@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-17 (v3.5.15 RELEASE CLOSED — GitHub Pages LIVE)
+> **Last updated**: 2026-05-18 (v3.5.16 RELEASE CLOSED — Styleguide modernization)
 
 ---
 
@@ -27,16 +27,17 @@ v3.5.12  Wave 1 — Carousel #34                                       ✓ DONE
 v3.5.13  Wave 1 closure cleanup (#32 / #33 / Records sweep)          ✓ DONE
 v3.5.14  Publish prep                                                ✓ DONE
 v3.5.15  GitHub repository + Pages publish                           ✓ DONE
-v3.5.16  Styleguide modernization + module workspace framing          ☐ NEXT
+v3.5.16  Styleguide modernization + module workspace framing          ✓ DONE
+v3.5.17  Post-modernization routing decision                          ☐ NEXT
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.5.15 GitHub repository + Pages publish
+Current release:   v3.5.16 Styleguide modernization + module workspace framing
 Current phase:     CLOSED
-Closed by:         Public GitHub push + Pages navigation verification
-Next allowed work: v3.5.16 modernization plan-first
+Closed by:         Phase 3 visual QA PASS + Phase 5 bookkeeping
+Next allowed work: v3.5.17 route selection
 ```
 
 ## Wave 1 Progress
@@ -74,58 +75,50 @@ TODO      0 / 9
 37 canonical entries total.
 ```
 
-v3.5.14 does not change component row status. The matrix remains
+v3.5.16 does not change component row status. The matrix remains
 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
 
-## v3.5.15 Closure Notes
+## v3.5.16 Closure Notes
 
 ```txt
-GitHub repository + Pages publish closed.
-No component baseline CSS/tokens were changed.
-Repository is live:
-  https://github.com/Jiwoon-Kim/axismundi
-Pages is live:
+Styleguide modernization closed.
+No component matrix rows changed.
+No baseline component CSS/tokens were changed.
+Public Pages remains live:
   https://jiwoon-kim.github.io/axismundi/
 ```
 
-Publish results:
+Closed scope:
 
 ```txt
-Directory rename:
-  C:\Users\thaum\dev\axismundi-v3.5.1-phase0-handoff
-  -> C:\Users\thaum\dev\axismundi
+Charter §3.3:
+  lab/modules/* = module workspace + validation specimen surface
 
-Git:
-  e22b9e5 Initial Axismundi public release
-  origin https://github.com/Jiwoon-Kim/axismundi.git
+Styleguide:
+  18 module/record actions added
+  nav/body order equality locked (nav is canonical)
+  mobile-first shell guardrails added
 
-Pages source:
-  main branch root
+Publish mirror:
+  theme.js copied
+  module links rewritten for repository-root Pages
 
-Verified public URLs:
-  /                                      200
-  /styleguide/                          200
-  /README.md                            200
-  /README.ko.md                         200
-  /products/.../axismundi-lab/README.md 200
-  /products/.../modules/README.md       200
-  /docs/v3.5.14/TEMPLATES...NOTE.md     200
-  /LICENSE-MATRIX.md                    200
-  /NOTICE.md                            200
+Lab patterns:
+  16 validation-specimen banners added
+
+Backlog hygiene:
+  #1 / #10 / #13 / #17 / #28 resolved
+  #11 framework portion resolved; UX superseded by #34
 ```
 
-## v3.5.16 Next Route
+## v3.5.17 Next Route Candidates
 
 ```txt
-Modernization:
-  - use docs/v3.5.16/MODERNIZATION-AUDIT.md
-  - use docs/v3.5.16/STALE-STATE-AUDIT.md
-  - Charter §3.3 amendment: lab = module workspace, legacy naming
-  - styleguide -> module navigation UX
-  - lab pattern HTML validation-specimen banners
-  - BACKLOG hygiene (#11/#34 overlap, #10/#17 close-check, #13)
-  - Snackbar/Tooltip legacy marking
-  - optional side-fixes (#1/#2/#3/#28) only if bounded
+Option A  BACKLOG #34 follow-up: N3 dialog/module picker UX
+Option B  Side-fix cleanup: BACKLOG #2 / #3
+Option C  Date picker grid a11y: BACKLOG #19
+Option D  Behavior patterns: BACKLOG #29 Card / #30 Extended FAB
+Option E  v3.6.0 Ontology Theme Pilot entry planning
 ```
 
 Repository naming / path lock:
@@ -141,9 +134,13 @@ Current directory:
 ```txt
 Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS
 npm test:  PASS
-Pages QA:  9 public URLs returned HTTP 200
-Baseline:  components.css / tokens.css / style-guide.html / blocks.css /
-           theme.json preserved in v3.5.15.
+Playwright:
+  root/styleguide/lab pattern overflow 0 at 390 / 768 / 1280
+  styleguide nav anchors = 37
+  styleguide body sections = 37
+  nav/body order equality = true
+Baseline:
+  components.css / tokens.css / blocks.css / theme.json untouched.
 ```
 
 ## Discipline

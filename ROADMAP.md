@@ -323,7 +323,17 @@ release planning cycle.
     `https://jiwoon-kim.github.io/axismundi/`.
   - Public navigation verified: root, styleguide, README, README.ko, lab overview,
     lab module index, templates note, LICENSE-MATRIX, and NOTICE return 200.
-- **v3.5.16 (NEXT)** — **Styleguide Modernization + Module Workspace Framing**. Use `docs/v3.5.16/MODERNIZATION-AUDIT.md` and `docs/v3.5.16/STALE-STATE-AUDIT.md` as authoritative inputs. Scope: Charter §3.3 amendment, styleguide-to-module navigation UX, lab pattern validation-specimen banners, BACKLOG #11/#34 hygiene, close-checks for #10/#17, #13 publish theme.js decision, legacy Snackbar/Tooltip marking, and optional small side-fixes if bounded.
+- **v3.5.16** ← **Styleguide Modernization + Module Workspace Framing** ✓ DONE (2026-05-18)
+  - Amended `PUBLIC-SURFACE-CHARTER.md §3.3`: `lab/modules/*` is a module workspace + validation specimen surface; `/styleguide/` remains canonical public visual demo.
+  - Added 18 styleguide actions (15 validation specimen links + 3 record audit links), with Material Symbols icon+label treatment.
+  - Added mobile-first public shell guardrails to root `index.html` and the styleguide.
+  - Updated `publish_styleguide.py`: copies `theme.js` and rewrites generated lab links for repository-root GitHub Pages.
+  - Added validation-specimen banners to all 16 current `lab-*-pattern.html` pages.
+  - Closed hygiene items #1, #10, #13, #17, #28; #11 framework portion remains resolved and UX is superseded by #34.
+  - Phase 3 lesson locked: sidebar nav is the canonical source of section order; body sections follow nav order.
+  - Matrix distribution unchanged: 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
+
+- **v3.5.17 (NEXT)** — **Post-modernization routing decision**. Candidate paths: BACKLOG #34 follow-up (N3 dialog/module picker UX), BACKLOG #2/#3 side-fixes, BACKLOG #19 Date picker grid a11y, BACKLOG #29/#30 behavior-pattern modules, or v3.6.0 Ontology Theme Pilot entry planning.
 - **v3.6.0** — **Ontology Theme Pilot**. Consumer of Wave 1+ public-tier modules + infrastructure dependencies (popover/, ripple/, icon-system/). First real WordPress block theme consuming the v3.5.0 public surface. Validates 4-tier architecture in production. Per CHARTER §3.4, pilot lives outside the theme repo; theme repo provides public surface only.
 - **v3.6.x — v3.7.x** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
 - **v3.7.x → v1.0 RC** — 33-component audit coverage substantially complete (DONE + RECORD = 30+ out of 34 TOC components); pilot theme stable; M3 Interpreter Plugin (BACKLOG #21) authoring in parallel as plugin-tier artifact.

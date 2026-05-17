@@ -1,6 +1,6 @@
-# NEXT-SESSION.md — v3.5.16 Entry Handoff
+# NEXT-SESSION.md — v3.5.17 Routing Handoff
 
-> **Status**: v3.5.15 GitHub repository + Pages publish closed.  
+> **Status**: v3.5.16 Styleguide modernization closed.
 > **Use**: read at the start of the next local Claude/Codex session.
 
 ---
@@ -12,13 +12,12 @@
 2. CURRENT-STATE.md
 3. PROJECT-CONTEXT.md
 4. docs/v3.5.5/PRE-ENTRY-ONTOLOGY-GROUNDING.md
-5. docs/v3.5.16/MODERNIZATION-AUDIT.md
-6. docs/v3.5.16/STALE-STATE-AUDIT.md
-7. docs/v3.5.0/MODULE-STATUS-MATRIX.md
-8. CHANGELOG.md latest entry (v3.5.15)
-9. ROADMAP.md v3.5.16 NEXT entry
-10. docs/v3.5.15/GITHUB-PUBLISH-PHASE-1-REPORT.md
-11. docs/v3.5.15/GITHUB-PUBLISH-PHASE-2-REPORT.md
+5. CHANGELOG.md latest entry (v3.5.16)
+6. ROADMAP.md v3.5.17 NEXT entry
+7. docs/v3.5.16/STYLEGUIDE-MODERNIZATION-PHASE-2-REPORT.md
+8. docs/v3.5.16/MODERNIZATION-AUDIT.md
+9. docs/v3.5.16/STALE-STATE-AUDIT.md
+10. docs/v3.5.0/MODULE-STATUS-MATRIX.md
 ```
 
 ## 1) Current State
@@ -27,10 +26,11 @@
 v3.5.13 — Wave 1 closure cleanup (#32/#33/Records)  ✓ CLOSED
 v3.5.14 — Publish prep                               ✓ CLOSED
 v3.5.15 — GitHub repository + Pages publish          ✓ CLOSED
+v3.5.16 — Styleguide modernization                   ✓ CLOSED
 Validator                                            1.000 / 1.000 / 1.000 / 1.000 PASS
 npm test                                             PASS
-GitHub repository                                   LIVE
-GitHub Pages                                        LIVE
+GitHub repository                                    LIVE
+GitHub Pages                                         LIVE
 ```
 
 Public URLs:
@@ -43,109 +43,88 @@ Pages:
   https://jiwoon-kim.github.io/axismundi/
 ```
 
-Wave 1 progress:
-
-```txt
-DONE      9 / 9  Button, Icon button, FAB family, Button group, Card,
-                 Text field, Search bar, List, Carousel
-PARTIAL   0 / 9
-TODO      0 / 9
-```
-
 Overall matrix:
 
 ```txt
 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD + 3 infrastructure = 37 entries
 ```
 
-## 2) v3.5.15 Closure Summary
+## 2) v3.5.16 Closure Summary
+
+Closed scope:
 
 ```txt
-Local directory rename              COMPLETE
-Git initialization                   COMPLETE
-Initial commit                       COMPLETE
-GitHub repository creation           COMPLETE
-Initial push                         COMPLETE
-GitHub Pages activation              COMPLETE
-Public navigation verification       COMPLETE
+Charter §3.3:
+  lab/modules/* = module workspace + validation specimen surface
+  /styleguide/ = canonical public visual demo
+
+Styleguide:
+  18 icon+label actions added
+  15 Validation specimen links
+  3 Record audit links
+  nav/body order equality locked
+
+Publish mirror:
+  theme.js copied to /styleguide/scripts/
+  source-local modules/... links rewritten for generated /styleguide/
+
+Lab patterns:
+  16 lab-*-pattern.html files now include validation-specimen banners
+
+Backlog hygiene:
+  #1 / #10 / #13 / #17 / #28 resolved
+  #11 framework portion resolved; UX superseded by #34
+  Snackbar / Tooltip marked as pre-v3.5.0 legacy audit shape
 ```
 
-Details:
+Phase 3 lesson:
 
 ```txt
-Current path:
-  C:\Users\thaum\dev\axismundi
-
-Remote:
-  origin https://github.com/Jiwoon-Kim/axismundi.git
-
-Initial commit:
-  e22b9e5 Initial Axismundi public release
-
-Pages source:
-  main branch root
+Sidebar nav is the canonical source of styleguide section order.
+Body sections follow nav order.
+Do not reorder nav to match body; reorder body to match nav.
 ```
 
-Public navigation QA:
+Verification:
 
 ```txt
-https://jiwoon-kim.github.io/axismundi/                                                   200
-https://jiwoon-kim.github.io/axismundi/styleguide/                                        200
-https://jiwoon-kim.github.io/axismundi/README.md                                          200
-https://jiwoon-kim.github.io/axismundi/README.ko.md                                       200
-https://jiwoon-kim.github.io/axismundi/products/reference-implementations/axismundi-lab/README.md 200
-https://jiwoon-kim.github.io/axismundi/products/reference-implementations/axismundi-lab/modules/README.md 200
-https://jiwoon-kim.github.io/axismundi/docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md    200
-https://jiwoon-kim.github.io/axismundi/LICENSE-MATRIX.md                                  200
-https://jiwoon-kim.github.io/axismundi/NOTICE.md                                          200
+Validator:       1.000 / 1.000 / 1.000 / 1.000 PASS
+npm test:        PASS
+Playwright:
+  root / styleguide / lab pattern overflow = 0 at 390 / 768 / 1280
+  styleguide nav anchors = 37
+  styleguide body sections = 37
+  nav/body order equality = true
+  lab links = 18
+  icon links = 18
 ```
 
-## 3) v3.5.16 Next Route — Modernization
+## 3) v3.5.17 Route Candidates
 
-Authoritative inputs:
+No route is selected yet. User decision required.
 
 ```txt
-docs/v3.5.16/MODERNIZATION-AUDIT.md
-docs/v3.5.16/STALE-STATE-AUDIT.md
+Option A — BACKLOG #34 follow-up
+  N3 dialog / module picker UX for lab module discovery.
+
+Option B — Side-fix cleanup
+  BACKLOG #2 Avatar size tokens and/or #3 floating toolbar selected color.
+
+Option C — Date picker grid a11y
+  BACKLOG #19.
+
+Option D — Behavior pattern modules
+  BACKLOG #29 Card behavior patterns and/or #30 Extended FAB behavior.
+
+Option E — v3.6.0 Ontology Theme Pilot entry planning
+  Move from public surface prep into actual WordPress block theme pilot.
 ```
-
-Locked direction:
-
-```txt
-Use option B:
-  v4.0까지 directory restructure 보류
-  v3.5.16에서 framing / UX / navigation 정렬
-```
-
-Recommended lanes:
-
-```txt
-Lane M — Charter §3.3 amendment
-  "lab" = module workspace / legacy naming, not experimentation-only.
-
-Lane N — Styleguide -> module navigation UX
-  BACKLOG #34, including #11 overlap resolution.
-
-Lane O — Lab pattern HTML validation-specimen banners
-  17 pattern HTMLs.
-
-Lane P — BACKLOG hygiene
-  #11/#34 overlap, #10/#17 close-check, #13 publish theme.js decision,
-  Snackbar/Tooltip legacy marking.
-
-Lane Q — Optional bounded side-fixes
-  #1 inline code font size, #2 Avatar size tokens, #3 Floating toolbar selected
-  color, #28 Icon button SVG wording cleanup.
-```
-
-Do not perform v4.0 directory restructure in v3.5.16.
 
 ## 4) Locked Later Route
 
 ```txt
-v3.5.16  Styleguide modernization + module workspace framing
 v3.6.0   Ontology Theme Pilot
-v3.7.x   Wave 2/3
+v3.7.x   Wave 2 / Wave 3 component coverage
 v4.0     Public release + directory restructure
 ```
 

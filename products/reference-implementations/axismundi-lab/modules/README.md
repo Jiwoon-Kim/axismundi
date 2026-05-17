@@ -22,16 +22,21 @@ Each file remains identifiable both in the source tree (where the folder gives t
 
 A secondary benefit: IDE tab bars. With distinct file names, multiple module CSS files open simultaneously are immediately distinguishable. With generic names like `module.css`, every tab reads the same.
 
-## What gets published, what stays lab-internal
+## What gets mirrored, what remains evidence
 
-| Asset | Path inside module | Published to `/styleguide/`? |
-|---|---|---|
-| Module CSS | `modules/<name>/lab-<name>.css` | **Yes** (flattened to `stylesheets/`) |
-| Module JS | `modules/<name>/lab-<name>.js` | No — lab-internal |
-| Pattern HTML | `modules/<name>/lab-<name>-pattern.html` | No — lab-internal |
-| Module docs | `modules/<name>/docs/*.md` | No — lab-internal |
+| Asset | Path inside module | Mirrored into `/styleguide/`? | Browsable from repo-root Pages? | Canonical? |
+|---|---|---:|---:|---|
+| Module CSS | `modules/<name>/lab-<name>.css` | **Yes** (flattened to `stylesheets/`) | Yes | Support layer for the styleguide mirror |
+| Module JS | `modules/<name>/lab-<name>.js` | No | Yes | Runtime evidence unless explicitly promoted |
+| Pattern HTML | `modules/<name>/lab-<name>-pattern.html` | No | Yes | Validation specimen, not canonical demo |
+| Module docs | `modules/<name>/docs/*.md` | No | Yes | Audit evidence |
 
-The asymmetry is intentional. CSS is innocuous on the publish surface (no HTML on the publish side links to it, so it sits as an orphan asset that does nothing). JS, pattern HTML, and docs would either need separate publish handling or risk being mistaken for canonical surfaces; until a module is promoted into the main styleguide, those artifacts stay in the lab.
+The asymmetry is intentional. CSS is mirrored into `/styleguide/` so the
+canonical public demo can use validated module styles. Pattern HTML, JS, and
+audit docs are not copied into the styleguide mirror; they remain source-tree
+evidence. On GitHub Pages they are still browsable from the repository-root
+site, so v3.5.16 treats them as validation specimens rather than hidden
+internals. The canonical visual demo remains `/styleguide/`.
 
 ## Charter cross-reference (added v3.5.0)
 

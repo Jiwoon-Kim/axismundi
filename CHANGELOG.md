@@ -1,5 +1,66 @@
 # CHANGELOG
 
+## v3.5.16 — Styleguide Modernization + Module Workspace Framing (2026-05-18)
+
+Post-publish public surface modernization. No component matrix rows changed;
+distribution remains 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
+
+### Changed — Public surface framing
+
+- Amended `PUBLIC-SURFACE-CHARTER.md §3.3`: `lab/modules/*` is now framed as
+  a module workspace + validation specimen surface. `/styleguide/` remains the
+  canonical public visual demo; lab pattern pages are browsable evidence, not
+  public API.
+- Updated `lab/modules/README.md` to distinguish styleguide mirror assets from
+  repository-root GitHub Pages browsing.
+- Kept v4.0 directory restructure deferred under BACKLOG #36.
+
+### Changed — Styleguide navigation
+
+- Added 18 styleguide actions:
+  - 15 `Validation specimen` links for Wave 1 / legacy component modules.
+  - 3 `Record audit` links for Avatar, Divider, and Badge.
+- Converted these actions to Material Symbols icon+label links.
+- Added mobile-first shell guardrails to root `index.html` and
+  `style-guide.html`.
+- Added a GitHub repository link to the root Pages entry.
+- Phase 3 follow-up locked the ordering rule: **sidebar nav is the canonical
+  source of section order; body sections follow nav order**. The 37 body
+  sections now match the 37 sidebar anchors exactly.
+
+### Changed — Publish mirror
+
+- `publish_styleguide.py` now copies `theme.js` into `/styleguide/scripts/`,
+  closing BACKLOG #13 and removing the publish-surface 404.
+- Generated `/styleguide/index.html` rewrites lab links from source-local
+  `modules/...` paths to repository-root Pages paths under
+  `../products/reference-implementations/axismundi-lab/modules/...`.
+- Publish mirror regenerated: 31 files, including `scripts/theme.js`.
+
+### Changed — Lab specimens and hygiene
+
+- Added `Validation specimen` banners to all 16 current `lab-*-pattern.html`
+  pages.
+- Closed or clarified BACKLOG items:
+  - #1 helper inline-code font-size inheritance fixed.
+  - #10 resolved by v3.5.6 Ripple v2.
+  - #11 framework portion resolved by v3.5.0; remaining UX superseded by #34.
+  - #13 resolved by v3.5.16 `theme.js` publish copy.
+  - #17 resolved by v3.5.7 Text field + v3.5.8 Search bar.
+  - #28 icon button SVG-era public wording fixed.
+- `MODULE-STATUS-MATRIX.md` now marks Snackbar and Tooltip as legacy DONE rows
+  whose audit shape predates the v3.5.0 3/4-doc framework.
+
+### Verified
+
+- Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS.
+- `npm test`: PASS.
+- Playwright checks:
+  - root / styleguide / lab pattern pages at 390 / 768 / 1280: overflow 0.
+  - styleguide lab links: 18.
+  - styleguide icon links: 18.
+  - nav anchors: 37; body sections: 37; nav/body order equality: true.
+
 ## v3.5.15 — GitHub Repository + Pages Publish (2026-05-17)
 
 First public GitHub publish cycle.

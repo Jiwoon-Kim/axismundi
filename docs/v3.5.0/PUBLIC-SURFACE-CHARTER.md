@@ -168,7 +168,7 @@ CHANGES TO components.css:
     release with M3 spec rationale
 ```
 
-### §3.3 — `lab/modules/*` is a **validation surface**
+### §3.3 — `lab/modules/*` is a **module workspace + validation specimen surface**
 
 ```
 WHAT IT IS:
@@ -176,8 +176,10 @@ WHAT IT IS:
   - Pattern pages for visual + runtime verification
   - Audit doc workspace
   - Module contract proving ground
+  - Browsable validation specimen surface on repository-root GitHub Pages
 
 WHAT IT IS NOT:
+  - The canonical public demo surface
   - A public API directly
   - Consumed by downstream consumers without graduation
   - A replacement for the baseline (the baseline remains authoritative
@@ -187,6 +189,16 @@ CHANGES TO lab/modules/*:
   - Free experimentation during Wave authoring
   - Graduation to public tier requires PROMOTION-CRITERIA satisfaction
 ```
+
+v3.5.16 amendment:
+
+`/styleguide/` remains the canonical public visual demo mirror. Because
+GitHub Pages now serves the repository from the `main` branch root, lab module
+pattern HTML and audit docs may be browsed directly for QA traceability. That
+does not make lab-only selectors, helper classes, or runtime hooks public API.
+Downstream consumers should depend on graduated baseline/component contracts,
+not the validation specimen markup. The `lab` directory name is legacy naming;
+the v4.0 directory restructure is tracked separately in BACKLOG #36.
 
 ### §3.4 — `bindings/` is the **plugin territory mapping**
 

@@ -113,6 +113,8 @@
     }
     .sg-section:last-child { border-bottom: 0; }
     .sg-section__head {
+      display: grid;
+      gap: var(--space-xs);
       margin-bottom: var(--space-xl);
     }
     .sg-section__eyebrow {
@@ -258,6 +260,33 @@
       color: var(--md-sys-color-on-surface-variant);
       margin-bottom: var(--space-sm);
     }
+    .sg-helper code,
+    .t-body-small code {
+      font-size: inherit;
+    }
+    .sg-lab-link {
+      justify-self: start;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      justify-content: center;
+      min-block-size: 40px;
+      padding-inline: var(--space-md);
+      border: 1px solid var(--md-sys-color-outline);
+      border-radius: var(--md-sys-shape-corner-pill-stable);
+      color: var(--md-sys-color-primary);
+      text-decoration: none;
+    }
+    .sg-lab-link .material-symbols-rounded {
+      font-size: 20px;
+      inline-size: 20px;
+      block-size: 20px;
+      line-height: 1;
+    }
+    .sg-lab-link:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-primary) 8%, transparent);
+    }
     .sg-divider-stack {
       max-width: 480px;
       background-color: var(--md-sys-color-surface-container);
@@ -329,6 +358,29 @@
       width: 100%;
       height: 100%;
       max-height: 100%;
+    }
+
+    @media (max-width: 640px) {
+      .sg-main {
+        padding: var(--space-lg) var(--space-md);
+      }
+      .sg-guide-nav {
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+      .sg-guide-nav a {
+        white-space: nowrap;
+      }
+      .sg-section {
+        padding-block: var(--space-lg);
+      }
+      .sg-section__head {
+        margin-bottom: var(--space-lg);
+      }
+      .sg-lab-link {
+        inline-size: 100%;
+        min-block-size: 48px;
+      }
     }
 
     /* Body scroll lock when a modal is open (live trigger handlers add/remove this class) */
@@ -602,7 +654,6 @@
           <div class="sg-swatch-grid" id="swatches-other"></div>
         </div>
       </section>
-
       <!-- ========== Typography ========== -->
       <section class="sg-section" id="typography" data-screen-label="Typography">
         <header class="sg-section__head">
@@ -616,7 +667,6 @@
         </header>
         <div id="type-specimen"></div>
       </section>
-
       <!-- ========== Component sections ==========
            SG-2: Button, Icon button, Avatar, Card, Chip, Divider -->
 
@@ -625,6 +675,8 @@
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Button</h2>
+
+          <a class="sg-lab-link t-label-large" href="modules/button/lab-button-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -689,12 +741,13 @@
           </div>
         </div>
       </section>
-
       <!-- ========== Icon button ========== -->
       <section class="sg-section" id="components-icon-button" data-screen-label="Icon button">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Icon button</h2>
+
+          <a class="sg-lab-link t-label-large" href="modules/icon-button/lab-icon-button-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -714,7 +767,7 @@
             </button>
           </div>
           <pre class="sg-snippet"><code>&lt;button class="ax-icon-button is-filled has-state-layer" aria-label="Add"&gt;
-  &lt;svg ...&gt;&lt;/svg&gt;
+  &lt;span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false"&gt;add&lt;/span&gt;
 &lt;/button&gt;</code></pre>
         </div>
 
@@ -722,7 +775,8 @@
           <h3 class="t-title-medium sg-subsection__head">Toggle</h3>
           <p class="t-body-small sg-helper">
             Per M3 §6.4: outlined toggle should swap to a filled glyph when selected.
-            Markup is identical — author updates SVG <code>fill</code>/<code>d</code> on toggle.
+            Markup is identical — author updates the Material Symbols glyph name
+            and selected state as needed.
           </p>
           <div class="sg-row">
             <button class="ax-icon-button is-filled has-state-layer sg-toggle" type="button" aria-label="Bookmark" aria-pressed="false">
@@ -758,7 +812,6 @@
           </div>
         </div>
       </section>
-
       <!-- ========== FAB ========== -->
       <section class="sg-section" id="components-fab" data-screen-label="FAB">
         <header class="sg-section__head">
@@ -767,6 +820,8 @@
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
             Floating action button. 3 sizes (default 56, medium 80, large 96) × 6 color styles. Icon-only — for label use Extended FAB.
           </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/fab/lab-fab-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -824,7 +879,6 @@
           </div>
         </div>
       </section>
-
       <!-- ========== Extended FAB ========== -->
       <section class="sg-section" id="components-fab-extended" data-screen-label="Extended FAB">
         <header class="sg-section__head">
@@ -833,6 +887,8 @@
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
             FAB with text label + leading icon. 56px height, min-width 80px, label uses title-medium typography.
           </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/fab/lab-fab-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -885,7 +941,6 @@
           </div>
         </div>
       </section>
-
       <!-- ========== FAB menu ========== -->
       <section class="sg-section" id="components-fab-menu" data-screen-label="FAB menu">
         <header class="sg-section__head">
@@ -1014,7 +1069,6 @@
         </div>
 
       </section>
-
       <!-- ========== Button group ========== -->
       <section class="sg-section" id="components-button-group" data-screen-label="Button group">
         <header class="sg-section__head">
@@ -1023,6 +1077,8 @@
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
             Composes <code>.ax-button</code> instances. Two variants: <strong>standard</strong> (selected button widens 15% per M3 §5.6) and <strong>connected</strong> (2px gap, full-pill outer corners, small inner corners). Two markup patterns supported — radio+label for single-select (CSS-only), button+aria-pressed for multi-toggle toolbars (JS).
           </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/button-group/lab-button-group-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -1118,7 +1174,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
 &lt;/script&gt;</code></pre>
         </div>
       </section>
-
       <!-- ========== Split button ========== -->
       <section class="sg-section" id="components-split-button" data-screen-label="Split button">
         <header class="sg-section__head">
@@ -1174,7 +1229,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Toolbar ========== -->
       <section class="sg-section" id="components-toolbar" data-screen-label="Toolbar">
         <header class="sg-section__head">
@@ -1254,480 +1308,13 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
 &lt;/div&gt;</code></pre>
         </div>
       </section>
-
-      <!-- ========== Avatar ========== -->
-      <section class="sg-section" id="components-avatar" data-screen-label="Avatar">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Components</div>
-          <h2 class="t-headline-medium">Avatar</h2>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Sizes</h3>
-          <div class="sg-row">
-            <span class="ax-avatar is-size-sm"><span>지원</span></span>
-            <span class="ax-avatar"><span>지원</span></span>
-            <span class="ax-avatar is-size-lg"><span>지원</span></span>
-          </div>
-          <pre class="sg-snippet"><code>&lt;span class="ax-avatar is-size-lg"&gt;&lt;span&gt;지원&lt;/span&gt;&lt;/span&gt;</code></pre>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Variants</h3>
-          <div class="sg-row">
-            <span class="ax-avatar"><span>HK</span></span>
-            <span class="ax-avatar"><span>도윤</span></span>
-            <span class="ax-avatar">
-              <img alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%237D5260'/%3E%3Ccircle cx='20' cy='16' r='6' fill='%23FFD8E4'/%3E%3Crect x='8' y='24' width='24' height='12' rx='6' fill='%23FFD8E4'/%3E%3C/svg%3E" />
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========== List ========== -->
-      <section class="sg-section" id="components-list" data-screen-label="List">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Components</div>
-          <h2 class="t-headline-medium">List</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            Container 1+ list items. Single/two/three-line variants. Slots: leading (icon 24 / image 56), content (overline + label + supporting), trailing (icon 24 / text). Selection via <code>.is-selected</code> or <code>aria-selected="true"</code>. Expressive shape state machine: rest → corner-extra-small, hover → corner-medium, focus/pressed/selected → corner-large.
-          </p>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Standard — single-line</h3>
-          <div class="ax-list" style="max-width: 360px;" role="list">
-            <button type="button" class="ax-list__item" role="listitem">
-              <span class="ax-list__leading">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 3H5c-1.11 0-2 .89-2 2v14c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 16H5V5h14v14zm-7-2c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z" fill="currentColor"/></svg>
-              </span>
-              <span class="ax-list__content">
-                <span class="ax-list__label">홈</span>
-              </span>
-              <span class="ax-list__trailing-text">⌘1</span>
-            </button>
-            <hr class="ax-list__divider" />
-            <button type="button" class="ax-list__item is-selected" role="listitem" aria-selected="true">
-              <span class="ax-list__leading">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg>
-              </span>
-              <span class="ax-list__content">
-                <span class="ax-list__label">내 프로필</span>
-              </span>
-              <span class="ax-list__trailing-text">⌘P</span>
-            </button>
-            <hr class="ax-list__divider" />
-            <button type="button" class="ax-list__item" role="listitem">
-              <span class="ax-list__leading">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/></svg>
-              </span>
-              <span class="ax-list__content">
-                <span class="ax-list__label">설정</span>
-              </span>
-            </button>
-          </div>
-          <pre class="sg-snippet"><code>&lt;div class="ax-list" role="list"&gt;
-  &lt;button class="ax-list__item" role="listitem"&gt;
-    &lt;span class="ax-list__leading"&gt;&lt;svg .../&gt;&lt;/span&gt;
-    &lt;span class="ax-list__content"&gt;
-      &lt;span class="ax-list__label"&gt;홈&lt;/span&gt;
-    &lt;/span&gt;
-    &lt;span class="ax-list__trailing-text"&gt;⌘1&lt;/span&gt;
-  &lt;/button&gt;
-  &lt;hr class="ax-list__divider" /&gt;
-&lt;/div&gt;</code></pre>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Two-line — overline + label + supporting</h3>
-          <div class="ax-list" style="max-width: 360px;" role="list">
-            <button type="button" class="ax-list__item ax-list__item--two-line" role="listitem">
-              <span class="ax-list__leading">
-                <span class="ax-avatar"><span>도윤</span></span>
-              </span>
-              <span class="ax-list__content">
-                <span class="ax-list__label">이도윤</span>
-                <span class="ax-list__supporting">새 게시물을 올렸습니다 · 5분 전</span>
-              </span>
-              <span class="ax-list__trailing">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-            </button>
-            <hr class="ax-list__divider" />
-            <button type="button" class="ax-list__item ax-list__item--two-line" role="listitem">
-              <span class="ax-list__leading">
-                <span class="ax-avatar"><span>가람</span></span>
-              </span>
-              <span class="ax-list__content">
-                <span class="ax-list__label">가람</span>
-                <span class="ax-list__supporting">@karam · ActivityPub 인스턴스에서 팔로우</span>
-              </span>
-              <span class="ax-list__trailing">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Three-line — overline + label + 2-line supporting</h3>
-          <div class="ax-list" style="max-width: 480px;" role="list">
-            <button type="button" class="ax-list__item ax-list__item--three-line" role="listitem">
-              <span class="ax-list__leading">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/></svg>
-              </span>
-              <span class="ax-list__content">
-                <span class="ax-list__overline">받은편지함</span>
-                <span class="ax-list__label">알림 설정 안내</span>
-                <span class="ax-list__supporting">새 댓글, 좋아요, 팔로우 알림을 받는 방식을 설정에서 관리할 수 있습니다. 푸시 알림은 모바일 앱에서만 작동합니다.</span>
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Segmented — gap + per-item rounding</h3>
-          <div class="ax-list ax-list--segmented" style="max-width: 360px;" role="list">
-            <button type="button" class="ax-list__item" role="listitem">
-              <span class="ax-list__content">
-                <span class="ax-list__label">개인정보</span>
-              </span>
-              <span class="ax-list__trailing">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-            </button>
-            <button type="button" class="ax-list__item" role="listitem">
-              <span class="ax-list__content">
-                <span class="ax-list__label">알림</span>
-              </span>
-              <span class="ax-list__trailing">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-            </button>
-            <button type="button" class="ax-list__item" disabled role="listitem">
-              <span class="ax-list__content">
-                <span class="ax-list__label">베타 기능 (비활성)</span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========== Carousel ========== -->
-      <section class="sg-section" id="components-carousel" data-screen-label="Carousel">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Components</div>
-          <h2 class="t-headline-medium">Carousel</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            Native horizontal scroll + scroll-snap. Item corner = corner-extra-large (28dp). Multi-browse default mixes large/medium/small items; hero variant features one large + small queue; uncontained bleeds past trailing edge for content-first browsing.
-          </p>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            <em>v0.3.5 scope</em>: multi-browse, hero, uncontained. Center-aligned hero, multi-aspect, full-screen, item-morph animation deferred.
-          </p>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Multi-browse — large / medium / small mix</h3>
-          <div class="ax-carousel">
-            <div class="ax-carousel__track">
-              <div class="ax-carousel__item ax-carousel__item--large">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">서울의 하루</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--medium">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">디자인 노트</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--medium">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">개발 일지</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--small">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary-container);"></div>
-                </div>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--small">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary-container);"></div>
-                </div>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--small">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary-container);"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <pre class="sg-snippet"><code>&lt;div class="ax-carousel"&gt;
-  &lt;div class="ax-carousel__track"&gt;
-    &lt;div class="ax-carousel__item ax-carousel__item--large"&gt;
-      &lt;div class="ax-carousel__item-media"&gt;&lt;img .../&gt;&lt;/div&gt;
-      &lt;span class="ax-carousel__item-label"&gt;서울의 하루&lt;/span&gt;
-    &lt;/div&gt;
-    &lt;div class="ax-carousel__item ax-carousel__item--medium"&gt;...&lt;/div&gt;
-    &lt;div class="ax-carousel__item ax-carousel__item--small"&gt;...&lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</code></pre>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Hero — featured + queue</h3>
-          <div class="ax-carousel ax-carousel--hero">
-            <div class="ax-carousel__track">
-              <div class="ax-carousel__item ax-carousel__item--large">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));"></div>
-                </div>
-                <span class="ax-carousel__item-label">오늘의 추천 게시물</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--small">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary);"></div>
-                </div>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--small">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary);"></div>
-                </div>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--small">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary);"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Uncontained — items bleed past trailing edge</h3>
-          <p class="sg-helper">No padding on trailing side — items extend off-screen. Drag/scroll to reveal.</p>
-          <div class="ax-carousel ax-carousel--uncontained">
-            <div class="ax-carousel__track">
-              <div class="ax-carousel__item ax-carousel__item--medium">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">게시물 1</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--medium">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">게시물 2</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--medium">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">게시물 3</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--medium">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">게시물 4</span>
-              </div>
-              <div class="ax-carousel__item ax-carousel__item--medium">
-                <div class="ax-carousel__item-media">
-                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-primary-container));"></div>
-                </div>
-                <span class="ax-carousel__item-label">게시물 5</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========== Date picker ========== -->
-      <section class="sg-section" id="components-date-picker" data-screen-label="Date picker">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Components</div>
-          <h2 class="t-headline-medium">Date picker</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            <strong>Visual structure only.</strong> Actual calendar logic (current month, navigation, validation) is the author's responsibility — typically driven by a JS library (flatpickr, vanilla-calendar) or server-rendered template. v0.4.0 = docked variant. Modal + modal-input variants reuse internals + dialog wrapper.
-          </p>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Docked — sample static layout</h3>
-          <div class="sg-row" style="align-items: flex-start;">
-            <div class="ax-date-picker">
-              <header class="ax-date-picker__header">
-                <span class="ax-date-picker__supporting">날짜 선택</span>
-                <span class="ax-date-picker__headline">2026년 5월 15일</span>
-              </header>
-              <nav class="ax-date-picker__nav" aria-label="월 선택">
-                <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="이전 달">
-                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_left</span>
-                </button>
-                <span class="ax-date-picker__nav-label">2026년 5월</span>
-                <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="다음 달">
-                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
-                </button>
-              </nav>
-              <div class="ax-date-picker__weekdays" aria-hidden="true">
-                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-              </div>
-              <div class="ax-date-picker__grid" role="grid">
-                <button type="button" class="ax-date-picker__cell is-outside">26</button>
-                <button type="button" class="ax-date-picker__cell is-outside">27</button>
-                <button type="button" class="ax-date-picker__cell is-outside">28</button>
-                <button type="button" class="ax-date-picker__cell is-outside">29</button>
-                <button type="button" class="ax-date-picker__cell is-outside">30</button>
-                <button type="button" class="ax-date-picker__cell">1</button>
-                <button type="button" class="ax-date-picker__cell">2</button>
-
-                <button type="button" class="ax-date-picker__cell is-today">3</button>
-                <button type="button" class="ax-date-picker__cell">4</button>
-                <button type="button" class="ax-date-picker__cell">5</button>
-                <button type="button" class="ax-date-picker__cell">6</button>
-                <button type="button" class="ax-date-picker__cell">7</button>
-                <button type="button" class="ax-date-picker__cell">8</button>
-                <button type="button" class="ax-date-picker__cell">9</button>
-
-                <button type="button" class="ax-date-picker__cell">10</button>
-                <button type="button" class="ax-date-picker__cell is-in-range is-range-start">11</button>
-                <button type="button" class="ax-date-picker__cell is-in-range">12</button>
-                <button type="button" class="ax-date-picker__cell is-in-range">13</button>
-                <button type="button" class="ax-date-picker__cell is-in-range">14</button>
-                <button type="button" class="ax-date-picker__cell is-selected" aria-selected="true">15</button>
-                <button type="button" class="ax-date-picker__cell">16</button>
-
-                <button type="button" class="ax-date-picker__cell">17</button>
-                <button type="button" class="ax-date-picker__cell">18</button>
-                <button type="button" class="ax-date-picker__cell">19</button>
-                <button type="button" class="ax-date-picker__cell">20</button>
-                <button type="button" class="ax-date-picker__cell">21</button>
-                <button type="button" class="ax-date-picker__cell">22</button>
-                <button type="button" class="ax-date-picker__cell">23</button>
-
-                <button type="button" class="ax-date-picker__cell">24</button>
-                <button type="button" class="ax-date-picker__cell">25</button>
-                <button type="button" class="ax-date-picker__cell">26</button>
-                <button type="button" class="ax-date-picker__cell">27</button>
-                <button type="button" class="ax-date-picker__cell">28</button>
-                <button type="button" class="ax-date-picker__cell">29</button>
-                <button type="button" class="ax-date-picker__cell">30</button>
-
-                <button type="button" class="ax-date-picker__cell">31</button>
-                <button type="button" class="ax-date-picker__cell is-outside">1</button>
-                <button type="button" class="ax-date-picker__cell is-outside">2</button>
-                <button type="button" class="ax-date-picker__cell is-outside">3</button>
-                <button type="button" class="ax-date-picker__cell is-outside">4</button>
-                <button type="button" class="ax-date-picker__cell is-outside">5</button>
-                <button type="button" class="ax-date-picker__cell is-outside">6</button>
-              </div>
-            </div>
-          </div>
-          <p class="sg-helper">15일 = selected (primary fill), 11일 = range-start (primary fill, leading 모서리 둥글), 12-14일 = in-range band (secondary-container), 3일 = today (primary outline). 회색 날짜 = is-outside (38% opacity).</p>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Usage patterns (reference)</h3>
-          <p class="sg-helper">Date picker는 단독 사용보다 다음 3 패턴 권장 — Jetpack Compose <code>DatePickerDocked</code> / <code>DatePickerModal</code> / <code>DatePickerModalInput</code>와 동일:</p>
-          <ul class="sg-helper" style="padding-inline-start: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs);">
-            <li><strong>Docked</strong> — readonly text-field + trailing 달력 icon → popup으로 calendar 표시 (작은 form 안에서 inline)</li>
-            <li><strong>Modal</strong> — <code>.dialog</code>로 wrap + 취소/확인 button (full calendar grid)</li>
-            <li><strong>Modal-input</strong> — dialog 안에 text-field만 (calendar 안 보이고 직접 입력 — MM/DD/YYYY 같은)</li>
-          </ul>
-          <p class="sg-helper">실제 popup 위치/dismiss/날짜 계산은 author/JS 영역. 이 시스템은 <em>visual primitives</em>만 — calendar grid, date cell 상태 (today/selected/range/outside).</p>
-        </div>
-      </section>
-
-      <!-- ========== Time picker ========== -->
-      <section class="sg-section" id="components-time-picker" data-screen-label="Time picker">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Components</div>
-          <h2 class="t-headline-medium">Time picker</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            <strong>Visual structure only.</strong> Input variant uses real <code>&lt;input type="text" inputmode="numeric"&gt;</code> for typeable HH/MM, and <code>&lt;input type="radio"&gt;</code> + <code>&lt;label&gt;</code> for AM/PM (single-select, CSS-only). Clock dial drag interaction stays in author code.
-          </p>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Input variant — type to enter time</h3>
-          <div class="sg-row">
-            <div class="ax-time-picker">
-              <span class="ax-time-picker__supporting">시간 입력</span>
-              <div class="ax-time-picker__inputs">
-                <input type="text" inputmode="numeric" maxlength="2"
-                       class="ax-time-picker__field is-selected"
-                       aria-label="Hour" value="10">
-                <span class="ax-time-picker__separator">:</span>
-                <input type="text" inputmode="numeric" maxlength="2"
-                       class="ax-time-picker__field"
-                       aria-label="Minute" value="30">
-
-                <fieldset class="ax-time-picker__period">
-                  <legend class="u-vh">AM or PM</legend>
-                  <input type="radio" name="sg-period" id="sg-period-am"
-                         class="ax-time-picker__period-input" checked>
-                  <label for="sg-period-am" class="ax-time-picker__period-btn">AM</label>
-                  <input type="radio" name="sg-period" id="sg-period-pm"
-                         class="ax-time-picker__period-input">
-                  <label for="sg-period-pm" class="ax-time-picker__period-btn">PM</label>
-                </fieldset>
-              </div>
-            </div>
-          </div>
-          <p class="sg-helper">시 (10) = 선택됨 (primary-container 채워짐). 분 (30) = 미선택. AM/PM = radio라 CSS-only로 클릭 토글, 키보드 화살표로 이동 가능. 사이에 1px outline 색 divider.</p>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">24-hour mode — period selector hidden</h3>
-          <p class="sg-helper"><code>.is-24h</code> modifier로 AM/PM selector 숨김. Compose <code>is24Hour=true</code>와 동일.</p>
-          <div class="sg-row">
-            <div class="ax-time-picker is-24h">
-              <span class="ax-time-picker__supporting">시간 입력 (24시간)</span>
-              <div class="ax-time-picker__inputs">
-                <input type="text" inputmode="numeric" maxlength="2"
-                       class="ax-time-picker__field is-selected"
-                       aria-label="Hour" value="14">
-                <span class="ax-time-picker__separator">:</span>
-                <input type="text" inputmode="numeric" maxlength="2"
-                       class="ax-time-picker__field"
-                       aria-label="Minute" value="30">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Dial variant — container scaffolding only</h3>
-          <p class="sg-helper">12-hour 라벨 + selector handle은 author/JS가 SVG 또는 absolute span으로 그림.</p>
-          <div class="sg-row">
-            <div class="ax-time-picker">
-              <span class="ax-time-picker__supporting">시간 선택</span>
-              <div class="ax-time-picker__dial" aria-label="시간 다이얼"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Usage patterns (reference)</h3>
-          <p class="sg-helper">Date/Time picker는 단독으로 잘 안 씀. Compose가 정의한 3 패턴 중 선택:</p>
-          <ul class="sg-helper" style="padding-inline-start: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs);">
-            <li><strong>Docked</strong> — text-field trailing icon 클릭 → popup으로 calendar/dial 표시 (form 안에서 inline 사용)</li>
-            <li><strong>Modal</strong> — <code>.dialog</code>로 wrap + 취소/확인 button (모바일에서 가장 흔한 패턴)</li>
-            <li><strong>Modal-input</strong> — dialog 안에 text-field만 (calendar 안 보이고 직접 타이핑)</li>
-          </ul>
-          <p class="sg-helper">실제 wiring (popup show/hide, dialog open/close)은 author/JS 영역. 이 시스템은 <em>visual structure</em>만 제공.</p>
-        </div>
-      </section>
-
       <!-- ========== Card ========== -->
       <section class="sg-section" id="components-card" data-screen-label="Card">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Card</h2>
+
+          <a class="sg-lab-link t-label-large" href="modules/card/lab-card-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -1777,144 +1364,13 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
-      <!-- ========== Chip ========== -->
-      <section class="sg-section" id="components-chip" data-screen-label="Chip">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Components</div>
-          <h2 class="t-headline-medium">Chip</h2>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Variants — 4 types</h3>
-          <div class="sg-row">
-            <button class="chip chip--assist has-state-layer" type="button">
-              <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">info</span>
-              <span class="chip__label">Assist</span>
-            </button>
-            <button class="chip chip--filter has-state-layer" type="button" aria-pressed="false">
-              <span class="chip__label">Filter</span>
-            </button>
-            <span class="chip chip--input has-state-layer">
-              <span class="chip__label">Input value</span>
-              <span class="material-symbols-rounded notranslate chip__trailing-icon" translate="no" aria-hidden="true" draggable="false">close</span>
-            </span>
-            <button class="chip chip--suggestion has-state-layer" type="button">
-              <span class="chip__label">Suggestion</span>
-            </button>
-          </div>
-          <pre class="sg-snippet"><code>&lt;button class="chip chip--filter has-state-layer" aria-pressed="false"&gt;
-  &lt;span class="chip__label"&gt;Filter&lt;/span&gt;
-&lt;/button&gt;</code></pre>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Filter — selected</h3>
-          <div class="sg-row">
-            <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="true">
-              <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">check</span>
-              <span class="chip__label">Selected</span>
-            </button>
-            <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="false">
-              <span class="chip__label">Unselected</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Input — with avatar leading</h3>
-          <div class="sg-row">
-            <span class="chip chip--input has-state-layer">
-              <span class="chip__leading-icon ax-avatar is-size-xs"><span>HK</span></span>
-              <span class="chip__label">한가람</span>
-              <span class="material-symbols-rounded notranslate chip__trailing-icon" translate="no" aria-hidden="true" draggable="false">close</span>
-            </span>
-          </div>
-          <p class="t-body-small sg-helper">Input chip leading slot accepts a 24px avatar (size override on the leading element).</p>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Disabled</h3>
-          <div class="sg-row">
-            <button class="chip chip--assist has-state-layer" type="button" disabled>
-              <span class="chip__label">Assist</span>
-            </button>
-            <button class="chip chip--filter has-state-layer" type="button" aria-pressed="false" disabled>
-              <span class="chip__label">Filter</span>
-            </button>
-            <button class="chip chip--input has-state-layer" type="button" disabled>
-              <span class="chip__label">Input</span>
-            </button>
-            <button class="chip chip--suggestion has-state-layer" type="button" disabled>
-              <span class="chip__label">Suggestion</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========== Badge ========== -->
-      <section class="sg-section" id="components-badge" data-screen-label="Badge">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Components</div>
-          <h2 class="t-headline-medium">Badge</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            Status indicator. Two variants: small (6×6 dot) / large (numeric label, 16×16 to 16×34). Anchored top-trailing of host. Apply <code>.has-badge</code> to host for positioning context.
-          </p>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium">Small (dot)</h3>
-          <p class="sg-helper">Used to mark unread / new / changed state without exact count.</p>
-          <div class="sg-row">
-            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Notifications (unread)">
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
-              <span class="ax-badge"></span>
-            </button>
-            <button type="button" class="ax-icon-button is-tonal has-badge" aria-label="Messages">
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
-              <span class="ax-badge"></span>
-            </button>
-          </div>
-          <pre class="sg-snippet"><code>&lt;button class="ax-icon-button is-standard has-badge" aria-label="Notifications (unread)"&gt;
-  &lt;svg ...&gt;&lt;/svg&gt;
-  &lt;span class="ax-badge"&gt;&lt;/span&gt;
-&lt;/button&gt;</code></pre>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium">Large (numeric)</h3>
-          <p class="sg-helper">Counts up to ~3 chars. Use <code>99+</code> for overflow.</p>
-          <div class="sg-row">
-            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Notifications (3)">
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
-              <span class="ax-badge is-large">3</span>
-            </button>
-            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Messages (12)">
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
-              <span class="ax-badge is-large">12</span>
-            </button>
-            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Messages (99 plus)">
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
-              <span class="ax-badge is-large">99+</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium">Inline (manual placement)</h3>
-          <p class="sg-helper">Use <code>.is-inline</code> to opt out of absolute positioning.</p>
-          <div class="sg-row" style="align-items: center;">
-            <span class="t-body-large">새 알림 <span class="ax-badge is-large is-inline">5</span></span>
-            <span class="t-body-large">Updates <span class="ax-badge is-large is-inline">New</span></span>
-          </div>
-        </div>
-      </section>
-
       <!-- ========== Divider ========== -->
       <section class="sg-section" id="components-divider" data-screen-label="Divider">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Divider</h2>
+
+          <a class="sg-lab-link t-label-large" href="modules/_records/DIVIDER-RECORD-AUDIT.md" aria-label="Open record audit"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">article</span><span>Record audit</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -1931,7 +1387,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           <pre class="sg-snippet"><code>&lt;hr class="ax-divider is-style-inset" /&gt;</code></pre>
         </div>
       </section>
-
       <!-- ========== App bar ========== -->
       <section class="sg-section" id="components-app-bar" data-screen-label="App bar">
         <header class="sg-section__head">
@@ -2010,7 +1465,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           <p class="t-body-small sg-helper">Demonstrates <code>[data-scrolled="true"]</code> — surface-container bg + level2 shadow.</p>
         </div>
       </section>
-
       <!-- ========== Nav bar ========== -->
       <section class="sg-section" id="components-nav-bar" data-screen-label="Nav bar">
         <header class="sg-section__head">
@@ -2069,7 +1523,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
 &lt;/nav&gt;</code></pre>
         </div>
       </section>
-
       <!-- ========== Nav rail ========== -->
       <section class="sg-section" id="components-nav-rail" data-screen-label="Nav rail">
         <header class="sg-section__head">
@@ -2118,7 +1571,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Nav rail (expanded) ========== -->
       <section class="sg-section" id="components-nav-rail-expanded" data-screen-label="Nav rail expanded">
         <header class="sg-section__head">
@@ -2172,7 +1624,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           <p class="t-body-small sg-helper">Modal mode가 필요하면 이 마크업을 <code>.sheet--side-modal</code> 안에 넣으세요 — composition pattern.</p>
         </div>
       </section>
-
       <!-- ========== Tabs ========== -->
       <section class="sg-section" id="components-tabs" data-screen-label="Tabs">
         <header class="sg-section__head">
@@ -2227,7 +1678,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Menu ========== -->
       <section class="sg-section" id="components-menu" data-screen-label="Menu">
         <header class="sg-section__head">
@@ -2337,7 +1787,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Text field ========== -->
       <section class="sg-section" id="components-text-field" data-screen-label="Text field">
         <header class="sg-section__head">
@@ -2346,6 +1795,8 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
             Refactored markup (v0.3.0+): outer <code>&lt;div class="text-field"&gt;</code> + visual <code>&lt;div class="text-field__container"&gt;</code> + optional <code>&lt;div class="text-field__bottom"&gt;</code>. Slot grid: leading / prefix / input+label / suffix / trailing+error. Native <code>:user-invalid</code> drives error state without JS.
           </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/text-field/lab-text-field-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -2549,12 +2000,13 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
         </div>
 
       </section>
-
       <!-- ========== Search bar ========== -->
       <section class="sg-section" id="components-search-bar" data-screen-label="Search bar">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Search bar</h2>
+
+          <a class="sg-lab-link t-label-large" href="modules/search-bar/lab-search-bar-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -2578,7 +2030,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
 &lt;/label&gt;</code></pre>
         </div>
       </section>
-
       <!-- ========== Checkbox ========== -->
       <section class="sg-section" id="components-checkbox" data-screen-label="Checkbox">
         <header class="sg-section__head">
@@ -2679,7 +2130,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Radio ========== -->
       <section class="sg-section" id="components-radio" data-screen-label="Radio">
         <header class="sg-section__head">
@@ -2732,7 +2182,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Switch ========== -->
       <section class="sg-section" id="components-switch" data-screen-label="Switch">
         <header class="sg-section__head">
@@ -2783,7 +2232,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Slider ========== -->
       <section class="sg-section" id="components-slider" data-screen-label="Slider">
         <header class="sg-section__head">
@@ -2822,7 +2270,319 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
         </div>
 
       </section>
+      <!-- ========== Date picker ========== -->
+      <section class="sg-section" id="components-date-picker" data-screen-label="Date picker">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Date picker</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <strong>Visual structure only.</strong> Actual calendar logic (current month, navigation, validation) is the author's responsibility — typically driven by a JS library (flatpickr, vanilla-calendar) or server-rendered template. v0.4.0 = docked variant. Modal + modal-input variants reuse internals + dialog wrapper.
+          </p>
 
+          <a class="sg-lab-link t-label-large" href="modules/date-time/lab-date-time-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Docked — sample static layout</h3>
+          <div class="sg-row" style="align-items: flex-start;">
+            <div class="ax-date-picker">
+              <header class="ax-date-picker__header">
+                <span class="ax-date-picker__supporting">날짜 선택</span>
+                <span class="ax-date-picker__headline">2026년 5월 15일</span>
+              </header>
+              <nav class="ax-date-picker__nav" aria-label="월 선택">
+                <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="이전 달">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_left</span>
+                </button>
+                <span class="ax-date-picker__nav-label">2026년 5월</span>
+                <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="다음 달">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </button>
+              </nav>
+              <div class="ax-date-picker__weekdays" aria-hidden="true">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="ax-date-picker__grid" role="grid">
+                <button type="button" class="ax-date-picker__cell is-outside">26</button>
+                <button type="button" class="ax-date-picker__cell is-outside">27</button>
+                <button type="button" class="ax-date-picker__cell is-outside">28</button>
+                <button type="button" class="ax-date-picker__cell is-outside">29</button>
+                <button type="button" class="ax-date-picker__cell is-outside">30</button>
+                <button type="button" class="ax-date-picker__cell">1</button>
+                <button type="button" class="ax-date-picker__cell">2</button>
+
+                <button type="button" class="ax-date-picker__cell is-today">3</button>
+                <button type="button" class="ax-date-picker__cell">4</button>
+                <button type="button" class="ax-date-picker__cell">5</button>
+                <button type="button" class="ax-date-picker__cell">6</button>
+                <button type="button" class="ax-date-picker__cell">7</button>
+                <button type="button" class="ax-date-picker__cell">8</button>
+                <button type="button" class="ax-date-picker__cell">9</button>
+
+                <button type="button" class="ax-date-picker__cell">10</button>
+                <button type="button" class="ax-date-picker__cell is-in-range is-range-start">11</button>
+                <button type="button" class="ax-date-picker__cell is-in-range">12</button>
+                <button type="button" class="ax-date-picker__cell is-in-range">13</button>
+                <button type="button" class="ax-date-picker__cell is-in-range">14</button>
+                <button type="button" class="ax-date-picker__cell is-selected" aria-selected="true">15</button>
+                <button type="button" class="ax-date-picker__cell">16</button>
+
+                <button type="button" class="ax-date-picker__cell">17</button>
+                <button type="button" class="ax-date-picker__cell">18</button>
+                <button type="button" class="ax-date-picker__cell">19</button>
+                <button type="button" class="ax-date-picker__cell">20</button>
+                <button type="button" class="ax-date-picker__cell">21</button>
+                <button type="button" class="ax-date-picker__cell">22</button>
+                <button type="button" class="ax-date-picker__cell">23</button>
+
+                <button type="button" class="ax-date-picker__cell">24</button>
+                <button type="button" class="ax-date-picker__cell">25</button>
+                <button type="button" class="ax-date-picker__cell">26</button>
+                <button type="button" class="ax-date-picker__cell">27</button>
+                <button type="button" class="ax-date-picker__cell">28</button>
+                <button type="button" class="ax-date-picker__cell">29</button>
+                <button type="button" class="ax-date-picker__cell">30</button>
+
+                <button type="button" class="ax-date-picker__cell">31</button>
+                <button type="button" class="ax-date-picker__cell is-outside">1</button>
+                <button type="button" class="ax-date-picker__cell is-outside">2</button>
+                <button type="button" class="ax-date-picker__cell is-outside">3</button>
+                <button type="button" class="ax-date-picker__cell is-outside">4</button>
+                <button type="button" class="ax-date-picker__cell is-outside">5</button>
+                <button type="button" class="ax-date-picker__cell is-outside">6</button>
+              </div>
+            </div>
+          </div>
+          <p class="sg-helper">15일 = selected (primary fill), 11일 = range-start (primary fill, leading 모서리 둥글), 12-14일 = in-range band (secondary-container), 3일 = today (primary outline). 회색 날짜 = is-outside (38% opacity).</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Usage patterns (reference)</h3>
+          <p class="sg-helper">Date picker는 단독 사용보다 다음 3 패턴 권장 — Jetpack Compose <code>DatePickerDocked</code> / <code>DatePickerModal</code> / <code>DatePickerModalInput</code>와 동일:</p>
+          <ul class="sg-helper" style="padding-inline-start: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs);">
+            <li><strong>Docked</strong> — readonly text-field + trailing 달력 icon → popup으로 calendar 표시 (작은 form 안에서 inline)</li>
+            <li><strong>Modal</strong> — <code>.dialog</code>로 wrap + 취소/확인 button (full calendar grid)</li>
+            <li><strong>Modal-input</strong> — dialog 안에 text-field만 (calendar 안 보이고 직접 입력 — MM/DD/YYYY 같은)</li>
+          </ul>
+          <p class="sg-helper">실제 popup 위치/dismiss/날짜 계산은 author/JS 영역. 이 시스템은 <em>visual primitives</em>만 — calendar grid, date cell 상태 (today/selected/range/outside).</p>
+        </div>
+      </section>
+      <!-- ========== Time picker ========== -->
+      <section class="sg-section" id="components-time-picker" data-screen-label="Time picker">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Time picker</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <strong>Visual structure only.</strong> Input variant uses real <code>&lt;input type="text" inputmode="numeric"&gt;</code> for typeable HH/MM, and <code>&lt;input type="radio"&gt;</code> + <code>&lt;label&gt;</code> for AM/PM (single-select, CSS-only). Clock dial drag interaction stays in author code.
+          </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/date-time/lab-date-time-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Input variant — type to enter time</h3>
+          <div class="sg-row">
+            <div class="ax-time-picker">
+              <span class="ax-time-picker__supporting">시간 입력</span>
+              <div class="ax-time-picker__inputs">
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field is-selected"
+                       aria-label="Hour" value="10">
+                <span class="ax-time-picker__separator">:</span>
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field"
+                       aria-label="Minute" value="30">
+
+                <fieldset class="ax-time-picker__period">
+                  <legend class="u-vh">AM or PM</legend>
+                  <input type="radio" name="sg-period" id="sg-period-am"
+                         class="ax-time-picker__period-input" checked>
+                  <label for="sg-period-am" class="ax-time-picker__period-btn">AM</label>
+                  <input type="radio" name="sg-period" id="sg-period-pm"
+                         class="ax-time-picker__period-input">
+                  <label for="sg-period-pm" class="ax-time-picker__period-btn">PM</label>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+          <p class="sg-helper">시 (10) = 선택됨 (primary-container 채워짐). 분 (30) = 미선택. AM/PM = radio라 CSS-only로 클릭 토글, 키보드 화살표로 이동 가능. 사이에 1px outline 색 divider.</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">24-hour mode — period selector hidden</h3>
+          <p class="sg-helper"><code>.is-24h</code> modifier로 AM/PM selector 숨김. Compose <code>is24Hour=true</code>와 동일.</p>
+          <div class="sg-row">
+            <div class="ax-time-picker is-24h">
+              <span class="ax-time-picker__supporting">시간 입력 (24시간)</span>
+              <div class="ax-time-picker__inputs">
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field is-selected"
+                       aria-label="Hour" value="14">
+                <span class="ax-time-picker__separator">:</span>
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field"
+                       aria-label="Minute" value="30">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Dial variant — container scaffolding only</h3>
+          <p class="sg-helper">12-hour 라벨 + selector handle은 author/JS가 SVG 또는 absolute span으로 그림.</p>
+          <div class="sg-row">
+            <div class="ax-time-picker">
+              <span class="ax-time-picker__supporting">시간 선택</span>
+              <div class="ax-time-picker__dial" aria-label="시간 다이얼"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Usage patterns (reference)</h3>
+          <p class="sg-helper">Date/Time picker는 단독으로 잘 안 씀. Compose가 정의한 3 패턴 중 선택:</p>
+          <ul class="sg-helper" style="padding-inline-start: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs);">
+            <li><strong>Docked</strong> — text-field trailing icon 클릭 → popup으로 calendar/dial 표시 (form 안에서 inline 사용)</li>
+            <li><strong>Modal</strong> — <code>.dialog</code>로 wrap + 취소/확인 button (모바일에서 가장 흔한 패턴)</li>
+            <li><strong>Modal-input</strong> — dialog 안에 text-field만 (calendar 안 보이고 직접 타이핑)</li>
+          </ul>
+          <p class="sg-helper">실제 wiring (popup show/hide, dialog open/close)은 author/JS 영역. 이 시스템은 <em>visual structure</em>만 제공.</p>
+        </div>
+      </section>
+      <!-- ========== Chip ========== -->
+      <section class="sg-section" id="components-chip" data-screen-label="Chip">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Chip</h2>
+
+          <a class="sg-lab-link t-label-large" href="modules/chip/lab-chip-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants — 4 types</h3>
+          <div class="sg-row">
+            <button class="chip chip--assist has-state-layer" type="button">
+              <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">info</span>
+              <span class="chip__label">Assist</span>
+            </button>
+            <button class="chip chip--filter has-state-layer" type="button" aria-pressed="false">
+              <span class="chip__label">Filter</span>
+            </button>
+            <span class="chip chip--input has-state-layer">
+              <span class="chip__label">Input value</span>
+              <span class="material-symbols-rounded notranslate chip__trailing-icon" translate="no" aria-hidden="true" draggable="false">close</span>
+            </span>
+            <button class="chip chip--suggestion has-state-layer" type="button">
+              <span class="chip__label">Suggestion</span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="chip chip--filter has-state-layer" aria-pressed="false"&gt;
+  &lt;span class="chip__label"&gt;Filter&lt;/span&gt;
+&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filter — selected</h3>
+          <div class="sg-row">
+            <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="true">
+              <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">check</span>
+              <span class="chip__label">Selected</span>
+            </button>
+            <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="false">
+              <span class="chip__label">Unselected</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Input — with avatar leading</h3>
+          <div class="sg-row">
+            <span class="chip chip--input has-state-layer">
+              <span class="chip__leading-icon ax-avatar is-size-xs"><span>HK</span></span>
+              <span class="chip__label">한가람</span>
+              <span class="material-symbols-rounded notranslate chip__trailing-icon" translate="no" aria-hidden="true" draggable="false">close</span>
+            </span>
+          </div>
+          <p class="t-body-small sg-helper">Input chip leading slot accepts a 24px avatar (size override on the leading element).</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Disabled</h3>
+          <div class="sg-row">
+            <button class="chip chip--assist has-state-layer" type="button" disabled>
+              <span class="chip__label">Assist</span>
+            </button>
+            <button class="chip chip--filter has-state-layer" type="button" aria-pressed="false" disabled>
+              <span class="chip__label">Filter</span>
+            </button>
+            <button class="chip chip--input has-state-layer" type="button" disabled>
+              <span class="chip__label">Input</span>
+            </button>
+            <button class="chip chip--suggestion has-state-layer" type="button" disabled>
+              <span class="chip__label">Suggestion</span>
+            </button>
+          </div>
+        </div>
+      </section>
+      <!-- ========== Badge ========== -->
+      <section class="sg-section" id="components-badge" data-screen-label="Badge">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Badge</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Status indicator. Two variants: small (6×6 dot) / large (numeric label, 16×16 to 16×34). Anchored top-trailing of host. Apply <code>.has-badge</code> to host for positioning context.
+          </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/_records/BADGE-RECORD-AUDIT.md" aria-label="Open record audit"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">article</span><span>Record audit</span></a>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Small (dot)</h3>
+          <p class="sg-helper">Used to mark unread / new / changed state without exact count.</p>
+          <div class="sg-row">
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Notifications (unread)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
+              <span class="ax-badge"></span>
+            </button>
+            <button type="button" class="ax-icon-button is-tonal has-badge" aria-label="Messages">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+              <span class="ax-badge"></span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="ax-icon-button is-standard has-badge" aria-label="Notifications (unread)"&gt;
+  &lt;svg ...&gt;&lt;/svg&gt;
+  &lt;span class="ax-badge"&gt;&lt;/span&gt;
+&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Large (numeric)</h3>
+          <p class="sg-helper">Counts up to ~3 chars. Use <code>99+</code> for overflow.</p>
+          <div class="sg-row">
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Notifications (3)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
+              <span class="ax-badge is-large">3</span>
+            </button>
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Messages (12)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+              <span class="ax-badge is-large">12</span>
+            </button>
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Messages (99 plus)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+              <span class="ax-badge is-large">99+</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Inline (manual placement)</h3>
+          <p class="sg-helper">Use <code>.is-inline</code> to opt out of absolute positioning.</p>
+          <div class="sg-row" style="align-items: center;">
+            <span class="t-body-large">새 알림 <span class="ax-badge is-large is-inline">5</span></span>
+            <span class="t-body-large">Updates <span class="ax-badge is-large is-inline">New</span></span>
+          </div>
+        </div>
+      </section>
       <!-- ========== Dialog ========== -->
       <section class="sg-section" id="components-dialog" data-screen-label="Dialog">
         <header class="sg-section__head">
@@ -2877,7 +2637,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           <p class="t-body-small sg-helper">실제 viewport 크기로 띄우려면 위 버튼을 사용. body scroll이 잠깁니다.</p>
         </div>
       </section>
-
       <!-- ========== Sheet ========== -->
       <section class="sg-section" id="components-sheet" data-screen-label="Sheet">
         <header class="sg-section__head">
@@ -2936,12 +2695,13 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Snackbar ========== -->
       <section class="sg-section" id="components-snackbar" data-screen-label="Snackbar">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Snackbar</h2>
+
+          <a class="sg-lab-link t-label-large" href="modules/snackbar/lab-snackbar-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -2971,7 +2731,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
 &lt;/div&gt;</code></pre>
         </div>
       </section>
-
       <!-- ========== Tooltip ========== -->
       <section class="sg-section" id="components-tooltip" data-screen-label="Tooltip">
         <header class="sg-section__head">
@@ -2980,6 +2739,8 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
             Two variants: plain (short label, inverse-surface) / rich (subhead + body + actions, surface-container). Static <code>.is-open</code> for demo; positioning to a trigger is the author's job.
           </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/tooltip/lab-tooltip-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
 
         <div class="sg-subsection">
@@ -3023,7 +2784,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
 &lt;/div&gt;</code></pre>
         </div>
       </section>
-
       <!-- ========== Loading indicator ========== -->
       <section class="sg-section" id="components-loading" data-screen-label="Loading">
         <header class="sg-section__head">
@@ -3082,7 +2842,6 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
           </div>
         </div>
       </section>
-
       <!-- ========== Progress indicator ========== -->
       <section class="sg-section" id="components-progress" data-screen-label="Progress">
         <header class="sg-section__head">
@@ -3157,65 +2916,300 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
 &lt;/span&gt;</code></pre>
         </div>
       </section>
+      <!-- ========== Avatar ========== -->
+      <section class="sg-section" id="components-avatar" data-screen-label="Avatar">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Avatar</h2>
 
-      <!-- ========== Live modals (rendered into a portal at body root) ========== -->
-      <div id="sg-portal" aria-hidden="true">
-        <div class="modal-scrim" data-open="false" data-portal-scrim></div>
-        <dialog class="dialog dialog--basic" id="sg-modal-basic">
-          <span class="dialog__icon">
-            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
-          </span>
-          <h2 class="dialog__headline">변경 사항을 저장하시겠습니까?</h2>
-          <p class="dialog__supporting">저장하지 않으면 마지막 편집 이후의 변경 사항이 모두 사라집니다.</p>
-          <div class="dialog__actions">
-            <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>취소</button>
-            <button class="ax-button is-filled has-state-layer t-label-large" type="button" data-close-modal>저장</button>
+          <a class="sg-lab-link t-label-large" href="modules/_records/AVATAR-RECORD-AUDIT.md" aria-label="Open record audit"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">article</span><span>Record audit</span></a>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Sizes</h3>
+          <div class="sg-row">
+            <span class="ax-avatar is-size-sm"><span>지원</span></span>
+            <span class="ax-avatar"><span>지원</span></span>
+            <span class="ax-avatar is-size-lg"><span>지원</span></span>
           </div>
-        </dialog>
-        <dialog class="dialog dialog--full-screen" id="sg-modal-full">
-          <header class="app-bar app-bar--small dialog__app-bar">
-            <span class="app-bar__leading">
-              <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Close" data-close-modal>
-                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
-              </button>
+          <pre class="sg-snippet"><code>&lt;span class="ax-avatar is-size-lg"&gt;&lt;span&gt;지원&lt;/span&gt;&lt;/span&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants</h3>
+          <div class="sg-row">
+            <span class="ax-avatar"><span>HK</span></span>
+            <span class="ax-avatar"><span>도윤</span></span>
+            <span class="ax-avatar">
+              <img alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%237D5260'/%3E%3Ccircle cx='20' cy='16' r='6' fill='%23FFD8E4'/%3E%3Crect x='8' y='24' width='24' height='12' rx='6' fill='%23FFD8E4'/%3E%3C/svg%3E" />
             </span>
-            <h1 class="app-bar__title t-title-large">새 글 작성</h1>
-            <span class="app-bar__trailing">
-              <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>게시</button>
-            </span>
-          </header>
-          <div class="dialog__body">
-            <div class="text-field text-field--outlined" style="max-width: 600px;">
-              <div class="text-field__container">
-                <textarea class="text-field__input" id="tf-auto-016" placeholder=" " rows="6"></textarea>
-                <label class="text-field__label" for="tf-auto-016">무슨 일이 있었나요?</label>
+          </div>
+        </div>
+      </section>
+      <!-- ========== List ========== -->
+      <section class="sg-section" id="components-list" data-screen-label="List">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">List</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Container 1+ list items. Single/two/three-line variants. Slots: leading (icon 24 / image 56), content (overline + label + supporting), trailing (icon 24 / text). Selection via <code>.is-selected</code> or <code>aria-selected="true"</code>. Expressive shape state machine: rest → corner-extra-small, hover → corner-medium, focus/pressed/selected → corner-large.
+          </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/list/lab-list-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Standard — single-line</h3>
+          <div class="ax-list" style="max-width: 360px;" role="list">
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 3H5c-1.11 0-2 .89-2 2v14c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 16H5V5h14v14zm-7-2c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">홈</span>
+              </span>
+              <span class="ax-list__trailing-text">⌘1</span>
+            </button>
+            <hr class="ax-list__divider" />
+            <button type="button" class="ax-list__item is-selected" role="listitem" aria-selected="true">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">내 프로필</span>
+              </span>
+              <span class="ax-list__trailing-text">⌘P</span>
+            </button>
+            <hr class="ax-list__divider" />
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">설정</span>
+              </span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-list" role="list"&gt;
+  &lt;button class="ax-list__item" role="listitem"&gt;
+    &lt;span class="ax-list__leading"&gt;&lt;svg .../&gt;&lt;/span&gt;
+    &lt;span class="ax-list__content"&gt;
+      &lt;span class="ax-list__label"&gt;홈&lt;/span&gt;
+    &lt;/span&gt;
+    &lt;span class="ax-list__trailing-text"&gt;⌘1&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;hr class="ax-list__divider" /&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Two-line — overline + label + supporting</h3>
+          <div class="ax-list" style="max-width: 360px;" role="list">
+            <button type="button" class="ax-list__item ax-list__item--two-line" role="listitem">
+              <span class="ax-list__leading">
+                <span class="ax-avatar"><span>도윤</span></span>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">이도윤</span>
+                <span class="ax-list__supporting">새 게시물을 올렸습니다 · 5분 전</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+            <hr class="ax-list__divider" />
+            <button type="button" class="ax-list__item ax-list__item--two-line" role="listitem">
+              <span class="ax-list__leading">
+                <span class="ax-avatar"><span>가람</span></span>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">가람</span>
+                <span class="ax-list__supporting">@karam · ActivityPub 인스턴스에서 팔로우</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Three-line — overline + label + 2-line supporting</h3>
+          <div class="ax-list" style="max-width: 480px;" role="list">
+            <button type="button" class="ax-list__item ax-list__item--three-line" role="listitem">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__overline">받은편지함</span>
+                <span class="ax-list__label">알림 설정 안내</span>
+                <span class="ax-list__supporting">새 댓글, 좋아요, 팔로우 알림을 받는 방식을 설정에서 관리할 수 있습니다. 푸시 알림은 모바일 앱에서만 작동합니다.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Segmented — gap + per-item rounding</h3>
+          <div class="ax-list ax-list--segmented" style="max-width: 360px;" role="list">
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__content">
+                <span class="ax-list__label">개인정보</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__content">
+                <span class="ax-list__label">알림</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+            <button type="button" class="ax-list__item" disabled role="listitem">
+              <span class="ax-list__content">
+                <span class="ax-list__label">베타 기능 (비활성)</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+      <!-- ========== Carousel ========== -->
+      <section class="sg-section" id="components-carousel" data-screen-label="Carousel">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Carousel</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Native horizontal scroll + scroll-snap. Item corner = corner-extra-large (28dp). Multi-browse default mixes large/medium/small items; hero variant features one large + small queue; uncontained bleeds past trailing edge for content-first browsing.
+          </p>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <em>v0.3.5 scope</em>: multi-browse, hero, uncontained. Center-aligned hero, multi-aspect, full-screen, item-morph animation deferred.
+          </p>
+
+          <a class="sg-lab-link t-label-large" href="modules/carousel/lab-carousel-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Multi-browse — large / medium / small mix</h3>
+          <div class="ax-carousel">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--large">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">서울의 하루</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">디자인 노트</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">개발 일지</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary-container);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary-container);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary-container);"></div>
+                </div>
               </div>
             </div>
           </div>
-        </dialog>
-        <aside class="sheet sheet--bottom-modal" id="sg-sheet-bottom">
-          <div class="sheet__handle" aria-hidden="true"></div>
-          <header class="sheet__header">
-            <h2 class="sheet__title t-title-large">공유</h2>
-          </header>
-          <div class="sheet__body">
-            <div class="sg-row">
-              <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-close-modal>메시지</button>
-              <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-close-modal>메일</button>
-              <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-close-modal>링크 복사</button>
+          <pre class="sg-snippet"><code>&lt;div class="ax-carousel"&gt;
+  &lt;div class="ax-carousel__track"&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--large"&gt;
+      &lt;div class="ax-carousel__item-media"&gt;&lt;img .../&gt;&lt;/div&gt;
+      &lt;span class="ax-carousel__item-label"&gt;서울의 하루&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--medium"&gt;...&lt;/div&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--small"&gt;...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Hero — featured + queue</h3>
+          <div class="ax-carousel ax-carousel--hero">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--large">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));"></div>
+                </div>
+                <span class="ax-carousel__item-label">오늘의 추천 게시물</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary);"></div>
+                </div>
+              </div>
             </div>
           </div>
-        </aside>
-        <aside class="sheet sheet--side-modal" id="sg-sheet-side">
-          <header class="sheet__header">
-            <h2 class="sheet__title t-title-large">필터</h2>
-          </header>
-          <div class="sheet__body">
-            <p class="t-body-medium">사이드 시트에서 다양한 필터 컨트롤을 배치할 수 있습니다.</p>
-            <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal style="margin-top: var(--space-md);">닫기</button>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Uncontained — items bleed past trailing edge</h3>
+          <p class="sg-helper">No padding on trailing side — items extend off-screen. Drag/scroll to reveal.</p>
+          <div class="ax-carousel ax-carousel--uncontained">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 1</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 2</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 3</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 4</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 5</span>
+              </div>
+            </div>
           </div>
-        </aside>
-      </div>
+        </div>
+      </section>
     </main>
   </div>
 

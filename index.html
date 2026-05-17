@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="styleguide/stylesheets/base.css">
 <style>
   body {
-    max-width: 960px;
+    max-width: 1040px;
     margin: 0 auto;
-    padding: var(--space-xl, 48px) var(--space-md, 16px);
+    padding: clamp(24px, 7vw, 72px) var(--space-md, 16px);
     color: var(--md-sys-color-on-background);
     background-color: var(--md-sys-color-background);
   }
@@ -30,7 +30,7 @@
     margin: 0;
     color: var(--md-sys-color-on-background);
     font-family: var(--md-sys-typescale-display-medium-font);
-    font-size: var(--md-sys-typescale-display-medium-size);
+    font-size: clamp(2.25rem, 10vw, var(--md-sys-typescale-display-medium-size));
     line-height: var(--md-sys-typescale-display-medium-line-height);
   }
   .lede {
@@ -49,6 +49,7 @@
   .nav-buttons a {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 40px;
     padding-inline: 24px;
     border-radius: var(--md-sys-shape-corner-pill-stable, 9999px);
@@ -58,6 +59,15 @@
     font-family: var(--md-sys-typescale-label-large-font);
     font-size: var(--md-sys-typescale-label-large-size);
     font-weight: 500;
+  }
+  @media (max-width: 560px) {
+    .nav-buttons {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .nav-buttons a {
+      min-height: 48px;
+    }
   }
   .nav-buttons a.secondary {
     background-color: var(--md-sys-color-secondary-container);
@@ -87,7 +97,7 @@
   }
   .surface-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
     gap: var(--space-md, 16px);
     margin-block-start: var(--space-md, 16px);
   }
@@ -117,6 +127,15 @@
     gap: var(--space-xs, 4px) var(--space-md, 16px);
     grid-template-columns: max-content minmax(0, 1fr);
     align-items: baseline;
+  }
+  @media (max-width: 560px) {
+    .layer-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-xs, 4px);
+    }
+    .layer-grid dt {
+      margin-block-start: var(--space-sm, 8px);
+    }
   }
   .layer-grid dt {
     color: var(--md-sys-color-on-surface);
@@ -156,6 +175,7 @@
     <a href="styleguide/">Styleguide</a>
     <a href="README.md" class="secondary">README</a>
     <a href="README.ko.md" class="secondary">README.ko</a>
+    <a href="https://github.com/Jiwoon-Kim/axismundi" class="secondary">GitHub repository</a>
     <a href="docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md" class="tertiary">Templates note</a>
   </div>
 </header>
@@ -163,15 +183,14 @@
 <section aria-labelledby="status-heading">
   <h2 id="status-heading">Current State</h2>
   <p>
-    Wave 1 component coverage is complete. v3.5.14 prepares the repository for
-    public GitHub and GitHub Pages; repository creation and Pages activation
-    remain the next release gate.
+    Wave 1 component coverage is complete. The repository is public on GitHub
+    and this page is served from GitHub Pages.
   </p>
   <dl class="layer-grid">
     <dt>v3.5.12</dt><dd>Wave 1 components closed, 9 / 9.</dd>
     <dt>v3.5.13</dt><dd>Wave 1 cleanup closed, including size variants, list token coverage, and records.</dd>
     <dt>v3.5.14</dt><dd>Publish prep: README, license, CI, path audit, and publish mirror checks.</dd>
-    <dt>v3.5.15</dt><dd>Planned GitHub repository <code>axismundi</code> and GitHub Pages activation.</dd>
+    <dt>v3.5.15</dt><dd>GitHub repository <code>axismundi</code> and GitHub Pages activation completed.</dd>
   </dl>
 </section>
 
@@ -197,6 +216,11 @@
       <h3>Templates</h3>
       <p>Planned page-layout and composition preview category.</p>
       <a href="docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md">Read category note</a>
+    </article>
+    <article class="surface">
+      <h3>Repository</h3>
+      <p>Source, audits, validators, and release records.</p>
+      <a href="https://github.com/Jiwoon-Kim/axismundi">Open GitHub repository</a>
     </article>
   </div>
 </section>

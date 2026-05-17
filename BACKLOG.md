@@ -29,10 +29,11 @@ losing the observations.
 ### 1. Inline code font-size inheritance in helper text
 
 - **Bucket**: D (theme baseline typography)
+- **Status**: **Resolved at v3.5.16.** `style-guide.html` now includes `.sg-helper code, .t-body-small code { font-size: inherit; }` as part of the styleguide modernization side-fix lane.
 - **Source**: v3.4.3 visual QA — found while reviewing Material Symbols conversion in `style-guide.html`.
 - **Issue**: `.sg-helper` is `font-size: 12px` (t-body-small range) but inline `<code>` defaults to 14px, creating a visible size jump inside helper sentences. Pattern repeats throughout the styleguide.
 - **Likely fix**: `.sg-helper code, .t-body-small code { font-size: inherit; }` (and possibly extend to all small-typography variants).
-- **Target**: TBD — candidate for `v3.4.4 Styleguide Typography QA` or as a side-fix in any future styleguide-touching release.
+- **Target**: ~~TBD — candidate for `v3.4.4 Styleguide Typography QA` or as a side-fix in any future styleguide-touching release~~ — **RESOLVED at v3.5.16.**
 - **Scope risk if forced into v3.4.3.1**: small CSS change, but would expand the patch's stated scope (icon-button visual QA fixes) — better held separately.
 
 ### 2. Avatar size token consistency across components
@@ -94,6 +95,7 @@ losing the observations.
 ### 10. Lab ripple module — runtime verification in pattern page
 
 - **Bucket**: D (lab module runtime, scoped to `lab-ripple-pattern.html` only)
+- **Status**: **Resolved at v3.5.6.** Ripple v2 rewrote the runtime contract and pattern page with `data-ax-ripple`, bounded/unbounded variants, reduced-motion behavior, and Playwright-backed QA. The original v3.4.4.1 visual-verification concern is absorbed by the v3.5.6 Ripple v2 cycle.
 - **Source**: v3.4.4.1 visual QA follow-up. User noticed ripple effect not visible in module pattern pages. Initial concern was that ripple was never wired anywhere; on reflection user confirmed ripple is intentionally a lab module (not promoted to baseline theme interaction).
 - **Likely cause**: Visual confusion compounded by what was then item 9 — when the theme palette did not toggle, state-layer color tokens also appeared unchanged, making any state-layer / ripple effect harder to perceive. Verification under correct palette toggling was needed before declaring ripple itself broken.
 - **Status update at v3.4.5**: item 9 is resolved (cohort-fix bundled with v3.4.5). The verification path is now unblocked.
@@ -102,11 +104,12 @@ losing the observations.
   2. Re-verify ripple in `lab-ripple-pattern.html` (the only place it should run): hover + press on `ax-button` / `ax-icon-button` / `ax-chip` demo instances under both light and dark themes.
   3. If ripple still does not fire, inspect `lab-ripple.js` event binding scope vs. `.prose` ancestor bail-out.
 - **NOT in scope**: promoting ripple to baseline theme interaction (`style-guide.html` global). That is a separate phase under Charter §1 (theme interaction layer) and intentionally not part of this BACKLOG item.
-- **Target**: post-v3.4.5 visual-QA pass. Not blocking v3.4.6 candidate choice.
+- **Target**: ~~post-v3.4.5 visual-QA pass~~ — **RESOLVED at v3.5.6.**
 
 ### 13. `publish_styleguide.py` does not copy `theme.js` to publish surface
 
 - **Bucket**: D / build pipeline
+- **Status**: **Resolved at v3.5.16.** Option A adopted: `publish_styleguide.py` copies `theme.js` to `styleguide/scripts/theme.js` when present. This removes the publish-surface 404 while preserving `/styleguide/` as a generated mirror.
 - **Source**: v3.4.5.1 incidental discovery. After patching `theme.js syncSwitchers` selector, verification revealed that `styleguide/scripts/` only contains `style-guide.js`. `theme.js` is referenced from `styleguide/index.html` (and `blocks.html`, `prose.html`) but is not present, producing a 404 on the published mirror.
 - **Why it has been invisible**: `style-guide.js` carries its own theme handler with self-sync, which covers the styleguide UX. The 404 surfaces only in the browser console; functionally the styleguide theme switcher works because `style-guide.js`'s handler runs first and theme.js fails silently when not present. Module pattern pages are deliberately NOT published (per `modules/README.md` policy), so the theme.js requirement on the publish surface was never enforced.
 - **Scope decision pending**:
@@ -114,7 +117,7 @@ losing the observations.
   - **Option B** — remove the `<script src="scripts/theme.js">` reference from `style-guide.html` / `blocks.html` / `prose.html` since `style-guide.js` is the actual handler there: tightens the publish contract, makes the styleguide explicit about which JS it depends on, but means `theme.js` is genuinely lab-only.
   - **Option C** — leave as-is and document: the 404 is harmless given current architecture. Document the asymmetry in `tools/generators/publish_styleguide.py` and accept that module pattern pages are local-only.
 - **Decision criteria**: tied to BACKLOG #11 (Public Surface Reframe). Option choice should happen alongside v3.5.0's broader publish-policy decisions, not as a one-off patch.
-- **Target**: v3.4.x or v3.5.0 depending on whether #11 is in progress when this is addressed. Not blocking v3.4.6 candidate.
+- **Target**: ~~v3.4.x or v3.5.0 depending on whether #11 is in progress when this is addressed~~ — **RESOLVED at v3.5.16.**
 - **Constraints**: this BACKLOG entry is recorded for traceability; the issue does not break currently-shipped behavior.
 
 ### 14. Material Symbols ligature layout shift on first load
@@ -169,6 +172,7 @@ font-size: 48px  → inline-size 48px  (large surfaces)
 ### 11. Public surface reframe — styleguide ⇄ module lab UX
 
 - **Bucket**: E (documentation UX) — first BACKLOG item in Bucket E so far
+- **Status**: **Partially resolved at v3.5.0; remaining UX superseded by #34 / v3.5.16.** The framework portion landed in the Public Surface Reframe docs. The concrete styleguide-to-module navigation work is now tracked by BACKLOG #34 and implemented in the v3.5.16 modernization cycle.
 - **Target**: v3.5.0 candidate (not v3.4.x). v3.4.x is internal-structure stabilization; v3.5.0 is public-surface reframe.
 - **Source**: v3.4.5 mid-discussion. After v3.4.0–v3.4.4.1 the boundary between baseline (styleguide) and extension (lab modules) has crystallized: the styleguide became an uncontaminated baseline catalog, lab modules became extension/interaction labs with their own pattern pages, and the icon system introduced a separate ship-track for chrome glyphs and brand specimens. The current public surface (GitHub Pages entry, mirror layout) still reflects the older "styleguide = mirror of everything" assumption and needs reframing to match the new structure.
 
@@ -318,7 +322,7 @@ v3.4.6 intentionally implements only the minimal accessible hover/focus runtime.
 ### 17. Text Input Corpus / Ontology Audit
 
 - **Bucket**: E/F — Lab module / plugin candidate (deliberately bucket-ambiguous — that ambiguity is the reason this entry exists)
-- **Status**: Deferred
+- **Status**: **Resolved by v3.5.7 Text field + v3.5.8 Search bar.** The text-input corpus split into Text field (native form-control shell, textarea, validation states, WP form boundary) and Search bar (distinct search affordance + extracted runtime audit). Remaining form/editor surfaces should be opened as new targeted items rather than keeping this broad corpus audit open.
 - **Target**: v3.4.x or post-pilot gap audit (likely paired with or following Pilot Block Theme Probe)
 - **Source**: v3.4.6 / v3.4.7 mid-discussion. After tooltip extraction closed the Beer-CSS interaction-module family, attention turned to text-input components — and immediately surfaced that they don't cleanly map to a single WordPress core block, editor component, or HTML form control.
 
@@ -759,7 +763,7 @@ After v3.4.9 stabilizes, elevated variants become a straightforward extension wi
 ### 28. Icon button public specimen SVG wording cleanup (v3.5.2 Phase 0 Risk 4)
 
 - **Bucket**: E — Documentation / public specimen cleanup
-- **Status**: Open
+- **Status**: **Resolved at v3.5.16.** `style-guide.html #components-icon-button` public snippet/helper wording now teaches Material Symbols markup instead of stale inline SVG examples.
 - **Target**: v3.5.x public-surface cleanup release (NOT v3.5.2 close)
 - **Source**: `docs/v3.5.2/ICON-BUTTON-PHASE-0-REPORT.md` Risk 4 + `ICON-BUTTON-SPEC-AUDIT.md` §2.3 / §7
 
@@ -1404,6 +1408,135 @@ README.md
 README.ko.md
 index.html
 docs/v3.5.14/PUBLISH-PREP-PHASE-0-REPORT.md
+```
+
+### 36. v4.0 directory restructure — retire `lab` naming
+
+- **Bucket**: A — Constitution / architecture / repository structure
+- **Status**: Open
+- **Priority**: Future architecture freeze
+- **Target**: v4.0 public release planning
+- **Source**: v3.5.16 framing decision
+
+**The concern**:
+
+`products/reference-implementations/axismundi-lab/` was named when modules were
+primarily validation / experimentation surfaces designed to protect baseline
+CSS from contamination. After Wave 1 closure and public GitHub Pages publish,
+many modules are now canonical validated implementation workspaces.
+
+The current naming still works, but it carries legacy semantics:
+
+```txt
+lab = validation-only / internal / experimental
+```
+
+The intended future framing is closer to:
+
+```txt
+modules = canonical implementation workspace
+styleguide = public preview mirror
+templates = page-layout / composition preview layer
+```
+
+**Recommended v4.0 scope**:
+
+```txt
+- Decide final module-first product name.
+- Rename axismundi-lab/ to module-first name.
+- Consider hoisting modules to product root level.
+- Retire lab-* file prefixes where safe.
+- Rewrite publish_styleguide.py around the new source structure.
+- Update 50+ audit doc cross-references.
+- Update README / README.ko / index / Pages navigation.
+```
+
+**Why not v3.5.16**:
+
+- v3.5.15 just published the repo and Pages.
+- A structural rename would invalidate many freshly verified paths.
+- v3.5.16 can solve the immediate user-facing problem with framing and
+  navigation changes.
+- v4.0 is the correct architecture-freeze moment for a repository-wide
+  structure migration.
+
+**Cross-references**:
+
+```txt
+docs/v3.5.16/MODERNIZATION-AUDIT.md
+docs/v3.5.16/STALE-STATE-AUDIT.md
+docs/v3.5.16/STYLEGUIDE-MODERNIZATION-PHASE-0-PLAN.md
+```
+
+### 37. GitHub Pages dogfooding — rebuild docs shell with Axismundi navigation components
+
+- **Bucket**: E — Public surface / showcase UX
+- **Status**: Open
+- **Priority**: Medium after Wave 2 navigation closure
+- **Target**: v3.7.x+ after App bar / Nav bar / Nav rail / Tabs are closed
+- **Source**: v3.5.16 mobile-first Pages discussion
+
+**The opportunity**:
+
+Axismundi's public documentation should eventually use Axismundi components as
+its own docs shell:
+
+```txt
+Mobile:   Nav bar / bottom navigation
+Tablet:   Nav rail
+Desktop:  App bar + side navigation / tabs
+```
+
+That would make GitHub Pages a strong showcase: "this documentation site is
+built out of the design system it documents."
+
+**Why deferred**:
+
+The strongest dogfooding path depends on Wave 2 navigation components:
+
+```txt
+App bar
+Nav bar
+Nav rail
+Tabs
+Menu
+Toolbar
+```
+
+These are not closed yet. Implementing them ad hoc inside the docs shell during
+v3.5.16 would bypass the component audit discipline.
+
+**Allowed in v3.5.16**:
+
+- mobile-first responsive improvements to `index.html` and styleguide
+  navigation,
+- modest use of already-closed Wave 1 components (Button / Card / List),
+- no dependency on unclosed Wave 2 navigation primitives.
+
+**Future cycle shape**:
+
+```txt
+Phase 0:
+  Verify Wave 2 navigation component closure and choose docs shell architecture.
+
+Phase 1:
+  UX plan for mobile / tablet / desktop shell.
+
+Phase 2:
+  Implement docs shell dogfooding.
+
+Phase 3:
+  GitHub Pages visual QA across 390 / 768 / 1280+.
+
+Phase 5:
+  Public surface release close.
+```
+
+**Cross-references**:
+
+```txt
+docs/v3.5.16/STYLEGUIDE-MODERNIZATION-PHASE-0-PLAN.md
+docs/v3.5.0/MODULE-STATUS-MATRIX.md
 ```
 
 

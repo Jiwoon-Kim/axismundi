@@ -16,10 +16,10 @@ lab-<name> prefix on each module's CSS preserves identifiability after
 flattening (see lab/modules/README.md).
 
 Module JS, pattern HTML, and per-module audit docs are intentionally NOT
-copied to the publish surface — they are lab-internal artifacts. The
-flattened module CSS appears as an orphan on the publish surface (no
-HTML on the publish side links to it), which is the same asymmetry that
-existed at v3.3.2/v3.3.3/v3.3.4 when modules lived in flat lab/.
+copied into the /styleguide/ mirror. On repository-root GitHub Pages they
+remain browsable from their source-tree paths as validation specimens, not as
+canonical public API. The flattened module CSS exists so the styleguide mirror
+can display validated module styling while preserving source authority.
 
 Per Constitution Article 12: publishing surfaces are mirrors, not authorities.
 The /styleguide/ folder is a derived artifact. Edit the Axismundi lab source,
@@ -125,13 +125,22 @@ def main():
 
     print(f"  ✓ stylesheets/ ({css_count} files, paths rewritten)")
 
-    # 2. Copy scripts (mirror) — style-guide.js
+    # 2. Copy scripts (mirror) — style-guide.js plus theme.js when present.
+    #    style-guide.html, blocks.html, and prose.html still reference
+    #    scripts/theme.js. Copying it prevents a publish-surface 404 while
+    #    keeping /styleguide/ a mirror rather than a source authority.
     src_js = SOURCE / "scripts/style-guide.js"
     dst_js = PUBLISH / "scripts/style-guide.js"
     if src_js.exists():
         dst_js.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_js, dst_js)
         print(f"  ✓ scripts/style-guide.js")
+    src_theme_js = SOURCE / "scripts/theme.js"
+    dst_theme_js = PUBLISH / "scripts/theme.js"
+    if src_theme_js.exists():
+        dst_theme_js.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_theme_js, dst_theme_js)
+        print(f"  ✓ scripts/theme.js")
 
     # 3. Copy + rename style guide HTML files
     for src_name, dst_name in STYLE_GUIDES:
@@ -148,6 +157,14 @@ def main():
                 html = html.replace(f'href="{from_name}"', f'href="{to_name}"')
                 # Also `./` prefix variant
                 html = html.replace(f'href="./{from_name}"', f'href="{to_name}"')
+            # Lab module links are authored relative to axismundi-lab/.
+            # In the generated /styleguide/ mirror they need to point back to
+            # the repository-root source tree, where GitHub Pages serves the
+            # validation specimen files.
+            html = html.replace(
+                'href="modules/',
+                'href="../products/reference-implementations/axismundi-lab/modules/'
+            )
             # Add publish-mirror banner (HTML comment, no visible change)
             banner = (
                 "<!-- ============================================================\n"

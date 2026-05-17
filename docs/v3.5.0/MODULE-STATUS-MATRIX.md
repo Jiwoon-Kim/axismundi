@@ -208,8 +208,8 @@ style-guide baseline still does not load ripple.
 |---:|---|---|---|:---:|---|---|:---:|---|---|:---:|---|
 | 26 | Dialog | Feedback | Interaction Runtime | TODO | — | `dialog/` | Independent | — | — | 2 | Basic + full-screen; focus trap; backdrop click; ESC dismiss |
 | 27 | Sheet | Feedback | Interaction Runtime | TODO | — | `sheet/` | Independent | — | — | 2 | Bottom-modal + side-modal; drag-to-dismiss; often paired with Dialog |
-| 28 | Snackbar | Feedback | Interaction Runtime | **DONE** | `snackbar/` (v3.4.10) | `snackbar/` | Independent | — | — | done | Naming inconsistency → BACKLOG #18 (v3.5.0 sweep deferred to Phase 1B) |
-| 29 | Tooltip | Feedback | Interaction Runtime | **DONE** | `tooltip/` (v3.4.6) | `tooltip/` | Independent | — | — | done | Touch long-press + rich tooltip → BACKLOG #16 |
+| 28 | Snackbar | Feedback | Interaction Runtime | **DONE** | `snackbar/` (v3.4.10) | `snackbar/` | Independent | — | — | done | Legacy audit shape predates v3.5.0 3/4-doc framework; retained as DONE. Naming inconsistency → BACKLOG #18 |
+| 29 | Tooltip | Feedback | Interaction Runtime | **DONE** | `tooltip/` (v3.4.6) | `tooltip/` | Independent | — | — | done | Legacy audit shape predates v3.5.0 3/4-doc framework; retained as DONE. Touch long-press + rich tooltip → BACKLOG #16 |
 | 30 | Loading | Feedback | Component Full-Spec | TODO | — | `loading/` | Independent | — | — | 3 | Spinner family; lower complexity |
 | 31 | Progress | Feedback | Component Full-Spec | TODO | — | `progress/` | Independent | — | — | 3 | Linear + circular; determinate + indeterminate; wavy variant deferred (v1.5+) |
 

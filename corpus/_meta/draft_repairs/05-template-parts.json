@@ -1,0 +1,30 @@
+{
+  "file": "theme-handbook/04-templates/template-parts.md",
+  "source_url": "https://developer.wordpress.org/themes/templates/template-parts/",
+  "blocks": [
+    {
+      "candidate_id": "theme-handbook/04-templates/template-parts.md::block_1",
+      "file": "theme-handbook/04-templates/template-parts.md",
+      "block_id": "block_1",
+      "section": "Organizing template parts",
+      "line_start": 79,
+      "line_end": 84,
+      "before_fence": "```text\n- `comments.html`\n- `footer.html`\n- `header.html`\n- `sidebar.html`\n```",
+      "after_markdown": "    - `comments.html`\n    - `footer.html`\n    - `header.html`\n    - `sidebar.html`",
+      "note": "parts/ directory tree — fence breaks parent `- parts/` bullet; indent children to 4-space",
+      "source_url": "https://developer.wordpress.org/themes/templates/template-parts/"
+    },
+    {
+      "candidate_id": "theme-handbook/04-templates/template-parts.md::block_2",
+      "file": "theme-handbook/04-templates/template-parts.md",
+      "block_id": "block_2",
+      "section": "Registering custom areas",
+      "line_start": 157,
+      "line_end": 165,
+      "before_fence": "```text\n- `div`\n- `article`\n- `aside`\n- `footer`\n- `header`\n- `main`\n- `section`\n```",
+      "after_markdown": "    - `div`\n    - `article`\n    - `aside`\n    - `footer`\n    - `header`\n    - `main`\n    - `section`",
+      "note": "area_tag's HTML tag options — fence breaks parent `- **area_tag**:` bullet; indent children to 4-space",
+      "source_url": "https://developer.wordpress.org/themes/templates/template-parts/"
+    }
+  ]
+}

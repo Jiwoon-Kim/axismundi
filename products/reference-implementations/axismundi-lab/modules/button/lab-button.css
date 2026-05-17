@@ -1,0 +1,174 @@
+/* ============================================================
+ * lab-button.css — Axismundi Button lab module
+ * v3.5.1 Phase 2
+ *
+ * Bucket E — Component Full-Spec Module.
+ * Scope: lab-internal pattern variations + demo page scaffolding.
+ *
+ * Relationship to baseline (UNCHANGED at v3.5.1):
+ *   components.css §2 Button (L122–L234) — baseline primitive
+ *   components.css §0 State-layer foundation (L22–L79) — CURRENT
+ *
+ * Conditional infrastructure dependencies:
+ *   icon-system/ — CURRENT (when icon slot is used)
+ *
+ * Target / future dependencies (NOT wired at v3.5.1):
+ *   lab/modules/ripple/ — TARGET (Phase 2 explicitly defers per
+ *     Option (b); animated ripple will land via Ripple v2 release,
+ *     BACKLOG #25)
+ *
+ * Phase 2 decisions implemented (per Phase 1 audit + Phase 2 plan
+ * v1.1):
+ *
+ *   1. NO ripple wiring. Static state-layer foundation §0 is the
+ *      only interaction layer at v3.5.1. Animated ripple is deferred
+ *      to Ripple v2 release (BACKLOG #25), which will revisit
+ *      Button + Icon button + FAB + Chip + Card etc. consumers
+ *      together.
+ *
+ *   2. NO baseline overrides. Bare `.ax-button` or `.ax-button.is-*`
+ *      selectors are FORBIDDEN in this file (per Plan §2.3 #1).
+ *      Demo-only state visualization is allowed ONLY scoped under
+ *      `.lab-button-demo` ancestor and limited to opacity / state-
+ *      layer overlay / token-value swap (per Plan §2.2 #3).
+ *
+ *   3. NO new M3 system tokens. This file only consumes existing
+ *      --md-sys-* tokens and component tokens already defined in
+ *      tokens.css. Demo layout uses module-private --lab-button-*
+ *      variables that do NOT bleed into button rendering.
+ *
+ *   4. NO JS dependency. lab-button-pattern.html is a static page;
+ *      all interactivity is native (button click, native disabled,
+ *      :hover / :focus-visible / :active pseudo-classes).
+ *
+ * Audit docs:
+ *   modules/button/docs/BUTTON-SPEC-AUDIT.md
+ *   modules/button/docs/BUTTON-MEASUREMENT-AUDIT.md
+ *   modules/button/docs/BUTTON-WP-MAPPING.md
+ *
+ * Module taxonomy: Component Full-Spec Module
+ *   (see lab/modules/README.md §Module taxonomy)
+ *
+ * Design principle: Visible control must map to real runtime
+ * behavior. (see lab/modules/README.md §Design principles §1)
+ * ============================================================ */
+
+/* ---- Module-private layout variables ---------------------- *
+ * These are demo-page scaffolding, NOT button-affecting. They
+ * do NOT use the --md-sys-* or --comp-* namespace; they use
+ * a module-private --lab-button-* prefix.
+ * ----------------------------------------------------------- */
+.lab-button-demo {
+  --lab-button-row-gap:       var(--space-md);
+  --lab-button-section-gap:   var(--space-xl);
+  --lab-button-caption-color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---- Demo page shell -------------------------------------- *
+ * .lab-button-demo is the scope marker per Plan §2.2 #3.
+ * Any demo-only state-visualization selector MUST be scoped
+ * under this ancestor.
+ * ----------------------------------------------------------- */
+.lab-button-demo {
+  display: grid;
+  gap: var(--lab-button-section-gap);
+  max-inline-size: min(100%, 1080px);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--space-md);
+}
+
+/* ---- Section ---------------------------------------------- */
+.lab-button-section {
+  display: grid;
+  gap: var(--space-md);
+}
+.lab-button-section__head {
+  display: grid;
+  gap: var(--space-xs);
+  padding-block-end: var(--space-sm);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+.lab-button-section__title { margin: 0; }
+.lab-button-section__supporting {
+  margin: 0;
+  color: var(--lab-button-caption-color);
+}
+
+/* ---- Button row (horizontal layout for variant matrix) ---- */
+.lab-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lab-button-row-gap);
+  align-items: center;
+}
+
+/* ---- Specimen wrapper (button + caption pair) ------------- *
+ * Used in §4 has-state-layer opt-out demo and §5a aria-disabled
+ * to attach a caption directly under the specimen.
+ * ----------------------------------------------------------- */
+.lab-button-specimen {
+  display: grid;
+  gap: var(--space-xs);
+  align-items: start;
+}
+.lab-button-specimen__caption {
+  font-family:    var(--md-sys-typescale-body-small-font);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  color:          var(--lab-button-caption-color);
+  max-inline-size: 36ch;
+}
+.lab-button-specimen__caption--ko { font-weight: 500; }
+
+/* ---- Code snippet (collapsible <details>) ----------------- */
+.lab-button-snippet {
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+.lab-button-snippet > summary {
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size:   var(--md-sys-typescale-label-medium-size);
+  color:       var(--md-sys-color-on-surface);
+}
+.lab-button-snippet pre {
+  margin: var(--space-sm) 0 0 0;
+  overflow-x: auto;
+  font-size: var(--md-sys-typescale-body-small-size);
+}
+
+/* ---- Cross-reference block -------------------------------- */
+.lab-button-xref {
+  padding: var(--space-md);
+  background-color: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-medium);
+  display: grid;
+  gap: var(--space-xs);
+}
+.lab-button-xref a { color: var(--md-sys-color-primary); }
+
+/* ---- Banner (Phase 2 status callout) ---------------------- */
+.lab-button-banner {
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  display: grid;
+  gap: var(--space-xs);
+}
+
+/* ============================================================
+ * End of lab-button.css
+ *
+ * Total scope: layout + caption + snippet + xref scaffolding.
+ * NO selectors target `.ax-button` or `.ax-button.is-*` at any
+ * scope. The baseline contract is preserved 100%.
+ *
+ * If a future Phase 2 amendment adds scoped state-visualization
+ * (e.g., `.lab-button-demo .ax-button[data-demo-state="pressed"]`),
+ * it MUST follow Plan §2.2 #3 visualization-only constraints.
+ * Verify with: grep -nE '^\.ax-button|^[^.].*\.ax-button' lab-button.css
+ * Any match without a `.lab-button-demo` prefix is a violation.
+ * ============================================================ */

@@ -1,0 +1,3251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Style Guide</title>
+  <link rel="stylesheet" href="stylesheets/fonts.css" />
+  <link rel="stylesheet" href="stylesheets/icons.css" />
+  <link rel="stylesheet" href="stylesheets/tokens.css" />
+  <link rel="stylesheet" href="stylesheets/base.css" />
+  <link rel="stylesheet" href="stylesheets/components.css" />
+  <style>
+    /* =====================================================
+     * style-guide.html — local layout only.
+     * No component re-styling. No literal type/color values
+     * apart from the side-by-side scheme override (see §3.2).
+     * ===================================================== */
+
+    /* ---- Layout shell ---- */
+    .sg-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+    .sg-sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      overflow-y: auto;
+      padding: var(--space-lg) var(--space-md);
+      background-color: var(--md-sys-color-surface-container-low);
+      border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+    .sg-brand {
+      color: var(--md-sys-color-on-surface);
+      letter-spacing: 0.04em;
+    }
+    .sg-brand-meta {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: var(--space-xs);
+    }
+    .sg-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-nav__group-label {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-top: var(--space-md);
+      margin-bottom: var(--space-xs);
+    }
+    .sg-nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-small);
+    }
+    .sg-nav a:hover {
+      background-color: color-mix(
+        in srgb,
+        var(--md-sys-color-on-surface) 8%,
+        transparent
+      );
+      text-decoration: none;
+    }
+
+    /* Cross-guide nav (3 guides — current highlighted) */
+    .sg-guide-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      padding-block: var(--space-sm);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-guide-nav__label {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-bottom: var(--space-xs);
+    }
+    .sg-guide-nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-small);
+    }
+    .sg-guide-nav a:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .sg-guide-nav a[aria-current="page"] {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+
+    .sg-main {
+      padding: var(--space-xl) var(--space-xl);
+      max-inline-size: 1280px;
+      /* CSS Grid 1fr child's implicit min is `auto` (= min-content).
+       * Without min-inline-size: 0, a long <pre> inside (snippet
+       * code blocks) forces the track to expand and creates a
+       * horizontal scrollbar on the page. */
+      min-inline-size: 0;
+    }
+
+    .sg-section {
+      padding-block: var(--space-xl);
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-section:last-child { border-bottom: 0; }
+    .sg-section__head {
+      margin-bottom: var(--space-xl);
+    }
+    .sg-section__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-bottom: var(--space-xs);
+    }
+    .sg-subsection {
+      margin-top: var(--space-xl);
+    }
+    .sg-subsection__head {
+      margin-bottom: var(--space-md);
+      color: var(--md-sys-color-on-surface);
+    }
+
+    /* ---- Theme switcher (3-state filter chip group) ---- */
+    .sg-theme {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      padding: var(--space-md);
+      background-color: var(--md-sys-color-surface-container);
+      border-radius: var(--md-sys-shape-corner-medium);
+    }
+    .sg-theme__label {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-theme__row {
+      display: flex;
+      gap: var(--space-xs);
+    }
+    .sg-theme__row .chip {
+      flex: 1 1 0;
+      padding-inline: var(--space-sm);
+      cursor: pointer;
+    }
+
+    /* ---- Color swatch grid ---- */
+    .sg-swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--space-md);
+    }
+    .sg-swatch {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-swatch__chip {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: var(--md-sys-shape-corner-medium);
+      border: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-swatch__name {
+      color: var(--md-sys-color-on-surface);
+      word-break: break-all;
+    }
+    .sg-swatch__hex {
+      color: var(--md-sys-color-on-surface-variant);
+      font-family: var(--md-ref-typeface-mono);
+    }
+    /* On-pair swatch — a small text chip showing on-X foreground over X bg */
+    .sg-swatch--pair .sg-swatch__chip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1.6 / 1;
+      font-family: var(--md-sys-typescale-label-medium-font);
+      font-size: var(--md-sys-typescale-label-medium-size);
+      letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+    }
+
+    /* Side-by-side light/dark preview (§3.2).
+     * One pane forces light, the other forces dark, by setting
+     * data-theme locally on the wrapper. The CSS rules in
+     * tokens.css already key off [data-theme] on any ancestor
+     * via :root selector — but we also accept a local override
+     * by re-declaring the dark scheme at the wrapper level. */
+    /* ---- Typography specimen ---- */
+    .sg-type-row {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: var(--space-lg);
+      padding-block: var(--space-md);
+      border-bottom: 1px dashed var(--md-sys-color-outline-variant);
+    }
+    .sg-type-row:last-child { border-bottom: 0; }
+    .sg-type-row__meta {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-type-row__role {
+      color: var(--md-sys-color-on-surface);
+      font-family: var(--md-ref-typeface-mono);
+    }
+    .sg-type-row__spec {
+      color: var(--md-sys-color-on-surface-variant);
+      font-family: var(--md-ref-typeface-mono);
+    }
+    .sg-type-row__sample {
+      color: var(--md-sys-color-on-surface);
+    }
+    .sg-type-row__sample > div + div {
+      margin-top: var(--space-xs);
+    }
+
+    /* ---- Component layout helpers ---- */
+    .sg-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: center;
+    }
+    .sg-row--baseline { align-items: baseline; }
+    .sg-row--cards {
+      align-items: stretch;
+    }
+    .sg-row--cards > .card,
+    .sg-row--cards > .card.card--interactive {
+      flex: 1 1 240px;
+      max-width: 360px;
+      text-align: start;
+    }
+    .sg-snippet {
+      margin-top: var(--space-md);
+      padding: var(--space-md);
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-medium);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      overflow-x: auto;
+    }
+    .sg-snippet code {
+      font-family: var(--md-ref-typeface-mono);
+      font-size:   var(--md-sys-typescale-body-small-size);
+      line-height: var(--md-sys-typescale-body-small-line-height);
+      color: inherit;
+      white-space: pre;
+    }
+    .sg-helper {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: var(--space-sm);
+    }
+    .sg-divider-stack {
+      max-width: 480px;
+      background-color: var(--md-sys-color-surface-container);
+      border-radius: var(--md-sys-shape-corner-medium);
+      padding: var(--space-md) 0;
+      border: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-divider-stack__row {
+      padding: var(--space-sm) var(--space-md);
+      color: var(--md-sys-color-on-surface);
+    }
+
+    /* Component frame — wraps app bars, nav rails, sheets so the
+     * spec-mandated full-width / full-height components render at
+     * a sensible size in the guide. */
+    .sg-frame {
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-medium);
+      max-width: 800px;
+      overflow: hidden;
+      background-color: var(--md-sys-color-surface);
+    }
+    .sg-frame--rail {
+      display: flex;
+      min-height: 400px;
+    }
+    .sg-frame--rail .nav-rail {
+      flex-shrink: 0;
+    }
+    .sg-frame--rail .sg-frame__body {
+      flex: 1 1 auto;
+      padding: var(--space-lg);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-frame--sheet,
+    .sg-frame--dialog {
+      /* New stacking context — keeps .sheet z-index:1001 and
+       * .dialog inside contained, instead of bubbling up to root
+       * and floating over later modal-scrim instances. */
+      isolation: isolate;
+      position: relative;
+      height: 360px;
+    }
+    .sg-frame--sheet .sheet {
+      position: absolute;   /* override fixed positioning for in-page demo */
+    }
+    .sg-frame--sheet .sheet--bottom-modal {
+      inset-inline-start: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      max-height: 240px;
+    }
+    .sg-frame--sheet .sheet--side-modal {
+      top: 0;
+      inset-inline-start: 0;
+      height: 100%;
+    }
+    .sg-frame--dialog {
+      background-color: var(--md-sys-color-surface-container-low);
+      display: grid;
+      place-items: center;
+    }
+    .sg-frame--dialog .dialog {
+      position: relative;     /* override fixed for in-page demo */
+      inset: auto;
+      transform: none;
+    }
+    .sg-frame--dialog .dialog--full-screen {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+    }
+
+    /* Body scroll lock when a modal is open (live trigger handlers add/remove this class) */
+    html.has-modal-open { overflow: hidden; }
+
+    /* Text field grid — give each TF a fixed column so they line up */
+    .sg-tf-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--space-md);
+      max-width: 800px;
+    }
+    .sg-tf-grid > .text-field { width: 100%; }
+
+    /* Snackbar stack — vertical for static demo */
+    .sg-snackbar-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      align-items: flex-start;
+    }
+
+    /* ---- Mobile ---- */
+    @media (max-width: 720px) {
+      .sg-layout { grid-template-columns: 1fr; }
+      .sg-sidebar {
+        position: static;
+        height: auto;
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      }
+      .sg-main { padding: var(--space-lg); }
+      .sg-type-row { grid-template-columns: 1fr; }
+    }
+
+    /* ---- Footer ---- */
+    .sg-footer {
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-low);
+      padding-block: var(--space-xl);
+      padding-inline: var(--space-xl);
+    }
+    .sg-footer__inner {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-footer__title { margin: 0; }
+    .sg-footer__meta {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-footer a {
+      color: var(--md-sys-color-primary);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+    @media (max-width: 720px) {
+      .sg-footer { padding-inline: var(--space-lg); }
+    }
+    /* ---- Themed thin scrollbars (page-internal scroll containers) ----
+     * Apply to sidebar / toc-rail / any internal scroll area.
+     * The browser/system scrollbar (window scroll) is left alone.
+     * Webkit + Firefox + future standard `scrollbar-color`. */
+    .sg-sidebar,
+    .sg-toc-rail {
+      scrollbar-width: thin;
+      scrollbar-color:
+        var(--md-sys-color-outline-variant) transparent;
+    }
+    .sg-sidebar::-webkit-scrollbar,
+    .sg-toc-rail::-webkit-scrollbar {
+      inline-size: 8px;
+      block-size:  8px;
+    }
+    .sg-sidebar::-webkit-scrollbar-track,
+    .sg-toc-rail::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+    .sg-sidebar::-webkit-scrollbar-thumb,
+    .sg-toc-rail::-webkit-scrollbar-thumb {
+      background-color: var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+    .sg-sidebar::-webkit-scrollbar-thumb:hover,
+    .sg-toc-rail::-webkit-scrollbar-thumb:hover {
+      background-color: var(--md-sys-color-outline);
+    }
+    /* Hide scrollbar buttons (arrows) — visual clutter at thin width */
+    .sg-sidebar::-webkit-scrollbar-button,
+    .sg-toc-rail::-webkit-scrollbar-button {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="sg-layout">
+    <!-- ============================================
+         Sidebar
+         ============================================ -->
+    <aside class="sg-sidebar" data-screen-label="Sidebar">
+      <div>
+        <div class="t-title-large sg-brand">AXISMUNDI</div>
+        <div class="t-label-medium sg-brand-meta">Design System v0.2.0</div>
+      </div>
+
+      <!-- Theme switcher -->
+      <div class="sg-theme" role="group" aria-label="Theme switcher">
+        <div class="t-label-medium sg-theme__label">Theme</div>
+        <div class="sg-theme__row" role="radiogroup" aria-label="테마 선택">
+          <button
+            class="chip chip--filter has-state-layer t-label-large"
+            data-theme-button="light"
+            type="button"
+            role="radio"
+            aria-checked="false"
+          >
+            <span class="chip__label">Light</span>
+          </button>
+          <button
+            class="chip chip--filter has-state-layer t-label-large"
+            data-theme-button="dark"
+            type="button"
+            role="radio"
+            aria-checked="false"
+          >
+            <span class="chip__label">Dark</span>
+          </button>
+          <button
+            class="chip chip--filter has-state-layer t-label-large"
+            data-theme-button="auto"
+            type="button"
+            role="radio"
+            aria-checked="true"
+          >
+            <span class="chip__label">Auto</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cross-guide navigation -->
+      <nav class="sg-guide-nav" aria-label="Style guides">
+        <div class="t-label-small sg-guide-nav__label">Guides</div>
+        <a class="t-body-medium" href="style-guide.html"
+           aria-current="page">Components (33)</a>
+        <a class="t-body-medium" href="style-guide-blocks.html">WP Blocks</a>
+        <a class="t-body-medium" href="style-guide-prose.html">Prose / Long-form</a>
+      </nav>
+
+      <!-- Anchored navigation -->
+      <nav class="sg-nav" aria-label="Style guide sections">
+        <div class="t-label-small sg-nav__group-label">Foundation</div>
+        <a class="t-body-medium" href="#color">Color</a>
+        <a class="t-body-medium" href="#typography">Typography</a>
+
+        <div class="t-label-small sg-nav__group-label">Actions</div>
+        <a class="t-body-medium" href="#components-button">Button</a>
+        <a class="t-body-medium" href="#components-icon-button">Icon button</a>
+        <a class="t-body-medium" href="#components-fab">FAB</a>
+        <a class="t-body-medium" href="#components-fab-extended">Extended FAB</a>
+        <a class="t-body-medium" href="#components-fab-menu">FAB menu</a>
+        <a class="t-body-medium" href="#components-button-group">Button group</a>
+        <a class="t-body-medium" href="#components-split-button">Split button</a>
+        <a class="t-body-medium" href="#components-toolbar">Toolbar</a>
+
+        <div class="t-label-small sg-nav__group-label">Containers</div>
+        <a class="t-body-medium" href="#components-card">Card</a>
+        <a class="t-body-medium" href="#components-divider">Divider</a>
+
+        <div class="t-label-small sg-nav__group-label">Navigation</div>
+        <a class="t-body-medium" href="#components-app-bar">App bar</a>
+        <a class="t-body-medium" href="#components-nav-bar">Nav bar</a>
+        <a class="t-body-medium" href="#components-nav-rail">Nav rail</a>
+        <a class="t-body-medium" href="#components-nav-rail-expanded">Nav rail (expanded)</a>
+        <a class="t-body-medium" href="#components-tabs">Tabs</a>
+        <a class="t-body-medium" href="#components-menu">Menu</a>
+
+        <div class="t-label-small sg-nav__group-label">Inputs</div>
+        <a class="t-body-medium" href="#components-text-field">Text field</a>
+        <a class="t-body-medium" href="#components-search-bar">Search bar</a>
+        <a class="t-body-medium" href="#components-checkbox">Checkbox</a>
+        <a class="t-body-medium" href="#components-radio">Radio</a>
+        <a class="t-body-medium" href="#components-switch">Switch</a>
+        <a class="t-body-medium" href="#components-slider">Slider</a>
+        <a class="t-body-medium" href="#components-date-picker">Date picker</a>
+        <a class="t-body-medium" href="#components-time-picker">Time picker</a>
+
+        <div class="t-label-small sg-nav__group-label">Selection</div>
+        <a class="t-body-medium" href="#components-chip">Chip</a>
+        <a class="t-body-medium" href="#components-badge">Badge</a>
+
+        <div class="t-label-small sg-nav__group-label">Feedback</div>
+        <a class="t-body-medium" href="#components-dialog">Dialog</a>
+        <a class="t-body-medium" href="#components-sheet">Sheet</a>
+        <a class="t-body-medium" href="#components-snackbar">Snackbar</a>
+        <a class="t-body-medium" href="#components-tooltip">Tooltip</a>
+        <a class="t-body-medium" href="#components-loading">Loading</a>
+        <a class="t-body-medium" href="#components-progress">Progress</a>
+
+        <div class="t-label-small sg-nav__group-label">Display</div>
+        <a class="t-body-medium" href="#components-avatar">Avatar</a>
+        <a class="t-body-medium" href="#components-list">List</a>
+        <a class="t-body-medium" href="#components-carousel">Carousel</a>
+      </nav>
+    </aside>
+
+    <!-- ============================================
+         Main
+         ============================================ -->
+    <main class="sg-main">
+      <header class="sg-section" style="border-bottom: 0; padding-top: 0;">
+        <div class="t-label-medium sg-section__eyebrow">Style Guide</div>
+        <h1 class="t-display-medium">Axismundi v0.2.0</h1>
+        <p class="t-body-large" style="margin-top: var(--space-md); max-width: 64ch; color: var(--md-sys-color-on-surface-variant);">
+          Material 3 기반의 한국어 우선 디자인 시스템.
+          타입 토큰, 색상 토큰, 컴포넌트 사양을 한 페이지에 모았습니다.
+          왼쪽 테마 스위처로 라이트/다크/시스템 자동 전환을 확인하세요.
+        </p>
+      </header>
+
+      <!-- ========== Color ========== -->
+      <section class="sg-section" id="color" data-screen-label="Color">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Foundation</div>
+          <h2 class="t-display-small">Color</h2>
+          <p class="t-body-large" style="margin-top: var(--space-sm); color: var(--md-sys-color-on-surface-variant); max-width: 64ch;">
+            38 system color roles per scheme. All values resolve via
+            <code>var(--md-sys-color-*)</code> tokens. Switch theme above to see
+            light, dark, or system-auto. The side-by-side preview on each
+            subsection forces both schemes simultaneously.
+          </p>
+        </header>
+
+        <!-- 3.1 Brand -->
+        <div class="sg-subsection">
+          <h3 class="t-headline-small sg-subsection__head">Brand</h3>
+          <div class="sg-swatch-grid" id="swatches-brand"></div>
+        </div>
+
+        <!-- 3.2 Single grid — follows current theme via switcher -->
+        <div class="sg-subsection">
+          <h3 class="t-headline-small sg-subsection__head">현재 테마 색상</h3>
+          <p class="sg-helper">상단 테마 토글 (Light/Dark/Auto)에 따라 sys 토큰이 동적으로 변경됩니다.</p>
+          <div class="sg-swatch-grid" id="swatches-pair-light"></div>
+        </div>
+
+        <!-- 3.3 Status -->
+        <div class="sg-subsection">
+          <h3 class="t-headline-small sg-subsection__head">Status</h3>
+          <div class="sg-swatch-grid" id="swatches-status"></div>
+        </div>
+
+        <!-- 3.4 Surface -->
+        <div class="sg-subsection">
+          <h3 class="t-headline-small sg-subsection__head">Surface</h3>
+          <div class="sg-swatch-grid" id="swatches-surface"></div>
+        </div>
+
+        <!-- 3.5 Inverse -->
+        <div class="sg-subsection">
+          <h3 class="t-headline-small sg-subsection__head">Inverse</h3>
+          <div class="sg-swatch-grid" id="swatches-inverse"></div>
+        </div>
+
+        <!-- 3.6 Outline + Other -->
+        <div class="sg-subsection">
+          <h3 class="t-headline-small sg-subsection__head">Outline &amp; Other</h3>
+          <div class="sg-swatch-grid" id="swatches-other"></div>
+        </div>
+      </section>
+
+      <!-- ========== Typography ========== -->
+      <section class="sg-section" id="typography" data-screen-label="Typography">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Foundation</div>
+          <h2 class="t-display-small">Typography</h2>
+          <p class="t-body-large" style="margin-top: var(--space-sm); color: var(--md-sys-color-on-surface-variant); max-width: 64ch;">
+            15 type roles. Each row uses the matching <code>.t-{role}</code>
+            utility class — no literal sizes in markup. Samples include both
+            English and 한글 to verify mixed-script line height.
+          </p>
+        </header>
+        <div id="type-specimen"></div>
+      </section>
+
+      <!-- ========== Component sections ==========
+           SG-2: Button, Icon button, Avatar, Card, Chip, Divider -->
+
+      <!-- ========== Button ========== -->
+      <section class="sg-section" id="components-button" data-screen-label="Button">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Button</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants — label only</h3>
+          <div class="sg-row">
+            <button class="ax-button is-filled has-state-layer t-label-large" type="button">Filled</button>
+            <button class="ax-button is-tonal has-state-layer t-label-large" type="button">Tonal</button>
+            <button class="ax-button is-elevated has-state-layer t-label-large" type="button">Elevated</button>
+            <button class="ax-button is-outlined has-state-layer t-label-large" type="button">Outlined</button>
+            <button class="ax-button is-text has-state-layer t-label-large" type="button">Text</button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="ax-button is-filled has-state-layer t-label-large"&gt;
+  Filled
+&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">With leading icon</h3>
+          <div class="sg-row">
+            <button class="ax-button is-filled has-state-layer t-label-large" type="button">
+              <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+              <span>Add</span>
+            </button>
+            <button class="ax-button is-tonal has-state-layer t-label-large" type="button">
+              <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">check</span>
+              <span>Confirm</span>
+            </button>
+            <button class="ax-button is-elevated has-state-layer t-label-large" type="button">
+              <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">menu</span>
+              <span>Menu</span>
+            </button>
+            <button class="ax-button is-outlined has-state-layer t-label-large" type="button">
+              <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">arrow_back</span>
+              <span>Back</span>
+            </button>
+            <button class="ax-button is-text has-state-layer t-label-large" type="button">
+              <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">chat_bubble</span>
+              <span>Comment</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Toggle (4 variants — text excluded)</h3>
+          <p class="t-body-small sg-helper">Click to toggle. Text variant doesn't support toggle per spec.</p>
+          <div class="sg-row">
+            <button class="ax-button is-filled has-state-layer t-label-large sg-toggle" type="button" aria-pressed="false">Filled</button>
+            <button class="ax-button is-tonal has-state-layer t-label-large sg-toggle" type="button" aria-pressed="false">Tonal</button>
+            <button class="ax-button is-elevated has-state-layer t-label-large sg-toggle" type="button" aria-pressed="false">Elevated</button>
+            <button class="ax-button is-outlined has-state-layer t-label-large sg-toggle" type="button" aria-pressed="false">Outlined</button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Disabled (Pattern A · §0.8)</h3>
+          <div class="sg-row">
+            <button class="ax-button is-filled has-state-layer t-label-large" type="button" disabled>Filled</button>
+            <button class="ax-button is-tonal has-state-layer t-label-large" type="button" disabled>Tonal</button>
+            <button class="ax-button is-elevated has-state-layer t-label-large" type="button" disabled>Elevated</button>
+            <button class="ax-button is-outlined has-state-layer t-label-large" type="button" disabled>Outlined</button>
+            <button class="ax-button is-text has-state-layer t-label-large" type="button" disabled>Text</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Icon button ========== -->
+      <section class="sg-section" id="components-icon-button" data-screen-label="Icon button">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Icon button</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants</h3>
+          <div class="sg-row">
+            <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Add">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span>
+            </button>
+            <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="Favorite">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+            </button>
+            <button class="ax-icon-button is-outlined has-state-layer" type="button" aria-label="Share">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+            </button>
+            <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="More">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">more_vert</span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="ax-icon-button is-filled has-state-layer" aria-label="Add"&gt;
+  &lt;svg ...&gt;&lt;/svg&gt;
+&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Toggle</h3>
+          <p class="t-body-small sg-helper">
+            Per M3 §6.4: outlined toggle should swap to a filled glyph when selected.
+            Markup is identical — author updates SVG <code>fill</code>/<code>d</code> on toggle.
+          </p>
+          <div class="sg-row">
+            <button class="ax-icon-button is-filled has-state-layer sg-toggle" type="button" aria-label="Bookmark" aria-pressed="false">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">bookmark</span>
+            </button>
+            <button class="ax-icon-button is-tonal has-state-layer sg-toggle" type="button" aria-label="Star" aria-pressed="false">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">star</span>
+            </button>
+            <button class="ax-icon-button is-outlined has-state-layer sg-toggle" type="button" aria-label="Like" aria-pressed="false">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+            </button>
+            <button class="ax-icon-button is-standard has-state-layer sg-toggle" type="button" aria-label="Pin" aria-pressed="false">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">push_pin</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Disabled</h3>
+          <div class="sg-row">
+            <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Add" disabled>
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span>
+            </button>
+            <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="Favorite" disabled>
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+            </button>
+            <button class="ax-icon-button is-outlined has-state-layer" type="button" aria-label="Share" disabled>
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+            </button>
+            <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="More" disabled>
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">more_vert</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== FAB ========== -->
+      <section class="sg-section" id="components-fab" data-screen-label="FAB">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">FAB</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Floating action button. 3 sizes (default 56, medium 80, large 96) × 6 color styles. Icon-only — for label use Extended FAB.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Sizes</h3>
+          <div class="sg-row">
+            <button class="ax-fab" aria-label="Compose">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-medium" aria-label="Compose">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-large" aria-label="Compose">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="ax-fab" aria-label="Compose"&gt;&lt;svg ...&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;button class="ax-fab is-medium" aria-label="Compose"&gt;...&lt;/button&gt;
+&lt;button class="ax-fab is-large" aria-label="Compose"&gt;...&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Color styles</h3>
+          <p class="sg-helper">Tonal primary (default) / Tonal secondary / Tonal tertiary / Primary / Secondary / Tertiary. All visually equivalent in M3 §7.3.</p>
+          <div class="sg-row">
+            <button class="ax-fab" aria-label="Tonal primary">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-tonal-secondary" aria-label="Tonal secondary">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-tonal-tertiary" aria-label="Tonal tertiary">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-primary" aria-label="Primary">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-secondary" aria-label="Secondary">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-tertiary" aria-label="Tertiary">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Disabled</h3>
+          <div class="sg-row">
+            <button class="ax-fab" disabled aria-label="Disabled">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+            <button class="ax-fab is-medium" disabled aria-label="Disabled">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Extended FAB ========== -->
+      <section class="sg-section" id="components-fab-extended" data-screen-label="Extended FAB">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Extended FAB</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            FAB with text label + leading icon. 56px height, min-width 80px, label uses title-medium typography.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default</h3>
+          <div class="sg-row">
+            <button class="ax-fab-extended">
+              <svg class="ax-fab-extended__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+              <span class="ax-fab-extended__label">Compose</span>
+            </button>
+            <button class="ax-fab-extended">
+              <svg class="ax-fab-extended__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+              <span class="ax-fab-extended__label">새 글 쓰기</span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="ax-fab-extended"&gt;
+  &lt;svg class="ax-fab-extended__icon" ...&gt;&lt;/svg&gt;
+  &lt;span class="ax-fab-extended__label"&gt;Compose&lt;/span&gt;
+&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Color styles</h3>
+          <div class="sg-row">
+            <button class="ax-fab-extended">
+              <svg class="ax-fab-extended__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+              <span class="ax-fab-extended__label">Tonal primary</span>
+            </button>
+            <button class="ax-fab-extended is-tonal-secondary">
+              <svg class="ax-fab-extended__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+              <span class="ax-fab-extended__label">Tonal secondary</span>
+            </button>
+            <button class="ax-fab-extended is-primary">
+              <svg class="ax-fab-extended__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+              <span class="ax-fab-extended__label">Primary</span>
+            </button>
+            <button class="ax-fab-extended is-tertiary">
+              <svg class="ax-fab-extended__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+              <span class="ax-fab-extended__label">Tertiary</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Disabled</h3>
+          <div class="sg-row">
+            <button class="ax-fab-extended" disabled>
+              <svg class="ax-fab-extended__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+              <span class="ax-fab-extended__label">Disabled</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== FAB menu ========== -->
+      <section class="sg-section" id="components-fab-menu" data-screen-label="FAB menu">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">FAB menu</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Close button (56×56) anchor + 2-6 list items stacked above. Toggle via <code>.is-open</code> on the wrapper. 3 color sets: Primary (default) / Secondary / Tertiary. Item enter/exit stagger animation deferred to v1.5+.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Primary — open state</h3>
+          <p class="sg-helper">Demos forced open via <code>.is-open</code>. In production, wire the close button's click to toggle the class.</p>
+          <div class="sg-row" style="align-items: flex-end; gap: var(--space-xl); padding-block: var(--space-md); min-height: 360px;">
+            <div class="ax-fab-menu is-open" id="sg-fab-menu-primary">
+              <button type="button" class="ax-fab-menu__close" aria-expanded="true" aria-controls="sg-fab-menu-primary-list" data-fab-menu-toggle>
+                <svg class="ax-fab-menu__close-icon-rest" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+                <svg class="ax-fab-menu__close-icon-open" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+              </button>
+              <ul class="ax-fab-menu__list" id="sg-fab-menu-primary-list">
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">새 글</span>
+                  </button>
+                </li>
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">사진</span>
+                  </button>
+                </li>
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">파일 첨부</span>
+                  </button>
+                </li>
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">투표 만들기</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div class="ax-fab-menu is-color-secondary is-open">
+              <button type="button" class="ax-fab-menu__close" aria-expanded="true">
+                <svg class="ax-fab-menu__close-icon-rest" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+                <svg class="ax-fab-menu__close-icon-open" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+              </button>
+              <ul class="ax-fab-menu__list">
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">Secondary</span>
+                  </button>
+                </li>
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">Item B</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div class="ax-fab-menu is-color-tertiary is-open">
+              <button type="button" class="ax-fab-menu__close" aria-expanded="true">
+                <svg class="ax-fab-menu__close-icon-rest" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+                <svg class="ax-fab-menu__close-icon-open" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+              </button>
+              <ul class="ax-fab-menu__list">
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">Tertiary</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-fab-menu is-open" id="compose-menu"&gt;
+  &lt;button class="ax-fab-menu__close"
+          aria-expanded="true" aria-controls="compose-menu-list"&gt;
+    &lt;svg class="ax-fab-menu__close-icon-rest"&gt;...&lt;/svg&gt;
+    &lt;svg class="ax-fab-menu__close-icon-open"&gt;...&lt;/svg&gt;
+  &lt;/button&gt;
+  &lt;ul class="ax-fab-menu__list" id="compose-menu-list"&gt;
+    &lt;li class="ax-fab-menu__item"&gt;
+      &lt;button class="ax-fab-menu__item-button"&gt;
+        &lt;span class="ax-fab-menu__item-icon"&gt;&lt;svg .../&gt;&lt;/span&gt;
+        &lt;span class="ax-fab-menu__item-label"&gt;새 글&lt;/span&gt;
+      &lt;/button&gt;
+    &lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Interactive — toggle via JS</h3>
+          <p class="sg-helper">Click the FAB to toggle. The script below listens to <code>[data-fab-menu-toggle]</code> buttons.</p>
+          <div class="sg-row" style="align-items: flex-end; padding-block: var(--space-md); min-height: 280px;">
+            <div class="ax-fab-menu" id="sg-fab-menu-interactive">
+              <button type="button" class="ax-fab-menu__close" aria-expanded="false" aria-controls="sg-fab-menu-interactive-list" data-fab-menu-toggle>
+                <svg class="ax-fab-menu__close-icon-rest" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
+                <svg class="ax-fab-menu__close-icon-open" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+              </button>
+              <ul class="ax-fab-menu__list" id="sg-fab-menu-interactive-list">
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">새 글</span>
+                  </button>
+                </li>
+                <li class="ax-fab-menu__item">
+                  <button type="button" class="ax-fab-menu__item-button">
+                    <span class="ax-fab-menu__item-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="currentColor"/></svg></span>
+                    <span class="ax-fab-menu__item-label">사진</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== Button group ========== -->
+      <section class="sg-section" id="components-button-group" data-screen-label="Button group">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Button group</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Composes <code>.ax-button</code> instances. Two variants: <strong>standard</strong> (selected button widens 15% per M3 §5.6) and <strong>connected</strong> (2px gap, full-pill outer corners, small inner corners). Two markup patterns supported — radio+label for single-select (CSS-only), button+aria-pressed for multi-toggle toolbars (JS).
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Standard — single-select (radio + label, no JS)</h3>
+          <p class="sg-helper">Click any option — selected button widens with a spring transition. Pure CSS via <code>:checked + .ax-button</code>; native keyboard arrow-key navigation between options.</p>
+          <div class="sg-row">
+            <fieldset class="ax-button-group">
+              <legend class="u-vh">View mode</legend>
+              <input type="radio" name="sg-view" id="sg-view-day"
+                     class="ax-button-group__input">
+              <label for="sg-view-day"
+                     class="ax-button is-outlined has-state-layer">Day</label>
+              <input type="radio" name="sg-view" id="sg-view-week"
+                     class="ax-button-group__input" checked>
+              <label for="sg-view-week"
+                     class="ax-button is-outlined has-state-layer">Week</label>
+              <input type="radio" name="sg-view" id="sg-view-month"
+                     class="ax-button-group__input">
+              <label for="sg-view-month"
+                     class="ax-button is-outlined has-state-layer">Month</label>
+            </fieldset>
+          </div>
+          <pre class="sg-snippet"><code>&lt;fieldset class="ax-button-group"&gt;
+  &lt;legend class="u-vh"&gt;View mode&lt;/legend&gt;
+
+  &lt;input type="radio" name="view" id="v-day"
+         class="ax-button-group__input"&gt;
+  &lt;label  for="v-day"
+         class="ax-button is-outlined has-state-layer"&gt;Day&lt;/label&gt;
+
+  &lt;input type="radio" name="view" id="v-week"
+         class="ax-button-group__input" checked&gt;
+  &lt;label  for="v-week"
+         class="ax-button is-outlined has-state-layer"&gt;Week&lt;/label&gt;
+
+  &lt;input type="radio" name="view" id="v-month"
+         class="ax-button-group__input"&gt;
+  &lt;label  for="v-month"
+         class="ax-button is-outlined has-state-layer"&gt;Month&lt;/label&gt;
+&lt;/fieldset&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Connected — single-select (radio + label)</h3>
+          <p class="sg-helper">2px gap, full-pill outer corners, small inner corners. Inner corners morph to full pill when selected.</p>
+          <div class="sg-row">
+            <fieldset class="ax-button-group ax-button-group--connected">
+              <legend class="u-vh">Text alignment</legend>
+              <input type="radio" name="sg-align" id="sg-align-left"
+                     class="ax-button-group__input">
+              <label for="sg-align-left"
+                     class="ax-button is-filled has-state-layer">왼쪽</label>
+              <input type="radio" name="sg-align" id="sg-align-center"
+                     class="ax-button-group__input" checked>
+              <label for="sg-align-center"
+                     class="ax-button is-filled has-state-layer">가운데</label>
+              <input type="radio" name="sg-align" id="sg-align-right"
+                     class="ax-button-group__input">
+              <label for="sg-align-right"
+                     class="ax-button is-filled has-state-layer">오른쪽</label>
+            </fieldset>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Toolbar — multi-toggle (button + aria-pressed, JS)</h3>
+          <p class="sg-helper">Each button toggles independently — wrong semantic for radio. Uses <code>&lt;button aria-pressed&gt;</code> with a small click handler (theme JS in production; inline demo here).</p>
+          <div class="sg-row">
+            <div class="ax-button-group ax-button-group--connected sg-toolbar-demo"
+                 role="toolbar" aria-label="Text formatting">
+              <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="true">B</button>
+              <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false">I</button>
+              <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="true">U</button>
+              <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false">S</button>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-button-group ax-button-group--connected"
+     role="toolbar" aria-label="Text formatting"&gt;
+  &lt;button type="button" class="ax-button is-tonal has-state-layer"
+          aria-pressed="true"&gt;B&lt;/button&gt;
+  &lt;button type="button" class="ax-button is-tonal has-state-layer"
+          aria-pressed="false"&gt;I&lt;/button&gt;
+  ...
+&lt;/div&gt;
+
+&lt;script&gt;
+// Theme JS — toggle aria-pressed on click
+document.querySelectorAll('[role="toolbar"] [aria-pressed]')
+  .forEach(btn =&gt; btn.addEventListener('click', () =&gt; {
+    const v = btn.getAttribute('aria-pressed') === 'true';
+    btn.setAttribute('aria-pressed', String(!v));
+  }));
+&lt;/script&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== Split button ========== -->
+      <section class="sg-section" id="components-split-button" data-screen-label="Split button">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Split button</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Composes two <code>.ax-button</code> instances — primary action + dropdown trigger. 2px gap, full-pill outer + 4dp inner (default M), morphs to 8dp on hover and 50% (full pill) when trailing button menu opens.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default — M size</h3>
+          <div class="sg-row">
+            <div class="ax-split-button" role="group">
+              <button type="button" class="ax-button is-filled has-state-layer">저장</button>
+              <button type="button" class="ax-button is-filled has-state-layer" aria-label="더 많은 저장 옵션" aria-haspopup="menu" aria-expanded="false">
+                <span class="material-symbols-rounded notranslate ax-split-button__trailing-icon" translate="no" aria-hidden="true" draggable="false">arrow_drop_down</span>
+              </button>
+            </div>
+            <div class="ax-split-button" role="group">
+              <button type="button" class="ax-button is-tonal has-state-layer">공유</button>
+              <button type="button" class="ax-button is-tonal has-state-layer" aria-label="공유 옵션" aria-haspopup="menu" aria-expanded="true">
+                <span class="material-symbols-rounded notranslate ax-split-button__trailing-icon" translate="no" aria-hidden="true" draggable="false">arrow_drop_down</span>
+              </button>
+            </div>
+            <div class="ax-split-button" role="group">
+              <button type="button" class="ax-button is-outlined has-state-layer">내보내기</button>
+              <button type="button" class="ax-button is-outlined has-state-layer" aria-label="내보내기 옵션" aria-haspopup="menu" aria-expanded="false">
+                <span class="material-symbols-rounded notranslate ax-split-button__trailing-icon" translate="no" aria-hidden="true" draggable="false">arrow_drop_down</span>
+              </button>
+            </div>
+          </div>
+          <p class="sg-helper">두 번째 split button (공유)은 <code>aria-expanded="true"</code> 상태 — trailing 모서리가 50% pill로 morph.</p>
+          <pre class="sg-snippet"><code>&lt;div class="ax-split-button" role="group"&gt;
+  &lt;button class="ax-button is-filled has-state-layer"&gt;저장&lt;/button&gt;
+  &lt;button class="ax-button is-filled has-state-layer"
+          aria-haspopup="menu" aria-expanded="false"
+          aria-label="더 많은 저장 옵션"&gt;
+    &lt;svg class="ax-split-button__trailing-icon"&gt;...&lt;/svg&gt;
+  &lt;/button&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Small size</h3>
+          <div class="sg-row">
+            <div class="ax-split-button is-size-s" role="group">
+              <button type="button" class="ax-button is-size-s is-filled has-state-layer">발행</button>
+              <button type="button" class="ax-button is-size-s is-filled has-state-layer" aria-label="발행 옵션" aria-haspopup="menu" aria-expanded="false">
+                <span class="material-symbols-rounded notranslate ax-split-button__trailing-icon" translate="no" aria-hidden="true" draggable="false">arrow_drop_down</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Toolbar ========== -->
+      <section class="sg-section" id="components-toolbar" data-screen-label="Toolbar">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Toolbar</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Slot-based action surface. Two variants (<strong>docked</strong> full-width, edge-anchored / <strong>floating</strong> detached pill, level3) × two color schemes (<strong>standard</strong> surface-container / <strong>vibrant</strong> primary-container).
+          </p>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <em>v0.3.5 scope</em>: docked + floating, both color schemes. Slots accept icon-button / button / text-field / button-group. Floating-with-FAB variant deferred to v1.5+.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Docked — standard color</h3>
+          <div class="sg-row" style="flex-direction: column; align-items: stretch;">
+            <div class="ax-toolbar ax-toolbar--docked" role="toolbar" aria-label="Format">
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Bold" aria-pressed="true">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">format_bold</span>
+              </button>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Italic">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">format_italic</span>
+              </button>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Underline">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">format_underlined</span>
+              </button>
+              <span class="ax-toolbar__spacer"></span>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Share">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Floating — standard color</h3>
+          <div class="sg-row" style="padding: var(--space-md); background-color: var(--md-sys-color-surface-container-low); border-radius: var(--md-sys-shape-corner-medium);">
+            <div class="ax-toolbar ax-toolbar--floating" role="toolbar" aria-label="Edit">
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Edit">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">edit</span>
+              </button>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Copy">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">content_copy</span>
+              </button>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Delete">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Floating — vibrant color</h3>
+          <div class="sg-row" style="padding: var(--space-md); background-color: var(--md-sys-color-surface-container-low); border-radius: var(--md-sys-shape-corner-medium);">
+            <div class="ax-toolbar ax-toolbar--floating ax-toolbar--vibrant" role="toolbar" aria-label="Quick actions">
+              <button type="button" class="ax-icon-button is-standard has-state-layer is-selected" aria-pressed="true" aria-label="Like">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+              </button>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Comment">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chat_bubble</span>
+              </button>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Repost">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">repeat</span>
+              </button>
+              <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="Share">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+              </button>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-toolbar ax-toolbar--floating ax-toolbar--vibrant"
+     role="toolbar"&gt;
+  &lt;button class="ax-icon-button is-standard has-state-layer is-selected"
+          aria-pressed="true" aria-label="Like"&gt;...&lt;/button&gt;
+  &lt;button class="ax-icon-button is-standard has-state-layer"
+          aria-label="Comment"&gt;...&lt;/button&gt;
+  ...
+&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== Avatar ========== -->
+      <section class="sg-section" id="components-avatar" data-screen-label="Avatar">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Avatar</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Sizes</h3>
+          <div class="sg-row">
+            <span class="ax-avatar is-size-sm"><span>지원</span></span>
+            <span class="ax-avatar"><span>지원</span></span>
+            <span class="ax-avatar is-size-lg"><span>지원</span></span>
+          </div>
+          <pre class="sg-snippet"><code>&lt;span class="ax-avatar is-size-lg"&gt;&lt;span&gt;지원&lt;/span&gt;&lt;/span&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants</h3>
+          <div class="sg-row">
+            <span class="ax-avatar"><span>HK</span></span>
+            <span class="ax-avatar"><span>도윤</span></span>
+            <span class="ax-avatar">
+              <img alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%237D5260'/%3E%3Ccircle cx='20' cy='16' r='6' fill='%23FFD8E4'/%3E%3Crect x='8' y='24' width='24' height='12' rx='6' fill='%23FFD8E4'/%3E%3C/svg%3E" />
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== List ========== -->
+      <section class="sg-section" id="components-list" data-screen-label="List">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">List</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Container 1+ list items. Single/two/three-line variants. Slots: leading (icon 24 / image 56), content (overline + label + supporting), trailing (icon 24 / text). Selection via <code>.is-selected</code> or <code>aria-selected="true"</code>. Expressive shape state machine: rest → corner-extra-small, hover → corner-medium, focus/pressed/selected → corner-large.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Standard — single-line</h3>
+          <div class="ax-list" style="max-width: 360px;" role="list">
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 3H5c-1.11 0-2 .89-2 2v14c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 16H5V5h14v14zm-7-2c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">홈</span>
+              </span>
+              <span class="ax-list__trailing-text">⌘1</span>
+            </button>
+            <hr class="ax-list__divider" />
+            <button type="button" class="ax-list__item is-selected" role="listitem" aria-selected="true">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">내 프로필</span>
+              </span>
+              <span class="ax-list__trailing-text">⌘P</span>
+            </button>
+            <hr class="ax-list__divider" />
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">설정</span>
+              </span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-list" role="list"&gt;
+  &lt;button class="ax-list__item" role="listitem"&gt;
+    &lt;span class="ax-list__leading"&gt;&lt;svg .../&gt;&lt;/span&gt;
+    &lt;span class="ax-list__content"&gt;
+      &lt;span class="ax-list__label"&gt;홈&lt;/span&gt;
+    &lt;/span&gt;
+    &lt;span class="ax-list__trailing-text"&gt;⌘1&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;hr class="ax-list__divider" /&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Two-line — overline + label + supporting</h3>
+          <div class="ax-list" style="max-width: 360px;" role="list">
+            <button type="button" class="ax-list__item ax-list__item--two-line" role="listitem">
+              <span class="ax-list__leading">
+                <span class="ax-avatar"><span>도윤</span></span>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">이도윤</span>
+                <span class="ax-list__supporting">새 게시물을 올렸습니다 · 5분 전</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+            <hr class="ax-list__divider" />
+            <button type="button" class="ax-list__item ax-list__item--two-line" role="listitem">
+              <span class="ax-list__leading">
+                <span class="ax-avatar"><span>가람</span></span>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__label">가람</span>
+                <span class="ax-list__supporting">@karam · ActivityPub 인스턴스에서 팔로우</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Three-line — overline + label + 2-line supporting</h3>
+          <div class="ax-list" style="max-width: 480px;" role="list">
+            <button type="button" class="ax-list__item ax-list__item--three-line" role="listitem">
+              <span class="ax-list__leading">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/></svg>
+              </span>
+              <span class="ax-list__content">
+                <span class="ax-list__overline">받은편지함</span>
+                <span class="ax-list__label">알림 설정 안내</span>
+                <span class="ax-list__supporting">새 댓글, 좋아요, 팔로우 알림을 받는 방식을 설정에서 관리할 수 있습니다. 푸시 알림은 모바일 앱에서만 작동합니다.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Segmented — gap + per-item rounding</h3>
+          <div class="ax-list ax-list--segmented" style="max-width: 360px;" role="list">
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__content">
+                <span class="ax-list__label">개인정보</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+            <button type="button" class="ax-list__item" role="listitem">
+              <span class="ax-list__content">
+                <span class="ax-list__label">알림</span>
+              </span>
+              <span class="ax-list__trailing">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+            <button type="button" class="ax-list__item" disabled role="listitem">
+              <span class="ax-list__content">
+                <span class="ax-list__label">베타 기능 (비활성)</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Carousel ========== -->
+      <section class="sg-section" id="components-carousel" data-screen-label="Carousel">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Carousel</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Native horizontal scroll + scroll-snap. Item corner = corner-extra-large (28dp). Multi-browse default mixes large/medium/small items; hero variant features one large + small queue; uncontained bleeds past trailing edge for content-first browsing.
+          </p>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <em>v0.3.5 scope</em>: multi-browse, hero, uncontained. Center-aligned hero, multi-aspect, full-screen, item-morph animation deferred.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Multi-browse — large / medium / small mix</h3>
+          <div class="ax-carousel">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--large">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">서울의 하루</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">디자인 노트</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">개발 일지</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary-container);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary-container);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary-container);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-carousel"&gt;
+  &lt;div class="ax-carousel__track"&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--large"&gt;
+      &lt;div class="ax-carousel__item-media"&gt;&lt;img .../&gt;&lt;/div&gt;
+      &lt;span class="ax-carousel__item-label"&gt;서울의 하루&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--medium"&gt;...&lt;/div&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--small"&gt;...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Hero — featured + queue</h3>
+          <div class="ax-carousel ax-carousel--hero">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--large">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));"></div>
+                </div>
+                <span class="ax-carousel__item-label">오늘의 추천 게시물</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Uncontained — items bleed past trailing edge</h3>
+          <p class="sg-helper">No padding on trailing side — items extend off-screen. Drag/scroll to reveal.</p>
+          <div class="ax-carousel ax-carousel--uncontained">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 1</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 2</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 3</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 4</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Date picker ========== -->
+      <section class="sg-section" id="components-date-picker" data-screen-label="Date picker">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Date picker</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <strong>Visual structure only.</strong> Actual calendar logic (current month, navigation, validation) is the author's responsibility — typically driven by a JS library (flatpickr, vanilla-calendar) or server-rendered template. v0.4.0 = docked variant. Modal + modal-input variants reuse internals + dialog wrapper.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Docked — sample static layout</h3>
+          <div class="sg-row" style="align-items: flex-start;">
+            <div class="ax-date-picker">
+              <header class="ax-date-picker__header">
+                <span class="ax-date-picker__supporting">날짜 선택</span>
+                <span class="ax-date-picker__headline">2026년 5월 15일</span>
+              </header>
+              <nav class="ax-date-picker__nav" aria-label="월 선택">
+                <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="이전 달">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_left</span>
+                </button>
+                <span class="ax-date-picker__nav-label">2026년 5월</span>
+                <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="다음 달">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </button>
+              </nav>
+              <div class="ax-date-picker__weekdays" aria-hidden="true">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="ax-date-picker__grid" role="grid">
+                <button type="button" class="ax-date-picker__cell is-outside">26</button>
+                <button type="button" class="ax-date-picker__cell is-outside">27</button>
+                <button type="button" class="ax-date-picker__cell is-outside">28</button>
+                <button type="button" class="ax-date-picker__cell is-outside">29</button>
+                <button type="button" class="ax-date-picker__cell is-outside">30</button>
+                <button type="button" class="ax-date-picker__cell">1</button>
+                <button type="button" class="ax-date-picker__cell">2</button>
+
+                <button type="button" class="ax-date-picker__cell is-today">3</button>
+                <button type="button" class="ax-date-picker__cell">4</button>
+                <button type="button" class="ax-date-picker__cell">5</button>
+                <button type="button" class="ax-date-picker__cell">6</button>
+                <button type="button" class="ax-date-picker__cell">7</button>
+                <button type="button" class="ax-date-picker__cell">8</button>
+                <button type="button" class="ax-date-picker__cell">9</button>
+
+                <button type="button" class="ax-date-picker__cell">10</button>
+                <button type="button" class="ax-date-picker__cell is-in-range is-range-start">11</button>
+                <button type="button" class="ax-date-picker__cell is-in-range">12</button>
+                <button type="button" class="ax-date-picker__cell is-in-range">13</button>
+                <button type="button" class="ax-date-picker__cell is-in-range">14</button>
+                <button type="button" class="ax-date-picker__cell is-selected" aria-selected="true">15</button>
+                <button type="button" class="ax-date-picker__cell">16</button>
+
+                <button type="button" class="ax-date-picker__cell">17</button>
+                <button type="button" class="ax-date-picker__cell">18</button>
+                <button type="button" class="ax-date-picker__cell">19</button>
+                <button type="button" class="ax-date-picker__cell">20</button>
+                <button type="button" class="ax-date-picker__cell">21</button>
+                <button type="button" class="ax-date-picker__cell">22</button>
+                <button type="button" class="ax-date-picker__cell">23</button>
+
+                <button type="button" class="ax-date-picker__cell">24</button>
+                <button type="button" class="ax-date-picker__cell">25</button>
+                <button type="button" class="ax-date-picker__cell">26</button>
+                <button type="button" class="ax-date-picker__cell">27</button>
+                <button type="button" class="ax-date-picker__cell">28</button>
+                <button type="button" class="ax-date-picker__cell">29</button>
+                <button type="button" class="ax-date-picker__cell">30</button>
+
+                <button type="button" class="ax-date-picker__cell">31</button>
+                <button type="button" class="ax-date-picker__cell is-outside">1</button>
+                <button type="button" class="ax-date-picker__cell is-outside">2</button>
+                <button type="button" class="ax-date-picker__cell is-outside">3</button>
+                <button type="button" class="ax-date-picker__cell is-outside">4</button>
+                <button type="button" class="ax-date-picker__cell is-outside">5</button>
+                <button type="button" class="ax-date-picker__cell is-outside">6</button>
+              </div>
+            </div>
+          </div>
+          <p class="sg-helper">15일 = selected (primary fill), 11일 = range-start (primary fill, leading 모서리 둥글), 12-14일 = in-range band (secondary-container), 3일 = today (primary outline). 회색 날짜 = is-outside (38% opacity).</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Usage patterns (reference)</h3>
+          <p class="sg-helper">Date picker는 단독 사용보다 다음 3 패턴 권장 — Jetpack Compose <code>DatePickerDocked</code> / <code>DatePickerModal</code> / <code>DatePickerModalInput</code>와 동일:</p>
+          <ul class="sg-helper" style="padding-inline-start: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs);">
+            <li><strong>Docked</strong> — readonly text-field + trailing 달력 icon → popup으로 calendar 표시 (작은 form 안에서 inline)</li>
+            <li><strong>Modal</strong> — <code>.dialog</code>로 wrap + 취소/확인 button (full calendar grid)</li>
+            <li><strong>Modal-input</strong> — dialog 안에 text-field만 (calendar 안 보이고 직접 입력 — MM/DD/YYYY 같은)</li>
+          </ul>
+          <p class="sg-helper">실제 popup 위치/dismiss/날짜 계산은 author/JS 영역. 이 시스템은 <em>visual primitives</em>만 — calendar grid, date cell 상태 (today/selected/range/outside).</p>
+        </div>
+      </section>
+
+      <!-- ========== Time picker ========== -->
+      <section class="sg-section" id="components-time-picker" data-screen-label="Time picker">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Time picker</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <strong>Visual structure only.</strong> Input variant uses real <code>&lt;input type="text" inputmode="numeric"&gt;</code> for typeable HH/MM, and <code>&lt;input type="radio"&gt;</code> + <code>&lt;label&gt;</code> for AM/PM (single-select, CSS-only). Clock dial drag interaction stays in author code.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Input variant — type to enter time</h3>
+          <div class="sg-row">
+            <div class="ax-time-picker">
+              <span class="ax-time-picker__supporting">시간 입력</span>
+              <div class="ax-time-picker__inputs">
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field is-selected"
+                       aria-label="Hour" value="10">
+                <span class="ax-time-picker__separator">:</span>
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field"
+                       aria-label="Minute" value="30">
+
+                <fieldset class="ax-time-picker__period">
+                  <legend class="u-vh">AM or PM</legend>
+                  <input type="radio" name="sg-period" id="sg-period-am"
+                         class="ax-time-picker__period-input" checked>
+                  <label for="sg-period-am" class="ax-time-picker__period-btn">AM</label>
+                  <input type="radio" name="sg-period" id="sg-period-pm"
+                         class="ax-time-picker__period-input">
+                  <label for="sg-period-pm" class="ax-time-picker__period-btn">PM</label>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+          <p class="sg-helper">시 (10) = 선택됨 (primary-container 채워짐). 분 (30) = 미선택. AM/PM = radio라 CSS-only로 클릭 토글, 키보드 화살표로 이동 가능. 사이에 1px outline 색 divider.</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">24-hour mode — period selector hidden</h3>
+          <p class="sg-helper"><code>.is-24h</code> modifier로 AM/PM selector 숨김. Compose <code>is24Hour=true</code>와 동일.</p>
+          <div class="sg-row">
+            <div class="ax-time-picker is-24h">
+              <span class="ax-time-picker__supporting">시간 입력 (24시간)</span>
+              <div class="ax-time-picker__inputs">
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field is-selected"
+                       aria-label="Hour" value="14">
+                <span class="ax-time-picker__separator">:</span>
+                <input type="text" inputmode="numeric" maxlength="2"
+                       class="ax-time-picker__field"
+                       aria-label="Minute" value="30">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Dial variant — container scaffolding only</h3>
+          <p class="sg-helper">12-hour 라벨 + selector handle은 author/JS가 SVG 또는 absolute span으로 그림.</p>
+          <div class="sg-row">
+            <div class="ax-time-picker">
+              <span class="ax-time-picker__supporting">시간 선택</span>
+              <div class="ax-time-picker__dial" aria-label="시간 다이얼"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Usage patterns (reference)</h3>
+          <p class="sg-helper">Date/Time picker는 단독으로 잘 안 씀. Compose가 정의한 3 패턴 중 선택:</p>
+          <ul class="sg-helper" style="padding-inline-start: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs);">
+            <li><strong>Docked</strong> — text-field trailing icon 클릭 → popup으로 calendar/dial 표시 (form 안에서 inline 사용)</li>
+            <li><strong>Modal</strong> — <code>.dialog</code>로 wrap + 취소/확인 button (모바일에서 가장 흔한 패턴)</li>
+            <li><strong>Modal-input</strong> — dialog 안에 text-field만 (calendar 안 보이고 직접 타이핑)</li>
+          </ul>
+          <p class="sg-helper">실제 wiring (popup show/hide, dialog open/close)은 author/JS 영역. 이 시스템은 <em>visual structure</em>만 제공.</p>
+        </div>
+      </section>
+
+      <!-- ========== Card ========== -->
+      <section class="sg-section" id="components-card" data-screen-label="Card">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Card</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants — rest</h3>
+          <div class="sg-row sg-row--cards">
+            <article class="card card--filled">
+              <h4 class="card__title t-title-large">Filled card</h4>
+              <p class="card__subtitle">surface-container-highest · level0</p>
+              <p>Resting filled surface. Use when the card sits inside another container that needs a lift.</p>
+            </article>
+            <article class="card card--elevated">
+              <h4 class="card__title t-title-large">Elevated card</h4>
+              <p class="card__subtitle">surface-container-low · level1</p>
+              <p>Floats above the canvas. Hover state only matters when the card is interactive.</p>
+            </article>
+            <article class="card card--outlined">
+              <h4 class="card__title t-title-large">Outlined card</h4>
+              <p class="card__subtitle">surface · 1px outline-variant</p>
+              <p>Defined by stroke, not fill. Best on busy backgrounds where elevation reads as noise.</p>
+            </article>
+          </div>
+          <pre class="sg-snippet"><code>&lt;article class="card card--filled"&gt;
+  &lt;h4 class="card__title t-title-large"&gt;Title&lt;/h4&gt;
+  &lt;p class="card__subtitle"&gt;Subtitle&lt;/p&gt;
+  &lt;p&gt;Body&lt;/p&gt;
+&lt;/article&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Interactive — hover for level1 → level2</h3>
+          <div class="sg-row sg-row--cards">
+            <button class="card card--elevated card--interactive has-state-layer" type="button">
+              <span class="card__title t-title-large">Hover me</span>
+              <span class="card__subtitle">Elevation morphs on hover; state-layer overlay handles hover/focus/pressed.</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Disabled (Pattern B · whole-container 0.38)</h3>
+          <div class="sg-row sg-row--cards">
+            <article class="card card--elevated" aria-disabled="true">
+              <h4 class="card__title t-title-large">Locked content</h4>
+              <p class="card__subtitle">aria-disabled="true"</p>
+              <p>Whole container fades to 0.38 opacity per §0.8 Pattern B.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Chip ========== -->
+      <section class="sg-section" id="components-chip" data-screen-label="Chip">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Chip</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants — 4 types</h3>
+          <div class="sg-row">
+            <button class="chip chip--assist has-state-layer" type="button">
+              <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">info</span>
+              <span class="chip__label">Assist</span>
+            </button>
+            <button class="chip chip--filter has-state-layer" type="button" aria-pressed="false">
+              <span class="chip__label">Filter</span>
+            </button>
+            <span class="chip chip--input has-state-layer">
+              <span class="chip__label">Input value</span>
+              <span class="material-symbols-rounded notranslate chip__trailing-icon" translate="no" aria-hidden="true" draggable="false">close</span>
+            </span>
+            <button class="chip chip--suggestion has-state-layer" type="button">
+              <span class="chip__label">Suggestion</span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="chip chip--filter has-state-layer" aria-pressed="false"&gt;
+  &lt;span class="chip__label"&gt;Filter&lt;/span&gt;
+&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filter — selected</h3>
+          <div class="sg-row">
+            <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="true">
+              <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">check</span>
+              <span class="chip__label">Selected</span>
+            </button>
+            <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="false">
+              <span class="chip__label">Unselected</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Input — with avatar leading</h3>
+          <div class="sg-row">
+            <span class="chip chip--input has-state-layer">
+              <span class="chip__leading-icon ax-avatar is-size-xs"><span>HK</span></span>
+              <span class="chip__label">한가람</span>
+              <span class="material-symbols-rounded notranslate chip__trailing-icon" translate="no" aria-hidden="true" draggable="false">close</span>
+            </span>
+          </div>
+          <p class="t-body-small sg-helper">Input chip leading slot accepts a 24px avatar (size override on the leading element).</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Disabled</h3>
+          <div class="sg-row">
+            <button class="chip chip--assist has-state-layer" type="button" disabled>
+              <span class="chip__label">Assist</span>
+            </button>
+            <button class="chip chip--filter has-state-layer" type="button" aria-pressed="false" disabled>
+              <span class="chip__label">Filter</span>
+            </button>
+            <button class="chip chip--input has-state-layer" type="button" disabled>
+              <span class="chip__label">Input</span>
+            </button>
+            <button class="chip chip--suggestion has-state-layer" type="button" disabled>
+              <span class="chip__label">Suggestion</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Badge ========== -->
+      <section class="sg-section" id="components-badge" data-screen-label="Badge">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Badge</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Status indicator. Two variants: small (6×6 dot) / large (numeric label, 16×16 to 16×34). Anchored top-trailing of host. Apply <code>.has-badge</code> to host for positioning context.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Small (dot)</h3>
+          <p class="sg-helper">Used to mark unread / new / changed state without exact count.</p>
+          <div class="sg-row">
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Notifications (unread)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
+              <span class="ax-badge"></span>
+            </button>
+            <button type="button" class="ax-icon-button is-tonal has-badge" aria-label="Messages">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+              <span class="ax-badge"></span>
+            </button>
+          </div>
+          <pre class="sg-snippet"><code>&lt;button class="ax-icon-button is-standard has-badge" aria-label="Notifications (unread)"&gt;
+  &lt;svg ...&gt;&lt;/svg&gt;
+  &lt;span class="ax-badge"&gt;&lt;/span&gt;
+&lt;/button&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Large (numeric)</h3>
+          <p class="sg-helper">Counts up to ~3 chars. Use <code>99+</code> for overflow.</p>
+          <div class="sg-row">
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Notifications (3)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
+              <span class="ax-badge is-large">3</span>
+            </button>
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Messages (12)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+              <span class="ax-badge is-large">12</span>
+            </button>
+            <button type="button" class="ax-icon-button is-standard has-badge" aria-label="Messages (99 plus)">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+              <span class="ax-badge is-large">99+</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Inline (manual placement)</h3>
+          <p class="sg-helper">Use <code>.is-inline</code> to opt out of absolute positioning.</p>
+          <div class="sg-row" style="align-items: center;">
+            <span class="t-body-large">새 알림 <span class="ax-badge is-large is-inline">5</span></span>
+            <span class="t-body-large">Updates <span class="ax-badge is-large is-inline">New</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Divider ========== -->
+      <section class="sg-section" id="components-divider" data-screen-label="Divider">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Divider</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">3 variants — between text content</h3>
+          <div class="sg-divider-stack">
+            <p class="t-body-medium sg-divider-stack__row">아주 오래된 책들 사이에서 — full-width</p>
+            <hr class="ax-divider" />
+            <p class="t-body-medium sg-divider-stack__row">A long, low corridor of shelves — inset</p>
+            <hr class="ax-divider is-style-inset" />
+            <p class="t-body-medium sg-divider-stack__row">먼지 냄새 가득한 — middle inset</p>
+            <hr class="ax-divider is-style-middle-inset" />
+            <p class="t-body-medium sg-divider-stack__row">그날 오후의 정적.</p>
+          </div>
+          <pre class="sg-snippet"><code>&lt;hr class="ax-divider is-style-inset" /&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== App bar ========== -->
+      <section class="sg-section" id="components-app-bar" data-screen-label="App bar">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">App bar</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Small (64px · title-large)</h3>
+          <div class="sg-frame">
+            <header class="app-bar app-bar--small">
+              <span class="app-bar__leading">
+                <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Back">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_back</span>
+                </button>
+              </span>
+              <h1 class="app-bar__title t-title-large">Inbox</h1>
+              <span class="app-bar__trailing">
+                <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="More">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">more_vert</span>
+                </button>
+              </span>
+            </header>
+          </div>
+          <pre class="sg-snippet"><code>&lt;header class="app-bar app-bar--small"&gt;
+  &lt;span class="app-bar__leading"&gt;...&lt;/span&gt;
+  &lt;h1 class="app-bar__title t-title-large"&gt;Inbox&lt;/h1&gt;
+  &lt;span class="app-bar__trailing"&gt;...&lt;/span&gt;
+&lt;/header&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Medium-flexible (112–136px · headline-medium)</h3>
+          <div class="sg-frame">
+            <header class="app-bar app-bar--medium-flexible">
+              <div class="app-bar__row">
+                <span class="app-bar__leading">
+                  <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Menu">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">menu</span>
+                  </button>
+                </span>
+                <span style="flex:1"></span>
+                <span class="app-bar__trailing">
+                  <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Settings">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">settings</span>
+                  </button>
+                </span>
+              </div>
+              <div style="padding: 0 var(--space-md);">
+                <h1 class="app-bar__title t-headline-medium app-bar__title--wrap">Discover</h1>
+              </div>
+            </header>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Large-flexible (120–152px · display-small) + scrolled state</h3>
+          <div class="sg-frame">
+            <header class="app-bar app-bar--large-flexible" data-scrolled="true">
+              <div class="app-bar__row">
+                <span class="app-bar__leading">
+                  <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Back">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_back</span>
+                  </button>
+                </span>
+              </div>
+              <div style="padding: 0 var(--space-md);">
+                <h1 class="app-bar__title t-display-small app-bar__title--wrap">설정</h1>
+                <div class="app-bar__subtitle">Account · Notifications · Privacy</div>
+              </div>
+            </header>
+          </div>
+          <p class="t-body-small sg-helper">Demonstrates <code>[data-scrolled="true"]</code> — surface-container bg + level2 shadow.</p>
+        </div>
+      </section>
+
+      <!-- ========== Nav bar ========== -->
+      <section class="sg-section" id="components-nav-bar" data-screen-label="Nav bar">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Nav bar</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Mobile bottom navigation. 64px height. Active indicator pill (56×32) per §0.13. Width is 100% — frame below shows it within constrained width.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default (4 items)</h3>
+          <div class="sg-frame" style="max-width: 480px;">
+            <div class="sg-frame__body" style="padding: 0;">
+              <nav class="nav-bar" aria-label="Main navigation">
+                <button type="button" class="nav-bar__item is-active" aria-current="page">
+                  <span class="nav-bar__icon">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+                  </span>
+                  <span class="nav-bar__label">Home</span>
+                </button>
+                <button type="button" class="nav-bar__item">
+                  <span class="nav-bar__icon">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                  </span>
+                  <span class="nav-bar__label">검색</span>
+                </button>
+                <button type="button" class="nav-bar__item">
+                  <span class="nav-bar__icon has-badge">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
+                    <span class="ax-badge is-large">3</span>
+                  </span>
+                  <span class="nav-bar__label">Notifications</span>
+                </button>
+                <button type="button" class="nav-bar__item">
+                  <span class="nav-bar__icon">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">person</span>
+                  </span>
+                  <span class="nav-bar__label">프로필</span>
+                </button>
+              </nav>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;nav class="nav-bar" aria-label="Main navigation"&gt;
+  &lt;button type="button" class="nav-bar__item is-active" aria-current="page"&gt;
+    &lt;span class="nav-bar__icon"&gt;&lt;svg ...&gt;&lt;/svg&gt;&lt;/span&gt;
+    &lt;span class="nav-bar__label"&gt;Home&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;button type="button" class="nav-bar__item"&gt;
+    &lt;span class="nav-bar__icon has-badge"&gt;
+      &lt;svg ...&gt;&lt;/svg&gt;
+      &lt;span class="ax-badge is-large"&gt;3&lt;/span&gt;
+    &lt;/span&gt;
+    &lt;span class="nav-bar__label"&gt;Notifications&lt;/span&gt;
+  &lt;/button&gt;
+&lt;/nav&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== Nav rail ========== -->
+      <section class="sg-section" id="components-nav-rail" data-screen-label="Nav rail">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Nav rail (collapsed)</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">96px width · 5 items · 1 active</h3>
+          <div class="sg-frame sg-frame--rail">
+            <nav class="nav-rail" aria-label="Main">
+              <button class="nav-rail__item is-active sg-rail-item" type="button">
+                <span class="nav-rail__icon has-state-layer">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+                </span>
+                <span class="nav-rail__label t-label-medium">홈</span>
+              </button>
+              <button class="nav-rail__item sg-rail-item" type="button">
+                <span class="nav-rail__icon has-state-layer">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </span>
+                <span class="nav-rail__label t-label-medium">검색</span>
+              </button>
+              <button class="nav-rail__item sg-rail-item" type="button">
+                <span class="nav-rail__icon has-state-layer">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
+                </span>
+                <span class="nav-rail__label t-label-medium">알림</span>
+              </button>
+              <button class="nav-rail__item sg-rail-item" type="button">
+                <span class="nav-rail__icon has-state-layer">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chat</span>
+                </span>
+                <span class="nav-rail__label t-label-medium">메시지</span>
+              </button>
+              <button class="nav-rail__item sg-rail-item" type="button">
+                <span class="nav-rail__icon has-state-layer">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">person</span>
+                </span>
+                <span class="nav-rail__label t-label-medium">프로필</span>
+              </button>
+            </nav>
+            <div class="sg-frame__body t-body-medium">
+              왼쪽 rail의 항목을 클릭하면 active indicator가 이동합니다. 활성 indicator는 56×32 pill에 secondary-container 배경.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Nav rail (expanded) ========== -->
+      <section class="sg-section" id="components-nav-rail-expanded" data-screen-label="Nav rail expanded">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Nav rail (expanded)</h2>
+          <p class="t-body-medium sg-section__intro">
+            220–360px 폭. 아이콘 + label-large가 한 줄에 정렬되며 active indicator는 행 전체를 감싸는 full-width pill로 변환됩니다 (collapsed의 56×32 → full-row).
+            Modal expanded variant은 별도 컴포넌트가 아니라 <code>.nav-rail.is-expanded</code>를 <code>.sheet--side-modal</code> 안에 넣는 컴포지션 패턴입니다.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Standalone — 220px width · 5 items · 1 active</h3>
+          <div class="sg-frame sg-frame--rail">
+            <nav class="nav-rail is-expanded" aria-label="Main expanded">
+              <button class="nav-rail__item is-active has-state-layer sg-rail-item" type="button">
+                <span class="nav-rail__icon">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+                </span>
+                <span class="nav-rail__label">홈</span>
+              </button>
+              <button class="nav-rail__item has-state-layer sg-rail-item" type="button">
+                <span class="nav-rail__icon">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </span>
+                <span class="nav-rail__label">검색</span>
+              </button>
+              <button class="nav-rail__item has-state-layer sg-rail-item" type="button">
+                <span class="nav-rail__icon">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">notifications</span>
+                </span>
+                <span class="nav-rail__label">알림</span>
+              </button>
+              <button class="nav-rail__item has-state-layer sg-rail-item" type="button">
+                <span class="nav-rail__icon">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chat</span>
+                </span>
+                <span class="nav-rail__label">메시지</span>
+              </button>
+              <button class="nav-rail__item has-state-layer sg-rail-item" type="button">
+                <span class="nav-rail__icon">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">person</span>
+                </span>
+                <span class="nav-rail__label">프로필</span>
+              </button>
+            </nav>
+            <div class="sg-frame__body t-body-medium">
+              Active indicator가 행 전체를 채우는 full-width pill로 표시됩니다. Label은 <code>label-large</code> typescale.
+            </div>
+          </div>
+          <p class="t-body-small sg-helper">Modal mode가 필요하면 이 마크업을 <code>.sheet--side-modal</code> 안에 넣으세요 — composition pattern.</p>
+        </div>
+      </section>
+
+      <!-- ========== Tabs ========== -->
+      <section class="sg-section" id="components-tabs" data-screen-label="Tabs">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Tabs</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Primary (3px indicator · top-rounded)</h3>
+          <div class="sg-frame">
+            <div class="tabs tabs--primary sg-tab-group">
+              <button class="tabs__tab is-active" type="button">홈</button>
+              <button class="tabs__tab" type="button">탐색</button>
+              <button class="tabs__tab" type="button">알림</button>
+              <button class="tabs__tab" type="button">메시지</button>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="tabs tabs--primary"&gt;
+  &lt;button class="tabs__tab is-active"&gt;홈&lt;/button&gt;
+  &lt;button class="tabs__tab"&gt;탐색&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Secondary (2px flat indicator)</h3>
+          <div class="sg-frame">
+            <div class="tabs tabs--secondary sg-tab-group">
+              <button class="tabs__tab is-active" type="button">전체</button>
+              <button class="tabs__tab" type="button">멘션</button>
+              <button class="tabs__tab" type="button">팔로잉</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">With icons (64px tall)</h3>
+          <div class="sg-frame">
+            <div class="tabs tabs--primary tabs--with-icon sg-tab-group">
+              <button class="tabs__tab is-active" type="button">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+                <span>홈</span>
+              </button>
+              <button class="tabs__tab" type="button">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">explore</span>
+                <span>탐색</span>
+              </button>
+              <button class="tabs__tab" type="button">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">person</span>
+                <span>프로필</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Menu ========== -->
+      <section class="sg-section" id="components-menu" data-screen-label="Menu">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Menu</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Vertical menu (Standard color). Item slots: leading icon, label, supporting text, trailing supporting (e.g. shortcut), trailing icon. Width is intrinsic — clamped between 112px (min) and 280px (max). Static <code>.is-open</code> for demo; positioning to a trigger is the author's job.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default — label-only items</h3>
+          <div class="sg-row">
+            <div class="ax-menu is-open" role="menu" aria-label="Demo menu">
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-label">새 항목</span>
+              </button>
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-label">열기</span>
+              </button>
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-label">저장</span>
+              </button>
+              <hr class="ax-menu__divider" />
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-label">삭제</span>
+              </button>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-menu is-open" role="menu"&gt;
+  &lt;button class="ax-menu__item" role="menuitem"&gt;
+    &lt;span class="ax-menu__item-label"&gt;새 항목&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;hr class="ax-menu__divider" /&gt;
+  &lt;button class="ax-menu__item" role="menuitem"&gt;...&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">With icons + shortcuts</h3>
+          <div class="sg-row">
+            <div class="ax-menu is-open" role="menu" aria-label="Edit menu">
+              <span class="ax-menu__section-label">Edit</span>
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-leading">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+                </span>
+                <span class="ax-menu__item-label">Edit</span>
+                <span class="ax-menu__item-trailing-text">⌘E</span>
+              </button>
+              <button type="button" class="ax-menu__item is-selected" role="menuitem" aria-selected="true">
+                <span class="ax-menu__item-leading">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg>
+                </span>
+                <span class="ax-menu__item-label">Copy</span>
+                <span class="ax-menu__item-trailing-text">⌘C</span>
+              </button>
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-leading">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V6h10v2z" fill="currentColor"/></svg>
+                </span>
+                <span class="ax-menu__item-label">Paste</span>
+                <span class="ax-menu__item-trailing-text">⌘V</span>
+              </button>
+              <hr class="ax-menu__divider" />
+              <button type="button" class="ax-menu__item" role="menuitem" disabled>
+                <span class="ax-menu__item-leading">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg>
+                </span>
+                <span class="ax-menu__item-label">Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">With supporting text</h3>
+          <p class="sg-helper">Two-line items use <code>.ax-menu__item-supporting</code> inside <code>.ax-menu__item-label</code>.</p>
+          <div class="sg-row">
+            <div class="ax-menu is-open" role="menu" aria-label="Account menu">
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-leading">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg>
+                </span>
+                <span class="ax-menu__item-label">
+                  내 프로필
+                  <span class="ax-menu__item-supporting">@dohyun</span>
+                </span>
+              </button>
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-leading">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/></svg>
+                </span>
+                <span class="ax-menu__item-label">
+                  설정
+                  <span class="ax-menu__item-supporting">테마, 알림, 개인정보</span>
+                </span>
+              </button>
+              <hr class="ax-menu__divider" />
+              <button type="button" class="ax-menu__item" role="menuitem">
+                <span class="ax-menu__item-leading">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor"/></svg>
+                </span>
+                <span class="ax-menu__item-label">로그아웃</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Text field ========== -->
+      <section class="sg-section" id="components-text-field" data-screen-label="Text field">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Text field</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Refactored markup (v0.3.0+): outer <code>&lt;div class="text-field"&gt;</code> + visual <code>&lt;div class="text-field__container"&gt;</code> + optional <code>&lt;div class="text-field__bottom"&gt;</code>. Slot grid: leading / prefix / input+label / suffix / trailing+error. Native <code>:user-invalid</code> drives error state without JS.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filled — 5 states</h3>
+          <div class="sg-tf-grid">
+            <div class="text-field text-field--filled">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-001" placeholder=" " />
+                <label class="text-field__label" for="tf-auto-001">Empty</label>
+              </div>
+            </div>
+            <div class="text-field text-field--filled">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-002" placeholder=" " value="이도윤" />
+                <label class="text-field__label" for="tf-auto-002">Populated</label>
+              </div>
+            </div>
+            <div class="text-field text-field--filled">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-003" placeholder=" " />
+                <label class="text-field__label" for="tf-auto-003">Focused (click me)</label>
+              </div>
+            </div>
+            <div class="text-field text-field--filled is-error">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-004" placeholder=" " value="invalid@" />
+                <label class="text-field__label" for="tf-auto-004">Email</label>
+                <span class="text-field__error-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <div class="text-field__bottom">
+                <span class="text-field__supporting">올바른 이메일 형식이 아닙니다.</span>
+              </div>
+            </div>
+            <div class="text-field text-field--filled">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-005" placeholder=" " value="잠김" disabled />
+                <label class="text-field__label" for="tf-auto-005">Disabled</label>
+              </div>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="text-field text-field--filled"&gt;
+  &lt;div class="text-field__container"&gt;
+    &lt;input class="text-field__input" id="tf-email" placeholder=" " /&gt;
+    &lt;label class="text-field__label" for="tf-email"&gt;Email&lt;/label&gt;
+  &lt;/div&gt;
+  &lt;div class="text-field__bottom"&gt;
+    &lt;span class="text-field__supporting"&gt;Helper text&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Outlined — 5 states</h3>
+          <div class="sg-tf-grid">
+            <div class="text-field text-field--outlined">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-006" placeholder=" " />
+                <label class="text-field__label" for="tf-auto-006">Empty</label>
+              </div>
+            </div>
+            <div class="text-field text-field--outlined">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-007" placeholder=" " value="가람" />
+                <label class="text-field__label" for="tf-auto-007">Populated</label>
+              </div>
+            </div>
+            <div class="text-field text-field--outlined">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-008" placeholder=" " />
+                <label class="text-field__label" for="tf-auto-008">Focused (click me)</label>
+              </div>
+            </div>
+            <div class="text-field text-field--outlined is-error">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-009" placeholder=" " value="!!!" />
+                <label class="text-field__label" for="tf-auto-009">Username</label>
+                <span class="text-field__error-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <div class="text-field__bottom">
+                <span class="text-field__supporting">특수문자는 사용할 수 없습니다.</span>
+              </div>
+            </div>
+            <div class="text-field text-field--outlined">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-010" placeholder=" " value="고정값" disabled />
+                <label class="text-field__label" for="tf-auto-010">Disabled</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Prefix · Suffix · Counter · Native validation</h3>
+          <p class="sg-helper">Prefix/suffix only appear when the label has floated up (focused or populated). Try entering letters in the price field — HTML5 <code>pattern</code> + <code>:user-invalid</code> auto-trigger error after blur.</p>
+          <div class="sg-tf-grid">
+            <div class="text-field text-field--outlined">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-011" placeholder=" " inputmode="numeric" pattern="[0-9]*" maxlength="10" />
+                <label class="text-field__label" for="tf-auto-011">가격</label>
+                <span class="text-field__prefix">₩</span>
+                <span class="text-field__suffix">KRW</span>
+                <span class="text-field__error-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <div class="text-field__bottom">
+                <span class="text-field__supporting">숫자만 입력해 주세요.</span>
+              </div>
+            </div>
+            <div class="text-field text-field--outlined">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-012" placeholder=" " maxlength="50" />
+                <label class="text-field__label" for="tf-auto-012">제목</label>
+                <span class="text-field__error-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <div class="text-field__bottom">
+                <span class="text-field__supporting">최대 50자.</span>
+                <span class="text-field__counter" data-tf-counter>0 / 50</span>
+              </div>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="text-field text-field--outlined"&gt;
+  &lt;div class="text-field__container"&gt;
+    &lt;input class="text-field__input" id="tf-price" placeholder=" "
+           inputmode="numeric" pattern="[0-9]*" maxlength="10" /&gt;
+    &lt;label class="text-field__label" for="tf-price"&gt;가격&lt;/label&gt;
+    &lt;span class="text-field__prefix"&gt;₩&lt;/span&gt;
+    &lt;span class="text-field__suffix"&gt;KRW&lt;/span&gt;
+    &lt;span class="text-field__error-icon"&gt;...&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="text-field__bottom"&gt;
+    &lt;span class="text-field__supporting"&gt;숫자만 입력해 주세요.&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Leading · Trailing icons</h3>
+          <p class="sg-helper">Leading icon (search affordance), trailing icon (clear action). Add <code>.text-field--with-leading</code> on the wrapper so the label clears the leading icon space. For interactive trailing buttons (clear, voice, dropdown), compose with <code>.ax-icon-button.is-standard.has-state-layer</code>. The clear button uses <code>.is-clear</code> for auto-hide-when-empty per M3 §32.</p>
+          <div class="sg-tf-grid">
+            <div class="text-field text-field--outlined text-field--with-leading">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-013" placeholder=" " value="검색어 입력" />
+                <label class="text-field__label" for="tf-auto-013">검색</label>
+                <span class="text-field__leading-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/></svg>
+                </span>
+                <button type="button" class="ax-icon-button is-standard has-state-layer text-field__trailing-icon is-clear" aria-label="Clear">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+                </button>
+              </div>
+            </div>
+            <div class="text-field text-field--outlined text-field--with-leading">
+              <div class="text-field__container">
+                <input class="text-field__input" id="tf-auto-014" placeholder=" " type="email" />
+                <label class="text-field__label" for="tf-auto-014">이메일</label>
+                <span class="text-field__leading-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/></svg>
+                </span>
+                <span class="text-field__error-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                </span>
+              </div>
+              <div class="text-field__bottom">
+                <span class="text-field__supporting">로그인에 사용할 이메일 주소</span>
+              </div>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="text-field text-field--outlined text-field--with-leading"&gt;
+  &lt;div class="text-field__container"&gt;
+    &lt;input class="text-field__input" id="tf-search" placeholder=" " /&gt;
+    &lt;label class="text-field__label" for="tf-search"&gt;검색&lt;/label&gt;
+    &lt;span class="text-field__leading-icon"&gt;&lt;svg .../&gt;&lt;/span&gt;
+    &lt;button class="ax-icon-button is-standard has-state-layer
+                   text-field__trailing-icon is-clear"
+            aria-label="Clear"&gt;
+      &lt;svg .../&gt;
+    &lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Textarea</h3>
+          <div class="text-field text-field--outlined" style="max-width: 480px;">
+            <div class="text-field__container">
+              <textarea class="text-field__input" id="tf-auto-015" placeholder=" " rows="3" maxlength="280"></textarea>
+              <label class="text-field__label" for="tf-auto-015">메시지 작성</label>
+            </div>
+            <div class="text-field__bottom">
+              <span class="text-field__supporting">최대 280자.</span>
+              <span class="text-field__counter" data-tf-counter>0 / 280</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== Search bar ========== -->
+      <section class="sg-section" id="components-search-bar" data-screen-label="Search bar">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Search bar</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Rest state · 56px · corner-full</h3>
+          <label class="search-bar" style="max-width: 600px;">
+            <span class="search-bar__leading-icon">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+            </span>
+            <input class="search-bar__input" name="q" id="sg-search-q" type="search" placeholder="검색어를 입력하세요" />
+            <span class="search-bar__trailing">
+              <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Voice search">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mic</span>
+              </button>
+              <span class="ax-avatar is-size-xs"><span>지원</span></span>
+            </span>
+          </label>
+          <pre class="sg-snippet"><code>&lt;label class="search-bar"&gt;
+  &lt;span class="search-bar__leading-icon"&gt;...&lt;/span&gt;
+  &lt;input class="search-bar__input" placeholder="검색" /&gt;
+  &lt;span class="search-bar__trailing"&gt;...&lt;/span&gt;
+&lt;/label&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== Checkbox ========== -->
+      <section class="sg-section" id="components-checkbox" data-screen-label="Checkbox">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Checkbox</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            18×18 box with 40×40 state layer halo. Selected primary fill + check icon. Indeterminate state shows horizontal bar. Pressed state shows preview-of-toggle color (M3 §13.3 quirk). Bucket E — system styles native <code>&lt;input type="checkbox"&gt;</code> via custom visual.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default states</h3>
+          <div class="sg-row" style="gap: var(--space-lg); align-items: center;">
+            <label class="ax-checkbox">
+              <input type="checkbox" class="ax-checkbox__input" />
+              <span class="ax-checkbox__visual">
+                <svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true">
+                  <polyline points="3.5,9.5 7.5,13.5 14.5,5.5"></polyline>
+                </svg>
+              </span>
+              <span class="ax-checkbox__label">Unchecked</span>
+            </label>
+            <label class="ax-checkbox">
+              <input type="checkbox" class="ax-checkbox__input" checked />
+              <span class="ax-checkbox__visual">
+                <svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true">
+                  <polyline points="3.5,9.5 7.5,13.5 14.5,5.5"></polyline>
+                </svg>
+              </span>
+              <span class="ax-checkbox__label">Checked</span>
+            </label>
+            <label class="ax-checkbox">
+              <input type="checkbox" class="ax-checkbox__input" id="sg-cb-indet" />
+              <span class="ax-checkbox__visual">
+                <svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true">
+                  <polyline points="3.5,9.5 7.5,13.5 14.5,5.5"></polyline>
+                </svg>
+              </span>
+              <span class="ax-checkbox__label">Indeterminate</span>
+            </label>
+          </div>
+          <pre class="sg-snippet"><code>&lt;label class="ax-checkbox"&gt;
+  &lt;input type="checkbox" class="ax-checkbox__input" /&gt;
+  &lt;span class="ax-checkbox__visual"&gt;
+    &lt;svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true"&gt;
+      &lt;polyline points="3.5,9.5 7.5,13.5 14.5,5.5"&gt;&lt;/polyline&gt;
+    &lt;/svg&gt;
+  &lt;/span&gt;
+  &lt;span class="ax-checkbox__label"&gt;Label&lt;/span&gt;
+&lt;/label&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Error</h3>
+          <div class="sg-row" style="gap: var(--space-lg); align-items: center;">
+            <label class="ax-checkbox is-error">
+              <input type="checkbox" class="ax-checkbox__input" />
+              <span class="ax-checkbox__visual">
+                <svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true">
+                  <polyline points="3.5,9.5 7.5,13.5 14.5,5.5"></polyline>
+                </svg>
+              </span>
+              <span class="ax-checkbox__label">필수 동의</span>
+            </label>
+            <label class="ax-checkbox is-error">
+              <input type="checkbox" class="ax-checkbox__input" checked />
+              <span class="ax-checkbox__visual">
+                <svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true">
+                  <polyline points="3.5,9.5 7.5,13.5 14.5,5.5"></polyline>
+                </svg>
+              </span>
+              <span class="ax-checkbox__label">Selected error</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Disabled</h3>
+          <div class="sg-row" style="gap: var(--space-lg); align-items: center;">
+            <label class="ax-checkbox">
+              <input type="checkbox" class="ax-checkbox__input" disabled />
+              <span class="ax-checkbox__visual">
+                <svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true">
+                  <polyline points="3.5,9.5 7.5,13.5 14.5,5.5"></polyline>
+                </svg>
+              </span>
+              <span class="ax-checkbox__label">Disabled</span>
+            </label>
+            <label class="ax-checkbox">
+              <input type="checkbox" class="ax-checkbox__input" checked disabled />
+              <span class="ax-checkbox__visual">
+                <svg class="ax-checkbox__check" viewBox="0 0 18 18" aria-hidden="true">
+                  <polyline points="3.5,9.5 7.5,13.5 14.5,5.5"></polyline>
+                </svg>
+              </span>
+              <span class="ax-checkbox__label">Disabled selected</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Radio ========== -->
+      <section class="sg-section" id="components-radio" data-screen-label="Radio">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Radio button</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            20×20 outer ring + 10×10 inner dot. Same state layer + cross-color pressed quirk as checkbox. Used in radio groups for mutually-exclusive choices. Bucket E — styles native <code>&lt;input type="radio"&gt;</code>.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default group</h3>
+          <div class="sg-row" style="flex-direction: column; gap: var(--space-sm); align-items: flex-start;">
+            <label class="ax-radio">
+              <input type="radio" name="sg-radio-demo" class="ax-radio__input" />
+              <span class="ax-radio__visual"></span>
+              <span class="ax-radio__label">Light</span>
+            </label>
+            <label class="ax-radio">
+              <input type="radio" name="sg-radio-demo" class="ax-radio__input" checked />
+              <span class="ax-radio__visual"></span>
+              <span class="ax-radio__label">Auto (시스템 따름)</span>
+            </label>
+            <label class="ax-radio">
+              <input type="radio" name="sg-radio-demo" class="ax-radio__input" />
+              <span class="ax-radio__visual"></span>
+              <span class="ax-radio__label">Dark</span>
+            </label>
+          </div>
+          <pre class="sg-snippet"><code>&lt;label class="ax-radio"&gt;
+  &lt;input type="radio" name="theme" class="ax-radio__input" /&gt;
+  &lt;span class="ax-radio__visual"&gt;&lt;/span&gt;
+  &lt;span class="ax-radio__label"&gt;Auto&lt;/span&gt;
+&lt;/label&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Disabled</h3>
+          <div class="sg-row" style="flex-direction: column; gap: var(--space-sm); align-items: flex-start;">
+            <label class="ax-radio">
+              <input type="radio" name="sg-radio-disabled" class="ax-radio__input" disabled />
+              <span class="ax-radio__visual"></span>
+              <span class="ax-radio__label">Disabled unselected</span>
+            </label>
+            <label class="ax-radio">
+              <input type="radio" name="sg-radio-disabled" class="ax-radio__input" checked disabled />
+              <span class="ax-radio__visual"></span>
+              <span class="ax-radio__label">Disabled selected</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Switch ========== -->
+      <section class="sg-section" id="components-switch" data-screen-label="Switch">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Switch</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Track 52×32 pill with size-morphing handle (16 unselected → 24 selected → 28 pressed). Selected = primary fill, unselected = surface-container-highest with 2px outline. State layer 40×40 follows handle. Bucket E — styles native <code>&lt;input type="checkbox" role="switch"&gt;</code>.
+          </p>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <em>v0.2.5 scope</em>: track + handle + state layer. Optional icon-on-handle deferred.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default</h3>
+          <div class="sg-row" style="flex-direction: column; gap: var(--space-md); align-items: flex-start;">
+            <label class="ax-switch">
+              <input type="checkbox" role="switch" class="ax-switch__input" />
+              <span class="ax-switch__track"></span>
+              <span class="ax-switch__label">Wi-Fi</span>
+            </label>
+            <label class="ax-switch">
+              <input type="checkbox" role="switch" class="ax-switch__input" checked />
+              <span class="ax-switch__track"></span>
+              <span class="ax-switch__label">알림 받기</span>
+            </label>
+          </div>
+          <pre class="sg-snippet"><code>&lt;label class="ax-switch"&gt;
+  &lt;input type="checkbox" role="switch" class="ax-switch__input" /&gt;
+  &lt;span class="ax-switch__track"&gt;&lt;/span&gt;
+  &lt;span class="ax-switch__label"&gt;알림 받기&lt;/span&gt;
+&lt;/label&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Disabled</h3>
+          <div class="sg-row" style="flex-direction: column; gap: var(--space-md); align-items: flex-start;">
+            <label class="ax-switch">
+              <input type="checkbox" role="switch" class="ax-switch__input" disabled />
+              <span class="ax-switch__track"></span>
+              <span class="ax-switch__label">Disabled off</span>
+            </label>
+            <label class="ax-switch">
+              <input type="checkbox" role="switch" class="ax-switch__input" checked disabled />
+              <span class="ax-switch__track"></span>
+              <span class="ax-switch__label">Disabled on</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Slider ========== -->
+      <section class="sg-section" id="components-slider" data-screen-label="Slider">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Slider</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            XS standard horizontal slider. Track 16px secondary-container, handle 4px primary (morphs to 2px on press). Uses native <code>&lt;input type="range"&gt;</code> with vendor pseudo-elements. Active fill via <code>accent-color</code> (browser-native) — for full M3 fidelity, author can add JS-driven gradient.
+          </p>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <em>v0.2.5 scope</em>: XS standard horizontal. S/M/L/XL sizes, vertical, centered, range, stops, value indicator deferred.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default</h3>
+          <div class="sg-row" style="flex-direction: column; gap: var(--space-lg); align-items: stretch; max-width: 400px;">
+            <div class="ax-slider">
+              <input type="range" class="ax-slider__input" min="0" max="100" value="40" style="--_value: 40%" aria-label="Volume" />
+            </div>
+            <div class="ax-slider">
+              <input type="range" class="ax-slider__input" min="0" max="100" value="75" style="--_value: 75%" aria-label="Brightness" />
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-slider"&gt;
+  &lt;input type="range" class="ax-slider__input" min="0" max="100" value="40" aria-label="Volume" /&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Disabled</h3>
+          <div class="sg-row" style="max-width: 400px;">
+            <div class="ax-slider">
+              <input type="range" class="ax-slider__input" min="0" max="100" value="30" style="--_value: 30%" disabled aria-label="Disabled" />
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== Dialog ========== -->
+      <section class="sg-section" id="components-dialog" data-screen-label="Dialog">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Dialog</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Static — basic</h3>
+          <div class="sg-frame sg-frame--dialog">
+            <div class="dialog dialog--basic" open style="position: relative; transform: none; inset: auto;">
+              <span class="dialog__icon">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+              </span>
+              <h2 class="dialog__headline">변경 사항을 저장하시겠습니까?</h2>
+              <p class="dialog__supporting">저장하지 않으면 마지막 편집 이후의 변경 사항이 모두 사라집니다.</p>
+              <div class="dialog__actions">
+                <button class="ax-button is-text has-state-layer t-label-large" type="button">취소</button>
+                <button class="ax-button is-filled has-state-layer t-label-large" type="button">저장</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Static — full-screen</h3>
+          <div class="sg-frame sg-frame--dialog">
+            <div class="dialog dialog--full-screen" open style="position: relative;">
+              <header class="app-bar app-bar--small dialog__app-bar">
+                <span class="app-bar__leading">
+                  <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Close">
+                    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+                  </button>
+                </span>
+                <h1 class="app-bar__title t-title-large">새 글 작성</h1>
+                <span class="app-bar__trailing">
+                  <button class="ax-button is-text has-state-layer t-label-large" type="button">게시</button>
+                </span>
+              </header>
+              <div class="dialog__body t-body-medium">전체 화면 다이얼로그는 본문 영역을 자유롭게 채울 수 있습니다.</div>
+            </div>
+          </div>
+          <p class="t-body-small sg-helper">Full-screen variant은 viewport 전체를 채우는 디자인 — 위 frame은 100% 컨테이너 fit으로 override되어 있습니다.</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Live — open as real modal</h3>
+          <div class="sg-row">
+            <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-open-dialog="basic">Open basic dialog</button>
+            <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-open-dialog="full">Open full-screen</button>
+          </div>
+          <p class="t-body-small sg-helper">실제 viewport 크기로 띄우려면 위 버튼을 사용. body scroll이 잠깁니다.</p>
+        </div>
+      </section>
+
+      <!-- ========== Sheet ========== -->
+      <section class="sg-section" id="components-sheet" data-screen-label="Sheet">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Sheet</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Static — bottom modal</h3>
+          <div class="sg-frame sg-frame--sheet">
+            <aside class="sheet sheet--bottom-modal is-open">
+              <div class="sheet__handle" aria-hidden="true"></div>
+              <header class="sheet__header">
+                <h2 class="sheet__title">공유</h2>
+              </header>
+              <div class="sheet__body">
+                <div class="sg-row">
+                  <button class="ax-button is-tonal has-state-layer t-label-large" type="button">메시지</button>
+                  <button class="ax-button is-tonal has-state-layer t-label-large" type="button">메일</button>
+                  <button class="ax-button is-tonal has-state-layer t-label-large" type="button">링크 복사</button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Static — side modal</h3>
+          <div class="sg-frame sg-frame--sheet">
+            <aside class="sheet sheet--side-modal is-open">
+              <header class="sheet__header">
+                <h2 class="sheet__title t-title-large">필터</h2>
+              </header>
+              <div class="sheet__body">
+                <div class="sg-row" style="flex-direction: column; align-items: stretch; gap: var(--space-xs);">
+                  <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="true">
+                    <span class="chip__label">최신순</span>
+                  </button>
+                  <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="false">
+                    <span class="chip__label">인기순</span>
+                  </button>
+                  <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="false">
+                    <span class="chip__label">팔로잉</span>
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Live — open as real modal</h3>
+          <div class="sg-row">
+            <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-open-sheet="bottom">Open bottom sheet</button>
+            <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-open-sheet="side">Open side sheet</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Snackbar ========== -->
+      <section class="sg-section" id="components-snackbar" data-screen-label="Snackbar">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Snackbar</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">4 variants — static</h3>
+          <div class="sg-snackbar-stack">
+            <div class="snackbar">
+              <span class="snackbar__label">메시지가 전송되었습니다.</span>
+            </div>
+            <div class="snackbar">
+              <span class="snackbar__label">초안이 저장되었습니다.</span>
+              <button class="snackbar__action" type="button">실행 취소</button>
+            </div>
+            <div class="snackbar snackbar--two-line">
+              <span class="snackbar__label">서버 응답이 늦어지고 있습니다. 다시 시도하면 빠르게 처리될 수 있어요.</span>
+            </div>
+            <div class="snackbar snackbar--two-line">
+              <span class="snackbar__label">새 버전이 발견되었습니다. 지금 새로고침하면 최신 인터페이스를 사용할 수 있어요.</span>
+              <button class="snackbar__action" type="button">새로고침</button>
+              <button class="snackbar__close" type="button" aria-label="Close">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+              </button>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="snackbar"&gt;
+  &lt;span class="snackbar__label"&gt;Saved&lt;/span&gt;
+  &lt;button class="snackbar__action"&gt;Undo&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== Tooltip ========== -->
+      <section class="sg-section" id="components-tooltip" data-screen-label="Tooltip">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Tooltip</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Two variants: plain (short label, inverse-surface) / rich (subhead + body + actions, surface-container). Static <code>.is-open</code> for demo; positioning to a trigger is the author's job.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Plain</h3>
+          <p class="sg-helper">Short, attached to a trigger element. Single-line, max 240px.</p>
+          <div class="sg-row" style="position: relative; padding: 32px 0; align-items: flex-start;">
+            <span class="ax-tooltip is-plain is-open" role="tooltip" style="position: relative;">새 글 쓰기</span>
+            <span class="ax-tooltip is-plain is-open" role="tooltip" style="position: relative;">⌘ + N</span>
+            <span class="ax-tooltip is-plain is-open" role="tooltip" style="position: relative;">Compose new post</span>
+          </div>
+          <pre class="sg-snippet"><code>&lt;span class="ax-tooltip is-plain is-open" role="tooltip"&gt;새 글 쓰기&lt;/span&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Rich</h3>
+          <p class="sg-helper">Subhead + body + up to 2 actions. Dismissible.</p>
+          <div class="sg-row" style="position: relative; padding: 16px 0; gap: var(--space-lg); align-items: flex-start;">
+            <div class="ax-tooltip is-rich is-open" role="tooltip" style="position: relative;">
+              <span class="ax-tooltip__subhead">키보드 단축키</span>
+              <span class="ax-tooltip__supporting">⌘ + N으로 새 글 작성을 빠르게 시작할 수 있습니다.</span>
+              <div class="ax-tooltip__actions">
+                <button type="button" class="ax-tooltip__action">자세히</button>
+                <button type="button" class="ax-tooltip__action">닫기</button>
+              </div>
+            </div>
+            <div class="ax-tooltip is-rich is-open" role="tooltip" style="position: relative;">
+              <span class="ax-tooltip__subhead">Federation</span>
+              <span class="ax-tooltip__supporting">Posts on this server are visible to followers across the fediverse.</span>
+              <div class="ax-tooltip__actions">
+                <button type="button" class="ax-tooltip__action">Learn more</button>
+              </div>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-tooltip is-rich is-open" role="tooltip"&gt;
+  &lt;span class="ax-tooltip__subhead"&gt;키보드 단축키&lt;/span&gt;
+  &lt;span class="ax-tooltip__supporting"&gt;⌘ + N으로 새 글 작성을 빠르게 시작합니다.&lt;/span&gt;
+  &lt;div class="ax-tooltip__actions"&gt;
+    &lt;button class="ax-tooltip__action"&gt;자세히&lt;/button&gt;
+    &lt;button class="ax-tooltip__action"&gt;닫기&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== Loading indicator ========== -->
+      <section class="sg-section" id="components-loading" data-screen-label="Loading">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Loading indicator</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Replaces indeterminate circular progress for short waits. Default (uncontained) / contained variants. Auto-respects <code>prefers-reduced-motion</code>.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Default (uncontained, 48px)</h3>
+          <div class="sg-row" style="align-items: center;">
+            <span class="ax-loading" role="status" aria-label="Loading">
+              <svg class="ax-loading__svg" viewBox="0 0 50 50" aria-hidden="true">
+                <circle class="ax-loading__circle" cx="25" cy="25" r="20"></circle>
+              </svg>
+            </span>
+          </div>
+          <pre class="sg-snippet"><code>&lt;span class="ax-loading" role="status" aria-label="Loading"&gt;
+  &lt;svg class="ax-loading__svg" viewBox="0 0 50 50" aria-hidden="true"&gt;
+    &lt;circle class="ax-loading__circle" cx="25" cy="25" r="20"&gt;&lt;/circle&gt;
+  &lt;/svg&gt;
+&lt;/span&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Contained</h3>
+          <p class="sg-helper">Pill container with primary-container fill, 38×48px.</p>
+          <div class="sg-row" style="align-items: center;">
+            <span class="ax-loading is-contained" role="status" aria-label="Loading">
+              <svg class="ax-loading__svg" viewBox="0 0 50 50" aria-hidden="true">
+                <circle class="ax-loading__circle" cx="25" cy="25" r="20"></circle>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium">Small (24px) — for inline use</h3>
+          <p class="sg-helper">Useful inside buttons or near labels.</p>
+          <div class="sg-row" style="align-items: center; gap: var(--space-md);">
+            <span class="ax-loading is-small" role="status" aria-label="Loading">
+              <svg class="ax-loading__svg" viewBox="0 0 50 50" aria-hidden="true">
+                <circle class="ax-loading__circle" cx="25" cy="25" r="20"></circle>
+              </svg>
+            </span>
+            <button type="button" class="ax-button is-filled has-state-layer">
+              <span class="ax-loading is-small" aria-hidden="true" style="color: currentColor;">
+                <svg class="ax-loading__svg" viewBox="0 0 50 50">
+                  <circle class="ax-loading__circle" cx="25" cy="25" r="20"></circle>
+                </svg>
+              </span>
+              <span style="margin-inline-start: var(--space-sm);">저장 중...</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Progress indicator ========== -->
+      <section class="sg-section" id="components-progress" data-screen-label="Progress">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Progress indicator</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Linear (4px track) + circular (40px). Determinate (set <code>--_value</code> via JS) or indeterminate (auto-animated). <code>prefers-reduced-motion</code> fallback for both. Wavy variant deferred to v1.5+.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Linear — determinate</h3>
+          <p class="sg-helper">Set <code>--_value</code> on the element to drive fill percentage.</p>
+          <div class="sg-row" style="flex-direction: column; gap: var(--space-md); align-items: stretch; max-width: 400px;">
+            <div class="ax-progress-linear is-determinate" style="--_value: 25%;" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="ax-progress-linear is-determinate" style="--_value: 60%;" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="ax-progress-linear is-determinate" style="--_value: 90%;" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-progress-linear is-determinate"
+     style="--_value: 60%;"
+     role="progressbar"
+     aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"&gt;&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Linear — indeterminate</h3>
+          <div class="sg-row" style="max-width: 400px;">
+            <div class="ax-progress-linear is-indeterminate" role="progressbar" aria-label="Loading"></div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Circular — determinate</h3>
+          <div class="sg-row" style="gap: var(--space-lg); align-items: center;">
+            <span class="ax-progress-circular is-determinate" style="--_value: 25;" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
+              <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ax-progress-circular__track"  cx="20" cy="20" r="18"></circle>
+                <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+              </svg>
+            </span>
+            <span class="ax-progress-circular is-determinate" style="--_value: 60;" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
+              <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ax-progress-circular__track"  cx="20" cy="20" r="18"></circle>
+                <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+              </svg>
+            </span>
+            <span class="ax-progress-circular is-determinate" style="--_value: 90;" role="progressbar" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100">
+              <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ax-progress-circular__track"  cx="20" cy="20" r="18"></circle>
+                <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Circular — indeterminate</h3>
+          <div class="sg-row" style="align-items: center;">
+            <span class="ax-progress-circular is-indeterminate" role="progressbar" aria-label="Loading">
+              <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ax-progress-circular__track"  cx="20" cy="20" r="18"></circle>
+                <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+              </svg>
+            </span>
+          </div>
+          <pre class="sg-snippet"><code>&lt;span class="ax-progress-circular is-indeterminate"
+      role="progressbar" aria-label="Loading"&gt;
+  &lt;svg class="ax-progress-circular__svg" viewBox="0 0 40 40"&gt;
+    &lt;circle class="ax-progress-circular__track"  cx="20" cy="20" r="18"/&gt;
+    &lt;circle class="ax-progress-circular__active" cx="20" cy="20" r="18"/&gt;
+  &lt;/svg&gt;
+&lt;/span&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- ========== Live modals (rendered into a portal at body root) ========== -->
+      <div id="sg-portal" aria-hidden="true">
+        <div class="modal-scrim" data-open="false" data-portal-scrim></div>
+        <dialog class="dialog dialog--basic" id="sg-modal-basic">
+          <span class="dialog__icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+          </span>
+          <h2 class="dialog__headline">변경 사항을 저장하시겠습니까?</h2>
+          <p class="dialog__supporting">저장하지 않으면 마지막 편집 이후의 변경 사항이 모두 사라집니다.</p>
+          <div class="dialog__actions">
+            <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>취소</button>
+            <button class="ax-button is-filled has-state-layer t-label-large" type="button" data-close-modal>저장</button>
+          </div>
+        </dialog>
+        <dialog class="dialog dialog--full-screen" id="sg-modal-full">
+          <header class="app-bar app-bar--small dialog__app-bar">
+            <span class="app-bar__leading">
+              <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Close" data-close-modal>
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+              </button>
+            </span>
+            <h1 class="app-bar__title t-title-large">새 글 작성</h1>
+            <span class="app-bar__trailing">
+              <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>게시</button>
+            </span>
+          </header>
+          <div class="dialog__body">
+            <div class="text-field text-field--outlined" style="max-width: 600px;">
+              <div class="text-field__container">
+                <textarea class="text-field__input" id="tf-auto-016" placeholder=" " rows="6"></textarea>
+                <label class="text-field__label" for="tf-auto-016">무슨 일이 있었나요?</label>
+              </div>
+            </div>
+          </div>
+        </dialog>
+        <aside class="sheet sheet--bottom-modal" id="sg-sheet-bottom">
+          <div class="sheet__handle" aria-hidden="true"></div>
+          <header class="sheet__header">
+            <h2 class="sheet__title t-title-large">공유</h2>
+          </header>
+          <div class="sheet__body">
+            <div class="sg-row">
+              <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-close-modal>메시지</button>
+              <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-close-modal>메일</button>
+              <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-close-modal>링크 복사</button>
+            </div>
+          </div>
+        </aside>
+        <aside class="sheet sheet--side-modal" id="sg-sheet-side">
+          <header class="sheet__header">
+            <h2 class="sheet__title t-title-large">필터</h2>
+          </header>
+          <div class="sheet__body">
+            <p class="t-body-medium">사이드 시트에서 다양한 필터 컨트롤을 배치할 수 있습니다.</p>
+            <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal style="margin-top: var(--space-md);">닫기</button>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <!-- =========================================================
+       Footer — author + license credit
+       ========================================================= -->
+  <footer class="sg-footer">
+    <div class="sg-footer__inner">
+      <p class="t-body-medium sg-footer__title">
+        <strong>Axismundi</strong> — Material 3 design system for WordPress
+      </p>
+      <p class="t-body-small sg-footer__meta">
+        © 2026 KIM JIWOON ·
+        <a href="https://designbusan.ai.kr" rel="author">designbusan.ai.kr</a> ·
+        Licensed under
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="license">GPL-3.0-or-later</a>
+      </p>
+      <p class="t-body-small sg-footer__meta">
+        Documentation licensed under
+        <a href="https://creativecommons.org/licenses/by/4.0/" rel="license">CC&nbsp;BY&nbsp;4.0</a>
+      </p>
+    </div>
+  </footer>
+
+  <!-- =========================================================
+       Inline data + boot script
+       ========================================================= -->
+<script defer src="scripts/style-guide.js"></script>
+<script defer src="scripts/theme.js"></script>
+<!-- Note: previous inline toolbar handler removed — theme.js §3
+     handles all [role="toolbar"] [aria-pressed] toggling globally. -->
+</body>
+</html>

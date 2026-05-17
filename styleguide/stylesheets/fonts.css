@@ -1,0 +1,137 @@
+/* ============================================================
+ * Axismundi — fonts.css
+ * v0.2 — Self-hosted variable fonts (full coverage strategy)
+ *
+ * Load order: this file should be the FIRST stylesheet enqueued
+ * by the theme so @font-face declarations are parsed before any
+ * styles that use them.
+ *
+ * Strategy (v3.2.3 — refined from v3.2.1's Latin-subset approach):
+ *
+ *   Roboto Flex / Serif / Mono — non-CJK base layer.
+ *     Full glyph coverage (no subset). Covers Latin + Latin
+ *     Extended + Greek + Cyrillic + currency (₩, ¥, £, €) +
+ *     arrows + math operators + general punctuation. This is
+ *     "everything except CJK".
+ *
+ *   Noto Sans KR / Noto Serif KR — Korean fallback layer.
+ *     Korean subset (Hangul Syllables + Jamo). unicode-range
+ *     scopes this font to Korean glyphs only, so Latin chars
+ *     fall through to Roboto.
+ *
+ *   Material Symbols Rounded — theme chrome icons only.
+ *     Full glyph table preserved (no subset; ligatures need it).
+ *
+ * Future expansion path:
+ *   For Japanese / Chinese support, users can add Noto Sans JP /
+ *   Noto Sans SC etc. through WordPress's official Google Fonts
+ *   integration (Font Library, 6.5+) — Axismundi does not need
+ *   to ship every CJK font. Whatever the user adds extends the
+ *   fallback layer; Roboto stays in place as the non-CJK base.
+ *   Subsetting is not guaranteed for user-added fonts (that is
+ *   a trade-off of the user-managed path), but the architecture
+ *   remains consistent.
+ *
+ * License notes:
+ *   - All fonts: SIL OFL 1.1 (OFL.txt in each subfolder)
+ *   - Material Symbols: Apache 2.0 (LICENSE.txt in each subfolder)
+ *   - See NOTICE.md at repo root for full attribution
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * Roboto Flex — primary non-CJK typeface
+ * Variable axes: opsz, wght, wdth, slnt, GRAD,
+ *                XOPQ, YOPQ, XTRA, YTUC, YTLC, YTAS, YTDE, YTFI
+ * Coverage: 826 glyphs incl. ₩, ←→, ≈≠≤≥, Greek, Cyrillic
+ * NO unicode-range — this is the base layer; all non-CJK chars
+ * resolve here. CJK chars fall through to Noto Sans KR below.
+ * ------------------------------------------------------------ */
+@font-face {
+  font-family: 'Roboto Flex';
+  src: url('../../core/design-systems/material3/assets/fonts/roboto-flex/axismundi-roboto-flex.woff2')
+       format('woff2-variations'),
+       url('../../core/design-systems/material3/assets/fonts/roboto-flex/axismundi-roboto-flex.woff2')
+       format('woff2');
+  font-weight: 100 1000;
+  font-stretch: 25% 151%;
+  font-style: oblique -10deg 0deg;
+  font-display: swap;
+}
+
+/* ------------------------------------------------------------
+ * Noto Sans KR — Korean coverage fallback
+ * Variable axis: wght
+ * unicode-range scopes this font to Korean glyphs ONLY, so
+ * Latin/Cyrillic/Greek/symbols fall through to Roboto Flex.
+ *
+ * To extend to full CJK (Japanese, Chinese): add additional
+ * @font-face declarations with their unicode-range. Roboto
+ * Flex remains the non-CJK base.
+ * ------------------------------------------------------------ */
+@font-face {
+  font-family: 'Noto Sans KR';
+  src: url('../../core/design-systems/material3/assets/fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2')
+       format('woff2-variations'),
+       url('../../core/design-systems/material3/assets/fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2')
+       format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range:
+    U+AC00-D7A3,           /* Hangul Syllables (full 11,172 chars) */
+    U+1100-11FF,           /* Hangul Jamo */
+    U+3130-318F,           /* Hangul Compatibility Jamo */
+    U+A960-A97F,           /* Hangul Jamo Extended-A */
+    U+D7B0-D7FF;           /* Hangul Jamo Extended-B */
+}
+
+/* ------------------------------------------------------------
+ * Roboto Mono — monospace (full coverage)
+ * ------------------------------------------------------------ */
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('../../core/design-systems/material3/assets/fonts/roboto-mono/axismundi-roboto-mono.woff2')
+       format('woff2-variations'),
+       url('../../core/design-systems/material3/assets/fonts/roboto-mono/axismundi-roboto-mono.woff2')
+       format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('../../core/design-systems/material3/assets/fonts/roboto-mono/axismundi-roboto-mono-italic.woff2')
+       format('woff2-variations'),
+       url('../../core/design-systems/material3/assets/fonts/roboto-mono/axismundi-roboto-mono-italic.woff2')
+       format('woff2');
+  font-weight: 100 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ------------------------------------------------------------
+ * Material Symbols Rounded — theme chrome icons
+ * Variable axes: FILL, GRAD, opsz, wght
+ *
+ * SCOPE: this font is intended for theme chrome ONLY.
+ * Usage in post content / .prose / ActivityPub Note.content
+ * is forbidden — see prose.css §icon-scope-policy for the
+ * enforcement CSS that breaks ligatures inside content areas.
+ *
+ * REQUIRED MARKUP:
+ *   <span class="material-symbols-rounded notranslate"
+ *         translate="no" aria-hidden="true">home</span>
+ *
+ * Both translate="no" and class="notranslate" are required to
+ * prevent translation tools from translating the ligature text.
+ * ------------------------------------------------------------ */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  src: url('../../core/design-systems/material3/assets/icons/material-symbols-rounded/material-symbols-rounded.woff2')
+       format('woff2-variations'),
+       url('../../core/design-systems/material3/assets/icons/material-symbols-rounded/material-symbols-rounded.woff2')
+       format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: block;  /* block (not swap): no FOIT-to-text flash for icons */
+}

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axismundi</title>
+<link rel="stylesheet" href="styleguide/stylesheets/tokens.css">
+<link rel="stylesheet" href="styleguide/stylesheets/base.css">
+<style>
+  body {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--space-xl, 48px) var(--space-md, 16px);
+    color: var(--md-sys-color-on-background);
+    background-color: var(--md-sys-color-background);
+  }
+  header {
+    margin-block-end: var(--space-xl, 48px);
+  }
+  .eyebrow {
+    margin: 0 0 var(--space-xs, 4px);
+    color: var(--md-sys-color-primary);
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  h1 {
+    margin: 0;
+    color: var(--md-sys-color-on-background);
+    font-family: var(--md-sys-typescale-display-medium-font);
+    font-size: var(--md-sys-typescale-display-medium-size);
+    line-height: var(--md-sys-typescale-display-medium-line-height);
+  }
+  .lede {
+    max-width: 760px;
+    margin-block: var(--space-md, 16px) var(--space-lg, 32px);
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-headline-small-font);
+    font-size: var(--md-sys-typescale-headline-small-size);
+    line-height: var(--md-sys-typescale-headline-small-line-height);
+  }
+  .nav-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm, 8px);
+  }
+  .nav-buttons a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding-inline: 24px;
+    border-radius: var(--md-sys-shape-corner-pill-stable, 9999px);
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    text-decoration: none;
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: 500;
+  }
+  .nav-buttons a.secondary {
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+  }
+  .nav-buttons a.tertiary {
+    background-color: transparent;
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-outline);
+  }
+  section {
+    margin-block: var(--space-xl, 48px);
+  }
+  h2 {
+    margin-block: 0 var(--space-sm, 8px);
+    color: var(--md-sys-color-primary);
+    font-family: var(--md-sys-typescale-title-large-font);
+    font-size: var(--md-sys-typescale-title-large-size);
+    line-height: var(--md-sys-typescale-title-large-line-height);
+  }
+  p {
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  a {
+    color: var(--md-sys-color-primary);
+    text-underline-offset: 3px;
+  }
+  .surface-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-md, 16px);
+    margin-block-start: var(--space-md, 16px);
+  }
+  .surface {
+    min-height: 148px;
+    padding: var(--space-md, 16px);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-large, 16px);
+    background-color: var(--md-sys-color-surface-container-low);
+  }
+  .surface h3 {
+    margin: 0 0 var(--space-xs, 4px);
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--md-sys-typescale-title-medium-font);
+    font-size: var(--md-sys-typescale-title-medium-size);
+  }
+  .surface p {
+    margin-block: 0 var(--space-sm, 8px);
+  }
+  .surface a {
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: 500;
+  }
+  .layer-grid {
+    display: grid;
+    gap: var(--space-xs, 4px) var(--space-md, 16px);
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: baseline;
+  }
+  .layer-grid dt {
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-weight: 600;
+  }
+  .layer-grid dd {
+    margin: 0;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  code {
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: var(--md-sys-color-surface-container);
+    font-family: var(--md-sys-typescale-body-small-font);
+    font-size: 0.9em;
+  }
+  footer {
+    margin-block-start: var(--space-xl, 48px);
+    padding-block-start: var(--space-md, 16px);
+    border-block-start: 1px solid var(--md-sys-color-outline-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-body-small-size);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">v3.5.14 publish prep</p>
+  <h1>Axismundi</h1>
+  <p class="lede">
+    Ontology-driven Material 3 design system with a WordPress binding and pilot
+    theme path.
+  </p>
+  <div class="nav-buttons" aria-label="Primary navigation">
+    <a href="styleguide/">Styleguide</a>
+    <a href="README.md" class="secondary">README</a>
+    <a href="README.ko.md" class="secondary">README.ko</a>
+    <a href="docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md" class="tertiary">Templates note</a>
+  </div>
+</header>
+
+<section aria-labelledby="status-heading">
+  <h2 id="status-heading">Current State</h2>
+  <p>
+    Wave 1 component coverage is complete. v3.5.14 prepares the repository for
+    public GitHub and GitHub Pages; repository creation and Pages activation
+    remain the next release gate.
+  </p>
+  <dl class="layer-grid">
+    <dt>v3.5.12</dt><dd>Wave 1 components closed, 9 / 9.</dd>
+    <dt>v3.5.13</dt><dd>Wave 1 cleanup closed, including size variants, list token coverage, and records.</dd>
+    <dt>v3.5.14</dt><dd>Publish prep: README, license, CI, path audit, and publish mirror checks.</dd>
+    <dt>v3.5.15</dt><dd>Planned GitHub repository <code>axismundi</code> and GitHub Pages activation.</dd>
+  </dl>
+</section>
+
+<section aria-labelledby="surfaces-heading">
+  <h2 id="surfaces-heading">Public Surfaces</h2>
+  <div class="surface-grid">
+    <article class="surface">
+      <h3>Styleguide</h3>
+      <p>Generated mirror of the canonical component catalog.</p>
+      <a href="styleguide/">Open styleguide</a>
+    </article>
+    <article class="surface">
+      <h3>Lab Source</h3>
+      <p>Source authority for visual QA, component audits, and lab modules.</p>
+      <a href="products/reference-implementations/axismundi-lab/README.md">Read lab overview</a>
+    </article>
+    <article class="surface">
+      <h3>Lab Modules</h3>
+      <p>Validation surfaces for Wave components and infrastructure modules.</p>
+      <a href="products/reference-implementations/axismundi-lab/modules/README.md">Read module index</a>
+    </article>
+    <article class="surface">
+      <h3>Templates</h3>
+      <p>Planned page-layout and composition preview category.</p>
+      <a href="docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md">Read category note</a>
+    </article>
+  </div>
+</section>
+
+<section aria-labelledby="architecture-heading">
+  <h2 id="architecture-heading">Architecture</h2>
+  <p>
+    Axismundi separates evidence, rules, ontology, bindings, products, and
+    automation into six repository layers.
+  </p>
+  <dl class="layer-grid">
+    <dt><code>corpus/</code></dt><dd>source documents and refined references</dd>
+    <dt><code>atlas/</code></dt><dd>rule-based knowledge and audits</dd>
+    <dt><code>core/</code></dt><dd>formal platform and design-system ontologies</dd>
+    <dt><code>bindings/</code></dt><dd>cross-ontology translation</dd>
+    <dt><code>products/</code></dt><dd>reference implementations and future distributables</dd>
+    <dt><code>tools/</code></dt><dd>validators, generators, and builders</dd>
+  </dl>
+</section>
+
+<section aria-labelledby="license-heading">
+  <h2 id="license-heading">License</h2>
+  <p>
+    Code, theme, and tooling are GPL-3.0-or-later. Documentation and
+    ontology/data surfaces use CC BY-SA 4.0. Third-party assets preserve their
+    original licenses.
+  </p>
+  <p>
+    See <a href="LICENSE-MATRIX.md">LICENSE-MATRIX.md</a> and
+    <a href="NOTICE.md">NOTICE.md</a>.
+  </p>
+</section>
+
+<footer>
+  <p>KIM JIWOON (designbusan.ai.kr) — Busan, Korea.</p>
+</footer>
+
+</body>
+</html>

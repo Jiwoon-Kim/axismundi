@@ -1,0 +1,17 @@
+[
+  {
+    "find": "```php\n<?phpwp_localize_script( 'wp-api', 'wpApiSettings', array( 'root' => esc_url_raw( rest_url() ), 'nonce' => wp_create_nonce( 'wp_rest' )) );\n```",
+    "replace": "```js\n<?phpwp_localize_script( 'wp-api', 'wpApiSettings', array( 'root' => esc_url_raw( rest_url() ), 'nonce' => wp_create_nonce( 'wp_rest' )) );\n```",
+    "reason": "v1.1a lang_fix: text → js (actual JS code block from original (language-js))"
+  },
+  {
+    "find": "```text\noptions.beforeSend = function(xhr) { xhr.setRequestHeader('X-WP-Nonce', wpApiSettings.nonce); if (beforeSend) { return beforeSend.apply(this, arguments); }};\n```",
+    "replace": "```js\noptions.beforeSend = function(xhr) { xhr.setRequestHeader('X-WP-Nonce', wpApiSettings.nonce); if (beforeSend) { return beforeSend.apply(this, arguments); }};\n```",
+    "reason": "v1.1a lang_fix: text → js (jQuery AJAX example)"
+  },
+  {
+    "find": "```js\n$.ajax( { url: wpApiSettings.root + 'wp/v2/posts/1', method: 'POST', beforeSend: function ( xhr ) { xhr.setRequestHeader( 'X-WP-Nonce', wpApiSettings.nonce ); }, data:{ 'title' : 'Hello Moon' }} ).done( function ( response ) { console.log( response );} );\n```",
+    "replace": "```js\n$.ajax( { url: wpApiSettings.root + 'wp/v2/posts/1', method: 'POST', beforeSend: function ( xhr ) { xhr.setRequestHeader( 'X-WP-Nonce', wpApiSettings.nonce ); }, data:{ 'title' : 'Hello Moon' }} ).done( function ( response ) { console.log( response );} );\n```",
+    "reason": "v1.1a lang_fix: text → js (jQuery AJAX example (post edit))"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "find": "```js\nstore( 'myPlugin', { actions: { toggleContextColor: () => { const context = getContext(); context.color = context.color === 'red' ? 'blue' : 'red'; }, },} );\n```",
+    "replace": "```js\nstore( 'myPlugin', { actions: { toggleContextColor: () => { const context = getContext(); context.color = context.color === 'red' ? 'blue' : 'red'; }, },} );\n```",
+    "reason": "v1.1a lang_fix: text → js"
+  },
+  {
+    "find": "```js\nstore( 'myPlugin', { actions: { toggleContextText: () => { const context = getContext(); context.text = context.text === 'Text 1' ? 'Text 2' : 'Text 1'; }, },} );\n```",
+    "replace": "```js\nstore( 'myPlugin', { actions: { toggleContextText: () => { const context = getContext(); context.text = context.text === 'Text 1' ? 'Text 2' : 'Text 1'; }, },} );\n```",
+    "reason": "v1.1a lang_fix: text → js"
+  }
+]

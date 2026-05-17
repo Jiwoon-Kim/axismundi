@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Header (template part)</title>
+
+  <!--
+    Static HTML prototype. In Phase 3 WP integration, this part's
+    <header> body is rendered via `<!-- wp:template-part {"slug":"header"} /-->`
+    inside templates. For now, this file is a STANDALONE preview —
+    open in browser to see the header in isolation.
+
+    Templates (front-page.html, 404.html, etc.) inline this <header>
+    markup directly. When this part changes, sync templates manually.
+    Phase 3 PHP layer dedupes via render_block.
+  -->
+
+  <link rel="stylesheet" href="../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../stylesheets/base.css" />
+  <link rel="stylesheet" href="../stylesheets/components.css" />
+  <style>
+    /* Standalone preview chrome — only used when this file is opened
+     * directly in a browser. NOT included when inlined in templates. */
+    .standalone-preview {
+      padding: var(--space-lg);
+      background-color: var(--md-sys-color-surface);
+      min-block-size: 100vh;
+    }
+    .standalone-preview__note {
+      max-inline-size: 64ch;
+      margin: var(--space-xl) auto;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* ─── header part (the actual styles, also inlined into templates) ─── */
+
+    .ax-site-header {
+      /* App bar wrapper — sticky top, surface background.
+       * Component .app-bar provides typography + slot grid;
+       * this wrapper adds page-context positioning. */
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 10;
+      background-color: var(--md-sys-color-surface);
+      /* Subtle border on scroll (set by JS; placeholder rule for now) */
+      border-block-end: 1px solid transparent;
+      transition: border-color
+        var(--md-sys-motion-curve-fast-effects-duration)
+        var(--md-sys-motion-curve-fast-effects);
+    }
+    .ax-site-header[data-scrolled="true"] {
+      border-block-end-color: var(--md-sys-color-outline-variant);
+    }
+
+    /* Hide hamburger on desktop — nav rail visible permanently */
+    @media (min-width: 1024px) {
+      .ax-site-header [data-toggle-nav] {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PART CONTENT — copy-paste this <header>...</header> into
+       templates verbatim. Everything outside it is preview chrome.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <header class="ax-site-header app-bar app-bar--small">
+    <div class="app-bar__leading">
+      <button type="button"
+              class="ax-icon-button is-standard has-state-layer"
+              data-toggle-nav
+              aria-controls="nav-drawer"
+              aria-expanded="false"
+              aria-label="메뉴 열기">
+        <!-- Material icon: menu (closed state) -->
+        <svg class="material-icons material-icons--menu"
+             xmlns="http://www.w3.org/2000/svg"
+             width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+             aria-hidden="true">
+          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+        </svg>
+        <!-- Material icon: menu_open (open state) — hidden by default,
+             shown via [aria-expanded="true"] selector in components.css.
+             For now both render; CSS will toggle visibility. -->
+        <svg class="material-icons material-icons--menu-open"
+             xmlns="http://www.w3.org/2000/svg"
+             width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+             aria-hidden="true" style="display: none;">
+          <path d="M3 18h13v-2H3v2zm0-5h10v-2H3v2zm0-7v2h13V6H3zm18 9.59L17.42 12 21 8.41 19.59 7l-5 5 5 5L21 15.59z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!--
+      Site title heading — IS_FRONT_PAGE BRANCH POINT.
+
+      Phase 3 PHP: <h1> on homepage, <p> elsewhere via is_front_page().
+      Static prototype:
+        - front-page.html: <h1> (homepage, site title IS the page heading)
+        - home.html / single.html / 404.html / archive.html etc.:
+          REPLACE with <p class="app-bar__title"> + page-specific <h1>
+          on content (e.g. "Blog", article title, "페이지를 찾을 수 없습니다")
+      Reason: WCAG 1.3.1 + heading hierarchy — exactly one <h1> per page.
+    -->
+    <h1 class="app-bar__title">
+      <a href="/" style="color: inherit; text-decoration: none;">Axismundi</a>
+    </h1>
+
+    <div class="app-bar__actions">
+      <button type="button"
+              class="ax-icon-button is-standard has-state-layer"
+              aria-label="검색">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+             aria-hidden="true">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+      </button>
+      <button type="button"
+              class="ax-icon-button is-standard has-state-layer"
+              aria-label="알림">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+             aria-hidden="true">
+          <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+        </svg>
+      </button>
+      <button type="button"
+              class="ax-icon-button is-standard has-state-layer"
+              aria-label="계정">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             width="24" height="24" viewBox="0 0 24 24" fill="currentColor"
+             aria-hidden="true">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       END PART CONTENT — preview chrome below not for inline use
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <div class="standalone-preview">
+    <div class="standalone-preview__note">
+      <p class="t-body-small">
+        이 페이지는 <code>parts/header.html</code>의 <strong>standalone preview</strong>입니다. 위 <code>&lt;header&gt;</code> 요소가 실제 part 콘텐츠 — 다른 templates에 inline 복사해서 사용합니다.
+      </p>
+      <p class="t-body-small" style="margin-block-start: var(--space-md);">
+        햄버거 클릭 시 <code>theme.js §1</code>이 <code>data-toggle-nav</code>를 받아 <code>#nav-drawer</code> dialog를 모달 모드로 엽니다 — 이 페이지엔 drawer가 없어서 콘솔 경고만 출력. <code>front-page.html</code>에서 실제 동작 확인.
+      </p>
+    </div>
+  </div>
+
+  <script defer src="../scripts/theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Search Bar Full Spec + Runtime Module (v3.5.8)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="lab-search-bar.css" />
+</head>
+<body>
+<main class="lab-search-bar-demo">
+  <header class="lab-search-bar-header">
+    <div class="t-label-medium">Axismundi · v3.5.8 · Wave 1 #17</div>
+    <h1 class="t-display-small">Search bar — Full Spec + Runtime Module</h1>
+    <p class="t-body-medium lab-search-bar-caption">
+      Baseline <code>components.css §10</code> remains unchanged. This page
+      consolidates the previous <code>search-expansion/</code> runtime into
+      the Search bar component lane while preserving the old module as
+      historical evidence.
+    </p>
+  </header>
+
+  <div class="lab-search-bar-banner">
+    <strong>Runtime scope.</strong>
+    Search bar owns search shell, combobox/listbox suggestions, keyboard
+    movement, and Escape clear/collapse policy. Search data, autocomplete
+    source, analytics, and federated search remain plugin territory.
+  </div>
+
+  <section class="lab-search-bar-section" id="search-rest">
+    <header>
+      <h2 class="t-title-large">§1. Rest shell</h2>
+      <p class="t-body-small lab-search-bar-caption">
+        Baseline class names only: <code>.search-bar</code>,
+        <code>.search-bar__leading-icon</code>, <code>.search-bar__input</code>,
+        and <code>.search-bar__trailing</code>.
+      </p>
+    </header>
+    <div class="lab-search-bar-grid">
+      <div class="lab-search-bar-card">
+        <label class="search-bar" data-search-suggestions="최근 검색어|컴포넌트 토큰|상태 레이어|검색 패턴">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-rest" type="search" placeholder="검색어를 입력하세요" aria-label="Search" />
+          <span class="search-bar__trailing">
+            <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Voice search" data-ax-ripple="unbounded">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mic</span>
+            </button>
+          </span>
+        </label>
+        <p class="t-body-small lab-search-bar-caption">Rest shell. Focus the input to open static lab suggestions.</p>
+      </div>
+
+      <div class="lab-search-bar-card">
+        <label class="search-bar" data-search-suggestions="문서 검색|테마 토큰|블록 패턴">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-filled" type="search" value="state layer" placeholder="검색어" aria-label="Search docs" />
+          <span class="search-bar__trailing">
+            <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Clear search" data-ax-search-action="clear" data-ax-ripple="unbounded">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </span>
+        </label>
+        <p class="t-body-small lab-search-bar-caption">Filled state with clear action. Clear is runtime-local; data source remains plugin territory.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-search-bar-section" id="search-styles">
+    <header>
+      <h2 class="t-title-large">§2. Contained and divided styles</h2>
+      <p class="t-body-small lab-search-bar-caption">
+        Contained follows the current baseline. Divided is lab-scoped evidence
+        for M3 search style coverage, not a baseline edit.
+      </p>
+    </header>
+    <div class="lab-search-bar-grid">
+      <div class="lab-search-bar-card">
+        <label class="search-bar" data-search-suggestions="Contained example|Recent search|Autocomplete">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-contained" type="search" placeholder="Contained search" aria-label="Contained search" />
+          <span class="search-bar__trailing">
+            <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Open filters" data-ax-ripple="unbounded">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">tune</span>
+            </button>
+          </span>
+        </label>
+        <p class="t-body-small lab-search-bar-caption">Contained style: current baseline shell.</p>
+      </div>
+
+      <div class="lab-search-bar-card">
+        <label class="search-bar" data-search-style="divided" data-search-suggestions="Divided search|Result boundary|List-like surface">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-divided" type="search" placeholder="Divided search" aria-label="Divided search" />
+          <span class="search-bar__trailing">
+            <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Clear search" data-ax-search-action="clear" data-ax-ripple="unbounded">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </span>
+        </label>
+        <p class="t-body-small lab-search-bar-caption">Divided style specimen. Baseline promotion is not part of Phase 2.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-search-bar-section" id="search-trailing">
+    <header>
+      <h2 class="t-title-large">§3. Trailing actions</h2>
+      <p class="t-body-small lab-search-bar-caption">
+        Trailing controls are icon-button consumers. Ripple is attached to the
+        icon buttons only, never to the Search field host.
+      </p>
+    </header>
+    <div class="lab-search-bar-card">
+      <label class="search-bar" data-search-suggestions="마이크 검색|필터 적용|검색어 지우기">
+        <span class="search-bar__leading-icon">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+        </span>
+        <input class="search-bar__input" name="q-actions" type="search" value="Material" placeholder="Search" aria-label="Search with actions" />
+        <span class="search-bar__trailing">
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Clear search" data-ax-search-action="clear" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Open filters" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">tune</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Voice search" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mic</span>
+          </button>
+        </span>
+      </label>
+      <p class="t-body-small lab-search-bar-caption">Clicking clear mutates the local input only. Filter, mic, and product search behavior are integration/plugin territory.</p>
+    </div>
+  </section>
+
+  <section class="lab-search-bar-section" id="search-core">
+    <header>
+      <h2 class="t-title-large">§4. core/search-inspired form</h2>
+      <p class="t-body-small lab-search-bar-caption">
+        This is a lab mapping specimen only. No WordPress block registration,
+        <code>theme.json</code>, or backend query behavior is implemented.
+      </p>
+    </header>
+    <div class="lab-search-bar-card">
+      <form role="search" action="#" method="get">
+        <label class="search-bar" data-search-suggestions="사이트 검색|최근 글|태그 검색">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="s" type="search" placeholder="사이트 검색" aria-label="Site search" />
+          <span class="search-bar__trailing">
+            <button class="ax-icon-button is-standard has-state-layer" type="submit" aria-label="Submit search" data-ax-ripple="unbounded">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_forward</span>
+            </button>
+          </span>
+        </label>
+      </form>
+      <p class="t-body-small lab-search-bar-caption">Native form semantics are preserved. Real query behavior belongs to WordPress/plugin integration.</p>
+    </div>
+  </section>
+
+  <section class="lab-search-bar-section" id="search-empty-disabled">
+    <header>
+      <h2 class="t-title-large">§5. Empty, no-results, and disabled specimens</h2>
+    </header>
+    <div class="lab-search-bar-grid">
+      <div class="lab-search-bar-card">
+        <label class="search-bar" data-search-suggestions="결과 없음|다른 검색어를 입력하세요">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-empty" type="search" placeholder="No-results demo" aria-label="No-results demo" />
+          <span class="search-bar__trailing"></span>
+        </label>
+        <p class="t-body-small lab-search-bar-caption">Static no-results copy. Real result state and announcements are plugin territory.</p>
+      </div>
+
+      <div class="lab-search-bar-card">
+        <label class="search-bar" aria-disabled="true">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-disabled" type="search" placeholder="비활성 검색" aria-label="Disabled search" disabled />
+          <span class="search-bar__trailing"></span>
+        </label>
+        <p class="t-body-small lab-search-bar-caption">Disabled specimen. Runtime should not attach useful interaction to inactive controls.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-search-bar-section" id="search-negative">
+    <header>
+      <h2 class="t-title-large">§6. Forbidden ancestor negative cases</h2>
+      <p class="t-body-small lab-search-bar-caption">
+        Runtime must not attach inside prose, post content, entry content, or
+        editable surfaces.
+      </p>
+    </header>
+    <div class="lab-search-bar-grid">
+      <div class="lab-search-bar-card lab-search-bar-negative prose">
+        <p class="t-body-small">Inside <code>.prose</code>: focus should not create suggestions.</p>
+        <label class="search-bar">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-prose" type="search" placeholder="prose 안 — 확장 없음" aria-label="Prose search" />
+          <span class="search-bar__trailing"></span>
+        </label>
+      </div>
+
+      <div class="lab-search-bar-card lab-search-bar-negative" contenteditable="true">
+        <p class="t-body-small">Inside <code>[contenteditable]</code>: focus should not create suggestions.</p>
+        <label class="search-bar">
+          <span class="search-bar__leading-icon">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </span>
+          <input class="search-bar__input" name="q-editor" type="search" placeholder="editor 안 — 확장 없음" aria-label="Editor search" />
+          <span class="search-bar__trailing"></span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-search-bar-section" id="search-snippets">
+    <header>
+      <h2 class="t-title-large">§7. Code snippets</h2>
+    </header>
+    <pre class="lab-search-bar-code"><code>&lt;label class="search-bar" data-search-suggestions="최근 검색어|컴포넌트 토큰"&gt;
+  &lt;span class="search-bar__leading-icon"&gt;...&lt;/span&gt;
+  &lt;input class="search-bar__input" type="search" aria-label="Search" /&gt;
+  &lt;span class="search-bar__trailing"&gt;
+    &lt;button class="ax-icon-button" data-ax-ripple="unbounded" aria-label="Clear search"&gt;...&lt;/button&gt;
+  &lt;/span&gt;
+&lt;/label&gt;</code></pre>
+  </section>
+
+  <section class="lab-search-bar-section" id="search-refs">
+    <header>
+      <h2 class="t-title-large">§8. Cross-references</h2>
+    </header>
+    <ul class="t-body-medium">
+      <li><code>docs/v3.5.8/SEARCH-BAR-PHASE-0-REPORT.md</code></li>
+      <li><code>docs/v3.5.8/SEARCH-BAR-PHASE-2-PLAN.md</code></li>
+      <li><code>modules/search-bar/docs/SEARCH-BAR-RUNTIME-AUDIT.md</code></li>
+      <li><code>modules/search-expansion/docs/SEARCH-EXPANSION-AUDIT.md</code></li>
+    </ul>
+  </section>
+</main>
+
+<script defer src="../ripple/lab-ripple.js"></script>
+<script defer src="lab-search-bar.js"></script>
+</body>
+</html>

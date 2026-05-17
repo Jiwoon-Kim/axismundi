@@ -1,0 +1,18 @@
+{
+  "file": "rest-api-handbook/04-extending-the-rest-api/routes-and-endpoints.md",
+  "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/routes-and-endpoints/",
+  "blocks": [
+    {
+      "candidate_id": "rest-api-handbook/04-extending-the-rest-api/routes-and-endpoints.md::block_1",
+      "file": "rest-api-handbook/04-extending-the-rest-api/routes-and-endpoints.md",
+      "block_id": "block_1",
+      "section": "Routes vs Endpoints",
+      "line_start": 30,
+      "line_end": 34,
+      "before_fence": "```text\n- `GET` triggers a `get_item` method, returning the post data to the client.\n- `PUT` triggers an `update_item` method, taking the data to update, and returning the updated post data.\n- `DELETE` triggers a `delete_item` method, returning the now-deleted post data to the client.\n```",
+      "after_markdown": "  - `GET` triggers a `get_item` method, returning the post data to the client.\n  - `PUT` triggers an `update_item` method, taking the data to update, and returning the updated post data.\n  - `DELETE` triggers a `delete_item` method, returning the now-deleted post data to the client.",
+      "note": "nested UL: 3 endpoints under 'This route has 3 endpoints:'",
+      "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/routes-and-endpoints/"
+    }
+  ]
+}

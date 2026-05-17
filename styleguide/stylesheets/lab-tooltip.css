@@ -1,0 +1,84 @@
+/* ============================================================
+ * lab-tooltip.css — Axismundi Tooltip lab module
+ * v3.4.6
+ *
+ * Bucket D — theme interaction runtime, lab module only.
+ * Scope: runtime-specific layer ONLY.
+ *
+ * NON-GOAL: redefining .ax-tooltip visual primitive. That lives in
+ * components.css L3089–L3230 at v3.4.5.1 (plain M3 §34.2 + rich §34.3 +
+ * actions). If a property appears in both files, components.css wins.
+ *
+ * Reduced motion: handled at primitive level (components.css transitions
+ * use --md-sys-motion-curve-fast-effects-duration which is reduced-motion
+ * token-gated). No override needed here. This differs from popover
+ * v3.4.5 where lab-popover.css added an explicit reduced-motion block.
+ * ============================================================ */
+
+/* ----------------------------------------------------------------
+ * §1 — Singleton runtime tooltip (created by lab-tooltip.js)
+ *
+ * lab-tooltip.js creates one #lab-tooltip-singleton .ax-tooltip element
+ * appended to <body> and sets `position: fixed` inline. The visibility
+ * primitive (visibility/opacity transition) comes from components.css.
+ * This section adds only what the runtime layer requires beyond the
+ * primitive.
+ * ---------------------------------------------------------------- */
+#lab-tooltip-singleton.ax-tooltip {
+  /* z-index already set in primitive (1100); position is set inline by JS;
+     pointer-events: none from primitive (plain variant). Nothing to add
+     for the plain singleton at v3.4.6 — declaration block kept as a
+     hook for future runtime-specific properties. */
+}
+
+/* ----------------------------------------------------------------
+ * §2 — Module pattern page layout helpers
+ *
+ * Scoped to .lab-tooltip-pattern only — demo-only, never expected
+ * in baseline contexts.
+ * ---------------------------------------------------------------- */
+.lab-tooltip-pattern .lab-tooltip-demo {
+  display: grid;
+  gap: var(--space-md, 16px);
+  padding: var(--space-lg, 24px);
+  background-color: var(--md-sys-color-surface, transparent);
+  border-radius: var(--md-sys-shape-corner-large, 16px);
+  border: 1px solid var(--md-sys-color-outline-variant, currentColor);
+}
+
+.lab-tooltip-pattern .lab-tooltip-demo__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 16px);
+  flex-wrap: wrap;
+}
+
+.lab-tooltip-pattern .lab-tooltip-demo__label {
+  color: var(--md-sys-color-on-surface-variant, currentColor);
+  min-width: 12rem;
+}
+
+/* Forbidden-ancestor demo card — dashed border so the visual reading is
+   "this is intentionally off-limits, not just regular content". */
+.lab-tooltip-pattern .lab-tooltip-demo--forbidden {
+  background-color: var(--md-sys-color-surface-container-low, transparent);
+  border-style: dashed;
+}
+
+.lab-tooltip-pattern .lab-tooltip-demo--forbidden .prose {
+  padding: var(--space-md, 16px);
+  border-radius: var(--md-sys-shape-corner-small, 8px);
+  background-color: var(--md-sys-color-surface-container, transparent);
+}
+
+/* Rich tooltip visual specimen demo — rich variants are STATIC at v3.4.6.
+   Layout container forces them to be visible without runtime wiring, so
+   readers can audit the visual primitive without the interactive layer. */
+.lab-tooltip-pattern .lab-tooltip-demo--rich-specimen {
+  position: relative;
+  padding-block: calc(var(--space-lg, 24px) + 80px);  /* Leave room for static positioned tooltips */
+}
+
+.lab-tooltip-pattern .lab-tooltip-demo--rich-specimen .ax-tooltip.is-rich {
+  position: relative;
+}

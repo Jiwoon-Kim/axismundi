@@ -1,0 +1,124 @@
+{
+  "schema_version": "v2.0-baseline-2026-05-12",
+  "generated_at": "2026-05-12",
+  "purpose": "v2.0 ontology core validation — release-pinned source policy, no trunk.",
+
+  "corpus": {
+    "path": "dev_handbook_clean/",
+    "sync_date": "2026-05-12",
+    "version": "v1.1a-frozen",
+    "handbooks": 5,
+    "files": 630,
+    "bridge_anchor_candidates": 47
+  },
+
+  "baselines": {
+    "wordpress": {
+      "repo": "WordPress/WordPress",
+      "tag": "6.9.4",
+      "sha": "97b7f62adb5d8864c3fac554bc7182d9fd754a41",
+      "commit_date": "2026-03-11",
+      "local_path": "/home/claude/v2_0_work/WP-6.9.4",
+      "rationale": "corpus sync 직전 6.9.x line 최신 stable (gap: ~2 months)"
+    },
+    "gutenberg": {
+      "repo": "WordPress/gutenberg",
+      "tag": "v23.1.1",
+      "sha": "12c6c76efe7c8f7d83c49655855a7cdb4ff16cdd",
+      "commit_date": "2026-05-08",
+      "local_path": "/home/claude/v2_0_work/GB-23.1.1",
+      "sparse_paths": [
+        "docs/",
+        "schemas/",
+        "packages/block-editor/",
+        "packages/data/",
+        "packages/block-library/"
+      ],
+      "rationale": "corpus sync (2026-05-12) 직전 4일 stable. developer.wordpress.org docs는 Gutenberg plugin trunk 기준으로 빌드되므로, corpus와 docs의 1:1 매칭은 동시기 plugin tag와 맞춤. supports.md 3-way pilot에서 corpus 28 H2 ↔ docs 28 H2 ↔ schema 28 properties 정확히 일치 확인.",
+      "wp_core_subset_note": "WP 6.9.x core가 동봉한 Gutenberg는 v21.9.0이지만, handbook은 plugin 최신을 reflect. 이 갭은 의도적이며 gap_report에 기록."
+    }
+  },
+
+  "source_priority": {
+    "1_docs": {
+      "description": "Gutenberg docs markdown — handbook의 빌드 입력 원천",
+      "root": "GB-21.9.0/docs/",
+      "applies_to": ["block-editor-handbook 전체"],
+      "primary_subdirs": [
+        "reference-guides/block-api/",
+        "reference-guides/interactivity-api/",
+        "reference-guides/data/",
+        "reference-guides/components/",
+        "reference-guides/filters/",
+        "reference-guides/packages/",
+        "reference-guides/slotfills/",
+        "reference-guides/richtext/",
+        "reference-guides/theme-json-reference/"
+      ]
+    },
+    "2_schema": {
+      "description": "Gutenberg canonical JSON schemas",
+      "files": [
+        "GB-21.9.0/schemas/json/block.json",
+        "GB-21.9.0/schemas/json/theme.json",
+        "GB-21.9.0/schemas/json/font-collection.json",
+        "GB-21.9.0/schemas/json/wp-env.json"
+      ],
+      "applies_to": ["block.json / theme.json 모든 reference"]
+    },
+    "3_packages": {
+      "description": "Gutenberg packages — 구현 ground truth",
+      "roots": [
+        "GB-21.9.0/packages/block-editor/",
+        "GB-21.9.0/packages/data/",
+        "GB-21.9.0/packages/block-library/"
+      ],
+      "core_block_instances": "GB-21.9.0/packages/block-library/src/*/block.json (112 blocks)"
+    },
+    "4_wp_core": {
+      "description": "WordPress core PHP runtime",
+      "files": [
+        "WP-6.9.4/wp-includes/blocks.php",
+        "WP-6.9.4/wp-includes/theme.json",
+        "WP-6.9.4/wp-includes/class-wp-block-type.php",
+        "WP-6.9.4/wp-includes/class-wp-block-supports.php",
+        "WP-6.9.4/wp-includes/class-wp-theme-json.php"
+      ],
+      "applies_to": ["server-side registration / parsing / theme.json runtime"]
+    },
+    "5_developer_url": {
+      "description": "developer.wordpress.org HTML — 빌드 산출물, fallback only",
+      "use_when": "Gutenberg docs에 source markdown이 없는 경우 (theme-handbook 일부, rest-api-handbook 전체, plugin-handbook 일부, common-apis-handbook)"
+    },
+    "6_corpus": {
+      "description": "refined corpus — last resort fallback",
+      "use_when": "다른 모든 source 부재 또는 충돌 시 marker로만"
+    }
+  },
+
+  "trunk_policy": {
+    "rule": "Never use trunk as baseline.",
+    "exception": "Trunk may be referenced only in gap_report.md as 'upstream-future-note' for items already in trunk but not yet in pinned release.",
+    "rationale": "WP 7.0 beta (~2026-09 expected) introduces experimental API + schema changes that would destabilize ontology baseline."
+  },
+
+  "anchor_critical_pages_v1_1a": {
+    "source": "_meta/v1_1a/anchor_critical_pages.json",
+    "count": 47,
+    "by_handbook": {
+      "block-editor": 26,
+      "theme": 14,
+      "rest-api": 3,
+      "plugin": 3,
+      "common-apis": 1
+    },
+    "note": "v2.0 검증 대상 — 이 47 페이지에 한정해 3-way 대조 진행"
+  },
+
+  "validation_flow": {
+    "1": "anchor → repo_source map (anchor_to_repo_map.json)",
+    "2": "for each anchor: extract slots from (corpus, docs, schema/code) — 3-way",
+    "3": "compare → ontology_slot_candidates.json (only slots present in ≥2 sources)",
+    "4": "log discrepancies → gap_report.md"
+  }
+}

@@ -1,0 +1,905 @@
+/* ============================================================
+ * Axismundi — tokens.css
+ * v0.2.0 — v2 rebuild
+ *
+ * Layer order (writing in stages — this file is built incrementally):
+ *   §1 Reference layer    — palette tones + typeface refs   ← THIS PASS
+ *   §2 System layer       — sys-color (light + dark)        — next pass
+ *   §3 Typescale system   — 15 roles                        — next pass
+ *   §4 Shape / spacing / motion / elevation / state         — next pass
+ *   §5 Component tokens   — §3.3                            — next pass
+ *   §6 Semantic aliases   — §8                              — next pass
+ *   §7 Layout tokens      — §9                              — next pass
+ *
+ * All color values stored as 6-digit hex (#RRGGBB) per
+ * prompt-v2 §1.4 — required for color-mix() compatibility.
+ * Source: M3-COLOR-TOKEN.md §1.
+ * ============================================================ */
+
+:root {
+  /* ----------------------------------------------------------
+   * §1.1 Reference — Primary tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.1
+   * ---------------------------------------------------------- */
+  --md-ref-palette-primary-0:   #000000;
+  --md-ref-palette-primary-10:  #21005D;
+  --md-ref-palette-primary-20:  #381E72;
+  --md-ref-palette-primary-30:  #4F378B;
+  --md-ref-palette-primary-40:  #6750A4;
+  --md-ref-palette-primary-50:  #7F67BE;
+  --md-ref-palette-primary-60:  #9A82DB;
+  --md-ref-palette-primary-70:  #B69DF8;
+  --md-ref-palette-primary-80:  #D0BCFF;
+  --md-ref-palette-primary-90:  #EADDFF;
+  --md-ref-palette-primary-95:  #F6EDFF;
+  --md-ref-palette-primary-98:  #FEF7FF;
+  --md-ref-palette-primary-99:  #FFFBFE;
+  --md-ref-palette-primary-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.2 Reference — Secondary tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.2
+   * ---------------------------------------------------------- */
+  --md-ref-palette-secondary-0:   #000000;
+  --md-ref-palette-secondary-10:  #1D192B;
+  --md-ref-palette-secondary-20:  #332D41;
+  --md-ref-palette-secondary-30:  #4A4458;
+  --md-ref-palette-secondary-40:  #625B71;
+  --md-ref-palette-secondary-50:  #7A7289;
+  --md-ref-palette-secondary-60:  #958DA5;
+  --md-ref-palette-secondary-70:  #B0A7C0;
+  --md-ref-palette-secondary-80:  #CCC2DC;
+  --md-ref-palette-secondary-90:  #E8DEF8;
+  --md-ref-palette-secondary-95:  #F6EDFF;
+  --md-ref-palette-secondary-98:  #FEF7FF;
+  --md-ref-palette-secondary-99:  #FFFBFE;
+  --md-ref-palette-secondary-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.3 Reference — Tertiary tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.3
+   * ---------------------------------------------------------- */
+  --md-ref-palette-tertiary-0:   #000000;
+  --md-ref-palette-tertiary-10:  #31111D;
+  --md-ref-palette-tertiary-20:  #492532;
+  --md-ref-palette-tertiary-30:  #633B48;
+  --md-ref-palette-tertiary-40:  #7D5260;
+  --md-ref-palette-tertiary-50:  #986977;
+  --md-ref-palette-tertiary-60:  #B58392;
+  --md-ref-palette-tertiary-70:  #D29DAC;
+  --md-ref-palette-tertiary-80:  #EFB8C8;
+  --md-ref-palette-tertiary-90:  #FFD8E4;
+  --md-ref-palette-tertiary-95:  #FFECF1;
+  --md-ref-palette-tertiary-98:  #FFF8F8;
+  --md-ref-palette-tertiary-99:  #FFFBFA;
+  --md-ref-palette-tertiary-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.4 Reference — Error tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.4
+   * ---------------------------------------------------------- */
+  --md-ref-palette-error-0:   #000000;
+  --md-ref-palette-error-10:  #410E0B;
+  --md-ref-palette-error-20:  #601410;
+  --md-ref-palette-error-30:  #8C1D18;
+  --md-ref-palette-error-40:  #B3261E;
+  --md-ref-palette-error-50:  #DC362E;
+  --md-ref-palette-error-60:  #E46962;
+  --md-ref-palette-error-70:  #EC928E;
+  --md-ref-palette-error-80:  #F2B8B5;
+  --md-ref-palette-error-90:  #F9DEDC;
+  --md-ref-palette-error-95:  #FCEEEE;
+  --md-ref-palette-error-98:  #FFF8F7;
+  --md-ref-palette-error-99:  #FFFBF9;
+  --md-ref-palette-error-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.5 Reference — Neutral tonal palette (24 tones)
+   * M3 Expressive: extra granularity at the dark end for
+   * dark-mode surfaces. Source: M3-COLOR-TOKEN.md §1.5
+   * ---------------------------------------------------------- */
+  --md-ref-palette-neutral-0:   #000000;
+  --md-ref-palette-neutral-4:   #0F0D13;
+  --md-ref-palette-neutral-6:   #141218;
+  --md-ref-palette-neutral-10:  #1D1B20;
+  --md-ref-palette-neutral-12:  #211F26;
+  --md-ref-palette-neutral-17:  #2B2930;
+  --md-ref-palette-neutral-20:  #322F35;
+  --md-ref-palette-neutral-22:  #36343B;
+  --md-ref-palette-neutral-24:  #3B383E;
+  --md-ref-palette-neutral-30:  #48464C;
+  --md-ref-palette-neutral-40:  #605D64;
+  --md-ref-palette-neutral-50:  #79767D;
+  --md-ref-palette-neutral-60:  #938F96;
+  --md-ref-palette-neutral-70:  #AEA9B1;
+  --md-ref-palette-neutral-80:  #CAC5CD;
+  --md-ref-palette-neutral-87:  #DED8E1;
+  --md-ref-palette-neutral-90:  #E6E0E9;
+  --md-ref-palette-neutral-92:  #ECE6F0;
+  --md-ref-palette-neutral-94:  #F3EDF7;
+  --md-ref-palette-neutral-95:  #F5EFF7;
+  --md-ref-palette-neutral-96:  #F7F2FA;
+  --md-ref-palette-neutral-98:  #FEF7FF;
+  --md-ref-palette-neutral-99:  #FFFBFF;
+  --md-ref-palette-neutral-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.6 Reference — Neutral variant tonal palette (13 tones)
+   * Source: M3-COLOR-TOKEN.md §1.6
+   * ---------------------------------------------------------- */
+  --md-ref-palette-neutral-variant-0:   #000000;
+  --md-ref-palette-neutral-variant-10:  #1D1A22;
+  --md-ref-palette-neutral-variant-20:  #322F37;
+  --md-ref-palette-neutral-variant-30:  #49454F;
+  --md-ref-palette-neutral-variant-40:  #605D66;
+  --md-ref-palette-neutral-variant-50:  #79747E;
+  --md-ref-palette-neutral-variant-60:  #938F99;
+  --md-ref-palette-neutral-variant-70:  #AEA9B4;
+  --md-ref-palette-neutral-variant-80:  #CAC4D0;
+  --md-ref-palette-neutral-variant-90:  #E7E0EC;
+  --md-ref-palette-neutral-variant-95:  #F5EEFA;
+  --md-ref-palette-neutral-variant-98:  #FDF7FF;
+  --md-ref-palette-neutral-variant-99:  #FFFBFE;
+  --md-ref-palette-neutral-variant-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.7 Reference — Typeface families
+   * prompt-v2 §2.1
+   * Korean is first-class (BRIEF.md): Noto Sans/Serif KR
+   * always present in every stack.
+   * ---------------------------------------------------------- */
+  --md-ref-typeface-brand: 'Roboto Flex', 'Noto Sans KR', system-ui, sans-serif;
+  --md-ref-typeface-plain: 'Roboto Flex', 'Noto Sans KR', system-ui, sans-serif;
+  --md-ref-typeface-serif: 'Roboto Serif', 'Noto Serif KR', Georgia, serif;
+  --md-ref-typeface-mono:  'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ----------------------------------------------------------
+   * §1.8 Reference — Typeface weights
+   * prompt-v2 §2.1
+   * ---------------------------------------------------------- */
+  --md-ref-typeface-weight-regular: 400;
+  --md-ref-typeface-weight-medium:  500;
+  --md-ref-typeface-weight-bold:    700;
+
+  /* ----------------------------------------------------------
+   * §1.4 Variable axis sync — text + icon GRAD
+   * ----------------------------------------------------------
+   * Both Roboto Flex (text) and Material Symbols (icons)
+   * have a GRAD variable axis. M3 spec recommends syncing
+   * grade between text and symbols for visual harmony.
+   *
+   * Default = 0 (matches M3 light-on-dark-bg default).
+   * [data-theme="dark"] in icons.css overrides to -25,
+   * per M3 spec for light-on-dark surfaces.
+   *
+   * Roboto Flex GRAD range: [-200, 0, 150]
+   * Material Symbols GRAD range: [-50, 0, 200]
+   * Practical range used in Axismundi: [-25, 0, 200]
+   * ---------------------------------------------------------- */
+  --md-grade: 0;
+}
+
+/* ============================================================
+ * §2 System layer — Color schemes
+ *
+ * Sys tokens consume ref palette tones. Same role names in
+ * light + dark, different ref tones per scheme.
+ *
+ * Scheme application strategy (BRIEF.md — dark-first):
+ *   :root            → light scheme defaults
+ *   [data-theme="dark"]            → dark scheme override
+ *   @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
+ *                                    → auto follows system
+ *
+ * NOTE: this pass writes §2.1 (Light scheme) only. Dark scheme
+ * arrives in the next pass.
+ *
+ * 38 sys-color tokens per scheme:
+ *   12 brand   (primary/secondary/tertiary × 4)
+ *    4 status  (error × 4)
+ *   13 surface (background, on-bg, surface, on-surface,
+ *               surface-variant, on-surface-variant,
+ *               surface-bright, surface-dim,
+ *               surface-container-{lowest,low,base,high,highest})
+ *    3 inverse (inverse-surface, inverse-on-surface,
+ *               inverse-primary)
+ *    2 outline (outline, outline-variant)
+ *    2 other   (shadow, scrim)
+ *   ----
+ *   38 total. surface-tint excluded (deprecated, prompt-v2 §1.3).
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * §2.1 Light scheme
+ * Source: M3-COLOR-TOKEN.md §2.1
+ * Applied as :root default. Dark scheme overrides in §2.2.
+ * ------------------------------------------------------------ */
+:root {
+  /* --- Brand: primary --- */
+  --md-sys-color-primary:              #6750A4; /* primary 40  */
+  --md-sys-color-on-primary:           #FFFFFF; /* primary 100 */
+  --md-sys-color-primary-container:    #EADDFF; /* primary 90  */
+  --md-sys-color-on-primary-container: #4F378B; /* primary 30  */
+
+  /* --- Brand: secondary --- */
+  --md-sys-color-secondary:              #625B71; /* secondary 40  */
+  --md-sys-color-on-secondary:           #FFFFFF; /* secondary 100 */
+  --md-sys-color-secondary-container:    #E8DEF8; /* secondary 90  */
+  --md-sys-color-on-secondary-container: #4A4458; /* secondary 30  */
+
+  /* --- Brand: tertiary --- */
+  --md-sys-color-tertiary:              #7D5260; /* tertiary 40  */
+  --md-sys-color-on-tertiary:           #FFFFFF; /* tertiary 100 */
+  --md-sys-color-tertiary-container:    #FFD8E4; /* tertiary 90  */
+  --md-sys-color-on-tertiary-container: #633B48; /* tertiary 30  */
+
+  /* --- Status: error --- */
+  --md-sys-color-error:              #B3261E; /* error 40  */
+  --md-sys-color-on-error:           #FFFFFF; /* error 100 */
+  --md-sys-color-error-container:    #F9DEDC; /* error 90  */
+  --md-sys-color-on-error-container: #8C1D18; /* error 30  */
+
+  /* --- Surface: background + surface --- */
+  --md-sys-color-background:         #FEF7FF; /* neutral 98 */
+  --md-sys-color-on-background:      #1D1B20; /* neutral 10 */
+  --md-sys-color-surface:            #FEF7FF; /* neutral 98 */
+  --md-sys-color-on-surface:         #1D1B20; /* neutral 10 */
+  --md-sys-color-surface-variant:    #E7E0EC; /* neutral-variant 90 */
+  --md-sys-color-on-surface-variant: #49454F; /* neutral-variant 30 */
+  --md-sys-color-surface-bright:     #FEF7FF; /* neutral 98 */
+  --md-sys-color-surface-dim:        #DED8E1; /* neutral 87 */
+
+  /* --- Surface: 5 container levels (lowest → highest) --- */
+  --md-sys-color-surface-container-lowest:  #FFFFFF; /* neutral 100 */
+  --md-sys-color-surface-container-low:     #F7F2FA; /* neutral 96  */
+  --md-sys-color-surface-container:         #F3EDF7; /* neutral 94  */
+  --md-sys-color-surface-container-high:    #ECE6F0; /* neutral 92  */
+  --md-sys-color-surface-container-highest: #E6E0E9; /* neutral 90  */
+
+  /* --- Inverse (Snackbar, Slider value indicator,
+         Outlined toggle button selected) --- */
+  --md-sys-color-inverse-surface:    #322F35; /* neutral 20  */
+  --md-sys-color-inverse-on-surface: #F5EFF7; /* neutral 95  */
+  --md-sys-color-inverse-primary:    #D0BCFF; /* primary 80  */
+
+  /* --- Outline --- */
+  --md-sys-color-outline:         #79747E; /* neutral-variant 50 */
+  --md-sys-color-outline-variant: #CAC4D0; /* neutral-variant 80 */
+
+  /* --- Other --- */
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim:  #000000;
+}
+
+/* ------------------------------------------------------------
+ * §2.2 Dark scheme
+ * Source: M3-COLOR-TOKEN.md §2.2
+ *
+ * Selector strategy (BRIEF.md "Modes" — auto + manual override):
+ *   1. :root[data-theme="dark"]
+ *      → explicit user choice. Highest priority. Wins over both
+ *        the light defaults in :root and the auto media query.
+ *   2. @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
+ *      → auto-follow OS. Suppressed only when the user has
+ *        explicitly picked light. data-theme="auto" or absent
+ *        → media query takes effect.
+ *
+ * The two blocks share an identical token set so cascade order
+ * is enough; no !important needed.
+ * ------------------------------------------------------------ */
+:root[data-theme="dark"] {
+  /* --- Brand: primary --- */
+  --md-sys-color-primary:              #D0BCFF; /* primary 80  */
+  --md-sys-color-on-primary:           #381E72; /* primary 20  */
+  --md-sys-color-primary-container:    #4F378B; /* primary 30  */
+  --md-sys-color-on-primary-container: #EADDFF; /* primary 90  */
+
+  /* --- Brand: secondary --- */
+  --md-sys-color-secondary:              #CCC2DC; /* secondary 80 */
+  --md-sys-color-on-secondary:           #332D41; /* secondary 20 */
+  --md-sys-color-secondary-container:    #4A4458; /* secondary 30 */
+  --md-sys-color-on-secondary-container: #E8DEF8; /* secondary 90 */
+
+  /* --- Brand: tertiary --- */
+  --md-sys-color-tertiary:              #EFB8C8; /* tertiary 80 */
+  --md-sys-color-on-tertiary:           #492532; /* tertiary 20 */
+  --md-sys-color-tertiary-container:    #633B48; /* tertiary 30 */
+  --md-sys-color-on-tertiary-container: #FFD8E4; /* tertiary 90 */
+
+  /* --- Status: error --- */
+  --md-sys-color-error:              #F2B8B5; /* error 80 */
+  --md-sys-color-on-error:           #601410; /* error 20 */
+  --md-sys-color-error-container:    #8C1D18; /* error 30 */
+  --md-sys-color-on-error-container: #F9DEDC; /* error 90 */
+
+  /* --- Surface: background + surface --- */
+  --md-sys-color-background:         #141218; /* neutral 6  */
+  --md-sys-color-on-background:      #E6E0E9; /* neutral 90 */
+  --md-sys-color-surface:            #141218; /* neutral 6  */
+  --md-sys-color-on-surface:         #E6E0E9; /* neutral 90 */
+  --md-sys-color-surface-variant:    #49454F; /* neutral-variant 30 */
+  --md-sys-color-on-surface-variant: #CAC4D0; /* neutral-variant 80 */
+  --md-sys-color-surface-bright:     #3B383E; /* neutral 24 */
+  --md-sys-color-surface-dim:        #141218; /* neutral 6  */
+
+  /* --- Surface: 5 container levels (lowest → highest) --- */
+  --md-sys-color-surface-container-lowest:  #0F0D13; /* neutral 4  */
+  --md-sys-color-surface-container-low:     #1D1B20; /* neutral 10 */
+  --md-sys-color-surface-container:         #211F26; /* neutral 12 */
+  --md-sys-color-surface-container-high:    #2B2930; /* neutral 17 */
+  --md-sys-color-surface-container-highest: #36343B; /* neutral 22 */
+
+  /* --- Inverse --- */
+  --md-sys-color-inverse-surface:    #E6E0E9; /* neutral 90 */
+  --md-sys-color-inverse-on-surface: #322F35; /* neutral 20 */
+  --md-sys-color-inverse-primary:    #6750A4; /* primary 40 */
+
+  /* --- Outline --- */
+  --md-sys-color-outline:         #938F99; /* neutral-variant 60 */
+  --md-sys-color-outline-variant: #49454F; /* neutral-variant 30 */
+
+  /* --- Other --- */
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim:  #000000;
+}
+
+/* ------------------------------------------------------------
+ * §2.3 Auto mode — follow OS preference unless user picked light
+ * ------------------------------------------------------------ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* --- Brand: primary --- */
+    --md-sys-color-primary:              #D0BCFF;
+    --md-sys-color-on-primary:           #381E72;
+    --md-sys-color-primary-container:    #4F378B;
+    --md-sys-color-on-primary-container: #EADDFF;
+
+    /* --- Brand: secondary --- */
+    --md-sys-color-secondary:              #CCC2DC;
+    --md-sys-color-on-secondary:           #332D41;
+    --md-sys-color-secondary-container:    #4A4458;
+    --md-sys-color-on-secondary-container: #E8DEF8;
+
+    /* --- Brand: tertiary --- */
+    --md-sys-color-tertiary:              #EFB8C8;
+    --md-sys-color-on-tertiary:           #492532;
+    --md-sys-color-tertiary-container:    #633B48;
+    --md-sys-color-on-tertiary-container: #FFD8E4;
+
+    /* --- Status: error --- */
+    --md-sys-color-error:              #F2B8B5;
+    --md-sys-color-on-error:           #601410;
+    --md-sys-color-error-container:    #8C1D18;
+    --md-sys-color-on-error-container: #F9DEDC;
+
+    /* --- Surface: background + surface --- */
+    --md-sys-color-background:         #141218;
+    --md-sys-color-on-background:      #E6E0E9;
+    --md-sys-color-surface:            #141218;
+    --md-sys-color-on-surface:         #E6E0E9;
+    --md-sys-color-surface-variant:    #49454F;
+    --md-sys-color-on-surface-variant: #CAC4D0;
+    --md-sys-color-surface-bright:     #3B383E;
+    --md-sys-color-surface-dim:        #141218;
+
+    /* --- Surface: 5 container levels --- */
+    --md-sys-color-surface-container-lowest:  #0F0D13;
+    --md-sys-color-surface-container-low:     #1D1B20;
+    --md-sys-color-surface-container:         #211F26;
+    --md-sys-color-surface-container-high:    #2B2930;
+    --md-sys-color-surface-container-highest: #36343B;
+
+    /* --- Inverse --- */
+    --md-sys-color-inverse-surface:    #E6E0E9;
+    --md-sys-color-inverse-on-surface: #322F35;
+    --md-sys-color-inverse-primary:    #6750A4;
+
+    /* --- Outline --- */
+    --md-sys-color-outline:         #938F99;
+    --md-sys-color-outline-variant: #49454F;
+
+    /* --- Other --- */
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim:  #000000;
+  }
+}
+
+/* ============================================================
+ * §3 Typescale system — 15 roles, atomic tokens
+ *
+ * Atomic structure: each role exposes 5 properties separately
+ * (font / size / line-height / weight / tracking). Components
+ * compose them à la carte — you can override one axis without
+ * losing the rest.
+ *
+ * Family mapping (prompt-v2 §2.2):
+ *   display-*, headline-*, title-large → brand
+ *   everything else                    → plain
+ *
+ * Weight mapping (prompt-v2 §2.2):
+ *   display-*, headline-*, title-large, body-* → 400 (regular)
+ *   title-medium, title-small, label-*         → 500 (medium)
+ *
+ * Units: px throughout. No dp/pt. No variable-font axis tokens.
+ * ============================================================ */
+:root {
+  /* --- display-large --- */
+  --md-sys-typescale-display-large-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-large-size:        57px;
+  --md-sys-typescale-display-large-line-height: 64px;
+  --md-sys-typescale-display-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-display-large-tracking:    -0.25px;
+
+  /* --- display-medium --- */
+  --md-sys-typescale-display-medium-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-medium-size:        45px;
+  --md-sys-typescale-display-medium-line-height: 52px;
+  --md-sys-typescale-display-medium-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-display-medium-tracking:    0px;
+
+  /* --- display-small --- */
+  --md-sys-typescale-display-small-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-small-size:        36px;
+  --md-sys-typescale-display-small-line-height: 44px;
+  --md-sys-typescale-display-small-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-display-small-tracking:    0px;
+
+  /* --- headline-large --- */
+  --md-sys-typescale-headline-large-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-large-size:        32px;
+  --md-sys-typescale-headline-large-line-height: 40px;
+  --md-sys-typescale-headline-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-headline-large-tracking:    0px;
+
+  /* --- headline-medium --- */
+  --md-sys-typescale-headline-medium-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-medium-size:        28px;
+  --md-sys-typescale-headline-medium-line-height: 36px;
+  --md-sys-typescale-headline-medium-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-headline-medium-tracking:    0px;
+
+  /* --- headline-small --- */
+  --md-sys-typescale-headline-small-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-small-size:        24px;
+  --md-sys-typescale-headline-small-line-height: 32px;
+  --md-sys-typescale-headline-small-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-headline-small-tracking:    0px;
+
+  /* --- title-large --- (uses brand per §2.2) */
+  --md-sys-typescale-title-large-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-title-large-size:        22px;
+  --md-sys-typescale-title-large-line-height: 28px;
+  --md-sys-typescale-title-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-title-large-tracking:    0px;
+
+  /* --- title-medium --- */
+  --md-sys-typescale-title-medium-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-medium-size:        16px;
+  --md-sys-typescale-title-medium-line-height: 24px;
+  --md-sys-typescale-title-medium-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-title-medium-tracking:    0.15px;
+
+  /* --- title-small --- */
+  --md-sys-typescale-title-small-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-small-size:        14px;
+  --md-sys-typescale-title-small-line-height: 20px;
+  --md-sys-typescale-title-small-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-title-small-tracking:    0.1px;
+
+  /* --- body-large --- */
+  --md-sys-typescale-body-large-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-large-size:        16px;
+  --md-sys-typescale-body-large-line-height: 24px;
+  --md-sys-typescale-body-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-body-large-tracking:    0.5px;
+
+  /* --- body-medium --- */
+  --md-sys-typescale-body-medium-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-medium-size:        14px;
+  --md-sys-typescale-body-medium-line-height: 20px;
+  --md-sys-typescale-body-medium-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-body-medium-tracking:    0.25px;
+
+  /* --- body-small --- */
+  --md-sys-typescale-body-small-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-small-size:        12px;
+  --md-sys-typescale-body-small-line-height: 16px;
+  --md-sys-typescale-body-small-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-body-small-tracking:    0.4px;
+
+  /* --- label-large --- */
+  --md-sys-typescale-label-large-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-large-size:        14px;
+  --md-sys-typescale-label-large-line-height: 20px;
+  --md-sys-typescale-label-large-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-label-large-tracking:    0.1px;
+
+  /* --- label-medium --- */
+  --md-sys-typescale-label-medium-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-medium-size:        12px;
+  --md-sys-typescale-label-medium-line-height: 16px;
+  --md-sys-typescale-label-medium-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-label-medium-tracking:    0.5px;
+
+  /* --- label-small --- */
+  --md-sys-typescale-label-small-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-small-size:        11px;
+  --md-sys-typescale-label-small-line-height: 16px;
+  --md-sys-typescale-label-small-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-label-small-tracking:    0.5px;
+}
+
+/* ============================================================
+ * §3.1 Typescale utility classes — 15 roles
+ *
+ * NOTE: provisional location. May move to base.css when
+ * base.css is built. Kept here for now so the typescale stays
+ * self-contained and easy to validate against §3 atomic tokens.
+ *
+ * §2.3 Emphasis modifier (prompt-v2 §2.3):
+ *   .t-label-large.is-prominent / .t-label-medium.is-prominent
+ *     → weight bumped to bold (700). No new tokens.
+ * ============================================================ */
+.t-display-large {
+  font-family:    var(--md-sys-typescale-display-large-font);
+  font-size:      var(--md-sys-typescale-display-large-size);
+  line-height:    var(--md-sys-typescale-display-large-line-height);
+  font-weight:    var(--md-sys-typescale-display-large-weight);
+  letter-spacing: var(--md-sys-typescale-display-large-tracking);
+}
+.t-display-medium {
+  font-family:    var(--md-sys-typescale-display-medium-font);
+  font-size:      var(--md-sys-typescale-display-medium-size);
+  line-height:    var(--md-sys-typescale-display-medium-line-height);
+  font-weight:    var(--md-sys-typescale-display-medium-weight);
+  letter-spacing: var(--md-sys-typescale-display-medium-tracking);
+}
+.t-display-small {
+  font-family:    var(--md-sys-typescale-display-small-font);
+  font-size:      var(--md-sys-typescale-display-small-size);
+  line-height:    var(--md-sys-typescale-display-small-line-height);
+  font-weight:    var(--md-sys-typescale-display-small-weight);
+  letter-spacing: var(--md-sys-typescale-display-small-tracking);
+}
+.t-headline-large {
+  font-family:    var(--md-sys-typescale-headline-large-font);
+  font-size:      var(--md-sys-typescale-headline-large-size);
+  line-height:    var(--md-sys-typescale-headline-large-line-height);
+  font-weight:    var(--md-sys-typescale-headline-large-weight);
+  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+}
+.t-headline-medium {
+  font-family:    var(--md-sys-typescale-headline-medium-font);
+  font-size:      var(--md-sys-typescale-headline-medium-size);
+  line-height:    var(--md-sys-typescale-headline-medium-line-height);
+  font-weight:    var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+}
+.t-headline-small {
+  font-family:    var(--md-sys-typescale-headline-small-font);
+  font-size:      var(--md-sys-typescale-headline-small-size);
+  line-height:    var(--md-sys-typescale-headline-small-line-height);
+  font-weight:    var(--md-sys-typescale-headline-small-weight);
+  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+}
+.t-title-large {
+  font-family:    var(--md-sys-typescale-title-large-font);
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+.t-title-medium {
+  font-family:    var(--md-sys-typescale-title-medium-font);
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+.t-title-small {
+  font-family:    var(--md-sys-typescale-title-small-font);
+  font-size:      var(--md-sys-typescale-title-small-size);
+  line-height:    var(--md-sys-typescale-title-small-line-height);
+  font-weight:    var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+.t-body-large {
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+}
+.t-body-medium {
+  font-family:    var(--md-sys-typescale-body-medium-font);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+.t-body-small {
+  font-family:    var(--md-sys-typescale-body-small-font);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+.t-label-large {
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+.t-label-large.is-prominent { font-weight: var(--md-ref-typeface-weight-bold); }
+
+.t-label-medium {
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+.t-label-medium.is-prominent { font-weight: var(--md-ref-typeface-weight-bold); }
+
+.t-label-small {
+  font-family:    var(--md-sys-typescale-label-small-font);
+  font-size:      var(--md-sys-typescale-label-small-size);
+  line-height:    var(--md-sys-typescale-label-small-line-height);
+  font-weight:    var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+/* ============================================================
+ * §4 Shape scale (prompt-v2 §3.2 — M3 Expressive full scale)
+ *
+ * 10 tiers + 3 directional modifiers. Component-specific
+ * sub-xs literals (e.g. checkbox 2px) stay at component layer.
+ * Directional modifiers are full border-radius shorthand
+ * values (TL TR BR BL) — apply via `border-radius: var(...)`.
+ * ============================================================ */
+:root {
+  --md-sys-shape-corner-none:                  0;
+  --md-sys-shape-corner-extra-small:           4px;
+  --md-sys-shape-corner-small:                 8px;
+  --md-sys-shape-corner-medium:                12px;
+  --md-sys-shape-corner-large:                 16px;
+  --md-sys-shape-corner-large-increased:       20px;
+  --md-sys-shape-corner-extra-large:           28px;
+  --md-sys-shape-corner-extra-large-increased: 32px;
+  --md-sys-shape-corner-extra-extra-large:     48px;
+  --md-sys-shape-corner-full:                  9999px;
+
+  /* --- Directional modifiers (full shorthand: TL TR BR BL) --- */
+  --md-sys-shape-corner-extra-large-top: 28px 28px 0 0;   /* bottom sheet, filled text field */
+  --md-sys-shape-corner-extra-small-top: 4px 4px 0 0;     /* filled text field active */
+  --md-sys-shape-corner-large-start:     16px 0 0 16px;   /* modal side sheet (LTR) */
+}
+
+/* ============================================================
+ * §5 Spacing (prompt-v2 §3.1)
+ * ============================================================ */
+:root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+}
+
+/* ============================================================
+ * §6 State layer opacity (prompt-v2 §4.1)
+ *
+ * M3 Expressive correct values: 0.08 / 0.10 / 0.10 / 0.16
+ * (NOT legacy 0.12 — see audit §2.2). Token names use full M3
+ * form for portability with the spec.
+ *
+ * Implementation: see prompt-v2 §4.2 — Pattern A (currentColor
+ * + opacity token, preferred for state layers) and Pattern B
+ * (explicit color token + transparent N%, for non-state
+ * overlays). Reference snippets live in components.css.
+ * ============================================================ */
+:root {
+  --md-sys-state-hover-state-layer-opacity:    0.08;
+  --md-sys-state-focus-state-layer-opacity:    0.10;
+  --md-sys-state-pressed-state-layer-opacity:  0.10;
+  --md-sys-state-dragged-state-layer-opacity:  0.16;
+}
+
+/* ============================================================
+ * §7 Motion — M3 Expressive spring physics (prompt-v2 §5)
+ *
+ * §7.1 Spring tokens — raw physics. Damping + stiffness are
+ *      unitless and exposed as separate vars so native runtimes
+ *      (Compose, Motion One, Framer Motion) can consume them.
+ *
+ * §7.2 CSS cubic-bezier tokens — curve + duration pairs for
+ *      transition-timing-function / animation. Each curve has a
+ *      paired duration token.
+ *
+ * Style:
+ *   spatial → shape/size/position (slight overshoot)
+ *   effects → color/opacity (no overshoot)
+ * Speed:
+ *   fast / default / slow
+ * ============================================================ */
+:root {
+  /* --- §7.1 Spring physics (12 tokens — raw) --- */
+  --md-sys-motion-spring-fast-spatial-damping:      0.6;
+  --md-sys-motion-spring-fast-spatial-stiffness:    800;
+  --md-sys-motion-spring-default-spatial-damping:   0.8;
+  --md-sys-motion-spring-default-spatial-stiffness: 380;
+  --md-sys-motion-spring-slow-spatial-damping:      0.8;
+  --md-sys-motion-spring-slow-spatial-stiffness:    200;
+
+  --md-sys-motion-spring-fast-effects-damping:      1;
+  --md-sys-motion-spring-fast-effects-stiffness:    3800;
+  --md-sys-motion-spring-default-effects-damping:   1;
+  --md-sys-motion-spring-default-effects-stiffness: 1600;
+  --md-sys-motion-spring-slow-effects-damping:      1;
+  --md-sys-motion-spring-slow-effects-stiffness:    800;
+
+  /* --- §7.2 CSS curves (12 tokens — 6 curves + 6 durations) --- */
+  --md-sys-motion-curve-fast-spatial:             cubic-bezier(0.42, 1.67, 0.21, 0.90);
+  --md-sys-motion-curve-fast-spatial-duration:    350ms;
+  --md-sys-motion-curve-default-spatial:          cubic-bezier(0.38, 1.21, 0.22, 1.00);
+  --md-sys-motion-curve-default-spatial-duration: 500ms;
+  --md-sys-motion-curve-slow-spatial:             cubic-bezier(0.39, 1.29, 0.35, 0.98);
+  --md-sys-motion-curve-slow-spatial-duration:    650ms;
+
+  --md-sys-motion-curve-fast-effects:             cubic-bezier(0.31, 0.94, 0.34, 1.00);
+  --md-sys-motion-curve-fast-effects-duration:    150ms;
+  --md-sys-motion-curve-default-effects:          cubic-bezier(0.34, 0.80, 0.34, 1.00);
+  --md-sys-motion-curve-default-effects-duration: 200ms;
+  --md-sys-motion-curve-slow-effects:             cubic-bezier(0.34, 0.88, 0.34, 1.00);
+  --md-sys-motion-curve-slow-effects-duration:    300ms;
+}
+
+/* ============================================================
+ * §8 Elevation (prompt-v2 §6)
+ *
+ * §8.1 Six dp levels. Levels 0-3 = resting; 4-5 = interaction
+ *      states only (hover, dragged).
+ *
+ * §8.2 Light/dark policy (audit §1.2):
+ *      - Light mode → tonal containers + shadows
+ *      - Dark mode  → tonal only; shadows suppressed to none
+ *
+ * §8.3 Shadow specs use color-mix(in srgb, shadow, transparent N%)
+ *      so they respect the active scheme's shadow token (currently
+ *      #000 in both, but extensible).
+ *
+ * surface-tint is intentionally NOT defined (deprecated).
+ * ============================================================ */
+:root {
+  /* --- §8.1 dp levels --- */
+  --md-sys-elevation-level0: 0;
+  --md-sys-elevation-level1: 1px;
+  --md-sys-elevation-level2: 3px;
+  --md-sys-elevation-level3: 6px;
+  --md-sys-elevation-level4: 8px;   /* interaction only — hover, dragged */
+  --md-sys-elevation-level5: 12px;  /* interaction only */
+
+  /* --- §8.3 Light-mode shadow specs --- */
+  --md-sys-elevation-shadow-level0: none;
+  --md-sys-elevation-shadow-level1:
+    0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%),
+    0 1px 3px 1px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%);
+  --md-sys-elevation-shadow-level2:
+    0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%),
+    0 2px 6px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%);
+  --md-sys-elevation-shadow-level3:
+    0 4px 8px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+    0 1px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+  --md-sys-elevation-shadow-level4:
+    0 6px 10px 4px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+    0 2px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+  --md-sys-elevation-shadow-level5:
+    0 8px 12px 6px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+    0 4px 4px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+}
+
+/* §8.2 Dark mode — suppress shadows (tonal elevation primary) */
+:root[data-theme="dark"] {
+  --md-sys-elevation-shadow-level1: none;
+  --md-sys-elevation-shadow-level2: none;
+  --md-sys-elevation-shadow-level3: none;
+  --md-sys-elevation-shadow-level4: none;
+  --md-sys-elevation-shadow-level5: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --md-sys-elevation-shadow-level1: none;
+    --md-sys-elevation-shadow-level2: none;
+    --md-sys-elevation-shadow-level3: none;
+    --md-sys-elevation-shadow-level4: none;
+    --md-sys-elevation-shadow-level5: none;
+  }
+}
+
+/* ============================================================
+ * §9 Component tokens (prompt-v2 §3.3)
+ *
+ * Hybrid layer: per-component sizing/radius handles that
+ * compose system tokens. Extension policy — add when a value
+ * would otherwise be hard-coded across multiple component
+ * files. Don't add for one-off literals.
+ * ============================================================ */
+:root {
+  /* Card */
+  --comp-card-padding: var(--space-md);
+  --comp-card-radius:  var(--md-sys-shape-corner-medium);
+
+  /* Button (M3 small button default) */
+  --comp-button-height: 40px;
+  --comp-button-radius: var(--md-sys-shape-corner-full);
+
+  /* Feed */
+  --comp-feed-gap: var(--space-sm);
+  --comp-feed-max: 640px;
+
+  /* Avatar */
+  --comp-avatar-size:   40px;
+  --comp-avatar-radius: var(--md-sys-shape-corner-full);
+
+  /* Navigation */
+  --comp-rail-width:    96px;   /* collapsed nav rail default */
+  --comp-rail-narrow:   80px;
+  --comp-rail-expanded: 220px;
+
+  /* Icon sizing — for buttons, icon buttons, app bar, nav, card icons */
+  --comp-icon-size-sm: 20px;  /* button XS/S, chip, menu item */
+  --comp-icon-size-md: 24px;  /* button M, icon button, app bar, nav, card */
+  --comp-icon-size-lg: 28px;  /* medium FAB, button L */
+  --comp-icon-size-xl: 32px;  /* large FAB, button XL */
+
+  /* Touch target minimum (a11y) */
+  --comp-touch-target: 48px;
+}
+
+/* ============================================================
+ * §10 Semantic aliases (prompt-v2 §8.1)
+ *
+ * Sit between sys tokens and component CSS. Components prefer
+ * aliases first; sys tokens only as fallback. All aliases
+ * reference var(--md-sys-color-*) directly — never rgb() wrap.
+ * ============================================================ */
+:root {
+  /* --- Surface roles (by use, not by M3 name) --- */
+  --site-bg:       var(--md-sys-color-background);
+  --feed-bg:       var(--md-sys-color-surface-container-lowest);
+  --card-bg:       var(--md-sys-color-surface-container);
+  --card-bg-hover: var(--md-sys-color-surface-container-high);
+  --modal-bg:      var(--md-sys-color-surface-container-high);
+
+  /* --- Navigation roles --- */
+  --nav-rail-bg:        var(--md-sys-color-surface);            /* collapsed standalone */
+  --nav-rail-bg-modal:  var(--md-sys-color-surface-container);  /* expanded modal */
+  --nav-bar-bg:         var(--md-sys-color-surface-container);
+  --nav-item-active:    var(--md-sys-color-secondary-container);
+  --nav-on-item-active: var(--md-sys-color-on-secondary-container);
+
+  /* --- Action roles --- */
+  --action-primary-bg:   var(--md-sys-color-primary);
+  --action-primary-fg:   var(--md-sys-color-on-primary);
+  --action-secondary-bg: var(--md-sys-color-secondary-container);
+  --action-secondary-fg: var(--md-sys-color-on-secondary-container);
+}
+
+/* ============================================================
+ * §11 Layout tokens (prompt-v2 §9)
+ *
+ * Replaces Phase-1's hardcoded 640/320. Templates may override
+ * any of these in a more specific selector.
+ * ============================================================ */
+:root {
+  --layout-content-max:        640px;  /* feed surface, articles */
+  --layout-rail-width:         96px;   /* collapsed nav rail */
+  --layout-rail-narrow:        80px;   /* narrow rail variant */
+  --layout-rail-expanded:      220px;  /* expanded rail min-width */
+  --layout-rail-expanded-max:  360px;
+  --layout-feed-max:           640px;  /* feed timeline */
+  --layout-aside-max:          320px;  /* right column on wide layout */
+  --layout-modal-max:          560px;  /* basic dialog */
+  --layout-bottom-sheet-max:   640px;
+}

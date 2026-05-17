@@ -1,0 +1,326 @@
+/* ============================================================
+ * Axismundi — lab-carousel.css
+ * v3.3.2 — Carousel Lab Module (extraction)
+ *
+ * EXTRACTED from `stylesheets/benchmark-interactions.css` L271-520
+ * (the "Material You morph slider" section) during v3.3.2 Carousel
+ * Lab Module Extraction. The original section in benchmark remains
+ * in place with an EXTRACTED comment marker (audit trail policy).
+ *
+ * Lineage: Material You Slider demo (see compare/Material You Slider.html
+ * and compare/Material You Slider_files/) — visual pattern reference.
+ * Axismundi tokens / classes were already mature when benchmark was
+ * built, so this layer is more refined than the original reference.
+ *
+ * Loaded by: lab-carousel-pattern.html ONLY.
+ * NOT loaded by main style-guide.html — lab-internal isolation.
+ * NOT promoted to components.css §G3 Carousel (main carousel remains
+ * the Phase 1B visual-structure version; this module is the
+ * interaction-layer enhancement candidate for a future promotion).
+ *
+ * Promotion criteria (see docs/CAROUSEL-AUDIT.md for full audit):
+ *   1. Works without JS (scroll-snap fallback)
+ *   2. M3 state-layer compliance
+ *   3. prefers-reduced-motion: reduce honored
+ *   4. Keyboard-operable (Tab, Arrow keys, Enter)
+ *   5. No leak into .prose / federated surfaces
+ *
+ * Ontology constraint (see docs/CAROUSEL-ONTOLOGY-CHECK.md):
+ *   Gallery is not Carousel.
+ *   Gallery + horizontal layout context + progressive interaction
+ *   layer can become a Carousel candidate.
+ *   core/gallery → conditional binding → M3 carousel / image list /
+ *   horizontal media rail.
+ *
+ * Theme territory (per CAROUSEL-ONTOLOGY-CHECK.md):
+ *   Allowed: CSS scroll-snap, gallery fallback, prev/next buttons,
+ *            reduced-motion, progressive enhancement JS.
+ *   Plugin territory: block editor carousel picker UI, slide reorder
+ *            UI, custom slide schema, remote/federated media logic,
+ *            carousel CPT.
+ * ============================================================ */
+
+.ax-material-slider-demo {
+  display: grid;
+  gap: var(--space-md);
+  inline-size: min(100%, 860px);
+}
+
+.ax-material-slider-demo__bar,
+.ax-material-slider-demo__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.ax-material-slider-demo__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.ax-material-slider-demo__group > .t-label-small {
+  padding-inline: 10px 6px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.ax-material-slider-demo__choice {
+  min-inline-size: 34px;
+  min-block-size: 32px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    color var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+.ax-material-slider-demo__choice.is-selected {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.ax-material-slider-demo__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+}
+
+.ax-material-slider {
+  --ax-material-slide-radius: 32px;
+  --_carousel-leading: 0px;
+  --_carousel-trailing: 0px;
+  --_carousel-block: 0px;
+  --_carousel-gap: 16px;
+  position: relative;
+  overflow: hidden;
+  inline-size: calc(100% - 32px);
+  max-inline-size: 800px;
+  block-size: 300px;
+  min-block-size: 300px;
+  margin-inline: auto;
+  border-radius: var(--ax-material-slide-radius);
+  background: transparent;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ax-material-slider.ax-carousel {
+  background: transparent;
+}
+
+.ax-material-slider:active {
+  cursor: grabbing;
+}
+
+.ax-material-slider:focus-visible {
+  outline: 2px solid var(--md-sys-color-secondary);
+  outline-offset: 3px;
+}
+
+.ax-material-slider__track {
+  display: flex;
+  gap: var(--_carousel-gap);
+  block-size: 100%;
+  min-block-size: 0;
+  padding-block: var(--_carousel-block);
+  padding-inline: var(--_carousel-leading) var(--_carousel-trailing);
+  will-change: transform;
+  transition: transform var(--md-sys-motion-curve-default-spatial-duration)
+    var(--md-sys-motion-curve-default-spatial);
+}
+
+.ax-material-slider .ax-carousel__track {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.ax-material-slider.is-enhanced .ax-carousel__track {
+  overflow: visible;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+}
+
+.ax-material-slider.is-dragging .ax-material-slider__track {
+  transition-duration: 0ms;
+}
+
+.ax-material-slide {
+  position: relative;
+  flex: 0 0 var(--ax-material-slide-size, 392px);
+  min-inline-size: 0;
+  block-size: 100%;
+  aspect-ratio: auto;
+  scroll-snap-align: start;
+  transition: flex-basis var(--md-sys-motion-curve-default-spatial-duration)
+    var(--md-sys-motion-curve-default-spatial);
+}
+
+.ax-material-slider.is-enhanced .ax-material-slide {
+  scroll-snap-align: none;
+}
+
+.ax-material-slider.is-layout-hero {
+  --_carousel-gap: 8px;
+}
+
+.ax-material-slider.is-layout-uncontained {
+  --_carousel-leading: 16px;
+  --_carousel-trailing: 0px;
+  --_carousel-gap: 8px;
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+.ax-material-slide__shell {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+  inline-size: calc(100% * var(--ax-material-scale, 1));
+  block-size: 100%;
+  border-radius: var(--ax-material-slide-radius);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-shadow-level1);
+  transform: translate3d(var(--ax-material-shift, 0px), 0, 0);
+  transform-origin: left center;
+  will-change: inline-size, transform;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    inline-size var(--md-sys-motion-curve-default-spatial-duration)
+      var(--md-sys-motion-curve-default-spatial),
+    transform var(--md-sys-motion-curve-default-spatial-duration)
+      var(--md-sys-motion-curve-default-spatial),
+    box-shadow var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+.ax-material-slider.is-dragging .ax-material-slide__shell,
+.ax-material-slider.is-dragging .ax-material-slide__shell img,
+.ax-material-slider.is-dragging .ax-material-slide__label {
+  transition-duration: 0ms;
+}
+
+.ax-material-slide.is-active .ax-material-slide__shell {
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+
+.ax-material-slide__shell img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  transform: scale(var(--ax-material-image-scale, 1));
+  transform-origin: center;
+  will-change: transform;
+  transition: transform var(--md-sys-motion-curve-default-spatial-duration)
+    var(--md-sys-motion-curve-default-spatial);
+}
+
+.ax-material-slide__label {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  inline-size: 100%;
+  block-size: 50%;
+  box-sizing: border-box;
+  padding: 24px;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 500;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.25);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0),
+    rgba(0, 0, 0, 0.2) 50%
+  );
+  opacity: var(--ax-material-opacity, 1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity var(--md-sys-motion-curve-fast-effects-duration)
+    var(--md-sys-motion-curve-fast-effects);
+}
+
+.ax-material-slider-demo__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ax-material-slider-demo__dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-outline);
+  opacity: 0.38;
+  cursor: pointer;
+  transition:
+    inline-size var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial),
+    opacity var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    background-color var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+.ax-material-slider-demo__dot.is-selected {
+  inline-size: 24px;
+  background-color: var(--md-sys-color-primary);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ax-material-slider,
+  .ax-material-slider *,
+  .ax-material-slider-demo__choice,
+  .ax-material-slider-demo__dot {
+    scroll-behavior: auto;
+    transition: none;
+    animation: none;
+    animation-duration: 0ms;
+    animation-delay: 0ms;
+    transition-duration: 0ms;
+    transition-delay: 0ms;
+  }
+
+  .ax-material-slider__track,
+  .ax-material-slide,
+  .ax-material-slide__shell,
+  .ax-material-slide__shell img,
+  .ax-material-slide__label {
+    transition: none;
+    animation: none;
+    will-change: auto;
+  }
+}

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Date/Time Picker Lab Module (v3.4.7)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-date-time.css" />
+
+  <style>
+    .lab-layout {
+      max-inline-size: min(100%, 1080px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow { color: var(--md-sys-color-on-surface-variant); }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-banner.lab-banner--warning {
+      background-color: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+    }
+    .lab-section { display: grid; gap: var(--space-md); }
+    .lab-section__head { margin: 0; display: grid; gap: var(--space-xs); }
+    .lab-section__title { margin: 0; }
+    .lab-section__supporting { margin: 0; color: var(--md-sys-color-on-surface-variant); }
+    .lab-demo {
+      padding: var(--space-lg);
+      background-color: var(--md-sys-color-surface);
+      border-radius: var(--md-sys-shape-corner-large);
+      border: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-demo--forbidden {
+      background-color: var(--md-sys-color-surface-container-low);
+      border-style: dashed;
+    }
+    .lab-demo--forbidden .prose {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-small);
+      background-color: var(--md-sys-color-surface-container);
+      margin-block-start: var(--space-sm);
+    }
+    .sg-theme {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+    .lab-row { display: flex; align-items: flex-start; gap: var(--space-md); flex-wrap: wrap; }
+  </style>
+</head>
+<body class="lab-date-time-pattern">
+  <main class="lab-layout">
+    <header class="lab-header">
+      <span class="t-label-medium lab-header__eyebrow">Axismundi · Lab module</span>
+      <h1 class="t-headline-large">Date / Time Picker (v3.4.7)</h1>
+      <p class="t-body-large" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+        GPT Codex-generated benchmark interaction layer, isolated as a lab module.
+        <strong>NOT</strong> a Beer-CSS-derived extraction.
+        See <code>docs/DATE-TIME-AUDIT.md</code> for provenance, baseline/module/plugin split,
+        and a11y carry-over policy (BACKLOG #19).
+      </p>
+
+      <!-- Theme switcher — canonical data-theme-set contract -->
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+          <span>Light</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+          <span>Dark</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">contrast</span>
+          <span>Auto</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="lab-banner">
+      <strong class="t-title-medium">Lab module — extraction, not redesign</strong>
+      <p class="t-body-medium" style="margin: 0;">
+        v3.4.7 extracts the benchmark date/time interaction verbatim. The
+        <code>.ax-date-benchmark__*</code> / <code>.ax-time-benchmark__*</code> BEM trees are
+        preserved as-is to keep the audit trail clean — class renames are deferred to a future
+        cleanup pass. Baseline <code>components.css</code> §33 Date picker and §34 Time picker
+        primitives are <strong>UNCHANGED</strong>.
+      </p>
+    </aside>
+
+    <aside class="lab-banner lab-banner--warning">
+      <strong class="t-title-medium">Inherited a11y gap — WAI-ARIA Date Picker grid pattern</strong>
+      <p class="t-body-medium" style="margin: 0;">
+        The benchmark interaction lacks ArrowKey grid navigation, <code>role="grid"</code> /
+        <code>role="gridcell"</code>, <code>aria-current="date"</code>, Home/End/PageUp/PageDown,
+        and roving <code>tabindex</code>. v3.4.7 carries this gap over by design — see
+        <strong>BACKLOG #19</strong>. This module does NOT claim production-ready date picker
+        accessibility.
+      </p>
+    </aside>
+
+    <!-- ========== 1. Date picker — docked + modal-input benchmark ========== -->
+    <section class="lab-section" id="demo-date-picker">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Date picker — interactive benchmark</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Single / Range mode toggle, docked text-field with calendar trailing icon, modal
+          calendar grid, month + year views, and modal-input direct entry. The picker root is
+          <code>[data-date-benchmark]</code>; <code>lab-date-time.js</code> auto-initializes on
+          <code>DOMContentLoaded</code>.
+        </p>
+      </header>
+      <div class="lab-demo">
+        <div class="ax-date-benchmark" data-date-benchmark>
+          <div class="ax-date-benchmark__controls" role="radiogroup" aria-label="Date picker benchmark mode">
+            <button type="button" class="ax-material-slider-demo__choice is-selected" data-date-mode="single" aria-pressed="true">Single</button>
+            <button type="button" class="ax-material-slider-demo__choice" data-date-mode="range" aria-pressed="false">Range</button>
+            <button type="button" class="ax-material-slider-demo__choice" data-date-open="input">Input</button>
+          </div>
+
+          <div class="ax-date-benchmark__field text-field text-field--outlined" data-date-docked>
+            <label class="text-field__container">
+              <input class="text-field__input" type="text" value="08/17/2025" readonly aria-label="Selected date" data-date-docked-input>
+              <span class="text-field__label">Date</span>
+              <button type="button" class="text-field__trailing-icon ax-icon-button is-tonal has-state-layer" data-date-open="calendar" aria-label="Open date picker">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">calendar_today</span>
+              </button>
+            </label>
+            <div class="text-field__bottom">
+              <span class="text-field__supporting">MM/DD/YYYY</span>
+            </div>
+          </div>
+
+          <div class="ax-date-benchmark__surface" data-date-surface hidden>
+            <div class="ax-date-benchmark__panel" role="dialog" aria-modal="false" aria-label="Benchmark date picker">
+              <header class="ax-date-benchmark__header">
+                <span class="ax-date-picker__supporting" data-date-supporting>Select date</span>
+                <strong class="ax-date-benchmark__headline" data-date-headline>Sun, Aug 17</strong>
+                <button type="button" class="ax-icon-button is-standard has-state-layer ax-date-benchmark__edit" data-date-open="input" aria-label="Switch to input mode">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">edit</span>
+                </button>
+              </header>
+
+              <div class="ax-date-benchmark__body">
+                <div class="ax-date-benchmark__calendar" data-date-view="calendar">
+                  <nav class="ax-date-picker__nav" aria-label="Month navigation">
+                    <button type="button" class="ax-date-benchmark__switch" data-date-view-button="month">August 2025</button>
+                    <span class="ax-date-benchmark__spacer"></span>
+                    <button type="button" class="ax-icon-button is-standard has-state-layer" data-date-prev aria-label="Previous month">
+                      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_left</span>
+                    </button>
+                    <button type="button" class="ax-icon-button is-standard has-state-layer" data-date-next aria-label="Next month">
+                      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                    </button>
+                  </nav>
+                  <div class="ax-date-picker__weekdays" aria-hidden="true">
+                    <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                  </div>
+                  <div class="ax-date-picker__grid" role="grid" data-date-grid></div>
+                </div>
+
+                <div class="ax-date-benchmark__month-list" data-date-view="month" hidden>
+                  <nav class="ax-date-picker__nav" aria-label="Month list header">
+                    <button type="button" class="ax-date-benchmark__switch" data-date-view-button="calendar">August</button>
+                    <button type="button" class="ax-date-benchmark__year-button" data-date-view-button="year">2025</button>
+                  </nav>
+                  <div class="ax-date-benchmark__list" data-date-month-list></div>
+                </div>
+
+                <div class="ax-date-benchmark__year-grid" data-date-view="year" hidden>
+                  <button type="button" class="ax-date-benchmark__switch" data-date-view-button="calendar">August 2025</button>
+                  <div class="ax-date-benchmark__years" data-date-year-grid></div>
+                </div>
+
+                <div class="ax-date-benchmark__input" data-date-view="input" hidden>
+                  <div class="text-field text-field--outlined">
+                    <label class="text-field__container">
+                      <input class="text-field__input" type="text" inputmode="numeric" placeholder=" " data-date-input aria-label="Date input">
+                      <span class="text-field__label">Date</span>
+                    </label>
+                    <div class="text-field__bottom">
+                      <span class="text-field__supporting" data-date-input-supporting>MM/DD/YYYY</span>
+                    </div>
+                  </div>
+                  <div class="text-field text-field--outlined" data-date-end-field hidden>
+                    <label class="text-field__container">
+                      <input class="text-field__input" type="text" inputmode="numeric" placeholder=" " data-date-end-input aria-label="End date input">
+                      <span class="text-field__label">End date</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <footer class="ax-date-benchmark__actions">
+                <button type="button" class="ax-button is-text has-state-layer" data-date-cancel>Cancel</button>
+                <button type="button" class="ax-button is-text has-state-layer" data-date-ok>OK</button>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 2. Time picker — dial + input benchmark ========== -->
+    <section class="lab-section" id="demo-time-picker">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Time picker — interactive benchmark</h2>
+        <p class="t-body-medium lab-section__supporting">
+          12 / 24 hour mode toggle, docked field with clock trailing icon, dial view with
+          listbox semantics, input-mode direct typing, and AM/PM toggle (12h mode only).
+        </p>
+      </header>
+      <div class="lab-demo">
+        <div class="ax-time-benchmark" data-time-benchmark>
+          <div class="ax-date-benchmark__controls" role="radiogroup" aria-label="Time picker benchmark mode">
+            <button type="button" class="ax-material-slider-demo__choice is-selected" data-time-format="12" aria-pressed="true">12h</button>
+            <button type="button" class="ax-material-slider-demo__choice" data-time-format="24" aria-pressed="false">24h</button>
+            <button type="button" class="ax-material-slider-demo__choice" data-time-open="input">Input</button>
+          </div>
+
+          <div class="ax-time-benchmark__field text-field text-field--outlined" data-time-docked>
+            <label class="text-field__container">
+              <input class="text-field__input" type="text" value="07:00 AM" readonly aria-label="Selected time" data-time-docked-input>
+              <span class="text-field__label">Time</span>
+              <button type="button" class="text-field__trailing-icon ax-icon-button is-tonal has-state-layer" data-time-open="dial" aria-label="Open time picker">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">schedule</span>
+              </button>
+            </label>
+            <div class="text-field__bottom">
+              <span class="text-field__supporting">HH:MM</span>
+            </div>
+          </div>
+
+          <div class="ax-time-benchmark__surface" data-time-surface hidden>
+            <div class="ax-time-benchmark__panel ax-time-picker" role="dialog" aria-modal="false" aria-label="Benchmark time picker">
+              <span class="ax-time-picker__supporting" data-time-supporting>Select time</span>
+
+              <div class="ax-time-benchmark__main">
+                <div class="ax-time-picker__inputs">
+                  <button type="button" class="ax-time-picker__field is-selected" data-time-part="hour" aria-pressed="true">07</button>
+                  <span class="ax-time-picker__separator">:</span>
+                  <button type="button" class="ax-time-picker__field" data-time-part="minute" aria-pressed="false">00</button>
+
+                  <fieldset class="ax-time-picker__period" data-time-period>
+                    <legend class="u-vh">AM or PM</legend>
+                    <button type="button" class="ax-time-picker__period-btn is-selected" data-time-period-value="AM" aria-pressed="true">AM</button>
+                    <button type="button" class="ax-time-picker__period-btn" data-time-period-value="PM" aria-pressed="false">PM</button>
+                  </fieldset>
+                </div>
+
+                <div class="ax-time-benchmark__dial" data-time-view="dial">
+                  <div class="ax-time-picker__dial" data-time-dial aria-label="Time dial" role="listbox"></div>
+                </div>
+
+                <div class="ax-time-benchmark__input" data-time-view="input" hidden>
+                  <div class="text-field text-field--outlined" data-time-input-field>
+                    <label class="text-field__container">
+                      <input class="text-field__input" type="text" inputmode="numeric" value="07:00" aria-label="Time input" data-time-input>
+                      <span class="text-field__label">Time</span>
+                    </label>
+                    <div class="text-field__bottom">
+                      <span class="text-field__supporting" data-time-input-supporting>HH:MM</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <footer class="ax-time-benchmark__actions">
+                <button type="button" class="ax-icon-button is-standard has-state-layer" data-time-toggle-view aria-label="Switch time input mode">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">keyboard</span>
+                </button>
+                <span class="ax-time-benchmark__action-spacer"></span>
+                <button type="button" class="ax-button is-text has-state-layer" data-time-cancel>Cancel</button>
+                <button type="button" class="ax-button is-text has-state-layer" data-time-ok>OK</button>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 3. Forbidden-ancestor demo (negative test) ========== -->
+    <section class="lab-section" id="demo-forbidden-ancestor">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Forbidden-ancestor bail-out (negative demo)</h2>
+        <p class="t-body-medium lab-section__supporting">
+          A <code>[data-date-benchmark]</code> placed inside <code>.prose</code> must be
+          <strong>skipped at init time</strong>. The forbidden-ancestor list at v3.4.7 is broader
+          than for popover/tooltip — it includes WordPress block-content surfaces:
+          <code>.prose</code>, <code>.wp-block-post-content</code>, <code>.entry-content</code>,
+          <code>[contenteditable]</code>.
+        </p>
+        <p class="t-body-medium lab-section__supporting">
+          Below: a picker root is intentionally placed inside <code>.prose</code>. Its trailing
+          icon should NOT open a calendar; the field is inert. (If a calendar opens, the
+          forbidden-ancestor bail-out is broken.)
+        </p>
+      </header>
+      <div class="lab-demo lab-demo--forbidden">
+        <div class="prose">
+          <p>이 단락은 <code>.prose</code> 안에 있습니다. 아래 date picker는 무시되어야 합니다.</p>
+          <div class="ax-date-benchmark" data-date-benchmark>
+            <div class="ax-date-benchmark__field text-field text-field--outlined" data-date-docked>
+              <label class="text-field__container">
+                <input class="text-field__input" type="text" value="N/A" readonly aria-label="Picker inside prose — must not initialize" data-date-docked-input>
+                <span class="text-field__label">Date (must not init)</span>
+                <button type="button" class="text-field__trailing-icon ax-icon-button is-tonal has-state-layer" data-date-open="calendar" aria-label="Should be inert">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">block</span>
+                </button>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer style="display: grid; gap: var(--space-xs); padding-block-start: var(--space-lg); border-block-start: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);">
+      <p class="t-body-small" style="margin: 0;">
+        Audit: <a href="docs/DATE-TIME-AUDIT.md">DATE-TIME-AUDIT.md</a> ·
+        Charter: <a href="../../docs/ARCHITECTURE-BOUNDARIES.md">ARCHITECTURE-BOUNDARIES.md</a> ·
+        BACKLOG #19 (deferred a11y): see project BACKLOG.md ·
+        Sibling lab modules:
+        <a href="../popover/lab-popover-pattern.html">popover</a>,
+        <a href="../tooltip/lab-tooltip-pattern.html">tooltip</a>
+      </p>
+    </footer>
+  </main>
+
+  <!-- Theme runtime (shared with all module pattern pages) -->
+  <script defer src="../../scripts/theme.js"></script>
+  <!-- Lab module runtime -->
+  <script defer src="lab-date-time.js"></script>
+</body>
+</html>

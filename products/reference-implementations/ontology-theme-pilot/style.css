@@ -1,0 +1,29 @@
+/*
+Theme Name:        Axismundi Pilot
+Theme URI:         https://github.com/jiwoon/axismundi-theme-pilot
+Author:            Ji-woon
+Description:       Pilot scaffold for Axismundi — Material Design 3 token-based block theme. Operationalizes v2.1a-P0 strong bindings (color/typography/appearanceTools). NOT a release. Validation target, not production. 한국어 first-class.
+Version:           0.1.0-pilot
+Requires at least: 6.7
+Tested up to:      6.9
+Requires PHP:      8.0
+License:           GPL-2.0-or-later
+License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain:       axismundi-pilot
+Tags:              full-site-editing, block-styles, material-design-3, microblog
+
+Theme is a v2.1a-P0 validation pilot. It implements:
+  - 3 strong token bindings (color/typography/appearanceTools)
+  - Tier 1 component bindings (Button, Card, List, Divider, Search)
+  - Binding rule operationalization (theme.json + block styles + base.css)
+
+See README.md for binding-to-code traceability.
+*/
+
+/*
+ * style.css visual rules are minimal — actual styling lives in:
+ *   assets/css/tokens.css   (M3 design tokens, 265 entities)
+ *   assets/css/base.css     (semantic runtime policy, 14 sections)
+ *   assets/css/block-styles.css (per-block-style M3 component CSS)
+ *   theme.json              (WP presets bound to M3 tokens)
+ */

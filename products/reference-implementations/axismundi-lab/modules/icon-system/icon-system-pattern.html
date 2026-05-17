@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Icon System Lab Module (v3.4.2)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <style>
+    /* Local layout — pattern page only. */
+    .lab-layout {
+      max-inline-size: min(100%, 960px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-section {
+      display: grid;
+      gap: var(--space-md);
+    }
+    .lab-section__head { margin: 0; }
+    .lab-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: center;
+    }
+    .lab-glyph-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: var(--space-sm);
+    }
+    .lab-glyph-tile {
+      display: grid;
+      place-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-small);
+      background-color: var(--md-sys-color-surface-container);
+      text-align: center;
+    }
+    .lab-glyph-tile .material-symbols-rounded { font-size: 32px; }
+    .lab-glyph-tile code {
+      font-size: 0.75rem;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .lab-prose-box {
+      padding: var(--space-md);
+      border: 2px dashed var(--md-sys-color-error);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: color-mix(in srgb, var(--md-sys-color-error-container) 30%, transparent);
+    }
+    .lab-prose-box .t-label-medium {
+      color: var(--md-sys-color-error);
+      display: block;
+      margin-block-end: var(--space-sm);
+    }
+    .axis-demo {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-sm);
+      padding: var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-surface-container-low);
+    }
+    .axis-demo > div {
+      display: grid;
+      place-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm);
+    }
+    .axis-demo .material-symbols-rounded { font-size: 48px; }
+    .axis-demo code {
+      font-size: 0.7rem;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-theme {
+      display: inline-flex;
+      gap: var(--space-xs);
+      align-items: center;
+    }
+
+    /* Hardening — applied locally on this pattern page to demonstrate
+     * the rules. In v3.4.3 these will move into lab/stylesheets/icons.css
+     * as the canonical theme runtime rules. */
+    .material-symbols-rounded {
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="lab-layout">
+    <header class="lab-header">
+      <div class="lab-header__eyebrow t-label-medium">Axismundi · Lab module · v3.4.2</div>
+      <h1 class="t-display-small">Icon System Lab Module</h1>
+      <p class="t-body-large" style="max-inline-size: 64ch;">
+        Dual-engine icon system: Material Symbols variable icon font
+        for M3 chrome glyphs (Bucket D), SVG icons for WordPress /
+        editor / social / brand / portable content (Bucket F).
+      </p>
+      <p class="t-body-medium" style="max-inline-size: 64ch; color: var(--md-sys-color-on-surface-variant);">
+        See <code>docs/ICON-SYSTEM-AUDIT.md</code> for the umbrella,
+        <code>docs/ICON-FONT-POLICY.md</code> for icon font hardening
+        + axis contract, <code>docs/SVG-ICON-POLICY.md</code> for the
+        WordPress / federation track, <code>docs/INLINE-SVG-INVENTORY.md</code>
+        for the 146-SVG conversion plan, and <code>docs/ICON-PICKER-UX.md</code>
+        for the future plugin UX sketch.
+      </p>
+      <nav class="lab-row" aria-label="Related pages">
+        <span class="t-label-medium" style="color: var(--md-sys-color-on-surface-variant);">Related:</span>
+        <a href="../../style-guide.html" style="color: var(--md-sys-color-primary);">Main styleguide</a>
+        <span aria-hidden="true">·</span>
+        <a href="../carousel/lab-carousel-pattern.html" style="color: var(--md-sys-color-primary);">Carousel (v3.3.2)</a>
+        <span aria-hidden="true">·</span>
+        <a href="../ripple/lab-ripple-pattern.html" style="color: var(--md-sys-color-primary);">Ripple (v3.3.3)</a>
+        <span aria-hidden="true">·</span>
+        <a href="../search-expansion/lab-search-expansion-pattern.html" style="color: var(--md-sys-color-primary);">Search expansion (v3.3.4)</a>
+      </nav>
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false"><span class="chip__label">Light</span></button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false"><span class="chip__label">Dark</span></button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true"><span class="chip__label">Auto</span></button>
+      </div>
+    </header>
+
+    <aside class="lab-banner" role="note">
+      <div class="t-label-large">Scope audit — minimal implementation</div>
+      <div class="t-body-medium">
+        v3.4.2 establishes policies and inventory. The actual conversion
+        of inline SVGs to icon font glyphs is scheduled for v3.4.3
+        (Icon Button Runtime Prototype). The hardening CSS rules
+        below currently live inline on this page; in v3.4.3 they
+        move into <code>lab/stylesheets/icons.css</code> as the
+        canonical theme runtime.
+      </div>
+    </aside>
+
+    <!-- Material Symbols showcase -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Material Symbols glyphs (chrome engine)</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Each tile uses the required markup pattern from
+        <code>ICON-FONT-POLICY.md</code>:
+        <code>class="material-symbols-rounded notranslate"</code>,
+        <code>translate="no"</code>,
+        <code>aria-hidden="true"</code>,
+        <code>draggable="false"</code>.
+      </p>
+      <div class="lab-glyph-grid">
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+          <code>home</code>
+        </div>
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          <code>search</code>
+        </div>
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">menu</span>
+          <code>menu</code>
+        </div>
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">settings</span>
+          <code>settings</code>
+        </div>
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+          <code>favorite</code>
+        </div>
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+          <code>share</code>
+        </div>
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+          <code>light_mode</code>
+        </div>
+        <div class="lab-glyph-tile">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+          <code>dark_mode</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- Variable axes showcase -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Variable axes (FILL, weight)</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        The same <code>favorite</code> glyph rendered with different
+        axis values. <code>GRAD</code> is theme-scope (not per-block)
+        and follows <code>--md-grade</code> from the theme switcher.
+      </p>
+      <div class="axis-demo">
+        <div>
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false"
+                style="--md-icon-fill: 0; --md-icon-weight: 300;">favorite</span>
+          <code>FILL 0, wght 300</code>
+        </div>
+        <div>
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false"
+                style="--md-icon-fill: 0; --md-icon-weight: 400;">favorite</span>
+          <code>FILL 0, wght 400</code>
+        </div>
+        <div>
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false"
+                style="--md-icon-fill: 1; --md-icon-weight: 400;">favorite</span>
+          <code>FILL 1, wght 400</code>
+        </div>
+        <div>
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false"
+                style="--md-icon-fill: 1; --md-icon-weight: 700;">favorite</span>
+          <code>FILL 1, wght 700</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- Composed inside chrome components -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Composed inside chrome components</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Material Symbols glyphs composed into <code>.ax-icon-button</code>,
+        <code>.ax-button</code>, and <code>.chip</code> — the three highest-
+        volume conversion targets from <code>INLINE-SVG-INVENTORY.md</code>.
+        The parent control owns the accessible name (<code>aria-label</code>
+        on the button); the glyph is <code>aria-hidden</code>.
+      </p>
+      <div class="lab-row">
+        <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="검색">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+        </button>
+        <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="좋아요">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+        </button>
+        <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="설정">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">settings</span>
+        </button>
+      </div>
+      <div class="lab-row">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">download</span>
+          <span class="ax-button__label">다운로드</span>
+        </button>
+        <button class="ax-button is-tonal has-state-layer t-label-large" type="button">
+          <span class="ax-button__label">자세히</span>
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_forward</span>
+        </button>
+      </div>
+      <div class="lab-row">
+        <button class="chip chip--assist has-state-layer t-label-large" type="button">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">bookmark</span>
+          <span class="chip__label">북마크</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- SVG-required examples -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">SVG icons (content / brand / portable engine)</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Cases where SVG is required (not optional). See
+        <code>docs/SVG-ICON-POLICY.md §Required (not optional) SVG cases</code>
+        for the full list (<code>@wordpress/icons</code> parity, <code>core/social-link</code>
+        variation registration per WP 6.9, Icon Block plugin parity, brand logos,
+        content-portable icons, federated content, email rendering).
+      </p>
+
+      <figure aria-labelledby="wp-wmark-specimen-caption"
+              style="margin: 0; display: grid; gap: var(--space-md); grid-template-columns: auto 1fr; align-items: start; padding: var(--space-md); border-radius: var(--md-sys-shape-corner-medium); background-color: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface);">
+        <!-- WordPress wmark — official source, currentColor-normalized,
+             styleguide-only reference specimen. NOT a theme primitive. -->
+        <svg viewBox="0 0 666.67 666.67" width="56" height="56"
+             role="img" aria-label="WordPress logo"
+             focusable="false"
+             style="flex: none;">
+          <title>WordPress logo specimen</title>
+          <g><g><g>
+            <path fill="currentColor" d="M333.33,20A311.93,311.93,0,0,1,508.51,73.5,314.19,314.19,0,0,1,622.05,211.38a313,313,0,0,1-28.88,297.13A314.19,314.19,0,0,1,455.29,622.05a313,313,0,0,1-297.13-28.88A314.19,314.19,0,0,1,44.62,455.29,313,313,0,0,1,73.5,158.16,314.94,314.94,0,0,1,158.16,73.5,311.93,311.93,0,0,1,333.33,20m0-20C149.24,0,0,149.24,0,333.33S149.24,666.67,333.33,666.67,666.67,517.43,666.67,333.33,517.43,0,333.33,0Z"/>
+            <path fill="currentColor" d="M55.56,333.32c0,110,63.89,205,156.56,250l-132.51-363A276.71,276.71,0,0,0,55.56,333.32Zm465.3-14c0-34.34-12.34-58.1-22.9-76.6-14.08-22.89-27.29-42.26-27.29-65.15,0-25.53,19.36-49.3,46.65-49.3,1.23,0,2.4.15,3.59.23A276.69,276.69,0,0,0,333.33,55.56c-97,0-182.42,49.79-232.09,125.19,6.52.21,12.67.34,17.88.34,29,0,74-3.53,74-3.53,15-.88,16.74,21.12,1.78,22.89,0,0-15.05,1.76-31.79,2.64L264.29,504l60.8-182.31L281.81,203.09c-15-.88-29.13-2.64-29.13-2.64-15-.88-13.22-23.77,1.76-22.89,0,0,45.86,3.53,73.16,3.53,29,0,74-3.53,74-3.53,15-.88,16.74,21.12,1.77,22.89,0,0-15.07,1.76-31.79,2.64L472,501.68l28.65-90.8C513.39,371.2,520.86,343.08,520.86,319.31ZM338.21,357.62,254.86,599.79a277.85,277.85,0,0,0,170.72-4.43,25.15,25.15,0,0,1-2-3.83ZM577.09,200.07A212,212,0,0,1,579,228.63c0,28.17-5.28,59.86-21.13,99.49L473,573.41c82.58-48.14,138.12-137.61,138.12-240.09A276.41,276.41,0,0,0,577.09,200.07Z"/>
+          </g></g></g>
+        </svg>
+
+        <figcaption id="wp-wmark-specimen-caption" style="display: grid; gap: var(--space-xs);">
+          <p class="t-label-large" style="margin: 0;">
+            WordPress logo specimen — shown for SVG interoperability reference only.
+          </p>
+          <p class="t-body-small" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+            WordPress and the WordPress logo are trademarks of the WordPress Foundation.
+            This specimen does not imply endorsement or affiliation.
+            Source: <a href="https://wordpress.org/about/logos/" style="color: var(--md-sys-color-primary);">wordpress.org/about/logos/</a>.
+          </p>
+          <p class="t-body-small" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+            The wmark above is the official W-mark, <code>currentColor</code>-normalized so
+            the glyph follows the page's <code>color</code> token —
+            light mode renders against <code>on-surface</code>, dark mode against
+            <code>on-surface</code> (theme-state cascade per charter §2).
+            Switch theme above to verify.
+          </p>
+        </figcaption>
+      </figure>
+
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Status of this specimen:
+      </p>
+      <ul class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); padding-inline-start: var(--space-lg); margin: 0;">
+        <li><strong>Bucket</strong>: F (plugin / reference specimen)</li>
+        <li><strong>Ship status</strong>: styleguide-only</li>
+        <li><strong>Theme core</strong>: <em>no</em> — brand and wordmark assets are not bundled in <code>products/.../axismundi-lab/stylesheets/</code> or the published <code>styleguide/</code> output. Per <code>SVG-ICON-POLICY.md</code> and charter §6.</li>
+        <li><strong>Source workflow</strong>: official source fetched fresh from the brand's official channel at the time of use. The seed file lives at <code>compare/brand-assets-research/WordPress-logotype-wmark.svg</code> with attribution README; future specimen additions follow the same fetch-from-source pattern (no project-mirrored brand pack).</li>
+        <li><strong>Other brands</strong> (Mastodon, GitHub, etc.) — not shown here. URL inventory maintained in <code>compare/brand-assets-research/README.md §What is NOT in this folder</code>; specimens added per-brand only when a concrete use case justifies it.</li>
+      </ul>
+    </section>
+
+    <!-- Hardening proof -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Hardening proof</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Try the following on the glyphs above:
+      </p>
+      <ul class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); padding-inline-start: var(--space-lg);">
+        <li><strong>Double-click a glyph:</strong> selection should not happen (<code>user-select: none</code>).</li>
+        <li><strong>Click-and-drag a glyph:</strong> nothing should drag out (<code>draggable="false"</code> + <code>-webkit-user-drag: none</code>).</li>
+        <li><strong>Right-click a glyph:</strong> context menu should show page-level options, not "Copy text" / "Search for ...".</li>
+        <li><strong>Translate the page</strong> via the browser's translate feature: glyphs should remain as Material Symbols glyphs, not as translated words (<code>translate="no"</code> + <code>notranslate</code>).</li>
+        <li><strong>Click on a glyph inside an icon button:</strong> the click should land on the button, not the glyph (<code>pointer-events: none</code> on the glyph).</li>
+        <li><strong>Use a screen reader on an icon button:</strong> reads the button's <code>aria-label</code> only; the glyph's ligature text is hidden via <code>aria-hidden="true"</code>.</li>
+      </ul>
+    </section>
+
+    <!-- Forbidden scope: must NOT use icon font inside prose -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Forbidden scope — icon font must <em>not</em> appear inside <code>.prose</code></h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Charter §5 + §6 + <code>prose.css §12</code>. Even if a Material
+        Symbols glyph accidentally lands inside long-form prose (e.g. a
+        block pattern that uses one inappropriately), the prose-side
+        enforcement forces it back to ligature text rendering so the
+        leak is obvious to the author.
+      </p>
+      <div class="lab-prose-box">
+        <span class="t-label-medium">.prose container — icon-font glyph here should render as literal text "search", NOT as the search glyph</span>
+        <div class="prose">
+          <p>
+            긴 본문 prose 안에 부적절하게 삽입된 아이콘 폰트 글리프:
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+            ← 이 자리에는 prose.css §12 규칙에 의해 <code>font-family: inherit</code>이 적용되어 "search"라는 글자로 보여야 합니다. Material Symbols 글리프로 보인다면 prose 격리가 깨진 것입니다.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script defer src="../../scripts/theme.js"></script>
+</body>
+</html>

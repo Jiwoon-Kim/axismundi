@@ -1,0 +1,65 @@
+{
+  "common-apis-handbook/16-security/sanitizing-data.md": {
+    "source_url": "https://developer.wordpress.org/apis/security/sanitizing/",
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "sanitizing-data",
+    "parent_order": 16,
+    "page_order": 1,
+    "title": "Sanitizing Data"
+  },
+  "common-apis-handbook/16-security/validating-data.md": {
+    "source_url": "https://developer.wordpress.org/apis/security/data-validation/",
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "validating-data",
+    "parent_order": 16,
+    "page_order": 2,
+    "title": "Validating Data"
+  },
+  "common-apis-handbook/16-security/escaping-data.md": {
+    "source_url": "https://developer.wordpress.org/apis/security/escaping/",
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "escaping-data",
+    "parent_order": 16,
+    "page_order": 3,
+    "title": "Escaping Data"
+  },
+  "common-apis-handbook/16-security/nonces.md": {
+    "source_url": "https://developer.wordpress.org/apis/security/nonces/",
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "nonces",
+    "parent_order": 16,
+    "page_order": 4,
+    "title": "Nonces"
+  },
+  "common-apis-handbook/16-security/user-roles-and-capabilities.md": {
+    "source_url": "https://developer.wordpress.org/apis/security/roles-and-capabilities/",
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "user-roles-and-capabilities",
+    "parent_order": 16,
+    "page_order": 5,
+    "title": "User Roles and Capabilities"
+  },
+  "common-apis-handbook/16-security/common-vulnerabilities.md": {
+    "source_url": "https://developer.wordpress.org/apis/security/common-vulnerabilities/",
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "common-vulnerabilities",
+    "parent_order": 16,
+    "page_order": 6,
+    "title": "Common Vulnerabilities"
+  },
+  "common-apis-handbook/16-security/example.md": {
+    "source_url": "https://developer.wordpress.org/apis/security/example/",
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "example",
+    "parent_order": 16,
+    "page_order": 7,
+    "title": "Example"
+  }
+}

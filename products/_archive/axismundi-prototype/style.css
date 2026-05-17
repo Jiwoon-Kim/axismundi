@@ -1,0 +1,46 @@
+/*
+Theme Name:        Axismundi
+Theme URI:         https://designbusan.ai.kr
+Author:            KIM JIWOON
+Author URI:        https://designbusan.ai.kr
+Description:       Axismundi is a Material 3 design system block theme for WordPress, optimized for both long-form blogging and ActivityPub microblogging surfaces. Token-driven color, typography, motion, and shape — accessibility-ready, RTL-aware, and built on full-site editing.
+Version:           1.0.0-rc1
+Requires at least: 6.5
+Tested up to:      6.7
+Requires PHP:      8.1
+License:           GPL-3.0-or-later
+License URI:       https://www.gnu.org/licenses/gpl-3.0.html
+Text Domain:       axismundi
+Tags:              block-theme, full-site-editing, blog, microblog, two-columns, three-columns, accessibility-ready, custom-colors, custom-menu, threaded-comments, translation-ready
+
+Axismundi WordPress theme, © 2026 KIM JIWOON.
+Axismundi is distributed under the terms of the GNU General Public License,
+version 3 or later (GPL-3.0-or-later). The full text of the license is
+included in the LICENSE file in the theme root, and is also available at
+<https://www.gnu.org/licenses/gpl-3.0.html>.
+
+This theme bundles the following resources, all GPL-compatible:
+  - Token system, base, components, prose, blocks stylesheets
+    (own work, GPL-3.0-or-later)
+  - SVG icons (own work, GPL-3.0-or-later)
+  - Documentation (CC-BY-4.0)
+
+For full source and documentation, see:
+  https://designbusan.ai.kr
+*/
+
+/* ---------------------------------------------------------------
+ * NOTE — The actual styling lives in modular sheets enqueued via
+ * functions.php for performance + caching:
+ *
+ *   stylesheets/tokens.css       — design tokens (M3 system)
+ *   stylesheets/base.css         — reset + element defaults
+ *   stylesheets/components.css   — Axismundi UI components
+ *   stylesheets/prose.css        — long-form typography (.prose)
+ *   stylesheets/blocks.css       — WP `wp-block-*` core mapping
+ *
+ * This file exists primarily to satisfy the WordPress.org theme
+ * directory requirement that style.css live at the theme root and
+ * carry the standard theme header above. Do NOT add styling here;
+ * add to the appropriate modular sheet instead.
+ * --------------------------------------------------------------- */

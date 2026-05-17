@@ -1,0 +1,181 @@
+{
+  "results": [
+    {
+      "src_file": "rest-api-handbook/03-using-the-rest-api/global-parameters.md",
+      "src_is_anchor": true,
+      "target_slug": "linking-and-embedding",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/rest-api/linking-and-embedding/",
+      "link_text": "Linking and Embedding",
+      "resolved_to": "rest-api-handbook/03-using-the-rest-api/linking-and-embedding.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/rest-api-handbook/03-using-the-rest-api/global-parameters.md.patches.json"
+    },
+    {
+      "src_file": "rest-api-handbook/03-using-the-rest-api/linking-and-embedding.md",
+      "src_is_anchor": true,
+      "target_slug": "global-parameters",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/rest-api/global-parameters/#envelope",
+      "link_text": "`_envelope`",
+      "resolved_to": "rest-api-handbook/03-using-the-rest-api/global-parameters.md",
+      "status": "matched_unique",
+      "anchor": "envelope",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/rest-api-handbook/03-using-the-rest-api/linking-and-embedding.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "src_is_anchor": true,
+      "target_slug": "border",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/themes/global-settings-and-styles/border",
+      "link_text": "Border",
+      "resolved_to": "theme-handbook/03-theme-json/02-settings/border.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/theme-handbook/03-theme-json/02-settings/appearance-tools.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "src_is_anchor": true,
+      "target_slug": "color",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/themes/global-settings-and-styles/color",
+      "link_text": "Color",
+      "resolved_to": "theme-handbook/03-theme-json/02-settings/color.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/theme-handbook/03-theme-json/02-settings/appearance-tools.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "src_is_anchor": true,
+      "target_slug": "dimensions",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/themes/global-settings-and-styles/dimensions",
+      "link_text": "Dimensions",
+      "resolved_to": "theme-handbook/03-theme-json/02-settings/dimensions.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/theme-handbook/03-theme-json/02-settings/appearance-tools.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "src_is_anchor": true,
+      "target_slug": "position",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/themes/global-settings-and-styles/position",
+      "link_text": "Position",
+      "resolved_to": "theme-handbook/03-theme-json/02-settings/position.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/theme-handbook/03-theme-json/02-settings/appearance-tools.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "src_is_anchor": true,
+      "target_slug": "spacing",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/themes/global-settings-and-styles/spacing",
+      "link_text": "Spacing",
+      "resolved_to": "theme-handbook/03-theme-json/02-settings/spacing.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/theme-handbook/03-theme-json/02-settings/appearance-tools.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "src_is_anchor": true,
+      "target_slug": "typography",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/themes/global-settings-and-styles/typography",
+      "link_text": "Typography",
+      "resolved_to": "theme-handbook/03-theme-json/02-settings/typography.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/theme-handbook/03-theme-json/02-settings/appearance-tools.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/03-theme-json/03-styles/applying-styles.md",
+      "src_is_anchor": true,
+      "target_slug": "use-root-padding-aware-alignments",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/themes/global-settings-and-styles/use-root-padding-aware-alignments/",
+      "link_text": "Use Root Padding Aware Alignments",
+      "resolved_to": "theme-handbook/03-theme-json/02-settings/use-root-padding-aware-alignments.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/theme-handbook/03-theme-json/03-styles/applying-styles.md.patches.json"
+    },
+    {
+      "src_file": "theme-handbook/04-templates/introduction-to-templates.md",
+      "src_is_anchor": true,
+      "target_slug": "classic-themes",
+      "target_is_anchor": false,
+      "original_url": "https://developer.wordpress.org/themes/classic-themes/",
+      "link_text": "classic themes",
+      "resolved_to": null,
+      "status": "no_match",
+      "anchor": "",
+      "disposition": "deferred_v1_1b",
+      "deferred_reason": "no_corpus_target"
+    },
+    {
+      "src_file": "rest-api-handbook/03-using-the-rest-api/client-libraries.md",
+      "src_is_anchor": false,
+      "target_slug": "authentication",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/rest-api/authentication/#authentication-plugins",
+      "link_text": "authentication plugin",
+      "resolved_to": "rest-api-handbook/03-using-the-rest-api/authentication.md",
+      "status": "matched_unique",
+      "anchor": "authentication-plugins",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/rest-api-handbook/03-using-the-rest-api/client-libraries.md.patches.json"
+    },
+    {
+      "src_file": "rest-api-handbook/03-using-the-rest-api/discovery.md",
+      "src_is_anchor": false,
+      "target_slug": "authentication",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/rest-api/authentication/",
+      "link_text": "authentication documentation",
+      "resolved_to": "rest-api-handbook/03-using-the-rest-api/authentication.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/rest-api-handbook/03-using-the-rest-api/discovery.md.patches.json"
+    },
+    {
+      "src_file": "rest-api-handbook/05-reference.md",
+      "src_is_anchor": false,
+      "target_slug": "authentication",
+      "target_is_anchor": true,
+      "original_url": "https://developer.wordpress.org/rest-api/authentication/",
+      "link_text": "authentication",
+      "resolved_to": "rest-api-handbook/03-using-the-rest-api/authentication.md",
+      "status": "matched_unique",
+      "anchor": "",
+      "disposition": "patched_v1_1a",
+      "patch_file": "patches/v1_1a/rest-api-handbook/05-reference.md.patches.json"
+    }
+  ],
+  "status_counts": {
+    "matched_unique": 12,
+    "no_match": 1
+  },
+  "final_disposition": {
+    "patched_v1_1a": 12,
+    "deferred_v1_1b": 1
+  }
+}

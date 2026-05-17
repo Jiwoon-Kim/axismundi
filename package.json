@@ -1,0 +1,27 @@
+{
+  "name": "axismundi",
+  "version": "1.0.0",
+  "description": "Ontology-driven Material 3 design system with a WordPress binding and pilot.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "npm run validate",
+    "validate": "python tools/validators/validate_theme_pilot.py",
+    "publish:styleguide": "python tools/generators/publish_styleguide.py"
+  },
+  "keywords": [
+    "wordpress",
+    "material-design",
+    "design-system",
+    "block-theme",
+    "ontology"
+  ],
+  "author": "KIM JIWOON (https://designbusan.ai.kr) - Busan, Korea",
+  "license": "GPL-3.0-or-later",
+  "type": "commonjs",
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "file": "theme-handbook/03-theme-json/02-settings/typography.md",
+  "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/typography/",
+  "blocks": [
+    {
+      "candidate_id": "theme-handbook/03-theme-json/02-settings/typography.md::block_1",
+      "file": "theme-handbook/03-theme-json/02-settings/typography.md",
+      "block_id": "block_1",
+      "section": "Registering web fonts (font faces)",
+      "line_start": 124,
+      "line_end": 128,
+      "before_fence": "```text\n- `/fonts`\n    - `/open-sans.woff2`\n    - `/open-sans-italic.woff2`\n```",
+      "after_markdown": "    - `/fonts`\n        - `/open-sans.woff2`\n        - `/open-sans-italic.woff2`",
+      "note": "/assets/fonts directory tree — fence breaks parent `- /assets` bullet; indent children (fonts at 4-space, font files preserve their 4-space which becomes 6-space relative)",
+      "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/typography/"
+    },
+    {
+      "candidate_id": "theme-handbook/03-theme-json/02-settings/typography.md::block_2",
+      "file": "theme-handbook/03-theme-json/02-settings/typography.md",
+      "block_id": "block_2",
+      "section": "Registering custom font size presets",
+      "line_start": 214,
+      "line_end": 217,
+      "before_fence": "```text\n- **`min`:** The minimum value that the font size can scale down to. Must be a valid CSS size.\n- **`max`:** The maximum value that the font size can scale up to. Must be a valid CSS size.\n```",
+      "after_markdown": "    - **`min`:** The minimum value that the font size can scale down to. Must be a valid CSS size.\n    - **`max`:** The maximum value that the font size can scale up to. Must be a valid CSS size.",
+      "note": "fluid min/max — fence breaks parent `- **fluid**:` bullet; indent children to 4-space",
+      "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/typography/"
+    }
+  ]
+}

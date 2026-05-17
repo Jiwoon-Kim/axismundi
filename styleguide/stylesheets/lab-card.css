@@ -1,0 +1,178 @@
+/* ============================================================
+ * lab-card.css — Axismundi Card lab module
+ * v3.5.3 Phase 2
+ *
+ * Lab-internal pattern page scaffolding on top of baseline:
+ *   - components.css §5 Card — CURRENT baseline primitive
+ *   - components.css §0 State-layer foundation — CURRENT for
+ *     interactive card specimens
+ *   - blocks.css §8 core/group card bridge — CURRENT partial
+ *
+ * Composition dependencies:
+ *   - icon-system/ — CURRENT conditional via nested Icon button
+ *     inside .card__actions only
+ *
+ * Candidate / future dependencies (NOT wired at v3.5.3):
+ *   - lab/modules/ripple/ — CANDIDATE for action/interactive Card,
+ *     deferred to Ripple v2 (BACKLOG #25 + #26)
+ *
+ * Audit docs:
+ *   - docs/CARD-SPEC-AUDIT.md
+ *   - docs/CARD-MEASUREMENT-AUDIT.md
+ *   - docs/CARD-WP-MAPPING.md
+ *
+ * Baseline/public files remain unchanged.
+ * No .card__body selector is introduced.
+ * ============================================================ */
+
+.lab-card-demo {
+  --lab-card-gap: var(--space-md);
+  --lab-card-section-gap: var(--space-xl);
+  --lab-card-caption-color: var(--md-sys-color-on-surface-variant);
+  --lab-card-panel: color-mix(in srgb, var(--md-sys-color-surface-container), transparent 8%);
+  --lab-card-border: color-mix(in srgb, var(--md-sys-color-outline-variant), transparent 12%);
+  --lab-card-media-a: color-mix(in srgb, var(--md-sys-color-primary-container), transparent 12%);
+  --lab-card-media-b: color-mix(in srgb, var(--md-sys-color-tertiary-container), transparent 18%);
+  display: grid;
+  gap: var(--lab-card-section-gap);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-xl);
+}
+
+.lab-card-section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-card-section__head {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.lab-card-section__title {
+  margin: 0;
+}
+
+.lab-card-section__supporting {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--lab-card-caption-color);
+}
+
+.lab-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--lab-card-gap);
+}
+
+.lab-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--lab-card-gap);
+}
+
+.lab-card-specimen {
+  display: grid;
+  gap: var(--space-sm);
+  align-content: start;
+}
+
+.lab-card-specimen__caption {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--lab-card-caption-color);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+
+.lab-card-specimen__caption--ko {
+  font-weight: 500;
+}
+
+.lab-card-banner {
+  padding: var(--space-md);
+  border: 1px solid var(--lab-card-border);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.lab-card-banner p {
+  margin: 0;
+}
+
+.lab-card-media {
+  min-block-size: 132px;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, var(--lab-card-media-a), var(--lab-card-media-b));
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.lab-card-media__label {
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+}
+
+.lab-card-action-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.lab-card-demo-card {
+  min-block-size: 100%;
+}
+
+.lab-card-demo-card > p {
+  margin-block: var(--space-sm) 0;
+}
+
+.lab-card-demo-card:where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.lab-card-note {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--lab-card-caption-color);
+}
+
+.lab-card-snippet {
+  border: 1px solid var(--lab-card-border);
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-card-snippet > summary {
+  cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--md-sys-color-primary);
+}
+
+.lab-card-snippet pre {
+  overflow-x: auto;
+  margin: 0;
+  padding: var(--space-md);
+  border-block-start: 1px solid var(--lab-card-border);
+}
+
+.lab-card-xref {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.lab-card-xref a {
+  color: var(--md-sys-color-primary);
+}
+
+/* Verification guide:
+ * - No unscoped baseline component selectors should appear in this file.
+ * - No .card__body selector exists.
+ * - No JS or ripple dependency exists for v3.5.3 Phase 2.
+ * - Any future visual helper must be scoped under .lab-card-demo.
+ */

@@ -1,0 +1,440 @@
+{
+  "schema_version": "v2.0-pilot-attributes-2026-05-12",
+  "generated_at": "2026-05-12",
+  "anchor": "block-editor-handbook/.../attributes.md",
+  "sources": {
+    "corpus": "dev_handbook_clean/block-editor-handbook/03-reference-guides/01-block-api-reference/attributes.md",
+    "docs": "/home/claude/v2_0_work/GB-23.1.1/docs/reference-guides/block-api/block-attributes.md",
+    "schema": "/home/claude/v2_0_work/GB-23.1.1/schemas/json/block.json",
+    "instances": "/home/claude/v2_0_work/GB-23.1.1/packages/block-library/src/*/block.json"
+  },
+  "baseline": {
+    "wordpress": "6.9.4 @ 97b7f62a",
+    "gutenberg": "v23.1.1 @ 12c6c76e"
+  },
+  "h2_alignment": {
+    "corpus": [
+      "Type validation",
+      "Enum validation",
+      "Value source",
+      "Default value",
+      "Role"
+    ],
+    "docs": [
+      "Type validation",
+      "Enum validation",
+      "Value source",
+      "Default value",
+      "Role"
+    ],
+    "match": true
+  },
+  "schema": {
+    "keys": [
+      "attribute",
+      "default",
+      "enum",
+      "meta",
+      "query",
+      "role",
+      "selector",
+      "source",
+      "type"
+    ],
+    "type_enum": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "string",
+      "rich-text",
+      "integer",
+      "number"
+    ],
+    "source_enum": [
+      "attribute",
+      "text",
+      "rich-text",
+      "html",
+      "raw",
+      "query",
+      "meta"
+    ],
+    "key_details": {
+      "type": {
+        "type": "?",
+        "description_first_line": "The type indicates the type of data that is stored by the attribute. It does not indicate where the data is stored, whic"
+      },
+      "enum": {
+        "type": "array",
+        "description_first_line": "An attribute can be defined as one of a fixed set of values. This is specified by an enum, which contains an array of al"
+      },
+      "source": {
+        "type": "string",
+        "description_first_line": "Attribute sources are used to define how the attribute values are extracted from saved post content. They provide a mech"
+      },
+      "selector": {
+        "type": "string",
+        "description_first_line": "The selector can be an HTML tag, or anything queryable with querySelector, such as a class or id attribute. Examples are"
+      },
+      "attribute": {
+        "type": "string",
+        "description_first_line": "Use an attribute source to extract the value from an attribute in the markup. The attribute is specified by the attribut"
+      },
+      "query": {
+        "type": "object",
+        "description_first_line": "Use query to extract an array of values from markup. Entries of the array are determined by the selector argument, where"
+      },
+      "meta": {
+        "type": "string",
+        "description_first_line": "Although attributes may be obtained from a post’s meta, meta attribute sources are considered deprecated; EntityProvider"
+      },
+      "role": {
+        "type": "string",
+        "description_first_line": "Designates the conceptual type of the attribute."
+      },
+      "default": {
+        "type": "?",
+        "description_first_line": "A block attribute can contain a default value, which will be used if the type and source do not match anything within th"
+      }
+    },
+    "role_enum": [
+      "content",
+      "local"
+    ]
+  },
+  "instance_stats": {
+    "total_blocks": 121,
+    "blocks_with_attributes": 102,
+    "total_attribute_definitions": 473,
+    "key_usage": {
+      "type": 473,
+      "default": 224,
+      "role": 96,
+      "source": 70,
+      "selector": 66,
+      "attribute": 39,
+      "enum": 16,
+      "query": 5,
+      "items": 5,
+      "__unstablePreserveWhiteSpace": 3,
+      "minimum": 3,
+      "maximum": 3,
+      "multiline": 2,
+      "enabled": 1
+    },
+    "type_usage": {
+      "string": 252,
+      "boolean": 109,
+      "number": 56,
+      "rich-text": 21,
+      "array": 18,
+      "object": 8,
+      "string|boolean": 6,
+      "integer": 3
+    },
+    "source_usage": {
+      "attribute": 37,
+      "rich-text": 21,
+      "query": 5,
+      "raw": 4,
+      "html": 3
+    },
+    "role_usage": {
+      "content": 90,
+      "local": 6
+    },
+    "type_source_combos_top10": {
+      "string+attribute": 29,
+      "rich-text+rich-text": 21,
+      "boolean+attribute": 8,
+      "array+query": 5,
+      "string+raw": 4,
+      "string+html": 3
+    },
+    "per_block_sample": [
+      {
+        "name": "core/accordion",
+        "attribute_count": 5,
+        "sources_used": {}
+      },
+      {
+        "name": "core/accordion-heading",
+        "attribute_count": 5,
+        "sources_used": {
+          "rich-text": 1
+        }
+      },
+      {
+        "name": "core/accordion-item",
+        "attribute_count": 1,
+        "sources_used": {}
+      },
+      {
+        "name": "core/accordion-panel",
+        "attribute_count": 1,
+        "sources_used": {}
+      },
+      {
+        "name": "core/archives",
+        "attribute_count": 4,
+        "sources_used": {}
+      },
+      {
+        "name": "core/audio",
+        "attribute_count": 7,
+        "sources_used": {
+          "attribute": 4,
+          "rich-text": 1
+        }
+      },
+      {
+        "name": "core/avatar",
+        "attribute_count": 4,
+        "sources_used": {}
+      },
+      {
+        "name": "core/block",
+        "attribute_count": 2,
+        "sources_used": {}
+      },
+      {
+        "name": "core/breadcrumbs",
+        "attribute_count": 5,
+        "sources_used": {}
+      },
+      {
+        "name": "core/button",
+        "attribute_count": 11,
+        "sources_used": {
+          "attribute": 4,
+          "rich-text": 1
+        }
+      }
+    ]
+  },
+  "keys_4way": {
+    "role": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 96,
+      "corpus_mention_count": 1,
+      "docs_mention_count": 1,
+      "in_n_sources": 4
+    },
+    "attribute": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 39,
+      "corpus_mention_count": 3,
+      "docs_mention_count": 4,
+      "in_n_sources": 4
+    },
+    "query": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 5,
+      "corpus_mention_count": 4,
+      "docs_mention_count": 5,
+      "in_n_sources": 4
+    },
+    "selector": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 66,
+      "corpus_mention_count": 4,
+      "docs_mention_count": 4,
+      "in_n_sources": 4
+    },
+    "enum": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 16,
+      "corpus_mention_count": 6,
+      "docs_mention_count": 6,
+      "in_n_sources": 4
+    },
+    "source": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 70,
+      "corpus_mention_count": 10,
+      "docs_mention_count": 10,
+      "in_n_sources": 4
+    },
+    "default": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 224,
+      "corpus_mention_count": 2,
+      "docs_mention_count": 2,
+      "in_n_sources": 4
+    },
+    "meta": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": false,
+      "instance_usage_count": 0,
+      "corpus_mention_count": 1,
+      "docs_mention_count": 2,
+      "in_n_sources": 3
+    },
+    "type": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "instance_usage_count": 473,
+      "corpus_mention_count": 8,
+      "docs_mention_count": 9,
+      "in_n_sources": 4
+    }
+  },
+  "ontology_slots": {
+    "BlockAttribute": {
+      "description": "A named attribute attached to a BlockType, providing structured data per block.",
+      "schema_keys": [
+        "role",
+        "attribute",
+        "query",
+        "selector",
+        "enum",
+        "source",
+        "default",
+        "meta",
+        "type"
+      ],
+      "schema_key_count": 9,
+      "evidence_tier": 2
+    },
+    "AttributeType": {
+      "description": "The data-type primitive for an attribute value.",
+      "schema_enum": [
+        "null",
+        "boolean",
+        "object",
+        "array",
+        "string",
+        "rich-text",
+        "integer",
+        "number"
+      ],
+      "schema_enum_count": 8,
+      "instance_usage": {
+        "string": 252,
+        "boolean": 109,
+        "number": 56,
+        "rich-text": 21,
+        "array": 18,
+        "object": 8,
+        "string|boolean": 6,
+        "integer": 3
+      },
+      "evidence_tier": 1
+    },
+    "AttributeSource": {
+      "description": "Where the attribute value is extracted from in saved block markup (storage strategy).",
+      "schema_enum": [
+        "attribute",
+        "text",
+        "rich-text",
+        "html",
+        "raw",
+        "query",
+        "meta"
+      ],
+      "schema_enum_count": 7,
+      "instance_usage": {
+        "attribute": 37,
+        "rich-text": 21,
+        "query": 5,
+        "raw": 4,
+        "html": 3
+      },
+      "evidence_tier": 1
+    },
+    "DefaultValue": {
+      "description": "Fallback value when an attribute is unset.",
+      "evidence_in_instances": "extracted from per-attribute 'default' field; type varies",
+      "evidence_tier": 2
+    },
+    "EnumConstraint": {
+      "description": "Closed set of allowed values for an attribute.",
+      "schema_field": "enum (array of bool/number/string)",
+      "evidence_tier": 2
+    },
+    "Selector": {
+      "description": "CSS selector used to locate the source DOM element for attribute extraction.",
+      "schema_field": "selector (string)",
+      "applies_when_source_in": [
+        "attribute",
+        "text",
+        "html",
+        "rich-text",
+        "raw"
+      ],
+      "evidence_tier": 2
+    },
+    "QueryShape": {
+      "description": "Recursive attribute shape: when source=query, each item in matched DOM uses a sub-attribute spec.",
+      "schema_field": "query (object with patternProperties matching parent attribute schema)",
+      "notable_property": "self-recursive schema",
+      "evidence_tier": 1
+    },
+    "Role": {
+      "description": "Semantic role of an attribute (e.g., 'content' for serialization boundary).",
+      "schema_field": "role (string)",
+      "instance_usage": {
+        "content": 90,
+        "local": 6
+      },
+      "evidence_tier": 1
+    },
+    "SerializationBoundary": {
+      "description": "Whether an attribute is part of serialized HTML output (source-dependent).",
+      "derivation": "function of AttributeSource: text/html/rich-text/attribute/raw → DOM; meta → external; query → recursive; null source → comment metadata",
+      "evidence_tier": 3
+    },
+    "DOMBinding": {
+      "description": "Mapping (selector + source-method) that connects an attribute to a DOM extraction strategy.",
+      "evidence_tier": 3
+    },
+    "MetaBinding": {
+      "description": "Bridge to wp_postmeta storage via source='meta'.",
+      "instance_usage": 0,
+      "evidence_tier": 3
+    }
+  },
+  "gaps": [
+    {
+      "id": "G2.1",
+      "category": "schema-naming",
+      "description": "`rich-text` appears in both type enum and source enum — distinct concepts: type='rich-text' is data-shape, source='rich-text' is extraction strategy. Potential ontology confusion."
+    },
+    {
+      "id": "G2.2",
+      "category": "schema-instances",
+      "description": "`role` field used in 96 attribute definitions across instances. Roles found: ['content', 'local']"
+    },
+    {
+      "id": "G2.3",
+      "category": "instance-coverage",
+      "description": "Schema-allowed sources not used in core instances: ['text', 'meta']"
+    }
+  ]
+}

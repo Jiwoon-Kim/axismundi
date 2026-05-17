@@ -1,0 +1,57 @@
+[
+  {
+    "find": "```text\n// Declare support for anchor links.supports: { anchor: true}\n```",
+    "replace": "```js\n// Declare support for anchor links.supports: { anchor: true}\n```",
+    "reason": "v1.1a lang_fix: text → js (supports: { anchor: true })"
+  },
+  {
+    "find": "```text\n- `backgroundImage`: type `boolean`, default value `false`\n- `backgroundSize`: type `boolean`, default value `false`\n```",
+    "replace": "  - `backgroundImage`: type `boolean`, default value `false`\n  - `backgroundSize`: type `boolean`, default value `false`",
+    "reason": "v1.1a markdown_list (block_2): background subproperties — convert flat fence to nested sub-list under existing 'Subproperties' bullet"
+  },
+  {
+    "find": "```text\n- `background`: an attribute of `object` type.\n    - `backgroundImage`: an attribute of `object` type, containing information about the selected image\n        - `url`: type `string`, URL to the image\n        - `id`: type `int`, media attachment ID\n        - `source`: type `string`, at the moment the only value is `file`\n        - `title`: type `string`, title of the media attachment\n    - `backgroundPosition`: an attribute of `string` type, defining the background images position, selected by FocalPointPicker and used in CSS as the [`background-position`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-position) value.\n    - `backgroundSize`: an attribute of `string` type. defining the CSS [`background-size`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-size) value.\n```",
+    "replace": "  - `background`: an attribute of `object` type.\n      - `backgroundImage`: an attribute of `object` type, containing information about the selected image\n          - `url`: type `string`, URL to the image\n          - `id`: type `int`, media attachment ID\n          - `source`: type `string`, at the moment the only value is `file`\n          - `title`: type `string`, title of the media attachment\n      - `backgroundPosition`: an attribute of `string` type, defining the background images position, selected by FocalPointPicker and used in CSS as the [`background-position`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-position) value.\n      - `backgroundSize`: an attribute of `string` type. defining the CSS [`background-size`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-size) value.",
+    "reason": "v1.1a markdown_list (block_3): background attribute tree — fence breaks parent `- style:` bullet; indent fence body to nest under style (existing indents become deeper)"
+  },
+  {
+    "find": "```text\n- `background`: type `boolean`, default value `true`\n- `button`: type `boolean`, default value `false`\n- `enableContrastChecker`: type `boolean`, default value `true`\n- `gradients`: type `boolean`, default value `false`\n- `heading`: type `boolean`, default value `false`\n- `link`: type `boolean`, default value `false`\n- `text`: type `boolean`, default value `true`\n```",
+    "replace": "  - `background`: type `boolean`, default value `true`\n  - `button`: type `boolean`, default value `false`\n  - `enableContrastChecker`: type `boolean`, default value `true`\n  - `gradients`: type `boolean`, default value `false`\n  - `heading`: type `boolean`, default value `false`\n  - `link`: type `boolean`, default value `false`\n  - `text`: type `boolean`, default value `true`",
+    "reason": "v1.1a markdown_list (block_4): color subproperties — sub-list indent under existing 'Subproperties:' bullet"
+  },
+  {
+    "find": "```text\n- `height`: type `boolean`, default value `false`\n- `minHeight`: type `boolean`, default value `false`\n- `minWidth`: type `boolean`, default value `false`\n- `width`: type `boolean`, default value `false`\n```",
+    "replace": "  - `height`: type `boolean`, default value `false`\n  - `minHeight`: type `boolean`, default value `false`\n  - `minWidth`: type `boolean`, default value `false`\n  - `width`: type `boolean`, default value `false`",
+    "reason": "v1.1a markdown_list (block_14): dimensions subproperties — sub-list indent"
+  },
+  {
+    "find": "```text\n- `duotone`: type `boolean`, default value `false`\n```",
+    "replace": "  - `duotone`: type `boolean`, default value `false`",
+    "reason": "v1.1a markdown_list (block_15): filter subproperties (single: duotone) — sub-list indent"
+  },
+  {
+    "find": "```text\n- `clientNavigation`: type `boolean`, default value `false`\n- `interactive`: type `boolean`, default value `false`\n```",
+    "replace": "  - `clientNavigation`: type `boolean`, default value `false`\n  - `interactive`: type `boolean`, default value `false`",
+    "reason": "v1.1a markdown_list (block_17): interactivity subproperties — sub-list indent"
+  },
+  {
+    "find": "```text\n- `default`: type `Object`, default value null\n- `allowSwitching`: type `boolean`, default value `false`\n- `allowEditing`: type `boolean`, default value `true`\n- `allowInheriting`: type `boolean`, default value `true`\n- `allowSizingOnChildren`: type `boolean`, default value `false`\n- `allowVerticalAlignment`: type `boolean`, default value `true`\n- `allowJustification`: type `boolean`, default value `true`\n- `allowOrientation`: type `boolean`, default value `true`\n- `allowWrap`: type `boolean`, default value `true`\n- `allowCustomContentAndWideSize`: type `boolean`, default value `true`\n```",
+    "replace": "  - `default`: type `Object`, default value null\n  - `allowSwitching`: type `boolean`, default value `false`\n  - `allowEditing`: type `boolean`, default value `true`\n  - `allowInheriting`: type `boolean`, default value `true`\n  - `allowSizingOnChildren`: type `boolean`, default value `false`\n  - `allowVerticalAlignment`: type `boolean`, default value `true`\n  - `allowJustification`: type `boolean`, default value `true`\n  - `allowOrientation`: type `boolean`, default value `true`\n  - `allowWrap`: type `boolean`, default value `true`\n  - `allowCustomContentAndWideSize`: type `boolean`, default value `true`",
+    "reason": "v1.1a markdown_list (block_18): layout subproperties — sub-list indent"
+  },
+  {
+    "find": "```text\n- `sticky`: type `boolean`, default value `false`\n```",
+    "replace": "  - `sticky`: type `boolean`, default value `false`",
+    "reason": "v1.1a markdown_list (block_19): position subproperties — sub-list indent"
+  },
+  {
+    "find": "```text\n- `margin`: type `boolean` or `array`, default value `false`\n- `padding`: type `boolean` or `array`, default value `false`\n- `blockGap`: type `boolean` or `array`, default value `false`\n```",
+    "replace": "  - `margin`: type `boolean` or `array`, default value `false`\n  - `padding`: type `boolean` or `array`, default value `false`\n  - `blockGap`: type `boolean` or `array`, default value `false`",
+    "reason": "v1.1a markdown_list (block_21): spacing subproperties — sub-list indent"
+  },
+  {
+    "find": "```text\n- `fontSize`: type `boolean`, default value `false`\n- `lineHeight`: type `boolean`, default value `false`\n- `textAlign`: type `boolean` or `array`, default value `false`\n```",
+    "replace": "  - `fontSize`: type `boolean`, default value `false`\n  - `lineHeight`: type `boolean`, default value `false`\n  - `textAlign`: type `boolean` or `array`, default value `false`",
+    "reason": "v1.1a markdown_list (block_22): typography subproperties — sub-list indent"
+  }
+]

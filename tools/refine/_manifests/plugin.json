@@ -1,0 +1,873 @@
+{
+  "plugin-handbook/00-plugin-handbook/index.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-handbook",
+    "slug": "index",
+    "parent_order": 0,
+    "page_order": 1001,
+    "source_url": "https://developer.wordpress.org/plugins/",
+    "title": "Plugin Handbook"
+  },
+  "plugin-handbook/01-introduction/index.md": {
+    "handbook": "plugin",
+    "chapter": "introduction",
+    "slug": "index",
+    "parent_order": 1,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/intro/",
+    "title": "Introduction to Plugin Development"
+  },
+  "plugin-handbook/01-introduction/what-is-a-plugin.md": {
+    "handbook": "plugin",
+    "chapter": "introduction",
+    "slug": "what-is-a-plugin",
+    "parent_order": 1,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/intro/what-is-a-plugin/",
+    "title": "What is a Plugin?"
+  },
+  "plugin-handbook/02-plugin-basics/activation-deactivation-hooks.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-basics",
+    "slug": "activation-deactivation-hooks",
+    "parent_order": 2,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/plugin-basics/activation-deactivation-hooks/",
+    "title": "Activation / Deactivation Hooks"
+  },
+  "plugin-handbook/02-plugin-basics/best-practices.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-basics",
+    "slug": "best-practices",
+    "parent_order": 2,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/plugin-basics/best-practices/",
+    "title": "Best Practices"
+  },
+  "plugin-handbook/02-plugin-basics/header-requirements.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-basics",
+    "slug": "header-requirements",
+    "parent_order": 2,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/plugin-basics/header-requirements/",
+    "title": "Header Requirements"
+  },
+  "plugin-handbook/02-plugin-basics/index.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-basics",
+    "slug": "index",
+    "parent_order": 2,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/plugin-basics/",
+    "title": "Plugin Basics"
+  },
+  "plugin-handbook/02-plugin-basics/plugin-and-content-directories.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-basics",
+    "slug": "plugin-and-content-directories",
+    "parent_order": 2,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/plugin-basics/determining-plugin-and-content-directories/",
+    "title": "Determining Plugin and Content Directories"
+  },
+  "plugin-handbook/02-plugin-basics/software-license.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-basics",
+    "slug": "software-license",
+    "parent_order": 2,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/plugins/plugin-basics/including-a-software-license/",
+    "title": "Including a Software License"
+  },
+  "plugin-handbook/02-plugin-basics/uninstall-methods.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-basics",
+    "slug": "uninstall-methods",
+    "parent_order": 2,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/plugins/plugin-basics/uninstall-methods/",
+    "title": "Uninstall Methods"
+  },
+  "plugin-handbook/03-plugin-security/checking-user-capabilities.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-security",
+    "slug": "checking-user-capabilities",
+    "parent_order": 3,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/security/checking-user-capabilities/",
+    "title": "Checking User Capabilities"
+  },
+  "plugin-handbook/03-plugin-security/data-validation.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-security",
+    "slug": "data-validation",
+    "parent_order": 3,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/security/data-validation/",
+    "title": "Data Validation"
+  },
+  "plugin-handbook/03-plugin-security/index.md": {
+    "handbook": "plugin",
+    "chapter": "plugin-security",
+    "slug": "index",
+    "parent_order": 3,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/security/",
+    "title": "Plugin Security"
+  },
+  "plugin-handbook/04-hooks/actions.md": {
+    "handbook": "plugin",
+    "chapter": "hooks",
+    "slug": "actions",
+    "parent_order": 4,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/hooks/actions/",
+    "title": "Actions"
+  },
+  "plugin-handbook/04-hooks/advanced-topics.md": {
+    "handbook": "plugin",
+    "chapter": "hooks",
+    "slug": "advanced-topics",
+    "parent_order": 4,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/hooks/advanced-topics/",
+    "title": "Advanced Topics"
+  },
+  "plugin-handbook/04-hooks/custom-hooks.md": {
+    "handbook": "plugin",
+    "chapter": "hooks",
+    "slug": "custom-hooks",
+    "parent_order": 4,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/hooks/custom-hooks/",
+    "title": "Custom Hooks"
+  },
+  "plugin-handbook/04-hooks/filters.md": {
+    "handbook": "plugin",
+    "chapter": "hooks",
+    "slug": "filters",
+    "parent_order": 4,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/hooks/filters/",
+    "title": "Filters"
+  },
+  "plugin-handbook/04-hooks/index.md": {
+    "handbook": "plugin",
+    "chapter": "hooks",
+    "slug": "index",
+    "parent_order": 4,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/hooks/",
+    "title": "Hooks"
+  },
+  "plugin-handbook/05-privacy/index.md": {
+    "handbook": "plugin",
+    "chapter": "privacy",
+    "slug": "index",
+    "parent_order": 5,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/privacy/",
+    "title": "Privacy"
+  },
+  "plugin-handbook/05-privacy/personal-data-eraser.md": {
+    "handbook": "plugin",
+    "chapter": "privacy",
+    "slug": "personal-data-eraser",
+    "parent_order": 5,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/privacy/adding-the-personal-data-eraser-to-your-plugin/",
+    "title": "Adding the Personal Data Eraser to Your Plugin"
+  },
+  "plugin-handbook/05-privacy/personal-data-exporter.md": {
+    "handbook": "plugin",
+    "chapter": "privacy",
+    "slug": "personal-data-exporter",
+    "parent_order": 5,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/privacy/adding-the-personal-data-exporter-to-your-plugin/",
+    "title": "Adding the Personal Data Exporter to Your Plugin"
+  },
+  "plugin-handbook/05-privacy/privacy-options-hooks-capabilities.md": {
+    "handbook": "plugin",
+    "chapter": "privacy",
+    "slug": "privacy-options-hooks-capabilities",
+    "parent_order": 5,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/privacy/privacy-related-options-hooks-and-capabilities/",
+    "title": "Privacy Related Options, Hooks and Capabilities"
+  },
+  "plugin-handbook/05-privacy/privacy-policy-text.md": {
+    "handbook": "plugin",
+    "chapter": "privacy",
+    "slug": "privacy-policy-text",
+    "parent_order": 5,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/privacy/suggesting-text-for-the-site-privacy-policy/",
+    "title": "Suggesting text for the site privacy policy"
+  },
+  "plugin-handbook/06-administration-menus/index.md": {
+    "handbook": "plugin",
+    "chapter": "administration-menus",
+    "slug": "index",
+    "parent_order": 6,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/administration-menus/",
+    "title": "Administration Menus"
+  },
+  "plugin-handbook/06-administration-menus/sub-menus.md": {
+    "handbook": "plugin",
+    "chapter": "administration-menus",
+    "slug": "sub-menus",
+    "parent_order": 6,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/administration-menus/sub-menus/",
+    "title": "Sub-Menus"
+  },
+  "plugin-handbook/06-administration-menus/top-level-menus.md": {
+    "handbook": "plugin",
+    "chapter": "administration-menus",
+    "slug": "top-level-menus",
+    "parent_order": 6,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/administration-menus/top-level-menus/",
+    "title": "Top-Level Menus"
+  },
+  "plugin-handbook/07-shortcodes/basic-shortcodes.md": {
+    "handbook": "plugin",
+    "chapter": "shortcodes",
+    "slug": "basic-shortcodes",
+    "parent_order": 7,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/shortcodes/basic-shortcodes/",
+    "title": "Basic Shortcodes"
+  },
+  "plugin-handbook/07-shortcodes/enclosing-shortcodes.md": {
+    "handbook": "plugin",
+    "chapter": "shortcodes",
+    "slug": "enclosing-shortcodes",
+    "parent_order": 7,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/shortcodes/enclosing-shortcodes/",
+    "title": "Enclosing Shortcodes"
+  },
+  "plugin-handbook/07-shortcodes/index.md": {
+    "handbook": "plugin",
+    "chapter": "shortcodes",
+    "slug": "index",
+    "parent_order": 7,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/shortcodes/",
+    "title": "Shortcodes"
+  },
+  "plugin-handbook/07-shortcodes/shortcodes-with-parameters.md": {
+    "handbook": "plugin",
+    "chapter": "shortcodes",
+    "slug": "shortcodes-with-parameters",
+    "parent_order": 7,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/shortcodes/shortcodes-with-parameters/",
+    "title": "Shortcodes with Parameters"
+  },
+  "plugin-handbook/07-shortcodes/tinymce-enhanced-shortcodes.md": {
+    "handbook": "plugin",
+    "chapter": "shortcodes",
+    "slug": "tinymce-enhanced-shortcodes",
+    "parent_order": 7,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/shortcodes/tinymce-enhanced-shortcodes/",
+    "title": "TinyMCE Enhanced Shortcodes"
+  },
+  "plugin-handbook/08-settings/custom-settings-page.md": {
+    "handbook": "plugin",
+    "chapter": "settings",
+    "slug": "custom-settings-page",
+    "parent_order": 8,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/settings/custom-settings-page/",
+    "title": "Custom Settings Page"
+  },
+  "plugin-handbook/08-settings/index.md": {
+    "handbook": "plugin",
+    "chapter": "settings",
+    "slug": "index",
+    "parent_order": 8,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/settings/",
+    "title": "Settings"
+  },
+  "plugin-handbook/08-settings/options-api.md": {
+    "handbook": "plugin",
+    "chapter": "settings",
+    "slug": "options-api",
+    "parent_order": 8,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/settings/options-api/",
+    "title": "Options API"
+  },
+  "plugin-handbook/08-settings/settings-api.md": {
+    "handbook": "plugin",
+    "chapter": "settings",
+    "slug": "settings-api",
+    "parent_order": 8,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/settings/settings-api/",
+    "title": "Settings API"
+  },
+  "plugin-handbook/08-settings/using-settings-api.md": {
+    "handbook": "plugin",
+    "chapter": "settings",
+    "slug": "using-settings-api",
+    "parent_order": 8,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/settings/using-settings-api/",
+    "title": "Using Settings API"
+  },
+  "plugin-handbook/09-metadata/custom-meta-boxes.md": {
+    "handbook": "plugin",
+    "chapter": "metadata",
+    "slug": "custom-meta-boxes",
+    "parent_order": 9,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/metadata/custom-meta-boxes/",
+    "title": "Custom Meta Boxes"
+  },
+  "plugin-handbook/09-metadata/index.md": {
+    "handbook": "plugin",
+    "chapter": "metadata",
+    "slug": "index",
+    "parent_order": 9,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/metadata/",
+    "title": "Metadata"
+  },
+  "plugin-handbook/09-metadata/managing-post-metadata.md": {
+    "handbook": "plugin",
+    "chapter": "metadata",
+    "slug": "managing-post-metadata",
+    "parent_order": 9,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/metadata/managing-post-metadata/",
+    "title": "Managing Post Metadata"
+  },
+  "plugin-handbook/09-metadata/rendering-post-metadata.md": {
+    "handbook": "plugin",
+    "chapter": "metadata",
+    "slug": "rendering-post-metadata",
+    "parent_order": 9,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/metadata/rendering-post-metadata/",
+    "title": "Rendering Post Metadata"
+  },
+  "plugin-handbook/10-custom-post-types/index.md": {
+    "handbook": "plugin",
+    "chapter": "custom-post-types",
+    "slug": "index",
+    "parent_order": 10,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/post-types/",
+    "title": "Custom Post Types"
+  },
+  "plugin-handbook/10-custom-post-types/registering-custom-post-types.md": {
+    "handbook": "plugin",
+    "chapter": "custom-post-types",
+    "slug": "registering-custom-post-types",
+    "parent_order": 10,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/post-types/registering-custom-post-types/",
+    "title": "Registering Custom Post Types"
+  },
+  "plugin-handbook/10-custom-post-types/working-with-custom-post-types.md": {
+    "handbook": "plugin",
+    "chapter": "custom-post-types",
+    "slug": "working-with-custom-post-types",
+    "parent_order": 10,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/post-types/working-with-custom-post-types/",
+    "title": "Working with Custom Post Types"
+  },
+  "plugin-handbook/11-taxonomies/index.md": {
+    "handbook": "plugin",
+    "chapter": "taxonomies",
+    "slug": "index",
+    "parent_order": 11,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/taxonomies/",
+    "title": "Taxonomies"
+  },
+  "plugin-handbook/11-taxonomies/working-with-custom-taxonomies.md": {
+    "handbook": "plugin",
+    "chapter": "taxonomies",
+    "slug": "working-with-custom-taxonomies",
+    "parent_order": 11,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/taxonomies/working-with-custom-taxonomies/",
+    "title": "Working with Custom Taxonomies"
+  },
+  "plugin-handbook/12-users/index.md": {
+    "handbook": "plugin",
+    "chapter": "users",
+    "slug": "index",
+    "parent_order": 12,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/users/",
+    "title": "Users"
+  },
+  "plugin-handbook/12-users/roles-and-capabilities.md": {
+    "handbook": "plugin",
+    "chapter": "users",
+    "slug": "roles-and-capabilities",
+    "parent_order": 12,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/users/roles-and-capabilities/",
+    "title": "Roles and Capabilities"
+  },
+  "plugin-handbook/12-users/working-with-user-metadata.md": {
+    "handbook": "plugin",
+    "chapter": "users",
+    "slug": "working-with-user-metadata",
+    "parent_order": 12,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/users/working-with-user-metadata/",
+    "title": "Working with User Metadata"
+  },
+  "plugin-handbook/12-users/working-with-users.md": {
+    "handbook": "plugin",
+    "chapter": "users",
+    "slug": "working-with-users",
+    "parent_order": 12,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/users/working-with-users/",
+    "title": "Working with Users"
+  },
+  "plugin-handbook/13-http-api/index.md": {
+    "handbook": "plugin",
+    "chapter": "http-api",
+    "slug": "index",
+    "parent_order": 13,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/http-api/",
+    "title": "HTTP API"
+  },
+  "plugin-handbook/14-rest-api/controller-classes.md": {
+    "handbook": "plugin",
+    "chapter": "rest-api",
+    "slug": "controller-classes",
+    "parent_order": 14,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/plugins/rest-api/controller-classes/",
+    "title": "Controller Classes"
+  },
+  "plugin-handbook/14-rest-api/index.md": {
+    "handbook": "plugin",
+    "chapter": "rest-api",
+    "slug": "index",
+    "parent_order": 14,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/rest-api/",
+    "title": "REST API"
+  },
+  "plugin-handbook/14-rest-api/requests.md": {
+    "handbook": "plugin",
+    "chapter": "rest-api",
+    "slug": "requests",
+    "parent_order": 14,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/rest-api/requests/",
+    "title": "Requests"
+  },
+  "plugin-handbook/14-rest-api/responses.md": {
+    "handbook": "plugin",
+    "chapter": "rest-api",
+    "slug": "responses",
+    "parent_order": 14,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/rest-api/responses-2/",
+    "title": "Responses"
+  },
+  "plugin-handbook/14-rest-api/rest-api-overview.md": {
+    "handbook": "plugin",
+    "chapter": "rest-api",
+    "slug": "rest-api-overview",
+    "parent_order": 14,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/rest-api/rest-api-overview/",
+    "title": "REST API Overview"
+  },
+  "plugin-handbook/14-rest-api/routes-and-endpoints.md": {
+    "handbook": "plugin",
+    "chapter": "rest-api",
+    "slug": "routes-and-endpoints",
+    "parent_order": 14,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/rest-api/routes-endpoints/",
+    "title": "Routes & Endpoints"
+  },
+  "plugin-handbook/14-rest-api/schema.md": {
+    "handbook": "plugin",
+    "chapter": "rest-api",
+    "slug": "schema",
+    "parent_order": 14,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/plugins/rest-api/schema/",
+    "title": "Schema"
+  },
+  "plugin-handbook/15-javascript/ajax.md": {
+    "handbook": "plugin",
+    "chapter": "javascript",
+    "slug": "ajax",
+    "parent_order": 15,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/javascript/ajax/",
+    "title": "AJAX"
+  },
+  "plugin-handbook/15-javascript/heartbeat-api.md": {
+    "handbook": "plugin",
+    "chapter": "javascript",
+    "slug": "heartbeat-api",
+    "parent_order": 15,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/javascript/heartbeat-api/",
+    "title": "Heartbeat API"
+  },
+  "plugin-handbook/15-javascript/index.md": {
+    "handbook": "plugin",
+    "chapter": "javascript",
+    "slug": "index",
+    "parent_order": 15,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/javascript/",
+    "title": "JavaScript"
+  },
+  "plugin-handbook/15-javascript/jquery.md": {
+    "handbook": "plugin",
+    "chapter": "javascript",
+    "slug": "jquery",
+    "parent_order": 15,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/javascript/jquery/",
+    "title": "jQuery"
+  },
+  "plugin-handbook/15-javascript/server-side-php-and-enqueuing.md": {
+    "handbook": "plugin",
+    "chapter": "javascript",
+    "slug": "server-side-php-and-enqueuing",
+    "parent_order": 15,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/javascript/enqueuing/",
+    "title": "Server Side PHP and Enqueuing"
+  },
+  "plugin-handbook/15-javascript/summary.md": {
+    "handbook": "plugin",
+    "chapter": "javascript",
+    "slug": "summary",
+    "parent_order": 15,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/plugins/javascript/summary/",
+    "title": "Summary"
+  },
+  "plugin-handbook/16-cron/index.md": {
+    "handbook": "plugin",
+    "chapter": "cron",
+    "slug": "index",
+    "parent_order": 16,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/cron/",
+    "title": "Cron"
+  },
+  "plugin-handbook/16-cron/scheduling-wp-cron-events.md": {
+    "handbook": "plugin",
+    "chapter": "cron",
+    "slug": "scheduling-wp-cron-events",
+    "parent_order": 16,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/cron/scheduling-wp-cron-events/",
+    "title": "Scheduling WP Cron Events"
+  },
+  "plugin-handbook/16-cron/system-task-scheduler.md": {
+    "handbook": "plugin",
+    "chapter": "cron",
+    "slug": "system-task-scheduler",
+    "parent_order": 16,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/",
+    "title": "Hooking WP-Cron Into the System Task Scheduler"
+  },
+  "plugin-handbook/16-cron/testing-wp-cron.md": {
+    "handbook": "plugin",
+    "chapter": "cron",
+    "slug": "testing-wp-cron",
+    "parent_order": 16,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/cron/simple-testing/",
+    "title": "Testing of WP-Cron"
+  },
+  "plugin-handbook/16-cron/understanding-wp-cron-scheduling.md": {
+    "handbook": "plugin",
+    "chapter": "cron",
+    "slug": "understanding-wp-cron-scheduling",
+    "parent_order": 16,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/cron/understanding-wp-cron-scheduling/",
+    "title": "Understanding WP-Cron Scheduling"
+  },
+  "plugin-handbook/17-internationalization/index.md": {
+    "handbook": "plugin",
+    "chapter": "internationalization",
+    "slug": "index",
+    "parent_order": 17,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/internationalization/",
+    "title": "Internationalization"
+  },
+  "plugin-handbook/17-internationalization/internationalize-your-plugin.md": {
+    "handbook": "plugin",
+    "chapter": "internationalization",
+    "slug": "internationalize-your-plugin",
+    "parent_order": 17,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/internationalization/how-to-internationalize-your-plugin/",
+    "title": "How to Internationalize Your Plugin"
+  },
+  "plugin-handbook/17-internationalization/localization.md": {
+    "handbook": "plugin",
+    "chapter": "internationalization",
+    "slug": "localization",
+    "parent_order": 17,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/internationalization/localization/",
+    "title": "Localization"
+  },
+  "plugin-handbook/17-internationalization/security.md": {
+    "handbook": "plugin",
+    "chapter": "internationalization",
+    "slug": "security",
+    "parent_order": 17,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/internationalization/security/",
+    "title": "Internationalization Security"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/add-plugin-to-block-directory.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "add-plugin-to-block-directory",
+    "parent_order": 18,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/add-your-plugin-to-the-block-directory/",
+    "title": "Add Your Plugin to the Block Directory"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/alerts-and-warnings.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "alerts-and-warnings",
+    "parent_order": 18,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/alerts-and-warnings/",
+    "title": "Alerts and Warnings"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/block-specific-plugin-guidelines.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "block-specific-plugin-guidelines",
+    "parent_order": 18,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/block-specific-plugin-guidelines/",
+    "title": "Block Specific Plugin Guidelines"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/common-issues.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "common-issues",
+    "parent_order": 18,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/common-issues/",
+    "title": "Common issues"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/compliance-disclaimers.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "compliance-disclaimers",
+    "parent_order": 18,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/compliance-disclaimers/",
+    "title": "Compliance Disclaimers"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/detailed-plugin-guidelines.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "detailed-plugin-guidelines",
+    "parent_order": 18,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/",
+    "title": "Detailed Plugin Guidelines"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/index.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "index",
+    "parent_order": 18,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/",
+    "title": "The WordPress.org Plugin Directory"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/planning-submitting-maintaining.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "planning-submitting-maintaining",
+    "parent_order": 18,
+    "page_order": 8,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/planning-submitting-and-maintaining-plugins/",
+    "title": "Planning, Submitting, and Maintaining Plugins"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/plugin-assets.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "plugin-assets",
+    "parent_order": 18,
+    "page_order": 7,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/plugin-assets/",
+    "title": "How Your Plugin Assets Work"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/plugin-developer-faq.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "plugin-developer-faq",
+    "parent_order": 18,
+    "page_order": 9,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/plugin-developer-faq/"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/plugin-readmes.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "plugin-readmes",
+    "parent_order": 18,
+    "page_order": 10,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/how-your-readme-txt-works/",
+    "title": "Plugin Readmes"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/preventing-external-plugin-updates.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "preventing-external-plugin-updates",
+    "parent_order": 18,
+    "page_order": 11,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/preventing-wordpress-from-updating-your-external-plugin/"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/previews-and-blueprints.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "previews-and-blueprints",
+    "parent_order": 18,
+    "page_order": 12,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/previews-and-blueprints/",
+    "title": "Previews and Blueprints"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/release-confirmation-emails.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "release-confirmation-emails",
+    "parent_order": 18,
+    "page_order": 13,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/release-confirmation-emails/",
+    "title": "Release Confirmation Emails"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/reporting-plugin-security-issues.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "reporting-plugin-security-issues",
+    "parent_order": 18,
+    "page_order": 14,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/reporting-plugin-security-issues/",
+    "title": "Reporting Plugin Security Issues"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/special-user-roles-capabilities.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "special-user-roles-capabilities",
+    "parent_order": 18,
+    "page_order": 15,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/special-user-roles-capabilities/",
+    "title": "Special User Roles and Capabilities"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/take-over-existing-plugin.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "take-over-existing-plugin",
+    "parent_order": 18,
+    "page_order": 16,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/take-over-an-existing-plugin/",
+    "title": "Take Over an Existing Plugin"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/transferring-plugin-owner.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "transferring-plugin-owner",
+    "parent_order": 18,
+    "page_order": 17,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/transferring-your-plugin-to-a-new-owner/",
+    "title": "Transferring Your Plugin to a New Owner"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/using-forums.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "using-forums",
+    "parent_order": 18,
+    "page_order": 19,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/using-the-forums/",
+    "title": "Using the Forums"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/using-subversion.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "using-subversion",
+    "parent_order": 18,
+    "page_order": 18,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/how-to-use-subversion/",
+    "title": "Using Subversion"
+  },
+  "plugin-handbook/18-wordpress-org-plugin-directory/using-wordpress-org-mcp-server.md": {
+    "handbook": "plugin",
+    "chapter": "wordpress-org-plugin-directory",
+    "slug": "using-wordpress-org-mcp-server",
+    "parent_order": 18,
+    "page_order": 20,
+    "source_url": "https://developer.wordpress.org/plugins/wordpress-org/using-the-mcp-server/",
+    "title": "Using the WordPress.org MCP Server"
+  },
+  "plugin-handbook/19-developer-tools/debug-bar-and-add-ons.md": {
+    "handbook": "plugin",
+    "chapter": "developer-tools",
+    "slug": "debug-bar-and-add-ons",
+    "parent_order": 19,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/plugins/developer-tools/debug-bar-and-add-ons/",
+    "title": "Debug Bar and Add-Ons"
+  },
+  "plugin-handbook/19-developer-tools/helper-plugins.md": {
+    "handbook": "plugin",
+    "chapter": "developer-tools",
+    "slug": "helper-plugins",
+    "parent_order": 19,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/plugins/developer-tools/helper-plugins/",
+    "title": "Helper Plugins"
+  },
+  "plugin-handbook/19-developer-tools/index.md": {
+    "handbook": "plugin",
+    "chapter": "developer-tools",
+    "slug": "index",
+    "parent_order": 19,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/developer-tools/",
+    "title": "Developer Tools"
+  },
+  "plugin-handbook/20-creating-tables-with-plugins/index.md": {
+    "handbook": "plugin",
+    "chapter": "creating-tables-with-plugins",
+    "slug": "index",
+    "parent_order": 20,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/plugins/creating-tables-with-plugins/",
+    "title": "Creating Tables with Plugins"
+  }
+}

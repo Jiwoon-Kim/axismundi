@@ -1,0 +1,125 @@
+/* ============================================================
+ * lab-popover.css — Axismundi Popover/Menu lab module
+ * v3.4.5
+ *
+ * Bucket D — theme interaction runtime, lab module only.
+ * Scope: runtime states for .ax-menu + module pattern layout.
+ *
+ * NON-GOAL: redefining .ax-menu visual primitive. That lives in
+ * components.css (L2752–L2779 at v3.4.4.1). If a property appears in
+ * both files, components.css wins (load order).
+ * ============================================================ */
+
+/* ----------------------------------------------------------------
+ * §1 — Runtime states for .ax-menu when wired by lab-popover.js
+ *
+ * .ax-menu opens with `position: fixed` because lab-popover.js sets
+ * its `left` / `top` in pixels via getBoundingClientRect. The primitive
+ * in components.css does not assume a positioning model — that decision
+ * belongs to the runtime layer.
+ * ---------------------------------------------------------------- */
+.ax-menu[data-popover-wired],
+.ax-menu.ax-benchmark-popover {
+  position: fixed;
+  z-index: var(--md-sys-z-popover, 50);
+}
+
+.ax-menu[data-popover-wired]:not(.is-open),
+.ax-menu.ax-benchmark-popover:not(.is-open) {
+  /* Force out of layout when closed — prevents stray pointer/focus targets */
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------
+ * §2 — Trigger state styling
+ *
+ * Triggers wired by lab-popover.js receive .is-selected while their
+ * menu is open. This is a runtime state, not a component variant.
+ * ---------------------------------------------------------------- */
+[data-popover-trigger].is-selected {
+  /* Sustain the state-layer appearance while menu is open.
+     Specific color hooks come from the trigger's own component
+     (ax-button / ax-icon-button) — we only assert the state. */
+}
+
+[data-popover-trigger][aria-expanded="true"] {
+  /* Hook for future styling. Intentionally empty rule kept as
+     contract documentation. */
+}
+
+/* ----------------------------------------------------------------
+ * §3 — Menu item keyboard-focus ring
+ *
+ * Menu items receive focus via lab-popover.js (ArrowDown/Up nav).
+ * The visible focus ring follows the M3 focus-indicator token.
+ * ---------------------------------------------------------------- */
+.ax-menu__item:focus-visible {
+  outline: 3px solid var(--md-sys-color-secondary, currentColor);
+  outline-offset: -3px;
+  border-radius: inherit;
+}
+
+/* ----------------------------------------------------------------
+ * §4 — Reduced-motion override
+ *
+ * Collapses the visibility/opacity transition defined in
+ * components.css L2773–L2777 when the user prefers reduced motion.
+ * Only overrides the transition; visual state is unchanged.
+ * ---------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .ax-menu,
+  .ax-menu.is-open {
+    transition: none !important;
+  }
+}
+
+/* ----------------------------------------------------------------
+ * §5 — Module pattern page layout helpers
+ *
+ * Scoped to .lab-popover-pattern only — these classes are demo-only
+ * and never expected to appear in baseline contexts.
+ * ---------------------------------------------------------------- */
+.lab-popover-pattern .lab-popover-demo {
+  display: grid;
+  gap: var(--space-md, 16px);
+  padding: var(--space-lg, 24px);
+  background-color: var(--md-sys-color-surface, transparent);
+  border-radius: var(--md-sys-shape-corner-large, 16px);
+  border: 1px solid var(--md-sys-color-outline-variant, currentColor);
+}
+
+.lab-popover-pattern .lab-popover-demo__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 16px);
+  flex-wrap: wrap;
+}
+
+.lab-popover-pattern .lab-popover-demo__label {
+  color: var(--md-sys-color-on-surface-variant, currentColor);
+  min-width: 12rem;
+}
+
+/* Forbidden-ancestor demo card — visually distinct so users can see
+   the "no trigger fired" outcome */
+.lab-popover-pattern .lab-popover-demo--forbidden {
+  background-color: var(--md-sys-color-surface-container-low, transparent);
+  border-style: dashed;
+}
+
+.lab-popover-pattern .lab-popover-demo--forbidden .prose {
+  padding: var(--space-md, 16px);
+  border-radius: var(--md-sys-shape-corner-small, 8px);
+  background-color: var(--md-sys-color-surface-container, transparent);
+}
+
+/* ----------------------------------------------------------------
+ * §6 — Z-index stack
+ *
+ * If --md-sys-z-popover is not defined globally, this file provides a
+ * sensible default scoped to .lab-popover-pattern. Baseline tokens.css
+ * may override.
+ * ---------------------------------------------------------------- */
+.lab-popover-pattern {
+  --md-sys-z-popover: 50;
+}

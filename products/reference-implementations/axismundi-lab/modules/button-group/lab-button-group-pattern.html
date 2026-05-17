@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Button Group Full Spec Module (v3.5.10)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="lab-button-group.css" />
+</head>
+<body>
+<main class="lab-button-group-demo">
+  <header class="lab-button-group-header">
+    <div class="t-label-medium">Axismundi · v3.5.10 · Wave 1 #6</div>
+    <h1 class="t-display-small">Button group — Full Spec Module</h1>
+    <p class="t-body-medium lab-button-group-caption">
+      Baseline <code>components.css §28</code> remains authoritative. This
+      lab page demonstrates Pattern A native radio groups, Pattern B
+      <code>aria-pressed</code> toggles, bounded segment ripple, and the
+      v3.5.9 finite connected-pill radius.
+    </p>
+  </header>
+
+  <section class="lab-button-group-section" id="status">
+    <div class="lab-button-group-banner">
+      <p class="t-body-small">
+        Experimental lab preview. <code>tokens.css</code> and
+        <code>components.css</code> are not edited by this module.
+        <code>--_button-group-pill-radius</code> stays local in §28; public
+        Button group token promotion is deferred.
+      </p>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="standard">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§2. Standard Button group</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Standard groups keep individual button separation. Pattern A uses
+        native radios; selected width expansion comes from baseline §28.
+      </p>
+    </header>
+    <div class="lab-button-group-grid">
+      <div class="lab-button-group-specimen" data-qa="standard-radio">
+        <fieldset class="ax-button-group" aria-label="View mode">
+          <legend class="u-vh">View mode</legend>
+          <input type="radio" name="standard-view" id="standard-view-list" class="ax-button-group__input">
+          <label for="standard-view-list" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">List</label>
+          <input type="radio" name="standard-view" id="standard-view-grid" class="ax-button-group__input" checked>
+          <label for="standard-view-grid" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">Grid</label>
+          <input type="radio" name="standard-view" id="standard-view-map" class="ax-button-group__input">
+          <label for="standard-view-map" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">Map</label>
+        </fieldset>
+        <p class="t-body-small lab-button-group-caption">
+          Pattern A. Browser radio behavior owns selection and arrow-key flow.
+        </p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="standard-button-toggle">
+        <div class="ax-button-group"
+             role="group"
+             aria-label="Formatting toggles"
+             data-button-group-toggle-demo>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="true" data-ax-ripple="bounded">Bold</button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Italic</button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Underline</button>
+        </div>
+        <p class="t-body-small lab-button-group-caption">
+          Pattern B. Local demo JS flips <code>aria-pressed</code>; no public
+          runtime API is created.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="connected">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§3. Connected Button group</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Connected groups preserve outer pill corners and morph inner corners.
+        v3.5.9 replaced unstable <code>9999px</code> interpolation with finite
+        local radius.
+      </p>
+    </header>
+    <div class="lab-button-group-grid">
+      <div class="lab-button-group-specimen" data-qa="connected-radio">
+        <fieldset class="ax-button-group ax-button-group--connected lab-button-group-fit" aria-label="Density">
+          <legend class="u-vh">Density</legend>
+          <input type="radio" name="density" id="density-compact" class="ax-button-group__input">
+          <label for="density-compact" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Compact</label>
+          <input type="radio" name="density" id="density-comfortable" class="ax-button-group__input" checked>
+          <label for="density-comfortable" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Comfort</label>
+          <input type="radio" name="density" id="density-spacious" class="ax-button-group__input">
+          <label for="density-spacious" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Spacious</label>
+        </fieldset>
+        <p class="t-body-small lab-button-group-caption">
+          Connected Pattern A. Each label is the ripple host; the fieldset is not.
+        </p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="connected-toolbar">
+        <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+             role="group"
+             aria-label="Text styles"
+             data-button-group-toggle-demo>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="true" data-ax-ripple="bounded">B</button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">I</button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">U</button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">S</button>
+        </div>
+        <p class="t-body-small lab-button-group-caption">
+          Connected Pattern B. M3 web button-item keyboard guidance maps here.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="segment-count">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§4. Segment count matrix</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Representative 2 / 3 / 4 / 5 segment connected groups. Full cartesian
+        combinations are intentionally avoided.
+      </p>
+    </header>
+    <div class="lab-button-group-grid">
+      <div class="lab-button-group-specimen" data-qa="segments-2">
+        <fieldset class="ax-button-group ax-button-group--connected lab-button-group-fit" aria-label="Billing cycle">
+          <legend class="u-vh">Billing cycle</legend>
+          <input type="radio" name="billing" id="billing-monthly" class="ax-button-group__input" checked>
+          <label for="billing-monthly" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">Monthly</label>
+          <input type="radio" name="billing" id="billing-yearly" class="ax-button-group__input">
+          <label for="billing-yearly" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">Yearly</label>
+        </fieldset>
+        <p class="t-body-small lab-button-group-caption">2 segments.</p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="segments-3">
+        <fieldset class="ax-button-group ax-button-group--connected lab-button-group-fit" aria-label="Range">
+          <legend class="u-vh">Range</legend>
+          <input type="radio" name="range" id="range-day" class="ax-button-group__input">
+          <label for="range-day" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">Day</label>
+          <input type="radio" name="range" id="range-week" class="ax-button-group__input" checked>
+          <label for="range-week" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">Week</label>
+          <input type="radio" name="range" id="range-month" class="ax-button-group__input">
+          <label for="range-month" class="ax-button is-outlined has-state-layer" data-ax-ripple="bounded">Month</label>
+        </fieldset>
+        <p class="t-body-small lab-button-group-caption">3 segments.</p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="segments-4">
+        <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+             role="group"
+             aria-label="Paragraph alignment"
+             data-button-group-toggle-demo>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="true" aria-label="Align left" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">format_align_left</span>
+          </button>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="false" aria-label="Align center" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">format_align_center</span>
+          </button>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="false" aria-label="Align right" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">format_align_right</span>
+          </button>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="false" aria-label="Justify" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">format_align_justify</span>
+          </button>
+        </div>
+        <p class="t-body-small lab-button-group-caption">4 segments, icon-only. Accessible names required.</p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="segments-5">
+        <div class="lab-button-group-mobile-check" data-qa="mobile-overflow-check">
+          <fieldset class="ax-button-group ax-button-group--connected" aria-label="Priority">
+            <legend class="u-vh">Priority</legend>
+            <input type="radio" name="priority" id="priority-p0" class="ax-button-group__input">
+            <label for="priority-p0" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">P0</label>
+            <input type="radio" name="priority" id="priority-p1" class="ax-button-group__input" checked>
+            <label for="priority-p1" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">P1</label>
+            <input type="radio" name="priority" id="priority-p2" class="ax-button-group__input">
+            <label for="priority-p2" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">P2</label>
+            <input type="radio" name="priority" id="priority-p3" class="ax-button-group__input">
+            <label for="priority-p3" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">P3</label>
+            <input type="radio" name="priority" id="priority-p4" class="ax-button-group__input">
+            <label for="priority-p4" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">P4</label>
+          </fieldset>
+        </div>
+        <p class="t-body-small lab-button-group-caption">5 segments inside a 390px QA shell.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="content">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§5. Content matrix</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Label-only, icon+label, and icon-only segments. Icon-bearing specimens
+        consume icon-system conditionally.
+      </p>
+    </header>
+    <div class="lab-button-group-grid">
+      <div class="lab-button-group-specimen" data-qa="content-label">
+        <fieldset class="ax-button-group ax-button-group--connected lab-button-group-fit" aria-label="Sort">
+          <legend class="u-vh">Sort</legend>
+          <input type="radio" name="sort" id="sort-new" class="ax-button-group__input" checked>
+          <label for="sort-new" class="ax-button is-filled has-state-layer" data-ax-ripple="bounded">New</label>
+          <input type="radio" name="sort" id="sort-top" class="ax-button-group__input">
+          <label for="sort-top" class="ax-button is-filled has-state-layer" data-ax-ripple="bounded">Top</label>
+          <input type="radio" name="sort" id="sort-hot" class="ax-button-group__input">
+          <label for="sort-hot" class="ax-button is-filled has-state-layer" data-ax-ripple="bounded">Hot</label>
+        </fieldset>
+        <p class="t-body-small lab-button-group-caption">Label-only.</p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="content-icon-label">
+        <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+             role="group"
+             aria-label="View controls"
+             data-button-group-toggle-demo>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="true" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">view_list</span>
+            List
+          </button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">grid_view</span>
+            Grid
+          </button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">map</span>
+            Map
+          </button>
+        </div>
+        <p class="t-body-small lab-button-group-caption">Icon + label.</p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="content-icon-only">
+        <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+             role="group"
+             aria-label="Editor mode"
+             data-button-group-toggle-demo>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-label="Edit mode" aria-pressed="true" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">edit</span>
+          </button>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-label="Preview mode" aria-pressed="false" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">visibility</span>
+          </button>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-label="Publish mode" aria-pressed="false" data-ax-ripple="bounded">
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">rocket_launch</span>
+          </button>
+        </div>
+        <p class="t-body-small lab-button-group-caption">Icon-only. Every segment has an accessible name.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="sizes">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§6. Size hooks — partial baseline</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Baseline §28 has XS/S gap hooks and connected L/XL corner hooks, but
+        it does not yet change segment height, typography, or horizontal
+        padding. Button group adapts to child Button sizes; Button #1 still
+        ships only the 40px baseline size.
+      </p>
+    </header>
+    <div class="lab-button-group-warning">
+      <p class="t-body-small">
+        Phase 3 finding: these are size hooks, not complete M3 XS/S/M/L/XL
+        Button group implementations. Full size support requires Button /
+        Icon button size variants first.
+      </p>
+    </div>
+    <div class="lab-button-group-grid">
+      <div class="lab-button-group-specimen" data-qa="size-xs">
+        <fieldset class="ax-button-group ax-button-group--connected is-size-xs lab-button-group-fit" aria-label="XS size">
+          <legend class="u-vh">XS size</legend>
+          <input type="radio" name="size-xs" id="size-xs-a" class="ax-button-group__input" checked>
+          <label for="size-xs-a" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">XS A</label>
+          <input type="radio" name="size-xs" id="size-xs-b" class="ax-button-group__input">
+          <label for="size-xs-b" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">XS B</label>
+        </fieldset>
+        <p class="t-body-small lab-button-group-caption">
+          XS hook: wider gap, 48px min-inline-size, extra-small inner corners.
+          Height remains the baseline 40px.
+        </p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="size-l-xl">
+        <div class="lab-button-group-stack">
+          <fieldset class="ax-button-group ax-button-group--connected is-size-l lab-button-group-fit" aria-label="Large size">
+            <legend class="u-vh">Large size</legend>
+            <input type="radio" name="size-l" id="size-l-a" class="ax-button-group__input">
+            <label for="size-l-a" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Large A</label>
+            <input type="radio" name="size-l" id="size-l-b" class="ax-button-group__input" checked>
+            <label for="size-l-b" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Large B</label>
+          </fieldset>
+          <fieldset class="ax-button-group ax-button-group--connected is-size-xl lab-button-group-fit" aria-label="Extra large size">
+            <legend class="u-vh">Extra large size</legend>
+            <input type="radio" name="size-xl" id="size-xl-a" class="ax-button-group__input" checked>
+            <label for="size-xl-a" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">XL A</label>
+            <input type="radio" name="size-xl" id="size-xl-b" class="ax-button-group__input">
+            <label for="size-xl-b" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">XL B</label>
+          </fieldset>
+        </div>
+        <p class="t-body-small lab-button-group-caption">
+          L/XL hooks: larger inner corner rules only. Segment height remains
+          40px because child Button size variants are not implemented yet.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="disabled">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§7. Disabled states</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Pattern A applies native disabled to the input; Pattern B applies
+        native disabled to buttons. Aria-disabled is plugin-managed.
+      </p>
+    </header>
+    <div class="lab-button-group-grid">
+      <div class="lab-button-group-specimen" data-qa="disabled-radio">
+        <fieldset class="ax-button-group ax-button-group--connected lab-button-group-fit" aria-label="Native disabled radio">
+          <legend class="u-vh">Native disabled radio</legend>
+          <input type="radio" name="disabled-radio" id="disabled-radio-a" class="ax-button-group__input" checked>
+          <label for="disabled-radio-a" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Open</label>
+          <input type="radio" name="disabled-radio" id="disabled-radio-b" class="ax-button-group__input" disabled>
+          <label for="disabled-radio-b" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Locked</label>
+          <input type="radio" name="disabled-radio" id="disabled-radio-c" class="ax-button-group__input">
+          <label for="disabled-radio-c" class="ax-button is-tonal has-state-layer" data-ax-ripple="bounded">Later</label>
+        </fieldset>
+        <p class="t-body-small lab-button-group-caption">Native disabled segment.</p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="disabled-button">
+        <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+             role="group"
+             aria-label="Native disabled buttons"
+             data-button-group-toggle-demo>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="true" data-ax-ripple="bounded">Ready</button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" disabled data-ax-ripple="bounded">Disabled</button>
+          <button type="button" class="ax-button is-tonal has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Next</button>
+        </div>
+        <p class="t-body-small lab-button-group-caption">Native disabled button segment.</p>
+      </div>
+
+      <div class="lab-button-group-specimen" data-qa="aria-disabled">
+        <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+             role="group"
+             aria-label="Plugin-managed disabled"
+             data-button-group-toggle-demo>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Free</button>
+          <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="false" aria-disabled="true" data-ax-ripple="bounded">Pro</button>
+        </div>
+        <p class="t-body-small lab-button-group-caption">
+          Aria-disabled is semantic only. Plugin code must suppress activation
+          and explain why the segment is unavailable.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="ripple">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§8. Bounded ripple protocol</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Ripple attaches to each visible segment, never to the group container.
+      </p>
+    </header>
+    <div class="lab-button-group-qa-box" data-qa="ripple-container-check">
+      <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+           role="group"
+           aria-label="Ripple check"
+           data-button-group-toggle-demo>
+        <button type="button" class="ax-button is-filled has-state-layer" aria-pressed="true" data-ax-ripple="bounded">One</button>
+        <button type="button" class="ax-button is-filled has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Two</button>
+        <button type="button" class="ax-button is-filled has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Three</button>
+      </div>
+      <p class="t-body-small lab-button-group-caption">
+        QA expectation: group container has no <code>data-ax-ripple</code>;
+        all three segments do.
+      </p>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="wordpress">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§9. WordPress approximation specimen</h2>
+      <p class="t-body-small lab-button-group-caption">
+        <code>core/buttons</code> can approximate an inline row visually, but
+        cannot express connected selection semantics by itself.
+      </p>
+    </header>
+    <div class="lab-button-group-specimen lab-button-group-specimen--wide">
+      <div class="lab-button-group-note">
+        <p class="t-body-small">
+          Theme pattern markup or plugin ownership is required for radio /
+          pressed state. This specimen is documentation only; no block style is
+          registered in v3.5.10.
+        </p>
+      </div>
+      <div class="ax-button-group ax-button-group--connected lab-button-group-fit"
+           role="group"
+           aria-label="Approximate core buttons row"
+           data-button-group-toggle-demo>
+        <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="true" data-ax-ripple="bounded">All</button>
+        <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Draft</button>
+        <button type="button" class="ax-button is-outlined has-state-layer" aria-pressed="false" data-ax-ripple="bounded">Published</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="snippets">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§10. Code snippets</h2>
+      <p class="t-body-small lab-button-group-caption">
+        Minimal authoring contracts for both patterns.
+      </p>
+    </header>
+    <div class="lab-button-group-grid">
+      <pre class="lab-button-group-code"><code>&lt;fieldset class="ax-button-group ax-button-group--connected"&gt;
+  &lt;legend class="u-vh"&gt;Density&lt;/legend&gt;
+  &lt;input type="radio" name="density" id="density-a"
+         class="ax-button-group__input" checked&gt;
+  &lt;label for="density-a"
+         class="ax-button is-tonal has-state-layer"
+         data-ax-ripple="bounded"&gt;Comfort&lt;/label&gt;
+&lt;/fieldset&gt;</code></pre>
+
+      <pre class="lab-button-group-code"><code>&lt;div class="ax-button-group ax-button-group--connected"
+     role="group"
+     aria-label="Formatting"
+     data-button-group-toggle-demo&gt;
+  &lt;button type="button"
+          class="ax-button is-tonal has-state-layer"
+          aria-pressed="true"
+          data-ax-ripple="bounded"&gt;Bold&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+    </div>
+  </section>
+
+  <section class="lab-button-group-section" id="cross-refs">
+    <header class="lab-button-group-section__head">
+      <h2 class="t-title-large">§11. Cross-references</h2>
+    </header>
+    <ul class="t-body-small lab-button-group-state-list">
+      <li><code>docs/v3.5.10/BUTTON-GROUP-PHASE-0-REPORT.md</code></li>
+      <li><code>products/reference-implementations/axismundi-lab/modules/button-group/docs/BUTTON-GROUP-SPEC-AUDIT.md</code></li>
+      <li><code>products/reference-implementations/axismundi-lab/modules/button-group/docs/BUTTON-GROUP-MEASUREMENT-AUDIT.md</code></li>
+      <li><code>products/reference-implementations/axismundi-lab/modules/button-group/docs/BUTTON-GROUP-WP-MAPPING.md</code></li>
+      <li><code>docs/v3.5.9/PILL-RADIUS-CORRECTION-AUDIT.md</code></li>
+    </ul>
+  </section>
+</main>
+
+<script defer src="../ripple/lab-ripple.js"></script>
+<script defer src="lab-button-group.js"></script>
+</body>
+</html>

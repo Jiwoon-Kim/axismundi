@@ -1,0 +1,12 @@
+[
+  {
+    "find": "```text\n- `/fonts`\n    - `/open-sans.woff2`\n    - `/open-sans-italic.woff2`\n```",
+    "replace": "    - `/fonts`\n        - `/open-sans.woff2`\n        - `/open-sans-italic.woff2`",
+    "reason": "v1.1a markdown_list (block_1): /assets/fonts directory tree — fence breaks parent `- /assets` bullet; indent children (fonts at 4-space, font files preserve their 4-space which becomes 6-space relative)"
+  },
+  {
+    "find": "```text\n- **`min`:** The minimum value that the font size can scale down to. Must be a valid CSS size.\n- **`max`:** The maximum value that the font size can scale up to. Must be a valid CSS size.\n```",
+    "replace": "    - **`min`:** The minimum value that the font size can scale down to. Must be a valid CSS size.\n    - **`max`:** The maximum value that the font size can scale up to. Must be a valid CSS size.",
+    "reason": "v1.1a markdown_list (block_2): fluid min/max — fence breaks parent `- **fluid**:` bullet; indent children to 4-space"
+  }
+]

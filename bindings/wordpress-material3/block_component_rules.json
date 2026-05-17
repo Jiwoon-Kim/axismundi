@@ -1,0 +1,1054 @@
+{
+  "schema_version": "v2.1a-block-component-binding-2026-05-12",
+  "generated_at": "2026-05-12",
+  "source": "/home/claude/v2_1_axismundi_input/BLOCK-COMPONENT-MAP.md",
+  "wp_ontology_baseline": "v0.2",
+  "bucket_taxonomy": {
+    "A": {
+      "binding_type": "Direct.CoreBlockStyle",
+      "description": "Core Gutenberg block exists with semantic match; M3 variant realized as registered Block Style class.",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration"
+    },
+    "B": {
+      "binding_type": "Compositional.BlockPattern",
+      "description": "M3 component realized as composition of multiple core blocks (e.g. List item with leading + body + trailing).",
+      "ontology_strength": "conditional",
+      "implementation_path": "block_pattern_authoring",
+      "requires_supports_profile": true
+    },
+    "C": {
+      "binding_type": "Direct.CustomBlock",
+      "description": "No reasonable core equivalent; ship as custom block (m3/* or axismundi/* plugin).",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin"
+    },
+    "D": {
+      "binding_type": "Composite.TemplatePart",
+      "description": "Site-chrome element; lives at FSE template-part level, not content flow.",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part"
+    },
+    "E": {
+      "binding_type": "OutOfScope.Handoff",
+      "description": "Doesn't fit WP authoring paradigm; either handed off to a form/3rd-party plugin or dropped for v1.",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only"
+    },
+    "F": {
+      "binding_type": "RuntimeOnly.ThemeJS",
+      "description": "Pure interaction primitive; no block representation, runtime-only.",
+      "ontology_strength": "runtime_only",
+      "implementation_path": "theme_js_api"
+    }
+  },
+  "summary": {
+    "total_rules": 48,
+    "by_binding_type": {
+      "Direct.CoreBlockStyle": 14,
+      "Direct.CustomBlock": 11,
+      "OutOfScope.Handoff": 9,
+      "Composite.TemplatePart": 7,
+      "RuntimeOnly.ThemeJS": 6,
+      "Compositional.BlockPattern": 1
+    },
+    "by_bucket": {
+      "A": 14,
+      "C": 11,
+      "E": 9,
+      "D": 7,
+      "F": 6,
+      "B": 1
+    },
+    "deferred_count": 0
+  },
+  "rules": [
+    {
+      "@id": "ax:Binding.button---filled",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.button---filled",
+      "m3_component": "Button — filled",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "core/button"
+      ],
+      "style_classes": [
+        "is-style-filled"
+      ],
+      "raw_mapping": "`core/button` + `is-style-filled` (default)",
+      "style_class_binding": {
+        "applies_to_block": "core/button",
+        "style_classes": [
+          "is-style-filled"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.button---tonal",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.button---tonal",
+      "m3_component": "Button — tonal",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "core/button"
+      ],
+      "style_classes": [
+        "is-style-tonal"
+      ],
+      "raw_mapping": "`core/button` + `is-style-tonal`",
+      "style_class_binding": {
+        "applies_to_block": "core/button",
+        "style_classes": [
+          "is-style-tonal"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.button---elevated",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.button---elevated",
+      "m3_component": "Button — elevated",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "core/button"
+      ],
+      "style_classes": [
+        "is-style-elevated"
+      ],
+      "raw_mapping": "`core/button` + `is-style-elevated`",
+      "style_class_binding": {
+        "applies_to_block": "core/button",
+        "style_classes": [
+          "is-style-elevated"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.button---outlined",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.button---outlined",
+      "m3_component": "Button — outlined",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "core/button"
+      ],
+      "style_classes": [
+        "is-style-outlined"
+      ],
+      "raw_mapping": "`core/button` + `is-style-outlined`",
+      "style_class_binding": {
+        "applies_to_block": "core/button",
+        "style_classes": [
+          "is-style-outlined"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.button---text",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.button---text",
+      "m3_component": "Button — text",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "core/button"
+      ],
+      "style_classes": [
+        "is-style-text"
+      ],
+      "raw_mapping": "`core/button` + `is-style-text`",
+      "style_class_binding": {
+        "applies_to_block": "core/button",
+        "style_classes": [
+          "is-style-text"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.button-group",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.button-group",
+      "m3_component": "Button group",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "core/buttons"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`core/buttons` (parent block)"
+    },
+    {
+      "@id": "ax:Binding.icon-button",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.icon-button",
+      "m3_component": "Icon button",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "m3/icon-button"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/icon-button` — supports `filled` / `filled-tonal` / `outlined` / `standard` + `toggled`",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/icon-button"
+        ],
+        "plugin": "m3-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.fab-smmdlg",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.fab-smmdlg",
+      "m3_component": "FAB (sm/md/lg)",
+      "binding_type": "Composite.TemplatePart",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part",
+      "bucket_legacy": "D",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Theme-level — fixed-position element in `templates/*.html`",
+      "template_part_spec": {
+        "template_parts": [],
+        "level": "fse_chrome"
+      }
+    },
+    {
+      "@id": "ax:Binding.extended-fab",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.extended-fab",
+      "m3_component": "Extended FAB",
+      "binding_type": "Composite.TemplatePart",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part",
+      "bucket_legacy": "D",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same — template-part overlay",
+      "template_part_spec": {
+        "template_parts": [],
+        "level": "fse_chrome"
+      }
+    },
+    {
+      "@id": "ax:Binding.fab-menu",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.fab-menu",
+      "m3_component": "FAB menu",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "**Drop for v1.** Replace with bottom-sheet menu",
+      "out_of_scope_reason": "deferred_for_v1"
+    },
+    {
+      "@id": "ax:Binding.split-button",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.split-button",
+      "m3_component": "Split button",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Buttons",
+      "deferred": false,
+      "block_refs": [
+        "m3/split-button"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/split-button` — Tier 3, low priority",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/split-button"
+        ],
+        "plugin": "m3-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.card---filled",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.card---filled",
+      "m3_component": "Card — filled",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Containers",
+      "deferred": false,
+      "block_refs": [
+        "core/group"
+      ],
+      "style_classes": [
+        "is-style-card-filled"
+      ],
+      "raw_mapping": "`core/group` + `is-style-card-filled`",
+      "style_class_binding": {
+        "applies_to_block": "core/group",
+        "style_classes": [
+          "is-style-card-filled"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.card---elevated",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.card---elevated",
+      "m3_component": "Card — elevated",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Containers",
+      "deferred": false,
+      "block_refs": [
+        "core/group"
+      ],
+      "style_classes": [
+        "is-style-card-elevated"
+      ],
+      "raw_mapping": "`core/group` + `is-style-card-elevated`",
+      "style_class_binding": {
+        "applies_to_block": "core/group",
+        "style_classes": [
+          "is-style-card-elevated"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.card---outlined",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.card---outlined",
+      "m3_component": "Card — outlined",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Containers",
+      "deferred": false,
+      "block_refs": [
+        "core/group"
+      ],
+      "style_classes": [
+        "is-style-card-outlined"
+      ],
+      "raw_mapping": "`core/group` + `is-style-card-outlined`",
+      "style_class_binding": {
+        "applies_to_block": "core/group",
+        "style_classes": [
+          "is-style-card-outlined"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.list-plain",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.list-plain",
+      "m3_component": "List (plain)",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Containers",
+      "deferred": false,
+      "block_refs": [
+        "core/list"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`core/list`"
+    },
+    {
+      "@id": "ax:Binding.list---segmented",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.list---segmented",
+      "m3_component": "List — segmented",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Containers",
+      "deferred": false,
+      "block_refs": [
+        "core/list"
+      ],
+      "style_classes": [
+        "is-style-list-segmented"
+      ],
+      "raw_mapping": "`core/list` + `is-style-list-segmented`",
+      "style_class_binding": {
+        "applies_to_block": "core/list",
+        "style_classes": [
+          "is-style-list-segmented"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.list-item-with-leadingtrailing",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.list-item-with-leadingtrailing",
+      "m3_component": "List item (with leading/trailing)",
+      "binding_type": "Compositional.BlockPattern",
+      "ontology_strength": "conditional",
+      "implementation_path": "block_pattern_authoring",
+      "bucket_legacy": "B",
+      "subsection": "Containers",
+      "deferred": false,
+      "block_refs": [
+        "core/group",
+        "core/group"
+      ],
+      "style_classes": [],
+      "raw_mapping": "Pattern: `core/group` (row) → Image + `core/group` (stack: Heading+Paragraph) + Icon button",
+      "composition_requires_supports": [],
+      "evaluation_rule": "WHEN block participates in pattern AND its BlockType.supports profile includes [] THEN this binding is applicable."
+    },
+    {
+      "@id": "ax:Binding.divider",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.divider",
+      "m3_component": "Divider",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Containers",
+      "deferred": false,
+      "block_refs": [
+        "core/separator"
+      ],
+      "style_classes": [
+        "is-style-divider-inset",
+        "is-style-divider-middle-inset"
+      ],
+      "raw_mapping": "`core/separator` (variants: `is-style-divider-inset`, `is-style-divider-middle-inset`)",
+      "style_class_binding": {
+        "applies_to_block": "core/separator",
+        "style_classes": [
+          "is-style-divider-inset",
+          "is-style-divider-middle-inset"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.text-field---filled",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.text-field---filled",
+      "m3_component": "Text field — filled",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Forms plugin (CF7 / WPForms / Gravity). Theme ships **CSS** for their output",
+      "out_of_scope_reason": "form_plugin_handoff"
+    },
+    {
+      "@id": "ax:Binding.text-field---outlined",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.text-field---outlined",
+      "m3_component": "Text field — outlined",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same",
+      "out_of_scope_reason": "deferred_for_v1"
+    },
+    {
+      "@id": "ax:Binding.search-field",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.search-field",
+      "m3_component": "Search field",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [
+        "core/search"
+      ],
+      "style_classes": [
+        "is-style-filled-search"
+      ],
+      "raw_mapping": "`core/search` + `is-style-filled-search`",
+      "style_class_binding": {
+        "applies_to_block": "core/search",
+        "style_classes": [
+          "is-style-filled-search"
+        ],
+        "registration_method": "register_block_style()"
+      }
+    },
+    {
+      "@id": "ax:Binding.checkbox",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.checkbox",
+      "m3_component": "Checkbox",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Forms plugin",
+      "out_of_scope_reason": "form_plugin_handoff"
+    },
+    {
+      "@id": "ax:Binding.radio-button",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.radio-button",
+      "m3_component": "Radio button",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Forms plugin",
+      "out_of_scope_reason": "form_plugin_handoff"
+    },
+    {
+      "@id": "ax:Binding.switch",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.switch",
+      "m3_component": "Switch",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Forms plugin",
+      "out_of_scope_reason": "form_plugin_handoff"
+    },
+    {
+      "@id": "ax:Binding.slider",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.slider",
+      "m3_component": "Slider",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Forms plugin",
+      "out_of_scope_reason": "form_plugin_handoff"
+    },
+    {
+      "@id": "ax:Binding.date-picker",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.date-picker",
+      "m3_component": "Date picker",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Forms plugin",
+      "out_of_scope_reason": "form_plugin_handoff"
+    },
+    {
+      "@id": "ax:Binding.time-picker",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.time-picker",
+      "m3_component": "Time picker",
+      "binding_type": "OutOfScope.Handoff",
+      "ontology_strength": "out_of_scope",
+      "implementation_path": "external_plugin_styling_only",
+      "bucket_legacy": "E",
+      "subsection": "Inputs (mostly hand-off territory)",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Forms plugin",
+      "out_of_scope_reason": "form_plugin_handoff"
+    },
+    {
+      "@id": "ax:Binding.app-bar-top",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.app-bar-top",
+      "m3_component": "App bar (top)",
+      "binding_type": "Composite.TemplatePart",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part",
+      "bucket_legacy": "D",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [
+        "core/navigation"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`parts/header.html` + `core/navigation`",
+      "template_part_spec": {
+        "template_parts": [
+          "parts/header.html"
+        ],
+        "level": "fse_chrome"
+      }
+    },
+    {
+      "@id": "ax:Binding.toolbar-docked-floating",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.toolbar-docked-floating",
+      "m3_component": "Toolbar (docked / floating)",
+      "binding_type": "Composite.TemplatePart",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part",
+      "bucket_legacy": "D",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same surface, different content variant",
+      "template_part_spec": {
+        "template_parts": [],
+        "level": "fse_chrome"
+      }
+    },
+    {
+      "@id": "ax:Binding.navigation-bar-mobile-bottom",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.navigation-bar-mobile-bottom",
+      "m3_component": "Navigation bar (mobile bottom)",
+      "binding_type": "Composite.TemplatePart",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part",
+      "bucket_legacy": "D",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [
+        "core/navigation"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`parts/footer.html` (mobile only via container query) + `core/navigation`",
+      "template_part_spec": {
+        "template_parts": [
+          "parts/footer.html"
+        ],
+        "level": "fse_chrome"
+      }
+    },
+    {
+      "@id": "ax:Binding.navigation-rail---collapsed",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.navigation-rail---collapsed",
+      "m3_component": "Navigation rail — collapsed",
+      "binding_type": "Composite.TemplatePart",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part",
+      "bucket_legacy": "D",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [
+        "core/navigation"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`parts/sidebar.html` + vertical `core/navigation`",
+      "template_part_spec": {
+        "template_parts": [
+          "parts/sidebar.html"
+        ],
+        "level": "fse_chrome"
+      }
+    },
+    {
+      "@id": "ax:Binding.navigation-rail---expanded-modal",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.navigation-rail---expanded-modal",
+      "m3_component": "Navigation rail — expanded modal",
+      "binding_type": "Composite.TemplatePart",
+      "ontology_strength": "strong",
+      "implementation_path": "fse_template_part",
+      "bucket_legacy": "D",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same `parts/sidebar.html` + theme JS for toggle/scrim (replaces deprecated drawer)",
+      "template_part_spec": {
+        "template_parts": [
+          "parts/sidebar.html"
+        ],
+        "level": "fse_chrome"
+      }
+    },
+    {
+      "@id": "ax:Binding.tabs",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.tabs",
+      "m3_component": "Tabs",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [
+        "m3/tabs",
+        "m3/tab-panel"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/tabs` (parent) + `m3/tab-panel` (children)",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/tabs",
+          "m3/tab-panel"
+        ],
+        "plugin": "m3-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.menu-dropdown",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.menu-dropdown",
+      "m3_component": "Menu (dropdown)",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [
+        "m3/menu",
+        "core/navigation"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/menu`. `core/navigation` submenus aren't enough",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/menu"
+        ],
+        "plugin": "m3-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.search",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.search",
+      "m3_component": "Search",
+      "binding_type": "Direct.CoreBlockStyle",
+      "ontology_strength": "strong",
+      "implementation_path": "block_style_registration",
+      "bucket_legacy": "A",
+      "subsection": "Navigation / Chrome",
+      "deferred": false,
+      "block_refs": [
+        "core/search"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`core/search` (already covered)"
+    },
+    {
+      "@id": "ax:Binding.chip---assist",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.chip---assist",
+      "m3_component": "Chip — assist",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Selection / Status",
+      "deferred": false,
+      "block_refs": [
+        "m3/chip"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/chip` (variant attr)",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/chip"
+        ],
+        "plugin": "m3-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.chip---filter",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.chip---filter",
+      "m3_component": "Chip — filter",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Selection / Status",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same — `filter` variant, supports `selected`",
+      "custom_block_spec": {
+        "block_names": [],
+        "plugin": "axismundi-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.chip---input",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.chip---input",
+      "m3_component": "Chip — input",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Selection / Status",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same — `input` variant with close icon",
+      "custom_block_spec": {
+        "block_names": [],
+        "plugin": "axismundi-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.chip---suggestion",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.chip---suggestion",
+      "m3_component": "Chip — suggestion",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Selection / Status",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same — `suggestion` variant",
+      "custom_block_spec": {
+        "block_names": [],
+        "plugin": "axismundi-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.badge",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.badge",
+      "m3_component": "Badge",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Selection / Status",
+      "deferred": false,
+      "block_refs": [
+        "m3/badge"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/badge` — also exposed as a custom **rich-text format** for inline use",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/badge"
+        ],
+        "plugin": "m3-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.dialog",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.dialog",
+      "m3_component": "Dialog",
+      "binding_type": "RuntimeOnly.ThemeJS",
+      "ontology_strength": "runtime_only",
+      "implementation_path": "theme_js_api",
+      "bucket_legacy": "F",
+      "subsection": "Feedback / Overlays",
+      "deferred": false,
+      "block_refs": [
+        "m3/dialog-trigger"
+      ],
+      "style_classes": [],
+      "raw_mapping": "Theme JS for behavior + `m3/dialog-trigger` block to open"
+    },
+    {
+      "@id": "ax:Binding.sheet-bottom",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.sheet-bottom",
+      "m3_component": "Sheet (bottom)",
+      "binding_type": "RuntimeOnly.ThemeJS",
+      "ontology_strength": "runtime_only",
+      "implementation_path": "theme_js_api",
+      "bucket_legacy": "F",
+      "subsection": "Feedback / Overlays",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same model — trigger block + JS"
+    },
+    {
+      "@id": "ax:Binding.sheet-side",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.sheet-side",
+      "m3_component": "Sheet (side)",
+      "binding_type": "RuntimeOnly.ThemeJS",
+      "ontology_strength": "runtime_only",
+      "implementation_path": "theme_js_api",
+      "bucket_legacy": "F",
+      "subsection": "Feedback / Overlays",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Same"
+    },
+    {
+      "@id": "ax:Binding.snackbar",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.snackbar",
+      "m3_component": "Snackbar",
+      "binding_type": "RuntimeOnly.ThemeJS",
+      "ontology_strength": "runtime_only",
+      "implementation_path": "theme_js_api",
+      "bucket_legacy": "F",
+      "subsection": "Feedback / Overlays",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Pure theme JS — no block. Imperative `m3.snackbar(msg)` API"
+    },
+    {
+      "@id": "ax:Binding.tooltip",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.tooltip",
+      "m3_component": "Tooltip",
+      "binding_type": "RuntimeOnly.ThemeJS",
+      "ontology_strength": "runtime_only",
+      "implementation_path": "theme_js_api",
+      "bucket_legacy": "F",
+      "subsection": "Feedback / Overlays",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Pure JS/CSS — `data-m3-tooltip=\"...\"` on any element"
+    },
+    {
+      "@id": "ax:Binding.loading-indicator",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.loading-indicator",
+      "m3_component": "Loading indicator",
+      "binding_type": "RuntimeOnly.ThemeJS",
+      "ontology_strength": "runtime_only",
+      "implementation_path": "theme_js_api",
+      "bucket_legacy": "F",
+      "subsection": "Feedback / Overlays",
+      "deferred": false,
+      "block_refs": [],
+      "style_classes": [],
+      "raw_mapping": "Pure JS — only used inside interactive blocks"
+    },
+    {
+      "@id": "ax:Binding.progress-indicator",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.progress-indicator",
+      "m3_component": "Progress indicator",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Feedback / Overlays",
+      "deferred": false,
+      "block_refs": [
+        "m3/progress"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/progress` (linear/circular + determinate/indeterminate)",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/progress"
+        ],
+        "plugin": "m3-blocks"
+      }
+    },
+    {
+      "@id": "ax:Binding.carousel",
+      "@type": "ax:BlockComponentBinding",
+      "rule_id": "binding.carousel",
+      "m3_component": "Carousel",
+      "binding_type": "Direct.CustomBlock",
+      "ontology_strength": "strong",
+      "implementation_path": "custom_block_plugin",
+      "bucket_legacy": "C",
+      "subsection": "Display",
+      "deferred": false,
+      "block_refs": [
+        "m3/carousel",
+        "core/gallery"
+      ],
+      "style_classes": [],
+      "raw_mapping": "`m3/carousel` — `core/gallery` is grid-only",
+      "custom_block_spec": {
+        "block_names": [
+          "m3/carousel"
+        ],
+        "plugin": "m3-blocks"
+      }
+    }
+  ]
+}

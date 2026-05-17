@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — List Full Spec Module (v3.5.11)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="lab-list.css" />
+</head>
+<body>
+<main class="lab-list-demo">
+  <header class="lab-list-header">
+    <div class="t-label-medium">Axismundi · v3.5.11 · Wave 1 #33</div>
+    <h1 class="t-display-small">List — Full Spec Module</h1>
+    <p class="t-body-medium lab-list-caption">
+      Baseline <code>components.css §26</code> remains authoritative. This lab
+      page demonstrates static lists, action rows, navigation rows, selected
+      catalog states, disabled split, Avatar composition, and Ripple v2 on
+      interactive row items only.
+    </p>
+  </header>
+
+  <section class="lab-list-section" id="status">
+    <div class="lab-list-banner">
+      <p class="t-body-small">
+        Experimental lab preview. No baseline CSS, WordPress registration,
+        runtime module, or Avatar record closure is performed in v3.5.11
+        Phase 2. Canonical interactive rows do not use
+        <code>button role="listitem"</code>.
+      </p>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="static">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§2. Static list</h2>
+      <p class="t-body-small lab-list-caption">
+        Static rows use native list structure and receive no ripple host.
+      </p>
+    </header>
+    <div class="lab-list-grid">
+      <div class="lab-list-card" data-qa="static-list">
+        <ul class="ax-list" aria-label="Profile summary">
+          <li class="ax-list__item" data-demo-static="true">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">person</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Profile</span>
+            </span>
+            <span class="ax-list__trailing-text">Public</span>
+          </li>
+          <li class="ax-list__item" data-demo-static="true">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">schedule</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Last active</span>
+            </span>
+            <span class="ax-list__trailing-text">5 min</span>
+          </li>
+        </ul>
+        <p class="t-body-small lab-list-caption">
+          Static informational rows. No <code>data-ax-ripple</code>, no fake
+          click target.
+        </p>
+      </div>
+
+      <div class="lab-list-card" data-qa="static-editorial">
+        <ol class="ax-list" aria-label="Editorial checklist">
+          <li class="ax-list__item ax-list__item--two-line" data-demo-static="true">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Review summary</span>
+              <span class="ax-list__supporting">Confirm all source links and image captions.</span>
+            </span>
+          </li>
+          <li class="ax-list__item ax-list__item--two-line" data-demo-static="true">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Publish notes</span>
+              <span class="ax-list__supporting">Static editorial mapping approximates <code>core/list</code>.</span>
+            </span>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="configurations">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§3. Configurations and styles</h2>
+      <p class="t-body-small lab-list-caption">
+        M3 configurations separate visual style from interaction mode:
+        standard and segmented are style choices; single-action and
+        multi-action are behavior shapes.
+      </p>
+    </header>
+    <div class="lab-list-grid">
+      <div class="lab-list-card" data-qa="style-standard">
+        <div class="ax-list" aria-label="Standard style">
+          <button type="button" class="ax-list__item" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Standard style</span>
+              <span class="ax-list__supporting">Flat container, row-level state layer.</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      <div class="lab-list-card" data-qa="style-segmented">
+        <div class="ax-list ax-list--segmented" aria-label="Segmented style">
+          <button type="button" class="ax-list__item" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Segmented style</span>
+              <span class="ax-list__supporting">Tinted lab surface makes segment separation visible.</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item is-selected" aria-pressed="true" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Selected segment</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      <div class="lab-list-card" data-qa="multi-action-static">
+        <div class="ax-list" aria-label="Multi-action static specimen">
+          <div class="ax-list__item" data-demo-static="true">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Multi-action row</span>
+              <span class="ax-list__supporting">Primary row + trailing action composition.</span>
+            </span>
+            <span class="ax-list__trailing" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">more_vert</span>
+            </span>
+          </div>
+        </div>
+        <p class="t-body-small lab-list-caption">
+          Static composition specimen only. Production multi-action rows need a
+          focus and activation owner; no nested row button is introduced here.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="actions">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§4. Action rows</h2>
+      <p class="t-body-small lab-list-caption">
+        Action rows are native buttons. Ripple attaches to the item, not the
+        container.
+      </p>
+    </header>
+    <div class="lab-list-grid">
+      <div class="lab-list-card" data-qa="action-list">
+        <div class="ax-list" aria-label="Account actions">
+          <button type="button" class="ax-list__item" data-ax-ripple="bounded">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">notifications</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Notification settings</span>
+            </span>
+            <span class="ax-list__trailing" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+            </span>
+          </button>
+          <hr class="ax-list__divider" />
+          <button type="button" class="ax-list__item" data-demo-state="focused" data-ax-ripple="bounded">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">security</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Security</span>
+            </span>
+          </button>
+        </div>
+        <p class="t-body-small lab-list-caption">
+          The second row is a static focused-state catalog specimen.
+        </p>
+      </div>
+
+      <div class="lab-list-card" data-qa="navigation-list">
+        <nav class="ax-list" aria-label="Workspace navigation">
+          <a class="ax-list__item" href="#static" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Static rows</span>
+            </span>
+            <span class="ax-list__trailing" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">arrow_forward</span>
+            </span>
+          </a>
+          <a class="ax-list__item is-selected" href="#actions" aria-current="page" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Action rows</span>
+            </span>
+            <span class="ax-list__trailing-text">Current</span>
+          </a>
+        </nav>
+        <p class="t-body-small lab-list-caption">
+          Navigation rows use anchors. Selected/current state is represented
+          with <code>aria-current</code>, not a listbox claim.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="selection-modes">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§5. Selection modes</h2>
+      <p class="t-body-small lab-list-caption">
+        Selection mode examples are static catalog specimens in v3.5.11.
+        Persistent listbox or checkbox behavior belongs to an integration owner.
+      </p>
+    </header>
+    <div class="lab-list-grid">
+      <div class="lab-list-card" data-qa="single-select-static">
+        <div class="ax-list" aria-label="Single-select static specimen">
+          <button type="button" class="ax-list__item is-selected" aria-pressed="true" data-ax-ripple="bounded">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">check</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Single-select item</span>
+              <span class="ax-list__supporting">Only one selected value is shown.</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Unselected item</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      <div class="lab-list-card" data-qa="multi-select-static">
+        <div class="ax-list" aria-label="Multi-select static specimen">
+          <button type="button" class="ax-list__item is-selected" aria-pressed="true" data-ax-ripple="bounded">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">check_box</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Selected checkbox-like row</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" aria-pressed="false" data-ax-ripple="bounded">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">check_box_outline_blank</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Unselected checkbox-like row</span>
+            </span>
+          </button>
+        </div>
+        <p class="t-body-small lab-list-caption">
+          Static visual only. Real multi-select requires checkbox/listbox state
+          management and keyboard policy.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="segmented">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§6. Segmented list</h2>
+      <p class="t-body-small lab-list-caption">
+        Segmented lists are visual variants with per-row rounding and a 2px gap.
+      </p>
+    </header>
+    <div class="lab-list-grid">
+      <div class="lab-list-card" data-qa="segmented-list">
+        <div class="ax-list ax-list--segmented" aria-label="Settings">
+          <button type="button" class="ax-list__item" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Privacy</span>
+            </span>
+            <span class="ax-list__trailing" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" data-demo-state="hover" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Appearance</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" disabled>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Beta features</span>
+            </span>
+          </button>
+        </div>
+        <p class="t-body-small lab-list-caption">
+          Hover is statically visualized; disabled native button receives no
+          ripple host.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="density">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§7. Row heights and slots</h2>
+      <p class="t-body-small lab-list-caption">
+        Baseline heights: 56 / 72 / 88. Avatar is composed, image is a List slot.
+      </p>
+    </header>
+    <div class="lab-list-grid is-wide">
+      <div class="lab-list-card" data-qa="height-matrix">
+        <div class="ax-list is-fluid" aria-label="Message preview">
+          <button type="button" class="ax-list__item" data-ax-ripple="bounded">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">inbox</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Single-line row</span>
+            </span>
+            <span class="ax-list__trailing-text">56</span>
+          </button>
+          <button type="button" class="ax-list__item ax-list__item--two-line" data-ax-ripple="bounded">
+            <span class="ax-list__leading">
+              <span class="ax-avatar"><span>DY</span></span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Two-line row with Avatar</span>
+              <span class="ax-list__supporting">Avatar #32 remains a composed leading-slot dependency.</span>
+            </span>
+            <span class="ax-list__trailing" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item ax-list__item--three-line" data-ax-ripple="bounded">
+            <span class="ax-list__leading">
+              <img class="ax-list__leading-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' rx='8' fill='%23d7e3ff'/%3E%3Cpath d='M12 38l9-11 7 8 5-6 11 13H12z' fill='%233f5f90'/%3E%3Ccircle cx='38' cy='18' r='5' fill='%233f5f90'/%3E%3C/svg%3E" alt="" />
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__overline">Three-line</span>
+              <span class="ax-list__label">Media row with supporting copy</span>
+              <span class="ax-list__supporting">Compact support text.</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="states">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§8. Default and selected item states</h2>
+    </header>
+    <div class="lab-list-grid">
+      <div class="lab-list-card" data-qa="default-states">
+        <div class="ax-list" aria-label="Default list item states">
+          <button type="button" class="ax-list__item" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Enabled</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" data-demo-state="hover" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Hovered</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" data-demo-state="focused" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Focused</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" data-demo-state="pressed" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Pressed</span>
+            </span>
+          </button>
+          <button type="button" class="ax-list__item" data-demo-state="dragged">
+            <span class="ax-list__leading" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">drag_indicator</span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Dragged</span>
+            </span>
+          </button>
+        </div>
+        <p class="t-body-small lab-list-caption">
+          Hover/focus/pressed/dragged are static state specimens. Drag behavior
+          remains out of v3.5.11 scope.
+        </p>
+      </div>
+
+      <div class="lab-list-card" data-qa="selected-static">
+        <div class="ax-list" aria-label="Static selected specimen">
+          <button type="button" class="ax-list__item is-selected" aria-pressed="true" data-ax-ripple="bounded">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Selected catalog row</span>
+              <span class="ax-list__supporting">Fixed visual state for documentation.</span>
+            </span>
+            <span class="ax-list__trailing" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">check</span>
+            </span>
+          </button>
+        </div>
+        <p class="t-body-small lab-list-caption">
+          Static catalog state. Production selectable lists need an owner for
+          focus, keyboard movement, and state persistence.
+        </p>
+      </div>
+
+      <div class="lab-list-card" data-qa="disabled-split">
+        <div class="ax-list" aria-label="Disabled examples">
+          <button type="button" class="ax-list__item" disabled>
+            <span class="ax-list__content">
+              <span class="ax-list__label">Native disabled action</span>
+            </span>
+          </button>
+          <a class="ax-list__item" href="#" aria-disabled="true">
+            <span class="ax-list__content">
+              <span class="ax-list__label">ARIA-disabled navigation</span>
+              <span class="ax-list__supporting">Integrator must suppress activation.</span>
+            </span>
+            <span class="ax-list__trailing" aria-hidden="true">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+            </span>
+          </a>
+        </div>
+        <p class="t-body-small lab-list-caption">
+          <code>aria-disabled</code> communicates state only. Integration code
+          owns activation suppression and focus policy.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="expand">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§9. Expand interaction boundary</h2>
+      <p class="t-body-small lab-list-caption">
+        M3 lists may expand. v3.5.11 records the visual contract only; no
+        expand/collapse runtime is created.
+      </p>
+    </header>
+    <div class="lab-list-card" data-qa="expand-static">
+      <div class="ax-list" aria-label="Expand static specimen">
+        <button type="button" class="ax-list__item" aria-expanded="true" data-demo-state="focused" data-ax-ripple="bounded">
+          <span class="ax-list__content">
+            <span class="ax-list__label">Expanded parent row</span>
+            <span class="ax-list__supporting">Static expanded state; behavior deferred.</span>
+          </span>
+          <span class="ax-list__trailing" aria-hidden="true">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">expand_less</span>
+          </span>
+        </button>
+        <div class="ax-list__item ax-list__item--two-line" data-demo-static="true">
+          <span class="ax-list__content">
+            <span class="ax-list__label">Child row</span>
+            <span class="ax-list__supporting">Shown only to document the static expanded shape.</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="stress">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§10. Long-content stress</h2>
+    </header>
+    <div class="lab-list-card lab-list-stress" data-qa="overflow-stress">
+      <div class="ax-list">
+        <button type="button" class="ax-list__item ax-list__item--two-line" data-ax-ripple="bounded">
+          <span class="ax-list__content">
+            <span class="ax-list__label">A very long list label that must truncate before it collides with trailing metadata</span>
+            <span class="ax-list__supporting">Supporting text also truncates in a two-line row.</span>
+          </span>
+          <span class="ax-list__trailing-text">12:48 PM</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="wp">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§11. WordPress mapping specimens</h2>
+      <p class="t-body-small lab-list-caption">
+        <code>core/list</code> maps only to static editorial lists. App rows,
+        search results, profile directories, and notifications are theme
+        pattern or plugin territory.
+      </p>
+    </header>
+    <div class="lab-list-grid">
+      <div class="lab-list-card" data-qa="wp-static">
+        <ul class="ax-list" aria-label="Editorial list">
+          <li class="ax-list__item" data-demo-static="true">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Static editorial row</span>
+            </span>
+          </li>
+          <li class="ax-list__item" data-demo-static="true">
+            <span class="ax-list__content">
+              <span class="ax-list__label">Maps to core/list only when content is truly editorial.</span>
+            </span>
+          </li>
+        </ul>
+      </div>
+      <div class="lab-list-card" data-qa="wp-plugin">
+        <div class="ax-list" aria-label="Notification feed">
+          <button type="button" class="ax-list__item ax-list__item--two-line" data-ax-ripple="bounded">
+            <span class="ax-list__leading">
+              <span class="ax-avatar"><span>AM</span></span>
+            </span>
+            <span class="ax-list__content">
+              <span class="ax-list__label">New mention</span>
+              <span class="ax-list__supporting">Dynamic notification feeds are plugin territory.</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="snippets">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§12. Code snippets</h2>
+    </header>
+    <div class="lab-list-grid">
+      <pre class="lab-list-code"><code>&lt;button type="button"
+        class="ax-list__item"
+        data-ax-ripple="bounded"&gt;
+  &lt;span class="ax-list__content"&gt;
+    &lt;span class="ax-list__label"&gt;Action&lt;/span&gt;
+  &lt;/span&gt;
+&lt;/button&gt;</code></pre>
+
+      <pre class="lab-list-code"><code>&lt;ul class="ax-list" aria-label="Profile summary"&gt;
+  &lt;li class="ax-list__item" data-demo-static="true"&gt;
+    &lt;span class="ax-list__content"&gt;
+      &lt;span class="ax-list__label"&gt;Static row&lt;/span&gt;
+    &lt;/span&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+    </div>
+  </section>
+
+  <section class="lab-list-section" id="qa">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§13. Playwright QA targets</h2>
+    </header>
+    <table class="lab-list-qa-table t-body-small">
+      <thead>
+        <tr><th>Target</th><th>Expected</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Single-line row</td><td>56px min-height</td></tr>
+        <tr><td>Two-line row</td><td>72px min-height</td></tr>
+        <tr><td>Three-line row</td><td>88px min-height</td></tr>
+        <tr><td>Ripple hosts</td><td>Interactive .ax-list__item only</td></tr>
+        <tr><td>Static rows</td><td>No ripple host</td></tr>
+        <tr><td>Container</td><td>No ripple host</td></tr>
+        <tr><td>Mobile</td><td>No horizontal overflow at 390px</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="lab-list-section" id="cross-refs">
+    <header class="lab-list-section__head">
+      <h2 class="t-title-large">§14. Cross-references</h2>
+    </header>
+    <ul class="t-body-small lab-list-caption">
+      <li><code>docs/v3.5.11/LIST-PHASE-0-REPORT.md</code></li>
+      <li><code>products/reference-implementations/axismundi-lab/modules/list/docs/LIST-SPEC-AUDIT.md</code></li>
+      <li><code>products/reference-implementations/axismundi-lab/modules/list/docs/LIST-MEASUREMENT-AUDIT.md</code></li>
+      <li><code>products/reference-implementations/axismundi-lab/modules/list/docs/LIST-WP-MAPPING.md</code></li>
+      <li><code>docs/v3.5.0/MODULE-STATUS-MATRIX.md</code> row #33</li>
+    </ul>
+  </section>
+</main>
+
+<script defer src="../ripple/lab-ripple.js"></script>
+</body>
+</html>

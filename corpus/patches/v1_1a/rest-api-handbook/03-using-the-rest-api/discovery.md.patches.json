@@ -1,0 +1,7 @@
+[
+  {
+    "find": "](https://developer.wordpress.org/rest-api/authentication/)",
+    "replace": "](authentication.md)",
+    "reason": "v1.1a: link to rest-api-handbook/03-using-the-rest-api/authentication.md"
+  }
+]

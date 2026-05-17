@@ -1,0 +1,379 @@
+{
+  "common-apis-handbook/00-common-apis-handbook.md": {
+    "handbook": "common-apis",
+    "chapter": "",
+    "slug": "common-apis-handbook",
+    "parent_order": 0,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/",
+    "title": "Common APIs Handbook"
+  },
+  "common-apis-handbook/01-hooks/action-reference.md": {
+    "handbook": "common-apis",
+    "chapter": "hooks",
+    "slug": "action-reference",
+    "parent_order": 1,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/apis/hooks/action-reference/",
+    "title": "Action Reference"
+  },
+  "common-apis-handbook/01-hooks/filter-reference.md": {
+    "handbook": "common-apis",
+    "chapter": "hooks",
+    "slug": "filter-reference",
+    "parent_order": 1,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/apis/hooks/filter-reference/",
+    "title": "Filter Reference"
+  },
+  "common-apis-handbook/01-hooks.md": {
+    "handbook": "common-apis",
+    "chapter": "hooks",
+    "slug": "hooks",
+    "parent_order": 1,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/hooks/",
+    "title": "Hooks"
+  },
+  "common-apis-handbook/02-responsive-images.md": {
+    "handbook": "common-apis",
+    "chapter": "responsive-images",
+    "slug": "responsive-images",
+    "parent_order": 2,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/responsive-images/",
+    "title": "Responsive Images"
+  },
+  "common-apis-handbook/03-abilities-api/getting-started.md": {
+    "handbook": "common-apis",
+    "chapter": "abilities-api",
+    "slug": "getting-started",
+    "parent_order": 3,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/apis/abilities-api/getting-started/",
+    "title": "Getting started"
+  },
+  "common-apis-handbook/03-abilities-api/hooks.md": {
+    "handbook": "common-apis",
+    "chapter": "abilities-api",
+    "slug": "hooks",
+    "parent_order": 3,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/apis/abilities-api/hooks/",
+    "title": "Hooks"
+  },
+  "common-apis-handbook/03-abilities-api/php-reference.md": {
+    "handbook": "common-apis",
+    "chapter": "abilities-api",
+    "slug": "php-reference",
+    "parent_order": 3,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/apis/abilities-api/php-reference/",
+    "title": "PHP reference"
+  },
+  "common-apis-handbook/03-abilities-api/rest-api-endpoints.md": {
+    "handbook": "common-apis",
+    "chapter": "abilities-api",
+    "slug": "rest-api-endpoints",
+    "parent_order": 3,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/apis/abilities-api/rest-api-endpoints/",
+    "title": "REST API endpoints"
+  },
+  "common-apis-handbook/03-abilities-api.md": {
+    "handbook": "common-apis",
+    "chapter": "abilities-api",
+    "slug": "abilities-api",
+    "parent_order": 3,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/abilities-api/",
+    "title": "Abilities API"
+  },
+  "common-apis-handbook/04-dashboard-widgets-api.md": {
+    "handbook": "common-apis",
+    "chapter": "dashboard-widgets-api",
+    "slug": "dashboard-widgets-api",
+    "parent_order": 4,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/dashboard-widgets/",
+    "title": "Dashboard widgets API"
+  },
+  "common-apis-handbook/05-database-api.md": {
+    "handbook": "common-apis",
+    "chapter": "database-api",
+    "slug": "database-api",
+    "parent_order": 5,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/database/",
+    "title": "Database API"
+  },
+  "common-apis-handbook/06-internationalization/internationalization-functions.md": {
+    "handbook": "common-apis",
+    "chapter": "internationalization",
+    "slug": "internationalization-functions",
+    "parent_order": 6,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/apis/internationalization/internationalization-functions/",
+    "title": "Internationalization Functions"
+  },
+  "common-apis-handbook/06-internationalization/internationalization-guidelines.md": {
+    "handbook": "common-apis",
+    "chapter": "internationalization",
+    "slug": "internationalization-guidelines",
+    "parent_order": 6,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/apis/internationalization/internationalization-guidelines/",
+    "title": "Internationalization Guidelines"
+  },
+  "common-apis-handbook/06-internationalization/localization.md": {
+    "handbook": "common-apis",
+    "chapter": "internationalization",
+    "slug": "localization",
+    "parent_order": 6,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/apis/internationalization/localization/",
+    "title": "Localization"
+  },
+  "common-apis-handbook/06-internationalization.md": {
+    "handbook": "common-apis",
+    "chapter": "internationalization",
+    "slug": "internationalization",
+    "parent_order": 6,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/internationalization/",
+    "title": "Internationalization"
+  },
+  "common-apis-handbook/07-filesystem.md": {
+    "handbook": "common-apis",
+    "chapter": "filesystem",
+    "slug": "filesystem",
+    "parent_order": 7,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/filesystem/",
+    "title": "Filesystem"
+  },
+  "common-apis-handbook/08-global-variables.md": {
+    "handbook": "common-apis",
+    "chapter": "global-variables",
+    "slug": "global-variables",
+    "parent_order": 8,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/global-variables/",
+    "title": "Global Variables"
+  },
+  "common-apis-handbook/09-metadata.md": {
+    "handbook": "common-apis",
+    "chapter": "metadata",
+    "slug": "metadata",
+    "parent_order": 9,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/metadata/",
+    "title": "Metadata"
+  },
+  "common-apis-handbook/10-options.md": {
+    "handbook": "common-apis",
+    "chapter": "options",
+    "slug": "options",
+    "parent_order": 10,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/options/",
+    "title": "Options"
+  },
+  "common-apis-handbook/12-making-http-requests/advanced.md": {
+    "handbook": "common-apis",
+    "chapter": "making-http-requests",
+    "slug": "advanced",
+    "parent_order": 12,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/apis/making-http-requests/advanced/",
+    "title": "Advanced"
+  },
+  "common-apis-handbook/12-making-http-requests/authentication.md": {
+    "handbook": "common-apis",
+    "chapter": "making-http-requests",
+    "slug": "authentication",
+    "parent_order": 12,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/apis/making-http-requests/authentication/",
+    "title": "Authentication"
+  },
+  "common-apis-handbook/12-making-http-requests/getting-data-from-external-service.md": {
+    "handbook": "common-apis",
+    "chapter": "making-http-requests",
+    "slug": "getting-data-from-external-service",
+    "parent_order": 12,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/apis/making-http-requests/getting-data-from-an-external-service/",
+    "title": "GETting data from an external service"
+  },
+  "common-apis-handbook/12-making-http-requests/performance.md": {
+    "handbook": "common-apis",
+    "chapter": "making-http-requests",
+    "slug": "performance",
+    "parent_order": 12,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/apis/making-http-requests/performance/",
+    "title": "Performance"
+  },
+  "common-apis-handbook/12-making-http-requests/posting-data-to-external-service.md": {
+    "handbook": "common-apis",
+    "chapter": "making-http-requests",
+    "slug": "posting-data-to-external-service",
+    "parent_order": 12,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/apis/making-http-requests/posting-data-to-an-external-service/",
+    "title": "POSTing data to an external service"
+  },
+  "common-apis-handbook/12-making-http-requests.md": {
+    "handbook": "common-apis",
+    "chapter": "making-http-requests",
+    "slug": "making-http-requests",
+    "parent_order": 12,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/making-http-requests/",
+    "title": "Making HTTP requests"
+  },
+  "common-apis-handbook/13-quicktags.md": {
+    "handbook": "common-apis",
+    "chapter": "quicktags",
+    "slug": "quicktags",
+    "parent_order": 13,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/quicktags/",
+    "title": "Quicktags"
+  },
+  "common-apis-handbook/15-rewrite.md": {
+    "handbook": "common-apis",
+    "chapter": "rewrite",
+    "slug": "rewrite",
+    "parent_order": 15,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/rewrite/",
+    "title": "Rewrite"
+  },
+  "common-apis-handbook/16-security/common-vulnerabilities.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "common-vulnerabilities",
+    "parent_order": 16,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/apis/security/common-vulnerabilities/",
+    "title": "Common Vulnerabilities"
+  },
+  "common-apis-handbook/16-security/escaping-data.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "escaping-data",
+    "parent_order": 16,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/apis/security/escaping/",
+    "title": "Escaping Data"
+  },
+  "common-apis-handbook/16-security/example.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "example",
+    "parent_order": 16,
+    "page_order": 7,
+    "source_url": "https://developer.wordpress.org/apis/security/example/"
+  },
+  "common-apis-handbook/16-security/nonces.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "nonces",
+    "parent_order": 16,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/apis/security/nonces/",
+    "title": "Nonces"
+  },
+  "common-apis-handbook/16-security/sanitizing-data.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "sanitizing-data",
+    "parent_order": 16,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/apis/security/sanitizing/",
+    "title": "Sanitizing Data"
+  },
+  "common-apis-handbook/16-security/user-roles-and-capabilities.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "user-roles-and-capabilities",
+    "parent_order": 16,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/apis/security/user-roles-and-capabilities/",
+    "title": "User Roles and Capabilities"
+  },
+  "common-apis-handbook/16-security/validating-data.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "validating-data",
+    "parent_order": 16,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/apis/security/data-validation/",
+    "title": "Validating Data"
+  },
+  "common-apis-handbook/16-security.md": {
+    "handbook": "common-apis",
+    "chapter": "security",
+    "slug": "security",
+    "parent_order": 16,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/security/",
+    "title": "Security"
+  },
+  "common-apis-handbook/17-settings.md": {
+    "handbook": "common-apis",
+    "chapter": "settings",
+    "slug": "settings",
+    "parent_order": 17,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/settings/",
+    "title": "Settings"
+  },
+  "common-apis-handbook/18-shortcode.md": {
+    "handbook": "common-apis",
+    "chapter": "shortcode",
+    "slug": "shortcode",
+    "parent_order": 18,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/shortcode/",
+    "title": "Shortcode"
+  },
+  "common-apis-handbook/19-site-health.md": {
+    "handbook": "common-apis",
+    "chapter": "site-health",
+    "slug": "site-health",
+    "parent_order": 19,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/site-health/",
+    "title": "Site Health"
+  },
+  "common-apis-handbook/21-transients.md": {
+    "handbook": "common-apis",
+    "chapter": "transients",
+    "slug": "transients",
+    "parent_order": 21,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/transients/",
+    "title": "Transients"
+  },
+  "common-apis-handbook/22-xml-rpc.md": {
+    "handbook": "common-apis",
+    "chapter": "xml-rpc",
+    "slug": "xml-rpc",
+    "parent_order": 22,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/xml-rpc/",
+    "title": "XML-RPC"
+  },
+  "common-apis-handbook/23-wp-config-php.md": {
+    "handbook": "common-apis",
+    "chapter": "wp-config-php",
+    "slug": "wp-config-php",
+    "parent_order": 23,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/apis/wp-config-php/",
+    "title": "wp-config.php"
+  }
+}

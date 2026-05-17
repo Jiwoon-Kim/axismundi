@@ -1,0 +1,896 @@
+{
+  "schema_version": 1,
+  "summary": {
+    "total_anchor_pages": 47,
+    "by_priority": {
+      "1": 43,
+      "2": 4
+    },
+    "degraded_count": 18,
+    "total_outbound_broken": 1
+  },
+  "pages": [
+    {
+      "priority": 1,
+      "path": "block-editor-handbook/03-reference-guides/01-block-api-reference/attributes.md",
+      "handbook": "block-editor",
+      "chapter": "reference-guides",
+      "sub_chapter": "block-api-reference",
+      "slug": "attributes",
+      "title": "Attributes",
+      "lang_profile": {
+        "text": 11,
+        "js": 2,
+        "html": 8,
+        "json": 8
+      },
+      "degraded": false,
+      "anchors_count": 10,
+      "outbound_links_total": 10,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 14
+    },
+    {
+      "priority": 1,
+      "path": "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md",
+      "handbook": "block-editor",
+      "chapter": "reference-guides",
+      "sub_chapter": "block-api-reference",
+      "slug": "deprecation",
+      "title": "Deprecation",
+      "lang_profile": {
+        "js": 1,
+        "text": 2,
+        "jsx": 3
+      },
+      "degraded": true,
+      "anchors_count": 2,
+      "outbound_links_total": 7,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 8
+    },
+    {
+      "priority": 1,
+      "path": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "handbook": "block-editor",
+      "chapter": "reference-guides",
+      "sub_chapter": "block-api-reference",
+      "slug": "supports",
+      "title": "Supports",
+      "lang_profile": {
+        "jsx": 3,
+        "php": 4,
+        "text": 22,
+        "js": 43
+      },
+      "degraded": true,
+      "anchors_count": 50,
+      "outbound_links_total": 19,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 18
+    },
+    {
+      "priority": 1,
+      "path": "block-editor-handbook/03-reference-guides/10-data-module-reference/data-core-block-editor.md",
+      "handbook": "block-editor",
+      "chapter": "reference-guides",
+      "sub_chapter": "data-module-reference",
+      "slug": "data-core-block-editor",
+      "title": "The Block Editor’s Data",
+      "lang_profile": {
+        "js": 2
+      },
+      "degraded": true,
+      "anchors_count": 142,
+      "outbound_links_total": 2,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    },
+    {
+      "priority": 1,
+      "path": "block-editor-handbook/03-reference-guides/04-interactivity-api-reference/directives-and-store.md",
+      "handbook": "block-editor",
+      "chapter": "reference-guides",
+      "sub_chapter": "interactivity-api-reference",
+      "slug": "directives-and-store",
+      "title": "Directives and Store",
+      "lang_profile": {
+        "html": 27,
+        "php": 11,
+        "js": 33,
+        "text": 2
+      },
+      "degraded": true,
+      "anchors_count": 32,
+      "outbound_links_total": 31,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 30
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/04-extending-the-rest-api/controller-classes.md",
+      "handbook": "rest-api",
+      "chapter": "extending-the-rest-api",
+      "sub_chapter": null,
+      "slug": "controller-classes",
+      "title": "Controller Classes",
+      "lang_profile": {
+        "php": 3
+      },
+      "degraded": true,
+      "anchors_count": 5,
+      "outbound_links_total": 14,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 4
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/04-extending-the-rest-api/routes-and-endpoints.md",
+      "handbook": "rest-api",
+      "chapter": "extending-the-rest-api",
+      "sub_chapter": null,
+      "slug": "routes-and-endpoints",
+      "title": "Routes and Endpoints",
+      "lang_profile": {
+        "text": 1,
+        "php": 7
+      },
+      "degraded": true,
+      "anchors_count": 12,
+      "outbound_links_total": 1,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 1
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/04-extending-the-rest-api/schema.md",
+      "handbook": "rest-api",
+      "chapter": "extending-the-rest-api",
+      "sub_chapter": null,
+      "slug": "schema",
+      "title": "Schema",
+      "lang_profile": {
+        "json": 17,
+        "php": 28
+      },
+      "degraded": true,
+      "anchors_count": 16,
+      "outbound_links_total": 21,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 4
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/05-reference/application-passwords.md",
+      "handbook": "rest-api",
+      "chapter": "reference",
+      "sub_chapter": null,
+      "slug": "application-passwords",
+      "title": "Application Passwords",
+      "lang_profile": {},
+      "degraded": false,
+      "anchors_count": 9,
+      "outbound_links_total": 2,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 0
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/03-using-the-rest-api/authentication.md",
+      "handbook": "rest-api",
+      "chapter": "using-the-rest-api",
+      "sub_chapter": null,
+      "slug": "authentication",
+      "title": "Authentication",
+      "lang_profile": {
+        "php": 1,
+        "text": 1,
+        "js": 1,
+        "bash": 1
+      },
+      "degraded": true,
+      "anchors_count": 3,
+      "outbound_links_total": 9,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 6
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/03-using-the-rest-api/global-parameters.md",
+      "handbook": "rest-api",
+      "chapter": "using-the-rest-api",
+      "sub_chapter": null,
+      "slug": "global-parameters",
+      "title": "Global Parameters",
+      "lang_profile": {
+        "text": 4,
+        "http": 3,
+        "html": 1
+      },
+      "degraded": false,
+      "anchors_count": 5,
+      "outbound_links_total": 6,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 4
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/03-using-the-rest-api/linking-and-embedding.md",
+      "handbook": "rest-api",
+      "chapter": "using-the-rest-api",
+      "sub_chapter": null,
+      "slug": "linking-and-embedding",
+      "title": "Linking and Embedding",
+      "lang_profile": {
+        "json": 2
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 4,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 3
+    },
+    {
+      "priority": 1,
+      "path": "rest-api-handbook/03-using-the-rest-api/pagination.md",
+      "handbook": "rest-api",
+      "chapter": "using-the-rest-api",
+      "sub_chapter": null,
+      "slug": "pagination",
+      "title": "Pagination",
+      "lang_profile": {
+        "text": 4,
+        "php": 1
+      },
+      "degraded": false,
+      "anchors_count": 2,
+      "outbound_links_total": 1,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 1
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/04-templates/index.md",
+      "handbook": "theme",
+      "chapter": "templates",
+      "sub_chapter": null,
+      "slug": "index",
+      "title": "Templates",
+      "lang_profile": {},
+      "degraded": false,
+      "anchors_count": 1,
+      "outbound_links_total": 4,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 12
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/04-templates/introduction-to-templates.md",
+      "handbook": "theme",
+      "chapter": "templates",
+      "sub_chapter": null,
+      "slug": "introduction-to-templates",
+      "title": "Introduction to Templates",
+      "lang_profile": {
+        "html": 6,
+        "text": 2
+      },
+      "degraded": false,
+      "anchors_count": 5,
+      "outbound_links_total": 6,
+      "outbound_links_broken": 1,
+      "broken_outbound_targets": [
+        "https://developer.wordpress.org/themes/classic-themes/"
+      ],
+      "inbound_links": 6
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/04-templates/template-hierarchy.md",
+      "handbook": "theme",
+      "chapter": "templates",
+      "sub_chapter": null,
+      "slug": "template-hierarchy",
+      "title": "Template Hierarchy",
+      "lang_profile": {},
+      "degraded": false,
+      "anchors_count": 10,
+      "outbound_links_total": 10,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 12
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/04-templates/template-parts.md",
+      "handbook": "theme",
+      "chapter": "templates",
+      "sub_chapter": null,
+      "slug": "template-parts",
+      "title": "Template Parts",
+      "lang_profile": {
+        "html": 3,
+        "text": 2,
+        "php": 2,
+        "json": 1
+      },
+      "degraded": true,
+      "anchors_count": 9,
+      "outbound_links_total": 18,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 8
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/04-templates/templates.md",
+      "handbook": "theme",
+      "chapter": "templates",
+      "sub_chapter": null,
+      "slug": "templates",
+      "title": "Templates",
+      "lang_profile": {
+        "html": 1,
+        "text": 1,
+        "php": 1
+      },
+      "degraded": false,
+      "anchors_count": 7,
+      "outbound_links_total": 13,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 7
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/04-custom-templates.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": null,
+      "slug": "custom-templates",
+      "title": "Custom Templates",
+      "lang_profile": {
+        "json": 1,
+        "html": 1
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 2,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 3
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/index.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": null,
+      "slug": "index",
+      "title": "Global Settings and Styles (theme.json)",
+      "lang_profile": {},
+      "degraded": false,
+      "anchors_count": 1,
+      "outbound_links_total": 7,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 10
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/05-patterns.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": null,
+      "slug": "patterns",
+      "title": "Patterns",
+      "lang_profile": {
+        "json": 3,
+        "text": 1
+      },
+      "degraded": false,
+      "anchors_count": 1,
+      "outbound_links_total": 2,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/07-style-variations.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": null,
+      "slug": "style-variations",
+      "title": "Style Variations",
+      "lang_profile": {
+        "text": 1,
+        "json": 1
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 4,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 5
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/06-template-parts.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": null,
+      "slug": "template-parts",
+      "title": "Template Parts",
+      "lang_profile": {
+        "json": 1,
+        "html": 4
+      },
+      "degraded": true,
+      "anchors_count": 4,
+      "outbound_links_total": 4,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 4
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/01-introduction/introduction-to-theme-json.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "introduction",
+      "slug": "introduction-to-theme-json",
+      "title": "Introduction to theme.json",
+      "lang_profile": {
+        "php": 2,
+        "json": 1
+      },
+      "degraded": false,
+      "anchors_count": 5,
+      "outbound_links_total": 10,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 1
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "appearance-tools",
+      "title": "Appearance Tools",
+      "lang_profile": {
+        "json": 3
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 6,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 1
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/blocks.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "blocks",
+      "title": "Blocks",
+      "lang_profile": {
+        "json": 4
+      },
+      "degraded": false,
+      "anchors_count": 2,
+      "outbound_links_total": 3,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/border.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "border",
+      "title": "Border",
+      "lang_profile": {
+        "json": 1
+      },
+      "degraded": false,
+      "anchors_count": 1,
+      "outbound_links_total": 0,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/color.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "color",
+      "title": "Color",
+      "lang_profile": {
+        "json": 17,
+        "php": 1
+      },
+      "degraded": true,
+      "anchors_count": 14,
+      "outbound_links_total": 3,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 7
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/custom.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "custom",
+      "title": "Custom",
+      "lang_profile": {
+        "json": 5,
+        "css": 4
+      },
+      "degraded": false,
+      "anchors_count": 7,
+      "outbound_links_total": 2,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 4
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/dimensions.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "dimensions",
+      "title": "Dimensions",
+      "lang_profile": {
+        "json": 2
+      },
+      "degraded": false,
+      "anchors_count": 2,
+      "outbound_links_total": 0,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 3
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/index.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "index",
+      "title": "Settings",
+      "lang_profile": {
+        "json": 1
+      },
+      "degraded": false,
+      "anchors_count": 2,
+      "outbound_links_total": 13,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 7
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/layout.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "layout",
+      "title": "Layout",
+      "lang_profile": {
+        "json": 3
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 0,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/lightbox.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "lightbox",
+      "title": "Lightbox",
+      "lang_profile": {
+        "json": 3
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 0,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/position.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "position",
+      "title": "Position",
+      "lang_profile": {
+        "json": 2
+      },
+      "degraded": false,
+      "anchors_count": 2,
+      "outbound_links_total": 0,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 3
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/settings-reference.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "settings-reference",
+      "title": "Settings Reference",
+      "lang_profile": {},
+      "degraded": false,
+      "anchors_count": 12,
+      "outbound_links_total": 13,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 1
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/shadow.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "shadow",
+      "title": "Shadow",
+      "lang_profile": {
+        "json": 2,
+        "css": 1,
+        "php": 1
+      },
+      "degraded": true,
+      "anchors_count": 3,
+      "outbound_links_total": 2,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 3
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/spacing.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "spacing",
+      "title": "Spacing",
+      "lang_profile": {
+        "json": 9,
+        "text": 1
+      },
+      "degraded": true,
+      "anchors_count": 9,
+      "outbound_links_total": 5,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 5
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/typography.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "typography",
+      "title": "Typography",
+      "lang_profile": {
+        "json": 4,
+        "php": 4,
+        "css": 7,
+        "text": 2
+      },
+      "degraded": true,
+      "anchors_count": 7,
+      "outbound_links_total": 5,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 7
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/02-settings/use-root-padding-aware-alignments.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "settings",
+      "slug": "use-root-padding-aware-alignments",
+      "title": "Use Root Padding Aware Alignments",
+      "lang_profile": {
+        "json": 2,
+        "css": 3,
+        "html": 1
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 1,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 3
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/03-styles/applying-styles.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "styles",
+      "slug": "applying-styles",
+      "title": "Applying Styles",
+      "lang_profile": {
+        "json": 6,
+        "css": 2,
+        "text": 2
+      },
+      "degraded": true,
+      "anchors_count": 6,
+      "outbound_links_total": 8,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/03-styles/index.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "styles",
+      "slug": "index",
+      "title": "Styles",
+      "lang_profile": {
+        "json": 2
+      },
+      "degraded": false,
+      "anchors_count": 2,
+      "outbound_links_total": 3,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 16
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/03-styles/styles-reference.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "styles",
+      "slug": "styles-reference",
+      "title": "Styles Reference",
+      "lang_profile": {
+        "json": 9
+      },
+      "degraded": false,
+      "anchors_count": 8,
+      "outbound_links_total": 25,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 6
+    },
+    {
+      "priority": 1,
+      "path": "theme-handbook/03-theme-json/03-styles/using-presets.md",
+      "handbook": "theme",
+      "chapter": "theme-json",
+      "sub_chapter": "styles",
+      "slug": "using-presets",
+      "title": "Using Presets",
+      "lang_profile": {
+        "json": 4,
+        "css": 2
+      },
+      "degraded": false,
+      "anchors_count": 4,
+      "outbound_links_total": 10,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 1
+    },
+    {
+      "priority": 2,
+      "path": "plugin-handbook/04-hooks/actions.md",
+      "handbook": "plugin",
+      "chapter": "hooks",
+      "sub_chapter": null,
+      "slug": "actions",
+      "title": "Actions",
+      "lang_profile": {
+        "php": 5
+      },
+      "degraded": true,
+      "anchors_count": 4,
+      "outbound_links_total": 5,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 10
+    },
+    {
+      "priority": 2,
+      "path": "plugin-handbook/04-hooks/filters.md",
+      "handbook": "plugin",
+      "chapter": "hooks",
+      "sub_chapter": null,
+      "slug": "filters",
+      "title": "Filters",
+      "lang_profile": {
+        "php": 2
+      },
+      "degraded": false,
+      "anchors_count": 3,
+      "outbound_links_total": 8,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 5
+    },
+    {
+      "priority": 2,
+      "path": "plugin-handbook/15-javascript/ajax.md",
+      "handbook": "plugin",
+      "chapter": "javascript",
+      "sub_chapter": null,
+      "slug": "ajax",
+      "title": "AJAX",
+      "lang_profile": {
+        "text": 7,
+        "php": 1
+      },
+      "degraded": true,
+      "anchors_count": 9,
+      "outbound_links_total": 7,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 3
+    },
+    {
+      "priority": 2,
+      "path": "plugin-handbook/07-shortcodes/basic-shortcodes.md",
+      "handbook": "plugin",
+      "chapter": "shortcodes",
+      "sub_chapter": null,
+      "slug": "basic-shortcodes",
+      "title": "Basic Shortcodes",
+      "lang_profile": {
+        "php": 3
+      },
+      "degraded": true,
+      "anchors_count": 3,
+      "outbound_links_total": 2,
+      "outbound_links_broken": 0,
+      "broken_outbound_targets": [],
+      "inbound_links": 2
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Axismundi Lab — Variable Font Axis Explorer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="stylesheets/tokens.css">
+<link rel="stylesheet" href="stylesheets/fonts.css">
+<link rel="stylesheet" href="stylesheets/base.css">
+<link rel="stylesheet" href="stylesheets/icons.css">
+<style>
+  body {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-xl, 48px) var(--space-lg, 24px);
+    background: var(--md-sys-color-background);
+    color: var(--md-sys-color-on-background);
+  }
+  .lab-banner {
+    padding: var(--space-md, 16px);
+    background: var(--md-sys-color-tertiary-container);
+    color: var(--md-sys-color-on-tertiary-container);
+    border-radius: 12px;
+    margin-block-end: var(--space-xl, 48px);
+  }
+  .axis-controls {
+    display: grid;
+    gap: var(--space-md, 16px);
+    grid-template-columns: max-content 1fr max-content;
+    align-items: center;
+    padding: var(--space-md, 16px);
+    background: var(--md-sys-color-surface-container);
+    border-radius: 12px;
+    margin-block-end: var(--space-xl, 48px);
+  }
+  .axis-controls label { font-family: var(--md-sys-typescale-label-large-font); font-weight: 500; }
+  .axis-controls input[type="range"] { width: 100%; }
+  .axis-controls output {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    min-width: 5ch;
+    text-align: end;
+  }
+  .preview {
+    padding: var(--space-xl, 48px);
+    background: var(--md-sys-color-surface);
+    border-radius: 12px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    margin-block-end: var(--space-xl, 48px);
+  }
+  .preview-block + .preview-block { margin-block-start: var(--space-lg, 24px); }
+  .preview-label {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-block-end: 4px;
+  }
+  .demo-text {
+    font-family: 'Roboto Flex', 'Noto Sans KR', sans-serif;
+    font-variation-settings:
+      'opsz' var(--demo-opsz, 14),
+      'wght' var(--demo-wght, 400),
+      'wdth' var(--demo-wdth, 100),
+      'slnt' var(--demo-slnt, 0),
+      'GRAD' var(--demo-grad, 0);
+  }
+  .demo-text.t-display { font-size: 57px; line-height: 1.05; }
+  .demo-text.t-headline { font-size: 32px; line-height: 1.25; }
+  .demo-text.t-body { font-size: 16px; line-height: 1.6; }
+  .demo-text.t-label { font-size: 11px; line-height: 1.45; letter-spacing: 0.5px; text-transform: uppercase; }
+  .icon-row {
+    display: flex; gap: 16px; align-items: center;
+    padding: var(--space-md, 16px);
+    background: var(--md-sys-color-surface-container);
+    border-radius: 8px;
+    margin-block-start: var(--space-md, 16px);
+  }
+  .icon-row .material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-variation-settings:
+      'FILL' var(--demo-fill, 0),
+      'wght' var(--demo-icon-wght, 400),
+      'GRAD' var(--demo-grad, 0),
+      'opsz' 24;
+    font-size: 36px;
+  }
+</style>
+</head>
+<body>
+
+<div class="lab-banner">
+  <strong>LAB STATUS</strong> — Variable Font Axis Explorer. Visual QA tool for design exploration, not a user-facing feature. Drag axes to see how Roboto Flex 13-axis variable font behaves and how GRAD syncs between text and Material Symbols icons.
+</div>
+
+<h1>Variable Font Axis Explorer</h1>
+
+<section class="axis-controls">
+  <label for="ax-opsz">opsz (optical size)</label>
+  <input type="range" id="ax-opsz" min="8" max="144" step="1" value="14">
+  <output for="ax-opsz" id="out-opsz">14</output>
+
+  <label for="ax-wght">wght (weight)</label>
+  <input type="range" id="ax-wght" min="100" max="1000" step="10" value="400">
+  <output for="ax-wght" id="out-wght">400</output>
+
+  <label for="ax-wdth">wdth (width)</label>
+  <input type="range" id="ax-wdth" min="25" max="151" step="1" value="100">
+  <output for="ax-wdth" id="out-wdth">100</output>
+
+  <label for="ax-slnt">slnt (slant)</label>
+  <input type="range" id="ax-slnt" min="-10" max="0" step="0.5" value="0">
+  <output for="ax-slnt" id="out-slnt">0</output>
+
+  <label for="ax-grad"><strong>GRAD (grade, SHARED with icons)</strong></label>
+  <input type="range" id="ax-grad" min="-200" max="150" step="5" value="0">
+  <output for="ax-grad" id="out-grad">0</output>
+
+  <label for="ax-fill">FILL (icon, 0=outlined / 1=filled)</label>
+  <input type="range" id="ax-fill" min="0" max="1" step="0.05" value="0">
+  <output for="ax-fill" id="out-fill">0</output>
+
+  <label for="ax-icon-wght">wght (icon)</label>
+  <input type="range" id="ax-icon-wght" min="100" max="700" step="10" value="400">
+  <output for="ax-icon-wght" id="out-icon-wght">400</output>
+</section>
+
+<div class="preview">
+  <div class="preview-block">
+    <div class="preview-label">Display large — 57px</div>
+    <p class="demo-text t-display">한국어 Korean Display</p>
+  </div>
+  <div class="preview-block">
+    <div class="preview-label">Headline — 32px</div>
+    <p class="demo-text t-headline">Variable fonts in mixed scripts</p>
+  </div>
+  <div class="preview-block">
+    <div class="preview-label">Body — 16px</div>
+    <p class="demo-text t-body">한글과 영문이 섞인 본문에서도 가변폰트 axes가 어떻게 적용되는지 확인합니다. Roboto Flex has 13 variable axes, while Noto Sans KR has wght. Mixed-script line-height parity is maintained via base.css §7.</p>
+  </div>
+  <div class="preview-block">
+    <div class="preview-label">Label small — 11px uppercase</div>
+    <p class="demo-text t-label">label small 11px</p>
+  </div>
+
+  <div class="icon-row">
+    <div class="preview-label">Icons synced via GRAD</div>
+    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">home</span>
+    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">search</span>
+    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">favorite</span>
+    <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">settings</span>
+  </div>
+</div>
+
+<h2 style="margin-block-start: var(--space-2xl, 64px);">Font layer coverage test</h2>
+<p style="color: var(--md-sys-color-on-surface-variant); font-size: 14px;">
+  Each character below is rendered by the font in its layer:
+  <strong>Roboto Flex</strong> handles Latin + numbers + currency (₩, ¥, £, €) + arrows + math operators + Greek + Cyrillic;
+  <strong>Noto Sans KR</strong> handles Hangul;
+  <strong>Material Symbols Rounded</strong> handles iconography (forbidden in post content — theme chrome only).
+</p>
+<div class="preview">
+  <div class="preview-block">
+    <div class="preview-label">Mixed-script coverage</div>
+    <p class="demo-text t-headline">Axismundi 2026 — ₩12,000 → 3.14 ≤ 10 ≈ π</p>
+  </div>
+  <div class="preview-block">
+    <div class="preview-label">Mixed Hangul + Latin (body)</div>
+    <p class="demo-text t-body">한국어 본문에서 영문 Roboto와 한글 Noto Sans KR이 자연스럽게 섞입니다. Numbers (12,345), currency (₩, ¥, £, €), arrows (← → ↑ ↓), math (≈ ≠ ≤ ≥, π, μ), Greek (α β γ Δ Ω), Cyrillic (Ж Д Я) all render via Roboto Flex.</p>
+  </div>
+  <div class="preview-block">
+    <div class="preview-label">Icons (Material Symbols, theme chrome only)</div>
+    <p style="font-size: 14px; color: var(--md-sys-color-on-surface-variant);">5-star rating, rendered as icons (NOT as ★ glyphs in Roboto — that codepoint is not in Roboto Flex):</p>
+    <div class="icon-row">
+      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" style="font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' var(--demo-grad, 0), 'opsz' 24;">star</span>
+      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" style="font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' var(--demo-grad, 0), 'opsz' 24;">star</span>
+      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" style="font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' var(--demo-grad, 0), 'opsz' 24;">star</span>
+      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" style="font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' var(--demo-grad, 0), 'opsz' 24;">star</span>
+      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" style="font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' var(--demo-grad, 0), 'opsz' 24;">star</span>
+    </div>
+  </div>
+</div>
+
+<p style="color: var(--md-sys-color-on-surface-variant); font-size: 14px;">
+  GRAD axis is shared between Roboto Flex (text) and Material Symbols (icons). Move the GRAD slider to see both update simultaneously — this is the implementation of M3 spec's "match grade between text and symbols for harmonious visual effect."
+</p>
+
+<script>
+const axes = ['opsz', 'wght', 'wdth', 'slnt', 'grad', 'fill', 'icon-wght'];
+const cssVarMap = {
+  'opsz': '--demo-opsz',
+  'wght': '--demo-wght',
+  'wdth': '--demo-wdth',
+  'slnt': '--demo-slnt',
+  'grad': '--demo-grad',
+  'fill': '--demo-fill',
+  'icon-wght': '--demo-icon-wght',
+};
+
+axes.forEach(axis => {
+  const input = document.getElementById('ax-' + axis);
+  const output = document.getElementById('out-' + axis);
+  const cssVar = cssVarMap[axis];
+
+  function update() {
+    output.textContent = input.value;
+    document.documentElement.style.setProperty(cssVar, input.value);
+  }
+  input.addEventListener('input', update);
+  update();
+});
+</script>
+
+</body>
+</html>

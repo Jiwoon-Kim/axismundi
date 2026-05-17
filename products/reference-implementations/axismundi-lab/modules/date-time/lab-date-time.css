@@ -1,0 +1,453 @@
+/* ============================================================
+ * lab-date-time.css — Axismundi Date/Time Picker lab module
+ * v3.4.7
+ *
+ * Bucket D — theme interaction runtime, lab module only.
+ * Scope: runtime-specific layer for the date/time picker pickers.
+ *
+ * Provenance:
+ *   NOT a Beer-CSS-derived extraction.
+ *   .ax-date-picker / .ax-time-picker visual primitives are baseline
+ *   (components.css §33 + §34, UNCHANGED at v3.4.7).
+ *   This file holds the .ax-date-benchmark__* and .ax-time-benchmark__*
+ *   BEM trees that drive the GPT Codex-generated benchmark interaction.
+ *   These class names are intentionally preserved verbatim from the
+ *   source (no rename at v3.4.7 — see audit doc §6 "Extraction strategy"
+ *   decision 3).
+ *
+ * Source:
+ *   benchmark-interactions.css L619-L1046 (428 lines, verbatim).
+ *   The originals are retained in benchmark-interactions.css with an
+ *   /* EXTRACTED */ marker per the Charter EXTRACTED policy.
+ *
+ * Audit: docs/DATE-TIME-AUDIT.md
+ * ============================================================ */
+
+/* Date picker benchmark phase */
+.ax-date-benchmark {
+  display: grid;
+  gap: var(--space-md);
+  inline-size: min(100%, 760px);
+}
+
+.ax-date-benchmark__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: start;
+  padding: 4px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.ax-date-benchmark__field {
+  inline-size: min(100%, 360px);
+}
+
+.ax-date-benchmark__field .text-field__trailing-icon {
+  border: 0;
+}
+
+.ax-date-benchmark__surface[hidden] {
+  display: none;
+}
+
+.ax-date-benchmark__surface {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.ax-date-benchmark__panel {
+  inline-size: min(100%, 360px);
+  overflow: hidden;
+  border-radius: 28px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+
+.ax-date-benchmark__header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+  min-block-size: 128px;
+  padding: 24px 24px 12px;
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.ax-date-benchmark__header .ax-date-picker__supporting {
+  grid-column: 1 / -1;
+}
+
+.ax-date-benchmark__headline {
+  align-self: end;
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-headline-large-font);
+  font-size: var(--md-sys-typescale-headline-large-size);
+  line-height: var(--md-sys-typescale-headline-large-line-height);
+  font-weight: var(--md-sys-typescale-headline-large-weight);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ax-date-benchmark__edit {
+  align-self: end;
+}
+
+.ax-date-benchmark__body {
+  min-block-size: 360px;
+  padding: 12px 16px 8px;
+}
+
+.ax-date-benchmark__panel .ax-date-picker__nav {
+  min-block-size: 48px;
+  padding-inline: 0;
+}
+
+.ax-date-benchmark__switch,
+.ax-date-benchmark__year-button {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 40px;
+  padding-inline: 16px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ax-date-benchmark__switch::after,
+.ax-date-benchmark__year-button::after {
+  content: "";
+  inline-size: 0;
+  block-size: 0;
+  margin-inline-start: 10px;
+  border-inline: 5px solid transparent;
+  border-block-start: 5px solid currentColor;
+}
+
+.ax-date-benchmark__spacer {
+  flex: 1;
+}
+
+.ax-date-benchmark__calendar .ax-date-picker__weekdays {
+  padding-block: 12px 8px;
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
+.ax-date-benchmark__calendar .ax-date-picker__grid {
+  gap: 4px 0;
+}
+
+.ax-date-benchmark__calendar .ax-date-picker__cell {
+  inline-size: 48px;
+  block-size: 48px;
+}
+
+.ax-date-benchmark__calendar .ax-date-picker__cell.is-range-preview {
+  background-color: color-mix(
+    in srgb,
+    var(--md-sys-color-primary) 14%,
+    transparent
+  );
+  border-radius: 0;
+}
+
+.ax-date-benchmark__list {
+  max-block-size: 360px;
+  overflow-y: auto;
+  padding-block: 8px;
+  scrollbar-width: thin;
+}
+
+.ax-date-benchmark__list-item {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding-inline: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ax-date-benchmark__list-item.is-selected {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.ax-date-benchmark__check {
+  inline-size: 24px;
+  color: currentColor;
+}
+
+.ax-date-benchmark__years {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px 12px;
+  padding-block: 32px;
+}
+
+.ax-date-benchmark__year {
+  justify-self: center;
+  min-inline-size: 72px;
+  min-block-size: 36px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ax-date-benchmark__year.is-selected {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.ax-date-benchmark__input {
+  display: grid;
+  gap: 16px;
+  padding-block: 24px 8px;
+}
+
+.ax-date-benchmark__input[hidden] {
+  display: none;
+}
+
+.ax-date-benchmark__input .text-field {
+  inline-size: 100%;
+}
+
+.ax-date-benchmark__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  min-block-size: 56px;
+  padding: 8px 12px 12px;
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.ax-date-benchmark__actions .ax-button {
+  min-inline-size: 72px;
+}
+
+/* Time picker benchmark phase */
+.ax-time-benchmark {
+  display: grid;
+  gap: var(--space-md);
+  inline-size: min(100%, 860px);
+}
+
+.ax-time-benchmark__field {
+  inline-size: min(100%, 320px);
+}
+
+.ax-time-benchmark__field .text-field__trailing-icon {
+  border: 0;
+}
+
+.ax-time-benchmark__surface[hidden] {
+  display: none;
+}
+
+.ax-time-benchmark__surface {
+  display: flex;
+  align-items: flex-start;
+}
+
+.ax-time-benchmark__panel.ax-time-picker {
+  inline-size: min(100%, 420px);
+  padding: 24px;
+  gap: 24px;
+  overflow: hidden;
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+
+.ax-time-benchmark__main {
+  display: grid;
+  gap: 24px;
+}
+
+.ax-time-benchmark__panel .ax-time-picker__inputs {
+  align-items: flex-start;
+}
+
+.ax-time-benchmark__panel .ax-time-picker__field {
+  border: 0;
+}
+
+.ax-time-benchmark__panel .ax-time-picker__field.is-active {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 0;
+}
+
+.ax-time-benchmark__panel .ax-time-picker__period {
+  flex: 0 0 auto;
+}
+
+.ax-time-benchmark__panel.is-24h .ax-time-picker__period {
+  display: none;
+}
+
+.ax-time-benchmark__dial[hidden],
+.ax-time-benchmark__input[hidden] {
+  display: none;
+}
+
+.ax-time-benchmark__dial .ax-time-picker__dial {
+  width: 256px;
+  height: 256px;
+}
+
+.ax-time-benchmark__dial .ax-time-picker__dial::before {
+  content: "";
+  position: absolute;
+  inset: calc(50% - 4px);
+  border-radius: 50%;
+  background-color: var(--md-sys-color-primary);
+  z-index: 2;
+}
+
+.ax-time-benchmark__hand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 80px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  transform-origin: 50% 0;
+  z-index: 1;
+}
+
+.ax-time-benchmark__dial-option {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  inline-size: 48px;
+  block-size: 48px;
+  margin: -24px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font: inherit;
+  font-size: var(--md-sys-typescale-title-large-size);
+  line-height: 1;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.ax-time-benchmark__dial-option.is-inner {
+  inline-size: 40px;
+  block-size: 40px;
+  margin: -20px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-title-medium-size);
+}
+
+.ax-time-benchmark__dial-option.is-selected {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.ax-time-benchmark__input {
+  display: grid;
+  gap: 16px;
+  padding-block: 12px 84px;
+}
+
+.ax-time-benchmark__input .text-field {
+  inline-size: 100%;
+}
+
+.ax-time-benchmark__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 56px;
+}
+
+.ax-time-benchmark__action-spacer {
+  flex: 1;
+}
+
+.ax-time-benchmark__actions .ax-button {
+  min-inline-size: 72px;
+}
+
+@media (min-width: 900px) {
+  .ax-time-benchmark__panel.is-wide {
+    inline-size: min(100%, 640px);
+  }
+
+  .ax-time-benchmark__panel.is-wide .ax-time-benchmark__main {
+    grid-template-columns: minmax(0, 1fr) 256px;
+    align-items: center;
+  }
+
+  .ax-time-benchmark__panel.is-wide .ax-time-picker__inputs {
+    flex-wrap: wrap;
+  }
+
+  .ax-time-benchmark__panel.is-wide .ax-time-picker__period {
+    flex-direction: row;
+    inline-size: 100%;
+    block-size: 48px;
+  }
+
+  .ax-time-benchmark__panel.is-wide .ax-time-picker__period-btn {
+    block-size: 48px;
+  }
+
+  .ax-time-benchmark__panel.is-wide .ax-time-picker__period-btn:not(:last-of-type) {
+    border-block-end: 0;
+    border-inline-end: 1px solid var(--md-sys-color-outline);
+  }
+
+  .ax-time-benchmark__panel.is-wide .ax-time-benchmark__dial {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .ax-time-benchmark__panel.is-wide .ax-time-benchmark__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .ax-material-slider {
+    inline-size: 100%;
+    block-size: 300px;
+    min-block-size: 300px;
+  }
+
+  .ax-material-slider-demo__bar,
+  .ax-material-slider-demo__nav {
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ax-material-slider__track,
+  .ax-material-slide__shell,
+  .ax-material-slide__shell img,
+  .ax-material-slide__label,
+  .ax-material-slider-demo__dot {
+    transition-duration: 0.01ms !important;
+  }
+}

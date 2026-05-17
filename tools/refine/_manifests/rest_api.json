@@ -1,0 +1,551 @@
+{
+  "rest-api-handbook/00-rest-api-handbook.md": {
+    "handbook": "rest-api",
+    "chapter": "",
+    "slug": "rest-api-handbook",
+    "parent_order": 0,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/",
+    "title": "REST API Handbook"
+  },
+  "rest-api-handbook/01-key-concepts.md": {
+    "handbook": "rest-api",
+    "chapter": "key-concepts",
+    "slug": "key-concepts",
+    "parent_order": 1,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/key-concepts/",
+    "title": "Key Concepts"
+  },
+  "rest-api-handbook/02-frequently-asked-questions.md": {
+    "handbook": "rest-api",
+    "chapter": "frequently-asked-questions",
+    "slug": "frequently-asked-questions",
+    "parent_order": 2,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/frequently-asked-questions/",
+    "title": "Frequently Asked Questions"
+  },
+  "rest-api-handbook/03-using-the-rest-api/authentication.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "authentication",
+    "parent_order": 3,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/",
+    "title": "Authentication"
+  },
+  "rest-api-handbook/03-using-the-rest-api/backbone-javascript-client.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "backbone-javascript-client",
+    "parent_order": 3,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/backbone-javascript-client/",
+    "title": "Backbone JavaScript Client"
+  },
+  "rest-api-handbook/03-using-the-rest-api/client-libraries.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "client-libraries",
+    "parent_order": 3,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/client-libraries/",
+    "title": "Client Libraries"
+  },
+  "rest-api-handbook/03-using-the-rest-api/discovery.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "discovery",
+    "parent_order": 3,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/discovery/",
+    "title": "Discovery"
+  },
+  "rest-api-handbook/03-using-the-rest-api/global-parameters.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "global-parameters",
+    "parent_order": 3,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/global-parameters/",
+    "title": "Global Parameters"
+  },
+  "rest-api-handbook/03-using-the-rest-api/linking-and-embedding.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "linking-and-embedding",
+    "parent_order": 3,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/linking-and-embedding/",
+    "title": "Linking and Embedding"
+  },
+  "rest-api-handbook/03-using-the-rest-api/pagination.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "pagination",
+    "parent_order": 3,
+    "page_order": 7,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/pagination/",
+    "title": "Pagination"
+  },
+  "rest-api-handbook/03-using-the-rest-api.md": {
+    "handbook": "rest-api",
+    "chapter": "using-the-rest-api",
+    "slug": "using-the-rest-api",
+    "parent_order": 3,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/using-the-rest-api/",
+    "title": "Using the REST API"
+  },
+  "rest-api-handbook/04-extending-the-rest-api/adding-custom-endpoints.md": {
+    "handbook": "rest-api",
+    "chapter": "extending-the-rest-api",
+    "slug": "adding-custom-endpoints",
+    "parent_order": 4,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/",
+    "title": "Adding Custom Endpoints"
+  },
+  "rest-api-handbook/04-extending-the-rest-api/adding-rest-api-support-for-custom-content-types.md": {
+    "handbook": "rest-api",
+    "chapter": "extending-the-rest-api",
+    "slug": "adding-rest-api-support-for-custom-content-types",
+    "parent_order": 4,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-rest-api-support-for-custom-content-types/",
+    "title": "Adding REST API Support For Custom Content Types"
+  },
+  "rest-api-handbook/04-extending-the-rest-api/controller-classes.md": {
+    "handbook": "rest-api",
+    "chapter": "extending-the-rest-api",
+    "slug": "controller-classes",
+    "parent_order": 4,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/controller-classes/",
+    "title": "Controller Classes"
+  },
+  "rest-api-handbook/04-extending-the-rest-api/modifying-responses.md": {
+    "handbook": "rest-api",
+    "chapter": "extending-the-rest-api",
+    "slug": "modifying-responses",
+    "parent_order": 4,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/modifying-responses/",
+    "title": "Modifying Responses"
+  },
+  "rest-api-handbook/04-extending-the-rest-api/routes-and-endpoints.md": {
+    "handbook": "rest-api",
+    "chapter": "extending-the-rest-api",
+    "slug": "routes-and-endpoints",
+    "parent_order": 4,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/routes-and-endpoints/",
+    "title": "Routes and Endpoints"
+  },
+  "rest-api-handbook/04-extending-the-rest-api/schema.md": {
+    "handbook": "rest-api",
+    "chapter": "extending-the-rest-api",
+    "slug": "schema",
+    "parent_order": 4,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/schema/",
+    "title": "Schema"
+  },
+  "rest-api-handbook/04-extending-the-rest-api.md": {
+    "handbook": "rest-api",
+    "chapter": "extending-the-rest-api",
+    "slug": "extending-the-rest-api",
+    "parent_order": 4,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/extending-the-rest-api/",
+    "title": "Extending the REST API"
+  },
+  "rest-api-handbook/05-reference/application-passwords.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "application-passwords",
+    "parent_order": 5,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/application-passwords/",
+    "title": "Application Passwords"
+  },
+  "rest-api-handbook/05-reference/block-directory-items.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "block-directory-items",
+    "parent_order": 5,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/block-directory-items/",
+    "title": "Block Directory Items"
+  },
+  "rest-api-handbook/05-reference/block-pattern-categories.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "block-pattern-categories",
+    "parent_order": 5,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/block-pattern-categories/",
+    "title": "Block Pattern Categories"
+  },
+  "rest-api-handbook/05-reference/block-patterns.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "block-patterns",
+    "parent_order": 5,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/block-patterns/",
+    "title": "Block Patterns"
+  },
+  "rest-api-handbook/05-reference/block-revisions.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "block-revisions",
+    "parent_order": 5,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/block-revisions/",
+    "title": "Block Revisions"
+  },
+  "rest-api-handbook/05-reference/block-types.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "block-types",
+    "parent_order": 5,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/block-types/",
+    "title": "Block Types"
+  },
+  "rest-api-handbook/05-reference/categories.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "categories",
+    "parent_order": 5,
+    "page_order": 7,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/categories/",
+    "title": "Categories"
+  },
+  "rest-api-handbook/05-reference/comments.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "comments",
+    "parent_order": 5,
+    "page_order": 8,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/comments/",
+    "title": "Comments"
+  },
+  "rest-api-handbook/05-reference/editor-blocks.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "editor-blocks",
+    "parent_order": 5,
+    "page_order": 9,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/blocks/",
+    "title": "Editor Blocks"
+  },
+  "rest-api-handbook/05-reference/global-styles.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "global-styles",
+    "parent_order": 5,
+    "page_order": 10,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp_global_styles/",
+    "title": "Global\\_Styles"
+  },
+  "rest-api-handbook/05-reference/media.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "media",
+    "parent_order": 5,
+    "page_order": 11,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/media/",
+    "title": "Media"
+  },
+  "rest-api-handbook/05-reference/menu-locations.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "menu-locations",
+    "parent_order": 5,
+    "page_order": 12,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/menu-locations/",
+    "title": "Menu Locations"
+  },
+  "rest-api-handbook/05-reference/nav-menu-item-revisions.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "nav-menu-item-revisions",
+    "parent_order": 5,
+    "page_order": 16,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/nav_menu_item-revisions/",
+    "title": "Nav\\_Menu\\_Item Revisions"
+  },
+  "rest-api-handbook/05-reference/nav-menu-items.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "nav-menu-items",
+    "parent_order": 5,
+    "page_order": 17,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/nav_menu_items/",
+    "title": "Nav\\_Menu\\_Items"
+  },
+  "rest-api-handbook/05-reference/nav-menus.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "nav-menus",
+    "parent_order": 5,
+    "page_order": 15,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/nav_menus/",
+    "title": "Nav\\_Menus"
+  },
+  "rest-api-handbook/05-reference/navigation-revisions.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "navigation-revisions",
+    "parent_order": 5,
+    "page_order": 13,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp_navigation-revisions/",
+    "title": "Navigation Revisions"
+  },
+  "rest-api-handbook/05-reference/navigations.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "navigations",
+    "parent_order": 5,
+    "page_order": 14,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp_navigations/",
+    "title": "Navigations"
+  },
+  "rest-api-handbook/05-reference/page-revisions.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "page-revisions",
+    "parent_order": 5,
+    "page_order": 18,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/page-revisions/",
+    "title": "Page Revisions"
+  },
+  "rest-api-handbook/05-reference/pages.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "pages",
+    "parent_order": 5,
+    "page_order": 19,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/pages/",
+    "title": "Pages"
+  },
+  "rest-api-handbook/05-reference/pattern-directory-items.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "pattern-directory-items",
+    "parent_order": 5,
+    "page_order": 20,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/pattern-directory-items/",
+    "title": "Pattern Directory Items"
+  },
+  "rest-api-handbook/05-reference/plugins.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "plugins",
+    "parent_order": 5,
+    "page_order": 21,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/plugins/",
+    "title": "Plugins"
+  },
+  "rest-api-handbook/05-reference/post-revisions.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "post-revisions",
+    "parent_order": 5,
+    "page_order": 22,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/post-revisions/",
+    "title": "Post Revisions"
+  },
+  "rest-api-handbook/05-reference/posts.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "posts",
+    "parent_order": 5,
+    "page_order": 23,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/posts/",
+    "title": "Posts"
+  },
+  "rest-api-handbook/05-reference/rendered-blocks.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "rendered-blocks",
+    "parent_order": 5,
+    "page_order": 24,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/rendered-blocks/",
+    "title": "Rendered Blocks"
+  },
+  "rest-api-handbook/05-reference/search-results.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "search-results",
+    "parent_order": 5,
+    "page_order": 25,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/search-results/",
+    "title": "Search Results"
+  },
+  "rest-api-handbook/05-reference/sidebars.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "sidebars",
+    "parent_order": 5,
+    "page_order": 26,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/sidebars/",
+    "title": "Sidebars"
+  },
+  "rest-api-handbook/05-reference/site-settings.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "site-settings",
+    "parent_order": 5,
+    "page_order": 27,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/settings/",
+    "title": "Site Settings"
+  },
+  "rest-api-handbook/05-reference/statuses.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "statuses",
+    "parent_order": 5,
+    "page_order": 28,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/post-statuses/",
+    "title": "Statuses"
+  },
+  "rest-api-handbook/05-reference/tags.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "tags",
+    "parent_order": 5,
+    "page_order": 29,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/tags/",
+    "title": "Tags"
+  },
+  "rest-api-handbook/05-reference/taxonomies.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "taxonomies",
+    "parent_order": 5,
+    "page_order": 30,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/taxonomies/",
+    "title": "Taxonomies"
+  },
+  "rest-api-handbook/05-reference/template-part-revisions.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "template-part-revisions",
+    "parent_order": 5,
+    "page_order": 33,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp_template_part-revisions/",
+    "title": "Template\\_Part Revisions"
+  },
+  "rest-api-handbook/05-reference/template-parts.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "template-parts",
+    "parent_order": 5,
+    "page_order": 34,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp_template_parts/",
+    "title": "Template\\_Parts"
+  },
+  "rest-api-handbook/05-reference/template-revisions.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "template-revisions",
+    "parent_order": 5,
+    "page_order": 31,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp_template-revisions/",
+    "title": "Template Revisions"
+  },
+  "rest-api-handbook/05-reference/templates.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "templates",
+    "parent_order": 5,
+    "page_order": 32,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp_templates/",
+    "title": "Templates"
+  },
+  "rest-api-handbook/05-reference/themes.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "themes",
+    "parent_order": 5,
+    "page_order": 35,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/themes/",
+    "title": "Themes"
+  },
+  "rest-api-handbook/05-reference/types.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "types",
+    "parent_order": 5,
+    "page_order": 36,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/post-types/",
+    "title": "Types"
+  },
+  "rest-api-handbook/05-reference/users.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "users",
+    "parent_order": 5,
+    "page_order": 37,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/users/",
+    "title": "Users"
+  },
+  "rest-api-handbook/05-reference/widget-types.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "widget-types",
+    "parent_order": 5,
+    "page_order": 38,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/widget-types/",
+    "title": "Widget Types"
+  },
+  "rest-api-handbook/05-reference/widgets.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "widgets",
+    "parent_order": 5,
+    "page_order": 39,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/widgets/",
+    "title": "Widgets"
+  },
+  "rest-api-handbook/05-reference/wp-site-health-tests.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "wp-site-health-tests",
+    "parent_order": 5,
+    "page_order": 40,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/wp-site-health-tests/",
+    "title": "Wp Site Health Tests"
+  },
+  "rest-api-handbook/05-reference.md": {
+    "handbook": "rest-api",
+    "chapter": "reference",
+    "slug": "reference",
+    "parent_order": 5,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/reference/",
+    "title": "Reference"
+  },
+  "rest-api-handbook/06-requests.md": {
+    "handbook": "rest-api",
+    "chapter": "requests",
+    "slug": "requests",
+    "parent_order": 6,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/requests/",
+    "title": "Requests"
+  },
+  "rest-api-handbook/07-glossary.md": {
+    "handbook": "rest-api",
+    "chapter": "glossary",
+    "slug": "glossary",
+    "parent_order": 7,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/rest-api/glossary/",
+    "title": "Glossary"
+  }
+}

@@ -1,0 +1,7 @@
+[
+  {
+    "find": "```text\n- `GET` triggers a `get_item` method, returning the post data to the client.\n- `PUT` triggers an `update_item` method, taking the data to update, and returning the updated post data.\n- `DELETE` triggers a `delete_item` method, returning the now-deleted post data to the client.\n```",
+    "replace": "  - `GET` triggers a `get_item` method, returning the post data to the client.\n  - `PUT` triggers an `update_item` method, taking the data to update, and returning the updated post data.\n  - `DELETE` triggers a `delete_item` method, returning the now-deleted post data to the client.",
+    "reason": "v1.1a markdown_list (block_1): nested UL: 3 endpoints under 'This route has 3 endpoints:'"
+  }
+]

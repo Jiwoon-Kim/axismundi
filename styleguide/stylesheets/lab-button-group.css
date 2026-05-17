@@ -1,0 +1,187 @@
+/*
+ * Axismundi — lab-button-group.css
+ * v3.5.10 — Button group #6 Full-Spec module
+ *
+ * Lab-scoped page scaffolding only. Baseline authority remains
+ * components.css §28. This file does not redefine .ax-button-group,
+ * .ax-button-group__input, .ax-button, public tokens, or Ripple v2.
+ */
+
+.lab-button-group-demo {
+  max-inline-size: min(100%, 1120px);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--space-md);
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.lab-button-group-header,
+.lab-button-group-section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-button-group-header {
+  padding-block-end: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-button-group-section__head {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.lab-button-group-caption {
+  max-inline-size: 78ch;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-button-group-banner {
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.lab-button-group-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  align-items: start;
+}
+
+.lab-button-group-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.lab-button-group-stack {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-button-group-specimen {
+  display: grid;
+  gap: var(--space-sm);
+  align-content: start;
+  padding: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-low);
+  overflow-x: auto;
+}
+
+.lab-button-group-specimen--wide {
+  grid-column: 1 / -1;
+}
+
+.lab-button-group-specimen__surface {
+  display: grid;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.lab-button-group-fit {
+  inline-size: fit-content;
+  max-inline-size: 100%;
+}
+
+.lab-button-group-scroll {
+  max-inline-size: 100%;
+  overflow-x: auto;
+  padding-block-end: var(--space-xs);
+}
+
+.lab-button-group-code {
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-small);
+  overflow-x: auto;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-button-group-token-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.lab-button-group-token-table th,
+.lab-button-group-token-table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+  text-align: start;
+  vertical-align: top;
+}
+
+.lab-button-group-token-table th {
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-button-group-note {
+  padding: var(--space-sm) var(--space-md);
+  border-inline-start: 4px solid var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.lab-button-group-warning {
+  padding: var(--space-sm) var(--space-md);
+  border-inline-start: 4px solid var(--md-sys-color-error);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.lab-button-group-qa-box {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px dashed var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.lab-button-group-mobile-check {
+  inline-size: min(100%, 390px);
+  padding: var(--space-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  overflow-x: auto;
+}
+
+.lab-button-group-state-list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding-inline-start: var(--space-lg);
+}
+
+.lab-button-group-inline-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.lab-button-group-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-xs);
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (max-width: 520px) {
+  .lab-button-group-demo {
+    padding-inline: var(--space-sm);
+  }
+
+  .lab-button-group-specimen {
+    padding: var(--space-sm);
+  }
+}
+

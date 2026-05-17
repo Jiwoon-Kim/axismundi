@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<!-- ============================================================
+     Publishing surface — DO NOT EDIT DIRECTLY.
+     Source of truth:
+       products/reference-implementations/axismundi-lab/style-guide-blocks.html
+     Regenerate with: python3 tools/generators/publish_styleguide.py
+     ============================================================ -->
+
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Block Catalog</title>
+  <link rel="stylesheet" href="stylesheets/tokens.css" />
+  <link rel="stylesheet" href="stylesheets/base.css" />
+  <link rel="stylesheet" href="stylesheets/components.css" />
+  <link rel="stylesheet" href="stylesheets/prose.css" />
+  <link rel="stylesheet" href="stylesheets/blocks.css" />
+  <style>
+    /* =====================================================
+     * style-guide-blocks.html — local layout only.
+     * Mirrors style-guide.html shell. No component
+     * re-styling. No literal type/color values.
+     * ===================================================== */
+
+    /* ---- Layout shell ---- */
+    .sg-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+    .sg-sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      overflow-y: auto;
+      padding: var(--space-lg) var(--space-md);
+      background-color: var(--md-sys-color-surface-container-low);
+      border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+    .sg-brand {
+      color: var(--md-sys-color-on-surface);
+      letter-spacing: 0.04em;
+    }
+    .sg-brand-meta {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: var(--space-xs);
+    }
+    /* Cross-guide nav (3 guides — current highlighted) */
+    .sg-guide-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      padding-block: var(--space-sm);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-guide-nav__label {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-bottom: var(--space-xs);
+    }
+    .sg-guide-nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-small);
+    }
+    .sg-guide-nav a:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .sg-guide-nav a[aria-current="page"] {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+    .sg-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-nav__group-label {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-top: var(--space-md);
+      margin-bottom: var(--space-xs);
+    }
+    .sg-nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-small);
+    }
+    .sg-nav a:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+
+    .sg-main {
+      padding: var(--space-xl) var(--space-xl);
+      /* Bounded container — required by .alignfull's calc(50% - 50vw) */
+      max-inline-size: 1280px;
+      /* CSS Grid 1fr child needs explicit min-inline-size: 0 to
+       * prevent overflow children (long <pre>, wide <table>) from
+       * forcing the track to expand. */
+      min-inline-size: 0;
+    }
+
+    .sg-section {
+      padding-block: var(--space-xl);
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-section:last-child { border-bottom: 0; }
+    .sg-section__head {
+      margin-bottom: var(--space-xl);
+    }
+    .sg-section__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-bottom: var(--space-xs);
+    }
+    .sg-subsection {
+      margin-top: var(--space-xl);
+    }
+    .sg-subsection__head {
+      margin-bottom: var(--space-md);
+      color: var(--md-sys-color-on-surface);
+    }
+
+    /* Demo container — frame around block samples so the block's
+     * own visual containment is distinguishable from page chrome. */
+    .sg-demo {
+      padding: var(--space-md);
+      border: 1px dashed var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-surface-container-low);
+      /* Block samples that use alignwide/alignfull need their own
+       * bounded parent; this demo's max-inline-size provides it. */
+      max-inline-size: 720px;
+      margin-block: var(--space-md);
+      /* Re-flow as a content column so alignfull's calc(50% - 50vw)
+       * doesn't push out of the demo frame. The demo's own bounds
+       * also constrain alignwide. */
+      overflow: hidden;
+    }
+    .sg-demo--wide {
+      max-inline-size: none; /* for showcasing alignfull within main */
+    }
+
+    .sg-helper {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: var(--space-sm);
+    }
+    .sg-snippet {
+      margin-top: var(--space-md);
+      padding: var(--space-md);
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-medium);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      overflow-x: auto;
+    }
+    .sg-snippet code {
+      font-family: var(--md-ref-typeface-mono);
+      font-size:   var(--md-sys-typescale-body-small-size);
+      line-height: var(--md-sys-typescale-body-small-line-height);
+      color: inherit;
+      white-space: pre;
+    }
+
+    /* Sample image — neutral placeholder, no external request */
+    .sg-sample-img {
+      display: block;
+      inline-size: 100%;
+      block-size: 200px;
+      background:
+        linear-gradient(135deg,
+          var(--md-sys-color-primary-container) 0%,
+          var(--md-sys-color-tertiary-container) 100%);
+      border-radius: var(--md-sys-shape-corner-medium);
+    }
+    .sg-sample-img--small { block-size: 100px; }
+
+    /* ---- Mobile ---- */
+    @media (max-width: 720px) {
+      .sg-layout { grid-template-columns: 1fr; }
+      .sg-sidebar {
+        position: static;
+        height: auto;
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      }
+      .sg-main { padding: var(--space-lg); }
+      .sg-demo { max-inline-size: 100%; }
+    }
+
+    /* ---- Footer ---- */
+    .sg-footer {
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-low);
+      padding-block: var(--space-xl);
+      padding-inline: var(--space-xl);
+    }
+    .sg-footer__inner {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-footer__title { margin: 0; }
+    .sg-footer__meta {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-footer a {
+      color: var(--md-sys-color-primary);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+    @media (max-width: 720px) {
+      .sg-footer { padding-inline: var(--space-lg); }
+    }
+    /* ---- Themed thin scrollbars (sidebar / toc-rail) ---- */
+    .sg-sidebar,
+    .sg-toc-rail {
+      scrollbar-width: thin;
+      scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+    }
+    .sg-sidebar::-webkit-scrollbar,
+    .sg-toc-rail::-webkit-scrollbar {
+      inline-size: 8px;
+      block-size:  8px;
+    }
+    .sg-sidebar::-webkit-scrollbar-track,
+    .sg-toc-rail::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+    .sg-sidebar::-webkit-scrollbar-thumb,
+    .sg-toc-rail::-webkit-scrollbar-thumb {
+      background-color: var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+    .sg-sidebar::-webkit-scrollbar-thumb:hover,
+    .sg-toc-rail::-webkit-scrollbar-thumb:hover {
+      background-color: var(--md-sys-color-outline);
+    }
+    .sg-sidebar::-webkit-scrollbar-button,
+    .sg-toc-rail::-webkit-scrollbar-button {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="sg-layout">
+
+    <!-- =========================================================
+         Sidebar
+         ========================================================= -->
+    <aside class="sg-sidebar">
+      <div>
+        <div class="t-headline-small sg-brand">Axismundi</div>
+        <div class="t-label-small sg-brand-meta">Block catalog · v1.0.0-rc1</div>
+      </div>
+
+      <nav class="sg-guide-nav" aria-label="Style guides">
+        <div class="t-label-small sg-guide-nav__label">Guides</div>
+        <a class="t-body-medium" href="index.html">Components (33)</a>
+        <a class="t-body-medium" href="blocks.html"
+           aria-current="page">WP Blocks</a>
+        <a class="t-body-medium" href="prose.html">Prose / Long-form</a>
+      </nav>
+
+      <nav class="sg-nav" aria-label="Block sections">
+        <div class="t-label-small sg-nav__group-label">Layout</div>
+        <a class="t-body-medium" href="#blocks-alignment">Alignment</a>
+
+        <div class="t-label-small sg-nav__group-label">Text</div>
+        <a class="t-body-medium" href="#blocks-paragraph">Paragraph</a>
+        <a class="t-body-medium" href="#blocks-quote">Quote / Pullquote</a>
+        <a class="t-body-medium" href="#blocks-code">Code / Verse</a>
+        <a class="t-body-medium" href="#blocks-list">List</a>
+
+        <div class="t-label-small sg-nav__group-label">Design</div>
+        <a class="t-body-medium" href="#blocks-separator">Separator</a>
+        <a class="t-body-medium" href="#blocks-table">Table</a>
+        <a class="t-body-medium" href="#blocks-media">Image / Gallery</a>
+        <a class="t-body-medium" href="#blocks-group">Columns / Group / Card</a>
+        <a class="t-body-medium" href="#blocks-button">Buttons</a>
+      </nav>
+    </aside>
+
+    <!-- =========================================================
+         Main
+         ========================================================= -->
+    <main class="sg-main">
+
+      <header style="margin-block-end: var(--space-xl);">
+        <h1 class="t-display-small">WordPress Block Catalog</h1>
+        <p class="t-body-large" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-sm); max-inline-size: 64ch;">
+          Visual reference for every <code>.wp-block-*</code> core block styled by <code>blocks.css</code>. Markup mirrors what the WordPress block editor emits — copy the snippets directly into a post or template.
+        </p>
+      </header>
+
+      <!-- ========== Alignment ========== -->
+      <section class="sg-section" id="blocks-alignment">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Layout</div>
+          <h2 class="t-headline-medium">Alignment helpers</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>.alignleft</code>, <code>.alignright</code>, <code>.aligncenter</code> for inline-flow alignment. <code>.alignwide</code>, <code>.alignfull</code> for content-width breakouts. Both wide/full <strong>require a bounded parent</strong> — the demo container below sets <code>max-inline-size</code> to ensure correct behavior.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Float left / right</h3>
+          <div class="sg-demo">
+            <div class="alignleft sg-sample-img sg-sample-img--small" style="inline-size: 120px;"></div>
+            <p class="t-body-medium">왼쪽 정렬 이미지 옆으로 본문이 흘러갑니다. <code>.alignleft</code>는 <code>float: left</code>와 <code>margin-inline-end: var(--space-md)</code>를 적용합니다. RTL 환경에서는 logical property가 자동으로 반대편으로 띄웁니다. 영문 sample text follows the floated image to demonstrate the wrap behavior across mixed scripts.</p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Center</h3>
+          <div class="sg-demo">
+            <div class="aligncenter sg-sample-img" style="max-inline-size: 320px;"></div>
+            <p class="t-body-medium" style="margin-block-start: var(--space-md);">중앙 정렬된 figure 또는 image.</p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Wide / full</h3>
+          <div class="sg-demo">
+            <p class="t-body-medium">기본 콘텐츠 폭의 본문.</p>
+            <div class="alignwide sg-sample-img" style="block-size: 80px;"></div>
+            <p class="t-body-medium" style="margin-block-start: var(--space-md);"><code>.alignwide</code>는 부모의 <code>max-inline-size</code>를 해제합니다. 이 demo 컨테이너 자체가 720px이라 그 안에서만 늘어납니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Paragraph ========== -->
+      <section class="sg-section" id="blocks-paragraph">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <h2 class="t-headline-medium">Paragraph</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            기본 출력은 <code>prose.css</code>의 typography를 따릅니다. <code>.has-drop-cap</code> 변형만 <code>blocks.css</code>가 추가합니다.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Drop cap</h3>
+          <div class="sg-demo prose">
+            <p class="wp-block-paragraph has-drop-cap">처음 글자가 큰 드롭캡으로 표시됩니다. 본문은 자연스럽게 흘러갑니다. WordPress block editor에서 paragraph block의 "Drop cap" 옵션을 켜면 자동으로 <code>has-drop-cap</code> 클래스가 추가됩니다. 한글 첫 글자도 드롭캡 처리되며 brand typeface로 강조됩니다.</p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Text alignment</h3>
+          <div class="sg-demo prose">
+            <p class="has-text-align-left">왼쪽 정렬 (기본).</p>
+            <p class="has-text-align-center">중앙 정렬.</p>
+            <p class="has-text-align-right">오른쪽 정렬.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Quote / Pullquote ========== -->
+      <section class="sg-section" id="blocks-quote">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <h2 class="t-headline-medium">Quote &amp; Pullquote</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            Quote는 <code>prose.css</code>의 primary-bordered blockquote을 그대로 사용. Pullquote는 <code>blocks.css</code>가 정의한 별도 스타일 — headline-medium serif italic, top/bottom dividers.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/quote</h3>
+          <div class="sg-demo prose">
+            <blockquote class="wp-block-quote">
+              <p>코드는 한 번 쓰이고 여러 번 읽힙니다. 그래서 코드를 읽기 좋게 만드는 일이 가독성 있는 글을 쓰는 일보다 더 중요합니다.</p>
+              <cite>Guido van Rossum</cite>
+            </blockquote>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/pullquote</h3>
+          <div class="sg-demo">
+            <figure class="wp-block-pullquote">
+              <p>"디자인은 어떻게 보이느냐가 아니라 어떻게 작동하느냐다."</p>
+              <cite>Steve Jobs</cite>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Code / Preformatted / Verse ========== -->
+      <section class="sg-section" id="blocks-code">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <h2 class="t-headline-medium">Code / Preformatted / Verse</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/code</h3>
+          <div class="sg-demo">
+<pre class="wp-block-code"><code>function greet(name) {
+  return `안녕하세요, ${name}!`;
+}
+
+console.log(greet('World'));</code></pre>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/preformatted</h3>
+          <div class="sg-demo">
+<pre class="wp-block-preformatted">  공백과
+    들여쓰기가
+      그대로
+    유지됩니다.</pre>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/verse</h3>
+          <div class="sg-demo">
+<pre class="wp-block-verse">진달래꽃
+김소월
+
+나 보기가 역겨워
+가실 때에는
+말없이 고이 보내드리오리다</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== List ========== -->
+      <section class="sg-section" id="blocks-list">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <h2 class="t-headline-medium">List</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            기본 ul/ol는 <code>base.css</code> + <code>prose.css</code>가 처리. <code>is-style-list-segmented</code>는 <code>blocks.css</code>의 Axismundi block style — surface-container 셀이 2px 간격으로 쌓이는 segmented 변형.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default list</h3>
+          <div class="sg-demo prose">
+            <ul class="wp-block-list">
+              <li>첫 번째 항목</li>
+              <li>두 번째 항목
+                <ul>
+                  <li>중첩 항목 a</li>
+                  <li>중첩 항목 b</li>
+                </ul>
+              </li>
+              <li>세 번째 항목</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Segmented (Axismundi block style)</h3>
+          <div class="sg-demo">
+            <ul class="wp-block-list is-style-list-segmented">
+              <li>알림 설정</li>
+              <li>개인정보</li>
+              <li>연결된 계정</li>
+              <li>로그아웃</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Task list (markdown <code>- [x]</code>)</h3>
+          <div class="sg-demo prose">
+            <ul>
+              <li><input type="checkbox" disabled checked> 완료된 작업</li>
+              <li><input type="checkbox" disabled> 진행 중인 작업</li>
+              <li><input type="checkbox" disabled> 대기 중인 작업</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Separator ========== -->
+      <section class="sg-section" id="blocks-separator">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Separator — 5 styles</h2>
+        </header>
+
+        <div class="sg-demo">
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant);">Default (25% width)</p>
+          <hr class="wp-block-separator">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Wide (100%)</p>
+          <hr class="wp-block-separator is-style-wide">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Dots (centered ···)</p>
+          <hr class="wp-block-separator is-style-dots">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Divider inset (Axismundi block style)</p>
+          <hr class="wp-block-separator is-style-divider-inset">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Divider middle-inset</p>
+          <hr class="wp-block-separator is-style-divider-middle-inset">
+        </div>
+      </section>
+
+      <!-- ========== Table ========== -->
+      <section class="sg-section" id="blocks-table">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Table</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/table</code>은 <code>&lt;figure class="wp-block-table"&gt;</code> 안에 <code>&lt;table&gt;</code>이 들어있는 형태로 출력됩니다. <code>blocks.css</code>가 figure를 wrapper로 활용 (border, radius, overflow-x).
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default</h3>
+          <div class="sg-demo prose">
+            <figure class="wp-block-table">
+              <table>
+                <thead>
+                  <tr><th>이름</th><th>역할</th><th>가입일</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>김민수</td><td>관리자</td><td>2024-01-15</td></tr>
+                  <tr><td>이서연</td><td>편집자</td><td>2024-03-22</td></tr>
+                  <tr><td>박지훈</td><td>작성자</td><td>2024-05-08</td></tr>
+                </tbody>
+              </table>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Stripes (<code>is-style-stripes</code>)</h3>
+          <div class="sg-demo prose">
+            <figure class="wp-block-table is-style-stripes">
+              <table>
+                <thead>
+                  <tr><th>제품</th><th>가격</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Basic</td><td>$9/mo</td></tr>
+                  <tr><td>Pro</td><td>$29/mo</td></tr>
+                  <tr><td>Enterprise</td><td>Contact</td></tr>
+                </tbody>
+              </table>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Wide table — horizontal scroll (default)</h3>
+          <p class="sg-helper">기본 동작: 셀이 줄바꿈 없이 자연 너비 유지 → wrapper의 <code>overflow-x: auto</code>로 가로 스크롤. 데모는 <code>white-space: nowrap</code>을 셀에 인라인 적용해서 작은 viewport에서도 overflow 발생을 보장.</p>
+          <div class="sg-demo prose">
+            <figure class="wp-block-table">
+              <table>
+                <thead>
+                  <tr style="white-space: nowrap;">
+                    <th>ID</th><th>이름 (Full Name)</th><th>이메일 주소</th>
+                    <th>역할 / 권한</th><th>가입일자</th>
+                    <th>마지막 로그인 시각</th><th>현재 상태</th><th>접속 IP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="white-space: nowrap;">
+                    <td>00001</td><td>김민수 (Minsu Kim)</td>
+                    <td>minsu.kim@example.com</td>
+                    <td>Administrator</td><td>2024-01-15 09:30</td>
+                    <td>2 hours ago</td><td>● Active</td>
+                    <td>203.0.113.42</td>
+                  </tr>
+                  <tr style="white-space: nowrap;">
+                    <td>00002</td><td>이서연 (Seoyeon Lee)</td>
+                    <td>seoyeon.lee@example.com</td>
+                    <td>Editor</td><td>2024-03-22 14:18</td>
+                    <td>1 day ago</td><td>● Active</td>
+                    <td>198.51.100.7</td>
+                  </tr>
+                </tbody>
+              </table>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Wide table — wrap (<code>is-style-wrap</code>)</h3>
+          <p class="sg-helper">Opt OUT of horizontal scroll. Cells wrap to multiple lines. Use when table content is text-heavy (descriptions, notes).</p>
+          <div class="sg-demo prose">
+            <figure class="wp-block-table is-style-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>토큰</th><th>설명 (긴 텍스트)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>--space-md</code></td>
+                    <td>component padding 기본값. 16px. 한글 본문이나 영문 설명이 길게 들어가도 셀 안에서 자연스럽게 줄바꿈되어 표시됩니다.</td>
+                  </tr>
+                  <tr>
+                    <td><code>--space-lg</code></td>
+                    <td>section 내부 단락 간 spacing. 24px. word-break: keep-all 로 한글은 단어 단위 줄바꿈, 긴 영단어는 overflow-wrap: anywhere로 강제 break.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Vertical borders (<code>is-style-vertical-borders</code>)</h3>
+          <p class="sg-helper">Adds column separators. Use when cells merge (rowspan / colspan) — vertical lines communicate the merged structure.</p>
+          <div class="sg-demo prose">
+            <figure class="wp-block-table is-style-vertical-borders">
+              <table>
+                <thead>
+                  <tr>
+                    <th rowspan="2">분기</th>
+                    <th colspan="2">매출</th>
+                    <th rowspan="2">증감</th>
+                  </tr>
+                  <tr>
+                    <th>2024</th>
+                    <th>2025</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Q1</td><td>120</td><td>145</td><td>+21%</td></tr>
+                  <tr><td>Q2</td><td>135</td><td>168</td><td>+24%</td></tr>
+                  <tr><td>Q3</td><td>140</td><td>178</td><td>+27%</td></tr>
+                </tbody>
+              </table>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">With figcaption</h3>
+          <p class="sg-helper">core/table에서 caption 입력 시 figure 하위에 figcaption으로 출력. wrapper 외부에 위치하므로 가로 스크롤 영역 밖에서 그대로 보임.</p>
+          <div class="sg-demo prose">
+            <figure class="wp-block-table is-style-stripes">
+              <table>
+                <thead>
+                  <tr><th>제품</th><th>가격</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Basic</td><td>$9/mo</td></tr>
+                  <tr><td>Pro</td><td>$29/mo</td></tr>
+                  <tr><td>Enterprise</td><td>Contact</td></tr>
+                </tbody>
+              </table>
+              <figcaption>Table 1. 2026년 기준 월별 구독 요금 — VAT 별도</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Image / Gallery ========== -->
+      <section class="sg-section" id="blocks-media">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Image &amp; Gallery</h2>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/image</h3>
+          <div class="sg-demo">
+            <figure class="wp-block-image">
+              <div class="sg-sample-img"></div>
+              <figcaption>이미지 캡션은 <code>prose.css</code>의 figcaption 스타일을 따릅니다 (body-small, on-surface-variant, center).</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/gallery — 3 columns</h3>
+          <div class="sg-demo">
+            <ul class="wp-block-gallery columns-3">
+              <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
+              <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
+              <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
+              <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
+              <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
+              <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Group / Columns / Card variants ========== -->
+      <section class="sg-section" id="blocks-group">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Columns / Group / Card variants</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/group</code> + 3 card style variants — <code>is-style-card-filled</code>, <code>is-style-card-elevated</code>, <code>is-style-card-outlined</code>. <code>core/columns</code>는 600px 이하에서 자동 stack (<code>is-not-stacked-on-mobile</code> 옵션으로 비활성).
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Card filled</h3>
+          <div class="sg-demo">
+            <div class="wp-block-group is-style-card-filled">
+              <h4 class="t-title-medium" style="margin: 0 0 var(--space-sm);">알림</h4>
+              <p class="t-body-medium" style="margin: 0;">새로운 메시지가 도착했습니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Card elevated</h3>
+          <div class="sg-demo">
+            <div class="wp-block-group is-style-card-elevated">
+              <h4 class="t-title-medium" style="margin: 0 0 var(--space-sm);">제목</h4>
+              <p class="t-body-medium" style="margin: 0;">elevated card는 약간의 그림자로 surface 위로 떠 보입니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Card outlined</h3>
+          <div class="sg-demo">
+            <div class="wp-block-group is-style-card-outlined">
+              <h4 class="t-title-medium" style="margin: 0 0 var(--space-sm);">제목</h4>
+              <p class="t-body-medium" style="margin: 0;">outlined card는 1px outline-variant 테두리만 있습니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/columns — 3 columns (mobile stack @ 600px)</h3>
+          <div class="sg-demo">
+            <div class="wp-block-columns">
+              <div class="wp-block-column">
+                <h4 class="t-title-medium">첫번째</h4>
+                <p class="t-body-medium">왼쪽 컬럼.</p>
+              </div>
+              <div class="wp-block-column">
+                <h4 class="t-title-medium">두번째</h4>
+                <p class="t-body-medium">중간 컬럼.</p>
+              </div>
+              <div class="wp-block-column">
+                <h4 class="t-title-medium">세번째</h4>
+                <p class="t-body-medium">오른쪽 컬럼.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Buttons ========== -->
+      <section class="sg-section" id="blocks-button">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Buttons — 5 style variants</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/button</code> + <code>is-style-{filled|tonal|elevated|outlined|text}</code>. Phase 2A는 <code>blocks.css</code>의 fallback 스타일이 직접 적용. Phase 3 PHP <code>register_block_style()</code> + render filter 작성 후엔 <code>.ax-button</code> 클래스가 주입되어 <code>components.css §3</code>가 takeover.
+          </p>
+        </header>
+
+        <div class="sg-demo">
+          <div class="wp-block-buttons">
+            <div class="wp-block-button is-style-filled">
+              <a class="wp-block-button__link">Filled</a>
+            </div>
+            <div class="wp-block-button is-style-tonal">
+              <a class="wp-block-button__link">Tonal</a>
+            </div>
+            <div class="wp-block-button is-style-elevated">
+              <a class="wp-block-button__link">Elevated</a>
+            </div>
+            <div class="wp-block-button is-style-outlined">
+              <a class="wp-block-button__link">Outlined</a>
+            </div>
+            <div class="wp-block-button is-style-text">
+              <a class="wp-block-button__link">Text</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =========================================================
+       Footer — author + license credit
+       ========================================================= -->
+  <footer class="sg-footer">
+    <div class="sg-footer__inner">
+      <p class="t-body-medium sg-footer__title">
+        <strong>Axismundi</strong> — Material 3 design system for WordPress
+      </p>
+      <p class="t-body-small sg-footer__meta">
+        © 2026 본인 실명 ·
+        <a href="https://designbusan.ai.kr" rel="author">designbusan.ai.kr</a> ·
+        Licensed under
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="license">GPL-3.0-or-later</a>
+      </p>
+      <p class="t-body-small sg-footer__meta">
+        Documentation licensed under
+        <a href="https://creativecommons.org/licenses/by/4.0/" rel="license">CC&nbsp;BY&nbsp;4.0</a>
+      </p>
+    </div>
+  </footer>
+
+  <script defer src="scripts/theme.js"></script>
+</body>
+</html>

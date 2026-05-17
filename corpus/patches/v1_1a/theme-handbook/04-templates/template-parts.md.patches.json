@@ -1,0 +1,12 @@
+[
+  {
+    "find": "```text\n- `comments.html`\n- `footer.html`\n- `header.html`\n- `sidebar.html`\n```",
+    "replace": "    - `comments.html`\n    - `footer.html`\n    - `header.html`\n    - `sidebar.html`",
+    "reason": "v1.1a markdown_list (block_1): parts/ directory tree — fence breaks parent `- parts/` bullet; indent children to 4-space"
+  },
+  {
+    "find": "```text\n- `div`\n- `article`\n- `aside`\n- `footer`\n- `header`\n- `main`\n- `section`\n```",
+    "replace": "    - `div`\n    - `article`\n    - `aside`\n    - `footer`\n    - `header`\n    - `main`\n    - `section`",
+    "reason": "v1.1a markdown_list (block_2): area_tag's HTML tag options — fence breaks parent `- **area_tag**:` bullet; indent children to 4-space"
+  }
+]

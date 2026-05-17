@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Tooltip Lab Module (v3.4.6)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-tooltip.css" />
+
+  <style>
+    /* Local layout — pattern page only, NOT a reusable component. */
+    .lab-layout {
+      max-inline-size: min(100%, 960px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow { color: var(--md-sys-color-on-surface-variant); }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-section { display: grid; gap: var(--space-md); }
+    .lab-section__head { margin: 0; display: grid; gap: var(--space-xs); }
+    .lab-section__title { margin: 0; }
+    .lab-section__supporting { margin: 0; color: var(--md-sys-color-on-surface-variant); }
+    .sg-theme {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body class="lab-tooltip-pattern">
+  <main class="lab-layout">
+    <header class="lab-header">
+      <span class="t-label-medium lab-header__eyebrow">Axismundi · Lab module</span>
+      <h1 class="t-headline-large">Tooltip (v3.4.6)</h1>
+      <p class="t-body-large" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+        Hover/focus descriptive tooltip runtime. Lab module only — not promoted to baseline.
+        Different trigger model from popover: <em>does not move focus</em>, uses
+        <code>aria-describedby</code>, not <code>role="menu"</code>. See
+        <code>docs/TOOLTIP-AUDIT.md</code> for rationale, Beer CSS intake notes, and a11y risk register.
+      </p>
+
+      <!-- Theme switcher — uses data-theme-set (canonical contract, post-v3.4.5) -->
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+          <span>Light</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+          <span>Dark</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">contrast</span>
+          <span>Auto</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="lab-banner">
+      <strong class="t-title-medium">Lab module — runtime layer only</strong>
+      <p class="t-body-medium" style="margin: 0;">
+        Tooltip show/hide/aria-describedby runs only inside this pattern page. The baseline
+        styleguide keeps <code>.ax-tooltip.is-open</code> as a static visual specimen. Rich
+        tooltip variants below are <strong>visual specimens only at v3.4.6</strong> — their
+        interactive wiring (Tab into actions, Escape dismiss with focus restoration) is
+        intentionally deferred to a later phase.
+      </p>
+    </aside>
+
+    <!-- ========== 1. Plain hover demo (.ax-icon-button[aria-label]) ========== -->
+    <section class="lab-section" id="demo-hover-icon">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Plain tooltip — hover on icon button</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Icon-only buttons get tooltip exposure of their <code>aria-label</code> (Decision B
+          selector). Hover or focus the buttons below; the singleton tooltip appears above
+          the trigger, anchored center, with 8px gap. Inspect the trigger's
+          <code>aria-describedby</code> attribute in DevTools — it should equal
+          <code>lab-tooltip-singleton</code> while visible and disappear on hide.
+        </p>
+      </header>
+      <div class="lab-tooltip-demo">
+        <div class="lab-tooltip-demo__row">
+          <span class="lab-tooltip-demo__label t-label-medium">Icon buttons:</span>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="새 글 쓰기">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">edit</span>
+          </button>
+          <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="다른 이름으로 저장">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">save</span>
+          </button>
+          <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="삭제">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">delete</span>
+          </button>
+          <button class="ax-icon-button is-outlined has-state-layer" type="button" aria-label="공유">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 2. Plain hover demo ([data-tooltip] explicit opt-in) ========== -->
+    <section class="lab-section" id="demo-hover-explicit">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Plain tooltip — explicit <code>data-tooltip</code></h2>
+        <p class="t-body-medium lab-section__supporting">
+          Any element with a <code>data-tooltip</code> attribute is wired, regardless of tag.
+          This is the universal opt-in route. <code>data-tooltip</code> wins over
+          <code>aria-label</code> if both are present.
+        </p>
+      </header>
+      <div class="lab-tooltip-demo">
+        <div class="lab-tooltip-demo__row">
+          <span class="lab-tooltip-demo__label t-label-medium">Span with data-tooltip:</span>
+          <span tabindex="0"
+                data-tooltip="이 요소는 data-tooltip으로 명시적 opt-in"
+                style="padding: 4px 8px; border: 1px dashed var(--md-sys-color-outline); border-radius: 4px; cursor: help;">
+            hover me
+          </span>
+          <span tabindex="0"
+                data-tooltip="Korean + English mixed: ⌘ + N"
+                style="padding: 4px 8px; border: 1px dashed var(--md-sys-color-outline); border-radius: 4px; cursor: help;">
+            mixed locale
+          </span>
+        </div>
+        <div class="lab-tooltip-demo__row">
+          <span class="lab-tooltip-demo__label t-label-medium">Priority test (both):</span>
+          <button class="ax-icon-button is-standard has-state-layer"
+                  type="button"
+                  aria-label="이건 aria-label이지만 무시되어야 함"
+                  data-tooltip="data-tooltip이 우선">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">info</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 3. Keyboard focus demo ========== -->
+    <section class="lab-section" id="demo-focus">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Keyboard focus path</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Tab through the buttons below. The tooltip shows on <code>focusin</code> and hides
+          on <code>focusout</code> — independent of pointer position. Focus stays on the
+          trigger throughout. <code>Escape</code> dismisses the visible tooltip (the trigger
+          keeps focus and the next Tab moves forward as usual).
+        </p>
+      </header>
+      <div class="lab-tooltip-demo">
+        <div class="lab-tooltip-demo__row">
+          <span class="lab-tooltip-demo__label t-label-medium">Tab through:</span>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="첫 번째">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_back</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="두 번째">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_upward</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="세 번째">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_downward</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="네 번째">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 4. Forbidden-ancestor bail-out demo (negative test) ========== -->
+    <section class="lab-section" id="demo-forbidden">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Forbidden-ancestor bail-out</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Triggers placed inside <code>.prose</code> or <code>[contenteditable]</code> must
+          be <strong>ignored</strong> by the tooltip runtime. Charter §5, §6 — federation
+          content surfaces and WordPress block editor regions cannot surface theme-side
+          tooltips inside user-authored content.
+        </p>
+      </header>
+      <div class="lab-tooltip-demo lab-tooltip-demo--forbidden">
+        <p class="t-body-small" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+          ↓ Triggers below are inside <code>.prose</code>. Hover or focus them — no tooltip
+          should appear. (If a tooltip appears, the bail-out is broken.)
+        </p>
+        <div class="prose">
+          <p>이 단락은 <code>.prose</code> 안에 있습니다. 아래 버튼들은 무시되어야 합니다.</p>
+          <p>
+            <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="이 tooltip은 발사되면 안 됨">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">block</span>
+            </button>
+            <span tabindex="0"
+                  data-tooltip="이 data-tooltip도 무시되어야 함"
+                  style="padding: 4px 8px; border: 1px dashed var(--md-sys-color-error); border-radius: 4px; cursor: help; margin-inline-start: 8px;">
+              data-tooltip in .prose — must not fire
+            </span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 5. Rich tooltip — VISUAL SPECIMEN ONLY (not wired) ========== -->
+    <section class="lab-section" id="demo-rich-specimen">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Rich tooltip — visual specimen (not wired at v3.4.6)</h2>
+        <p class="t-body-medium lab-section__supporting">
+          The rich variant carries a subhead, supporting text, and action buttons. Its
+          interactive wiring (Tab into actions, Escape with focus restoration, hover into
+          tooltip body without dismissing) is intentionally <strong>deferred</strong> — see
+          BACKLOG #16. The specimen below is rendered statically with <code>is-open</code>
+          so the visual primitive can be audited against M3 §34.3 without the runtime layer.
+        </p>
+      </header>
+      <div class="lab-tooltip-demo lab-tooltip-demo--rich-specimen">
+        <p class="t-body-small" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+          ↓ Static specimen. Tab order ignores these elements — they are inert at v3.4.6.
+        </p>
+        <div class="ax-tooltip is-rich is-open" role="tooltip" aria-hidden="true">
+          <span class="ax-tooltip__subhead">키보드 단축키</span>
+          <span class="ax-tooltip__supporting">
+            ⌘ + N으로 새 글 작성을 빠르게 시작할 수 있습니다. 본 specimen은 v3.4.6에서
+            interactive wiring이 적용되지 않습니다.
+          </span>
+          <div class="ax-tooltip__actions">
+            <button type="button" class="ax-tooltip__action" tabindex="-1">자세히</button>
+            <button type="button" class="ax-tooltip__action" tabindex="-1">닫기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer style="display: grid; gap: var(--space-xs); padding-block-start: var(--space-lg); border-block-start: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);">
+      <p class="t-body-small" style="margin: 0;">
+        Audit: <a href="docs/TOOLTIP-AUDIT.md">TOOLTIP-AUDIT.md</a> ·
+        Charter: <a href="../../docs/ARCHITECTURE-BOUNDARIES.md">ARCHITECTURE-BOUNDARIES.md</a> ·
+        Intake: <a href="../../docs/BEER-CSS-INTAKE.md">BEER-CSS-INTAKE.md</a> ·
+        Popover (sibling module): <a href="../popover/lab-popover-pattern.html">lab-popover-pattern.html</a>
+      </p>
+    </footer>
+  </main>
+
+  <!-- Theme runtime (shared with all module pattern pages) -->
+  <script defer src="../../scripts/theme.js"></script>
+  <!-- Lab module runtime -->
+  <script defer src="lab-tooltip.js"></script>
+</body>
+</html>

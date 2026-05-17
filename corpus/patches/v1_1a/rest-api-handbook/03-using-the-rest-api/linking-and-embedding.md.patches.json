@@ -1,0 +1,7 @@
+[
+  {
+    "find": "](https://developer.wordpress.org/rest-api/global-parameters/#envelope)",
+    "replace": "](global-parameters.md#envelope)",
+    "reason": "v1.1a: link to rest-api-handbook/03-using-the-rest-api/global-parameters.md#envelope"
+  }
+]

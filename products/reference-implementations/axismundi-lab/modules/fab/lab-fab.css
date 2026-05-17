@@ -1,0 +1,164 @@
+/* ============================================================
+ * lab-fab.css — Axismundi FAB family lab module
+ * v3.5.5 Phase 2
+ *
+ * Scope: lab-internal pattern page scaffolding only.
+ *
+ * Source authority:
+ *   - docs/FAB-SPEC-AUDIT.md
+ *   - docs/FAB-MEASUREMENT-AUDIT.md
+ *   - docs/FAB-WP-MAPPING.md
+ *
+ * Baseline primitives remain authoritative and unchanged:
+ *   - components.css §15 FAB
+ *   - components.css §16 Extended FAB
+ *   - components.css §0 state-layer foundation
+ *
+ * Dependency profile:
+ *   - state-layer foundation = CURRENT
+ *   - icon-system/ = CURRENT unconditional
+ *   - ripple/ = CANDIDATE, not wired here
+ *   - elevation tokens = CURRENT token graph
+ *
+ * Rules:
+ *   - NO unscoped .ax-fab or .ax-fab-extended overrides.
+ *   - NO ripple wiring.
+ *   - NO production fixed/sticky placement utility.
+ *   - NO JavaScript dependency.
+ * ============================================================ */
+
+.lab-fab-demo {
+  --lab-fab-gap: var(--space-md);
+  --lab-fab-section-gap: var(--space-xl);
+  --lab-fab-caption-color: var(--md-sys-color-on-surface-variant);
+  --lab-fab-panel: color-mix(in srgb, var(--md-sys-color-surface-container), transparent 8%);
+  --lab-fab-border: color-mix(in srgb, var(--md-sys-color-outline-variant), transparent 12%);
+  display: grid;
+  gap: var(--lab-fab-section-gap);
+  max-inline-size: min(100%, 1080px);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--space-md);
+}
+
+.lab-fab-section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-fab-section__head {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.lab-fab-section__title {
+  margin: 0;
+}
+
+.lab-fab-section__supporting {
+  max-inline-size: 76ch;
+  margin: 0;
+  color: var(--lab-fab-caption-color);
+}
+
+.lab-fab-banner {
+  padding: var(--space-md);
+  border: 1px solid var(--lab-fab-border);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.lab-fab-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lab-fab-gap);
+}
+
+/* Icon-system bridge for this lab page.
+ * The FAB baseline sizes SVG/.ax-icon boxes through --_fab-icon.
+ * Material Symbols glyphs size by font-size, so the live icon-system
+ * specimens need this scoped bridge to match 24 / 28 / 36px. */
+.lab-fab-demo .ax-fab > .material-symbols-rounded,
+.lab-fab-demo .ax-fab-extended > .material-symbols-rounded {
+  font-size: var(--_fab-icon);
+}
+
+.lab-fab-demo .ax-fab > .material-symbols-rounded {
+  --md-icon-opsz: 24;
+}
+
+.lab-fab-demo .ax-fab.is-medium > .material-symbols-rounded {
+  --md-icon-opsz: 28;
+}
+
+.lab-fab-demo .ax-fab.is-large > .material-symbols-rounded {
+  --md-icon-opsz: 36;
+}
+
+.lab-fab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(144px, 1fr));
+  gap: var(--space-md);
+}
+
+.lab-fab-specimen {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--space-sm);
+  min-block-size: 148px;
+  padding: var(--space-md);
+  border: 1px solid var(--lab-fab-border);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--lab-fab-panel);
+}
+
+.lab-fab-specimen--wide {
+  min-inline-size: min(100%, 220px);
+}
+
+.lab-fab-caption {
+  max-inline-size: 28ch;
+  margin: 0;
+  color: var(--lab-fab-caption-color);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  text-align: center;
+}
+
+.lab-fab-caption--ko {
+  font-weight: 500;
+}
+
+.lab-fab-code {
+  overflow-x: auto;
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--lab-fab-border);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-fab-code code {
+  white-space: pre;
+}
+
+.lab-fab-placement-note {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-inline-start: 4px solid var(--md-sys-color-tertiary);
+  border-radius: var(--md-sys-shape-corner-small);
+  background: color-mix(in srgb, var(--md-sys-color-tertiary-container), transparent 55%);
+}
+
+.lab-fab-elevation-note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--lab-fab-caption-color);
+}
+
+.lab-fab-demo a {
+  color: var(--md-sys-color-primary);
+}

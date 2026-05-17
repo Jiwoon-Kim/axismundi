@@ -1,0 +1,251 @@
+/* ============================================================
+ * Axismundi — lab-search-bar.css
+ * v3.5.8 — Search bar #17 Full-Spec + Runtime module
+ *
+ * Phase 2 scope:
+ *   - Lab-only Search bar pattern scaffolding.
+ *   - Runtime expansion layer derived from search-expansion/ evidence.
+ *   - No baseline components.css §10 mutation.
+ *   - No popover/ dependency.
+ *   - Field host remains non-ripple; trailing icon buttons may consume Ripple v2.
+ * ============================================================ */
+
+.lab-search-bar-demo {
+  --ax-search-suggestions-item-gap: 2px;
+  --ax-search-suggestions-item-icon-gap: 12px;
+  --ax-search-suggestions-item-min-height: 44px;
+
+  max-inline-size: min(100%, 1080px);
+  margin-inline: auto;
+  padding: var(--space-lg) var(--space-md);
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.lab-search-bar-header,
+.lab-search-bar-section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-search-bar-header {
+  padding-block-end: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-search-bar-banner {
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.lab-search-bar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.lab-search-bar-card {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-lowest);
+}
+
+.lab-search-bar-card .search-bar {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.lab-search-bar-caption {
+  color: var(--md-sys-color-on-surface-variant);
+  max-inline-size: 70ch;
+}
+
+.lab-search-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.lab-search-bar-code {
+  overflow: auto;
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* Runtime expansion layer.
+ * The baseline .search-bar layout remains in components.css §10. */
+.search-bar {
+  transition:
+    background-color var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    box-shadow var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    transform var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial);
+}
+
+.search-bar:focus-within,
+.search-bar.is-search-active {
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+  transform: translateY(-1px);
+}
+
+.search-bar.is-search-active {
+  z-index: 20;
+}
+
+.search-bar[data-search-style="divided"] {
+  border-radius: var(--md-sys-shape-corner-large);
+  box-shadow: none;
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.search-bar[aria-disabled="true"] .search-bar__input,
+.search-bar.is-search-disabled .search-bar__input {
+  cursor: not-allowed;
+}
+
+/* Custom clear buttons are explicit trailing icon-button consumers.
+ * Hide browser-provided search decorations so the affordance is not doubled. */
+input.search-bar__input[type="search"]::-webkit-search-cancel-button,
+input.search-bar__input[type="search"]::-webkit-search-decoration,
+input.search-bar__input[type="search"]::-webkit-search-results-button,
+input.search-bar__input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: 0;
+  block-size: 0;
+  margin: 0;
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+input.search-bar__input[type="search"]::-ms-clear,
+input.search-bar__input[type="search"]::-ms-reveal {
+  display: none;
+  inline-size: 0;
+  block-size: 0;
+}
+
+.ax-search-suggestions {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline: 0;
+  z-index: 30;
+
+  display: grid;
+  gap: var(--ax-search-suggestions-item-gap);
+  padding-block: var(--space-sm);
+
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  transform-origin: top center;
+  pointer-events: none;
+
+  transition:
+    opacity var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    transform var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial),
+    visibility 0s linear var(--md-sys-motion-curve-fast-effects-duration);
+}
+
+.search-bar.is-search-active .ax-search-suggestions {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition:
+    opacity var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    transform var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial),
+    visibility 0s linear 0s;
+}
+
+.ax-search-suggestions__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ax-search-suggestions-item-icon-gap);
+  min-height: var(--ax-search-suggestions-item-min-height);
+  padding-inline: var(--space-md);
+  padding-block: 0;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ax-search-suggestions__item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--md-sys-motion-curve-fast-effects-duration)
+    var(--md-sys-motion-curve-fast-effects);
+}
+
+.ax-search-suggestions__item:hover::before {
+  opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+
+.ax-search-suggestions__item:focus-visible::before {
+  opacity: var(--md-sys-state-focus-state-layer-opacity);
+}
+
+.ax-search-suggestions__item .material-symbols-rounded {
+  font-size: var(--comp-icon-size-sm);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-search-bar-negative {
+  padding: var(--space-md);
+  border: 2px dashed var(--md-sys-color-error);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: color-mix(in srgb, var(--md-sys-color-error-container) 36%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-bar {
+    transition: background-color 0s, box-shadow 0s, transform 0s;
+  }
+
+  .search-bar:focus-within,
+  .search-bar.is-search-active {
+    transform: none;
+  }
+
+  .ax-search-suggestions {
+    transform: none;
+    transition: opacity 0s, visibility 0s;
+  }
+
+  .search-bar.is-search-active .ax-search-suggestions {
+    transform: none;
+    transition: opacity 0s, visibility 0s;
+  }
+}

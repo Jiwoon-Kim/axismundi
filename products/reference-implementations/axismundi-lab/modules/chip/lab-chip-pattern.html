@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Chip Full Spec Module (v3.4.9)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-chip.css" />
+
+  <style>
+    .lab-layout {
+      max-inline-size: min(100%, 1080px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow { color: var(--md-sys-color-on-surface-variant); }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-section { display: grid; gap: var(--space-md); }
+    .lab-section__head { margin: 0; display: grid; gap: var(--space-xs); }
+    .lab-section__title { margin: 0; }
+    .lab-section__supporting { margin: 0; color: var(--md-sys-color-on-surface-variant); }
+    .sg-theme {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+    .lab-applied { display: grid; gap: var(--space-xs); }
+    .lab-applied__output {
+      padding: var(--space-sm) var(--space-md);
+      background-color: var(--md-sys-color-surface-container);
+      border-radius: var(--md-sys-shape-corner-small);
+      color: var(--md-sys-color-on-surface-variant);
+      font-family: var(--md-sys-typescale-body-small-font);
+      font-size: var(--md-sys-typescale-body-small-size);
+    }
+    .lab-applied__output:empty::after {
+      content: "(none selected — toggle the filter chips above)";
+      font-style: italic;
+    }
+  </style>
+</head>
+<body class="lab-chip-pattern">
+  <main class="lab-layout">
+    <header class="lab-header">
+      <span class="t-label-medium lab-header__eyebrow">Axismundi · Lab module</span>
+      <h1 class="t-headline-large">Chip Full Spec Module (v3.4.9)</h1>
+      <p class="t-body-large" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+        The first <strong>Component Full-Spec Module</strong>. Unlike interaction
+        modules, the chip module does not extract runtime from a benchmark source;
+        it expands the baseline chip primitive into full M3 §14 spec coverage,
+        measurement audit, and WordPress mapping. The <code>components.css §11
+        Chip</code> baseline (L1626–L1743) is <strong>UNCHANGED</strong> at v3.4.9.
+        See <code>docs/CHIP-SPEC-AUDIT.md</code>, <code>docs/CHIP-MEASUREMENT-AUDIT.md</code>,
+        <code>docs/CHIP-WP-MAPPING.md</code>.
+      </p>
+
+      <!-- Theme switcher — canonical data-theme-set contract -->
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+          <span class="chip__label">Light</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+          <span class="chip__label">Dark</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true">
+          <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">contrast</span>
+          <span class="chip__label">Auto</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="lab-banner">
+      <strong class="t-title-medium">First Component Full-Spec Module — design principles applied</strong>
+      <p class="t-body-medium" style="margin: 0;">
+        Per <code>lab/modules/README.md §Design principles</code>:
+        (1) <strong>Visible control must map to real runtime behavior</strong>.
+        (2) Prefer native form semantics. (3) No fake controls in demos.
+        This page demonstrates the principle-compliant patterns: filter chips
+        use <code>&lt;input type="checkbox"&gt;</code> / <code>&lt;input type="radio"&gt;</code>,
+        input chip close uses real <code>&lt;button&gt;</code> with
+        <code>aria-label</code>, disabled chips actually disable.
+      </p>
+    </aside>
+
+    <!-- ========== 1. Four-variant matrix (representative) ========== -->
+    <section class="lab-section" id="demo-variant-matrix">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">1 · Four-variant matrix</h2>
+        <p class="t-body-medium lab-section__supporting">
+          The four M3 §14 baseline variants. Each is rendered with the
+          principle-compliant semantic for its role. Compare to baseline at
+          <code>style-guide.html#components-chip</code> for representative specimens.
+        </p>
+      </header>
+
+      <div class="lab-chip-demo">
+        <!-- Assist: <button> with real action -->
+        <div class="lab-chip-demo__row">
+          <span class="t-label-medium lab-chip-demo__label">Assist chip:</span>
+          <button class="chip chip--assist has-state-layer" type="button" onclick="document.getElementById('assist-output').textContent = 'Action triggered at ' + new Date().toLocaleTimeString();">
+            <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">info</span>
+            <span class="chip__label">Show details</span>
+          </button>
+          <output id="assist-output" class="t-body-small" style="color: var(--md-sys-color-on-surface-variant);"></output>
+        </div>
+
+        <!-- Suggestion: <button> with real action -->
+        <div class="lab-chip-demo__row">
+          <span class="t-label-medium lab-chip-demo__label">Suggestion chip:</span>
+          <button class="chip chip--suggestion has-state-layer" type="button" onclick="document.getElementById('suggestion-output').textContent = 'Suggestion accepted at ' + new Date().toLocaleTimeString();">
+            <span class="chip__label">Try Korean cuisine</span>
+          </button>
+          <output id="suggestion-output" class="t-body-small" style="color: var(--md-sys-color-on-surface-variant);"></output>
+        </div>
+
+        <p class="lab-chip-demo__measurement">
+          Measurements (per <code>CHIP-MEASUREMENT-AUDIT.md §3</code>):
+          height 32px · corner-radius 8px (corner-small token) · label
+          typography label-large · outline 1px outline-variant (assist) /
+          flat (suggestion). Filter and Input variants are demonstrated
+          separately below since they have richer state behavior.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 2. Filter chip — multi-select (checkbox group) ========== -->
+    <section class="lab-section" id="demo-filter-multi">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">2 · Filter chip — multi-select (native checkboxes)</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Per Principle 2: <strong>native form semantics over JS-emulated state</strong>.
+          Each filter chip is a <code>&lt;label&gt;</code> wrapping styling, paired with
+          a hidden <code>&lt;input type="checkbox"&gt;</code> via <code>for=</code>.
+          Clicking the chip toggles the input natively; CSS reads
+          <code>:checked</code> to render the selected state. No JS required.
+        </p>
+      </header>
+
+      <div class="lab-chip-demo">
+        <fieldset class="lab-chip-fieldset">
+          <legend class="t-label-medium lab-chip-fieldset__legend">Categories (select any combination):</legend>
+          <div class="lab-chip-demo__row">
+
+            <input class="chip__control" type="checkbox" id="filter-design" checked />
+            <label class="chip chip--filter has-state-layer" for="filter-design">
+              <span class="chip__label">Design</span>
+            </label>
+
+            <input class="chip__control" type="checkbox" id="filter-engineering" />
+            <label class="chip chip--filter has-state-layer" for="filter-engineering">
+              <span class="chip__label">Engineering</span>
+            </label>
+
+            <input class="chip__control" type="checkbox" id="filter-research" checked />
+            <label class="chip chip--filter has-state-layer" for="filter-research">
+              <span class="chip__label">Research</span>
+            </label>
+
+            <input class="chip__control" type="checkbox" id="filter-ops" />
+            <label class="chip chip--filter has-state-layer" for="filter-ops">
+              <span class="chip__label">Operations</span>
+            </label>
+
+          </div>
+        </fieldset>
+
+        <p class="lab-chip-demo__measurement">
+          Selected state styling matches baseline <code>§11 L1709–L1715</code> exactly —
+          outline removed, secondary-container fill, on-secondary-container text. The
+          <code>.chip__control:checked + .chip--filter</code> selector in
+          <code>lab-chip.css §1</code> mirrors the baseline button-based filter selected state.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 3. Filter chip — single-select (radio group) ========== -->
+    <section class="lab-section" id="demo-filter-single">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">3 · Filter chip — single-select (native radios)</h2>
+        <p class="t-body-medium lab-section__supporting">
+          M3 §14.3 supports both multi-select (toolbar pattern, <code>aria-pressed</code>)
+          and single-select (radiogroup, <code>aria-checked</code>). The native radio
+          group expresses one-of-N exactly: exactly one chip is selected at a time,
+          arrow keys move focus within the group, and the group has a legend.
+        </p>
+      </header>
+
+      <div class="lab-chip-demo">
+        <fieldset class="lab-chip-fieldset">
+          <legend class="t-label-medium lab-chip-fieldset__legend">Sort by (choose one):</legend>
+          <div class="lab-chip-demo__row">
+
+            <input class="chip__control" type="radio" name="sort" id="sort-newest" checked />
+            <label class="chip chip--filter has-state-layer" for="sort-newest">
+              <span class="chip__label">Newest</span>
+            </label>
+
+            <input class="chip__control" type="radio" name="sort" id="sort-oldest" />
+            <label class="chip chip--filter has-state-layer" for="sort-oldest">
+              <span class="chip__label">Oldest</span>
+            </label>
+
+            <input class="chip__control" type="radio" name="sort" id="sort-popular" />
+            <label class="chip chip--filter has-state-layer" for="sort-popular">
+              <span class="chip__label">Most read</span>
+            </label>
+
+          </div>
+        </fieldset>
+      </div>
+    </section>
+
+    <!-- ========== 4. Input chip with avatar + button close ========== -->
+    <section class="lab-section" id="demo-input-close">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">4 · Input chip — avatar leading + button close</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Phase 2 decision: input chip close affordance uses <strong>Option B</strong>
+          (real <code>&lt;button class="chip__close"&gt;</code> with <code>aria-label</code>)
+          plus <strong>Option A-lite</strong> (24×24 button container, hit area
+          expanded to ≥44×44 on coarse pointer via <code>::before</code> pseudo).
+          Visible close glyph stays 18px to match <code>--_chip-icon</code> baseline.
+        </p>
+        <p class="t-body-medium lab-section__supporting">
+          WCAG target-size compliance: <strong>SC 2.5.8 Level AA</strong> (24×24 CSS px)
+          is met on all pointer types by the button container. <strong>SC 2.5.5 Level AAA</strong>
+          (44×44 CSS px) and the Material touch-friendly convention are met on coarse
+          pointer via the <code>::before</code> expansion. Option C (Backspace/Delete
+          keyboard dismiss) is deferred — requires JS.
+        </p>
+      </header>
+
+      <div class="lab-chip-demo">
+        <div class="lab-chip-demo__row" id="input-chip-row">
+
+          <span class="chip chip--input has-state-layer" data-chip-id="apple">
+            <span class="chip__leading-icon ax-avatar is-size-xs"><span>A</span></span>
+            <span class="chip__label">Apple</span>
+            <button class="chip__close" type="button" aria-label="Remove Apple" onclick="this.parentElement.remove();">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </span>
+
+          <span class="chip chip--input has-state-layer" data-chip-id="banana">
+            <span class="chip__leading-icon ax-avatar is-size-xs"><span>B</span></span>
+            <span class="chip__label">Banana</span>
+            <button class="chip__close" type="button" aria-label="Remove Banana" onclick="this.parentElement.remove();">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </span>
+
+          <span class="chip chip--input has-state-layer" data-chip-id="cherry">
+            <span class="chip__leading-icon ax-avatar is-size-xs"><span>C</span></span>
+            <span class="chip__label">Cherry</span>
+            <button class="chip__close" type="button" aria-label="Remove Cherry" onclick="this.parentElement.remove();">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </span>
+
+        </div>
+
+        <p class="lab-chip-demo__measurement">
+          Per <code>CHIP-MEASUREMENT-AUDIT.md §4.4</code>: avatar 24px (preserved
+          via <code>.ax-avatar.is-size-xs</code> selector skip), close visible icon
+          18px, close button container 24×24, hit area expansion 44×44 (touch),
+          aria-label per chip ("Remove Apple", etc.).
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 5. Disabled states (all four variants) ========== -->
+    <section class="lab-section" id="demo-disabled">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">5 · Disabled states</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Baseline Pattern A (10% surface fill + 38% text + 12% outline) applies to
+          assist/filter/input. Suggestion chip keeps transparent background per
+          baseline <code>§11 L1739–L1742</code> exception. The
+          <code>has-state-layer</code> overlay is explicitly suppressed on disabled
+          chips per <code>lab-chip.css §3</code>, preventing fake hover feedback on
+          non-interactive surfaces.
+        </p>
+      </header>
+
+      <div class="lab-chip-demo">
+        <div class="lab-chip-demo__row">
+
+          <button class="chip chip--assist has-state-layer" type="button" disabled>
+            <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">info</span>
+            <span class="chip__label">Assist (disabled)</span>
+          </button>
+
+          <input class="chip__control" type="checkbox" id="filter-disabled" disabled />
+          <label class="chip chip--filter has-state-layer" for="filter-disabled">
+            <span class="chip__label">Filter (disabled via input)</span>
+          </label>
+
+          <span class="chip chip--input has-state-layer" aria-disabled="true">
+            <span class="chip__leading-icon ax-avatar is-size-xs"><span>D</span></span>
+            <span class="chip__label">Input (disabled)</span>
+            <button class="chip__close" type="button" aria-label="Remove" disabled>
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </span>
+
+          <button class="chip chip--suggestion has-state-layer" type="button" disabled>
+            <span class="chip__label">Suggestion (disabled, transparent bg)</span>
+          </button>
+
+        </div>
+
+        <p class="lab-chip-demo__measurement">
+          Three disabled markers all resolve identically:
+          <code>.chip:disabled</code> (assist/suggestion buttons),
+          <code>.chip__control:disabled + .chip</code> (filter native form pattern),
+          <code>.chip[aria-disabled="true"]</code> (input chip span).
+          The <code>chip__close</code> inside a disabled input chip is also disabled
+          (pointer-events: none + opacity 0.38).
+        </p>
+      </div>
+    </section>
+
+    <footer style="display: grid; gap: var(--space-xs); padding-block-start: var(--space-lg); border-block-start: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);">
+      <p class="t-body-small" style="margin: 0;">
+        Audits:
+        <a href="docs/CHIP-SPEC-AUDIT.md">CHIP-SPEC-AUDIT</a> ·
+        <a href="docs/CHIP-MEASUREMENT-AUDIT.md">CHIP-MEASUREMENT-AUDIT</a> ·
+        <a href="docs/CHIP-WP-MAPPING.md">CHIP-WP-MAPPING</a>
+      </p>
+      <p class="t-body-small" style="margin: 0;">
+        Charter: <a href="../../docs/ARCHITECTURE-BOUNDARIES.md">ARCHITECTURE-BOUNDARIES.md</a> ·
+        Module taxonomy + design principles: <a href="../README.md">lab/modules/README.md</a> ·
+        Sibling baseline specimens: <a href="../../style-guide.html#components-chip">style-guide.html#components-chip</a>
+      </p>
+    </footer>
+  </main>
+
+  <!-- Theme runtime (shared with all module pattern pages) -->
+  <script defer src="../../scripts/theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+/* ============================================================
+ * Axismundi — lab-ripple.css
+ * v3.5.6 — Ripple v2 Contract + data-ax-ripple Opt-In
+ *
+ * Ripple v2 is an animated progressive enhancement above
+ * components.css §0 static state-layer foundation. It does not replace
+ * the baseline hover/focus/pressed state-layer system.
+ *
+ * Stable public contract:
+ *   [data-ax-ripple]               bounded ripple
+ *   [data-ax-ripple="bounded"]     bounded ripple
+ *   [data-ax-ripple="unbounded"]   unbounded ripple
+ *
+ * Provider-owned runtime classes:
+ *   .ax-ripple-host
+ *   .ax-ripple-host--bounded
+ *   .ax-ripple-host--unbounded
+ *   .ax-ripple
+ * ============================================================ */
+
+:root {
+  --md-ripple-hover-color: var(--md-sys-color-on-surface);
+  --md-ripple-pressed-color: var(--md-sys-color-on-surface);
+
+  --ax-ripple-hover-color: var(--md-ripple-hover-color);
+  --ax-ripple-pressed-color: var(--md-ripple-pressed-color);
+  --ax-ripple-hover-opacity: var(--md-sys-state-hover-state-layer-opacity);
+  --ax-ripple-pressed-opacity: 0.16;
+  --ax-ripple-duration: var(--md-sys-motion-curve-slow-spatial-duration);
+  --ax-ripple-easing: var(--md-sys-motion-curve-slow-spatial);
+}
+
+[data-ax-ripple],
+.ax-ripple-host {
+  position: relative;
+}
+
+.ax-ripple-host--bounded {
+  overflow: hidden;
+}
+
+.ax-ripple-host--unbounded {
+  overflow: visible;
+}
+
+.ax-ripple {
+  position: absolute;
+  left: var(--ax-ripple-x);
+  top: var(--ax-ripple-y);
+  z-index: 2;
+  width: var(--ax-ripple-size);
+  height: var(--ax-ripple-size);
+  border-radius: 50%;
+  pointer-events: none;
+  background-color: var(--ax-ripple-pressed-color);
+  opacity: var(--ax-ripple-pressed-opacity);
+  transform: scale(0);
+  animation: ax-ripple var(--ax-ripple-duration) var(--ax-ripple-easing) forwards;
+}
+
+@keyframes ax-ripple {
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ax-ripple {
+    animation: none;
+    transform: scale(1);
+    transition:
+      opacity
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+  }
+
+  .ax-ripple.is-fading {
+    opacity: 0;
+  }
+}

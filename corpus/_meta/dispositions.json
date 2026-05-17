@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-05-12",
+  "reviewer_notes": "v1.1a Batch A — low-risk structural repairs only. Supports JS object default examples (Blocks #5-13, #16, #20) deferred to v1.1b for semantic segmentation.",
+  "dispositions": {
+    "rest-api-handbook/04-extending-the-rest-api/routes-and-endpoints.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "nested UL: route + 3 endpoints (GET/PUT/DELETE)"
+      }
+    },
+    "rest-api-handbook/03-using-the-rest-api/authentication.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "js",
+        "note": "actual JS code block from original (language-js)"
+      },
+      "block_2": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "js",
+        "note": "jQuery AJAX example"
+      },
+      "block_3": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "js",
+        "note": "jQuery AJAX example (post edit)"
+      }
+    },
+    "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "nested doc list: attributes/supports/save/migrate/isEligible with Parameters/Return"
+      },
+      "block_2": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "continuation of nested doc list"
+      }
+    },
+    "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "js",
+        "note": "supports: { anchor: true }"
+      },
+      "block_2": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "background subproperties (Type/Default/Subproperties)"
+      },
+      "block_3": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "background attribute tree (style → background → ...)"
+      },
+      "block_4": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "color subproperties (background/button/.../text)"
+      },
+      "block_5": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation: prose + embedded JS example mixed"
+      },
+      "block_6": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_7": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_8": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_9": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_10": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_11": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_12": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_13": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_14": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "dimensions subproperties (height/minHeight/minWidth/width)"
+      },
+      "block_15": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "filter.duotone single property"
+      },
+      "block_16": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_17": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "interactivity subproperties (clientNavigation/interactive)"
+      },
+      "block_18": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "layout subproperties (default/allowSwitching/...)"
+      },
+      "block_19": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "position subproperties (sticky)"
+      },
+      "block_20": {
+        "action": "deferred",
+        "reason": "v1.1b semantic segmentation"
+      },
+      "block_21": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "spacing subproperties"
+      },
+      "block_22": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "typography subproperties"
+      }
+    },
+    "theme-handbook/03-theme-json/02-settings/spacing.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "css",
+        "note": "CSS code, not prose"
+      }
+    },
+    "theme-handbook/03-theme-json/02-settings/typography.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "/fonts directory tree"
+      },
+      "block_2": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "min/max option list"
+      }
+    },
+    "theme-handbook/03-theme-json/03-styles/applying-styles.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "css"
+      },
+      "block_2": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "css"
+      }
+    },
+    "block-editor-handbook/03-reference-guides/04-interactivity-api-reference/directives-and-store.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "js"
+      },
+      "block_2": {
+        "action": "confirmed_repair",
+        "type": "lang_fix",
+        "from": "text",
+        "to": "js"
+      }
+    },
+    "theme-handbook/04-templates/template-parts.md": {
+      "block_1": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "directory structure / option list"
+      },
+      "block_2": {
+        "action": "confirmed_repair",
+        "type": "markdown_list",
+        "note": "semantic list"
+      }
+    }
+  }
+}

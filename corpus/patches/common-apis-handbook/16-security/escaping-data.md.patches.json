@@ -1,0 +1,22 @@
+[
+  {
+    "find": "> [!WARNING]\n> Code block appears degraded due to lost newlines during scraping.\n\n```php\n<?phpecho wp_kses_post( $partial_html );echo wp_kses( $another_partial_html, array( 'a' => array( 'href' => array(), 'title' => array(), ), 'br' => array(), 'em' => array(), 'strong' => array(), )); ?>\n```",
+    "replace": "> [!NOTE]\n> Code block manually restored from degraded scrape (newlines reconstructed).\n\n```php\n<?php\necho wp_kses_post( $partial_html );\n\necho wp_kses(\n    $another_partial_html,\n    array(\n        'a'      => array(\n            'href'  => array(),\n            'title' => array(),\n        ),\n        'br'     => array(),\n        'em'     => array(),\n        'strong' => array(),\n    )\n);\n?>\n```"
+  },
+  {
+    "find": "> [!WARNING]\n> Code block appears degraded due to lost newlines during scraping.\n\n```php\n// Okay, but not great.$url = esc_url( $url );$text = esc_html( $text );echo '<a href=\"'. $url . '\">' . $text . '</a>'; // Much better!echo '<a href=\"'. esc_url( $url ) . '\">' . esc_html( $text ) . '</a>';\n```",
+    "replace": "> [!NOTE]\n> Code block manually restored from degraded scrape (newlines reconstructed).\n\n```php\n// Okay, but not great.\n$url  = esc_url( $url );\n$text = esc_html( $text );\necho '<a href=\"' . $url . '\">' . $text . '</a>';\n\n// Much better!\necho '<a href=\"' . esc_url( $url ) . '\">' . esc_html( $text ) . '</a>';\n```"
+  },
+  {
+    "find": "> [!WARNING]\n> Code block appears degraded due to lost newlines during scraping.\n\n```php\nesc_html_e( 'Hello World', 'text_domain' );// Same asecho esc_html( __( 'Hello World', 'text_domain' ) );\n```",
+    "replace": "> [!NOTE]\n> Code block manually restored from degraded scrape (newlines reconstructed).\n\n```php\nesc_html_e( 'Hello World', 'text_domain' );\n\n// Same as\necho esc_html( __( 'Hello World', 'text_domain' ) );\n```"
+  },
+  {
+    "find": "> [!WARNING]\n> Code block appears degraded due to lost newlines during scraping.\n\n```php\necho '<a href=\"', esc_attr( $url ), '\">';echo '<a href=\"', esc_attr( esc_url( $url ) ), '\">';\n```",
+    "replace": "> [!NOTE]\n> Code block manually restored from degraded scrape (newlines reconstructed).\n\n```php\necho '<a href=\"', esc_attr( $url ), '\">';\necho '<a href=\"', esc_attr( esc_url( $url ) ), '\">';\n```"
+  },
+  {
+    "find": "> [!WARNING]\n> Code block appears degraded due to lost newlines during scraping.\n\n```php\nwp_localize_script( 'handle', 'name', array( 'prefix_nonce' => wp_create_nonce( 'plugin-name' ), 'ajaxurl' => admin_url( 'admin-ajax.php' ), 'errorMsg' => __( 'An error occurred', 'plugin-name' ), ));\n```",
+    "replace": "> [!NOTE]\n> Code block manually restored from degraded scrape (newlines reconstructed).\n\n```php\nwp_localize_script(\n    'handle',\n    'name',\n    array(\n        'prefix_nonce' => wp_create_nonce( 'plugin-name' ),\n        'ajaxurl'      => admin_url( 'admin-ajax.php' ),\n        'errorMsg'     => __( 'An error occurred', 'plugin-name' ),\n    )\n);\n```"
+  }
+]

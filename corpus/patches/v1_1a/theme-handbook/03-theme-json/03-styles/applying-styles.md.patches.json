@@ -1,0 +1,17 @@
+[
+  {
+    "find": "](https://developer.wordpress.org/themes/global-settings-and-styles/use-root-padding-aware-alignments/)",
+    "replace": "](../02-settings/use-root-padding-aware-alignments.md)",
+    "reason": "v1.1a: link to theme-handbook/03-theme-json/02-settings/use-root-padding-aware-alignments.md"
+  },
+  {
+    "find": "```text\n.wp-element-button, .wp-block-button__link { background-color: #aa3f33; color: #ffffff;}\n```",
+    "replace": "```css\n.wp-element-button, .wp-block-button__link { background-color: #aa3f33; color: #ffffff;}\n```",
+    "reason": "v1.1a lang_fix: text → css"
+  },
+  {
+    "find": "```text\n.wp-block-image img { border-radius: 6px;}\n```",
+    "replace": "```css\n.wp-block-image img { border-radius: 6px;}\n```",
+    "reason": "v1.1a lang_fix: text → css"
+  }
+]

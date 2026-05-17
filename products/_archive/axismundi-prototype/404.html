@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>페이지를 찾을 수 없습니다 — Axismundi</title>
+
+  <link rel="stylesheet" href="stylesheets/tokens.css" />
+  <link rel="stylesheet" href="stylesheets/base.css" />
+  <link rel="stylesheet" href="stylesheets/components.css" />
+  <link rel="stylesheet" href="stylesheets/prose.css" />
+  <style>
+    /* ── header (inlined from parts/header.html) ── */
+    .ax-site-header {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 10;
+      background-color: var(--md-sys-color-surface);
+      border-block-end: 1px solid transparent;
+      transition: border-color
+        var(--md-sys-motion-curve-fast-effects-duration)
+        var(--md-sys-motion-curve-fast-effects);
+    }
+    .ax-site-header[data-scrolled="true"] {
+      border-block-end-color: var(--md-sys-color-outline-variant);
+    }
+    @media (min-width: 1024px) {
+      .ax-site-header [data-toggle-nav] { display: none; }
+    }
+
+    /* ── 404 main content ── */
+    .ax-404 {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-block-size: calc(100vh - 64px - 200px); /* viewport - header - footer rough */
+      padding: var(--space-xl);
+      text-align: center;
+    }
+    .ax-404__hero {
+      font-family:    var(--md-sys-typescale-display-large-font);
+      font-size:      var(--md-sys-typescale-display-large-size);
+      line-height:    1;
+      font-weight:    var(--md-ref-typeface-weight-medium);
+      letter-spacing: var(--md-sys-typescale-display-large-tracking);
+      color: var(--md-sys-color-primary);
+      margin-block-end: var(--space-md);
+      /* big number, gradient fill */
+      background: linear-gradient(135deg,
+        var(--md-sys-color-primary) 0%,
+        var(--md-sys-color-tertiary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .ax-404__title {
+      margin-block: var(--space-sm) 0;
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-404__body {
+      max-inline-size: 48ch;
+      margin-block: var(--space-md) var(--space-xl);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-404__actions {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .ax-404__search {
+      margin-block-start: var(--space-xl);
+      inline-size: 100%;
+      max-inline-size: 480px;
+    }
+
+    /* ── nav drawer ── */
+    .nav-drawer {
+      margin-inline-start: 0;
+      margin-block: 0;
+      max-block-size: 100vh;
+      block-size: 100vh;
+      inline-size: min(320px, 80vw);
+      padding: 0;
+      border: 0;
+      background-color: var(--md-sys-color-surface-container-low);
+      color: var(--md-sys-color-on-surface);
+    }
+    .nav-drawer::backdrop {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-scrim) 32%, transparent);
+    }
+    .nav-drawer__head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .nav-drawer__body {
+      padding: var(--space-md) var(--space-sm);
+      overflow-y: auto;
+      block-size: calc(100vh - 64px);
+    }
+    /* nav-list (shared with sidebar/drawer) */
+    .ax-nav-list {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: var(--space-xs);
+    }
+    .ax-nav-list a {
+      display: flex; align-items: center; gap: var(--space-md);
+      inline-size: 100%; padding: var(--space-sm) var(--space-md);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-full);
+      text-decoration: none;
+      font-family:    var(--md-sys-typescale-label-large-font);
+      font-size:      var(--md-sys-typescale-label-large-size);
+      line-height:    var(--md-sys-typescale-label-large-line-height);
+      font-weight:    var(--md-sys-typescale-label-large-weight);
+    }
+    .ax-nav-list a:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .ax-nav-list__icon {
+      inline-size: 24px; block-size: 24px; flex-shrink: 0;
+    }
+    .ax-nav-list__icon > svg {
+      inline-size: 100%; block-size: 100%; fill: currentColor;
+    }
+
+    /* footer (inlined from parts/footer.html) */
+    .ax-site-footer {
+      background-color: var(--md-sys-color-surface-container-low);
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      padding-block: var(--space-xl);
+      padding-inline: var(--space-xl);
+    }
+    .ax-site-footer__inner {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      display: grid;
+      gap: var(--space-lg);
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) {
+      .ax-site-footer__inner { grid-template-columns: 2fr 1fr 1fr; }
+    }
+    .ax-site-footer__col-title {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-block-end: var(--space-sm);
+      letter-spacing: 0.08em;
+    }
+    .ax-site-footer__brand-name { letter-spacing: 0.04em; }
+    .ax-site-footer__tagline {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-block-start: var(--space-xs);
+      max-inline-size: 48ch;
+    }
+    .ax-site-footer__nav {
+      display: flex; flex-direction: column; gap: var(--space-xs);
+    }
+    .ax-site-footer__nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+    }
+    .ax-site-footer__nav a:hover {
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .ax-site-footer__bottom {
+      grid-column: 1 / -1;
+      padding-block-start: var(--space-md);
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      display: flex; flex-wrap: wrap; gap: var(--space-md);
+      justify-content: space-between;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-site-footer__bottom a {
+      color: var(--md-sys-color-primary);
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    @media (max-width: 720px) {
+      .ax-site-footer { padding-inline: var(--space-lg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WCAG 2.4.1 Bypass Blocks — first focusable element -->
+  <a href="#main" class="skip-link">메인 콘텐츠로 건너뛰기</a>
+
+  <!-- HEADER -->
+  <header class="ax-site-header app-bar app-bar--small">
+    <div class="app-bar__leading">
+      <button type="button"
+              class="ax-icon-button is-standard has-state-layer"
+              data-toggle-nav
+              aria-controls="nav-drawer"
+              aria-expanded="false"
+              aria-label="메뉴 열기">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+        </svg>
+      </button>
+    </div>
+    <p class="app-bar__title">
+      <a href="/" style="color: inherit; text-decoration: none;">Axismundi</a>
+    </p>
+    <div class="app-bar__actions">
+      <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="검색">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 404 main -->
+  <main class="ax-404" id="main">
+    <div class="ax-404__hero" aria-hidden="true">404</div>
+    <h1 class="t-headline-medium ax-404__title">페이지를 찾을 수 없습니다</h1>
+    <p class="t-body-large ax-404__body">
+      요청하신 페이지가 이동되었거나, 삭제되었거나, 처음부터 존재하지 않았을 수 있습니다.
+      아래에서 검색하거나 홈으로 돌아가세요.
+    </p>
+
+    <div class="ax-404__actions">
+      <a href="/" class="ax-button is-filled has-state-layer t-label-large">
+        홈으로 돌아가기
+      </a>
+      <a href="/blog" class="ax-button is-tonal has-state-layer t-label-large">
+        블로그 둘러보기
+      </a>
+    </div>
+
+    <form class="ax-404__search" role="search" action="/search" method="get">
+      <div class="text-field text-field--outlined text-field--with-leading">
+        <div class="text-field__container">
+          <span class="text-field__leading-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+          </span>
+          <input type="search" name="s" id="search-404"
+                 class="text-field__input"
+                 placeholder=" "
+                 autocomplete="off">
+          <label class="text-field__label" for="search-404">검색어를 입력하세요</label>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <!-- Nav drawer -->
+  <dialog class="nav-drawer" id="nav-drawer" aria-label="Main navigation">
+    <header class="nav-drawer__head">
+      <h2 class="t-title-medium" style="margin: 0;">Axismundi</h2>
+      <button type="button"
+              class="ax-icon-button is-standard has-state-layer"
+              data-close-modal
+              aria-label="메뉴 닫기">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
+    </header>
+    <nav class="nav-drawer__body" aria-label="Main navigation (mobile)">
+      <ul class="ax-nav-list">
+        <li><a href="/">
+          <span class="ax-nav-list__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+          </span>
+          Home
+        </a></li>
+        <li><a href="/blog">
+          <span class="ax-nav-list__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+          </span>
+          Blog
+        </a></li>
+        <li><a href="/search">
+          <span class="ax-nav-list__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+          </span>
+          Search
+        </a></li>
+      </ul>
+    </nav>
+  </dialog>
+
+  <!-- FOOTER (inlined) -->
+  <footer class="ax-site-footer">
+    <div class="ax-site-footer__inner">
+      <div>
+        <div class="t-label-small ax-site-footer__col-title">About</div>
+        <div class="t-headline-small ax-site-footer__brand-name">Axismundi</div>
+        <p class="t-body-medium ax-site-footer__tagline">
+          Material 3 디자인 시스템으로 만든 WordPress 블록 테마.
+        </p>
+      </div>
+      <nav class="ax-site-footer__nav" aria-label="Site sections">
+        <div class="t-label-small ax-site-footer__col-title">Site</div>
+        <a class="t-body-medium" href="/">Home</a>
+        <a class="t-body-medium" href="/blog">Blog</a>
+        <a class="t-body-medium" href="/search">Search</a>
+      </nav>
+      <nav class="ax-site-footer__nav" aria-label="Legal">
+        <div class="t-label-small ax-site-footer__col-title">Legal</div>
+        <a class="t-body-medium" href="/privacy">Privacy</a>
+        <a class="t-body-medium" href="/terms">Terms</a>
+      </nav>
+      <div class="ax-site-footer__bottom">
+        <p class="t-body-small">
+          © 2026 본인 실명 ·
+          <a href="https://designbusan.ai.kr" rel="author">designbusan.ai.kr</a>
+        </p>
+        <p class="t-body-small">
+          Powered by <a href="https://wordpress.org">WordPress</a> ·
+          <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="license">GPL-3.0-or-later</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script defer src="scripts/theme.js"></script>
+</body>
+</html>

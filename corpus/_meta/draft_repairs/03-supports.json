@@ -1,0 +1,126 @@
+{
+  "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+  "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/",
+  "blocks": [
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_2",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_2",
+      "section": "background",
+      "line_start": 132,
+      "line_end": 135,
+      "before_fence": "```text\n- `backgroundImage`: type `boolean`, default value `false`\n- `backgroundSize`: type `boolean`, default value `false`\n```",
+      "after_markdown": "  - `backgroundImage`: type `boolean`, default value `false`\n  - `backgroundSize`: type `boolean`, default value `false`",
+      "note": "background subproperties — convert flat fence to nested sub-list under existing 'Subproperties' bullet",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_3",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_3",
+      "section": "background",
+      "line_start": 153,
+      "line_end": 162,
+      "before_fence": "```text\n- `background`: an attribute of `object` type.\n    - `backgroundImage`: an attribute of `object` type, containing information about the selected image\n        - `url`: type `string`, URL to the image\n        - `id`: type `int`, media attachment ID\n        - `source`: type `string`, at the moment the only value is `file`\n        - `title`: type `string`, title of the media attachment\n    - `backgroundPosition`: an attribute of `string` type, defining the background images position, selected by FocalPointPicker and used in CSS as the [`background-position`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-position) value.\n    - `backgroundSize`: an attribute of `string` type. defining the CSS [`background-size`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-size) value.\n```",
+      "after_markdown": "  - `background`: an attribute of `object` type.\n      - `backgroundImage`: an attribute of `object` type, containing information about the selected image\n          - `url`: type `string`, URL to the image\n          - `id`: type `int`, media attachment ID\n          - `source`: type `string`, at the moment the only value is `file`\n          - `title`: type `string`, title of the media attachment\n      - `backgroundPosition`: an attribute of `string` type, defining the background images position, selected by FocalPointPicker and used in CSS as the [`background-position`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-position) value.\n      - `backgroundSize`: an attribute of `string` type. defining the CSS [`background-size`](https://developer.mozilla.org/en-US/docs/Web/CSS/background-size) value.",
+      "note": "background attribute tree — fence breaks parent `- style:` bullet; indent fence body to nest under style (existing indents become deeper)",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_4",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_4",
+      "section": "color",
+      "line_start": 186,
+      "line_end": 194,
+      "before_fence": "```text\n- `background`: type `boolean`, default value `true`\n- `button`: type `boolean`, default value `false`\n- `enableContrastChecker`: type `boolean`, default value `true`\n- `gradients`: type `boolean`, default value `false`\n- `heading`: type `boolean`, default value `false`\n- `link`: type `boolean`, default value `false`\n- `text`: type `boolean`, default value `true`\n```",
+      "after_markdown": "  - `background`: type `boolean`, default value `true`\n  - `button`: type `boolean`, default value `false`\n  - `enableContrastChecker`: type `boolean`, default value `true`\n  - `gradients`: type `boolean`, default value `false`\n  - `heading`: type `boolean`, default value `false`\n  - `link`: type `boolean`, default value `false`\n  - `text`: type `boolean`, default value `true`",
+      "note": "color subproperties — sub-list indent under existing 'Subproperties:' bullet",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_14",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_14",
+      "section": "dimensions",
+      "line_start": 435,
+      "line_end": 440,
+      "before_fence": "```text\n- `height`: type `boolean`, default value `false`\n- `minHeight`: type `boolean`, default value `false`\n- `minWidth`: type `boolean`, default value `false`\n- `width`: type `boolean`, default value `false`\n```",
+      "after_markdown": "  - `height`: type `boolean`, default value `false`\n  - `minHeight`: type `boolean`, default value `false`\n  - `minWidth`: type `boolean`, default value `false`\n  - `width`: type `boolean`, default value `false`",
+      "note": "dimensions subproperties — sub-list indent",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_15",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_15",
+      "section": "filter",
+      "line_start": 461,
+      "line_end": 463,
+      "before_fence": "```text\n- `duotone`: type `boolean`, default value `false`\n```",
+      "after_markdown": "  - `duotone`: type `boolean`, default value `false`",
+      "note": "filter subproperties (single: duotone) — sub-list indent",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_17",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_17",
+      "section": "interactivity",
+      "line_start": 516,
+      "line_end": 519,
+      "before_fence": "```text\n- `clientNavigation`: type `boolean`, default value `false`\n- `interactive`: type `boolean`, default value `false`\n```",
+      "after_markdown": "  - `clientNavigation`: type `boolean`, default value `false`\n  - `interactive`: type `boolean`, default value `false`",
+      "note": "interactivity subproperties — sub-list indent",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_18",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_18",
+      "section": "layout",
+      "line_start": 534,
+      "line_end": 545,
+      "before_fence": "```text\n- `default`: type `Object`, default value null\n- `allowSwitching`: type `boolean`, default value `false`\n- `allowEditing`: type `boolean`, default value `true`\n- `allowInheriting`: type `boolean`, default value `true`\n- `allowSizingOnChildren`: type `boolean`, default value `false`\n- `allowVerticalAlignment`: type `boolean`, default value `true`\n- `allowJustification`: type `boolean`, default value `true`\n- `allowOrientation`: type `boolean`, default value `true`\n- `allowWrap`: type `boolean`, default value `true`\n- `allowCustomContentAndWideSize`: type `boolean`, default value `true`\n```",
+      "after_markdown": "  - `default`: type `Object`, default value null\n  - `allowSwitching`: type `boolean`, default value `false`\n  - `allowEditing`: type `boolean`, default value `true`\n  - `allowInheriting`: type `boolean`, default value `true`\n  - `allowSizingOnChildren`: type `boolean`, default value `false`\n  - `allowVerticalAlignment`: type `boolean`, default value `true`\n  - `allowJustification`: type `boolean`, default value `true`\n  - `allowOrientation`: type `boolean`, default value `true`\n  - `allowWrap`: type `boolean`, default value `true`\n  - `allowCustomContentAndWideSize`: type `boolean`, default value `true`",
+      "note": "layout subproperties — sub-list indent",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_19",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_19",
+      "section": "position",
+      "line_start": 667,
+      "line_end": 669,
+      "before_fence": "```text\n- `sticky`: type `boolean`, default value `false`\n```",
+      "after_markdown": "  - `sticky`: type `boolean`, default value `false`",
+      "note": "position subproperties — sub-list indent",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_21",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_21",
+      "section": "spacing",
+      "line_start": 742,
+      "line_end": 746,
+      "before_fence": "```text\n- `margin`: type `boolean` or `array`, default value `false`\n- `padding`: type `boolean` or `array`, default value `false`\n- `blockGap`: type `boolean` or `array`, default value `false`\n```",
+      "after_markdown": "  - `margin`: type `boolean` or `array`, default value `false`\n  - `padding`: type `boolean` or `array`, default value `false`\n  - `blockGap`: type `boolean` or `array`, default value `false`",
+      "note": "spacing subproperties — sub-list indent",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md::block_22",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "block_id": "block_22",
+      "section": "typography",
+      "line_start": 780,
+      "line_end": 784,
+      "before_fence": "```text\n- `fontSize`: type `boolean`, default value `false`\n- `lineHeight`: type `boolean`, default value `false`\n- `textAlign`: type `boolean` or `array`, default value `false`\n```",
+      "after_markdown": "  - `fontSize`: type `boolean`, default value `false`\n  - `lineHeight`: type `boolean`, default value `false`\n  - `textAlign`: type `boolean` or `array`, default value `false`",
+      "note": "typography subproperties — sub-list indent",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-supports/"
+    }
+  ]
+}

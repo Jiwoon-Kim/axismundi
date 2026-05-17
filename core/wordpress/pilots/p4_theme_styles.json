@@ -1,0 +1,122 @@
+{
+  "schema_version": "v2.0-pilot-theme-styles-2026-05-12",
+  "generated_at": "2026-05-12",
+  "pilot": "P4-styles",
+  "axes": [
+    {
+      "axis": "background",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": false,
+      "n_sources": 2
+    },
+    {
+      "axis": "blocks",
+      "in_corpus": false,
+      "in_docs": false,
+      "in_schema": false,
+      "in_runtime": true,
+      "in_atlas": false,
+      "n_sources": 1
+    },
+    {
+      "axis": "border",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": false,
+      "n_sources": 2
+    },
+    {
+      "axis": "color",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": true,
+      "n_sources": 3
+    },
+    {
+      "axis": "css",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": true,
+      "n_sources": 3
+    },
+    {
+      "axis": "dimensions",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": false,
+      "n_sources": 2
+    },
+    {
+      "axis": "elements",
+      "in_corpus": false,
+      "in_docs": false,
+      "in_schema": false,
+      "in_runtime": true,
+      "in_atlas": false,
+      "n_sources": 1
+    },
+    {
+      "axis": "filter",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": true,
+      "n_sources": 3
+    },
+    {
+      "axis": "outline",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": false,
+      "n_sources": 2
+    },
+    {
+      "axis": "shadow",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": false,
+      "n_sources": 2
+    },
+    {
+      "axis": "spacing",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": true,
+      "in_atlas": true,
+      "n_sources": 4
+    },
+    {
+      "axis": "typography",
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_runtime": false,
+      "in_atlas": true,
+      "n_sources": 3
+    }
+  ],
+  "summary": {
+    "total_distinct": 12,
+    "in_all_5": 0,
+    "in_4": 1,
+    "in_3": 4,
+    "in_2_or_less": 7
+  }
+}

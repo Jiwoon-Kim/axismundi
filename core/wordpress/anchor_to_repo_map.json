@@ -1,0 +1,1050 @@
+{
+  "schema_version": "v2.0-anchor-map-2026-05-12",
+  "generated_at": "2026-05-12",
+  "baseline": {
+    "wordpress": "6.9.4 @ 97b7f62a",
+    "gutenberg": "v21.9.0 @ ccb651bc"
+  },
+  "summary": {
+    "total_anchors": 47,
+    "tier_1_docs": 7,
+    "tier_2_schema": 16,
+    "tier_3_packages": 3,
+    "tier_4_wp_core": 0,
+    "tier_5_developer_url": 12,
+    "missing": 0,
+    "tier_4_core": 31
+  },
+  "mappings": [
+    {
+      "handbook_path": "block-editor-handbook/03-reference-guides/01-block-api-reference/attributes.md",
+      "handbook": "block-editor",
+      "slug": "attributes",
+      "title": "Attributes",
+      "priority": 1,
+      "anchors_count": 10,
+      "inbound_links": 14,
+      "source_priority": "repo_markdown",
+      "repo_sources": [
+        {
+          "tier": 1,
+          "type": "gutenberg_docs",
+          "path": "docs/reference-guides/block-api/block-attributes.md",
+          "exists": true
+        },
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/block.json",
+          "exists": true,
+          "note": "block supports/attributes canonical schema"
+        },
+        {
+          "tier": 3,
+          "type": "gutenberg_packages",
+          "path": "packages/block-library/src/*/block.json",
+          "exists": true,
+          "note": "112 core block instances"
+        }
+      ]
+    },
+    {
+      "handbook_path": "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md",
+      "handbook": "block-editor",
+      "slug": "deprecation",
+      "title": "Deprecation",
+      "priority": 1,
+      "anchors_count": 2,
+      "inbound_links": 8,
+      "source_priority": "repo_markdown",
+      "repo_sources": [
+        {
+          "tier": 1,
+          "type": "gutenberg_docs",
+          "path": "docs/reference-guides/block-api/block-deprecation.md",
+          "exists": true
+        },
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/block.json",
+          "exists": true,
+          "note": "block supports/attributes canonical schema"
+        },
+        {
+          "tier": 3,
+          "type": "gutenberg_packages",
+          "path": "packages/block-library/src/*/block.json",
+          "exists": true,
+          "note": "112 core block instances"
+        }
+      ]
+    },
+    {
+      "handbook_path": "block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+      "handbook": "block-editor",
+      "slug": "supports",
+      "title": "Supports",
+      "priority": 1,
+      "anchors_count": 50,
+      "inbound_links": 18,
+      "source_priority": "repo_markdown",
+      "repo_sources": [
+        {
+          "tier": 1,
+          "type": "gutenberg_docs",
+          "path": "docs/reference-guides/block-api/block-supports.md",
+          "exists": true
+        },
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/block.json",
+          "exists": true,
+          "note": "block supports/attributes canonical schema"
+        },
+        {
+          "tier": 3,
+          "type": "gutenberg_packages",
+          "path": "packages/block-library/src/*/block.json",
+          "exists": true,
+          "note": "112 core block instances"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/class-wp-block-supports.php",
+          "exists": true,
+          "note": "server-side implementation"
+        }
+      ]
+    },
+    {
+      "handbook_path": "block-editor-handbook/03-reference-guides/10-data-module-reference/data-core-block-editor.md",
+      "handbook": "block-editor",
+      "slug": "data-core-block-editor",
+      "title": "The Block Editor’s Data",
+      "priority": 1,
+      "anchors_count": 142,
+      "inbound_links": 2,
+      "source_priority": "repo_markdown",
+      "repo_sources": [
+        {
+          "tier": 1,
+          "type": "gutenberg_docs",
+          "path": "docs/reference-guides/data/data-core-block-editor.md",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "handbook_path": "block-editor-handbook/03-reference-guides/04-interactivity-api-reference/directives-and-store.md",
+      "handbook": "block-editor",
+      "slug": "directives-and-store",
+      "title": "Directives and Store",
+      "priority": 1,
+      "anchors_count": 32,
+      "inbound_links": 30,
+      "source_priority": "repo_markdown",
+      "repo_sources": [
+        {
+          "tier": 1,
+          "type": "gutenberg_docs",
+          "path": "docs/reference-guides/interactivity-api/directives-and-store.md",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/04-extending-the-rest-api/controller-classes.md",
+      "handbook": "rest-api",
+      "slug": "controller-classes",
+      "title": "Controller Classes",
+      "priority": 1,
+      "anchors_count": 5,
+      "inbound_links": 4,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/04-extending-the-rest-api/routes-and-endpoints.md",
+      "handbook": "rest-api",
+      "slug": "routes-and-endpoints",
+      "title": "Routes and Endpoints",
+      "priority": 1,
+      "anchors_count": 12,
+      "inbound_links": 1,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/04-extending-the-rest-api/schema.md",
+      "handbook": "rest-api",
+      "slug": "schema",
+      "title": "Schema",
+      "priority": 1,
+      "anchors_count": 16,
+      "inbound_links": 4,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/05-reference/application-passwords.md",
+      "handbook": "rest-api",
+      "slug": "application-passwords",
+      "title": "Application Passwords",
+      "priority": 1,
+      "anchors_count": 9,
+      "inbound_links": 0,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/03-using-the-rest-api/authentication.md",
+      "handbook": "rest-api",
+      "slug": "authentication",
+      "title": "Authentication",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 6,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/03-using-the-rest-api/global-parameters.md",
+      "handbook": "rest-api",
+      "slug": "global-parameters",
+      "title": "Global Parameters",
+      "priority": 1,
+      "anchors_count": 5,
+      "inbound_links": 4,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/03-using-the-rest-api/linking-and-embedding.md",
+      "handbook": "rest-api",
+      "slug": "linking-and-embedding",
+      "title": "Linking and Embedding",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 3,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "rest-api-handbook/03-using-the-rest-api/pagination.md",
+      "handbook": "rest-api",
+      "slug": "pagination",
+      "title": "Pagination",
+      "priority": 1,
+      "anchors_count": 2,
+      "inbound_links": 1,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/04-templates/index.md",
+      "handbook": "theme",
+      "slug": "index",
+      "title": "Templates",
+      "priority": 1,
+      "anchors_count": 1,
+      "inbound_links": 12,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/04-templates/introduction-to-templates.md",
+      "handbook": "theme",
+      "slug": "introduction-to-templates",
+      "title": "Introduction to Templates",
+      "priority": 1,
+      "anchors_count": 5,
+      "inbound_links": 6,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/04-templates/template-hierarchy.md",
+      "handbook": "theme",
+      "slug": "template-hierarchy",
+      "title": "Template Hierarchy",
+      "priority": 1,
+      "anchors_count": 10,
+      "inbound_links": 12,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/04-templates/template-parts.md",
+      "handbook": "theme",
+      "slug": "template-parts",
+      "title": "Template Parts",
+      "priority": 1,
+      "anchors_count": 9,
+      "inbound_links": 8,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/04-templates/templates.md",
+      "handbook": "theme",
+      "slug": "templates",
+      "title": "Templates",
+      "priority": 1,
+      "anchors_count": 7,
+      "inbound_links": 7,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/04-custom-templates.md",
+      "handbook": "theme",
+      "slug": "custom-templates",
+      "title": "Custom Templates",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 3,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/index.md",
+      "handbook": "theme",
+      "slug": "index",
+      "title": "Global Settings and Styles (theme.json)",
+      "priority": 1,
+      "anchors_count": 1,
+      "inbound_links": 10,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/05-patterns.md",
+      "handbook": "theme",
+      "slug": "patterns",
+      "title": "Patterns",
+      "priority": 1,
+      "anchors_count": 1,
+      "inbound_links": 2,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/07-style-variations.md",
+      "handbook": "theme",
+      "slug": "style-variations",
+      "title": "Style Variations",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 5,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/06-template-parts.md",
+      "handbook": "theme",
+      "slug": "template-parts",
+      "title": "Template Parts",
+      "priority": 1,
+      "anchors_count": 4,
+      "inbound_links": 4,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/01-introduction/introduction-to-theme-json.md",
+      "handbook": "theme",
+      "slug": "introduction-to-theme-json",
+      "title": "Introduction to theme.json",
+      "priority": 1,
+      "anchors_count": 5,
+      "inbound_links": 1,
+      "source_priority": "repo_markdown",
+      "repo_sources": [
+        {
+          "tier": 1,
+          "type": "gutenberg_docs",
+          "path": "docs/how-to-guides/themes/global-settings-and-styles.md",
+          "exists": true,
+          "note": "cross-reference (not strict 1:1 source; supplementary)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/appearance-tools.md",
+      "handbook": "theme",
+      "slug": "appearance-tools",
+      "title": "Appearance Tools",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 1,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/appearanceTools",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/blocks.md",
+      "handbook": "theme",
+      "slug": "blocks",
+      "title": "Blocks",
+      "priority": 1,
+      "anchors_count": 2,
+      "inbound_links": 2,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/blocks",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/border.md",
+      "handbook": "theme",
+      "slug": "border",
+      "title": "Border",
+      "priority": 1,
+      "anchors_count": 1,
+      "inbound_links": 2,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/border",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/color.md",
+      "handbook": "theme",
+      "slug": "color",
+      "title": "Color",
+      "priority": 1,
+      "anchors_count": 14,
+      "inbound_links": 7,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/color",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/custom.md",
+      "handbook": "theme",
+      "slug": "custom",
+      "title": "Custom",
+      "priority": 1,
+      "anchors_count": 7,
+      "inbound_links": 4,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/dimensions.md",
+      "handbook": "theme",
+      "slug": "dimensions",
+      "title": "Dimensions",
+      "priority": 1,
+      "anchors_count": 2,
+      "inbound_links": 3,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/dimensions",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/index.md",
+      "handbook": "theme",
+      "slug": "index",
+      "title": "Settings",
+      "priority": 1,
+      "anchors_count": 2,
+      "inbound_links": 7,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/layout.md",
+      "handbook": "theme",
+      "slug": "layout",
+      "title": "Layout",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 2,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/layout",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/lightbox.md",
+      "handbook": "theme",
+      "slug": "lightbox",
+      "title": "Lightbox",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 2,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/lightbox",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/position.md",
+      "handbook": "theme",
+      "slug": "position",
+      "title": "Position",
+      "priority": 1,
+      "anchors_count": 2,
+      "inbound_links": 3,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/position",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/settings-reference.md",
+      "handbook": "theme",
+      "slug": "settings-reference",
+      "title": "Settings Reference",
+      "priority": 1,
+      "anchors_count": 12,
+      "inbound_links": 1,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/shadow.md",
+      "handbook": "theme",
+      "slug": "shadow",
+      "title": "Shadow",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 3,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/shadow",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/spacing.md",
+      "handbook": "theme",
+      "slug": "spacing",
+      "title": "Spacing",
+      "priority": 1,
+      "anchors_count": 9,
+      "inbound_links": 5,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/spacing",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/typography.md",
+      "handbook": "theme",
+      "slug": "typography",
+      "title": "Typography",
+      "priority": 1,
+      "anchors_count": 7,
+      "inbound_links": 7,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json#properties/settings/properties/typography",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/02-settings/use-root-padding-aware-alignments.md",
+      "handbook": "theme",
+      "slug": "use-root-padding-aware-alignments",
+      "title": "Use Root Padding Aware Alignments",
+      "priority": 1,
+      "anchors_count": 3,
+      "inbound_links": 3,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/03-styles/applying-styles.md",
+      "handbook": "theme",
+      "slug": "applying-styles",
+      "title": "Applying Styles",
+      "priority": 1,
+      "anchors_count": 6,
+      "inbound_links": 2,
+      "source_priority": "repo_markdown",
+      "repo_sources": [
+        {
+          "tier": 1,
+          "type": "gutenberg_docs",
+          "path": "docs/how-to-guides/themes/global-settings-and-styles.md",
+          "exists": true,
+          "note": "cross-reference (not strict 1:1 source; supplementary)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/03-styles/index.md",
+      "handbook": "theme",
+      "slug": "index",
+      "title": "Styles",
+      "priority": 1,
+      "anchors_count": 2,
+      "inbound_links": 16,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/03-styles/styles-reference.md",
+      "handbook": "theme",
+      "slug": "styles-reference",
+      "title": "Styles Reference",
+      "priority": 1,
+      "anchors_count": 8,
+      "inbound_links": 6,
+      "source_priority": "repo_schema",
+      "repo_sources": [
+        {
+          "tier": 2,
+          "type": "gutenberg_schema",
+          "path": "schemas/json/theme.json",
+          "exists": true,
+          "note": "theme.json canonical schema (with property path)"
+        },
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "theme-handbook/03-theme-json/03-styles/using-presets.md",
+      "handbook": "theme",
+      "slug": "using-presets",
+      "title": "Using Presets",
+      "priority": 1,
+      "anchors_count": 4,
+      "inbound_links": 1,
+      "source_priority": "wp_core_php",
+      "repo_sources": [
+        {
+          "tier": 4,
+          "type": "wp_core",
+          "path": "wp-includes/theme.json",
+          "exists": true,
+          "note": "runtime default theme.json"
+        }
+      ]
+    },
+    {
+      "handbook_path": "plugin-handbook/04-hooks/actions.md",
+      "handbook": "plugin",
+      "slug": "actions",
+      "title": "Actions",
+      "priority": 2,
+      "anchors_count": 4,
+      "inbound_links": 10,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "plugin-handbook/04-hooks/filters.md",
+      "handbook": "plugin",
+      "slug": "filters",
+      "title": "Filters",
+      "priority": 2,
+      "anchors_count": 3,
+      "inbound_links": 5,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "plugin-handbook/15-javascript/ajax.md",
+      "handbook": "plugin",
+      "slug": "ajax",
+      "title": "AJAX",
+      "priority": 2,
+      "anchors_count": 9,
+      "inbound_links": 3,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    },
+    {
+      "handbook_path": "plugin-handbook/07-shortcodes/basic-shortcodes.md",
+      "handbook": "plugin",
+      "slug": "basic-shortcodes",
+      "title": "Basic Shortcodes",
+      "priority": 2,
+      "anchors_count": 3,
+      "inbound_links": 2,
+      "source_priority": "developer_url",
+      "repo_sources": [
+        {
+          "tier": 5,
+          "type": "developer_url",
+          "path": null,
+          "note": "No Gutenberg/WP repo source identified; use developer.wordpress.org HTML as primary"
+        }
+      ]
+    }
+  ]
+}

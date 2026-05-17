@@ -1,0 +1,708 @@
+{
+  "theme-handbook/00-theme-handbook/index.md": {
+    "handbook": "theme",
+    "chapter": "theme-handbook",
+    "slug": "index",
+    "parent_order": 0,
+    "page_order": 1001,
+    "source_url": "https://developer.wordpress.org/themes/",
+    "title": "Theme Handbook"
+  },
+  "theme-handbook/01-getting-started/index.md": {
+    "handbook": "theme",
+    "chapter": "getting-started",
+    "slug": "index",
+    "parent_order": 1,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/getting-started/",
+    "title": "Getting Started"
+  },
+  "theme-handbook/01-getting-started/reading-this-handbook.md": {
+    "handbook": "theme",
+    "chapter": "getting-started",
+    "slug": "reading-this-handbook",
+    "parent_order": 1,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/getting-started/reading-this-handbook/",
+    "title": "Reading This Handbook"
+  },
+  "theme-handbook/01-getting-started/tools-and-setup.md": {
+    "handbook": "theme",
+    "chapter": "getting-started",
+    "slug": "tools-and-setup",
+    "parent_order": 1,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/themes/getting-started/tools-and-setup/",
+    "title": "Tools and Setup"
+  },
+  "theme-handbook/01-getting-started/what-is-a-theme.md": {
+    "handbook": "theme",
+    "chapter": "getting-started",
+    "slug": "what-is-a-theme",
+    "parent_order": 1,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/getting-started/what-is-a-theme/",
+    "title": "What Is a Theme?"
+  },
+  "theme-handbook/02-core-concepts/custom-functionality.md": {
+    "handbook": "theme",
+    "chapter": "core-concepts",
+    "slug": "custom-functionality",
+    "parent_order": 2,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/themes/core-concepts/custom-functionality/",
+    "title": "Custom Functionality (functions.php)"
+  },
+  "theme-handbook/02-core-concepts/global-settings-and-styles.md": {
+    "handbook": "theme",
+    "chapter": "core-concepts",
+    "slug": "global-settings-and-styles",
+    "parent_order": 2,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/themes/core-concepts/global-settings-and-styles/",
+    "title": "Global Settings and Styles"
+  },
+  "theme-handbook/02-core-concepts/including-assets.md": {
+    "handbook": "theme",
+    "chapter": "core-concepts",
+    "slug": "including-assets",
+    "parent_order": 2,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/themes/core-concepts/including-assets/",
+    "title": "Including Assets"
+  },
+  "theme-handbook/02-core-concepts/index.md": {
+    "handbook": "theme",
+    "chapter": "core-concepts",
+    "slug": "index",
+    "parent_order": 2,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/core-concepts/",
+    "title": "Core Concepts"
+  },
+  "theme-handbook/02-core-concepts/main-stylesheet.md": {
+    "handbook": "theme",
+    "chapter": "core-concepts",
+    "slug": "main-stylesheet",
+    "parent_order": 2,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/core-concepts/main-stylesheet/",
+    "title": "Main Stylesheet (style.css)"
+  },
+  "theme-handbook/02-core-concepts/templates.md": {
+    "handbook": "theme",
+    "chapter": "core-concepts",
+    "slug": "templates",
+    "parent_order": 2,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/core-concepts/templates/",
+    "title": "Templates"
+  },
+  "theme-handbook/02-core-concepts/theme-structure.md": {
+    "handbook": "theme",
+    "chapter": "core-concepts",
+    "slug": "theme-structure",
+    "parent_order": 2,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/core-concepts/theme-structure/",
+    "title": "Theme Structure"
+  },
+  "theme-handbook/03-theme-json/01-introduction/introduction-to-theme-json.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "introduction-to-theme-json",
+    "parent_order": 3,
+    "page_order": 1001,
+    "sub_chapter": "introduction",
+    "sub_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/introduction-to-theme-json/",
+    "title": "Introduction to theme.json"
+  },
+  "theme-handbook/03-theme-json/02-settings/appearance-tools.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "appearance-tools",
+    "parent_order": 3,
+    "page_order": 1,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/appearance-tools/",
+    "title": "Appearance Tools"
+  },
+  "theme-handbook/03-theme-json/02-settings/blocks.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "blocks",
+    "parent_order": 3,
+    "page_order": 2,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/blocks/",
+    "title": "Blocks"
+  },
+  "theme-handbook/03-theme-json/02-settings/border.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "border",
+    "parent_order": 3,
+    "page_order": 3,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/border/",
+    "title": "Border"
+  },
+  "theme-handbook/03-theme-json/02-settings/color.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "color",
+    "parent_order": 3,
+    "page_order": 4,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/color/",
+    "title": "Color"
+  },
+  "theme-handbook/03-theme-json/02-settings/custom.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "custom",
+    "parent_order": 3,
+    "page_order": 5,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/custom/",
+    "title": "Custom"
+  },
+  "theme-handbook/03-theme-json/02-settings/dimensions.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "dimensions",
+    "parent_order": 3,
+    "page_order": 6,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/dimensions/",
+    "title": "Dimensions"
+  },
+  "theme-handbook/03-theme-json/02-settings/index.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "index",
+    "parent_order": 3,
+    "page_order": 0,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/",
+    "title": "Settings"
+  },
+  "theme-handbook/03-theme-json/02-settings/layout.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "layout",
+    "parent_order": 3,
+    "page_order": 7,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/layout/",
+    "title": "Layout"
+  },
+  "theme-handbook/03-theme-json/02-settings/lightbox.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "lightbox",
+    "parent_order": 3,
+    "page_order": 8,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/lightbox/",
+    "title": "Lightbox"
+  },
+  "theme-handbook/03-theme-json/02-settings/position.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "position",
+    "parent_order": 3,
+    "page_order": 9,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/position/",
+    "title": "Position"
+  },
+  "theme-handbook/03-theme-json/02-settings/settings-reference.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "settings-reference",
+    "parent_order": 3,
+    "page_order": 14,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/settings-reference/",
+    "title": "Settings Reference"
+  },
+  "theme-handbook/03-theme-json/02-settings/shadow.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "shadow",
+    "parent_order": 3,
+    "page_order": 10,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/shadow/",
+    "title": "Shadow"
+  },
+  "theme-handbook/03-theme-json/02-settings/spacing.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "spacing",
+    "parent_order": 3,
+    "page_order": 11,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/spacing/",
+    "title": "Spacing"
+  },
+  "theme-handbook/03-theme-json/02-settings/typography.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "typography",
+    "parent_order": 3,
+    "page_order": 12,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/typography/",
+    "title": "Typography"
+  },
+  "theme-handbook/03-theme-json/02-settings/use-root-padding-aware-alignments.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "use-root-padding-aware-alignments",
+    "parent_order": 3,
+    "page_order": 13,
+    "sub_chapter": "settings",
+    "sub_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/settings/use-root-padding-aware-alignments/",
+    "title": "Use Root Padding Aware Alignments"
+  },
+  "theme-handbook/03-theme-json/03-styles/applying-styles.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "applying-styles",
+    "parent_order": 3,
+    "page_order": 1,
+    "sub_chapter": "styles",
+    "sub_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/styles/applying-styles/",
+    "title": "Applying Styles"
+  },
+  "theme-handbook/03-theme-json/03-styles/index.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "index",
+    "parent_order": 3,
+    "page_order": 0,
+    "sub_chapter": "styles",
+    "sub_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/styles/",
+    "title": "Styles"
+  },
+  "theme-handbook/03-theme-json/03-styles/styles-reference.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "styles-reference",
+    "parent_order": 3,
+    "page_order": 3,
+    "sub_chapter": "styles",
+    "sub_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/styles/styles-reference/",
+    "title": "Styles Reference"
+  },
+  "theme-handbook/03-theme-json/03-styles/using-presets.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "using-presets",
+    "parent_order": 3,
+    "page_order": 2,
+    "sub_chapter": "styles",
+    "sub_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/styles/using-presets/",
+    "title": "Using Presets"
+  },
+  "theme-handbook/03-theme-json/04-custom-templates.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "custom-templates",
+    "parent_order": 3,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/custom-templates/",
+    "title": "Custom Templates"
+  },
+  "theme-handbook/03-theme-json/05-patterns.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "patterns",
+    "parent_order": 3,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/patterns/",
+    "title": "Patterns"
+  },
+  "theme-handbook/03-theme-json/06-template-parts.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "template-parts",
+    "parent_order": 3,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/template-parts/",
+    "title": "Template Parts"
+  },
+  "theme-handbook/03-theme-json/07-style-variations.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "style-variations",
+    "parent_order": 3,
+    "page_order": 7,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/style-variations/",
+    "title": "Style Variations"
+  },
+  "theme-handbook/03-theme-json/index.md": {
+    "handbook": "theme",
+    "chapter": "theme-json",
+    "slug": "index",
+    "parent_order": 3,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/global-settings-and-styles/",
+    "title": "Global Settings and Styles (theme.json)"
+  },
+  "theme-handbook/04-templates/index.md": {
+    "handbook": "theme",
+    "chapter": "templates",
+    "slug": "index",
+    "parent_order": 4,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/templates/",
+    "title": "Templates"
+  },
+  "theme-handbook/04-templates/introduction-to-templates.md": {
+    "handbook": "theme",
+    "chapter": "templates",
+    "slug": "introduction-to-templates",
+    "parent_order": 4,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/templates/introduction-to-templates/",
+    "title": "Introduction to Templates"
+  },
+  "theme-handbook/04-templates/template-hierarchy.md": {
+    "handbook": "theme",
+    "chapter": "templates",
+    "slug": "template-hierarchy",
+    "parent_order": 4,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/templates/template-hierarchy/",
+    "title": "Template Hierarchy"
+  },
+  "theme-handbook/04-templates/template-parts.md": {
+    "handbook": "theme",
+    "chapter": "templates",
+    "slug": "template-parts",
+    "parent_order": 4,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/themes/templates/template-parts/",
+    "title": "Template Parts"
+  },
+  "theme-handbook/04-templates/templates.md": {
+    "handbook": "theme",
+    "chapter": "templates",
+    "slug": "templates",
+    "parent_order": 4,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/templates/templates/",
+    "title": "Templates"
+  },
+  "theme-handbook/05-patterns/block-type-patterns.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "block-type-patterns",
+    "parent_order": 5,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/themes/patterns/block-type-patterns/",
+    "title": "Block Type Patterns"
+  },
+  "theme-handbook/05-patterns/index.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "index",
+    "parent_order": 5,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/patterns/",
+    "title": "Patterns"
+  },
+  "theme-handbook/05-patterns/introduction-to-patterns.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "introduction-to-patterns",
+    "parent_order": 5,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/patterns/introduction-to-patterns/",
+    "title": "Introduction to Patterns"
+  },
+  "theme-handbook/05-patterns/patterns-and-block-locking.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "patterns-and-block-locking",
+    "parent_order": 5,
+    "page_order": 7,
+    "source_url": "https://developer.wordpress.org/themes/patterns/patterns-and-block-locking/",
+    "title": "Patterns and Block Locking"
+  },
+  "theme-handbook/05-patterns/registering-patterns.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "registering-patterns",
+    "parent_order": 5,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/patterns/registering-patterns/",
+    "title": "Registering Patterns"
+  },
+  "theme-handbook/05-patterns/starter-patterns.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "starter-patterns",
+    "parent_order": 5,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/themes/patterns/starter-patterns/",
+    "title": "Starter Patterns"
+  },
+  "theme-handbook/05-patterns/usage-in-templates.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "usage-in-templates",
+    "parent_order": 5,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/themes/patterns/usage-in-templates/",
+    "title": "Usage in Templates"
+  },
+  "theme-handbook/05-patterns/using-php-in-patterns.md": {
+    "handbook": "theme",
+    "chapter": "patterns",
+    "slug": "using-php-in-patterns",
+    "parent_order": 5,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/patterns/using-php-in-patterns/",
+    "title": "Using PHP in Patterns"
+  },
+  "theme-handbook/06-features/block-style-variations.md": {
+    "handbook": "theme",
+    "chapter": "features",
+    "slug": "block-style-variations",
+    "parent_order": 6,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/features/block-style-variations/",
+    "title": "Block Style Variations"
+  },
+  "theme-handbook/06-features/block-stylesheets.md": {
+    "handbook": "theme",
+    "chapter": "features",
+    "slug": "block-stylesheets",
+    "parent_order": 6,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/features/block-stylesheets/",
+    "title": "Block Stylesheets"
+  },
+  "theme-handbook/06-features/block-variations.md": {
+    "handbook": "theme",
+    "chapter": "features",
+    "slug": "block-variations",
+    "parent_order": 6,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/features/block-variations/",
+    "title": "Block Variations"
+  },
+  "theme-handbook/06-features/index.md": {
+    "handbook": "theme",
+    "chapter": "features",
+    "slug": "index",
+    "parent_order": 6,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/features/",
+    "title": "Features"
+  },
+  "theme-handbook/07-advanced-topics/build-process.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "build-process",
+    "parent_order": 7,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/build-process/",
+    "title": "Build Process"
+  },
+  "theme-handbook/07-advanced-topics/child-themes.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "child-themes",
+    "parent_order": 7,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/child-themes/",
+    "title": "Child Themes"
+  },
+  "theme-handbook/07-advanced-topics/debugging.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "debugging",
+    "parent_order": 7,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/debugging/",
+    "title": "Debugging"
+  },
+  "theme-handbook/07-advanced-topics/index.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "index",
+    "parent_order": 7,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/",
+    "title": "Advanced Topics"
+  },
+  "theme-handbook/07-advanced-topics/internationalization.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "internationalization",
+    "parent_order": 7,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/internationalization/",
+    "title": "Internationalization"
+  },
+  "theme-handbook/07-advanced-topics/javascript-best-practices.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "javascript-best-practices",
+    "parent_order": 7,
+    "page_order": 12,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/javascript-best-practices/",
+    "title": "JavaScript Best Practices"
+  },
+  "theme-handbook/07-advanced-topics/plugin-api-hooks.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "plugin-api-hooks",
+    "parent_order": 7,
+    "page_order": 10,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/plugin-api-hooks/",
+    "title": "Plugin API Hooks"
+  },
+  "theme-handbook/07-advanced-topics/privacy.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "privacy",
+    "parent_order": 7,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/privacy/",
+    "title": "Privacy"
+  },
+  "theme-handbook/07-advanced-topics/publishing-themes.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "publishing-themes",
+    "parent_order": 7,
+    "page_order": 8,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/publishing-themes/",
+    "title": "Publishing Themes"
+  },
+  "theme-handbook/07-advanced-topics/security.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "security",
+    "parent_order": 7,
+    "page_order": 7,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/security/",
+    "title": "Security"
+  },
+  "theme-handbook/07-advanced-topics/testing.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "testing",
+    "parent_order": 7,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/testing/",
+    "title": "Testing"
+  },
+  "theme-handbook/07-advanced-topics/theme-testing.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "theme-testing",
+    "parent_order": 7,
+    "page_order": 9,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/theme-testing/",
+    "title": "Theme Testing"
+  },
+  "theme-handbook/07-advanced-topics/ui-best-practices.md": {
+    "handbook": "theme",
+    "chapter": "advanced-topics",
+    "slug": "ui-best-practices",
+    "parent_order": 7,
+    "page_order": 11,
+    "source_url": "https://developer.wordpress.org/themes/advanced-topics/ui-best-practices/",
+    "title": "UI Best Practices"
+  },
+  "theme-handbook/08-releasing-your-theme/index.md": {
+    "handbook": "theme",
+    "chapter": "releasing-your-theme",
+    "slug": "index",
+    "parent_order": 8,
+    "page_order": 0,
+    "source_url": "https://developer.wordpress.org/themes/releasing-your-theme/",
+    "title": "Releasing Your Theme"
+  },
+  "theme-handbook/08-releasing-your-theme/required-theme-files.md": {
+    "handbook": "theme",
+    "chapter": "releasing-your-theme",
+    "slug": "required-theme-files",
+    "parent_order": 8,
+    "page_order": 1,
+    "source_url": "https://developer.wordpress.org/themes/releasing-your-theme/required-theme-files/",
+    "title": "Required Theme Files"
+  },
+  "theme-handbook/08-releasing-your-theme/submitting-to-wordpress-org.md": {
+    "handbook": "theme",
+    "chapter": "releasing-your-theme",
+    "slug": "submitting-to-wordpress-org",
+    "parent_order": 8,
+    "page_order": 2,
+    "source_url": "https://developer.wordpress.org/themes/releasing-your-theme/submitting-your-theme-to-wordpress-org/",
+    "title": "Submitting Your Theme to WordPress.org"
+  },
+  "theme-handbook/08-releasing-your-theme/testing.md": {
+    "handbook": "theme",
+    "chapter": "releasing-your-theme",
+    "slug": "testing",
+    "parent_order": 8,
+    "page_order": 3,
+    "source_url": "https://developer.wordpress.org/themes/releasing-your-theme/testing/",
+    "title": "Testing"
+  },
+  "theme-handbook/08-releasing-your-theme/theme-review-guidelines.md": {
+    "handbook": "theme",
+    "chapter": "releasing-your-theme",
+    "slug": "theme-review-guidelines",
+    "parent_order": 8,
+    "page_order": 4,
+    "source_url": "https://developer.wordpress.org/themes/releasing-your-theme/theme-review-guidelines/",
+    "title": "Theme Review Guidelines"
+  },
+  "theme-handbook/08-releasing-your-theme/updating-your-theme.md": {
+    "handbook": "theme",
+    "chapter": "releasing-your-theme",
+    "slug": "updating-your-theme",
+    "parent_order": 8,
+    "page_order": 5,
+    "source_url": "https://developer.wordpress.org/themes/releasing-your-theme/updating-your-theme/",
+    "title": "Updating Your Theme"
+  },
+  "theme-handbook/08-releasing-your-theme/writing-documentation.md": {
+    "handbook": "theme",
+    "chapter": "releasing-your-theme",
+    "slug": "writing-documentation",
+    "parent_order": 8,
+    "page_order": 6,
+    "source_url": "https://developer.wordpress.org/themes/releasing-your-theme/writing-documentation/",
+    "title": "Writing Documentation"
+  }
+}

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>검색 결과 — Axismundi</title>
+
+  <link rel="stylesheet" href="stylesheets/tokens.css" />
+  <link rel="stylesheet" href="stylesheets/base.css" />
+  <link rel="stylesheet" href="stylesheets/components.css" />
+  <link rel="stylesheet" href="stylesheets/prose.css" />
+  <link rel="stylesheet" href="stylesheets/blocks.css" />
+  <style>
+    /* =====================================================
+     * search.html — 검색 결과 페이지 (search.html template)
+     *
+     * Layout: header + 2-column main (results list + sidebar) + footer
+     * 모바일: sidebar가 main 아래로 stack
+     * 결과 0개일 때: .ax-search--empty 변형 활용
+     *
+     * WP template-hierarchy note:
+     *   search.html → searchresult.html → index.html
+     *   This file is the canonical search-results template.
+     * ===================================================== */
+    .ax-site-header {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 10;
+      background-color: var(--md-sys-color-surface);
+      border-block-end: 1px solid transparent;
+      transition: border-color
+        var(--md-sys-motion-curve-fast-effects-duration)
+        var(--md-sys-motion-curve-fast-effects);
+    }
+    .ax-site-header.is-scrolled {
+      border-block-end-color: var(--md-sys-color-outline-variant);
+    }
+
+    .nav-drawer {
+      width: min(320px, 80vw);
+      max-width: 320px;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+    }
+    .nav-drawer::backdrop {
+      background-color: var(--md-sys-color-scrim);
+      opacity: 0.32;
+    }
+    .nav-drawer__head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--space-md) var(--space-lg);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .nav-drawer__body {
+      padding: var(--space-sm) 0;
+    }
+
+    /* ── search layout ── */
+    .ax-search {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      padding: var(--space-xl) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    @media (min-width: 900px) {
+      .ax-search { grid-template-columns: 1fr 280px; }
+    }
+
+    .ax-search__head {
+      grid-column: 1 / -1;
+    }
+    .ax-search__title {
+      margin: 0 0 var(--space-sm);
+    }
+    .ax-search__meta {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* search input — large, prominent at top of page */
+    .ax-search__form {
+      grid-column: 1 / -1;
+    }
+
+    /* results list — vertical card column */
+    .ax-search__results {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .ax-search__results > .card {
+      padding: var(--space-lg);
+    }
+    .ax-search__result-title {
+      margin: 0 0 var(--space-xs);
+    }
+    .ax-search__result-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .ax-search__result-title a:hover {
+      text-decoration: underline;
+      text-decoration-color: var(--md-sys-color-primary);
+      text-underline-offset: 4px;
+    }
+    .ax-search__result-meta {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-block-end: var(--space-sm);
+    }
+    /* Highlight the query within result titles/excerpts */
+    .ax-search__result mark {
+      background-color: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    .ax-search__result-link-row {
+      margin-block-start: var(--space-md);
+      color: var(--md-sys-color-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .ax-search__result-link-row a {
+      color: inherit;
+    }
+
+    /* Sidebar — same widget pattern as home.html */
+    .ax-search-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    @media (min-width: 900px) {
+      .ax-search-sidebar {
+        position: sticky;
+        inset-block-start: calc(64px + var(--space-md));
+        align-self: start;
+      }
+    }
+
+    /* Empty state */
+    .ax-search--empty .ax-search__results {
+      display: none;
+    }
+    .ax-search__empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding-block: var(--space-3xl, var(--space-xl));
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-search__empty-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      margin-block-end: var(--space-lg);
+      border-radius: var(--md-sys-shape-corner-large);
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-search__empty h2 {
+      margin: 0 0 var(--space-sm);
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-search__empty-suggestions {
+      margin-block-start: var(--space-lg);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      justify-content: center;
+    }
+
+    /* Footer (sync with home.html / front-page.html / 404.html) */
+    .ax-site-footer {
+      margin-block-start: var(--space-xxl, 64px);
+      padding: var(--space-xl) var(--space-md);
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-site-footer__inner {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      display: grid;
+      gap: var(--space-xl);
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 700px) {
+      .ax-site-footer__inner { grid-template-columns: 2fr 1fr 1fr; }
+    }
+    .ax-site-footer__nav { display: flex; flex-direction: column; gap: var(--space-xs); }
+    .ax-site-footer__nav a {
+      color: inherit; text-decoration: none;
+    }
+    .ax-site-footer__nav a:hover { color: var(--md-sys-color-primary); }
+    .ax-site-footer__col-title {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-block-end: var(--space-sm);
+    }
+    .ax-site-footer__brand-name { margin: 0 0 var(--space-xs); }
+    .ax-site-footer__tagline {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+      max-inline-size: 40ch;
+    }
+    .ax-site-footer__bottom {
+      grid-column: 1 / -1;
+      padding-block-start: var(--space-md);
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface-variant);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .ax-site-footer__bottom a {
+      color: inherit;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WCAG 2.4.1 Bypass Blocks — first focusable element -->
+  <a href="#main" class="skip-link">메인 콘텐츠로 건너뛰기</a>
+
+  <!-- HEADER (sync with home.html / front-page.html / 404.html) -->
+  <header class="ax-site-header app-bar app-bar--small">
+    <div class="app-bar__leading">
+      <button type="button" class="ax-icon-button is-standard has-state-layer"
+              data-toggle-nav aria-controls="nav-drawer" aria-expanded="false"
+              aria-label="메뉴 열기">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+        </svg>
+      </button>
+    </div>
+    <p class="app-bar__title">
+      <a href="/" style="color: inherit; text-decoration: none;">Axismundi</a>
+    </p>
+    <div class="app-bar__actions">
+      <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="계정">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="ax-search" id="main">
+
+    <!-- Page heading + meta -->
+    <div class="ax-search__head">
+      <h1 class="ax-search__title t-headline-large">"머티리얼 디자인" 검색 결과</h1>
+      <p class="ax-search__meta t-body-medium">
+        12개의 결과 · 0.04초
+      </p>
+    </div>
+
+    <!-- Search form — full width, allows refinement on results page -->
+    <form class="ax-search__form" role="search" action="/search" method="get">
+      <div class="text-field text-field--outlined text-field--with-leading">
+        <div class="text-field__container">
+          <span class="text-field__leading-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+          </span>
+          <input type="search" name="s" id="search-q" class="text-field__input" placeholder=" " value="머티리얼 디자인" autocomplete="off">
+          <label class="text-field__label" for="search-q">검색어</label>
+          <button type="button" class="ax-icon-button is-standard has-state-layer text-field__trailing-icon is-clear" aria-label="지우기">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Results list (each card = one search hit) -->
+    <div class="ax-search__results">
+
+      <article class="ax-search__result card card--outlined">
+        <p class="ax-search__result-meta t-label-small">아티클 · 2026.04.18</p>
+        <h2 class="ax-search__result-title t-headline-small">
+          <a href="/single">M3 Expressive — <mark>머티리얼 디자인</mark> 3 표현 시스템 도입</a>
+        </h2>
+        <p class="t-body-medium">
+          <mark>머티리얼 디자인</mark> 3는 토큰 기반 시스템과 표현 가능한 컴포넌트 변형을 결합합니다. 본 글에서는 Axismundi가 채택한 sys/ref 토큰 레이어 구조와 컴포넌트 매핑을 다룹니다.
+        </p>
+        <p class="ax-search__result-link-row t-label-medium">
+          <span>아티클 더 보기</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </p>
+      </article>
+
+      <article class="ax-search__result card card--outlined">
+        <p class="ax-search__result-meta t-label-small">아티클 · 2026.03.05</p>
+        <h2 class="ax-search__result-title t-headline-small">
+          <a href="/single">디자인 시스템과 <mark>머티리얼</mark> 토큰의 사이</a>
+        </h2>
+        <p class="t-body-medium">
+          토큰을 단순히 변수로 보지 말고, 의미적 계층(reference / system / component)으로 이해할 때 디자인 시스템의 확장성이 살아납니다. <mark>머티리얼</mark> 3 사양과 비교 분석.
+        </p>
+        <p class="ax-search__result-link-row t-label-medium">
+          <span>아티클 더 보기</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </p>
+      </article>
+
+      <article class="ax-search__result card card--outlined">
+        <p class="ax-search__result-meta t-label-small">노트 · 2026.02.22</p>
+        <h2 class="ax-search__result-title t-headline-small">
+          <a href="/single"><mark>머티리얼</mark> 모션 곡선과 워드프레스 트랜지션</a>
+        </h2>
+        <p class="t-body-medium">
+          블록 에디터 기본 트랜지션을 M3 모션 토큰(emphasized, standard, fast-effects)으로 매핑하기. 인터랙티비티 API 연동 가능성 검토.
+        </p>
+        <p class="ax-search__result-link-row t-label-medium">
+          <span>아티클 더 보기</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </p>
+      </article>
+
+      <article class="ax-search__result card card--outlined">
+        <p class="ax-search__result-meta t-label-small">아티클 · 2026.01.30</p>
+        <h2 class="ax-search__result-title t-headline-small">
+          <a href="/single">한글 타이포그래피와 본문 리듬</a>
+        </h2>
+        <p class="t-body-medium">
+          <mark>머티리얼 디자인</mark>의 typescale을 한글 본문에 그대로 적용했을 때의 한계, 그리고 line-height 비율을 조정한 prose.css의 합의 지점.
+        </p>
+        <p class="ax-search__result-link-row t-label-medium">
+          <span>아티클 더 보기</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </p>
+      </article>
+
+      <article class="ax-search__result card card--outlined">
+        <p class="ax-search__result-meta t-label-small">아티클 · 2025.12.10</p>
+        <h2 class="ax-search__result-title t-headline-small">
+          <a href="/single">ActivityPub 통합 — 페디버스에서 <mark>디자인</mark>이 작동하는 방식</a>
+        </h2>
+        <p class="t-body-medium">
+          마이크로블로그 노트가 페디버스로 연합될 때, 토큰 기반 시각 시스템이 인스턴스 간 어떻게 보존/번역되는지에 대한 메모. 예시 implementation 포함.
+        </p>
+        <p class="ax-search__result-link-row t-label-medium">
+          <span>아티클 더 보기</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+        </p>
+      </article>
+
+    </div>
+
+    <!-- Sidebar widgets -->
+    <aside class="ax-search-sidebar" aria-label="Search sidebar">
+
+      <section class="ax-widget card card--outlined">
+        <h3 class="t-label-small ax-widget__title">결과 필터</h3>
+        <div role="radiogroup" aria-label="검색 결과 타입 필터" style="display: flex; flex-wrap: wrap; gap: var(--space-xs); padding: var(--space-md);">
+          <button type="button" class="chip chip--filter has-state-layer t-label-large" role="radio" aria-checked="true">
+            <span class="chip__label">전체</span>
+          </button>
+          <button type="button" class="chip chip--filter has-state-layer t-label-large" role="radio" aria-checked="false">
+            <span class="chip__label">아티클</span>
+          </button>
+          <button type="button" class="chip chip--filter has-state-layer t-label-large" role="radio" aria-checked="false">
+            <span class="chip__label">노트</span>
+          </button>
+          <button type="button" class="chip chip--filter has-state-layer t-label-large" role="radio" aria-checked="false">
+            <span class="chip__label">페이지</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="ax-widget card card--outlined">
+        <h3 class="t-label-small ax-widget__title">최근 검색어</h3>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li><a href="/?s=react" style="display: block; padding: var(--space-sm) var(--space-md); color: inherit; text-decoration: none;">React</a></li>
+          <li><a href="/?s=token" style="display: block; padding: var(--space-sm) var(--space-md); color: inherit; text-decoration: none;">디자인 토큰</a></li>
+          <li><a href="/?s=activitypub" style="display: block; padding: var(--space-sm) var(--space-md); color: inherit; text-decoration: none;">ActivityPub</a></li>
+          <li><a href="/?s=한글" style="display: block; padding: var(--space-sm) var(--space-md); color: inherit; text-decoration: none;">한글 타이포</a></li>
+        </ul>
+      </section>
+
+    </aside>
+
+  </main>
+
+  <!-- ============================================================
+       NAV DRAWER (mobile / dialog modal)
+       ============================================================ -->
+  <dialog class="nav-drawer" id="nav-drawer" aria-label="Main navigation">
+    <header class="nav-drawer__head">
+      <h2 class="t-title-medium" style="margin: 0;">Axismundi</h2>
+      <button type="button"
+              class="ax-icon-button is-standard has-state-layer"
+              data-close-modal
+              aria-label="메뉴 닫기">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
+    </header>
+    <nav class="nav-drawer__body" aria-label="Main navigation (mobile)">
+      <ul class="ax-nav-list">
+        <li><a href="/">
+          <span class="ax-nav-list__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+          </span>
+          Home
+        </a></li>
+        <li><a href="/blog">
+          <span class="ax-nav-list__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
+          </span>
+          Blog
+        </a></li>
+        <li><a href="/archive">
+          <span class="ax-nav-list__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3h18v4H3zm1 5h16v13H4zm5 4v2h6v-2z"/>
+            </svg>
+          </span>
+          Archive
+        </a></li>
+      </ul>
+    </nav>
+  </dialog>
+
+  <footer class="ax-site-footer">
+    <div class="ax-site-footer__inner">
+      <div>
+        <div class="t-label-small ax-site-footer__col-title">About</div>
+        <div class="t-headline-small ax-site-footer__brand-name">Axismundi</div>
+        <p class="t-body-medium ax-site-footer__tagline">
+          Material 3 디자인 시스템으로 만든 WordPress 블록 테마.
+        </p>
+      </div>
+      <nav class="ax-site-footer__nav" aria-label="Site sections">
+        <div class="t-label-small ax-site-footer__col-title">Site</div>
+        <a class="t-body-medium" href="/">Home</a>
+        <a class="t-body-medium" href="/blog">Blog</a>
+        <a class="t-body-medium" href="/archive">Archive</a>
+      </nav>
+      <nav class="ax-site-footer__nav" aria-label="Legal">
+        <div class="t-label-small ax-site-footer__col-title">Legal</div>
+        <a class="t-body-medium" href="/privacy">Privacy</a>
+        <a class="t-body-medium" href="/terms">Terms</a>
+      </nav>
+      <div class="ax-site-footer__bottom">
+        <p class="t-body-small">© 2026 본인 실명 · <a href="https://designbusan.ai.kr" rel="author">designbusan.ai.kr</a></p>
+        <p class="t-body-small">Powered by <a href="https://wordpress.org">WordPress</a> · <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="license">GPL-3.0-or-later</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script defer src="scripts/theme.js"></script>
+</body>
+</html>

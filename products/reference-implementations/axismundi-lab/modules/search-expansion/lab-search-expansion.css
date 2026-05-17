@@ -1,0 +1,268 @@
+/* ============================================================
+ * Axismundi — lab-search-expansion.css
+ * v3.3.4 — Search Expansion Module Extraction
+ *
+ * EXTRACTED with refinement from benchmark-interactions.css L181-262
+ * (the "Search bar: keep original markup, add Beer-like focus
+ * expansion" block). Second Beer-CSS-derived module under the
+ * ../../docs/BEER-CSS-INTAKE.md contract.
+ *
+ * Refinement summary (against benchmark original):
+ *
+ *   - Hardcoded values tokenized (intake contract §3):
+ *       gap: 2px           → var(--space-xs) / 2 via custom prop
+ *                            (kept fine-grain — see §Suggestions list)
+ *       padding: 8px 0     → padding-block: var(--space-sm)
+ *       gap: 12px          → var(--space-sm) + var(--space-xs) via prop
+ *       min-height: 44px   → 44px retained (WCAG 2.5.5 target size minimum,
+ *                            not a design token — see comment below)
+ *       padding: 0 16px    → padding-inline: var(--space-md)
+ *       8% color-mix       → var(--md-sys-state-hover-state-layer-opacity)
+ *                            (M3 state-layer compliance, intake §7)
+ *
+ *   - Added explicit reduced-motion block (intake contract §4) —
+ *     the benchmark version had no @media (prefers-reduced-motion:
+ *     reduce) handling. New rule disables the elevation lift and
+ *     replaces the transform animation on the suggestions panel
+ *     with an instant visibility/opacity toggle.
+ *
+ *   - State-layer compliance for suggestion items (intake §7):
+ *     hover/focus-visible no longer hand-rolls an 8% on-surface
+ *     tint; instead uses Pattern A state layer via ::before pseudo
+ *     element with the canonical hover/focus opacity tokens. This
+ *     matches how .ax-button, .chip, .search-bar, and every other
+ *     interactive surface in components.css §0 handles state.
+ *
+ *   - role="listbox" / role="option" pairing kept (good a11y) but
+ *     the JS adds aria-controls + aria-expanded on the input —
+ *     so the listbox is announced as a popup of the input, not
+ *     a free-floating widget. CSS unchanged for this; just noting.
+ *
+ * Loaded by: lab-search-expansion-pattern.html ONLY.
+ * NOT loaded by main style-guide.html — lab-internal isolation.
+ * NOT promoted to components.css §10 Search bar — the static
+ * structure there stays; this module is the optional enhancement
+ * layer.
+ *
+ * Audit: docs/SEARCH-EXPANSION-AUDIT.md
+ * Cross-module contract: ../../docs/BEER-CSS-INTAKE.md
+ *
+ * Selector ownership:
+ *   .search-bar                → defined in components.css §10
+ *                                (this module only adds modifier behavior)
+ *   .search-bar.is-search-active → added by this module
+ *   .ax-search-suggestions     → added by this module (popup panel)
+ *   .ax-search-suggestions__item → added by this module (option button)
+ * ============================================================ */
+
+:root {
+  /* Module-local — fine-grain gap between suggestion items.
+   * 2px is below the --space-xs (4px) floor because suggestion items
+   * already have generous internal padding-block from min-height: 44px;
+   * adding 4px between them produces too much vertical rhythm noise.
+   * Kept as a module-local custom property so the value is named
+   * rather than magical. */
+  --ax-search-suggestions-item-gap: 2px;
+
+  /* Module-local — leading-icon-to-label gap inside each suggestion
+   * item. M3 reference shows ~12px (between space-sm 8 and space-md
+   * 16). Using a module-local prop documents that this is an
+   * intentional intermediate value. */
+  --ax-search-suggestions-item-icon-gap: 12px;
+
+  /* Module-local — suggestion item minimum height. 44px is the
+   * WCAG 2.5.5 Target Size (Level AAA) recommended minimum for
+   * interactive targets. Not a design token because it's a hard
+   * accessibility floor, not a visual rhythm value. M3 reference
+   * uses 48px; 44px is the WCAG floor and works for the typical
+   * suggestion-list density. */
+  --ax-search-suggestions-item-min-height: 44px;
+}
+
+/* ------------------------------------------------------------
+ * .search-bar — base elevation transition for expansion
+ *
+ * The host .search-bar is defined in components.css §10. This
+ * module adds the transition properties so the elevation/transform
+ * change between rest and active state animates rather than
+ * snapping. We do NOT redefine the .search-bar layout, only its
+ * motion. (Intake contract §7 — complement, don't duplicate.)
+ * ------------------------------------------------------------ */
+.search-bar {
+  transition:
+    background-color
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    box-shadow
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    transform
+      var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial);
+}
+
+/* Active state — either via :focus-within (CSS-only, works without
+ * JS) or via .is-search-active class (JS-added; covers e.g.
+ * suggestions hover where focus may move briefly).
+ *
+ * Both triggers produce the same visual: a small elevation lift
+ * (level2 shadow) and a 1px translateY upward to suggest
+ * "promoted above surrounding content".
+ *
+ * The CSS-only :focus-within path satisfies intake contract §5
+ * (JS-disabled fallback) — the bar still elevates on focus even
+ * without the JS module. */
+.search-bar:focus-within,
+.search-bar.is-search-active {
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+  transform: translateY(-1px);
+}
+
+/* Raise z-index when expanded so the suggestions popup stacks above
+ * any sibling chrome (header, nav, etc.). */
+.search-bar.is-search-active {
+  z-index: 20;
+}
+
+/* ------------------------------------------------------------
+ * .ax-search-suggestions — popup panel
+ *
+ * Anchored below the search bar via inset-block-start. The
+ * benchmark used logical properties here already (inset-block-*,
+ * inset-inline), so logical is retained — there is no
+ * physical-coordinate reason (unlike ripple) to use
+ * top/left/right. RTL: panel anchors below + spans full bar width
+ * regardless of writing direction. ✓
+ *
+ * Hidden state: visibility hidden + opacity 0 + slight translate
+ * upward, with pointer-events disabled. The visibility transition
+ * uses 0s linear with a delay equal to the opacity duration, so
+ * the panel only becomes pointer-inactive AFTER it has faded out
+ * (otherwise clicks during fade would land on invisible items).
+ * ------------------------------------------------------------ */
+.ax-search-suggestions {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline: 0;
+  z-index: 30;
+
+  display: grid;
+  gap: var(--ax-search-suggestions-item-gap);
+  padding-block: var(--space-sm);
+
+  border-radius: var(--md-sys-shape-corner-large);
+  background-color: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  transform-origin: top center;
+  pointer-events: none;
+
+  transition:
+    opacity
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    transform
+      var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial),
+    visibility 0s linear var(--md-sys-motion-curve-fast-effects-duration);
+}
+
+.search-bar.is-search-active .ax-search-suggestions {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  /* Reset visibility delay so the panel is interactive immediately
+   * on expand. */
+  transition:
+    opacity
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    transform
+      var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial),
+    visibility 0s linear 0s;
+}
+
+/* ------------------------------------------------------------
+ * .ax-search-suggestions__item — option button (role="option")
+ *
+ * Composes on top of a transparent button reset, then adds a
+ * Pattern A state layer via ::before for hover / focus-visible
+ * (intake contract §7 — use the same state-layer mechanism as
+ * components.css §0, do not hand-roll a custom color-mix).
+ * ------------------------------------------------------------ */
+.ax-search-suggestions__item {
+  position: relative;            /* host for ::before state layer */
+  display: flex;
+  align-items: center;
+  gap: var(--ax-search-suggestions-item-icon-gap);
+  min-height: var(--ax-search-suggestions-item-min-height);
+  padding-inline: var(--space-md);
+  padding-block: 0;
+
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* Pattern A state layer — matches components.css §0 conventions */
+.ax-search-suggestions__item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity
+    var(--md-sys-motion-curve-fast-effects-duration)
+    var(--md-sys-motion-curve-fast-effects);
+}
+
+.ax-search-suggestions__item:hover::before {
+  opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+
+.ax-search-suggestions__item:focus-visible::before {
+  opacity: var(--md-sys-state-focus-state-layer-opacity);
+}
+
+/* Focus ring on item — defer to host's :focus-visible default outline
+ * (browser-supplied) plus the state-layer above. No custom outline. */
+
+/* ------------------------------------------------------------
+ * Reduced motion — intake contract §4
+ *
+ * Disable the elevation lift transform (translateY) entirely.
+ * Suggestions panel still toggles between hidden and visible,
+ * but with no transform animation — instant snap. Box-shadow
+ * elevation change is kept because shadows are not motion in
+ * the M3 sense (they are state indication via depth).
+ * ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .search-bar {
+    transition: box-shadow 0s, background-color 0s, transform 0s;
+  }
+  .search-bar:focus-within,
+  .search-bar.is-search-active {
+    transform: none;
+  }
+  .ax-search-suggestions {
+    transform: none;
+    transition: opacity 0s, visibility 0s;
+  }
+  .search-bar.is-search-active .ax-search-suggestions {
+    transform: none;
+  }
+  .ax-search-suggestions__item::before {
+    transition: none;
+  }
+}

@@ -1,0 +1,437 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "settings": {
+    "_axismundi_provenance": "v2.1a-P0.5-v4: tokens.css is SoT. theme.json is minimal WP integration layer (slug registry + lock-down). Inspector GUI limits are intentional — to be replaced by Axismundi custom color/HCT panel plugin. Modern CSS preserved in block-styles.css.",
+    "appearanceTools": true,
+    "useRootPaddingAwareAlignments": true,
+    "layout": {
+      "contentSize": "640px",
+      "wideSize": "1280px"
+    },
+    "color": {
+      "background": true,
+      "text": true,
+      "link": true,
+      "heading": true,
+      "button": true,
+      "caption": true,
+      "palette": [
+        {
+          "slug": "primary",
+          "name": "Primary",
+          "color": "var(--md-sys-color-primary)"
+        },
+        {
+          "slug": "on-primary",
+          "name": "On Primary",
+          "color": "var(--md-sys-color-on-primary)"
+        },
+        {
+          "slug": "primary-container",
+          "name": "Primary Container",
+          "color": "var(--md-sys-color-primary-container)"
+        },
+        {
+          "slug": "on-primary-container",
+          "name": "On Primary Container",
+          "color": "var(--md-sys-color-on-primary-container)"
+        },
+        {
+          "slug": "secondary",
+          "name": "Secondary",
+          "color": "var(--md-sys-color-secondary)"
+        },
+        {
+          "slug": "on-secondary",
+          "name": "On Secondary",
+          "color": "var(--md-sys-color-on-secondary)"
+        },
+        {
+          "slug": "secondary-container",
+          "name": "Secondary Container",
+          "color": "var(--md-sys-color-secondary-container)"
+        },
+        {
+          "slug": "on-secondary-container",
+          "name": "On Secondary Container",
+          "color": "var(--md-sys-color-on-secondary-container)"
+        },
+        {
+          "slug": "tertiary",
+          "name": "Tertiary",
+          "color": "var(--md-sys-color-tertiary)"
+        },
+        {
+          "slug": "on-tertiary",
+          "name": "On Tertiary",
+          "color": "var(--md-sys-color-on-tertiary)"
+        },
+        {
+          "slug": "tertiary-container",
+          "name": "Tertiary Container",
+          "color": "var(--md-sys-color-tertiary-container)"
+        },
+        {
+          "slug": "on-tertiary-container",
+          "name": "On Tertiary Container",
+          "color": "var(--md-sys-color-on-tertiary-container)"
+        },
+        {
+          "slug": "error",
+          "name": "Error",
+          "color": "var(--md-sys-color-error)"
+        },
+        {
+          "slug": "on-error",
+          "name": "On Error",
+          "color": "var(--md-sys-color-on-error)"
+        },
+        {
+          "slug": "error-container",
+          "name": "Error Container",
+          "color": "var(--md-sys-color-error-container)"
+        },
+        {
+          "slug": "on-error-container",
+          "name": "On Error Container",
+          "color": "var(--md-sys-color-on-error-container)"
+        },
+        {
+          "slug": "background",
+          "name": "Background",
+          "color": "var(--md-sys-color-background)"
+        },
+        {
+          "slug": "on-background",
+          "name": "On Background",
+          "color": "var(--md-sys-color-on-background)"
+        },
+        {
+          "slug": "surface",
+          "name": "Surface",
+          "color": "var(--md-sys-color-surface)"
+        },
+        {
+          "slug": "on-surface",
+          "name": "On Surface",
+          "color": "var(--md-sys-color-on-surface)"
+        },
+        {
+          "slug": "surface-variant",
+          "name": "Surface Variant",
+          "color": "var(--md-sys-color-surface-variant)"
+        },
+        {
+          "slug": "on-surface-variant",
+          "name": "On Surface Variant",
+          "color": "var(--md-sys-color-on-surface-variant)"
+        },
+        {
+          "slug": "surface-bright",
+          "name": "Surface Bright",
+          "color": "var(--md-sys-color-surface-bright)"
+        },
+        {
+          "slug": "surface-dim",
+          "name": "Surface Dim",
+          "color": "var(--md-sys-color-surface-dim)"
+        },
+        {
+          "slug": "surface-container-lowest",
+          "name": "Surface Container Lowest",
+          "color": "var(--md-sys-color-surface-container-lowest)"
+        },
+        {
+          "slug": "surface-container-low",
+          "name": "Surface Container Low",
+          "color": "var(--md-sys-color-surface-container-low)"
+        },
+        {
+          "slug": "surface-container",
+          "name": "Surface Container",
+          "color": "var(--md-sys-color-surface-container)"
+        },
+        {
+          "slug": "surface-container-high",
+          "name": "Surface Container High",
+          "color": "var(--md-sys-color-surface-container-high)"
+        },
+        {
+          "slug": "surface-container-highest",
+          "name": "Surface Container Highest",
+          "color": "var(--md-sys-color-surface-container-highest)"
+        },
+        {
+          "slug": "inverse-surface",
+          "name": "Inverse Surface",
+          "color": "var(--md-sys-color-inverse-surface)"
+        },
+        {
+          "slug": "inverse-on-surface",
+          "name": "Inverse On Surface",
+          "color": "var(--md-sys-color-inverse-on-surface)"
+        },
+        {
+          "slug": "inverse-primary",
+          "name": "Inverse Primary",
+          "color": "var(--md-sys-color-inverse-primary)"
+        },
+        {
+          "slug": "outline",
+          "name": "Outline",
+          "color": "var(--md-sys-color-outline)"
+        },
+        {
+          "slug": "outline-variant",
+          "name": "Outline Variant",
+          "color": "var(--md-sys-color-outline-variant)"
+        },
+        {
+          "slug": "shadow",
+          "name": "Shadow",
+          "color": "var(--md-sys-color-shadow)"
+        },
+        {
+          "slug": "scrim",
+          "name": "Scrim",
+          "color": "var(--md-sys-color-scrim)"
+        }
+      ],
+      "duotone": [],
+      "custom": false,
+      "customGradient": false,
+      "defaultPalette": false,
+      "defaultGradients": false,
+      "defaultDuotone": false
+    },
+    "typography": {
+      "fontSizes": [
+        {
+          "slug": "display-large",
+          "name": "Display Large",
+          "size": "var(--md-sys-typescale-display-large-size)"
+        },
+        {
+          "slug": "display-medium",
+          "name": "Display Medium",
+          "size": "var(--md-sys-typescale-display-medium-size)"
+        },
+        {
+          "slug": "display-small",
+          "name": "Display Small",
+          "size": "var(--md-sys-typescale-display-small-size)"
+        },
+        {
+          "slug": "headline-large",
+          "name": "Headline Large",
+          "size": "var(--md-sys-typescale-headline-large-size)"
+        },
+        {
+          "slug": "headline-medium",
+          "name": "Headline Medium",
+          "size": "var(--md-sys-typescale-headline-medium-size)"
+        },
+        {
+          "slug": "headline-small",
+          "name": "Headline Small",
+          "size": "var(--md-sys-typescale-headline-small-size)"
+        },
+        {
+          "slug": "title-large",
+          "name": "Title Large",
+          "size": "var(--md-sys-typescale-title-large-size)"
+        },
+        {
+          "slug": "title-medium",
+          "name": "Title Medium",
+          "size": "var(--md-sys-typescale-title-medium-size)"
+        },
+        {
+          "slug": "title-small",
+          "name": "Title Small",
+          "size": "var(--md-sys-typescale-title-small-size)"
+        },
+        {
+          "slug": "body-large",
+          "name": "Body Large",
+          "size": "var(--md-sys-typescale-body-large-size)"
+        },
+        {
+          "slug": "body-medium",
+          "name": "Body Medium",
+          "size": "var(--md-sys-typescale-body-medium-size)"
+        },
+        {
+          "slug": "body-small",
+          "name": "Body Small",
+          "size": "var(--md-sys-typescale-body-small-size)"
+        },
+        {
+          "slug": "label-large",
+          "name": "Label Large",
+          "size": "var(--md-sys-typescale-label-large-size)"
+        },
+        {
+          "slug": "label-medium",
+          "name": "Label Medium",
+          "size": "var(--md-sys-typescale-label-medium-size)"
+        },
+        {
+          "slug": "label-small",
+          "name": "Label Small",
+          "size": "var(--md-sys-typescale-label-small-size)"
+        }
+      ],
+      "fluid": false,
+      "fontFamilies": [
+        {
+          "slug": "brand",
+          "name": "Brand (Roboto Flex + Noto Sans KR)",
+          "fontFamily": "'Roboto Flex', 'Noto Sans KR', system-ui, sans-serif"
+        },
+        {
+          "slug": "plain",
+          "name": "Plain",
+          "fontFamily": "'Roboto Flex', 'Noto Sans KR', system-ui, sans-serif"
+        },
+        {
+          "slug": "serif",
+          "name": "Serif",
+          "fontFamily": "'Roboto Serif', 'Noto Serif KR', Georgia, serif"
+        },
+        {
+          "slug": "mono",
+          "name": "Monospace",
+          "fontFamily": "'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
+        }
+      ],
+      "lineHeight": true,
+      "fontStyle": true,
+      "fontWeight": true,
+      "letterSpacing": true,
+      "textDecoration": true,
+      "textTransform": true,
+      "dropCap": false,
+      "customFontSize": false
+    },
+    "spacing": {
+      "spacingScale": {
+        "operator": "*",
+        "increment": 1.5,
+        "steps": 7,
+        "mediumStep": 1.5,
+        "unit": "rem"
+      },
+      "padding": true,
+      "margin": true,
+      "blockGap": true,
+      "units": [
+        "px",
+        "em",
+        "rem",
+        "%",
+        "vh",
+        "vw"
+      ]
+    },
+    "shadow": {
+      "presets": [
+        {
+          "slug": "elevation-0",
+          "name": "Elevation level 0",
+          "shadow": "var(--md-sys-elevation-shadow-level0)"
+        },
+        {
+          "slug": "elevation-1",
+          "name": "Elevation level 1",
+          "shadow": "var(--md-sys-elevation-shadow-level1)"
+        },
+        {
+          "slug": "elevation-2",
+          "name": "Elevation level 2",
+          "shadow": "var(--md-sys-elevation-shadow-level2)"
+        },
+        {
+          "slug": "elevation-3",
+          "name": "Elevation level 3",
+          "shadow": "var(--md-sys-elevation-shadow-level3)"
+        },
+        {
+          "slug": "elevation-4",
+          "name": "Elevation level 4",
+          "shadow": "var(--md-sys-elevation-shadow-level4)"
+        },
+        {
+          "slug": "elevation-5",
+          "name": "Elevation level 5",
+          "shadow": "var(--md-sys-elevation-shadow-level5)"
+        }
+      ],
+      "defaultPresets": false
+    },
+    "border": {
+      "color": true,
+      "radius": true,
+      "style": true,
+      "width": true
+    },
+    "dimensions": {
+      "aspectRatio": true,
+      "minHeight": true
+    },
+    "position": {
+      "sticky": true
+    }
+  },
+  "styles": {
+    "color": {
+      "background": "var(--md-sys-color-background)",
+      "text": "var(--md-sys-color-on-background)"
+    },
+    "typography": {
+      "fontFamily": "var(--md-sys-typescale-body-large-font)",
+      "fontSize": "var(--md-sys-typescale-body-large-size)",
+      "lineHeight": "var(--md-sys-typescale-body-large-line-height)",
+      "fontWeight": "var(--md-sys-typescale-body-large-weight)",
+      "letterSpacing": "var(--md-sys-typescale-body-large-tracking)"
+    },
+    "spacing": {
+      "blockGap": "var:preset|spacing|40"
+    },
+    "elements": {
+      "link": {
+        "color": {
+          "text": "var(--md-sys-color-primary)"
+        }
+      },
+      "button": {
+        "color": {
+          "background": "var(--md-sys-color-primary)",
+          "text": "var(--md-sys-color-on-primary)"
+        },
+        "border": {
+          "radius": "var(--md-sys-shape-corner-full)"
+        }
+      }
+    }
+  },
+  "customTemplates": [],
+  "templateParts": [
+    {
+      "name": "header",
+      "title": "Header (App Bar)",
+      "area": "header"
+    },
+    {
+      "name": "footer",
+      "title": "Footer",
+      "area": "footer"
+    },
+    {
+      "name": "sidebar",
+      "title": "Sidebar (Navigation rail)",
+      "area": "uncategorized"
+    }
+  ]
+}

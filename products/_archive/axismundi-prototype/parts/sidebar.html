@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Sidebar (template part)</title>
+
+  <link rel="stylesheet" href="../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../stylesheets/base.css" />
+  <link rel="stylesheet" href="../stylesheets/components.css" />
+  <style>
+    .standalone-preview {
+      padding: var(--space-lg);
+      background-color: var(--md-sys-color-surface);
+      min-block-size: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: var(--space-lg);
+      align-items: start;
+    }
+    .standalone-preview__note {
+      max-inline-size: 64ch;
+      color: var(--md-sys-color-on-surface-variant);
+      padding-block: var(--space-md);
+    }
+    @media (max-width: 720px) {
+      .standalone-preview {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ─── sidebar part styles ─── */
+
+    .ax-site-sidebar {
+      /* On desktop layout — sticky nav rail. nav-rail.is-expanded
+       * already provides typography + slot styling; this wrapper
+       * adds page-context positioning. */
+      position: sticky;
+      inset-block-start: 64px; /* offset for app-bar height */
+      align-self: start;
+      block-size: calc(100vh - 64px);
+      overflow-y: auto;
+      padding-block: var(--space-md);
+      padding-inline: var(--space-sm);
+      background-color: var(--md-sys-color-surface-container-low);
+      border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+
+      /* Themed thin scrollbar */
+      scrollbar-width: thin;
+      scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+    }
+    .ax-site-sidebar::-webkit-scrollbar {
+      inline-size: 8px;
+    }
+    .ax-site-sidebar::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+    .ax-site-sidebar::-webkit-scrollbar-thumb {
+      background-color: var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+
+    /* Custom expandable nav list — used inside nav-rail.is-expanded.
+     * Submenu pattern targeted by theme.js §2 accordion. */
+    .ax-nav-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .ax-nav-list a,
+    .ax-nav-list__expand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      inline-size: 100%;
+      padding: var(--space-sm) var(--space-md);
+      border: 0;
+      background: transparent;
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-full);
+      cursor: pointer;
+      text-align: start;
+      text-decoration: none;
+      font-family:    var(--md-sys-typescale-label-large-font);
+      font-size:      var(--md-sys-typescale-label-large-size);
+      line-height:    var(--md-sys-typescale-label-large-line-height);
+      font-weight:    var(--md-sys-typescale-label-large-weight);
+      letter-spacing: var(--md-sys-typescale-label-large-tracking);
+    }
+    .ax-nav-list a:hover,
+    .ax-nav-list__expand:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .ax-nav-list a[aria-current="page"] {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+    .ax-nav-list__icon {
+      inline-size: 24px;
+      block-size: 24px;
+      flex-shrink: 0;
+    }
+    .ax-nav-list__icon > svg {
+      inline-size: 100%;
+      block-size: 100%;
+      fill: currentColor;
+    }
+    .ax-nav-list__label {
+      flex: 1 1 auto;
+    }
+    .ax-nav-list__chevron {
+      inline-size: 20px;
+      block-size: 20px;
+      flex-shrink: 0;
+      transition: transform
+        var(--md-sys-motion-curve-fast-spatial-duration)
+        var(--md-sys-motion-curve-fast-spatial);
+    }
+    .ax-nav-list__expand[aria-expanded="true"] .ax-nav-list__chevron {
+      transform: rotate(180deg);
+    }
+    /* Sub-list — slight inset, smaller items */
+    .ax-nav-list .ax-nav-list {
+      padding-inline-start: var(--space-xl);
+      margin-block-start: var(--space-xs);
+      gap: var(--space-xs);
+    }
+    .ax-nav-list .ax-nav-list a {
+      font-family:    var(--md-sys-typescale-body-medium-font);
+      font-size:      var(--md-sys-typescale-body-medium-size);
+      line-height:    var(--md-sys-typescale-body-medium-line-height);
+      font-weight:    var(--md-sys-typescale-body-medium-weight);
+      letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+      padding-block: var(--space-xs);
+    }
+    /* Section divider inside nav */
+    .ax-nav-list__section {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: var(--space-md) var(--space-md) var(--space-xs);
+    }
+  </style>
+</head>
+<body>
+  <div class="standalone-preview">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         PART CONTENT — copy-paste this <aside>...</aside> verbatim
+         ═══════════════════════════════════════════════════════════════ -->
+
+    <aside class="ax-site-sidebar" role="navigation" aria-label="Main navigation">
+      <ul class="ax-nav-list">
+
+        <li>
+          <a href="/" aria-current="page">
+            <span class="ax-nav-list__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              </svg>
+            </span>
+            <span class="ax-nav-list__label">Home</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/blog">
+            <span class="ax-nav-list__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+            </span>
+            <span class="ax-nav-list__label">Blog</span>
+          </a>
+        </li>
+
+        <li>
+          <button type="button" class="ax-nav-list__expand"
+                  aria-expanded="false"
+                  aria-controls="nav-explore-sub">
+            <span class="ax-nav-list__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z"/>
+              </svg>
+            </span>
+            <span class="ax-nav-list__label">Explore</span>
+            <span class="ax-nav-list__chevron">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M7 10l5 5 5-5z"/>
+              </svg>
+            </span>
+          </button>
+          <ul id="nav-explore-sub" class="ax-nav-list" hidden>
+            <li><a href="/explore/topics">주제별</a></li>
+            <li><a href="/explore/people">사람</a></li>
+            <li><a href="/explore/trending">인기</a></li>
+            <li>
+              <button type="button" class="ax-nav-list__expand"
+                      aria-expanded="false"
+                      aria-controls="nav-explore-fediverse">
+                <span class="ax-nav-list__label">Fediverse</span>
+                <span class="ax-nav-list__chevron">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M7 10l5 5 5-5z"/>
+                  </svg>
+                </span>
+              </button>
+              <ul id="nav-explore-fediverse" class="ax-nav-list" hidden>
+                <li><a href="/explore/fediverse/local">로컬</a></li>
+                <li><a href="/explore/fediverse/federated">연합</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="/notifications">
+            <span class="ax-nav-list__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
+            </span>
+            <span class="ax-nav-list__label">Notifications</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/messages">
+            <span class="ax-nav-list__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+              </svg>
+            </span>
+            <span class="ax-nav-list__label">Messages</span>
+          </a>
+        </li>
+
+        <div class="t-label-small ax-nav-list__section">계정</div>
+
+        <li>
+          <a href="/profile">
+            <span class="ax-nav-list__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </span>
+            <span class="ax-nav-list__label">Profile</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/settings">
+            <span class="ax-nav-list__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+              </svg>
+            </span>
+            <span class="ax-nav-list__label">Settings</span>
+          </a>
+        </li>
+
+      </ul>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         END PART CONTENT
+         ═══════════════════════════════════════════════════════════════ -->
+
+    <div class="standalone-preview__note">
+      <p class="t-body-small">
+        <code>parts/sidebar.html</code> standalone preview. 위 <code>&lt;aside&gt;</code>가 실제 part — desktop 레이아웃의 left rail 또는 모바일 nav drawer 안에 inline 복사.
+      </p>
+      <p class="t-body-small" style="margin-block-start: var(--space-md);">
+        <strong>Test 항목:</strong>
+      </p>
+      <ul class="t-body-small" style="padding-inline-start: var(--space-lg);">
+        <li>"Explore" 클릭 → submenu (주제별/사람/인기/Fediverse) 펼쳐짐 (theme.js §2 accordion)</li>
+        <li>"Fediverse" 클릭 → depth-3 (로컬/연합) 펼쳐짐 (재귀 작동 검증)</li>
+        <li>chevron 회전 — <code>aria-expanded="true"</code> 시 180°</li>
+        <li>현재 페이지 ("Home") = secondary-container 색 highlight</li>
+      </ul>
+    </div>
+  </div>
+
+  <script defer src="../scripts/theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+/* ============================================================
+ * lab-chip.css — Axismundi Chip lab module
+ * v3.4.9
+ *
+ * Bucket E — component full-spec module (NOT interaction module).
+ * Scope: lab-internal full-spec expansion.
+ *
+ * Relationship to baseline:
+ *   components.css §11 Chip (L1626-L1743) is UNCHANGED at v3.4.9.
+ *   This file ADDS three module work items that the baseline does
+ *   not currently cover. It does NOT redefine any baseline selector.
+ *
+ * Phase 2 decisions implemented (per Phase 1 audit + Phase 2 plan):
+ *
+ *   1. Input chip close affordance
+ *      Primary: B — real <button class="chip__close"> with aria-label.
+ *      Boosted: A-lite — visible icon stays 18px; the button is a
+ *               24×24 container, hit area expands to ≥44×44 on coarse
+ *               pointer via ::before pseudo-element.
+ *      Deferred: C — keyboard Backspace/Delete dismiss (requires JS,
+ *               BACKLOG follow-up).
+ *      Target-size framing (per CHIP-SPEC-AUDIT §4.3 and
+ *      CHIP-MEASUREMENT-AUDIT §4.4):
+ *        - WCAG 2.2 SC 2.5.8 (Level AA): 24×24 CSS px minimum
+ *          → met by the 24×24 button on all pointer types
+ *        - WCAG 2.2 SC 2.5.5 (Level AAA): 44×44 CSS px enhanced
+ *          → met on coarse pointer via the ::before expansion
+ *        - Material touch-friendly convention: handled by the same
+ *          coarse-pointer expansion
+ *      Visible icon stays 18px (matches the baseline chip-icon size).
+ *
+ *   2. Filter chip native form mapping
+ *      Convention: hidden <input type="checkbox|radio" class="chip__control">
+ *      paired with a sibling <label class="chip chip--filter">.
+ *      The visible chip is the <label>; the <input> carries the state.
+ *      Selected state mirrors baseline `[aria-pressed="true"]` /
+ *      `[aria-checked="true"]` / `.is-selected` styling using
+ *      `.chip__control:checked + .chip--filter`.
+ *      Author opts in by using this markup; the baseline button-based
+ *      filter chip remains supported.
+ *
+ *   3. Disabled state-layer suppression
+ *      Explicitly suppresses the `has-state-layer` rest/hover/press
+ *      visualization when the chip is disabled. Prevents "fake hover"
+ *      feedback on a non-interactive surface.
+ *      Covers all three disabled markers:
+ *        - .chip:disabled
+ *        - .chip[aria-disabled="true"]
+ *        - .chip__control:disabled + .chip (native form pattern)
+ *
+ * Audit: modules/chip/docs/CHIP-SPEC-AUDIT.md
+ *        modules/chip/docs/CHIP-MEASUREMENT-AUDIT.md
+ *        modules/chip/docs/CHIP-WP-MAPPING.md
+ *
+ * Module taxonomy: Component Full-Spec Module
+ *   (see lab/modules/README.md §Module taxonomy)
+ *
+ * Design principle: Visible control must map to real runtime behavior.
+ *   (see lab/modules/README.md §Design principles §1)
+ * ============================================================ */
+
+
+/* ----------------------------------------------------------------
+ * §1 — Filter chip native form mapping
+ *
+ * Convention: hide the <input>, style the sibling <label> as the chip,
+ * let `:checked` drive the selected state. The <label for="..."> click
+ * toggles the input natively — no JS required.
+ *
+ * Markup:
+ *   <input class="chip__control" type="checkbox" id="filter-design">
+ *   <label class="chip chip--filter" for="filter-design">
+ *     <span class="chip__label">Design</span>
+ *   </label>
+ *
+ * Selected fill replicates baseline §11 L1709-L1715 styling exactly,
+ * so the visual result is indistinguishable from the button-based
+ * filter chip in selected state.
+ * ---------------------------------------------------------------- */
+
+.chip__control {
+  /* Visually hide the native input but keep it focusable and
+     keyboard-operable. We use absolute positioning + size:0
+     rather than display:none, which would remove it from the
+     accessibility tree. */
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* When the input is :checked, style the next sibling .chip--filter
+   identically to the baseline selected state. */
+.chip__control:checked + .chip--filter {
+  outline: 0;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+/* When the input is :disabled, propagate disabled styling to the
+   sibling label-chip. Mirrors baseline Pattern A (§11 L1723-L1738). */
+.chip__control:disabled + .chip {
+  cursor: not-allowed;
+  pointer-events: none;
+  background-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) 10%,
+    transparent
+  );
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  outline-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) 12%,
+    transparent
+  );
+}
+
+/* Suggestion chip exception (matches baseline §11 L1739-L1742) —
+   even though suggestion chips don't typically use form wrapping,
+   the rule is preserved for symmetry. */
+.chip__control:disabled + .chip--suggestion {
+  background-color: transparent;
+}
+
+/* Focus ring on the visible label-chip when the hidden input is
+   keyboard-focused. Use :focus-visible on the input, mirror to the
+   label via sibling combinator. */
+.chip__control:focus-visible + .chip {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------------
+ * §2 — Input chip close button (Option B primary + A-lite boosted)
+ *
+ * Markup:
+ *   <span class="chip chip--input">
+ *     <span class="chip__leading-icon ax-avatar is-size-xs">…</span>
+ *     <span class="chip__label">Apple</span>
+ *     <button class="chip__close" type="button" aria-label="Remove Apple">
+ *       <span class="material-symbols-rounded notranslate"
+ *             translate="no" aria-hidden="true" draggable="false">close</span>
+ *     </button>
+ *   </span>
+ *
+ * The visible icon remains 18px (matching --_chip-icon baseline).
+ * The button container is 24×24 (meets WCAG 2.2 SC 2.5.8 Level AA).
+ * On coarse pointer devices the ::before pseudo expands the hit
+ * area to ~44×44 (meets WCAG 2.2 SC 2.5.5 Level AAA and Material
+ * touch convention).
+ *
+ * The chip__close is rendered INSTEAD OF the bare chip__trailing-icon
+ * span when an actual remove action is provided. The baseline
+ * .chip--input .chip__trailing-icon rule (§11 L1718-L1720) still
+ * works for the span-based shape; this module adds the button shape
+ * as the principle-aligned option.
+ * ---------------------------------------------------------------- */
+
+.chip__close {
+  /* Button container — small, centered icon hit target */
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  inline-size: 24px;
+  block-size: 24px;
+
+  /* Button reset to neutralize browser defaults */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: inherit;
+
+  cursor: pointer;
+  border-radius: 50%;
+
+  /* State layer-style transition is delegated to has-state-layer
+     mechanism if present; this base just transitions the
+     background-color for the optional focus/hover styling below. */
+  transition:
+    background-color
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+.chip__close:hover,
+.chip__close:focus-visible {
+  background-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) 8%,
+    transparent
+  );
+}
+
+.chip__close:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 0;
+}
+
+/* The visible close glyph stays 18px to match --_chip-icon convention.
+   Cover material symbols, ax-icon span, and inline SVG. */
+.chip__close .material-symbols-rounded,
+.chip__close > svg,
+.chip__close > .ax-icon {
+  font-size: 18px;
+  inline-size: 18px;
+  block-size: 18px;
+  line-height: 1;
+}
+
+/* Hit area expansion on coarse pointer (touch).
+   24 + (10 + 10) = 44 → meets SC 2.5.5 AAA + Material convention. */
+@media (pointer: coarse) {
+  .chip__close::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
+    /* Invisible — purely a hit-target expansion. */
+  }
+}
+
+/* When the input chip itself is disabled, the close button must
+   also stop responding. Mirrors baseline Pattern A behavior. */
+.chip:disabled .chip__close,
+.chip[aria-disabled="true"] .chip__close {
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.38; /* Same as Pattern A text opacity for visual coherence */
+}
+
+
+/* ----------------------------------------------------------------
+ * §3 — Disabled state-layer suppression
+ *
+ * The `has-state-layer` mechanism (defined elsewhere) typically
+ * renders a state layer overlay via ::before with opacity changes
+ * on :hover, :focus-visible, :active. On a disabled chip, that
+ * overlay would be "fake feedback" — visible interaction response
+ * on a non-interactive surface. Suppress it explicitly.
+ *
+ * Covers all three disabled markers (matching baseline §11):
+ *   .chip:disabled
+ *   .chip[aria-disabled="true"]
+ *   .chip__control:disabled + .chip      (this module's native form pattern)
+ * ---------------------------------------------------------------- */
+
+.chip:disabled.has-state-layer::before,
+.chip[aria-disabled="true"].has-state-layer::before,
+.chip__control:disabled + .chip.has-state-layer::before {
+  opacity: 0;
+}
+
+
+/* ----------------------------------------------------------------
+ * §4 — Module pattern page layout helpers
+ *
+ * Scoped to .lab-chip-pattern only — demo-page layout, NOT part of
+ * the chip component itself.
+ * ---------------------------------------------------------------- */
+
+.lab-chip-pattern .lab-chip-demo {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background-color: var(--md-sys-color-surface);
+  border-radius: var(--md-sys-shape-corner-large);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-chip-pattern .lab-chip-demo__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.lab-chip-pattern .lab-chip-demo__label {
+  color: var(--md-sys-color-on-surface-variant);
+  min-inline-size: 12rem;
+}
+
+.lab-chip-pattern .lab-chip-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.lab-chip-pattern .lab-chip-fieldset__legend {
+  margin-block-end: var(--space-sm);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-chip-pattern .lab-chip-demo__measurement {
+  display: block;
+  margin-block-start: var(--space-xs);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+}

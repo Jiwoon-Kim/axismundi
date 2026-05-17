@@ -1,0 +1,325 @@
+{
+  "schema_version": "v2.1a-confidence-matrix-2026-05-12",
+  "axis_keys": [
+    "token",
+    "component"
+  ],
+  "confidence_taxonomy": {
+    "0.85-1.0": "strong — proceed with implementation, low risk",
+    "0.70-0.85": "moderate — proceed with documented binding pattern, some translation logic needed",
+    "0.50-0.70": "weak — design decision required, M3 baseline gap or WP openness mismatch",
+    "<0.50": "speculative — not recommended for v2.1a"
+  },
+  "matrix": [
+    {
+      "axis": "token",
+      "wp_anchor": "wp:ThemeToken.color",
+      "m3_anchor": "m3:Family.sys.color",
+      "confidence": 0.95,
+      "p4_agreement": "5/5",
+      "binding_pattern": "role_to_slug",
+      "has_axismundi_implementation": true
+    },
+    {
+      "axis": "token",
+      "wp_anchor": "wp:ThemeToken.typography",
+      "m3_anchor": "m3:Family.sys.typescale",
+      "confidence": 0.85,
+      "p4_agreement": "5/5",
+      "binding_pattern": "role_to_slug_plus_utility_class",
+      "has_axismundi_implementation": true
+    },
+    {
+      "axis": "token",
+      "wp_anchor": "wp:ThemeToken.spacing",
+      "m3_anchor": null,
+      "confidence": 0.7,
+      "p4_agreement": "5/5",
+      "binding_pattern": "wp_authoritative_with_axismundi_recommendation",
+      "has_axismundi_implementation": true
+    },
+    {
+      "axis": "token",
+      "wp_anchor": "wp:ThemeToken.shadow",
+      "m3_anchor": "m3:Family.sys.elevation",
+      "confidence": 0.7,
+      "p4_agreement": "4/5",
+      "binding_pattern": "level_to_preset",
+      "has_axismundi_implementation": true
+    },
+    {
+      "axis": "token",
+      "wp_anchor": "wp:ThemeToken.border",
+      "m3_anchor": "m3:Family.sys.shape",
+      "confidence": 0.6,
+      "p4_agreement": "4/5",
+      "binding_pattern": "radius_token_subset",
+      "has_axismundi_implementation": true
+    },
+    {
+      "axis": "token",
+      "wp_anchor": "wp:AppearanceTool",
+      "m3_anchor": "(meta-flag)",
+      "confidence": 0.9,
+      "p4_agreement": "5/5",
+      "binding_pattern": "meta_flag_to_capability_bundle",
+      "has_axismundi_implementation": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/button",
+      "m3_anchor": "Button — filled",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/button",
+      "m3_anchor": "Button — tonal",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/button",
+      "m3_anchor": "Button — elevated",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/button",
+      "m3_anchor": "Button — outlined",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/button",
+      "m3_anchor": "Button — text",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/buttons",
+      "m3_anchor": "Button group",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/icon-button",
+      "m3_anchor": "Icon button",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": null,
+      "m3_anchor": "FAB (sm/md/lg)",
+      "confidence": 0.75,
+      "binding_pattern": "Composite.TemplatePart",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": null,
+      "m3_anchor": "Extended FAB",
+      "confidence": 0.75,
+      "binding_pattern": "Composite.TemplatePart",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/split-button",
+      "m3_anchor": "Split button",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/group",
+      "m3_anchor": "Card — filled",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/group",
+      "m3_anchor": "Card — elevated",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/group",
+      "m3_anchor": "Card — outlined",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/list",
+      "m3_anchor": "List (plain)",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/list",
+      "m3_anchor": "List — segmented",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/separator",
+      "m3_anchor": "Divider",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/search",
+      "m3_anchor": "Search field",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/navigation",
+      "m3_anchor": "App bar (top)",
+      "confidence": 0.75,
+      "binding_pattern": "Composite.TemplatePart",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": null,
+      "m3_anchor": "Toolbar (docked / floating)",
+      "confidence": 0.75,
+      "binding_pattern": "Composite.TemplatePart",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/navigation",
+      "m3_anchor": "Navigation bar (mobile bottom)",
+      "confidence": 0.75,
+      "binding_pattern": "Composite.TemplatePart",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/navigation",
+      "m3_anchor": "Navigation rail — collapsed",
+      "confidence": 0.75,
+      "binding_pattern": "Composite.TemplatePart",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": null,
+      "m3_anchor": "Navigation rail — expanded modal",
+      "confidence": 0.75,
+      "binding_pattern": "Composite.TemplatePart",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/tabs",
+      "m3_anchor": "Tabs",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/menu",
+      "m3_anchor": "Menu (dropdown)",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "core/search",
+      "m3_anchor": "Search",
+      "confidence": 0.9,
+      "binding_pattern": "Direct.CoreBlockStyle",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/chip",
+      "m3_anchor": "Chip — assist",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": null,
+      "m3_anchor": "Chip — filter",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": null,
+      "m3_anchor": "Chip — input",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": null,
+      "m3_anchor": "Chip — suggestion",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/badge",
+      "m3_anchor": "Badge",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/progress",
+      "m3_anchor": "Progress indicator",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    },
+    {
+      "axis": "component",
+      "wp_anchor": "m3/carousel",
+      "m3_anchor": "Carousel",
+      "confidence": 0.85,
+      "binding_pattern": "Direct.CustomBlock",
+      "deferred": false
+    }
+  ]
+}

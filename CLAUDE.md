@@ -1,0 +1,81 @@
+# CLAUDE.md — Claude Code operational rules
+
+> **Audience**: Claude (Claude Code, Anthropic). Read this first before any work in this repo.
+> **Sibling file**: `AGENTS.md` (Codex/OpenAI executor rules). Both files coexist; pick the one matching your runtime.
+> **Last updated**: 2026-05-16 (v3.5.1 Phase 0.5 — Root Context Pack)
+
+---
+
+## Required reading order (every session)
+
+1. `CLAUDE.md` — this file
+2. `CURRENT-STATE.md` — current release / phase / next allowed action
+3. `PROJECT-CONTEXT.md` — stable architecture summary (A–F layers, v3.5.0 framework)
+4. `NEXT-SESSION.md` — next-session execution plan, forbidden surfaces, Codex task queue
+5. Only then: open the canonical docs referenced from §2–§4 (`docs/v3.5.0/*`, `docs/v3.5.1/*`, `CONSTITUTION.md`, `ROADMAP.md`).
+
+Do NOT skip steps 2–4 to "save time". Phase boundaries change session to session; chat memory is not authoritative for this repo.
+
+---
+
+## Role
+
+Claude in this repo is a **high-context implementation agent**. Allowed activities:
+
+- Architecture reasoning **grounded in canonical docs** (CONSTITUTION, v3.5.0 framework, Phase reports)
+- Phase-level execution (audit doc bodies, module files, validators, package zips)
+- Doc authoring + cross-doc consistency edits
+- BACKLOG / CHANGELOG / ROADMAP / memory updates as phase mechanics
+- Validator runs and report generation
+
+Forbidden without explicit user authorization:
+
+- Architectural decisions not yet recorded in CONSTITUTION / v3.5.0 framework
+- Category / boundary / ontology classification changes
+- Baseline mutations (`products/reference-implementations/axismundi-lab/stylesheets/components.css` §0–§34 baseline sections, `style-guide.html` `#components-*` anchors)
+- Naming sweeps (e.g., `.snackbar → .ax-snackbar`)
+- `theme.json` edits
+- `data-theme="auto"` implementation
+- Pilot theme generation
+- Ripple v2 implementation (scheduled, not in v3.5.1 Phase 1)
+- Button module CSS / JS / pattern HTML (scheduled for Phase 2, not Phase 1)
+
+---
+
+## Operating principles
+
+1. **Don't infer architecture from chat memory.** If a fact isn't in the repo's canonical docs, ask or look — don't assume.
+2. **Phase boundaries are real.** The current phase in `CURRENT-STATE.md` defines what's allowed *this* session. Cross-phase work needs explicit authorization.
+3. **DISTINCT but COUPLED.** Infrastructure providers (`ripple/`, `icon-system/`, `popover/`) and their consumers stay separate modules with explicit contracts. Don't collapse boundaries.
+4. **Bilingual policy text.** EN + KO together for any policy statement (matches v3.5.0 docs convention).
+5. **Validator gate.** Every implementation phase must end with `python3 tools/validators/validate_theme_pilot.py` at 1.000 / 1.000 / 1.000 / 1.000 PASS. Phase doesn't close without it.
+6. **Small diffs.** Even when authorized to edit broadly, prefer targeted edits with clear scope.
+7. **Provenance.** When a decision comes from an external source (M3 spec, WAI-ARIA APG, Material Web), cite it inline.
+
+---
+
+## When in doubt
+
+- **Architecture question?** → Read `CONSTITUTION.md` first. Then `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md`.
+- **Component question?** → Read `docs/v3.5.0/MODULE-STATUS-MATRIX.md` + the relevant `lab/modules/<name>/docs/` audit.
+- **Process question?** → Read `docs/v3.5.0/PROMOTION-CRITERIA.md` (G1–G26 gates).
+- **What am I allowed to do *right now*?** → `CURRENT-STATE.md` + `NEXT-SESSION.md`.
+- **Still unclear?** → Ask. Don't guess.
+
+---
+
+## Phase-end checklist (for any phase work done in a session)
+
+```
+[ ] Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS
+[ ] Baseline files unchanged (unless phase explicitly authorized)
+[ ] CHANGELOG entry (if release-eligible)
+[ ] ROADMAP updated (if release-eligible)
+[ ] BACKLOG entries opened for surfaced items
+[ ] CURRENT-STATE.md updated to reflect new state
+[ ] NEXT-SESSION.md updated for handoff
+```
+
+---
+
+End of file. Now read `CURRENT-STATE.md`.

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Snackbar Runtime Module (v3.4.10)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-snackbar.css" />
+
+  <style>
+    .lab-layout {
+      max-inline-size: min(100%, 1080px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow { color: var(--md-sys-color-on-surface-variant); }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-banner.lab-banner--warning {
+      background-color: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+    }
+    .lab-section { display: grid; gap: var(--space-md); }
+    .lab-section__head { margin: 0; display: grid; gap: var(--space-xs); }
+    .lab-section__title { margin: 0; }
+    .lab-section__supporting { margin: 0; color: var(--md-sys-color-on-surface-variant); }
+    .sg-theme {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+    .lab-demo {
+      padding: var(--space-lg);
+      background-color: var(--md-sys-color-surface);
+      border-radius: var(--md-sys-shape-corner-large);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      display: grid;
+      gap: var(--space-md);
+    }
+    .lab-demo--forbidden {
+      background-color: var(--md-sys-color-surface-container-low);
+      border-style: dashed;
+    }
+    .lab-demo__triggers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+    .lab-baseline-stack {
+      display: grid;
+      gap: var(--space-sm);
+      align-items: start;
+    }
+    .lab-baseline-stack .snackbar {
+      /* Static baseline reference — keep them visible inline, not floating */
+      position: static;
+      opacity: 1;
+      transform: none;
+    }
+    .lab-note {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+  </style>
+</head>
+<body class="lab-snackbar-pattern">
+  <main class="lab-layout">
+    <header class="lab-header">
+      <span class="t-label-medium lab-header__eyebrow">Axismundi · Lab module</span>
+      <h1 class="t-headline-large">Snackbar Runtime Module (v3.4.10)</h1>
+      <p class="t-body-large lab-note" style="margin: 0;">
+        Runtime module — not a Component Full-Spec Module. The baseline
+        <code>components.css §14 Snackbar</code> primitive (L2041–L2079) is
+        <strong>UNCHANGED</strong>. This module fills the runtime layer that the
+        baseline explicitly carved out: positioning, queue, timeout, action /
+        close, live announcement, reduced motion, interaction safety.
+        See <code>docs/SNACKBAR-RUNTIME-AUDIT.md</code>.
+      </p>
+
+      <!-- Theme switcher — canonical data-theme-set contract -->
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+          <span class="chip__label">Light</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+          <span class="chip__label">Dark</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true">
+          <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">contrast</span>
+          <span class="chip__label">Auto</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="lab-banner">
+      <strong class="t-title-medium">Runtime module — closes the transient/feedback surface trio</strong>
+      <p class="t-body-medium" style="margin: 0;">
+        After v3.4.10: <code>popover</code> v3.4.5 +
+        <code>tooltip</code> v3.4.6 + <code>snackbar</code> v3.4.10. Three
+        transient surface families closed. Snackbar separates the announcement
+        channel from the interactive surface: a single stable live region
+        announces text, while the visible snackbar remains a real interactive
+        surface with focusable action/close buttons, pauseable timeout, and no
+        <code>aria-hidden</code> misuse.
+      </p>
+    </aside>
+
+    <!-- ========== 1. Baseline static reference ========== -->
+    <section class="lab-section" id="demo-baseline-reference">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">1 · Baseline static reference</h2>
+        <p class="t-body-medium lab-section__supporting">
+          These are the four baseline specimens from
+          <code>style-guide.html#components-snackbar</code> (L2941–L2975),
+          rendered statically as a visual reference. They use the same
+          <code>.snackbar</code> primitive that the runtime below produces; the
+          difference is that these are inline static specimens, while the runtime
+          versions are dynamically inserted at <code>&lt;body&gt;</code> scope.
+        </p>
+      </header>
+
+      <div class="lab-demo">
+        <div class="lab-baseline-stack">
+
+          <div class="snackbar">
+            <span class="snackbar__label">메시지가 전송되었습니다.</span>
+          </div>
+
+          <div class="snackbar">
+            <span class="snackbar__label">초안이 저장되었습니다.</span>
+            <button class="snackbar__action" type="button">실행 취소</button>
+          </div>
+
+          <div class="snackbar snackbar--two-line">
+            <span class="snackbar__label">서버 응답이 늦어지고 있습니다. 다시 시도하면 빠르게 처리될 수 있어요.</span>
+          </div>
+
+          <div class="snackbar snackbar--two-line">
+            <span class="snackbar__label">새 버전이 발견되었습니다. 지금 새로고침하면 최신 인터페이스를 사용할 수 있어요.</span>
+            <button class="snackbar__action" type="button">새로고침</button>
+            <button class="snackbar__close" type="button" aria-label="Close">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </div>
+
+        </div>
+        <p class="t-body-small lab-note">
+          The action button styling (<code>inverse-primary</code> +
+          <code>label-large</code> + hover state layer) and the close button
+          styling (24px container, 18px icon, hit-area expansion on coarse
+          pointer) are provided by <code>lab-snackbar.css §1</code> and
+          <code>§2</code>. These were promised in the baseline §14 CSS comment
+          but not implemented at baseline; the runtime module fills the gap.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 2. Runtime demo — single show() variants ========== -->
+    <section class="lab-section" id="demo-runtime-show">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">2 · Runtime — <code>show()</code> variants</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Each button calls <code>window.labSnackbar.show(...)</code> with
+          different options. Snackbars appear at the bottom of the viewport
+          (centered on mobile, bottom-left on desktop ≥768px). Default timeouts
+          per audit §4.2: 5000ms (message-only), 7000ms (with action), 0
+          (persistent — with explicit close).
+        </p>
+      </header>
+
+      <div class="lab-demo">
+        <div class="lab-demo__triggers">
+          <button class="ax-button is-filled has-state-layer" type="button"
+                  onclick="window.labSnackbar.show('메시지가 전송되었습니다.');">
+            Show — message only (5s)
+          </button>
+
+          <button class="ax-button is-tonal has-state-layer" type="button"
+                  onclick="window.labSnackbar.show('초안이 저장되었습니다.', { actionText: '실행 취소', onAction: function() { window.labSnackbar.show('취소되었습니다.'); } });">
+            Show — with action (7s)
+          </button>
+
+          <button class="ax-button is-outlined has-state-layer" type="button"
+                  onclick="window.labSnackbar.show('새 버전이 발견되었습니다. 지금 새로고침하면 최신 인터페이스를 사용할 수 있어요.', { actionText: '새로고침', close: true });">
+            Show — action + close (persistent)
+          </button>
+
+          <button class="ax-button is-text has-state-layer" type="button"
+                  onclick="window.labSnackbar.show('이 메시지는 3초만 표시됩니다.', { timeout: 3000 });">
+            Show — custom timeout (3s)
+          </button>
+        </div>
+
+        <p class="t-body-small lab-note">
+          Hover the snackbar or focus its action/close button to pause the
+          timeout. The timeout resumes when pointer leaves AND keyboard focus
+          leaves the snackbar. This implements WCAG 2.2 SC 2.2.1 Timing
+          Adjustable.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 3. Queue demo — FIFO behavior ========== -->
+    <section class="lab-section" id="demo-runtime-queue">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">3 · Queue — single-at-a-time FIFO</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Snackbar runtime enforces one visible snackbar at a time. Additional
+          messages queue and surface FIFO as the current one dismisses. Click
+          the rapid-fire button to enqueue four snackbars; they appear one
+          after another.
+        </p>
+      </header>
+
+      <div class="lab-demo">
+        <div class="lab-demo__triggers">
+          <button class="ax-button is-filled has-state-layer" type="button"
+                  onclick="['첫 번째 메시지', '두 번째 메시지', '세 번째 메시지', '네 번째 메시지'].forEach(function(m, i) { window.labSnackbar.show(m, { timeout: 2500 }); });">
+            Rapid-fire — enqueue 4 snackbars
+          </button>
+
+          <button class="ax-button is-text has-state-layer" type="button"
+                  onclick="window.labSnackbar.dismissAll();">
+            Dismiss all + clear queue
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 4. Forbidden-ancestor negative demo ========== -->
+    <section class="lab-section" id="demo-forbidden-ancestor">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">4 · Forbidden-ancestor — trigger rejection</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Per audit §7 — Charter §5: snackbar <code>show()</code> rejects when
+          invoked from a trigger inside <code>.prose</code>,
+          <code>.wp-block-post-content</code>, <code>.entry-content</code>, or
+          <code>[contenteditable]</code>. The snackbar host itself is always at
+          <code>&lt;body&gt;</code> scope, but the trigger-side check prevents
+          accidental announcements from content surfaces (e.g., a button
+          mistakenly placed inside a WordPress post body).
+        </p>
+        <p class="t-body-medium lab-section__supporting">
+          The button below sits inside <code>.prose</code>. Clicking it should
+          do nothing (no snackbar appears). If a snackbar does appear, the
+          forbidden-ancestor check is broken.
+        </p>
+      </header>
+
+      <div class="lab-demo lab-demo--forbidden">
+        <div class="prose">
+          <p>이 단락은 <code>.prose</code> 안에 있습니다. 아래 버튼은 forbidden ancestor 안에서 호출되어 무시되어야 합니다.</p>
+          <button class="ax-button is-tonal has-state-layer" type="button"
+                  onclick="var result = window.labSnackbar.show('이 메시지는 표시되지 않아야 합니다.'); document.getElementById('forbidden-output').textContent = result ? '⚠ Snackbar shown — check broken' : '✓ Rejected (returned false)';">
+            Try to show from inside <code>.prose</code>
+          </button>
+        </div>
+        <output id="forbidden-output" class="t-body-small lab-note" style="display: block;">(click the button above)</output>
+      </div>
+    </section>
+
+    <!-- ========== 5. Reduced motion note ========== -->
+    <section class="lab-section" id="demo-reduced-motion">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">5 · Reduced motion</h2>
+        <p class="t-body-medium lab-section__supporting">
+          When the user's OS-level "Reduce motion" preference is on, the
+          snackbar appears and disappears instantly. The live region announcement
+          still fires, the queue still works, hover/focus pause still works.
+          Motion is purely a presentational hint.
+        </p>
+        <p class="t-body-medium lab-section__supporting">
+          To test: enable "Reduce motion" in your OS accessibility settings,
+          reload this page, and click any <code>Show</code> button in §2 above.
+          Transitions will be disabled while everything else stays intact.
+        </p>
+      </header>
+    </section>
+
+    <footer style="display: grid; gap: var(--space-xs); padding-block-start: var(--space-lg); border-block-start: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);">
+      <p class="t-body-small" style="margin: 0;">
+        Audit: <a href="docs/SNACKBAR-RUNTIME-AUDIT.md">SNACKBAR-RUNTIME-AUDIT.md</a> ·
+        Charter: <a href="../../docs/ARCHITECTURE-BOUNDARIES.md">ARCHITECTURE-BOUNDARIES.md</a> ·
+        Module taxonomy + design principles: <a href="../README.md">lab/modules/README.md</a>
+      </p>
+      <p class="t-body-small" style="margin: 0;">
+        Sibling baseline specimens:
+        <a href="../../style-guide.html#components-snackbar">style-guide.html#components-snackbar</a> ·
+        Companion trio: <a href="../popover/lab-popover-pattern.html">popover</a> ·
+        <a href="../tooltip/lab-tooltip-pattern.html">tooltip</a>
+      </p>
+    </footer>
+  </main>
+
+  <!-- Theme runtime (shared with all module pattern pages) -->
+  <script defer src="../../scripts/theme.js"></script>
+  <!-- Lab module runtime -->
+  <script defer src="lab-snackbar.js"></script>
+</body>
+</html>

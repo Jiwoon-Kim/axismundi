@@ -1,0 +1,30 @@
+{
+  "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md",
+  "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-deprecation/",
+  "blocks": [
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md::block_1",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md",
+      "block_id": "block_1",
+      "section": "Deprecation",
+      "line_start": 56,
+      "line_end": 62,
+      "before_fence": "```text\n- *Parameters*\n    - `attributes`: The block’s old attributes.\n    - `innerBlocks`: The block’s old inner blocks.\n- *Return*\n    - `Object | Array`: Either the updated block attributes or tuple array `[attributes, innerBlocks]`.\n```",
+      "after_markdown": "  - *Parameters*\n    - `attributes`: The block's old attributes.\n    - `innerBlocks`: The block's old inner blocks.\n  - *Return*\n    - `Object | Array`: Either the updated block attributes or tuple array `[attributes, innerBlocks]`.",
+      "note": "migrate's Parameters/Return — fence breaks parent `- migrate:` bullet; indent restored",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-deprecation/"
+    },
+    {
+      "candidate_id": "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md::block_2",
+      "file": "block-editor-handbook/03-reference-guides/01-block-api-reference/deprecation.md",
+      "block_id": "block_2",
+      "section": "Deprecation",
+      "line_start": 64,
+      "line_end": 73,
+      "before_fence": "```text\n- *Parameters*\n    - `attributes`: The raw block attributes as parsed from the serialized HTML, and before the block type code is applied.\n    - `innerBlocks`: The block’s current inner blocks.\n    - `data`: An object containing properties representing the block node and its resulting block object.\n        - `data.blockNode`: The raw form of the block as a result of parsing the serialized HTML.\n        - `data.block`: The block object, which is the result of applying the block type to the `blockNode`.\n- *Return*\n    - `boolean`: Whether or not this otherwise valid block is eligible to be migrated by this deprecation.\n```",
+      "after_markdown": "  - *Parameters*\n    - `attributes`: The raw block attributes as parsed from the serialized HTML, and before the block type code is applied.\n    - `innerBlocks`: The block's current inner blocks.\n    - `data`: An object containing properties representing the block node and its resulting block object.\n      - `data.blockNode`: The raw form of the block as a result of parsing the serialized HTML.\n      - `data.block`: The block object, which is the result of applying the block type to the `blockNode`.\n  - *Return*\n    - `boolean`: Whether or not this otherwise valid block is eligible to be migrated by this deprecation.",
+      "note": "isEligible's Parameters/Return — fence breaks parent `- isEligible:` bullet; indent restored",
+      "source_url": "https://developer.wordpress.org/block-editor/reference-guides/block-api/block-deprecation/"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template -->
+
+			<!-- wp:group {"className":"is-style-card-elevated","layout":{"type":"constrained"}} -->
+			<div class="wp-block-group is-style-card-elevated">
+
+				<!-- wp:post-title {"isLink":true,"level":2} /-->
+
+				<!-- wp:post-excerpt {"moreText":"더 읽기"} /-->
+
+				<!-- wp:post-date /-->
+
+			</div>
+			<!-- /wp:group -->
+
+			<!-- wp:separator {"className":"is-style-divider-inset"} -->
+			<hr class="wp-block-separator is-style-divider-inset"/>
+			<!-- /wp:separator -->
+
+		<!-- /wp:post-template -->
+
+		<!-- wp:query-pagination -->
+		<!-- wp:query-pagination-previous /-->
+		<!-- wp:query-pagination-numbers /-->
+		<!-- wp:query-pagination-next /-->
+		<!-- /wp:query-pagination -->
+
+		<!-- wp:query-no-results -->
+		<!-- wp:paragraph {"placeholder":"No posts."} -->
+		<p>아직 글이 없습니다.</p>
+		<!-- /wp:paragraph -->
+		<!-- /wp:query-no-results -->
+
+	</div>
+	<!-- /wp:query -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

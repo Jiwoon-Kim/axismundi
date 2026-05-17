@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Button Full Spec Module (v3.5.1)</title>
+
+  <!-- Core design system stack (mirrors style-guide.html) -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-button.css" />
+</head>
+<body>
+
+<!-- ============================================================
+     The .lab-button-demo wrapper is the scope marker per Plan §2.2 #3.
+     If any future amendment adds demo-only state visualization
+     selectors, they MUST nest under this element.
+     ============================================================ -->
+<main class="lab-button-demo">
+
+  <!-- ========================================================
+       §1 — Page header
+       ======================================================== -->
+  <header class="lab-button-section__head">
+    <div class="t-label-medium">Axismundi · v3.5.1 · Wave 1 #1</div>
+    <h1 class="t-display-small">Button — Full Spec Module</h1>
+    <p class="t-body-medium lab-button-section__supporting">
+      Component Full-Spec Module — baseline <code>components.css §2</code>
+      (L122–L234) is UNCHANGED at v3.5.1. This page demonstrates the
+      five variants × Phase 1-scoped states. Animated ripple is deferred
+      to Ripple v2 release (BACKLOG #25) per the Phase 2 pre-entry
+      decision (Option b).
+      <br>
+      Baseline catalog: <a href="../../style-guide.html#components-button">../../style-guide.html#components-button</a>
+    </p>
+  </header>
+
+  <div class="lab-button-banner">
+    <strong>Static state-layer only.</strong>
+    The five variants use <code>has-state-layer</code> (Pattern A:
+    currentColor overlay scaled by opacity tokens). Animated click-
+    position ripple is not wired at v3.5.1; it is a TARGET dependency
+    routed to the Ripple v2 release (BACKLOG #25).
+  </div>
+
+  <!-- ========================================================
+       §2 — Variants (label only) — 5 specimens
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§2. Variants — label only</h2>
+      <p class="t-body-small lab-button-section__supporting">
+        다섯 가지 variant — filled / tonal / elevated / outlined / text.
+        S size (40px), corner-full radius (round). On press: corner-small
+        morph via spatial spring. All include <code>has-state-layer</code>.
+      </p>
+    </header>
+    <div class="lab-button-row">
+      <button class="ax-button is-filled has-state-layer t-label-large" type="button">Filled</button>
+      <button class="ax-button is-tonal has-state-layer t-label-large" type="button">Tonal</button>
+      <button class="ax-button is-elevated has-state-layer t-label-large" type="button">Elevated</button>
+      <button class="ax-button is-outlined has-state-layer t-label-large" type="button">Outlined</button>
+      <button class="ax-button is-text has-state-layer t-label-large" type="button">Text</button>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §3 — With leading icon — 5 specimens
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§3. With leading icon</h2>
+      <p class="t-body-small lab-button-section__supporting">
+        Canonical icon slot per <code>BUTTON-SPEC-AUDIT.md §8</code> —
+        <code>&lt;span class="material-symbols-rounded ax-button-icon"
+        aria-hidden translate="no" draggable="false"&gt;</code> +
+        wrapped label.
+      </p>
+    </header>
+    <div class="lab-button-row">
+      <button class="ax-button is-filled has-state-layer t-label-large" type="button">
+        <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        <span>Add</span>
+      </button>
+      <button class="ax-button is-tonal has-state-layer t-label-large" type="button">
+        <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">check</span>
+        <span>Confirm</span>
+      </button>
+      <button class="ax-button is-elevated has-state-layer t-label-large" type="button">
+        <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">menu</span>
+        <span>Menu</span>
+      </button>
+      <button class="ax-button is-outlined has-state-layer t-label-large" type="button">
+        <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">arrow_back</span>
+        <span>Back</span>
+      </button>
+      <button class="ax-button is-text has-state-layer t-label-large" type="button">
+        <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">chat_bubble</span>
+        <span>Comment</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §4 — has-state-layer opt-out demo — 1 + 1
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§4. <code>has-state-layer</code> opt-out demo</h2>
+      <p class="t-body-small lab-button-section__supporting">
+        Phase 1 SPEC §10 Risk 3 settled: default-ON canonical. This
+        section demonstrates the opt-out path for completeness. Hover/
+        focus the two specimens to see the visual difference.
+      </p>
+    </header>
+    <div class="lab-button-row">
+
+      <div class="lab-button-specimen">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button">With state-layer</button>
+        <p class="lab-button-specimen__caption">
+          <code>has-state-layer</code> class applied — hover/focus shows
+          opacity overlay (Pattern A).
+        </p>
+        <p class="lab-button-specimen__caption lab-button-specimen__caption--ko">
+          <code>has-state-layer</code> 적용 — hover/focus 시 opacity
+          overlay 표시 (Pattern A).
+        </p>
+      </div>
+
+      <div class="lab-button-specimen">
+        <button class="ax-button is-filled t-label-large" type="button">Without state-layer</button>
+        <p class="lab-button-specimen__caption">
+          ← <code>has-state-layer</code> class omitted — expected to lack
+          hover/focus opacity overlay. Not a bug; intentional
+          demonstration.
+        </p>
+        <p class="lab-button-specimen__caption lab-button-specimen__caption--ko">
+          ← <code>has-state-layer</code> class 생략 — hover/focus opacity
+          overlay 없음이 정상. 버그 아님, 의도된 시연.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §5 — Disabled (Pattern A §0.8) — native attribute — 5
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§5. Disabled — native attribute (Pattern A §0.8)</h2>
+      <p class="t-body-small lab-button-section__supporting">
+        All five variants with native <code>disabled</code> attribute.
+        Pattern A: 10% on-surface bg + 38% on-surface text + level0
+        box-shadow. Text variant retains transparent bg (baseline
+        L231–L234 exception).
+        <br><br>
+        <em>Native <code>disabled</code> — browser blocks activation +
+        AT announces "disabled" + Pattern A visual rendering applied.</em>
+        <br>
+        <em>Native disabled — 브라우저가 activation 차단 + AT가
+        "disabled" 발화 + Pattern A 시각 렌더링 적용.</em>
+      </p>
+    </header>
+    <div class="lab-button-row">
+      <button class="ax-button is-filled has-state-layer t-label-large" type="button" disabled>Filled</button>
+      <button class="ax-button is-tonal has-state-layer t-label-large" type="button" disabled>Tonal</button>
+      <button class="ax-button is-elevated has-state-layer t-label-large" type="button" disabled>Elevated</button>
+      <button class="ax-button is-outlined has-state-layer t-label-large" type="button" disabled>Outlined</button>
+      <button class="ax-button is-text has-state-layer t-label-large" type="button" disabled>Text</button>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §5a — Disabled (aria-disabled, plugin-managed) — 1
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§5a. Disabled — <code>aria-disabled</code> (plugin-managed)</h2>
+      <p class="t-body-small lab-button-section__supporting">
+        Single specimen with explicit caption. <strong>NOT a canonical
+        replacement for native <code>disabled</code>.</strong>
+      </p>
+    </header>
+    <div class="lab-button-row">
+      <div class="lab-button-specimen">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button" aria-disabled="true">aria-disabled</button>
+        <p class="lab-button-specimen__caption">
+          <code>aria-disabled="true"</code> visually mirrors Pattern A
+          via baseline L213
+          (<code>[aria-disabled="true"]</code>) but does NOT block click
+          activation by itself. Use this form ONLY when the disabled
+          state is plugin-managed (e.g., a form plugin toggles
+          aria-disabled while the submit handler is in flight) and the
+          plugin's own JS prevents activation. For static / theme-side
+          disabled, prefer native <code>disabled</code>.
+        </p>
+        <p class="lab-button-specimen__caption lab-button-specimen__caption--ko">
+          <code>aria-disabled="true"</code>는 baseline L213 선택자로
+          Pattern A 외관을 흉내내지만, 단독으로는 click activation을
+          막지 않는다. plugin이 disabled 상태를 동적으로 관리하면서
+          (예: form plugin이 submit handler 진행 중 aria-disabled를
+          토글), plugin JS가 activation을 직접 차단할 때만 이 형태를
+          사용. 정적 / theme-side disabled는 native <code>disabled</code>가
+          정답.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §6 — Bare button (no .is-* class) — 1
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§6. Bare button</h2>
+      <p class="t-body-small lab-button-section__supporting">
+        Rare-use base shape per SPEC §4.6. Receives base sizing +
+        typography but no fill/color. Used for embedded contexts where
+        styling comes from parent (split-button slave, custom block
+        surface).
+      </p>
+    </header>
+    <div class="lab-button-row">
+      <button class="ax-button has-state-layer t-label-large" type="button">Bare</button>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       §7 — Code snippets (collapsible)
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§7. Code snippets</h2>
+      <p class="t-body-small lab-button-section__supporting">
+        Click each snippet to expand. Canonical markup for each variant
+        family.
+      </p>
+    </header>
+
+    <details class="lab-button-snippet">
+      <summary>§2 Variants — label only (canonical)</summary>
+<pre>&lt;button class="ax-button is-filled has-state-layer t-label-large" type="button"&gt;Filled&lt;/button&gt;
+&lt;button class="ax-button is-tonal has-state-layer t-label-large" type="button"&gt;Tonal&lt;/button&gt;
+&lt;button class="ax-button is-elevated has-state-layer t-label-large" type="button"&gt;Elevated&lt;/button&gt;
+&lt;button class="ax-button is-outlined has-state-layer t-label-large" type="button"&gt;Outlined&lt;/button&gt;
+&lt;button class="ax-button is-text has-state-layer t-label-large" type="button"&gt;Text&lt;/button&gt;</pre>
+    </details>
+
+    <details class="lab-button-snippet">
+      <summary>§3 With leading icon (canonical icon slot)</summary>
+<pre>&lt;button class="ax-button is-filled has-state-layer t-label-large" type="button"&gt;
+  &lt;span class="material-symbols-rounded notranslate ax-button-icon"
+        translate="no" aria-hidden="true" draggable="false"&gt;add&lt;/span&gt;
+  &lt;span&gt;Add&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+
+    <details class="lab-button-snippet">
+      <summary>§4 has-state-layer opt-out</summary>
+<pre>&lt;!-- Default (state-layer ON) --&gt;
+&lt;button class="ax-button is-filled has-state-layer t-label-large" type="button"&gt;With state-layer&lt;/button&gt;
+
+&lt;!-- Opt-out (state-layer OFF) --&gt;
+&lt;button class="ax-button is-filled t-label-large" type="button"&gt;Without state-layer&lt;/button&gt;</pre>
+    </details>
+
+    <details class="lab-button-snippet">
+      <summary>§5 Disabled — native attribute (preferred)</summary>
+<pre>&lt;button class="ax-button is-filled has-state-layer t-label-large" type="button" disabled&gt;Filled&lt;/button&gt;
+&lt;!-- ... text variant retains transparent bg per baseline L231-L234 exception --&gt;
+&lt;button class="ax-button is-text has-state-layer t-label-large" type="button" disabled&gt;Text&lt;/button&gt;</pre>
+    </details>
+
+    <details class="lab-button-snippet">
+      <summary>§5a aria-disabled — plugin-managed (use sparingly)</summary>
+<pre>&lt;!-- Plugin/JS must independently prevent activation; aria-disabled
+     alone does NOT block click. --&gt;
+&lt;button class="ax-button is-filled has-state-layer t-label-large"
+        type="button" aria-disabled="true"&gt;aria-disabled&lt;/button&gt;</pre>
+    </details>
+
+    <details class="lab-button-snippet">
+      <summary>§6 Bare button</summary>
+<pre>&lt;button class="ax-button has-state-layer t-label-large" type="button"&gt;Bare&lt;/button&gt;</pre>
+    </details>
+  </section>
+
+  <!-- ========================================================
+       §8 — Cross-references
+       ======================================================== -->
+  <section class="lab-button-section">
+    <header class="lab-button-section__head">
+      <h2 class="t-title-large lab-button-section__title">§8. Cross-references</h2>
+    </header>
+    <div class="lab-button-xref">
+      <p><strong>Phase 0</strong> · <a href="../../../../../docs/v3.5.1/BUTTON-PHASE-0-REPORT.md">BUTTON-PHASE-0-REPORT.md</a></p>
+      <p><strong>Phase 1 audit trio</strong>:</p>
+      <ul>
+        <li><a href="./docs/BUTTON-SPEC-AUDIT.md">BUTTON-SPEC-AUDIT.md</a></li>
+        <li><a href="./docs/BUTTON-MEASUREMENT-AUDIT.md">BUTTON-MEASUREMENT-AUDIT.md</a></li>
+        <li><a href="./docs/BUTTON-WP-MAPPING.md">BUTTON-WP-MAPPING.md</a></li>
+      </ul>
+      <p><strong>Phase 2 plan</strong> · <a href="../../../../../docs/v3.5.1/BUTTON-PHASE-2-PLAN.md">BUTTON-PHASE-2-PLAN.md</a></p>
+      <p><strong>Framework</strong>:</p>
+      <ul>
+        <li><a href="../../../../../docs/v3.5.0/MODULE-STATUS-MATRIX.md">MODULE-STATUS-MATRIX.md</a> row #1 (Button)</li>
+        <li><a href="../../../../../docs/v3.5.0/PROMOTION-CRITERIA.md">PROMOTION-CRITERIA.md</a> §4.1 + §7</li>
+        <li><a href="../../../../../docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md">PUBLIC-SURFACE-CHARTER.md</a> §3 + §4</li>
+      </ul>
+      <p><strong>Baseline</strong>:</p>
+      <ul>
+        <li><a href="../../stylesheets/components.css"><code>components.css</code></a> §0 (state-layer) + §2 (Button)</li>
+        <li><a href="../../style-guide.html#components-button">style-guide.html #components-button</a></li>
+      </ul>
+      <p><strong>Animated ripple (TARGET — deferred)</strong>: BACKLOG #25 — Ripple v2 contract.</p>
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>

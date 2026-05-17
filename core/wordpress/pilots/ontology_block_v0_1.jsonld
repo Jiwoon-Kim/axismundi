@@ -1,0 +1,1417 @@
+{
+  "@context": {
+    "wp": "https://anthropic.tld/v2.0/wp-ontology#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "tier": "wp:tier",
+    "provenance": "wp:provenance",
+    "thematic_domain": "wp:thematicDomain",
+    "atlas_rule_id": "wp:atlasRuleId",
+    "schema_field": "wp:schemaField",
+    "schema_path": "wp:schemaPath",
+    "binding_candidates": "wp:bindingCandidates",
+    "instance_count": "wp:instanceCount",
+    "instance_percent": "wp:instancePercent",
+    "enum_values": "wp:enumValues",
+    "subproperties": "wp:subproperties",
+    "has_property": "wp:hasProperty",
+    "has_attribute": "wp:hasAttribute",
+    "has_support": "wp:hasSupport",
+    "required": "wp:required",
+    "availability": "wp:availability",
+    "label": "rdfs:label",
+    "comment": "rdfs:comment",
+    "altLabel": "skos:altLabel",
+    "broader": "skos:broader",
+    "narrower": "skos:narrower"
+  },
+  "@id": "wp:WordPressBlockOntologyCore",
+  "@type": "wp:OntologyCore",
+  "label": "WordPress Block Ontology Core Draft v0.1",
+  "comment": "Unified ontology skeleton from P1 (supports) + P2 (attributes) + P3 (registration) pilots. Provenance-aware, atlas-linked, binding-ready. Tier classification: Root / Tier1_Identity / Tier2_Composition / Tier3_DataModel / Tier4_Runtime / Tier5_Context.",
+  "version": "0.1.0",
+  "generated_at": "2026-05-12T14:00:27Z",
+  "baseline": {
+    "wordpress": "6.9.4 @ 97b7f62a (2026-03-11)",
+    "gutenberg": "v23.1.1 @ 12c6c76e (2026-05-08)",
+    "corpus_sync": "2026-05-12"
+  },
+  "thematic_domains_total": [
+    "admin-ui",
+    "block-authoring",
+    "build-tooling",
+    "data-layer",
+    "editor-customization",
+    "i18n",
+    "interactivity",
+    "plugin-dev",
+    "site-building",
+    "style-engine",
+    "theme-config"
+  ],
+  "provenance_taxonomy": [
+    "schema+instance",
+    "schema+php_runtime",
+    "schema+js_runtime",
+    "schema_only",
+    "instance_only",
+    "instance_derived_enum",
+    "schema+instance_partial"
+  ],
+  "atlas_integration": {
+    "atlas_root": "knowledge/wordpress/",
+    "bounded_contexts": 11,
+    "atlas_rule_links": "ontology entities carry atlas_rule_id when 1:1 mapping exists",
+    "directionality": "atlas (B) is source-of-truth for rules; ontology (C) is typed projection"
+  },
+  "@graph": [
+    {
+      "@id": "wp:BlockType",
+      "@type": "wp:RootEntity",
+      "label": "BlockType",
+      "comment": "A registered Gutenberg block type. Identity + Composition + DataModel + Runtime + Context.",
+      "tier": "Root",
+      "schema_path": "schemas/json/block.json",
+      "required_properties": [
+        "apiVersion",
+        "name",
+        "title"
+      ],
+      "total_top_level_properties": 31,
+      "instance_population": 121,
+      "instance_namespace": "core/*",
+      "tier_groups": [
+        {
+          "tier": "Tier1_Identity",
+          "key_count": 11,
+          "instance_avg_pct": 65.3
+        },
+        {
+          "tier": "Tier2_Composition",
+          "key_count": 6,
+          "instance_avg_pct": 11.9
+        },
+        {
+          "tier": "Tier3_DataModel",
+          "key_count": 3,
+          "instance_avg_pct": 65.6
+        },
+        {
+          "tier": "Tier4_Runtime",
+          "key_count": 8,
+          "instance_avg_pct": 15.9
+        },
+        {
+          "tier": "Tier5_Context",
+          "key_count": 3,
+          "instance_avg_pct": 21.2
+        }
+      ],
+      "has_property": [
+        "wp:BlockType.name",
+        "wp:BlockType.title",
+        "wp:BlockType.apiVersion",
+        "wp:BlockType.category",
+        "wp:BlockType.description",
+        "wp:BlockType.icon",
+        "wp:BlockType.keywords",
+        "wp:BlockType.version",
+        "wp:BlockType.textdomain",
+        "wp:BlockType.$schema",
+        "wp:BlockType.__experimental",
+        "wp:BlockType.parent",
+        "wp:BlockType.ancestor",
+        "wp:BlockType.allowedBlocks",
+        "wp:BlockType.styles",
+        "wp:BlockType.variations",
+        "wp:BlockType.example",
+        "wp:BlockType.attributes",
+        "wp:BlockType.supports",
+        "wp:BlockType.selectors",
+        "wp:BlockType.render",
+        "wp:BlockType.script",
+        "wp:BlockType.style",
+        "wp:BlockType.editorScript",
+        "wp:BlockType.editorStyle",
+        "wp:BlockType.viewScript",
+        "wp:BlockType.viewStyle",
+        "wp:BlockType.viewScriptModule",
+        "wp:BlockType.providesContext",
+        "wp:BlockType.usesContext",
+        "wp:BlockType.blockHooks"
+      ],
+      "has_attribute_model": "wp:BlockAttribute",
+      "has_support_model": "wp:BlockSupport",
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:Category",
+      "@type": "wp:Enumeration",
+      "label": "Category",
+      "tier": "Tier1_Identity",
+      "comment": "Top-level grouping for inserter UI. Enum derived from 121 core block instances (schema is open string).",
+      "provenance": "instance_derived_enum",
+      "enum_values": [
+        "design",
+        "embed",
+        "media",
+        "reusable",
+        "text",
+        "theme",
+        "widgets"
+      ],
+      "schema_field": "category",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:ApiVersion",
+      "@type": "wp:Enumeration",
+      "label": "ApiVersion",
+      "tier": "Tier1_Identity",
+      "comment": "Block API version. Core is exclusively v3 (post-migration). Plugin/theme blocks may pin to 1/2/3 for compatibility.",
+      "provenance": "schema+instance",
+      "enum_values": [
+        1,
+        2,
+        3
+      ],
+      "instance_observed": [
+        3
+      ],
+      "schema_field": "apiVersion",
+      "required": true,
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:ExperimentalMarker",
+      "@type": "wp:Enumeration",
+      "label": "ExperimentalMarker",
+      "tier": "Tier1_Identity",
+      "comment": "Block lifecycle status. `true` = API may change; `'fse'` = FSE-only experimental.",
+      "provenance": "schema+instance",
+      "enum_values": [
+        true,
+        "fse"
+      ],
+      "schema_field": "__experimental",
+      "instance_count": 14,
+      "availability": "filter:exclude_for_production",
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:BlockName",
+      "@type": "wp:Identifier",
+      "label": "BlockName",
+      "tier": "Tier1_Identity",
+      "comment": "Globally unique block identifier with pattern `namespace/slug`. Core namespace reserved; plugin/theme use own namespace.",
+      "provenance": "schema+instance",
+      "pattern": "^[a-z][a-z0-9-]*\\/[a-z][a-z0-9-]*$",
+      "schema_field": "name",
+      "required": true,
+      "instance_count": 121,
+      "core_namespace_usage": "121/121",
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:ParentConstraint",
+      "@type": "wp:ContainmentRule",
+      "label": "ParentConstraint",
+      "tier": "Tier2_Composition",
+      "comment": "Direct-child containment: block must be a direct child of one of listed parent BlockTypes.",
+      "semantics": "directChildOf",
+      "schema_field": "parent",
+      "provenance": "schema+instance",
+      "instance_count": 25,
+      "instance_percent": 20.7,
+      "examples": [
+        {
+          "block": "core/accordion-heading",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/accordion-item",
+          "parent": [
+            "core/accordion"
+          ]
+        },
+        {
+          "block": "core/accordion-panel",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/button",
+          "parent": [
+            "core/buttons"
+          ]
+        },
+        {
+          "block": "core/column",
+          "parent": [
+            "core/columns"
+          ]
+        }
+      ],
+      "binding_candidates": {
+        "material": "composite_child (Button → ButtonGroup)",
+        "activitypub": "partOf (single Collection)"
+      },
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-hierarchy-constraints"
+    },
+    {
+      "@id": "wp:AncestorConstraint",
+      "@type": "wp:ContainmentRule",
+      "label": "AncestorConstraint",
+      "tier": "Tier2_Composition",
+      "comment": "Recursive descendant containment: block must be nested anywhere within one of listed ancestor BlockTypes.",
+      "semantics": "descendantOf",
+      "schema_field": "ancestor",
+      "provenance": "schema+instance",
+      "instance_count": 15,
+      "instance_percent": 12.4,
+      "binding_candidates": {
+        "material": "slot_template (Card.Content anywhere in Card)",
+        "activitypub": "partOf (transitive)"
+      },
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-hierarchy-constraints"
+    },
+    {
+      "@id": "wp:AllowedBlocks",
+      "@type": "wp:ContainmentRule",
+      "label": "AllowedBlocks",
+      "tier": "Tier2_Composition",
+      "comment": "Child whitelist (host-side rule): only listed BlockTypes can be inserted inside this block.",
+      "semantics": "childWhitelist",
+      "schema_field": "allowedBlocks",
+      "provenance": "schema+instance",
+      "instance_count": 20,
+      "instance_percent": 16.5,
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-hierarchy-constraints"
+    },
+    {
+      "@id": "wp:ContextProvider",
+      "@type": "wp:ContextIO",
+      "label": "ContextProvider",
+      "tier": "Tier5_Context",
+      "comment": "Block exposes named context values to descendant blocks.",
+      "schema_field": "providesContext",
+      "provenance": "schema+instance",
+      "instance_count": 14,
+      "instance_percent": 11.6,
+      "binding_candidates": {
+        "material": "context_provider (React)",
+        "activitypub": null
+      },
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-context"
+    },
+    {
+      "@id": "wp:ContextConsumer",
+      "@type": "wp:ContextIO",
+      "label": "ContextConsumer",
+      "tier": "Tier5_Context",
+      "comment": "Block reads named context values from an ancestor provider.",
+      "schema_field": "usesContext",
+      "provenance": "schema+instance",
+      "instance_count": 63,
+      "instance_percent": 52.1,
+      "binding_candidates": {
+        "material": "context_consumer (React)",
+        "activitypub": "context_field"
+      },
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-context"
+    },
+    {
+      "@id": "wp:PatternAffinity",
+      "@type": "wp:HookSurface",
+      "label": "PatternAffinity",
+      "tier": "Tier5_Context",
+      "comment": "blockHooks API: automatic insertion of block relative to others (before/after/firstChild/lastChild).",
+      "schema_field": "blockHooks",
+      "provenance": "schema_only",
+      "instance_count": 0,
+      "comment_provenance": "WP 6.4+ API; no core blocks adopted yet. Plugin/theme territory.",
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:BlockType.name",
+      "@type": "wp:BlockTypeProperty",
+      "label": "name",
+      "tier": "Tier1_Identity",
+      "required": true,
+      "provenance": "schema+instance",
+      "instance_count": 121,
+      "instance_percent": 100.0,
+      "schema_field": "name",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:BlockType.title",
+      "@type": "wp:BlockTypeProperty",
+      "label": "title",
+      "tier": "Tier1_Identity",
+      "required": true,
+      "provenance": "schema+instance",
+      "instance_count": 121,
+      "instance_percent": 100.0,
+      "schema_field": "title",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:BlockType.apiVersion",
+      "@type": "wp:BlockTypeProperty",
+      "label": "apiVersion",
+      "tier": "Tier1_Identity",
+      "required": true,
+      "provenance": "schema+instance",
+      "instance_count": 121,
+      "instance_percent": 100.0,
+      "schema_field": "apiVersion",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.api-version-and-block-evolution"
+    },
+    {
+      "@id": "wp:BlockType.category",
+      "@type": "wp:BlockTypeProperty",
+      "label": "category",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 121,
+      "instance_percent": 100.0,
+      "schema_field": "category",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:BlockType.description",
+      "@type": "wp:BlockTypeProperty",
+      "label": "description",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 121,
+      "instance_percent": 100.0,
+      "schema_field": "description",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:BlockType.icon",
+      "@type": "wp:BlockTypeProperty",
+      "label": "icon",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema+php_runtime",
+      "instance_count": 3,
+      "instance_percent": 2.5,
+      "schema_field": "icon",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:BlockType.keywords",
+      "@type": "wp:BlockTypeProperty",
+      "label": "keywords",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 46,
+      "instance_percent": 38.0,
+      "schema_field": "keywords",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:BlockType.version",
+      "@type": "wp:BlockTypeProperty",
+      "label": "version",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema_only",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "schema_field": "version",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-residual-fields"
+    },
+    {
+      "@id": "wp:BlockType.textdomain",
+      "@type": "wp:BlockTypeProperty",
+      "label": "textdomain",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 121,
+      "instance_percent": 100.0,
+      "schema_field": "textdomain",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-basic-metadata"
+    },
+    {
+      "@id": "wp:BlockType.$schema",
+      "@type": "wp:BlockTypeProperty",
+      "label": "$schema",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 121,
+      "instance_percent": 100.0,
+      "schema_field": "$schema",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-residual-fields"
+    },
+    {
+      "@id": "wp:BlockType.__experimental",
+      "@type": "wp:BlockTypeProperty",
+      "label": "__experimental",
+      "tier": "Tier1_Identity",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 14,
+      "instance_percent": 11.6,
+      "schema_field": "__experimental",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-residual-fields"
+    },
+    {
+      "@id": "wp:BlockType.parent",
+      "@type": "wp:BlockTypeProperty",
+      "label": "parent",
+      "tier": "Tier2_Composition",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 25,
+      "instance_percent": 20.7,
+      "schema_field": "parent",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-hierarchy-constraints"
+    },
+    {
+      "@id": "wp:BlockType.ancestor",
+      "@type": "wp:BlockTypeProperty",
+      "label": "ancestor",
+      "tier": "Tier2_Composition",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 15,
+      "instance_percent": 12.4,
+      "schema_field": "ancestor",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-hierarchy-constraints"
+    },
+    {
+      "@id": "wp:BlockType.allowedBlocks",
+      "@type": "wp:BlockTypeProperty",
+      "label": "allowedBlocks",
+      "tier": "Tier2_Composition",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 20,
+      "instance_percent": 16.5,
+      "schema_field": "allowedBlocks",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-hierarchy-constraints"
+    },
+    {
+      "@id": "wp:BlockType.styles",
+      "@type": "wp:BlockTypeProperty",
+      "label": "styles",
+      "tier": "Tier2_Composition",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 8,
+      "instance_percent": 6.6,
+      "schema_field": "styles",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.block-styles-registration"
+    },
+    {
+      "@id": "wp:BlockType.variations",
+      "@type": "wp:BlockTypeProperty",
+      "label": "variations",
+      "tier": "Tier2_Composition",
+      "required": false,
+      "provenance": "schema+js_runtime",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "schema_field": "variations",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.variations"
+    },
+    {
+      "@id": "wp:BlockType.example",
+      "@type": "wp:BlockTypeProperty",
+      "label": "example",
+      "tier": "Tier2_Composition",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 18,
+      "instance_percent": 14.9,
+      "schema_field": "example",
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:BlockType.attributes",
+      "@type": "wp:BlockTypeProperty",
+      "label": "attributes",
+      "tier": "Tier3_DataModel",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 104,
+      "instance_percent": 86.0,
+      "schema_field": "attributes",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-attributes-core"
+    },
+    {
+      "@id": "wp:BlockType.supports",
+      "@type": "wp:BlockTypeProperty",
+      "label": "supports",
+      "tier": "Tier3_DataModel",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 119,
+      "instance_percent": 98.3,
+      "schema_field": "supports",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-supports-field"
+    },
+    {
+      "@id": "wp:BlockType.selectors",
+      "@type": "wp:BlockTypeProperty",
+      "label": "selectors",
+      "tier": "Tier3_DataModel",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 15,
+      "instance_percent": 12.4,
+      "schema_field": "selectors",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-selectors"
+    },
+    {
+      "@id": "wp:BlockType.render",
+      "@type": "wp:BlockTypeProperty",
+      "label": "render",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+php_runtime",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "schema_field": "render",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.dynamic-rendering"
+    },
+    {
+      "@id": "wp:BlockType.script",
+      "@type": "wp:BlockTypeProperty",
+      "label": "script",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+php_runtime",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "schema_field": "script",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-assets"
+    },
+    {
+      "@id": "wp:BlockType.style",
+      "@type": "wp:BlockTypeProperty",
+      "label": "style",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 85,
+      "instance_percent": 70.2,
+      "schema_field": "style",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-assets"
+    },
+    {
+      "@id": "wp:BlockType.editorScript",
+      "@type": "wp:BlockTypeProperty",
+      "label": "editorScript",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 5,
+      "instance_percent": 4.1,
+      "schema_field": "editorScript",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-assets"
+    },
+    {
+      "@id": "wp:BlockType.editorStyle",
+      "@type": "wp:BlockTypeProperty",
+      "label": "editorStyle",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 62,
+      "instance_percent": 51.2,
+      "schema_field": "editorStyle",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-assets"
+    },
+    {
+      "@id": "wp:BlockType.viewScript",
+      "@type": "wp:BlockTypeProperty",
+      "label": "viewScript",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+php_runtime",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "schema_field": "viewScript",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-assets"
+    },
+    {
+      "@id": "wp:BlockType.viewStyle",
+      "@type": "wp:BlockTypeProperty",
+      "label": "viewStyle",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+php_runtime",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "schema_field": "viewStyle",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-assets"
+    },
+    {
+      "@id": "wp:BlockType.viewScriptModule",
+      "@type": "wp:BlockTypeProperty",
+      "label": "viewScriptModule",
+      "tier": "Tier4_Runtime",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 2,
+      "instance_percent": 1.7,
+      "schema_field": "viewScriptModule",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-assets"
+    },
+    {
+      "@id": "wp:BlockType.providesContext",
+      "@type": "wp:BlockTypeProperty",
+      "label": "providesContext",
+      "tier": "Tier5_Context",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 14,
+      "instance_percent": 11.6,
+      "schema_field": "providesContext",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-context"
+    },
+    {
+      "@id": "wp:BlockType.usesContext",
+      "@type": "wp:BlockTypeProperty",
+      "label": "usesContext",
+      "tier": "Tier5_Context",
+      "required": false,
+      "provenance": "schema+instance",
+      "instance_count": 63,
+      "instance_percent": 52.1,
+      "schema_field": "usesContext",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-context"
+    },
+    {
+      "@id": "wp:BlockType.blockHooks",
+      "@type": "wp:BlockTypeProperty",
+      "label": "blockHooks",
+      "tier": "Tier5_Context",
+      "required": false,
+      "provenance": "schema_only",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "schema_field": "blockHooks",
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:BlockSupport",
+      "@type": "wp:CapabilityClass",
+      "label": "BlockSupport",
+      "comment": "A named feature flag a block declares to opt into editor UI / attribute injection.",
+      "tier": "Tier3_DataModel",
+      "schema_path": "schemas/json/block.json#/properties/supports",
+      "instance_count": 28,
+      "agreement": {
+        "in_all_3_sources": 27,
+        "in_2_sources": 1,
+        "schema_only": 1
+      },
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-supports-field",
+      "atlas_related": [
+        "block.supports.background",
+        "block.supports.color",
+        "block.supports.dimensions",
+        "block.supports.filter",
+        "block.supports.layout",
+        "block.supports.position",
+        "block.supports.shadow",
+        "block.supports.spacing",
+        "block.supports.typography"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.align",
+      "@type": "wp:BlockSupportInstance",
+      "label": "align",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.align",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_default": false
+    },
+    {
+      "@id": "wp:BlockSupport.alignWide",
+      "@type": "wp:BlockSupportInstance",
+      "label": "alignWide",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.alignWide",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.allowedBlocks",
+      "@type": "wp:BlockSupportInstance",
+      "label": "allowedBlocks",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.allowedBlocks",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": false
+    },
+    {
+      "@id": "wp:BlockSupport.anchor",
+      "@type": "wp:BlockSupportInstance",
+      "label": "anchor",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.anchor",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": false
+    },
+    {
+      "@id": "wp:BlockSupport.ariaLabel",
+      "@type": "wp:BlockSupportInstance",
+      "label": "ariaLabel",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.ariaLabel",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_default": false
+    },
+    {
+      "@id": "wp:BlockSupport.autoRegister",
+      "@type": "wp:BlockSupportInstance",
+      "label": "autoRegister",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.autoRegister",
+      "provenance": "instance_only",
+      "thematic_domain": "block-authoring",
+      "availability": [
+        "core_6_9_4",
+        "gutenberg_plugin_23_1_1"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.background",
+      "@type": "wp:BlockSupportInstance",
+      "label": "background",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.background",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.background",
+      "schema_type": "object",
+      "subproperties": [
+        "wp:BlockSupport.background.backgroundImage",
+        "wp:BlockSupport.background.backgroundSize",
+        "wp:BlockSupport.background.gradient"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.className",
+      "@type": "wp:BlockSupportInstance",
+      "label": "className",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.className",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.color",
+      "@type": "wp:BlockSupportInstance",
+      "label": "color",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.color",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.color",
+      "schema_type": "object",
+      "subproperties": [
+        "wp:BlockSupport.color.background",
+        "wp:BlockSupport.color.gradients",
+        "wp:BlockSupport.color.link",
+        "wp:BlockSupport.color.text",
+        "wp:BlockSupport.color.heading",
+        "wp:BlockSupport.color.button",
+        "wp:BlockSupport.color.enableContrastChecker"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.contentRole",
+      "@type": "wp:BlockSupportInstance",
+      "label": "contentRole",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.contentRole",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": false,
+      "availability": [
+        "gutenberg_plugin_23_1_1"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.customCSS",
+      "@type": "wp:BlockSupportInstance",
+      "label": "customCSS",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.customCSS",
+      "provenance": "schema_only",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true,
+      "availability": [
+        "gutenberg_plugin_23_1_1"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.customClassName",
+      "@type": "wp:BlockSupportInstance",
+      "label": "customClassName",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.customClassName",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.dimensions",
+      "@type": "wp:BlockSupportInstance",
+      "label": "dimensions",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.dimensions",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.dimensions",
+      "schema_type": "object",
+      "subproperties": [
+        "wp:BlockSupport.dimensions.aspectRatio",
+        "wp:BlockSupport.dimensions.height",
+        "wp:BlockSupport.dimensions.minHeight",
+        "wp:BlockSupport.dimensions.minWidth",
+        "wp:BlockSupport.dimensions.width"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.filter",
+      "@type": "wp:BlockSupportInstance",
+      "label": "filter",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.filter",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.filter",
+      "schema_type": "object",
+      "subproperties": [
+        "wp:BlockSupport.filter.duotone"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.html",
+      "@type": "wp:BlockSupportInstance",
+      "label": "html",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.html",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.inserter",
+      "@type": "wp:BlockSupportInstance",
+      "label": "inserter",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.inserter",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.interactivity",
+      "@type": "wp:BlockSupportInstance",
+      "label": "interactivity",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.interactivity",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:BlockSupport.layout",
+      "@type": "wp:BlockSupportInstance",
+      "label": "layout",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.layout",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.layout",
+      "schema_default": false
+    },
+    {
+      "@id": "wp:BlockSupport.listView",
+      "@type": "wp:BlockSupportInstance",
+      "label": "listView",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.listView",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": false,
+      "availability": [
+        "gutenberg_plugin_23_1_1"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.lock",
+      "@type": "wp:BlockSupportInstance",
+      "label": "lock",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.lock",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.multiple",
+      "@type": "wp:BlockSupportInstance",
+      "label": "multiple",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.multiple",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.position",
+      "@type": "wp:BlockSupportInstance",
+      "label": "position",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.position",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.position",
+      "schema_type": "object",
+      "subproperties": [
+        "wp:BlockSupport.position.sticky"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.renaming",
+      "@type": "wp:BlockSupportInstance",
+      "label": "renaming",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.renaming",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.reusable",
+      "@type": "wp:BlockSupportInstance",
+      "label": "reusable",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.reusable",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true
+    },
+    {
+      "@id": "wp:BlockSupport.shadow",
+      "@type": "wp:BlockSupportInstance",
+      "label": "shadow",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.shadow",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.shadow",
+      "schema_default": false
+    },
+    {
+      "@id": "wp:BlockSupport.spacing",
+      "@type": "wp:BlockSupportInstance",
+      "label": "spacing",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.spacing",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.spacing",
+      "schema_type": "object",
+      "subproperties": [
+        "wp:BlockSupport.spacing.margin",
+        "wp:BlockSupport.spacing.padding"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.splitting",
+      "@type": "wp:BlockSupportInstance",
+      "label": "splitting",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.splitting",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": false
+    },
+    {
+      "@id": "wp:BlockSupport.typography",
+      "@type": "wp:BlockSupportInstance",
+      "label": "typography",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.typography",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.supports.typography",
+      "schema_type": "object",
+      "subproperties": [
+        "wp:BlockSupport.typography.fontSize",
+        "wp:BlockSupport.typography.lineHeight",
+        "wp:BlockSupport.typography.textAlign",
+        "wp:BlockSupport.typography.fitText",
+        "wp:BlockSupport.typography.textIndent"
+      ]
+    },
+    {
+      "@id": "wp:BlockSupport.visibility",
+      "@type": "wp:BlockSupportInstance",
+      "label": "visibility",
+      "broader": "wp:BlockSupport",
+      "tier": "Tier3_DataModel",
+      "schema_field": "supports.visibility",
+      "provenance": "schema+instance",
+      "thematic_domain": "block-authoring",
+      "schema_type": "boolean",
+      "schema_default": true,
+      "availability": [
+        "gutenberg_plugin_23_1_1"
+      ]
+    },
+    {
+      "@id": "wp:BlockAttribute",
+      "@type": "wp:DataModelClass",
+      "label": "BlockAttribute",
+      "comment": "A named attribute providing structured data for a BlockType. Has 9 schema-defined facets.",
+      "tier": "Tier3_DataModel",
+      "schema_path": "schemas/json/block.json#/properties/attributes/patternProperties/[a-zA-Z]",
+      "schema_keys": [
+        "attribute",
+        "default",
+        "enum",
+        "meta",
+        "query",
+        "role",
+        "selector",
+        "source",
+        "type"
+      ],
+      "instance_count": 473,
+      "instance_blocks_using": 102,
+      "thematic_domain": "block-authoring",
+      "atlas_rule_id": "block.json-attributes-core",
+      "atlas_related": [
+        "block.json-attributes-html-sources",
+        "block.json-attributes-query-source"
+      ]
+    },
+    {
+      "@id": "wp:AttributeType",
+      "@type": "wp:Enumeration",
+      "label": "AttributeType",
+      "broader": "wp:BlockAttribute",
+      "comment": "Data-type primitive for attribute value. Note: `rich-text` is a TYPE primitive distinct from `source: rich-text`.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "type",
+      "enum_values": [
+        "null",
+        "boolean",
+        "object",
+        "array",
+        "string",
+        "rich-text",
+        "integer",
+        "number"
+      ],
+      "provenance": "schema+instance",
+      "instance_usage": {
+        "string": 252,
+        "boolean": 109,
+        "number": 56,
+        "rich-text": 21,
+        "array": 18,
+        "object": 8,
+        "string|boolean": 6,
+        "integer": 3
+      },
+      "binding_candidates": {
+        "material": {
+          "rich-text": "RichTextField",
+          "string": "TextField",
+          "number": "NumberField",
+          "boolean": "ToggleField",
+          "object": "structured_props",
+          "array": "list_field"
+        }
+      },
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:AttributeSource",
+      "@type": "wp:Enumeration",
+      "label": "AttributeSource",
+      "broader": "wp:BlockAttribute",
+      "comment": "Extraction strategy: how attribute value is read from saved markup.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "source",
+      "enum_values": [
+        "attribute",
+        "text",
+        "rich-text",
+        "html",
+        "raw",
+        "query",
+        "meta"
+      ],
+      "active_sources": [
+        "attribute",
+        "rich-text",
+        "query",
+        "raw",
+        "html"
+      ],
+      "dormant_sources": [
+        "text",
+        "meta"
+      ],
+      "provenance": "schema+instance_partial",
+      "instance_usage": {
+        "attribute": 37,
+        "rich-text": 21,
+        "query": 5,
+        "raw": 4,
+        "html": 3
+      },
+      "comment_dormant": "`text` superseded by `rich-text`; `meta` is postmeta bridge (plugin territory).",
+      "binding_candidates": {
+        "material": {
+          "attribute": "propBinding",
+          "rich-text": "RichTextField.value",
+          "html": "innerHTML_binding",
+          "query": "list_field_binding"
+        }
+      },
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:Role",
+      "@type": "wp:Enumeration",
+      "label": "Role",
+      "broader": "wp:BlockAttribute",
+      "comment": "Semantic role of attribute. Schema defines as open string; instances reveal closed enum {content, local}.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "role",
+      "enum_values": [
+        "content",
+        "local"
+      ],
+      "provenance": "instance_derived_enum",
+      "instance_usage": {
+        "content": 90,
+        "local": 6
+      },
+      "schema_under_specification": true,
+      "binding_candidates": {
+        "material": {
+          "content": "Component.contentSlot",
+          "local": "Component.localState"
+        },
+        "activitypub": {
+          "content": "object.content (federated)",
+          "local": null
+        }
+      },
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:DefaultValue",
+      "@type": "wp:AttributeFacet",
+      "label": "DefaultValue",
+      "broader": "wp:BlockAttribute",
+      "comment": "Fallback value when attribute is unset. Type varies by attribute.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "default",
+      "provenance": "schema+instance",
+      "instance_count": 224,
+      "instance_percent": 47.4,
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:EnumConstraint",
+      "@type": "wp:AttributeFacet",
+      "label": "EnumConstraint",
+      "broader": "wp:BlockAttribute",
+      "comment": "Closed set of allowed values for an attribute.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "enum",
+      "provenance": "schema+instance",
+      "instance_count": 16,
+      "instance_percent": 3.4,
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:Selector",
+      "@type": "wp:AttributeFacet",
+      "label": "Selector",
+      "broader": "wp:BlockAttribute",
+      "comment": "CSS selector to locate source DOM element. Applies when source ∈ {attribute, text, html, rich-text, raw}.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "selector",
+      "provenance": "schema+instance",
+      "instance_count": 66,
+      "instance_percent": 13.9,
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:AttributeRef",
+      "@type": "wp:AttributeFacet",
+      "label": "AttributeRef",
+      "broader": "wp:BlockAttribute",
+      "comment": "Name of the HTML attribute to read (paired with source='attribute').",
+      "tier": "Tier3_DataModel",
+      "schema_field": "attribute",
+      "provenance": "schema+instance",
+      "instance_count": 39,
+      "instance_percent": 8.2,
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:QueryShape",
+      "@type": "wp:AttributeFacet",
+      "label": "QueryShape",
+      "broader": "wp:BlockAttribute",
+      "comment": "Recursive attribute shape: each item in matched DOM uses sub-attribute spec.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "query",
+      "provenance": "schema+instance",
+      "instance_count": 5,
+      "instance_percent": 1.1,
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:MetaBinding",
+      "@type": "wp:AttributeFacet",
+      "label": "MetaBinding",
+      "broader": "wp:BlockAttribute",
+      "comment": "wp_postmeta storage bridge. Schema-only in core; used in plugin meta-bound blocks.",
+      "tier": "Tier3_DataModel",
+      "schema_field": "meta",
+      "provenance": "schema_only",
+      "instance_count": 0,
+      "instance_percent": 0.0,
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:SerializationBoundary",
+      "@type": "wp:DerivedSlot",
+      "label": "SerializationBoundary",
+      "comment": "Whether an attribute participates in serialized HTML output. Derived from source: html/rich-text/attribute/raw/text → DOM; meta → external; query → recursive; null source → comment metadata.",
+      "tier": "Tier3_DataModel_Derived",
+      "derived_from": [
+        "wp:AttributeSource"
+      ],
+      "thematic_domain": "block-authoring"
+    },
+    {
+      "@id": "wp:DOMBinding",
+      "@type": "wp:DerivedSlot",
+      "label": "DOMBinding",
+      "comment": "Tuple (Selector, AttributeSource, AttributeRef) describing how an attribute extracts from the DOM.",
+      "tier": "Tier3_DataModel_Derived",
+      "derived_from": [
+        "wp:Selector",
+        "wp:AttributeSource",
+        "wp:AttributeRef"
+      ],
+      "thematic_domain": "block-authoring"
+    }
+  ]
+}

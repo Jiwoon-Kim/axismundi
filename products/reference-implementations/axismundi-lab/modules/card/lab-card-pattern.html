@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Card Full Spec Module (v3.5.3)</title>
+
+  <!-- Core design system stack (mirrors style-guide.html) -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/blocks.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-card.css" />
+</head>
+<body>
+
+<main class="lab-card-demo">
+  <header class="lab-card-section__head">
+    <p class="t-label-large">Axismundi v3.5.3 · Wave 1</p>
+    <h1 class="t-display-small lab-card-section__title">Card full-spec module</h1>
+    <p class="t-body-medium lab-card-section__supporting">
+      Baseline classes stay authoritative. This lab page catalogs Card
+      variants, slots, native semantics, disabled Pattern B, and the current
+      core/group bridge without adding runtime JavaScript.
+    </p>
+  </header>
+
+  <div class="lab-card-banner">
+    <p class="t-body-small">
+      Experimental lab preview — source authority remains
+      <code>components.css §5</code>. The WordPress bridge specimen uses the
+      existing <code>blocks.css §8</code> core/group mapping. Interactive
+      Card ripple remains CANDIDATE and is not wired here.
+    </p>
+  </div>
+
+  <!-- §2 — Variants -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§2. Variants — non-interactive articles</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        Three baseline variants rendered as static content cards. Static
+        cards are containers, not controls.
+      </p>
+    </header>
+    <div class="lab-card-grid">
+      <article class="card card--filled lab-card-demo-card">
+        <h3 class="card__title">Filled card</h3>
+        <p class="card__subtitle">Surface container highest</p>
+        <p>Un-classed body content inside the card. No <code>.card__body</code> wrapper.</p>
+      </article>
+
+      <article class="card card--elevated lab-card-demo-card">
+        <h3 class="card__title">Elevated card</h3>
+        <p class="card__subtitle">Elevation level 1</p>
+        <p>Use for content that needs a slightly raised surface.</p>
+      </article>
+
+      <article class="card card--outlined lab-card-demo-card">
+        <h3 class="card__title">Outlined card</h3>
+        <p class="card__subtitle">1px outline variant</p>
+        <p>Use where boundary clarity matters more than elevation.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- §3 — Media slot -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§3. With media slot</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        The media slot uses <code>.card__media</code>. Demo blocks avoid
+        external image dependencies while exercising the same slot geometry.
+      </p>
+    </header>
+    <div class="lab-card-grid">
+      <article class="card card--filled lab-card-demo-card">
+        <div class="card__media lab-card-media" aria-hidden="true">
+          <span class="lab-card-media__label">Media</span>
+        </div>
+        <h3 class="card__title">Filled with media</h3>
+        <p>Media reaches the card edge through the baseline negative margin.</p>
+      </article>
+
+      <article class="card card--elevated lab-card-demo-card">
+        <div class="card__media lab-card-media" aria-hidden="true">
+          <span class="lab-card-media__label">Media</span>
+        </div>
+        <h3 class="card__title">Elevated with media</h3>
+        <p>The card radius remains the baseline card radius.</p>
+      </article>
+
+      <article class="card card--outlined lab-card-demo-card">
+        <div class="card__media lab-card-media" aria-hidden="true">
+          <span class="lab-card-media__label">Media</span>
+        </div>
+        <h3 class="card__title">Outlined with media</h3>
+        <p>The slot demonstrates layout only, not content policy.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- §4 — Title / subtitle / body content -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§4. Title / subtitle / un-classed body content</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        Classed slots are <code>.card__title</code> and
+        <code>.card__subtitle</code>. Body content is direct un-classed
+        content; <code>.card__body</code> is intentionally not introduced.
+      </p>
+    </header>
+    <article class="card card--filled lab-card-demo-card">
+      <h3 class="card__title">Research note</h3>
+      <p class="card__subtitle">Ontology boundary check</p>
+      <p>
+        This paragraph is normal card body content. It stays un-classed so
+        the baseline slot taxonomy remains small and stable.
+      </p>
+    </article>
+  </section>
+
+  <!-- §5 — Actions slot composition -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§5. Actions slot composition</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        Card owns <code>.card__actions</code> layout. Nested Button and Icon
+        button controls own their semantics, accessibility, and icon-system
+        dependencies.
+      </p>
+    </header>
+    <article class="card card--elevated lab-card-demo-card">
+      <h3 class="card__title">Composition card</h3>
+      <p class="card__subtitle">Nested controls remain independent</p>
+      <p>Use the actions slot for local actions without making the whole card clickable.</p>
+      <div class="card__actions">
+        <button class="ax-button is-text has-state-layer t-label-large" type="button">Read</button>
+        <button class="ax-button is-text has-state-layer t-label-large" type="button">Save</button>
+        <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="More actions">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">more_vert</span>
+        </button>
+      </div>
+    </article>
+  </section>
+
+  <!-- §6 — Interactive variants -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§6. Interactive variants</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        Whole-card action uses a native button. Whole-card navigation uses
+        an anchor. Do not use fake clickable articles.
+      </p>
+    </header>
+    <div class="lab-card-grid">
+      <div class="lab-card-specimen">
+        <button class="card card--elevated card--interactive has-state-layer lab-card-demo-card" type="button">
+          <span class="card__title">Action card</span>
+          <span class="card__subtitle">Native button semantics</span>
+          <span>Use this when the whole card triggers an action.</span>
+        </button>
+        <p class="lab-card-specimen__caption">
+          Static catalog specimen — no runtime action is wired here. Production
+          usage wires behavior at the integrator level (theme JS / block editor / plugin).
+        </p>
+        <p class="lab-card-specimen__caption lab-card-specimen__caption--ko">
+          정적 카탈로그 specimen — 여기서는 runtime action을 배선하지 않는다.
+          실제 사용 시 통합 레벨(theme JS / block editor / plugin)에서 behavior를 배선한다.
+        </p>
+      </div>
+
+      <div class="lab-card-specimen">
+        <a class="card card--outlined card--interactive has-state-layer lab-card-demo-card" href="#card-demo-navigation-target">
+          <span class="card__title">Navigation card</span>
+          <span class="card__subtitle">Native anchor semantics</span>
+          <span>Use this when the whole card navigates to a destination.</span>
+        </a>
+        <p class="lab-card-specimen__caption">
+          Static catalog specimen — this anchor points to an in-page target only.
+          Production navigation supplies the real destination.
+        </p>
+        <p class="lab-card-specimen__caption lab-card-specimen__caption--ko">
+          정적 카탈로그 specimen — 이 anchor는 페이지 내부 target만 가리킨다.
+          실제 사용 시 production destination을 제공한다.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §7 — Disabled Pattern B split -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§7. Disabled Pattern B split</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        Card disabled uses Pattern B whole-container opacity. Native
+        disabled and aria-disabled have different behavior contracts.
+      </p>
+    </header>
+    <div class="lab-card-grid">
+      <div class="lab-card-specimen">
+        <article class="card card--elevated lab-card-demo-card" aria-disabled="true">
+          <h3 class="card__title">Locked content card</h3>
+          <p class="card__subtitle">aria-disabled article</p>
+          <p>The card is unavailable content. There is no activation to block.</p>
+        </article>
+        <p class="lab-card-specimen__caption">Non-interactive locked card — no activation exists.</p>
+        <p class="lab-card-specimen__caption lab-card-specimen__caption--ko">비상호작용 locked card — 차단할 activation이 없다.</p>
+      </div>
+
+      <div class="lab-card-specimen">
+        <button class="card card--elevated card--interactive lab-card-demo-card" type="button" disabled>
+          <span class="card__title">Native disabled action</span>
+          <span class="card__subtitle">Browser blocks activation</span>
+          <span>The whole card is a disabled native button.</span>
+        </button>
+        <p class="lab-card-specimen__caption">Native disabled button-card — platform behavior blocks activation.</p>
+        <p class="lab-card-specimen__caption lab-card-specimen__caption--ko">Native disabled button-card — 플랫폼 동작이 activation을 차단한다.</p>
+      </div>
+
+      <div class="lab-card-specimen">
+        <button class="card card--elevated card--interactive lab-card-demo-card" type="button" aria-disabled="true">
+          <span class="card__title">Plugin-managed action</span>
+          <span class="card__subtitle">aria-disabled state</span>
+          <span>The integrator must guard click and keyboard behavior.</span>
+        </button>
+        <p class="lab-card-specimen__caption">
+          <code>aria-disabled</code> exposes disabled state and receives Pattern B
+          styling, but does not block activation. The integrator/plugin must guard activation.
+        </p>
+        <p class="lab-card-specimen__caption lab-card-specimen__caption--ko">
+          <code>aria-disabled</code>는 disabled 상태와 Pattern B 외관을 제공하지만
+          activation을 막지 않는다. integrator/plugin이 activation을 차단해야 한다.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §8 — has-state-layer opt-out -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§8. <code>has-state-layer</code> opt-out</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        Interactive cards may compose the static state-layer foundation.
+        This section shows the intentional opt-out path.
+      </p>
+    </header>
+    <div class="lab-card-grid">
+      <div class="lab-card-specimen">
+        <button class="card card--filled card--interactive has-state-layer lab-card-demo-card" type="button">
+          <span class="card__title">With state-layer</span>
+          <span>Hover/focus opacity overlay is expected.</span>
+        </button>
+        <p class="lab-card-specimen__caption">State-layer applied.</p>
+      </div>
+      <div class="lab-card-specimen">
+        <button class="card card--filled card--interactive lab-card-demo-card" type="button">
+          <span class="card__title">Without state-layer</span>
+          <span>Hover/focus opacity overlay is intentionally omitted.</span>
+        </button>
+        <p class="lab-card-specimen__caption">No state-layer overlay — intentional demo, not a bug.</p>
+        <p class="lab-card-specimen__caption lab-card-specimen__caption--ko">state-layer 없음 — 의도된 시연, 버그 아님.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §9 — WordPress current bridge specimen -->
+  <section class="lab-card-section" id="card-demo-navigation-target">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§9. WordPress current bridge specimen</h2>
+      <p class="t-body-small lab-card-section__supporting">
+        This single specimen demonstrates the existing <code>blocks.css</code>
+        core/group bridge. It is CURRENT partial and belongs to WP-MAPPING,
+        not the source Card component API.
+      </p>
+    </header>
+    <div class="lab-card-specimen">
+      <div class="wp-block-group is-style-card-filled">
+        <h3 class="card__title">core/group card bridge</h3>
+        <p>This uses <code>.wp-block-group.is-style-card-filled</code> from <code>blocks.css §8</code>.</p>
+      </div>
+      <p class="lab-card-specimen__caption">
+        Current partial bridge only — does not cover interactive semantics,
+        media/title/subtitle/actions slots, or disabled behavior.
+      </p>
+      <p class="lab-card-specimen__caption lab-card-specimen__caption--ko">
+        현재 partial bridge 시연 — interactive semantics, slots, disabled behavior는 포함하지 않는다.
+      </p>
+    </div>
+  </section>
+
+  <!-- §10 — Code snippets -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§10. Code snippets</h2>
+    </header>
+    <details class="lab-card-snippet">
+      <summary>Static article card</summary>
+<pre>&lt;article class="card card--filled"&gt;
+  &lt;h3 class="card__title"&gt;Card title&lt;/h3&gt;
+  &lt;p&gt;Un-classed body content.&lt;/p&gt;
+&lt;/article&gt;</pre>
+    </details>
+    <details class="lab-card-snippet">
+      <summary>Action button-card</summary>
+<pre>&lt;button class="card card--elevated card--interactive has-state-layer" type="button"&gt;
+  &lt;span class="card__title"&gt;Run action&lt;/span&gt;
+  &lt;span&gt;Un-classed body content.&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+    <details class="lab-card-snippet">
+      <summary>Navigation anchor-card</summary>
+<pre>&lt;a class="card card--outlined card--interactive has-state-layer" href="/destination/"&gt;
+  &lt;span class="card__title"&gt;Open destination&lt;/span&gt;
+  &lt;span&gt;Un-classed body content.&lt;/span&gt;
+&lt;/a&gt;</pre>
+    </details>
+    <details class="lab-card-snippet">
+      <summary>Actions slot composition</summary>
+<pre>&lt;article class="card card--elevated"&gt;
+  &lt;h3 class="card__title"&gt;Composition card&lt;/h3&gt;
+  &lt;p&gt;Card owns the slot; nested controls own behavior.&lt;/p&gt;
+  &lt;div class="card__actions"&gt;
+    &lt;button class="ax-button is-text has-state-layer t-label-large" type="button"&gt;Read&lt;/button&gt;
+    &lt;button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="More actions"&gt;
+      &lt;span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false"&gt;more_vert&lt;/span&gt;
+    &lt;/button&gt;
+  &lt;/div&gt;
+&lt;/article&gt;</pre>
+    </details>
+    <details class="lab-card-snippet">
+      <summary>Disabled split</summary>
+<pre>&lt;article class="card card--elevated" aria-disabled="true"&gt;...&lt;/article&gt;
+&lt;button class="card card--elevated card--interactive" type="button" disabled&gt;...&lt;/button&gt;
+&lt;button class="card card--elevated card--interactive" type="button" aria-disabled="true"&gt;...&lt;/button&gt;
+&lt;!-- Plugin/app code must guard activation for aria-disabled. --&gt;</pre>
+    </details>
+    <details class="lab-card-snippet">
+      <summary>WordPress core/group bridge</summary>
+<pre>&lt;div class="wp-block-group is-style-card-filled"&gt;
+  &lt;h3&gt;Group rendered with existing card bridge&lt;/h3&gt;
+  &lt;p&gt;Current partial bridge from blocks.css §8.&lt;/p&gt;
+&lt;/div&gt;</pre>
+    </details>
+  </section>
+
+  <!-- §11 — Cross-references -->
+  <section class="lab-card-section">
+    <header class="lab-card-section__head">
+      <h2 class="t-title-large lab-card-section__title">§11. Cross-references</h2>
+    </header>
+    <div class="lab-card-xref">
+      <a href="../../style-guide.html#components-card">Baseline style-guide card anchor</a>
+      <a href="../../../../../docs/v3.5.3/CARD-PHASE-0-REPORT.md">Phase 0 report</a>
+      <a href="../../../../../docs/v3.5.3/CARD-PHASE-1-PLAN.md">Phase 1 plan</a>
+      <a href="../../../../../docs/v3.5.3/CARD-PHASE-2-PLAN.md">Phase 2 plan</a>
+      <a href="docs/CARD-SPEC-AUDIT.md">SPEC audit</a>
+      <a href="docs/CARD-MEASUREMENT-AUDIT.md">MEASUREMENT audit</a>
+      <a href="docs/CARD-WP-MAPPING.md">WP mapping audit</a>
+      <a href="../button/lab-button-pattern.html">Button precedent</a>
+      <a href="../icon-button/lab-icon-button-pattern.html">Icon button precedent</a>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

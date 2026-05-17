@@ -1,0 +1,488 @@
+/* ============================================================
+ * Axismundi — blocks.css
+ * v0.1.0 — Phase 2A: WordPress core block mapping
+ *
+ * Maps `.wp-block-*` core blocks + WP alignment helpers to the
+ * Axismundi M3 system. Composes on top of base.css element
+ * defaults + prose.css long-form rhythm — does NOT redefine
+ * typography. Adds only block-specific chrome (alignment,
+ * variant skins, layout helpers) that WP itself emits.
+ *
+ * Source of truth: docs/B-track/BLOCK-COMPONENT-MAP.md §3.
+ *
+ * Sections:
+ *   §1  WP alignment system (.alignleft/alignright/alignwide…)
+ *   §2  Text blocks — paragraph / heading / list (chrome only)
+ *   §3  Quote / Pullquote
+ *   §4  Code / Preformatted
+ *   §5  Separator + 5 style variants
+ *   §6  Table — WP variants layered on prose.css
+ *   §7  Image / Gallery / Embed-stub
+ *   §8  Columns / Row / Group + 3 card style variants
+ *   §9  Buttons (core/button) + 5 style variants (PHP-composed —
+ *       see §9 header for ax-button class wiring note)
+ *   §10 List — is-style-list-segmented
+ *
+ * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
+ * `.prose .entry-content`, prose layer wins on shared elements
+ * (correct — prose owns typography, blocks owns block chrome).
+ * ============================================================ */
+
+/* ============================================================
+ * §1 WP alignment system
+ *
+ * WP core emits `.alignleft / .alignright / .aligncenter` for
+ * inline-flow alignment, `.alignwide / .alignfull` for content-
+ * width breakouts. Per-block text alignment uses
+ * `.has-text-align-*`. Authors expect literal left/right intent
+ * (WP doesn't expose logical "start/end" in editor UI).
+ * ============================================================ */
+.alignleft {
+  float: left;
+  margin-inline-end:   var(--space-md);
+  margin-block-end:    var(--space-md);
+}
+.alignright {
+  float: right;
+  margin-inline-start: var(--space-md);
+  margin-block-end:    var(--space-md);
+}
+.aligncenter {
+  display: block;
+  margin-inline: auto;
+}
+
+/* alignwide / alignfull — content-width breakout helpers.
+ *
+ * Both rely on a BOUNDED PARENT to read sensibly:
+ *   - alignwide expects parent's max-inline-size to be set
+ *     (e.g. 65ch for prose) so removing it widens the block
+ *     within the layout column, not across the viewport.
+ *   - alignfull uses the `calc(50% - 50vw)` margin trick which
+ *     ASSUMES the parent has a max-inline-size narrower than
+ *     the viewport. If the parent already spans 100vw, the
+ *     negative margin pushes the block off-screen.
+ *
+ * Phase 3 wiring: theme.json's `settings.layout.contentSize` /
+ * `wideSize` make the layout container apply max-inline-size
+ * to its children automatically — alignwide/full breakouts then
+ * "just work" in the editor + front-end.
+ *
+ * Phase 2A standalone preview: ensure these classes are used
+ * inside a container that has its own max-inline-size set, e.g.
+ * `<main style="max-inline-size: 65ch; margin-inline: auto;">`.
+ * Without that, alignfull may overflow horizontally. */
+.alignwide {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+.alignfull {
+  inline-size: 100vw;
+  max-inline-size: none;
+  margin-inline: calc(50% - 50vw);
+}
+
+/* Per-block text alignment helpers.
+ *
+ * INTENTIONALLY physical (left/right, not start/end) — this matches
+ * the WP block editor toolbar's mental model. When an author picks
+ * "right align" in RTL contexts, they want literal right alignment,
+ * NOT direction-flipped end-alignment. Converting to logical would
+ * break author intent in mixed-direction sites. See §1 header. */
+.has-text-align-left   { text-align: left; }
+.has-text-align-center { text-align: center; }
+.has-text-align-right  { text-align: right; }
+
+/* ============================================================
+ * §2 Text blocks — paragraph / heading / list
+ *
+ * Typography (font, size, line-height) flows from prose.css
+ * when wrapped in `.prose`. This section adds only WP-specific
+ * chrome — drop-cap support, list block defaults.
+ * ============================================================ */
+.wp-block-paragraph.has-drop-cap::first-letter {
+  float: left;
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 4em;
+  line-height: 0.85;
+  font-weight: var(--md-ref-typeface-weight-medium);
+  margin-inline-end: var(--space-sm);
+  margin-block-start: var(--space-xs);
+  color: var(--md-sys-color-primary);
+}
+
+/* core/list — base.css §9 already sets padding-inline-start.
+ * Block wrapper just normalises margin to 0 (prose owns rhythm). */
+.wp-block-list {
+  margin-block: 0;
+}
+
+/* ============================================================
+ * §3 Quote / Pullquote
+ *
+ * core/quote → maps to <blockquote>; prose.css §6 already styles
+ * with primary-bordered emphasis. Block wrapper just opts into
+ * a citation row.
+ *
+ * core/pullquote → distinct visual: large headline-medium type,
+ * centered, with top + bottom dividers. Per BLOCK-COMPONENT-MAP §3.
+ * ============================================================ */
+.wp-block-quote {
+  /* prose.css owns the bar + padding; nothing to add */
+}
+.wp-block-quote cite {
+  /* WP outputs <cite> as a sibling of <p>, not nested. prose.css
+   * §6 cite styles still apply. */
+  display: block;
+}
+
+.wp-block-pullquote {
+  margin-block: var(--space-xl);
+  padding-block: var(--space-lg);
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+  border-block-end:   1px solid var(--md-sys-color-outline-variant);
+  text-align: center;
+  color: var(--md-sys-color-on-surface);
+}
+.wp-block-pullquote p {
+  font-family:    var(--md-sys-typescale-headline-medium-font);
+  font-size:      var(--md-sys-typescale-headline-medium-size);
+  line-height:    var(--md-sys-typescale-headline-medium-line-height);
+  font-weight:    var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+  font-style: italic;
+}
+.wp-block-pullquote cite {
+  display: block;
+  margin-block-start: var(--space-md);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size:   var(--md-sys-typescale-body-small-size);
+  font-style: normal;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ============================================================
+ * §4 Code / Preformatted
+ *
+ * base.css §11 already styles <pre> + <code>. WP emits these
+ * with class hooks; respect them but inherit base styling.
+ * ============================================================ */
+.wp-block-code,
+.wp-block-preformatted {
+  /* base <pre> already provides padding + bg + radius + overflow */
+  margin-block: var(--space-md);
+}
+.wp-block-code code {
+  /* base.css §11 strips inline-pill from `pre code`; preserve */
+}
+
+.wp-block-verse {
+  /* core/verse — preserves whitespace, serif family per spec */
+  margin-block: var(--space-md);
+  padding: var(--space-md);
+  white-space: pre-wrap;
+  font-family: var(--md-ref-typeface-serif);
+}
+
+/* ============================================================
+ * §5 Separator — 5 style variants
+ *
+ * core/separator emits <hr class="wp-block-separator …"> with
+ * built-in WP variants (is-style-default, is-style-wide,
+ * is-style-dots) plus 2 Axismundi-registered styles
+ * (is-style-divider-inset, is-style-divider-middle-inset).
+ * base.css §8 owns the basic <hr>; this layer adds variant skin.
+ * ============================================================ */
+.wp-block-separator {
+  /* base.css §8 sets the 1px outline-variant line */
+  inline-size: 25%;          /* default WP look — short centered rule */
+  margin-inline: auto;
+}
+.wp-block-separator.is-style-wide {
+  inline-size: 100%;
+}
+.wp-block-separator.is-style-dots {
+  inline-size: auto;
+  background: none;          /* override base bg */
+  block-size: auto;
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-separator.is-style-dots::before {
+  content: "···";
+  letter-spacing: var(--space-sm);
+  font-size: 1.5em;
+}
+
+/* Axismundi block-styles (registered via PHP register_block_style) */
+.wp-block-separator.is-style-divider-inset {
+  inline-size: calc(100% - 2 * var(--space-md));
+  margin-inline: var(--space-md);
+}
+.wp-block-separator.is-style-divider-middle-inset {
+  inline-size: calc(100% - 2 * var(--space-xl));
+  margin-inline: var(--space-xl);
+}
+
+/* ============================================================
+ * §6 Table — WP variants layered on prose.css
+ *
+ * prose.css §11 owns the full table styling INSIDE `.prose`
+ * (cells, header bg, row separators, wrapper containment).
+ * This section:
+ *   1. Re-applies wrapper containment for `.wp-block-table` used
+ *      OUTSIDE `.prose` (sidebars, widget areas, full-site-editor
+ *      page templates without prose wrap).
+ *   2. Adds WP-specific class hooks not covered by prose:
+ *        .has-fixed-layout                  → table-layout: fixed
+ *        .is-style-stripes                  → zebra rows
+ *        .has-subtle-light-background-color → WP built-in tint
+ *
+ * Rules below are idempotent — when a `.wp-block-table` IS inside
+ * `.prose`, prose.css's identical containment styles apply at
+ * higher specificity (`.prose figure:has(> table)` = 0,2,1) but
+ * the visual outcome is the same.
+ * ============================================================ */
+
+/* core/table renders as <figure class="wp-block-table"><table>…</table></figure>.
+ * The figure itself is the wrapper — apply containment + scroll. */
+.wp-block-table {
+  margin-block: var(--space-md);
+  overflow-x: auto;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-table .has-fixed-layout {
+  table-layout: fixed;
+  inline-size: 100%;
+}
+
+.wp-block-table.is-style-stripes tbody tr:nth-child(even) {
+  /* Match the prose `th` header band tone (surface-container-high) so the
+   * zebra rhythm reads as a continuous alternation starting FROM the header:
+   *   header  (stripe tone)
+   *   row 1   (base / no fill)
+   *   row 2   (stripe tone)  ← same as header
+   *   row 3   (base)
+   *   row 4   (stripe tone)
+   * If we used a different shade here, the pattern would visually "restart"
+   * at row 2 and the header would feel disconnected from the stripe rhythm.
+   *
+   * surface-container-high (not -low) chosen so the stripe tone remains
+   * visible when the table is rendered inside the styleguide's `.sg-demo`
+   * container (which has `background-color: surface-container-low`).
+   * Stripes/header at -low would be invisible against that backdrop.
+   * Keep prose.css §11.4 `.prose th` background in sync with this value. */
+  background-color: var(--md-sys-color-surface-container-high);
+}
+/* Stripes variant drops the row separator (the bg banding does the job) */
+.wp-block-table.is-style-stripes th,
+.wp-block-table.is-style-stripes td {
+  border-block-end: 0;
+}
+
+/* ----- is-style-vertical-borders -----
+ * Adds 1px column separators between cells. Pairs naturally with the
+ * default horizontal separators (prose.css §11.3) to create a fully
+ * gridded table read — matches M3 spec table reference imagery.
+ * Last cell in each row drops its inline-end border so the table
+ * wrapper's outer outline isn't doubled. */
+.wp-block-table.is-style-vertical-borders th,
+.wp-block-table.is-style-vertical-borders td {
+  border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+}
+.wp-block-table.is-style-vertical-borders tr > th:last-child,
+.wp-block-table.is-style-vertical-borders tr > td:last-child {
+  border-inline-end: 0;
+}
+
+/* ============================================================
+ * §7 Image / Gallery
+ *
+ * core/image → <figure class="wp-block-image"><img>[<figcaption>]</figure>.
+ * prose.css §9 already gives images radius-medium + figcaption
+ * styling. This section adds WP-specific size hooks + gallery
+ * grid layout.
+ * ============================================================ */
+.wp-block-image {
+  margin-block: var(--space-md);
+}
+.wp-block-image img {
+  /* prose.css gives radius-medium; preserve here for non-prose contexts */
+  border-radius: var(--md-sys-shape-corner-medium);
+  max-inline-size: 100%;
+  block-size: auto;
+}
+.wp-block-image.size-thumbnail img { inline-size: auto; }
+.wp-block-image.is-resized img      { inline-size: auto; }
+
+/* core/gallery — <ul> grid of <figure> items. WP emits .columns-N. */
+.wp-block-gallery {
+  display: grid;
+  gap: var(--space-sm);
+  list-style: none;
+  padding: 0;
+  margin-block: var(--space-md);
+}
+.wp-block-gallery.columns-1 { grid-template-columns: 1fr; }
+.wp-block-gallery.columns-2 { grid-template-columns: repeat(2, 1fr); }
+.wp-block-gallery.columns-3 { grid-template-columns: repeat(3, 1fr); }
+.wp-block-gallery.columns-4 { grid-template-columns: repeat(4, 1fr); }
+.wp-block-gallery.columns-5 { grid-template-columns: repeat(5, 1fr); }
+.wp-block-gallery.columns-6 { grid-template-columns: repeat(6, 1fr); }
+.wp-block-gallery.columns-7 { grid-template-columns: repeat(7, 1fr); }
+.wp-block-gallery.columns-8 { grid-template-columns: repeat(8, 1fr); }
+
+.wp-block-gallery .wp-block-image {
+  margin: 0; /* gap owns spacing */
+}
+
+/* ============================================================
+ * §8 Columns / Row / Group + card style variants
+ *
+ * core/columns / core/group / core/row produce flex/grid wrappers
+ * with no chrome by default — surface only. Card variants
+ * (per BLOCK-COMPONENT-MAP §0.3) skin a Group as M3 Card.
+ * ============================================================ */
+.wp-block-columns {
+  display: flex;
+  gap: var(--space-md);
+  margin-block: var(--space-md);
+}
+.wp-block-columns.is-not-stacked-on-mobile {
+  /* keep horizontal even on narrow viewports — author opt-in */
+}
+.wp-block-column {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+
+@media (max-inline-size: 600px) {
+  .wp-block-columns:not(.is-not-stacked-on-mobile) {
+    flex-direction: column;
+  }
+}
+
+.wp-block-group {
+  /* No chrome by default — just surface */
+}
+
+/* Card style variants — registered via register_block_style().
+ * Mirror .ax-card / .card--filled / --elevated / --outlined from
+ * components.css §3, scoped to core/group blocks. */
+.wp-block-group.is-style-card-filled,
+.wp-block-group.is-style-card-elevated,
+.wp-block-group.is-style-card-outlined {
+  padding: var(--comp-card-padding);
+  border-radius: var(--comp-card-radius);
+}
+.wp-block-group.is-style-card-filled {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+.wp-block-group.is-style-card-elevated {
+  background-color: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+.wp-block-group.is-style-card-outlined {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  outline: 1px solid var(--md-sys-color-outline-variant);
+  outline-offset: -1px; /* sits on the box edge, not outside */
+}
+
+/* ============================================================
+ * §9 Buttons — core/button + 5 style variants
+ *
+ * **PHP-layer note:** the production wiring registers each
+ * Block Style via `register_block_style('core/button', …)` and
+ * filters render output to add `.ax-button .is-{filled|tonal|
+ * elevated|outlined|text}` classes onto `.wp-block-button__link`.
+ * Once that filter ships, components.css §3 takes over and the
+ * fallback rules below become redundant.
+ *
+ * For Phase 2A standalone preview (no PHP layer yet), the
+ * fallbacks below give the editor + front-end render a usable
+ * approximation of each variant using only block-class selectors.
+ * ============================================================ */
+.wp-block-button {
+  margin-block: var(--space-xs);
+}
+.wp-block-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+}
+
+/* Core link — minimal common reset (matches .ax-button base) */
+.wp-block-button__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  border-radius: var(--comp-button-radius);
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* 5 variant fallbacks (replaced by .ax-button cascade once PHP
+ * filter wires the class). Defaults to filled when no style set. */
+.wp-block-button .wp-block-button__link,
+.wp-block-button.is-style-filled .wp-block-button__link {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+.wp-block-button.is-style-tonal .wp-block-button__link {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+.wp-block-button.is-style-elevated .wp-block-button__link {
+  background-color: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-primary);
+  box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+.wp-block-button.is-style-outlined .wp-block-button__link {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline);
+}
+.wp-block-button.is-style-text .wp-block-button__link {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  padding-inline: var(--space-md);
+}
+
+/* ============================================================
+ * §10 List — is-style-list-segmented
+ *
+ * Axismundi block style (registered via register_block_style on
+ * core/list). Mirrors .ax-list--segmented from components.css §26 —
+ * 2px gap between items + per-item large radius + container fill.
+ * ============================================================ */
+.wp-block-list.is-style-list-segmented {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wp-block-list.is-style-list-segmented > li {
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+/* Reset task-list bullet behavior inside segmented list (base §9 :has rule
+ * still applies; segmented already has list-style: none). */
+.wp-block-list.is-style-list-segmented > li > input[type="checkbox"]:first-child {
+  margin-inline-end: var(--space-sm);
+}

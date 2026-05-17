@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Text Field Full Spec + Interaction Module (v3.5.7)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="lab-text-field.css" />
+</head>
+<body>
+<main class="lab-text-field-demo">
+  <header class="lab-text-field-section__head">
+    <div class="t-label-medium">Axismundi · v3.5.7 · Wave 1 #16</div>
+    <h1 class="t-display-small">Text field — Full Spec + Interaction Module</h1>
+    <p class="t-body-medium lab-text-field-section__supporting">
+      Baseline <code>components.css §9</code> is unchanged. This page demonstrates
+      native/CSS interaction states for filled, outlined, textarea, slots,
+      static counter, static clear affordance, and native validation. No
+      <code>lab-text-field.js</code> is wired in v3.5.7.
+    </p>
+  </header>
+
+  <div class="lab-text-field-banner">
+    <strong>Native/CSS interaction only.</strong>
+    Label float, active indicator, <code>:placeholder-shown</code>,
+    <code>:user-invalid</code>, <code>:disabled</code>, and slot layout are
+    baseline CSS behavior. Clear-click and live counter behavior belong to
+    theme/editor/plugin integration.
+  </div>
+
+  <section class="lab-text-field-section" id="text-field-filled">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§2. Filled variant matrix</h2>
+      <p class="t-body-small lab-text-field-section__supporting">
+        Filled states: empty, populated, leading icon, static focused,
+        manual error, native disabled, supporting text, and static counter.
+      </p>
+    </header>
+    <div class="lab-text-field-grid">
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-filled-empty" placeholder=" " />
+            <label class="text-field__label" for="tf-filled-empty">Empty</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Rest state: empty input, label centered.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-filled-populated" placeholder=" " value="Axis mundi" />
+            <label class="text-field__label" for="tf-filled-populated">Populated</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Populated state: label floats without JavaScript.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled text-field--with-leading">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-filled-leading" placeholder=" " value="support@example.com" />
+            <label class="text-field__label" for="tf-filled-leading">Email</label>
+            <span class="text-field__leading-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Filled leading-icon specimen; icon-system is a conditional composition dependency.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled" data-demo-state="focused">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-filled-focused" placeholder=" " />
+            <label class="text-field__label" for="tf-filled-focused">Focused</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Static catalog focus specimen — no script, visual focus state only.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled is-error">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-filled-error" placeholder=" " value="invalid@" aria-describedby="tf-filled-error-help" />
+            <label class="text-field__label" for="tf-filled-error">Email</label>
+            <span class="text-field__error-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-filled-error-help">올바른 이메일 형식이 아닙니다.</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Manual <code>.is-error</code> state for server-rendered/static examples.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-filled-disabled" placeholder=" " value="Locked" disabled />
+            <label class="text-field__label" for="tf-filled-disabled">Disabled</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Native disabled input blocks editing through platform behavior.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-filled-counter" placeholder=" " maxlength="50" aria-describedby="tf-filled-counter-help" />
+            <label class="text-field__label" for="tf-filled-counter">Title</label>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-filled-counter-help">최대 50자.</span>
+            <span class="text-field__counter" data-tf-counter>0 / 50</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Static counter specimen — no live character count is wired here.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-outlined">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§3. Outlined variant matrix</h2>
+      <p class="t-body-small lab-text-field-section__supporting">
+        Outlined states include the same native/CSS behavior plus leading,
+        trailing, prefix, suffix, and native validation specimens.
+      </p>
+    </header>
+    <div class="lab-text-field-grid">
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-outlined-empty" placeholder=" " />
+            <label class="text-field__label" for="tf-outlined-empty">Empty</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Outlined rest state.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-outlined-populated" placeholder=" " value="user@example.com" />
+            <label class="text-field__label" for="tf-outlined-populated">Email</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Populated outlined field with floated label.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined" data-demo-state="focused">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-outlined-focused" placeholder=" " />
+            <label class="text-field__label" for="tf-outlined-focused">Focused</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Static catalog focus specimen — shows outline/label focus treatment.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined is-error">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-outlined-error" placeholder=" " value="!!!" aria-describedby="tf-outlined-error-help" />
+            <label class="text-field__label" for="tf-outlined-error">Username</label>
+            <span class="text-field__error-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-outlined-error-help">특수문자는 사용할 수 없습니다.</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Manual error with helper text.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined text-field--with-leading">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-outlined-leading" placeholder=" " value="검색어" />
+            <label class="text-field__label" for="tf-outlined-leading">Search label</label>
+            <span class="text-field__leading-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Leading icon uses icon-system conditionally; field remains valid without it.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-outlined-affix" placeholder=" " value="12000" inputmode="numeric" pattern="[0-9]*" maxlength="10" />
+            <label class="text-field__label" for="tf-outlined-affix">Price</label>
+            <span class="text-field__prefix">₩</span>
+            <span class="text-field__error-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting">숫자만 입력해 주세요.</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Prefix-only currency specimen; formatted input text is visible because the field is populated.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-native-states">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§4. Native / CSS states</h2>
+      <p class="t-body-small lab-text-field-section__supporting">
+        Native browser validation drives <code>:user-invalid</code> after
+        interaction. Manual <code>.is-error</code> is still used for static
+        server-rendered examples.
+      </p>
+    </header>
+    <div class="lab-text-field-grid">
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-native-email" type="email" required placeholder=" " aria-describedby="tf-native-email-help" />
+            <label class="text-field__label" for="tf-native-email">Required email</label>
+            <span class="text-field__error-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-native-email-help">Blur after invalid input to trigger native state.</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Native validation specimen — no custom validation JS is wired.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-readonly" placeholder=" " value="Read-only value" readonly />
+            <label class="text-field__label" for="tf-readonly">Readonly</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Readonly is native HTML support; no distinct baseline visual state is claimed.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-required" placeholder=" " required aria-describedby="tf-required-help" />
+            <label class="text-field__label" for="tf-required">Required</label>
+            <span class="text-field__error-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-required-help">Required is native; custom message generation belongs to integration.</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Required field with native validity surface.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-slots">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§5. Slots and composed trailing icon-button</h2>
+      <p class="t-body-small lab-text-field-section__supporting">
+        Text field owns placement. Icon system owns glyph rendering. Icon
+        button owns interactive trailing action semantics and geometry.
+      </p>
+    </header>
+    <div class="lab-text-field-grid">
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined text-field--with-leading">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-slot-clear" placeholder=" " value="Draft" />
+            <label class="text-field__label" for="tf-slot-clear">Search</label>
+            <span class="text-field__leading-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+            <button type="button" class="ax-icon-button is-standard has-state-layer text-field__trailing-icon is-clear" aria-label="Clear">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">
+          Static clear specimen — the clear affordance is visual only; no click handler is wired in v3.5.7.
+        </p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined is-error">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-slot-error" placeholder=" " value="wrong" />
+            <label class="text-field__label" for="tf-slot-error">Error icon</label>
+            <button type="button" class="ax-icon-button is-standard has-state-layer text-field__trailing-icon" aria-label="Assist">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">help</span>
+            </button>
+            <span class="text-field__error-icon material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">error</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Error icon shares the trailing grid cell and hides the regular trailing action.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-slot-affix-filled" placeholder=" " value="72" inputmode="decimal" />
+            <label class="text-field__label" for="tf-slot-affix-filled">Weight</label>
+            <span class="text-field__suffix">kg</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Suffix-only unit specimen; the entered value stays numeric and the unit is supplied by the field.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-counter-disabled">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§6-§7. Counter, clear, and disabled split</h2>
+    </header>
+    <div class="lab-text-field-grid">
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-static-counter" placeholder=" " maxlength="80" aria-describedby="tf-static-counter-help" />
+            <label class="text-field__label" for="tf-static-counter">Headline</label>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-static-counter-help">Static counter specimen.</span>
+            <span class="text-field__counter" data-tf-counter>0 / 80</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Static counter specimen — no live character count is wired here.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-native-disabled" placeholder=" " value="Disabled" disabled />
+            <label class="text-field__label" for="tf-native-disabled">Native disabled</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Native disabled blocks field editing through platform behavior.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled" aria-disabled="true">
+          <div class="text-field__container">
+            <input class="text-field__input" id="tf-aria-disabled" placeholder=" " value="Plugin-managed" aria-describedby="tf-aria-disabled-help" />
+            <label class="text-field__label" for="tf-aria-disabled">aria-disabled</label>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-aria-disabled-help">Integrator must guard editing, events, and submission.</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Plugin-managed specimen — aria-disabled communicates state only.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-textarea">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§8. Textarea variant</h2>
+      <p class="t-body-small lab-text-field-section__supporting">
+        Textarea is a Text field variant, not a separate module or matrix row.
+      </p>
+    </header>
+    <div class="lab-text-field-grid is-wide">
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--outlined" data-demo-wide="true">
+          <div class="text-field__container">
+            <textarea class="text-field__input" id="tf-message" placeholder=" " rows="3" maxlength="280" aria-describedby="tf-message-help"></textarea>
+            <label class="text-field__label" for="tf-message">Message</label>
+          </div>
+          <div class="text-field__bottom">
+            <span class="text-field__supporting" id="tf-message-help">최대 280자.</span>
+            <span class="text-field__counter" data-tf-counter>0 / 280</span>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Static textarea counter; no auto-grow runtime is wired.</p>
+      </div>
+
+      <div class="lab-text-field-card">
+        <div class="text-field text-field--filled" data-demo-wide="true">
+          <div class="text-field__container">
+            <textarea class="text-field__input" id="tf-message-disabled" placeholder=" " rows="3" disabled>Locked message</textarea>
+            <label class="text-field__label" for="tf-message-disabled">Disabled textarea</label>
+          </div>
+        </div>
+        <p class="t-body-small lab-text-field-caption">Native disabled textarea.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-input-types">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§9. Native input types</h2>
+      <p class="t-body-small lab-text-field-section__supporting">
+        These are shell examples only. Search expansion, Date picker, and Time
+        picker behavior belong to their own rows.
+      </p>
+    </header>
+    <div class="lab-text-field-type-grid">
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-text" type="text" placeholder=" " />
+          <label class="text-field__label" for="tf-type-text">Text</label>
+        </div>
+      </div>
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-email" type="email" placeholder=" " autocomplete="email" />
+          <label class="text-field__label" for="tf-type-email">Email</label>
+        </div>
+      </div>
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-url" type="url" placeholder=" " />
+          <label class="text-field__label" for="tf-type-url">URL</label>
+        </div>
+      </div>
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-tel" type="tel" placeholder=" " autocomplete="tel" />
+          <label class="text-field__label" for="tf-type-tel">Telephone</label>
+        </div>
+      </div>
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-password" type="password" placeholder=" " />
+          <label class="text-field__label" for="tf-type-password">Password</label>
+        </div>
+      </div>
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-number" inputmode="numeric" pattern="[0-9]*" placeholder=" " />
+          <label class="text-field__label" for="tf-type-number">Number</label>
+        </div>
+      </div>
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-search" type="search" placeholder=" " />
+          <label class="text-field__label" for="tf-type-search">Search shell</label>
+        </div>
+      </div>
+      <div class="text-field text-field--outlined">
+        <div class="text-field__container">
+          <input class="text-field__input" id="tf-type-date" type="date" placeholder=" " />
+          <label class="text-field__label" for="tf-type-date">Native date shell</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-qa">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§10. Playwright QA targets</h2>
+    </header>
+    <ul class="lab-text-field-checklist t-body-small">
+      <li>Filled and outlined container height should render at 56px for single-line fields.</li>
+      <li>Textarea should render at or above 96px min-height.</li>
+      <li>Label should move and resize between rest, focus, and populated states.</li>
+      <li>Clear button should remain a 40px composed Icon button in the trailing slot.</li>
+      <li>Field host must not include <code>data-ax-ripple</code>.</li>
+      <li>SC 2.5.8 / 2.5.5 apply to the composed clear icon-button, not the field host.</li>
+    </ul>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-snippets">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§11. Code snippets</h2>
+    </header>
+    <pre class="lab-text-field-snippet"><code>&lt;div class="text-field text-field--outlined"&gt;
+  &lt;div class="text-field__container"&gt;
+    &lt;input class="text-field__input" id="tf-email" type="email" placeholder=" " /&gt;
+    &lt;label class="text-field__label" for="tf-email"&gt;Email&lt;/label&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+  </section>
+
+  <section class="lab-text-field-section" id="text-field-crossrefs">
+    <header class="lab-text-field-section__head">
+      <h2 class="t-title-large lab-text-field-section__title">§12. Cross-references</h2>
+    </header>
+    <p class="t-body-small lab-text-field-section__supporting">
+      Audit docs: <a href="docs/TEXT-FIELD-SPEC-AUDIT.md">SPEC</a>,
+      <a href="docs/TEXT-FIELD-MEASUREMENT-AUDIT.md">MEASUREMENT</a>,
+      <a href="docs/TEXT-FIELD-WP-MAPPING.md">WP-MAPPING</a>.
+      Baseline catalog:
+      <a href="../../style-guide.html#components-text-field">../../style-guide.html#components-text-field</a>.
+    </p>
+  </section>
+</main>
+</body>
+</html>

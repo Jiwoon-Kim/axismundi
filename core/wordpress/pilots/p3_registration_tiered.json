@@ -1,0 +1,479 @@
+{
+  "schema_version": "v2.0-p3-tier-regroup-2026-05-12",
+  "generated_at": "2026-05-12",
+  "source_pilot": "_meta/v2_0/pilot_registration.json",
+  "tier_definitions": {
+    "Tier1_Identity": {
+      "description": "What a BlockType IS — name, label, version, taxonomy. Mostly schema-direct, mostly required or near-100% instance grounding.",
+      "keys": [
+        "name",
+        "title",
+        "apiVersion",
+        "category",
+        "description",
+        "icon",
+        "keywords",
+        "version",
+        "textdomain",
+        "$schema",
+        "__experimental"
+      ]
+    },
+    "Tier2_Composition": {
+      "description": "How a BlockType relates to OTHER blocks — containment, inserter rules, child/parent semantics.",
+      "keys": [
+        "parent",
+        "ancestor",
+        "allowedBlocks",
+        "styles",
+        "variations",
+        "example"
+      ]
+    },
+    "Tier3_DataModel": {
+      "description": "How a BlockType stores DATA — attribute shape, support flags, selectors. Connects to P1/P2 pilots.",
+      "keys": [
+        "attributes",
+        "supports",
+        "selectors"
+      ]
+    },
+    "Tier4_Runtime": {
+      "description": "Asset loading + render. Most core blocks use PHP register_block_type for these; block.json adoption is partial.",
+      "keys": [
+        "render",
+        "script",
+        "style",
+        "editorScript",
+        "editorStyle",
+        "viewScript",
+        "viewStyle",
+        "viewScriptModule"
+      ]
+    },
+    "Tier5_Context": {
+      "description": "Block-to-block runtime communication: context provision/consumption + hook insertion.",
+      "keys": [
+        "providesContext",
+        "usesContext",
+        "blockHooks"
+      ]
+    }
+  },
+  "tiered_keys": {
+    "Tier1_Identity": {
+      "description": "What a BlockType IS — name, label, version, taxonomy. Mostly schema-direct, mostly required or near-100% instance grounding.",
+      "key_count": 11,
+      "keys": [
+        {
+          "key": "name",
+          "in_schema": true,
+          "required": true,
+          "instance_usage": 121,
+          "instance_pct": 100.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "title",
+          "in_schema": true,
+          "required": true,
+          "instance_usage": 121,
+          "instance_pct": 100.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "apiVersion",
+          "in_schema": true,
+          "required": true,
+          "instance_usage": 121,
+          "instance_pct": 100.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "category",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 121,
+          "instance_pct": 100.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "description",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 121,
+          "instance_pct": 100.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "icon",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 3,
+          "instance_pct": 2.5,
+          "provenance": "schema+php_runtime"
+        },
+        {
+          "key": "keywords",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 46,
+          "instance_pct": 38.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "version",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 0,
+          "instance_pct": 0.0,
+          "provenance": "schema_only"
+        },
+        {
+          "key": "textdomain",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 121,
+          "instance_pct": 100.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "$schema",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 121,
+          "instance_pct": 100.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "__experimental",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 14,
+          "instance_pct": 11.6,
+          "provenance": "schema+instance"
+        }
+      ]
+    },
+    "Tier2_Composition": {
+      "description": "How a BlockType relates to OTHER blocks — containment, inserter rules, child/parent semantics.",
+      "key_count": 6,
+      "keys": [
+        {
+          "key": "parent",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 25,
+          "instance_pct": 20.7,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "ancestor",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 15,
+          "instance_pct": 12.4,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "allowedBlocks",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 20,
+          "instance_pct": 16.5,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "styles",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 8,
+          "instance_pct": 6.6,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "variations",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 0,
+          "instance_pct": 0.0,
+          "provenance": "schema+js_runtime"
+        },
+        {
+          "key": "example",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 18,
+          "instance_pct": 14.9,
+          "provenance": "schema+instance"
+        }
+      ]
+    },
+    "Tier3_DataModel": {
+      "description": "How a BlockType stores DATA — attribute shape, support flags, selectors. Connects to P1/P2 pilots.",
+      "key_count": 3,
+      "keys": [
+        {
+          "key": "attributes",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 104,
+          "instance_pct": 86.0,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "supports",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 119,
+          "instance_pct": 98.3,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "selectors",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 15,
+          "instance_pct": 12.4,
+          "provenance": "schema+instance"
+        }
+      ]
+    },
+    "Tier4_Runtime": {
+      "description": "Asset loading + render. Most core blocks use PHP register_block_type for these; block.json adoption is partial.",
+      "key_count": 8,
+      "keys": [
+        {
+          "key": "render",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 0,
+          "instance_pct": 0.0,
+          "provenance": "schema+php_runtime"
+        },
+        {
+          "key": "script",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 0,
+          "instance_pct": 0.0,
+          "provenance": "schema+php_runtime"
+        },
+        {
+          "key": "style",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 85,
+          "instance_pct": 70.2,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "editorScript",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 5,
+          "instance_pct": 4.1,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "editorStyle",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 62,
+          "instance_pct": 51.2,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "viewScript",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 0,
+          "instance_pct": 0.0,
+          "provenance": "schema+php_runtime"
+        },
+        {
+          "key": "viewStyle",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 0,
+          "instance_pct": 0.0,
+          "provenance": "schema+php_runtime"
+        },
+        {
+          "key": "viewScriptModule",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 2,
+          "instance_pct": 1.7,
+          "provenance": "schema+instance"
+        }
+      ]
+    },
+    "Tier5_Context": {
+      "description": "Block-to-block runtime communication: context provision/consumption + hook insertion.",
+      "key_count": 3,
+      "keys": [
+        {
+          "key": "providesContext",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 14,
+          "instance_pct": 11.6,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "usesContext",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 63,
+          "instance_pct": 52.1,
+          "provenance": "schema+instance"
+        },
+        {
+          "key": "blockHooks",
+          "in_schema": true,
+          "required": false,
+          "instance_usage": 0,
+          "instance_pct": 0.0,
+          "provenance": "schema_only"
+        }
+      ]
+    }
+  },
+  "coverage_check": {
+    "schema_total_keys": 31,
+    "tiered_total_keys": 31,
+    "uncovered_by_tiering": [],
+    "extra_in_tiers_not_in_schema": []
+  },
+  "composability_synthesis": {
+    "ParentConstraint": {
+      "source": "parent",
+      "semantics": "direct child only",
+      "instance_count": 25,
+      "example": [
+        {
+          "block": "core/accordion-heading",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/accordion-item",
+          "parent": [
+            "core/accordion"
+          ]
+        },
+        {
+          "block": "core/accordion-panel",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/button",
+          "parent": [
+            "core/buttons"
+          ]
+        },
+        {
+          "block": "core/column",
+          "parent": [
+            "core/columns"
+          ]
+        }
+      ]
+    },
+    "AncestorConstraint": {
+      "source": "ancestor",
+      "semantics": "recursive descendant",
+      "instance_count": 15,
+      "example": [
+        {
+          "block": "core/comment-author-avatar",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-author-name",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-content",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-date",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-edit-link",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        }
+      ]
+    },
+    "AllowedBlocks": {
+      "source": "allowedBlocks",
+      "semantics": "child whitelist (host-side rule)",
+      "instance_count": 20
+    }
+  },
+  "asset_surface": {
+    "EditorAssets": [
+      "editorScript",
+      "editorStyle"
+    ],
+    "FrontendAssets": [
+      "style",
+      "viewScript",
+      "viewStyle",
+      "viewScriptModule"
+    ],
+    "BothAssets": [
+      "script"
+    ],
+    "ServerRender": [
+      "render"
+    ]
+  },
+  "axismundi_safe_filter": {
+    "description": "Filter rules for production block themes (e.g., Axismundi) — avoid experimental, FSE-only, plugin-territory features.",
+    "exclude_when": {
+      "__experimental in {true, 'fse'}": "experimental marker",
+      "blockHooks": "new API, not yet in core",
+      "render via block.json": "use PHP if needed"
+    },
+    "tolerable": {
+      "ancestor": "rare but stable",
+      "selectors": "style engine, stable",
+      "variations (JS API)": "stable, but bind via JS not block.json"
+    }
+  },
+  "refined_gaps_p3_supplement": {
+    "G3.9_icon_provenance": {
+      "description": "icon is Identity-tier but 118/121 core blocks set it via PHP register_block_type, not block.json. Instance grounding for icon is outside block.json corpus.",
+      "impact": "Ontology Icon slot has provenance=schema+php_runtime; instance scan must include PHP files for completeness."
+    },
+    "G3.10_runtime_php_dominance": {
+      "description": "Tier 4 (Runtime) keys mostly absent in block.json: render/script/viewScript/viewStyle all 0%. Core blocks register render callbacks via PHP. Plugin block.json patterns may differ.",
+      "impact": "Ontology Runtime slots are schema-valid but their instance corpus is in PHP, not block.json."
+    },
+    "G3.11_apiVersion_as_ontology_boundary": {
+      "description": "All core blocks pin to apiVersion=3. Pre-v3 blocks use different attribute parsing semantics (entity vs HTML). Ontology must support multi-version BlockType analysis for plugin block compatibility.",
+      "impact": "Ontology slot ApiVersion is a discrete-axis enum; ontology validation rules can differ per version."
+    },
+    "G3.12_blockHooks_emerging": {
+      "description": "blockHooks (WP 6.4+) is composability hook surface (after/before/firstChild/lastChild) — 0 core usage. Plugin territory. Strategically important for Axismundi/ActivityPub binding.",
+      "impact": "Ontology slot PatternAffinity / HookInsertion is currently aspirational; revisit when plugin instance corpus available."
+    }
+  }
+}

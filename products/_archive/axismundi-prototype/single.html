@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Material 3 토큰 시스템 처음부터 빌드하기 — Axismundi Blog</title>
+
+  <link rel="stylesheet" href="stylesheets/tokens.css" />
+  <link rel="stylesheet" href="stylesheets/base.css" />
+  <link rel="stylesheet" href="stylesheets/components.css" />
+  <link rel="stylesheet" href="stylesheets/prose.css" />
+  <link rel="stylesheet" href="stylesheets/blocks.css" />
+  <style>
+    /* =====================================================
+     * single.html — article view
+     *
+     * Layout: header + breadcrumb + 3-col (article + TOC rail) + footer
+     * desktop: sidebar(empty) + article + TOC
+     * tablet: TOC moves to top of article (collapsed)
+     * mobile: single column, TOC drawer
+     * ===================================================== */
+
+    /* header / drawer / nav-list — sync from home.html */
+    .ax-site-header {
+      position: sticky; inset-block-start: 0; z-index: 10;
+      background-color: var(--md-sys-color-surface);
+      border-block-end: 1px solid transparent;
+      transition: border-color
+        var(--md-sys-motion-curve-fast-effects-duration)
+        var(--md-sys-motion-curve-fast-effects);
+    }
+    .ax-site-header[data-scrolled="true"] {
+      border-block-end-color: var(--md-sys-color-outline-variant);
+    }
+    @media (min-width: 1024px) {
+      .ax-site-header [data-toggle-nav] { display: none; }
+    }
+    .nav-drawer {
+      margin-inline-start: 0; margin-block: 0;
+      max-block-size: 100vh; block-size: 100vh;
+      inline-size: min(320px, 80vw);
+      padding: 0; border: 0;
+      background-color: var(--md-sys-color-surface-container-low);
+      color: var(--md-sys-color-on-surface);
+    }
+    .nav-drawer::backdrop {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-scrim) 32%, transparent);
+    }
+    .nav-drawer__head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .nav-drawer__body {
+      padding: var(--space-md) var(--space-sm);
+      overflow-y: auto;
+      block-size: calc(100vh - 64px);
+    }
+    .ax-nav-list {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: var(--space-xs);
+    }
+    .ax-nav-list a {
+      display: flex; align-items: center; gap: var(--space-md);
+      inline-size: 100%; padding: var(--space-sm) var(--space-md);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-full);
+      text-decoration: none;
+      font-family: var(--md-sys-typescale-label-large-font);
+      font-size:   var(--md-sys-typescale-label-large-size);
+    }
+    .ax-nav-list a:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .ax-nav-list a[aria-current="page"] {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+    .ax-nav-list__icon {
+      inline-size: 24px; block-size: 24px; flex-shrink: 0;
+    }
+    .ax-nav-list__icon > svg {
+      inline-size: 100%; block-size: 100%; fill: currentColor;
+    }
+
+    /* ── Breadcrumb ── */
+    .ax-breadcrumb {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      padding: var(--space-md) var(--space-lg) 0;
+    }
+    .ax-breadcrumb ol {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-breadcrumb li {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .ax-breadcrumb a {
+      color: var(--md-sys-color-on-surface-variant);
+      text-decoration: none;
+    }
+    .ax-breadcrumb a:hover { color: var(--md-sys-color-primary); }
+    .ax-breadcrumb [aria-current="page"] {
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-breadcrumb__separator {
+      opacity: 0.6;
+      user-select: none;
+    }
+
+    /* ── Article layout ── */
+    .ax-single {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-lg) var(--space-xl);
+      display: grid;
+      gap: var(--space-xl);
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 1100px) {
+      .ax-single {
+        grid-template-columns: minmax(0, 1fr) 240px;
+      }
+    }
+
+    .ax-article {
+      min-inline-size: 0;
+      max-inline-size: 720px;
+      margin-inline: auto;
+    }
+
+    /* ── Article header ── */
+    .ax-article__hero {
+      block-size: 280px;
+      border-radius: var(--md-sys-shape-corner-large);
+      background: linear-gradient(135deg,
+        var(--md-sys-color-primary-container) 0%,
+        var(--md-sys-color-tertiary-container) 100%);
+      margin-block-end: var(--space-lg);
+    }
+    .ax-article__category {
+      margin-block-end: var(--space-sm);
+    }
+    .ax-article__title {
+      margin-block: 0 var(--space-md);
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-article__meta {
+      display: flex;
+      gap: var(--space-md);
+      align-items: center;
+      flex-wrap: wrap;
+      color: var(--md-sys-color-on-surface-variant);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      margin-block-end: var(--space-lg);
+    }
+    .ax-article__author {
+      display: flex; align-items: center; gap: var(--space-sm);
+    }
+    .ax-article__avatar {
+      inline-size: 32px; block-size: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,
+        var(--md-sys-color-secondary-container) 0%,
+        var(--md-sys-color-tertiary-container) 100%);
+    }
+
+    /* ── Article footer (tags + share) ── */
+    .ax-article__footer {
+      margin-block-start: var(--space-xl);
+      padding-block: var(--space-lg);
+      border-block: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .ax-article__tags {
+      display: flex;
+      gap: var(--space-xs);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .ax-article__tags-label {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-inline-end: var(--space-xs);
+    }
+    .ax-article__share {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: center;
+    }
+    .ax-article__share-label {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-inline-end: var(--space-xs);
+    }
+
+    /* ── Author bio card ── */
+    .ax-author-bio {
+      margin-block: var(--space-xl) 0;
+      padding: var(--space-lg);
+      display: flex;
+      gap: var(--space-md);
+      align-items: flex-start;
+    }
+    .ax-author-bio__avatar {
+      inline-size: 64px; block-size: 64px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: linear-gradient(135deg,
+        var(--md-sys-color-secondary-container) 0%,
+        var(--md-sys-color-tertiary-container) 100%);
+    }
+    .ax-author-bio__name {
+      margin: 0 0 var(--space-xs);
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-author-bio__handle {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-block-end: var(--space-sm);
+    }
+    .ax-author-bio__bio {
+      color: var(--md-sys-color-on-surface);
+      margin-block-end: var(--space-md);
+    }
+
+    /* ── Related posts ── */
+    .ax-related {
+      margin-block-start: var(--space-xl);
+    }
+    .ax-related__title {
+      margin: 0 0 var(--space-lg);
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-related__grid {
+      display: grid;
+      gap: var(--space-md);
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 600px) {
+      .ax-related__grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .ax-related__post {
+      padding: var(--space-md);
+    }
+    .ax-related__post-title {
+      margin: 0 0 var(--space-xs);
+    }
+    .ax-related__post-title a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+    }
+    .ax-related__post-title a:hover {
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .ax-related__post-meta {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* ── Comments section ── */
+    .ax-comments {
+      margin-block-start: var(--space-xl);
+    }
+    .ax-comments__title {
+      margin: 0 0 var(--space-md);
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-comments__form {
+      padding: var(--space-md);
+      margin-block-end: var(--space-lg);
+    }
+    .ax-comments__textarea-wrap {
+      margin-block-end: var(--space-sm);
+    }
+    .ax-comment-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .ax-comment {
+      padding: var(--space-md);
+    }
+    .ax-comment__head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-block-end: var(--space-sm);
+    }
+    .ax-comment__avatar {
+      inline-size: 32px; block-size: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,
+        var(--md-sys-color-primary-container) 0%,
+        var(--md-sys-color-secondary-container) 100%);
+      flex-shrink: 0;
+    }
+    .ax-comment__author {
+      flex: 1; min-inline-size: 0;
+    }
+    .ax-comment__author-name {
+      color: var(--md-sys-color-on-surface);
+      font-weight: var(--md-ref-typeface-weight-medium);
+    }
+    .ax-comment__time {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-comment__body {
+      color: var(--md-sys-color-on-surface);
+      margin-block-end: var(--space-sm);
+    }
+    .ax-comment__actions {
+      display: flex;
+      gap: var(--space-md);
+    }
+    .ax-comment__action {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: var(--md-sys-color-primary);
+      cursor: pointer;
+      font-family: var(--md-sys-typescale-label-medium-font);
+      font-size:   var(--md-sys-typescale-label-medium-size);
+    }
+    .ax-comment__action:hover {
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    /* nested replies */
+    .ax-comment-list .ax-comment-list {
+      margin-block-start: var(--space-md);
+      padding-inline-start: var(--space-lg);
+      border-inline-start: 2px solid var(--md-sys-color-outline-variant);
+    }
+
+    /* ── TOC rail ── */
+    .ax-toc-rail {
+      min-inline-size: 0;
+    }
+    @media (min-width: 1100px) {
+      .ax-toc-rail {
+        position: sticky;
+        inset-block-start: calc(64px + var(--space-md));
+        align-self: start;
+        max-block-size: calc(100vh - 64px - var(--space-md));
+        overflow-y: auto;
+        padding-inline: var(--space-md);
+        scrollbar-width: thin;
+        scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+      }
+    }
+    @media (max-width: 1099px) {
+      .ax-toc-rail {
+        max-inline-size: 720px;
+        margin-inline: auto;
+        padding-block: var(--space-md);
+        border-block: 1px solid var(--md-sys-color-outline-variant);
+      }
+    }
+    .ax-toc-rail__title {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-block-end: var(--space-sm);
+    }
+    .ax-toc-rail__list {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: var(--space-xs);
+    }
+    .ax-toc-rail__list a {
+      display: block;
+      padding: var(--space-xs) var(--space-sm);
+      color: var(--md-sys-color-on-surface-variant);
+      text-decoration: none;
+      border-radius: var(--md-sys-shape-corner-small);
+      font-family: var(--md-sys-typescale-body-small-font);
+      font-size:   var(--md-sys-typescale-body-small-size);
+    }
+    .ax-toc-rail__list a:hover {
+      color: var(--md-sys-color-on-surface);
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .ax-toc-rail__list a.is-current {
+      color: var(--md-sys-color-primary);
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-primary) 12%, transparent);
+      font-weight: var(--md-ref-typeface-weight-medium);
+    }
+    .ax-toc-rail__list .toc-h3 {
+      padding-inline-start: var(--space-md);
+    }
+
+    /* ── footer (sync) ── */
+    .ax-site-footer {
+      background-color: var(--md-sys-color-surface-container-low);
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      padding-block: var(--space-xl);
+      padding-inline: var(--space-xl);
+    }
+    .ax-site-footer__inner {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      display: grid;
+      gap: var(--space-lg);
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) {
+      .ax-site-footer__inner { grid-template-columns: 2fr 1fr 1fr; }
+    }
+    .ax-site-footer__col-title {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-block-end: var(--space-sm);
+      letter-spacing: 0.08em;
+    }
+    .ax-site-footer__brand-name { letter-spacing: 0.04em; }
+    .ax-site-footer__tagline {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-block-start: var(--space-xs);
+      max-inline-size: 48ch;
+    }
+    .ax-site-footer__nav {
+      display: flex; flex-direction: column; gap: var(--space-xs);
+    }
+    .ax-site-footer__nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+    }
+    .ax-site-footer__nav a:hover {
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .ax-site-footer__bottom {
+      grid-column: 1 / -1;
+      padding-block-start: var(--space-md);
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      display: flex; flex-wrap: wrap; gap: var(--space-md);
+      justify-content: space-between;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-site-footer__bottom a {
+      color: var(--md-sys-color-primary);
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    @media (max-width: 720px) {
+      .ax-site-footer { padding-inline: var(--space-lg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WCAG 2.4.1 Bypass Blocks — first focusable element -->
+  <a href="#main" class="skip-link">메인 콘텐츠로 건너뛰기</a>
+
+  <!-- HEADER (sync) -->
+  <header class="ax-site-header app-bar app-bar--small">
+    <div class="app-bar__leading">
+      <button type="button" class="ax-icon-button is-standard has-state-layer"
+              data-toggle-nav aria-controls="nav-drawer" aria-expanded="false"
+              aria-label="메뉴 열기">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+        </svg>
+      </button>
+    </div>
+    <p class="app-bar__title">
+      <a href="/" style="color: inherit; text-decoration: none;">Axismundi</a>
+    </p>
+    <div class="app-bar__actions">
+      <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="검색">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- BREADCRUMB -->
+  <nav class="ax-breadcrumb" aria-label="Breadcrumb">
+    <ol class="t-body-small">
+      <li><a href="/">Home</a></li>
+      <li class="ax-breadcrumb__separator" aria-hidden="true">›</li>
+      <li><a href="/blog">Blog</a></li>
+      <li class="ax-breadcrumb__separator" aria-hidden="true">›</li>
+      <li><a href="/category/design-system">디자인 시스템</a></li>
+      <li class="ax-breadcrumb__separator" aria-hidden="true">›</li>
+      <li aria-current="page">Material 3 토큰 시스템 처음부터 빌드하기</li>
+    </ol>
+  </nav>
+
+  <!-- ARTICLE LAYOUT -->
+  <main class="ax-single" id="main">
+
+    <article class="ax-article">
+      <div class="ax-article__hero" aria-hidden="true"></div>
+
+      <span class="chip has-state-layer t-label-medium ax-article__category">
+        <span class="chip__label">디자인 시스템</span>
+      </span>
+
+      <h1 class="t-display-small ax-article__title">
+        Material 3 토큰 시스템 처음부터 빌드하기
+      </h1>
+
+      <div class="t-body-small ax-article__meta">
+        <div class="ax-article__author">
+          <div class="ax-article__avatar" aria-hidden="true"></div>
+          <span>김민수</span>
+        </div>
+        <span aria-hidden="true">·</span>
+        <time datetime="2026-05-08">2026년 5월 8일</time>
+        <span aria-hidden="true">·</span>
+        <span>12분 읽기</span>
+      </div>
+
+      <!-- ── Article body — uses .prose for typography ── -->
+      <div class="prose">
+
+        <p>
+          디자인 시스템을 처음부터 빌드한다는 건 보통 *컴포넌트 라이브러리*를 떠올리지만, 더 근본적인 layer는 <strong>토큰 시스템</strong>입니다. 이 글은 Material 3의 ref / sys / comp 3-tier 토큰 구조를 CSS custom property로 옮긴 경험과, 그 위에 light/dark scheme이 자동으로 sync되도록 설계한 패턴을 정리합니다.
+        </p>
+
+        <p>
+          이 시스템은 일반적인 토큰 시스템 가이드와 두 가지 면에서 다릅니다 — 첫째, 모든 색이 <em>token만</em>으로 표현되고 hex literal이 0개 (state layer까지 포함해서). 둘째, 한글과 영문이 섞인 본문 typography를 시작 단계부터 고려합니다. 이 두 결정은 나중에 ActivityPub 마이크로블로그를 만들 때 커다란 leverage로 작동했습니다.
+        </p>
+
+        <h2 id="why-tokens">왜 토큰인가?</h2>
+
+        <p>
+          가장 단순한 답: <strong>색이나 사이즈를 한 번 바꿀 때 100군데를 안 바꾸기 위해서</strong>. 하지만 이건 표면적인 답이고, 더 깊은 이유가 있습니다 — 토큰은 <em>의미</em>를 인코딩합니다. <code>#1976D2</code>는 그냥 파란색이지만, <code>--md-sys-color-primary</code>는 "사용자가 가장 주목해야 할 액션"이라는 의미를 갖습니다. 의미가 있으면 light/dark에서 자동으로 다른 hex 값을 매핑할 수 있습니다.
+        </p>
+
+        <blockquote>
+          <p>토큰은 시각이 아니라 의미를 다룬다. 의미가 명확하면 시각은 따라온다.</p>
+          <cite>본인의 디자인 시스템 일기 중</cite>
+        </blockquote>
+
+        <h2 id="three-tiers">3-tier 구조 — ref / sys / comp</h2>
+
+        <p>
+          M3 spec의 핵심은 토큰을 <strong>3개 layer</strong>로 분할한 것입니다:
+        </p>
+
+        <ol>
+          <li><strong>Ref (reference)</strong> — 실제 hex 값을 갖는 색 팔레트. 예: <code>--md-ref-palette-primary-40</code>.</li>
+          <li><strong>Sys (system)</strong> — 의미적 매핑. 예: <code>--md-sys-color-primary</code>가 light에선 <code>palette-primary-40</code>, dark에선 <code>palette-primary-80</code>을 가리킴.</li>
+          <li><strong>Comp (component)</strong> — 컴포넌트별 token. 예: <code>--md-comp-button-container-color</code>가 <code>--md-sys-color-primary</code>를 가리킴.</li>
+        </ol>
+
+        <p>
+          이 분리가 왜 중요한가? <strong>각 layer가 독립적으로 변경 가능하기 때문</strong>입니다. 브랜드 색을 바꿀 땐 ref만 수정. 다크 모드 hex를 미세조정할 땐 sys만 수정. 버튼이 primary 대신 tertiary를 쓰게 할 땐 comp만 수정. 변경의 <em>blast radius</em>가 layer 안에 갇힙니다.
+        </p>
+
+        <h3 id="ref-layer">Ref layer 정의</h3>
+
+        <p>
+          M3 baseline 팔레트는 5개 색조 × 13개 톤(0-100) 으로 시작합니다. 한 번에 다 정의하면 토큰 파일이 무거워지니, 처음엔 primary / secondary / tertiary / neutral / neutral-variant 5개만:
+        </p>
+
+        <pre><code>:root {
+  /* Primary 톤별 hex — Material Theme Builder에서 추출 */
+  --md-ref-palette-primary-0:   #000000;
+  --md-ref-palette-primary-10:  #21005D;
+  --md-ref-palette-primary-20:  #381E72;
+  --md-ref-palette-primary-30:  #4F378B;
+  --md-ref-palette-primary-40:  #6750A4;
+  /* ... 50, 60, 70, 80, 90, 95, 99, 100 */
+}</code></pre>
+
+        <p>
+          이 단계에선 *어떤 톤이 light에 쓰일지, 어떤 톤이 dark에 쓰일지* 결정하지 않습니다. ref는 <strong>scheme-agnostic</strong>입니다.
+        </p>
+
+        <h3 id="sys-layer">Sys layer — light/dark scheme 분기</h3>
+
+        <p>
+          Sys 단계에서 처음으로 <em>scheme</em>이 등장합니다. M3 spec은 light에선 primary가 톤 40, dark에선 톤 80이라고 정의합니다. 이걸 CSS로:
+        </p>
+
+        <pre><code>:root,
+:root[data-theme="light"] {
+  --md-sys-color-primary:        var(--md-ref-palette-primary-40);
+  --md-sys-color-on-primary:     var(--md-ref-palette-primary-100);
+  --md-sys-color-primary-container:    var(--md-ref-palette-primary-90);
+  --md-sys-color-on-primary-container: var(--md-ref-palette-primary-10);
+  /* ... */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --md-sys-color-primary:    var(--md-ref-palette-primary-80);
+    --md-sys-color-on-primary: var(--md-ref-palette-primary-20);
+    /* ... */
+  }
+}
+:root[data-theme="dark"] {
+  --md-sys-color-primary:    var(--md-ref-palette-primary-80);
+  /* ... 같은 매핑 명시적 적용 */
+}</code></pre>
+
+        <p>
+          이 패턴의 장점 — 컴포넌트는 항상 <code>var(--md-sys-color-primary)</code>만 참조하면 됩니다. light/dark 분기를 컴포넌트가 신경 쓰지 않아도 자동으로 맞는 hex가 들어갑니다.
+        </p>
+
+        <h2 id="state-layers">State layer — color-mix()로 토큰만 사용</h2>
+
+        <p>
+          M3의 hover / focus / pressed 상태는 *color* 자체를 바꾸는 게 아니라, <em>state layer</em>라는 반투명 색을 위에 얹습니다. spec상 hover는 8% 불투명, focus는 12%, pressed는 16% 불투명한 <code>on-{role}</code> 색.
+        </p>
+
+        <p>
+          가장 단순한 구현은 <code>::before</code> pseudo-element + opacity 조절. 하지만 <strong>color-mix() CSS 함수</strong>를 쓰면 *background를 직접 합성*해서 더 깔끔하게 처리됩니다:
+        </p>
+
+        <pre><code>.ax-button:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-primary)
+    calc(var(--md-sys-state-hover-state-layer-opacity) * 100%),
+    var(--md-sys-color-primary)
+  );
+}</code></pre>
+
+        <p>
+          <code>color-mix(in srgb, A 8%, B)</code> = "A를 8%, B를 92% 비율로 합성". <code>--md-sys-state-hover-state-layer-opacity: 0.08</code>으로 정의해두면 state layer 비율도 *토큰*이 됩니다. 정말 모든 게 토큰만으로 표현됩니다.
+        </p>
+
+        <h2 id="korean-typography">한글 + 영문 mixed body — 처음부터 고려</h2>
+
+        <p>
+          한글 사이트에서 영문 단어가 갑자기 등장할 때 어떻게 줄바꿈 되어야 하나요? 기본 CSS의 <code>word-break: normal</code>은 한글에 적용하면 *글자 단위*로 끊어 buggy. <code>word-break: break-all</code>은 단어 중간을 끊어버려 더 가독성 떨어짐.
+        </p>
+
+        <p>
+          정답은 <strong>word-break: keep-all + overflow-wrap: anywhere</strong> 조합:
+        </p>
+
+        <pre><code>body {
+  word-break: keep-all;       /* 한글 — 단어 단위로 줄바꿈 */
+  overflow-wrap: anywhere;     /* 긴 영단어/URL — 안전하게 break */
+  line-height: 1.6;            /* mixed-script line-height parity */
+}</code></pre>
+
+        <p>
+          이 작은 3 줄이 <em>한글과 영문이 섞인 본문에서 자연스러운 줄바꿈</em>을 보장합니다. 영문만 있는 영역에선 <code>break-word</code> 정도로 충분하지만, 본 사이트처럼 <code>WordPress</code>나 <code>ActivityPub</code>가 한글 사이에 등장하면 <code>keep-all + anywhere</code>가 답입니다.
+        </p>
+
+        <h2 id="conclusion">맺음말</h2>
+
+        <p>
+          토큰 시스템은 디자인 시스템의 *기초*가 아니라 *척추*입니다. 컴포넌트는 토큰 위에서 자라고, 토큰의 의미가 명확하면 컴포넌트도 명확해집니다. M3 spec을 그대로 따라가면 8할은 옳은 결정입니다 — 나머지 2할은 본인 도메인 (한글, microblog 등)을 위해 careful하게 추가하면 됩니다.
+        </p>
+
+        <p>
+          다음 글에서는 이 토큰 위에 <strong>33개 컴포넌트</strong>를 어떻게 빌드했는지, 그리고 그 과정에서 마주친 caveat들을 다루겠습니다.
+        </p>
+
+      </div>
+      <!-- ── End .prose ── -->
+
+      <!-- Article footer — tags + share -->
+      <footer class="ax-article__footer">
+        <div class="ax-article__tags">
+          <span class="t-body-small ax-article__tags-label">태그:</span>
+          <a href="/tag/m3" class="chip has-state-layer t-label-small"><span class="chip__label">M3</span></a>
+          <a href="/tag/tokens" class="chip has-state-layer t-label-small"><span class="chip__label">tokens</span></a>
+          <a href="/tag/css" class="chip has-state-layer t-label-small"><span class="chip__label">CSS</span></a>
+          <a href="/tag/design-system" class="chip has-state-layer t-label-small"><span class="chip__label">design-system</span></a>
+          <a href="/tag/korean" class="chip has-state-layer t-label-small"><span class="chip__label">한글</span></a>
+        </div>
+        <div class="ax-article__share">
+          <span class="t-body-small ax-article__share-label">공유:</span>
+          <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="링크 복사">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+            </svg>
+          </button>
+          <button type="button" class="ax-icon-button is-standard has-state-layer" aria-label="공유">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+            </svg>
+          </button>
+        </div>
+      </footer>
+
+      <!-- Author bio -->
+      <section class="ax-author-bio card card--filled" aria-label="작성자 소개">
+        <div class="ax-author-bio__avatar" aria-hidden="true"></div>
+        <div>
+          <h2 class="t-title-medium ax-author-bio__name">김민수</h2>
+          <p class="t-body-small ax-author-bio__handle">@minsu@axismundi.example</p>
+          <p class="t-body-medium ax-author-bio__bio">
+            부산에서 디자인 시스템과 web standards를 따라 글 쓰는 디자이너 + 개발자.
+            워드프레스 블록 테마와 ActivityPub 분산 SNS를 한 사이트로 합치는 실험 중.
+          </p>
+          <a href="/author/minsu" class="ax-button is-tonal has-state-layer t-label-large">
+            전체 글 보기
+          </a>
+        </div>
+      </section>
+
+      <!-- Related posts -->
+      <section class="ax-related" aria-label="관련 글">
+        <h2 class="t-title-large ax-related__title">관련 글</h2>
+        <div class="ax-related__grid">
+          <article class="ax-related__post card card--outlined">
+            <h3 class="t-title-small ax-related__post-title">
+              <a href="/blog/wp-block-theme-anatomy">WordPress 블록 테마 해부</a>
+            </h3>
+            <p class="t-body-small ax-related__post-meta">
+              2026-05-05 · 18분 읽기
+            </p>
+          </article>
+          <article class="ax-related__post card card--outlined">
+            <h3 class="t-title-small ax-related__post-title">
+              <a href="/blog/css-logical-properties">CSS Logical Properties로 RTL 무료</a>
+            </h3>
+            <p class="t-body-small ax-related__post-meta">
+              2026-04-25 · 8분 읽기
+            </p>
+          </article>
+          <article class="ax-related__post card card--outlined">
+            <h3 class="t-title-small ax-related__post-title">
+              <a href="/blog/korean-typography">한글 + 영문 mixed typography</a>
+            </h3>
+            <p class="t-body-small ax-related__post-meta">
+              2026-04-15 · 10분 읽기
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Comments -->
+      <section class="ax-comments" aria-label="댓글">
+        <h2 class="t-title-large ax-comments__title">댓글 (2)</h2>
+
+        <!-- Comment form -->
+        <form class="ax-comments__form card card--outlined">
+          <div class="ax-comments__textarea-wrap">
+            <div class="text-field text-field--outlined" data-mode="rest">
+              <label class="text-field__container" for="comment-textarea">
+                <textarea name="comment" id="comment-textarea"
+                          class="text-field__input"
+                          rows="4"
+                          placeholder=" "></textarea>
+                <span class="text-field__label">댓글을 남겨주세요</span>
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="ax-button is-filled has-state-layer t-label-large">
+            댓글 등록
+          </button>
+        </form>
+
+        <!-- Comment list -->
+        <ul class="ax-comment-list">
+          <li>
+            <article class="ax-comment card card--outlined">
+              <header class="ax-comment__head">
+                <div class="ax-comment__avatar" aria-hidden="true"></div>
+                <div class="ax-comment__author">
+                  <div class="ax-comment__author-name t-body-medium">이서연</div>
+                  <time class="ax-comment__time t-body-small" datetime="2026-05-08T14:00">3시간 전</time>
+                </div>
+              </header>
+              <div class="ax-comment__body t-body-medium">
+                color-mix() 패턴 정말 깔끔하네요. 저는 ::before 방식으로 했는데 반복 코드가 많아서 고민이었습니다. 이참에 마이그레이션 해야겠어요.
+              </div>
+              <div class="ax-comment__actions">
+                <button type="button" class="ax-comment__action">답글</button>
+                <button type="button" class="ax-comment__action">좋아요</button>
+              </div>
+              <!-- Nested reply -->
+              <ul class="ax-comment-list">
+                <li>
+                  <article class="ax-comment card card--outlined">
+                    <header class="ax-comment__head">
+                      <div class="ax-comment__avatar" aria-hidden="true"></div>
+                      <div class="ax-comment__author">
+                        <div class="ax-comment__author-name t-body-medium">김민수</div>
+                        <time class="ax-comment__time t-body-small" datetime="2026-05-08T14:30">2시간 전</time>
+                      </div>
+                    </header>
+                    <div class="ax-comment__body t-body-medium">
+                      ::before 방식도 working하지만 토큰 갯수가 늘어나면 color-mix가 훨씬 단순합니다. 단점은 Safari 16+ 필요한 것 정도.
+                    </div>
+                    <div class="ax-comment__actions">
+                      <button type="button" class="ax-comment__action">답글</button>
+                      <button type="button" class="ax-comment__action">좋아요</button>
+                    </div>
+                  </article>
+                </li>
+              </ul>
+            </article>
+          </li>
+
+          <li>
+            <article class="ax-comment card card--outlined">
+              <header class="ax-comment__head">
+                <div class="ax-comment__avatar" aria-hidden="true"></div>
+                <div class="ax-comment__author">
+                  <div class="ax-comment__author-name t-body-medium">박지훈</div>
+                  <time class="ax-comment__time t-body-small" datetime="2026-05-08T16:00">1시간 전</time>
+                </div>
+              </header>
+              <div class="ax-comment__body t-body-medium">
+                한글 typography 부분 너무 공감합니다. word-break: keep-all은 발견하기 전엔 정말 답이 없던데요.
+              </div>
+              <div class="ax-comment__actions">
+                <button type="button" class="ax-comment__action">답글</button>
+                <button type="button" class="ax-comment__action">좋아요</button>
+              </div>
+            </article>
+          </li>
+        </ul>
+      </section>
+
+    </article>
+
+    <!-- TOC rail -->
+    <aside class="ax-toc-rail" aria-label="In this article">
+      <div class="t-label-small ax-toc-rail__title">In this article</div>
+      <ol class="ax-toc-rail__list toc-list">
+        <li><a href="#why-tokens">왜 토큰인가?</a></li>
+        <li><a href="#three-tiers">3-tier 구조</a>
+          <ul class="ax-toc-rail__list">
+            <li class="toc-h3"><a href="#ref-layer">Ref layer</a></li>
+            <li class="toc-h3"><a href="#sys-layer">Sys layer</a></li>
+          </ul>
+        </li>
+        <li><a href="#state-layers">State layer</a></li>
+        <li><a href="#korean-typography">한글 + 영문 typography</a></li>
+        <li><a href="#conclusion">맺음말</a></li>
+      </ol>
+    </aside>
+
+  </main>
+
+  <!-- NAV DRAWER -->
+  <dialog class="nav-drawer" id="nav-drawer" aria-label="Main navigation">
+    <header class="nav-drawer__head">
+      <h2 class="t-title-medium" style="margin: 0;">Axismundi</h2>
+      <button type="button" class="ax-icon-button is-standard has-state-layer"
+              data-close-modal aria-label="메뉴 닫기">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
+    </header>
+    <nav class="nav-drawer__body" aria-label="Main navigation (mobile)">
+      <ul class="ax-nav-list">
+        <li><a href="/">
+          <span class="ax-nav-list__icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></span>
+          Home
+        </a></li>
+        <li><a href="/blog">
+          <span class="ax-nav-list__icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></span>
+          Blog
+        </a></li>
+      </ul>
+    </nav>
+  </dialog>
+
+  <!-- FOOTER -->
+  <footer class="ax-site-footer">
+    <div class="ax-site-footer__inner">
+      <div>
+        <div class="t-label-small ax-site-footer__col-title">About</div>
+        <div class="t-headline-small ax-site-footer__brand-name">Axismundi</div>
+        <p class="t-body-medium ax-site-footer__tagline">
+          Material 3 디자인 시스템으로 만든 WordPress 블록 테마.
+        </p>
+      </div>
+      <nav class="ax-site-footer__nav" aria-label="Site sections">
+        <div class="t-label-small ax-site-footer__col-title">Site</div>
+        <a class="t-body-medium" href="/">Home</a>
+        <a class="t-body-medium" href="/blog">Blog</a>
+        <a class="t-body-medium" href="/archive">Archive</a>
+      </nav>
+      <nav class="ax-site-footer__nav" aria-label="Legal">
+        <div class="t-label-small ax-site-footer__col-title">Legal</div>
+        <a class="t-body-medium" href="/privacy">Privacy</a>
+        <a class="t-body-medium" href="/terms">Terms</a>
+      </nav>
+      <div class="ax-site-footer__bottom">
+        <p class="t-body-small">© 2026 본인 실명 · <a href="https://designbusan.ai.kr" rel="author">designbusan.ai.kr</a></p>
+        <p class="t-body-small">Powered by <a href="https://wordpress.org">WordPress</a> · <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="license">GPL-3.0-or-later</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script defer src="scripts/theme.js"></script>
+  <!-- Inline TOC scroll-spy demo (style-guide-prose.html과 동일 — theme.js §5 정식 finalize 시 이동) -->
+</body>
+</html>

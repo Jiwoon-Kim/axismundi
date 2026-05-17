@@ -1,0 +1,209 @@
+/* ============================================================
+ * lab-snackbar.css — Axismundi Snackbar Runtime Module
+ * v3.4.10
+ *
+ * Bucket D — theme interaction runtime, lab module only.
+ *
+ * Relationship to baseline:
+ *   components.css §14 Snackbar (L2041-L2160, ~120 lines, 5 rule
+ *   blocks) is UNCHANGED at v3.4.10.
+ *
+ *   The Phase 0 inventory under-counted baseline rules — its regex
+ *   missed indented selectors. The Phase 0 correction is recorded in
+ *   docs/SNACKBAR-RUNTIME-AUDIT.md §3. Actual baseline §14 includes:
+ *
+ *     .snackbar              — container (full visual chrome)
+ *     .snackbar--two-line    — height variant
+ *     .snackbar__label       — flex slot (flex: 1 1 auto)
+ *     .snackbar__action      — full styling INCLUDING state-layer
+ *                              Pattern A via ::before pseudo
+ *                              (inverse-primary + label-large +
+ *                              hover/focus/pressed opacity tokens)
+ *     .snackbar__close       — 24×24 container + icon size
+ *
+ *   The baseline action button uses ::before for its state layer.
+ *   This module therefore uses ::after for the close-button hit-area
+ *   expansion to avoid colliding with baseline pseudo-element usage.
+ *
+ * Five sections (final, post Phase 0 correction):
+ *   §1 Close button hit-area expansion (coarse pointer)
+ *   §2 Positioning + safe-area (host wrapper at <body> scope)
+ *   §3 Open / leaving runtime states (.is-open / .is-leaving)
+ *   §4 Reduced motion
+ *   §5 Live region (screen-reader-only utility)
+ *
+ * Module taxonomy: Interaction module (Runtime)
+ *   (see lab/modules/README.md §Module taxonomy)
+ *
+ * Audit: modules/snackbar/docs/SNACKBAR-RUNTIME-AUDIT.md
+ *
+ * Hard rules (Phase 1 §5.2) enforced visually:
+ *   - The visible snackbar carries no aria-hidden attribute.
+ *     (Implemented by lab-snackbar.js — root element creation
+ *     never calls setAttribute('aria-hidden').)
+ *   - Action / close are real <button> elements with real focus rings.
+ *     (Inherited from baseline §14 styling — UNCHANGED.)
+ * ============================================================ */
+
+
+/* ----------------------------------------------------------------
+ * §1 — Close button hit-area expansion (coarse pointer only)
+ *
+ * Baseline §14 already styles `.snackbar__close` as a 24×24
+ * container with 18px icon — this meets WCAG 2.2 SC 2.5.8
+ * Target Size (Minimum), Level AA (24×24 CSS px) on all pointer
+ * types.
+ *
+ * This module adds an invisible hit-area expansion on coarse
+ * pointer devices (touch input), expanding the effective hit
+ * target to ~44×44 — meeting WCAG 2.2 SC 2.5.5 Target Size
+ * (Enhanced), Level AAA, and the Material touch-friendly
+ * convention.
+ *
+ * Implementation note:
+ *   The baseline `.snackbar__action::before` already exists for
+ *   the action button's state-layer (Pattern A). To avoid pseudo-
+ *   element collisions on `.snackbar__close`, this module uses
+ *   `::after` for the hit-area extension.
+ *
+ *   Scope is limited to .lab-snackbar-host descendants so this
+ *   only applies to runtime-injected snackbars (not the static
+ *   baseline specimens in style-guide.html).
+ * ---------------------------------------------------------------- */
+
+@media (pointer: coarse) {
+  .lab-snackbar-host .snackbar__close {
+    /* Ensure positioning context for ::after */
+    position: relative;
+  }
+
+  .lab-snackbar-host .snackbar__close::after {
+    content: "";
+    position: absolute;
+    inset: -10px;
+    /* Invisible — purely hit-target expansion.
+       24 + (10 + 10) = 44 → meets SC 2.5.5 AAA + touch convention. */
+  }
+}
+
+
+/* ----------------------------------------------------------------
+ * §2 — Positioning + safe-area
+ *
+ * The runtime module mounts a container at <body> scope. Position
+ * is fixed bottom-center on small viewports (mobile/tablet) and
+ * bottom-left on wider viewports (desktop convention).
+ *
+ * Safe-area-inset accounts for iOS/Android home-indicator regions.
+ * z-index sits above content but below modal dialog.
+ *
+ * .lab-snackbar-host is added by the runtime — baseline does NOT
+ * define this class. It is NOT applied to static baseline specimens.
+ * ---------------------------------------------------------------- */
+
+.lab-snackbar-host {
+  position: fixed;
+  inset-block-end: max(
+    var(--space-md),
+    calc(var(--space-md) + env(safe-area-inset-bottom, 0px))
+  );
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.lab-snackbar-host > .snackbar {
+  pointer-events: auto;
+}
+
+/* Desktop convention — bottom-left */
+@media (min-width: 768px) {
+  .lab-snackbar-host {
+    inset-inline-start: var(--space-lg);
+    transform: none;
+  }
+}
+
+
+/* ----------------------------------------------------------------
+ * §3 — Open / leaving runtime states
+ *
+ * The runtime adds .is-open when the snackbar enters and removes
+ * it (replacing with .is-leaving briefly) on exit. CSS handles the
+ * transition; JS coordinates timing.
+ *
+ * These states ONLY apply to snackbars inside .lab-snackbar-host.
+ * Static baseline specimens in style-guide.html are unaffected.
+ * ---------------------------------------------------------------- */
+
+.lab-snackbar-host > .snackbar {
+  /* Initial state — slightly off-screen below, transparent */
+  opacity: 0;
+  transform: translateY(8px);
+
+  transition:
+    opacity
+      var(--md-sys-motion-curve-medium-effects-duration)
+      var(--md-sys-motion-curve-medium-effects),
+    transform
+      var(--md-sys-motion-curve-medium-effects-duration)
+      var(--md-sys-motion-curve-medium-effects);
+}
+
+.lab-snackbar-host > .snackbar.is-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lab-snackbar-host > .snackbar.is-leaving {
+  opacity: 0;
+  /* Faster exit */
+  transition-duration: var(--md-sys-motion-curve-fast-effects-duration);
+}
+
+
+/* ----------------------------------------------------------------
+ * §4 — Reduced motion
+ *
+ * Per audit §6: motion is a presentational hint only. The live
+ * region announcement already conveys the change. When the user
+ * prefers reduced motion, the snackbar appears and disappears
+ * instantly — all other functionality (queue, timeout, dismiss,
+ * action, close, focus management, live announcement) remains
+ * intact.
+ * ---------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-snackbar-host > .snackbar,
+  .lab-snackbar-host > .snackbar.is-open,
+  .lab-snackbar-host > .snackbar.is-leaving {
+    transition: none;
+    transform: none;
+  }
+}
+
+
+/* ----------------------------------------------------------------
+ * §5 — Live region (screen-reader-only utility)
+ *
+ * The single stable live region for announcements. Lives at <body>
+ * scope, separate from the visible snackbar host. Uses the standard
+ * visually-hidden pattern.
+ *
+ * Hard rule (audit §5.2 #5): this region announces text-only
+ * feedback. The runtime never inserts buttons into this region.
+ * ---------------------------------------------------------------- */
+
+.lab-snackbar-live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}

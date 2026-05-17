@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Popover/Menu Lab Module (v3.4.5)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-popover.css" />
+
+  <style>
+    /* Local layout — pattern page only, NOT a reusable component. */
+    .lab-layout {
+      max-inline-size: min(100%, 960px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-section {
+      display: grid;
+      gap: var(--space-md);
+    }
+    .lab-section__head {
+      margin: 0;
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-section__title { margin: 0; }
+    .lab-section__supporting {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-theme {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body class="lab-popover-pattern">
+  <main class="lab-layout">
+    <header class="lab-header">
+      <span class="t-label-medium lab-header__eyebrow">Axismundi · Lab module</span>
+      <h1 class="t-headline-large">Popover / Menu (v3.4.5)</h1>
+      <p class="t-body-large lab-header__supporting" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+        Anchored menu / popover runtime. Lab module only — not promoted to baseline. See
+        <code>docs/POPOVER-AUDIT.md</code> for rationale, Beer CSS intake notes, and a11y risk register.
+      </p>
+
+      <!-- Theme switcher — uses data-theme-set (canonical contract, matches style-guide.html) -->
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+          <span>Light</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+          <span>Dark</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">contrast</span>
+          <span>Auto</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="lab-banner">
+      <strong class="t-title-medium">Lab module — runtime layer only</strong>
+      <p class="t-body-medium" style="margin: 0;">
+        Popover open / close / dismiss / focus-restoration runs only inside this pattern page.
+        The baseline styleguide keeps <code>.ax-menu.is-open</code> as a static visual specimen.
+        Verify open-without-immediate-close, Escape dismiss, outside-pointerdown dismiss, focus
+        restoration, and forbidden-ancestor bail-out below.
+      </p>
+    </aside>
+
+    <!-- ========== Anchored menu demo ========== -->
+    <section class="lab-section" id="demo-anchored">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Anchored menu</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Click "Open menu" to anchor a menu under the trigger. Verify focus moves to the first
+          menuitem, ArrowDown/ArrowUp navigates, Escape closes and returns focus to the trigger,
+          and clicking outside closes without firing the trigger again.
+        </p>
+      </header>
+      <div class="lab-popover-demo">
+        <div class="lab-popover-demo__row">
+          <span class="lab-popover-demo__label t-label-medium">Trigger:</span>
+          <button type="button"
+                  class="ax-button is-tonal has-state-layer t-label-large"
+                  data-popover-trigger
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="lab-popover-anchored-menu">
+            <span>Open menu</span>
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_drop_down</span>
+          </button>
+        </div>
+
+        <div class="ax-menu" id="lab-popover-anchored-menu" role="menu" aria-label="Anchored demo menu" data-popover-wired>
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-leading">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span>
+            </span>
+            <span class="ax-menu__item-label">새 항목</span>
+            <span class="ax-menu__item-trailing-text t-label-small">Ctrl+N</span>
+          </button>
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-leading">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">folder_open</span>
+            </span>
+            <span class="ax-menu__item-label">열기</span>
+            <span class="ax-menu__item-trailing-text t-label-small">Ctrl+O</span>
+          </button>
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-leading">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">save</span>
+            </span>
+            <span class="ax-menu__item-label">저장</span>
+            <span class="ax-menu__item-trailing-text t-label-small">Ctrl+S</span>
+          </button>
+          <hr class="ax-menu__divider" />
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-leading">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">delete</span>
+            </span>
+            <span class="ax-menu__item-label">삭제</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Split-button menu demo ========== -->
+    <section class="lab-section" id="demo-split">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Split-button menu</h2>
+        <p class="t-body-medium lab-section__supporting">
+          Primary action on the left button; secondary actions in the menu opened by the chevron
+          button on the right. Verify the chevron <code>aria-expanded</code> toggles correctly
+          and the menu anchors under the chevron, not under the primary action.
+        </p>
+      </header>
+      <div class="lab-popover-demo">
+        <div class="lab-popover-demo__row">
+          <span class="lab-popover-demo__label t-label-medium">저장:</span>
+          <div class="ax-split-button" role="group">
+            <button type="button" class="ax-button is-filled has-state-layer">저장</button>
+            <button type="button"
+                    class="ax-button is-filled has-state-layer"
+                    data-popover-trigger
+                    aria-label="더 많은 저장 옵션"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-controls="lab-popover-split-menu">
+              <span class="material-symbols-rounded notranslate ax-split-button__trailing-icon" translate="no" aria-hidden="true" draggable="false">arrow_drop_down</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ax-menu" id="lab-popover-split-menu" role="menu" aria-label="저장 옵션" data-popover-wired>
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-label">다른 이름으로 저장</span>
+            <span class="ax-menu__item-trailing-text t-label-small">Ctrl+Shift+S</span>
+          </button>
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-label">복사본 저장</span>
+          </button>
+          <hr class="ax-menu__divider" />
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-leading">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">settings</span>
+            </span>
+            <span class="ax-menu__item-label">저장 설정</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Forbidden-ancestor bail-out demo ========== -->
+    <section class="lab-section" id="demo-forbidden">
+      <header class="lab-section__head">
+        <h2 class="t-headline-small lab-section__title">Forbidden-ancestor bail-out</h2>
+        <p class="t-body-medium lab-section__supporting">
+          A trigger placed inside <code>.prose</code> should be <strong>ignored</strong> — the menu
+          must not open. This protects federation content surfaces (Charter §5, §6) and editor
+          <code>[contenteditable]</code> regions from theme-side interaction firing inside
+          user-authored content.
+        </p>
+      </header>
+      <div class="lab-popover-demo lab-popover-demo--forbidden">
+        <p class="t-body-small" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">
+          ↓ The button below is inside <code>.prose</code>. Clicking it should do nothing. The
+          menu (rendered separately, outside <code>.prose</code>) cannot be opened from here.
+        </p>
+        <div class="prose">
+          <p>이 문단은 <code>.prose</code> 안에 있습니다. 아래 버튼은 무시되어야 합니다.</p>
+          <p>
+            <button type="button"
+                    class="ax-button is-outlined has-state-layer t-label-large"
+                    data-popover-trigger
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-controls="lab-popover-forbidden-menu">
+              <span>This trigger must not fire</span>
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">block</span>
+            </button>
+          </p>
+        </div>
+
+        <div class="ax-menu" id="lab-popover-forbidden-menu" role="menu" aria-label="Forbidden menu (must not open)" data-popover-wired>
+          <button type="button" class="ax-menu__item" role="menuitem">
+            <span class="ax-menu__item-label">If you see this, the bail-out failed.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <footer style="display: grid; gap: var(--space-xs); padding-block-start: var(--space-lg); border-block-start: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);">
+      <p class="t-body-small" style="margin: 0;">
+        Audit: <a href="docs/POPOVER-AUDIT.md">POPOVER-AUDIT.md</a> ·
+        Charter: <a href="../../docs/ARCHITECTURE-BOUNDARIES.md">ARCHITECTURE-BOUNDARIES.md</a> ·
+        Intake: <a href="../../docs/BEER-CSS-INTAKE.md">BEER-CSS-INTAKE.md</a>
+      </p>
+    </footer>
+  </main>
+
+  <!-- Theme runtime (shared with all module pattern pages) -->
+  <script defer src="../../scripts/theme.js"></script>
+  <!-- Lab module runtime -->
+  <script defer src="lab-popover.js"></script>
+</body>
+</html>

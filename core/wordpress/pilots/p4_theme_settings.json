@@ -1,0 +1,665 @@
+{
+  "schema_version": "v2.0-pilot-theme-settings-2026-05-12",
+  "generated_at": "2026-05-12",
+  "pilot": "P4-settings",
+  "sources": {
+    "1_corpus": "dev_handbook_clean/theme-handbook/03-theme-json/02-settings",
+    "2_docs": "/home/claude/v2_0_work/GB-23.1.1/docs/reference-guides/theme-json-reference/theme-json-living.md",
+    "3_schema": "/home/claude/v2_0_work/GB-23.1.1/schemas/json/theme.json",
+    "4_wp_runtime": "/home/claude/v2_0_work/WP-6.9.4/wp-includes/theme.json",
+    "5_atlas": "/home/claude/knowledge_check/knowledge/wordpress/theme-config/settings"
+  },
+  "baseline": {
+    "wordpress": "6.9.4 @ 97b7f62a",
+    "gutenberg": "v23.1.1 @ 12c6c76e",
+    "atlas": "knowledge/wordpress/theme-config/settings/ (6 rules)"
+  },
+  "categories": [
+    {
+      "canonical": "appearancetools",
+      "display": "appearanceTools",
+      "slug_variants": [
+        "appearance-tools",
+        "appearanceTools"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": true,
+      "in_atlas": true,
+      "n_sources": 5,
+      "atlas_metadata": {
+        "rule_id": "theme-config.json-appearanceTools",
+        "field_cluster": "meta-governance",
+        "status": "stable",
+        "language": "json",
+        "related": [
+          "block.supports.background",
+          "block.supports.position",
+          "block.supports.dimensions",
+          "block.supports.spacing",
+          "block.supports.color",
+          "block.supports.typography",
+          "block.supports.shadow",
+          "block.supports.filter",
+          "theme-config.json-settings-color",
+          "theme-config.json-settings-typography",
+          "theme-config.json-settings-spacing",
+          "theme-config.json-settings-dimensions",
+          "theme-config.json-settings-border"
+        ]
+      },
+      "schema_def_name": "settingsAppearanceToolsProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "appearanceTools"
+      ],
+      "wp_runtime_key": "appearanceTools",
+      "wp_runtime_details": false
+    },
+    {
+      "canonical": "background",
+      "display": "background",
+      "slug_variants": [
+        "background"
+      ],
+      "in_corpus": false,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": false,
+      "in_atlas": false,
+      "n_sources": 2,
+      "schema_def_name": "settingsBackgroundProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "background"
+      ]
+    },
+    {
+      "canonical": "blocks",
+      "display": "blocks",
+      "slug_variants": [
+        "blocks"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": false,
+      "in_wp_runtime": true,
+      "in_atlas": false,
+      "n_sources": 3,
+      "wp_runtime_key": "blocks",
+      "wp_runtime_details": {
+        "key_count": 3,
+        "keys": [
+          "core/button",
+          "core/image",
+          "core/pullquote"
+        ]
+      }
+    },
+    {
+      "canonical": "border",
+      "display": "border",
+      "slug_variants": [
+        "border"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": true,
+      "in_atlas": false,
+      "n_sources": 4,
+      "schema_def_name": "settingsBorderProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "border"
+      ],
+      "wp_runtime_key": "border",
+      "wp_runtime_details": {
+        "key_count": 4,
+        "keys": [
+          "color",
+          "radius",
+          "style",
+          "width"
+        ]
+      }
+    },
+    {
+      "canonical": "color",
+      "display": "color",
+      "slug_variants": [
+        "color"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": true,
+      "in_atlas": true,
+      "n_sources": 5,
+      "atlas_metadata": {
+        "rule_id": "theme-config.json-settings-color",
+        "field_cluster": "design-tokens",
+        "status": "stable",
+        "language": "json",
+        "related": [
+          "block.supports.color",
+          "block.supports.filter",
+          "theme-config.json-appearanceTools",
+          "theme-config.json-styles-color",
+          "theme-config.json-settings-typography",
+          "theme-config.json-settings-spacing"
+        ]
+      },
+      "schema_def_name": "settingsColorProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "color"
+      ],
+      "wp_runtime_key": "color",
+      "wp_runtime_details": {
+        "key_count": 15,
+        "keys": [
+          "background",
+          "button",
+          "caption",
+          "custom",
+          "customDuotone",
+          "customGradient",
+          "defaultDuotone",
+          "defaultGradients",
+          "defaultPalette",
+          "duotone",
+          "gradients",
+          "heading",
+          "link",
+          "palette",
+          "text"
+        ],
+        "duotone_preset_count": 8,
+        "gradients_preset_count": 12,
+        "palette_preset_count": 12
+      }
+    },
+    {
+      "canonical": "custom",
+      "display": "custom",
+      "slug_variants": [
+        "custom"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": false,
+      "in_atlas": false,
+      "n_sources": 3,
+      "schema_def_name": "settingsCustomProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "custom"
+      ]
+    },
+    {
+      "canonical": "dimensions",
+      "display": "dimensions",
+      "slug_variants": [
+        "dimensions"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": true,
+      "in_atlas": false,
+      "n_sources": 4,
+      "schema_def_name": "settingsDimensionsProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "dimensions"
+      ],
+      "wp_runtime_key": "dimensions",
+      "wp_runtime_details": {
+        "key_count": 2,
+        "keys": [
+          "aspectRatios",
+          "defaultAspectRatios"
+        ],
+        "aspectRatios_preset_count": 7
+      }
+    },
+    {
+      "canonical": "layout",
+      "display": "layout",
+      "slug_variants": [
+        "layout"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": false,
+      "in_atlas": true,
+      "n_sources": 4,
+      "atlas_metadata": {
+        "rule_id": "theme-config.json-settings-layout",
+        "field_cluster": "composition-substrate",
+        "status": "stable",
+        "language": "json",
+        "related": [
+          "block.supports.layout",
+          "block.supports.governance-toggles",
+          "theme-config.json-settings-typography",
+          "theme-config.json-styles-spacing",
+          "theme-config.json-appearanceTools",
+          "theme-config.json-settings-spacing"
+        ]
+      },
+      "schema_def_name": "settingsLayoutProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "layout"
+      ]
+    },
+    {
+      "canonical": "lightbox",
+      "display": "lightbox",
+      "slug_variants": [
+        "lightbox"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": false,
+      "in_atlas": false,
+      "n_sources": 3,
+      "schema_def_name": "settingsLightboxProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "lightbox"
+      ]
+    },
+    {
+      "canonical": "position",
+      "display": "position",
+      "slug_variants": [
+        "position"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": false,
+      "in_atlas": false,
+      "n_sources": 3,
+      "schema_def_name": "settingsPositionProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "position"
+      ]
+    },
+    {
+      "canonical": "residualgovernance",
+      "display": "residual-governance",
+      "slug_variants": [
+        "residual-governance"
+      ],
+      "in_corpus": false,
+      "in_docs": false,
+      "in_schema": false,
+      "in_wp_runtime": false,
+      "in_atlas": true,
+      "n_sources": 1,
+      "atlas_metadata": {
+        "rule_id": "theme-config.json-settings-residual-governance",
+        "field_cluster": "governance-bridges",
+        "status": "stable",
+        "language": "json",
+        "related": [
+          "theme-config.json-settings-color",
+          "theme-config.json-settings-typography",
+          "theme-config.json-settings-spacing",
+          "theme-config.json-styles-css",
+          "block-authoring.supports.position",
+          "block-authoring.supports.dimensions",
+          "style-engine.css-variable-emission",
+          "style-engine.generated-selectors"
+        ]
+      }
+    },
+    {
+      "canonical": "shadow",
+      "display": "shadow",
+      "slug_variants": [
+        "shadow"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": true,
+      "in_atlas": false,
+      "n_sources": 4,
+      "schema_def_name": "settingsShadowProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "shadow"
+      ],
+      "wp_runtime_key": "shadow",
+      "wp_runtime_details": {
+        "key_count": 2,
+        "keys": [
+          "defaultPresets",
+          "presets"
+        ],
+        "presets_preset_count": 5
+      }
+    },
+    {
+      "canonical": "spacing",
+      "display": "spacing",
+      "slug_variants": [
+        "spacing"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": true,
+      "in_atlas": true,
+      "n_sources": 5,
+      "atlas_metadata": {
+        "rule_id": "theme-config.json-settings-spacing",
+        "field_cluster": "design-tokens",
+        "status": "stable",
+        "language": "json",
+        "related": [
+          "block.supports.spacing",
+          "theme-config.json-settings-color",
+          "theme-config.json-settings-typography",
+          "theme-config.json-settings-layout",
+          "theme-config.json-styles-spacing",
+          "theme-config.json-appearanceTools"
+        ]
+      },
+      "schema_def_name": "settingsSpacingProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "spacing"
+      ],
+      "wp_runtime_key": "spacing",
+      "wp_runtime_details": {
+        "key_count": 7,
+        "keys": [
+          "blockGap",
+          "customSpacingSize",
+          "defaultSpacingSizes",
+          "margin",
+          "padding",
+          "spacingScale",
+          "units"
+        ],
+        "units_preset_count": 6
+      }
+    },
+    {
+      "canonical": "typography",
+      "display": "typography",
+      "slug_variants": [
+        "typography"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": true,
+      "in_wp_runtime": true,
+      "in_atlas": true,
+      "n_sources": 5,
+      "atlas_metadata": {
+        "rule_id": "theme-config.json-settings-typography",
+        "field_cluster": "design-tokens",
+        "status": "stable",
+        "language": "json",
+        "related": [
+          "block.supports.typography",
+          "theme-config.json-settings-color",
+          "theme-config.json-appearanceTools",
+          "theme-config.json-styles-typography",
+          "theme-config.json-settings-spacing"
+        ]
+      },
+      "schema_def_name": "settingsTypographyProperties",
+      "schema_property_count": 1,
+      "schema_properties": [
+        "typography"
+      ],
+      "wp_runtime_key": "typography",
+      "wp_runtime_details": {
+        "key_count": 12,
+        "keys": [
+          "customFontSize",
+          "defaultFontSizes",
+          "dropCap",
+          "fontSizes",
+          "fontStyle",
+          "fontWeight",
+          "letterSpacing",
+          "lineHeight",
+          "textAlign",
+          "textDecoration",
+          "textTransform",
+          "writingMode"
+        ],
+        "fontSizes_preset_count": 4
+      }
+    },
+    {
+      "canonical": "userootpaddingawarealignments",
+      "display": "use-root-padding-aware-alignments",
+      "slug_variants": [
+        "use-root-padding-aware-alignments"
+      ],
+      "in_corpus": true,
+      "in_docs": true,
+      "in_schema": false,
+      "in_wp_runtime": true,
+      "in_atlas": false,
+      "n_sources": 3,
+      "wp_runtime_key": "useRootPaddingAwareAlignments",
+      "wp_runtime_details": false
+    }
+  ],
+  "categories_summary": {
+    "total_distinct": 15,
+    "in_all_5_sources": 4,
+    "in_4_sources": 4,
+    "in_3_sources": 5,
+    "in_2_sources": 1,
+    "in_1_source": 1
+  },
+  "schema_definitions_count": 13,
+  "wp_runtime_settings": [
+    "appearanceTools",
+    "useRootPaddingAwareAlignments",
+    "border",
+    "color",
+    "dimensions",
+    "shadow",
+    "spacing",
+    "typography",
+    "blocks"
+  ],
+  "ontology_slots": {
+    "ThemeToken": {
+      "tier": 1,
+      "description": "A named design value registered in theme.json settings — color/font/spacing/shadow preset that becomes a CSS custom property and inserter option.",
+      "instance_count": 0,
+      "atlas_rule_id_pattern": "theme-config.settings.*"
+    },
+    "GlobalSetting": {
+      "tier": 1,
+      "description": "A boolean/scalar opt-in toggle in theme.json settings (e.g., color.custom=false locks down user palette extension).",
+      "tier_note": "Distinct from ThemeToken (which is presets); GlobalSetting is configuration policy."
+    },
+    "Preset": {
+      "tier": 1,
+      "description": "A user-selectable named value within a ThemeToken category (color palette item, font size step, spacing step).",
+      "atlas_rule_id_pattern": "theme-config.settings.color/typography/spacing"
+    },
+    "CustomToken": {
+      "tier": 1,
+      "description": "Theme-author-defined arbitrary CSS variable via settings.custom (escape hatch for non-standard tokens).",
+      "atlas_rule_id_pattern": "theme-config.settings.custom (residual-governance)"
+    },
+    "AppearanceTool": {
+      "tier": 1,
+      "description": "appearanceTools is a meta-toggle that bulk-enables UI controls (border, link color, padding, margin) across blocks. Bridge between BlockSupport and ThemeToken.",
+      "atlas_rule_id_pattern": "theme-config.settings.appearanceTools",
+      "bridge_to_block_supports": true
+    },
+    "ColorPalette": {
+      "tier": 2,
+      "description": "Ordered list of named color Presets exposed in color picker UI.",
+      "parent_token": "ThemeToken.color"
+    },
+    "TypographyScale": {
+      "tier": 2,
+      "description": "Ordered list of named font-size Presets + fluid scaling rules.",
+      "parent_token": "ThemeToken.typography"
+    },
+    "SpacingScale": {
+      "tier": 2,
+      "description": "Ordered list of named spacing Presets (margin/padding/blockGap).",
+      "parent_token": "ThemeToken.spacing"
+    },
+    "ShadowPreset": {
+      "tier": 2,
+      "description": "Named shadow tokens for shadow picker UI.",
+      "parent_token": "ThemeToken.shadow"
+    },
+    "LayoutConstraint": {
+      "tier": 2,
+      "description": "contentSize / wideSize root-level constraints + custom layout rules.",
+      "parent_token": "ThemeToken.layout"
+    },
+    "PresetOrigin": {
+      "tier": 3,
+      "description": "Where a preset comes from — core defaults / theme.json / user style preferences. Critical for cascade order.",
+      "enum_values": [
+        "core",
+        "theme",
+        "user"
+      ]
+    },
+    "InheritanceBoundary": {
+      "tier": 3,
+      "description": "Theme inheritance rules — block-level settings override theme-level, user overrides theme."
+    }
+  },
+  "bridges_block_to_theme": {
+    "BlockSupport.spacing ↔ ThemeToken.spacing": {
+      "block_support": "wp:BlockSupport.spacing",
+      "theme_token": "ThemeToken.spacing",
+      "atlas_block_rule": "block.supports.spacing",
+      "atlas_theme_rule": "theme-config.settings.spacing",
+      "binding": "When a block declares supports.spacing, theme.json spacing tokens become available as UI options for that block."
+    },
+    "BlockSupport.typography ↔ ThemeToken.typography": {
+      "block_support": "wp:BlockSupport.typography",
+      "theme_token": "ThemeToken.typography",
+      "atlas_block_rule": "block.supports.typography",
+      "atlas_theme_rule": "theme-config.settings.typography"
+    },
+    "BlockSupport.color ↔ ThemeToken.color": {
+      "block_support": "wp:BlockSupport.color",
+      "theme_token": "ThemeToken.color",
+      "atlas_block_rule": "block.supports.color",
+      "atlas_theme_rule": "theme-config.settings.color"
+    },
+    "BlockSupport.dimensions ↔ ThemeToken.dimensions": {
+      "block_support": "wp:BlockSupport.dimensions",
+      "theme_token": "ThemeToken.dimensions"
+    },
+    "BlockSupport.shadow ↔ ThemeToken.shadow": {
+      "block_support": "wp:BlockSupport.shadow",
+      "theme_token": "ThemeToken.shadow",
+      "atlas_theme_rule": "theme-config.settings.shadow"
+    },
+    "BlockSupport.layout ↔ ThemeToken.layout": {
+      "block_support": "wp:BlockSupport.layout",
+      "theme_token": "ThemeToken.layout",
+      "atlas_theme_rule": "theme-config.settings.layout"
+    },
+    "BlockSupport.border ↔ ThemeToken.border": {
+      "block_support": "wp:BlockSupport.border",
+      "theme_token": "ThemeToken.border"
+    },
+    "appearanceTools ↔ multiple BlockSupports": {
+      "theme_token": "AppearanceTool",
+      "block_supports": [
+        "border.color",
+        "border.radius",
+        "border.style",
+        "border.width",
+        "color.link",
+        "dimensions.aspectRatio",
+        "dimensions.minHeight",
+        "position.sticky",
+        "spacing.blockGap",
+        "spacing.margin",
+        "spacing.padding",
+        "typography.lineHeight"
+      ],
+      "binding": "appearanceTools=true is a bulk-enable for 12 specific BlockSupport sub-properties."
+    }
+  },
+  "gaps": [
+    {
+      "id": "G4.1",
+      "category": "schema-runtime-divergence",
+      "description": "theme.json schema defines categories not in WP runtime defaults: ['background', 'custom', 'layout', 'lightbox', 'position']; runtime has: ['blocks', 'userootpaddingawarealignments']",
+      "schema_only": [
+        "background",
+        "custom",
+        "layout",
+        "lightbox",
+        "position"
+      ],
+      "runtime_only": [
+        "blocks",
+        "userootpaddingawarealignments"
+      ]
+    },
+    {
+      "id": "G4.2",
+      "category": "atlas-coverage",
+      "description": "Schema settings categories not yet covered by atlas: ['background', 'border', 'custom', 'dimensions', 'lightbox', 'position', 'shadow']",
+      "missing_in_atlas": [
+        "background",
+        "border",
+        "custom",
+        "dimensions",
+        "lightbox",
+        "position",
+        "shadow"
+      ],
+      "extra_in_atlas": [
+        "residualgovernance"
+      ]
+    },
+    {
+      "id": "G4.3",
+      "category": "block-theme-bridge",
+      "description": "appearanceTools is a meta-toggle bridging theme.json settings and block supports. It bulk-enables 12+ block support sub-properties. This is the most important Block↔Theme binding surface in the ontology.",
+      "atlas_anchor": "theme-config.settings.appearanceTools",
+      "impact": "AppearanceTool slot must explicitly enumerate the 12 BlockSupport sub-properties it controls."
+    },
+    {
+      "id": "G4.4",
+      "category": "naming-divergence",
+      "description": "Slug naming differs across sources (corpus kebab-case vs schema/atlas camelCase).",
+      "instances": [
+        {
+          "canonical": "appearancetools",
+          "variants": [
+            "appearance-tools",
+            "appearanceTools"
+          ]
+        }
+      ]
+    }
+  ]
+}

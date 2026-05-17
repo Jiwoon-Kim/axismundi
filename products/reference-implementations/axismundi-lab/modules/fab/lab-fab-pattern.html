@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — FAB Family Full Spec Module (v3.5.5)</title>
+
+  <!-- Core design system stack (mirrors style-guide.html) -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-fab.css" />
+</head>
+<body>
+
+<main class="lab-fab-demo">
+  <header class="lab-fab-section__head">
+    <p class="t-label-large">Axismundi v3.5.5 · Wave 1</p>
+    <h1 class="t-display-small lab-fab-section__title">FAB family full-spec module</h1>
+    <p class="t-body-medium lab-fab-section__supporting">
+      Baseline classes stay authoritative. This lab page catalogs the static
+      FAB and Extended FAB primitives with icon-system-forward specimens,
+      native button semantics, and no ripple/runtime wiring.
+    </p>
+  </header>
+
+  <!-- §1 — Overview / dependency banner -->
+  <section class="lab-fab-section">
+    <div class="lab-fab-banner">
+      <p class="t-body-small">
+        Experimental lab preview — source authority remains
+        <code>components.css §15</code>, <code>components.css §16</code>,
+        and the FAB audit trio. <code>icon-system/</code> is CURRENT
+        unconditional; <code>ripple/</code> remains CANDIDATE and is not wired.
+      </p>
+    </div>
+    <div class="lab-fab-placement-note">
+      <p class="t-body-small lab-fab-caption">
+        Inline catalog specimens only. Production floating/fixed placement is
+        integration-owned by theme templates, patterns, block editor, or plugin code.
+      </p>
+      <p class="t-body-small lab-fab-caption lab-fab-caption--ko">
+        인라인 카탈로그 specimen만 제공한다. 실제 floating/fixed placement는
+        theme template, pattern, block editor, plugin 레벨의 통합 책임이다.
+      </p>
+    </div>
+  </section>
+
+  <!-- §2 — FAB sizes -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§2. FAB sizes</h2>
+      <p class="t-body-small lab-fab-section__supporting">
+        Current baseline sizes are 56 / 80 / 96. This page does not invent a
+        40px FAB rule.
+      </p>
+    </header>
+    <div class="lab-fab-row">
+      <div class="lab-fab-specimen">
+        <button class="ax-fab has-state-layer" type="button" aria-label="Create">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <p class="lab-fab-caption">Default · 56px</p>
+      </div>
+      <div class="lab-fab-specimen">
+        <button class="ax-fab is-medium has-state-layer" type="button" aria-label="Edit">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">edit</span>
+        </button>
+        <p class="lab-fab-caption">Medium · 80px</p>
+      </div>
+      <div class="lab-fab-specimen">
+        <button class="ax-fab is-large has-state-layer" type="button" aria-label="Publish">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">publish</span>
+        </button>
+        <p class="lab-fab-caption">Large · 96px</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §3 — FAB surface variants -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§3. Surface variants</h2>
+      <p class="t-body-small lab-fab-section__supporting">
+        Six baseline color styles. Hover demonstrates the baseline elevation
+        transition from level3 to level4; no alternate elevation variant is created.
+      </p>
+    </header>
+    <div class="lab-fab-grid">
+      <div class="lab-fab-specimen">
+        <button class="ax-fab has-state-layer" type="button" aria-label="Tonal primary">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <p class="lab-fab-caption">Tonal primary</p>
+      </div>
+      <div class="lab-fab-specimen">
+        <button class="ax-fab is-tonal-secondary has-state-layer" type="button" aria-label="Tonal secondary">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <p class="lab-fab-caption">Tonal secondary</p>
+      </div>
+      <div class="lab-fab-specimen">
+        <button class="ax-fab is-tonal-tertiary has-state-layer" type="button" aria-label="Tonal tertiary">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <p class="lab-fab-caption">Tonal tertiary</p>
+      </div>
+      <div class="lab-fab-specimen">
+        <button class="ax-fab is-primary has-state-layer" type="button" aria-label="Primary">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <p class="lab-fab-caption">Primary</p>
+      </div>
+      <div class="lab-fab-specimen">
+        <button class="ax-fab is-secondary has-state-layer" type="button" aria-label="Secondary">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <p class="lab-fab-caption">Secondary</p>
+      </div>
+      <div class="lab-fab-specimen">
+        <button class="ax-fab is-tertiary has-state-layer" type="button" aria-label="Tertiary">
+          <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <p class="lab-fab-caption">Tertiary</p>
+      </div>
+    </div>
+    <p class="t-body-small lab-fab-elevation-note">
+      Hover to inspect the baseline level3 → level4 elevation transition.
+    </p>
+  </section>
+
+  <!-- §4 — Extended FAB static -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§4. Extended FAB static</h2>
+      <p class="t-body-small lab-fab-section__supporting">
+        Static catalog specimen — no runtime action or transition is wired here.
+        Production usage wires behavior at the integrator level (theme JS /
+        block editor / plugin).
+      </p>
+      <p class="t-body-small lab-fab-section__supporting">
+        정적 카탈로그 specimen — 여기에는 런타임 액션이나 전환 동작이 배선되어
+        있지 않다. 실제 사용 시 theme JS / block editor / plugin 레벨에서 동작을
+        배선한다.
+      </p>
+    </header>
+    <div class="lab-fab-row">
+      <div class="lab-fab-specimen lab-fab-specimen--wide">
+        <button class="ax-fab-extended has-state-layer" type="button">
+          <span class="material-symbols-rounded notranslate ax-fab-extended__icon" translate="no" aria-hidden="true" draggable="false">edit</span>
+          <span class="ax-fab-extended__label">Compose</span>
+        </button>
+        <p class="lab-fab-caption">Icon + visible label</p>
+      </div>
+      <div class="lab-fab-specimen lab-fab-specimen--wide">
+        <button class="ax-fab-extended is-primary has-state-layer" type="button">
+          <span class="material-symbols-rounded notranslate ax-fab-extended__icon" translate="no" aria-hidden="true" draggable="false">add</span>
+          <span class="ax-fab-extended__label">새 글 쓰기</span>
+        </button>
+        <p class="lab-fab-caption lab-fab-caption--ko">아이콘 + visible label</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §5 — Disabled native -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§5. Disabled — native</h2>
+      <p class="t-body-small lab-fab-section__supporting">
+        Native <code>disabled</code> blocks activation by platform behavior.
+      </p>
+    </header>
+    <div class="lab-fab-row">
+      <button class="ax-fab has-state-layer" type="button" aria-label="Disabled create" disabled>
+        <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+      </button>
+      <button class="ax-fab-extended has-state-layer" type="button" disabled>
+        <span class="material-symbols-rounded notranslate ax-fab-extended__icon" translate="no" aria-hidden="true" draggable="false">edit</span>
+        <span class="ax-fab-extended__label">Disabled</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- §5a — Disabled aria-disabled plugin-managed -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§5a. Disabled — aria-disabled plugin-managed</h2>
+      <p class="t-body-small lab-fab-section__supporting">
+        <code>aria-disabled</code> only communicates state; integrator code
+        must block activation.
+      </p>
+      <p class="t-body-small lab-fab-section__supporting">
+        <code>aria-disabled</code>는 상태만 전달한다. 실제 activation 차단은
+        integrator 코드가 담당해야 한다.
+      </p>
+    </header>
+    <div class="lab-fab-row">
+      <button class="ax-fab has-state-layer" type="button" aria-label="Unavailable create" aria-disabled="true">
+        <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+      </button>
+      <button class="ax-fab-extended has-state-layer" type="button" aria-disabled="true">
+        <span class="material-symbols-rounded notranslate ax-fab-extended__icon" translate="no" aria-hidden="true" draggable="false">edit</span>
+        <span class="ax-fab-extended__label">Unavailable</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- §6 — State-layer opt-out / ripple boundary -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§6. State-layer / ripple boundary</h2>
+      <p class="t-body-small lab-fab-section__supporting">
+        Static state-layer foundation is CURRENT. Animated ripple remains
+        CANDIDATE; this page intentionally has no ripple data attribute,
+        Material Web ripple element, or lab ripple script wiring.
+      </p>
+    </header>
+    <div class="lab-fab-row">
+      <button class="ax-fab has-state-layer" type="button" aria-label="State layer on">
+        <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">touch_app</span>
+      </button>
+      <button class="ax-fab" type="button" aria-label="Static fallback">
+        <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">touch_app</span>
+      </button>
+    </div>
+    <p class="lab-fab-caption">With <code>has-state-layer</code> / without opt-in class.</p>
+  </section>
+
+  <!-- §7 — Code snippets -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§7. Code snippets</h2>
+    </header>
+    <pre class="lab-fab-code"><code>&lt;button class="ax-fab has-state-layer" type="button" aria-label="Create"&gt;
+  &lt;span class="material-symbols-rounded notranslate ax-icon ax-fab-icon"
+        translate="no" aria-hidden="true" draggable="false"&gt;add&lt;/span&gt;
+&lt;/button&gt;
+
+&lt;button class="ax-fab-extended has-state-layer" type="button"&gt;
+  &lt;span class="material-symbols-rounded notranslate ax-fab-extended__icon"
+        translate="no" aria-hidden="true" draggable="false"&gt;edit&lt;/span&gt;
+  &lt;span class="ax-fab-extended__label"&gt;Compose&lt;/span&gt;
+&lt;/button&gt;
+
+&lt;button class="ax-fab has-state-layer" type="button"
+        aria-label="Unavailable create" aria-disabled="true"&gt;
+  ...
+&lt;/button&gt;</code></pre>
+  </section>
+
+  <!-- §8 — Cross-references -->
+  <section class="lab-fab-section">
+    <header class="lab-fab-section__head">
+      <h2 class="t-title-large lab-fab-section__title">§8. Cross-references</h2>
+    </header>
+    <ul class="t-body-small">
+      <li><a href="docs/FAB-SPEC-AUDIT.md">FAB-SPEC-AUDIT.md</a></li>
+      <li><a href="docs/FAB-MEASUREMENT-AUDIT.md">FAB-MEASUREMENT-AUDIT.md</a></li>
+      <li><a href="docs/FAB-WP-MAPPING.md">FAB-WP-MAPPING.md</a></li>
+      <li><a href="../../../docs/v3.5.5/FAB-PHASE-0-REPORT.md">FAB-PHASE-0-REPORT.md</a></li>
+      <li><a href="../../../docs/v3.5.5/FAB-PHASE-2-PLAN.md">FAB-PHASE-2-PLAN.md</a></li>
+    </ul>
+  </section>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Search Expansion Lab Module (v3.3.4)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-search-expansion.css" />
+
+  <style>
+    /* Local layout — pattern page only. */
+    .lab-layout {
+      max-inline-size: min(100%, 960px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .lab-section {
+      display: grid;
+      gap: var(--space-md);
+    }
+    .lab-section__head {
+      margin: 0;
+    }
+    .lab-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: center;
+    }
+    .lab-prose-box {
+      padding: var(--space-md);
+      border: 2px dashed var(--md-sys-color-error);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: color-mix(in srgb, var(--md-sys-color-error-container) 30%, transparent);
+    }
+    .lab-prose-box .t-label-medium {
+      color: var(--md-sys-color-error);
+      display: block;
+      margin-block-end: var(--space-sm);
+    }
+    .sg-theme {
+      display: inline-flex;
+      gap: var(--space-xs);
+      align-items: center;
+    }
+    .lab-instruction {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+    .lab-instruction code,
+    .lab-instruction kbd {
+      background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 10%, transparent);
+      padding: 2px 6px;
+      border-radius: var(--md-sys-shape-corner-extra-small);
+      font-family: var(--md-sys-typescale-body-medium-font, inherit);
+      font-size: 0.95em;
+    }
+  </style>
+</head>
+<body>
+  <main class="lab-layout">
+    <header class="lab-header">
+      <div class="lab-header__eyebrow t-label-medium">Axismundi · Lab module · v3.3.4</div>
+      <h1 class="t-display-small">Search Expansion Lab Module</h1>
+      <p class="t-body-large" style="max-inline-size: 64ch;">
+        Focus-driven elevation + suggestions popup for
+        <code>.search-bar</code>. Second Beer-CSS-derived module
+        under the <code>../../docs/BEER-CSS-INTAKE.md</code> contract.
+      </p>
+      <p class="t-body-medium" style="max-inline-size: 64ch; color: var(--md-sys-color-on-surface-variant);">
+        See <code>docs/SEARCH-EXPANSION-AUDIT.md</code> for the
+        seven refinements applied during extraction, including the
+        Escape-key policy (clear-then-collapse), the explicit
+        <code>.prose</code> bail-out, and the aria-controls
+        a11y wiring.
+      </p>
+      <nav class="lab-row" aria-label="Related pages">
+        <span class="t-label-medium" style="color: var(--md-sys-color-on-surface-variant);">Related:</span>
+        <a href="../../style-guide.html" style="color: var(--md-sys-color-primary);">Main styleguide</a>
+        <span aria-hidden="true">·</span>
+        <a href="../carousel/lab-carousel-pattern.html" style="color: var(--md-sys-color-primary);">Carousel (v3.3.2)</a>
+        <span aria-hidden="true">·</span>
+        <a href="../ripple/lab-ripple-pattern.html" style="color: var(--md-sys-color-primary);">Ripple (v3.3.3)</a>
+        <span aria-hidden="true">·</span>
+        <a href="../../style-guide-benchmark.html" style="color: var(--md-sys-color-primary);">Benchmark (legacy)</a>
+      </nav>
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false"><span class="chip__label">Light</span></button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false"><span class="chip__label">Dark</span></button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true"><span class="chip__label">Auto</span></button>
+      </div>
+    </header>
+
+    <aside class="lab-banner" role="note">
+      <div class="t-label-large">Lab module — not yet promoted</div>
+      <div class="t-body-medium">
+        Focus the search bar below. It should elevate (level2 shadow + 1px lift) and a suggestions panel appears beneath it. Click a suggestion to populate the input. Press <kbd>Esc</kbd> once with text to clear; press again to collapse.
+      </div>
+    </aside>
+
+    <!-- ========== Allowlisted host ========== -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Allowlisted host — <code>.search-bar</code></h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Standard <code>.search-bar</code> markup from
+        <code>components.css §10</code>. This module adds the
+        expansion behavior; the underlying structure is unchanged.
+      </p>
+
+      <label class="search-bar" style="max-inline-size: 600px;">
+        <span class="search-bar__leading-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        <input class="search-bar__input" name="q" id="lab-search-q" type="search" placeholder="검색어를 입력하세요" />
+        <span class="search-bar__trailing">
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Voice search">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" stroke-width="2"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </span>
+      </label>
+    </section>
+
+    <!-- ========== Keyboard / Escape policy demo ========== -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Keyboard + Escape policy</h2>
+      <div class="lab-instruction t-body-medium">
+        <p><strong>Test these flows on the search bar above:</strong></p>
+        <ul>
+          <li><kbd>Tab</kbd> to focus → bar elevates, suggestions popup appears.</li>
+          <li><kbd>↓</kbd> (ArrowDown) from input → focus moves to first suggestion.</li>
+          <li><kbd>↓</kbd> / <kbd>↑</kbd> on suggestions → navigate the list.</li>
+          <li><kbd>↑</kbd> at first suggestion → focus returns to input.</li>
+          <li><kbd>Home</kbd> / <kbd>End</kbd> on suggestions → jump to first / last.</li>
+          <li><kbd>Enter</kbd> on suggestion → populates input, collapses.</li>
+          <li>Type any text, then <kbd>Esc</kbd> → text clears, panel stays open.</li>
+          <li><kbd>Esc</kbd> again (empty input) → blur + collapse.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== Forbidden scope test — must NOT expand ========== -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Forbidden scope — search bar must <em>not</em> expand</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Intake contract §1 forbids attaching the expansion JS to
+        a <code>.search-bar</code> that has any of
+        <code>.prose</code>, <code>.wp-block-post-content</code>,
+        <code>.entry-content</code>, or <code>[contenteditable]</code>
+        as an ancestor. The two search bars below should behave as
+        <strong>plain HTML5 search inputs</strong>: no elevation
+        change, no suggestions popup, no <code>.is-search-active</code>
+        class.
+      </p>
+
+      <div class="lab-prose-box">
+        <span class="t-label-medium">.prose container (federation territory — no expansion here)</span>
+        <div class="prose">
+          <p>
+            긴 본문 prose 안의 검색 인풋:
+          </p>
+          <label class="search-bar" style="max-inline-size: 480px;">
+            <span class="search-bar__leading-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            <input class="search-bar__input" name="q-prose" id="lab-search-q-prose" type="search" placeholder="prose 안 — 확장 없음" />
+          </label>
+          <p>
+            이 검색바를 포커스해도 elevation 변화가 없어야 하고 suggestions 패널이 나타나지 않아야 합니다 (intake contract §1). 일반 HTML5 검색 입력으로만 작동.
+          </p>
+        </div>
+      </div>
+
+      <div class="lab-prose-box">
+        <span class="t-label-medium">[contenteditable] container (editor territory — no expansion here)</span>
+        <div contenteditable="true" style="padding: var(--space-md); border-radius: var(--md-sys-shape-corner-small); background-color: var(--md-sys-color-surface-container);" aria-label="Editable area">
+          편집 가능 영역 안의 검색바:
+          <label class="search-bar" style="max-inline-size: 480px; display: inline-flex; vertical-align: middle;">
+            <span class="search-bar__leading-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            <input class="search-bar__input" name="q-editor" id="lab-search-q-editor" type="search" placeholder="editor 안 — 확장 없음" />
+          </label>
+          확장 없음.
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Reduced-motion path test ========== -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">Reduced-motion path</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Enable <code>prefers-reduced-motion: reduce</code> at the OS or DevTools level, then focus the allowlisted search bar above. The suggestions panel should appear instantly (no fade / scale animation), and the bar should not animate its translateY lift. Box-shadow elevation change is retained because shadows are depth indication, not motion.
+      </p>
+    </section>
+
+    <!-- ========== JS-disabled fallback ========== -->
+    <section class="lab-section">
+      <h2 class="t-headline-medium lab-section__head">JS-disabled fallback</h2>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        Disable JavaScript in DevTools and reload. The allowlisted search bar should still:
+      </p>
+      <ul class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); padding-inline-start: var(--space-lg);">
+        <li>elevate on focus (via the CSS <code>:focus-within</code> selector, no JS needed)</li>
+        <li>accept input normally</li>
+        <li>submit on Enter if wrapped in a <code>&lt;form&gt;</code></li>
+      </ul>
+      <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+        The suggestions popup will not appear (it is built by JS), but the bar remains usable.
+      </p>
+    </section>
+  </main>
+
+  <script defer src="../../scripts/theme.js"></script>
+  <script defer src="lab-search-expansion.js"></script>
+</body>
+</html>

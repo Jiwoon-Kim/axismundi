@@ -1,0 +1,655 @@
+{
+  "schema_version": "v2.0-pilot-supports-2026-05-12",
+  "generated_at": "2026-05-12",
+  "anchor": "block-editor-handbook/.../supports.md",
+  "sources": {
+    "corpus": "dev_handbook_clean/block-editor-handbook/03-reference-guides/01-block-api-reference/supports.md",
+    "docs": "/home/claude/v2_0_work/GB-23.1.1/docs/reference-guides/block-api/block-supports.md",
+    "schema": "/home/claude/v2_0_work/GB-23.1.1/schemas/json/block.json"
+  },
+  "baseline": {
+    "wordpress": "6.9.4 @ 97b7f62a",
+    "gutenberg": "v23.1.1 @ 12c6c76e"
+  },
+  "agreement": {
+    "in_all_3": 27,
+    "in_2_sources": 1,
+    "in_1_source_only": 1,
+    "corpus_only": [],
+    "docs_only": [],
+    "schema_only": [
+      "customCSS"
+    ]
+  },
+  "ontology_slots": {
+    "BlockSupport": {
+      "description": "A named feature flag a block can declare to opt into editor UI / attribute injection.",
+      "instances": [
+        "align",
+        "alignWide",
+        "allowedBlocks",
+        "anchor",
+        "ariaLabel",
+        "background",
+        "className",
+        "color",
+        "contentRole",
+        "customCSS",
+        "customClassName",
+        "dimensions",
+        "filter",
+        "html",
+        "inserter",
+        "interactivity",
+        "layout",
+        "listView",
+        "lock",
+        "multiple",
+        "position",
+        "renaming",
+        "reusable",
+        "shadow",
+        "spacing",
+        "splitting",
+        "typography",
+        "visibility"
+      ],
+      "instance_count": 28,
+      "evidence_tier": 2
+    },
+    "SupportProperty": {
+      "description": "Sub-property of a BlockSupport (e.g. color.background, dimensions.minHeight).",
+      "instances": [
+        "background.backgroundImage",
+        "background.backgroundSize",
+        "background.gradient",
+        "color.background",
+        "color.gradients",
+        "color.link",
+        "color.text",
+        "color.heading",
+        "color.button",
+        "color.enableContrastChecker",
+        "dimensions.aspectRatio",
+        "dimensions.height",
+        "dimensions.minHeight",
+        "dimensions.minWidth",
+        "dimensions.width",
+        "filter.duotone",
+        "position.sticky",
+        "spacing.margin",
+        "spacing.padding",
+        "typography.fontSize",
+        "typography.lineHeight",
+        "typography.textAlign",
+        "typography.fitText",
+        "typography.textIndent"
+      ],
+      "instance_count": 24
+    },
+    "AttributeInjection": {
+      "description": "Block attribute(s) auto-added when a BlockSupport is declared (e.g. color → backgroundColor + style).",
+      "instances": []
+    },
+    "DefaultValue": {
+      "description": "Schema-declared default for a BlockSupport (false/true/null).",
+      "instances": [
+        {
+          "support": "align",
+          "default": false
+        },
+        {
+          "support": "alignWide",
+          "default": true
+        },
+        {
+          "support": "allowedBlocks",
+          "default": false
+        },
+        {
+          "support": "anchor",
+          "default": false
+        },
+        {
+          "support": "ariaLabel",
+          "default": false
+        },
+        {
+          "support": "className",
+          "default": true
+        },
+        {
+          "support": "contentRole",
+          "default": false
+        },
+        {
+          "support": "customCSS",
+          "default": true
+        },
+        {
+          "support": "customClassName",
+          "default": true
+        },
+        {
+          "support": "html",
+          "default": true
+        },
+        {
+          "support": "inserter",
+          "default": true
+        },
+        {
+          "support": "layout",
+          "default": false
+        },
+        {
+          "support": "listView",
+          "default": false
+        },
+        {
+          "support": "lock",
+          "default": true
+        },
+        {
+          "support": "multiple",
+          "default": true
+        },
+        {
+          "support": "renaming",
+          "default": true
+        },
+        {
+          "support": "reusable",
+          "default": true
+        },
+        {
+          "support": "shadow",
+          "default": false
+        },
+        {
+          "support": "splitting",
+          "default": false
+        },
+        {
+          "support": "visibility",
+          "default": true
+        }
+      ],
+      "instance_count": 20
+    },
+    "StylePath": {
+      "description": "Path within style attribute where user-set values are stored (e.g. style.color.background).",
+      "instances": []
+    },
+    "UIControlExposure": {
+      "description": "Mapping from BlockSupport opt-in to specific editor UI control visibility.",
+      "instances": []
+    },
+    "SchemaConstraint": {
+      "description": "JSON-schema-level constraint on a BlockSupport (type/enum/oneOf).",
+      "instances": []
+    }
+  },
+  "slots": [
+    {
+      "canonical_name": "align",
+      "corpus_name": "align",
+      "docs_name": "align",
+      "schema_name": "align",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": null,
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "alignWide",
+      "corpus_name": "alignWide",
+      "docs_name": "alignWide",
+      "schema_name": "alignWide",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "allowedBlocks",
+      "corpus_name": "allowedBlocks",
+      "docs_name": "allowedBlocks",
+      "schema_name": "allowedBlocks",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "anchor",
+      "corpus_name": "anchor",
+      "docs_name": "anchor",
+      "schema_name": "anchor",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "ariaLabel",
+      "corpus_name": "ariaLabel",
+      "docs_name": "ariaLabel",
+      "schema_name": "ariaLabel",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": null,
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "autoRegister",
+      "corpus_name": "autoRegister",
+      "docs_name": "autoRegister",
+      "schema_name": null,
+      "provenance": [
+        "corpus",
+        "docs"
+      ],
+      "in_n_sources": 2
+    },
+    {
+      "canonical_name": "background",
+      "corpus_name": "background",
+      "docs_name": "background",
+      "schema_name": "background",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "object",
+      "schema_default": null,
+      "schema_subprops": [
+        "backgroundImage",
+        "backgroundSize",
+        "gradient"
+      ]
+    },
+    {
+      "canonical_name": "className",
+      "corpus_name": "className",
+      "docs_name": "className",
+      "schema_name": "className",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "color",
+      "corpus_name": "color",
+      "docs_name": "color",
+      "schema_name": "color",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "object",
+      "schema_default": null,
+      "schema_subprops": [
+        "background",
+        "gradients",
+        "link",
+        "text",
+        "heading",
+        "button",
+        "enableContrastChecker"
+      ]
+    },
+    {
+      "canonical_name": "contentRole",
+      "corpus_name": "contentRole",
+      "docs_name": "contentRole",
+      "schema_name": "contentRole",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "customCSS",
+      "corpus_name": null,
+      "docs_name": null,
+      "schema_name": "customCSS",
+      "provenance": [
+        "schema"
+      ],
+      "in_n_sources": 1,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "customClassName",
+      "corpus_name": "customClassName",
+      "docs_name": "customClassName",
+      "schema_name": "customClassName",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "dimensions",
+      "corpus_name": "dimensions",
+      "docs_name": "dimensions",
+      "schema_name": "dimensions",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "object",
+      "schema_default": null,
+      "schema_subprops": [
+        "aspectRatio",
+        "height",
+        "minHeight",
+        "minWidth",
+        "width"
+      ]
+    },
+    {
+      "canonical_name": "filter",
+      "corpus_name": "filter",
+      "docs_name": "filter",
+      "schema_name": "filter",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "object",
+      "schema_default": null,
+      "schema_subprops": [
+        "duotone"
+      ]
+    },
+    {
+      "canonical_name": "html",
+      "corpus_name": "html",
+      "docs_name": "html",
+      "schema_name": "html",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "inserter",
+      "corpus_name": "inserter",
+      "docs_name": "inserter",
+      "schema_name": "inserter",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "interactivity",
+      "corpus_name": "interactivity",
+      "docs_name": "interactivity",
+      "schema_name": "interactivity",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": null,
+      "schema_default": null,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "layout",
+      "corpus_name": "layout",
+      "docs_name": "layout",
+      "schema_name": "layout",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": null,
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "listView",
+      "corpus_name": "listView",
+      "docs_name": "listView",
+      "schema_name": "listView",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "lock",
+      "corpus_name": "lock",
+      "docs_name": "lock",
+      "schema_name": "lock",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "multiple",
+      "corpus_name": "multiple",
+      "docs_name": "multiple",
+      "schema_name": "multiple",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "position",
+      "corpus_name": "position",
+      "docs_name": "position",
+      "schema_name": "position",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "object",
+      "schema_default": null,
+      "schema_subprops": [
+        "sticky"
+      ]
+    },
+    {
+      "canonical_name": "renaming",
+      "corpus_name": "renaming",
+      "docs_name": "renaming",
+      "schema_name": "renaming",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "reusable",
+      "corpus_name": "reusable",
+      "docs_name": "reusable",
+      "schema_name": "reusable",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "shadow",
+      "corpus_name": "shadow",
+      "docs_name": "shadow",
+      "schema_name": "shadow",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": null,
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "spacing",
+      "corpus_name": "spacing",
+      "docs_name": "spacing",
+      "schema_name": "spacing",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "object",
+      "schema_default": null,
+      "schema_subprops": [
+        "margin",
+        "padding"
+      ]
+    },
+    {
+      "canonical_name": "splitting",
+      "corpus_name": "splitting",
+      "docs_name": "splitting",
+      "schema_name": "splitting",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": false,
+      "schema_subprops": []
+    },
+    {
+      "canonical_name": "typography",
+      "corpus_name": "typography",
+      "docs_name": "typography",
+      "schema_name": "typography",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "object",
+      "schema_default": null,
+      "schema_subprops": [
+        "fontSize",
+        "lineHeight",
+        "textAlign",
+        "fitText",
+        "textIndent"
+      ]
+    },
+    {
+      "canonical_name": "visibility",
+      "corpus_name": "visibility",
+      "docs_name": "visibility",
+      "schema_name": "visibility",
+      "provenance": [
+        "corpus",
+        "docs",
+        "schema"
+      ],
+      "in_n_sources": 3,
+      "schema_type": "boolean",
+      "schema_default": true,
+      "schema_subprops": []
+    }
+  ]
+}

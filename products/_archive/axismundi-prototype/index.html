@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi</title>
+
+  <link rel="stylesheet" href="stylesheets/tokens.css" />
+  <link rel="stylesheet" href="stylesheets/base.css" />
+  <link rel="stylesheet" href="stylesheets/components.css" />
+  <link rel="stylesheet" href="stylesheets/prose.css" />
+  <style>
+    /* =====================================================
+     * index.html — Ultimate fallback template (TT5-style)
+     *
+     * Role in WP template hierarchy:
+     *   - front-page.html (microblog feed) ← ActivityPub plugin 활성 시
+     *     → 비활성 또는 미설치 시 home.html 또는 index.html로 자동 fallback
+     *   - home.html (블로그 인덱스) ← 일반 블로그 site
+     *     → 비활성/없을 시 index.html
+     *   - 기타 모든 template missing 시 → index.html
+     *
+     * Design concept:
+     *   - WordPress Twenty Twenty-Five (TT5) 미니멀 컨셉 차용
+     *   - Single column, max 65ch
+     *   - Serif title (Roboto Serif + Noto Serif KR via --md-ref-typeface-serif)
+     *   - 간소화된 header (nav만, action 없음)
+     *   - 큰 whitespace, 텍스트 위주 list
+     *   - Footer 한 줄
+     *
+     * Why this design?
+     *   - Plugin이 없는 vanilla 환경에서도 site가 *읽기 좋게* 작동해야 함
+     *   - Microblog UI 기능 (FAB, 카드 그리드 등)이 없는 데서 *깨진 느낌* 안 들게
+     *   - 본질적인 콘텐츠(글 list + 본문)만 보이게
+     * ===================================================== */
+
+    /* ── Minimal header — logo + nav, 액션 없음 ── */
+    .ax-min-header {
+      max-inline-size: 720px;
+      margin-inline: auto;
+      padding: var(--space-xl) var(--space-lg) var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .ax-min-header__brand {
+      margin: 0; /* h1 default reset — flex layout uses gap */
+      font-family: var(--md-ref-typeface-serif);
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.1;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .ax-min-header__brand:hover {
+      color: var(--md-sys-color-primary);
+    }
+    .ax-min-header__tagline {
+      font-family: var(--md-ref-typeface-serif);
+      font-style: italic;
+      color: var(--md-sys-color-on-surface-variant);
+      text-align: center;
+      max-inline-size: 48ch;
+    }
+    .ax-min-header__nav {
+      display: flex;
+      gap: var(--space-lg);
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-block-start: var(--space-sm);
+    }
+    .ax-min-header__nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      font-family: var(--md-sys-typescale-label-large-font);
+      font-size:   var(--md-sys-typescale-label-large-size);
+      letter-spacing: 0.04em;
+    }
+    .ax-min-header__nav a:hover {
+      color: var(--md-sys-color-primary);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+    .ax-min-header__nav a[aria-current="page"] {
+      color: var(--md-sys-color-primary);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    /* ── Main content — single column, 65ch ── */
+    .ax-min-main {
+      max-inline-size: 65ch;
+      margin-inline: auto;
+      padding: var(--space-xl) var(--space-lg) var(--space-xl);
+    }
+
+    /* Section title — serif italic, 큰 whitespace */
+    .ax-min-section-title {
+      font-family: var(--md-ref-typeface-serif);
+      font-style: italic;
+      color: var(--md-sys-color-on-surface-variant);
+      text-align: center;
+      margin-block: 0 var(--space-xl);
+      font-size: var(--md-sys-typescale-title-medium-size);
+    }
+
+    /* ── Recent posts list — text-only, large vertical rhythm ── */
+    .ax-min-posts {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xl);
+    }
+    .ax-min-post-meta {
+      color: var(--md-sys-color-on-surface-variant);
+      font-family: var(--md-sys-typescale-label-medium-font);
+      font-size:   var(--md-sys-typescale-label-medium-size);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-block-end: var(--space-sm);
+    }
+    .ax-min-post-title {
+      margin: 0 0 var(--space-sm);
+      font-family: var(--md-ref-typeface-serif);
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      line-height: 1.25;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface);
+      letter-spacing: -0.01em;
+    }
+    .ax-min-post-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .ax-min-post-title a:hover {
+      color: var(--md-sys-color-primary);
+    }
+    .ax-min-post-excerpt {
+      color: var(--md-sys-color-on-surface);
+      margin-block-end: var(--space-md);
+      max-inline-size: 60ch;
+    }
+    .ax-min-post-link {
+      color: var(--md-sys-color-primary);
+      text-decoration: none;
+      font-family: var(--md-sys-typescale-label-large-font);
+      font-size:   var(--md-sys-typescale-label-large-size);
+    }
+    .ax-min-post-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ── Pagination — minimal text links ── */
+    .ax-min-pagination {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-md);
+      margin-block-start: var(--space-xl);
+      padding-block-start: var(--space-lg);
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .ax-min-pagination a,
+    .ax-min-pagination span {
+      color: var(--md-sys-color-on-surface-variant);
+      text-decoration: none;
+      font-family: var(--md-ref-typeface-serif);
+      font-style: italic;
+    }
+    .ax-min-pagination a:hover {
+      color: var(--md-sys-color-primary);
+    }
+    .ax-min-pagination [aria-disabled="true"] {
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    /* ── Minimal footer — one line ── */
+    .ax-min-footer {
+      max-inline-size: 720px;
+      margin-inline: auto;
+      padding: var(--space-xl) var(--space-lg);
+      text-align: center;
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-min-footer p {
+      margin: 0;
+      font-family: var(--md-ref-typeface-serif);
+      font-style: italic;
+    }
+    .ax-min-footer a {
+      color: var(--md-sys-color-on-surface-variant);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .ax-min-footer a:hover {
+      color: var(--md-sys-color-primary);
+    }
+
+    /* Reduce visual loudness in dark scheme — TT5 컨셉 */
+    @media (prefers-color-scheme: dark) {
+      .ax-min-header__brand,
+      .ax-min-post-title {
+        font-weight: 400;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WCAG 2.4.1 Bypass Blocks — first focusable element -->
+  <a href="#main" class="skip-link">메인 콘텐츠로 건너뛰기</a>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MINIMAL HEADER — logo + tagline + nav. No action icons.
+       ═══════════════════════════════════════════════════════════════ -->
+  <header class="ax-min-header">
+    <h1 class="ax-min-header__brand">
+      <a href="/" style="color: inherit; text-decoration: none;">Axismundi</a>
+    </h1>
+    <p class="ax-min-header__tagline">
+      디자인 시스템과 분산 웹에 관한 글을 모아둡니다
+    </p>
+    <nav class="ax-min-header__nav" aria-label="Main navigation">
+      <a href="/" aria-current="page">Home</a>
+      <a href="/blog">Blog</a>
+      <a href="/about">About</a>
+      <a href="/archive">Archive</a>
+    </nav>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MAIN — recent posts list, text-only, large vertical rhythm
+       ═══════════════════════════════════════════════════════════════ -->
+  <main class="ax-min-main" id="main">
+
+    <h2 class="ax-min-section-title">— Recent Notes —</h2>
+
+    <ol class="ax-min-posts">
+
+      <li>
+        <article>
+          <p class="ax-min-post-meta">
+            <time datetime="2026-05-08">2026년 5월 8일</time>
+            · 디자인 시스템 · 12분 읽기
+          </p>
+          <h3 class="ax-min-post-title">
+            <a href="/blog/material-3-tokens">
+              Material 3 토큰 시스템 처음부터 빌드하기
+            </a>
+          </h3>
+          <p class="ax-min-post-excerpt">
+            ref → sys → comp 3-tier 토큰 구조로 디자인 시스템을 빌드한 경험. light/dark scheme이 자동으로 sync되는 방법, color-mix()로 state layer를 토큰만으로 처리하는 패턴까지.
+          </p>
+          <a href="/blog/material-3-tokens" class="ax-min-post-link">
+            Read more →
+          </a>
+        </article>
+      </li>
+
+      <li>
+        <article>
+          <p class="ax-min-post-meta">
+            <time datetime="2026-05-05">2026년 5월 5일</time>
+            · WordPress · 18분 읽기
+          </p>
+          <h3 class="ax-min-post-title">
+            <a href="/blog/wp-block-theme-anatomy">
+              WordPress 블록 테마 해부 — templates, parts, theme.json
+            </a>
+          </h3>
+          <p class="ax-min-post-excerpt">
+            클래식 테마와 블록 테마의 차이, full-site editing 진입점, theme.json이 cover하는 영역 vs CSS가 cover하는 영역. 직접 디자인 시스템을 블록 테마로 옮기면서 마주친 결정들.
+          </p>
+          <a href="/blog/wp-block-theme-anatomy" class="ax-min-post-link">
+            Read more →
+          </a>
+        </article>
+      </li>
+
+      <li>
+        <article>
+          <p class="ax-min-post-meta">
+            <time datetime="2026-05-01">2026년 5월 1일</time>
+            · ActivityPub · 24분 읽기
+          </p>
+          <h3 class="ax-min-post-title">
+            <a href="/blog/activitypub-microblog">
+              ActivityPub로 마이크로블로그 만들기 — S2S부터
+            </a>
+          </h3>
+          <p class="ax-min-post-excerpt">
+            Mastodon API 호환 layer 위에서 ActivityPub server-to-server 구현하기. signed HTTP requests, instance discovery, FEPs 중 어떤 것이 immediate value인지.
+          </p>
+          <a href="/blog/activitypub-microblog" class="ax-min-post-link">
+            Read more →
+          </a>
+        </article>
+      </li>
+
+      <li>
+        <article>
+          <p class="ax-min-post-meta">
+            <time datetime="2026-04-25">2026년 4월 25일</time>
+            · CSS · 8분 읽기
+          </p>
+          <h3 class="ax-min-post-title">
+            <a href="/blog/css-logical-properties">
+              CSS Logical Properties로 RTL 사이트 무료로 만들기
+            </a>
+          </h3>
+          <p class="ax-min-post-excerpt">
+            margin-left → margin-inline-start, width → inline-size로 바꾸는 작은 습관 변경 하나로 RTL 지원이 자동으로 따라옴. 브라우저 지원, gotcha, 마이그레이션 전략.
+          </p>
+          <a href="/blog/css-logical-properties" class="ax-min-post-link">
+            Read more →
+          </a>
+        </article>
+      </li>
+
+      <li>
+        <article>
+          <p class="ax-min-post-meta">
+            <time datetime="2026-04-20">2026년 4월 20일</time>
+            · A11y · 15분 읽기
+          </p>
+          <h3 class="ax-min-post-title">
+            <a href="/blog/a11y-radio-vs-button">
+              버튼 그룹 vs 탭 vs 라디오 — 뭐가 정답인가?
+            </a>
+          </h3>
+          <p class="ax-min-post-excerpt">
+            "버튼처럼 생긴 single-select"를 만들 때 radio + label, button + aria-pressed, role="tablist" 중 어느 패턴을 써야 하는지. ARIA spec 정확히 읽기.
+          </p>
+          <a href="/blog/a11y-radio-vs-button" class="ax-min-post-link">
+            Read more →
+          </a>
+        </article>
+      </li>
+
+    </ol>
+
+    <!-- Pagination — minimal text -->
+    <nav class="ax-min-pagination" aria-label="페이지 이동">
+      <span class="t-body-medium" aria-disabled="true">← Newer</span>
+      <a href="/page/2" class="t-body-medium">Older →</a>
+    </nav>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MINIMAL FOOTER — single line credit
+       ═══════════════════════════════════════════════════════════════ -->
+  <footer class="ax-min-footer">
+    <p class="t-body-small">
+      © 2026 본인 실명 ·
+      <a href="https://designbusan.ai.kr" rel="author">designbusan.ai.kr</a>
+      · Powered by <a href="https://wordpress.org">WordPress</a>
+      · <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="license">GPL-3.0-or-later</a>
+    </p>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,948 @@
+{
+  "schema_version": "v2.0-pilot-registration-2026-05-12",
+  "generated_at": "2026-05-12",
+  "anchor": "block-editor-handbook/.../registration.md",
+  "sources": {
+    "corpus": "dev_handbook_clean/block-editor-handbook/03-reference-guides/01-block-api-reference/registration.md",
+    "docs": "/home/claude/v2_0_work/GB-23.1.1/docs/reference-guides/block-api/block-registration.md",
+    "schema": "/home/claude/v2_0_work/GB-23.1.1/schemas/json/block.json",
+    "instances": "/home/claude/v2_0_work/GB-23.1.1/packages/block-library/src/*/block.json"
+  },
+  "baseline": {
+    "wordpress": "6.9.4 @ 97b7f62a",
+    "gutenberg": "v23.1.1 @ 12c6c76e"
+  },
+  "h2_alignment": {
+    "corpus": [
+      "registerBlockType",
+      "Block collections",
+      "registerBlockCollection"
+    ],
+    "docs": [
+      "registerBlockType",
+      "Block collections",
+      "registerBlockCollection"
+    ],
+    "match": true
+  },
+  "schema_summary": {
+    "total_keys": 31,
+    "required": [
+      "apiVersion",
+      "name",
+      "title"
+    ],
+    "all_keys": [
+      "$schema",
+      "__experimental",
+      "allowedBlocks",
+      "ancestor",
+      "apiVersion",
+      "attributes",
+      "blockHooks",
+      "category",
+      "description",
+      "editorScript",
+      "editorStyle",
+      "example",
+      "icon",
+      "keywords",
+      "name",
+      "parent",
+      "providesContext",
+      "render",
+      "script",
+      "selectors",
+      "style",
+      "styles",
+      "supports",
+      "textdomain",
+      "title",
+      "usesContext",
+      "variations",
+      "version",
+      "viewScript",
+      "viewScriptModule",
+      "viewStyle"
+    ],
+    "category_enum": null
+  },
+  "instances": {
+    "total_blocks": 121,
+    "key_usage": {
+      "$schema": 121,
+      "apiVersion": 121,
+      "name": 121,
+      "title": 121,
+      "category": 121,
+      "description": 121,
+      "textdomain": 121,
+      "supports": 119,
+      "attributes": 104,
+      "style": 85,
+      "usesContext": 63,
+      "editorStyle": 62,
+      "keywords": 46,
+      "parent": 25,
+      "allowedBlocks": 20,
+      "example": 18,
+      "selectors": 15,
+      "ancestor": 15,
+      "providesContext": 14,
+      "__experimental": 14,
+      "styles": 8,
+      "editorScript": 5,
+      "icon": 3,
+      "viewScriptModule": 2
+    },
+    "name_namespaces": {
+      "core": 121
+    },
+    "name_collisions": {},
+    "category_usage": {
+      "theme": 51,
+      "design": 25,
+      "widgets": 18,
+      "text": 15,
+      "media": 10,
+      "reusable": 1,
+      "embed": 1
+    },
+    "api_version_usage": {
+      "3": 121
+    },
+    "parent_blocks": 25,
+    "parent_examples": [
+      {
+        "block": "core/accordion-heading",
+        "parent": [
+          "core/accordion-item"
+        ]
+      },
+      {
+        "block": "core/accordion-item",
+        "parent": [
+          "core/accordion"
+        ]
+      },
+      {
+        "block": "core/accordion-panel",
+        "parent": [
+          "core/accordion-item"
+        ]
+      },
+      {
+        "block": "core/button",
+        "parent": [
+          "core/buttons"
+        ]
+      },
+      {
+        "block": "core/column",
+        "parent": [
+          "core/columns"
+        ]
+      }
+    ],
+    "ancestor_blocks": 15,
+    "ancestor_examples": [
+      {
+        "block": "core/comment-author-avatar",
+        "ancestor": [
+          "core/comment-template"
+        ]
+      },
+      {
+        "block": "core/comment-author-name",
+        "ancestor": [
+          "core/comment-template"
+        ]
+      },
+      {
+        "block": "core/comment-content",
+        "ancestor": [
+          "core/comment-template"
+        ]
+      },
+      {
+        "block": "core/comment-date",
+        "ancestor": [
+          "core/comment-template"
+        ]
+      },
+      {
+        "block": "core/comment-edit-link",
+        "ancestor": [
+          "core/comment-template"
+        ]
+      }
+    ],
+    "total_variations": 0,
+    "variation_blocks_top10": [],
+    "styles_used": 8,
+    "example_used": 18,
+    "keywords_total_unique": 85,
+    "keywords_top20": {
+      "form": 4,
+      "menu": 4,
+      "navigation": 4,
+      "music": 3,
+      "sound": 3,
+      "link": 2,
+      "posts": 2,
+      "categories": 2,
+      "summary": 2,
+      "container": 2,
+      "wrapper": 2,
+      "row": 2,
+      "section": 2,
+      "links": 2,
+      "list": 2,
+      "podcast": 1,
+      "recording": 1,
+      "reusable": 1,
+      "archive": 1,
+      "toggle": 1
+    },
+    "blockHooks_used": 0,
+    "allowedBlocks_used": 20,
+    "providesContext_used": 14,
+    "usesContext_used": 63,
+    "selectors_used": 15,
+    "__experimental_used": 14,
+    "icon_types": {
+      "str": 3
+    }
+  },
+  "keys_4way": {
+    "$schema": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 121,
+      "required": false,
+      "n_sources": 2
+    },
+    "__experimental": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 14,
+      "required": false,
+      "n_sources": 2
+    },
+    "allowedBlocks": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 1,
+      "docs_mentions": 1,
+      "instance_usage": 20,
+      "required": false,
+      "n_sources": 4
+    },
+    "ancestor": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 2,
+      "docs_mentions": 2,
+      "instance_usage": 15,
+      "required": false,
+      "n_sources": 4
+    },
+    "apiVersion": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 121,
+      "required": true,
+      "n_sources": 2
+    },
+    "attributes": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 104,
+      "required": false,
+      "n_sources": 2
+    },
+    "blockHooks": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": false,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 0,
+      "required": false,
+      "n_sources": 1
+    },
+    "category": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 121,
+      "required": false,
+      "n_sources": 2
+    },
+    "description": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 121,
+      "required": false,
+      "n_sources": 2
+    },
+    "editorScript": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 5,
+      "required": false,
+      "n_sources": 2
+    },
+    "editorStyle": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 62,
+      "required": false,
+      "n_sources": 2
+    },
+    "example": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 1,
+      "docs_mentions": 1,
+      "instance_usage": 18,
+      "required": false,
+      "n_sources": 4
+    },
+    "icon": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 1,
+      "docs_mentions": 1,
+      "instance_usage": 3,
+      "required": false,
+      "n_sources": 4
+    },
+    "keywords": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 46,
+      "required": false,
+      "n_sources": 2
+    },
+    "name": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 1,
+      "docs_mentions": 1,
+      "instance_usage": 121,
+      "required": true,
+      "n_sources": 4
+    },
+    "parent": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 3,
+      "docs_mentions": 3,
+      "instance_usage": 25,
+      "required": false,
+      "n_sources": 4
+    },
+    "providesContext": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 14,
+      "required": false,
+      "n_sources": 2
+    },
+    "render": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": false,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 0,
+      "required": false,
+      "n_sources": 1
+    },
+    "script": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": false,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 0,
+      "required": false,
+      "n_sources": 1
+    },
+    "selectors": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 15,
+      "required": false,
+      "n_sources": 2
+    },
+    "style": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 85,
+      "required": false,
+      "n_sources": 2
+    },
+    "styles": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 8,
+      "required": false,
+      "n_sources": 2
+    },
+    "supports": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 1,
+      "docs_mentions": 1,
+      "instance_usage": 119,
+      "required": false,
+      "n_sources": 4
+    },
+    "textdomain": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 121,
+      "required": false,
+      "n_sources": 2
+    },
+    "title": {
+      "in_schema": true,
+      "in_corpus": true,
+      "in_docs": true,
+      "in_instances": true,
+      "corpus_mentions": 1,
+      "docs_mentions": 1,
+      "instance_usage": 121,
+      "required": true,
+      "n_sources": 4
+    },
+    "usesContext": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 63,
+      "required": false,
+      "n_sources": 2
+    },
+    "variations": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": false,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 0,
+      "required": false,
+      "n_sources": 1
+    },
+    "version": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": false,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 0,
+      "required": false,
+      "n_sources": 1
+    },
+    "viewScript": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": false,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 0,
+      "required": false,
+      "n_sources": 1
+    },
+    "viewScriptModule": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": true,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 2,
+      "required": false,
+      "n_sources": 2
+    },
+    "viewStyle": {
+      "in_schema": true,
+      "in_corpus": false,
+      "in_docs": false,
+      "in_instances": false,
+      "corpus_mentions": 0,
+      "docs_mentions": 0,
+      "instance_usage": 0,
+      "required": false,
+      "n_sources": 1
+    }
+  },
+  "ontology_groups": {
+    "BlockType.Identity": {
+      "description": "Identity aspect of BlockType registration",
+      "keys": [
+        "name",
+        "title",
+        "description",
+        "icon",
+        "apiVersion",
+        "version",
+        "textdomain",
+        "$schema",
+        "__experimental"
+      ],
+      "instance_usage": {
+        "name": 121,
+        "title": 121,
+        "description": 121,
+        "icon": 3,
+        "apiVersion": 121,
+        "version": 0,
+        "textdomain": 121,
+        "$schema": 121,
+        "__experimental": 14
+      }
+    },
+    "BlockType.Taxonomy": {
+      "description": "Taxonomy aspect of BlockType registration",
+      "keys": [
+        "category",
+        "keywords"
+      ],
+      "instance_usage": {
+        "category": 121,
+        "keywords": 46
+      }
+    },
+    "BlockType.Containment": {
+      "description": "Containment aspect of BlockType registration",
+      "keys": [
+        "parent",
+        "ancestor",
+        "allowedBlocks"
+      ],
+      "instance_usage": {
+        "parent": 25,
+        "ancestor": 15,
+        "allowedBlocks": 20
+      }
+    },
+    "BlockType.Context": {
+      "description": "Context aspect of BlockType registration",
+      "keys": [
+        "providesContext",
+        "usesContext"
+      ],
+      "instance_usage": {
+        "providesContext": 14,
+        "usesContext": 63
+      }
+    },
+    "BlockType.DataModel": {
+      "description": "DataModel aspect of BlockType registration",
+      "keys": [
+        "attributes",
+        "supports",
+        "selectors"
+      ],
+      "instance_usage": {
+        "attributes": 104,
+        "supports": 119,
+        "selectors": 15
+      }
+    },
+    "BlockType.Composability": {
+      "description": "Composability aspect of BlockType registration",
+      "keys": [
+        "blockHooks",
+        "variations",
+        "styles",
+        "example"
+      ],
+      "instance_usage": {
+        "blockHooks": 0,
+        "variations": 0,
+        "styles": 8,
+        "example": 18
+      }
+    },
+    "BlockType.Runtime": {
+      "description": "Runtime aspect of BlockType registration",
+      "keys": [
+        "render",
+        "editorScript",
+        "editorStyle",
+        "script",
+        "style",
+        "viewScript",
+        "viewScriptModule",
+        "viewStyle"
+      ],
+      "instance_usage": {
+        "render": 0,
+        "editorScript": 5,
+        "editorStyle": 62,
+        "script": 0,
+        "style": 85,
+        "viewScript": 0,
+        "viewScriptModule": 2,
+        "viewStyle": 0
+      }
+    }
+  },
+  "tier1_slots": {
+    "BlockType": {
+      "tier": 1,
+      "description": "Root: a registered block type; identified by global `name` (namespace/slug).",
+      "required_keys": [
+        "apiVersion",
+        "name",
+        "title"
+      ],
+      "total_top_level_keys": 31,
+      "instance_population": 121
+    },
+    "BlockName": {
+      "tier": 1,
+      "description": "Globally unique identifier; pattern `namespace/slug`.",
+      "namespaces_in_instances": {
+        "core": 121
+      },
+      "name_collisions": {}
+    },
+    "Category": {
+      "tier": 1,
+      "description": "Top-level grouping for inserter UI.",
+      "schema_enum": null,
+      "instance_usage": {
+        "theme": 51,
+        "design": 25,
+        "widgets": 18,
+        "text": 15,
+        "media": 10,
+        "reusable": 1,
+        "embed": 1
+      }
+    },
+    "ParentConstraint": {
+      "tier": 1,
+      "description": "Direct-containment constraint: block must be a direct child of one of listed parent types.",
+      "instance_count": 25,
+      "examples": [
+        {
+          "block": "core/accordion-heading",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/accordion-item",
+          "parent": [
+            "core/accordion"
+          ]
+        },
+        {
+          "block": "core/accordion-panel",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/button",
+          "parent": [
+            "core/buttons"
+          ]
+        },
+        {
+          "block": "core/column",
+          "parent": [
+            "core/columns"
+          ]
+        }
+      ]
+    },
+    "AncestorConstraint": {
+      "tier": 1,
+      "description": "Recursive-containment constraint: block must be nested anywhere within one of listed ancestor types.",
+      "instance_count": 15,
+      "examples": [
+        {
+          "block": "core/comment-author-avatar",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-author-name",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-content",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-date",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-edit-link",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        }
+      ]
+    },
+    "Keyword": {
+      "tier": 1,
+      "description": "Search-discovery aliases for the inserter.",
+      "unique_keywords": 85,
+      "top20": {
+        "form": 4,
+        "menu": 4,
+        "navigation": 4,
+        "music": 3,
+        "sound": 3,
+        "link": 2,
+        "posts": 2,
+        "categories": 2,
+        "summary": 2,
+        "container": 2,
+        "wrapper": 2,
+        "row": 2,
+        "section": 2,
+        "links": 2,
+        "list": 2,
+        "podcast": 1,
+        "recording": 1,
+        "reusable": 1,
+        "archive": 1,
+        "toggle": 1
+      }
+    },
+    "StyleVariation": {
+      "tier": 1,
+      "description": "Named visual variant registered via `styles[]`; user-selectable in editor.",
+      "instance_count": 8
+    },
+    "Variation": {
+      "tier": 1,
+      "description": "Pre-configured block instance variation with default attribute presets.",
+      "instance_blocks_using_variations": 0,
+      "total_variations_across_corpus": 0,
+      "top10": []
+    },
+    "Example": {
+      "tier": 1,
+      "description": "Static preview definition rendered in the inserter and inspector preview surfaces.",
+      "instance_count": 18
+    }
+  },
+  "tier2_slots": {
+    "Discoverability": {
+      "tier": 2,
+      "description": "Derived: which blocks appear in the inserter (function of category, keywords, parent/ancestor, allowedBlocks).",
+      "evidence_inputs": [
+        "Category",
+        "Keyword",
+        "ParentConstraint",
+        "AncestorConstraint",
+        "allowedBlocks"
+      ]
+    },
+    "InserterSurface": {
+      "tier": 2,
+      "description": "Where a block can be inserted: derived from parent + ancestor + allowedBlocks (of would-be host).",
+      "evidence_inputs": [
+        "parent",
+        "ancestor",
+        "allowedBlocks"
+      ]
+    },
+    "ComposableConstraint": {
+      "tier": 2,
+      "description": "Full composability rule set for a block (parent + ancestor + allowedBlocks + supports)."
+    },
+    "PatternAffinity": {
+      "tier": 2,
+      "description": "Block's relationship to pattern system (blockHooks targets).",
+      "instance_count": 0
+    },
+    "ContextProvider": {
+      "tier": 2,
+      "description": "Block exposes context downward.",
+      "instance_count": 14
+    },
+    "ContextConsumer": {
+      "tier": 2,
+      "description": "Block reads context from ancestor.",
+      "instance_count": 63
+    }
+  },
+  "gaps": [
+    {
+      "id": "G3.3",
+      "category": "containment-model",
+      "description": "parent (direct) used by 25 blocks; ancestor (recursive) used by 15 blocks. Asymmetric usage suggests parent is well-understood, ancestor is sparsely adopted.",
+      "parent_examples": [
+        {
+          "block": "core/accordion-heading",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/accordion-item",
+          "parent": [
+            "core/accordion"
+          ]
+        },
+        {
+          "block": "core/accordion-panel",
+          "parent": [
+            "core/accordion-item"
+          ]
+        },
+        {
+          "block": "core/button",
+          "parent": [
+            "core/buttons"
+          ]
+        },
+        {
+          "block": "core/column",
+          "parent": [
+            "core/columns"
+          ]
+        }
+      ],
+      "ancestor_examples": [
+        {
+          "block": "core/comment-author-avatar",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-author-name",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-content",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-date",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        },
+        {
+          "block": "core/comment-edit-link",
+          "ancestor": [
+            "core/comment-template"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G3.5",
+      "category": "schema-instances",
+      "description": "`example` defined in schema as preview source-of-truth, but only 18/121 (15%) of core blocks provide one."
+    },
+    {
+      "id": "G3.7",
+      "category": "lifecycle",
+      "description": "14 blocks marked __experimental. These should be flagged in ontology with availability=experimental."
+    }
+  ]
+}

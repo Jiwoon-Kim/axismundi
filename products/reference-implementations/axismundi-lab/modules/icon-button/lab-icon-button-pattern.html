@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Icon button Full Spec Module (v3.5.2)</title>
+
+  <!-- Core design system stack (mirrors style-guide.html) -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-icon-button.css" />
+</head>
+<body>
+
+<main class="lab-icon-button-demo">
+  <header class="lab-icon-button-section__head">
+    <p class="t-label-large">Axismundi v3.5.2 · Wave 1</p>
+    <h1 class="t-display-small lab-icon-button-section__title">Icon button full-spec module</h1>
+    <p class="t-body-medium lab-icon-button-section__supporting">
+      Baseline classes stay authoritative. This lab page catalogs the Icon
+      button contract for variants, selected states, accessible names, and
+      disabled handling without adding runtime JavaScript.
+    </p>
+  </header>
+
+  <div class="lab-icon-button-banner">
+    <p class="t-body-small">
+      Experimental lab preview — source authority remains
+      <code>components.css §3</code> plus <code>icons.css §1/§5</code>.
+      This page does not modify the public style guide.
+    </p>
+  </div>
+
+  <!-- §2 — Variants -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§2. Variants</h2>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        Four baseline variants, each rendered as a native button with an
+        accessible name and an aria-hidden Material Symbols glyph.
+      </p>
+    </header>
+    <div class="lab-icon-button-row">
+      <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Add">
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span>
+      </button>
+      <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="Favorite">
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+      </button>
+      <button class="ax-icon-button is-outlined has-state-layer" type="button" aria-label="Share">
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+      </button>
+      <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="More">
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">more_vert</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- §3 — Selected / unselected toggle states -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§3. Selected / unselected states</h2>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        Static catalog specimens — <code>aria-pressed</code> values are fixed;
+        no JS toggle handler. Production usage wires actual toggle behavior
+        at the integrator level (theme JS / block editor / plugin).
+      </p>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        정적 카탈로그 specimen — <code>aria-pressed</code> 값 고정, JS toggle 없음.
+        실제 사용 시 통합 레벨(theme JS / block editor / plugin)에서 toggle handler 배선.
+      </p>
+    </header>
+    <div class="lab-icon-button-grid">
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Bookmark" aria-pressed="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">bookmark</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Filled · false</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Bookmark selected" aria-pressed="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">bookmark</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Filled · true</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="Star" aria-pressed="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">star</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Tonal · false</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="Star selected" aria-pressed="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">star</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Tonal · true</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-outlined has-state-layer" type="button" aria-label="Like" aria-pressed="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Outlined · false</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-outlined has-state-layer" type="button" aria-label="Like selected" aria-pressed="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Outlined · true</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Pin" aria-pressed="false">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">push_pin</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Standard · false</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Pin selected" aria-pressed="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">push_pin</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Standard · true</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §4 — Accessible name contract -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§4. Accessible name contract</h2>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        Icon-only controls require a programmatic name. The visible glyph is
+        decorative and remains <code>aria-hidden="true"</code>.
+      </p>
+    </header>
+    <div class="lab-icon-button-row">
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Search">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Named by aria-label</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <span id="lab-icon-button-upload-label" class="t-body-small">Upload</span>
+        <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-labelledby="lab-icon-button-upload-label">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">upload</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Named by aria-labelledby</p>
+      </div>
+    </div>
+    <details class="lab-icon-button-snippet">
+      <summary>Anti-pattern snippet — missing accessible name (not rendered)</summary>
+<pre>&lt;!-- Do not render this as a live control. The glyph is aria-hidden
+     and there is no aria-label / aria-labelledby. --&gt;
+&lt;button class="ax-icon-button is-standard has-state-layer" type="button"&gt;
+  &lt;span class="material-symbols-rounded" aria-hidden="true"&gt;search&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+  </section>
+
+  <!-- §5 — Native disabled -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§5. Disabled — native attribute</h2>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        Native disabled blocks activation and applies the baseline disabled
+        styling for every variant.
+      </p>
+    </header>
+    <div class="lab-icon-button-row">
+      <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Add" disabled>
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span>
+      </button>
+      <button class="ax-icon-button is-tonal has-state-layer" type="button" aria-label="Favorite" disabled>
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">favorite</span>
+      </button>
+      <button class="ax-icon-button is-outlined has-state-layer" type="button" aria-label="Share" disabled>
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">share</span>
+      </button>
+      <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="More" disabled>
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">more_vert</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- §5a — aria-disabled plugin-managed -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§5a. Disabled — aria-disabled (plugin-managed)</h2>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        <code>aria-disabled="true"</code> styles and announces state, but does
+        not block activation by itself. Use only when app/plugin code also
+        prevents activation.
+      </p>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        <code>aria-disabled="true"</code>는 상태를 표시하고 전달하지만, 단독으로
+        activation을 차단하지 않는다. app/plugin 코드가 activation을 함께 막을 때만 사용.
+      </p>
+    </header>
+    <div class="lab-icon-button-row">
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Sync paused" aria-disabled="true">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">sync</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">Plugin-managed disabled</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §6 — has-state-layer opt-out -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§6. <code>has-state-layer</code> opt-out</h2>
+      <p class="t-body-small lab-icon-button-section__supporting">
+        The baseline supports an explicit opt-out path. The specimen without
+        <code>has-state-layer</code> is expected to lack hover/focus opacity overlay.
+      </p>
+    </header>
+    <div class="lab-icon-button-row">
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Settings with state layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">settings</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">With state-layer</p>
+        <p class="lab-icon-button-specimen__caption lab-icon-button-specimen__caption--ko">state-layer 적용</p>
+      </div>
+      <div class="lab-icon-button-specimen">
+        <button class="ax-icon-button is-standard" type="button" aria-label="Settings without state layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">settings</span>
+        </button>
+        <p class="lab-icon-button-specimen__caption">No state-layer overlay</p>
+        <p class="lab-icon-button-specimen__caption lab-icon-button-specimen__caption--ko">state-layer 생략</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- §7 — Code snippets -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§7. Code snippets</h2>
+    </header>
+    <details class="lab-icon-button-snippet">
+      <summary>Canonical variant</summary>
+<pre>&lt;button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Search"&gt;
+  &lt;span class="material-symbols-rounded notranslate"
+        translate="no" aria-hidden="true" draggable="false"&gt;search&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+    <details class="lab-icon-button-snippet">
+      <summary>Selected state</summary>
+<pre>&lt;button class="ax-icon-button is-tonal has-state-layer"
+        type="button" aria-label="Star selected" aria-pressed="true"&gt;
+  &lt;span class="material-symbols-rounded notranslate"
+        translate="no" aria-hidden="true" draggable="false"&gt;star&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+    <details class="lab-icon-button-snippet">
+      <summary>aria-labelledby</summary>
+<pre>&lt;span id="upload-label"&gt;Upload&lt;/span&gt;
+&lt;button class="ax-icon-button is-tonal has-state-layer"
+        type="button" aria-labelledby="upload-label"&gt;
+  &lt;span class="material-symbols-rounded notranslate"
+        translate="no" aria-hidden="true" draggable="false"&gt;upload&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+    <details class="lab-icon-button-snippet">
+      <summary>Native disabled</summary>
+<pre>&lt;button class="ax-icon-button is-filled has-state-layer"
+        type="button" aria-label="Add" disabled&gt;
+  &lt;span class="material-symbols-rounded notranslate"
+        translate="no" aria-hidden="true" draggable="false"&gt;add&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+    <details class="lab-icon-button-snippet">
+      <summary>aria-disabled — plugin-managed</summary>
+<pre>&lt;!-- App/plugin code must also prevent activation. --&gt;
+&lt;button class="ax-icon-button is-filled has-state-layer"
+        type="button" aria-label="Sync paused" aria-disabled="true"&gt;
+  &lt;span class="material-symbols-rounded notranslate"
+        translate="no" aria-hidden="true" draggable="false"&gt;sync&lt;/span&gt;
+&lt;/button&gt;</pre>
+    </details>
+  </section>
+
+  <!-- §8 — Cross-references -->
+  <section class="lab-icon-button-section">
+    <header class="lab-icon-button-section__head">
+      <h2 class="t-title-large lab-icon-button-section__title">§8. Cross-references</h2>
+    </header>
+    <div class="lab-icon-button-xref">
+      <a href="../../../docs/v3.5.2/ICON-BUTTON-PHASE-0-REPORT.md">Phase 0 report</a>
+      <a href="../../../docs/v3.5.2/ICON-BUTTON-PHASE-1-PLAN.md">Phase 1 plan</a>
+      <a href="docs/ICON-BUTTON-SPEC-AUDIT.md">SPEC audit</a>
+      <a href="docs/ICON-BUTTON-MEASUREMENT-AUDIT.md">MEASUREMENT audit</a>
+      <a href="docs/ICON-BUTTON-WP-MAPPING.md">WP mapping audit</a>
+      <a href="../icon-system/docs/ICON-SYSTEM-AUDIT.md">Icon-system audit</a>
+      <a href="../icon-system/docs/ICON-BUTTON-RUNTIME-AUDIT.md">Historical runtime audit</a>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

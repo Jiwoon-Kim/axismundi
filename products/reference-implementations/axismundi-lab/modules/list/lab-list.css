@@ -1,0 +1,219 @@
+/*
+ * Axismundi — lab-list.css
+ * v3.5.11 — List #33 Full-Spec module
+ *
+ * Lab-scoped page scaffolding only. Baseline authority remains
+ * components.css §26. This file does not redefine unscoped .ax-list,
+ * .ax-list__item, Ripple v2, Avatar, or icon-system styles.
+ */
+
+.lab-list-demo {
+  width: min(100% - (var(--space-xl) * 2), 1120px);
+  margin-inline: auto;
+  padding-block: var(--space-xl);
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-list-header,
+.lab-list-section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lab-list-header {
+  padding-block-end: var(--space-lg);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-list-section {
+  padding-block: var(--space-xl);
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-list-section__head {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.lab-list-caption {
+  max-inline-size: 76ch;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-list-banner,
+.lab-list-note {
+  padding: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-list-banner {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.lab-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+  min-inline-size: 0;
+}
+
+.lab-list-grid.is-wide {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+}
+
+.lab-list-card {
+  display: grid;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+}
+
+.lab-list-card.is-wide {
+  grid-column: 1 / -1;
+}
+
+.lab-list-surface {
+  display: grid;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-lowest);
+}
+
+.lab-list-demo .ax-list {
+  inline-size: 100%;
+  max-inline-size: 520px;
+  min-inline-size: 0;
+}
+
+.lab-list-demo :is(ul, ol).ax-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.lab-list-demo .ax-list.is-fluid {
+  max-inline-size: none;
+}
+
+.lab-list-demo .ax-list__item {
+  box-sizing: border-box;
+}
+
+.lab-list-demo .ax-list.ax-list--segmented {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.lab-list-demo .ax-list.ax-list--segmented .ax-list__item {
+  background: var(--md-sys-color-surface);
+}
+
+.lab-list-demo .ax-list.ax-list--segmented .ax-list__item.is-selected,
+.lab-list-demo .ax-list.ax-list--segmented .ax-list__item[aria-selected="true"] {
+  background: var(--md-sys-color-secondary-container);
+}
+
+.lab-list-demo .ax-list__item[data-demo-static="true"] {
+  cursor: default;
+}
+
+.lab-list-demo .ax-list__item[data-demo-static="true"]::before {
+  display: none;
+}
+
+.lab-list-demo .ax-list__item[data-demo-state="focused"] {
+  border-radius: var(--md-sys-shape-corner-large);
+  outline: 2px solid var(--md-sys-color-secondary);
+  outline-offset: -3px;
+}
+
+.lab-list-demo .ax-list__item[data-demo-state="focused"]::before {
+  opacity: var(--md-sys-state-focus-state-layer-opacity);
+}
+
+.lab-list-demo .ax-list__item[data-demo-state="pressed"] {
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+.lab-list-demo .ax-list__item[data-demo-state="pressed"]::before {
+  opacity: var(--md-sys-state-pressed-state-layer-opacity);
+}
+
+.lab-list-demo .ax-list__item[data-demo-state="hover"] {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.lab-list-demo .ax-list__item[data-demo-state="hover"]::before {
+  opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+
+.lab-list-demo .ax-list__item[data-demo-state="dragged"] {
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-level2);
+  transform: translateY(-2px);
+}
+
+.lab-list-demo .ax-list__item[aria-expanded="true"] {
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+.lab-list-demo .ax-list__trailing-text {
+  white-space: nowrap;
+}
+
+.lab-list-demo .ax-avatar {
+  inline-size: 40px;
+  block-size: 40px;
+}
+
+.lab-list-demo .ax-avatar > span {
+  font-size: var(--md-sys-typescale-label-medium-size);
+}
+
+.lab-list-stress {
+  inline-size: min(100%, 360px);
+}
+
+.lab-list-code {
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-small);
+  overflow-x: auto;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-list-qa-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.lab-list-qa-table th,
+.lab-list-qa-table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+  text-align: start;
+  vertical-align: top;
+}
+
+.lab-list-qa-table th {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (max-width: 520px) {
+  .lab-list-demo {
+    width: min(100% - (var(--space-md) * 2), 100%);
+  }
+
+  .lab-list-surface {
+    padding-inline: var(--space-sm);
+  }
+}

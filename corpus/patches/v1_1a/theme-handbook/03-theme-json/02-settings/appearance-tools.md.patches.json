@@ -1,0 +1,32 @@
+[
+  {
+    "find": "](https://developer.wordpress.org/themes/global-settings-and-styles/border)",
+    "replace": "](border.md)",
+    "reason": "v1.1a: link to theme-handbook/03-theme-json/02-settings/border.md"
+  },
+  {
+    "find": "](https://developer.wordpress.org/themes/global-settings-and-styles/color)",
+    "replace": "](color.md)",
+    "reason": "v1.1a: link to theme-handbook/03-theme-json/02-settings/color.md"
+  },
+  {
+    "find": "](https://developer.wordpress.org/themes/global-settings-and-styles/dimensions)",
+    "replace": "](dimensions.md)",
+    "reason": "v1.1a: link to theme-handbook/03-theme-json/02-settings/dimensions.md"
+  },
+  {
+    "find": "](https://developer.wordpress.org/themes/global-settings-and-styles/position)",
+    "replace": "](position.md)",
+    "reason": "v1.1a: link to theme-handbook/03-theme-json/02-settings/position.md"
+  },
+  {
+    "find": "](https://developer.wordpress.org/themes/global-settings-and-styles/spacing)",
+    "replace": "](spacing.md)",
+    "reason": "v1.1a: link to theme-handbook/03-theme-json/02-settings/spacing.md"
+  },
+  {
+    "find": "](https://developer.wordpress.org/themes/global-settings-and-styles/typography)",
+    "replace": "](typography.md)",
+    "reason": "v1.1a: link to theme-handbook/03-theme-json/02-settings/typography.md"
+  }
+]

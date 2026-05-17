@@ -1,0 +1,154 @@
+/* ============================================================
+ * Axismundi v3.5.7 — Text Field lab pattern scaffolding
+ *
+ * Scope:
+ *   This file styles only the lab pattern page around the baseline
+ *   Text field primitive. It must not replace components.css §9.
+ *
+ * Selector policy:
+ *   - .lab-text-field-demo is the scope marker.
+ *   - Unscoped .text-field / .text-field__* overrides are forbidden.
+ *   - Any scoped .text-field selector here is visualization/layout only.
+ *
+ * Runtime:
+ *   No lab-text-field.js. Clear button, counter, and validation examples are
+ *   static/native catalog specimens.
+ * ============================================================ */
+
+.lab-text-field-demo {
+  width: min(100% - (var(--space-xl) * 2), 1120px);
+  margin-inline: auto;
+  padding-block: var(--space-xl);
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-text-field-section {
+  padding-block: var(--space-xl);
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.lab-text-field-section__head {
+  display: grid;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+}
+
+.lab-text-field-section__title {
+  margin: 0;
+}
+
+.lab-text-field-section__supporting {
+  max-width: 74ch;
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-text-field-banner {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  margin-block: var(--space-lg);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-text-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.lab-text-field-grid.is-wide {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+}
+
+.lab-text-field-card {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.lab-text-field-caption {
+  color: var(--md-sys-color-on-surface-variant);
+  max-width: 64ch;
+}
+
+.lab-text-field-demo .text-field {
+  max-width: 420px;
+}
+
+.lab-text-field-demo .text-field[data-demo-wide="true"] {
+  max-width: 560px;
+}
+
+.lab-text-field-demo .text-field[data-demo-state="focused"] .text-field__container {
+  box-shadow: inset 0 -2px 0 0 var(--md-sys-color-primary);
+}
+
+.lab-text-field-demo .text-field--outlined[data-demo-state="focused"] .text-field__container {
+  box-shadow: inset 0 0 0 2px var(--md-sys-color-primary);
+}
+
+.lab-text-field-demo .text-field[data-demo-state="focused"] .text-field__label {
+  color: var(--md-sys-color-primary);
+}
+
+.lab-text-field-demo .text-field[data-demo-state="focused"] .text-field__label,
+.lab-text-field-demo .text-field[data-demo-state="focused"] .text-field__input:not(:placeholder-shown) ~ .text-field__label {
+  top: 8px;
+  transform: translateY(0);
+  font-size: var(--_tf-label-float-size);
+  line-height: var(--_tf-label-float-lh);
+}
+
+.lab-text-field-demo .text-field--outlined[data-demo-state="focused"] .text-field__label {
+  background-color: var(--md-sys-color-surface);
+  padding-inline: var(--space-xs);
+  top: calc(var(--_tf-label-float-lh) * -0.5);
+}
+
+.lab-text-field-demo .text-field[data-demo-state="focused"] .text-field__prefix,
+.lab-text-field-demo .text-field[data-demo-state="focused"] .text-field__suffix {
+  visibility: visible;
+}
+
+.lab-text-field-note {
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.lab-text-field-snippet {
+  margin: 0;
+  padding: var(--space-md);
+  overflow-x: auto;
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-text-field-snippet code {
+  white-space: pre;
+}
+
+.lab-text-field-checklist {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-text-field-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-md);
+}
+
+/* Verification note:
+ * No unscoped baseline selector appears in this file. The few scoped
+ * .lab-text-field-demo .text-field[...] selectors above are visualization
+ * helpers for static catalog focused-state specimens only. */

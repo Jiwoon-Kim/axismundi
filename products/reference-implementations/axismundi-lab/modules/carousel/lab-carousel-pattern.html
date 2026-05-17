@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Carousel Lab Module (v3.5.12)</title>
+
+  <!-- Core design system stack -->
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+
+  <!-- Lab module (this page's subject) -->
+  <link rel="stylesheet" href="lab-carousel.css" />
+
+  <style>
+    /* Local layout — pattern page only, NOT a reusable component.
+       Kept inline so the lab module CSS stays focused on the module itself. */
+    body {
+      overflow-x: clip;
+    }
+    .lab-layout {
+      max-inline-size: min(100%, 1200px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+    .lab-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .lab-header__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .lab-header__nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      align-items: center;
+      margin-block-start: var(--space-sm);
+    }
+    .lab-header__nav a {
+      color: var(--md-sys-color-primary);
+    }
+    .lab-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .sg-theme {
+      display: inline-flex;
+      gap: var(--space-xs);
+      align-items: center;
+    }
+    .sg-section {
+      display: grid;
+      gap: var(--space-lg);
+    }
+    .sg-section__head {
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .sg-section__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-subsection {
+      display: grid;
+      gap: var(--space-md);
+    }
+    .sg-subsection__head {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="lab-layout">
+    <header class="lab-header">
+      <div class="lab-header__eyebrow t-label-medium">Axismundi · Lab module · v3.5.12</div>
+      <h1 class="t-display-small">Carousel Lab Module</h1>
+      <p class="t-body-large" style="max-inline-size: 64ch;">
+        Material You morph slider extracted from <code>benchmark-interactions.{css,js}</code>
+        during the v3.3.2 Carousel Lab Module Extraction. This page is the
+        module&rsquo;s isolated demo surface; it is NOT loaded by the main
+        styleguide. See <code>docs/CAROUSEL-AUDIT.md</code>,
+        <code>docs/CAROUSEL-ONTOLOGY-CHECK.md</code>, and
+        <code>docs/CAROUSEL-VISUAL-QA.md</code> for the audit + ontology
+        binding + QA checklist.
+      </p>
+      <nav class="lab-header__nav t-body-medium" aria-label="Related pages">
+        <span class="t-label-medium" style="color: var(--md-sys-color-on-surface-variant);">Related:</span>
+        <a href="../../style-guide.html">Main styleguide</a>
+        <span aria-hidden="true">·</span>
+        <a href="../../style-guide-benchmark.html">Benchmark (legacy, includes pre-extraction carousel)</a>
+      </nav>
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <span class="t-label-medium">Theme:</span>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false"><span class="chip__label">Light</span></button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false"><span class="chip__label">Dark</span></button>
+        <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true"><span class="chip__label">Auto</span></button>
+      </div>
+    </header>
+
+    <aside class="lab-banner" role="note">
+      <div class="t-label-large">Lab module — not yet promoted</div>
+      <div class="t-body-medium">
+        The static <code>.ax-carousel</code> markup (multi-browse / hero / uncontained subsections)
+        below uses the main <code>components.css §G3 Carousel</code> structure (Phase 1B). The
+        <strong>Benchmark — Material You morph slider</strong> subsection at the bottom is the
+        interactive enhancement this module adds. v3.5.12 keeps <code>.ax-carousel</code> as the
+        canonical primitive and treats <code>.ax-material-slider</code> as a historical adapter.
+      </div>
+    </aside>
+
+      <section class="sg-section" id="components-carousel" data-screen-label="Carousel">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Components</div>
+          <h2 class="t-headline-medium">Carousel</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            Native horizontal scroll + scroll-snap. Item corner = corner-extra-large (28dp). Multi-browse default mixes large/medium/small items; hero variant features one large + small queue; uncontained bleeds past trailing edge for content-first browsing.
+          </p>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
+            <em>v0.3.5 scope</em>: multi-browse, hero, uncontained. Center-aligned hero, multi-aspect, full-screen, item-morph animation deferred.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Multi-browse — large / medium / small mix</h3>
+          <div class="ax-carousel">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--large">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">서울의 하루</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">디자인 노트</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">개발 일지</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary-container);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary-container);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary-container);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <pre class="sg-snippet"><code>&lt;div class="ax-carousel"&gt;
+  &lt;div class="ax-carousel__track"&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--large"&gt;
+      &lt;div class="ax-carousel__item-media"&gt;&lt;img .../&gt;&lt;/div&gt;
+      &lt;span class="ax-carousel__item-label"&gt;서울의 하루&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--medium"&gt;...&lt;/div&gt;
+    &lt;div class="ax-carousel__item ax-carousel__item--small"&gt;...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Hero — featured + queue</h3>
+          <div class="ax-carousel ax-carousel--hero">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--large">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));"></div>
+                </div>
+                <span class="ax-carousel__item-label">오늘의 추천 게시물</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-secondary);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-tertiary);"></div>
+                </div>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--small">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: var(--md-sys-color-primary);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Uncontained — items bleed past trailing edge</h3>
+          <p class="sg-helper">No padding on trailing side — items extend off-screen. Drag/scroll to reveal.</p>
+          <div class="ax-carousel ax-carousel--uncontained">
+            <div class="ax-carousel__track">
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 1</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 2</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 3</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 4</span>
+              </div>
+              <div class="ax-carousel__item ax-carousel__item--medium">
+                <div class="ax-carousel__item-media">
+                  <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-primary-container));"></div>
+                </div>
+                <span class="ax-carousel__item-label">게시물 5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection" id="components-carousel-material">
+          <h3 class="t-title-medium sg-subsection__head">Benchmark — Material You morph slider</h3>
+          <p class="sg-helper">Progress-driven wrapper width, image zoom, label fade, drag, keyboard, and per-view controls. Keyboard support includes ArrowLeft/ArrowRight plus Home/End. Reduced-motion users receive instant state changes.</p>
+          <p class="sg-helper">Gallery is not automatically Carousel. Production WordPress usage needs an explicit carousel pattern/style and an accessible “Show all” path to the full item set.</p>
+          <div class="ax-material-slider-demo" data-material-slider>
+            <div class="ax-material-slider-demo__bar" aria-label="Material You slider controls">
+              <div class="ax-material-slider-demo__group" role="group" aria-label="Carousel layout">
+                <span class="t-label-small">layout</span>
+                <button type="button" class="ax-material-slider-demo__choice is-selected" data-material-layout="multi" aria-pressed="true">Multi</button>
+                <button type="button" class="ax-material-slider-demo__choice" data-material-layout="hero" aria-pressed="false">Hero</button>
+                <button type="button" class="ax-material-slider-demo__choice" data-material-layout="uncontained" aria-pressed="false">Uncontained</button>
+              </div>
+              <div class="ax-material-slider-demo__group" role="group" aria-label="Slides per view">
+                <span class="t-label-small">slidesPerView</span>
+                <button type="button" class="ax-material-slider-demo__choice" data-material-spv="1" aria-pressed="false">1</button>
+                <button type="button" class="ax-material-slider-demo__choice is-selected" data-material-spv="2" aria-pressed="true">2</button>
+                <button type="button" class="ax-material-slider-demo__choice" data-material-spv="3" aria-pressed="false">3</button>
+                <button type="button" class="ax-material-slider-demo__choice" data-material-spv="4" aria-pressed="false">4</button>
+                <button type="button" class="ax-material-slider-demo__choice" data-material-spv="5" aria-pressed="false">5</button>
+              </div>
+              <label class="ax-material-slider-demo__toggle">
+                <input type="checkbox" data-material-centered>
+                <span>centeredSlides</span>
+              </label>
+            </div>
+
+            <div class="ax-material-slider ax-carousel" tabindex="0" role="region" aria-label="Material You benchmark slider">
+              <div class="ax-material-slider__track ax-carousel__track">
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--large">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-01/900/700" alt="Material slide 1">
+                    <span class="ax-material-slide__label">Slide 1</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--medium">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-02/900/700" alt="Material slide 2">
+                    <span class="ax-material-slide__label">Slide 2</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-03/900/700" alt="Material slide 3">
+                    <span class="ax-material-slide__label">Slide 3</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-04/900/700" alt="Material slide 4">
+                    <span class="ax-material-slide__label">Slide 4</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-05/900/700" alt="Material slide 5">
+                    <span class="ax-material-slide__label">Slide 5</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-06/900/700" alt="Material slide 6">
+                    <span class="ax-material-slide__label">Slide 6</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-07/900/700" alt="Material slide 7">
+                    <span class="ax-material-slide__label">Slide 7</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-08/900/700" alt="Material slide 8">
+                    <span class="ax-material-slide__label">Slide 8</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-09/900/700" alt="Material slide 9">
+                    <span class="ax-material-slide__label">Slide 9</span>
+                  </div>
+                </article>
+                <article class="ax-material-slide ax-carousel__item ax-carousel__item--small">
+                  <div class="ax-material-slide__shell">
+                    <img src="https://picsum.photos/seed/axismundi-material-10/900/700" alt="Material slide 10">
+                    <span class="ax-material-slide__label">Slide 10</span>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <div class="ax-material-slider-demo__nav">
+              <button type="button" class="ax-icon-button is-tonal has-state-layer" data-material-prev aria-label="Previous slide">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_left</span>
+              </button>
+              <div class="ax-material-slider-demo__dots" aria-label="Slide position"></div>
+              <button type="button" class="ax-icon-button is-tonal has-state-layer" data-material-next aria-label="Next slide">
+                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+  </main>
+
+  <!-- Production runtime (theme switcher etc.) -->
+  <script defer src="../../scripts/theme.js"></script>
+  <!-- Lab module behavior -->
+  <script defer src="lab-carousel.js"></script>
+</body>
+</html>

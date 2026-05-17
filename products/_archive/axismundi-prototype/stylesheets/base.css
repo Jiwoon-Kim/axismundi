@@ -1,0 +1,824 @@
+/* ============================================================
+ * Axismundi — base.css
+ * v0.3.0 — Phase 2A: Style foundation 확장
+ *
+ * Builds on tokens.css. Contains:
+ *   §1  Modern reset
+ *   §2  :root + body defaults
+ *   §3  Heading semantic mapping → typescale
+ *   §4  Inline elements (p, a, code, strong, em)
+ *   §5  Form & interactive defaults + global :focus-visible
+ *   §6  Accessibility (reduced motion, [hidden])
+ *   §6.5 Type utility classes (.t-{role})
+ *   §6.6 A11y utilities (.u-vh)
+ *   §6.7 Skip link (.skip-link) — WCAG 2.4.1
+ *   §6.8 Visually-hidden (.visually-hidden)
+ *   §7  Korean / CJK rules
+ *
+ *   --- Phase 2A additions (markdown / classic-editor parity) ---
+ *   §8  Block elements (blockquote, hr, figure, figcaption)
+ *   §9  Lists (ul/ol/li, ::marker, task list via :has())
+ *   §10 Tables — baseline (full styling in prose.css)
+ *   §11 Code — inline pill + <pre> block + kbd
+ *   §12 Inline rich text (mark, del/ins/s, abbr)
+ *   §13 Native <select> — outlined-text-field visual + custom arrow
+ *   §14 Heading anchor helper (.heading-anchor)
+ *   §15 ::selection
+ *
+ * Specificity policy — element-only (0,0,1) throughout, with one
+ * exception: §14 .heading-anchor helper class (0,1,0). All values
+ * resolve to tokens in tokens.css; no literal type/color
+ * (lone exception: §13 select arrow data URLs — see §13 header).
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * §1 Modern CSS reset
+ * ------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* Default = light (matches :root token defaults).
+     Overridden below for explicit dark + auto-follow-system patterns
+     so native UI (scrollbars, form controls, etc.) matches Axismundi theme. */
+  color-scheme: light;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Auto mode (no [data-theme] set) — follow system */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+}
+
+/* Manual override — explicit user pick wins regardless of system */
+html[data-theme="light"] {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+img,
+picture,
+video,
+svg,
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* ------------------------------------------------------------
+ * §2 :root + body defaults
+ * ------------------------------------------------------------ */
+body {
+  background-color: var(--site-bg);
+  color: var(--md-sys-color-on-background);
+
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  /* §7 — set on body so headings inherit the same hyphen rules */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------
+ * §3 Heading semantic mapping (microblog prototype)
+ * display-* tokens reserved for utility classes (.t-display-*).
+ * ------------------------------------------------------------ */
+h1, h2, h3, h4, h5, h6 {
+  color: inherit;     /* on-surface / on-background flows down */
+  text-wrap: balance; /* prettier wrap on titles where supported */
+}
+
+h1 {
+  font-family:    var(--md-sys-typescale-headline-large-font);
+  font-size:      var(--md-sys-typescale-headline-large-size);
+  line-height:    var(--md-sys-typescale-headline-large-line-height);
+  font-weight:    var(--md-sys-typescale-headline-large-weight);
+  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+}
+h2 {
+  font-family:    var(--md-sys-typescale-headline-medium-font);
+  font-size:      var(--md-sys-typescale-headline-medium-size);
+  line-height:    var(--md-sys-typescale-headline-medium-line-height);
+  font-weight:    var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+}
+h3 {
+  font-family:    var(--md-sys-typescale-headline-small-font);
+  font-size:      var(--md-sys-typescale-headline-small-size);
+  line-height:    var(--md-sys-typescale-headline-small-line-height);
+  font-weight:    var(--md-sys-typescale-headline-small-weight);
+  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+}
+h4 {
+  font-family:    var(--md-sys-typescale-title-large-font);
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+h5 {
+  font-family:    var(--md-sys-typescale-title-medium-font);
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+h6 {
+  font-family:    var(--md-sys-typescale-title-small-font);
+  font-size:      var(--md-sys-typescale-title-small-size);
+  line-height:    var(--md-sys-typescale-title-small-line-height);
+  font-weight:    var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+
+/* ------------------------------------------------------------
+ * §4 Inline elements
+ * ------------------------------------------------------------ */
+p {
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--md-sys-color-primary);
+  text-decoration: inherit;
+  text-underline-offset: 2px;
+}
+a:hover { text-decoration: underline; }
+
+code, pre, kbd, samp {
+  font-family:    var(--md-ref-typeface-mono);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+
+strong, b { font-weight: var(--md-ref-typeface-weight-medium); }
+em, i     { font-style: italic; }
+
+/* ------------------------------------------------------------
+ * §5 Form & interactive defaults
+ * ------------------------------------------------------------ */
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled { cursor: not-allowed; }
+
+input,
+textarea,
+select {
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: inherit;
+}
+
+/* §0.11 focus indicator — outer offset +2px default.
+ * Components needing inner offset (-3px) override locally. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------
+ * §6 Accessibility
+ * ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+[hidden] { display: none !important; }
+
+/* ------------------------------------------------------------
+ * §6.5 Type utility classes (.t-{role})
+ *
+ * One class per M3 typescale role — applies font-family, size,
+ * line-height, weight, and tracking together. Use on any
+ * element to override the inherited type without changing
+ * semantics.
+ *
+ * Order matches M3-COMPONENT-SPECS / tokens.css §2.
+ * ------------------------------------------------------------ */
+.t-display-large {
+  font-family:    var(--md-sys-typescale-display-large-font);
+  font-size:      var(--md-sys-typescale-display-large-size);
+  line-height:    var(--md-sys-typescale-display-large-line-height);
+  font-weight:    var(--md-sys-typescale-display-large-weight);
+  letter-spacing: var(--md-sys-typescale-display-large-tracking);
+}
+.t-display-medium {
+  font-family:    var(--md-sys-typescale-display-medium-font);
+  font-size:      var(--md-sys-typescale-display-medium-size);
+  line-height:    var(--md-sys-typescale-display-medium-line-height);
+  font-weight:    var(--md-sys-typescale-display-medium-weight);
+  letter-spacing: var(--md-sys-typescale-display-medium-tracking);
+}
+.t-display-small {
+  font-family:    var(--md-sys-typescale-display-small-font);
+  font-size:      var(--md-sys-typescale-display-small-size);
+  line-height:    var(--md-sys-typescale-display-small-line-height);
+  font-weight:    var(--md-sys-typescale-display-small-weight);
+  letter-spacing: var(--md-sys-typescale-display-small-tracking);
+}
+.t-headline-large {
+  font-family:    var(--md-sys-typescale-headline-large-font);
+  font-size:      var(--md-sys-typescale-headline-large-size);
+  line-height:    var(--md-sys-typescale-headline-large-line-height);
+  font-weight:    var(--md-sys-typescale-headline-large-weight);
+  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+}
+.t-headline-medium {
+  font-family:    var(--md-sys-typescale-headline-medium-font);
+  font-size:      var(--md-sys-typescale-headline-medium-size);
+  line-height:    var(--md-sys-typescale-headline-medium-line-height);
+  font-weight:    var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+}
+.t-headline-small {
+  font-family:    var(--md-sys-typescale-headline-small-font);
+  font-size:      var(--md-sys-typescale-headline-small-size);
+  line-height:    var(--md-sys-typescale-headline-small-line-height);
+  font-weight:    var(--md-sys-typescale-headline-small-weight);
+  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+}
+.t-title-large {
+  font-family:    var(--md-sys-typescale-title-large-font);
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+.t-title-medium {
+  font-family:    var(--md-sys-typescale-title-medium-font);
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+.t-title-small {
+  font-family:    var(--md-sys-typescale-title-small-font);
+  font-size:      var(--md-sys-typescale-title-small-size);
+  line-height:    var(--md-sys-typescale-title-small-line-height);
+  font-weight:    var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+.t-body-large {
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+}
+.t-body-medium {
+  font-family:    var(--md-sys-typescale-body-medium-font);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+.t-body-small {
+  font-family:    var(--md-sys-typescale-body-small-font);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+.t-label-large {
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+.t-label-medium {
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+.t-label-small {
+  font-family:    var(--md-sys-typescale-label-small-font);
+  font-size:      var(--md-sys-typescale-label-small-size);
+  line-height:    var(--md-sys-typescale-label-small-line-height);
+  font-weight:    var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+
+/* ------------------------------------------------------------
+ * §6.6 A11y utilities
+ *
+ * .u-vh — Visually hidden but available to assistive tech.
+ * Use case: <legend> inside a fieldset where no visible heading
+ * is wanted, "Skip to content" links, button labels paired with
+ * decorative icons.
+ *
+ * Why clip-path inset(50%) over `display: none` / `visibility:
+ * hidden`: those remove the element from the AT tree. Why over
+ * `text-indent: -9999px`: that breaks RTL layouts. The pattern
+ * below is the WHATWG-recommended hide that survives browser
+ * heuristics + works inside flex/grid + screen readers announce.
+ * ------------------------------------------------------------ */
+.u-vh {
+  position: absolute !important;
+  inline-size: 1px !important;
+  block-size: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+
+/* ------------------------------------------------------------
+ * §6.7 Skip link — WCAG 2.4.1 Bypass Blocks (Level A)
+ *
+ * Pattern: First focusable element on every page. Hidden until
+ * keyboard focus, then slides into view at top-start corner.
+ * Click/Enter jumps to <main id="main"> bypassing the repeated
+ * header / nav / drawer chrome.
+ *
+ * Markup contract:
+ *   <body>
+ *     <a href="#main" class="skip-link">메인 콘텐츠로 건너뛰기</a>
+ *     <header>...</header>
+ *     <main id="main">...</main>
+ *
+ * Why `transform: translateY()` over `top: -100%`: transform
+ * stays GPU-composited (no layout thrash) and animates smoothly.
+ * Why z-index 100: must paint over sticky header (z-10).
+ * ------------------------------------------------------------ */
+.skip-link {
+  position: fixed;
+  inset-block-start: var(--space-md);
+  inset-inline-start: var(--space-md);
+  z-index: 100;
+
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-primary);
+  color:            var(--md-sys-color-on-primary);
+  text-decoration: none;
+
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+
+  /* Hidden — translated up off-screen. NOT display:none/visibility:
+   * hidden (those remove from focus order). NOT clip-path (we WANT
+   * the element rendered, just visually offscreen). */
+  transform: translateY(calc(-100% - var(--space-lg)));
+  transition: transform
+    var(--md-sys-motion-curve-fast-effects-duration)
+    var(--md-sys-motion-curve-fast-effects);
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  /* Slide into view */
+  transform: translateY(0);
+  outline: 2px solid var(--md-sys-color-on-primary);
+  outline-offset: 2px;
+}
+
+
+/* ------------------------------------------------------------
+ * §6.8 .visually-hidden — accessible-only label utility
+ *
+ * Hides content visually while keeping it in the AT (screen
+ * reader) tree. Use for `<label>` text that's redundant for
+ * sighted users (placeholder is sufficient) but required for
+ * AT to announce the input.
+ *
+ * Pattern: clip-path + size 1px + absolute positioning. NOT
+ * `display: none` (removes from AT) and NOT `visibility:
+ * hidden` (also removes from AT). The clip-path approach
+ * preserves AT visibility while taking zero layout space.
+ * ------------------------------------------------------------ */
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+
+/* ------------------------------------------------------------
+ * §7 Korean & CJK
+ * Latin + Hangul mixed-script line-height parity.
+ * keep-all + overflow-wrap:anywhere = Korean wraps at word
+ * boundaries, long Latin words still break safely.
+ * ------------------------------------------------------------ */
+:root {
+  --base-line-height-cjk: 1.6;
+}
+body { line-height: var(--base-line-height-cjk); }
+/* word-break + overflow-wrap set on body in §2 */
+
+
+/* ============================================================
+ * §8 Block elements
+ *
+ * blockquote, hr, figure, figcaption — minimal element defaults.
+ * Heavier prose styling (vertical rhythm between paragraphs,
+ * blockquote size emphasis, image max-width inside flow) lives
+ * in prose.css and applies only inside `.prose`.
+ * ============================================================ */
+blockquote {
+  /* Reset browser default 40px L/R margin. */
+  margin-inline: 0;
+  padding-inline-start: var(--space-md);
+  border-inline-start: 4px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+hr {
+  border: 0;
+  block-size: 1px;
+  background-color: var(--md-sys-color-outline-variant);
+  margin-block: var(--space-lg);
+}
+
+figure {
+  /* Reset browser default 40px margins; prose.css adds rhythm. */
+  margin: 0;
+}
+figcaption {
+  margin-block-start: var(--space-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-body-small-font);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+
+/* ============================================================
+ * §9 Lists
+ *
+ * ul / ol / li with subtle marker color. Task-list pattern
+ * (markdown `- [ ]` / `- [x]`) — :has() detects checkbox-first
+ * children and removes the bullet without needing a wrapper class.
+ * Project relies on :has() (caveat 2.3).
+ * ============================================================ */
+ul,
+ol {
+  padding-inline-start: var(--space-xl); /* 32px — clear marker space */
+}
+
+/* Tighten nested lists */
+li > ul,
+li > ol {
+  margin-block: var(--space-xs);
+}
+
+/* Subtler marker — bullet/number in on-surface-variant, not on-surface */
+li::marker {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Task list — markdown commonly outputs:
+ *   <li><input type="checkbox" disabled> Task</li>
+ * Suppress the bullet when an <li> begins with a checkbox.
+ * The list's left padding remains, so checkboxes stay aligned. */
+li:has(> input[type="checkbox"]:first-child) {
+  list-style: none;
+}
+li > input[type="checkbox"]:first-child {
+  margin-inline-end: var(--space-xs);
+  vertical-align: -2px; /* baseline → x-height alignment with text */
+}
+
+/* ============================================================
+ * §10 Tables — baseline only
+ *
+ * Cell collapse + sane defaults. Full styling (zebra rows,
+ * header separator, cell padding, hover, mobile horizontal
+ * scroll wrapper) lives in prose.css under `.prose table`.
+ * ============================================================ */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+caption {
+  caption-side: bottom;
+  margin-block-start: var(--space-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-body-small-font);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+th,
+td {
+  text-align: start;
+  vertical-align: top;
+}
+th {
+  font-weight: var(--md-ref-typeface-weight-medium);
+}
+
+/* ============================================================
+ * §11 Code — inline & block
+ *
+ * §4 sets only the mono font on code/pre/kbd/samp. This section
+ * adds the *visual container* styling.
+ *   - inline <code>  → subtle pill (surface-container bg, tiny radius)
+ *   - <pre> block    → padded card with overflow-x scroll
+ *   - <pre><code>    → strip the inline-code pill (pre owns the surface)
+ *   - <kbd>          → key-cap badge (slight elevation cue)
+ * ============================================================ */
+code {
+  padding-inline: 0.3em;
+  padding-block:  0.15em;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+pre {
+  display: block;
+  overflow-x: auto;
+  padding: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  /* tab-size kept readable when copied into other tools */
+  tab-size: 2;
+}
+
+/* <code> inside <pre> is decorative — strip its inline pill so the
+ * pre block alone provides the surface. */
+pre code {
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+}
+
+kbd {
+  padding-inline: 0.4em;
+  padding-block:  0.1em;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: inset 0 -1px 0 0 var(--md-sys-color-outline-variant);
+  font-size: 0.875em; /* relative — keeps inline-flow proportional */
+}
+
+/* ============================================================
+ * §12 Inline rich text — mark, del/ins/s, abbr
+ *
+ * Markdown / GFM inline element baselines.
+ * ============================================================ */
+mark {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  padding-inline: 0.2em;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+}
+
+del,
+s {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+ins {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--md-sys-color-primary);
+}
+
+abbr[title] {
+  text-decoration: underline dotted;
+  text-decoration-skip-ink: auto;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* ============================================================
+ * §13 Native <select>
+ *
+ * Phase 2A scope: native element only. Visually mirrors
+ * `.text-field--outlined` (1px → 3px primary on focus) without
+ * the floating-label notch.
+ *
+ * ── Custom arrow strategy ──
+ *
+ * <select> is a "replaced element" — it can't host pseudo-elements
+ * (::before / ::after) or wrap content. So the arrow has to be
+ * painted via background-image. We previously used a data: URL SVG
+ * with literal hex fill, but that broke token-driven theming
+ * (CSS doesn't allow var() inside url() literals; dark scheme
+ * required hardcoded color sync).
+ *
+ * NEW APPROACH — paint a downward chevron entirely with CSS
+ * gradients on the background. Two linear-gradient layers form
+ * the two stems of the ▼. The gradient COLOR is set via
+ * `currentColor` so it inherits select's text color, which in
+ * turn comes from --md-sys-color-on-surface. Token drift impossible.
+ *
+ * Geometry:
+ *   - Each stem is a 1.5px-thick band at 45° / 135°
+ *   - Positioned right-of-center so they intersect into a chevron
+ *   - 10px wide × 6px tall total
+ *
+ * Phase 2B+: a custom `.ax-select` component (text-field trigger +
+ * ax-menu dropdown) may be layered on top — see CONTEXT.md §3.6.
+ * ============================================================ */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 56px;                  /* text-field parity + a11y target */
+  padding-block: var(--space-sm);
+  padding-inline-start: var(--space-md);
+  /* Right padding = inline base + chevron area (24px) + gap. */
+  padding-inline-end: calc(var(--space-md) + 24px + var(--space-sm));
+
+  /* Two linear-gradient stems form a ▼ chevron painted in
+     currentColor. Positioned at right edge, vertically centered. */
+  background-color: transparent;
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 50%,
+      currentColor 50%,
+      currentColor calc(50% + 1.5px),
+      transparent calc(50% + 1.5px)
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 50%,
+      currentColor 50%,
+      currentColor calc(50% + 1.5px),
+      transparent calc(50% + 1.5px)
+    );
+  background-position:
+    right calc(var(--space-md) + 5px) center,
+    right var(--space-md) center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat, no-repeat;
+
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  /* Active indicator = full inset outline. 1px rest → 3px focus. */
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline);
+
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+
+  cursor: pointer;
+  transition:
+    box-shadow
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    color
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+/* RTL — chevron flips to the inline-start side */
+select:dir(rtl) {
+  background-position:
+    left calc(var(--space-md) + 5px) center,
+    left var(--space-md) center;
+  padding-inline-end: var(--space-md);
+  padding-inline-start: calc(var(--space-md) + 24px + var(--space-sm));
+}
+
+select:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-on-surface);
+}
+
+/* Override the global :focus-visible (§5, 2px outer secondary)
+ * with the outlined-text-field pattern (3px inset primary).
+ * Color shift to primary also recolors the chevron via currentColor. */
+select:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--md-sys-color-primary);
+  color: var(--md-sys-color-primary);
+}
+
+select:disabled {
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+}
+
+/* When using <select size="N"> or [multiple], render as a sized
+ * list-box — drop the chevron + symmetric padding. */
+select[size]:not([size="1"]),
+select[multiple] {
+  background-image: none;
+  padding-inline-end: var(--space-md);
+  min-block-size: auto;
+}
+
+/* ============================================================
+ * §14 Heading anchor — helper class
+ *
+ * Markup pattern:
+ *   <h2 id="section-1">
+ *     Title
+ *     <a class="heading-anchor" href="#section-1"
+ *        aria-label="Permalink">#</a>
+ *   </h2>
+ *
+ * Default: anchor invisible. Reveals on heading hover or anchor
+ * focus-visible (a11y — keyboard users can find permalinks).
+ * Specificity (0,1,0) — only helper class in base.css.
+ * ============================================================ */
+.heading-anchor {
+  display: inline-block;
+  margin-inline-start: var(--space-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: none;
+  font-weight: var(--md-ref-typeface-weight-regular);
+
+  opacity: 0;
+  transition: opacity
+    var(--md-sys-motion-curve-fast-effects-duration)
+    var(--md-sys-motion-curve-fast-effects);
+}
+
+/* :where() keeps the parent-heading selector at 0 specificity,
+ * so the rule sums to (0,1,1) — same as a plain class:hover. */
+:where(h1, h2, h3, h4, h5, h6):hover > .heading-anchor,
+.heading-anchor:focus-visible {
+  opacity: 1;
+}
+
+/* ============================================================
+ * §15 ::selection
+ *
+ * Single global rule — secondary-container fill, on-secondary
+ * foreground. Same pair both schemes (token swap handles dark).
+ * ============================================================ */
+::selection {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}

@@ -1,0 +1,1437 @@
+# Axismundi Backlog
+
+> Tracked work items that are **deliberately out of scope** for the
+> current and previous releases. Each entry was flagged during a
+> review or visual-QA pass, evaluated against the release-in-flight's
+> scope, and either dispatched to a future release or left as a
+> known-delta with rationale. Entries here are not bugs — they are
+> documented decisions to defer.
+>
+> When an item is ready to be addressed, it gets a `target: vX.Y.Z`
+> field; until then, the field is `target: TBD`.
+
+## How items get on this list
+
+1. A visual QA pass, review session, or external consultation surfaces
+   an issue or improvement opportunity.
+2. The issue is evaluated against the release-in-flight's scope
+   (per the release's CHANGELOG entry and ROADMAP target).
+3. If the issue would expand scope past the release's commitment, it
+   is added here with a `source` field naming where it was discovered.
+4. The CHANGELOG of the release notes that the issue was found and
+   deferred, with a link to this file.
+
+This ROUTING prevents scope creep on releases-in-flight without
+losing the observations.
+
+## Open items
+
+### 1. Inline code font-size inheritance in helper text
+
+- **Bucket**: D (theme baseline typography)
+- **Source**: v3.4.3 visual QA — found while reviewing Material Symbols conversion in `style-guide.html`.
+- **Issue**: `.sg-helper` is `font-size: 12px` (t-body-small range) but inline `<code>` defaults to 14px, creating a visible size jump inside helper sentences. Pattern repeats throughout the styleguide.
+- **Likely fix**: `.sg-helper code, .t-body-small code { font-size: inherit; }` (and possibly extend to all small-typography variants).
+- **Target**: TBD — candidate for `v3.4.4 Styleguide Typography QA` or as a side-fix in any future styleguide-touching release.
+- **Scope risk if forced into v3.4.3.1**: small CSS change, but would expand the patch's stated scope (icon-button visual QA fixes) — better held separately.
+
+### 2. Avatar size token consistency across components
+
+- **Bucket**: B / D (token system + component composition)
+- **Source**: v3.4.3 visual QA — sections `#components-avatar` and `#components-search-bar` reference different avatar sizes.
+- **Issue**: `#components-avatar` shows `is-size-sm`, default, `is-size-lg`. `#components-search-bar` references `is-size-xs`. The full size scale (xs / sm / default / lg / possibly xl) is not laid out together for visual comparison, and the relationship to icon sizes (24px chrome, 18px chip, 16px small-target) is undocumented.
+- **Likely fix**: A short audit producing a single avatar/icon/chip size token map, plus visual comparison row in `#components-avatar`.
+- **Target**: `v3.4.x — Avatar / Icon / Chip Size Token Alignment` (separate release).
+- **Note**: Related to Chip Measurement Audit (item 4) — both touch size-token consistency. May merge into one release if scheduled together.
+
+### 3. Floating toolbar — "is-selected" color should align with primary palette
+
+- **Bucket**: B / D (component variant + state token)
+- **Source**: v3.4.3 visual QA — `Components → App bar → Large-flexible → Floating, vibrant color` section.
+- **Issue**: `is-selected` state uses a color that does not feel aligned with the M3 primary palette for the component. User suggested it should be a primary-family tone to match the M3 reference.
+- **Likely fix**: Review the `is-selected` selector for the component and adjust its color token from whatever neutral it currently is to a primary-family token (e.g. `primary-container` → `on-primary-container`).
+- **Target**: TBD — likely `v3.4.x Component State Token Audit`.
+
+### 5. WordPress logo styleguide specimen
+
+- **Bucket**: F (reference specimen) — NOT a theme icon primitive
+- **Source**: v3.4.3 visual QA — user asked whether WordPress logo SVG could appear in the styleguide as a reference. GPT consultation concluded: yes, as a clearly-labeled `reference specimen` (NOT as a theme-shipped icon).
+- **Issue**: The SVG track (per `SVG-ICON-POLICY.md`) handles WordPress / social / brand / portable content. There is currently no styleguide demonstration of the SVG track — the icon-system-pattern.html mentions it but does not show a recognized brand glyph.
+- **Likely fix**: Add a `figure.sg-brand-specimen` block to `style-guide.html` (or to `icon-system-pattern.html`) embedding the WordPress wmark SVG with: trademark notice, link to https://wordpress.org/about/logos/, explicit "reference only — not a theme primitive" caption. Sourced fresh from `compare/brand-assets-research/WordPress-logotype-wmark.svg` (which itself was fetched from the official source).
+- **Target**: ~~`v3.4.4` candidate~~ — **RESOLVED at v3.4.4.** Embedded in `lab/modules/icon-system/icon-system-pattern.html §SVG icons` as a currentColor-normalized inline figure with trademark caption + source link. Seed file at `compare/brand-assets-research/WordPress-logotype-wmark.svg` unchanged. Caption phrasing deliberately scoped: "official-source styleguide-only specimen, manageable when scoped per these rules" — NOT "trademark policy compliant".
+- **Constraints**: No other brand logos enter the styleguide as a pack. WordPress is permitted because the project is a WordPress theme; other brands (Mastodon, etc.) come via plugin or user-provided assets per `SVG-ICON-POLICY.md`.
+
+### 6. Monotone SVG theming plugin concept
+
+- **Bucket**: F (plugin)
+- **Source**: v3.4.3 visual QA discussion — user observation: "monotone SVG icon이 theme palette에 맞춰 자동전환 plugin은 메리트 있겠음". GPT consultation refined: this is a credible plugin concept — `Monotone SVG Theming Engine` / `Token-bound SVG Icon System`.
+- **Scope**: A plugin (`axismundi-svg-icons` or similar) that:
+  - Accepts SVG upload / paste with sanitization
+  - Auto-converts simple monochrome SVGs to `fill="currentColor"`
+  - Binds the resulting glyph to a theme token via sidebar inspector
+  - Toggles between "official brand color" and "monotone adaptive" modes
+  - Provides an icon-registry block toolbar item
+  - Pairs with Material Symbols picker for complete dual-engine UX
+- **Performance trade-off documented**: inline SVG is most flexible for currentColor / token binding, but increases DOM size; for repeated UI glyphs, sprite + `<use>` or CSS mask is preferred. The plugin should be an adaptive renderer that picks the right strategy per icon usage.
+- **Target**: `axismundi-icons` plugin extraction (post-pilot, post-v3.4.x).
+- **Note**: This is a multi-release vision, not a single backlog item. Listed here to preserve the architectural decision that the project agrees monotone SVG theming is a credible plugin direction; specific work items will be created when the plugin extraction starts.
+
+### 7. Search bar leading icon — known delta from v3.4.3
+
+- **Bucket**: D (theme interaction, deferred conversion)
+- **Source**: v3.4.3 visual QA — user noted that `search-bar__leading-icon` remains inline SVG while `ax-icon-button` was converted to Material Symbols in the same page.
+- **Status**: **Known delta, not a bug.** v3.4.3 was scoped to `ax-icon-button` only (40 instances) per `INLINE-SVG-INVENTORY.md §Conversion ordering`. The single search-bar leading icon is queued for v3.4.4 alongside chip (4) and button leading icons (10).
+- **Likely fix**: v3.4.4 conversion pass, same shape as v3.4.3.
+- **Target**: ~~`v3.4.4`~~ — **RESOLVED at v3.4.4.** `search-bar__leading-icon` SVG replaced with Material Symbols `search` glyph in `style-guide.html` L2563. Conversion-shape variant B (slot class lives on the wrapping span; only the inner SVG is replaced; the wrapping span keeps its layout role) — documented in `ICON-MIGRATION-PASS-2-AUDIT.md §Conversion shape`.
+
+### 8. Module pattern HTML `role="group"` → `role="radiogroup"` (cohort fix)
+
+- **Bucket**: D (theme runtime — accessibility role lookup)
+- **Source**: v3.4.3 visual QA — `icon-system-pattern.html` theme switcher did not toggle. Root cause: `theme.js` (`L357 const groups = document.querySelectorAll('[role="radiogroup"]');`) finds only `[role="radiogroup"]`, but all four module pattern HTMLs used `role="group"` on the sg-theme container.
+- **Fixed in v3.4.3.1**: All 4 module pattern HTMLs (carousel, ripple, search-expansion, icon-system) updated to `role="radiogroup"` in this patch. The fix was originally only required for icon-system, but applying it across the cohort prevents the same typo from re-surfacing during visual QA on the other modules. This is *consistency-maintenance*, not scope creep — same typo, same fix, four files.
+- **Status**: **Resolved at v3.4.3.1.** Listed here for traceability.
+
+### 10. Lab ripple module — runtime verification in pattern page
+
+- **Bucket**: D (lab module runtime, scoped to `lab-ripple-pattern.html` only)
+- **Source**: v3.4.4.1 visual QA follow-up. User noticed ripple effect not visible in module pattern pages. Initial concern was that ripple was never wired anywhere; on reflection user confirmed ripple is intentionally a lab module (not promoted to baseline theme interaction).
+- **Likely cause**: Visual confusion compounded by what was then item 9 — when the theme palette did not toggle, state-layer color tokens also appeared unchanged, making any state-layer / ripple effect harder to perceive. Verification under correct palette toggling was needed before declaring ripple itself broken.
+- **Status update at v3.4.5**: item 9 is resolved (cohort-fix bundled with v3.4.5). The verification path is now unblocked.
+- **Action when triggered**:
+  1. ~~Resolve item 9 first.~~ ✓ Done at v3.4.5.
+  2. Re-verify ripple in `lab-ripple-pattern.html` (the only place it should run): hover + press on `ax-button` / `ax-icon-button` / `ax-chip` demo instances under both light and dark themes.
+  3. If ripple still does not fire, inspect `lab-ripple.js` event binding scope vs. `.prose` ancestor bail-out.
+- **NOT in scope**: promoting ripple to baseline theme interaction (`style-guide.html` global). That is a separate phase under Charter §1 (theme interaction layer) and intentionally not part of this BACKLOG item.
+- **Target**: post-v3.4.5 visual-QA pass. Not blocking v3.4.6 candidate choice.
+
+### 13. `publish_styleguide.py` does not copy `theme.js` to publish surface
+
+- **Bucket**: D / build pipeline
+- **Source**: v3.4.5.1 incidental discovery. After patching `theme.js syncSwitchers` selector, verification revealed that `styleguide/scripts/` only contains `style-guide.js`. `theme.js` is referenced from `styleguide/index.html` (and `blocks.html`, `prose.html`) but is not present, producing a 404 on the published mirror.
+- **Why it has been invisible**: `style-guide.js` carries its own theme handler with self-sync, which covers the styleguide UX. The 404 surfaces only in the browser console; functionally the styleguide theme switcher works because `style-guide.js`'s handler runs first and theme.js fails silently when not present. Module pattern pages are deliberately NOT published (per `modules/README.md` policy), so the theme.js requirement on the publish surface was never enforced.
+- **Scope decision pending**:
+  - **Option A** — copy `theme.js` to publish (small `publish_styleguide.py` patch): aligns publish mirror with lab, eliminates 404s, makes module-pattern-style theme contracts work if a module pattern is ever individually shared from the publish surface.
+  - **Option B** — remove the `<script src="scripts/theme.js">` reference from `style-guide.html` / `blocks.html` / `prose.html` since `style-guide.js` is the actual handler there: tightens the publish contract, makes the styleguide explicit about which JS it depends on, but means `theme.js` is genuinely lab-only.
+  - **Option C** — leave as-is and document: the 404 is harmless given current architecture. Document the asymmetry in `tools/generators/publish_styleguide.py` and accept that module pattern pages are local-only.
+- **Decision criteria**: tied to BACKLOG #11 (Public Surface Reframe). Option choice should happen alongside v3.5.0's broader publish-policy decisions, not as a one-off patch.
+- **Target**: v3.4.x or v3.5.0 depending on whether #11 is in progress when this is addressed. Not blocking v3.4.6 candidate.
+- **Constraints**: this BACKLOG entry is recorded for traceability; the issue does not break currently-shipped behavior.
+
+### 14. Material Symbols ligature layout shift on first load
+
+- **Bucket**: D — Theme interaction / icon runtime
+- **Status**: Deferred
+- **Target**: v3.4.x Icon Runtime Polish, or rolled into v3.5.0 Public Surface Reframe if the publish/icon-runtime contract is being touched together
+- **Source**: v3.4.5.1 Visual QA Gate
+
+**Symptom**: On reload, controls using Material Symbols ligatures (theme toggle buttons, anchored menu trigger, split-button chevron, dialog/tab icons, etc.) briefly expand before contracting to icon-glyph width once the Material Symbols Rounded font finishes loading. This is FOUT/FOIT-class icon ligature layout shift, not a functional bug — once the font is cached the shift disappears.
+
+**Root cause**: Fallback text content such as `dark_mode`, `light_mode`, `arrow_drop_down`, `more_vert` occupies inline layout space in the fallback font (typically a generic sans-serif metric) for a few hundred milliseconds before the ligature substitution resolves. Without a fixed inline-size constraint on `.material-symbols-rounded`, those characters dictate width during the FOUT window.
+
+**Potential fix** (do NOT apply without full visual QA):
+
+```css
+.material-symbols-rounded {
+  display: inline-block;
+  inline-size: 1em;
+  block-size: 1em;
+  line-height: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+```
+
+Key choice: `inline-size: 1em` (not a fixed `24px`) so per-size icon rhythm is preserved:
+
+```
+font-size: 18px  → inline-size 18px
+font-size: 24px  → inline-size 24px
+font-size: 40px  → inline-size 40px  (FAB context)
+font-size: 48px  → inline-size 48px  (large surfaces)
+```
+
+**Why this needs a dedicated visual-QA pass**: `.material-symbols-rounded` is a global selector. The rule above changes the box contract for *every* Material Symbols surface shipped so far — icon buttons (40 v3.4.3) + ax-button-icon (5 v3.4.4) + chip (4 v3.4.4) + search-bar (1 v3.4.4) + nav-bar (4 v3.4.4) + nav-rail (9 v3.4.4) + tabs (3 v3.4.4.1) + dialog (2 v3.4.4.1) + theme switcher chips (3 × 5 module patterns) + popover trigger chevrons (2 v3.4.5) + popover menu-item leadings (5+ v3.4.5) = 70+ touchpoints. Future FAB conversion (35 SVGs at 56px context) and remaining `sg-*` chrome (~21 SVGs) will compound this.
+
+**Constraints when patching**:
+- Per-size rhythm must hold (18/20/24/40/48 contexts).
+- Variable-font axes (`FILL`, `wght`, `GRAD`, `opsz`) must not be regressed — Charter §v3.2.1 `--md-grade` theme-scope sync must continue to apply.
+- Material Symbols Rounded family is the only Material Symbols font shipped with the theme (per `ICON-FONT-POLICY.md`); Outlined/Sharp arrive via opt-in plugin — the box rule must not assume Rounded-only metrics.
+- `font-feature-settings: 'liga'` and the `notranslate` / `translate="no"` attributes already on every span must be preserved.
+
+**Not in scope** of this entry:
+- Changing icon sizes or per-context rhythm.
+- Switching from ligature-based Material Symbols to glyph-codepoint Material Symbols (a separate runtime decision).
+- Preloading the icon font earlier in the document (`<link rel="preload">`) — that is a different mitigation that does not need the global box contract change but adds bytes to first paint.
+
+**Decision criteria**: visual-only flash on first load, no functional impact, no broken contract. Patch when (a) global icon box contract is up for refactor anyway, or (b) accumulated user reports make the flash a priority.
+
+### 11. Public surface reframe — styleguide ⇄ module lab UX
+
+- **Bucket**: E (documentation UX) — first BACKLOG item in Bucket E so far
+- **Target**: v3.5.0 candidate (not v3.4.x). v3.4.x is internal-structure stabilization; v3.5.0 is public-surface reframe.
+- **Source**: v3.4.5 mid-discussion. After v3.4.0–v3.4.4.1 the boundary between baseline (styleguide) and extension (lab modules) has crystallized: the styleguide became an uncontaminated baseline catalog, lab modules became extension/interaction labs with their own pattern pages, and the icon system introduced a separate ship-track for chrome glyphs and brand specimens. The current public surface (GitHub Pages entry, mirror layout) still reflects the older "styleguide = mirror of everything" assumption and needs reframing to match the new structure.
+
+**User-stated vision**:
+
+```
+스타일가이드에는 승격된 컴포넌트 모듈의 결과만을 보여주고,
+설명은 lab 모듈 페이지로 링크.
+승격되지 않은 모듈은 실험실 아이콘 팝업 메뉴로 리스트를 보여주면 될 것 같음.
+```
+
+Translated / expanded:
+
+- Styleguide = baseline catalog showing only **promoted** module results (post-promotion baseline form). No rationale, no a11y narrative, no Beer-CSS-intake details on the baseline page itself.
+- Each component links out to its lab module page where the audit, rationale, intake notes, and visual QA narrative live.
+- Modules that are not promoted to baseline appear via a **lab/flask icon** in the styleguide chrome that opens a popup menu listing them — discoverable but not visually mixed into the baseline catalog.
+
+**Principles (consolidating user vision + GPT consultation)**:
+
+1. **Styleguide is the baseline catalog**, not a mirror of every experiment. Once a module is promoted, its visual primitive appears in the styleguide and a "See module" link sits next to it. Unpromoted modules are accessed from a dedicated lab-flask popup, not inline.
+2. **Lab modules are extension labs**. They retain their own pattern page (rationale + a11y narrative + visual QA + audit doc + 5-criterion verdict). Detailed prose moves from baseline to module pages.
+3. **The public `styleguide/` mirror is a generated artifact, not an authoring surface.** Canonical source is `products/reference-implementations/axismundi-lab/`. This already matches `publish_styleguide.py` behavior — the policy just becomes explicit in docs.
+4. **`typography-axis.html` is a typography adjunct, not a module.** It belongs as a sub-link from the Typography section ("Open typography axis specimen"), not as a separate module entry and not as a top-level GitHub Pages entry.
+
+**Proposed GitHub Pages entry layout (sketch — to be designed at v3.5.0)**:
+
+```
+GitHub Pages entry
+├─ Baseline Styleguide              ← promoted module results, no narrative
+│  ├─ Tokens
+│  ├─ Typography  (└─ link: typography-axis specimen)
+│  ├─ Components
+│  ├─ Blocks
+│  └─ Prose
+├─ Module Lab                       ← reachable also via the lab-flask popup
+│  ├─ Carousel
+│  ├─ Ripple
+│  ├─ Search Expansion
+│  ├─ Icon System
+│  └─ Popover  (and any v3.4.x+ additions)
+├─ Experimental / Reference
+│  ├─ benchmark-interactions (frozen Beer CSS lineage snapshot)
+│  └─ compare/ references (frozen, never authority — see Charter)
+└─ Docs
+   ├─ Architecture Boundaries
+   ├─ Beer CSS Intake
+   ├─ Icon System Audit
+   ├─ Roadmap
+   └─ Backlog
+```
+
+**Concrete change set (high-level, to be detailed at v3.5.0)**:
+
+- New GitHub Pages entry HTML (currently no entry — styleguide IS the entry).
+- Add lab-flask icon component to the styleguide chrome with popup menu listing unpromoted modules. *Note*: this depends on v3.4.5 popover landing; cannot start before that.
+- Move detailed rationale prose out of `style-guide.html` and into module pages where it doesn't already live there.
+- Add publish doc line: *"The public styleguide mirror is a generated artifact, not an authoring surface. Canonical edits belong in axismundi-lab."*
+- Link `typography-axis.html` from the Typography section.
+
+**Constraints**:
+
+- Promotion criteria for "promoted module result vs. lab-only" must be written down before any styleguide trimming happens — otherwise the styleguide becomes inconsistent. Likely sits in a new Charter clause or in `lab/docs/PROMOTION-CRITERIA.md`.
+- Mirror generation must not break (`publish_styleguide.py` continues to work; output paths remain stable for any existing GitHub Pages links).
+- The "lab-flask popup" UX depends on v3.4.5 popover being available — sequencing constraint.
+
+**NOT in scope** of this BACKLOG item: deciding *which* current lab modules count as "promoted" vs "lab-only". That call happens at v3.5.0 entry, informed by where each module stands at that point.
+
+### 18. Snackbar class naming inconsistency
+
+- **Bucket**: E — Documentation / naming convention housekeeping
+- **Status**: Deferred
+- **Target**: v3.5.0 Public Surface Reframe (BACKLOG #11) — natural fit for that phase's broader baseline naming convention review
+- **Source**: v3.4.7 Phase 0 inventory. While verifying snackbar's actual scaffolding, discovered that snackbar uses bare BEM (`.snackbar`, `.snackbar__label`, `.snackbar__action`, `.snackbar__close`, `.snackbar--two-line`) — no `ax-` prefix — while every other component uses the `ax-` prefix (`.ax-button`, `.ax-icon-button`, `.ax-tooltip`, `.ax-date-picker`, `.ax-time-picker`, `.ax-menu`, `.ax-card`, `.ax-app-bar`, etc.).
+
+**Why this matters**:
+
+1. **Public surface predictability**: Once Axismundi is published, third-party themes / plugins may shadow / extend `.snackbar` (a very common BEM root used by many other design systems). The `ax-` prefix exists precisely to avoid such collisions.
+2. **Documentation consistency**: When documenting "all baseline components use the `ax-` prefix", snackbar is the lone exception — generating ongoing friction in docs, tutorials, and search/replace operations.
+3. **Federation / WordPress integration**: A theme installing into a WordPress site already loaded with another plugin's `.snackbar` styles risks visual collision. The `ax-` prefix isolates Axismundi.
+
+**Why this is NOT urgent**:
+
+- The current snackbar is baseline-only with no third-party consumers (yet). Renaming after a public release would be a breaking change.
+- The renaming touches: `components.css` L2042–L2156 (primitive), `style-guide.html#components-snackbar` (4 specimens at L2941–L2973), `style-guide-benchmark.html` (snackbar section, line range to be re-checked at execution time), any future `lab/modules/snackbar/` files. Mechanical but cross-file.
+- Best timing: paired with **v3.5.0 Public Surface Reframe** (BACKLOG #11), which already plans to formalize the baseline-vs-lab boundary. Naming conventions belong in the same conversation.
+
+**Scope when triggered**:
+
+```
+1. Rename .snackbar*  →  .ax-snackbar*  in components.css §14
+2. Update style-guide.html#components-snackbar markup + code snippet
+3. Update style-guide-benchmark.html snackbar section (if still present after v3.4.8)
+4. Update any lab-snackbar.* references (depends on BACKLOG #15 having landed first or not)
+5. Verify no internal docs or tutorials reference the bare .snackbar selector
+```
+
+**NOT in scope**:
+
+- Reviewing every other component naming for consistency (separate question, larger).
+- Changing BEM convention (we keep BEM; we just add the `ax-` prefix to the root).
+
+**Sequencing**:
+
+- Best executed alongside v3.5.0 Public Surface Reframe.
+- If BACKLOG #15 (Snackbar Runtime Module) lands first, the runtime module should be authored against the `.snackbar` name as it currently exists, and renamed at v3.5.0. This avoids two passes of the lab module.
+- Alternative: rename can happen before v3.5.0 as a "v3.4.x naming convention hardening" patch, if surface stability becomes a concern earlier.
+
+- **v3.5.0 schedule pointer (Phase 1B charter, 2026-05-15)**: Recorded in `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md §5.2`. Execution scheduled for a v3.5.x mini-release ("naming sweep") with its own Phase 0 → 5 cycle. NOT closed until that mini-release lands.
+
+### 16. Tooltip delay and touch long-press refinement
+
+- **Bucket**: D/E — Theme interaction / lab module refinement
+- **Status**: Deferred
+- **Target**: v3.4.x Tooltip Interaction Polish (post-v3.4.6, before v3.5.0)
+- **Source**: v3.4.6 Tooltip Module Extraction Phase 0 audit. M3 spec recommends ~500ms hover delay for plain tooltips and long-press triggering on touch devices. The benchmark `enableTooltips()` does neither — show is immediate on `pointerover` / `focusin`, and touch devices inherit pointerover's sticky behavior.
+
+**Rationale for deferral**:
+
+```
+v3.4.6 goal
+  = extract Beer-CSS-derived tooltip into an Axismundi-native lab module
+  = minimal accessible hover/focus runtime
+
+v3.4.x Tooltip Interaction Polish goal
+  = refinements that depend on running the v3.4.6 extraction first
+```
+
+v3.4.6 intentionally implements only the minimal accessible hover/focus runtime. Mixing refinements into the extraction phase risks scope creep and obscures the extraction's audit trail.
+
+**Deferred refinements**:
+
+- **Hover show delay** — ~500ms `setTimeout` before show; cleared if pointer leaves before delay elapses. M3 spec value, but exact tuning under reduced-motion / a11y settings is open.
+- **Touch long-press trigger** — Android pattern; touch device should require long-press to show, not immediate `pointerover` (which fires on every tap).
+- **Rich tooltip timing** — rich variant is dismissible and may need its own show/hide model independent of plain (e.g., manual close button + auto-dismiss timeout combination).
+- **Mobile dismissal behavior** — outside-tap dismiss on touch surfaces, different from desktop's mouseleave.
+- **Pointer coarse/fine distinction** — `@media (pointer: coarse)` vs `(pointer: fine)` switching between long-press and hover trigger automatically.
+- **Reduced-motion show delay adjustment** — `(prefers-reduced-motion: reduce)` may want zero delay (since motion is already collapsed) or, conversely, longer delay (less twitchy).
+
+**NOT a v3.4.6 blocker**: v3.4.6 extraction does not need any of these refinements to satisfy its core a11y contract (`aria-describedby`, hover/focus show, mouseleave/blur hide, Escape for rich, forbidden-ancestor bail-out).
+
+**Sequencing**:
+
+- This entry activates only after `lab-tooltip` runtime stabilizes through v3.4.6 visual QA.
+- Touch long-press has UA / device fragmentation concerns — likely needs a dedicated test pass.
+- May get bundled with v3.4.x Icon Runtime Polish (BACKLOG #14) if both end up under the same release.
+
+### 17. Text Input Corpus / Ontology Audit
+
+- **Bucket**: E/F — Lab module / plugin candidate (deliberately bucket-ambiguous — that ambiguity is the reason this entry exists)
+- **Status**: Deferred
+- **Target**: v3.4.x or post-pilot gap audit (likely paired with or following Pilot Block Theme Probe)
+- **Source**: v3.4.6 / v3.4.7 mid-discussion. After tooltip extraction closed the Beer-CSS interaction-module family, attention turned to text-input components — and immediately surfaced that they don't cleanly map to a single WordPress core block, editor component, or HTML form control.
+
+**The mapping ambiguity**:
+
+```
+M3 Text Field visual spec
+   ≠ WordPress frontend block
+   ≠ WordPress editor component (TextControl / InputControl / TextareaControl)
+   ≠ native HTML form control
+```
+
+Four overlapping but non-identical reference points. A "textbox module" cut from any one of them without first mapping the corpus risks shipping something that fits the M3 spec but breaks WordPress integration, or fits a WordPress editor control but doesn't represent the frontend authoring surface.
+
+**Connected surfaces** (all currently touched by some flavor of "text input"):
+
+```
+Text field (M3)            comment form
+InputControl (Gutenberg)   login form
+TextControl                settings field
+TextareaControl            post meta field
+Search bar                 block sidebar control
+Select                     ActivityPub note composer (future)
+Combobox
+```
+
+These are not separable trivially — a Search bar overlaps with `<input type="search">` and with the search lab module already in `lab/modules/search-expansion/`. A Combobox overlaps with the popover lab module's anchored-listbox pattern.
+
+**Why not bypass the audit and build the module directly**:
+
+> *"이 input은 post content 안에 들어가는가? theme chrome인가? comment form인가? search form인가? editor sidebar control인가? plugin setting field인가?"*
+
+These questions cannot be answered from the static styleguide alone. They surface only when the components are placed into a real WordPress block theme. Therefore: **build the pilot probe first, then audit, then decide module shape**. Skipping straight to "lab-textbox" module would likely require redesign once the pilot surfaces actual usage contexts.
+
+**Scope when triggered**:
+
+1. M3 Text Field spec inventory (filled, outlined, with-leading, with-trailing, error, disabled, focused, supporting-text, character-counter, prefix, suffix).
+2. WordPress `TextControl` / `InputControl` / `TextareaControl` mapping — which Axismundi tokens / states / variants align to which WordPress component prop.
+3. Boundary between frontend form input (post content / comment form / search form) and editor sidebar control (block sidebar / settings / inspector controls).
+4. Overlap with existing lab modules — particularly `search-expansion` (Search bar already extracted) and `popover` (Combobox / Select would need anchored listbox).
+5. Decision tree for: baseline visual specimen vs. lab module vs. plugin territory.
+6. Audit doc records the corpus + gaps discovered during the pilot probe, not implementation.
+
+**Provisional classification** (revisable at audit time):
+
+```
+Baseline styleguide:
+- text field visual specimen (filled / outlined)
+- textarea visual specimen
+- search field visual specimen
+- disabled / error / focus state primitives
+
+Lab module candidates:
+- floating label runtime behavior
+- prefix / suffix / counter
+- validation message lifecycle
+- combobox-like behavior (overlaps with popover module)
+- password visibility toggle
+- textarea autosize
+- input + helper / error linked-text lifecycle
+
+Plugin territory:
+- block editor sidebar controls
+- custom form block
+- post meta binding
+- user settings forms
+- ActivityPub composer
+```
+
+**NOT in scope of this BACKLOG item**:
+
+- Implementing any of the lab module candidates listed above. This entry covers audit / classification only.
+- Touching the existing `.text-field` primitive in `components.css` (it stays in baseline as visual specimen at minimum).
+- Deciding the WordPress editor integration story (separate plugin phase).
+- ActivityPub composer surface (federation-side decision, not theme-side).
+
+**Sequencing dependency**:
+
+This audit is best preceded by the Pilot Block Theme Probe (already on ROADMAP as `v3.4.x`). The pilot surfaces actual placement contexts (header chrome vs. post-content vs. comment form vs. editor sidebar), which directly informs the audit's bucket decisions.
+
+If the pilot probe is delayed, the audit can still run on the static styleguide corpus alone — but its decisions will need a follow-up pass after pilot exists.
+
+### 19. Date Picker Grid Navigation A11y
+
+- **Bucket**: D/E — Theme interaction / lab module a11y refinement
+- **Status**: Deferred
+- **Target**: v3.4.x Date/Time A11y Pass (post-v3.4.7 extraction, before v3.5.0 if feasible)
+- **Source**: v3.4.7 Date/Time Picker Interaction Extraction Phase 0 inventory. The GPT Codex-generated benchmark date picker interaction lacks the WAI-ARIA calendar grid navigation pattern. v3.4.7 explicitly carries this gap over rather than fixing it in-flight, because a complete WAI-ARIA Date Picker pattern is its own design decision and would balloon the extraction's scope.
+
+**The carry-over policy in v3.4.7**:
+
+```
+v3.4.7 = benchmark interaction layer를 date-time module로 추출
+       = 기존 a11y 수준을 정확히 기록
+       = critical gap은 숨기지 않고 BACKLOG #19로 라우팅
+
+v3.4.x later = Date Picker Grid Navigation a11y pass
+```
+
+**Missing a11y patterns** (date picker only — time picker has its own partial patterns):
+
+The benchmark date interaction code (`benchmark-interactions.js` L921–L1283) has only `role` 1× / `aria-selected` 1× / `aria-pressed` 1× / `aria-label` 1× / `tabindex` 1× / `event.key` 3× / `"Escape"` 1×. None of the WAI-ARIA Date Picker grid pattern is wired:
+
+```
+ARIA structure:
+  role="grid" on the calendar table
+  role="row" on each week row
+  role="gridcell" on each day cell
+  aria-current="date" on today's cell
+  aria-selected on the active selection
+  aria-readonly / aria-multiselectable as appropriate
+  aria-labelledby pointing to the month/year nav label
+
+Keyboard navigation:
+  ArrowLeft / ArrowRight  → previous/next day
+  ArrowUp / ArrowDown     → previous/next week
+  Home / End              → start/end of week
+  PageUp / PageDown       → previous/next month (Shift +PageUp/Down = year)
+  Enter / Space           → select date
+  Escape                  → close picker
+
+Roving tabindex:
+  Only one cell has tabindex="0" at a time (the focused date)
+  All other cells have tabindex="-1"
+  Focus follows arrow-key navigation
+
+Announcements:
+  Month/year changes announced when ArrowKey crosses month boundary
+  aria-live="polite" region for nav announcements
+```
+
+**Why this is a separate phase, not v3.4.7 scope**:
+
+1. **Scope honesty** — v3.4.7 is already 684 lines JS + 428 lines CSS extraction. Adding the full WAI-ARIA pattern would double the audit doc and require new design decisions (focus management on month boundary crossings, range-selection a11y interaction with single-date a11y, etc.).
+2. **Carry-over policy precedent** — v3.4.6 tooltip *did* fix the missing `aria-describedby` because it was a single defensive setAttribute / removeAttribute pair. The date picker grid pattern is qualitatively different — it's an ongoing design conversation, not a missing one-line attribute.
+3. **Audit doc transparency** — DATE-TIME-AUDIT.md records the a11y gap explicitly in its 5-criterion verdict as a known limitation: *"PASS as an interaction extraction module, with critical inherited a11y gaps deferred."*
+
+**Scope when triggered**:
+
+- `lab-date-time.js` — wire ArrowKey navigation, roving tabindex, Home/End/PageUp/PageDown, aria-live announcements
+- `lab-date-time.css` — `:focus-visible` ring on gridcell (currently relies on browser default)
+- `lab-date-time-pattern.html` — add keyboard-navigation demo section with instructions
+- `DATE-TIME-AUDIT.md` 5-criterion verdict — upgrade row 4 (keyboard/a11y) from "PASS (carry-over, partial)" to "PASS (full WAI-ARIA Date Picker pattern)"
+- Verify with at least one screen reader (NVDA or VoiceOver)
+
+**NOT in scope** of this BACKLOG entry:
+
+- Time picker a11y refinements (separate consideration — time picker uses different ARIA patterns, possibly `role="radiogroup"` for hour/minute selection)
+- Locale calendar systems (lunar / Hijri / Korean Sexagenary) — separate locale phase
+- Range selection a11y (BACKLOG could be split further if range selection is needed)
+- ActivityPub Event object integration
+- WordPress editor date binding
+
+**Sequencing**:
+
+- Best executed after v3.4.7 freeze stabilizes and at least one external pilot using the module surfaces real usage patterns.
+- May be bundled with the v3.4.x Pilot Block Theme Probe if the probe surfaces date-picker usage that needs a11y.
+- Independent of BACKLOG #15 (Snackbar Runtime) and #17 (Text Input Audit) — different surface, different a11y model.
+
+### 20. Theme-only color customization policy
+
+- **Bucket**: F — Plugin / theme binding policy
+- **Status**: Deferred
+- **Target**: v3.4.x or v3.5.0 Public Surface Reframe — confirm policy when `ontology-theme-pilot` is next reviewed
+- **Source**: `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §1 (Color picker concern and bridge strategy)
+
+**The concern**:
+
+The WordPress `theme.json` color palette UI / Global Styles inspector / color swatch preview is built around a single-color-per-slug assumption. Axismundi's M3 token graph (`ref → sys → comp`) does not fit that assumption — a user who opens Gutenberg's color picker and changes a swatch sees a visible-but-non-functional control because the change does not propagate to `--md-sys-color-*`. This is a UX anti-pattern (user trust erosion) AND a review risk (WordPress.org theme reviews routinely test color controls).
+
+**Resolution proposal**:
+
+```
+Theme-only mode (no Interpreter Plugin installed):
+  theme.json settings.color.custom = false
+  Lock Gutenberg color customization UI.
+  Document the lock as protecting the M3 token graph.
+  Direct users to the M3 Interpreter Plugin (BACKLOG #21) for full
+  color customization.
+```
+
+This is the **honest default** — visible controls behave because non-functional controls are not rendered. Compare to the alternative ("custom=true with default Gutenberg color UI that doesn't propagate") which violates the "Visible control must map to real runtime behavior" design principle.
+
+**Scope when triggered**:
+
+1. Verify `ontology-theme-pilot/theme.json` current `settings.color.custom` value.
+2. If currently `true` (or unset, which defaults to `true`), update to `false`.
+3. Add documentation note in pilot README explaining the policy.
+4. Confirm that the lock applies in both site editor and post editor contexts.
+5. Record decision in `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §6 status table.
+
+**NOT in scope**:
+
+- Implementing the Interpreter Plugin that *would* re-enable color customization with M3 bridging (separate BACKLOG #21).
+- Renaming or restructuring existing palette slugs (separate task).
+- Block-supports-level color overrides on individual blocks (per-block decision, not theme-level policy).
+
+**Sequencing**:
+
+- This is a small mechanical change to `ontology-theme-pilot/theme.json` plus a documentation note.
+- Can be bundled with v3.5.0 Public Surface Reframe or executed standalone as a quick patch.
+- Independent of all other v3.4.x items.
+
+- **v3.5.0 Phase 1B charter pointer (2026-05-15)**: Recorded in `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md §6.2`. Execution scheduled for a v3.5.x mini-release ("theme policy") alongside BACKLOG #22 implementation. NOT closed until that mini-release lands.
+
+### 21. M3 Interpreter Plugin separation
+
+- **Bucket**: F — Plugin
+- **Status**: Deferred (milestone candidate)
+- **Target**: v3.5.x+ — larger than a single release; spans multiple phases
+- **Source**: `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §1 (Bridge stages) and §7 (Interpreter Plugin scope preview)
+
+**Goal**:
+
+Create a separate WordPress plugin (`axismundi-m3-interpreter` or similar) that bridges Gutenberg's color/style UI and Axismundi's M3 token graph. The plugin is NOT a fork of Gutenberg — it extends Gutenberg's official extension surface (block filters, block supports, SlotFill, PluginSidebar, theme.json contract, `@wordpress/global-styles-engine`) without modifying core.
+
+The plugin sits at the binding boundary:
+
+```
+WordPress (Gutenberg core + theme.json) ←→ Interpreter Plugin ←→ Axismundi M3 token graph
+```
+
+**Three-stage phasing** (per FEEDBACK-AND-STRATEGY.md §1 "Bridge stages"):
+
+```
+Stage 1 — Static bridge (no plugin, theme-only mode — covered by BACKLOG #20)
+Stage 2 — Preset bridge (v1 plugin):
+   theme.json palette slugs registered;
+   --md-sys-color-primary: var(--wp--preset--color--primary);
+   Changing the WP preset propagates to M3 sys token.
+   Limitation: changing one preset does not regenerate the M3 role family.
+
+Stage 3 — Semantic M3 bridge (v2 plugin):
+   User chooses a seed color or role color;
+   Plugin generates M3 tonal palette (ref tier);
+   Plugin computes light/dark role sets (sys tier);
+   Plugin synchronizes Global Styles / editor CSS / frontend CSS.
+   Cost: depends on Material Color Utilities (HCT color space) —
+   non-trivial to ship in either JS or PHP.
+```
+
+**Implementation surface** (preview, not committed):
+
+```
+axismundi-m3-interpreter/
+├── axismundi-m3-interpreter.php       (plugin bootstrap)
+├── block.json
+├── src/
+│   ├── editor/
+│   │   ├── index.js                   (editor bootstrap)
+│   │   ├── plugin-sidebar.js          (M3 role panel via PluginSidebar)
+│   │   ├── block-filters.js           (blocks.registerBlockType extensions)
+│   │   ├── m3-controls.js             (InspectorControls for M3 role/variant)
+│   │   └── preview-sync.js            (editor canvas / frontend sync)
+│   ├── runtime/
+│   │   ├── theme-mode.js              (data-theme auto/light/dark — paired with BACKLOG #22)
+│   │   ├── token-resolver.js          (HCT → sys token computation)
+│   │   └── block-role-map.js          (core block → M3 role mapping table)
+│   └── styles/
+│       ├── editor.css                 (editor canvas runtime)
+│       ├── frontend.css               (frontend runtime)
+│       ├── tokens-ref.css             (ref tier)
+│       ├── tokens-sys.css             (sys tier)
+│       └── tokens-comp.css            (comp tier)
+├── tokens/
+│   ├── m3-baseline.tokens.json        (M3 baseline schemes)
+│   ├── axismundi.tokens.json          (Axismundi specialization)
+│   └── role-map.json                  (block-to-role mapping ontology)
+└── build/
+```
+
+The `role-map.json` is the ontology bridge:
+
+```json
+{
+  "core/button": {
+    "m3Roles": ["filled-button", "outlined-button", "text-button", "tonal-button", "elevated-button"],
+    "defaultRole": "filled-button"
+  },
+  "core/group": {
+    "m3Roles": ["surface", "card", "section", "navigation-container"],
+    "defaultRole": "surface"
+  },
+  "core/navigation": {
+    "m3Roles": ["top-app-bar", "navigation-bar", "navigation-rail", "navigation-drawer"],
+    "defaultRole": "top-app-bar"
+  }
+}
+```
+
+**NOT in scope** of this BACKLOG item:
+
+- Modifying Gutenberg core or Site Editor source.
+- Replacing the entire Gutenberg color UI (the plugin extends, it does not replace).
+- Implementation in current v3.4.x cycle — this is firmly a v3.5.x+ milestone.
+
+**Sequencing dependencies**:
+
+- BACKLOG #20 (theme-only color policy) should land first to establish the "no plugin = no customization" honest default.
+- BACKLOG #22 (explicit `data-theme="auto"` 3-state) should land in the plugin's runtime module (`src/runtime/theme-mode.js`).
+- The plugin's `role-map.json` becomes a downstream consumer of completed Component modules (BACKLOG #17 text input mapping, future text-field-WP-mapping, etc.).
+
+**Sub-decisions at execution time**:
+
+- Stage 2 OR Stage 3 first? Stage 2 is shippable and useful; Stage 3 needs Material Color Utilities. Probably Stage 2 first, Stage 3 as a follow-up release.
+- Material Color Utilities: JS (client-side, larger bundle) or PHP port (server-side, requires implementing HCT)? Open question.
+- Plugin name and slug: TBD.
+- Block-attribute strategy: `className` only (safest, no save-markup validation risk) vs. custom block attributes like `m3Role` (more semantic, but core block save markup may reject). FEEDBACK-AND-STRATEGY.md §6 notes this is speculative until validated.
+
+### 22. Explicit `data-theme="auto"` 3-state model
+
+- **Bucket**: D/E — Theme runtime / lab module candidate
+- **Status**: Deferred
+- **Target**: v3.5.0 Public Surface Reframe (paired with BACKLOG #11)
+- **Source**: `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §6 (Impact on current v3.4.x work)
+
+**The current state**:
+
+The ontology-theme-pilot uses the pattern:
+
+```css
+:root:not([data-theme="light"]) {
+  /* dark scheme overrides */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* dark scheme overrides */
+  }
+}
+```
+
+This works functionally — a missing `data-theme` attribute, `data-theme="auto"`, or `data-theme="dark"` all resolve to dark when the OS prefers dark, while `data-theme="light"` forces light. But the state model is implicit. There is no canonical "auto" state visible in the DOM, and the `:not()` pattern would silently absorb hypothetical future variants like `data-theme="sepia"` or `data-theme="dim"` or `data-theme="high-contrast"`.
+
+**The proposed model**:
+
+Three explicit states:
+
+```
+data-theme="auto"   →  follow OS preference (default)
+data-theme="light"  →  force light
+data-theme="dark"   →  force dark
+```
+
+CSS layered explicitly:
+
+```css
+/* Light is the baseline */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* light token values */
+}
+
+/* Auto + OS dark */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]),
+  :root[data-theme="auto"] {
+    color-scheme: dark;
+    /* dark token values */
+  }
+}
+
+/* Force dark */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  /* dark token values */
+}
+```
+
+The `<html>` element is set by PHP `language_attributes` filter (server-side default) and overridden by JS `document.documentElement.dataset.theme` (user choice from localStorage).
+
+**Why this matters**:
+
+1. **Future variants**: when a high-contrast or sepia variant is added later, the `:not([data-theme="light"])` pattern would incorrectly absorb it into the dark branch. The explicit 3-state model makes the variant addition mechanical.
+2. **Debuggability**: `<html data-theme="auto">` makes the current state visible in DevTools. The implicit "no attribute = auto" model hides state.
+3. **Pairing with BACKLOG #21**: the Interpreter Plugin's `src/runtime/theme-mode.js` should expose `auto / light / dark` as an explicit enum, not an implicit "anything-but-light = dark" computation.
+
+**Scope when triggered**:
+
+1. Audit current `ontology-theme-pilot/stylesheets/tokens.css` for `:not([data-theme="light"])` patterns.
+2. Rewrite each to the explicit 3-state model.
+3. Confirm `color-scheme` is set explicitly per state.
+4. Add PHP `language_attributes` filter to set `data-theme="auto"` by default at the HTML root.
+5. Add small inline `<head>` script for JS override from localStorage (runs before render to avoid FOUC).
+6. Verify both site editor canvas and frontend render correctly under each state.
+
+**NOT in scope**:
+
+- Adding high-contrast or sepia variants — those are separate decisions; this entry just makes future addition mechanical.
+- Implementing the full theme-mode JS module — that lives in the Interpreter Plugin (BACKLOG #21).
+- Changing the WordPress.org Customizer integration — separate consideration.
+
+**Sequencing**:
+
+- Best executed alongside v3.5.0 Public Surface Reframe (BACKLOG #11), since both touch ontology-theme-pilot's public surface and benefit from a single coordinated audit.
+- Independent of BACKLOG #15 (Snackbar) and #17 (Text Input).
+- BACKLOG #21 (Interpreter Plugin) consumes the output of this entry.
+
+- **v3.5.0 Phase 1B charter pointer (2026-05-15)**: Recorded in `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md §6.1` (3-state model designed: light / dark / auto). Execution scheduled for a v3.5.x mini-release ("theme policy"). NOT closed until that mini-release lands.
+
+### 23. Elevated Chip Variants
+
+- **Bucket**: E — Lab module variant expansion
+- **Status**: Deferred
+- **Target**: v3.4.10+ or later, after v3.4.9 first-Component-Module pattern stabilizes
+- **Source**: v3.4.9 Phase 1 scope decision. Material Design 3 §14 spec defines optional elevated variants for assist, filter, and suggestion chips (input chip is always outlined per M3 spec since it represents user-entered data). The v3.4.9 Chip Full Spec Module focuses on the four baseline variants already present in `components.css §11`. Elevated variants are valid M3 options but expanding into them would dilute the **first Component Full-Spec Module** as a pattern template.
+
+**Why deferred**:
+
+v3.4.9 is the first Axismundi Component Full-Spec Module. Its purpose is to establish the *pattern* for component modules (full-spec audit + measurement audit + WordPress mapping audit), not to expand chip into every M3 optional variant. If elevated variants were folded into v3.4.9:
+
+1. The audit doc would double in size and lose its focus as a "first-of-class" template.
+2. The variant matrix would mix "baseline coverage" with "module extension", obscuring the cleanest demonstration of what a Component Module *is*.
+3. Subsequent Component Modules (text-field, future FAB-full-spec) would have a less clear template to follow.
+
+After v3.4.9 stabilizes, elevated variants become a straightforward extension within the established pattern.
+
+**Scope when triggered**:
+
+- `lab-chip.css` extends with elevated variant selectors for assist / filter / suggestion (naming convention TBD by v3.4.9 audit).
+- Each variant: M3 elevation token (typically level1 at rest, level2 on hover/focus, dropped on press).
+- Visual specimens in `lab-chip-pattern.html`.
+- `CHIP-SPEC-AUDIT.md` v2 update with elevated variant matrix rows.
+- Token alignment check: which `--md-sys-elevation-level*` tokens are used.
+
+**NOT in scope**:
+
+- Input chip elevated variant — M3 spec does NOT define elevated input chip (input chip represents user-entered data, always outlined).
+- Promoting elevated variants to `components.css` baseline. Separate Charter §1 decision after the variant pattern stabilizes in lab.
+- Native form wrapping changes (filter chip `<input type="checkbox">`) — handled in v3.4.9.
+
+**Sequencing**:
+
+- Best executed AFTER v3.4.9 completes AND at least one external use of `lab/modules/chip/` surfaces real elevated-variant demand.
+- Independent of BACKLOG #15, #17, #21.
+
+### 28. Icon button public specimen SVG wording cleanup (v3.5.2 Phase 0 Risk 4)
+
+- **Bucket**: E — Documentation / public specimen cleanup
+- **Status**: Open
+- **Target**: v3.5.x public-surface cleanup release (NOT v3.5.2 close)
+- **Source**: `docs/v3.5.2/ICON-BUTTON-PHASE-0-REPORT.md` Risk 4 + `ICON-BUTTON-SPEC-AUDIT.md` §2.3 / §7
+
+**The concern**:
+
+`style-guide.html #components-icon-button` now renders real Material Symbols glyph spans inside `.ax-icon-button`, but the public snippet/helper wording still contains SVG-era examples. This is a documentation/public specimen mismatch, not a runtime bug.
+
+**Why it matters**:
+
+Icon button is the first Wave 1 component with `icon-system/` as a CURRENT unconditional dependency. Public examples must not teach downstream authors to bypass `icon-system/` by copying stale inline SVG snippets.
+
+**Proposed cleanup**:
+
+```txt
+Update style-guide.html #components-icon-button snippet/helper copy:
+  before: <svg ...></svg> / update SVG fill/d wording
+  after:  <span class="material-symbols-rounded notranslate" ...>...</span>
+
+Keep:
+  - native <button type="button">
+  - aria-label on the host button
+  - aria-hidden glyph
+  - translate="no"
+  - draggable="false"
+```
+
+**NOT in scope**:
+
+- Changing baseline `.ax-icon-button` styles.
+- Moving `ICON-BUTTON-RUNTIME-AUDIT.md`.
+- Implementing Icon button Phase 2 artifacts (done in v3.5.2).
+- Implementing Ripple v2 or current ripple wiring.
+
+### 29. Card behavior patterns (v3.5.3 M3 guideline cross-check)
+
+- **Bucket**: E — Lab module behavior pattern expansion
+- **Status**: Open
+- **Target**: v3.5.x mini-release or Wave 2 candidate (NOT v3.5.3 Card primitive close)
+- **Source**: v3.5.3 Card Phase 2 M3 guideline cross-check against https://m3.material.io/components/cards/guidelines §Behavior
+
+**The concern**:
+
+v3.5.3 closes Card as a static Component Full-Spec primitive: variants, slots, native action/navigation semantics, disabled Pattern B, and current `core/group` bridge. Material Design 3 Card guidelines also include behavior-heavy patterns that are valid Card guidance but intentionally outside the primitive release.
+
+**Deferred behavior patterns**:
+
+```txt
+expanding cards / container transform
+navigation transition patterns
+swipe actions (one swipe action per card)
+pickup / move / reorder in collections
+scrolling behavior for expanded cards
+```
+
+**Why deferred**:
+
+These patterns require runtime behavior, motion policy, collection semantics, and often plugin/editor integration. Folding them into v3.5.3 would blur the boundary between Card primitive and Card behavior patterns.
+
+**Proposed future scope**:
+
+- Create a Card behavior pattern mini-release or Wave 2 item.
+- Decide whether behavior patterns live under `modules/card/` or a separate interaction/pattern module.
+- Audit M3 behavior rules:
+  - expanding only for important expressive moments
+  - one swipe action per card
+  - no swipeable/paginated content inside swipeable cards
+  - pickup/reorder raises the card without pushing other elements
+  - mobile expanded cards scroll in-screen, not internally nested
+  - desktop expanded card content may expand/scroll
+- Keep v3.5.3 `lab-card.css` / `lab-card-pattern.html` as the static primitive reference.
+
+**NOT in scope**:
+
+- Reopening v3.5.3 Card primitive release.
+- Adding `lab-card.js` retroactively to v3.5.3.
+- Wiring current ripple.
+- Implementing Ripple v2.
+- Editing `components.css` baseline without a separate Charter decision.
+
+### 30. Extended FAB behavior patterns (v3.5.5 FAB family close)
+
+- **Bucket**: E — Lab module behavior pattern expansion
+- **Status**: Open
+- **Target**: v3.5.x mini-release or Wave 2 candidate (NOT v3.5.5 FAB primitive close)
+- **Source**: v3.5.5 FAB Phase 0/1/2 findings; M3 Extended FAB behavior concerns.
+
+**The concern**:
+
+v3.5.5 closes FAB #3 + Extended FAB #4 as one static Component Full-Spec family primitive: size variants, surface variants, static Extended FAB, disabled Pattern A, icon-system CURRENT unconditional, and ripple CANDIDATE. Extended FAB guidance can also involve behavior-heavy patterns that are intentionally outside the primitive release.
+
+**Deferred behavior patterns**:
+
+```txt
+Extended FAB collapse/expand
+auto-hide on scroll
+FAB-to-FAB-menu transition
+toolbar floating-with-FAB choreography
+modal/sheet morph behavior
+```
+
+**Why deferred**:
+
+These patterns require runtime behavior, scroll policy, motion policy, toolbar/menu coordination, and often editor or plugin integration. Folding them into v3.5.5 would blur the boundary between the static FAB family primitive and behavior-pattern work.
+
+**Proposed future scope**:
+
+- Decide whether behavior patterns live under `modules/fab/`, `modules/fab-menu/`, or a separate interaction/pattern release.
+- Audit Extended FAB collapse/expand and auto-hide behavior against M3 guidance.
+- Coordinate with Toolbar #8 and FAB menu #5 before implementing cross-component choreography.
+- Preserve v3.5.5 `lab-fab.css` / `lab-fab-pattern.html` as the static primitive reference.
+
+**NOT in scope**:
+
+- Reopening v3.5.5 FAB family primitive release.
+- Adding `lab-fab.js` retroactively to v3.5.5.
+- Promoting FAB to ripple TARGET before Ripple v2.
+- Implementing Ripple v2.
+- Implementing FAB menu or Toolbar integration.
+- Editing `components.css` baseline without a separate Charter decision.
+
+### 31. Pill radius interpolation — morphing-safe corner-full token
+
+- **Bucket**: C / D — Token graph + baseline correction
+- **Status**: **RESOLVED at v3.5.9**
+- **Target**: ~~v3.5.x baseline correction release~~ — **v3.5.9 baseline correction**
+- **Source**: v3.5.7 Playwright Button `:active` morph QA finding
+
+**Resolution at v3.5.9**:
+
+```txt
+tokens.css:
+  --md-sys-shape-corner-full remains 9999px.
+  --md-sys-shape-corner-pill-stable added as 50%.
+  --comp-button-radius now resolves to calc(var(--comp-button-height) / 2).
+
+components.css:
+  Button rest radius now resolves to finite 20px.
+  Button group connected / selected morph sources now use a local
+  --_button-group-pill-radius based on Button's 40px height.
+```
+
+Visual QA result:
+
+```txt
+Button variants:       20px -> 8px active morph, no 9999px interpolation flicker.
+Button group selected: 20px -> 4px active morph.
+Outer group corners:   20px preserved while inner pressed corners shrink.
+```
+
+Split button remains a future component-cycle concern; it was explicitly
+excluded from v3.5.9 rather than silently migrated before its Full-Spec audit.
+
+**The concern**:
+
+Current `--md-sys-shape-corner-full = 9999px` works correctly for static pill contexts such as Chip at rest, Badge dot, and other non-morphing surfaces. It becomes visually unstable when a component transitions from a full pill to a smaller pressed shape.
+
+Confirmed example:
+
+```txt
+Button #1 (v3.5.1):
+  rest      -> border-radius: 9999px
+  pressed   -> border-radius: 8px
+
+Observed Playwright trace on lab-button-pattern.html:
+  rest      -> 9999px
+  80ms      -> 2608px
+  transient -> 59px / 0px class of intermediate computed values
+  pressed   -> 8px
+```
+
+The final pressed value is correct, but CSS interpolates the very large `9999px` value linearly during the transition. That produces visible flicker during the morph.
+
+**Affected closed components**:
+
+```txt
+Button #1 (v3.5.1):
+  confirmed via Playwright on lab-button-pattern.html; fixed at v3.5.9
+
+FAB #3 + Extended FAB #4 (v3.5.5):
+  verified not affected in v3.5.9 Phase 0; no corner-full morph source
+
+Future morphing components:
+  sheet drag surfaces, card expand behavior, Split button, and other
+  full-pill -> smaller-corner transitions should be checked during their own
+  component cycles
+```
+
+**Recommended fix direction**:
+
+Option (d): introduce a dedicated morphing-safe pill token instead of changing static `corner-full` semantics globally.
+
+```txt
+Static logical pill:
+  --md-sys-shape-corner-full: 9999px
+
+Morphing-safe pill:
+  --md-sys-shape-corner-pill-stable:
+    calc(var(--comp-X-height) / 2)
+    OR a per-component height-based calc through component tokens
+```
+
+Rationale:
+
+```txt
+- Static contexts continue to use corner-full.
+- Morphing transition sources use a height-based pill radius.
+- M3 compliant: M3 defines fully-rounded shape semantics; the concrete
+  interpolation-safe implementation is the design system's responsibility.
+- Avoids ad-hoc per-component fixes when the same interpolation problem
+  appears in FAB, Button group, or future behavior modules.
+```
+
+**Cycle shape when scheduled**:
+
+```txt
+Phase 0:
+  Token graph design. Decide option (b) component-token-only vs option (d)
+  dedicated morphing-safe token.
+
+Phase 1:
+  Baseline correction audit + affected consumer alignment plan.
+
+Phase 2:
+  tokens.css + components.css edit for Button and any confirmed affected
+  morphing components.
+
+Phase 3:
+  Playwright re-QA for Button + FAB morph stability.
+
+Phase 5:
+  BACKLOG #31 close + CHANGELOG/ROADMAP close. Button group #6 inherits the
+  fixed baseline when its Full-Spec cycle starts.
+```
+
+**Cross-references**:
+
+```txt
+v3.5.7 Playwright Button :active morph QA finding
+components.css §2 Button:
+  .ax-button { border-radius: var(--comp-button-radius); }
+  .ax-button:active { border-radius: var(--md-sys-shape-corner-small); }
+tokens.css:
+  --md-sys-shape-corner-full definition
+components.css §15 + §16 FAB:
+  verify active/full-pill morph behavior during correction cycle Phase 0
+```
+
+**NOT in scope**:
+
+- Editing baseline files during v3.5.7 Text field Phase 0.
+- Changing `--md-sys-shape-corner-full` globally without a token graph decision.
+- Reopening v3.5.1 Button or v3.5.5 FAB release closure.
+- Adding JavaScript to solve a CSS interpolation issue.
+
+### 32. Button family size variants — XS/S/M/L/XL coverage cycle
+
+- **Bucket**: A / B — Token graph + component family
+- **Status**: Resolved
+- **Target**: Closed in v3.5.13 Wave 1 closure cleanup
+- **Source**: v3.5.10 Button group Phase 3 Playwright finding
+
+**The concern**:
+
+M3 Button group specs declare five size variants (XS / S / M / L / XL) with
+distinct heights, font-sizes, and touch targets. Axismundi's Button family
+currently ships only the default M size (40px height, 14px font, 16px
+horizontal padding). Button group #6 inherits this limitation:
+
+```txt
+Phase 3 Playwright measurement on lab-button-group-pattern.html:
+  XS height:  40px  (M3 spec expects smaller)
+  M height:   40px  (default)
+  L height:   40px  (M3 spec expects larger)
+  XL height:  40px  (M3 spec expects largest)
+  font-size:  14px  (constant across is-size-* hooks)
+```
+
+Root cause:
+
+```txt
+baseline components.css §28 is-size-xs/s/l/xl hooks only adjust:
+  - gap / min-inline-size (XS / S)
+  - connected inner corner radius (L / XL)
+They do not touch height / font / padding because those properties cascade
+from .ax-button at the default 40px / 14px / 16px values shipped by Button #1.
+```
+
+**Affected components**:
+
+```txt
+Button #1 (v3.5.1):          default M only; no XS/S/L/XL variants.
+Icon button #2 (v3.5.2):     default size only; XS/S/L/XL not implemented.
+Button group #6 (v3.5.10):   size hooks scaffolded but not functional.
+```
+
+**Recommended cycle shape**:
+
+```txt
+Phase 0:
+  Audit M3 spec for Button + Icon button + Button group size matrices.
+  Decide token surface: per-size --comp-button-{xs,s,m,l,xl}-height
+                       vs --comp-button-height-{xs,s,m,l,xl}
+                       vs density-style global modifier.
+
+Phase 1:
+  3-component coordinated audit. Spec, measurement, and WP-mapping
+  updates for all three components.
+
+Phase 2:
+  tokens.css + components.css patch covering Button, Icon button, and
+  Button group is-size-* hooks. Lab pattern HTML updates per component.
+
+Phase 3:
+  Playwright re-measure XS / S / M / L / XL heights, font sizes, padding,
+  and touch targets across all three components.
+  Re-evaluate SC 2.5.5 AAA for any size with rendered hit target >= 44x44.
+
+Phase 5:
+  CHANGELOG / ROADMAP / MATRIX bookkeeping.
+  Update Button #1, Icon button #2, Button group #6 audit docs in-place
+  (no audit re-open; mechanical size finding update only).
+```
+
+**Cycle interaction**:
+
+This is a cross-cutting size cycle, similar in shape to v3.5.9 pill-radius
+correction. It is NOT a Wave 1 component cycle; it is a foundation cycle
+that touches three already-closed components mechanically.
+
+**NOT in scope**:
+
+- Reopening v3.5.1 Button, v3.5.2 Icon button, or v3.5.10 Button group
+  closure verdicts.
+- Adding new Wave 1 components.
+- Changing `--md-sys-shape-corner-full` or `--md-sys-shape-corner-pill-stable`
+  values (v3.5.9 baseline correction stays in place).
+- Implementing FAB size variants (FAB has independent size system).
+
+**Cross-references**:
+
+```txt
+v3.5.10 Phase 3 Playwright finding (lab-button-group-pattern.html §6 specimen
+  labelled "Size hooks — partial baseline")
+products/reference-implementations/axismundi-lab/modules/button-group/docs/
+  BUTTON-GROUP-MEASUREMENT-AUDIT.md §9 Phase 5 close findings
+M3 Button groups spec page (XS/S/M/L/XL size table)
+M3 Buttons spec page (XS/S/M/L/XL size table)
+```
+
+**Resolution (v3.5.13)**:
+
+```txt
+Closed by the Wave 1 closure cleanup Lane A.
+
+Implemented:
+  - tokens.css Button family size matrix tokens;
+  - components.css §2 Button is-size-xs/s/m/l/xl hooks;
+  - components.css §3 Icon button is-size-xs/s/m/l/xl hooks;
+  - components.css §28 Button group size hooks and connected geometry.
+
+Verified:
+  - Button XS/S/M/L/XL = 32 / 40 / 56 / 96 / 136;
+  - Icon button XS/S/M/L/XL = 32 / 40 / 56 / 96 / 136;
+  - Button group spacing = 18 / 12 / 8 / 8 / 8;
+  - connected gap = 2px;
+  - XS/S connected min width = 48px;
+  - default no-size Button remains 40px.
+
+Follow-up:
+  Card composition QA surfaced the Icon button corner-full interpolation tail
+  from BACKLOG #31. v3.5.13 replaced the composed Icon button rest radius with
+  finite box-derived radius while preserving the existing pressed corner.
+```
+
+### 33. List M3 full token coverage extension
+
+- **Bucket**: B — Component token alignment / audit extension
+- **Status**: Resolved
+- **Target**: Closed in v3.5.13 Wave 1 closure cleanup
+- **Source**: v3.5.11 Phase 5 close post-mortem; user supplied the full M3 List token dump after close
+
+**The concern**:
+
+v3.5.11 closed List #33 with Common / Enabled and Selected token rows mapped,
+and resolved the two small in-cycle color mismatches (`segmented container` and
+`unselected trailing icon`) inside `components.css` §26. The post-close token
+dump shows the audit still lacks explicit full-table coverage for additional
+M3 List token categories:
+
+```txt
+Color:
+  Disabled
+  Disabled - Selected
+  Hovered
+  Hovered - Selected
+  Focused + focus indicator
+  Focused - Selected
+  Pressed (ripple)
+  Pressed - Selected
+  Dragged
+
+Spacing:
+  leading/trailing 16dp
+  top/bottom 10dp
+  between 12dp
+  divider spaces
+  segment gap 2dp
+
+Shape:
+  container corner-large
+  item corner-none
+  expressive state shapes
+  avatar/image/video shapes
+
+Size and typography:
+  avatar 40dp
+  icon 24dp / expressive 20dp
+  image 56dp
+  video 100dp / 56dp / 114dp / 64dp
+  56/72/88 row heights
+  label/supporting/overline/trailing typography tables
+```
+
+**Important framing**:
+
+```txt
+Hovered / Focused / Pressed rows partly map to Axismundi's generic
+components.css §0 state-layer Pattern A foundation. That may be an intentional
+design-system difference, not a component bug.
+
+Dragged rows include elevation level4 and state-layer opacity 0.16; v3.5.11
+explicitly deferred drag/reorder behavior, so this needs a future decision
+before baseline edits.
+
+Expressive shape rows are M3 Expressive theming dimensions. Axismundi currently
+uses expressive state shapes in List §26, but the full table should be audited
+before claiming exhaustive coverage.
+```
+
+**Recommended cycle shape**:
+
+```txt
+Phase 0:
+  Compare the full M3 List token table against components.css §26 and lab-list
+  specimens. Classify each mismatch as:
+    - already covered by §26,
+    - covered by generic §0 state-layer foundation,
+    - composition-owned (Avatar / icon-system),
+    - behavior-deferred (dragged / expand / reorder),
+    - real List baseline mismatch.
+
+Phase 1:
+  Audit extension for LIST-SPEC-AUDIT.md + LIST-MEASUREMENT-AUDIT.md.
+
+Phase 2:
+  Minimal baseline edit only if Phase 0/1 identify a narrow List-specific
+  mismatch. Otherwise documentation-only.
+
+Phase 3:
+  Playwright re-check for disabled, selected-disabled, hover/focus/pressed,
+  dragged specimen if introduced, spacing, and typography measurements.
+
+Phase 5:
+  CHANGELOG / ROADMAP / MATRIX bookkeeping.
+```
+
+**NOT in scope**:
+
+- Reopening v3.5.11 List release closure.
+- Adding BACKLOG #33 during v3.5.11 Phase 5 after close.
+- Implementing drag/reorder runtime.
+- Treating generic §0 state-layer differences as bugs before an explicit
+  framework decision.
+
+**Cross-references**:
+
+```txt
+v3.5.11 List #33 Phase 5 close
+LIST-SPEC-AUDIT.md §10 Token-Level M3 Spec Map
+LIST-MEASUREMENT-AUDIT.md §7 Token Comparison / Phase 3 Finding
+components.css §0 State-layer foundation
+components.css §26 List
+```
+
+**Resolution (v3.5.13)**:
+
+```txt
+Closed by the Wave 1 closure cleanup Lane B.
+
+Implemented / recorded:
+  - LIST-SPEC-AUDIT.md and LIST-MEASUREMENT-AUDIT.md full-token extensions;
+  - components.css §26 focus indicator 3px / -3px;
+  - selected-disabled container resolves to 38% on-surface mix;
+  - segmented wrapper is transparent / radius 0 / padding 0;
+  - segmented item containers own surface color and corner-large radius;
+  - List Expand trailing icon container maps to surface-container (#211f26
+    in dark scheme);
+  - trailing supporting time text no-wraps.
+
+Deferred by design:
+  - drag/reorder runtime;
+  - expand/collapse runtime;
+  - video slot implementation;
+  - generic §0 state-layer rewrite.
+```
+
+### 34. Styleguide modernization + lab module navigation UX
+
+- **Bucket**: E — Public surface / publish UX
+- **Status**: Open
+- **Priority**: Medium
+- **Target**: v3.5.x after GitHub Pages publish, before v3.6.0 Ontology Theme Pilot if possible
+- **Source**: v3.5.14 publish prep Phase 3 / user navigation review
+
+**The concern**:
+
+Wave 1 component modules are now organized under `lab/modules/*`, but the
+canonical `style-guide.html` still behaves like an older monolithic surface.
+The publish flow is valid, yet the navigation story is incomplete:
+
+```txt
+index.html          -> styleguide/
+styleguide/         -> component visual surface
+lab/modules/*       -> validation surface, pattern HTML, audit docs
+```
+
+Users can reach the styleguide from the root index, but a reader inspecting a
+component in the styleguide cannot easily jump to that component's lab module,
+audit docs, or validation pattern. This is a publish UX gap, not a component
+correctness blocker.
+
+**Recommended direction**:
+
+Add module-aware navigation to the styleguide without turning lab module
+pattern HTML into the canonical publish surface.
+
+Candidate UX:
+
+```txt
+Styleguide header or component section header:
+  lab icon button
+    -> dialog / sheet / menu listing relevant lab modules
+       - module overview
+       - pattern HTML
+       - SPEC / MEASUREMENT / WP-MAPPING / RUNTIME docs as available
+```
+
+This matches the existing ontology:
+
+- `styleguide/` = canonical public visual mirror,
+- `lab/modules/*` = validation and audit surface,
+- lab links are available for inspection but do not replace canonical demos.
+
+**Likely scope**:
+
+```txt
+Phase 0:
+  Read PUBLIC-SURFACE-CHARTER, Architecture Boundaries, Article 12, and
+  publish_styleguide.py. Decide exact UX: global lab index dialog, per-section
+  lab affordance, or both.
+
+Phase 1:
+  Navigation map: styleguide section -> lab module(s) -> docs/pattern files.
+
+Phase 2:
+  Minimal styleguide/source edit + publish mirror regeneration.
+
+Phase 3:
+  Browser/Playwright visual QA for dialog, focus management, links, and mobile.
+
+Phase 5:
+  CHANGELOG / ROADMAP / CURRENT-STATE / NEXT-SESSION bookkeeping.
+```
+
+**Out of scope**:
+
+- Rebuilding the whole styleguide as a multi-page app.
+- Publishing every lab pattern HTML as canonical styleguide content.
+- Changing component baseline behavior.
+- Implementing templates/page-layout previews; that belongs to the `/templates/`
+  category.
+
+**Cross-references**:
+
+```txt
+CONSTITUTION.md Article 12
+docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md
+products/reference-implementations/axismundi-lab/docs/ARCHITECTURE-BOUNDARIES.md
+tools/generators/publish_styleguide.py
+docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md
+```
+
+### 35. Root index Korean version and language toggle
+
+- **Bucket**: E — Public surface / i18n
+- **Status**: Open
+- **Priority**: Low
+- **Target**: v3.5.x after GitHub Pages publish, or later public-site polish
+- **Source**: v3.5.14 publish prep Phase 3 / user i18n review
+
+**The concern**:
+
+The root `index.html` now works as the English public entry point, and the repo
+has both `README.md` and `README.ko.md`. A Korean public entry page would improve
+the Korean developer audience story, but it is not a publish blocker.
+
+**Recommended direction**:
+
+Add a Korean root entry and a small language switcher after the first GitHub
+Pages publish proves the English route is stable.
+
+Candidate shape:
+
+```txt
+index.html     English entry
+index.ko.html  Korean entry
+
+Language switch:
+  English <-> 한국어
+```
+
+Implementation options to decide in Phase 0:
+
+- static reciprocal links only,
+- tiny no-dependency JS toggle,
+- URL-param or localStorage preference.
+
+Static reciprocal links are preferred unless there is a clear reason to add
+client-side state.
+
+**Out of scope**:
+
+- Translating every styleguide component section.
+- Translating all audit docs.
+- Adding a site-wide i18n framework.
+- Blocking v3.5.15 GitHub repo + Pages creation.
+
+**Cross-references**:
+
+```txt
+README.md
+README.ko.md
+index.html
+docs/v3.5.14/PUBLISH-PREP-PHASE-0-REPORT.md
+```
+
+
+## Closed items
+
+| # | Title | Closed at | Resolution summary |
+|---:|---|---|---|
+| 33 | List M3 full token coverage extension | v3.5.13 | Closed by Wave 1 cleanup Lane B. LIST-SPEC / MEASUREMENT gained the full-token extension; `components.css §26` now covers 3px focus indicator, selected-disabled 38% on-surface mix, transparent segmented wrapper with surface item containers, expand trailing icon container surface-container mapping, and no-wrap trailing supporting time. Drag/reorder and expand runtime remain deferred. |
+| 32 | Button family size variants — XS/S/M/L/XL coverage cycle | v3.5.13 | Closed by Wave 1 cleanup Lane A. `tokens.css` gained Button family size tokens; `components.css §2/§3/§28` now maps Button, Icon button, and Button group XS/S/M/L/XL variants. Playwright verified 32/40/56/96/136 size matrix and default no-size Button remains 40px. |
+| 27 | data-ax-ripple opt-in introduction | v3.5.6 | Closed by the Ripple v2 stable declarative contract. `[data-ax-ripple]` is now the public authoring path, with bounded/unbounded values and `window.axRipple.attach/detach/refresh` for imperative attachment. The previous HOST_SELECTOR allowlist remains transitional compatibility only. |
+| 25 | Ripple v2 contract — Material Web alignment | v3.5.6 | Closed by `lab/modules/ripple/docs/RIPPLE-V2-AUDIT.md` plus v2 `lab-ripple.css`, `lab-ripple.js`, and `lab-ripple-pattern.html`. The contract aligns with Material Web concepts without importing `<md-ripple>`: bounded/unbounded variants, `--md-ripple-*` bridge tokens, `data-ax-ripple`, pointer-only activation, reduced-motion behavior, and `window.axRipple.attach/detach/refresh`. `components.css §0` state-layer foundation remains unchanged. |
+| 26 | Matrix row #36 allowlist correction | v3.5.4 | Closed by `docs/v3.5.0/MODULE-STATUS-MATRIX.md` v3.5.4 amendment. Row #36 `ripple/` now uses state-aware buckets. v3.5.6 later refined those buckets after Ripple v2: FAB family and Card action surfaces promoted to TARGET, Nav bar/Nav rail verified as bounded TARGET, and the remaining inferred surfaces stay CANDIDATE. |
+| 24 | Matrix consumer-state column | v3.5.4 | Closed by adding consumer-state vocabulary and provider-specific sub-table strategy to `MODULE-STATUS-MATRIX.md`. States are CURRENT / TARGET / CANDIDATE / NONE plus conditional variants. Button, Icon button, and Card SPEC docs gained short v3.5.4 alignment notes. Chip v3.4.9 remains a legacy audit predating the vocabulary; its ripple TARGET state is recorded in the canonical matrix only. |
+| 15 | Snackbar Runtime Module | v3.4.10 | Closed by `lab/modules/snackbar/`. Runtime layer added (queue, timeout, hover/focus pause, separated live announcement via single role=status region, fixed positioning, reduced motion, coarse-pointer close hit-area expansion). Baseline `components.css §14 Snackbar` UNCHANGED. 5 hard rules locked (visible root never aria-hidden, hover/focus pause, real buttons, no role=alert default, text-only live region). Phase 0 inventory correction explicitly recorded — baseline §14 actually styles 5 base selectors with full state-layer Pattern A. Closes the transient/feedback surface trio: popover (v3.4.5) + tooltip (v3.4.6) + snackbar (v3.4.10). |
+| 4 | Chip Measurement Audit | v3.4.9 | Closed by `lab/modules/chip/docs/CHIP-MEASUREMENT-AUDIT.md`. M3 §14 spec table compared against Axismundi baseline; 19 of 20 measurement properties token-driven; 2 private literals (`--_chip-h: 32px`, `--_chip-icon: 18px`) with documented rationale; Phase 2 input chip close affordance dimensions recorded (24×24 button + ::before pseudo-element 44×44 hit area on coarse pointer). |
+| 5 | WordPress logo styleguide specimen | v3.4.4 | Embedded in `icon-system-pattern.html §SVG icons` as currentColor-normalized reference specimen. Trademark caption + source-link required. Seed at `compare/brand-assets-research/`. |
+| 7 | Search bar leading icon (known delta from v3.4.3) | v3.4.4 | Converted to Material Symbols `search` glyph via conversion-shape variant B (slot class on wrapping span). |
+| 8 | Module pattern `role="group"` → `role="radiogroup"` cohort fix | v3.4.3.1 | Resolved as part of the v3.4.3.1 visual QA patch across all 4 module patterns. |
+| 9 | Module pattern theme switcher — `data-theme-button` → `data-theme-set` cohort fix | v3.4.5 | Renamed across 4 existing module pattern HTMLs (carousel / ripple / search-expansion / icon-system), 3 occurrences each. New `lab-popover-pattern.html` uses `data-theme-set` from authoring. Cohort-fix sibling of item 8 — same shape, same release pattern. |
+| 12 | Theme switcher `syncSwitchers()` selector mismatch — `.ax-theme-switcher` only finds archive markup | v3.4.5.1 | One-line `theme.js` fix: selector changed to `.sg-theme, .ax-theme-switcher` (defensive — both accepted). Third entry in the cohort-fix family (8 role → 9 attribute → 12 class). Visual QA Gate follow-up to v3.4.5. |
+
+(Open items above retain their full entries until resolved. When an
+item is closed, only the summary row is preserved here.)
+
+## See also
+
+- `CHANGELOG.md` — per-release record
+- `ROADMAP.md` — sequence of planned releases
+- `lab/docs/ARCHITECTURE-BOUNDARIES.md` — charter clauses cited above
+- `lab/modules/icon-system/docs/INLINE-SVG-INVENTORY.md` — pre-conversion SVG inventory
+- `compare/brand-assets-research/README.md` — brand asset policy + URL inventory

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Ripple v2 Lab Module</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../button/lab-button.css" />
+  <link rel="stylesheet" href="../icon-button/lab-icon-button.css" />
+  <link rel="stylesheet" href="../card/lab-card.css" />
+  <link rel="stylesheet" href="../fab/lab-fab.css" />
+  <link rel="stylesheet" href="lab-ripple.css" />
+
+  <style>
+    .lab-ripple-demo {
+      max-inline-size: min(100%, 1080px);
+      margin-inline: auto;
+      padding: var(--space-lg) var(--space-md);
+      display: grid;
+      gap: var(--space-xl);
+    }
+
+    .lab-ripple-demo__header,
+    .lab-ripple-section {
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .lab-ripple-demo__header {
+      padding-block-end: var(--space-md);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .lab-ripple-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: center;
+    }
+
+    .lab-ripple-stack {
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .lab-ripple-note {
+      max-inline-size: 76ch;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .lab-ripple-banner {
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+    }
+
+    .lab-ripple-box {
+      padding: var(--space-md);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-surface-container-low);
+      display: grid;
+      gap: var(--space-sm);
+    }
+
+    .lab-ripple-prose-box {
+      padding: var(--space-md);
+      border: 2px dashed var(--md-sys-color-error);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: color-mix(in srgb, var(--md-sys-color-error-container) 34%, transparent);
+    }
+
+    .lab-ripple-dynamic {
+      min-block-size: 56px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: center;
+    }
+
+    .lab-ripple-tabs-demo {
+      inline-size: min(100%, 320px);
+      flex: 0 1 320px;
+      overflow: hidden;
+    }
+
+    .lab-ripple-nav-demo {
+      inline-size: min(100%, 360px);
+      padding: 0;
+      border-radius: var(--md-sys-shape-corner-large);
+      background-color: var(--md-sys-color-surface-container);
+      overflow: hidden;
+    }
+
+    .lab-ripple-nav-rail-demo {
+      min-height: auto;
+      padding-block: var(--space-sm);
+      padding-inline: 0;
+      gap: var(--space-xs);
+      border-radius: var(--md-sys-shape-corner-large);
+      background-color: var(--md-sys-color-surface-container);
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <main class="lab-ripple-demo">
+    <header class="lab-ripple-demo__header">
+      <div class="t-label-medium lab-ripple-note">Axismundi · Infrastructure module · v3.5.6</div>
+      <h1 class="t-display-small">Ripple v2 Lab Module</h1>
+      <p class="t-body-large lab-ripple-note">
+        Ripple v2 is an animated progressive enhancement above the
+        static <code>components.css §0</code> state-layer foundation.
+        Stable authoring uses <code>data-ax-ripple</code>; the legacy
+        allowlist remains only as transitional compatibility.
+      </p>
+      <nav class="lab-ripple-row" aria-label="Related pages">
+        <a href="../../style-guide.html">Main styleguide</a>
+        <a href="docs/RIPPLE-V2-AUDIT.md">Ripple v2 audit</a>
+        <a href="docs/RIPPLE-AUDIT.md">Historical v1 audit</a>
+      </nav>
+    </header>
+
+    <aside class="lab-ripple-banner" role="note">
+      <strong>Static catalog note.</strong>
+      Keyboard activation uses native focus-visible state-layer feedback;
+      v3.5.6 ripple is pointer-only. Reduced-motion users should see no
+      radial expansion.
+    </aside>
+
+    <section class="lab-ripple-section" aria-labelledby="bounded">
+      <h2 id="bounded" class="t-headline-medium">§2 Bounded opt-in</h2>
+      <p class="t-body-medium lab-ripple-note">Bounded ripple is the default for rectangular or clipped hosts.</p>
+      <div class="lab-ripple-row">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button" data-ax-ripple>
+          <span class="ax-button__label">Button bounded</span>
+        </button>
+        <button class="chip chip--assist has-state-layer t-label-large" type="button" data-ax-ripple="bounded">
+          <span class="chip__label">Chip bounded</span>
+        </button>
+        <button class="ax-button is-outlined has-state-layer t-label-large" type="button" data-ax-ripple="unexpected">
+          <span class="ax-button__label">Unknown value → bounded</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="unbounded">
+      <h2 id="unbounded" class="t-headline-medium">§3 Unbounded opt-in</h2>
+      <p class="t-body-medium lab-ripple-note">Unbounded ripple is explicit for icon-centric or floating action surfaces.</p>
+      <div class="lab-ripple-row">
+        <button class="ax-icon-button is-filled has-state-layer" type="button" aria-label="Add" data-ax-ripple="unbounded">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span>
+        </button>
+        <button class="ax-fab has-state-layer" type="button" aria-label="Create" data-ax-ripple="unbounded">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">edit</span>
+        </button>
+        <button class="ax-fab-extended has-state-layer" type="button" data-ax-ripple="unbounded">
+          <span class="material-symbols-rounded notranslate ax-fab-icon" translate="no" aria-hidden="true" draggable="false">add</span>
+          <span class="ax-fab-label">Extended FAB</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="targets">
+      <h2 id="targets" class="t-headline-medium">§4 Existing TARGET consumer coverage</h2>
+      <div class="lab-ripple-stack">
+        <div class="lab-ripple-row">
+          <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-ax-ripple><span class="ax-button__label">Button</span></button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Settings" data-ax-ripple="unbounded"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">settings</span></button>
+          <button class="chip chip--filter has-state-layer t-label-large" type="button" data-ax-ripple><span class="chip__label">Chip</span></button>
+          <button class="ax-menu__item t-label-large" type="button" role="menuitem" data-ax-ripple>Menu item</button>
+          <div class="tabs tabs--primary lab-ripple-tabs-demo" role="tablist" aria-label="Tabs ripple demo">
+            <button class="tabs__tab is-active has-state-layer" role="tab" type="button" aria-selected="true" data-ax-ripple="bounded">Tab</button>
+            <button class="tabs__tab has-state-layer" role="tab" type="button" aria-selected="false" data-ax-ripple="bounded">Other</button>
+          </div>
+        </div>
+        <nav class="nav-bar lab-ripple-nav-demo" aria-label="Nav bar demo">
+          <button class="nav-bar__item" type="button" aria-label="Home" data-ax-ripple="bounded">
+            <span class="nav-bar__icon">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+            </span>
+            <span class="nav-bar__label">Home</span>
+          </button>
+          <button class="nav-bar__item" type="button" aria-label="Search" data-ax-ripple="bounded">
+            <span class="nav-bar__icon">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+            </span>
+            <span class="nav-bar__label">Search</span>
+          </button>
+        </nav>
+        <nav class="nav-rail is-narrow lab-ripple-nav-rail-demo" aria-label="Nav rail demo">
+          <button class="nav-rail__item" type="button" aria-label="Inbox" data-ax-ripple="bounded">
+            <span class="nav-rail__icon has-state-layer">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">inbox</span>
+            </span>
+            <span class="nav-rail__label t-label-medium">Inbox</span>
+          </button>
+          <button class="nav-rail__item" type="button" aria-label="Archive" data-ax-ripple="bounded">
+            <span class="nav-rail__icon has-state-layer">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">archive</span>
+            </span>
+            <span class="nav-rail__label t-label-medium">Archive</span>
+          </button>
+        </nav>
+      </div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="wave1">
+      <h2 id="wave1" class="t-headline-medium">§5 Newly promotable Wave 1 consumers</h2>
+      <div class="lab-ripple-row">
+        <button class="ax-fab has-state-layer" type="button" aria-label="Compose" data-ax-ripple="unbounded">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">add</span>
+        </button>
+        <button class="card card--interactive has-state-layer" type="button" data-ax-ripple>
+          <span class="card__title t-title-medium">Action card</span>
+          <span class="t-body-medium">Bounded ripple on the interactive card host.</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="migration">
+      <h2 id="migration" class="t-headline-medium">§6 Dual-mode migration</h2>
+      <p class="t-body-medium lab-ripple-note">
+        The first button uses stable <code>data-ax-ripple</code>. The second
+        intentionally relies on the legacy allowlist; it still works in
+        v3.5.6 but is not the recommended authoring path.
+      </p>
+      <div class="lab-ripple-row">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button" data-ax-ripple><span class="ax-button__label">Stable opt-in</span></button>
+        <button class="ax-button is-text has-state-layer t-label-large" type="button"><span class="ax-button__label">Legacy allowlist</span></button>
+      </div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="api">
+      <h2 id="api" class="t-headline-medium">§7 Public API demo</h2>
+      <div class="lab-ripple-row">
+        <button id="ax-ripple-api-target" class="ax-button is-tonal has-state-layer t-label-large" type="button"><span class="ax-button__label">API target</span></button>
+        <button class="ax-button is-outlined has-state-layer t-label-large" type="button" data-ripple-action="attach"><span class="ax-button__label">attach()</span></button>
+        <button class="ax-button is-outlined has-state-layer t-label-large" type="button" data-ripple-action="detach"><span class="ax-button__label">detach()</span></button>
+        <button class="ax-button is-outlined has-state-layer t-label-large" type="button" data-ripple-action="refresh"><span class="ax-button__label">refresh()</span></button>
+      </div>
+      <div class="lab-ripple-dynamic" id="ax-ripple-dynamic"></div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="disabled">
+      <h2 id="disabled" class="t-headline-medium">§8 Disabled and aria-disabled</h2>
+      <div class="lab-ripple-row">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button" data-ax-ripple disabled><span class="ax-button__label">Native disabled</span></button>
+        <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-ax-ripple aria-disabled="true"><span class="ax-button__label">aria-disabled</span></button>
+      </div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="forbidden">
+      <h2 id="forbidden" class="t-headline-medium">§9 Forbidden ancestors</h2>
+      <div class="lab-ripple-prose-box">
+        <div class="prose">
+          <p>
+            Inside prose:
+            <button class="ax-button is-text has-state-layer t-label-medium" type="button" data-ax-ripple><span class="ax-button__label">No ripple here</span></button>
+          </p>
+        </div>
+      </div>
+      <div class="lab-ripple-prose-box" contenteditable="true" aria-label="Editable no-ripple area">
+        Editable area:
+        <button class="ax-button is-tonal has-state-layer t-label-medium" type="button" data-ax-ripple><span class="ax-button__label">No ripple in editor</span></button>
+      </div>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="motion">
+      <h2 id="motion" class="t-headline-medium">§10 Reduced-motion QA</h2>
+      <p class="t-body-medium lab-ripple-note">
+        Enable <code>prefers-reduced-motion: reduce</code>. Pointer clicks
+        should show a brief static tint with no radial expansion.
+      </p>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="snippets">
+      <h2 id="snippets" class="t-headline-medium">§11 Code snippets</h2>
+      <pre><code>&lt;button class="ax-button" data-ax-ripple&gt;...&lt;/button&gt;
+&lt;button class="ax-icon-button" data-ax-ripple="unbounded"&gt;...&lt;/button&gt;
+window.axRipple.attach(control, { mode: "bounded" });
+window.axRipple.detach(control);
+window.axRipple.refresh(document);</code></pre>
+    </section>
+
+    <section class="lab-ripple-section" aria-labelledby="refs">
+      <h2 id="refs" class="t-headline-medium">§12 Cross-references</h2>
+      <ul class="t-body-medium">
+        <li><a href="docs/RIPPLE-V2-AUDIT.md">RIPPLE-V2-AUDIT.md</a></li>
+        <li><a href="docs/RIPPLE-AUDIT.md">RIPPLE-AUDIT.md</a></li>
+        <li><a href="../../../../docs/v3.5.6/RIPPLE-V2-PHASE-2-PLAN.md">RIPPLE-V2-PHASE-2-PLAN.md</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <script defer src="../../scripts/theme.js"></script>
+  <script defer src="lab-ripple.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      var target = document.getElementById("ax-ripple-api-target");
+      var dynamic = document.getElementById("ax-ripple-dynamic");
+
+      document.querySelectorAll("[data-ripple-action]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var action = button.getAttribute("data-ripple-action");
+
+          if (action === "attach") {
+            window.axRipple.attach(target, { mode: "bounded" });
+          }
+
+          if (action === "detach") {
+            window.axRipple.detach(target);
+          }
+
+          if (action === "refresh") {
+            dynamic.innerHTML = '<button class="ax-button is-filled has-state-layer t-label-large" type="button" data-ax-ripple><span class="ax-button__label">Dynamic refreshed host</span></button>';
+            window.axRipple.refresh(dynamic);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

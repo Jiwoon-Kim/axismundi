@@ -35,6 +35,39 @@
       flex-direction: column;
       gap: var(--space-lg);
     }
+    .sg-top-bar {
+      display: none;
+    }
+    .sg-drawer {
+      inline-size: min(360px, 88vw);
+      max-inline-size: min(360px, 88vw);
+      block-size: 100dvh;
+      max-block-size: 100dvh;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+    .sg-drawer::backdrop {
+      background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+    }
+    .sg-drawer__surface {
+      min-block-size: 100dvh;
+      overflow: auto;
+      padding: var(--space-lg) var(--space-md);
+      background: var(--md-sys-color-surface);
+      border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+      box-shadow: var(--md-sys-elevation-level3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+    .sg-drawer__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
     .sg-brand {
       color: var(--md-sys-color-on-surface);
       letter-spacing: 0.04em;
@@ -130,7 +163,7 @@
       color: var(--md-sys-color-on-surface);
     }
 
-    /* ---- Theme switcher (3-state filter chip group) ---- */
+    /* ---- Theme switcher (3-state icon group) ---- */
     .sg-theme {
       display: flex;
       flex-direction: column;
@@ -146,10 +179,17 @@
       display: flex;
       gap: var(--space-xs);
     }
-    .sg-theme__row .chip {
-      flex: 1 1 0;
-      padding-inline: var(--space-sm);
+    .sg-theme--icons .sg-theme__row {
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sg-theme--icons [data-theme-button] {
       cursor: pointer;
+    }
+    .sg-theme--icons [data-theme-button].is-selected,
+    .sg-theme--icons [data-theme-button][aria-checked="true"] {
+      color: var(--md-sys-color-on-secondary-container);
+      background-color: var(--md-sys-color-secondary-container);
     }
 
     /* ---- Color swatch grid ---- */
@@ -256,6 +296,29 @@
       color: inherit;
       white-space: pre;
     }
+    .sg-readmore {
+      max-width: 68ch;
+      margin-block: var(--space-sm) var(--space-md);
+      padding-block-start: var(--space-sm);
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-readmore > summary {
+      cursor: pointer;
+      color: var(--md-sys-color-primary);
+      list-style-position: inside;
+    }
+    .sg-readmore__body {
+      display: grid;
+      gap: var(--space-sm);
+      margin-block-start: var(--space-sm);
+    }
+    .sg-readmore__body > :first-child {
+      margin-top: 0;
+    }
+    .sg-readmore__body > :last-child {
+      margin-bottom: 0;
+    }
     .sg-helper {
       color: var(--md-sys-color-on-surface-variant);
       margin-bottom: var(--space-sm);
@@ -264,7 +327,8 @@
     .t-body-small code {
       font-size: inherit;
     }
-    .sg-lab-link {
+    .sg-lab-link,
+    .sg-foundation-link {
       justify-self: start;
       display: inline-flex;
       align-items: center;
@@ -277,13 +341,15 @@
       color: var(--md-sys-color-primary);
       text-decoration: none;
     }
-    .sg-lab-link .material-symbols-rounded {
+    .sg-lab-link .material-symbols-rounded,
+    .sg-foundation-link .material-symbols-rounded {
       font-size: 20px;
       inline-size: 20px;
       block-size: 20px;
       line-height: 1;
     }
-    .sg-lab-link:hover {
+    .sg-lab-link:hover,
+    .sg-foundation-link:hover {
       background-color: color-mix(
         in srgb, var(--md-sys-color-primary) 8%, transparent);
     }
@@ -364,6 +430,13 @@
       .sg-main {
         padding: var(--space-lg) var(--space-md);
       }
+      .sg-swatch-grid {
+        grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+        gap: var(--space-sm);
+      }
+      .sg-swatch__chip {
+        aspect-ratio: 1 / 0.72;
+      }
       .sg-guide-nav {
         overflow-x: auto;
         scrollbar-width: thin;
@@ -378,6 +451,10 @@
         margin-bottom: var(--space-lg);
       }
       .sg-lab-link {
+        inline-size: 100%;
+        min-block-size: 48px;
+      }
+      .sg-foundation-link {
         inline-size: 100%;
         min-block-size: 48px;
       }
@@ -406,13 +483,34 @@
     /* ---- Mobile ---- */
     @media (max-width: 720px) {
       .sg-layout { grid-template-columns: 1fr; }
-      .sg-sidebar {
-        position: static;
-        height: auto;
-        border-inline-end: 0;
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      .sg-top-bar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+        min-block-size: 64px;
+        padding: var(--space-xs) var(--space-md);
+        background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
+        border-block-end: 1px solid var(--md-sys-color-outline-variant);
+        backdrop-filter: blur(12px);
       }
-      .sg-main { padding: var(--space-lg); }
+      .sg-top-bar__brand {
+        display: flex;
+        min-inline-size: 0;
+        flex-direction: column;
+      }
+      .sg-top-bar__title,
+      .sg-top-bar__subtitle {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .sg-sidebar {
+        display: none;
+      }
+      .sg-main { padding: var(--space-lg) var(--space-md); }
       .sg-type-row { grid-template-columns: 1fr; }
     }
 
@@ -480,6 +578,56 @@
   </style>
 </head>
 <body>
+  <header class="sg-top-bar" data-screen-label="Mobile top app bar">
+    <button
+      id="sg-menu-toggle"
+      class="ax-icon-button is-standard has-state-layer sg-menu-toggle"
+      type="button"
+      aria-label="Open navigation"
+      aria-controls="sg-drawer"
+      aria-expanded="false"
+      data-toggle-nav
+    >
+      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">menu</span>
+    </button>
+    <div class="sg-top-bar__brand" aria-label="Axismundi Style Guide">
+      <span class="t-title-medium sg-top-bar__title">AXISMUNDI</span>
+      <span class="t-label-medium sg-top-bar__subtitle">Style Guide</span>
+    </div>
+  </header>
+
+  <dialog id="sg-drawer" class="sg-drawer" aria-label="Style guide navigation" data-close-at="(min-width: 721px)">
+    <div class="sg-drawer__surface">
+      <header class="sg-drawer__header">
+        <div>
+          <div class="t-title-medium sg-brand">AXISMUNDI</div>
+          <div class="t-label-medium sg-brand-meta">Style Guide</div>
+        </div>
+        <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Close navigation" data-close-modal>
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+        </button>
+      </header>
+
+      <div class="sg-theme sg-theme--icons" role="group" aria-label="Theme switcher">
+        <div class="t-label-medium sg-theme__label">Theme</div>
+        <div class="sg-theme__row" role="radiogroup" aria-label="Theme">
+          <button class="ax-icon-button is-standard has-state-layer" data-theme-button="light" type="button" role="radio" aria-label="Light theme" aria-checked="false" aria-pressed="false">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">light_mode</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" data-theme-button="dark" type="button" role="radio" aria-label="Dark theme" aria-checked="false" aria-pressed="false">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" data-theme-button="auto" type="button" role="radio" aria-label="Auto theme" aria-checked="true" aria-pressed="true">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">contrast</span>
+          </button>
+        </div>
+      </div>
+
+      <div data-drawer-guide-nav></div>
+      <div data-drawer-section-nav></div>
+    </div>
+  </dialog>
+
   <div class="sg-layout">
     <!-- ============================================
          Sidebar
@@ -487,39 +635,22 @@
     <aside class="sg-sidebar" data-screen-label="Sidebar">
       <div>
         <div class="t-title-large sg-brand">AXISMUNDI</div>
-        <div class="t-label-medium sg-brand-meta">Design System v0.2.0</div>
+        <div class="t-label-medium sg-brand-meta">Style Guide v0.3.0</div>
+        <div class="t-label-small sg-brand-meta">Monorepo v3.5.17</div>
       </div>
 
       <!-- Theme switcher -->
-      <div class="sg-theme" role="group" aria-label="Theme switcher">
+      <div class="sg-theme sg-theme--icons" role="group" aria-label="Theme switcher">
         <div class="t-label-medium sg-theme__label">Theme</div>
-        <div class="sg-theme__row" role="radiogroup" aria-label="테마 선택">
-          <button
-            class="chip chip--filter has-state-layer t-label-large"
-            data-theme-button="light"
-            type="button"
-            role="radio"
-            aria-checked="false"
-          >
-            <span class="chip__label">Light</span>
+        <div class="sg-theme__row" role="radiogroup" aria-label="Theme">
+          <button class="ax-icon-button is-standard has-state-layer" data-theme-button="light" type="button" role="radio" aria-label="Light theme" aria-checked="false" aria-pressed="false">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">light_mode</span>
           </button>
-          <button
-            class="chip chip--filter has-state-layer t-label-large"
-            data-theme-button="dark"
-            type="button"
-            role="radio"
-            aria-checked="false"
-          >
-            <span class="chip__label">Dark</span>
+          <button class="ax-icon-button is-standard has-state-layer" data-theme-button="dark" type="button" role="radio" aria-label="Dark theme" aria-checked="false" aria-pressed="false">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">dark_mode</span>
           </button>
-          <button
-            class="chip chip--filter has-state-layer t-label-large"
-            data-theme-button="auto"
-            type="button"
-            role="radio"
-            aria-checked="true"
-          >
-            <span class="chip__label">Auto</span>
+          <button class="ax-icon-button is-standard has-state-layer" data-theme-button="auto" type="button" role="radio" aria-label="Auto theme" aria-checked="true" aria-pressed="true">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">contrast</span>
           </button>
         </div>
       </div>
@@ -596,7 +727,8 @@
     <main class="sg-main">
       <header class="sg-section" style="border-bottom: 0; padding-top: 0;">
         <div class="t-label-medium sg-section__eyebrow">Style Guide</div>
-        <h1 class="t-display-medium">Axismundi v0.2.0</h1>
+        <h1 class="t-display-medium">Axismundi Style Guide v0.3.0</h1>
+        <div class="t-label-medium sg-brand-meta" style="margin-top: var(--space-xs);">Monorepo cycle: v3.5.17</div>
         <p class="t-body-large" style="margin-top: var(--space-md); max-width: 64ch; color: var(--md-sys-color-on-surface-variant);">
           Material 3 기반의 한국어 우선 디자인 시스템.
           타입 토큰, 색상 토큰, 컴포넌트 사양을 한 페이지에 모았습니다.
@@ -609,12 +741,17 @@
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Foundation</div>
           <h2 class="t-display-small">Color</h2>
-          <p class="t-body-large" style="margin-top: var(--space-sm); color: var(--md-sys-color-on-surface-variant); max-width: 64ch;">
-            38 system color roles per scheme. All values resolve via
-            <code>var(--md-sys-color-*)</code> tokens. Switch theme above to see
-            light, dark, or system-auto. The side-by-side preview on each
-            subsection forces both schemes simultaneously.
-          </p>
+          <details class="sg-readmore">
+            <summary class="t-label-large">Read more</summary>
+            <div class="sg-readmore__body">
+              <p class="t-body-large">
+                38 system color roles per scheme. All values resolve via
+                <code>var(--md-sys-color-*)</code> tokens. Switch theme above to see
+                light, dark, or system-auto. The side-by-side preview on each
+                subsection forces both schemes simultaneously.
+              </p>
+            </div>
+          </details>
         </header>
 
         <!-- 3.1 Brand -->
@@ -664,6 +801,10 @@
             utility class — no literal sizes in markup. Samples include both
             English and 한글 to verify mixed-script line height.
           </p>
+          <a class="sg-foundation-link t-label-large" href="typography-axis.html" aria-label="Open typography axis specimen">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">text_fields</span>
+            <span>Typography axis specimen</span>
+          </a>
         </header>
         <div id="type-specimen"></div>
       </section>
@@ -1083,7 +1224,12 @@
 
         <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Standard — single-select (radio + label, no JS)</h3>
-          <p class="sg-helper">Click any option — selected button widens with a spring transition. Pure CSS via <code>:checked + .ax-button</code>; native keyboard arrow-key navigation between options.</p>
+          <details class="sg-readmore">
+            <summary class="t-label-large">Read more</summary>
+            <div class="sg-readmore__body">
+              <p class="sg-helper">Click any option — selected button widens with a spring transition. Pure CSS via <code>:checked + .ax-button</code>; native keyboard arrow-key navigation between options.</p>
+            </div>
+          </details>
           <div class="sg-row">
             <fieldset class="ax-button-group">
               <legend class="u-vh">View mode</legend>
@@ -1792,9 +1938,14 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Text field</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            Refactored markup (v0.3.0+): outer <code>&lt;div class="text-field"&gt;</code> + visual <code>&lt;div class="text-field__container"&gt;</code> + optional <code>&lt;div class="text-field__bottom"&gt;</code>. Slot grid: leading / prefix / input+label / suffix / trailing+error. Native <code>:user-invalid</code> drives error state without JS.
-          </p>
+          <details class="sg-readmore">
+            <summary class="t-label-large">Read more</summary>
+            <div class="sg-readmore__body">
+              <p class="t-body-medium">
+                Refactored markup (v0.3.0+): outer <code>&lt;div class="text-field"&gt;</code> + visual <code>&lt;div class="text-field__container"&gt;</code> + optional <code>&lt;div class="text-field__bottom"&gt;</code>. Slot grid: leading / prefix / input+label / suffix / trailing+error. Native <code>:user-invalid</code> drives error state without JS.
+              </p>
+            </div>
+          </details>
 
           <a class="sg-lab-link t-label-large" href="modules/text-field/lab-text-field-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
@@ -2275,9 +2426,14 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Date picker</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            <strong>Visual structure only.</strong> Actual calendar logic (current month, navigation, validation) is the author's responsibility — typically driven by a JS library (flatpickr, vanilla-calendar) or server-rendered template. v0.4.0 = docked variant. Modal + modal-input variants reuse internals + dialog wrapper.
-          </p>
+          <details class="sg-readmore">
+            <summary class="t-label-large">Read more</summary>
+            <div class="sg-readmore__body">
+              <p class="t-body-medium">
+                <strong>Visual structure only.</strong> Actual calendar logic (current month, navigation, validation) is the author's responsibility — typically driven by a JS library (flatpickr, vanilla-calendar) or server-rendered template. v0.4.0 = docked variant. Modal + modal-input variants reuse internals + dialog wrapper.
+              </p>
+            </div>
+          </details>
 
           <a class="sg-lab-link t-label-large" href="modules/date-time/lab-date-time-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
@@ -2372,9 +2528,14 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Time picker</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            <strong>Visual structure only.</strong> Input variant uses real <code>&lt;input type="text" inputmode="numeric"&gt;</code> for typeable HH/MM, and <code>&lt;input type="radio"&gt;</code> + <code>&lt;label&gt;</code> for AM/PM (single-select, CSS-only). Clock dial drag interaction stays in author code.
-          </p>
+          <details class="sg-readmore">
+            <summary class="t-label-large">Read more</summary>
+            <div class="sg-readmore__body">
+              <p class="t-body-medium">
+                <strong>Visual structure only.</strong> Input variant uses real <code>&lt;input type="text" inputmode="numeric"&gt;</code> for typeable HH/MM, and <code>&lt;input type="radio"&gt;</code> + <code>&lt;label&gt;</code> for AM/PM (single-select, CSS-only). Clock dial drag interaction stays in author code.
+              </p>
+            </div>
+          </details>
 
           <a class="sg-lab-link t-label-large" href="modules/date-time/lab-date-time-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>
@@ -3081,12 +3242,17 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Components</div>
           <h2 class="t-headline-medium">Carousel</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            Native horizontal scroll + scroll-snap. Item corner = corner-extra-large (28dp). Multi-browse default mixes large/medium/small items; hero variant features one large + small queue; uncontained bleeds past trailing edge for content-first browsing.
-          </p>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-top: var(--space-xs); max-width: 64ch;">
-            <em>v0.3.5 scope</em>: multi-browse, hero, uncontained. Center-aligned hero, multi-aspect, full-screen, item-morph animation deferred.
-          </p>
+          <details class="sg-readmore">
+            <summary class="t-label-large">Read more</summary>
+            <div class="sg-readmore__body">
+              <p class="t-body-medium">
+                Native horizontal scroll + scroll-snap. Item corner = corner-extra-large (28dp). Multi-browse default mixes large/medium/small items; hero variant features one large + small queue; uncontained bleeds past trailing edge for content-first browsing.
+              </p>
+              <p class="t-body-medium">
+                <em>v0.3.5 scope</em>: multi-browse, hero, uncontained. Center-aligned hero, multi-aspect, full-screen, item-morph animation deferred.
+              </p>
+            </div>
+          </details>
 
           <a class="sg-lab-link t-label-large" href="modules/carousel/lab-carousel-pattern.html" aria-label="Open validation specimen"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">science</span><span>Validation specimen</span></a>
         </header>

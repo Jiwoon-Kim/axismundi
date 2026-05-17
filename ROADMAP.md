@@ -332,8 +332,14 @@ release planning cycle.
   - Closed hygiene items #1, #10, #13, #17, #28; #11 framework portion remains resolved and UX is superseded by #34.
   - Phase 3 lesson locked: sidebar nav is the canonical source of section order; body sections follow nav order.
   - Matrix distribution unchanged: 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
-
-- **v3.5.17 (NEXT)** — **Post-modernization routing decision**. Candidate paths: BACKLOG #34 follow-up (N3 dialog/module picker UX), BACKLOG #2/#3 side-fixes, BACKLOG #19 Date picker grid a11y, BACKLOG #29/#30 behavior-pattern modules, or v3.6.0 Ontology Theme Pilot entry planning.
+- **v3.5.17** ← **Styleguide Shell Rebuild + Mobile Reading Polish** ✓ DONE (2026-05-18)
+  - Rebuilt the styleguide mobile shell as styleguide-local `.sg-*` chrome: top app bar, menu icon button, and Sheet-style side drawer without claiming App bar / Nav drawer / Sheet component completion.
+  - Converted the theme switcher to icon buttons while preserving the shared `data-theme-button` contract.
+  - Added mobile reading polish: compact palette chips, native read-more disclosure, and styleguide version `v0.3.0` with monorepo cycle metadata.
+  - Linked `typography-axis.html` from Foundation > Typography and optimized the specimen for mobile with collapsible sticky axis controls.
+  - BACKLOG #34 is partially resolved; N3 module picker/dialog UX remains deferred. BACKLOG #37 still owns full docs-site dogfooding after Wave 2 navigation closure.
+  - Matrix distribution unchanged: 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
+- **v3.5.18 (NEXT)** — **Post-shell routing decision**. Candidate paths: BACKLOG #34 residual N3 module picker/dialog UX, BACKLOG #2/#3 side-fixes, BACKLOG #19 Date picker grid a11y, BACKLOG #29/#30 behavior-pattern modules, or v3.6.0 Ontology Theme Pilot entry planning.
 - **v3.6.0** — **Ontology Theme Pilot**. Consumer of Wave 1+ public-tier modules + infrastructure dependencies (popover/, ripple/, icon-system/). First real WordPress block theme consuming the v3.5.0 public surface. Validates 4-tier architecture in production. Per CHARTER §3.4, pilot lives outside the theme repo; theme repo provides public surface only.
 - **v3.6.x — v3.7.x** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
 - **v3.7.x → v1.0 RC** — 33-component audit coverage substantially complete (DONE + RECORD = 30+ out of 34 TOC components); pilot theme stable; M3 Interpreter Plugin (BACKLOG #21) authoring in parallel as plugin-tier artifact.

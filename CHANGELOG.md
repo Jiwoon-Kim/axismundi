@@ -1,5 +1,62 @@
 # CHANGELOG
 
+## v3.5.17 — Styleguide Shell Rebuild + Mobile Reading Polish (2026-05-18)
+
+Corrective styleguide UX release after v3.5.16 closed the framing work but did
+not yet satisfy the requested mobile shell and reading experience. No component
+matrix rows changed; distribution remains 13 DONE / 2 PARTIAL / 16 TODO /
+3 RECORD.
+
+### Changed — Styleguide-local shell
+
+- Rebuilt the styleguide shell as **styleguide-local chrome**, not as App bar,
+  Navigation drawer, or Sheet component completion.
+- Added a mobile top app bar with a real icon-button menu trigger.
+- Added `.sg-drawer`, a Sheet-style side drawer using `.sg-*` naming only; no
+  `.ax-app-bar`, `.ax-nav-drawer`, or `.ax-sheet` promotion claim.
+- Drawer content is cloned from the canonical sidebar navigation so desktop and
+  mobile nav stay in the same order.
+- Preserved the desktop/tablet sidebar at 768px and above.
+
+### Changed — Theme and body reading
+
+- Converted the styleguide theme switcher to icon buttons:
+  `light_mode`, `dark_mode`, and `contrast`.
+- Preserved the existing `data-theme-button` contract so lab/module pages can
+  continue sharing the same theme runtime.
+- Added mobile reading polish: compact/wrapping palette chips and native
+  `<details><summary>` read-more disclosure for long explanatory copy.
+- Updated styleguide version display to:
+  `Axismundi Style Guide v0.3.0` with `Monorepo cycle: v3.5.17`.
+
+### Changed — Typography adjunct
+
+- Added `typography-axis.html` as a Foundation > Typography adjunct link, per
+  BACKLOG #11's prior decision that the axis specimen is not a standalone
+  module entry.
+- Updated `publish_styleguide.py` so generated `/styleguide/` links point to
+  the repository-root typography-axis specimen.
+- Optimized `typography-axis.html` for mobile reading and control use:
+  responsive typography, read-more framing, sticky axis controls, and a
+  collapsible `Axis controls` panel so the controls do not cover the specimen.
+
+### Deferred
+
+- Rich motion and full docs-site dogfooding remain deferred to BACKLOG #37,
+  after Wave 2 navigation components are closed.
+- BACKLOG #34 remains partially open for the later N3 module picker/dialog UX.
+
+### Verified
+
+- Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS.
+- `npm test`: PASS.
+- `publish_styleguide.py`: regenerated `/styleguide/` successfully.
+- Phase 3 acceptance checks passed for mobile top bar, drawer toggle, icon
+  theme switcher, body/nav order, lab links, validation banners, typography
+  adjunct link, and the v0.3.0 / v3.5.17 version display.
+- User visual QA passed for the updated `typography-axis.html` collapsible
+  controls.
+
 ## v3.5.16 — Styleguide Modernization + Module Workspace Framing (2026-05-18)
 
 Post-publish public surface modernization. No component matrix rows changed;

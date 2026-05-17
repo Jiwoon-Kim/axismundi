@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-18 (v3.5.16 RELEASE CLOSED — Styleguide modernization)
+> **Last updated**: 2026-05-18 (v3.5.17 RELEASE CLOSED — Styleguide shell rebuild)
 
 ---
 
@@ -28,16 +28,17 @@ v3.5.13  Wave 1 closure cleanup (#32 / #33 / Records sweep)          ✓ DONE
 v3.5.14  Publish prep                                                ✓ DONE
 v3.5.15  GitHub repository + Pages publish                           ✓ DONE
 v3.5.16  Styleguide modernization + module workspace framing          ✓ DONE
-v3.5.17  Post-modernization routing decision                          ☐ NEXT
+v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
+v3.5.18  Post-shell routing decision                                  ☐ NEXT
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.5.16 Styleguide modernization + module workspace framing
+Current release:   v3.5.17 Styleguide shell rebuild + mobile reading polish
 Current phase:     CLOSED
 Closed by:         Phase 3 visual QA PASS + Phase 5 bookkeeping
-Next allowed work: v3.5.17 route selection
+Next allowed work: v3.5.18 route selection
 ```
 
 ## Wave 1 Progress
@@ -75,13 +76,13 @@ TODO      0 / 9
 37 canonical entries total.
 ```
 
-v3.5.16 does not change component row status. The matrix remains
+v3.5.17 does not change component row status. The matrix remains
 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
 
-## v3.5.16 Closure Notes
+## v3.5.17 Closure Notes
 
 ```txt
-Styleguide modernization closed.
+Styleguide shell rebuild + mobile reading polish closed.
 No component matrix rows changed.
 No baseline component CSS/tokens were changed.
 Public Pages remains live:
@@ -91,30 +92,33 @@ Public Pages remains live:
 Closed scope:
 
 ```txt
-Charter §3.3:
-  lab/modules/* = module workspace + validation specimen surface
-
 Styleguide:
-  18 module/record actions added
-  nav/body order equality locked (nav is canonical)
-  mobile-first shell guardrails added
+  mobile top app bar added
+  menu icon button opens a Sheet-style .sg-drawer
+  desktop/tablet sidebar preserved
+  theme switcher is now icon-button based
+  data-theme-button contract preserved
+  body/nav order equality preserved
+  color palettes compact/wrap on mobile
+  long explanation copy uses native details/summary disclosure
 
-Publish mirror:
-  theme.js copied
-  module links rewritten for repository-root Pages
+Typography:
+  Foundation > Typography now links typography-axis.html as an adjunct
+  typography-axis.html has mobile-friendly, collapsible sticky controls
 
-Lab patterns:
-  16 validation-specimen banners added
+Versioning:
+  Axismundi Style Guide v0.3.0
+  Monorepo cycle: v3.5.17
 
-Backlog hygiene:
-  #1 / #10 / #13 / #17 / #28 resolved
-  #11 framework portion resolved; UX superseded by #34
+Backlog:
+  #34 partially resolved; N3 module picker/dialog UX remains
+  #37 remains full dogfooding after Wave 2 navigation closure
 ```
 
-## v3.5.17 Next Route Candidates
+## v3.5.18 Next Route Candidates
 
 ```txt
-Option A  BACKLOG #34 follow-up: N3 dialog/module picker UX
+Option A  BACKLOG #34 residual: N3 dialog/module picker UX
 Option B  Side-fix cleanup: BACKLOG #2 / #3
 Option C  Date picker grid a11y: BACKLOG #19
 Option D  Behavior patterns: BACKLOG #29 Card / #30 Extended FAB
@@ -135,10 +139,11 @@ Current directory:
 Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS
 npm test:  PASS
 Playwright:
-  root/styleguide/lab pattern overflow 0 at 390 / 768 / 1280
-  styleguide nav anchors = 37
-  styleguide body sections = 37
+  styleguide shell acceptance passed at 390 / 768 / 1280
+  mobile drawer opens/closes from the menu icon button
   nav/body order equality = true
+  lab/record links and validation banners preserved
+  typography-axis mobile overflow = 0
 Baseline:
   components.css / tokens.css / blocks.css / theme.json untouched.
 ```

@@ -165,6 +165,13 @@ def main():
                 'href="modules/',
                 'href="../products/reference-implementations/axismundi-lab/modules/'
             )
+            # Foundation adjuncts are not copied into /styleguide/. They remain
+            # source-tree validation/specimen pages served from the repository
+            # root, like module pattern pages.
+            html = html.replace(
+                'href="typography-axis.html"',
+                'href="../products/reference-implementations/axismundi-lab/typography-axis.html"'
+            )
             # Add publish-mirror banner (HTML comment, no visible change)
             banner = (
                 "<!-- ============================================================\n"

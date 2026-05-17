@@ -15,7 +15,7 @@
  * Each section is an IIFE so failures in one don't block others.
  *
  * Sections:
- *   §1 Off-canvas nav drawer (App bar hamburger ↔ Sheet-side modal)
+ *   §1 Off-canvas nav drawer (page chrome menu ↔ dialog side drawer)
  *   §2 Submenu expand (accordion pattern for depth-2+ nav items)
  *   §3 Toolbar aria-pressed toggle (B/I/U/S formatting groups)
  *   §4 Heading anchor injection (markdown / classic editor output)
@@ -33,24 +33,23 @@
 /* ============================================================
  * §1 Off-canvas nav drawer
  *
- * Pattern: App bar hamburger button toggles a <dialog> element
- * containing the nav rail's content. `<dialog>` provides native:
+ * Pattern: a page-chrome menu button toggles a <dialog> element
+ * containing navigation content. `<dialog>` provides native:
  *   - focus trap (ESC key + Tab cycle)
  *   - scrim (::backdrop pseudo-element)
  *   - scroll-lock on body (modal mode only)
  *
  * Markup contract:
  *   <button data-toggle-nav aria-controls="nav-drawer" aria-expanded="false">
- *   <dialog id="nav-drawer" class="ax-sheet ax-sheet--side-modal">
+ *   <dialog id="nav-drawer" class="sg-drawer">
  *     <button data-close-modal>…</button>
  *     …nav content…
  *   </dialog>
  *
  * State:
  *   - aria-expanded on the trigger reflects open/closed
- *   - data-toggle-nav buttons swap between Menu / Menu Open icons
- *     via CSS (see app-bar component styling — both icons in
- *     markup, one hidden by aria-expanded state)
+ *   - data-toggle-nav buttons may swap between Menu / Menu Open icons
+ *     via page-specific CSS when both icons are present in markup
  *
  * Delegation: ALL [data-toggle-nav] and [data-close-modal] buttons
  * are wired via a single document-level click listener. Page
@@ -132,7 +131,8 @@
   // --- Viewport guard: if user resizes from mobile to desktop
   //     while drawer is open, close it (desktop layout doesn't
   //     show drawer; leaving it open creates phantom focus trap). ---
-  const desktopMq = window.matchMedia('(min-width: 1024px)');
+  const closeAt = drawer.getAttribute('data-close-at') || '(min-width: 1024px)';
+  const desktopMq = window.matchMedia(closeAt);
   desktopMq.addEventListener('change', (e) => {
     if (e.matches && drawer.open) close();
   });

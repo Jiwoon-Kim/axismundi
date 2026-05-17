@@ -10,11 +10,23 @@
 <link rel="stylesheet" href="stylesheets/icons.css">
 <style>
   body {
+    box-sizing: border-box;
     max-width: 1200px;
     margin: 0 auto;
     padding: var(--space-xl, 48px) var(--space-lg, 24px);
     background: var(--md-sys-color-background);
     color: var(--md-sys-color-on-background);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  h1 {
+    margin-block: 0 var(--space-lg, 24px);
+    font-size: clamp(2rem, 10vw, 3.5rem);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+  h2 {
+    font-size: clamp(1.5rem, 7vw, 2rem);
+    line-height: 1.15;
   }
   .lab-banner {
     padding: var(--space-md, 16px);
@@ -23,17 +35,78 @@
     border-radius: 12px;
     margin-block-end: var(--space-xl, 48px);
   }
+  .axis-readmore {
+    margin-block: 0 var(--space-lg, 24px);
+    padding: var(--space-md, 16px);
+    background: var(--md-sys-color-surface-container-low);
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 12px;
+  }
+  .axis-readmore summary {
+    cursor: pointer;
+    color: var(--md-sys-color-primary);
+  }
+  .axis-control-shell {
+    position: sticky;
+    top: var(--space-md, 16px);
+    z-index: 5;
+    margin-block-end: var(--space-xl, 48px);
+    background: color-mix(in srgb, var(--md-sys-color-surface-container) 88%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 12px;
+    box-shadow: var(--md-sys-elevation-level2);
+    overflow: clip;
+  }
+  @supports not (background: color-mix(in srgb, white 50%, transparent)) {
+    .axis-control-shell {
+      background: var(--md-sys-color-surface-container);
+    }
+  }
+  .axis-control-shell summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md, 16px);
+    min-block-size: 56px;
+    padding: 0 var(--space-md, 16px);
+    cursor: pointer;
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: 500;
+    list-style: none;
+  }
+  .axis-control-shell summary::-webkit-details-marker {
+    display: none;
+  }
+  .axis-control-shell summary::after {
+    content: 'expand_more';
+    font-family: 'Material Symbols Rounded';
+    font-size: 24px;
+    line-height: 1;
+    transition: transform 160ms ease;
+  }
+  .axis-control-shell[open] summary::after {
+    transform: rotate(180deg);
+  }
   .axis-controls {
     display: grid;
     gap: var(--space-md, 16px);
     grid-template-columns: max-content 1fr max-content;
     align-items: center;
     padding: var(--space-md, 16px);
-    background: var(--md-sys-color-surface-container);
-    border-radius: 12px;
-    margin-block-end: var(--space-xl, 48px);
+    border-block-start: 1px solid var(--md-sys-color-outline-variant);
+    min-width: 0;
   }
-  .axis-controls label { font-family: var(--md-sys-typescale-label-large-font); font-weight: 500; }
+  .axis-controls label {
+    min-width: 0;
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
   .axis-controls input[type="range"] { width: 100%; }
   .axis-controls output {
     font-family: 'Roboto Mono', monospace;
@@ -48,6 +121,7 @@
     border-radius: 12px;
     border: 1px solid var(--md-sys-color-outline-variant);
     margin-block-end: var(--space-xl, 48px);
+    overflow: hidden;
   }
   .preview-block + .preview-block { margin-block-start: var(--space-lg, 24px); }
   .preview-label {
@@ -67,12 +141,15 @@
       'slnt' var(--demo-slnt, 0),
       'GRAD' var(--demo-grad, 0);
   }
-  .demo-text.t-display { font-size: 57px; line-height: 1.05; }
-  .demo-text.t-headline { font-size: 32px; line-height: 1.25; }
+  .demo-text {
+    overflow-wrap: anywhere;
+  }
+  .demo-text.t-display { font-size: clamp(2.25rem, 11vw, 57px); line-height: 1.05; }
+  .demo-text.t-headline { font-size: clamp(1.5rem, 8vw, 32px); line-height: 1.25; }
   .demo-text.t-body { font-size: 16px; line-height: 1.6; }
   .demo-text.t-label { font-size: 11px; line-height: 1.45; letter-spacing: 0.5px; text-transform: uppercase; }
   .icon-row {
-    display: flex; gap: 16px; align-items: center;
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
     padding: var(--space-md, 16px);
     background: var(--md-sys-color-surface-container);
     border-radius: 8px;
@@ -87,6 +164,49 @@
       'opsz' 24;
     font-size: 36px;
   }
+  @media (max-width: 640px) {
+    body {
+      padding: var(--space-lg, 24px) var(--space-md, 16px);
+    }
+    .lab-banner,
+    .axis-controls,
+    .preview {
+      margin-block-end: var(--space-lg, 24px);
+    }
+    .axis-control-shell {
+      top: var(--space-sm, 12px);
+      margin-block-end: var(--space-lg, 24px);
+    }
+    .axis-controls {
+      grid-template-columns: 1fr auto;
+      gap: var(--space-sm, 12px);
+      padding: var(--space-md, 16px);
+      max-block-size: min(58dvh, 440px);
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+    .axis-controls label {
+      grid-column: 1 / -1;
+    }
+    .axis-controls input[type="range"] {
+      min-width: 0;
+    }
+    .axis-controls output {
+      min-width: 4ch;
+    }
+    .preview {
+      padding: var(--space-lg, 24px) var(--space-md, 16px);
+    }
+    .preview-label {
+      overflow-wrap: anywhere;
+    }
+    .icon-row {
+      gap: var(--space-sm, 12px);
+    }
+    .icon-row .material-symbols-rounded {
+      font-size: 32px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -97,7 +217,19 @@
 
 <h1>Variable Font Axis Explorer</h1>
 
-<section class="axis-controls">
+<details class="axis-readmore">
+  <summary>Read more</summary>
+  <p>
+    This specimen is a Foundation > Typography adjunct. It is a visual QA tool
+    for variable font axes, not a public component module. Use it to inspect
+    Roboto Flex axes and the shared GRAD behavior between text and Material
+    Symbols icons.
+  </p>
+</details>
+
+<details class="axis-control-shell" open>
+<summary>Axis controls</summary>
+<section class="axis-controls" aria-label="Variable font axis controls">
   <label for="ax-opsz">opsz (optical size)</label>
   <input type="range" id="ax-opsz" min="8" max="144" step="1" value="14">
   <output for="ax-opsz" id="out-opsz">14</output>
@@ -126,6 +258,7 @@
   <input type="range" id="ax-icon-wght" min="100" max="700" step="10" value="400">
   <output for="ax-icon-wght" id="out-icon-wght">400</output>
 </section>
+</details>
 
 <div class="preview">
   <div class="preview-block">
@@ -198,6 +331,11 @@ const cssVarMap = {
   'fill': '--demo-fill',
   'icon-wght': '--demo-icon-wght',
 };
+
+const controlShell = document.querySelector('.axis-control-shell');
+if (controlShell && window.matchMedia('(max-width: 640px)').matches) {
+  controlShell.open = false;
+}
 
 axes.forEach(axis => {
   const input = document.getElementById('ax-' + axis);

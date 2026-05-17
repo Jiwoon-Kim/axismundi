@@ -172,7 +172,7 @@ font-size: 48px  → inline-size 48px  (large surfaces)
 ### 11. Public surface reframe — styleguide ⇄ module lab UX
 
 - **Bucket**: E (documentation UX) — first BACKLOG item in Bucket E so far
-- **Status**: **Partially resolved at v3.5.0; remaining UX superseded by #34 / v3.5.16.** The framework portion landed in the Public Surface Reframe docs. The concrete styleguide-to-module navigation work is now tracked by BACKLOG #34 and implemented in the v3.5.16 modernization cycle.
+- **Status**: **Resolved / superseded.** The framework portion landed in v3.5.0 Public Surface Reframe. Typography-axis adjunct linking and concrete styleguide-to-module navigation landed across v3.5.16 and v3.5.17. Any remaining module picker/dialog UX belongs to BACKLOG #34, not this original framing item.
 - **Target**: v3.5.0 candidate (not v3.4.x). v3.4.x is internal-structure stabilization; v3.5.0 is public-surface reframe.
 - **Source**: v3.4.5 mid-discussion. After v3.4.0–v3.4.4.1 the boundary between baseline (styleguide) and extension (lab modules) has crystallized: the styleguide became an uncontaminated baseline catalog, lab modules became extension/interaction labs with their own pattern pages, and the icon system introduced a separate ship-track for chrome glyphs and brand specimens. The current public surface (GitHub Pages entry, mirror layout) still reflects the older "styleguide = mirror of everything" assumption and needs reframing to match the new structure.
 
@@ -1273,7 +1273,7 @@ Deferred by design:
 ### 34. Styleguide modernization + lab module navigation UX
 
 - **Bucket**: E — Public surface / publish UX
-- **Status**: Open
+- **Status**: Partially resolved at v3.5.16 / v3.5.17; residual N3 module picker/dialog UX remains open.
 - **Priority**: Medium
 - **Target**: v3.5.x after GitHub Pages publish, before v3.6.0 Ontology Theme Pilot if possible
 - **Source**: v3.5.14 publish prep Phase 3 / user navigation review
@@ -1316,6 +1316,25 @@ This matches the existing ontology:
 - `styleguide/` = canonical public visual mirror,
 - `lab/modules/*` = validation and audit surface,
 - lab links are available for inspection but do not replace canonical demos.
+
+**Progress**:
+
+```txt
+v3.5.16:
+  - Charter/module-workspace framing amended.
+  - 15 validation specimen links + 3 record audit links added to styleguide.
+  - 16 lab pattern pages received validation-specimen banners.
+
+v3.5.17:
+  - Mobile shell rebuilt with styleguide-local top bar + .sg-drawer.
+  - Icon theme switcher added while preserving data-theme-button.
+  - Body mobile polish added with compact palettes + native read-more.
+  - Foundation > Typography now links typography-axis.html as an adjunct.
+  - typography-axis.html received mobile-friendly collapsible controls.
+
+Remaining:
+  - N3 module picker/dialog UX, if still desired after the direct-link shell.
+```
 
 **Likely scope**:
 
@@ -1506,12 +1525,17 @@ Toolbar
 These are not closed yet. Implementing them ad hoc inside the docs shell during
 v3.5.16 would bypass the component audit discipline.
 
-**Allowed in v3.5.16**:
+**Allowed before Wave 2 closure**:
 
 - mobile-first responsive improvements to `index.html` and styleguide
   navigation,
 - modest use of already-closed Wave 1 components (Button / Card / List),
 - no dependency on unclosed Wave 2 navigation primitives.
+
+v3.5.17 used this carve-out for styleguide-local `.sg-*` chrome only: a mobile
+top bar, menu icon button, and Sheet-style drawer without claiming App bar /
+Nav drawer / Sheet completion. Richer motion and true component dogfooding stay
+deferred to this item.
 
 **Future cycle shape**:
 

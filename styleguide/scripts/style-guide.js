@@ -62,6 +62,33 @@ document.getElementById('sg-cb-indet').indeterminate = true;
             });
           })();
 
+/* ----- Styleguide-local drawer nav clone ----- */
+(function () {
+  const guideSlot = document.querySelector('[data-drawer-guide-nav]');
+  const sectionSlot = document.querySelector('[data-drawer-section-nav]');
+  const desktopGuide = document.querySelector('.sg-sidebar .sg-guide-nav');
+  const desktopSection = document.querySelector('.sg-sidebar .sg-nav');
+  const drawer = document.getElementById('sg-drawer');
+
+  if (guideSlot && desktopGuide) {
+    guideSlot.replaceChildren(desktopGuide.cloneNode(true));
+  }
+  if (sectionSlot && desktopSection) {
+    sectionSlot.replaceChildren(desktopSection.cloneNode(true));
+  }
+
+  if (!drawer) return;
+
+  drawer.addEventListener('click', (event) => {
+    const anchor = event.target.closest('a[href^="#"]');
+    if (!anchor || !drawer.contains(anchor)) return;
+    drawer.close();
+    document.querySelectorAll('[data-toggle-nav]').forEach((button) => {
+      button.setAttribute('aria-expanded', 'false');
+    });
+  });
+})();
+
 /* ----- Main runtime: snackbar / dialog / sheet / theme switcher / palette painter ----- */
 /* ---------------- Theme switcher ---------------- */
     (function () {

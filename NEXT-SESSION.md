@@ -1,6 +1,6 @@
-# NEXT-SESSION.md — v3.5.17 Routing Handoff
+# NEXT-SESSION.md — v3.5.18 Routing Handoff
 
-> **Status**: v3.5.16 Styleguide modernization closed.
+> **Status**: v3.5.17 Styleguide shell rebuild + mobile reading polish closed.
 > **Use**: read at the start of the next local Claude/Codex session.
 
 ---
@@ -12,11 +12,11 @@
 2. CURRENT-STATE.md
 3. PROJECT-CONTEXT.md
 4. docs/v3.5.5/PRE-ENTRY-ONTOLOGY-GROUNDING.md
-5. CHANGELOG.md latest entry (v3.5.16)
-6. ROADMAP.md v3.5.17 NEXT entry
-7. docs/v3.5.16/STYLEGUIDE-MODERNIZATION-PHASE-2-REPORT.md
-8. docs/v3.5.16/MODERNIZATION-AUDIT.md
-9. docs/v3.5.16/STALE-STATE-AUDIT.md
+5. CHANGELOG.md latest entry (v3.5.17)
+6. ROADMAP.md v3.5.18 NEXT entry
+7. docs/v3.5.17/STYLEGUIDE-SHELL-REBUILD-PHASE-0-PLAN.md
+8. docs/v3.5.17/STYLEGUIDE-SHELL-REBUILD-PHASE-0-REPORT.md
+9. docs/v3.5.17/STYLEGUIDE-SHELL-REBUILD-PHASE-1-PLAN.md
 10. docs/v3.5.0/MODULE-STATUS-MATRIX.md
 ```
 
@@ -26,7 +26,8 @@
 v3.5.13 — Wave 1 closure cleanup (#32/#33/Records)  ✓ CLOSED
 v3.5.14 — Publish prep                               ✓ CLOSED
 v3.5.15 — GitHub repository + Pages publish          ✓ CLOSED
-v3.5.16 — Styleguide modernization                   ✓ CLOSED
+v3.5.16 — Styleguide modernization/framing           ✓ CLOSED
+v3.5.17 — Styleguide shell rebuild/mobile polish     ✓ CLOSED
 Validator                                            1.000 / 1.000 / 1.000 / 1.000 PASS
 npm test                                             PASS
 GitHub repository                                    LIVE
@@ -49,40 +50,53 @@ Overall matrix:
 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD + 3 infrastructure = 37 entries
 ```
 
-## 2) v3.5.16 Closure Summary
+## 2) v3.5.17 Closure Summary
 
 Closed scope:
 
 ```txt
-Charter §3.3:
-  lab/modules/* = module workspace + validation specimen surface
-  /styleguide/ = canonical public visual demo
+Styleguide-local shell:
+  mobile top app bar
+  menu icon button
+  Sheet-style .sg-drawer
+  desktop/tablet sidebar preserved
+  no App bar / Nav drawer / Sheet completion claim
 
-Styleguide:
-  18 icon+label actions added
-  15 Validation specimen links
-  3 Record audit links
-  nav/body order equality locked
+Theme:
+  icon-button theme switcher
+  light_mode / dark_mode / contrast glyphs
+  data-theme-button contract preserved
 
-Publish mirror:
-  theme.js copied to /styleguide/scripts/
-  source-local modules/... links rewritten for generated /styleguide/
+Body mobile polish:
+  palette chips compact/wrap on mobile
+  long explanatory copy uses native details/summary disclosure
+  visual specimens remain the primary content
 
-Lab patterns:
-  16 lab-*-pattern.html files now include validation-specimen banners
+Typography adjunct:
+  Foundation > Typography links typography-axis.html
+  typography-axis.html has mobile-friendly, collapsible sticky controls
 
-Backlog hygiene:
-  #1 / #10 / #13 / #17 / #28 resolved
-  #11 framework portion resolved; UX superseded by #34
-  Snackbar / Tooltip marked as pre-v3.5.0 legacy audit shape
+Version:
+  Axismundi Style Guide v0.3.0
+  Monorepo cycle: v3.5.17
+```
+
+Deferred:
+
+```txt
+BACKLOG #34:
+  residual N3 module picker/dialog UX remains open.
+
+BACKLOG #37:
+  full docs-site dogfooding remains deferred until Wave 2 navigation closure.
 ```
 
 Phase 3 lesson:
 
 ```txt
-Sidebar nav is the canonical source of styleguide section order.
-Body sections follow nav order.
-Do not reorder nav to match body; reorder body to match nav.
+Do not close on "plan executed" alone.
+Close only after explicit user-request acceptance criteria pass.
+For corrective UX cycles, preserve a User Request Log and verify it directly.
 ```
 
 Verification:
@@ -90,22 +104,23 @@ Verification:
 ```txt
 Validator:       1.000 / 1.000 / 1.000 / 1.000 PASS
 npm test:        PASS
-Playwright:
-  root / styleguide / lab pattern overflow = 0 at 390 / 768 / 1280
-  styleguide nav anchors = 37
-  styleguide body sections = 37
-  nav/body order equality = true
-  lab links = 18
-  icon links = 18
+Playwright/user QA:
+  mobile top bar visible at 390px
+  drawer opens/closes from menu icon
+  drawer includes canonical nav + icon theme switcher
+  desktop/tablet sidebar remains
+  nav/body order equality preserved
+  lab links and validation banners preserved
+  typography-axis collapsible controls accepted by user
 ```
 
-## 3) v3.5.17 Route Candidates
+## 3) v3.5.18 Route Candidates
 
 No route is selected yet. User decision required.
 
 ```txt
-Option A — BACKLOG #34 follow-up
-  N3 dialog / module picker UX for lab module discovery.
+Option A — BACKLOG #34 residual
+  N3 module picker / dialog UX for lab module discovery.
 
 Option B — Side-fix cleanup
   BACKLOG #2 Avatar size tokens and/or #3 floating toolbar selected color.

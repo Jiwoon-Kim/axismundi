@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v3.5.15 — GitHub Repository + Pages Publish (2026-05-17)
+
+First public GitHub publish cycle.
+
+### Published
+
+- Local workspace renamed from
+  `C:\Users\thaum\dev\axismundi-v3.5.1-phase0-handoff` to
+  `C:\Users\thaum\dev\axismundi`.
+- Initialized git history with a single root commit:
+  `e22b9e5 Initial Axismundi public release`.
+- Created and pushed repository:
+  `https://github.com/Jiwoon-Kim/axismundi`.
+- Enabled GitHub Pages from `main` branch root.
+- Public Pages URL:
+  `https://jiwoon-kim.github.io/axismundi/`.
+
+### Verified
+
+- Post-rename validator: 1.000 / 1.000 / 1.000 / 1.000 PASS.
+- `npm test`: PASS.
+- `publish_styleguide.py`: PASS.
+- GitHub Pages HTTP checks: root, styleguide, README, README.ko, lab overview,
+  lab module index, templates note, LICENSE-MATRIX, and NOTICE all returned
+  200.
+- Root page renders `Axismundi`, links to `/styleguide/`, and keeps author
+  metadata aligned as `KIM JIWOON (designbusan.ai.kr) — Busan, Korea`.
+
+### Deferred
+
+- v3.5.16 modernization remains next: styleguide/module navigation UX,
+  validation-specimen framing, BACKLOG hygiene, and "lab" naming amendment.
+- `index.ko.html` / language toggle remains BACKLOG #35.
+- v4.0 directory restructure remains deferred.
+
 ## v3.5.14 — Publish Prep (2026-05-17)
 
 Repository publish-prep release after Wave 1 closure. No component matrix rows

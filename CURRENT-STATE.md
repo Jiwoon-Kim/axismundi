@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-17 (v3.5.14 RELEASE CLOSED — Publish prep DONE)
+> **Last updated**: 2026-05-17 (v3.5.15 RELEASE CLOSED — GitHub Pages LIVE)
 
 ---
 
@@ -26,16 +26,17 @@ v3.5.11  Wave 1 — List #33                                           ✓ DONE
 v3.5.12  Wave 1 — Carousel #34                                       ✓ DONE
 v3.5.13  Wave 1 closure cleanup (#32 / #33 / Records sweep)          ✓ DONE
 v3.5.14  Publish prep                                                ✓ DONE
-v3.5.15  GitHub repository + Pages publish                           ☐ NEXT
+v3.5.15  GitHub repository + Pages publish                           ✓ DONE
+v3.5.16  Styleguide modernization + module workspace framing          ☐ NEXT
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.5.14 Publish prep
+Current release:   v3.5.15 GitHub repository + Pages publish
 Current phase:     CLOSED
-Closed by:         Phase 3 visual QA follow-up + Phase 5 mechanical close
-Next allowed work: v3.5.15 GitHub repository + Pages publish plan-first
+Closed by:         Public GitHub push + Pages navigation verification
+Next allowed work: v3.5.16 modernization plan-first
 ```
 
 ## Wave 1 Progress
@@ -76,79 +77,61 @@ TODO      0 / 9
 v3.5.14 does not change component row status. The matrix remains
 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
 
-## v3.5.14 Closure Notes
+## v3.5.15 Closure Notes
 
 ```txt
-Publish prep closed.
+GitHub repository + Pages publish closed.
 No component baseline CSS/tokens were changed.
-No GitHub repository was created.
-No GitHub Pages settings were changed.
-No local directory rename was executed.
+Repository is live:
+  https://github.com/Jiwoon-Kim/axismundi
+Pages is live:
+  https://jiwoon-kim.github.io/axismundi/
 ```
 
-Lane results:
+Publish results:
 
 ```txt
-Lane H — License / NOTICE / package metadata
-  - Root LICENSE added (GPL-3.0 text).
-  - LICENSE-CC-BY-SA-4.0.md added.
-  - LICENSE-MATRIX.md now defines code / docs / ontology-data boundaries.
-  - NOTICE.md asset paths corrected to core/design-systems/material3/assets.
-  - package.json / package-lock.json aligned to axismundi + GPL-3.0-or-later.
+Directory rename:
+  C:\Users\thaum\dev\axismundi-v3.5.1-phase0-handoff
+  -> C:\Users\thaum\dev\axismundi
 
-Lane E — Hardcoded path audit
-  - Public-facing active stale command fixed.
-  - Historical / provenance paths intentionally preserved.
-  - Directory rename remains deferred pending final user GO.
+Git:
+  e22b9e5 Initial Axismundi public release
+  origin https://github.com/Jiwoon-Kim/axismundi.git
 
-Lane G — Publish mirror check
-  - publish_styleguide.py regenerated 30 files and 16 module CSS files.
-  - Publish generator wording now references Axismundi lab source.
+Pages source:
+  main branch root
 
-Lane C — Ignore and artifact policy
-  - .gitignore covers Node, Playwright, temporary, editor, and OS artifacts.
-  - Validator evidence remains tracked.
-
-Lane D — GitHub Actions
-  - Validator-only workflow added.
-  - Playwright CI deferred.
-
-Lane A/B — README surfaces
-  - README.md rewritten.
-  - README.ko.md created.
-  - Authorship aligned to KIM JIWOON (designbusan.ai.kr) — Busan, Korea.
-
-Lane F — Templates category note
-  - docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md added.
-  - Future route: /templates/.
-  - Actual template implementation deferred.
-
-Phase 3 follow-up — Root index
-  - index.html refreshed as the public entry point.
-  - Links now route to styleguide, README, README.ko, lab overview, lab module
-    index, templates note, license matrix, and NOTICE.
+Verified public URLs:
+  /                                      200
+  /styleguide/                          200
+  /README.md                            200
+  /README.ko.md                         200
+  /products/.../axismundi-lab/README.md 200
+  /products/.../modules/README.md       200
+  /docs/v3.5.14/TEMPLATES...NOTE.md     200
+  /LICENSE-MATRIX.md                    200
+  /NOTICE.md                            200
 ```
 
-## v3.5.15 Next Route
+## v3.5.16 Next Route
 
 ```txt
-GitHub repository + Pages publish:
-  - final path grep
-  - user GO for local directory rename
-  - rename local directory to C:\Users\thaum\dev\axismundi if approved
-  - create GitHub repository `axismundi`
-  - push initial public repo
-  - enable GitHub Pages
-  - verify /index.html -> /styleguide/ -> lab/module documentation navigation
+Modernization:
+  - use docs/v3.5.16/MODERNIZATION-AUDIT.md
+  - use docs/v3.5.16/STALE-STATE-AUDIT.md
+  - Charter §3.3 amendment: lab = module workspace, legacy naming
+  - styleguide -> module navigation UX
+  - lab pattern HTML validation-specimen banners
+  - BACKLOG hygiene (#11/#34 overlap, #10/#17 close-check, #13)
+  - Snackbar/Tooltip legacy marking
+  - optional side-fixes (#1/#2/#3/#28) only if bounded
 ```
 
 Repository naming / path lock:
 
 ```txt
 Repo name: axismundi
-Preferred target path:
-  C:\Users\thaum\dev\axismundi
-
 Current directory:
   C:\Users\thaum\dev\axismundi
 ```
@@ -158,9 +141,9 @@ Current directory:
 ```txt
 Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS
 npm test:  PASS
-Index QA:  overflowX 0; 10 links rendered; local link targets exist
+Pages QA:  9 public URLs returned HTTP 200
 Baseline:  components.css / tokens.css / style-guide.html / blocks.css /
-           theme.json preserved in v3.5.14.
+           theme.json preserved in v3.5.15.
 ```
 
 ## Discipline

@@ -315,7 +315,15 @@ release planning cycle.
   - `publish_styleguide.py` regenerated the styleguide mirror (30 files / 16 module CSS files) and now references Axismundi lab source wording.
   - `docs/v3.5.14/TEMPLATES-PUBLISH-CATEGORY-NOTE.md` defines `/templates/` as the future lab composition / page-layout preview category.
   - Directory rename, GitHub repository creation, and Pages activation remain deferred to v3.5.15.
-- **v3.5.15 (NEXT)** — **GitHub Repository + Pages Publish**. Create GitHub repository `axismundi`, execute local directory rename only after final path grep/user GO, push the public repo, enable GitHub Pages, and verify `/index.html` → `/styleguide/` → lab/module documentation navigation.
+- **v3.5.15** ← **GitHub Repository + Pages Publish** ✓ DONE (2026-05-17)
+  - Local directory renamed to `C:\Users\thaum\dev\axismundi`.
+  - Git initialized with root commit `e22b9e5 Initial Axismundi public release`.
+  - Repository published at `https://github.com/Jiwoon-Kim/axismundi`.
+  - GitHub Pages enabled from `main` branch root:
+    `https://jiwoon-kim.github.io/axismundi/`.
+  - Public navigation verified: root, styleguide, README, README.ko, lab overview,
+    lab module index, templates note, LICENSE-MATRIX, and NOTICE return 200.
+- **v3.5.16 (NEXT)** — **Styleguide Modernization + Module Workspace Framing**. Use `docs/v3.5.16/MODERNIZATION-AUDIT.md` and `docs/v3.5.16/STALE-STATE-AUDIT.md` as authoritative inputs. Scope: Charter §3.3 amendment, styleguide-to-module navigation UX, lab pattern validation-specimen banners, BACKLOG #11/#34 hygiene, close-checks for #10/#17, #13 publish theme.js decision, legacy Snackbar/Tooltip marking, and optional small side-fixes if bounded.
 - **v3.6.0** — **Ontology Theme Pilot**. Consumer of Wave 1+ public-tier modules + infrastructure dependencies (popover/, ripple/, icon-system/). First real WordPress block theme consuming the v3.5.0 public surface. Validates 4-tier architecture in production. Per CHARTER §3.4, pilot lives outside the theme repo; theme repo provides public surface only.
 - **v3.6.x — v3.7.x** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
 - **v3.7.x → v1.0 RC** — 33-component audit coverage substantially complete (DONE + RECORD = 30+ out of 34 TOC components); pilot theme stable; M3 Interpreter Plugin (BACKLOG #21) authoring in parallel as plugin-tier artifact.

@@ -1,6 +1,6 @@
 # v3.5.15 GitHub Repository + Pages Publish — Phase 0 Plan
 
-> Status: Phase 0 plan v1.0  
+> Status: CLOSED — v3.5.15 Phase 5  
 > Date: 2026-05-17  
 > Cycle: v3.5.15 GitHub repository + Pages publish  
 > Scope: plan-first for first public GitHub publish  

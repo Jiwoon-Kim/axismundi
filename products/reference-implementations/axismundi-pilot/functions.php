@@ -91,6 +91,134 @@ function axismundi_pilot_enqueue_assets() : void {
 add_action( 'wp_enqueue_scripts', 'axismundi_pilot_enqueue_assets' );
 
 /**
+ * Register Axismundi's bundled text fonts as a WordPress Font Library collection.
+ *
+ * The theme also registers these families in theme.json with `fontFace.src`.
+ * This collection gives the Font Library the same font-name-level definitions
+ * through the WP 6.5+ `font_family_settings` contract.
+ */
+function axismundi_pilot_register_font_collection() : void {
+	if ( ! function_exists( 'wp_register_font_collection' ) ) {
+		return;
+	}
+
+	$font_families = array(
+		array(
+			'font_family_settings' => array(
+				'fontFamily' => '"Roboto Flex", "Noto Sans KR", system-ui, sans-serif',
+				'slug'       => 'roboto-flex',
+				'name'       => 'Roboto Flex',
+				'fontFace'   => array(
+					array(
+						'fontFamily'  => 'Roboto Flex',
+						'fontStyle'   => 'oblique -10deg 0deg',
+						'fontWeight'  => '100 1000',
+						'fontStretch' => '25% 151%',
+						'src'         => get_theme_file_uri( 'assets/fonts/roboto-flex/axismundi-roboto-flex.woff2' ),
+					),
+				),
+			),
+			'categories'           => array( 'sans-serif' ),
+		),
+		array(
+			'font_family_settings' => array(
+				'fontFamily' => '"Noto Sans KR", sans-serif',
+				'slug'       => 'noto-sans-kr',
+				'name'       => 'Noto Sans KR',
+				'fontFace'   => array(
+					array(
+						'fontFamily' => 'Noto Sans KR',
+						'fontStyle'  => 'normal',
+						'fontWeight' => '100 900',
+						'src'        => get_theme_file_uri( 'assets/fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2' ),
+					),
+				),
+			),
+			'categories'           => array( 'sans-serif' ),
+		),
+		array(
+			'font_family_settings' => array(
+				'fontFamily' => '"Roboto Serif", "Noto Serif KR", Georgia, serif',
+				'slug'       => 'roboto-serif',
+				'name'       => 'Roboto Serif',
+				'fontFace'   => array(
+					array(
+						'fontFamily'  => 'Roboto Serif',
+						'fontStyle'   => 'normal',
+						'fontWeight'  => '100 900',
+						'fontStretch' => '50% 150%',
+						'src'         => get_theme_file_uri( 'assets/fonts/roboto-serif/axismundi-roboto-serif.woff2' ),
+					),
+				),
+			),
+			'categories'           => array( 'serif' ),
+		),
+		array(
+			'font_family_settings' => array(
+				'fontFamily' => '"Noto Serif KR", serif',
+				'slug'       => 'noto-serif-kr',
+				'name'       => 'Noto Serif KR',
+				'fontFace'   => array(
+					array(
+						'fontFamily' => 'Noto Serif KR',
+						'fontStyle'  => 'normal',
+						'fontWeight' => '100 900',
+						'src'        => get_theme_file_uri( 'assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2' ),
+					),
+				),
+			),
+			'categories'           => array( 'serif' ),
+		),
+		array(
+			'font_family_settings' => array(
+				'fontFamily' => '"Roboto Mono", monospace',
+				'slug'       => 'roboto-mono',
+				'name'       => 'Roboto Mono',
+				'fontFace'   => array(
+					array(
+						'fontFamily' => 'Roboto Mono',
+						'fontStyle'  => 'normal',
+						'fontWeight' => '100 700',
+						'src'        => get_theme_file_uri( 'assets/fonts/roboto-mono/axismundi-roboto-mono.woff2' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Mono',
+						'fontStyle'  => 'italic',
+						'fontWeight' => '100 700',
+						'src'        => get_theme_file_uri( 'assets/fonts/roboto-mono/axismundi-roboto-mono-italic.woff2' ),
+					),
+				),
+			),
+			'categories'           => array( 'monospace' ),
+		),
+	);
+
+	wp_register_font_collection(
+		'axismundi-pilot-fonts',
+		array(
+			'name'          => _x( 'Axismundi Pilot Fonts', 'Font collection name', 'axismundi-pilot' ),
+			'description'   => _x( 'Bundled Roboto and Noto Korean font families for the Axismundi Pilot theme.', 'Font collection description', 'axismundi-pilot' ),
+			'font_families' => $font_families,
+			'categories'    => array(
+				array(
+					'name' => _x( 'Sans Serif', 'Font category name', 'axismundi-pilot' ),
+					'slug' => 'sans-serif',
+				),
+				array(
+					'name' => _x( 'Serif', 'Font category name', 'axismundi-pilot' ),
+					'slug' => 'serif',
+				),
+				array(
+					'name' => _x( 'Monospace', 'Font category name', 'axismundi-pilot' ),
+					'slug' => 'monospace',
+				),
+			),
+		)
+	);
+}
+add_action( 'init', 'axismundi_pilot_register_font_collection' );
+
+/**
  * Register block style variants used by the Pilot patterns.
  *
  * These are style registrations for WordPress core blocks only. The Pilot

@@ -151,7 +151,7 @@
         {
           "slug": "serif",
           "name": "Serif",
-          "fontFamily": "\"Noto Serif KR\", Georgia, serif"
+          "fontFamily": "\"Roboto Serif\", \"Noto Serif KR\", Georgia, serif"
         },
         {
           "slug": "mono",

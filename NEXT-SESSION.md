@@ -12,13 +12,17 @@
 1. AGENTS.md or CLAUDE.md
 2. CURRENT-STATE.md
 3. PROJECT-CONTEXT.md
-4. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-0-PLAN.md
-5. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-1-PLAN.md
-6. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-2E-REPORT.md
-7. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
-8. docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md
-9. docs/v3.5.0/MODULE-STATUS-MATRIX.md
-10. BACKLOG.md latest #38 / #39 / #40 / #41 entries
+4. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md  ← HIGH PRIORITY
+   (authoritative architectural insights from final session;
+    input for v3.6.0 Phase 5 close + v3.6.1 plan-first)
+5. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-0-PLAN.md
+6. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-1-PLAN.md
+7. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-2E-REPORT.md
+8. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
+9. docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md
+10. docs/v3.5.0/MODULE-STATUS-MATRIX.md
+11. BACKLOG.md latest #38 / #39 / #40 entries
+    (#41 / #42 to be added during v3.6.0 Phase 5 close)
 ```
 
 ## 1) Current State
@@ -172,13 +176,31 @@ Required before Phase 5:
 □ Computed-style audit still PASS
 ```
 
-If approved:
+If approved — v3.6.0 Phase 5 mechanical close:
 
 ```txt
-Proceed to v3.6.0 Phase 5 mechanical close.
-Update CHANGELOG / ROADMAP / CURRENT-STATE / NEXT-SESSION.
-Close or route BACKLOG #20 / #40 / #41 as appropriate.
-Commit Phase 5 bookkeeping separately if possible.
+1. Status framing: "Pilot v0 — scaffold + Wave 1 reverse mapping +
+   block bridge MVP" (NOT complete theme)
+2. Lesson lock 4-location apply per PILOT-LESSONS §4.2:
+   - AGENTS.md / CLAUDE.md: WP core reset + computed audit + build direction
+   - PRE-ENTRY-ONTOLOGY-GROUNDING.md: lesson section append
+   - bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md: §1 refinement
+3. BACKLOG updates:
+   - #20 close trigger shifted to v3.6.1 (Token Architecture Refactor)
+   - #21 scope revised (Interpreter Plugin handles WP → M3 reverse direction)
+   - #41 (new) Token Architecture Refactor — bucket A
+   - #42 (new) Block bridge full coverage — bucket B/D
+4. CHANGELOG / ROADMAP / CURRENT-STATE / NEXT-SESSION update
+5. Commit Phase 5 bookkeeping (single commit or split as needed)
+
+Then proceed to v3.6.1 plan-first:
+
+```txt
+Cycle: Token Architecture Refactor (cross-cutting: lab + Pilot)
+Input: docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+       (authoritative, do not invent — verbatim quote in User Request Log)
+Scope: per PILOT-LESSONS §5.1 (9 items)
+Lane assignment unchanged: Codex implementation / Opus ontology review
 ```
 
 If more issues are found:
@@ -204,4 +226,55 @@ User had to catch several visual defects manually:
   table default/stripes leakage
 
 Future agents must not call this done without computed values.
+```
+
+Architectural lessons captured (final session before Phase 5 close):
+
+```txt
+Reference: docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md (622 lines)
+
+Lesson 1 — Build direction reversal:
+  Design system construction is FORWARD (M3 spec → component → mapping).
+  Theme integration is REVERSE (CMS native surface → M3 overlay).
+  Forward direction CANNOT be reused as-is for reverse case.
+  axismundi-lab = forward, axismundi-pilot = reverse.
+
+Lesson 2 — WP core style reset first:
+  WordPress core blocks carry non-neutral defaults
+  (fill / outline / stripes / table borders / inline patterns).
+  Reset is explicit step before M3 mapping.
+  Five-step order: inventory → reset → M3 mapping → interaction → computed audit.
+
+Lesson 3 — Token layering architecture:
+  md-ref (primitive) → md-sys (semantic) → wp-preset + wp-custom → ax-comp
+  Dark mode = sys layer swap only (ref unchanged, preset/custom follow).
+  All bridges M3 → WP (Strict M3 mode).
+  wp-preset = editor-facing projection.
+  wp-custom = theme-managed internal bridge (NOT in picker).
+  md-sys is source of truth, NOT theme.json hex values.
+
+These lessons drive v3.6.1 Token Architecture Refactor scope.
+plan-first must include User Request Log with verbatim quotes from
+PILOT-LESSONS doc §1.4, §3.5, §3.6. Do not abstract these into lane labels.
+```
+
+## 7) v3.6.1 Preview — Token Architecture Refactor
+
+After v3.6.0 Phase 5 close, next cycle entry:
+
+```txt
+Cycle name:  v3.6.1 Token Architecture Refactor
+Bucket:      A — Architecture / Constitution-level
+Cross-cutting: axismundi-lab + axismundi-pilot 양쪽 영향
+Input:       docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+Scope:       per §5.1 (9 items)
+
+Phase 0 plan-first must:
+  □ User Request Log at top with verbatim insight quotes
+  □ Lock token layer 5-model (ref / sys.light / sys.dark / wp-preset / wp-custom / ax-comp)
+  □ Lock bridge direction (M3 → WP only)
+  □ Lock dark mode mechanism (data-theme + sys layer swap)
+  □ Lock cross-cutting scope (lab tokens.css + Pilot 양쪽)
+  □ Phase 3 acceptance criteria: light + dark 양쪽 visual QA
+  □ Korean prose render in both modes
 ```

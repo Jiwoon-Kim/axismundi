@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-19 (v3.6.0 Phase 3 paused — computed QA gate added)
+> **Last updated**: 2026-05-19 (v3.6.0 Phase 3 paused — computed QA gate added + architectural lessons captured)
 
 ---
 
@@ -91,6 +91,17 @@ Phase 3:
     npm run validate:computed
   Technical validation passes.
   User visual QA is not yet final-close approved.
+
+Architectural insights captured (post-Phase 2E):
+  docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md (622 lines)
+  Three lessons locked:
+    1. Build direction reversal (forward design system vs reverse theme integration)
+    2. WP core style reset first (five-step block bridge order + computed audit gate)
+    3. Token layering architecture
+       md-ref → md-sys → wp-preset + wp-custom → ax-comp
+       Dark mode = sys layer swap only (ref unchanged)
+       All bridges M3 → WP (Strict M3 mode)
+  This doc is authoritative input for v3.6.1 plan-first.
 ```
 
 ## v3.6.0 Close Route
@@ -109,10 +120,38 @@ Next:
        mobile 390px
   4. If user approves: Phase 5 mechanical close.
 
+Phase 5 close must:
+  - Add lesson locks per docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md §4.2
+    to AGENTS.md / CLAUDE.md / PRE-ENTRY-ONTOLOGY-GROUNDING.md /
+    bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md
+  - Open BACKLOG #41 (Token Architecture Refactor) for v3.6.1
+  - Open BACKLOG #42 (Block bridge full coverage)
+  - Revise BACKLOG #20 close trigger (now v3.6.1, not v3.6.0)
+  - Frame v3.6.0 as "Pilot v0 — minimum viable" (NOT complete theme)
+
 Do not:
   close v3.6.0 before user visual QA approval.
   commit Phase 5 bookkeeping before approval.
   reintroduce forced .prose wrapper on core/post-content.
+  attempt token architecture refactor inside v3.6.0 (defer to v3.6.1).
+```
+
+## v3.6.1 Identified Follow-on Cycle
+
+```txt
+v3.6.1   Token Architecture Refactor (planned)         ☐ NEXT after v3.6.0 close
+
+Scope (per PILOT-LESSONS-AND-TOKEN-ARCHITECTURE §5.1):
+  1. tokens.css split (ref / sys.light / sys.dark / wp-preset / wp-custom)
+  2. theme.json settings.custom.axismundi.* shape/state-layer/motion
+  3. Dark mode infrastructure (data-theme + theme switcher)
+  4. Cross-cutting: axismundi-lab + Pilot 양쪽 영향
+  5. Light + dark visual QA acceptance
+  6. BACKLOG #20 final close
+  7. FEEDBACK-AND-STRATEGY.md §1 refinement
+
+This is bucket A (architecture-level) cycle, larger than typical Wave 1 cycle.
+plan-first must include User Request Log with verbatim insight quotes.
 ```
 
 Repository:

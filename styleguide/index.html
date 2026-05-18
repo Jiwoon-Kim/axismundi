@@ -3387,6 +3387,75 @@ document.querySelectorAll('[role="toolbar"] [aria-pressed]')
   </div>
 
   <!-- =========================================================
+       Live modal portal — source of truth for Dialog / Sheet
+       ========================================================= -->
+  <div id="sg-portal" class="sg-portal" aria-live="polite">
+    <div class="modal-scrim" data-portal-scrim="false" aria-hidden="true"></div>
+
+    <dialog id="sg-modal-basic" class="dialog dialog--basic" aria-labelledby="sg-modal-basic-title" aria-describedby="sg-modal-basic-supporting">
+      <span class="dialog__icon" aria-hidden="true">
+        <span class="material-symbols-rounded notranslate" translate="no" draggable="false">edit_note</span>
+      </span>
+      <h2 class="dialog__headline" id="sg-modal-basic-title">변경 사항을 저장하시겠습니까?</h2>
+      <p class="dialog__supporting" id="sg-modal-basic-supporting">저장하지 않으면 마지막 편집 이후의 변경 사항이 모두 사라집니다.</p>
+      <div class="dialog__actions">
+        <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>취소</button>
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button" data-close-modal>저장</button>
+      </div>
+    </dialog>
+
+    <dialog id="sg-modal-full" class="dialog dialog--full-screen" aria-labelledby="sg-modal-full-title">
+      <header class="app-bar app-bar--small dialog__app-bar">
+        <span class="app-bar__leading">
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Close full-screen dialog" data-close-modal>
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+          </button>
+        </span>
+        <h1 class="app-bar__title t-title-large" id="sg-modal-full-title">새 글 작성</h1>
+        <span class="app-bar__trailing">
+          <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>게시</button>
+        </span>
+      </header>
+      <div class="dialog__body t-body-medium">전체 화면 다이얼로그는 본문 영역을 자유롭게 채울 수 있습니다.</div>
+    </dialog>
+
+    <aside id="sg-sheet-bottom" class="sheet sheet--bottom-modal" role="dialog" aria-modal="true" aria-labelledby="sg-sheet-bottom-title">
+      <div class="sheet__handle" aria-hidden="true"></div>
+      <header class="sheet__header">
+        <h2 class="sheet__title" id="sg-sheet-bottom-title">공유</h2>
+      </header>
+      <div class="sheet__body">
+        <div class="sg-row">
+          <button class="ax-button is-tonal has-state-layer t-label-large" type="button">메시지</button>
+          <button class="ax-button is-tonal has-state-layer t-label-large" type="button">메일</button>
+          <button class="ax-button is-tonal has-state-layer t-label-large" type="button">링크 복사</button>
+          <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>닫기</button>
+        </div>
+      </div>
+    </aside>
+
+    <aside id="sg-sheet-side" class="sheet sheet--side-modal" role="dialog" aria-modal="true" aria-labelledby="sg-sheet-side-title">
+      <header class="sheet__header">
+        <h2 class="sheet__title t-title-large" id="sg-sheet-side-title">필터</h2>
+      </header>
+      <div class="sheet__body">
+        <div class="sg-row" style="flex-direction: column; align-items: stretch; gap: var(--space-xs);">
+          <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="true">
+            <span class="chip__label">최신순</span>
+          </button>
+          <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="false">
+            <span class="chip__label">인기순</span>
+          </button>
+          <button class="chip chip--filter has-state-layer sg-toggle" type="button" aria-pressed="false">
+            <span class="chip__label">팔로잉</span>
+          </button>
+          <button class="ax-button is-text has-state-layer t-label-large" type="button" data-close-modal>닫기</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- =========================================================
        Footer — author + license credit
        ========================================================= -->
   <footer class="sg-footer">

@@ -44,7 +44,12 @@
           })();
 
 /* ----- Checkbox indeterminate (sg-cb-indet) ----- */
-document.getElementById('sg-cb-indet').indeterminate = true;
+(function () {
+  const indeterminateCheckbox = document.getElementById('sg-cb-indet');
+  if (indeterminateCheckbox) {
+    indeterminateCheckbox.indeterminate = true;
+  }
+})();
 
 /* ----- Slider active-fill (--_value custom property) ----- */
 (function () {
@@ -176,15 +181,23 @@ document.getElementById('sg-cb-indet').indeterminate = true;
       };
       let active = null;
 
+      function setScrim(open) {
+        if (scrim) {
+          scrim.dataset.open = open ? "true" : "false";
+        }
+      }
+
       function open(key) {
         const el = modals[key];
         if (!el) return;
         close(); // close any other
         active = el;
-        scrim.dataset.open = "true";
+        setScrim(true);
         document.documentElement.classList.add("has-modal-open");
-        if (el.tagName === "DIALOG") {
-          el.setAttribute("open", "");
+        if (el instanceof HTMLDialogElement) {
+          if (!el.open) {
+            el.showModal();
+          }
         } else {
           el.classList.add("is-open");
         }
@@ -192,16 +205,18 @@ document.getElementById('sg-cb-indet').indeterminate = true;
       function close() {
         document.documentElement.classList.remove("has-modal-open");
         if (!active) {
-          scrim.dataset.open = "false";
+          setScrim(false);
           return;
         }
-        if (active.tagName === "DIALOG") {
-          active.removeAttribute("open");
+        if (active instanceof HTMLDialogElement) {
+          if (active.open) {
+            active.close();
+          }
         } else {
           active.classList.remove("is-open");
         }
         active = null;
-        scrim.dataset.open = "false";
+        setScrim(false);
       }
 
       document.querySelectorAll("[data-open-dialog]").forEach((btn) => {
@@ -213,7 +228,29 @@ document.getElementById('sg-cb-indet').indeterminate = true;
       portal.querySelectorAll("[data-close-modal]").forEach((btn) => {
         btn.addEventListener("click", close);
       });
-      scrim.addEventListener("click", close);
+      if (scrim) {
+        scrim.addEventListener("click", close);
+      }
+      Object.values(modals).forEach((el) => {
+        if (!(el instanceof HTMLDialogElement)) return;
+        el.addEventListener("click", (event) => {
+          if (event.target === el && el.classList.contains("dialog--basic")) {
+            close();
+          }
+        });
+        el.addEventListener("cancel", () => {
+          active = null;
+          setScrim(false);
+          document.documentElement.classList.remove("has-modal-open");
+        });
+        el.addEventListener("close", () => {
+          if (active === el) {
+            active = null;
+            setScrim(false);
+            document.documentElement.classList.remove("has-modal-open");
+          }
+        });
+      });
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") close();
       });

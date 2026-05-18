@@ -40,6 +40,16 @@ matrix rows changed; distribution remains 13 DONE / 2 PARTIAL / 16 TODO /
   responsive typography, read-more framing, sticky axis controls, and a
   collapsible `Axis controls` panel so the controls do not cover the specimen.
 
+### Fixed — Live Dialog / Sheet portal
+
+- Restored the source `#sg-portal` live modal host required by the Dialog and
+  Sheet buttons in the styleguide.
+- Regenerated `/styleguide/` so GitHub Pages includes:
+  `#sg-modal-basic`, `#sg-modal-full`, `#sg-sheet-bottom`, and
+  `#sg-sheet-side`.
+- Hardened `style-guide.js` with a checkbox null guard and native
+  `HTMLDialogElement.showModal()` / `.close()` handling for dialog demos.
+
 ### Deferred
 
 - Rich motion and full docs-site dogfooding remain deferred to BACKLOG #37,

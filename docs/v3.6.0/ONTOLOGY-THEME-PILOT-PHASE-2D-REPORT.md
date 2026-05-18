@@ -100,12 +100,16 @@ Viewport smoke:
 Button style classes observed:
 
 ```txt
-is-style-filled
-is-style-outlined
+is-style-fill
+is-style-outline
 is-style-tonal
 is-style-elevated
 is-style-text
 ```
+
+Phase 2E corrected the Button style contract: WordPress native `fill` /
+`outline` are mapped to M3 Filled / Outlined, while Axismundi registers only
+the missing `tonal`, `elevated`, and `text` styles.
 
 ## 5. Verification
 

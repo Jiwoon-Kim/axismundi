@@ -1570,6 +1570,7 @@ docs/v3.5.0/MODULE-STATUS-MATRIX.md
 - **Priority**: Medium after v3.6.0 Pilot entry
 - **Target**: v3.6.x parallel or post-Pilot
 - **Source**: v3.5.18 Carousel reroute
+- **Depends on**: BACKLOG #40 for long-term theme asset slicing policy.
 
 **Scope**:
 
@@ -1626,6 +1627,75 @@ docs/v3.5.18/BLOCKS-PROSE-PILOT-SPEC-VERIFY.md
 docs/v3.5.18/PRE-PILOT-SMOKE-CHECKLIST.md
 ```
 
+### 40. Modularized component CSS separation
+
+- **Bucket**: A — Architecture
+- **Status**: Open
+- **Priority**: Medium before v4.0 public release
+- **Target**: v4.0 architecture freeze window
+- **Source**: v3.6.0 Pilot Phase 3 Carousel CSS leakage finding
+
+**Scope**:
+
+- Treat validated module CSS as the canonical component implementation surface.
+- Reduce `components.css` to foundation / baseline / non-modularized surfaces, or
+  otherwise define a clear build-time split between theme-owned component CSS and
+  plugin-routed component CSS.
+- Update the Pilot asset bridge so plugin-routed surfaces such as Carousel do not
+  silently ship inside the theme bundle unless explicitly allowed.
+- Coordinate with BACKLOG #36 directory restructure and the v4.0 public release
+  architecture freeze.
+
+**Non-goals**:
+
+- Do not rewrite `components.css` during v3.6.0.
+- Do not remove historical Carousel audit artifacts.
+- Do not block the v3.6.0 Pilot close; this is an architecture cleanup item.
+
+**Cross-references**:
+
+```txt
+docs/v3.5.16/MODERNIZATION-AUDIT.md
+docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
+BACKLOG #36
+BACKLOG #38
+```
+
+### 41. WordPress block bridge state and ripple enhancement
+
+- **Bucket**: B — WordPress binding / block bridge
+- **Status**: Open
+- **Priority**: Medium post-Pilot
+- **Target**: v3.6.x or v3.7.x
+- **Source**: v3.6.0 Pilot Phase 3 visual QA / Phase 2E minimum bridge
+
+**Scope**:
+
+- Extend the minimum Phase 2E block bridge into full WordPress block coverage.
+- Expand beyond the v3.6.0 proof set (`core/post-content`, prose blocks, and
+  `core/button`) into `core/search`, `core/group`, `core/list`, and other Pilot
+  surfaces.
+- Verify editor-canvas parity for hover/focus/pressed/disabled/selected state
+  mapping where WordPress exposes equivalent editor states.
+- Decide whether the Pilot-specific ripple bridge should graduate into a shared
+  WordPress binding runtime or remain Pilot-only.
+- Preserve Charter §4: no custom block registration.
+
+**Non-goals**:
+
+- Do not introduce custom blocks.
+- Do not include Carousel; Carousel remains BACKLOG #38.
+- Do not solve modular CSS slicing; that belongs to BACKLOG #40.
+
+**Cross-references**:
+
+```txt
+docs/v3.5.6/
+docs/v3.5.9/
+docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-2E-REPORT.md
+docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
+```
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing
@@ -1634,9 +1704,9 @@ metadata, not closure.
 | Bucket | Items |
 |---|---|
 | Pilot-before | None currently. If `blocks.html` / `prose.html` verification surfaces a blocker, update this row before v3.6.0. |
-| Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #19 Date Picker Grid Navigation A11y; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency |
+| Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #19 Date Picker Grid Navigation A11y; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency; #41 WordPress block bridge state and ripple enhancement |
 | Plugin territory | #6 Monotone SVG theming plugin concept; #21 M3 Interpreter Plugin separation; #38 Carousel plugin extraction |
-| Deferred / ongoing | #5 WordPress logo styleguide specimen; #7 Search bar leading icon known delta; #14 Material Symbols ligature layout shift; #16 Tooltip delay / touch long-press; #18 Snackbar class naming; #20 Theme-only color customization policy; #22 `data-theme="auto"` model; #23 Elevated Chip variants; #36 v4.0 directory restructure; #37 GitHub Pages dogfooding |
+| Deferred / ongoing | #5 WordPress logo styleguide specimen; #7 Search bar leading icon known delta; #14 Material Symbols ligature layout shift; #16 Tooltip delay / touch long-press; #18 Snackbar class naming; #20 Theme-only color customization policy; #22 `data-theme="auto"` model; #23 Elevated Chip variants; #36 v4.0 directory restructure; #37 GitHub Pages dogfooding; #40 Modularized component CSS separation |
 
 
 ## Closed items

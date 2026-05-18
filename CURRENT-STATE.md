@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-18 (v3.5.18 RELEASE CLOSED — Pre-Pilot cleanup)
+> **Last updated**: 2026-05-19 (v3.6.0 Phase 3 paused — computed QA gate added)
 
 ---
 
@@ -30,16 +30,16 @@ v3.5.15  GitHub repository + Pages publish                           ✓ DONE
 v3.5.16  Styleguide modernization + module workspace framing          ✓ DONE
 v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
 v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
-v3.6.0   Ontology Theme Pilot                                         ☐ NEXT
+v3.6.0   Ontology Theme Pilot                                         ◐ ACTIVE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.5.18 Pre-Pilot cleanup + Carousel reroute
-Current phase:     CLOSED
-Closed by:         Phase 3 PASS + Phase 5 bookkeeping
-Next allowed work: v3.6.0 Ontology Theme Pilot plan-first
+Current release:   v3.6.0 Ontology Theme Pilot
+Current phase:     Phase 3 QA / Phase 2E bridge verification
+Current state:     PAUSED FOR SESSION END
+Next allowed work: User visual QA confirmation → Phase 5 mechanical close
 ```
 
 ## Matrix Snapshot
@@ -59,47 +59,60 @@ Next allowed work: v3.6.0 Ontology Theme Pilot plan-first
 37 canonical entries total.
 ```
 
-v3.5.18 does not change component row status. Carousel #34 remains historically
-DONE from v3.5.12, but is Pilot-excluded / plugin-routed for v3.6.0.
+v3.6.0 does not change component row status yet. Carousel #34 remains
+historically DONE from v3.5.12, but is Pilot-excluded / plugin-routed for the
+theme Pilot.
 
-## v3.5.18 Closure Notes
+## v3.6.0 Active Notes
 
 ```txt
-Carousel:
-  v3.5.12 DONE history preserved
-  Pilot-excluded / plugin-routed amendment added
-  lab/modules/carousel/ retained as BACKLOG #38 extraction seed
+Phase 2A:
+  axismundi-pilot scaffold created and activated in wp-env.
 
-Process:
-  User Request Log discipline added to AGENTS.md / CLAUDE.md
-  portal/overlay smoke-test rule added
-  v3.5.16 / v3.5.17 lessons recorded in grounding doc
+Phase 2B:
+  asset bridge generator created; lab CSS/fonts/icons copied into Pilot.
 
-Pilot inputs:
-  blocks.html verified as WP core block extension spec
-  prose.html verified as post body rendering spec
-  prose 390px overflow fixed in-cycle
-  sg-sidebar shell inconsistency routed to BACKLOG #39
+Phase 2C:
+  block templates created; Korean prose sample render verified.
 
-Handoff:
-  docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md created
+Phase 2D:
+  Pilot patterns and block styles registered.
+
+Phase 2E:
+  WordPress block -> M3 reverse mapping bridge added.
+  No forced .prose wrapper; block-level customization preserved.
+  Button native fill/outline map to M3 Filled/Outlined.
+  Pilot registers only tonal/elevated/text Button styles.
+  Ripple + finite-radius morph verified for core/button links.
+  Table default/stripes reset verified.
+
+Phase 3:
+  computed-style Playwright gate added:
+    npm run validate:computed
+  Technical validation passes.
+  User visual QA is not yet final-close approved.
 ```
 
-## v3.6.0 Next Route
+## v3.6.0 Close Route
 
 ```txt
-Route: Ontology Theme Pilot
-Scope: theme-only WordPress block theme proof
-Consumes:
-  Wave 1 minus Carousel
-  popover/ + ripple/ + icon-system/
-  tokens.css + components.css + blocks.css + prose.css
-  styleguide/index.html + blocks.html + prose.html as spec references
-Excludes:
-  Carousel plugin/block
-  ActivityPub runtime
-  M3 Interpreter plugin
-  v4.0 directory restructure
+Next:
+  1. Reopen wp-env if needed.
+  2. Run final validation:
+       npm test
+       npm run validate:computed
+       php -l products/reference-implementations/axismundi-pilot/functions.php
+  3. User visual QA:
+       Button styles
+       prose code/quote/table/separator
+       table default/stripes
+       mobile 390px
+  4. If user approves: Phase 5 mechanical close.
+
+Do not:
+  close v3.6.0 before user visual QA approval.
+  commit Phase 5 bookkeeping before approval.
+  reintroduce forced .prose wrapper on core/post-content.
 ```
 
 Repository:
@@ -113,17 +126,13 @@ C:\Users\thaum\dev\axismundi
 ## Validation State
 
 ```txt
-Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS
-npm test:  PASS
-Publish:   /styleguide/ regenerated
-Smoke:
-  styleguide/index.html PASS
-  styleguide/blocks.html PASS
-  styleguide/prose.html PASS
-  typography-axis.html PASS
-  lab pattern pages PASS
-Baseline:
-  components.css / tokens.css / blocks.css / theme.json untouched.
+Validator:         1.000 / 1.000 / 1.000 / 1.000 PASS
+npm test:          PASS
+PHP lint:          PASS
+Computed QA:       npm run validate:computed PASS
+wp-env:            active during verification
+Published mirror:  styleguide regenerated
+Generated tmp:     tmp/ ignored; validator script is tracked
 ```
 
 ## Discipline

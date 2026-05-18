@@ -85,6 +85,44 @@
 }
 
 /* ------------------------------------------------------------
+ * Roboto Serif — serif non-CJK typeface
+ * Variable axes: opsz, wght, wdth, GRAD
+ * ------------------------------------------------------------ */
+@font-face {
+  font-family: 'Roboto Serif';
+  src: url('../../core/design-systems/material3/assets/fonts/roboto-serif/axismundi-roboto-serif.woff2')
+       format('woff2-variations'),
+       url('../../core/design-systems/material3/assets/fonts/roboto-serif/axismundi-roboto-serif.woff2')
+       format('woff2');
+  font-weight: 100 900;
+  font-stretch: 50% 150%;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ------------------------------------------------------------
+ * Noto Serif KR — Korean serif coverage fallback
+ * Variable axis: wght
+ * unicode-range scopes this font to Korean glyphs ONLY, so
+ * non-Korean serif text falls through to Roboto Serif.
+ * ------------------------------------------------------------ */
+@font-face {
+  font-family: 'Noto Serif KR';
+  src: url('../../core/design-systems/material3/assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2')
+       format('woff2-variations'),
+       url('../../core/design-systems/material3/assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2')
+       format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range:
+    U+AC00-D7A3,           /* Hangul Syllables (full 11,172 chars) */
+    U+1100-11FF,           /* Hangul Jamo */
+    U+3130-318F,           /* Hangul Compatibility Jamo */
+    U+A960-A97F,           /* Hangul Jamo Extended-A */
+    U+D7B0-D7FF;           /* Hangul Jamo Extended-B */
+}
+
+/* ------------------------------------------------------------
  * Roboto Mono — monospace (full coverage)
  * ------------------------------------------------------------ */
 @font-face {

@@ -769,13 +769,13 @@ console.log(greet('World'));</code></pre>
           <div class="t-label-medium sg-section__eyebrow">Design</div>
           <h2 class="t-headline-medium">Buttons — 5 style variants</h2>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            <code>core/button</code> + <code>is-style-{filled|tonal|elevated|outlined|text}</code>. Phase 2A는 <code>blocks.css</code>의 fallback 스타일이 직접 적용. Phase 3 PHP <code>register_block_style()</code> + render filter 작성 후엔 <code>.ax-button</code> 클래스가 주입되어 <code>components.css §3</code>가 takeover.
+            <code>core/button</code> + <code>is-style-{fill|tonal|elevated|outline|text}</code>. WordPress core의 <code>fill</code>/<code>outline</code> 기본 스타일을 M3 Filled/Outlined로 매핑하고, 나머지 3개 스타일만 theme이 등록합니다.
           </p>
         </header>
 
         <div class="sg-demo">
           <div class="wp-block-buttons">
-            <div class="wp-block-button is-style-filled">
+            <div class="wp-block-button is-style-fill">
               <a class="wp-block-button__link">Filled</a>
             </div>
             <div class="wp-block-button is-style-tonal">
@@ -784,7 +784,7 @@ console.log(greet('World'));</code></pre>
             <div class="wp-block-button is-style-elevated">
               <a class="wp-block-button__link">Elevated</a>
             </div>
-            <div class="wp-block-button is-style-outlined">
+            <div class="wp-block-button is-style-outline">
               <a class="wp-block-button__link">Outlined</a>
             </div>
             <div class="wp-block-button is-style-text">

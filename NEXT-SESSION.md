@@ -1,7 +1,8 @@
-# NEXT-SESSION.md — v3.6.0 Pilot Handoff
+# NEXT-SESSION.md — v3.6.0 Pilot QA Handoff
 
-> **Status**: v3.5.18 Pre-Pilot cleanup + Carousel reroute closed.
-> **Use**: read at the start of the next local Claude/Codex session.
+> **Status**: v3.6.0 Ontology Theme Pilot is active.
+> **Use**: read at the start of the next Codex/Claude session.
+> **Last updated**: 2026-05-19.
 
 ---
 
@@ -11,169 +12,196 @@
 1. AGENTS.md or CLAUDE.md
 2. CURRENT-STATE.md
 3. PROJECT-CONTEXT.md
-4. docs/v3.5.5/PRE-ENTRY-ONTOLOGY-GROUNDING.md
-5. docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md
-6. docs/v3.5.18/BLOCKS-PROSE-PILOT-SPEC-VERIFY.md
-7. docs/v3.5.18/PRE-PILOT-SMOKE-CHECKLIST.md
-8. docs/v3.5.0/MODULE-STATUS-MATRIX.md
-9. ROADMAP.md latest v3.5.18 / v3.6.0 entries
-10. CHANGELOG.md latest entry (v3.5.18)
+4. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-0-PLAN.md
+5. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-1-PLAN.md
+6. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-2E-REPORT.md
+7. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
+8. docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md
+9. docs/v3.5.0/MODULE-STATUS-MATRIX.md
+10. BACKLOG.md latest #38 / #39 / #40 / #41 entries
 ```
 
 ## 1) Current State
 
 ```txt
-v3.5.13 — Wave 1 closure cleanup (#32/#33/Records)  ✓ CLOSED
-v3.5.14 — Publish prep                               ✓ CLOSED
-v3.5.15 — GitHub repository + Pages publish          ✓ CLOSED
-v3.5.16 — Styleguide modernization/framing           ✓ CLOSED
-v3.5.17 — Styleguide shell rebuild/mobile polish     ✓ CLOSED
-v3.5.18 — Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
-v3.6.0  — Ontology Theme Pilot                       ☐ NEXT
-Validator                                            1.000 / 1.000 / 1.000 / 1.000 PASS
-npm test                                             PASS
-GitHub repository                                    LIVE
-GitHub Pages                                         LIVE
+v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
+v3.6.0   Ontology Theme Pilot                       ◐ ACTIVE
+Phase    Phase 3 QA / Phase 2E bridge verification
+Status   paused for session end after computed-style gate PASS
 ```
 
-Public URLs:
+Public repository:
 
 ```txt
-Repository:
-  https://github.com/Jiwoon-Kim/axismundi
-
-Pages:
-  https://jiwoon-kim.github.io/axismundi/
+https://github.com/Jiwoon-Kim/axismundi
+https://jiwoon-kim.github.io/axismundi/
 ```
 
-Overall matrix:
+Local workspace:
 
 ```txt
-13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD + 3 infrastructure = 37 entries
+C:\Users\thaum\dev\axismundi
 ```
 
-Carousel #34 remains historically DONE from v3.5.12 but is excluded from the
-v3.6.0 theme Pilot and routed to plugin territory via BACKLOG #38.
+## 2) v3.6.0 Pilot Progress
 
-## 2) v3.5.18 Closure Summary
-
-Closed scope:
+Completed:
 
 ```txt
-Carousel reroute:
-  Matrix row #34 amended
-  DONE history preserved
-  Pilot-excluded / plugin-routed
-  BACKLOG #38 added
-
-Process lessons:
-  User Request Log — Do Not Abstract Away
-  Global portal/overlay smoke test:
-    trigger + runtime + host + contract + errors
-  Added to AGENTS.md / CLAUDE.md / grounding doc
-
-Pilot specification surfaces:
-  blocks.html = WP core block extension spec
-  prose.html  = post body rendering spec
-  prose 390px overflow fixed
-  blocks/prose shell polish deferred to BACKLOG #39
-
-Pilot handoff:
-  docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md created
+Phase 0    Plan + report
+Phase 1    Implementation plan
+Phase 2A   Theme scaffold + wp-env activation
+Phase 2B   Asset bridge generator
+Phase 2C   Templates + Korean prose sample
+Phase 2D   Patterns + block styles
+Phase 2E   WP block -> M3 reverse mapping bridge
+Phase 3    automated smoke + computed-style audit
 ```
 
-Verification:
+Current architectural lock:
 
 ```txt
-Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS
-npm test:  PASS
-Publish:   styleguide mirror regenerated
-Smoke:
-  styleguide/index.html PASS
-  styleguide/blocks.html PASS
-  styleguide/prose.html PASS
-  typography-axis.html PASS
-  lab/modules/*/lab-*-pattern.html PASS
+Pilot directory: products/reference-implementations/axismundi-pilot/
+Theme slug:      axismundi-pilot
+Display name:    Axismundi Pilot
+wp-env URL:      http://localhost:8888/
+
+Scope:
+  Wave 1 minus Carousel
+  core blocks only
+  no custom block registration
+  no Carousel plugin/block/runtime
+  no HCT Interpreter Plugin
+
+Bridge:
+  WordPress block selectors map back to M3 contracts.
+  Do not force .prose onto core/post-content.
 ```
 
-## 3) v3.6.0 Pilot Route
+## 3) Latest Technical State
 
-Proceed with **Ontology Theme Pilot** as a theme-only WordPress block theme
-proof.
-
-Consumes:
+Phase 2E added:
 
 ```txt
-Wave 1 minus Carousel:
-  Button #1
-  Icon button #2
-  FAB / Extended FAB #3 / #4
-  Button group #6
-  Card #9
-  Text field #16
-  Search bar #17
-  List #33
-
-Infrastructure:
-  popover/
-  ripple/
-  icon-system/
-
-Specification surfaces:
-  styleguide/index.html
-  styleguide/blocks.html
-  styleguide/prose.html
-  lab/modules/* audit docs and specimens
-
-Baseline assets:
-  tokens.css
-  components.css
-  blocks.css
-  prose.css
-  theme.json as reference only unless Pilot plan decides otherwise
+products/reference-implementations/axismundi-pilot/bridge/pilot-block-bridge.css
+products/reference-implementations/axismundi-pilot/bridge/pilot-block-bridge.js
+products/reference-implementations/axismundi-pilot/assets/styles/pilot-block-bridge.css
+products/reference-implementations/axismundi-pilot/assets/scripts/pilot-block-bridge.js
+tools/validators/validate_pilot_computed_styles.js
 ```
 
-Excludes:
+Mapped/fixed in this session:
 
 ```txt
-Carousel plugin/block
-ActivityPub runtime
-M3 Interpreter plugin
-v4.0 directory restructure
-blocks/prose shell consistency polish
+Button:
+  native WP fill      -> M3 Filled
+  native WP outline   -> M3 Outlined
+  custom tonal        -> M3 Tonal
+  custom elevated     -> M3 Elevated
+  custom text         -> M3 Text
+  ripple + finite-radius morph verified on front-end links
+
+Table:
+  default table cells use M3 horizontal separators
+  stripes odd rows/cells reset to transparent
+  stripes even rows/cells use surface-container-high
+
+Prose:
+  core/post-content remains block-first
+  code / quote / list / separator / table are mapped by block selectors
 ```
 
-Lane assignment:
+Computed-style audit:
 
 ```txt
-1. Codex implements the Pilot.
-2. Opus/GPT reviews ontology consistency.
-3. Codex applies corrections.
+Command: npm run validate:computed
+Status:  PASS
+
+Checks:
+  pattern QA page
+  single prose page
+  front page
+  styleguide blocks table
+  button computed styles
+  search computed styles
+  prose computed styles
+  table default/stripes computed styles
+  horizontal overflow
+  console/page errors
 ```
 
-## 4) First v3.6.0 Phase 0 Questions
+## 4) Resume Checklist
 
-```txt
-1. Where exactly should the pilot theme live?
-   Suggested: products/reference-implementations/axismundi-pilot-theme/
-
-2. Which WordPress runtime will verify it?
-   Local WP env / theme zip inspection / static file verification.
-
-3. Does Pilot copy baseline CSS directly, enqueue generated assets, or create a
-   theme-facing bundle?
-
-4. Which block templates and patterns prove enough of the ontology?
-
-5. Which WordPress block styles require functions.php registration?
-```
-
-## 5) Operational Commands
+Start by running:
 
 ```powershell
 cd C:\Users\thaum\dev\axismundi
-python .\tools\validators\validate_theme_pilot.py
-npm test
-python .\tools\generators\publish_styleguide.py
 git status --short
+php -l products\reference-implementations\axismundi-pilot\functions.php
+npm test
+npm run validate:computed
+```
+
+If wp-env is not running:
+
+```powershell
+wp-env start
+```
+
+Then open/check:
+
+```txt
+http://localhost:8888/
+http://localhost:8888/?page_id=10
+http://localhost:8888/?p=1
+file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
+```
+
+## 5) Next Decision
+
+The next session should not immediately close v3.6.0.
+
+Required before Phase 5:
+
+```txt
+□ User visual QA final approval
+□ Button style picker / Button visual states acceptable
+□ Table default and stripes visually acceptable
+□ Prose inline code / code block / quote / separator acceptable
+□ 390px mobile visual QA acceptable
+□ Computed-style audit still PASS
+```
+
+If approved:
+
+```txt
+Proceed to v3.6.0 Phase 5 mechanical close.
+Update CHANGELOG / ROADMAP / CURRENT-STATE / NEXT-SESSION.
+Close or route BACKLOG #20 / #40 / #41 as appropriate.
+Commit Phase 5 bookkeeping separately if possible.
+```
+
+If more issues are found:
+
+```txt
+Treat as Phase 3 finding.
+Patch source authority first.
+Regenerate assets/mirror.
+Run npm test + npm run validate:computed.
+Do not close until user confirms.
+```
+
+## 6) Important Lessons
+
+```txt
+Smoke tests were insufficient for this Pilot.
+Selector presence was insufficient.
+Computed style is now a Phase 3 gate for WP block -> M3 mapping.
+
+User had to catch several visual defects manually:
+  Button native fill/outline mapping
+  outlined Button border conflict
+  table default/stripes leakage
+
+Future agents must not call this done without computed values.
 ```

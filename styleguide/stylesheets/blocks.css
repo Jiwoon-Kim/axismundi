@@ -21,7 +21,8 @@
  *   §8  Columns / Row / Group + 3 card style variants
  *   §9  Buttons (core/button) + 5 style variants (PHP-composed —
  *       see §9 header for ax-button class wiring note)
- *   §10 List — is-style-list-segmented
+ *   §10 Search — is-style-filled-search
+ *   §11 List — is-style-list-segmented
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -258,6 +259,25 @@
   inline-size: 100%;
 }
 
+.wp-block-table th,
+.wp-block-table td {
+  border: 0;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.wp-block-table tbody tr:last-child > th,
+.wp-block-table tbody tr:last-child > td {
+  border-block-end: 0;
+}
+
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd),
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) > th,
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) > td {
+  background-color: transparent;
+}
+
 .wp-block-table.is-style-stripes tbody tr:nth-child(even) {
   /* Match the prose `th` header band tone (surface-container-high) so the
    * zebra rhythm reads as a continuous alternation starting FROM the header:
@@ -276,9 +296,15 @@
    * Keep prose.css §11.4 `.prose th` background in sync with this value. */
   background-color: var(--md-sys-color-surface-container-high);
 }
+
+.wp-block-table.is-style-stripes tbody tr:nth-child(even) > th,
+.wp-block-table.is-style-stripes tbody tr:nth-child(even) > td {
+  background-color: var(--md-sys-color-surface-container-high);
+}
 /* Stripes variant drops the row separator (the bg banding does the job) */
 .wp-block-table.is-style-stripes th,
 .wp-block-table.is-style-stripes td {
+  border: 0;
   border-block-end: 0;
 }
 
@@ -396,12 +422,9 @@
 /* ============================================================
  * §9 Buttons — core/button + 5 style variants
  *
- * **PHP-layer note:** the production wiring registers each
- * Block Style via `register_block_style('core/button', …)` and
- * filters render output to add `.ax-button .is-{filled|tonal|
- * elevated|outlined|text}` classes onto `.wp-block-button__link`.
- * Once that filter ships, components.css §3 takes over and the
- * fallback rules below become redundant.
+ * WP core already owns the `fill` and `outline` Button styles.
+ * Axismundi maps those native slugs to M3 Filled / Outlined, then registers
+ * only the missing M3 styles: tonal, elevated, and text.
  *
  * For Phase 2A standalone preview (no PHP layer yet), the
  * fallbacks below give the editor + front-end render a usable
@@ -424,6 +447,7 @@
   justify-content: center;
   block-size: var(--comp-button-height);
   padding-inline: var(--space-lg);
+  border: 0;
   border-radius: var(--comp-button-radius);
   font-family:    var(--md-sys-typescale-label-large-font);
   font-size:      var(--md-sys-typescale-label-large-size);
@@ -434,9 +458,9 @@
   cursor: pointer;
 }
 
-/* 5 variant fallbacks (replaced by .ax-button cascade once PHP
- * filter wires the class). Defaults to filled when no style set. */
+/* 5 variant fallbacks. Defaults to filled when no style set. */
 .wp-block-button .wp-block-button__link,
+.wp-block-button.is-style-fill .wp-block-button__link,
 .wp-block-button.is-style-filled .wp-block-button__link {
   background-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
@@ -450,6 +474,7 @@
   color: var(--md-sys-color-primary);
   box-shadow: var(--md-sys-elevation-shadow-level1);
 }
+.wp-block-button.is-style-outline .wp-block-button__link,
 .wp-block-button.is-style-outlined .wp-block-button__link {
   background-color: transparent;
   color: var(--md-sys-color-primary);
@@ -462,7 +487,70 @@
 }
 
 /* ============================================================
- * §10 List — is-style-list-segmented
+ * §10 Search — is-style-filled-search
+ *
+ * Axismundi block style (registered via register_block_style on
+ * core/search). Keeps WP's native search form contract while mapping
+ * the visual surface to the Search bar rest-state token family.
+ * ============================================================ */
+.wp-block-search.is-style-filled-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-block-size: 56px;
+  padding: 0 var(--space-md);
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+.wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  border: 0;
+  padding: 0;
+}
+.wp-block-search.is-style-filled-search .wp-block-search__input {
+  min-inline-size: 0;
+  border: 0;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+.wp-block-search.is-style-filled-search .wp-block-search__input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-search.is-style-filled-search .wp-block-search__button {
+  border: 0;
+  border-radius: var(--comp-button-radius);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  min-block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+}
+
+@media (max-inline-size: 600px) {
+  .wp-block-search.is-style-filled-search,
+  .wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wp-block-search.is-style-filled-search {
+    padding-block: var(--space-sm);
+  }
+}
+
+/* ============================================================
+ * §11 List — is-style-list-segmented
  *
  * Axismundi block style (registered via register_block_style on
  * core/list). Mirrors .ax-list--segmented from components.css §26 —

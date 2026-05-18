@@ -259,6 +259,25 @@
   inline-size: 100%;
 }
 
+.wp-block-table th,
+.wp-block-table td {
+  border: 0;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.wp-block-table tbody tr:last-child > th,
+.wp-block-table tbody tr:last-child > td {
+  border-block-end: 0;
+}
+
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd),
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) > th,
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) > td {
+  background-color: transparent;
+}
+
 .wp-block-table.is-style-stripes tbody tr:nth-child(even) {
   /* Match the prose `th` header band tone (surface-container-high) so the
    * zebra rhythm reads as a continuous alternation starting FROM the header:
@@ -277,9 +296,15 @@
    * Keep prose.css §11.4 `.prose th` background in sync with this value. */
   background-color: var(--md-sys-color-surface-container-high);
 }
+
+.wp-block-table.is-style-stripes tbody tr:nth-child(even) > th,
+.wp-block-table.is-style-stripes tbody tr:nth-child(even) > td {
+  background-color: var(--md-sys-color-surface-container-high);
+}
 /* Stripes variant drops the row separator (the bg banding does the job) */
 .wp-block-table.is-style-stripes th,
 .wp-block-table.is-style-stripes td {
+  border: 0;
   border-block-end: 0;
 }
 
@@ -397,12 +422,9 @@
 /* ============================================================
  * §9 Buttons — core/button + 5 style variants
  *
- * **PHP-layer note:** the production wiring registers each
- * Block Style via `register_block_style('core/button', …)` and
- * filters render output to add `.ax-button .is-{filled|tonal|
- * elevated|outlined|text}` classes onto `.wp-block-button__link`.
- * Once that filter ships, components.css §3 takes over and the
- * fallback rules below become redundant.
+ * WP core already owns the `fill` and `outline` Button styles.
+ * Axismundi maps those native slugs to M3 Filled / Outlined, then registers
+ * only the missing M3 styles: tonal, elevated, and text.
  *
  * For Phase 2A standalone preview (no PHP layer yet), the
  * fallbacks below give the editor + front-end render a usable
@@ -425,6 +447,7 @@
   justify-content: center;
   block-size: var(--comp-button-height);
   padding-inline: var(--space-lg);
+  border: 0;
   border-radius: var(--comp-button-radius);
   font-family:    var(--md-sys-typescale-label-large-font);
   font-size:      var(--md-sys-typescale-label-large-size);
@@ -435,9 +458,9 @@
   cursor: pointer;
 }
 
-/* 5 variant fallbacks (replaced by .ax-button cascade once PHP
- * filter wires the class). Defaults to filled when no style set. */
+/* 5 variant fallbacks. Defaults to filled when no style set. */
 .wp-block-button .wp-block-button__link,
+.wp-block-button.is-style-fill .wp-block-button__link,
 .wp-block-button.is-style-filled .wp-block-button__link {
   background-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
@@ -451,6 +474,7 @@
   color: var(--md-sys-color-primary);
   box-shadow: var(--md-sys-elevation-shadow-level1);
 }
+.wp-block-button.is-style-outline .wp-block-button__link,
 .wp-block-button.is-style-outlined .wp-block-button__link {
   background-color: transparent;
   color: var(--md-sys-color-primary);

@@ -26,7 +26,9 @@ M3_ASSETS = ROOT / "core/design-systems/material3/assets"
 
 SOURCE_STYLES = LAB / "stylesheets"
 PILOT_ASSETS = PILOT / "assets"
+PILOT_BRIDGE = PILOT / "bridge"
 PILOT_STYLES = PILOT_ASSETS / "styles"
+PILOT_SCRIPTS = PILOT_ASSETS / "scripts"
 PILOT_FONTS = PILOT_ASSETS / "fonts"
 PILOT_ICONS = PILOT_ASSETS / "icons"
 
@@ -38,6 +40,14 @@ STYLE_ORDER = (
     "components.css",
     "blocks.css",
     "prose.css",
+)
+
+BRIDGE_STYLES = (
+    "pilot-block-bridge.css",
+)
+
+BRIDGE_SCRIPTS = (
+    "pilot-block-bridge.js",
 )
 
 FONT_PATH_FROM_LAB = "../../../../core/design-systems/material3/assets/fonts/"
@@ -69,6 +79,33 @@ def copy_styles() -> int:
             text = text.replace(ICON_PATH_FROM_LAB, ICON_PATH_FROM_PILOT)
 
         target.write_text(text, encoding=UTF8)
+        copied += 1
+
+    for name in BRIDGE_STYLES:
+        source = PILOT_BRIDGE / name
+        target = PILOT_STYLES / name
+
+        if not source.exists():
+            raise FileNotFoundError(f"Required Pilot bridge style missing: {source}")
+
+        target.write_text(source.read_text(encoding=UTF8), encoding=UTF8)
+        copied += 1
+
+    return copied
+
+
+def copy_scripts() -> int:
+    reset_dir(PILOT_SCRIPTS)
+
+    copied = 0
+    for name in BRIDGE_SCRIPTS:
+        source = PILOT_BRIDGE / name
+        target = PILOT_SCRIPTS / name
+
+        if not source.exists():
+            raise FileNotFoundError(f"Required Pilot bridge script missing: {source}")
+
+        target.write_text(source.read_text(encoding=UTF8), encoding=UTF8)
         copied += 1
 
     return copied
@@ -126,11 +163,13 @@ def main() -> int:
         return 1
 
     style_count = copy_styles()
+    script_count = copy_scripts()
     font_count = copy_asset_tree(M3_ASSETS / "fonts", PILOT_FONTS)
     icon_count = copy_asset_tree(M3_ASSETS / "icons", PILOT_ICONS)
     assert_rewrites()
 
     print(f"  ✓ assets/styles/ ({style_count} files)")
+    print(f"  ✓ assets/scripts/ ({script_count} files)")
     print(f"  ✓ assets/fonts/  ({font_count} files)")
     print(f"  ✓ assets/icons/  ({icon_count} files)")
     print("  ✓ fonts.css paths rewritten to Pilot-local assets")

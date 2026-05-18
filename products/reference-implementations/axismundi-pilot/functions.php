@@ -55,6 +55,7 @@ function axismundi_pilot_setup() : void {
 			file_exists( get_template_directory() . '/assets/styles/components.css' ) ? 'assets/styles/components.css' : null,
 			file_exists( get_template_directory() . '/assets/styles/blocks.css' ) ? 'assets/styles/blocks.css' : null,
 			file_exists( get_template_directory() . '/assets/styles/prose.css' ) ? 'assets/styles/prose.css' : null,
+			file_exists( get_template_directory() . '/assets/styles/pilot-block-bridge.css' ) ? 'assets/styles/pilot-block-bridge.css' : null,
 		)
 	);
 
@@ -76,6 +77,7 @@ function axismundi_pilot_enqueue_assets() : void {
 		'axismundi-pilot-components' => array( 'assets/styles/components.css', array( 'axismundi-pilot-base', 'axismundi-pilot-icons' ) ),
 		'axismundi-pilot-blocks'     => array( 'assets/styles/blocks.css', array( 'axismundi-pilot-components' ) ),
 		'axismundi-pilot-prose'      => array( 'assets/styles/prose.css', array( 'axismundi-pilot-blocks' ) ),
+		'axismundi-pilot-bridge'     => array( 'assets/styles/pilot-block-bridge.css', array( 'axismundi-pilot-prose' ) ),
 	);
 
 	foreach ( $styles as $handle => $style ) {
@@ -86,6 +88,17 @@ function axismundi_pilot_enqueue_assets() : void {
 		}
 
 		wp_enqueue_style( $handle, $uri, $style[1], AXISMUNDI_PILOT_VERSION );
+	}
+
+	$bridge_script = 'assets/scripts/pilot-block-bridge.js';
+	if ( file_exists( get_template_directory() . '/' . $bridge_script ) ) {
+		wp_enqueue_script(
+			'axismundi-pilot-block-bridge',
+			axismundi_pilot_asset_uri( $bridge_script ),
+			array(),
+			AXISMUNDI_PILOT_VERSION,
+			true
+		);
 	}
 }
 add_action( 'wp_enqueue_scripts', 'axismundi_pilot_enqueue_assets' );
@@ -227,10 +240,8 @@ add_action( 'init', 'axismundi_pilot_register_font_collection' );
 function axismundi_pilot_register_block_styles() : void {
 	$styles = array(
 		'core/button'    => array(
-			'filled'   => __( 'Filled', 'axismundi-pilot' ),
 			'tonal'    => __( 'Tonal', 'axismundi-pilot' ),
 			'elevated' => __( 'Elevated', 'axismundi-pilot' ),
-			'outlined' => __( 'Outlined', 'axismundi-pilot' ),
 			'text'     => __( 'Text', 'axismundi-pilot' ),
 		),
 		'core/group'     => array(

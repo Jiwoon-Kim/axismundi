@@ -9,6 +9,7 @@
   "scripts": {
     "test": "npm run validate",
     "validate": "python tools/validators/validate_theme_pilot.py",
+    "validate:computed": "node tools/validators/validate_pilot_computed_styles.js",
     "publish:styleguide": "python tools/generators/publish_styleguide.py"
   },
   "keywords": [

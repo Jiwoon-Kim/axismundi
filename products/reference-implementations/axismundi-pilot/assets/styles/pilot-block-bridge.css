@@ -1,0 +1,326 @@
+/* ============================================================
+ * Axismundi Pilot — pilot-block-bridge.css
+ * v3.6.0 Phase 2E
+ *
+ * WordPress block → Material 3 reverse mapping.
+ *
+ * This file is Pilot-specific glue. It keeps lab/styleguide `.prose`
+ * contracts intact while mapping real WordPress core block markup to the
+ * same M3 token system block-by-block.
+ * ============================================================ */
+
+/* ============================================================
+ * §1 Post content rhythm — block-first prose contract
+ * ============================================================ */
+.wp-block-post-content {
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  font-weight: var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-post-content > * + * {
+  margin-block-start: var(--space-md);
+}
+
+.wp-block-post-content > :first-child {
+  margin-block-start: 0;
+}
+
+.wp-block-post-content > :last-child {
+  margin-block-end: 0;
+}
+
+.wp-block-post-content > p + p {
+  margin-block-start: 1.25em;
+}
+
+.wp-block-post-content p {
+  margin-block: 0;
+}
+
+.wp-block-post-content > :where(
+  .wp-block-quote,
+  .wp-block-pullquote,
+  .wp-block-code,
+  .wp-block-preformatted,
+  .wp-block-list,
+  .wp-block-separator,
+  .wp-block-table,
+  .wp-block-image,
+  .wp-block-gallery,
+  figure
+) {
+  margin-block: var(--space-md);
+}
+
+/* ============================================================
+ * §2 Headings
+ * ============================================================ */
+.wp-block-post-content :where(h1, h2) {
+  margin-block: var(--space-xl) var(--space-md);
+}
+
+.wp-block-post-content :where(h3) {
+  margin-block: var(--space-lg) var(--space-sm);
+}
+
+.wp-block-post-content :where(h4) {
+  margin-block: var(--space-md) var(--space-sm);
+}
+
+.wp-block-post-content :where(h5, h6) {
+  margin-block: var(--space-md) var(--space-xs);
+}
+
+.wp-block-post-content > :where(h1, h2, h3, h4, h5, h6):first-child {
+  margin-block-start: 0;
+}
+
+/* ============================================================
+ * §3 Lists
+ * ============================================================ */
+.wp-block-post-content li + li {
+  margin-block-start: var(--space-xs);
+}
+
+.wp-block-post-content li > :where(ul, ol) {
+  margin-block: var(--space-xs);
+}
+
+.wp-block-post-content dt {
+  font-weight: var(--md-ref-typeface-weight-medium);
+}
+
+.wp-block-post-content dd {
+  margin-inline-start: var(--space-lg);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-post-content dd + dt {
+  margin-block-start: var(--space-md);
+}
+
+/* ============================================================
+ * §4 Quote blocks
+ * ============================================================ */
+.wp-block-post-content :where(.wp-block-quote, blockquote) {
+  padding-block: var(--space-sm);
+  padding-inline-start: var(--space-lg);
+  border-inline-start-color: var(--md-sys-color-primary);
+}
+
+.wp-block-post-content :where(.wp-block-quote, blockquote) > p {
+  color: inherit;
+}
+
+.wp-block-post-content :where(.wp-block-quote, blockquote) cite {
+  display: block;
+  margin-block-start: var(--space-sm);
+  font-style: normal;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+
+.wp-block-post-content :where(.wp-block-quote, blockquote) cite::before {
+  content: "-- ";
+}
+
+/* ============================================================
+ * §5 Separator, code, media, links
+ * ============================================================ */
+.wp-block-post-content .wp-block-separator {
+  margin-block: var(--space-xl);
+}
+
+.wp-block-post-content :where(.wp-block-code, .wp-block-preformatted, pre) {
+  padding: var(--space-lg);
+}
+
+.wp-block-post-content img {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.wp-block-post-content figure img {
+  inline-size: 100%;
+}
+
+.wp-block-post-content figcaption {
+  text-align: center;
+}
+
+.wp-block-post-content a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.wp-block-post-content a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ============================================================
+ * §6 Tables
+ * ============================================================ */
+.wp-block-post-content :where(.table-wrapper, .wp-block-table) {
+  overflow-x: auto;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-post-content table {
+  inline-size: 100%;
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  font-weight: var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+
+.wp-block-post-content :where(th, td) {
+  border: 0 !important;
+  padding-block: var(--space-sm) !important;
+  padding-inline: var(--space-md) !important;
+  border-block-end: 1px solid var(--md-sys-color-outline-variant) !important;
+}
+
+.wp-block-post-content tbody tr:last-child > :where(th, td) {
+  border-block-end: 0 !important;
+}
+
+.wp-block-post-content th {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-block-end: 1px solid var(--md-sys-color-outline) !important;
+}
+
+.wp-block-post-content caption {
+  margin-block-start: var(--space-sm);
+  text-align: start;
+}
+
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd),
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) > :where(th, td) {
+  background-color: transparent;
+}
+
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(even) {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(even) > :where(th, td) {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.wp-block-post-content .wp-block-table.is-style-stripes :where(th, td) {
+  border: 0 !important;
+  border-block-end: 0 !important;
+}
+
+/* ============================================================
+ * §7 Icon font content boundary
+ * ============================================================ */
+.wp-block-post-content .material-symbols-rounded,
+.wp-block-post-content .material-symbols-outlined,
+.wp-block-post-content .material-symbols-sharp,
+.wp-block-post-content [class*="material-symbols"] {
+  font-family: inherit !important;
+  font-variation-settings: normal !important;
+  font-feature-settings: normal !important;
+  letter-spacing: normal !important;
+  speak: auto;
+}
+
+/* ============================================================
+ * §8 Button state bridge — core/button → M3 Button
+ * ============================================================ */
+.wp-block-button__link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+    color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+    border-radius var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+    box-shadow var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+.wp-block-button__link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: currentColor;
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+.wp-block-button__link:hover::before {
+  opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+
+.wp-block-button__link:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.wp-block-button__link:active {
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-button__link:active::before {
+  opacity: var(--md-sys-state-pressed-state-layer-opacity);
+}
+
+.wp-block-button__link[aria-disabled="true"],
+.wp-block-button__link.is-disabled {
+  cursor: default;
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.wp-block-button__link .ax-ripple {
+  position: absolute;
+  left: var(--ax-ripple-x);
+  top: var(--ax-ripple-y);
+  z-index: 1;
+  width: var(--ax-ripple-size);
+  height: var(--ax-ripple-size);
+  border-radius: 50%;
+  pointer-events: none;
+  background-color: currentColor;
+  opacity: 0.16;
+  transform: scale(0);
+  animation: ax-pilot-ripple var(--md-sys-motion-curve-slow-spatial-duration) var(--md-sys-motion-curve-slow-spatial) forwards;
+}
+
+@keyframes ax-pilot-ripple {
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wp-block-button__link {
+    transition: none;
+  }
+
+  .wp-block-button__link::before {
+    transition: none;
+  }
+
+  .wp-block-button__link .ax-ripple {
+    animation: none;
+    transform: scale(1);
+    transition: opacity var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+  }
+
+  .wp-block-button__link .ax-ripple.is-fading {
+    opacity: 0;
+  }
+}

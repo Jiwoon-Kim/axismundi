@@ -1,0 +1,8 @@
+{
+  "core": "WordPress/WordPress#6.9.4",
+  "testsEnvironment": false,
+  "themes": [
+    "./products/reference-implementations/axismundi-pilot"
+  ],
+  "plugins": []
+}

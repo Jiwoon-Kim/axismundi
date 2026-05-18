@@ -1,0 +1,306 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "settings": {
+    "_axismundi_provenance": "v3.6.0 Phase 2A scaffold. Theme-only mode; tokens.css remains source of truth; theme.json is the Gutenberg slug registry and compatibility contract.",
+    "appearanceTools": true,
+    "useRootPaddingAwareAlignments": true,
+    "layout": {
+      "contentSize": "640px",
+      "wideSize": "1280px"
+    },
+    "color": {
+      "custom": false,
+      "customDuotone": false,
+      "customGradient": false,
+      "defaultDuotone": false,
+      "defaultGradients": false,
+      "defaultPalette": false,
+      "palette": [
+        {
+          "slug": "primary",
+          "name": "Primary",
+          "color": "var(--md-sys-color-primary)"
+        },
+        {
+          "slug": "on-primary",
+          "name": "On Primary",
+          "color": "var(--md-sys-color-on-primary)"
+        },
+        {
+          "slug": "primary-container",
+          "name": "Primary Container",
+          "color": "var(--md-sys-color-primary-container)"
+        },
+        {
+          "slug": "on-primary-container",
+          "name": "On Primary Container",
+          "color": "var(--md-sys-color-on-primary-container)"
+        },
+        {
+          "slug": "secondary",
+          "name": "Secondary",
+          "color": "var(--md-sys-color-secondary)"
+        },
+        {
+          "slug": "on-secondary",
+          "name": "On Secondary",
+          "color": "var(--md-sys-color-on-secondary)"
+        },
+        {
+          "slug": "secondary-container",
+          "name": "Secondary Container",
+          "color": "var(--md-sys-color-secondary-container)"
+        },
+        {
+          "slug": "on-secondary-container",
+          "name": "On Secondary Container",
+          "color": "var(--md-sys-color-on-secondary-container)"
+        },
+        {
+          "slug": "tertiary",
+          "name": "Tertiary",
+          "color": "var(--md-sys-color-tertiary)"
+        },
+        {
+          "slug": "on-tertiary",
+          "name": "On Tertiary",
+          "color": "var(--md-sys-color-on-tertiary)"
+        },
+        {
+          "slug": "tertiary-container",
+          "name": "Tertiary Container",
+          "color": "var(--md-sys-color-tertiary-container)"
+        },
+        {
+          "slug": "on-tertiary-container",
+          "name": "On Tertiary Container",
+          "color": "var(--md-sys-color-on-tertiary-container)"
+        },
+        {
+          "slug": "error",
+          "name": "Error",
+          "color": "var(--md-sys-color-error)"
+        },
+        {
+          "slug": "on-error",
+          "name": "On Error",
+          "color": "var(--md-sys-color-on-error)"
+        },
+        {
+          "slug": "error-container",
+          "name": "Error Container",
+          "color": "var(--md-sys-color-error-container)"
+        },
+        {
+          "slug": "on-error-container",
+          "name": "On Error Container",
+          "color": "var(--md-sys-color-on-error-container)"
+        },
+        {
+          "slug": "surface",
+          "name": "Surface",
+          "color": "var(--md-sys-color-surface)"
+        },
+        {
+          "slug": "on-surface",
+          "name": "On Surface",
+          "color": "var(--md-sys-color-on-surface)"
+        },
+        {
+          "slug": "surface-variant",
+          "name": "Surface Variant",
+          "color": "var(--md-sys-color-surface-variant)"
+        },
+        {
+          "slug": "on-surface-variant",
+          "name": "On Surface Variant",
+          "color": "var(--md-sys-color-on-surface-variant)"
+        },
+        {
+          "slug": "background",
+          "name": "Background",
+          "color": "var(--md-sys-color-background)"
+        },
+        {
+          "slug": "on-background",
+          "name": "On Background",
+          "color": "var(--md-sys-color-on-background)"
+        },
+        {
+          "slug": "outline",
+          "name": "Outline",
+          "color": "var(--md-sys-color-outline)"
+        },
+        {
+          "slug": "outline-variant",
+          "name": "Outline Variant",
+          "color": "var(--md-sys-color-outline-variant)"
+        }
+      ]
+    },
+    "typography": {
+      "customFontSize": false,
+      "fluid": true,
+      "fontFamilies": [
+        {
+          "slug": "body",
+          "name": "Body",
+          "fontFamily": "\"Roboto Flex\", \"Noto Sans KR\", system-ui, sans-serif"
+        },
+        {
+          "slug": "serif",
+          "name": "Serif",
+          "fontFamily": "\"Noto Serif KR\", Georgia, serif"
+        },
+        {
+          "slug": "mono",
+          "name": "Mono",
+          "fontFamily": "\"Roboto Mono\", monospace"
+        }
+      ],
+      "fontSizes": [
+        {
+          "slug": "display-large",
+          "name": "Display Large",
+          "size": "var(--md-sys-typescale-display-large-size)"
+        },
+        {
+          "slug": "display-medium",
+          "name": "Display Medium",
+          "size": "var(--md-sys-typescale-display-medium-size)"
+        },
+        {
+          "slug": "display-small",
+          "name": "Display Small",
+          "size": "var(--md-sys-typescale-display-small-size)"
+        },
+        {
+          "slug": "headline-large",
+          "name": "Headline Large",
+          "size": "var(--md-sys-typescale-headline-large-size)"
+        },
+        {
+          "slug": "headline-medium",
+          "name": "Headline Medium",
+          "size": "var(--md-sys-typescale-headline-medium-size)"
+        },
+        {
+          "slug": "headline-small",
+          "name": "Headline Small",
+          "size": "var(--md-sys-typescale-headline-small-size)"
+        },
+        {
+          "slug": "title-large",
+          "name": "Title Large",
+          "size": "var(--md-sys-typescale-title-large-size)"
+        },
+        {
+          "slug": "title-medium",
+          "name": "Title Medium",
+          "size": "var(--md-sys-typescale-title-medium-size)"
+        },
+        {
+          "slug": "title-small",
+          "name": "Title Small",
+          "size": "var(--md-sys-typescale-title-small-size)"
+        },
+        {
+          "slug": "body-large",
+          "name": "Body Large",
+          "size": "var(--md-sys-typescale-body-large-size)"
+        },
+        {
+          "slug": "body-medium",
+          "name": "Body Medium",
+          "size": "var(--md-sys-typescale-body-medium-size)"
+        },
+        {
+          "slug": "body-small",
+          "name": "Body Small",
+          "size": "var(--md-sys-typescale-body-small-size)"
+        },
+        {
+          "slug": "label-large",
+          "name": "Label Large",
+          "size": "var(--md-sys-typescale-label-large-size)"
+        },
+        {
+          "slug": "label-medium",
+          "name": "Label Medium",
+          "size": "var(--md-sys-typescale-label-medium-size)"
+        },
+        {
+          "slug": "label-small",
+          "name": "Label Small",
+          "size": "var(--md-sys-typescale-label-small-size)"
+        }
+      ]
+    },
+    "spacing": {
+      "blockGap": true,
+      "margin": true,
+      "padding": true,
+      "spacingSizes": [
+        {
+          "slug": "xs",
+          "name": "XS",
+          "size": "4px"
+        },
+        {
+          "slug": "sm",
+          "name": "SM",
+          "size": "8px"
+        },
+        {
+          "slug": "md",
+          "name": "MD",
+          "size": "16px"
+        },
+        {
+          "slug": "lg",
+          "name": "LG",
+          "size": "24px"
+        },
+        {
+          "slug": "xl",
+          "name": "XL",
+          "size": "32px"
+        },
+        {
+          "slug": "xxl",
+          "name": "XXL",
+          "size": "48px"
+        }
+      ],
+      "units": [
+        "px",
+        "rem",
+        "%"
+      ]
+    }
+  },
+  "styles": {
+    "color": {
+      "background": "var(--md-sys-color-background)",
+      "text": "var(--md-sys-color-on-background)"
+    },
+    "typography": {
+      "fontFamily": "var(--wp--preset--font-family--body)",
+      "fontSize": "var(--md-sys-typescale-body-large-size)",
+      "lineHeight": "var(--md-sys-typescale-body-large-line-height)"
+    }
+  },
+  "templateParts": [
+    {
+      "name": "header",
+      "title": "Header",
+      "area": "header"
+    },
+    {
+      "name": "footer",
+      "title": "Footer",
+      "area": "footer"
+    }
+  ]
+}

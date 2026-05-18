@@ -1,0 +1,20 @@
+/*
+Theme Name: Axismundi Pilot
+Theme URI: https://github.com/Jiwoon-Kim/axismundi
+Author: KIM JIWOON
+Author URI: https://designbusan.ai.kr
+Description: Ontology theme pilot for Axismundi's Material 3 WordPress binding.
+Version: 0.1.0-pilot
+Requires at least: 6.5
+Tested up to: 6.9
+Requires PHP: 8.1
+License: GPL-3.0-or-later
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
+Text Domain: axismundi-pilot
+Tags: full-site-editing, block-patterns, custom-colors, custom-logo, editor-style
+*/
+
+/*
+ * v3.6.0 Phase 2A scaffold only.
+ * Runtime styles are copied into assets/styles during Phase 2B.
+ */

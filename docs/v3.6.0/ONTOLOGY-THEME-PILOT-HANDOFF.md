@@ -130,7 +130,7 @@ Theme should not:
 Exact path to be decided in v3.6.0 Phase 0, but expected shape:
 
 ```txt
-products/reference-implementations/axismundi-pilot-theme/
+products/reference-implementations/axismundi-pilot/
   style.css
   theme.json
   functions.php

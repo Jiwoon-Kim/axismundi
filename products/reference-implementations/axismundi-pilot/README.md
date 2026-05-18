@@ -37,6 +37,7 @@ Full M3 color customization belongs to the future Interpreter Plugin.
 From the repository root:
 
 ```powershell
+python .\tools\generators\build_pilot_assets.py
 wp-env start
 wp-env run cli wp theme activate axismundi-pilot
 ```

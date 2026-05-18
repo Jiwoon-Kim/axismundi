@@ -1,0 +1,6 @@
+Source: https://github.com/google/fonts/tree/main/ofl/robotoflex
+Original file: RobotoFlex-VariableFont_GRAD,XOPQ,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf
+Processing: pyftsubset → WOFF2 (format conversion only, no glyph subset)
+All variable axes preserved.
+Conversion date: 2026-05-13
+License: SIL Open Font License 1.1

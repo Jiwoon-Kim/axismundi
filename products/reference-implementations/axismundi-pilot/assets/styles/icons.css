@@ -1,0 +1,182 @@
+/* ============================================================
+ * Axismundi — icons.css
+ * v0.1 — Material Symbols base styling + axis sync
+ *
+ * Scope: theme chrome ONLY. Post content forbidden (enforced
+ * by prose.css §12). See atlas/material/icon-font-scope-policy.md
+ * for the full doctrine.
+ *
+ * What this file provides:
+ *   §1  Base .material-symbols-rounded class (theme-shipped style)
+ *   §2  CSS custom properties for axis control
+ *   §3  GRAD axis sync with text (Roboto Flex GRAD)
+ *   §4  Dark mode grade adjustment (M3 spec)
+ *   §5  Integration with .ax-icon-button (components.css)
+ *   §6  Expressive state (FILL on hover/active — M3 motion)
+ *
+ * What this file does NOT provide:
+ *   - Icon picker UI (plugin territory: axismundi-icons plugin)
+ *   - Additional styles (Outlined / Sharp): only Rounded ships
+ *     with the theme; plugin adds the others
+ *   - Block editor inspector controls: plugin territory
+ *
+ * Required markup pattern (theme chrome):
+ *   <span class="material-symbols-rounded notranslate"
+ *         translate="no" aria-hidden="true">home</span>
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * §1 — Base icon class
+ * ------------------------------------------------------------ */
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 24px;              /* default M3 spec icon size */
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  /* Material Symbols variable axis defaults — overridable via custom props */
+  font-variation-settings:
+    'FILL' var(--md-icon-fill, 0),
+    'wght' var(--md-icon-weight, 400),
+    'GRAD' var(--md-grade, 0),
+    'opsz' var(--md-icon-opsz, 24);
+  /* Prevent flash of fallback font (font-display: block in fonts.css) */
+  font-synthesis: none;
+
+  /* ----------------------------------------------------------------
+   * Hardening — v3.4.3 (per modules/icon-system/docs/ICON-FONT-POLICY.md)
+   *
+   * The icon glyph is UI machinery, not user content. These four
+   * properties prevent the underlying ligature string ("home",
+   * "search", "menu") from being treated as selectable / draggable
+   * / copyable text:
+   *
+   *   user-select: none           — disables double-click text
+   *                                 selection of the glyph
+   *   -webkit-user-select: none   — Safari/WebKit equivalent
+   *   -webkit-user-drag: none     — disables Safari drag-as-text
+   *                                 (Mac force-touch, iOS long-press)
+   *   pointer-events: none        — pointer events pass through to
+   *                                 the parent control (button, link,
+   *                                 chip), so the parent owns hover/
+   *                                 click/focus behavior — the glyph
+   *                                 never intercepts
+   *
+   * Markup also requires `translate="no"`, `class="notranslate"`,
+   * `aria-hidden="true"`, `draggable="false"` (see policy doc).
+   * The accessible name belongs to the parent control via aria-label.
+   * ---------------------------------------------------------------- */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+ * §2 — Axis custom properties (overridable in any scope)
+ * ------------------------------------------------------------ */
+:root {
+  --md-icon-fill: 0;         /* 0 = outlined, 1 = filled */
+  --md-icon-weight: 400;     /* 100-700 */
+  --md-icon-opsz: 24;        /* 20-48, should match font-size */
+  /* --md-grade is declared in tokens.css — shared with text */
+}
+
+/* ------------------------------------------------------------
+ * §3 — GRAD axis sync with text (Roboto Flex)
+ * ------------------------------------------------------------
+ * M3 spec: "Grade levels between text and symbols can be matched
+ * for a harmonious visual effect."
+ *
+ * This is implemented via the shared --md-grade CSS custom
+ * property declared in tokens.css. Both Roboto Flex (via
+ * font-variation-settings in base.css typescale) and Material
+ * Symbols (above in §1) read the same variable, so any change
+ * to --md-grade affects both simultaneously.
+ * ------------------------------------------------------------ */
+
+/* ------------------------------------------------------------
+ * §4 — Dark mode grade adjustment
+ * ------------------------------------------------------------
+ * M3 spec: "to match the apparent icon size, the default grade
+ * for a dark icon on a light background is 0, and -25 for a
+ * light icon on a dark background."
+ * ------------------------------------------------------------ */
+[data-theme="dark"] {
+  --md-grade: -25;
+}
+
+/* Reduced motion users: avoid grade transition overhead */
+@media (prefers-reduced-motion: reduce) {
+  .material-symbols-rounded {
+    transition: none !important;
+  }
+}
+
+/* ------------------------------------------------------------
+ * §5 — Integration with .ax-icon-button
+ * ------------------------------------------------------------
+ * components.css §ax-icon-button defines the button container.
+ * It supports SVG icons (existing) and now Material Symbols.
+ * Sizing matches the existing 24dp icon convention.
+ * ------------------------------------------------------------ */
+.ax-icon-button > .material-symbols-rounded {
+  font-size: 24px;
+  --md-icon-opsz: 24;
+}
+
+/* Smaller icon button variant (if components.css adds one later) */
+.ax-icon-button.is-small > .material-symbols-rounded {
+  font-size: 20px;
+  --md-icon-opsz: 20;
+}
+
+/* ------------------------------------------------------------
+ * §6 — Expressive state (FILL transition on hover/active)
+ * ------------------------------------------------------------
+ * M3 Expressive motion spec: icons can fill on interaction.
+ * This is achieved via the FILL axis (0 → 1) with a transition.
+ * The transition is on font-variation-settings, which is animatable.
+ *
+ * Note: Safari prior to 17.2 has limited support for animated
+ * font-variation-settings. Falls back gracefully (instant fill
+ * change instead of smooth transition).
+ * ------------------------------------------------------------ */
+.ax-icon-button > .material-symbols-rounded {
+  transition: font-variation-settings 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ax-icon-button:hover > .material-symbols-rounded,
+.ax-icon-button:focus-visible > .material-symbols-rounded {
+  --md-icon-fill: 1;
+}
+
+.ax-icon-button[aria-pressed="true"] > .material-symbols-rounded {
+  --md-icon-fill: 1;
+  --md-icon-weight: 500;
+}
+
+/* ------------------------------------------------------------
+ * §7 — Notes for plugin (axismundi-icons) author
+ * ------------------------------------------------------------
+ * If the axismundi-icons plugin is installed, it provides:
+ *   - Additional styles: Material Symbols Outlined
+ *     (registered as separate @font-face by the plugin)
+ *   - Icon picker UI in block inspector
+ *   - Axis controls per icon instance
+ *   - Block variation for icon-button (extends core/button)
+ *
+ * The plugin adds CSS classes .material-symbols-outlined
+ * and re-uses the axis custom properties declared here.
+ * Plugin classes should follow the same notranslate +
+ * translate="no" + aria-hidden="true" pattern documented in
+ * atlas/material/icon-font-scope-policy.md.
+ * ------------------------------------------------------------ */

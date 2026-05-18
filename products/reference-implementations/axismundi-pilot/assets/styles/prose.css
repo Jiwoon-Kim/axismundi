@@ -1,0 +1,450 @@
+/* ============================================================
+ * Axismundi — prose.css
+ * v0.1.0 — Phase 2A: Style foundation 확장
+ *
+ * Long-form typography scoped to `.prose`. Apply to any element
+ * that wraps article-style content (markdown output, classic
+ * editor body, Article view long-form). All rules sit at
+ * specificity (0,1,1)–(0,2,0) so they layer cleanly between
+ * base.css element defaults (0,0,1) and components.css (0,2,0)+.
+ *
+ * Composition principle — prose.css *adds rhythm + emphasis*
+ * on top of base.css element styling. It does NOT redefine
+ * what base provides (mono font on code, inline code pill,
+ * `pre` overflow, `th` font-weight, etc.). When base already
+ * gives the right baseline, prose.css stays out of the way.
+ *
+ * Sections:
+ *   §1  .prose container baseline
+ *   §2  Vertical rhythm (lobotomized owl + edge resets)
+ *   §3  Headings — per-level content margin
+ *   §4  Paragraphs
+ *   §5  Lists
+ *   §6  Blockquote — bumped emphasis
+ *   §7  HR
+ *   §8  Code — block padding bump + inline (inherits from base)
+ *   §9  Images & figures
+ *   §10 Links — always-underline (accessibility in prose context)
+ *   §11 Tables — full styling + .table-wrapper (mobile scroll)
+ *   §12 Icon font scope policy (Material Symbols — see atlas doctrine)
+ * ============================================================ */
+
+/* ============================================================
+ * §1 .prose container baseline
+ *
+ * Pin body-large explicitly so prose looks the same regardless
+ * of the parent's font (a sidebar with title-medium shouldn't
+ * shrink article body). All children inherit unless overridden.
+ * ============================================================ */
+.prose {
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* ============================================================
+ * §2 Vertical rhythm
+ *
+ * Lobotomized-owl pattern (`> * + *`) — every direct child
+ * after the first gets a top margin. Headings override with
+ * bigger top margins (§3). Edge resets keep .prose flush at
+ * its top and bottom edges, so it composes cleanly inside any
+ * parent layout.
+ *
+ * Specificity note: `> * + *` resolves to (0,1,0) — combinators
+ * don't contribute. Equivalent to a bare `.prose` selector,
+ * easy to override per-element.
+ * ============================================================ */
+.prose > * + * {
+  margin-block-start: var(--space-md);
+}
+.prose > :first-child {
+  margin-block-start: 0;
+}
+.prose > :last-child {
+  margin-block-end: 0;
+}
+
+/* ------------------------------------------------------------
+ * §2.1 Paragraph rhythm
+ *
+ * body-large line-height (≈1.5) already creates ~24px of internal
+ * vertical space inside a single <p>. With only the §2 owl-default
+ * 16px between paragraphs, the break visually vanishes — readers
+ * lose the paragraph boundary. 1.25em (≈20px at body-large) is the
+ * long-form convention shared by WordPress core, Tailwind
+ * Typography, and Notion-class editors. em (not space-md) keeps
+ * the rhythm proportional to the local font-size, so nested prose
+ * inside cards / blockquotes / pull quotes scales naturally.
+ *
+ * Specificity: (0,1,2) beats §2 owl (0,1,0).
+ * ------------------------------------------------------------ */
+.prose > p + p {
+  margin-block-start: 1.25em;
+}
+
+/* ------------------------------------------------------------
+ * §2.2 Block-level punctuation rhythm
+ *
+ * blockquote / pre / ol / ul / hr / table / figure are themselves
+ * visual units that need vertical breathing room on BOTH sides.
+ * The §2 owl rule only sets margin-block-start (16px) which
+ * creates a gap above the block but lets the next paragraph cling
+ * to the block's bottom edge — visually unbalanced.
+ *
+ * Fix: set margin-block (top + bottom) to space-md directly on
+ * the punctuation element itself. Margin-collapsing handles the
+ * interaction with §2 owl: when the next sibling's margin-top
+ * (16px from owl) meets this element's margin-bottom (16px),
+ * the gap collapses to 16px — not double, just balanced.
+ *
+ * Specificity: (0,1,1) beats §2 owl (0,1,0); same as / loses to
+ * §2.1 `p + p` (0,1,2).
+ * ------------------------------------------------------------ */
+.prose > blockquote,
+.prose > pre,
+.prose > ol,
+.prose > ul,
+.prose > hr,
+.prose > table,
+.prose > figure {
+  margin-block: var(--space-md);
+}
+
+/* ============================================================
+ * §3 Headings — content margin
+ *
+ * Asymmetric vertical rhythm: bigger top (separates from
+ * preceding content) + smaller bottom (binds heading visually
+ * to the paragraph it introduces). Falls off as level deepens.
+ *
+ * Typography itself comes from base.css §3 (M3 typescale roles).
+ * This section only handles in-flow margins.
+ * ============================================================ */
+.prose h1,
+.prose h2 {
+  margin-block: var(--space-xl) var(--space-md);
+}
+.prose h3 {
+  margin-block: var(--space-lg) var(--space-sm);
+}
+.prose h4 {
+  margin-block: var(--space-md) var(--space-sm);
+}
+.prose h5,
+.prose h6 {
+  margin-block: var(--space-md) var(--space-xs);
+}
+
+/* When a heading is the very first child, kill the top margin
+ * (defensive — beats the §2 generic rule for headings too). */
+.prose > h1:first-child,
+.prose > h2:first-child,
+.prose > h3:first-child,
+.prose > h4:first-child,
+.prose > h5:first-child,
+.prose > h6:first-child {
+  margin-block-start: 0;
+}
+
+/* ============================================================
+ * §4 Paragraphs
+ *
+ * §1 already sets body-large + base.css adds text-wrap: pretty.
+ * Reset stray margin so §2 owl rule alone governs spacing.
+ * ============================================================ */
+.prose p {
+  margin-block: 0;
+}
+
+/* ============================================================
+ * §5 Lists
+ *
+ * base.css §9 owns list-style + padding-inline-start. This
+ * section adds in-prose spacing between siblings + nested-list
+ * tightening. Items themselves don't get extra spacing — the
+ * default browser leading is already comfortable at body-large.
+ *
+ * NOTE: top-level .prose > ul / > ol get vertical breathing room
+ * from §2.2 (`margin-block: var(--space-md)`). We do NOT override
+ * that here. The previous `margin-block: 0` rule was incorrect —
+ * it cascaded over §2.2 (same specificity, later in source) and
+ * silently zeroed list rhythm. Nested-list tightening below
+ * targets only `.prose li > ul/ol` (extra specificity), so the
+ * top-level rule isn't needed.
+ * ============================================================ */
+
+/* Item-to-item spacing — small but readable */
+.prose li + li {
+  margin-block-start: var(--space-xs);
+}
+
+/* Nested lists: tighter than top-level (§2.2 would be too big) */
+.prose li > ul,
+.prose li > ol {
+  margin-block: var(--space-xs);
+}
+
+/* Definition list — markdown rare, but valid HTML5 */
+.prose dt {
+  font-weight: var(--md-ref-typeface-weight-medium);
+}
+.prose dd {
+  margin-inline-start: var(--space-lg);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.prose dd + dt {
+  margin-block-start: var(--space-md);
+}
+
+/* ============================================================
+ * §6 Blockquote — bumped emphasis
+ *
+ * base.css §8 gives the basic line: 4px outline-variant border,
+ * padding-inline-start, on-surface-variant color. In prose
+ * context we want the quote to *feel* like a quote — bigger
+ * padding, primary-colored bar, slight typographic distinction.
+ * ============================================================ */
+.prose blockquote {
+  /* base sets margin-inline: 0 + border-inline-start: 4px outline-variant
+   * + padding-inline-start: var(--space-md) + color: on-surface-variant.
+   * Override to bump emphasis. */
+  padding-block: var(--space-sm);
+  padding-inline-start: var(--space-lg);
+  border-inline-start-color: var(--md-sys-color-primary);
+}
+
+/* Nested paragraphs inside a blockquote share the quote color */
+.prose blockquote > p {
+  color: inherit;
+}
+
+/* Optional <cite> credit — author attribution at the end */
+.prose blockquote cite {
+  display: block;
+  margin-block-start: var(--space-sm);
+  font-style: normal;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+.prose blockquote cite::before {
+  content: "— ";
+}
+
+/* ============================================================
+ * §7 HR
+ *
+ * base.css §8 provides the line + var(--space-lg) block margin.
+ * Bump to var(--space-xl) for prose — HR usually marks a
+ * stronger section break in long-form than UI dividers do.
+ * ============================================================ */
+.prose hr {
+  margin-block: var(--space-xl);
+}
+
+/* ============================================================
+ * §8 Code — block padding bump (inline inherits base)
+ *
+ * Inline <code> already gets the base.css §11 pill (small bg
+ * tint, tiny radius). prose context keeps that — it reads well
+ * inside body-large flow.
+ *
+ * <pre> blocks bump to space-lg padding for breathing room on
+ * code samples, which often run several lines.
+ * ============================================================ */
+.prose pre {
+  padding: var(--space-lg);
+  /* base sets corner-small radius + surface-container bg + overflow-x: auto */
+}
+
+/* ============================================================
+ * §9 Images & figures
+ *
+ * base.css §1 reset gives images `display: block; max-width: 100%;
+ * height: auto;`. base §8 sets `figure { margin: 0 }` so §2 owl
+ * controls the spacing.
+ *
+ * Prose adds: rounded corners on images + tighter figcaption
+ * positioning under figure images.
+ * ============================================================ */
+.prose img {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.prose figure img {
+  /* Fill figure container regardless of intrinsic image width */
+  inline-size: 100%;
+}
+
+/* figcaption already styled in base.css §8 (body-small, on-surface-variant).
+ * In prose we tighten the gap to the image and center caption text. */
+.prose figcaption {
+  text-align: center;
+}
+
+/* ============================================================
+ * §10 Links — always underline in prose
+ *
+ * base.css §4 makes links primary-colored with no underline at
+ * rest, underline-on-hover. That's right for UI chrome but
+ * hurts scannability and a11y in long-form (color alone is not
+ * a sufficient cue — WCAG 1.4.1 Use of Color).
+ *
+ * Override: always-underline at rest, thicker on hover for a
+ * tactile cue.
+ * ============================================================ */
+.prose a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.prose a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Heading-anchor links (defined in base §14) stay opacity-0
+ * even inside prose — we don't want every heading littered
+ * with permanent #s. Override the .prose a underline so when
+ * the anchor reveals on hover, it's clean. */
+.prose .heading-anchor {
+  text-decoration: none;
+}
+
+/* ============================================================
+ * §11 Tables — full styling
+ *
+ * base.css §10 gives only the technical baseline (border-collapse,
+ * th font-weight, text-align: start). Prose owns the *visual*
+ * styling — header emphasis, cell padding, row separators,
+ * caption, and the .table-wrapper mobile-scroll pattern.
+ *
+ * Markup convention:
+ *
+ *   <div class="table-wrapper">
+ *     <table>
+ *       <thead>
+ *         <tr><th>…</th></tr>
+ *       </thead>
+ *       <tbody>
+ *         <tr><td>…</td></tr>
+ *       </tbody>
+ *     </table>
+ *   </div>
+ *
+ * The wrapper handles horizontal overflow on narrow viewports
+ * (a table at body-medium with 4+ columns rarely fits in a
+ * 360px-wide phone). Without the wrapper, wide tables push
+ * the parent layout. Markdown post-processing or WP's core/
+ * table block (`<figure class="wp-block-table">`) supplies the
+ * wrapper; for raw markdown without post-processing, authors
+ * are expected to wrap manually.
+ * ============================================================ */
+
+/* --- §11.1 Wrapper — horizontal scroll on overflow ---
+ *
+ * Both wrapper variants supported, identical visual treatment:
+ *   (a) <div class="table-wrapper"><table>…</table></div>
+ *       — for raw markdown post-processing
+ *   (b) <figure class="wp-block-table"><table>…</table></figure>
+ *       — for WP core/table block output (matched via :has)
+ *
+ * Same border + radius on both so prose tables read consistently
+ * regardless of source. blocks.css §6 may layer WP-specific
+ * variants (stripes, fixed-layout) on top — visual frame stays. */
+.prose .table-wrapper,
+.prose figure:has(> table) {
+  overflow-x: auto;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* --- §11.2 Table — sized to its container --- */
+.prose table {
+  inline-size: 100%;
+  /* base sets border-collapse: collapse + border-spacing: 0 */
+  font-family:    var(--md-sys-typescale-body-medium-font);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+
+/* --- §11.3 Cells — padding + row separator --- */
+.prose th,
+.prose td {
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Last row — clean bottom edge (wrapper border draws it) */
+.prose tbody tr:last-child > th,
+.prose tbody tr:last-child > td {
+  border-block-end: 0;
+}
+
+/* --- §11.4 Header — subtle bg + stronger separator --- */
+.prose th {
+  background-color: var(--md-sys-color-surface-container-high);
+  /* Heavier line under the header row (full outline, not -variant) */
+  border-block-end: 1px solid var(--md-sys-color-outline);
+  /* base.css §10 already sets font-weight: medium */
+}
+
+/* --- §11.5 Caption — sits below the table per base §10.
+ *      Bump margin in prose for legibility separation. --- */
+.prose caption {
+  /* base sets caption-side: bottom + body-small typography */
+  margin-block-start: var(--space-sm);
+  text-align: start;
+}
+
+
+/* ============================================================
+ * §12 — Icon font scope policy (Material Symbols)
+ * ------------------------------------------------------------
+ * Material Symbols icon fonts are scoped to theme chrome ONLY
+ * (FSE template parts, navigation, theme switcher, etc.).
+ * They are FORBIDDEN inside .prose content for three reasons:
+ *
+ *   1. Federation portability — ActivityPub clients strip CSS
+ *      classes during sanitization; the ligature trick
+ *      (<span>home</span> → 🏠) requires the class to survive.
+ *      Stripped classes leave literal "home" in federated feeds.
+ *
+ *   2. Author UX — Material Symbols ligatures fire on common
+ *      English words (home, search, menu, favorite, share...).
+ *      Authors typing these words must see text, not icons.
+ *
+ *   3. Semantic boundary — theme chrome (presentation) and
+ *      content (federation territory) must stay separated per
+ *      Constitution Article 2.
+ *
+ * The CSS below is the enforcement mechanism. If an icon class
+ * accidentally appears inside .prose (e.g. via copied HTML),
+ * the font-family is reverted so the literal ligature text is
+ * rendered instead of an icon glyph. This is graceful
+ * degradation — content still makes sense.
+ *
+ * See atlas/material/icon-font-scope-policy.md for the full
+ * doctrine.
+ * ============================================================ */
+
+.prose .material-symbols-rounded,
+.prose .material-symbols-outlined,
+.prose .material-symbols-sharp,
+.prose [class*="material-symbols"] {
+  /* Revert font-family so ligatures break — text renders as text */
+  font-family: inherit !important;
+  font-variation-settings: normal !important;
+  /* Restore baseline rhythm; icon font sets odd metrics */
+  font-feature-settings: normal !important;
+  letter-spacing: normal !important;
+  /* Allow screen readers to read the now-text content normally */
+  speak: auto;
+}

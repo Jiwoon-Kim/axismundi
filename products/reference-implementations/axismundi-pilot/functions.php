@@ -91,11 +91,66 @@ function axismundi_pilot_enqueue_assets() : void {
 add_action( 'wp_enqueue_scripts', 'axismundi_pilot_enqueue_assets' );
 
 /**
- * Register block styles in Phase 2D.
+ * Register block style variants used by the Pilot patterns.
  *
- * Intentionally empty in Phase 2A. No custom blocks are registered by this
- * theme.
+ * These are style registrations for WordPress core blocks only. The Pilot
+ * theme intentionally does not register custom blocks.
  */
 function axismundi_pilot_register_block_styles() : void {
+	$styles = array(
+		'core/button'    => array(
+			'filled'   => __( 'Filled', 'axismundi-pilot' ),
+			'tonal'    => __( 'Tonal', 'axismundi-pilot' ),
+			'elevated' => __( 'Elevated', 'axismundi-pilot' ),
+			'outlined' => __( 'Outlined', 'axismundi-pilot' ),
+			'text'     => __( 'Text', 'axismundi-pilot' ),
+		),
+		'core/group'     => array(
+			'card-filled'   => __( 'Card filled', 'axismundi-pilot' ),
+			'card-elevated' => __( 'Card elevated', 'axismundi-pilot' ),
+			'card-outlined' => __( 'Card outlined', 'axismundi-pilot' ),
+		),
+		'core/list'      => array(
+			'list-segmented' => __( 'Segmented list', 'axismundi-pilot' ),
+		),
+		'core/separator' => array(
+			'divider-inset'        => __( 'Inset divider', 'axismundi-pilot' ),
+			'divider-middle-inset' => __( 'Middle inset divider', 'axismundi-pilot' ),
+		),
+		'core/search'    => array(
+			'filled-search' => __( 'Filled search', 'axismundi-pilot' ),
+		),
+	);
+
+	foreach ( $styles as $block_name => $block_styles ) {
+		foreach ( $block_styles as $style_name => $label ) {
+			register_block_style(
+				$block_name,
+				array(
+					'name'  => $style_name,
+					'label' => $label,
+				)
+			);
+		}
+	}
 }
 add_action( 'init', 'axismundi_pilot_register_block_styles' );
+
+/**
+ * Register Pilot pattern categories.
+ */
+function axismundi_pilot_register_pattern_categories() : void {
+	register_block_pattern_category(
+		'axismundi-showcase',
+		array( 'label' => __( 'Axismundi Showcase', 'axismundi-pilot' ) )
+	);
+	register_block_pattern_category(
+		'axismundi-composition',
+		array( 'label' => __( 'Axismundi Composition', 'axismundi-pilot' ) )
+	);
+	register_block_pattern_category(
+		'axismundi-prose',
+		array( 'label' => __( 'Axismundi Prose', 'axismundi-pilot' ) )
+	);
+}
+add_action( 'init', 'axismundi_pilot_register_pattern_categories' );

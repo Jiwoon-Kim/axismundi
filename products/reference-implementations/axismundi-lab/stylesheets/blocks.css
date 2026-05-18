@@ -21,7 +21,8 @@
  *   §8  Columns / Row / Group + 3 card style variants
  *   §9  Buttons (core/button) + 5 style variants (PHP-composed —
  *       see §9 header for ax-button class wiring note)
- *   §10 List — is-style-list-segmented
+ *   §10 Search — is-style-filled-search
+ *   §11 List — is-style-list-segmented
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -462,7 +463,70 @@
 }
 
 /* ============================================================
- * §10 List — is-style-list-segmented
+ * §10 Search — is-style-filled-search
+ *
+ * Axismundi block style (registered via register_block_style on
+ * core/search). Keeps WP's native search form contract while mapping
+ * the visual surface to the Search bar rest-state token family.
+ * ============================================================ */
+.wp-block-search.is-style-filled-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-block-size: 56px;
+  padding: 0 var(--space-md);
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+.wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  border: 0;
+  padding: 0;
+}
+.wp-block-search.is-style-filled-search .wp-block-search__input {
+  min-inline-size: 0;
+  border: 0;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+.wp-block-search.is-style-filled-search .wp-block-search__input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-search.is-style-filled-search .wp-block-search__button {
+  border: 0;
+  border-radius: var(--comp-button-radius);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  min-block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+}
+
+@media (max-inline-size: 600px) {
+  .wp-block-search.is-style-filled-search,
+  .wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wp-block-search.is-style-filled-search {
+    padding-block: var(--space-sm);
+  }
+}
+
+/* ============================================================
+ * §11 List — is-style-list-segmented
  *
  * Axismundi block style (registered via register_block_style on
  * core/list). Mirrors .ax-list--segmented from components.css §26 —

@@ -15,6 +15,12 @@ Checked surfaces:
 - `products/reference-implementations/axismundi-pilot/assets/styles/fonts.css`
 - `products/reference-implementations/axismundi-lab/stylesheets/fonts.css`
 - `wp-env` front-end runtime at `http://localhost:8888/`
+- WordPress Theme Handbook local intake:
+  `corpus/refined/dev-handbook-clean/theme-handbook/03-theme-json/02-settings/typography.md`
+- WordPress Font Library documentation:
+  https://wordpress.org/documentation/article/the-font-library/
+- WordPress 6.5 Font Library dev note:
+  https://make.wordpress.org/core/2024/03/14/new-feature-font-library/
 
 ## 2. Findings
 
@@ -174,7 +180,78 @@ P3 design question:
 - `Noto Sans KR` and `Noto Serif KR` are also available as explicit font-name presets for editor users who want direct Korean-family selection.
 - `Material Symbols Rounded` remains chrome-only and is intentionally not exposed as a content font.
 
-## 7. Verification Commands
+## 7. Ontology Gap For Opus Review
+
+This audit exposed an ontology gap that is not fully covered by the existing
+WP ↔ M3 binding map.
+
+Existing ontology coverage:
+
+- `bindings/wordpress-material3/binding_map.json` and `binding_summary.md`
+  cover `settings.typography.fontSizes` and M3 `sys.typescale` roles well.
+- `core/design-systems/material3/runtime/tokens.css` defines `ref.typeface`
+  stacks:
+  - `brand` / `plain`: Roboto Flex + Noto Sans KR
+  - `serif`: Roboto Serif + Noto Serif KR
+  - `mono`: Roboto Mono
+- The existing binding treats typography primarily as typescale and CSS token
+  output.
+
+Gap:
+
+- WordPress has a second typography contract that is not just typescale:
+  **font family registration and font file registration**.
+- That contract exists in two related but distinct places:
+  - `theme.json settings.typography.fontFamilies[*].fontFace[*].src`
+  - Font Library collections via `wp_register_font_collection()` and
+    `font_family_settings`
+- Axismundi previously satisfied runtime rendering through `fonts.css`, but
+  the WordPress ontology surface remained incomplete because Gutenberg and
+  the Font Library could not see the bundled font file sources.
+
+Why this matters:
+
+- `fonts.css @font-face` is sufficient for browser rendering.
+- `theme.json fontFace.src` is required for theme-bundled font faces to be
+  represented in the WordPress theme settings contract.
+- `font_family_settings` is the official Font Library collection shape for
+  installable/manageable font families.
+- Therefore a future ontology node should distinguish:
+  - `m3:TypefaceReference` / CSS runtime family stack
+  - `wp:ThemeFontFamilyPreset`
+  - `wp:ThemeFontFaceSource`
+  - `wp:FontLibraryCollection`
+  - `wp:FontFamilySettings`
+  - chrome-only icon fonts, such as Material Symbols, which are not prose
+    typography choices
+
+Recommended future ontology work:
+
+1. Extend the WordPress binding ontology beyond `fontSizes` to include
+   `settings.typography.fontFamilies` and `fontFace`.
+2. Add Font Library collection entities and map them to the same source font
+   files used by `theme.json`.
+3. Encode the Axismundi policy that content fonts are exposed to Gutenberg,
+   while `Material Symbols Rounded` remains a chrome-only icon font.
+4. Add a validator axis that checks every bundled content font has:
+   - asset file present;
+   - `fonts.css @font-face`;
+   - `theme.json fontFace.src`;
+   - optional Font Library `font_family_settings` entry;
+   - runtime URL 200.
+
+Source facts used:
+
+- The local Theme Handbook intake says `settings.typography.fontFamilies`
+  accepts `name`, `slug`, `fontFamily`, and optional `fontFace`, and that
+  `fontFace.src` can reference bundled theme files with `file:./...`.
+- WordPress.org Font Library documentation says the Font Library is available
+  for block themes and appears in Site Editor typography management.
+- The WordPress 6.5 dev note says Font Collections use font family definitions
+  in `theme.json` format and can be registered with
+  `wp_register_font_collection()` using `font_family_settings`.
+
+## 8. Verification Commands
 
 ```powershell
 python .\tools\generators\build_pilot_assets.py

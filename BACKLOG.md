@@ -1563,6 +1563,81 @@ docs/v3.5.16/STYLEGUIDE-MODERNIZATION-PHASE-0-PLAN.md
 docs/v3.5.0/MODULE-STATUS-MATRIX.md
 ```
 
+### 38. Carousel plugin extraction
+
+- **Bucket**: F — Plugin/runtime extraction
+- **Status**: Open
+- **Priority**: Medium after v3.6.0 Pilot entry
+- **Target**: v3.6.x parallel or post-Pilot
+- **Source**: v3.5.18 Carousel reroute
+
+**Scope**:
+
+- Extract Carousel into a WordPress plugin/block lifecycle.
+- Use `lab/modules/carousel/` as seed evidence, not as final plugin code.
+- Improve responsive behavior, runtime navigation, ARIA, reduced motion, and
+  block integration.
+- Keep v3.6.0 Ontology Theme Pilot independent from Carousel.
+
+**Non-goals**:
+
+- Do not change v3.5.12 Carousel audit history.
+- Do not include Carousel in the theme-only Pilot.
+- Do not implement the plugin in v3.5.18.
+
+**Cross-references**:
+
+```txt
+docs/v3.5.12/
+docs/v3.5.18/PRE-PILOT-CLEANUP-PHASE-0-REPORT.md
+docs/v3.5.0/MODULE-STATUS-MATRIX.md row #34
+```
+
+### 39. Styleguide shell consistency — blocks.html + prose.html
+
+- **Bucket**: E — Public surface / docs maintenance
+- **Status**: Open
+- **Priority**: Low, post-Pilot unless a broken interaction is found
+- **Target**: Ongoing maintenance
+- **Source**: v3.5.18 pre-pilot smoke scope
+
+**Scope**:
+
+- Consider applying the v3.5.17 styleguide-local shell pattern to
+  `blocks.html` and `prose.html`.
+- Align mobile top bar, theme switcher, and reading polish if/when those pages
+  become public showcase surfaces.
+- Fix the `sg-sidebar` responsive layout on `blocks.html` / `prose.html`;
+  v3.5.18 verified spec correctness but left the shell inconsistency as
+  cosmetic post-Pilot work.
+
+**Non-goals**:
+
+- Does not own spec correctness for blocks/prose; v3.5.18 verifies that before
+  Pilot.
+- Not required before v3.6.0 Pilot.
+- Do not block theme implementation.
+- Do not introduce unclosed Wave 2 navigation components.
+
+**Cross-references**:
+
+```txt
+docs/v3.5.18/BLOCKS-PROSE-PILOT-SPEC-VERIFY.md
+docs/v3.5.18/PRE-PILOT-SMOKE-CHECKLIST.md
+```
+
+## Pre-Pilot classification snapshot (v3.5.18)
+
+This snapshot classifies open items before v3.6.0 Pilot entry. It is routing
+metadata, not closure.
+
+| Bucket | Items |
+|---|---|
+| Pilot-before | None currently. If `blocks.html` / `prose.html` verification surfaces a blocker, update this row before v3.6.0. |
+| Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #19 Date Picker Grid Navigation A11y; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency |
+| Plugin territory | #6 Monotone SVG theming plugin concept; #21 M3 Interpreter Plugin separation; #38 Carousel plugin extraction |
+| Deferred / ongoing | #5 WordPress logo styleguide specimen; #7 Search bar leading icon known delta; #14 Material Symbols ligature layout shift; #16 Tooltip delay / touch long-press; #18 Snackbar class naming; #20 Theme-only color customization policy; #22 `data-theme="auto"` model; #23 Elevated Chip variants; #36 v4.0 directory restructure; #37 GitHub Pages dogfooding |
+
 
 ## Closed items
 

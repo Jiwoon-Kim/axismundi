@@ -51,6 +51,8 @@ Forbidden without explicit user authorization:
 5. **Validator gate.** Every implementation phase must end with `python3 tools/validators/validate_theme_pilot.py` at 1.000 / 1.000 / 1.000 / 1.000 PASS. Phase doesn't close without it.
 6. **Small diffs.** Even when authorized to edit broadly, prefer targeted edits with clear scope.
 7. **Provenance.** When a decision comes from an external source (M3 spec, WAI-ARIA APG, Material Web), cite it inline.
+8. **User Request Log.** Do not abstract concrete user requests into generic phase lanes. Preserve them as explicit acceptance criteria and verify them before close.
+9. **Portal / overlay smoke.** Shell or runtime-trigger changes require trigger + runtime + host + open/close contract verification, with console/page errors checked.
 
 ---
 

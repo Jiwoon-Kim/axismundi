@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## v3.5.18 — Pre-Pilot Cleanup + Carousel Reroute (2026-05-18)
+
+Small pre-Pilot cleanup release before v3.6.0. No component matrix rows changed;
+distribution remains 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD. Carousel keeps
+its historical v3.5.12 closure while being explicitly excluded from the
+theme-only Pilot and routed to plugin territory.
+
+### Changed — Carousel routing
+
+- Amended Matrix row #34 without rewriting history: Carousel remains DONE
+  evidence from v3.5.12, but is now `Pilot-excluded / plugin-routed`.
+- Retained `lab/modules/carousel/` as the seed evidence for future plugin
+  extraction.
+- Added BACKLOG #38 for Carousel plugin/block extraction after v3.6.0 Pilot
+  entry.
+
+### Changed — Process discipline
+
+- Added `User Request Log — Do Not Abstract Away` to AGENTS.md and CLAUDE.md.
+- Added the global portal/overlay smoke-test rule: trigger, runtime, host,
+  contract, and errors must all be checked before Phase 3 PASS.
+- Recorded the v3.5.16 request-loss lesson and the v3.5.17 `#sg-portal`
+  regression in `PRE-ENTRY-ONTOLOGY-GROUNDING.md`.
+
+### Changed — Pilot inputs
+
+- Reclassified `blocks.html` and `prose.html` as v3.6.0 Pilot specification
+  surfaces, not cosmetic documentation pages.
+- Added `docs/v3.5.18/BLOCKS-PROSE-PILOT-SPEC-VERIFY.md`.
+- Added `docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md` for theme-only Pilot
+  entry.
+
+### Fixed — Prose mobile spec surface
+
+- Fixed `prose.html` 390px overflow by adding layout min-width guards to the
+  source `style-guide-prose.html` and regenerating `/styleguide/prose.html`.
+- Routed remaining `sg-sidebar` mobile shell inconsistency for blocks/prose to
+  BACKLOG #39 instead of blocking Pilot entry.
+
+### Verified
+
+- Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS.
+- `npm test`: PASS.
+- `publish_styleguide.py`: regenerated `/styleguide/`.
+- Pre-Pilot smoke checklist passed for styleguide index, blocks, prose,
+  typography-axis, and all current lab pattern pages.
+
 ## v3.5.17 — Styleguide Shell Rebuild + Mobile Reading Polish (2026-05-18)
 
 Corrective styleguide UX release after v3.5.16 closed the framing work but did

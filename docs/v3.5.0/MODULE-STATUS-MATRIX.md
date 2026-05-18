@@ -52,6 +52,12 @@
 > closed. Baseline-only Records now have record-only audit docs under
 > `lab/modules/_records/` while retaining RECORD status. Component status
 > counts are unchanged: 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
+>
+> **v3.5.18 amendment**: Carousel #34 is not reopened. Its v3.5.12
+> Full-Spec + Interaction closure remains historical evidence, but Carousel is
+> marked Pilot-excluded / plugin-routed for v3.6.0. `lab/modules/carousel/` is
+> retained as the plugin extraction seed; see BACKLOG #38. Component status
+> counts are unchanged: 13 DONE / 2 PARTIAL / 16 TODO / 3 RECORD.
 
 ## §1 — Hard rule: row counting
 
@@ -219,7 +225,7 @@ style-guide baseline still does not load ripple.
 |---:|---|---|---|:---:|---|---|:---:|---|---|:---:|---|
 | 32 | Avatar | Display | Baseline-only Record | RECORD | — | (records-only) | Independent | — | — | record | Standalone (not folded into List); uses outside List (chat, profile). v3.5.13 record-only audit exists under `lab/modules/_records/` |
 | 33 | List | Display | Component Full-Spec | **DONE** (v3.5.11) | `list/` | `list/` | Consumer | `ripple/` (interactive rows), `icon-system/` (conditional leading/trailing icons), Avatar #32 composition | — | done | Wave 1 #8 closed. 3-doc trio; no RUNTIME. 1/2/3-line rows, standard + segmented styles, state matrix, static/action/navigation semantics. Interactive rows ripple TARGET bounded per item; static informational rows ripple NONE. Avatar remains Baseline-only Record composition, not folded into List. v3.5.13 closes BACKLOG #33: focus indicator, selected-disabled, segmented wrapper/item token split, expand trailing icon container, and trailing supporting time are aligned. `core/list` is partial static mapping only |
-| 34 | Carousel | Display | Component Full-Spec + Interaction | **DONE** (v3.5.12) | `carousel/` (v3.3.2, v3.5.12 Full-Spec close) | `carousel/` | Independent | — | — | done | Wave 1 #9 closed. 4-doc audit shape because lab-carousel.js owns extracted runtime. Reduced-motion + Home/End blockers closed; no-JS fallback preserved via `.is-enhanced`. Gallery is not Carousel; conditional binding only. Full-screen remains deferred/integration scope |
+| 34 | Carousel | Display | Component Full-Spec + Interaction | **DONE** (v3.5.12) | `carousel/` (v3.3.2, v3.5.12 Full-Spec close) | `carousel/` | Independent | — | — | done | Wave 1 #9 closed. 4-doc audit shape because lab-carousel.js owns extracted runtime. Reduced-motion + Home/End blockers closed; no-JS fallback preserved via `.is-enhanced`. Gallery is not Carousel; conditional binding only. Full-screen remains deferred/integration scope. v3.5.18 amendment: Pilot-excluded / plugin-routed; `lab/modules/carousel/` retained as BACKLOG #38 extraction seed; v3.6.0 theme Pilot does not consume Carousel |
 
 ## §4 — Infrastructure Provider Matrix (3 rows)
 
@@ -263,6 +269,10 @@ The Baseline-only Record category exists precisely to keep the 33-component audi
 | Component total | **34** | — |
 | Infrastructure (DONE) | 3 | popover/ #35, ripple/ #36, icon-system/ #37 |
 | Grand total | **37** | canonical entries |
+
+Carousel #34 remains in the DONE count as v3.5.12 historical closure, but
+v3.6.0 Pilot scope excludes it and routes future Carousel work to plugin
+extraction (BACKLOG #38).
 
 ## §7 — Dependency snapshot (informal, formalized in COVERAGE-MAP §3)
 
@@ -319,12 +329,13 @@ The following are recorded here but resolved by Phase 1B:
 ## §9 — One-line summary
 
 ```
-v3.5.12 updates the module status matrix: 34 TOC component rows
+v3.5.18 preserves the module status matrix arithmetic: 34 TOC component rows
 (13 DONE + 2 PARTIAL + 16 TODO + 3 RECORD) plus 3 infrastructure provider
 rows (popover/ ripple/ icon-system/), for 37 canonical entries with
 explicit Dependency Type / Provider / Consumers axis on every row —
 "DISTINCT but COUPLED" relationships traced from Menu/Split button/
 FAB menu/Date+Time picker through popover/, state-aware consumer buckets
 through ripple/, and component/icon composition through icon-system/. Wave 1 is
-now 9 / 9 complete.
+historically 9 / 9 complete; Carousel #34 remains DONE evidence but is
+Pilot-excluded / plugin-routed for v3.6.0.
 ```

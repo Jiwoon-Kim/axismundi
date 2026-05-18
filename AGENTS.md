@@ -63,6 +63,26 @@ For any multi-file or ambiguous task, **do not edit immediately**. Produce a pla
 
 Wait for user approval before transitioning from plan to execution.
 
+### User Request Log — Do Not Abstract Away
+
+When the user gives concrete UX, behavior, or acceptance requirements, preserve
+them as a `User Request Log` in the plan. Do not compress them into generic lane
+titles. Phase close is blocked until those explicit requests are verified or
+the user explicitly defers them.
+
+### Global portal / overlay smoke test
+
+If a change touches page shell, publish mirror, global runtime, trigger buttons,
+overlays, portals, dialogs, sheets, drawers, popovers, menus, tooltips, or
+snackbars, Phase 3 QA must verify:
+
+1. trigger exists;
+2. runtime handler attaches;
+3. host / portal element exists;
+4. open and visible state works;
+5. close / dismiss path works;
+6. console and page errors are absent.
+
 ---
 
 ## Reporting protocol

@@ -29,6 +29,9 @@
       min-height: 100vh;
       gap: 0;
     }
+    .sg-layout > * {
+      min-inline-size: 0;
+    }
     .sg-sidebar {
       position: sticky;
       top: 0;
@@ -82,7 +85,9 @@
 
     /* ---- Article column ---- */
     .sg-article {
-      max-inline-size: 65ch; /* prose target column width */
+      box-sizing: border-box;
+      inline-size: 100%;
+      max-inline-size: min(65ch, 100%); /* prose target column width */
       margin-inline: auto;
       padding: var(--space-xl) var(--space-xl);
     }

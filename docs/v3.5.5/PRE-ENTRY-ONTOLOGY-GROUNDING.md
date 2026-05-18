@@ -464,6 +464,41 @@ Trend: findings count decreased as framework stabilized.
        Card v3.5.3 = framework discipline fully internalized in Codex.
 ```
 
+### §3.2a — v3.5.16 / v3.5.17 Process Lessons
+
+```
+1. User Request Log — Do Not Abstract Away
+
+   v3.5.16 closed framing/plumbing work but missed concrete user requests:
+   mobile top app bar, Sheet-style drawer, icon theme switcher, and body
+   mobile polish.
+
+   v3.5.17 corrected this by preserving those requests as explicit acceptance
+   criteria. Phase close was blocked until the user confirmed the actual UX.
+
+   Rule:
+     If the user gives concrete UX, behavior, or acceptance requirements,
+     preserve them in a User Request Log. Do not compress them into generic
+     lane names.
+
+2. Global portal / overlay smoke test
+
+   v3.5.17 hotfix 81d0317: Dialog/Sheet trigger buttons existed and
+   style-guide.js existed, but #sg-portal was missing from source and the
+   generated mirror. The JS returned silently before attaching handlers.
+   Validator, focused Playwright QA, and user shell QA all missed it.
+
+   Rule:
+     If trigger button, runtime handler, and host/portal live in separate
+     places, Phase 3 must verify the full contract:
+       trigger exists;
+       runtime attaches;
+       host/portal exists;
+       open state works;
+       close/dismiss path works;
+       console/page errors are absent.
+```
+
 ### §3.3 — Locked Patterns (cross-cycle)
 
 ```

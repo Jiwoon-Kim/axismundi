@@ -100,6 +100,83 @@ theme.json settings.custom.axismundi.* obeys downstream-only lock:
   tools/validators/validate_theme_pilot.py Axis G
 ```
 
+## Lesson Lock Candidates
+
+These are candidates for Phase 5 four-location lesson locking:
+
+```txt
+Lock 1 — wp-custom downstream-only
+
+Every settings.custom.axismundi.* entry MUST be defined as:
+  var(--comp-*) or var(--md-sys-*) or var(--md-ref-*)
+
+Literal hex / rgb / px / number values are forbidden in this namespace.
+
+Rationale:
+  wp-custom is a downstream projection of M3, never a source.
+
+Validator:
+  tools/validators/validate_theme_pilot.py Axis G
+```
+
+```txt
+Lock 2 — md-sys color maps to md-ref
+
+Every --md-sys-color-* entry MUST be defined as:
+  var(--md-ref-palette-*)
+
+Literal hex / rgb / hsl values are forbidden in the md-sys color layer.
+
+Rationale:
+  md-sys is the runtime semantic layer; md-ref is the primitive source.
+  Dark mode swaps sys -> ref mappings only.
+  md-sys holding literals breaks the swap invariant.
+
+Validator:
+  tools/validators/validate_theme_pilot.py Axis E
+```
+
+Phase 5 should apply these locks to the established four-location chain:
+
+```txt
+1. AGENTS.md / CLAUDE.md
+2. docs/v3.5.5/PRE-ENTRY-ONTOLOGY-GROUNDING.md
+3. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md
+4. NEXT-SESSION.md
+```
+
+If a location already carries an equivalent rule, Phase 5 should update the
+wording rather than duplicate it.
+
+## Phase 5 Close Pending
+
+Phase 1 implementation is closed, but release close is not complete.
+
+```txt
+Phase 3 visual QA:
+  Run surface-level light/dark visual QA after computed validation.
+  The current computed audit proves click -> attribute -> CSS variable ->
+  rendered DOM. Human screenshot review still needs to confirm visible surfaces
+  and text contrast read correctly across the Pilot/styleguide entry points.
+
+Phase 5 close docs:
+  Apply Lesson Lock Candidates to the four-location chain.
+  Update CHANGELOG.md with the v3.6.1 entry.
+  Update ROADMAP.md with the v3.6.1 closed marker / next route.
+  Update CURRENT-STATE.md and NEXT-SESSION.md at the release boundary.
+  Confirm BACKLOG #20 remains closed and route Axis H / auto-mode candidates
+  only if the user chooses to track them.
+```
+
+Recommended cadence:
+
+```txt
+1. Phase 3 visual QA
+2. Phase 5 close plan / implementation
+3. Final validator + computed matrix
+4. Commit + push after release close review
+```
+
 ## Non-Blocking Future Candidates
 
 ```txt

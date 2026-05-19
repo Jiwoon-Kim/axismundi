@@ -2,7 +2,7 @@
 
 > **Audience**: OpenAI Codex (or any coding-agent that uses `AGENTS.md` as repo-level guidance). Read this first before any edit.
 > **Sibling file**: `CLAUDE.md` (Anthropic Claude Code rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-19 (v3.6.0 Phase 5 — Pilot close lessons)
+> **Last updated**: 2026-05-19 (v3.6.1 Phase 0 — relay discipline)
 
 ---
 
@@ -69,6 +69,18 @@ When the user gives concrete UX, behavior, or acceptance requirements, preserve
 them as a `User Request Log` in the plan. Do not compress them into generic lane
 titles. Phase close is blocked until those explicit requests are verified or
 the user explicitly defers them.
+
+### Cross-agent relay discipline
+
+When Codex and Opus/Claude are both involved, the repo remains the source of
+truth. Chat is a relay channel, not authority. Do not rely on chat memory.
+
+Default ownership:
+
+- Codex writes implementation files and phase plan/report docs.
+- Opus/Claude writes review findings only, preferably as user-relayed text or
+  `docs/<cycle>/*-review.md` when repo-based handoff is requested.
+- Both may read all repo docs and implementation files.
 
 ### Global portal / overlay smoke test
 

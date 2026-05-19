@@ -485,8 +485,8 @@ Announcements:
 ### 20. Theme-only color customization policy
 
 - **Bucket**: F — Plugin / theme binding policy
-- **Status**: Partially validated at v3.6.0; final close deferred to v3.6.1
-- **Target**: v3.6.1 Token Architecture Refactor
+- **Status**: **Resolved / closed at v3.6.1.**
+- **Target**: v3.6.1 Token Architecture Refactor — **DONE**
 - **Source**: `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §1 (Color picker concern and bridge strategy)
 
 **The concern**:
@@ -533,6 +533,19 @@ This is the **honest default** — visible controls behave because non-functiona
   theme-only default. Final close is deferred to v3.6.1 because the token layer
   still needs the ref/sys/preset/custom bridge split and dark-mode sys-layer
   swap.
+- **v3.6.1 final close (2026-05-19)**: closed by the Token Architecture
+  Refactor Phase 1 implementation:
+  1. `axismundi-pilot/theme.json` still has `settings.color.custom = false`
+     and `settings.color.defaultPalette = false`.
+  2. `wp-preset.bridge.css` and `wp-custom.bridge.css` exist in lab, Pilot
+     assets, and the published styleguide mirror.
+  3. `theme.json settings.custom.axismundi.*` has 26 downstream-only `var(...)`
+     leaves; Axis G validates every leaf against the real upstream token graph.
+  4. `npm run validate:computed` validates light/dark sys-layer swaps through
+     both forced matrix entries and the real Pilot `Light / Dark / Auto`
+     switcher click path.
+  5. Axis E/F/G now permanently guard the md-ref -> md-sys -> WP bridge ->
+     theme.json chain.
 
 ### 21. M3 Interpreter Plugin separation
 

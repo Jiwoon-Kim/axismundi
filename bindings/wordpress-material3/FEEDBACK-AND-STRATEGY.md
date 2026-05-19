@@ -45,18 +45,19 @@ Both modes follow Principle 1 below: visible controls behave.
 
 ### Bridge stages
 
-Three stages, designed to be implemented incrementally. v3.6.0 refined the
-Stage 1 wording: it is a **static slug bridge**, not a claim that `theme.json`
-hex values are the source of truth.
+Three stages, designed to be implemented incrementally. v3.6.1 refined the
+Stage 1 wording: it is a **downstream token bridge**, not a claim that
+`theme.json` hex values are the source of truth.
 
 ```
-Stage 1 — Static slug bridge (theme-only mode)
+Stage 1 — Downstream token bridge (theme-only mode)
   theme.json palette = static slugs registered for the editor UI.
-  theme.json color values are registration / fallback values.
-  tokens.css keeps the M3 graph as the source of truth:
-    md-ref -> md-sys -> wp-preset projection.
-  CSS bridge direction:
+  theme.json color values are registration values that point at sys tokens.
+  Layered CSS keeps the M3 graph as the source of truth:
+    md-ref -> md-sys -> wp-preset/wp-custom -> theme.json projections.
+  CSS bridge directions:
     --wp--preset--color--primary: var(--md-sys-color-primary)
+    --wp--custom--axismundi--state-layer--hover: var(--md-sys-state-hover-state-layer-opacity)
   Outcome: stable, review-safe, but customization is limited.
 
 Stage 2 — Preset bridge (v1 Interpreter Plugin)
@@ -116,34 +117,37 @@ tokens.css
 
 The trap to avoid: putting too much into `theme.json`. Trying to express the full M3 graph in `theme.json` flattens the role/state model. Treat `theme.json` as a thin compatibility shell. Audit each new entry: is this here because Gutenberg needs to know about it, or because the design system runtime needs it? If only the design system needs it, it goes in `tokens.css`.
 
-### v3.6.0 Pilot refinement
+### v3.6.1 Token architecture refinement
 
-The v3.6.0 Pilot validated the theme-only default but also exposed the next
-architecture layer:
+The v3.6.1 Token Architecture Refactor validates the refined strict-mode
+architecture:
 
 ```txt
-md-ref     = primitive source (hex / px / rem / duration)
-md-sys     = runtime semantic source (light/dark maps roles to ref)
-wp-preset  = editor-facing semantic projection
-wp-custom  = WordPress-managed internal token bridge
-ax-comp    = component contract consuming md-sys / ax-comp values
+md-ref    = primitive source (hex / px / rem / duration)
+md-sys    = runtime semantic source (light/dark maps roles to ref)
+comp      = component contract consuming md-sys values
+wp-preset = editor-facing semantic color projection
+wp-custom = WordPress-managed internal token projection
+theme.json settings.custom.axismundi.*
+          = downstream registration values only
 ```
 
 For color, Strict M3 mode projects downstream:
 
 ```css
---md-sys-color-primary: var(--md-ref-palette-primary40);
+--md-sys-color-primary: var(--md-ref-palette-primary-40);
 --wp--preset--color--primary: var(--md-sys-color-primary);
 ```
 
 For shape, state-layer, motion, elevation, and other non-picker values, use
-`wp-custom` only where WordPress-managed override is needed. Otherwise component
-CSS should consume `md-sys` / `ax-comp` directly.
+`wp-custom` only where WordPress-managed registration is needed. Otherwise
+component CSS should consume `md-sys` / `comp` directly.
 
 The Pilot confirms `settings.color.custom = false` as the safe theme-only
-default. Final BACKLOG #20 closure is deferred to v3.6.1 because dark-mode
-sys-layer swapping and the `wp-preset` / `wp-custom` bridge still need a
-cross-cutting token architecture pass.
+default. BACKLOG #20 is closed by v3.6.1: `wp-preset` / `wp-custom` bridge
+files exist, `settings.custom.axismundi.*` is downstream-only, and
+`npm run validate:computed` proves light/dark sys-layer swaps through the real
+Pilot theme switcher.
 
 ## §3 — Interaction vs Component module taxonomy
 
@@ -188,7 +192,7 @@ The principle is **not** "use as few controls as possible". It is "don't render 
 |---|---|
 | Visible control principle | **Adopted into `lab/modules/README.md` at v3.4.9 entry**. Applies to chip filter/input variants — must use native `<input type="checkbox">` / `<input type="radio">`, not fake `<button>` toggles. |
 | `theme.json = contract / tokens.css = runtime` 3-tier | **Already matches current ontology-theme-pilot**. No change needed. |
-| `settings.color.custom=false` default in theme-only mode | **Routed to BACKLOG #20** — confirm policy when ontology-theme-pilot is next reviewed. |
+| `settings.color.custom=false` default in theme-only mode | **Closed by v3.6.1 / BACKLOG #20** — theme-only mode keeps Gutenberg color customization locked while preserving M3 downstream token projections. |
 | `data-theme="auto"` explicit 3-state model | **Routed to BACKLOG #22** — paired with v3.5.0 Public Surface Reframe. |
 | Interpreter Plugin separation (Stage 2 / Stage 3 bridge) | **Routed to BACKLOG #21** — v3.5.x+ milestone, not v3.4.x. |
 | `light-dark()` experiment | **Deferred to v3.5.0+ Public Surface Reframe**. Pilot's explicit override model is more stable for WordPress until interpreter plugin lands. |

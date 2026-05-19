@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-19 (v3.6.1 Phase 1A+1B complete)
+> **Last updated**: 2026-05-19 (v3.6.1 Phase 1 implementation complete)
 
 ---
 
@@ -31,16 +31,16 @@ v3.5.16  Styleguide modernization + module workspace framing          ✓ DONE
 v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
 v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
 v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
-v3.6.1   Token Architecture Refactor                                  ☐ NEXT
+v3.6.1   Token Architecture Refactor                                  ◐ IN PROGRESS
 ```
 
 ## Current Phase
 
 ```txt
 Current release:   v3.6.1 Token Architecture Refactor
-Current phase:     Phase 1 implementation in progress
-Current state:     Phase 1A token extraction + Phase 1B loading/copy pipeline complete
-Next allowed work: v3.6.1 Phase 1C bridge files, then Opus mini-review
+Current phase:     Phase 1 implementation complete
+Current state:     Phase 1A-1F complete; BACKLOG #20 closed; full close review pending
+Next allowed work: Opus Phase 1 full close review, then Phase 2 planning if GO
 ```
 
 ## Matrix Snapshot
@@ -103,7 +103,7 @@ Architectural insights captured (post-Phase 2E):
     1. Build direction reversal (forward design system vs reverse theme integration)
     2. WP core style reset first (five-step block bridge order + computed audit gate)
     3. Token layering architecture
-       md-ref → md-sys → wp-preset + wp-custom → ax-comp
+       md-ref → md-sys → wp-preset + wp-custom + comp
        Dark mode = sys layer swap only (ref unchanged)
        All bridges M3 → WP (Strict M3 mode)
   This doc is authoritative input for v3.6.1 plan-first.
@@ -131,16 +131,24 @@ Routed:
 ## v3.6.1 Identified Follow-on Cycle
 
 ```txt
-v3.6.1   Token Architecture Refactor                   ☐ NEXT
+v3.6.1   Token Architecture Refactor                   ◐ IN PROGRESS
 
 Scope (per PILOT-LESSONS-AND-TOKEN-ARCHITECTURE §5.1):
-  1. tokens.css split (ref / sys.light / sys.dark / wp-preset / wp-custom)
-  2. theme.json settings.custom.axismundi.* shape/state-layer/motion
-  3. Dark mode infrastructure (data-theme + theme switcher)
-  4. Cross-cutting: axismundi-lab + Pilot 양쪽 영향
-  5. Light + dark visual QA acceptance
-  6. BACKLOG #20 final close
-  7. FEEDBACK-AND-STRATEGY.md §1 refinement
+  1. tokens.css split (ref / sys.light / sys.dark / comp)
+  2. wp-preset / wp-custom bridge files
+  3. theme.json settings.custom.axismundi.* shape/state-layer/motion
+  4. Dark mode infrastructure (data-theme + theme switcher)
+  5. Cross-cutting: axismundi-lab + Pilot 양쪽 영향
+  6. Light + dark computed validation matrix
+  7. BACKLOG #20 final close
+  8. FEEDBACK-AND-STRATEGY.md §1 refinement
+
+Phase 1 implementation complete:
+  - Axis E md-sys -> md-ref token layering guard
+  - Axis F wp-preset/wp-custom bridge guard
+  - Axis G theme.json settings.custom.axismundi guard
+  - Pilot real Light / Dark / Auto switcher click path validated
+  - BACKLOG #20 closed
 
 This is bucket A (architecture-level) cycle, larger than typical Wave 1 cycle.
 plan-first must include User Request Log with verbatim insight quotes.
@@ -157,10 +165,10 @@ C:\Users\thaum\dev\axismundi
 ## Validation State
 
 ```txt
-Validator:         1.000 / 1.000 / 1.000 / 1.000 PASS
+Validator:         7-axis 1.000 PASS
 npm test:          PASS
 PHP lint:          PASS
-Computed QA:       npm run validate:computed PASS
+Computed QA:       npm run validate:computed PASS (light/dark matrix + click path)
 wp-env:            active during final verification
 Published mirror:  styleguide regenerated
 Generated tmp:     tmp/ ignored; validator script is tracked

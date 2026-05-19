@@ -10,6 +10,7 @@ Audit axes (per project plan):
   B. Theme axis: appearanceTools enabled; color.custom=false enforced
   C. CSS axis: tokens.css + base.css present in expected paths
   D. Runtime axis: block style registrations in functions.php match Tier 2 binding rules
+  E. Token layering axis: md-sys color tokens reference md-ref, never literal hex
 
 Output: pilot_validation_report.md + binding_legitimacy_audit.json
 """
@@ -22,6 +23,7 @@ from collections import defaultdict
 UTF8 = "utf-8"
 
 PILOT = Path("products/reference-implementations/ontology-theme-pilot")
+AXISMUNDI_LAB_STYLES = Path("products/reference-implementations/axismundi-lab/stylesheets")
 BINDING_MAP = Path("bindings/wordpress-material3/binding_map.json")
 M3_ONTOLOGY = Path("core/design-systems/material3/token_ontology.jsonld")
 BINDING_RULES = Path("bindings/wordpress-material3/block_component_rules.json")
@@ -214,6 +216,58 @@ def axis_d_runtime(pilot_dir, binding_rules):
     return findings, overall
 
 
+def axis_e_token_layering(styles_dir):
+    """E. Token layering axis — md-sys color tokens must consume md-ref."""
+    findings = {}
+    sys_files = [
+        styles_dir / "tokens.sys.light.css",
+        styles_dir / "tokens.sys.dark.css",
+    ]
+
+    sys_color_def_pattern = re.compile(r"^\s*(--md-sys-color-[a-z0-9-]+)\s*:\s*([^;]+);", re.MULTILINE)
+    direct_hex_pattern = re.compile(r"^\s*(--md-sys-color-[a-z0-9-]+)\s*:\s*(#[0-9A-Fa-f]{3,8})\b", re.MULTILINE)
+    md_ref_pattern = re.compile(r"^\s*--md-sys-color-[a-z0-9-]+\s*:\s*var\(--md-ref-", re.MULTILINE)
+
+    scores = []
+    for path in sys_files:
+        if not path.exists():
+            findings[str(path)] = {
+                "exists": False,
+                "score": 0.0,
+            }
+            scores.append(0.0)
+            continue
+
+        text = path.read_text(encoding=UTF8)
+        definitions = [
+            {"token": match.group(1), "value": match.group(2).strip()}
+            for match in sys_color_def_pattern.finditer(text)
+        ]
+        direct_hex = [
+            {
+                "line": text[:match.start()].count("\n") + 1,
+                "token": match.group(1),
+                "value": match.group(2),
+            }
+            for match in direct_hex_pattern.finditer(text)
+        ]
+        md_ref_refs = len(md_ref_pattern.findall(text))
+
+        score = 1.0 if definitions and not direct_hex and md_ref_refs == len(definitions) else 0.0
+        scores.append(score)
+        findings[str(path)] = {
+            "exists": True,
+            "sys_color_definitions": len(definitions),
+            "md_ref_references": md_ref_refs,
+            "direct_hex_count": len(direct_hex),
+            "direct_hex": direct_hex,
+            "score": score,
+        }
+
+    overall = sum(scores) / len(scores) if scores else 0.0
+    return findings, overall
+
+
 def main():
     theme_json = json.loads((PILOT / "theme.json").read_text(encoding=UTF8))
     m3 = json.loads(M3_ONTOLOGY.read_text(encoding=UTF8))
@@ -224,8 +278,9 @@ def main():
     findings_b, score_b = axis_b_theme(theme_json)
     findings_c, score_c = axis_c_css(PILOT)
     findings_d, score_d = axis_d_runtime(PILOT, binding_rules)
+    findings_e, score_e = axis_e_token_layering(AXISMUNDI_LAB_STYLES)
 
-    overall = (score_a + score_b + score_c + score_d) / 4
+    overall = (score_a + score_b + score_c + score_d + score_e) / 5
 
     audit = {
         "schema_version": "v2.1a-P0.5-binding-legitimacy-audit-2026-05-12",
@@ -236,6 +291,7 @@ def main():
             "B_theme": {"findings": findings_b, "score": score_b, "weight": 0.20},
             "C_css": {"findings": findings_c, "score": score_c, "weight": 0.20},
             "D_runtime": {"findings": findings_d, "score": score_d, "weight": 0.30},
+            "E_token_layering": {"findings": findings_e, "score": score_e, "weight": "hard gate"},
         },
         "overall_score": round(overall, 3),
         "passes_threshold": overall >= 0.85,
@@ -259,7 +315,7 @@ def main():
         f"- **Threshold (≥0.85)**: {'PASS ✓' if audit['passes_threshold'] else 'FAIL ✗'}",
         f"- **Verdict**: **{audit['verdict']}**",
         "",
-        "## 4-Axis breakdown",
+        "## 5-Axis breakdown",
         "",
         "| Axis | Description | Score | Weight |",
         "|---|---|---|---|",
@@ -267,6 +323,7 @@ def main():
         f"| B — Theme | appearanceTools + lock-down flags | **{score_b:.3f}** | 0.20 |",
         f"| C — CSS | tokens.css + base.css + block-styles.css | **{score_c:.3f}** | 0.20 |",
         f"| D — Runtime | block style registrations ↔ binding rules | **{score_d:.3f}** | 0.30 |",
+        f"| E — Token layering | md-sys color tokens reference md-ref | **{score_e:.3f}** | hard gate |",
         "",
         "## Axis A — Schema (theme.json ↔ M3 ontology)",
         "",
@@ -305,6 +362,18 @@ def main():
                 md.append(f"- `{kk}`: {vv}")
         md.append("")
 
+    md.append("## Axis E — Token layering (md-sys → md-ref)")
+    md.append("")
+    for k, v in findings_e.items():
+        md.append(f"### {k}")
+        md.append("")
+        if isinstance(v, dict):
+            for kk, vv in v.items():
+                if isinstance(vv, list) and len(vv) > 8:
+                    vv = vv[:8] + ["..."]
+                md.append(f"- `{kk}`: {vv}")
+        md.append("")
+
     md.append("## Decision")
     md.append("")
     if audit["passes_threshold"]:
@@ -329,6 +398,7 @@ def main():
     print(f"  B theme:   {score_b:.3f}")
     print(f"  C css:     {score_c:.3f}")
     print(f"  D runtime: {score_d:.3f}")
+    print(f"  E tokens:  {score_e:.3f}")
 
 
 if __name__ == "__main__":

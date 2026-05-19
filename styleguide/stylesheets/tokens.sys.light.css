@@ -43,59 +43,59 @@
  * ------------------------------------------------------------ */
 :root {
   /* --- Brand: primary --- */
-  --md-sys-color-primary:              #6750A4; /* primary 40  */
-  --md-sys-color-on-primary:           #FFFFFF; /* primary 100 */
-  --md-sys-color-primary-container:    #EADDFF; /* primary 90  */
-  --md-sys-color-on-primary-container: #4F378B; /* primary 30  */
+  --md-sys-color-primary:              var(--md-ref-palette-primary-40);  /* primary 40  */
+  --md-sys-color-on-primary:           var(--md-ref-palette-primary-100); /* primary 100 */
+  --md-sys-color-primary-container:    var(--md-ref-palette-primary-90);  /* primary 90  */
+  --md-sys-color-on-primary-container: var(--md-ref-palette-primary-30);  /* primary 30  */
 
   /* --- Brand: secondary --- */
-  --md-sys-color-secondary:              #625B71; /* secondary 40  */
-  --md-sys-color-on-secondary:           #FFFFFF; /* secondary 100 */
-  --md-sys-color-secondary-container:    #E8DEF8; /* secondary 90  */
-  --md-sys-color-on-secondary-container: #4A4458; /* secondary 30  */
+  --md-sys-color-secondary:              var(--md-ref-palette-secondary-40);  /* secondary 40  */
+  --md-sys-color-on-secondary:           var(--md-ref-palette-secondary-100); /* secondary 100 */
+  --md-sys-color-secondary-container:    var(--md-ref-palette-secondary-90);  /* secondary 90  */
+  --md-sys-color-on-secondary-container: var(--md-ref-palette-secondary-30);  /* secondary 30  */
 
   /* --- Brand: tertiary --- */
-  --md-sys-color-tertiary:              #7D5260; /* tertiary 40  */
-  --md-sys-color-on-tertiary:           #FFFFFF; /* tertiary 100 */
-  --md-sys-color-tertiary-container:    #FFD8E4; /* tertiary 90  */
-  --md-sys-color-on-tertiary-container: #633B48; /* tertiary 30  */
+  --md-sys-color-tertiary:              var(--md-ref-palette-tertiary-40);  /* tertiary 40  */
+  --md-sys-color-on-tertiary:           var(--md-ref-palette-tertiary-100); /* tertiary 100 */
+  --md-sys-color-tertiary-container:    var(--md-ref-palette-tertiary-90);  /* tertiary 90  */
+  --md-sys-color-on-tertiary-container: var(--md-ref-palette-tertiary-30);  /* tertiary 30  */
 
   /* --- Status: error --- */
-  --md-sys-color-error:              #B3261E; /* error 40  */
-  --md-sys-color-on-error:           #FFFFFF; /* error 100 */
-  --md-sys-color-error-container:    #F9DEDC; /* error 90  */
-  --md-sys-color-on-error-container: #8C1D18; /* error 30  */
+  --md-sys-color-error:              var(--md-ref-palette-error-40);  /* error 40  */
+  --md-sys-color-on-error:           var(--md-ref-palette-error-100); /* error 100 */
+  --md-sys-color-error-container:    var(--md-ref-palette-error-90);  /* error 90  */
+  --md-sys-color-on-error-container: var(--md-ref-palette-error-30);  /* error 30  */
 
   /* --- Surface: background + surface --- */
-  --md-sys-color-background:         #FEF7FF; /* neutral 98 */
-  --md-sys-color-on-background:      #1D1B20; /* neutral 10 */
-  --md-sys-color-surface:            #FEF7FF; /* neutral 98 */
-  --md-sys-color-on-surface:         #1D1B20; /* neutral 10 */
-  --md-sys-color-surface-variant:    #E7E0EC; /* neutral-variant 90 */
-  --md-sys-color-on-surface-variant: #49454F; /* neutral-variant 30 */
-  --md-sys-color-surface-bright:     #FEF7FF; /* neutral 98 */
-  --md-sys-color-surface-dim:        #DED8E1; /* neutral 87 */
+  --md-sys-color-background:         var(--md-ref-palette-neutral-98);           /* neutral 98 */
+  --md-sys-color-on-background:      var(--md-ref-palette-neutral-10);           /* neutral 10 */
+  --md-sys-color-surface:            var(--md-ref-palette-neutral-98);           /* neutral 98 */
+  --md-sys-color-on-surface:         var(--md-ref-palette-neutral-10);           /* neutral 10 */
+  --md-sys-color-surface-variant:    var(--md-ref-palette-neutral-variant-90);   /* neutral-variant 90 */
+  --md-sys-color-on-surface-variant: var(--md-ref-palette-neutral-variant-30);   /* neutral-variant 30 */
+  --md-sys-color-surface-bright:     var(--md-ref-palette-neutral-98);           /* neutral 98 */
+  --md-sys-color-surface-dim:        var(--md-ref-palette-neutral-87);           /* neutral 87 */
 
   /* --- Surface: 5 container levels (lowest → highest) --- */
-  --md-sys-color-surface-container-lowest:  #FFFFFF; /* neutral 100 */
-  --md-sys-color-surface-container-low:     #F7F2FA; /* neutral 96  */
-  --md-sys-color-surface-container:         #F3EDF7; /* neutral 94  */
-  --md-sys-color-surface-container-high:    #ECE6F0; /* neutral 92  */
-  --md-sys-color-surface-container-highest: #E6E0E9; /* neutral 90  */
+  --md-sys-color-surface-container-lowest:  var(--md-ref-palette-neutral-100); /* neutral 100 */
+  --md-sys-color-surface-container-low:     var(--md-ref-palette-neutral-96);  /* neutral 96  */
+  --md-sys-color-surface-container:         var(--md-ref-palette-neutral-94);  /* neutral 94  */
+  --md-sys-color-surface-container-high:    var(--md-ref-palette-neutral-92);  /* neutral 92  */
+  --md-sys-color-surface-container-highest: var(--md-ref-palette-neutral-90);  /* neutral 90  */
 
   /* --- Inverse (Snackbar, Slider value indicator,
          Outlined toggle button selected) --- */
-  --md-sys-color-inverse-surface:    #322F35; /* neutral 20  */
-  --md-sys-color-inverse-on-surface: #F5EFF7; /* neutral 95  */
-  --md-sys-color-inverse-primary:    #D0BCFF; /* primary 80  */
+  --md-sys-color-inverse-surface:    var(--md-ref-palette-neutral-20); /* neutral 20  */
+  --md-sys-color-inverse-on-surface: var(--md-ref-palette-neutral-95); /* neutral 95  */
+  --md-sys-color-inverse-primary:    var(--md-ref-palette-primary-80); /* primary 80  */
 
   /* --- Outline --- */
-  --md-sys-color-outline:         #79747E; /* neutral-variant 50 */
-  --md-sys-color-outline-variant: #CAC4D0; /* neutral-variant 80 */
+  --md-sys-color-outline:         var(--md-ref-palette-neutral-variant-50); /* neutral-variant 50 */
+  --md-sys-color-outline-variant: var(--md-ref-palette-neutral-variant-80); /* neutral-variant 80 */
 
   /* --- Other --- */
-  --md-sys-color-shadow: #000000;
-  --md-sys-color-scrim:  #000000;
+  --md-sys-color-shadow: var(--md-ref-palette-neutral-0);
+  --md-sys-color-scrim:  var(--md-ref-palette-neutral-0);
 }
 
 /* ------------------------------------------------------------

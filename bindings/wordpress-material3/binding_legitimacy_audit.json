@@ -125,6 +125,28 @@
       },
       "score": 1.0,
       "weight": 0.3
+    },
+    "E_token_layering": {
+      "findings": {
+        "products\\reference-implementations\\axismundi-lab\\stylesheets\\tokens.sys.light.css": {
+          "exists": true,
+          "sys_color_definitions": 36,
+          "md_ref_references": 36,
+          "direct_hex_count": 0,
+          "direct_hex": [],
+          "score": 1.0
+        },
+        "products\\reference-implementations\\axismundi-lab\\stylesheets\\tokens.sys.dark.css": {
+          "exists": true,
+          "sys_color_definitions": 72,
+          "md_ref_references": 72,
+          "direct_hex_count": 0,
+          "direct_hex": [],
+          "score": 1.0
+        }
+      },
+      "score": 1.0,
+      "weight": "hard gate"
     }
   },
   "overall_score": 1.0,

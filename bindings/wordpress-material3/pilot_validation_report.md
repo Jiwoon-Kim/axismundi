@@ -10,7 +10,7 @@
 - **Threshold (≥0.85)**: PASS ✓
 - **Verdict**: **PASS**
 
-## 4-Axis breakdown
+## 5-Axis breakdown
 
 | Axis | Description | Score | Weight |
 |---|---|---|---|
@@ -18,6 +18,7 @@
 | B — Theme | appearanceTools + lock-down flags | **1.000** | 0.20 |
 | C — CSS | tokens.css + base.css + block-styles.css | **1.000** | 0.20 |
 | D — Runtime | block style registrations ↔ binding rules | **1.000** | 0.30 |
+| E — Token layering | md-sys color tokens reference md-ref | **1.000** | hard gate |
 
 ## Axis A — Schema (theme.json ↔ M3 ontology)
 
@@ -79,6 +80,26 @@
 
 - `enqueues`: ['axismundi-tokens', 'axismundi-base', 'axismundi-block-styles']
 - `expected`: ['axismundi-tokens', 'axismundi-base', 'axismundi-block-styles']
+- `score`: 1.0
+
+## Axis E — Token layering (md-sys → md-ref)
+
+### products\reference-implementations\axismundi-lab\stylesheets\tokens.sys.light.css
+
+- `exists`: True
+- `sys_color_definitions`: 36
+- `md_ref_references`: 36
+- `direct_hex_count`: 0
+- `direct_hex`: []
+- `score`: 1.0
+
+### products\reference-implementations\axismundi-lab\stylesheets\tokens.sys.dark.css
+
+- `exists`: True
+- `sys_color_definitions`: 72
+- `md_ref_references`: 72
+- `direct_hex_count`: 0
+- `direct_hex`: []
 - `score`: 1.0
 
 ## Decision

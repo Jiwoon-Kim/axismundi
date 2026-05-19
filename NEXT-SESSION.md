@@ -1,7 +1,7 @@
 # NEXT-SESSION.md — Post-v3.6.1 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot and v3.6.1 Token Architecture
-> Refactor are closed.
+> Refactor are closed. v3.6.2 Phase 0 plan is drafted.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-20.
 
@@ -16,11 +16,12 @@
 4. CHANGELOG.md latest entry
 5. ROADMAP.md current tail
 6. BACKLOG.md #41 / #43 / #21
-7. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
-8. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
-9. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
-10. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-11. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+7. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
+8. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
+9. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
+10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
+11. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+12. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -42,10 +43,11 @@ Opus/Claude:
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
 v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
 v3.6.1   Token Architecture Refactor                ✓ CLOSED
+v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 0
 
 Next route:
-  v3.6.x Pilot feedback iteration or Wave 2 plan-first.
-  Do not begin implementation without a fresh cycle plan.
+  Review v3.6.2 Phase 0 plan.
+  Do not begin implementation until review returns GO.
 ```
 
 Public repository:
@@ -163,29 +165,30 @@ http://localhost:8888/?p=1
 file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
 ```
 
-## 5) Next Decision
+## 5) Next Action
 
-The next cycle should be chosen explicitly. Current likely routes:
+Review the v3.6.2 Phase 0 plan:
 
 ```txt
-Option A:
-  v3.6.x WP core block specimen wall / variation audit
-  Primary backlog: #43
-  Feeds: #41 full block bridge expansion
-
-Option B:
-  v3.6.x / v3.7.x full block bridge expansion
-  Primary backlog: #41
-  Requires #43 specimen evidence before broad mapping claims
-
-Option C:
-  Wave 2 plan-first
-  Navigation/Form split still likely per ROADMAP
-
-Option D:
-  BACKLOG #21 Interpreter Plugin strategy
-  Now unblocked by the v3.6.1 strict-mode token architecture lock
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
 ```
 
-Do not treat the Phase 3 visual QA findings as v3.6.1 regressions. They are
-routed evidence for the next Pilot feedback cycle.
+Expected review focus:
+
+```txt
+1. Evidence-cycle framing holds:
+   enumerate + classify + route, not implement bridge fixes.
+
+2. Tier 1 scope is correctly bounded.
+
+3. Fixture strategy is reproducible and WP-rendered.
+
+4. Validator scope stops at render/snapshot/classification, not expected M3
+   mapping assertions.
+
+5. Finding buckets include no-action / reset / bridge / semantic-decision /
+   backlog.
+```
+
+If review returns GO, Phase 1 may create the fixture/import/render-gate
+implementation.

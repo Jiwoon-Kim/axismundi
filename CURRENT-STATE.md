@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-20 (v3.6.1 closed)
+> **Last updated**: 2026-05-20 (v3.6.2 Phase 0 plan drafted)
 
 ---
 
@@ -32,15 +32,16 @@ v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
 v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
 v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
 v3.6.1   Token Architecture Refactor                                  ✓ DONE
+v3.6.2   WP Core Block Specimen Wall                                  ◐ PHASE 0
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.1 Token Architecture Refactor
-Current phase:     CLOSED
-Current state:     v3.6.1 closed; token architecture locks applied
-Next allowed work: v3.6.x Pilot feedback iteration or Wave 2 plan-first
+Current release:   v3.6.2 WP Core Block Specimen Wall
+Current phase:     Phase 0 plan drafted
+Current state:     Evidence-collection / classification cycle plan ready for review
+Next allowed work: Opus/Claude Phase 0 review, then Phase 1 if GO
 ```
 
 ## Matrix Snapshot
@@ -181,6 +182,27 @@ Computed QA:       npm run validate:computed PASS (light/dark matrix + click pat
 wp-env:            active during final verification
 Published mirror:  styleguide regenerated
 Generated tmp:     tmp/ ignored; validator script is tracked
+```
+
+## v3.6.2 Current Plan
+
+```txt
+Cycle:
+  WP Core Block Specimen Wall
+
+Mode:
+  Evidence collection / classification
+
+Primary backlog:
+  #43 WP core block specimen wall / full variation audit
+
+Feeds:
+  #41 full block bridge expansion
+
+Phase 0 plan:
+  docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
+
+Do not start implementation until Phase 0 review returns GO.
 ```
 
 ## Discipline

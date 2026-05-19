@@ -21,6 +21,35 @@ const tier1Families = [
   "core-columns",
 ];
 
+const specimenEntries = [
+  { id: "paragraph-default", family: "core-paragraph", selector: '[data-ax-specimen-id="core-paragraph"] p' },
+  { id: "heading-h1", family: "core-heading", selector: '[data-ax-specimen-id="core-heading"] h1' },
+  { id: "heading-h2", family: "core-heading", selector: '[data-ax-specimen-id="core-heading"] h2' },
+  { id: "heading-h3", family: "core-heading", selector: '[data-ax-specimen-id="core-heading"] h3' },
+  { id: "list-unordered", family: "core-list", selector: '[data-ax-specimen-id="core-list"] ul:not(.is-style-list-segmented)' },
+  { id: "list-ordered", family: "core-list", selector: '[data-ax-specimen-id="core-list"] ol' },
+  { id: "list-segmented", family: "core-list", selector: '[data-ax-specimen-variant="list-segmented"]' },
+  { id: "quote-default", family: "core-quote", selector: '[data-ax-specimen-id="core-quote"] blockquote' },
+  { id: "code-block", family: "core-code", selector: '[data-ax-specimen-id="core-code"] pre' },
+  { id: "table-default", family: "core-table", selector: '[data-ax-specimen-variant="table-default"]' },
+  { id: "table-stripes", family: "core-table", selector: '[data-ax-specimen-variant="table-stripes"]' },
+  { id: "table-footer", family: "core-table", selector: '[data-ax-specimen-variant="table-footer"] tfoot' },
+  { id: "button-fill", family: "core-buttons", selector: '[data-ax-specimen-variant="button-fill"] .wp-block-button__link' },
+  { id: "button-outline", family: "core-buttons", selector: '[data-ax-specimen-variant="button-outline"] .wp-block-button__link' },
+  { id: "button-tonal", family: "core-buttons", selector: '[data-ax-specimen-variant="button-tonal"] .wp-block-button__link' },
+  { id: "button-elevated", family: "core-buttons", selector: '[data-ax-specimen-variant="button-elevated"] .wp-block-button__link' },
+  { id: "button-text", family: "core-buttons", selector: '[data-ax-specimen-variant="button-text"] .wp-block-button__link' },
+  { id: "search-default", family: "core-search", selector: '[data-ax-specimen-id="core-search"] .wp-block-search:not(.is-style-filled-search)' },
+  { id: "search-filled", family: "core-search", selector: '[data-ax-specimen-id="core-search"] .wp-block-search.is-style-filled-search' },
+  { id: "separator-default", family: "core-separator", selector: '[data-ax-specimen-variant="separator-default"]' },
+  { id: "separator-inset", family: "core-separator", selector: '[data-ax-specimen-variant="separator-inset"]' },
+  { id: "separator-middle-inset", family: "core-separator", selector: '[data-ax-specimen-variant="separator-middle-inset"]' },
+  { id: "group-card-filled", family: "core-group", selector: '[data-ax-specimen-variant="group-card-filled"]' },
+  { id: "group-card-elevated", family: "core-group", selector: '[data-ax-specimen-variant="group-card-elevated"]' },
+  { id: "group-card-outlined", family: "core-group", selector: '[data-ax-specimen-variant="group-card-outlined"]' },
+  { id: "columns-default", family: "core-columns", selector: '[data-ax-specimen-id="core-columns"] .wp-block-columns' },
+];
+
 const snapshotProps = [
   "display",
   "font-family",
@@ -37,6 +66,12 @@ const snapshotProps = [
   "box-shadow",
   "text-decoration-line",
   "user-select",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "margin-top",
+  "margin-bottom",
 ];
 
 function assert(findings, condition, label, details) {
@@ -106,6 +141,18 @@ async function run() {
     }))
   );
 
+  const entries = {};
+  for (const entry of specimenEntries) {
+    const count = await page.locator(entry.selector).count();
+    entries[entry.id] = {
+      family: entry.family,
+      selector: entry.selector,
+      count,
+      snapshot: count > 0 ? await snapshotElement(page, entry.selector) : null,
+    };
+    assert(findings, count >= 1, `${entry.id} entry exists`, { selector: entry.selector, count });
+  }
+
   assert(findings, status === 200, "specimen wall HTTP 200", { status, url });
   assert(findings, consoleErrors.length === 0, "console/page errors are zero", { consoleErrors });
   assert(findings, overflowX === 0, "horizontal overflow is zero", { overflowX });
@@ -124,6 +171,7 @@ async function run() {
       families,
     },
     variants,
+    entries,
     findings,
   };
 

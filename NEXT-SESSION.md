@@ -1,7 +1,7 @@
 # NEXT-SESSION.md — Post-v3.6.1 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot and v3.6.1 Token Architecture
-> Refactor are closed. v3.6.2 Phase 1 fixture + render gate is complete.
+> Refactor are closed. v3.6.2 Phase 2 computed snapshot + classification is complete.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-20.
 
@@ -18,11 +18,12 @@
 6. BACKLOG.md #41 / #43 / #21
 7. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
 8. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
-9. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
-10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
-11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
-12. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-13. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+9. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
+11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
+12. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
+13. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+14. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -44,10 +45,10 @@ Opus/Claude:
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
 v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
 v3.6.1   Token Architecture Refactor                ✓ CLOSED
-v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 1
+v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 2
 
 Next route:
-  Phase 2 computed snapshot + 5-bucket classification.
+  Phase 3 visual QA.
   Do not patch bridge/reset CSS inside v3.6.2 unless user promotes a finding.
 ```
 
@@ -168,21 +169,22 @@ file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
 
 ## 5) Next Action
 
-Start Phase 2 from the stable Phase 1 wall:
+Start Phase 3 visual QA from the stable specimen wall:
 
 ```txt
 http://localhost:8888/?pagename=axismundi-core-block-specimen-wall
 ```
 
-Phase 2 focus:
+Phase 3 focus:
 
 ```txt
-1. Capture per-block computed style snapshots from the specimen wall.
+1. Review the full specimen wall in light and dark.
 
-2. Create a Tier 1 block x variation classification table.
+2. Confirm the Phase 2 classifications match visible surfaces.
 
-3. Assign every entry exactly one bucket:
-   no-action / reset / bridge / semantic-decision / backlog.
+3. Pay special attention to:
+   table-footer reset finding
+   button semantic-decision finding
 
-4. Do not assert expected M3 mapping values; that remains #41 territory.
+4. Do not patch findings unless the user explicitly promotes one to blocker.
 ```

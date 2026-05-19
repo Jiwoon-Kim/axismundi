@@ -70,6 +70,21 @@ tmp/phase1-specimen-wall/specimen-wall-render-gate.json
 tmp/phase1-specimen-wall/specimen-wall-390.png
 ```
 
+## Implementation Observations
+
+```txt
+wp-env permalink behavior:
+  http://localhost:8888/axismundi-core-block-specimen-wall/
+  can fall back to the front template in the current local wp-env state.
+
+Stable audit URL:
+  http://localhost:8888/?pagename=axismundi-core-block-specimen-wall
+
+Rendered anchor behavior:
+  WordPress preserves data-ax-specimen-id attributes in the rendered page, so
+  the wall can use committed fixture anchors as Playwright targets.
+```
+
 ## Validation
 
 ```txt

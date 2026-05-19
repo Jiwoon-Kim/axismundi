@@ -1,5 +1,73 @@
 # CHANGELOG
 
+## v3.6.1 — Token Architecture Refactor (2026-05-20)
+
+Cross-cutting lab + Pilot token architecture release. This closes BACKLOG #42
+and the deferred BACKLOG #20 theme-only color policy by making the M3 token
+graph explicit, downstream-only, and validator-backed.
+
+### Added — Token layers
+
+- Split the former token entry point into explicit layers:
+  `tokens.ref.css`, `tokens.sys.light.css`, `tokens.sys.dark.css`, and
+  `tokens.comp.css`.
+- Kept `tokens.css` as an empty compatibility shim with no residual token
+  definitions and no import chain.
+- Loaded tokens in the validated order:
+  `ref -> sys.light -> comp -> sys.dark -> wp-preset -> wp-custom -> shim`.
+- Updated the lab styleguide, Pilot asset bridge, and generated mirror to carry
+  the new layer files.
+
+### Added — WordPress projections
+
+- Added `wp-preset.bridge.css` for editor-facing semantic color projections.
+- Added `wp-custom.bridge.css` for state-layer, shape, motion, elevation, and
+  component-default projections.
+- Added `theme.json settings.custom.axismundi.*` with 26 downstream-only
+  `var(...)` leaves.
+- Preserved `settings.color.custom = false` as the theme-only default while
+  keeping WordPress registered values connected to M3 tokens.
+
+### Added — Dark mode infrastructure
+
+- Added Pilot Light / Dark / Auto controls and runtime bridge.
+- Implemented dark mode as sys-layer remapping only: `md-ref` primitives remain
+  unchanged while `md-sys` roles swap their ref-tone mappings.
+- Extended computed validation to cover forced light/dark front surfaces,
+  forced light/dark styleguide block surfaces, and the real Pilot click path.
+
+### Added — Validator locks
+
+- Added Axis E: every `--md-sys-color-*` must resolve through
+  `var(--md-ref-palette-*)`; literal md-sys color values fail validation.
+- Added Axis F: WordPress bridge entries must be single-var downstream
+  projections with existing upstream token references.
+- Added Axis G: `theme.json settings.custom.axismundi.*` must use downstream
+  `var(--comp-*)`, `var(--md-sys-*)`, or `var(--md-ref-*)` values.
+- Locked the two architectural lessons in AGENTS / CLAUDE, PRE-ENTRY,
+  FEEDBACK-AND-STRATEGY, and NEXT-SESSION:
+  `wp-custom` is never a source, and `md-sys` colors map to `md-ref`.
+
+### Routed
+
+- Closed BACKLOG #20.
+- Closed BACKLOG #42.
+- Routed Phase 3 visual QA findings to BACKLOG #43 / #41:
+  table footer native border strength and the core/button semantic boundary
+  between `<button>` styleguide specimens and WordPress link-based core/button
+  markup.
+- Deferred Axis H bridge/theme correspondence and auto-mode media emulation as
+  non-blocking future candidates.
+
+### Verified
+
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; validator overall 1.000 PASS with Axis E/F/G at 1.000.
+- `npm run validate:computed`: PASS; light/dark matrix and Pilot click path
+  verified.
+- Phase 3 visual QA: PASS with two routed non-blocking findings.
+
 ## v3.6.0 — Ontology Theme Pilot v0 (2026-05-19)
 
 First real WordPress block theme Pilot. This is a theme-only proof, not the

@@ -2,7 +2,7 @@
 
 > **Audience**: Claude (Claude Code, Anthropic). Read this first before any work in this repo.
 > **Sibling file**: `AGENTS.md` (Codex/OpenAI executor rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-19 (v3.6.0 Phase 5 — Pilot close lessons)
+> **Last updated**: 2026-05-20 (v3.6.1 Phase 5 — token architecture locks)
 
 ---
 
@@ -55,6 +55,7 @@ Forbidden without explicit user authorization:
 9. **Portal / overlay smoke.** Shell or runtime-trigger changes require trigger + runtime + host + open/close contract verification, with console/page errors checked.
 10. **WordPress block bridge is reverse-direction work.** For block themes, start from Markdown / HTML defaults and WordPress core block output, reset core defaults, then map to M3. Do not assume Axismundi component selectors are enough. Computed front-end/editor values are the acceptance gate; selector presence is not proof.
 11. **Generated Pilot assets must be refreshed.** After source CSS edits that feed `axismundi-pilot`, rerun the asset bridge and use a fresh browser context or hard reload. Browser cache and copied-asset drift can hide or fake a WordPress/M3 mapping result.
+12. **Token architecture is downstream-only.** `settings.custom.axismundi.*` leaves must be `var(--comp-*)`, `var(--md-sys-*)`, or `var(--md-ref-*)`; literal hex/rgb/px/number values are forbidden there. `--md-sys-color-*` entries must map to `var(--md-ref-palette-*)`; literal hex/rgb/hsl values are forbidden in the md-sys color layer. Axis G and Axis E in `tools/validators/validate_theme_pilot.py` are the permanent guards.
 
 ---
 

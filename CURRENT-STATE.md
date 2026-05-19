@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-19 (v3.6.1 Phase 3 visual QA complete)
+> **Last updated**: 2026-05-20 (v3.6.1 closed)
 
 ---
 
@@ -31,16 +31,16 @@ v3.5.16  Styleguide modernization + module workspace framing          ✓ DONE
 v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
 v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
 v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
-v3.6.1   Token Architecture Refactor                                  ◐ IN PROGRESS
+v3.6.1   Token Architecture Refactor                                  ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
 Current release:   v3.6.1 Token Architecture Refactor
-Current phase:     Phase 3 visual QA complete
-Current state:     Phase 1A-1F complete; Phase 3 visual QA PASS with one routed P3 finding
-Next allowed work: Phase 5 close plan / implementation
+Current phase:     CLOSED
+Current state:     v3.6.1 closed; token architecture locks applied
+Next allowed work: v3.6.x Pilot feedback iteration or Wave 2 plan-first
 ```
 
 ## Matrix Snapshot
@@ -128,10 +128,10 @@ Routed:
   #43 WP core specimen wall -> v3.6.x
 ```
 
-## v3.6.1 Identified Follow-on Cycle
+## v3.6.1 Close Outcome
 
 ```txt
-v3.6.1   Token Architecture Refactor                   ◐ IN PROGRESS
+v3.6.1   Token Architecture Refactor                   ✓ DONE
 
 Scope (per PILOT-LESSONS-AND-TOKEN-ARCHITECTURE §5.1):
   1. tokens.css split (ref / sys.light / sys.dark / comp)
@@ -152,12 +152,15 @@ Phase 1 implementation complete:
 
 Phase 3 visual QA complete:
   - Light/dark visual surfaces PASS
-  - One non-blocking core table footer finding routed to BACKLOG #43
+  - Two non-blocking core block findings routed to BACKLOG #43 / #41
   - Evidence doc:
     docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
 
-This is bucket A (architecture-level) cycle, larger than typical Wave 1 cycle.
-plan-first must include User Request Log with verbatim insight quotes.
+Phase 5 complete:
+  - CHANGELOG v3.6.1 entry
+  - ROADMAP v3.6.1 DONE + v3.6.x/v3.7.x NEXT
+  - BACKLOG #42 closed
+  - Lesson locks applied to AGENTS / CLAUDE / PRE-ENTRY / FEEDBACK / NEXT-SESSION
 ```
 
 Repository:

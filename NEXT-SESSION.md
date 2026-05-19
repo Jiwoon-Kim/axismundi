@@ -1,8 +1,9 @@
-# NEXT-SESSION.md — v3.6.1 Token Architecture Refactor Handoff
+# NEXT-SESSION.md — Post-v3.6.1 Handoff
 
-> **Status**: v3.6.0 Ontology Theme Pilot is closed. v3.6.1 Phase 3 visual QA is complete.
+> **Status**: v3.6.0 Ontology Theme Pilot and v3.6.1 Token Architecture
+> Refactor are closed.
 > **Use**: read at the start of the next Codex/Claude session.
-> **Last updated**: 2026-05-19.
+> **Last updated**: 2026-05-20.
 
 ---
 
@@ -12,27 +13,27 @@
 1. AGENTS.md or CLAUDE.md
 2. CURRENT-STATE.md
 3. PROJECT-CONTEXT.md
-4. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md  ← HIGH PRIORITY
-   (authoritative architectural input for v3.6.1)
-5. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-5-CLOSE.md
-6. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
-7. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-8. BACKLOG.md #20 / #21 / #41 / #42 / #43
-9. docs/v3.5.0/MODULE-STATUS-MATRIX.md
+4. CHANGELOG.md latest entry
+5. ROADMAP.md current tail
+6. BACKLOG.md #41 / #43 / #21
+7. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
+8. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
+9. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
+10. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+11. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
-Active v3.6.1 plan / relay note:
+Repo docs remain authority. Chat is relay, not source of truth.
+
+Default relay ownership:
 
 ```txt
-10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-0-PLAN.md
-11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-PLAN.md
-12. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
-13. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
+Codex:
+  implementation files and phase plan/report docs
 
-Repo docs remain authority. Chat is relay, not source of truth.
-Codex writes implementation + phase plan/report docs.
-Opus/Claude writes review findings only, preferably via user relay or
-docs/v3.6.1/*-review.md if repo-based handoff is requested.
+Opus/Claude:
+  review findings only, preferably as user-relayed text or
+  docs/<cycle>/*-review.md if repo-based handoff is requested
 ```
 
 ## 1) Current State
@@ -40,9 +41,11 @@ docs/v3.6.1/*-review.md if repo-based handoff is requested.
 ```txt
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
 v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
-v3.6.1   Token Architecture Refactor                ◐ IN PROGRESS
-Phase    Phase 3 visual QA complete
-Status   Phase 1A-1F complete; Phase 3 visual QA PASS; next is Phase 5 close
+v3.6.1   Token Architecture Refactor                ✓ CLOSED
+
+Next route:
+  v3.6.x Pilot feedback iteration or Wave 2 plan-first.
+  Do not begin implementation without a fresh cycle plan.
 ```
 
 Public repository:
@@ -58,92 +61,78 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.0 Pilot Close Summary
+## 2) v3.6.1 Close Summary
 
-Completed:
+Implemented:
 
 ```txt
-Phase 0    Plan + report
-Phase 1    Implementation plan
-Phase 2A   Theme scaffold + wp-env activation
-Phase 2B   Asset bridge generator
-Phase 2C   Templates + Korean prose sample
-Phase 2D   Patterns + block styles
-Phase 2E   WP block -> M3 reverse mapping bridge
-Phase 3    automated smoke + computed-style audit + visual QA follow-up
-Phase 5    mechanical close
+Token layers:
+  tokens.ref.css
+  tokens.sys.light.css
+  tokens.sys.dark.css
+  tokens.comp.css
+  tokens.css empty compatibility shim
+
+WordPress projections:
+  wp-preset.bridge.css
+  wp-custom.bridge.css
+  theme.json settings.custom.axismundi.* downstream var() leaves
+
+Dark mode:
+  Pilot Light / Dark / Auto controls
+  sys-layer remapping only; md-ref unchanged
+
+Validation:
+  Axis E md-sys -> md-ref lock
+  Axis F bridge downstream lock
+  Axis G theme.json custom downstream lock
+  computed light/dark matrix + real click path
 ```
 
-Current architectural lock:
+Closed:
 
 ```txt
-Pilot directory: products/reference-implementations/axismundi-pilot/
-Theme slug:      axismundi-pilot
-Display name:    Axismundi Pilot
-wp-env URL:      http://localhost:8888/
-
-Scope:
-  Wave 1 minus Carousel
-  core blocks only
-  no custom block registration
-  no Carousel plugin/block/runtime
-  no HCT Interpreter Plugin
-
-Bridge:
-  WordPress block selectors map back to M3 contracts.
-  Do not force .prose onto core/post-content.
+BACKLOG #20 — settings.color.custom=false theme-only color policy
+BACKLOG #42 — Token Architecture Refactor
 ```
 
-## 3) Latest Technical State
-
-Phase 2E added:
+Routed:
 
 ```txt
-products/reference-implementations/axismundi-pilot/bridge/pilot-block-bridge.css
-products/reference-implementations/axismundi-pilot/bridge/pilot-block-bridge.js
-products/reference-implementations/axismundi-pilot/assets/styles/pilot-block-bridge.css
-products/reference-implementations/axismundi-pilot/assets/scripts/pilot-block-bridge.js
-tools/validators/validate_pilot_computed_styles.js
+BACKLOG #43 / #41:
+  Phase 3 visual QA table footer native border finding
+  Phase 3 visual QA core/button semantic boundary finding
+
+Future candidates:
+  Axis H bridge/theme correspondence validator
+  Auto-mode media emulation matrix
 ```
 
-Mapped/fixed in this session:
+## 3) Lesson Locks
+
+These are now close-time rules, not suggestions:
 
 ```txt
-Button:
-  native WP fill      -> M3 Filled
-  native WP outline   -> M3 Outlined
-  custom tonal        -> M3 Tonal
-  custom elevated     -> M3 Elevated
-  custom text         -> M3 Text
-  ripple + finite-radius morph verified on front-end links
+Lock 1 — wp-custom downstream-only
 
-Table:
-  default table cells use M3 horizontal separators
-  stripes odd rows/cells reset to transparent
-  stripes even rows/cells use surface-container-high
+Every settings.custom.axismundi.* entry MUST be defined as:
+  var(--comp-*) or var(--md-sys-*) or var(--md-ref-*)
 
-Prose:
-  core/post-content remains block-first
-  code / quote / list / separator / table are mapped by block selectors
+Literal hex / rgb / px / number values are forbidden in this namespace.
+Rationale: wp-custom is a downstream projection of M3, never a source.
+Validator: tools/validators/validate_theme_pilot.py Axis G.
 ```
 
-Computed-style audit:
-
 ```txt
-Command: npm run validate:computed
-Status:  PASS
+Lock 2 — md-sys color maps to md-ref
 
-Checks:
-  pattern QA page
-  single prose page
-  front page
-  styleguide blocks table
-  button computed styles
-  search computed styles
-  prose computed styles
-  table default/stripes computed styles
-  horizontal overflow
-  console/page errors
+Every --md-sys-color-* entry MUST be defined as:
+  var(--md-ref-palette-*)
+
+Literal hex / rgb / hsl values are forbidden in the md-sys color layer.
+Rationale: md-sys is the runtime semantic layer; md-ref is the primitive source.
+Dark mode swaps sys -> ref mappings only.
+Validator: tools/validators/validate_theme_pilot.py Axis E.
 ```
 
 ## 4) Resume Checklist
@@ -164,7 +153,8 @@ If wp-env is not running:
 wp-env start
 ```
 
-Then open/check:
+Then open/check relevant Pilot/styleguide surfaces for the next cycle. For
+Pilot feedback work, include:
 
 ```txt
 http://localhost:8888/
@@ -175,90 +165,27 @@ file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
 
 ## 5) Next Decision
 
-Start v3.6.1 Phase 0 plan-first:
+The next cycle should be chosen explicitly. Current likely routes:
 
 ```txt
-Cycle: Token Architecture Refactor (cross-cutting: lab + Pilot)
-Input: docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
-       (authoritative, do not invent — verbatim quote in User Request Log)
-Scope: per PILOT-LESSONS §5.1 (9 items)
-Lane assignment unchanged: Codex implementation / Opus ontology review
+Option A:
+  v3.6.x WP core block specimen wall / variation audit
+  Primary backlog: #43
+  Feeds: #41 full block bridge expansion
+
+Option B:
+  v3.6.x / v3.7.x full block bridge expansion
+  Primary backlog: #41
+  Requires #43 specimen evidence before broad mapping claims
+
+Option C:
+  Wave 2 plan-first
+  Navigation/Form split still likely per ROADMAP
+
+Option D:
+  BACKLOG #21 Interpreter Plugin strategy
+  Now unblocked by the v3.6.1 strict-mode token architecture lock
 ```
 
-Do not start by editing tokens. First produce a Phase 0 plan with a User Request
-Log that quotes the insight directly:
-
-```txt
-□ md-ref is primitive source
-□ md-sys is runtime semantic source
-□ wp-preset is editor-facing projection
-□ wp-custom is theme-managed internal bridge
-□ dark mode swaps sys mappings, not ref values
-□ lab + Pilot are both affected
-```
-
-## 6) Important Lessons
-
-```txt
-Smoke tests were insufficient for this Pilot.
-Selector presence was insufficient.
-Computed style is now a Phase 3 gate for WP block -> M3 mapping.
-
-User had to catch several visual defects manually:
-  Button native fill/outline mapping
-  outlined Button border conflict
-  table default/stripes leakage
-
-Future agents must not call this done without computed values.
-```
-
-Architectural lessons captured during v3.6.0 close:
-
-```txt
-Reference: docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md (622 lines)
-
-Lesson 1 — Build direction reversal:
-  Design system construction is FORWARD (M3 spec → component → mapping).
-  Theme integration is REVERSE (CMS native surface → M3 overlay).
-  Forward direction CANNOT be reused as-is for reverse case.
-  axismundi-lab = forward, axismundi-pilot = reverse.
-
-Lesson 2 — WP core style reset first:
-  WordPress core blocks carry non-neutral defaults
-  (fill / outline / stripes / table borders / inline patterns).
-  Reset is explicit step before M3 mapping.
-  Five-step order: inventory → reset → M3 mapping → interaction → computed audit.
-
-Lesson 3 — Token layering architecture:
-  md-ref (primitive) → md-sys (semantic) → wp-preset + wp-custom → ax-comp
-  Dark mode = sys layer swap only (ref unchanged, preset/custom follow).
-  All bridges M3 → WP (Strict M3 mode).
-  wp-preset = editor-facing projection.
-  wp-custom = theme-managed internal bridge (NOT in picker).
-  md-sys is source of truth, NOT theme.json hex values.
-
-These lessons drive v3.6.1 Token Architecture Refactor scope.
-plan-first must include User Request Log with verbatim quotes from
-PILOT-LESSONS doc §1.4, §3.5, §3.6. Do not abstract these into lane labels.
-```
-
-## 7) v3.6.1 Preview — Token Architecture Refactor
-
-Next cycle entry:
-
-```txt
-Cycle name:  v3.6.1 Token Architecture Refactor
-Bucket:      A — Architecture / Constitution-level
-Cross-cutting: axismundi-lab + axismundi-pilot 양쪽 영향
-Input:       docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
-Scope:       per §5.1 (9 items)
-
-Phase 0 plan-first must:
-  □ User Request Log at top with verbatim insight quotes
-  □ Lock token layer 5-model (ref / sys.light / sys.dark / wp-preset / wp-custom / ax-comp)
-  □ Lock bridge direction (M3 → WP only)
-  □ Lock dark mode mechanism (data-theme + sys layer swap)
-  □ Lock cross-cutting scope (lab tokens.css + Pilot 양쪽)
-  □ Phase 3 acceptance criteria: light + dark 양쪽 visual QA
-  □ Korean prose render in both modes
-```
+Do not treat the Phase 3 visual QA findings as v3.6.1 regressions. They are
+routed evidence for the next Pilot feedback cycle.

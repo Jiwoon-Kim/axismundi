@@ -1013,8 +1013,25 @@ use a fresh browser context before visual QA.
 
 Token architecture also gained a close-time lock: `md-ref` holds primitives,
 `md-sys` holds semantic roles, `wp-preset` / `wp-custom` are WordPress-facing
-projections, and component CSS consumes `md-sys` / `ax-comp`. Dark mode belongs
+projections, and component CSS consumes `md-sys` / `comp`. Dark mode belongs
 to the sys layer, not to ad hoc `theme.json` hex rewriting.
+
+v3.6.1 tightened that into two permanent validator-backed locks:
+
+```txt
+1. Every settings.custom.axismundi.* entry MUST be defined as:
+     var(--comp-*) or var(--md-sys-*) or var(--md-ref-*)
+   Literal hex / rgb / px / number values are forbidden in this namespace.
+   wp-custom is a downstream projection of M3, never a source.
+   Guard: tools/validators/validate_theme_pilot.py Axis G.
+
+2. Every --md-sys-color-* entry MUST be defined as:
+     var(--md-ref-palette-*)
+   Literal hex / rgb / hsl values are forbidden in the md-sys color layer.
+   md-sys is the runtime semantic layer; md-ref is the primitive source.
+   Dark mode swaps sys -> ref mappings only.
+   Guard: tools/validators/validate_theme_pilot.py Axis E.
+```
 
 Canonical details:
 

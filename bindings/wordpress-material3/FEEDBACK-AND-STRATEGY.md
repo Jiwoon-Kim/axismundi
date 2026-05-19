@@ -149,6 +149,23 @@ files exist, `settings.custom.axismundi.*` is downstream-only, and
 `npm run validate:computed` proves light/dark sys-layer swaps through the real
 Pilot theme switcher.
 
+Close-time locks:
+
+```txt
+1. Every settings.custom.axismundi.* entry MUST be defined as:
+     var(--comp-*) or var(--md-sys-*) or var(--md-ref-*)
+   Literal hex / rgb / px / number values are forbidden in this namespace.
+   Rationale: wp-custom is a downstream projection of M3, never a source.
+   Validator: tools/validators/validate_theme_pilot.py Axis G.
+
+2. Every --md-sys-color-* entry MUST be defined as:
+     var(--md-ref-palette-*)
+   Literal hex / rgb / hsl values are forbidden in the md-sys color layer.
+   Rationale: md-sys is the runtime semantic layer; md-ref is the primitive
+   source. Dark mode swaps sys -> ref mappings only.
+   Validator: tools/validators/validate_theme_pilot.py Axis E.
+```
+
 ## §3 — Interaction vs Component module taxonomy
 
 The taxonomy itself lives in `lab/modules/README.md` (canonical home). This section records its rationale, for cross-reference from binding-strategy documents:

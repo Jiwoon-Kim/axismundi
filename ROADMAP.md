@@ -350,8 +350,12 @@ release planning cycle.
   - Locked the Pilot narrative as "Pilot v0 — scaffold + Wave 1 reverse mapping + block bridge MVP"; not a complete distributable theme.
   - Confirmed Carousel remains plugin territory (BACKLOG #38) and custom blocks remain out of scope.
   - Added computed-style QA and documented the reset-first reverse mapping lesson for WordPress core blocks.
-- **v3.6.1 (NEXT)** — **Token Architecture Refactor**. Cross-cutting lab + Pilot cycle that splits/refines the token layers (`md-ref`, `md-sys.light`, `md-sys.dark`, `wp-preset.bridge`, `wp-custom.bridge`, `ax-comp`), adds dark-mode infrastructure, and finalizes BACKLOG #20's theme-only color policy.
-- **v3.6.x — v3.7.x** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Includes BACKLOG #41 full block bridge expansion and BACKLOG #43 WP core block specimen wall / variation audit before broad block mapping claims. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
+- **v3.6.1** ← **Token Architecture Refactor** ✓ DONE (2026-05-20)
+  - Split/refined the token layers (`md-ref`, `md-sys.light`, `md-sys.dark`, `wp-preset.bridge`, `wp-custom.bridge`, `comp`) across lab + Pilot.
+  - Added Pilot dark-mode infrastructure as sys-layer remapping only.
+  - Closed BACKLOG #20 and BACKLOG #42 with validator-backed Axis E/F/G locks.
+  - Phase 3 visual QA passed with table-footer and core/button semantic findings routed to BACKLOG #43 / #41.
+- **v3.6.x — v3.7.x (NEXT)** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Includes BACKLOG #41 full block bridge expansion and BACKLOG #43 WP core block specimen wall / variation audit before broad block mapping claims. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
 - **v3.7.x → v1.0 RC** — 33-component audit coverage substantially complete (DONE + RECORD = 30+ out of 34 TOC components); pilot theme stable; M3 Interpreter Plugin (BACKLOG #21) authoring in parallel as plugin-tier artifact.
 - v3.4.x — **Promotion Criteria / Public Surface Prep** — `lab/docs/PROMOTION-CRITERIA.md` author the rules for "what gets promoted from lab to baseline styleguide" before v3.5.0 trims the styleguide. Also: publish-doc "generated artifact, not authoring surface" note, link `typography-axis.html` from Typography section. No interaction-module work. (Was tagged v3.4.8 — bumped because Date/Time and Benchmark Surface Cleanup took those slots.)
 - v3.4.x — **FAB / Extended FAB / FAB menu conversion** — 35 SVGs at 56px context. Independent visual rhythm pass; conversion-shape variants A/B already documented in v3.4.4 audit. (Originally tagged v3.4.6, then v3.4.7, then v3.4.9 — now bumped to v3.4.x to make room for Date/Time extraction and benchmark cleanup.)

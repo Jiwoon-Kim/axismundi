@@ -1723,16 +1723,16 @@ docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
 ### 42. Token Architecture Refactor
 
 - **Bucket**: A — Architecture / token system
-- **Status**: Open
+- **Status**: **Resolved / closed at v3.6.1.**
 - **Priority**: High post-Pilot
-- **Target**: v3.6.1
+- **Target**: v3.6.1 — **DONE**
 - **Source**: v3.6.0 Pilot Phase 3 architectural lessons and token-layering consultation
 
 **Scope**:
 
 - Split the current token architecture into explicit layers:
   `md-ref`, `md-sys.light`, `md-sys.dark`, `wp-preset.bridge`,
-  `wp-custom.bridge`, and `ax-comp` consumption.
+  `wp-custom.bridge`, and `comp` consumption.
 - Keep `md-ref` as primitive source and `md-sys` as runtime semantic source.
   Do not let `theme.json` hex values become the real design-system source.
 - Project M3 sys tokens into WordPress preset variables for editor-facing
@@ -1755,10 +1755,27 @@ docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
 
 ```txt
 docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
+docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
 bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md
 BACKLOG #20
 BACKLOG #21
 ```
+
+**v3.6.1 close evidence (2026-05-20)**:
+
+- Token layers split across lab, Pilot assets, and published styleguide mirror:
+  `tokens.ref.css`, `tokens.sys.light.css`, `tokens.sys.dark.css`,
+  `tokens.comp.css`, plus empty `tokens.css` shim.
+- `wp-preset.bridge.css` and `wp-custom.bridge.css` added as downstream
+  WordPress projections.
+- `theme.json settings.custom.axismundi.*` contains 26 downstream-only
+  `var(...)` leaves.
+- Dark mode implemented as sys-layer swap; Pilot Light / Dark / Auto runtime
+  validates through the real click path.
+- Axis E/F/G permanently guard md-sys -> md-ref, bridge downstream refs, and
+  theme.json custom downstream refs.
+- BACKLOG #20 closed as part of this cycle.
 
 ### 43. WP core block specimen wall / full variation audit
 

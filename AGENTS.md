@@ -2,7 +2,7 @@
 
 > **Audience**: OpenAI Codex (or any coding-agent that uses `AGENTS.md` as repo-level guidance). Read this first before any edit.
 > **Sibling file**: `CLAUDE.md` (Anthropic Claude Code rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-19 (v3.6.1 Phase 0 — relay discipline)
+> **Last updated**: 2026-05-20 (v3.6.1 Phase 5 — token architecture locks)
 
 ---
 
@@ -116,6 +116,26 @@ When a Pilot consumes generated or copied assets, regenerate the asset bridge
 after source CSS edits and use a fresh browser context or hard reload during
 visual QA. Browser cache and source/consumer drift can make a fixed source look
 stale on the front end.
+
+### Token architecture locks
+
+Strict M3 token flow is downstream-only:
+
+```txt
+md-ref -> md-sys -> wp-preset / wp-custom / comp -> consumers
+```
+
+For WordPress theme work, `settings.custom.axismundi.*` is a downstream
+projection. Every leaf must be `var(--comp-*)`, `var(--md-sys-*)`, or
+`var(--md-ref-*)`. Literal hex, rgb, px, and number values are forbidden in
+that namespace. The permanent guard is
+`tools/validators/validate_theme_pilot.py` Axis G.
+
+For color roles, every `--md-sys-color-*` entry must be defined as
+`var(--md-ref-palette-*)`. Literal hex, rgb, and hsl values are forbidden in the
+md-sys color layer. Dark mode swaps sys -> ref mappings only; it does not
+rewrite ref primitives or inject theme.json color literals. The permanent guard
+is `tools/validators/validate_theme_pilot.py` Axis E.
 
 ---
 

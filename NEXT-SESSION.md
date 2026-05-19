@@ -1,7 +1,7 @@
 # NEXT-SESSION.md — Post-v3.6.1 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot and v3.6.1 Token Architecture
-> Refactor are closed. v3.6.2 Phase 0 plan is drafted.
+> Refactor are closed. v3.6.2 Phase 1 fixture + render gate is complete.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-20.
 
@@ -17,11 +17,12 @@
 5. ROADMAP.md current tail
 6. BACKLOG.md #41 / #43 / #21
 7. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
-8. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
-9. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
-10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
-11. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-12. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+8. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
+9. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
+10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
+11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
+12. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+13. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -43,11 +44,11 @@ Opus/Claude:
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
 v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
 v3.6.1   Token Architecture Refactor                ✓ CLOSED
-v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 0
+v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 1
 
 Next route:
-  Review v3.6.2 Phase 0 plan.
-  Do not begin implementation until review returns GO.
+  Phase 2 computed snapshot + 5-bucket classification.
+  Do not patch bridge/reset CSS inside v3.6.2 unless user promotes a finding.
 ```
 
 Public repository:
@@ -167,28 +168,21 @@ file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
 
 ## 5) Next Action
 
-Review the v3.6.2 Phase 0 plan:
+Start Phase 2 from the stable Phase 1 wall:
 
 ```txt
-docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
+http://localhost:8888/?pagename=axismundi-core-block-specimen-wall
 ```
 
-Expected review focus:
+Phase 2 focus:
 
 ```txt
-1. Evidence-cycle framing holds:
-   enumerate + classify + route, not implement bridge fixes.
+1. Capture per-block computed style snapshots from the specimen wall.
 
-2. Tier 1 scope is correctly bounded.
+2. Create a Tier 1 block x variation classification table.
 
-3. Fixture strategy is reproducible and WP-rendered.
+3. Assign every entry exactly one bucket:
+   no-action / reset / bridge / semantic-decision / backlog.
 
-4. Validator scope stops at render/snapshot/classification, not expected M3
-   mapping assertions.
-
-5. Finding buckets include no-action / reset / bridge / semantic-decision /
-   backlog.
+4. Do not assert expected M3 mapping values; that remains #41 territory.
 ```
-
-If review returns GO, Phase 1 may create the fixture/import/render-gate
-implementation.

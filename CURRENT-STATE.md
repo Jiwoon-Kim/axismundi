@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-20 (v3.6.2 Phase 0 plan drafted)
+> **Last updated**: 2026-05-20 (v3.6.2 Phase 1 complete)
 
 ---
 
@@ -32,16 +32,16 @@ v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
 v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
 v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
 v3.6.1   Token Architecture Refactor                                  ✓ DONE
-v3.6.2   WP Core Block Specimen Wall                                  ◐ PHASE 0
+v3.6.2   WP Core Block Specimen Wall                                  ◐ PHASE 1
 ```
 
 ## Current Phase
 
 ```txt
 Current release:   v3.6.2 WP Core Block Specimen Wall
-Current phase:     Phase 0 plan drafted
-Current state:     Evidence-collection / classification cycle plan ready for review
-Next allowed work: Opus/Claude Phase 0 review, then Phase 1 if GO
+Current phase:     Phase 1 fixture + render gate complete
+Current state:     Tier 1 specimen wall renders through WordPress; 11/11 anchors PASS
+Next allowed work: Phase 2 computed snapshot + 5-bucket classification
 ```
 
 ## Matrix Snapshot
@@ -202,7 +202,16 @@ Feeds:
 Phase 0 plan:
   docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
 
-Do not start implementation until Phase 0 review returns GO.
+Phase 1 report:
+  docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
+
+Current specimen page:
+  http://localhost:8888/?pagename=axismundi-core-block-specimen-wall
+
+Current coverage:
+  Tier 1 block families represented: 11 / 11
+  Stable anchors: PASS
+  Render gate: PASS
 ```
 
 ## Discipline

@@ -10,6 +10,7 @@
     "test": "npm run validate",
     "validate": "python tools/validators/validate_theme_pilot.py",
     "validate:computed": "node tools/validators/validate_pilot_computed_styles.js",
+    "validate:specimen-wall": "node tools/validators/validate_pilot_specimen_wall.js",
     "publish:styleguide": "python tools/generators/publish_styleguide.py"
   },
   "keywords": [

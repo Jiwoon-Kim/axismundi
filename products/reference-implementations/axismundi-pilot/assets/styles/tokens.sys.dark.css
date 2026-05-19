@@ -1,0 +1,161 @@
+/* ============================================================
+ * Axismundi — tokens.sys.dark.css
+ * v3.6.1 — Token Architecture Refactor Phase 1A
+ *
+ * Runtime semantic dark layer.
+ * Dark mode swaps md-sys mappings only; md-ref remains mode-agnostic.
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * §2.2 Dark scheme
+ * Source: M3-COLOR-TOKEN.md §2.2
+ *
+ * Selector strategy (BRIEF.md "Modes" — auto + manual override):
+ *   1. :root[data-theme="dark"]
+ *      → explicit user choice. Highest priority. Wins over both
+ *        the light defaults in :root and the auto media query.
+ *   2. @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
+ *      → auto-follow OS. Suppressed only when the user has
+ *        explicitly picked light. data-theme="auto" or absent
+ *        → media query takes effect.
+ *
+ * The two blocks share an identical token set so cascade order
+ * is enough; no !important needed.
+ * ------------------------------------------------------------ */
+:root[data-theme="dark"] {
+  /* --- Brand: primary --- */
+  --md-sys-color-primary:              #D0BCFF; /* primary 80  */
+  --md-sys-color-on-primary:           #381E72; /* primary 20  */
+  --md-sys-color-primary-container:    #4F378B; /* primary 30  */
+  --md-sys-color-on-primary-container: #EADDFF; /* primary 90  */
+
+  /* --- Brand: secondary --- */
+  --md-sys-color-secondary:              #CCC2DC; /* secondary 80 */
+  --md-sys-color-on-secondary:           #332D41; /* secondary 20 */
+  --md-sys-color-secondary-container:    #4A4458; /* secondary 30 */
+  --md-sys-color-on-secondary-container: #E8DEF8; /* secondary 90 */
+
+  /* --- Brand: tertiary --- */
+  --md-sys-color-tertiary:              #EFB8C8; /* tertiary 80 */
+  --md-sys-color-on-tertiary:           #492532; /* tertiary 20 */
+  --md-sys-color-tertiary-container:    #633B48; /* tertiary 30 */
+  --md-sys-color-on-tertiary-container: #FFD8E4; /* tertiary 90 */
+
+  /* --- Status: error --- */
+  --md-sys-color-error:              #F2B8B5; /* error 80 */
+  --md-sys-color-on-error:           #601410; /* error 20 */
+  --md-sys-color-error-container:    #8C1D18; /* error 30 */
+  --md-sys-color-on-error-container: #F9DEDC; /* error 90 */
+
+  /* --- Surface: background + surface --- */
+  --md-sys-color-background:         #141218; /* neutral 6  */
+  --md-sys-color-on-background:      #E6E0E9; /* neutral 90 */
+  --md-sys-color-surface:            #141218; /* neutral 6  */
+  --md-sys-color-on-surface:         #E6E0E9; /* neutral 90 */
+  --md-sys-color-surface-variant:    #49454F; /* neutral-variant 30 */
+  --md-sys-color-on-surface-variant: #CAC4D0; /* neutral-variant 80 */
+  --md-sys-color-surface-bright:     #3B383E; /* neutral 24 */
+  --md-sys-color-surface-dim:        #141218; /* neutral 6  */
+
+  /* --- Surface: 5 container levels (lowest → highest) --- */
+  --md-sys-color-surface-container-lowest:  #0F0D13; /* neutral 4  */
+  --md-sys-color-surface-container-low:     #1D1B20; /* neutral 10 */
+  --md-sys-color-surface-container:         #211F26; /* neutral 12 */
+  --md-sys-color-surface-container-high:    #2B2930; /* neutral 17 */
+  --md-sys-color-surface-container-highest: #36343B; /* neutral 22 */
+
+  /* --- Inverse --- */
+  --md-sys-color-inverse-surface:    #E6E0E9; /* neutral 90 */
+  --md-sys-color-inverse-on-surface: #322F35; /* neutral 20 */
+  --md-sys-color-inverse-primary:    #6750A4; /* primary 40 */
+
+  /* --- Outline --- */
+  --md-sys-color-outline:         #938F99; /* neutral-variant 60 */
+  --md-sys-color-outline-variant: #49454F; /* neutral-variant 30 */
+
+  /* --- Other --- */
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim:  #000000;
+}
+
+/* ------------------------------------------------------------
+ * §2.3 Auto mode — follow OS preference unless user picked light
+ * ------------------------------------------------------------ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* --- Brand: primary --- */
+    --md-sys-color-primary:              #D0BCFF;
+    --md-sys-color-on-primary:           #381E72;
+    --md-sys-color-primary-container:    #4F378B;
+    --md-sys-color-on-primary-container: #EADDFF;
+
+    /* --- Brand: secondary --- */
+    --md-sys-color-secondary:              #CCC2DC;
+    --md-sys-color-on-secondary:           #332D41;
+    --md-sys-color-secondary-container:    #4A4458;
+    --md-sys-color-on-secondary-container: #E8DEF8;
+
+    /* --- Brand: tertiary --- */
+    --md-sys-color-tertiary:              #EFB8C8;
+    --md-sys-color-on-tertiary:           #492532;
+    --md-sys-color-tertiary-container:    #633B48;
+    --md-sys-color-on-tertiary-container: #FFD8E4;
+
+    /* --- Status: error --- */
+    --md-sys-color-error:              #F2B8B5;
+    --md-sys-color-on-error:           #601410;
+    --md-sys-color-error-container:    #8C1D18;
+    --md-sys-color-on-error-container: #F9DEDC;
+
+    /* --- Surface: background + surface --- */
+    --md-sys-color-background:         #141218;
+    --md-sys-color-on-background:      #E6E0E9;
+    --md-sys-color-surface:            #141218;
+    --md-sys-color-on-surface:         #E6E0E9;
+    --md-sys-color-surface-variant:    #49454F;
+    --md-sys-color-on-surface-variant: #CAC4D0;
+    --md-sys-color-surface-bright:     #3B383E;
+    --md-sys-color-surface-dim:        #141218;
+
+    /* --- Surface: 5 container levels --- */
+    --md-sys-color-surface-container-lowest:  #0F0D13;
+    --md-sys-color-surface-container-low:     #1D1B20;
+    --md-sys-color-surface-container:         #211F26;
+    --md-sys-color-surface-container-high:    #2B2930;
+    --md-sys-color-surface-container-highest: #36343B;
+
+    /* --- Inverse --- */
+    --md-sys-color-inverse-surface:    #E6E0E9;
+    --md-sys-color-inverse-on-surface: #322F35;
+    --md-sys-color-inverse-primary:    #6750A4;
+
+    /* --- Outline --- */
+    --md-sys-color-outline:         #938F99;
+    --md-sys-color-outline-variant: #49454F;
+
+    /* --- Other --- */
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim:  #000000;
+  }
+}
+
+
+/* §8.2 Dark mode — suppress shadows (tonal elevation primary) */
+:root[data-theme="dark"] {
+  --md-sys-elevation-shadow-level1: none;
+  --md-sys-elevation-shadow-level2: none;
+  --md-sys-elevation-shadow-level3: none;
+  --md-sys-elevation-shadow-level4: none;
+  --md-sys-elevation-shadow-level5: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --md-sys-elevation-shadow-level1: none;
+    --md-sys-elevation-shadow-level2: none;
+    --md-sys-elevation-shadow-level3: none;
+    --md-sys-elevation-shadow-level4: none;
+    --md-sys-elevation-shadow-level5: none;
+  }
+}
+
+

@@ -49,6 +49,10 @@ function axismundi_pilot_setup() : void {
 	$editor_styles = array_filter(
 		array(
 			file_exists( get_template_directory() . '/assets/styles/fonts.css' ) ? 'assets/styles/fonts.css' : null,
+			file_exists( get_template_directory() . '/assets/styles/tokens.ref.css' ) ? 'assets/styles/tokens.ref.css' : null,
+			file_exists( get_template_directory() . '/assets/styles/tokens.sys.light.css' ) ? 'assets/styles/tokens.sys.light.css' : null,
+			file_exists( get_template_directory() . '/assets/styles/tokens.comp.css' ) ? 'assets/styles/tokens.comp.css' : null,
+			file_exists( get_template_directory() . '/assets/styles/tokens.sys.dark.css' ) ? 'assets/styles/tokens.sys.dark.css' : null,
 			file_exists( get_template_directory() . '/assets/styles/tokens.css' ) ? 'assets/styles/tokens.css' : null,
 			file_exists( get_template_directory() . '/assets/styles/base.css' ) ? 'assets/styles/base.css' : null,
 			file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
@@ -70,14 +74,18 @@ add_action( 'after_setup_theme', 'axismundi_pilot_setup' );
  */
 function axismundi_pilot_enqueue_assets() : void {
 	$styles = array(
-		'axismundi-pilot-fonts'      => array( 'assets/styles/fonts.css', array() ),
-		'axismundi-pilot-tokens'     => array( 'assets/styles/tokens.css', array( 'axismundi-pilot-fonts' ) ),
-		'axismundi-pilot-base'       => array( 'assets/styles/base.css', array( 'axismundi-pilot-tokens' ) ),
-		'axismundi-pilot-icons'      => array( 'assets/styles/icons.css', array( 'axismundi-pilot-fonts', 'axismundi-pilot-tokens' ) ),
-		'axismundi-pilot-components' => array( 'assets/styles/components.css', array( 'axismundi-pilot-base', 'axismundi-pilot-icons' ) ),
-		'axismundi-pilot-blocks'     => array( 'assets/styles/blocks.css', array( 'axismundi-pilot-components' ) ),
-		'axismundi-pilot-prose'      => array( 'assets/styles/prose.css', array( 'axismundi-pilot-blocks' ) ),
-		'axismundi-pilot-bridge'     => array( 'assets/styles/pilot-block-bridge.css', array( 'axismundi-pilot-prose' ) ),
+		'axismundi-pilot-fonts'            => array( 'assets/styles/fonts.css', array() ),
+		'axismundi-pilot-tokens-ref'       => array( 'assets/styles/tokens.ref.css', array( 'axismundi-pilot-fonts' ) ),
+		'axismundi-pilot-tokens-sys-light' => array( 'assets/styles/tokens.sys.light.css', array( 'axismundi-pilot-tokens-ref' ) ),
+		'axismundi-pilot-tokens-comp'      => array( 'assets/styles/tokens.comp.css', array( 'axismundi-pilot-tokens-sys-light' ) ),
+		'axismundi-pilot-tokens-sys-dark'  => array( 'assets/styles/tokens.sys.dark.css', array( 'axismundi-pilot-tokens-comp' ) ),
+		'axismundi-pilot-tokens'           => array( 'assets/styles/tokens.css', array( 'axismundi-pilot-tokens-sys-dark' ) ),
+		'axismundi-pilot-base'             => array( 'assets/styles/base.css', array( 'axismundi-pilot-tokens' ) ),
+		'axismundi-pilot-icons'            => array( 'assets/styles/icons.css', array( 'axismundi-pilot-fonts', 'axismundi-pilot-tokens' ) ),
+		'axismundi-pilot-components'       => array( 'assets/styles/components.css', array( 'axismundi-pilot-base', 'axismundi-pilot-icons' ) ),
+		'axismundi-pilot-blocks'           => array( 'assets/styles/blocks.css', array( 'axismundi-pilot-components' ) ),
+		'axismundi-pilot-prose'            => array( 'assets/styles/prose.css', array( 'axismundi-pilot-blocks' ) ),
+		'axismundi-pilot-bridge'           => array( 'assets/styles/pilot-block-bridge.css', array( 'axismundi-pilot-prose' ) ),
 	);
 
 	foreach ( $styles as $handle => $style ) {

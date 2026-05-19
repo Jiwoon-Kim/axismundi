@@ -1,0 +1,155 @@
+/* ============================================================
+ * Axismundi — tokens.ref.css
+ * v3.6.1 — Token Architecture Refactor Phase 1A
+ *
+ * Primitive source layer: M3 ref palette and typeface primitives.
+ * This file may contain literal primitive values; downstream layers consume them.
+ * ============================================================ */
+
+:root {
+  /* ----------------------------------------------------------
+   * §1.1 Reference — Primary tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.1
+   * ---------------------------------------------------------- */
+  --md-ref-palette-primary-0:   #000000;
+  --md-ref-palette-primary-10:  #21005D;
+  --md-ref-palette-primary-20:  #381E72;
+  --md-ref-palette-primary-30:  #4F378B;
+  --md-ref-palette-primary-40:  #6750A4;
+  --md-ref-palette-primary-50:  #7F67BE;
+  --md-ref-palette-primary-60:  #9A82DB;
+  --md-ref-palette-primary-70:  #B69DF8;
+  --md-ref-palette-primary-80:  #D0BCFF;
+  --md-ref-palette-primary-90:  #EADDFF;
+  --md-ref-palette-primary-95:  #F6EDFF;
+  --md-ref-palette-primary-98:  #FEF7FF;
+  --md-ref-palette-primary-99:  #FFFBFE;
+  --md-ref-palette-primary-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.2 Reference — Secondary tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.2
+   * ---------------------------------------------------------- */
+  --md-ref-palette-secondary-0:   #000000;
+  --md-ref-palette-secondary-10:  #1D192B;
+  --md-ref-palette-secondary-20:  #332D41;
+  --md-ref-palette-secondary-30:  #4A4458;
+  --md-ref-palette-secondary-40:  #625B71;
+  --md-ref-palette-secondary-50:  #7A7289;
+  --md-ref-palette-secondary-60:  #958DA5;
+  --md-ref-palette-secondary-70:  #B0A7C0;
+  --md-ref-palette-secondary-80:  #CCC2DC;
+  --md-ref-palette-secondary-90:  #E8DEF8;
+  --md-ref-palette-secondary-95:  #F6EDFF;
+  --md-ref-palette-secondary-98:  #FEF7FF;
+  --md-ref-palette-secondary-99:  #FFFBFE;
+  --md-ref-palette-secondary-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.3 Reference — Tertiary tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.3
+   * ---------------------------------------------------------- */
+  --md-ref-palette-tertiary-0:   #000000;
+  --md-ref-palette-tertiary-10:  #31111D;
+  --md-ref-palette-tertiary-20:  #492532;
+  --md-ref-palette-tertiary-30:  #633B48;
+  --md-ref-palette-tertiary-40:  #7D5260;
+  --md-ref-palette-tertiary-50:  #986977;
+  --md-ref-palette-tertiary-60:  #B58392;
+  --md-ref-palette-tertiary-70:  #D29DAC;
+  --md-ref-palette-tertiary-80:  #EFB8C8;
+  --md-ref-palette-tertiary-90:  #FFD8E4;
+  --md-ref-palette-tertiary-95:  #FFECF1;
+  --md-ref-palette-tertiary-98:  #FFF8F8;
+  --md-ref-palette-tertiary-99:  #FFFBFA;
+  --md-ref-palette-tertiary-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.4 Reference — Error tonal palette (14 tones)
+   * Source: M3-COLOR-TOKEN.md §1.4
+   * ---------------------------------------------------------- */
+  --md-ref-palette-error-0:   #000000;
+  --md-ref-palette-error-10:  #410E0B;
+  --md-ref-palette-error-20:  #601410;
+  --md-ref-palette-error-30:  #8C1D18;
+  --md-ref-palette-error-40:  #B3261E;
+  --md-ref-palette-error-50:  #DC362E;
+  --md-ref-palette-error-60:  #E46962;
+  --md-ref-palette-error-70:  #EC928E;
+  --md-ref-palette-error-80:  #F2B8B5;
+  --md-ref-palette-error-90:  #F9DEDC;
+  --md-ref-palette-error-95:  #FCEEEE;
+  --md-ref-palette-error-98:  #FFF8F7;
+  --md-ref-palette-error-99:  #FFFBF9;
+  --md-ref-palette-error-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.5 Reference — Neutral tonal palette (24 tones)
+   * M3 Expressive: extra granularity at the dark end for
+   * dark-mode surfaces. Source: M3-COLOR-TOKEN.md §1.5
+   * ---------------------------------------------------------- */
+  --md-ref-palette-neutral-0:   #000000;
+  --md-ref-palette-neutral-4:   #0F0D13;
+  --md-ref-palette-neutral-6:   #141218;
+  --md-ref-palette-neutral-10:  #1D1B20;
+  --md-ref-palette-neutral-12:  #211F26;
+  --md-ref-palette-neutral-17:  #2B2930;
+  --md-ref-palette-neutral-20:  #322F35;
+  --md-ref-palette-neutral-22:  #36343B;
+  --md-ref-palette-neutral-24:  #3B383E;
+  --md-ref-palette-neutral-30:  #48464C;
+  --md-ref-palette-neutral-40:  #605D64;
+  --md-ref-palette-neutral-50:  #79767D;
+  --md-ref-palette-neutral-60:  #938F96;
+  --md-ref-palette-neutral-70:  #AEA9B1;
+  --md-ref-palette-neutral-80:  #CAC5CD;
+  --md-ref-palette-neutral-87:  #DED8E1;
+  --md-ref-palette-neutral-90:  #E6E0E9;
+  --md-ref-palette-neutral-92:  #ECE6F0;
+  --md-ref-palette-neutral-94:  #F3EDF7;
+  --md-ref-palette-neutral-95:  #F5EFF7;
+  --md-ref-palette-neutral-96:  #F7F2FA;
+  --md-ref-palette-neutral-98:  #FEF7FF;
+  --md-ref-palette-neutral-99:  #FFFBFF;
+  --md-ref-palette-neutral-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.6 Reference — Neutral variant tonal palette (13 tones)
+   * Source: M3-COLOR-TOKEN.md §1.6
+   * ---------------------------------------------------------- */
+  --md-ref-palette-neutral-variant-0:   #000000;
+  --md-ref-palette-neutral-variant-10:  #1D1A22;
+  --md-ref-palette-neutral-variant-20:  #322F37;
+  --md-ref-palette-neutral-variant-30:  #49454F;
+  --md-ref-palette-neutral-variant-40:  #605D66;
+  --md-ref-palette-neutral-variant-50:  #79747E;
+  --md-ref-palette-neutral-variant-60:  #938F99;
+  --md-ref-palette-neutral-variant-70:  #AEA9B4;
+  --md-ref-palette-neutral-variant-80:  #CAC4D0;
+  --md-ref-palette-neutral-variant-90:  #E7E0EC;
+  --md-ref-palette-neutral-variant-95:  #F5EEFA;
+  --md-ref-palette-neutral-variant-98:  #FDF7FF;
+  --md-ref-palette-neutral-variant-99:  #FFFBFE;
+  --md-ref-palette-neutral-variant-100: #FFFFFF;
+
+  /* ----------------------------------------------------------
+   * §1.7 Reference — Typeface families
+   * prompt-v2 §2.1
+   * Korean is first-class (BRIEF.md): Noto Sans/Serif KR
+   * always present in every stack.
+   * ---------------------------------------------------------- */
+  --md-ref-typeface-brand: 'Roboto Flex', 'Noto Sans KR', system-ui, sans-serif;
+  --md-ref-typeface-plain: 'Roboto Flex', 'Noto Sans KR', system-ui, sans-serif;
+  --md-ref-typeface-serif: 'Roboto Serif', 'Noto Serif KR', Georgia, serif;
+  --md-ref-typeface-mono:  'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ----------------------------------------------------------
+   * §1.8 Reference — Typeface weights
+   * prompt-v2 §2.1
+   * ---------------------------------------------------------- */
+  --md-ref-typeface-weight-regular: 400;
+  --md-ref-typeface-weight-medium:  500;
+  --md-ref-typeface-weight-bold:    700;
+}
+
+

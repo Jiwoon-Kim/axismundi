@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-19 (v3.6.0 CLOSED — Pilot v0 complete; v3.6.1 next)
+> **Last updated**: 2026-05-19 (v3.6.1 Phase 1A+1B complete)
 
 ---
 
@@ -38,9 +38,9 @@ v3.6.1   Token Architecture Refactor                                  ☐ NEXT
 
 ```txt
 Current release:   v3.6.1 Token Architecture Refactor
-Current phase:     Phase 0 plan-first pending
-Current state:     v3.6.0 closed; next cycle not started
-Next allowed work: v3.6.1 Phase 0 plan-first
+Current phase:     Phase 1 implementation in progress
+Current state:     Phase 1A token extraction + Phase 1B loading/copy pipeline complete
+Next allowed work: v3.6.1 Phase 1C bridge files, then Opus mini-review
 ```
 
 ## Matrix Snapshot

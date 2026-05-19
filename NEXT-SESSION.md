@@ -1,6 +1,6 @@
 # NEXT-SESSION.md — v3.6.1 Token Architecture Refactor Handoff
 
-> **Status**: v3.6.0 Ontology Theme Pilot is closed. v3.6.1 Phase 0 plan is drafted.
+> **Status**: v3.6.0 Ontology Theme Pilot is closed. v3.6.1 Phase 1A+1B are complete.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-19.
 
@@ -25,6 +25,7 @@ Active v3.6.1 plan / relay note:
 
 ```txt
 10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-0-PLAN.md
+11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-PLAN.md
 
 Repo docs remain authority. Chat is relay, not source of truth.
 Codex writes implementation + phase plan/report docs.
@@ -38,8 +39,8 @@ docs/v3.6.1/*-review.md if repo-based handoff is requested.
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
 v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
 v3.6.1   Token Architecture Refactor                ☐ NEXT
-Phase    Phase 0 plan drafted; Opus GO received
-Status   ready for Phase 0 close / Phase 1 plan-first
+Phase    Phase 1 implementation in progress
+Status   Phase 1A+1B complete; next is Phase 1C bridge files + Opus mini-review
 ```
 
 Public repository:

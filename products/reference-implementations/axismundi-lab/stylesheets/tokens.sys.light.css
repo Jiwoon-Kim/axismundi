@@ -1,0 +1,102 @@
+/* ============================================================
+ * Axismundi — tokens.sys.light.css
+ * v3.6.1 — Token Architecture Refactor Phase 1A
+ *
+ * Runtime semantic light layer.
+ * Light mode maps md-sys roles to md-ref primitives.
+ * ============================================================ */
+
+/* ============================================================
+ * §2 System layer — Color schemes
+ *
+ * Sys tokens consume ref palette tones. Same role names in
+ * light + dark, different ref tones per scheme.
+ *
+ * Scheme application strategy (BRIEF.md — dark-first):
+ *   :root            → light scheme defaults
+ *   [data-theme="dark"]            → dark scheme override
+ *   @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
+ *                                    → auto follows system
+ *
+ * NOTE: this pass writes §2.1 (Light scheme) only. Dark scheme
+ * arrives in the next pass.
+ *
+ * 38 sys-color tokens per scheme:
+ *   12 brand   (primary/secondary/tertiary × 4)
+ *    4 status  (error × 4)
+ *   13 surface (background, on-bg, surface, on-surface,
+ *               surface-variant, on-surface-variant,
+ *               surface-bright, surface-dim,
+ *               surface-container-{lowest,low,base,high,highest})
+ *    3 inverse (inverse-surface, inverse-on-surface,
+ *               inverse-primary)
+ *    2 outline (outline, outline-variant)
+ *    2 other   (shadow, scrim)
+ *   ----
+ *   38 total. surface-tint excluded (deprecated, prompt-v2 §1.3).
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * §2.1 Light scheme
+ * Source: M3-COLOR-TOKEN.md §2.1
+ * Applied as :root default. Dark scheme overrides in §2.2.
+ * ------------------------------------------------------------ */
+:root {
+  /* --- Brand: primary --- */
+  --md-sys-color-primary:              #6750A4; /* primary 40  */
+  --md-sys-color-on-primary:           #FFFFFF; /* primary 100 */
+  --md-sys-color-primary-container:    #EADDFF; /* primary 90  */
+  --md-sys-color-on-primary-container: #4F378B; /* primary 30  */
+
+  /* --- Brand: secondary --- */
+  --md-sys-color-secondary:              #625B71; /* secondary 40  */
+  --md-sys-color-on-secondary:           #FFFFFF; /* secondary 100 */
+  --md-sys-color-secondary-container:    #E8DEF8; /* secondary 90  */
+  --md-sys-color-on-secondary-container: #4A4458; /* secondary 30  */
+
+  /* --- Brand: tertiary --- */
+  --md-sys-color-tertiary:              #7D5260; /* tertiary 40  */
+  --md-sys-color-on-tertiary:           #FFFFFF; /* tertiary 100 */
+  --md-sys-color-tertiary-container:    #FFD8E4; /* tertiary 90  */
+  --md-sys-color-on-tertiary-container: #633B48; /* tertiary 30  */
+
+  /* --- Status: error --- */
+  --md-sys-color-error:              #B3261E; /* error 40  */
+  --md-sys-color-on-error:           #FFFFFF; /* error 100 */
+  --md-sys-color-error-container:    #F9DEDC; /* error 90  */
+  --md-sys-color-on-error-container: #8C1D18; /* error 30  */
+
+  /* --- Surface: background + surface --- */
+  --md-sys-color-background:         #FEF7FF; /* neutral 98 */
+  --md-sys-color-on-background:      #1D1B20; /* neutral 10 */
+  --md-sys-color-surface:            #FEF7FF; /* neutral 98 */
+  --md-sys-color-on-surface:         #1D1B20; /* neutral 10 */
+  --md-sys-color-surface-variant:    #E7E0EC; /* neutral-variant 90 */
+  --md-sys-color-on-surface-variant: #49454F; /* neutral-variant 30 */
+  --md-sys-color-surface-bright:     #FEF7FF; /* neutral 98 */
+  --md-sys-color-surface-dim:        #DED8E1; /* neutral 87 */
+
+  /* --- Surface: 5 container levels (lowest → highest) --- */
+  --md-sys-color-surface-container-lowest:  #FFFFFF; /* neutral 100 */
+  --md-sys-color-surface-container-low:     #F7F2FA; /* neutral 96  */
+  --md-sys-color-surface-container:         #F3EDF7; /* neutral 94  */
+  --md-sys-color-surface-container-high:    #ECE6F0; /* neutral 92  */
+  --md-sys-color-surface-container-highest: #E6E0E9; /* neutral 90  */
+
+  /* --- Inverse (Snackbar, Slider value indicator,
+         Outlined toggle button selected) --- */
+  --md-sys-color-inverse-surface:    #322F35; /* neutral 20  */
+  --md-sys-color-inverse-on-surface: #F5EFF7; /* neutral 95  */
+  --md-sys-color-inverse-primary:    #D0BCFF; /* primary 80  */
+
+  /* --- Outline --- */
+  --md-sys-color-outline:         #79747E; /* neutral-variant 50 */
+  --md-sys-color-outline-variant: #CAC4D0; /* neutral-variant 80 */
+
+  /* --- Other --- */
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim:  #000000;
+}
+
+/* ------------------------------------------------------------
+

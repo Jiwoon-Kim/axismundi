@@ -34,6 +34,10 @@ PILOT_ICONS = PILOT_ASSETS / "icons"
 
 STYLE_ORDER = (
     "fonts.css",
+    "tokens.ref.css",
+    "tokens.sys.light.css",
+    "tokens.comp.css",
+    "tokens.sys.dark.css",
     "tokens.css",
     "base.css",
     "icons.css",

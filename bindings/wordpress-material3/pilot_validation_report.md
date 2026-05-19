@@ -10,7 +10,7 @@
 - **Threshold (≥0.85)**: PASS ✓
 - **Verdict**: **PASS**
 
-## 5-Axis breakdown
+## 6-Axis breakdown
 
 | Axis | Description | Score | Weight |
 |---|---|---|---|
@@ -19,6 +19,7 @@
 | C — CSS | tokens.css + base.css + block-styles.css | **1.000** | 0.20 |
 | D — Runtime | block style registrations ↔ binding rules | **1.000** | 0.30 |
 | E — Token layering | md-sys color tokens reference md-ref | **1.000** | hard gate |
+| F — Bridge layering | wp-preset/wp-custom bridge vars stay downstream | **1.000** | hard gate |
 
 ## Axis A — Schema (theme.json ↔ M3 ontology)
 
@@ -100,6 +101,28 @@
 - `md_ref_references`: 72
 - `direct_hex_count`: 0
 - `direct_hex`: []
+- `score`: 1.0
+
+## Axis F — Bridge layering (WP bridge → M3/comp)
+
+### products\reference-implementations\axismundi-lab\stylesheets\wp-preset.bridge.css
+
+- `exists`: True
+- `bridge_definitions`: 24
+- `var_references`: 24
+- `literal_value_count`: 0
+- `literal_values`: []
+- `broken_references`: []
+- `score`: 1.0
+
+### products\reference-implementations\axismundi-lab\stylesheets\wp-custom.bridge.css
+
+- `exists`: True
+- `bridge_definitions`: 26
+- `var_references`: 26
+- `literal_value_count`: 0
+- `literal_values`: []
+- `broken_references`: []
 - `score`: 1.0
 
 ## Decision

@@ -38,6 +38,8 @@ STYLE_ORDER = (
     "tokens.sys.light.css",
     "tokens.comp.css",
     "tokens.sys.dark.css",
+    "wp-preset.bridge.css",
+    "wp-custom.bridge.css",
     "tokens.css",
     "base.css",
     "icons.css",

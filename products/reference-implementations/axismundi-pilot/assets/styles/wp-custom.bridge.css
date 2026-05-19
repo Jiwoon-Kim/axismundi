@@ -1,0 +1,45 @@
+/* ============================================================
+ * Axismundi — wp-custom.bridge.css
+ * v3.6.1 — Token Architecture Refactor Phase 1C
+ *
+ * WordPress custom projection layer.
+ * settings.custom.axismundi.* consumes these aliases downstream.
+ * ============================================================ */
+
+:root {
+  /* --- State layers --- */
+  --wp--custom--axismundi--state-layer--hover: var(--md-sys-state-hover-state-layer-opacity);
+  --wp--custom--axismundi--state-layer--focus: var(--md-sys-state-focus-state-layer-opacity);
+  --wp--custom--axismundi--state-layer--pressed: var(--md-sys-state-pressed-state-layer-opacity);
+  --wp--custom--axismundi--state-layer--dragged: var(--md-sys-state-dragged-state-layer-opacity);
+
+  /* --- Shape --- */
+  --wp--custom--axismundi--shape--corner-small: var(--md-sys-shape-corner-small);
+  --wp--custom--axismundi--shape--corner-medium: var(--md-sys-shape-corner-medium);
+  --wp--custom--axismundi--shape--corner-large: var(--md-sys-shape-corner-large);
+  --wp--custom--axismundi--shape--corner-full: var(--md-sys-shape-corner-full);
+
+  /* --- Motion --- */
+  --wp--custom--axismundi--motion--duration-fast-effects: var(--md-sys-motion-curve-fast-effects-duration);
+  --wp--custom--axismundi--motion--duration-default-effects: var(--md-sys-motion-curve-default-effects-duration);
+  --wp--custom--axismundi--motion--duration-fast-spatial: var(--md-sys-motion-curve-fast-spatial-duration);
+  --wp--custom--axismundi--motion--curve-fast-effects: var(--md-sys-motion-curve-fast-effects);
+  --wp--custom--axismundi--motion--curve-default-effects: var(--md-sys-motion-curve-default-effects);
+  --wp--custom--axismundi--motion--curve-fast-spatial: var(--md-sys-motion-curve-fast-spatial);
+
+  /* --- Elevation --- */
+  --wp--custom--axismundi--elevation--level0: var(--md-sys-elevation-level0);
+  --wp--custom--axismundi--elevation--level1: var(--md-sys-elevation-level1);
+  --wp--custom--axismundi--elevation--level2: var(--md-sys-elevation-level2);
+  --wp--custom--axismundi--elevation--level3: var(--md-sys-elevation-level3);
+  --wp--custom--axismundi--elevation--shadow-level1: var(--md-sys-elevation-shadow-level1);
+  --wp--custom--axismundi--elevation--shadow-level2: var(--md-sys-elevation-shadow-level2);
+  --wp--custom--axismundi--elevation--shadow-level3: var(--md-sys-elevation-shadow-level3);
+
+  /* --- Component defaults --- */
+  --wp--custom--axismundi--component--card-padding: var(--comp-card-padding);
+  --wp--custom--axismundi--component--card-radius: var(--comp-card-radius);
+  --wp--custom--axismundi--component--button-height: var(--comp-button-height);
+  --wp--custom--axismundi--component--button-radius: var(--comp-button-radius);
+  --wp--custom--axismundi--component--touch-target: var(--comp-touch-target);
+}

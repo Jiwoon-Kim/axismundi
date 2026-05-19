@@ -1,0 +1,41 @@
+/* ============================================================
+ * Axismundi — wp-preset.bridge.css
+ * v3.6.1 — Token Architecture Refactor Phase 1C
+ *
+ * WordPress preset projection layer.
+ * WP preset variables are downstream aliases of md-sys color roles.
+ * ============================================================ */
+
+:root {
+  /* --- Brand --- */
+  --wp--preset--color--primary: var(--md-sys-color-primary);
+  --wp--preset--color--on-primary: var(--md-sys-color-on-primary);
+  --wp--preset--color--primary-container: var(--md-sys-color-primary-container);
+  --wp--preset--color--on-primary-container: var(--md-sys-color-on-primary-container);
+
+  --wp--preset--color--secondary: var(--md-sys-color-secondary);
+  --wp--preset--color--on-secondary: var(--md-sys-color-on-secondary);
+  --wp--preset--color--secondary-container: var(--md-sys-color-secondary-container);
+  --wp--preset--color--on-secondary-container: var(--md-sys-color-on-secondary-container);
+
+  --wp--preset--color--tertiary: var(--md-sys-color-tertiary);
+  --wp--preset--color--on-tertiary: var(--md-sys-color-on-tertiary);
+  --wp--preset--color--tertiary-container: var(--md-sys-color-tertiary-container);
+  --wp--preset--color--on-tertiary-container: var(--md-sys-color-on-tertiary-container);
+
+  /* --- Status --- */
+  --wp--preset--color--error: var(--md-sys-color-error);
+  --wp--preset--color--on-error: var(--md-sys-color-on-error);
+  --wp--preset--color--error-container: var(--md-sys-color-error-container);
+  --wp--preset--color--on-error-container: var(--md-sys-color-on-error-container);
+
+  /* --- Surface --- */
+  --wp--preset--color--surface: var(--md-sys-color-surface);
+  --wp--preset--color--on-surface: var(--md-sys-color-on-surface);
+  --wp--preset--color--surface-variant: var(--md-sys-color-surface-variant);
+  --wp--preset--color--on-surface-variant: var(--md-sys-color-on-surface-variant);
+  --wp--preset--color--background: var(--md-sys-color-background);
+  --wp--preset--color--on-background: var(--md-sys-color-on-background);
+  --wp--preset--color--outline: var(--md-sys-color-outline);
+  --wp--preset--color--outline-variant: var(--md-sys-color-outline-variant);
+}

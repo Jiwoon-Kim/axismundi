@@ -11,6 +11,7 @@ Audit axes (per project plan):
   C. CSS axis: tokens.css + base.css present in expected paths
   D. Runtime axis: block style registrations in functions.php match Tier 2 binding rules
   E. Token layering axis: md-sys color tokens reference md-ref, never literal hex
+  F. Bridge layering axis: wp-preset/wp-custom bridges are downstream var chains
 
 Output: pilot_validation_report.md + binding_legitimacy_audit.json
 """
@@ -268,6 +269,73 @@ def axis_e_token_layering(styles_dir):
     return findings, overall
 
 
+def axis_f_bridge_layering(styles_dir):
+    """F. Bridge layering axis — WP bridge tokens stay downstream of M3/comp."""
+    findings = {}
+    token_files = [
+        styles_dir / "tokens.ref.css",
+        styles_dir / "tokens.sys.light.css",
+        styles_dir / "tokens.sys.dark.css",
+        styles_dir / "tokens.comp.css",
+    ]
+    bridge_files = [
+        styles_dir / "wp-preset.bridge.css",
+        styles_dir / "wp-custom.bridge.css",
+    ]
+
+    token_def_pattern = re.compile(r"^\s*(--(?:md-ref|md-sys|comp)-[a-z0-9-]+)\s*:", re.MULTILINE)
+    bridge_def_pattern = re.compile(r"^\s*(--wp--(?:preset--color|custom--axismundi)--[a-z0-9-]+(?:--[a-z0-9-]+)*)\s*:\s*([^;]+);", re.MULTILINE)
+    var_ref_pattern = re.compile(r"var\((--(?:md-ref|md-sys|comp)-[a-z0-9-]+)\)")
+    literal_pattern = re.compile(r"^\s*--wp--(?:preset--color|custom--axismundi)--[a-z0-9-]+(?:--[a-z0-9-]+)*\s*:\s*(?!\s*var\()[^;]+;", re.MULTILINE)
+
+    upstream_tokens = set()
+    for path in token_files:
+        if not path.exists():
+            findings[str(path)] = {"exists": False, "score": 0.0}
+            continue
+        upstream_tokens.update(token_def_pattern.findall(path.read_text(encoding=UTF8)))
+
+    scores = []
+    for path in bridge_files:
+        if not path.exists():
+            findings[str(path)] = {
+                "exists": False,
+                "score": 0.0,
+            }
+            scores.append(0.0)
+            continue
+
+        text = path.read_text(encoding=UTF8)
+        definitions = [
+            {"token": match.group(1), "value": match.group(2).strip()}
+            for match in bridge_def_pattern.finditer(text)
+        ]
+        literal_values = [
+            {
+                "line": text[:match.start()].count("\n") + 1,
+                "declaration": match.group(0).strip(),
+            }
+            for match in literal_pattern.finditer(text)
+        ]
+        var_refs = [match.group(1) for match in var_ref_pattern.finditer(text)]
+        broken_refs = sorted({ref for ref in var_refs if ref not in upstream_tokens})
+
+        score = 1.0 if definitions and not literal_values and not broken_refs and len(var_refs) == len(definitions) else 0.0
+        scores.append(score)
+        findings[str(path)] = {
+            "exists": True,
+            "bridge_definitions": len(definitions),
+            "var_references": len(var_refs),
+            "literal_value_count": len(literal_values),
+            "literal_values": literal_values,
+            "broken_references": broken_refs,
+            "score": score,
+        }
+
+    overall = sum(scores) / len(scores) if scores else 0.0
+    return findings, overall
+
+
 def main():
     theme_json = json.loads((PILOT / "theme.json").read_text(encoding=UTF8))
     m3 = json.loads(M3_ONTOLOGY.read_text(encoding=UTF8))
@@ -279,8 +347,9 @@ def main():
     findings_c, score_c = axis_c_css(PILOT)
     findings_d, score_d = axis_d_runtime(PILOT, binding_rules)
     findings_e, score_e = axis_e_token_layering(AXISMUNDI_LAB_STYLES)
+    findings_f, score_f = axis_f_bridge_layering(AXISMUNDI_LAB_STYLES)
 
-    overall = (score_a + score_b + score_c + score_d + score_e) / 5
+    overall = (score_a + score_b + score_c + score_d + score_e + score_f) / 6
 
     audit = {
         "schema_version": "v2.1a-P0.5-binding-legitimacy-audit-2026-05-12",
@@ -292,6 +361,7 @@ def main():
             "C_css": {"findings": findings_c, "score": score_c, "weight": 0.20},
             "D_runtime": {"findings": findings_d, "score": score_d, "weight": 0.30},
             "E_token_layering": {"findings": findings_e, "score": score_e, "weight": "hard gate"},
+            "F_bridge_layering": {"findings": findings_f, "score": score_f, "weight": "hard gate"},
         },
         "overall_score": round(overall, 3),
         "passes_threshold": overall >= 0.85,
@@ -315,7 +385,7 @@ def main():
         f"- **Threshold (≥0.85)**: {'PASS ✓' if audit['passes_threshold'] else 'FAIL ✗'}",
         f"- **Verdict**: **{audit['verdict']}**",
         "",
-        "## 5-Axis breakdown",
+        "## 6-Axis breakdown",
         "",
         "| Axis | Description | Score | Weight |",
         "|---|---|---|---|",
@@ -324,6 +394,7 @@ def main():
         f"| C — CSS | tokens.css + base.css + block-styles.css | **{score_c:.3f}** | 0.20 |",
         f"| D — Runtime | block style registrations ↔ binding rules | **{score_d:.3f}** | 0.30 |",
         f"| E — Token layering | md-sys color tokens reference md-ref | **{score_e:.3f}** | hard gate |",
+        f"| F — Bridge layering | wp-preset/wp-custom bridge vars stay downstream | **{score_f:.3f}** | hard gate |",
         "",
         "## Axis A — Schema (theme.json ↔ M3 ontology)",
         "",
@@ -374,6 +445,18 @@ def main():
                 md.append(f"- `{kk}`: {vv}")
         md.append("")
 
+    md.append("## Axis F — Bridge layering (WP bridge → M3/comp)")
+    md.append("")
+    for k, v in findings_f.items():
+        md.append(f"### {k}")
+        md.append("")
+        if isinstance(v, dict):
+            for kk, vv in v.items():
+                if isinstance(vv, list) and len(vv) > 8:
+                    vv = vv[:8] + ["..."]
+                md.append(f"- `{kk}`: {vv}")
+        md.append("")
+
     md.append("## Decision")
     md.append("")
     if audit["passes_threshold"]:
@@ -399,6 +482,7 @@ def main():
     print(f"  C css:     {score_c:.3f}")
     print(f"  D runtime: {score_d:.3f}")
     print(f"  E tokens:  {score_e:.3f}")
+    print(f"  F bridge:  {score_f:.3f}")
 
 
 if __name__ == "__main__":

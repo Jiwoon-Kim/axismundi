@@ -147,6 +147,30 @@
       },
       "score": 1.0,
       "weight": "hard gate"
+    },
+    "F_bridge_layering": {
+      "findings": {
+        "products\\reference-implementations\\axismundi-lab\\stylesheets\\wp-preset.bridge.css": {
+          "exists": true,
+          "bridge_definitions": 24,
+          "var_references": 24,
+          "literal_value_count": 0,
+          "literal_values": [],
+          "broken_references": [],
+          "score": 1.0
+        },
+        "products\\reference-implementations\\axismundi-lab\\stylesheets\\wp-custom.bridge.css": {
+          "exists": true,
+          "bridge_definitions": 26,
+          "var_references": 26,
+          "literal_value_count": 0,
+          "literal_values": [],
+          "broken_references": [],
+          "score": 1.0
+        }
+      },
+      "score": 1.0,
+      "weight": "hard gate"
     }
   },
   "overall_score": 1.0,

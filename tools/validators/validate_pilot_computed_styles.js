@@ -77,6 +77,91 @@ async function pageBase(page, name, url) {
   return { name, url, consoleErrors, overflowX };
 }
 
+async function forceTheme(page, mode) {
+  await page.evaluate((themeMode) => {
+    if (themeMode === "auto") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", themeMode);
+    }
+  }, mode);
+}
+
+async function themeSnapshot(page) {
+  return page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    return {
+      attr: document.documentElement.getAttribute("data-theme"),
+      primary: style.getPropertyValue("--md-sys-color-primary").trim(),
+      background: style.getPropertyValue("--md-sys-color-background").trim(),
+      surface: style.getPropertyValue("--md-sys-color-surface").trim(),
+      bodyBackground: getComputedStyle(document.body).backgroundColor,
+      bodyColor: getComputedStyle(document.body).color,
+    };
+  });
+}
+
+async function auditThemeMode(context, findings, report, mode, url, pageName) {
+  const page = await context.newPage();
+  const base = await pageBase(page, `${pageName}-${mode}`, url);
+  await forceTheme(page, mode);
+  const snapshotData = await themeSnapshot(page);
+  const fillButton = await optionalSnapshot(page, ".wp-block-button.is-style-fill .wp-block-button__link", [
+    "background-color",
+    "color",
+  ]);
+  const rootAttr = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+
+  assert(findings, rootAttr === mode, `${pageName}-${mode}`, "forced data-theme sticks", {
+    expected: mode,
+    actual: rootAttr,
+  });
+  assert(findings, !isTransparent(snapshotData.bodyBackground), `${pageName}-${mode}`, "body background resolves", snapshotData);
+  assert(findings, !!fillButton, `${pageName}-${mode}`, "filled button exists under forced theme", {});
+  if (fillButton) {
+    assert(findings, !isTransparent(fillButton["background-color"]), `${pageName}-${mode}`, "filled button background resolves", fillButton);
+  }
+
+  report.themeMatrix[`${pageName}-${mode}`] = {
+    ...base,
+    theme: snapshotData,
+    fillButton,
+  };
+  await page.close();
+}
+
+async function auditPilotThemeToggle(context, findings, report) {
+  const page = await context.newPage();
+  await pageBase(page, "front-theme-toggle", "http://localhost:8888/");
+
+  const darkButton = await page.$('[data-theme-set="dark"]');
+  const lightButton = await page.$('[data-theme-set="light"]');
+  assert(findings, !!darkButton && !!lightButton, "front-theme-toggle", "theme toggle buttons exist", {});
+  if (!darkButton || !lightButton) {
+    await page.close();
+    return;
+  }
+
+  await darkButton.click();
+  const dark = await themeSnapshot(page);
+  await lightButton.click();
+  const light = await themeSnapshot(page);
+
+  assert(findings, dark.attr === "dark", "front-theme-toggle", "dark button sets data-theme", dark);
+  assert(findings, light.attr === "light", "front-theme-toggle", "light button sets data-theme", light);
+  assert(findings, dark.background !== light.background, "front-theme-toggle", "light/dark sys backgrounds differ", {
+    dark: dark.background,
+    light: light.background,
+  });
+  assert(findings, dark.bodyBackground !== light.bodyBackground, "front-theme-toggle", "visible body background responds", {
+    dark: dark.bodyBackground,
+    light: light.bodyBackground,
+  });
+
+  report.themeToggle = { dark, light };
+  await page.close();
+}
+
 async function run() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 390, height: 900 }, deviceScaleFactor: 1 });
@@ -85,6 +170,8 @@ async function run() {
     generatedAt: new Date().toISOString(),
     viewport: { width: 390, height: 900 },
     pages: {},
+    themeMatrix: {},
+    themeToggle: {},
     findings,
   };
 
@@ -281,6 +368,12 @@ async function run() {
   report.pages.front.styles.fill = await optionalSnapshot(front, ".wp-block-button.is-style-fill .wp-block-button__link", buttonProps);
   report.pages.front.styles.outline = await optionalSnapshot(front, ".wp-block-button.is-style-outline .wp-block-button__link", buttonProps);
   await front.screenshot({ path: path.join(outDir, "front-390.png"), fullPage: true });
+
+  await auditThemeMode(context, findings, report, "light", "http://localhost:8888/", "front");
+  await auditThemeMode(context, findings, report, "dark", "http://localhost:8888/", "front");
+  await auditThemeMode(context, findings, report, "light", styleguideBlocksUrl, "styleguide-blocks");
+  await auditThemeMode(context, findings, report, "dark", styleguideBlocksUrl, "styleguide-blocks");
+  await auditPilotThemeToggle(context, findings, report);
 
   for (const pageReport of [report.pages.pattern, report.pages.prose, report.pages.styleguideBlocks, report.pages.front]) {
     assert(findings, pageReport.overflowX === 0, pageReport.name, "horizontal overflow is zero", {

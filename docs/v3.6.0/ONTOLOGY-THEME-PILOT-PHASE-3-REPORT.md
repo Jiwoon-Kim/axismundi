@@ -77,13 +77,16 @@ Computed-style gate:
 ```txt
 Button fill:             non-transparent M3 container
 Button outline:          native border reset to 0px; inset outline retained
+Button outline tokens:   color = on-surface-variant; outline = outline-variant
 Button text:             transparent container
 Search filled:           border reset to 0px
+Search button:           core default background removed
 Inline code:             visible token surface
-Code block wrapper:      visible token surface + 24px padding
+Code block wrapper:      visible token surface + 24px padding + core border removed
 Quote:                   leading indicator present
-Separator:               visible
-Default table:           no top cell border; bottom separator present
+Separator:               visible M3 line; core gray border removed
+Default table:           no top cell border; thead 3px border removed; bottom separator present
+Stripes wrapper:         core #f0f0f0 border removed
 Stripes odd row/cell:    transparent background
 Stripes even row/cell:   surface-container-high background
 Horizontal overflow:     0
@@ -239,12 +242,33 @@ are mapped to M3 Filled / Outlined, while the theme registers only `tonal`,
 ### Fixed in cycle — Core Table default / stripes reset
 
 Phase 3 visual QA also caught that WordPress core table defaults could leak
-through as native-looking borders and stripe fills. `blocks.css` and the Pilot
-bridge now explicitly map:
+through as native-looking borders and stripe fills. A follow-up computed-style
+inventory also found `thead { border-bottom: 3px solid; }` and
+`.wp-block-table.is-style-stripes { border-bottom: 1px solid #f0f0f0; }`
+leaking from core styles. `blocks.css` and the Pilot bridge now explicitly map:
 
 - default table cells to M3 horizontal separators, and
 - `is-style-stripes` odd rows/cells to transparent backgrounds while even
-  rows/cells use `surface-container-high`.
+  rows/cells use `surface-container-high`, and
+- table header / stripes wrapper borders to M3 outline-variant rules.
+
+### Fixed in cycle — Core Search and Code residual defaults
+
+Computed-style inventory surfaced two additional non-M3 residuals:
+
+- `core/search` default button background (`rgb(50, 55, 60)`) outside the
+  filled-search specimen, and
+- `core/code` / `core/preformatted` default `#ccc` borders.
+
+Both now reset through `blocks.css`, with the Pilot bridge reinforcing code
+block reset inside `core/post-content`.
+
+### Limitation — core/button renders links, not native button elements
+
+`core/button` renders `.wp-block-button__link` as an anchor. The Pilot maps this
+anchor to the M3 Button visual/state contract, but it does not alter WordPress
+core markup semantics. Changing anchor-vs-button semantics would require a
+render filter or a custom block, both outside v3.6.0 theme-only scope.
 
 ## 9. Verdict
 

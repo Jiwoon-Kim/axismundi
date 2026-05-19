@@ -172,6 +172,7 @@
 .wp-block-preformatted {
   /* base <pre> already provides padding + bg + radius + overflow */
   margin-block: var(--space-md);
+  border: 0;
 }
 .wp-block-code code {
   /* base.css §11 strips inline-pill from `pre code`; preserve */
@@ -198,6 +199,9 @@
   /* base.css §8 sets the 1px outline-variant line */
   inline-size: 25%;          /* default WP look — short centered rule */
   margin-inline: auto;
+  block-size: 1px;
+  border: 0;
+  background-color: var(--md-sys-color-outline-variant);
 }
 .wp-block-separator.is-style-wide {
   inline-size: 100%;
@@ -254,6 +258,10 @@
   border-radius: var(--md-sys-shape-corner-small);
 }
 
+.wp-block-table thead {
+  border-block-end: 0;
+}
+
 .wp-block-table .has-fixed-layout {
   table-layout: fixed;
   inline-size: 100%;
@@ -300,6 +308,9 @@
 .wp-block-table.is-style-stripes tbody tr:nth-child(even) > th,
 .wp-block-table.is-style-stripes tbody tr:nth-child(even) > td {
   background-color: var(--md-sys-color-surface-container-high);
+}
+.wp-block-table.is-style-stripes {
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
 }
 /* Stripes variant drops the row separator (the bg banding does the job) */
 .wp-block-table.is-style-stripes th,
@@ -477,8 +488,8 @@
 .wp-block-button.is-style-outline .wp-block-button__link,
 .wp-block-button.is-style-outlined .wp-block-button__link {
   background-color: transparent;
-  color: var(--md-sys-color-primary);
-  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline);
+  color: var(--md-sys-color-on-surface-variant);
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline-variant);
 }
 .wp-block-button.is-style-text .wp-block-button__link {
   background-color: transparent;
@@ -523,6 +534,18 @@
 }
 .wp-block-search.is-style-filled-search .wp-block-search__input::placeholder {
   color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-search .wp-block-search__button {
+  border: 0;
+  border-radius: var(--comp-button-radius);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  min-block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
 }
 .wp-block-search.is-style-filled-search .wp-block-search__button {
   border: 0;

@@ -10,7 +10,7 @@
 - **Threshold (≥0.85)**: PASS ✓
 - **Verdict**: **PASS**
 
-## 6-Axis breakdown
+## 7-Axis breakdown
 
 | Axis | Description | Score | Weight |
 |---|---|---|---|
@@ -20,6 +20,7 @@
 | D — Runtime | block style registrations ↔ binding rules | **1.000** | 0.30 |
 | E — Token layering | md-sys color tokens reference md-ref | **1.000** | hard gate |
 | F — Bridge layering | wp-preset/wp-custom bridge vars stay downstream | **1.000** | hard gate |
+| G — Custom settings | settings.custom.axismundi leaves are upstream vars | **1.000** | hard gate |
 
 ## Axis A — Schema (theme.json ↔ M3 ontology)
 
@@ -122,6 +123,16 @@
 - `var_references`: 26
 - `literal_value_count`: 0
 - `literal_values`: []
+- `broken_references`: []
+- `score`: 1.0
+
+## Axis G — Custom settings (theme.json settings.custom.axismundi)
+
+### settings.custom.axismundi
+
+- `exists`: True
+- `leaf_values`: 26
+- `invalid_values`: []
 - `broken_references`: []
 - `score`: 1.0
 

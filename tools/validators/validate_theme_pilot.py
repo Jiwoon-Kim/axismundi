@@ -12,6 +12,7 @@ Audit axes (per project plan):
   D. Runtime axis: block style registrations in functions.php match Tier 2 binding rules
   E. Token layering axis: md-sys color tokens reference md-ref, never literal hex
   F. Bridge layering axis: wp-preset/wp-custom bridges are downstream var chains
+  G. Custom settings axis: settings.custom.axismundi leaves are upstream vars
 
 Output: pilot_validation_report.md + binding_legitimacy_audit.json
 """
@@ -24,6 +25,7 @@ from collections import defaultdict
 UTF8 = "utf-8"
 
 PILOT = Path("products/reference-implementations/ontology-theme-pilot")
+AXISMUNDI_PILOT = Path("products/reference-implementations/axismundi-pilot")
 AXISMUNDI_LAB_STYLES = Path("products/reference-implementations/axismundi-lab/stylesheets")
 BINDING_MAP = Path("bindings/wordpress-material3/binding_map.json")
 M3_ONTOLOGY = Path("core/design-systems/material3/token_ontology.jsonld")
@@ -336,8 +338,78 @@ def axis_f_bridge_layering(styles_dir):
     return findings, overall
 
 
+def collect_upstream_tokens(styles_dir):
+    token_files = [
+        styles_dir / "tokens.ref.css",
+        styles_dir / "tokens.sys.light.css",
+        styles_dir / "tokens.sys.dark.css",
+        styles_dir / "tokens.comp.css",
+    ]
+    token_def_pattern = re.compile(r"^\s*(--(?:md-ref|md-sys|comp)-[a-z0-9-]+)\s*:", re.MULTILINE)
+
+    upstream_tokens = set()
+    for path in token_files:
+        if not path.exists():
+            continue
+        upstream_tokens.update(token_def_pattern.findall(path.read_text(encoding=UTF8)))
+    return upstream_tokens
+
+
+def flatten_leaf_values(value, prefix=""):
+    if isinstance(value, dict):
+        leaves = []
+        for key, child in value.items():
+            child_prefix = f"{prefix}.{key}" if prefix else key
+            leaves.extend(flatten_leaf_values(child, child_prefix))
+        return leaves
+    return [{"path": prefix, "value": value}]
+
+
+def axis_g_custom_settings(theme_json, styles_dir):
+    """G. Custom settings axis — settings.custom.axismundi stays downstream."""
+    axismundi = theme_json.get("settings", {}).get("custom", {}).get("axismundi")
+    if not isinstance(axismundi, dict):
+        return {
+            "settings.custom.axismundi": {
+                "exists": False,
+                "score": 0.0,
+            }
+        }, 0.0
+
+    leaves = flatten_leaf_values(axismundi, "settings.custom.axismundi")
+    allowed_pattern = re.compile(r"^var\((--(?:comp|md-sys|md-ref)-[a-z0-9-]+)\)$")
+    upstream_tokens = collect_upstream_tokens(styles_dir)
+
+    invalid_values = []
+    broken_refs = []
+    for leaf in leaves:
+        value = leaf["value"]
+        if not isinstance(value, str):
+            invalid_values.append(leaf)
+            continue
+        match = allowed_pattern.match(value)
+        if not match:
+            invalid_values.append(leaf)
+            continue
+        if match.group(1) not in upstream_tokens:
+            broken_refs.append({"path": leaf["path"], "token": match.group(1)})
+
+    score = 1.0 if leaves and not invalid_values and not broken_refs else 0.0
+    findings = {
+        "settings.custom.axismundi": {
+            "exists": True,
+            "leaf_values": len(leaves),
+            "invalid_values": invalid_values,
+            "broken_references": broken_refs,
+            "score": score,
+        }
+    }
+    return findings, score
+
+
 def main():
     theme_json = json.loads((PILOT / "theme.json").read_text(encoding=UTF8))
+    axismundi_theme_json = json.loads((AXISMUNDI_PILOT / "theme.json").read_text(encoding=UTF8))
     m3 = json.loads(M3_ONTOLOGY.read_text(encoding=UTF8))
     binding_map = json.loads(BINDING_MAP.read_text(encoding=UTF8))
     binding_rules = json.loads(BINDING_RULES.read_text(encoding=UTF8))
@@ -348,8 +420,9 @@ def main():
     findings_d, score_d = axis_d_runtime(PILOT, binding_rules)
     findings_e, score_e = axis_e_token_layering(AXISMUNDI_LAB_STYLES)
     findings_f, score_f = axis_f_bridge_layering(AXISMUNDI_LAB_STYLES)
+    findings_g, score_g = axis_g_custom_settings(axismundi_theme_json, AXISMUNDI_LAB_STYLES)
 
-    overall = (score_a + score_b + score_c + score_d + score_e + score_f) / 6
+    overall = (score_a + score_b + score_c + score_d + score_e + score_f + score_g) / 7
 
     audit = {
         "schema_version": "v2.1a-P0.5-binding-legitimacy-audit-2026-05-12",
@@ -362,6 +435,7 @@ def main():
             "D_runtime": {"findings": findings_d, "score": score_d, "weight": 0.30},
             "E_token_layering": {"findings": findings_e, "score": score_e, "weight": "hard gate"},
             "F_bridge_layering": {"findings": findings_f, "score": score_f, "weight": "hard gate"},
+            "G_custom_settings": {"findings": findings_g, "score": score_g, "weight": "hard gate"},
         },
         "overall_score": round(overall, 3),
         "passes_threshold": overall >= 0.85,
@@ -385,7 +459,7 @@ def main():
         f"- **Threshold (≥0.85)**: {'PASS ✓' if audit['passes_threshold'] else 'FAIL ✗'}",
         f"- **Verdict**: **{audit['verdict']}**",
         "",
-        "## 6-Axis breakdown",
+        "## 7-Axis breakdown",
         "",
         "| Axis | Description | Score | Weight |",
         "|---|---|---|---|",
@@ -395,6 +469,7 @@ def main():
         f"| D — Runtime | block style registrations ↔ binding rules | **{score_d:.3f}** | 0.30 |",
         f"| E — Token layering | md-sys color tokens reference md-ref | **{score_e:.3f}** | hard gate |",
         f"| F — Bridge layering | wp-preset/wp-custom bridge vars stay downstream | **{score_f:.3f}** | hard gate |",
+        f"| G — Custom settings | settings.custom.axismundi leaves are upstream vars | **{score_g:.3f}** | hard gate |",
         "",
         "## Axis A — Schema (theme.json ↔ M3 ontology)",
         "",
@@ -457,6 +532,18 @@ def main():
                 md.append(f"- `{kk}`: {vv}")
         md.append("")
 
+    md.append("## Axis G — Custom settings (theme.json settings.custom.axismundi)")
+    md.append("")
+    for k, v in findings_g.items():
+        md.append(f"### {k}")
+        md.append("")
+        if isinstance(v, dict):
+            for kk, vv in v.items():
+                if isinstance(vv, list) and len(vv) > 8:
+                    vv = vv[:8] + ["..."]
+                md.append(f"- `{kk}`: {vv}")
+        md.append("")
+
     md.append("## Decision")
     md.append("")
     if audit["passes_threshold"]:
@@ -483,6 +570,7 @@ def main():
     print(f"  D runtime: {score_d:.3f}")
     print(f"  E tokens:  {score_e:.3f}")
     print(f"  F bridge:  {score_f:.3f}")
+    print(f"  G custom:  {score_g:.3f}")
 
 
 if __name__ == "__main__":

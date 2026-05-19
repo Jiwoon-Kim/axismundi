@@ -171,6 +171,19 @@
       },
       "score": 1.0,
       "weight": "hard gate"
+    },
+    "G_custom_settings": {
+      "findings": {
+        "settings.custom.axismundi": {
+          "exists": true,
+          "leaf_values": 26,
+          "invalid_values": [],
+          "broken_references": [],
+          "score": 1.0
+        }
+      },
+      "score": 1.0,
+      "weight": "hard gate"
     }
   },
   "overall_score": 1.0,

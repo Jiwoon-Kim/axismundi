@@ -35,7 +35,7 @@ The runtime source of truth remains:
 
 This means dark mode is a sys-layer-only operation.
 Toggling data-theme rewires sys → ref mappings,
-and all four downstream layers (preset / custom / ax-comp / component CSS)
+and all four downstream layers (preset / custom / comp / component CSS)
 follow automatically.
 ```
 
@@ -49,7 +49,7 @@ P1 lock for `theme.json settings.custom.axismundi.*`:
 
 ```txt
 Every settings.custom.axismundi.* entry MUST be defined as
-  var(--ax-comp-*) or var(--md-sys-*) or var(--md-ref-*).
+  var(--comp-*) or var(--md-sys-*) or var(--md-ref-*).
 
 Literal hex / rgb / px / number values are forbidden in this namespace.
 
@@ -120,13 +120,13 @@ md-ref
 md-sys.light / md-sys.dark
   runtime semantic mapping; dark mode swaps this layer only
   ↓
-ax-comp
+comp
   component-facing contracts
   ↓
 component CSS / block bridge CSS / prose CSS
 ```
 
-WordPress projections are downstream branches from `md-sys` / `ax-comp`:
+WordPress projections are downstream branches from `md-sys` / `comp`:
 
 ```txt
 md-sys.light / md-sys.dark
@@ -139,7 +139,7 @@ theme.json palette/editor-facing semantic color slugs
 ```
 
 ```txt
-md-sys / ax-comp / md-ref
+md-sys / comp / md-ref
   ↓
 wp-custom.bridge.css
   ↓
@@ -173,7 +173,7 @@ Phase 1B — Style loading and asset bridge update
   enqueue/editor-style order so layered files load before consumers.
 
 Phase 1C — wp-preset / wp-custom bridge files
-  Add bridge CSS files and keep both downstream from md-sys / ax-comp.
+  Add bridge CSS files and keep both downstream from md-sys / comp.
 
 Phase 1D — theme.json settings.custom.axismundi.* hunk
   Add only var(...) entries under settings.custom.axismundi.* and validate the
@@ -341,7 +341,7 @@ Guardrail:
 
 ```txt
 No literal hex / rgb / px / number values in wp-custom.bridge.css except as
-already-upstream var() values from md-ref/md-sys/ax-comp.
+already-upstream var() values from md-ref/md-sys/comp.
 ```
 
 ### Phase 1D — theme.json settings.custom.axismundi.*
@@ -381,7 +381,7 @@ P1 hunk review:
 
 ```txt
 Every added value under settings.custom.axismundi.* must match:
-  ^var\(--(ax-comp|md-sys|md-ref)-[a-z0-9-]+\)$
+  ^var\(--(comp|md-sys|md-ref)-[a-z0-9-]+\)$
 
 Any required literal fallback becomes a Phase 1 finding, not an implementation
 shortcut.

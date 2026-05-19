@@ -348,6 +348,46 @@
         "rem",
         "%"
       ]
+    },
+    "custom": {
+      "axismundi": {
+        "stateLayer": {
+          "hover": "var(--md-sys-state-hover-state-layer-opacity)",
+          "focus": "var(--md-sys-state-focus-state-layer-opacity)",
+          "pressed": "var(--md-sys-state-pressed-state-layer-opacity)",
+          "dragged": "var(--md-sys-state-dragged-state-layer-opacity)"
+        },
+        "shape": {
+          "cornerSmall": "var(--md-sys-shape-corner-small)",
+          "cornerMedium": "var(--md-sys-shape-corner-medium)",
+          "cornerLarge": "var(--md-sys-shape-corner-large)",
+          "cornerFull": "var(--md-sys-shape-corner-full)"
+        },
+        "motion": {
+          "durationFastEffects": "var(--md-sys-motion-curve-fast-effects-duration)",
+          "durationDefaultEffects": "var(--md-sys-motion-curve-default-effects-duration)",
+          "durationFastSpatial": "var(--md-sys-motion-curve-fast-spatial-duration)",
+          "curveFastEffects": "var(--md-sys-motion-curve-fast-effects)",
+          "curveDefaultEffects": "var(--md-sys-motion-curve-default-effects)",
+          "curveFastSpatial": "var(--md-sys-motion-curve-fast-spatial)"
+        },
+        "elevation": {
+          "level0": "var(--md-sys-elevation-level0)",
+          "level1": "var(--md-sys-elevation-level1)",
+          "level2": "var(--md-sys-elevation-level2)",
+          "level3": "var(--md-sys-elevation-level3)",
+          "shadowLevel1": "var(--md-sys-elevation-shadow-level1)",
+          "shadowLevel2": "var(--md-sys-elevation-shadow-level2)",
+          "shadowLevel3": "var(--md-sys-elevation-shadow-level3)"
+        },
+        "component": {
+          "cardPadding": "var(--comp-card-padding)",
+          "cardRadius": "var(--comp-card-radius)",
+          "buttonHeight": "var(--comp-button-height)",
+          "buttonRadius": "var(--comp-button-radius)",
+          "touchTarget": "var(--comp-touch-target)"
+        }
+      }
     }
   },
   "styles": {

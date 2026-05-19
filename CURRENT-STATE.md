@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-19 (v3.6.1 Phase 1 implementation complete)
+> **Last updated**: 2026-05-19 (v3.6.1 Phase 3 visual QA complete)
 
 ---
 
@@ -38,9 +38,9 @@ v3.6.1   Token Architecture Refactor                                  ◐ IN PRO
 
 ```txt
 Current release:   v3.6.1 Token Architecture Refactor
-Current phase:     Phase 1 implementation complete
-Current state:     Phase 1A-1F complete; BACKLOG #20 closed; full close review pending
-Next allowed work: Opus Phase 1 full close review, then Phase 2 planning if GO
+Current phase:     Phase 3 visual QA complete
+Current state:     Phase 1A-1F complete; Phase 3 visual QA PASS with one routed P3 finding
+Next allowed work: Phase 5 close plan / implementation
 ```
 
 ## Matrix Snapshot
@@ -149,6 +149,12 @@ Phase 1 implementation complete:
   - Axis G theme.json settings.custom.axismundi guard
   - Pilot real Light / Dark / Auto switcher click path validated
   - BACKLOG #20 closed
+
+Phase 3 visual QA complete:
+  - Light/dark visual surfaces PASS
+  - One non-blocking core table footer finding routed to BACKLOG #43
+  - Evidence doc:
+    docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
 
 This is bucket A (architecture-level) cycle, larger than typical Wave 1 cycle.
 plan-first must include User Request Log with verbatim insight quotes.

@@ -1780,6 +1780,23 @@ BACKLOG #21
   backlog/deferred.
 - Use the specimen wall as an input to BACKLOG #41 full block bridge expansion.
 
+**Known evidence**:
+
+- v3.6.1 Phase 3 visual QA surfaced the table footer option on the Pilot
+  pattern QA page (`http://localhost:8888/?page_id=10`): `.wp-block-table tfoot`
+  keeps a native-looking `border-top: 3px solid currentcolor`, which reads too
+  strong against the current M3 surface treatment. Route through the specimen
+  wall before deciding whether the final fix belongs in a core reset, table
+  block bridge, or broader BACKLOG #41 expansion.
+- v3.6.1 Phase 3 visual QA also surfaced the core/button semantic boundary:
+  Axismundi styleguide button specimens use `<button>`, while WordPress
+  core/button commonly renders link-based markup. Underline leakage and button
+  text drag/selection suppression can be fixed mechanically, but the larger
+  decision is whether M3 button variants should be added as core/buttons styles,
+  require a custom block for some semantics, or remain a bridge-layer mapping.
+  Audit this with the full core block option/specimen wall before changing the
+  Pilot button contract.
+
 **Non-goals**:
 
 - Do not claim full WordPress core block coverage until the audit is complete.

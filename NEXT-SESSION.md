@@ -1,7 +1,7 @@
 # NEXT-SESSION.md — Post-v3.6.1 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot and v3.6.1 Token Architecture
-> Refactor are closed. v3.6.2 Phase 2 computed snapshot + classification is complete.
+> Refactor are closed. v3.6.2 Phase 3 visual QA is complete.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-20.
 
@@ -19,11 +19,12 @@
 7. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
 8. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
 9. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-10. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
-11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
-12. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
-13. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-14. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+10. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
+12. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
+13. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
+14. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+15. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -45,10 +46,10 @@ Opus/Claude:
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
 v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
 v3.6.1   Token Architecture Refactor                ✓ CLOSED
-v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 2
+v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 3
 
 Next route:
-  Phase 3 visual QA.
+  Phase 5 close.
   Do not patch bridge/reset CSS inside v3.6.2 unless user promotes a finding.
 ```
 
@@ -169,22 +170,23 @@ file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
 
 ## 5) Next Action
 
-Start Phase 3 visual QA from the stable specimen wall:
+Start Phase 5 close from:
 
 ```txt
-http://localhost:8888/?pagename=axismundi-core-block-specimen-wall
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
 ```
 
-Phase 3 focus:
+Phase 5 focus:
 
 ```txt
-1. Review the full specimen wall in light and dark.
+1. Preserve evidence-cycle close framing:
+   enumerate + classify + route, no bridge fixes.
 
-2. Confirm the Phase 2 classifications match visible surfaces.
+2. Update BACKLOG #43 with v3.6.2 coverage evidence.
 
-3. Pay special attention to:
-   table-footer reset finding
-   button semantic-decision finding
+3. Update BACKLOG #41 with routed reset / bridge / semantic-decision inputs.
 
-4. Do not patch findings unless the user explicitly promotes one to blocker.
+4. Update CHANGELOG / ROADMAP / CURRENT-STATE / NEXT-SESSION.
+
+5. Run final validators.
 ```

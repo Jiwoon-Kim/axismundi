@@ -2,7 +2,7 @@
 
 > **Audience**: OpenAI Codex (or any coding-agent that uses `AGENTS.md` as repo-level guidance). Read this first before any edit.
 > **Sibling file**: `CLAUDE.md` (Anthropic Claude Code rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-16 (v3.5.1 Phase 0.5 — Root Context Pack)
+> **Last updated**: 2026-05-19 (v3.6.0 Phase 5 — Pilot close lessons)
 
 ---
 
@@ -82,6 +82,28 @@ snackbars, Phase 3 QA must verify:
 4. open and visible state works;
 5. close / dismiss path works;
 6. console and page errors are absent.
+
+### WordPress block bridge discipline
+
+For WordPress block-theme work, do not start from Axismundi component selectors
+alone. WordPress core blocks are not neutral. Phase 0 / Phase 1 must preserve
+the reverse build direction explicitly:
+
+```txt
+Markdown / HTML defaults -> WordPress core block -> core reset -> bridge -> M3 mapping
+```
+
+Before mapping a core block to M3, inventory and reset WordPress core styles
+that would otherwise leak through (`fill` / `outline`, table stripes, default
+borders, inline code, separator, search button, etc.). Then verify the rendered
+computed value, not just selector presence. Source-rule existence is not proof;
+computed styles in the front end and editor-facing surfaces are the acceptance
+gate.
+
+When a Pilot consumes generated or copied assets, regenerate the asset bridge
+after source CSS edits and use a fresh browser context or hard reload during
+visual QA. Browser cache and source/consumer drift can make a fixed source look
+stale on the front end.
 
 ---
 

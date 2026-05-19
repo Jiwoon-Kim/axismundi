@@ -979,6 +979,52 @@ Next expected update trigger: v3.5.5 close (whichever option User picks)
 
 ---
 
+## §6.1 — v3.6.0 Pilot Lessons Added at Close
+
+v3.6.0 proved that WordPress theme integration is a reverse-direction build,
+not a direct continuation of the v3.5.x design-system construction path.
+
+```txt
+v3.5.x forward direction:
+  M3 spec -> Axismundi component module -> styleguide/public surface
+
+v3.6.0 reverse direction:
+  Markdown / HTML defaults -> WordPress core block -> core reset -> bridge -> M3 mapping
+```
+
+This matters because WordPress core blocks carry their own defaults. A theme
+must inventory and reset those defaults before claiming an M3 mapping. Examples
+found during v3.6.0 Phase 3 included native Button `fill` / `outline`, table
+`thead` and `stripes`, Search button colors, code borders, and Separator
+borders.
+
+The acceptance rule is now:
+
+```txt
+Source selector exists      != proof
+Generated asset contains it != proof
+Rendered computed value     == proof
+```
+
+For WordPress block bridge work, Phase 3 must include computed-style checks for
+the front end and any editor-facing surface under review. If a source asset is
+copied into a Pilot or publish surface, regenerate the bridge and hard-reload or
+use a fresh browser context before visual QA.
+
+Token architecture also gained a close-time lock: `md-ref` holds primitives,
+`md-sys` holds semantic roles, `wp-preset` / `wp-custom` are WordPress-facing
+projections, and component CSS consumes `md-sys` / `ax-comp`. Dark mode belongs
+to the sys layer, not to ad hoc `theme.json` hex rewriting.
+
+Canonical details:
+
+```txt
+docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
+```
+
+---
+
 ## §7 — One-Line Summary
 
 ```

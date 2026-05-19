@@ -1,5 +1,82 @@
 # CHANGELOG
 
+## v3.6.0 — Ontology Theme Pilot v0 (2026-05-19)
+
+First real WordPress block theme Pilot. This is a theme-only proof, not the
+final distributable theme: it validates scaffold, asset bridge, templates,
+patterns, Font Library registration, and a minimum WordPress core block -> M3
+reverse mapping bridge.
+
+### Added — Pilot theme
+
+- Created `products/reference-implementations/axismundi-pilot/` with
+  `style.css`, `theme.json`, `functions.php`, templates, parts, patterns, and
+  draft WP.org support files.
+- Added root `.wp-env.json`; verified activation in WordPress 6.9.4.
+- Built an asset bridge generator that copies lab CSS, fonts, and icon assets
+  into the Pilot so the theme is self-contained.
+- Registered five Pilot patterns: hero, button actions, card list,
+  search section, and prose sample.
+- Registered core-block styles for Button, Group/Card, List, Search, and
+  Separator without registering custom blocks.
+
+### Added — WordPress/M3 bridge
+
+- Added a Pilot-specific block bridge mapping WordPress core output back to M3
+  tokens and interaction contracts.
+- Mapped native WordPress Button `fill` / `outline` to M3 Filled / Outlined and
+  registered only the missing `tonal`, `elevated`, and `text` styles.
+- Added bounded ripple attachment and finite radius morphing for core/button
+  links while preserving WordPress core anchor semantics.
+- Mapped post-content prose block-by-block instead of forcing a `.prose`
+  wrapper, preserving per-block customization.
+- Reset and re-mapped core table, search, code, separator, quote, and list
+  defaults where WordPress core styles leaked through.
+
+### Added — Verification
+
+- Added `npm run validate:computed` to verify rendered computed styles rather
+  than selector presence.
+- Computed QA now covers Button, Search, Code, Quote, Separator, default Table,
+  Stripes Table, overflow, console/page errors, and the static styleguide block
+  table specimen.
+- Verified Korean prose rendering and the Roboto/Noto fallback chain.
+- Registered Roboto Flex, Noto Sans KR, Roboto Serif, Noto Serif KR, and Roboto
+  Mono in the WordPress Font Library; kept Material Symbols as chrome-only font.
+
+### Changed — Architecture
+
+- Locked the v3.6.0 narrative as:
+  `Pilot v0 — scaffold + Wave 1 reverse mapping + block bridge MVP`.
+- Documented the build-direction reversal:
+  design-system construction is M3-forward; WordPress theme integration is
+  CMS-first reverse mapping.
+- Documented the WP core reset-first rule: inventory -> reset -> M3 mapping ->
+  interaction -> computed audit.
+- Added `docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md` as the
+  authoritative input for v3.6.1.
+- Refined `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` with the
+  `md-ref -> md-sys -> wp-preset/wp-custom -> ax-comp` model.
+
+### Routed
+
+- BACKLOG #20 remains partially validated; final close moves to v3.6.1 token
+  architecture refactor.
+- BACKLOG #21 now explicitly owns the reverse/customizable Interpreter Plugin
+  direction.
+- Added BACKLOG #42 for the v3.6.1 Token Architecture Refactor.
+- Added BACKLOG #43 for a full WP core block specimen wall / variation audit.
+- BACKLOG #41 continues to own full block bridge expansion.
+
+### Verified
+
+- Validator: 1.000 / 1.000 / 1.000 / 1.000 PASS.
+- `npm test`: PASS.
+- `npm run validate:computed`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `wp-env`: Pilot active and front-end/editor smoke tested.
+
 ## v3.5.18 — Pre-Pilot Cleanup + Carousel Reroute (2026-05-18)
 
 Small pre-Pilot cleanup release before v3.6.0. No component matrix rows changed;

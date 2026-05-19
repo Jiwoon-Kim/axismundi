@@ -431,18 +431,26 @@ bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md:
   for user-driven HCT color generation
   Stage 2 / Stage 3 of FEEDBACK-AND-STRATEGY.md §1
 
-#41 (new) Token Architecture Refactor (Pilot + Lab)
+#42 (new) Token Architecture Refactor (Pilot + Lab)
   Bucket: A — Architecture
   Source: v3.6.0 Phase 3 + GPT consultation insight
   Scope: tokens.css split into ref/sys.light/sys.dark/wp-preset/wp-custom
   Affects: both axismundi-lab and Pilot
   Target: v3.6.1
 
-#42 (new) Block bridge full coverage
+#41 (existing) WordPress block bridge state and ripple enhancement
   Bucket: B / D — Component + theme integration
   Source: v3.6.0 Phase 2E MVP (only Button + prose blocks mapped)
   Scope: per-block M3 mapping for all WP core blocks the Pilot uses
   Target: v3.6.x parallel or v3.7.x
+
+#43 (new) WP core block specimen wall / full variation audit
+  Bucket: B / D — WordPress binding QA
+  Source: v3.6.0 Phase 3 visual QA; hex/default leakage was faster to catch
+          when all core block variations were visible at once
+  Scope: render a full native WP block/variation wall, compute non-M3
+         residuals, then decide what belongs in reset, bridge, or backlog
+  Target: v3.6.x before broad block bridge expansion
 ```
 
 ---

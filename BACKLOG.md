@@ -485,8 +485,8 @@ Announcements:
 ### 20. Theme-only color customization policy
 
 - **Bucket**: F — Plugin / theme binding policy
-- **Status**: Deferred
-- **Target**: v3.4.x or v3.5.0 Public Surface Reframe — confirm policy when `ontology-theme-pilot` is next reviewed
+- **Status**: Partially validated at v3.6.0; final close deferred to v3.6.1
+- **Target**: v3.6.1 Token Architecture Refactor
 - **Source**: `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §1 (Color picker concern and bridge strategy)
 
 **The concern**:
@@ -527,12 +527,18 @@ This is the **honest default** — visible controls behave because non-functiona
 - Independent of all other v3.4.x items.
 
 - **v3.5.0 Phase 1B charter pointer (2026-05-15)**: Recorded in `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md §6.2`. Execution scheduled for a v3.5.x mini-release ("theme policy") alongside BACKLOG #22 implementation. NOT closed until that mini-release lands.
+- **v3.6.0 Pilot validation (2026-05-19)**: `axismundi-pilot/theme.json`
+  confirms `settings.color.custom = false`, `settings.color.defaultPalette =
+  false`, and 24 editor-facing M3 semantic color slugs. This validates the
+  theme-only default. Final close is deferred to v3.6.1 because the token layer
+  still needs the ref/sys/preset/custom bridge split and dark-mode sys-layer
+  swap.
 
 ### 21. M3 Interpreter Plugin separation
 
 - **Bucket**: F — Plugin
-- **Status**: Deferred (milestone candidate)
-- **Target**: v3.5.x+ — larger than a single release; spans multiple phases
+- **Status**: Deferred (milestone candidate; scope refined by v3.6.0)
+- **Target**: v3.6.x+ after v3.6.1 Token Architecture Refactor
 - **Source**: `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §1 (Bridge stages) and §7 (Interpreter Plugin scope preview)
 
 **Goal**:
@@ -631,6 +637,11 @@ The `role-map.json` is the ontology bridge:
 - Material Color Utilities: JS (client-side, larger bundle) or PHP port (server-side, requires implementing HCT)? Open question.
 - Plugin name and slug: TBD.
 - Block-attribute strategy: `className` only (safest, no save-markup validation risk) vs. custom block attributes like `m3Role` (more semantic, but core block save markup may reject). FEEDBACK-AND-STRATEGY.md §6 notes this is speculative until validated.
+- **v3.6.0 refinement**: In theme-only mode, bridge direction is M3 -> WP
+  projection (`md-ref -> md-sys -> wp-preset/wp-custom`). The Interpreter
+  Plugin owns the reverse/customizable direction where user-selected WP values
+  or HCT inputs regenerate the M3 graph. Do not blur these modes inside the
+  theme.
 
 ### 22. Explicit `data-theme="auto"` 3-state model
 
@@ -1696,6 +1707,72 @@ docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-2E-REPORT.md
 docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
 ```
 
+### 42. Token Architecture Refactor
+
+- **Bucket**: A — Architecture / token system
+- **Status**: Open
+- **Priority**: High post-Pilot
+- **Target**: v3.6.1
+- **Source**: v3.6.0 Pilot Phase 3 architectural lessons and token-layering consultation
+
+**Scope**:
+
+- Split the current token architecture into explicit layers:
+  `md-ref`, `md-sys.light`, `md-sys.dark`, `wp-preset.bridge`,
+  `wp-custom.bridge`, and `ax-comp` consumption.
+- Keep `md-ref` as primitive source and `md-sys` as runtime semantic source.
+  Do not let `theme.json` hex values become the real design-system source.
+- Project M3 sys tokens into WordPress preset variables for editor-facing
+  semantic values.
+- Add a `wp-custom` bridge for theme-managed non-picker values such as
+  state-layer opacity, shape, motion, and elevation only where WordPress-managed
+  override is useful.
+- Add dark-mode infrastructure through sys-layer remapping, not ref rewriting.
+- Apply the refactor across both `axismundi-lab` and `axismundi-pilot`.
+- Update `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` after the
+  implementation validates the model.
+
+**Non-goals**:
+
+- Do not implement the Interpreter Plugin in this cycle.
+- Do not add HCT generation; that remains BACKLOG #21.
+- Do not perform v4.0 directory restructure; that remains BACKLOG #36.
+
+**Cross-references**:
+
+```txt
+docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md
+BACKLOG #20
+BACKLOG #21
+```
+
+### 43. WP core block specimen wall / full variation audit
+
+- **Bucket**: B / D — WordPress binding QA
+- **Status**: Open
+- **Priority**: Medium post-Pilot
+- **Target**: v3.6.x before broad block bridge expansion
+- **Source**: v3.6.0 Pilot Phase 3 visual QA; user noted that listing all
+  core blocks and style variations at once is faster than finding residual WP
+  defaults one by one.
+
+**Scope**:
+
+- Create or generate a specimen surface containing the WordPress core blocks and
+  block style variations the Pilot/theme is expected to style.
+- Compare rendered computed values against M3 tokens and flag raw core defaults
+  (`#f0f0f0`, `#ccc`, `rgb(50, 55, 60)`, native table borders, etc.).
+- Route each finding to one of three places: core reset, M3 bridge mapping, or
+  backlog/deferred.
+- Use the specimen wall as an input to BACKLOG #41 full block bridge expansion.
+
+**Non-goals**:
+
+- Do not claim full WordPress core block coverage until the audit is complete.
+- Do not add custom blocks.
+- Do not solve token architecture here; that is BACKLOG #42.
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing
@@ -1704,7 +1781,7 @@ metadata, not closure.
 | Bucket | Items |
 |---|---|
 | Pilot-before | None currently. If `blocks.html` / `prose.html` verification surfaces a blocker, update this row before v3.6.0. |
-| Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #19 Date Picker Grid Navigation A11y; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency; #41 WordPress block bridge state and ripple enhancement |
+| Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #19 Date Picker Grid Navigation A11y; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency; #41 WordPress block bridge state and ripple enhancement; #42 Token Architecture Refactor; #43 WP core block specimen wall / full variation audit |
 | Plugin territory | #6 Monotone SVG theming plugin concept; #21 M3 Interpreter Plugin separation; #38 Carousel plugin extraction |
 | Deferred / ongoing | #5 WordPress logo styleguide specimen; #7 Search bar leading icon known delta; #14 Material Symbols ligature layout shift; #16 Tooltip delay / touch long-press; #18 Snackbar class naming; #20 Theme-only color customization policy; #22 `data-theme="auto"` model; #23 Elevated Chip variants; #36 v4.0 directory restructure; #37 GitHub Pages dogfooding; #40 Modularized component CSS separation |
 

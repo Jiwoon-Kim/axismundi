@@ -2,7 +2,7 @@
 
 > **Audience**: Claude (Claude Code, Anthropic). Read this first before any work in this repo.
 > **Sibling file**: `AGENTS.md` (Codex/OpenAI executor rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-16 (v3.5.1 Phase 0.5 — Root Context Pack)
+> **Last updated**: 2026-05-19 (v3.6.0 Phase 5 — Pilot close lessons)
 
 ---
 
@@ -53,6 +53,8 @@ Forbidden without explicit user authorization:
 7. **Provenance.** When a decision comes from an external source (M3 spec, WAI-ARIA APG, Material Web), cite it inline.
 8. **User Request Log.** Do not abstract concrete user requests into generic phase lanes. Preserve them as explicit acceptance criteria and verify them before close.
 9. **Portal / overlay smoke.** Shell or runtime-trigger changes require trigger + runtime + host + open/close contract verification, with console/page errors checked.
+10. **WordPress block bridge is reverse-direction work.** For block themes, start from Markdown / HTML defaults and WordPress core block output, reset core defaults, then map to M3. Do not assume Axismundi component selectors are enough. Computed front-end/editor values are the acceptance gate; selector presence is not proof.
+11. **Generated Pilot assets must be refreshed.** After source CSS edits that feed `axismundi-pilot`, rerun the asset bridge and use a fresh browser context or hard reload. Browser cache and copied-asset drift can hide or fake a WordPress/M3 mapping result.
 
 ---
 

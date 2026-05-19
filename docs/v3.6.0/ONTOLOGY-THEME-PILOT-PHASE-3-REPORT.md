@@ -1,6 +1,6 @@
 # Axismundi v3.6.0 — Ontology Theme Pilot Phase 3 Report
 
-Status: PASS WITH FINDINGS
+Status: PASS
 Date: 2026-05-19
 Scope: Acceptance verification for the v3.6.0 WordPress block theme Pilot
 
@@ -272,6 +272,15 @@ render filter or a custom block, both outside v3.6.0 theme-only scope.
 
 ## 9. Verdict
 
-Phase 3 automated acceptance passes.
+Phase 3 acceptance passes after visual QA follow-up and computed-style
+verification.
 
-The Pilot is ready for user visual confirmation and Phase 5 mechanical close.
+The Pilot is ready for Phase 5 mechanical close as:
+
+```txt
+Pilot v0 — scaffold + Wave 1 reverse mapping + block bridge MVP
+```
+
+It is not a complete distributable theme. Token architecture refactor, full
+block bridge expansion, and a full WP core block specimen wall are routed to
+v3.6.1 / v3.6.x follow-up work.

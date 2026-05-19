@@ -45,19 +45,26 @@ Both modes follow Principle 1 below: visible controls behave.
 
 ### Bridge stages
 
-Three stages, designed to be implemented incrementally:
+Three stages, designed to be implemented incrementally. v3.6.0 refined the
+Stage 1 wording: it is a **static slug bridge**, not a claim that `theme.json`
+hex values are the source of truth.
 
 ```
-Stage 1 — Static bridge
+Stage 1 — Static slug bridge (theme-only mode)
   theme.json palette = static slugs registered for the editor UI.
-  tokens.css carries fixed values or ref-var chains.
+  theme.json color values are registration / fallback values.
+  tokens.css keeps the M3 graph as the source of truth:
+    md-ref -> md-sys -> wp-preset projection.
+  CSS bridge direction:
+    --wp--preset--color--primary: var(--md-sys-color-primary)
   Outcome: stable, review-safe, but customization is limited.
 
 Stage 2 — Preset bridge (v1 Interpreter Plugin)
   theme.json palette slugs registered.
-  CSS: --md-sys-color-primary: var(--wp--preset--color--primary).
-  Outcome: changing the WordPress preset slug propagates to M3 sys token.
-  Limitation: changing one preset does not regenerate the M3 role family
+  CSS / plugin runtime treats the WordPress preset as user input.
+  Outcome: changing the WordPress preset slug propagates through plugin-owned
+  M3 sys token generation.
+  Limitation: changing one preset alone does not regenerate the M3 role family
   (on-primary, primary-container, on-primary-container, etc.).
 
 Stage 3 — Semantic M3 bridge (v2 Interpreter Plugin)
@@ -108,6 +115,35 @@ tokens.css
 ```
 
 The trap to avoid: putting too much into `theme.json`. Trying to express the full M3 graph in `theme.json` flattens the role/state model. Treat `theme.json` as a thin compatibility shell. Audit each new entry: is this here because Gutenberg needs to know about it, or because the design system runtime needs it? If only the design system needs it, it goes in `tokens.css`.
+
+### v3.6.0 Pilot refinement
+
+The v3.6.0 Pilot validated the theme-only default but also exposed the next
+architecture layer:
+
+```txt
+md-ref     = primitive source (hex / px / rem / duration)
+md-sys     = runtime semantic source (light/dark maps roles to ref)
+wp-preset  = editor-facing semantic projection
+wp-custom  = WordPress-managed internal token bridge
+ax-comp    = component contract consuming md-sys / ax-comp values
+```
+
+For color, Strict M3 mode projects downstream:
+
+```css
+--md-sys-color-primary: var(--md-ref-palette-primary40);
+--wp--preset--color--primary: var(--md-sys-color-primary);
+```
+
+For shape, state-layer, motion, elevation, and other non-picker values, use
+`wp-custom` only where WordPress-managed override is needed. Otherwise component
+CSS should consume `md-sys` / `ax-comp` directly.
+
+The Pilot confirms `settings.color.custom = false` as the safe theme-only
+default. Final BACKLOG #20 closure is deferred to v3.6.1 because dark-mode
+sys-layer swapping and the `wp-preset` / `wp-custom` bridge still need a
+cross-cutting token architecture pass.
 
 ## §3 — Interaction vs Component module taxonomy
 
@@ -193,3 +229,8 @@ This phasing is preview-only; the actual milestone breakdown will be authored wh
 This document is **not a roadmap entry**. It is a strategic memo that informs future BACKLOG items and a v3.5.x+ Interpreter Plugin milestone.
 
 The active v3.4.9 work (Chip Full Spec Module) adopts §5 (Visible control principle) into the module design rules. No other §1–§7 content is required by v3.4.9.
+
+v3.6.0 update: the Axismundi Pilot validates the theme-only default and the
+reverse mapping direction from WordPress core blocks to M3. It does not close
+the full token architecture policy; v3.6.1 owns that ref/sys/preset/custom
+refactor.

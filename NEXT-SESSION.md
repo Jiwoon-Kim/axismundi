@@ -1,6 +1,6 @@
-# NEXT-SESSION.md — v3.6.0 Pilot QA Handoff
+# NEXT-SESSION.md — v3.6.1 Token Architecture Refactor Handoff
 
-> **Status**: v3.6.0 Ontology Theme Pilot is active.
+> **Status**: v3.6.0 Ontology Theme Pilot is closed. v3.6.1 is next.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-19.
 
@@ -13,25 +13,22 @@
 2. CURRENT-STATE.md
 3. PROJECT-CONTEXT.md
 4. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md  ← HIGH PRIORITY
-   (authoritative architectural insights from final session;
-    input for v3.6.0 Phase 5 close + v3.6.1 plan-first)
-5. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-0-PLAN.md
-6. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-1-PLAN.md
-7. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-2E-REPORT.md
-8. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
-9. docs/v3.6.0/ONTOLOGY-THEME-PILOT-HANDOFF.md
-10. docs/v3.5.0/MODULE-STATUS-MATRIX.md
-11. BACKLOG.md latest #38 / #39 / #40 entries
-    (#41 / #42 to be added during v3.6.0 Phase 5 close)
+   (authoritative architectural input for v3.6.1)
+5. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-5-CLOSE.md
+6. docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
+7. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+8. BACKLOG.md #20 / #21 / #41 / #42 / #43
+9. docs/v3.5.0/MODULE-STATUS-MATRIX.md
 ```
 
 ## 1) Current State
 
 ```txt
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
-v3.6.0   Ontology Theme Pilot                       ◐ ACTIVE
-Phase    Phase 3 QA / Phase 2E bridge verification
-Status   paused for session end after computed-style gate PASS
+v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
+v3.6.1   Token Architecture Refactor                ☐ NEXT
+Phase    Phase 0 plan-first pending
+Status   ready to plan; no implementation started
 ```
 
 Public repository:
@@ -47,7 +44,7 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.0 Pilot Progress
+## 2) v3.6.0 Pilot Close Summary
 
 Completed:
 
@@ -59,7 +56,8 @@ Phase 2B   Asset bridge generator
 Phase 2C   Templates + Korean prose sample
 Phase 2D   Patterns + block styles
 Phase 2E   WP block -> M3 reverse mapping bridge
-Phase 3    automated smoke + computed-style audit
+Phase 3    automated smoke + computed-style audit + visual QA follow-up
+Phase 5    mechanical close
 ```
 
 Current architectural lock:
@@ -163,37 +161,7 @@ file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
 
 ## 5) Next Decision
 
-The next session should not immediately close v3.6.0.
-
-Required before Phase 5:
-
-```txt
-□ User visual QA final approval
-□ Button style picker / Button visual states acceptable
-□ Table default and stripes visually acceptable
-□ Prose inline code / code block / quote / separator acceptable
-□ 390px mobile visual QA acceptable
-□ Computed-style audit still PASS
-```
-
-If approved — v3.6.0 Phase 5 mechanical close:
-
-```txt
-1. Status framing: "Pilot v0 — scaffold + Wave 1 reverse mapping +
-   block bridge MVP" (NOT complete theme)
-2. Lesson lock 4-location apply per PILOT-LESSONS §4.2:
-   - AGENTS.md / CLAUDE.md: WP core reset + computed audit + build direction
-   - PRE-ENTRY-ONTOLOGY-GROUNDING.md: lesson section append
-   - bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md: §1 refinement
-3. BACKLOG updates:
-   - #20 close trigger shifted to v3.6.1 (Token Architecture Refactor)
-   - #21 scope revised (Interpreter Plugin handles WP → M3 reverse direction)
-   - #41 (new) Token Architecture Refactor — bucket A
-   - #42 (new) Block bridge full coverage — bucket B/D
-4. CHANGELOG / ROADMAP / CURRENT-STATE / NEXT-SESSION update
-5. Commit Phase 5 bookkeeping (single commit or split as needed)
-
-Then proceed to v3.6.1 plan-first:
+Start v3.6.1 Phase 0 plan-first:
 
 ```txt
 Cycle: Token Architecture Refactor (cross-cutting: lab + Pilot)
@@ -203,14 +171,16 @@ Scope: per PILOT-LESSONS §5.1 (9 items)
 Lane assignment unchanged: Codex implementation / Opus ontology review
 ```
 
-If more issues are found:
+Do not start by editing tokens. First produce a Phase 0 plan with a User Request
+Log that quotes the insight directly:
 
 ```txt
-Treat as Phase 3 finding.
-Patch source authority first.
-Regenerate assets/mirror.
-Run npm test + npm run validate:computed.
-Do not close until user confirms.
+□ md-ref is primitive source
+□ md-sys is runtime semantic source
+□ wp-preset is editor-facing projection
+□ wp-custom is theme-managed internal bridge
+□ dark mode swaps sys mappings, not ref values
+□ lab + Pilot are both affected
 ```
 
 ## 6) Important Lessons
@@ -228,7 +198,7 @@ User had to catch several visual defects manually:
 Future agents must not call this done without computed values.
 ```
 
-Architectural lessons captured (final session before Phase 5 close):
+Architectural lessons captured during v3.6.0 close:
 
 ```txt
 Reference: docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md (622 lines)
@@ -260,7 +230,7 @@ PILOT-LESSONS doc §1.4, §3.5, §3.6. Do not abstract these into lane labels.
 
 ## 7) v3.6.1 Preview — Token Architecture Refactor
 
-After v3.6.0 Phase 5 close, next cycle entry:
+Next cycle entry:
 
 ```txt
 Cycle name:  v3.6.1 Token Architecture Refactor

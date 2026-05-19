@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-19 (v3.6.0 Phase 3 paused — computed QA gate added + architectural lessons captured)
+> **Last updated**: 2026-05-19 (v3.6.0 CLOSED — Pilot v0 complete; v3.6.1 next)
 
 ---
 
@@ -30,16 +30,17 @@ v3.5.15  GitHub repository + Pages publish                           ✓ DONE
 v3.5.16  Styleguide modernization + module workspace framing          ✓ DONE
 v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
 v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
-v3.6.0   Ontology Theme Pilot                                         ◐ ACTIVE
+v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
+v3.6.1   Token Architecture Refactor                                  ☐ NEXT
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.0 Ontology Theme Pilot
-Current phase:     Phase 3 QA / Phase 2E bridge verification
-Current state:     PAUSED FOR SESSION END
-Next allowed work: User visual QA confirmation → Phase 5 mechanical close
+Current release:   v3.6.1 Token Architecture Refactor
+Current phase:     Phase 0 plan-first pending
+Current state:     v3.6.0 closed; next cycle not started
+Next allowed work: v3.6.1 Phase 0 plan-first
 ```
 
 ## Matrix Snapshot
@@ -63,7 +64,7 @@ v3.6.0 does not change component row status yet. Carousel #34 remains
 historically DONE from v3.5.12, but is Pilot-excluded / plugin-routed for the
 theme Pilot.
 
-## v3.6.0 Active Notes
+## v3.6.0 Closed Notes
 
 ```txt
 Phase 2A:
@@ -90,7 +91,11 @@ Phase 3:
   computed-style Playwright gate added:
     npm run validate:computed
   Technical validation passes.
-  User visual QA is not yet final-close approved.
+  User visual QA PASS after follow-up fixes.
+
+Phase 5:
+  v3.6.0 closed as:
+    Pilot v0 — scaffold + Wave 1 reverse mapping + block bridge MVP
 
 Architectural insights captured (post-Phase 2E):
   docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md (622 lines)
@@ -104,42 +109,29 @@ Architectural insights captured (post-Phase 2E):
   This doc is authoritative input for v3.6.1 plan-first.
 ```
 
-## v3.6.0 Close Route
+## v3.6.0 Close Outcome
 
 ```txt
-Next:
-  1. Reopen wp-env if needed.
-  2. Run final validation:
-       npm test
-       npm run validate:computed
-       php -l products/reference-implementations/axismundi-pilot/functions.php
-  3. User visual QA:
-       Button styles
-       prose code/quote/table/separator
-       table default/stripes
-       mobile 390px
-  4. If user approves: Phase 5 mechanical close.
+Closed with:
+  - CHANGELOG v3.6.0 entry
+  - ROADMAP v3.6.0 DONE + v3.6.1 NEXT
+  - Phase 5 close doc
+  - lesson locks in AGENTS.md / CLAUDE.md / PRE-ENTRY / FEEDBACK
+  - BACKLOG #42 Token Architecture Refactor
+  - BACKLOG #43 WP core block specimen wall / full variation audit
 
-Phase 5 close must:
-  - Add lesson locks per docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md §4.2
-    to AGENTS.md / CLAUDE.md / PRE-ENTRY-ONTOLOGY-GROUNDING.md /
-    bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md
-  - Open BACKLOG #41 (Token Architecture Refactor) for v3.6.1
-  - Open BACKLOG #42 (Block bridge full coverage)
-  - Revise BACKLOG #20 close trigger (now v3.6.1, not v3.6.0)
-  - Frame v3.6.0 as "Pilot v0 — minimum viable" (NOT complete theme)
-
-Do not:
-  close v3.6.0 before user visual QA approval.
-  commit Phase 5 bookkeeping before approval.
-  reintroduce forced .prose wrapper on core/post-content.
-  attempt token architecture refactor inside v3.6.0 (defer to v3.6.1).
+Routed:
+  #20 final close -> v3.6.1
+  #21 Interpreter Plugin -> after v3.6.1 architecture lock
+  #41 full block bridge expansion -> v3.6.x/v3.7.x
+  #42 Token Architecture Refactor -> v3.6.1
+  #43 WP core specimen wall -> v3.6.x
 ```
 
 ## v3.6.1 Identified Follow-on Cycle
 
 ```txt
-v3.6.1   Token Architecture Refactor (planned)         ☐ NEXT after v3.6.0 close
+v3.6.1   Token Architecture Refactor                   ☐ NEXT
 
 Scope (per PILOT-LESSONS-AND-TOKEN-ARCHITECTURE §5.1):
   1. tokens.css split (ref / sys.light / sys.dark / wp-preset / wp-custom)
@@ -169,7 +161,7 @@ Validator:         1.000 / 1.000 / 1.000 / 1.000 PASS
 npm test:          PASS
 PHP lint:          PASS
 Computed QA:       npm run validate:computed PASS
-wp-env:            active during verification
+wp-env:            active during final verification
 Published mirror:  styleguide regenerated
 Generated tmp:     tmp/ ignored; validator script is tracked
 ```

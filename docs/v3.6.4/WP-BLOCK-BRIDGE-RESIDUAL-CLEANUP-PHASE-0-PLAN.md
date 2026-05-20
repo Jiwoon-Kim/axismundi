@@ -180,9 +180,10 @@ Reports:
 ```txt
 docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
 docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
+docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
 ```
 
-Optional close artifacts, if the implementation passes review:
+Phase 5 close artifacts, produced when both implementation phases pass review:
 
 ```txt
 docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
@@ -333,12 +334,25 @@ Phase 1:
 Phase 2:
   Quote/pullquote distinct-surface cleanup.
 
+Phase 3:
+  Light visual QA for button state interaction and quote/pullquote distinct
+  surfaces.
+
 Phase 5:
   Close if both implementation phases pass review.
 ```
 
 There is no semantic-decision phase in this cycle. v3.6.3 already supplied the
-semantic decisions; v3.6.4 enforces them.
+semantic decisions; v3.6.4 enforces them. Phase 3 is reserved for visual QA,
+not semantic routing.
+
+Phase 2 entry checkpoint:
+
+```txt
+Before writing the Pilot quote/pullquote bridge translation, read
+products/reference-implementations/axismundi-lab/stylesheets/blocks.css §3
+to inventory the lab quote/pullquote treatment.
+```
 
 ## Phase 0 Exit Criteria
 

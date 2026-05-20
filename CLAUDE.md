@@ -2,7 +2,7 @@
 
 > **Audience**: Claude (Claude Code, Anthropic). Read this first before any work in this repo.
 > **Sibling file**: `AGENTS.md` (Codex/OpenAI executor rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-20 (v3.6.3 Phase 5 - semantic bridge locks)
+> **Last updated**: 2026-05-21 (v3.6.4 Phase 5 - residual cleanup close)
 
 ---
 

@@ -1,10 +1,10 @@
-# NEXT-SESSION.md - Post-v3.6.3 Handoff
+# NEXT-SESSION.md - Post-v3.6.4 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot, v3.6.1 Token Architecture
-> Refactor, v3.6.2 WP Core Block Specimen Wall, and v3.6.3 WP Block Bridge
-> Expansion are closed.
+> Refactor, v3.6.2 WP Core Block Specimen Wall, v3.6.3 WP Block Bridge
+> Expansion, and v3.6.4 WP Block Bridge Residual Cleanup are closed.
 > **Use**: read at the start of the next Codex/Claude session.
-> **Last updated**: 2026-05-20.
+> **Last updated**: 2026-05-21.
 
 ---
 
@@ -17,17 +17,22 @@
 4. CHANGELOG.md latest entry
 5. ROADMAP.md current tail
 6. BACKLOG.md #41 / #44 / #21 / #14
-7. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
-8. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
-9. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
-10. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
-11. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
-12. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
-13. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
-14. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-15. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
-16. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-17. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+7. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
+8. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
+9. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
+10. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
+11. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
+12. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
+13. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
+14. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
+15. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
+16. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
+17. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
+18. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+19. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+20. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+21. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+22. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -51,11 +56,12 @@ v3.6.0   Ontology Theme Pilot v0                    CLOSED
 v3.6.1   Token Architecture Refactor                CLOSED
 v3.6.2   WP Core Block Specimen Wall                CLOSED
 v3.6.3   WP Block Bridge Expansion                  CLOSED
+v3.6.4   WP Block Bridge Residual Cleanup           CLOSED
 
 Next route:
   Start next cycle plan-first.
   Primary candidates:
-    BACKLOG #41 residual bridge cleanup after v3.6.3 semantic routing.
+    BACKLOG #41 ripple/editor parity follow-on.
     BACKLOG #44 specimen follow-on coverage + editor compatibility.
   Alternative candidates:
     Wave 2 plan-first.
@@ -75,26 +81,27 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.3 Close Summary
+## 2) v3.6.4 Close Summary
 
-Closed by v3.6.3:
+Closed by v3.6.4:
 
 ```txt
-Housekeeping:
-  BACKLOG #41 / #44 / #14 separator-to-Material-Symbols cross-link corrected.
-  .gitattributes line-ending policy added.
+Phase 1 button mechanical cleanup:
+  core/button href route preserved
+  post-content underline leakage removed
+  user-select disabled
+  focus/hover/pressed state behavior preserved
 
-Phase 1 reset:
-  table-footer-contrast
+Phase 2 quote/pullquote cleanup:
+  quote selectors narrowed
+  pullquote distinct bridge surface added
+  pullquote inner blockquote no longer absorbs quote padding/bar styling
+  pullquote cite no longer absorbs quote prefix
 
-Phase 2 bridges:
-  search-styleguide-delta
-  code-long-line-overflow
-  separator-variant-visibility
-
-Phase 3 semantic decisions:
-  button-anchor-semantics
-  quote-pullquote-semantics
+Phase 3 visual QA:
+  light/dark button + quote/pullquote sweep
+  editor canvas smoke
+  front-end drag console smoke
 ```
 
 Validation at close:
@@ -112,15 +119,15 @@ Routed forward:
 
 ```txt
 BACKLOG #41:
-  button mechanical cleanup after route
-  quote/pullquote distinct-surface implementation after route
-  ripple/editor parity questions from original #41
+  ripple bridge graduation
+  editor-canvas parity questions from original #41
+  editor md-sys color token enqueue parity surfaced by v3.6.4
 
 BACKLOG #44:
   editor-invalid-content
   mark/highlight coverage
   Material Symbols font constraint
-  possible deeper pullquote fixture coverage
+  editor compatibility follow-on
 ```
 
 ## 3) Lesson Locks
@@ -203,10 +210,10 @@ Choose the next cycle. Do not auto-start implementation without a Phase 0 plan.
 Recommended primary routes:
 
 ```txt
-BACKLOG #41 residual bridge cleanup:
-  button mechanical cleanup after semantic route
-  quote/pullquote distinct-surface implementation after semantic route
-  ripple/editor parity questions
+BACKLOG #41 ripple/editor parity follow-on:
+  decide whether the Pilot ripple bridge graduates or remains Pilot-only
+  verify editor-canvas parity for hover/focus/pressed/disabled/selected states
+  resolve editor md-sys color token enqueue parity
 
 BACKLOG #44 specimen follow-on coverage + editor compatibility:
   editor-invalid-content

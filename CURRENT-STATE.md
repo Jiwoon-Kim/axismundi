@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-20 (v3.6.3 closed)
+> **Last updated**: 2026-05-21 (v3.6.4 closed)
 
 ---
 
@@ -34,15 +34,16 @@ v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
 v3.6.1   Token Architecture Refactor                                  ✓ DONE
 v3.6.2   WP Core Block Specimen Wall                                  ✓ DONE
 v3.6.3   WP Block Bridge Expansion                                     ✓ DONE
+v3.6.4   WP Block Bridge Residual Cleanup                              ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.3 WP Block Bridge Expansion
+Current release:   v3.6.4 WP Block Bridge Residual Cleanup
 Current phase:     CLOSED
-Current state:     First BACKLOG #41 slice closed; residual work routed
-Next allowed work: Next cycle plan-first (#41 residual / #44 / Wave 2 / #21)
+Current state:     BACKLOG #41 mechanical residual cleanup closed; ripple/editor parity remains
+Next allowed work: Next cycle plan-first (#41 ripple/editor parity / #44 / Wave 2 / #21)
 ```
 
 ## Matrix Snapshot
@@ -277,6 +278,50 @@ Routed forward:
   BACKLOG #41 quote/pullquote distinct-surface implementation
   BACKLOG #41 original ripple/editor parity questions
   BACKLOG #44 specimen/editor follow-on coverage
+```
+
+## v3.6.4 Close Outcome
+
+```txt
+Mode:
+  BACKLOG #41 residual mechanical cleanup after v3.6.3 semantic routing
+
+Closed by v3.6.4:
+  button mechanical cleanup after route
+  quote/pullquote selector narrowing
+  pullquote distinct-surface bridge implementation
+  light/dark visual QA for button + quote/pullquote
+  editor canvas smoke
+  front-end drag console smoke
+
+Phase 0 plan:
+  docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
+
+Validation:
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS
+  npm run validate:computed                            PASS
+  git diff --check                                     PASS
+
+Routed forward:
+  BACKLOG #41 ripple bridge graduation
+  BACKLOG #41 editor-canvas parity questions
+  BACKLOG #41 editor md-sys color token enqueue parity
+  BACKLOG #44 editor-invalid-content / editor compatibility
 ```
 
 ## Discipline

@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v3.6.4 - WP Block Bridge Residual Cleanup (2026-05-21)
+
+Mechanical cleanup release for BACKLOG #41 residual work after the v3.6.3
+semantic routes. This cycle enforces Lock 3 and Lock 4 without reopening the
+semantic decisions.
+
+### Added
+
+- Added the v3.6.4 Phase 0/1/2/3/5 docs under `docs/v3.6.4/`.
+- Added editor canvas and front-end drag console smoke evidence to the Phase 3
+  visual QA record.
+
+### Changed
+
+- Cleaned up `core/button` link affordances after the v3.6.3 semantic route:
+  removed post-content underline leakage, disabled text selection, and
+  preserved focus/hover/pressed state behavior.
+- Narrowed quote bridge selectors so `core/pullquote` no longer silently
+  absorbs `core/quote` blockquote styling.
+- Added distinct `core/pullquote` bridge CSS following the lab pullquote route:
+  centered editorial surface, top/bottom dividers, headline-medium italic
+  paragraph, and body-small citation styling.
+
+### Routed
+
+- Reduced BACKLOG #41 residual scope to ripple/editor parity questions after
+  closing button mechanical cleanup and quote/pullquote distinct-surface work.
+- Routed the editor canvas sys-color token enqueue gap to existing #41 editor
+  parity / #44 editor compatibility territory; it is pre-existing token
+  plumbing, not a v3.6.4 regression.
+- Documented the user-observed `content.js` drag console error as not
+  reproduced in an extension-free browser and likely extension/content-script
+  noise unless it reproduces in the tracked Pilot bundle.
+
+### Verified
+
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS.
+- `npm run validate:computed`: PASS.
+- `git diff --check`: PASS.
+
 ## v3.6.3 - WP Block Bridge Expansion (2026-05-20)
 
 Implementation/routing release for the first BACKLOG #41 slice. This cycle

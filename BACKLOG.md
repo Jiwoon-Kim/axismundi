@@ -1688,7 +1688,7 @@ BACKLOG #38
 ### 41. WordPress block bridge state and ripple enhancement
 
 - **Bucket**: B — WordPress binding / block bridge
-- **Status**: Open - v3.6.3 first slice closed; residual bridge/state work remains
+- **Status**: Open - v3.6.4 closed mechanical residual cleanup; ripple/editor parity remains
 - **Priority**: Medium post-Pilot
 - **Target**: v3.6.x or v3.7.x
 - **Source**: v3.6.0 Pilot Phase 3 visual QA / Phase 2E minimum bridge
@@ -1771,7 +1771,7 @@ changes, or `functions.php` registration changes beyond the existing block
 style inventory. Separator visibility remains bridge CSS/style-variation work,
 not a Material Symbols font issue.
 
-Residual #41 scope:
+Residual #41 scope after v3.6.3:
 
 ```txt
 button mechanical cleanup after route:
@@ -1783,6 +1783,63 @@ quote/pullquote implementation after route:
 broader original #41 questions:
   ripple bridge graduation
   editor-canvas parity for hover/focus/pressed/disabled/selected states
+```
+
+**v3.6.4 close evidence (2026-05-21)**:
+
+v3.6.4 consumed the route-unblocked residual cleanup from v3.6.3 and closed
+these items:
+
+```txt
+Button mechanical cleanup after route:
+  .wp-block-button__link underline leakage removed
+  .wp-block-button__link user-select disabled
+  focus-visible outline preserved
+  hover/pressed state layers preserved
+  href semantics preserved
+
+Quote/pullquote implementation after route:
+  quote selectors narrowed away from pullquote's inner blockquote
+  pullquote distinct bridge surface added
+  pullquote paragraph/citation typography routed through lab §3 treatment
+  pullquote cite prefix leak removed
+
+Visual QA:
+  light/dark button state and quote/pullquote distinct-surface sweep
+  editor canvas smoke
+  front-end drag console smoke
+```
+
+The cycle did not reopen the v3.6.3 semantic decisions, introduce custom
+blocks, change plugin behavior, edit `theme.json`, edit `functions.php`, or
+expand the committed specimen fixture.
+
+Remaining #41 scope after v3.6.4:
+
+```txt
+ripple bridge graduation:
+  decide whether the Pilot-specific ripple bridge graduates into shared
+  WordPress binding runtime or remains Pilot-only
+
+editor-canvas parity:
+  verify hover/focus/pressed/disabled/selected state mapping where WordPress
+  exposes equivalent editor states
+
+editor token enqueue parity:
+  v3.6.4 Phase 3 found the editor iframe does not expose
+  --md-sys-color-on-surface or --md-sys-color-outline-variant.
+  Bridge selectors apply structurally, but color tokens do not resolve in the
+  editor canvas. This is pre-existing token enqueue plumbing, not a v3.6.4
+  regression.
+```
+
+Drag console note:
+
+```txt
+The user-observed ?p=36 drag errors referenced content.js and were not
+reproduced in an extension-free Playwright Chromium run. content.js is not a
+Pilot theme or repository file. Re-investigate only if the error reproduces in
+an extension-free browser or in the tracked Pilot script bundle.
 ```
 
 **Cross-references**:
@@ -1801,6 +1858,11 @@ docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
 docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
 docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
 docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
+docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
+docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
+docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
+docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
+docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
 ```
 
 ### 42. Token Architecture Refactor

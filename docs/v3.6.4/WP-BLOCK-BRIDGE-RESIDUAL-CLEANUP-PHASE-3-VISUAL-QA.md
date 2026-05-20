@@ -226,6 +226,104 @@ functions.php edit:                    no
 fixture expansion:                     no
 ```
 
+## Editor Canvas Smoke
+
+The block editor was opened at:
+
+```txt
+http://localhost:8888/wp-admin/post.php?post=29&action=edit
+```
+
+Observed editor structure:
+
+```txt
+Editor iframe:
+  iframe[name="editor-canvas"]
+
+Editor wrapper:
+  block-editor-iframe__body editor-styles-wrapper post-type-page
+```
+
+Existing editor compatibility notice remains:
+
+```txt
+Block contains unexpected or invalid content.
+Attempt recovery
+```
+
+This is the pre-existing BACKLOG #44 editor-valid fixture/editor compatibility
+lane. v3.6.4 does not reopen or solve it.
+
+### Button In Editor
+
+Computed inside the editor canvas:
+
+```txt
+.wp-block-button__link:
+  href:                 #button-fill
+  text-decoration-line: none
+  user-select:          none
+```
+
+Assessment:
+
+```txt
+PASS for the Phase 1 mechanical cleanup.
+
+The editor canvas receives the button link-affordance cleanup while preserving
+the anchor href.
+```
+
+### Quote / Pullquote In Editor
+
+Temporary DOM probe inside the editor canvas showed the selector-narrowing
+portion of Phase 2 applies:
+
+```txt
+core/pullquote inner blockquote:
+  padding-inline-start: 0px
+  padding-block-start:  0px
+  border-inline-start:  0px
+
+core/pullquote p:
+  font-size:   28px
+  line-height: 36px
+  font-style:  italic
+
+core/pullquote cite:
+  font-size:          12px
+  margin-block-start: 16px
+  cite::before:       none
+```
+
+But the editor iframe does not currently expose the required color sys tokens:
+
+```txt
+--md-sys-color-on-surface:        empty
+--md-sys-color-outline-variant:   empty
+```
+
+As a result, the editor canvas does not resolve the pullquote figure dividers
+the same way the front end does:
+
+```txt
+core/pullquote figure in editor:
+  border-block-start-width: 0px
+  border-block-start-style: none
+  color: rgb(0, 0, 0)
+```
+
+Assessment:
+
+```txt
+PASS for selector narrowing / R1 absorption closure.
+NOT a v3.6.4 implementation blocker.
+
+This is an editor token/style parity carry-forward item, not a quote/pullquote
+semantic-route failure. It belongs with the already-deferred #41 editor parity
+or #44 editor compatibility lane.
+```
+
 ## Validation
 
 No implementation files changed in Phase 3. Validation state carried forward
@@ -243,4 +341,3 @@ git diff --check: PASS
 ## Next
 
 Proceed to Phase 3 review, then Phase 5 close after GO.
-

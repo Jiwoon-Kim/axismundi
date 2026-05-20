@@ -180,6 +180,10 @@
   border-block-end: 0;
 }
 
+.wp-block-post-content .wp-block-table tfoot {
+  border-block-start: 0 !important;
+}
+
 .wp-block-post-content .wp-block-table.is-style-stripes {
   border-block-end: 1px solid var(--md-sys-color-outline-variant);
 }

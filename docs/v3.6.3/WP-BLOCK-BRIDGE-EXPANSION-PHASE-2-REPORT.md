@@ -144,6 +144,11 @@ core/separator variants now map in Pilot post content:
   is-style-divider-middle-inset inset by space-xl
 ```
 
+`separator-default` was classified as `no-action` in v3.6.2, but Phase 2
+intentionally adjusts it to a 25% centered line so default / wide / inset /
+middle-inset read as one coherent variant family. This is a coherence-driven
+bridge adjustment, not a newly discovered reset leak.
+
 This deliberately does not route separator visibility through the Material
 Symbols font issue.
 

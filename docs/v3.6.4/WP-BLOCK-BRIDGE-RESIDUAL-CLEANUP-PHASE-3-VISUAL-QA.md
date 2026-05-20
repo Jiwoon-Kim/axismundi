@@ -324,6 +324,46 @@ semantic-route failure. It belongs with the already-deferred #41 editor parity
 or #44 editor compatibility lane.
 ```
 
+## Front-End Drag Console Smoke
+
+The user observed this console error while dragging on `?p=36`:
+
+```txt
+content.js:2 Uncaught (in promise) TypeError: t.substring is not a function
+content.js:1 Uncaught (in promise) The message port closed before a response was received.
+```
+
+The page was retested in an extension-free Playwright Chromium session:
+
+```txt
+URL:
+  http://localhost:8888/?p=36
+
+Title:
+  WordPress Block Catalog - Axismundi Pilot
+
+Theme scripts observed:
+  /wp-content/themes/axismundi-pilot/assets/scripts/pilot-block-bridge.js
+
+Drag actions:
+  text-selection style drag across post content
+  anchor/button-adjacent drag
+
+Console/page errors:
+  0
+```
+
+Assessment:
+
+```txt
+NOT REPRODUCED in the extension-free browser.
+
+The reported stack points at `content.js`, which is not a file in the
+Axismundi Pilot theme or this repository. Treat this as likely browser
+extension/content-script noise unless it reproduces in an extension-free
+browser or in the tracked Pilot script bundle.
+```
+
 ## Validation
 
 No implementation files changed in Phase 3. Validation state carried forward

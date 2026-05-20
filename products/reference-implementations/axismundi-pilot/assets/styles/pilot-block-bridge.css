@@ -344,6 +344,12 @@
 /* ============================================================
  * §8 Button state bridge — core/button → M3 Button
  * ============================================================ */
+.wp-block-post-content .wp-block-button__link {
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .wp-block-button__link {
   position: relative;
   isolation: isolate;

@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-20 (v3.6.2 Phase 3 visual QA complete)
+> **Last updated**: 2026-05-20 (v3.6.2 closed)
 
 ---
 
@@ -32,16 +32,16 @@ v3.5.17  Styleguide shell rebuild + mobile reading polish             ✓ DONE
 v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
 v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
 v3.6.1   Token Architecture Refactor                                  ✓ DONE
-v3.6.2   WP Core Block Specimen Wall                                  ◐ PHASE 3
+v3.6.2   WP Core Block Specimen Wall                                  ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
 Current release:   v3.6.2 WP Core Block Specimen Wall
-Current phase:     Phase 3 visual QA complete
-Current state:     Light/dark specimen QA complete; findings routed, not patched
-Next allowed work: Phase 5 close
+Current phase:     CLOSED
+Current state:     Tier 1 evidence cycle closed; findings routed, not patched
+Next allowed work: Next cycle plan-first (#41 / #44 / Wave 2 / #21)
 ```
 
 ## Matrix Snapshot
@@ -184,20 +184,18 @@ Published mirror:  styleguide regenerated
 Generated tmp:     tmp/ ignored; validator script is tracked
 ```
 
-## v3.6.2 Current Plan
+## v3.6.2 Close Outcome
 
 ```txt
-Cycle:
-  WP Core Block Specimen Wall
-
 Mode:
-  Evidence collection / classification
+  Evidence collection / classification, not implementation
 
 Primary backlog:
-  #43 WP core block specimen wall / full variation audit
+  #43 WP core block specimen wall / full variation audit — CLOSED
 
 Feeds:
   #41 full block bridge expansion
+  #44 specimen follow-on coverage + editor compatibility
 
 Phase 0 plan:
   docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
@@ -211,16 +209,29 @@ Phase 2 classification:
 Phase 3 visual QA:
   docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
 
-Current specimen page:
+Phase 5 close:
+  docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+
+Specimen page:
   http://localhost:8888/?pagename=axismundi-core-block-specimen-wall
 
-Current coverage:
+Coverage:
   Tier 1 block families represented: 11 / 11
   Tier 1 entries classified: 26 / 26
   Unclassified entries: 0
   Stable anchors: PASS
   Render gate: PASS
   Phase 3 findings routed: PASS
+
+Routed to #41:
+  table-footer reset
+  search/code/separator bridge inputs
+  button/quote semantic-decision inputs
+
+Routed to #44:
+  editor-invalid-content
+  mark/highlight coverage
+  Material Symbols font constraint
 ```
 
 ## Discipline

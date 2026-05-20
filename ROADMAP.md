@@ -355,7 +355,12 @@ release planning cycle.
   - Added Pilot dark-mode infrastructure as sys-layer remapping only.
   - Closed BACKLOG #20 and BACKLOG #42 with validator-backed Axis E/F/G locks.
   - Phase 3 visual QA passed with table-footer and core/button semantic findings routed to BACKLOG #43 / #41.
-- **v3.6.x — v3.7.x (NEXT)** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Includes BACKLOG #41 full block bridge expansion and BACKLOG #43 WP core block specimen wall / variation audit before broad block mapping claims. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
+- **v3.6.2** ← **WP Core Block Specimen Wall** ✓ DONE (2026-05-20)
+  - Closed BACKLOG #43 as a Tier 1 evidence collection / classification cycle, not an implementation cycle.
+  - Added the WordPress-rendered specimen fixture, idempotent importer, and `npm run validate:specimen-wall` render gate.
+  - Verified 11 / 11 Tier 1 block families, 26 / 26 classified entries, and 0 unclassified entries.
+  - Routed reset / bridge / semantic-decision inputs to BACKLOG #41 and specimen follow-on coverage/editor compatibility to BACKLOG #44.
+- **v3.6.x — v3.7.x (NEXT)** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Primary next candidate: BACKLOG #41 full block bridge expansion using v3.6.2 evidence. BACKLOG #44 owns follow-on specimen coverage/editor compatibility; BACKLOG #21 Interpreter Plugin remains a larger strategy candidate. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
 - **v3.7.x → v1.0 RC** — 33-component audit coverage substantially complete (DONE + RECORD = 30+ out of 34 TOC components); pilot theme stable; M3 Interpreter Plugin (BACKLOG #21) authoring in parallel as plugin-tier artifact.
 - v3.4.x — **Promotion Criteria / Public Surface Prep** — `lab/docs/PROMOTION-CRITERIA.md` author the rules for "what gets promoted from lab to baseline styleguide" before v3.5.0 trims the styleguide. Also: publish-doc "generated artifact, not authoring surface" note, link `typography-axis.html` from Typography section. No interaction-module work. (Was tagged v3.4.8 — bumped because Date/Time and Benchmark Surface Cleanup took those slots.)
 - v3.4.x — **FAB / Extended FAB / FAB menu conversion** — 35 SVGs at 56px context. Independent visual rhythm pass; conversion-shape variants A/B already documented in v3.4.4 audit. (Originally tagged v3.4.6, then v3.4.7, then v3.4.9 — now bumped to v3.4.x to make room for Date/Time extraction and benchmark cleanup.)

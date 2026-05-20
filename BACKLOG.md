@@ -1711,6 +1711,44 @@ BACKLOG #38
 - Do not include Carousel; Carousel remains BACKLOG #38.
 - Do not solve modular CSS slicing; that belongs to BACKLOG #40.
 
+**v3.6.2 specimen wall inputs**:
+
+BACKLOG #43 closed the Tier 1 evidence/classification cycle and hands these
+inputs to #41:
+
+```txt
+Reset candidate:
+  table-footer-contrast
+    core/table tfoot keeps a too-strong 3px currentColor rule in light and dark.
+
+Bridge candidates:
+  search-styleguide-delta
+    core/search differs from the validated lab Search bar implementation.
+
+  code-long-line-overflow
+    core/code needs the long-line overflow behavior proven in prose.html.
+
+  separator-variant-visibility
+    core/separator style variants need visible M3 mapping, especially dots and
+    inset variants. Coordinate with BACKLOG #44 / #14 if the dots visibility
+    issue depends on Material Symbols font constraints rather than bridge CSS
+    alone.
+
+Semantic-decision candidates:
+  button-anchor-semantics
+    core/button renders anchor markup while lab Button specimens use button
+    elements. Underline/user-select fixes are mechanical; the architectural
+    decision is whether to extend core/buttons styles, keep an anchor bridge,
+    or introduce a semantic exception.
+
+  quote-pullquote-semantics
+    core/quote and core/pullquote render different blockquote/figure structures
+    that can mix styling and semantics.
+```
+
+v3.6.2 makes no custom-block decision and applies no bridge/reset patch. #41
+must consume this evidence plan-first before implementation.
+
 **Cross-references**:
 
 ```txt
@@ -1718,6 +1756,9 @@ docs/v3.5.6/
 docs/v3.5.9/
 docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-2E-REPORT.md
 docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
 ```
 
 ### 42. Token Architecture Refactor
@@ -1780,9 +1821,9 @@ BACKLOG #21
 ### 43. WP core block specimen wall / full variation audit
 
 - **Bucket**: B / D — WordPress binding QA
-- **Status**: Open
+- **Status**: **Resolved / closed at v3.6.2.**
 - **Priority**: Medium post-Pilot
-- **Target**: v3.6.x before broad block bridge expansion
+- **Target**: v3.6.2 — **DONE**
 - **Source**: v3.6.0 Pilot Phase 3 visual QA; user noted that listing all
   core blocks and style variations at once is faster than finding residual WP
   defaults one by one.
@@ -1819,6 +1860,73 @@ BACKLOG #21
 - Do not claim full WordPress core block coverage until the audit is complete.
 - Do not add custom blocks.
 - Do not solve token architecture here; that is BACKLOG #42.
+
+**v3.6.2 close evidence (2026-05-20)**:
+
+- Added a version-controlled Tier 1 fixture:
+  `products/reference-implementations/axismundi-pilot/fixtures/core-block-specimen-wall.html`.
+- Added an idempotent importer:
+  `tools/generators/build_pilot_specimen_wall.py`.
+- Added a render gate:
+  `tools/validators/validate_pilot_specimen_wall.js` and
+  `npm run validate:specimen-wall`.
+- Verified actual WordPress front-end rendering at:
+  `http://localhost:8888/?pagename=axismundi-core-block-specimen-wall`.
+- Covered the declared Tier 1 scope:
+  11 / 11 block families, 26 / 26 classified entries, 0 unclassified.
+- Phase 2 computed classification:
+  no-action 20, reset 1, bridge 0, semantic-decision 5, backlog 0.
+- Phase 3 visual QA catalog:
+  backlog 3, reset 1, semantic-decision 2, bridge 3, no-action 1.
+- Routed implementation inputs to BACKLOG #41 and follow-on coverage/editor
+  compatibility to BACKLOG #44.
+- Froze the current Tier 1 fixture as v3.6.2 coverage; Tier 2/3 and coverage
+  gaps are not claimed by this close.
+
+**v3.6.2 evidence docs**:
+
+```txt
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+```
+
+### 44. Specimen wall follow-on coverage + editor compatibility
+
+- **Bucket**: B / D — WordPress binding QA / specimen methodology
+- **Status**: Open
+- **Priority**: Low to medium post-v3.6.2
+- **Target**: v3.6.x after #41 scoping, or before the next specimen expansion
+- **Source**: v3.6.2 Phase 3 visual QA
+
+**Scope**:
+
+- Decide whether the specimen fixture should be editor-valid, or document the
+  front-end-only fixture method as intentional.
+- Add mark/highlight coverage once the authoring path is chosen.
+- Add long-line code coverage, or coordinate it with the #41 code bridge input.
+- Add deeper quote/pullquote fixture coverage if #41 needs more semantic
+  evidence.
+- Track the Material Symbols font constraint surfaced by separator variants,
+  cross-referencing existing BACKLOG #14 and BACKLOG #41 separator bridge work.
+
+**Non-goals**:
+
+- Do not reopen the v3.6.2 Tier 1 #43 close.
+- Do not implement #41 bridge/reset fixes.
+- Do not decide the core/button semantic boundary here.
+
+**Cross-references**:
+
+```txt
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+BACKLOG #14
+BACKLOG #41
+BACKLOG #43
+```
 
 ## Pre-Pilot classification snapshot (v3.5.18)
 

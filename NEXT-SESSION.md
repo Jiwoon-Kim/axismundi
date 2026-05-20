@@ -1,7 +1,7 @@
-# NEXT-SESSION.md — Post-v3.6.1 Handoff
+# NEXT-SESSION.md — Post-v3.6.2 Handoff
 
-> **Status**: v3.6.0 Ontology Theme Pilot and v3.6.1 Token Architecture
-> Refactor are closed. v3.6.2 Phase 3 visual QA is complete.
+> **Status**: v3.6.0 Ontology Theme Pilot, v3.6.1 Token Architecture
+> Refactor, and v3.6.2 WP Core Block Specimen Wall are closed.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-20.
 
@@ -15,16 +15,15 @@
 3. PROJECT-CONTEXT.md
 4. CHANGELOG.md latest entry
 5. ROADMAP.md current tail
-6. BACKLOG.md #41 / #43 / #21
-7. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
-8. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
-9. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-10. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
-11. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
-12. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-1-CLOSE.md
-13. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-3-VISUAL-QA.md
-14. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-15. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+6. BACKLOG.md #41 / #44 / #43 / #21 / #14
+7. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+8. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+9. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+10. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
+11. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
+12. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
+13. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+14. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -46,11 +45,12 @@ Opus/Claude:
 v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
 v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
 v3.6.1   Token Architecture Refactor                ✓ CLOSED
-v3.6.2   WP Core Block Specimen Wall                ◐ PHASE 3
+v3.6.2   WP Core Block Specimen Wall                ✓ CLOSED
 
 Next route:
-  Phase 5 close.
-  Do not patch bridge/reset CSS inside v3.6.2 unless user promotes a finding.
+  Start next cycle plan-first.
+  Primary candidate: BACKLOG #41 full block bridge expansion.
+  Follow-on candidate: BACKLOG #44 specimen coverage/editor compatibility.
 ```
 
 Public repository:
@@ -147,15 +147,12 @@ Start by running:
 ```powershell
 cd C:\Users\thaum\dev\axismundi
 git status --short
+wp-env start
+python tools\generators\build_pilot_specimen_wall.py
+npm run validate:specimen-wall
 php -l products\reference-implementations\axismundi-pilot\functions.php
 npm test
 npm run validate:computed
-```
-
-If wp-env is not running:
-
-```powershell
-wp-env start
 ```
 
 Then open/check relevant Pilot/styleguide surfaces for the next cycle. For
@@ -170,23 +167,27 @@ file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
 
 ## 5) Next Action
 
-Start Phase 5 close from:
+Choose the next cycle. Recommended primary route:
 
 ```txt
+BACKLOG #41 — WordPress block bridge expansion
+```
+
+Use v3.6.2 as input:
+
+```txt
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
 docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+BACKLOG #41
 ```
 
-Phase 5 focus:
+Alternative routes:
 
 ```txt
-1. Preserve evidence-cycle close framing:
-   enumerate + classify + route, no bridge fixes.
-
-2. Update BACKLOG #43 with v3.6.2 coverage evidence.
-
-3. Update BACKLOG #41 with routed reset / bridge / semantic-decision inputs.
-
-4. Update CHANGELOG / ROADMAP / CURRENT-STATE / NEXT-SESSION.
-
-5. Run final validators.
+BACKLOG #44 — specimen follow-on coverage + editor compatibility
+Wave 2 plan-first
+BACKLOG #21 — Interpreter Plugin strategy
 ```
+
+Do not auto-start implementation without a Phase 0 plan.

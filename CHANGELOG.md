@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v3.6.2 — WP Core Block Specimen Wall (2026-05-20)
+
+Evidence collection / classification release for BACKLOG #43. This cycle
+creates the Tier 1 WordPress core block specimen wall and routes findings into
+BACKLOG #41 without implementing bridge/reset fixes.
+
+### Added
+
+- Added a version-controlled specimen fixture for 11 Tier 1 WordPress core block
+  families.
+- Added an idempotent importer:
+  `tools/generators/build_pilot_specimen_wall.py`.
+- Added `npm run validate:specimen-wall` through
+  `tools/validators/validate_pilot_specimen_wall.js`.
+- Added Phase 1/2/3/5 evidence docs under `docs/v3.6.2/`.
+
+### Classified
+
+- Verified 11 / 11 Tier 1 families and 26 / 26 classified entries with 0
+  unclassified entries.
+- Phase 2 computed bucket distribution:
+  no-action 20, reset 1, bridge 0, semantic-decision 5, backlog 0.
+- Phase 3 visual QA added 10 routed findings:
+  backlog 3, reset 1, semantic-decision 2, bridge 3, no-action 1.
+
+### Routed
+
+- Closed BACKLOG #43 as a Tier 1 evidence cycle.
+- Routed table footer reset, search/code/separator bridge inputs, and
+  button/quote semantic decisions to BACKLOG #41.
+- Added BACKLOG #44 for specimen follow-on coverage and editor compatibility.
+- Kept the current Tier 1 fixture fixed; mark/highlight, long-line expansion,
+  editor validity, and deeper pullquote coverage move to follow-on work.
+
+### Verified
+
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS.
+- `npm run validate:computed`: PASS.
+- `git diff --check`: PASS.
+
 ## v3.6.1 — Token Architecture Refactor (2026-05-20)
 
 Cross-cutting lab + Pilot token architecture release. This closes BACKLOG #42

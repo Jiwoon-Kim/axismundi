@@ -1730,9 +1730,8 @@ Bridge candidates:
 
   separator-variant-visibility
     core/separator style variants need visible M3 mapping, especially dots and
-    inset variants. Coordinate with BACKLOG #44 / #14 if the dots visibility
-    issue depends on Material Symbols font constraints rather than bridge CSS
-    alone.
+    inset variants. Treat this as bridge CSS/style-variation work, not a
+    Material Symbols font issue.
 
 Semantic-decision candidates:
   button-anchor-semantics
@@ -1909,8 +1908,10 @@ docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
 - Add long-line code coverage, or coordinate it with the #41 code bridge input.
 - Add deeper quote/pullquote fixture coverage if #41 needs more semantic
   evidence.
-- Track the Material Symbols font constraint surfaced by separator variants,
-  cross-referencing existing BACKLOG #14 and BACKLOG #41 separator bridge work.
+- Track the Material Symbols font constraint surfaced during specimen QA as a
+  separate icon-font/layout constraint, cross-referencing existing BACKLOG #14.
+  Do not route separator variant visibility through the Material Symbols font
+  issue unless later evidence proves a real font dependency.
 
 **Non-goals**:
 

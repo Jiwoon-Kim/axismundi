@@ -106,17 +106,17 @@
 /* ============================================================
  * §4 Quote blocks
  * ============================================================ */
-.wp-block-post-content :where(.wp-block-quote, blockquote) {
+.wp-block-post-content :where(.wp-block-quote, blockquote:not(.wp-block-pullquote blockquote)) {
   padding-block: var(--space-sm);
   padding-inline-start: var(--space-lg);
   border-inline-start-color: var(--md-sys-color-primary);
 }
 
-.wp-block-post-content :where(.wp-block-quote, blockquote) > p {
+.wp-block-post-content :where(.wp-block-quote, blockquote:not(.wp-block-pullquote blockquote)) > p {
   color: inherit;
 }
 
-.wp-block-post-content :where(.wp-block-quote, blockquote) cite {
+.wp-block-post-content :where(.wp-block-quote, blockquote:not(.wp-block-pullquote blockquote)) cite {
   display: block;
   margin-block-start: var(--space-sm);
   font-style: normal;
@@ -126,8 +126,46 @@
   letter-spacing: var(--md-sys-typescale-body-small-tracking);
 }
 
-.wp-block-post-content :where(.wp-block-quote, blockquote) cite::before {
+.wp-block-post-content :where(.wp-block-quote, blockquote:not(.wp-block-pullquote blockquote)) cite::before {
   content: "-- ";
+}
+
+.wp-block-post-content .wp-block-pullquote {
+  margin-block: var(--space-xl);
+  padding-block: var(--space-lg);
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+  text-align: center;
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-post-content .wp-block-pullquote blockquote {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+}
+
+.wp-block-post-content .wp-block-pullquote p {
+  font-family: var(--md-sys-typescale-headline-medium-font);
+  font-size: var(--md-sys-typescale-headline-medium-size);
+  line-height: var(--md-sys-typescale-headline-medium-line-height);
+  font-weight: var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+  font-style: italic;
+}
+
+.wp-block-post-content .wp-block-pullquote cite {
+  display: block;
+  margin-block-start: var(--space-md);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  font-style: normal;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-post-content .wp-block-pullquote cite::before {
+  content: none;
 }
 
 /* ============================================================

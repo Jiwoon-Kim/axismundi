@@ -238,6 +238,10 @@ Entry probes:
 
 ```txt
 Editor canvas:
+  HTTP: confirm each editor-style CSS file is fetched by the editor iframe
+  DOM: confirm iframe document root element
+  DOM: confirm token CSS rules appear in document.styleSheets
+  DOM: confirm :root token declarations resolve at the iframe root
   --md-ref-palette-neutral-10
   --md-ref-palette-neutral-90
   --md-sys-color-on-surface
@@ -272,8 +276,9 @@ Exit criteria:
 - Before values recorded for editor and front end.
 - Root cause bucket A/B/C/D/E selected with evidence.
 - Implementation route chosen before any patch is applied.
-- No implementation file edited in Phase 1 unless Opus review explicitly
-  permits combining inventory and patch.
+- Phase 1 must not edit implementation files. If Phase 1 evidence surfaces an
+  unambiguously trivial patch, request scope expansion at Phase 1 review rather
+  than combining inventory and patch in the same commit.
 
 ### Phase 2 - Editor Token Parity Patch
 
@@ -557,6 +562,19 @@ Phase 0 review should verify:
 7. Validator strategy retains Axis E/F/G, `validate:specimen-wall`, and
    `validate:computed`.
 8. #44 editor-invalid-content remains out of scope.
+
+## Methodology Candidate
+
+v3.6.5 introduces a diagnostic-first cycle shape:
+
+```txt
+When the failure mode is unknown, Phase 1 classifies root cause and selects an
+implementation route before any patch.
+```
+
+Do not promote this to a new lock during Phase 0. Revisit at Phase 5 as a
+methodology finding. If later cycles reuse the same pattern for ripple
+graduation or editor state parity, consider whether it deserves lock status.
 
 ## Next
 

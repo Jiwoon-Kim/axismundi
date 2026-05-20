@@ -2,7 +2,7 @@
 
 > **Audience**: OpenAI Codex (or any coding-agent that uses `AGENTS.md` as repo-level guidance). Read this first before any edit.
 > **Sibling file**: `CLAUDE.md` (Anthropic Claude Code rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-20 (v3.6.1 Phase 5 — token architecture locks)
+> **Last updated**: 2026-05-20 (v3.6.3 Phase 5 - semantic bridge locks)
 
 ---
 
@@ -136,6 +136,20 @@ For color roles, every `--md-sys-color-*` entry must be defined as
 md-sys color layer. Dark mode swaps sys -> ref mappings only; it does not
 rewrite ref primitives or inject theme.json color literals. The permanent guard
 is `tools/validators/validate_theme_pilot.py` Axis E.
+
+### Semantic bridge locks
+
+For `core/button`, name the semantic route before accepting visual cleanup for
+link affordances. A `core/button` anchor with `href` is navigation and may
+receive an M3 button visual bridge. A real action, form behavior, AJAX flow,
+federation action, or durable custom schema must be routed to
+plugin/custom-block territory, not implemented in the theme bridge.
+
+When a WordPress core block visually maps to M3 but carries divergent markup,
+interaction, or accessibility semantics, route the mismatch as either
+theme-owned semantic-decision or plugin/custom-block territory before accepting
+a visual fix. Do not silently ignore the mismatch and do not collapse distinct
+core block structures into one generic CSS patch.
 
 ---
 

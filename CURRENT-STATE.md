@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-20 (v3.6.2 closed)
+> **Last updated**: 2026-05-20 (v3.6.3 closed)
 
 ---
 
@@ -33,15 +33,16 @@ v3.5.18  Pre-Pilot cleanup + Carousel reroute                         ✓ DONE
 v3.6.0   Ontology Theme Pilot v0                                      ✓ DONE
 v3.6.1   Token Architecture Refactor                                  ✓ DONE
 v3.6.2   WP Core Block Specimen Wall                                  ✓ DONE
+v3.6.3   WP Block Bridge Expansion                                     ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.2 WP Core Block Specimen Wall
+Current release:   v3.6.3 WP Block Bridge Expansion
 Current phase:     CLOSED
-Current state:     Tier 1 evidence cycle closed; findings routed, not patched
-Next allowed work: Next cycle plan-first (#41 / #44 / Wave 2 / #21)
+Current state:     First BACKLOG #41 slice closed; residual work routed
+Next allowed work: Next cycle plan-first (#41 residual / #44 / Wave 2 / #21)
 ```
 
 ## Matrix Snapshot
@@ -232,6 +233,50 @@ Routed to #44:
   editor-invalid-content
   mark/highlight coverage
   Material Symbols font constraint
+```
+
+## v3.6.3 Close Outcome
+
+```txt
+Mode:
+  BACKLOG #41 implementation/routing slice
+
+Closed by v3.6.3:
+  table-footer-contrast reset
+  search-styleguide-delta bridge
+  code-long-line-overflow bridge
+  separator-variant-visibility bridge
+  button-anchor-semantics route
+  quote-pullquote-semantics route
+
+Phase 0 plan:
+  docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
+
+Phase 3 decisions:
+  docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
+  docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
+
+Validation:
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS
+  npm run validate:computed                            PASS
+
+Routed forward:
+  BACKLOG #41 residual button mechanical cleanup
+  BACKLOG #41 quote/pullquote distinct-surface implementation
+  BACKLOG #41 original ripple/editor parity questions
+  BACKLOG #44 specimen/editor follow-on coverage
 ```
 
 ## Discipline

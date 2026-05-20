@@ -1,7 +1,8 @@
-# NEXT-SESSION.md — Post-v3.6.2 Handoff
+# NEXT-SESSION.md - Post-v3.6.3 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot, v3.6.1 Token Architecture
-> Refactor, and v3.6.2 WP Core Block Specimen Wall are closed.
+> Refactor, v3.6.2 WP Core Block Specimen Wall, and v3.6.3 WP Block Bridge
+> Expansion are closed.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-20.
 
@@ -15,15 +16,18 @@
 3. PROJECT-CONTEXT.md
 4. CHANGELOG.md latest entry
 5. ROADMAP.md current tail
-6. BACKLOG.md #41 / #44 / #43 / #21 / #14
-7. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
-8. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-9. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
-10. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-0-PLAN.md
-11. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-1-REPORT.md
-12. docs/v3.6.1/TOKEN-ARCHITECTURE-REFACTOR-PHASE-5-CLOSE.md
-13. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-14. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+6. BACKLOG.md #41 / #44 / #21 / #14
+7. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
+8. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
+9. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
+10. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
+11. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
+12. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
+13. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+14. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+15. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+16. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+17. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -42,15 +46,20 @@ Opus/Claude:
 ## 1) Current State
 
 ```txt
-v3.5.18  Pre-Pilot cleanup + Carousel reroute       ✓ CLOSED
-v3.6.0   Ontology Theme Pilot v0                    ✓ CLOSED
-v3.6.1   Token Architecture Refactor                ✓ CLOSED
-v3.6.2   WP Core Block Specimen Wall                ✓ CLOSED
+v3.5.18  Pre-Pilot cleanup + Carousel reroute       CLOSED
+v3.6.0   Ontology Theme Pilot v0                    CLOSED
+v3.6.1   Token Architecture Refactor                CLOSED
+v3.6.2   WP Core Block Specimen Wall                CLOSED
+v3.6.3   WP Block Bridge Expansion                  CLOSED
 
 Next route:
   Start next cycle plan-first.
-  Primary candidate: BACKLOG #41 full block bridge expansion.
-  Follow-on candidate: BACKLOG #44 specimen coverage/editor compatibility.
+  Primary candidates:
+    BACKLOG #41 residual bridge cleanup after v3.6.3 semantic routing.
+    BACKLOG #44 specimen follow-on coverage + editor compatibility.
+  Alternative candidates:
+    Wave 2 plan-first.
+    BACKLOG #21 Interpreter Plugin strategy.
 ```
 
 Public repository:
@@ -66,51 +75,52 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.1 Close Summary
+## 2) v3.6.3 Close Summary
 
-Implemented:
+Closed by v3.6.3:
 
 ```txt
-Token layers:
-  tokens.ref.css
-  tokens.sys.light.css
-  tokens.sys.dark.css
-  tokens.comp.css
-  tokens.css empty compatibility shim
+Housekeeping:
+  BACKLOG #41 / #44 / #14 separator-to-Material-Symbols cross-link corrected.
+  .gitattributes line-ending policy added.
 
-WordPress projections:
-  wp-preset.bridge.css
-  wp-custom.bridge.css
-  theme.json settings.custom.axismundi.* downstream var() leaves
+Phase 1 reset:
+  table-footer-contrast
 
-Dark mode:
-  Pilot Light / Dark / Auto controls
-  sys-layer remapping only; md-ref unchanged
+Phase 2 bridges:
+  search-styleguide-delta
+  code-long-line-overflow
+  separator-variant-visibility
 
-Validation:
-  Axis E md-sys -> md-ref lock
-  Axis F bridge downstream lock
-  Axis G theme.json custom downstream lock
-  computed light/dark matrix + real click path
+Phase 3 semantic decisions:
+  button-anchor-semantics
+  quote-pullquote-semantics
 ```
 
-Closed:
+Validation at close:
 
 ```txt
-BACKLOG #20 — settings.color.custom=false theme-only color policy
-BACKLOG #42 — Token Architecture Refactor
+python tools/generators/build_pilot_specimen_wall.py PASS
+npm run validate:specimen-wall                       PASS
+php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+npm test                                             PASS
+npm run validate:computed                            PASS
+git diff --check                                     PASS
 ```
 
-Routed:
+Routed forward:
 
 ```txt
-BACKLOG #43 / #41:
-  Phase 3 visual QA table footer native border finding
-  Phase 3 visual QA core/button semantic boundary finding
+BACKLOG #41:
+  button mechanical cleanup after route
+  quote/pullquote distinct-surface implementation after route
+  ripple/editor parity questions from original #41
 
-Future candidates:
-  Axis H bridge/theme correspondence validator
-  Auto-mode media emulation matrix
+BACKLOG #44:
+  editor-invalid-content
+  mark/highlight coverage
+  Material Symbols font constraint
+  possible deeper pullquote fixture coverage
 ```
 
 ## 3) Lesson Locks
@@ -118,7 +128,7 @@ Future candidates:
 These are now close-time rules, not suggestions:
 
 ```txt
-Lock 1 — wp-custom downstream-only
+Lock 1 - wp-custom downstream-only
 
 Every settings.custom.axismundi.* entry MUST be defined as:
   var(--comp-*) or var(--md-sys-*) or var(--md-ref-*)
@@ -129,7 +139,7 @@ Validator: tools/validators/validate_theme_pilot.py Axis G.
 ```
 
 ```txt
-Lock 2 — md-sys color maps to md-ref
+Lock 2 - md-sys color maps to md-ref
 
 Every --md-sys-color-* entry MUST be defined as:
   var(--md-ref-palette-*)
@@ -138,6 +148,26 @@ Literal hex / rgb / hsl values are forbidden in the md-sys color layer.
 Rationale: md-sys is the runtime semantic layer; md-ref is the primitive source.
 Dark mode swaps sys -> ref mappings only.
 Validator: tools/validators/validate_theme_pilot.py Axis E.
+```
+
+```txt
+Lock 3 - core/button semantic route before visual cleanup
+
+Before accepting visual cleanup for core/button link affordances, name the
+semantic route. A core/button anchor with href is navigation and may receive an
+M3 button visual bridge. A real action, form behavior, AJAX flow, federation
+action, or durable custom schema must be routed to plugin/custom-block
+territory, not implemented in the theme bridge.
+```
+
+```txt
+Lock 4 - semantic mismatch handling rule
+
+When a WordPress core block visually maps to M3 but carries divergent markup,
+interaction, or accessibility semantics, route the mismatch as either
+theme-owned semantic-decision or plugin/custom-block territory before
+accepting a visual fix. Do not silently ignore the mismatch and do not collapse
+distinct core block structures into one generic CSS patch.
 ```
 
 ## 4) Resume Checklist
@@ -162,32 +192,32 @@ Pilot feedback work, include:
 http://localhost:8888/
 http://localhost:8888/?page_id=10
 http://localhost:8888/?p=1
-file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html#blocks-table
+http://localhost:8888/?pagename=axismundi-core-block-specimen-wall
+file:///C:/Users/thaum/dev/axismundi/styleguide/blocks.html
 ```
 
 ## 5) Next Action
 
-Choose the next cycle. Recommended primary route:
+Choose the next cycle. Do not auto-start implementation without a Phase 0 plan.
+
+Recommended primary routes:
 
 ```txt
-BACKLOG #41 — WordPress block bridge expansion
-```
+BACKLOG #41 residual bridge cleanup:
+  button mechanical cleanup after semantic route
+  quote/pullquote distinct-surface implementation after semantic route
+  ripple/editor parity questions
 
-Use v3.6.2 as input:
-
-```txt
-docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
-docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
-BACKLOG #41
+BACKLOG #44 specimen follow-on coverage + editor compatibility:
+  editor-invalid-content
+  mark/highlight coverage
+  Material Symbols font constraint
+  deeper pullquote coverage if needed
 ```
 
 Alternative routes:
 
 ```txt
-BACKLOG #44 — specimen follow-on coverage + editor compatibility
 Wave 2 plan-first
-BACKLOG #21 — Interpreter Plugin strategy
+BACKLOG #21 Interpreter Plugin strategy
 ```
-
-Do not auto-start implementation without a Phase 0 plan.

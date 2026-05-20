@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## v3.6.3 - WP Block Bridge Expansion (2026-05-20)
+
+Implementation/routing release for the first BACKLOG #41 slice. This cycle
+consumes the v3.6.2 specimen wall evidence, fixes one reset leak, bridges three
+core block surfaces, and routes two semantic decisions without implementing
+custom blocks.
+
+### Added
+
+- Added the v3.6.3 Phase 0/1/2/3/5 docs under `docs/v3.6.3/`.
+- Added `.gitattributes` line-ending policy so text files check out as LF while
+  Windows command scripts keep CRLF.
+
+### Changed
+
+- Reset `core/table` footer borders so `tfoot` no longer inherits the native
+  3px currentColor rule.
+- Bridged `core/search.is-style-filled-search` toward the lab Search bar
+  surface.
+- Bridged long-line overflow for `core/code`, `core/preformatted`, and
+  post-content `pre`.
+- Bridged `core/separator` default, wide, dots, inset, and middle-inset
+  variants with token-routed visibility.
+- Corrected the BACKLOG #41 / #44 / #14 separator-to-Material-Symbols
+  cross-link; separator visibility is bridge CSS/style-variation work unless
+  later evidence proves a real font dependency.
+
+### Routed
+
+- Routed `button-anchor-semantics`: `core/button` anchors with `href` remain
+  valid navigation and may receive an M3 button visual bridge; action behavior
+  stays plugin/custom-block territory.
+- Routed `quote-pullquote-semantics`: `core/quote` and `core/pullquote` remain
+  distinct theme-owned surfaces; future CSS must not silently collapse them.
+- Promoted two lesson locks: core/button semantic route before visual cleanup,
+  and semantic mismatch handling before accepting visual fixes.
+
+### Verified
+
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS.
+- `npm run validate:computed`: PASS.
+- `git diff --check`: PASS.
+
 ## v3.6.2 — WP Core Block Specimen Wall (2026-05-20)
 
 Evidence collection / classification release for BACKLOG #43. This cycle

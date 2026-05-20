@@ -1688,7 +1688,7 @@ BACKLOG #38
 ### 41. WordPress block bridge state and ripple enhancement
 
 - **Bucket**: B — WordPress binding / block bridge
-- **Status**: Open
+- **Status**: Open - v3.6.3 first slice closed; residual bridge/state work remains
 - **Priority**: Medium post-Pilot
 - **Target**: v3.6.x or v3.7.x
 - **Source**: v3.6.0 Pilot Phase 3 visual QA / Phase 2E minimum bridge
@@ -1748,6 +1748,43 @@ Semantic-decision candidates:
 v3.6.2 makes no custom-block decision and applies no bridge/reset patch. #41
 must consume this evidence plan-first before implementation.
 
+**v3.6.3 close evidence (2026-05-20)**:
+
+v3.6.3 consumed the v3.6.2 evidence slice and closed these items:
+
+```txt
+Reset:
+  table-footer-contrast
+
+Bridge:
+  search-styleguide-delta
+  code-long-line-overflow
+  separator-variant-visibility
+
+Semantic routes:
+  button-anchor-semantics
+  quote-pullquote-semantics
+```
+
+The cycle did not implement custom blocks, plugin behavior, `theme.json`
+changes, or `functions.php` registration changes beyond the existing block
+style inventory. Separator visibility remains bridge CSS/style-variation work,
+not a Material Symbols font issue.
+
+Residual #41 scope:
+
+```txt
+button mechanical cleanup after route:
+  text-decoration, user-select, and state styling checks for .wp-block-button__link
+
+quote/pullquote implementation after route:
+  selector narrowing and distinct .wp-block-pullquote bridge styling
+
+broader original #41 questions:
+  ripple bridge graduation
+  editor-canvas parity for hover/focus/pressed/disabled/selected states
+```
+
 **Cross-references**:
 
 ```txt
@@ -1758,6 +1795,12 @@ docs/v3.6.0/ONTOLOGY-THEME-PILOT-PHASE-3-REPORT.md
 docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
 docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
 docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
+docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
+docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
+docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
+docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
+docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
 ```
 
 ### 42. Token Architecture Refactor

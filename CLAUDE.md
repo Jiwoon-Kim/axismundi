@@ -2,7 +2,7 @@
 
 > **Audience**: Claude (Claude Code, Anthropic). Read this first before any work in this repo.
 > **Sibling file**: `AGENTS.md` (Codex/OpenAI executor rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-20 (v3.6.1 Phase 5 — token architecture locks)
+> **Last updated**: 2026-05-20 (v3.6.3 Phase 5 - semantic bridge locks)
 
 ---
 
@@ -56,6 +56,8 @@ Forbidden without explicit user authorization:
 10. **WordPress block bridge is reverse-direction work.** For block themes, start from Markdown / HTML defaults and WordPress core block output, reset core defaults, then map to M3. Do not assume Axismundi component selectors are enough. Computed front-end/editor values are the acceptance gate; selector presence is not proof.
 11. **Generated Pilot assets must be refreshed.** After source CSS edits that feed `axismundi-pilot`, rerun the asset bridge and use a fresh browser context or hard reload. Browser cache and copied-asset drift can hide or fake a WordPress/M3 mapping result.
 12. **Token architecture is downstream-only.** `settings.custom.axismundi.*` leaves must be `var(--comp-*)`, `var(--md-sys-*)`, or `var(--md-ref-*)`; literal hex/rgb/px/number values are forbidden there. `--md-sys-color-*` entries must map to `var(--md-ref-palette-*)`; literal hex/rgb/hsl values are forbidden in the md-sys color layer. Axis G and Axis E in `tools/validators/validate_theme_pilot.py` are the permanent guards.
+13. **core/button needs a semantic route before visual cleanup.** A `core/button` anchor with `href` is navigation and may receive an M3 button visual bridge. Action behavior, form submission, AJAX, federation actions, and durable custom schemas are plugin/custom-block territory.
+14. **Semantic mismatches must be routed.** When a WordPress core block visually maps to M3 but carries divergent markup, interaction, or accessibility semantics, route the mismatch as theme-owned semantic-decision or plugin/custom-block territory before accepting a visual fix. Do not silently collapse distinct core block structures into one generic CSS patch.
 
 ---
 

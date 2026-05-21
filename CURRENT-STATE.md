@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-21 (v3.6.5 closed)
+> **Last updated**: 2026-05-21 (v3.6.6 closed)
 
 ---
 
@@ -36,15 +36,16 @@ v3.6.2   WP Core Block Specimen Wall                                  ✓ DONE
 v3.6.3   WP Block Bridge Expansion                                     ✓ DONE
 v3.6.4   WP Block Bridge Residual Cleanup                              ✓ DONE
 v3.6.5   WP Block Bridge Editor Token Parity                           ✓ DONE
+v3.6.6   WP Block Bridge Ripple / Editor State Parity                   ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.5 WP Block Bridge Editor Token Parity
+Current release:   v3.6.6 WP Block Bridge Ripple / Editor State Parity
 Current phase:     CLOSED
-Current state:     BACKLOG #41 editor token enqueue parity closed; ripple/editor state parity remains
-Next allowed work: Next cycle plan-first (#41 ripple/editor state parity / #44 / Wave 2 / #21)
+Current state:     BACKLOG #41 narrowed to shared WordPress ripple runtime packaging decision
+Next allowed work: Next cycle plan-first (#44 / Wave 2 / #21 / narrowed #41 packaging)
 ```
 
 ## Matrix Snapshot
@@ -365,6 +366,52 @@ Routed forward:
   BACKLOG #41 broader editor-canvas state parity
   BACKLOG #44 editor-invalid-content / editor compatibility
   TT5 as future selector/theme.json structure reference only
+```
+
+## v3.6.6 Close Outcome
+
+```txt
+Mode:
+  BACKLOG #41 ripple / editor state diagnostic and routing cycle
+
+Closed by v3.6.6:
+  Pilot ripple bridge does not graduate in v3.6.6
+  Pilot front-end core/button ripple remains Pilot-only
+  editor-canvas state parity for current core/button theme bridge:
+    focus-visible PASS
+    disabled PASS
+    hover not exposed / no theme target
+    pressed not exposed / no theme target
+    selected not exposed / no theme target
+
+Phase 0 plan:
+  docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-5-CLOSE.md
+
+Validation:
+  wp-env run cli wp core version                      7.0
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS (Axis A-G all 1.000)
+  npm run validate:computed                            PASS
+  git diff --check                                     PASS
+
+Routed forward:
+  BACKLOG #41 shared WordPress ripple runtime packaging decision
+  BACKLOG #44 editor-valid fixture / editor compatibility
+  diagnostic-first remains methodology finding, not Lock 5
 ```
 
 ## Discipline

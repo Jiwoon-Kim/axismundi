@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v3.6.6 - WP Block Bridge Ripple / Editor State Parity (2026-05-21)
+
+Diagnostic routing release for BACKLOG #41. This cycle closes the current
+v3.6.x theme-bridge editor state parity question and narrows #41 to a future
+shared WordPress ripple runtime packaging decision.
+
+### Added
+
+- Added the v3.6.6 Phase 0/1/2/3/5 docs under `docs/v3.6.6/`.
+- Added front-end and editor state matrices for `core/button` hover, focus,
+  pressed, disabled, and selected exposure.
+- Added Route C evidence explaining why the Pilot ripple bridge remains
+  Pilot-only rather than graduating to the existing Ripple v2 provider.
+
+### Routed
+
+- Kept BACKLOG #41 open only for the shared WordPress ripple runtime packaging
+  decision.
+- Closed BACKLOG #41's current editor-canvas state parity question for
+  `core/button`: focus/disabled pass; hover/pressed/selected are not exposed
+  theme targets in the editor canvas.
+- Routed the editor block-validation console errors observed during Phase 1/3
+  to BACKLOG #44 editor-valid fixture / editor compatibility work.
+
+### Verified
+
+- `wp-env run cli wp core version`: 7.0.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `git diff --check`: PASS.
+
 ## v3.6.5 - WP Block Bridge Editor Token Parity (2026-05-21)
 
 Editor token plumbing release for BACKLOG #41. This cycle closes the editor

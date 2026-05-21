@@ -1688,7 +1688,7 @@ BACKLOG #38
 ### 41. WordPress block bridge state and ripple enhancement
 
 - **Bucket**: B — WordPress binding / block bridge
-- **Status**: Open - v3.6.5 closed editor token parity; ripple/editor state parity remains
+- **Status**: Open - narrowed by v3.6.6 to shared WordPress ripple runtime packaging decision
 - **Priority**: Medium post-Pilot
 - **Target**: v3.6.x or v3.7.x
 - **Source**: v3.6.0 Pilot Phase 3 visual QA / Phase 2E minimum bridge
@@ -1869,6 +1869,52 @@ broader editor-canvas state parity:
   exposes equivalent editor states
 ```
 
+**v3.6.6 close evidence (2026-05-21)**:
+
+v3.6.6 consumed the remaining ripple/editor parity question for the current
+v3.6.x theme bridge and narrowed #41 to a future packaging decision:
+
+```txt
+Pilot ripple bridge graduation:
+  does not graduate in v3.6.6
+  remains Pilot-only for the front-end core/button bridge
+
+Editor-canvas state parity for core/button:
+  focus-visible: PASS
+  disabled:      PASS
+  hover:         not exposed / no theme target
+  pressed:       not exposed / no theme target
+  selected:      not exposed / no theme target
+```
+
+Why no shared runtime graduation:
+
+```txt
+Pilot front-end runtime currently attaches to .wp-block-button__link rendered
+inside .wp-block-post-content. Ripple v2's FORBIDDEN_ANCESTORS policy
+(closest('.prose, .wp-block-post-content, .entry-content, [contenteditable]'))
+would refuse provider-runtime attachment on that surface.
+```
+
+Remaining #41 scope after v3.6.6:
+
+```txt
+shared WordPress ripple runtime packaging decision:
+  decide whether a future v3.7.x WordPress binding / plugin-custom track
+  packages the Ripple v2 provider for WordPress surfaces.
+
+Sub-decisions:
+  1. post-content front-end anchors
+  2. editor-owned content surfaces
+  3. forbidden ancestor policy
+  4. attach/detach lifecycle
+  5. shared token alias location
+```
+
+v3.6.6 did not edit implementation files, did not add plugin/custom-block
+behavior, did not change `theme.json`, did not edit lab ripple files, and did
+not expand fixtures.
+
 TT5 note:
 
 ```txt
@@ -1915,6 +1961,11 @@ docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
 docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
 docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
 docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
+docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-0-PLAN.md
+docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-1-REPORT.md
+docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-2-REPORT.md
+docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-3-VISUAL-QA.md
+docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-5-CLOSE.md
 ```
 
 ### 42. Token Architecture Refactor
@@ -2085,6 +2136,18 @@ BACKLOG #14
 BACKLOG #41
 BACKLOG #43
 ```
+
+**v3.6.6 forward evidence (2026-05-21)**:
+
+v3.6.6 Phase 1 and Phase 3 editor probes observed:
+
+```txt
+editor open console errors:           56
+block validation console error count: 56
+```
+
+This remains #44 editor-valid fixture / editor compatibility work. v3.6.6 did
+not repair fixture validity and did not claim an invalid-content fix.
 
 ## Pre-Pilot classification snapshot (v3.5.18)
 

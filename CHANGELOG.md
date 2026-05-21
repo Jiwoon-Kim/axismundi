@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## v3.6.5 - WP Block Bridge Editor Token Parity (2026-05-21)
+
+Editor token plumbing release for BACKLOG #41. This cycle closes the editor
+md-sys color token enqueue parity item surfaced during v3.6.4 Phase 3 visual
+QA.
+
+### Added
+
+- Added the v3.6.5 Phase 0/1/2/3/5 docs under `docs/v3.6.5/`.
+- Added diagnostic-first root-cause evidence for editor iframe token loading.
+- Added a TT5 reference note: TT5 remains a future core-block selector/schema
+  reference, not a v3.6.5 implementation source.
+
+### Changed
+
+- Repaired the malformed trailing comment in `tokens.sys.light.css` across the
+  lab, Pilot, and styleguide tracked copies.
+- Restored WordPress 7.0 editor iframe resolution for md-sys light color
+  tokens used by block bridge surfaces.
+
+### Routed
+
+- Closed BACKLOG #41's editor md-sys color token enqueue parity item.
+- Kept BACKLOG #41 open for ripple bridge graduation and broader editor-canvas
+  state parity.
+- Kept BACKLOG #44 as owner of the pre-existing editor-invalid-content /
+  editor-valid fixture work.
+
+### Verified
+
+- `wp-env run cli wp core version`: 7.0.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS.
+- `npm run validate:computed`: PASS.
+- `git diff --check`: PASS.
+
 ## v3.6.4 - WP Block Bridge Residual Cleanup (2026-05-21)
 
 Mechanical cleanup release for BACKLOG #41 residual work after the v3.6.3

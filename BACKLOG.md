@@ -1688,7 +1688,7 @@ BACKLOG #38
 ### 41. WordPress block bridge state and ripple enhancement
 
 - **Bucket**: B — WordPress binding / block bridge
-- **Status**: Open - v3.6.4 closed mechanical residual cleanup; ripple/editor parity remains
+- **Status**: Open - v3.6.5 closed editor token parity; ripple/editor state parity remains
 - **Priority**: Medium post-Pilot
 - **Target**: v3.6.x or v3.7.x
 - **Source**: v3.6.0 Pilot Phase 3 visual QA / Phase 2E minimum bridge
@@ -1833,6 +1833,53 @@ editor token enqueue parity:
   regression.
 ```
 
+**v3.6.5 close evidence (2026-05-21)**:
+
+v3.6.5 consumed the editor token enqueue parity item and closed it:
+
+```txt
+Root cause:
+  tokens.sys.light.css ended with a dangling opening comment.
+  WordPress 7.0's editor-style transform turned that malformed light sys file
+  into an empty editor iframe inline style.
+
+Patch:
+  closed the malformed trailing comment across the lab, Pilot, and styleguide
+  tracked copies.
+
+Editor result:
+  --md-sys-color-on-surface:         #1D1B20
+  --md-sys-color-outline-variant:    #CAC4D0
+  --md-sys-color-on-surface-variant: #49454F
+  pullquote divider:                 1px solid rgb(202, 196, 208)
+```
+
+The cycle did not change `theme.json`, `functions.php`, plugin behavior,
+fixtures, TT5 reference files, ripple runtime, or broader editor state parity.
+
+Remaining #41 scope after v3.6.5:
+
+```txt
+ripple bridge graduation:
+  decide whether the Pilot-specific ripple bridge graduates into shared
+  WordPress binding runtime or remains Pilot-only
+
+broader editor-canvas state parity:
+  verify hover/focus/pressed/disabled/selected state mapping where WordPress
+  exposes equivalent editor states
+```
+
+TT5 note:
+
+```txt
+Twenty Twenty-Five 1.5 is available locally at:
+  C:\Users\thaum\dev\twentytwentyfive.1.5\twentytwentyfive
+
+Use TT5 as a future core block selector / theme.json structure reference, not
+as a token or visual-style source. Axismundi keeps the M3 token architecture
+and Lock 1/2 downstream-only constraints.
+```
+
 Drag console note:
 
 ```txt
@@ -1863,6 +1910,11 @@ docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
 docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
 docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
 docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
+docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-0-PLAN.md
+docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
+docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
+docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
+docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
 ```
 
 ### 42. Token Architecture Refactor

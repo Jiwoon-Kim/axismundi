@@ -1,8 +1,9 @@
-# NEXT-SESSION.md - Post-v3.6.4 Handoff
+# NEXT-SESSION.md - Post-v3.6.5 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot, v3.6.1 Token Architecture
 > Refactor, v3.6.2 WP Core Block Specimen Wall, v3.6.3 WP Block Bridge
-> Expansion, and v3.6.4 WP Block Bridge Residual Cleanup are closed.
+> Expansion, v3.6.4 WP Block Bridge Residual Cleanup, and v3.6.5 WP Block
+> Bridge Editor Token Parity are closed.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-21.
 
@@ -17,22 +18,27 @@
 4. CHANGELOG.md latest entry
 5. ROADMAP.md current tail
 6. BACKLOG.md #41 / #44 / #21 / #14
-7. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
-8. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
-9. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
-10. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
-11. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
-12. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
-13. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
-14. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
-15. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
-16. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
-17. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
-18. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
-19. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-20. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
-21. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-22. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+7. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
+8. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
+9. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
+10. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
+11. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-0-PLAN.md
+12. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
+13. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
+14. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
+15. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
+16. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
+17. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
+18. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
+19. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
+20. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
+21. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
+22. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
+23. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+24. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+25. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+26. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+27. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -57,11 +63,12 @@ v3.6.1   Token Architecture Refactor                CLOSED
 v3.6.2   WP Core Block Specimen Wall                CLOSED
 v3.6.3   WP Block Bridge Expansion                  CLOSED
 v3.6.4   WP Block Bridge Residual Cleanup           CLOSED
+v3.6.5   WP Block Bridge Editor Token Parity        CLOSED
 
 Next route:
   Start next cycle plan-first.
   Primary candidates:
-    BACKLOG #41 ripple/editor parity follow-on.
+    BACKLOG #41 ripple/editor state parity follow-on.
     BACKLOG #44 specimen follow-on coverage + editor compatibility.
   Alternative candidates:
     Wave 2 plan-first.
@@ -81,27 +88,23 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.4 Close Summary
+## 2) v3.6.5 Close Summary
 
-Closed by v3.6.4:
+Closed by v3.6.5:
 
 ```txt
-Phase 1 button mechanical cleanup:
-  core/button href route preserved
-  post-content underline leakage removed
-  user-select disabled
-  focus/hover/pressed state behavior preserved
+Phase 1 inventory:
+  editor token gap diagnosed as malformed tokens.sys.light.css trailing comment
+  TT5 recorded as future selector/schema reference only
 
-Phase 2 quote/pullquote cleanup:
-  quote selectors narrowed
-  pullquote distinct bridge surface added
-  pullquote inner blockquote no longer absorbs quote padding/bar styling
-  pullquote cite no longer absorbs quote prefix
+Phase 2 patch:
+  lab / Pilot / styleguide tokens.sys.light.css copies repaired in lockstep
+  editor md-sys light tokens restored in WordPress 7.0
 
 Phase 3 visual QA:
-  light/dark button + quote/pullquote sweep
-  editor canvas smoke
-  front-end drag console smoke
+  editor pullquote divider/color restored
+  front-end light/dark values unchanged
+  #44 editor-invalid-content warning remains routed
 ```
 
 Validation at close:
@@ -120,8 +123,7 @@ Routed forward:
 ```txt
 BACKLOG #41:
   ripple bridge graduation
-  editor-canvas parity questions from original #41
-  editor md-sys color token enqueue parity surfaced by v3.6.4
+  broader editor-canvas state parity questions from original #41
 
 BACKLOG #44:
   editor-invalid-content
@@ -213,7 +215,7 @@ Recommended primary routes:
 BACKLOG #41 ripple/editor parity follow-on:
   decide whether the Pilot ripple bridge graduates or remains Pilot-only
   verify editor-canvas parity for hover/focus/pressed/disabled/selected states
-  resolve editor md-sys color token enqueue parity
+  use diagnostic-first Phase 1 when failure mode is unknown
 
 BACKLOG #44 specimen follow-on coverage + editor compatibility:
   editor-invalid-content
@@ -227,4 +229,11 @@ Alternative routes:
 ```txt
 Wave 2 plan-first
 BACKLOG #21 Interpreter Plugin strategy
+```
+
+Phase cadence:
+
+```txt
+v3.6.x uses Phase 0 / 1 / 2 / 3 / 5.
+Phase 4 is intentionally unused in this cadence.
 ```

@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-21 (v3.6.4 closed)
+> **Last updated**: 2026-05-21 (v3.6.5 closed)
 
 ---
 
@@ -35,15 +35,16 @@ v3.6.1   Token Architecture Refactor                                  ✓ DONE
 v3.6.2   WP Core Block Specimen Wall                                  ✓ DONE
 v3.6.3   WP Block Bridge Expansion                                     ✓ DONE
 v3.6.4   WP Block Bridge Residual Cleanup                              ✓ DONE
+v3.6.5   WP Block Bridge Editor Token Parity                           ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.4 WP Block Bridge Residual Cleanup
+Current release:   v3.6.5 WP Block Bridge Editor Token Parity
 Current phase:     CLOSED
-Current state:     BACKLOG #41 mechanical residual cleanup closed; ripple/editor parity remains
-Next allowed work: Next cycle plan-first (#41 ripple/editor parity / #44 / Wave 2 / #21)
+Current state:     BACKLOG #41 editor token enqueue parity closed; ripple/editor state parity remains
+Next allowed work: Next cycle plan-first (#41 ripple/editor state parity / #44 / Wave 2 / #21)
 ```
 
 ## Matrix Snapshot
@@ -322,6 +323,48 @@ Routed forward:
   BACKLOG #41 editor-canvas parity questions
   BACKLOG #41 editor md-sys color token enqueue parity
   BACKLOG #44 editor-invalid-content / editor compatibility
+```
+
+## v3.6.5 Close Outcome
+
+```txt
+Mode:
+  BACKLOG #41 editor token enqueue parity slice
+
+Closed by v3.6.5:
+  editor md-sys color token enqueue parity
+  WordPress 7.0 editor iframe tokens.sys.light landing
+  editor pullquote divider/color token resolution
+
+Phase 0 plan:
+  docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
+
+Validation:
+  wp-env run cli wp core version                      7.0
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS
+  npm run validate:computed                            PASS
+  git diff --check                                     PASS
+
+Routed forward:
+  BACKLOG #41 ripple bridge graduation
+  BACKLOG #41 broader editor-canvas state parity
+  BACKLOG #44 editor-invalid-content / editor compatibility
+  TT5 as future selector/theme.json structure reference only
 ```
 
 ## Discipline

@@ -2,7 +2,7 @@
 
 > **Audience**: OpenAI Codex (or any coding-agent that uses `AGENTS.md` as repo-level guidance). Read this first before any edit.
 > **Sibling file**: `CLAUDE.md` (Anthropic Claude Code rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-21 (v3.6.4 Phase 5 - residual cleanup close)
+> **Last updated**: 2026-05-21 (v3.6.5 Phase 5 - editor token parity close)
 
 ---
 

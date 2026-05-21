@@ -370,7 +370,12 @@ release planning cycle.
   - Cleaned up core/button link affordances: underline leakage, user-select, and state behavior checks.
   - Split core/quote and core/pullquote bridge surfaces so pullquote no longer absorbs quote blockquote styling.
   - Added light/dark visual QA plus editor canvas and drag console smoke routing.
-- **v3.6.x — v3.7.x (NEXT)** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Primary next candidates: BACKLOG #41 ripple/editor parity follow-on, BACKLOG #44 specimen follow-on coverage/editor compatibility, Wave 2 plan-first, or BACKLOG #21 Interpreter Plugin strategy. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
+- **v3.6.5** ← **WP Block Bridge Editor Token Parity** ✓ DONE (2026-05-21)
+  - Diagnosed WordPress 7.0 editor iframe md-sys light token loss as a malformed `tokens.sys.light.css` trailing comment.
+  - Repaired the lab, Pilot, and styleguide token copies in lockstep.
+  - Restored editor canvas pullquote color/divider resolution while preserving front-end light/dark values.
+  - Kept TT5 as future selector/schema reference only; no TT5-derived implementation.
+- **v3.6.x — v3.7.x (NEXT)** — Wave 2 (14 entries) + Wave 3 (3 entries) + pilot feedback iteration. Primary next candidates: BACKLOG #41 ripple/editor state parity follow-on, BACKLOG #44 specimen follow-on coverage/editor compatibility, Wave 2 plan-first, or BACKLOG #21 Interpreter Plugin strategy. Wave 2 likely splits into 2A (Navigation: App bar/Nav rail/Nav bar/Tabs/Menu) + 2B (Form: Checkbox/Radio/Switch + Dialog/Sheet + remaining Actions).
 - **v3.7.x → v1.0 RC** — 33-component audit coverage substantially complete (DONE + RECORD = 30+ out of 34 TOC components); pilot theme stable; M3 Interpreter Plugin (BACKLOG #21) authoring in parallel as plugin-tier artifact.
 - v3.4.x — **Promotion Criteria / Public Surface Prep** — `lab/docs/PROMOTION-CRITERIA.md` author the rules for "what gets promoted from lab to baseline styleguide" before v3.5.0 trims the styleguide. Also: publish-doc "generated artifact, not authoring surface" note, link `typography-axis.html` from Typography section. No interaction-module work. (Was tagged v3.4.8 — bumped because Date/Time and Benchmark Surface Cleanup took those slots.)
 - v3.4.x — **FAB / Extended FAB / FAB menu conversion** — 35 SVGs at 56px context. Independent visual rhythm pass; conversion-shape variants A/B already documented in v3.4.4 audit. (Originally tagged v3.4.6, then v3.4.7, then v3.4.9 — now bumped to v3.4.x to make room for Date/Time extraction and benchmark cleanup.)

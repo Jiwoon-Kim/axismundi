@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-21 (v3.6.6 closed)
+> **Last updated**: 2026-05-21 (v3.6.7 closed)
 
 ---
 
@@ -37,15 +37,16 @@ v3.6.3   WP Block Bridge Expansion                                     ✓ DONE
 v3.6.4   WP Block Bridge Residual Cleanup                              ✓ DONE
 v3.6.5   WP Block Bridge Editor Token Parity                           ✓ DONE
 v3.6.6   WP Block Bridge Ripple / Editor State Parity                   ✓ DONE
+v3.6.7   WP Specimen Follow-On Editor Compatibility                     ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.6 WP Block Bridge Ripple / Editor State Parity
+Current release:   v3.6.7 WP Specimen Follow-On Editor Compatibility
 Current phase:     CLOSED
-Current state:     BACKLOG #41 narrowed to shared WordPress ripple runtime packaging decision
-Next allowed work: Next cycle plan-first (#44 / Wave 2 / #21 / narrowed #41 packaging)
+Current state:     BACKLOG #44 narrowed to remaining coverage follow-ons and validator polish
+Next allowed work: Next cycle plan-first (Wave 2 / #21 / narrowed #41 packaging / residual #44 coverage)
 ```
 
 ## Matrix Snapshot
@@ -411,6 +412,51 @@ Validation:
 Routed forward:
   BACKLOG #41 shared WordPress ripple runtime packaging decision
   BACKLOG #44 editor-valid fixture / editor compatibility
+  diagnostic-first remains methodology finding, not Lock 5
+```
+
+## v3.6.7 Close Outcome
+
+```txt
+Mode:
+  BACKLOG #44 specimen editor compatibility / split fixture cycle
+
+Closed by v3.6.7:
+  Route C implemented
+  original front-end specimen wall preserved for stable data-ax computed evidence
+  new editor-valid smoke fixture added:
+    products/reference-implementations/axismundi-pilot/fixtures/core-block-editor-smoke.html
+  importer extended to import both fixture pages
+  validate:specimen-wall extended to validate both surfaces
+
+Phase 0 plan:
+  docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
+
+Validation:
+  wp-env run cli wp core version                      7.0
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS (Axis A-G all 1.000)
+  npm run validate:computed                            PASS
+  git diff --check                                     PASS
+
+Routed forward:
+  BACKLOG #44 mark/highlight, long-line code, deep pullquote, Material Symbols coverage
+  BACKLOG #44 validator hardening polish
+  BACKLOG #41 shared WordPress ripple runtime packaging decision unchanged
   diagnostic-first remains methodology finding, not Lock 5
 ```
 

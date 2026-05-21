@@ -2103,15 +2103,16 @@ docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
 ### 44. Specimen wall follow-on coverage + editor compatibility
 
 - **Bucket**: B / D — WordPress binding QA / specimen methodology
-- **Status**: Open
+- **Status**: Open - narrowed by v3.6.7 to mark/highlight, long-line code, deep pullquote, Material Symbols follow-on coverage, and validator hardening polish
 - **Priority**: Low to medium post-v3.6.2
-- **Target**: v3.6.x after #41 scoping, or before the next specimen expansion
+- **Target**: post-v3.6.7 follow-on coverage, or before the next specimen expansion
 - **Source**: v3.6.2 Phase 3 visual QA
 
-**Scope**:
+**Scope after v3.6.7**:
 
-- Decide whether the specimen fixture should be editor-valid, or document the
-  front-end-only fixture method as intentional.
+- Editor compatibility decision is closed by v3.6.7 Route C: keep the original
+  front-end wall front-end-only and add `core-block-editor-smoke.html` as the
+  editor-valid surface.
 - Add mark/highlight coverage once the authoring path is chosen.
 - Add long-line code coverage, or coordinate it with the #41 code bridge input.
 - Add deeper quote/pullquote fixture coverage if #41 needs more semantic
@@ -2120,6 +2121,8 @@ docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
   separate icon-font/layout constraint, cross-referencing existing BACKLOG #14.
   Do not route separator variant visibility through the Material Symbols font
   issue unless later evidence proves a real font dependency.
+- Keep validator hardening polish in this item while it remains tied to the
+  split fixture validator surface.
 
 **Non-goals**:
 
@@ -2148,6 +2151,66 @@ block validation console error count: 56
 
 This remains #44 editor-valid fixture / editor compatibility work. v3.6.6 did
 not repair fixture validity and did not claim an invalid-content fix.
+
+**v3.6.7 close evidence (2026-05-21)**:
+
+v3.6.7 closed the editor compatibility question by implementing Route C:
+split the front-end computed evidence fixture from a new editor-valid smoke
+fixture.
+
+```txt
+Front-end evidence fixture:
+  products/reference-implementations/axismundi-pilot/fixtures/core-block-specimen-wall.html
+  slug: axismundi-core-block-specimen-wall
+  local page: 29
+  purpose: stable data-ax anchors for computed-style evidence
+
+Editor-valid smoke fixture:
+  products/reference-implementations/axismundi-pilot/fixtures/core-block-editor-smoke.html
+  slug: axismundi-core-block-editor-smoke
+  local page: 41
+  purpose: WordPress-save-compatible core block editor smoke
+```
+
+Phase 3 close evidence:
+
+```txt
+Front-end wall:        HTTP 200 / console 0 / overflow 0 / Tier 1 11/11 / findings 0
+Editor smoke FE:      HTTP 200 / console 0 / overflow 0 / sections 6 / buttons 5 / searches 2
+Editor smoke editor:  iframe 1 / console 0 / block validation 0 / invalid UI 0 / recovery UI 0
+Existing wall editor: iframe 1 / console 56 / block validation 56 / invalid UI 0 / recovery UI 0
+```
+
+The unchanged existing-wall `56 / 56` editor signal is intentionally retained
+on the front-end-only evidence surface. The new editor smoke fixture supplies
+the editor-valid `0 / 0 / 0 / 0` surface.
+
+Remaining #44 scope after v3.6.7:
+
+```txt
+1. mark/highlight coverage
+2. long-line code coverage
+3. deep pullquote coverage
+4. Material Symbols follow-on coverage / BACKLOG #14 cross-reference
+5. validator hardening polish:
+   - WP_ADMIN_USER / WP_ADMIN_PASS fallback for Playwright login
+   - strict section count if the smoke fixture contract should freeze
+   - less timing-sensitive editor settle wait if flakiness appears
+   - generic tmp output directory name instead of phase1-specific naming
+```
+
+v3.6.7 did not enter BACKLOG #41's narrowed shared WordPress ripple runtime
+packaging decision.
+
+**v3.6.7 evidence docs**:
+
+```txt
+docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-0-PLAN.md
+docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-1-REPORT.md
+docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-2-REPORT.md
+docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
+docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
+```
 
 ## Pre-Pilot classification snapshot (v3.5.18)
 

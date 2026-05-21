@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## v3.6.7 - WP Specimen Follow-On Editor Compatibility (2026-05-21)
+
+Split-fixture release for BACKLOG #44. This cycle closes the specimen editor
+compatibility question by preserving the original front-end evidence wall and
+adding a separate WordPress-save-compatible editor smoke surface.
+
+### Added
+
+- Added the v3.6.7 Phase 0/1/2/3/5 docs under `docs/v3.6.7/`.
+- Added `core-block-editor-smoke.html` as an editor-valid core block smoke
+  fixture.
+- Extended `build_pilot_specimen_wall.py` to import both the original specimen
+  wall and the editor smoke fixture.
+- Extended `validate_pilot_specimen_wall.js` so `validate:specimen-wall`
+  checks both the front-end wall and the editor smoke surface.
+
+### Routed
+
+- Narrowed BACKLOG #44 to mark/highlight, long-line code, deep pullquote,
+  Material Symbols follow-on coverage, and validator hardening polish.
+- Kept BACKLOG #41's shared WordPress ripple runtime packaging decision
+  unchanged.
+- Deferred validator polish notes: env-var login credentials, strict section
+  count, less timing-sensitive editor wait, and generic tmp directory naming.
+
+### Verified
+
+- `wp-env run cli wp core version`: 7.0.
+- Front-end wall: HTTP 200, console 0, overflow 0, Tier 1 11/11.
+- Editor smoke front end: HTTP 200, console 0, overflow 0, sections 6, buttons
+  5, searches 2.
+- Editor smoke editor: iframe 1, console 0, block validation 0, invalid UI 0,
+  recovery UI 0.
+- Existing wall editor reference remains intentionally isolated at console 56 /
+  block validation 56.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `git diff --check`: PASS.
+
 ## v3.6.6 - WP Block Bridge Ripple / Editor State Parity (2026-05-21)
 
 Diagnostic routing release for BACKLOG #41. This cycle closes the current

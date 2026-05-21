@@ -6,6 +6,8 @@ const outDir = path.resolve(process.cwd(), "tmp", "phase1-specimen-wall");
 fs.mkdirSync(outDir, { recursive: true });
 
 const url = "http://localhost:8888/?pagename=axismundi-core-block-specimen-wall";
+const editorSmokeUrl = "http://localhost:8888/?pagename=axismundi-core-block-editor-smoke";
+const editorSmokeEditUrl = "http://localhost:8888/wp-admin/post.php?post=";
 
 const tier1Families = [
   "core-paragraph",
@@ -76,6 +78,16 @@ const snapshotProps = [
 
 function assert(findings, condition, label, details) {
   if (!condition) findings.push({ label, details });
+}
+
+async function logIn(page) {
+  await page.goto("http://localhost:8888/wp-login.php", { waitUntil: "domcontentloaded" });
+  await page.fill("#user_login", "admin");
+  await page.fill("#user_pass", "password");
+  await Promise.all([
+    page.waitForURL(/wp-admin/, { timeout: 30000 }).catch(() => {}),
+    page.click("#wp-submit"),
+  ]);
 }
 
 async function snapshotElement(page, selector) {
@@ -161,6 +173,7 @@ async function run() {
   const report = {
     generatedAt: new Date().toISOString(),
     url,
+    editorSmokeUrl,
     status,
     viewport: { width: 390, height: 900 },
     overflowX,
@@ -172,10 +185,101 @@ async function run() {
     },
     variants,
     entries,
+    editorSmoke: null,
     findings,
   };
 
   await page.screenshot({ path: path.join(outDir, "specimen-wall-390.png"), fullPage: true });
+
+  const editorSmokePage = await context.newPage();
+  const editorSmokeConsoleErrors = [];
+  editorSmokePage.on("console", (message) => {
+    if (message.type() === "error") editorSmokeConsoleErrors.push(message.text());
+  });
+  editorSmokePage.on("pageerror", (error) => editorSmokeConsoleErrors.push(error.message));
+
+  const smokeResponse = await editorSmokePage.goto(editorSmokeUrl, { waitUntil: "networkidle" });
+  const smokeStatus = smokeResponse ? smokeResponse.status() : null;
+  const smokeOverflowX = await editorSmokePage.evaluate(() =>
+    Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  );
+  const smokeSections = await editorSmokePage.locator(".ax-editor-smoke__section").count();
+  const smokeButtons = await editorSmokePage.locator(".ax-editor-smoke .wp-block-button__link").count();
+  const smokeSearches = await editorSmokePage.locator(".ax-editor-smoke .wp-block-search").count();
+  assert(findings, smokeStatus === 200, "editor smoke front-end HTTP 200", { status: smokeStatus, url: editorSmokeUrl });
+  assert(findings, editorSmokeConsoleErrors.length === 0, "editor smoke front-end console/page errors are zero", {
+    consoleErrors: editorSmokeConsoleErrors,
+  });
+  assert(findings, smokeOverflowX === 0, "editor smoke horizontal overflow is zero", { overflowX: smokeOverflowX });
+  assert(findings, smokeSections >= 6, "editor smoke sections exist", { smokeSections });
+  assert(findings, smokeButtons === 5, "editor smoke button variants exist", { smokeButtons });
+  assert(findings, smokeSearches === 2, "editor smoke search variants exist", { smokeSearches });
+  await editorSmokePage.screenshot({ path: path.join(outDir, "editor-smoke-390.png"), fullPage: true });
+
+  const adminPage = await context.newPage();
+  const adminErrors = [];
+  adminPage.on("console", (message) => {
+    if (message.type() === "error") adminErrors.push(message.text());
+  });
+  adminPage.on("pageerror", (error) => adminErrors.push(error.message));
+  await logIn(adminPage);
+  await adminPage.goto(editorSmokeUrl, { waitUntil: "domcontentloaded" });
+  const editHref = await adminPage
+    .locator("#wp-admin-bar-edit a")
+    .getAttribute("href")
+    .catch(() => null);
+  const pageIdMatch = editHref ? editHref.match(/[?&]post=(\d+)/) : null;
+  const pageId = pageIdMatch ? Number(pageIdMatch[1]) : null;
+
+  assert(findings, Number.isInteger(pageId), "editor smoke page id resolves", { pageId });
+  if (Number.isInteger(pageId)) {
+    await adminPage.goto(`${editorSmokeEditUrl}${pageId}&action=edit`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
+    await adminPage.waitForSelector('iframe[name="editor-canvas"]', { timeout: 60000 }).catch(() => {});
+    await adminPage.waitForTimeout(6000);
+  }
+
+  const blockValidationErrors = adminErrors.filter((text) => text.includes("Block validation"));
+  const invalidContentTextCount = await adminPage
+    .locator("text=Block contains unexpected or invalid content")
+    .count()
+    .catch(() => -1);
+  const attemptRecoveryTextCount = await adminPage.locator("text=Attempt recovery").count().catch(() => -1);
+  const editorIframeCount = await adminPage.locator('iframe[name="editor-canvas"]').count().catch(() => 0);
+
+  assert(findings, editorIframeCount === 1, "editor smoke iframe exists", { editorIframeCount });
+  assert(findings, adminErrors.length === 0, "editor smoke editor console/page errors are zero", {
+    consoleErrors: adminErrors,
+  });
+  assert(findings, blockValidationErrors.length === 0, "editor smoke block validation errors are zero", {
+    blockValidationErrors,
+  });
+  assert(findings, invalidContentTextCount === 0, "editor smoke invalid-content UI text is zero", {
+    invalidContentTextCount,
+  });
+  assert(findings, attemptRecoveryTextCount === 0, "editor smoke attempt-recovery UI text is zero", {
+    attemptRecoveryTextCount,
+  });
+
+  report.editorSmoke = {
+    url: editorSmokeUrl,
+    editUrl: Number.isInteger(pageId) ? `${editorSmokeEditUrl}${pageId}&action=edit` : null,
+    pageId,
+    status: smokeStatus,
+    overflowX: smokeOverflowX,
+    frontEndConsoleErrors: editorSmokeConsoleErrors,
+    sections: smokeSections,
+    buttons: smokeButtons,
+    searches: smokeSearches,
+    editorIframeCount,
+    editorConsoleErrors: adminErrors,
+    blockValidationErrors,
+    invalidContentTextCount,
+    attemptRecoveryTextCount,
+  };
+
   fs.writeFileSync(path.join(outDir, "specimen-wall-render-gate.json"), JSON.stringify(report, null, 2));
   await browser.close();
 

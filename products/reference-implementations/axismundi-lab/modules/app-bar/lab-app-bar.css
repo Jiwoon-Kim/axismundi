@@ -1,0 +1,83 @@
+/*
+ * Axismundi — lab-app-bar.css
+ * v3.6.8 Wave 2A-1 Navigation Core
+ *
+ * Lab-scoped validation layout only. Baseline .app-bar rules remain in
+ * components.css and are not overridden here.
+ */
+
+.lab-app-bar-demo {
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface);
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.lab-app-bar-demo code {
+  font-size: inherit;
+}
+
+.lab-app-bar-demo .lab-app-bar-header,
+.lab-app-bar-demo .lab-app-bar-section {
+  max-width: 1120px;
+  margin: 0 auto 32px;
+}
+
+.lab-app-bar-demo .lab-app-bar-header {
+  display: grid;
+  gap: 8px;
+}
+
+.lab-app-bar-demo .lab-app-bar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.lab-app-bar-demo .lab-app-bar-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-app-bar-demo .lab-app-bar-frame {
+  overflow: hidden;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface);
+}
+
+.lab-app-bar-demo .lab-app-bar-caption {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-app-bar-demo .lab-app-bar-phone {
+  max-width: 390px;
+}
+
+.lab-app-bar-demo .lab-app-bar-wide {
+  min-width: 0;
+}
+
+.lab-app-bar-demo .lab-app-bar-scroll-body {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.lab-app-bar-demo .lab-app-bar-scroll-line {
+  height: 12px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+@media (max-width: 720px) {
+  .lab-app-bar-demo {
+    padding: 16px;
+  }
+}

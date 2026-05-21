@@ -1,0 +1,73 @@
+/*
+ * Axismundi — lab-nav-bar.css
+ * v3.6.8 Wave 2A-1 Navigation Core
+ *
+ * Lab-scoped validation layout only. Baseline .nav-bar rules remain in
+ * components.css and are not overridden here.
+ */
+
+.lab-nav-bar-demo {
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface);
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.lab-nav-bar-demo code {
+  font-size: inherit;
+}
+
+.lab-nav-bar-demo .lab-nav-bar-header,
+.lab-nav-bar-demo .lab-nav-bar-section {
+  max-width: 1120px;
+  margin: 0 auto 32px;
+}
+
+.lab-nav-bar-demo .lab-nav-bar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.lab-nav-bar-demo .lab-nav-bar-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-nav-bar-demo .lab-nav-bar-phone {
+  max-width: 430px;
+  overflow: hidden;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface);
+}
+
+.lab-nav-bar-demo .lab-nav-bar-content {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  min-height: 220px;
+  align-content: end;
+}
+
+.lab-nav-bar-demo .lab-nav-bar-line {
+  height: 12px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.lab-nav-bar-demo .lab-nav-bar-caption {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (max-width: 720px) {
+  .lab-nav-bar-demo {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Nav Rail Module (v3.6.8)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="lab-nav-rail.css" />
+</head>
+<body>
+<main class="lab-nav-rail-demo">
+  <aside class="lab-specimen-banner" role="note" style="margin: 16px 0; padding: 12px 16px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface);">
+    <strong>Validation specimen.</strong>
+    Nav rail uses bounded ripple on item hosts and keeps Sheet / Navigation
+    drawer out of scope.
+  </aside>
+
+  <header class="lab-nav-rail-header">
+    <p class="t-label-large">Axismundi v3.6.8 · Wave 2A-1 · Component-Coverage #13</p>
+    <h1 class="t-display-small">Nav rail</h1>
+    <p class="t-body-medium lab-nav-rail-caption">
+      Collapsed and expanded rail variants using baseline
+      <code>components.css §7</code>. This page does not claim Sheet or drawer
+      behavior.
+    </p>
+  </header>
+
+  <section class="lab-nav-rail-section">
+    <div class="lab-nav-rail-grid">
+      <article class="lab-nav-rail-card">
+        <div class="lab-nav-rail-frame">
+          <nav class="nav-rail is-narrow" aria-label="Collapsed navigation">
+            <button class="nav-rail__item is-active" type="button" aria-current="page" data-ax-ripple="bounded">
+              <span class="nav-rail__icon has-state-layer"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span></span>
+              <span class="nav-rail__label t-label-medium">Home</span>
+            </button>
+            <button class="nav-rail__item" type="button" data-ax-ripple="bounded">
+              <span class="nav-rail__icon has-state-layer"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span></span>
+              <span class="nav-rail__label t-label-medium">Search</span>
+            </button>
+            <button class="nav-rail__item" type="button" disabled data-ax-ripple="bounded">
+              <span class="nav-rail__icon has-state-layer"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">archive</span></span>
+              <span class="nav-rail__label t-label-medium">Archive</span>
+            </button>
+          </nav>
+          <div class="lab-nav-rail-content" aria-hidden="true">
+            <span class="lab-nav-rail-line"></span>
+            <span class="lab-nav-rail-line"></span>
+            <span class="lab-nav-rail-line"></span>
+          </div>
+        </div>
+        <p class="t-body-small lab-nav-rail-caption">Collapsed rail, active and disabled states.</p>
+      </article>
+
+      <article class="lab-nav-rail-card">
+        <div class="lab-nav-rail-frame">
+          <nav class="nav-rail is-expanded" aria-label="Expanded navigation">
+            <button class="nav-rail__item is-active has-state-layer" type="button" aria-current="page" data-ax-ripple="bounded">
+              <span class="nav-rail__icon"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">inbox</span></span>
+              <span class="nav-rail__label">Inbox</span>
+            </button>
+            <button class="nav-rail__item has-state-layer" type="button" data-ax-ripple="bounded">
+              <span class="nav-rail__icon"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">send</span></span>
+              <span class="nav-rail__label">Sent</span>
+            </button>
+            <button class="nav-rail__item has-state-layer" type="button" data-ax-ripple="bounded">
+              <span class="nav-rail__icon"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">draft</span></span>
+              <span class="nav-rail__label">Drafts</span>
+            </button>
+          </nav>
+          <div class="lab-nav-rail-content" aria-hidden="true">
+            <span class="lab-nav-rail-line"></span>
+            <span class="lab-nav-rail-line"></span>
+          </div>
+        </div>
+        <p class="t-body-small lab-nav-rail-caption">Expanded rail stays in the nav-rail module, not Sheet.</p>
+      </article>
+    </div>
+  </section>
+</main>
+<script defer src="../ripple/lab-ripple.js"></script>
+</body>
+</html>

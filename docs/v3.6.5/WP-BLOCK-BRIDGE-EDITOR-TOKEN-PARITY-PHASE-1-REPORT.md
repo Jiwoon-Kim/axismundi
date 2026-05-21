@@ -331,6 +331,61 @@ cycle to stay narrower.
 
 No `theme.json` edit is needed. No fallback editor-token bridge is needed yet.
 
+## TT5 Reference Addendum
+
+User provided a local Twenty Twenty-Five 1.5 reference tree:
+
+```txt
+C:\Users\thaum\dev\twentytwentyfive.1.5\twentytwentyfive
+```
+
+Phase 1 checked TT5 as a structure reference, not a copy source.
+
+TT5 editor style pattern:
+
+```php
+function twentytwentyfive_editor_style() {
+	add_editor_style( 'assets/css/editor-style.css' );
+}
+add_action( 'after_setup_theme', 'twentytwentyfive_editor_style' );
+```
+
+TT5's `assets/css/editor-style.css` is intentionally small:
+
+```css
+/*
+ * Link styles
+ * https://github.com/WordPress/gutenberg/issues/42319
+ */
+a {
+	text-decoration-thickness: 1px !important;
+	text-underline-offset: .1em;
+}
+```
+
+TT5 does not solve the v3.6.5 failure by example because it does not ship a
+large external md-ref/md-sys token CSS stack through `add_editor_style()`.
+Instead, it relies primarily on `theme.json` global styles for core block
+coverage and uses a tiny editor stylesheet for editor-specific polish.
+
+Useful TT5 takeaways for future #41 / #44 cycles:
+
+```txt
+TT5 is a good selector/schema reference:
+  theme.json block coverage for core/button, core/code, core/quote,
+  core/pullquote, core/search, core/separator, core/navigation, etc.
+
+TT5 is not a token-source replacement:
+  Axismundi keeps M3 md-ref -> md-sys -> wp-preset/wp-custom locks.
+
+TT5 is not a fork base for v3.6.5:
+  this cycle's root cause is a malformed Axismundi token stylesheet, not a
+  missing TT5-style editor CSS pattern.
+```
+
+Phase 2 should continue with the chosen route: repair the malformed
+`tokens.sys.light.css` trailing comment first, then re-run editor token probes.
+
 ## Phase 1 Exit Criteria
 
 ```txt

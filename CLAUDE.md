@@ -2,7 +2,7 @@
 
 > **Audience**: Claude (Claude Code, Anthropic). Read this first before any work in this repo.
 > **Sibling file**: `AGENTS.md` (Codex/OpenAI executor rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-21 (v3.6.5 Phase 5 - editor token parity close)
+> **Last updated**: 2026-05-22 (v3.6.10 Phase 5 - diagnostic-first lock promotion)
 
 ---
 
@@ -58,6 +58,7 @@ Forbidden without explicit user authorization:
 12. **Token architecture is downstream-only.** `settings.custom.axismundi.*` leaves must be `var(--comp-*)`, `var(--md-sys-*)`, or `var(--md-ref-*)`; literal hex/rgb/px/number values are forbidden there. `--md-sys-color-*` entries must map to `var(--md-ref-palette-*)`; literal hex/rgb/hsl values are forbidden in the md-sys color layer. Axis G and Axis E in `tools/validators/validate_theme_pilot.py` are the permanent guards.
 13. **core/button needs a semantic route before visual cleanup.** A `core/button` anchor with `href` is navigation and may receive an M3 button visual bridge. Action behavior, form submission, AJAX, federation actions, and durable custom schemas are plugin/custom-block territory.
 14. **Semantic mismatches must be routed.** When a WordPress core block visually maps to M3 but carries divergent markup, interaction, or accessibility semantics, route the mismatch as theme-owned semantic-decision or plugin/custom-block territory before accepting a visual fix. Do not silently collapse distinct core block structures into one generic CSS patch.
+15. **Diagnostic-first is a lock.** For plan-first cycles where the route, failure mode, or boundary risk is not already known, Phase 1 diagnostic inventory is mandatory before Phase 2 implementation. Diagnose source inputs, baseline / provider / semantic boundaries, route buckets, selected and rejected routes, write scope, fences, and validation plan before patching. If diagnosis shows provider, baseline, WordPress, plugin, or lock-file changes are needed, stop and return for review before implementation. Tiny mechanical edits with explicit scope and no boundary risk may skip the full report only when the shortcut is recorded as safe.
 
 ---
 

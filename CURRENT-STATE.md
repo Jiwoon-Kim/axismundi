@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-22 (v3.6.9 closed)
+> **Last updated**: 2026-05-22 (v3.6.10 closed)
 
 ---
 
@@ -40,24 +40,25 @@ v3.6.6   WP Block Bridge Ripple / Editor State Parity                   ✓ DONE
 v3.6.7   WP Specimen Follow-On Editor Compatibility                     ✓ DONE
 v3.6.8   Wave 2A Navigation Core                                        ✓ DONE
 v3.6.9   Wave 2A-2 Menu / Popover Consumer                              ✓ DONE
+v3.6.10  Wave 2B-1 Form Controls                                        ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.9 Wave 2A-2 Menu / Popover Consumer
+Current release:   v3.6.10 Wave 2B-1 Form Controls
 Current phase:     CLOSED
-Current state:     Wave 2A complete; BACKLOG #45 closed; #47 routed as provider hygiene
-Next allowed work: Next cycle plan-first (Wave 2B / #21 / narrowed #41 / residual #44 / #46 / #47)
+Current state:     Wave 2B-1 complete; Checkbox / Radio / Switch closed; Lock 5 promoted
+Next allowed work: Next cycle plan-first (Wave 2B-2 Dialog / Sheet / #21 / narrowed #41 / residual #44 / #46 / #47)
 ```
 
 ## Matrix Snapshot
 
 ```txt
 34 TOC component rows:
-  DONE       18
+  DONE       21
   PARTIAL     2
-  TODO       11
+  TODO        8
   RECORD      3
 
 3 infrastructure provider rows:
@@ -559,6 +560,63 @@ Routed forward:
   BACKLOG #41 shared WordPress ripple runtime packaging decision unchanged
   BACKLOG #44 residual coverage / validator polish unchanged
   diagnostic-first remains methodology finding, not Lock 5
+```
+
+## v3.6.10 Close Outcome
+
+```txt
+Mode:
+  Wave 2B-1 Form Controls input-domain component-lab cycle
+
+Closed by v3.6.10:
+  Route B implemented
+  Checkbox module added
+  Radio module added
+  Switch module added
+  lab-checkbox.js added as fixture-only indeterminate setup
+  lab-radio.js not added
+  lab-switch.js not added
+  components.css unchanged
+  provider modules unchanged
+  WordPress/Pilot files unchanged
+  3 modules x desktop/mobile x light/dark QA matrix PASS
+  Checkbox / Radio / Switch interactions PASS
+  Switch FormData participation with role=switch PASS
+  Lock 5 diagnostic-first promoted
+
+Phase 0 plan:
+  docs/v3.6.10/WAVE-2B-FORM-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.10/WAVE-2B-FORM-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.10/WAVE-2B-FORM-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.10/WAVE-2B-FORM-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.10/WAVE-2B-FORM-PHASE-5-CLOSE.md
+
+Validation:
+  wp-env run cli wp core version                      7.0
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS (Axis A-G all 1.000)
+  npm run validate:computed                            PASS
+  npm run publish:styleguide                           PASS, restored generated mirror
+  git diff --check                                     PASS
+
+Routed forward:
+  Wave 2B-2 Dialog / Sheet runtime
+  Wave 2B-3 Date+Time #22+#23 PARTIAL completion
+  Wave 2B-4 Actions consumers #5 / #7 / #8
+  BACKLOG #41 shared WordPress ripple runtime packaging decision unchanged
+  BACKLOG #44 residual coverage / validator polish unchanged
+  BACKLOG #46 disabled ripple host authoring hygiene unchanged
+  BACKLOG #47 popover provider menu-item-class logic extraction hygiene unchanged
 ```
 
 ## Discipline

@@ -1,5 +1,58 @@
 # CHANGELOG
 
+## v3.6.10 - Wave 2B-1 Form Controls (2026-05-22)
+
+Input-domain component-lab release that closes the first Wave 2B slice:
+Checkbox #18, Radio #19, and Switch #20. This cycle implements Route B, Form
+Controls Core.
+
+### Added
+
+- Added the v3.6.10 Phase 0/1/2/3/5 docs under `docs/v3.6.10/`.
+- Added `modules/checkbox/`, `modules/radio/`, and `modules/switch/` with
+  lab-scoped CSS, pattern HTML, and SPEC/MEASUREMENT/WP audit docs.
+- Added `lab-checkbox.js` as fixture-only indeterminate setup; no `lab-radio.js`
+  or `lab-switch.js` was added.
+- Promoted diagnostic-first to Lock 5 in `AGENTS.md` and `CLAUDE.md` after six
+  clean diagnostic-first cycles.
+
+### Routed
+
+- Routed remaining Wave 2B work into Wave 2B-2 Dialog / Sheet, Wave 2B-3
+  Date+Time #22+#23 PARTIAL completion, and Wave 2B-4 Actions consumers
+  #5 / #7 / #8.
+- Accepted `window.labCheckbox = { init }` as a small fixture
+  re-initialization convention; no BACKLOG item was created.
+- Kept BACKLOG #41 shared WordPress ripple runtime packaging unchanged.
+- Kept BACKLOG #44 remaining specimen coverage / validator polish unchanged.
+- Kept BACKLOG #46 disabled ripple host authoring hygiene unchanged.
+- Kept BACKLOG #47 popover provider menu-item-class logic extraction hygiene
+  unchanged.
+
+### Verified
+
+- `wp-env run cli wp core version`: 7.0.
+- 3 modules x desktop/mobile x light/dark: console 0 and overflow 0 in all 12
+  cells.
+- Checkbox: 10 inputs, 2 error specimens, initial indeterminate state,
+  disabled indeterminate, native indeterminate click transition, label click,
+  Space toggle, and disabled no-toggle all PASS.
+- Radio: 2 fieldsets, 2 legends, 6 inputs, 1 disabled input, same-name group
+  exclusivity, label click, ArrowRight / ArrowLeft navigation, and disabled
+  no-select all PASS.
+- Switch: 6 `role="switch"` checkbox inputs, 2 disabled inputs, FormData
+  participation, label click, Space toggle, second Space removal, and disabled
+  no-toggle all PASS.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `npm run publish:styleguide`: PASS, with generated mirror restored after
+  validation.
+- `git diff --check`: PASS.
+
 ## v3.6.9 - Wave 2A-2 Menu / Popover Consumer (2026-05-22)
 
 Component-lab release that completes Wave 2A by closing BACKLOG #45. This

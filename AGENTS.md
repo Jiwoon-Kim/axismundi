@@ -2,7 +2,7 @@
 
 > **Audience**: OpenAI Codex (or any coding-agent that uses `AGENTS.md` as repo-level guidance). Read this first before any edit.
 > **Sibling file**: `CLAUDE.md` (Anthropic Claude Code rules). Both files coexist; pick the one matching your runtime.
-> **Last updated**: 2026-05-21 (v3.6.5 Phase 5 - editor token parity close)
+> **Last updated**: 2026-05-22 (v3.6.10 Phase 5 - diagnostic-first lock promotion)
 
 ---
 
@@ -150,6 +150,22 @@ interaction, or accessibility semantics, route the mismatch as either
 theme-owned semantic-decision or plugin/custom-block territory before accepting
 a visual fix. Do not silently ignore the mismatch and do not collapse distinct
 core block structures into one generic CSS patch.
+
+### Diagnostic-first lock
+
+For plan-first cycles where the route, failure mode, or boundary risk is not
+already known, Phase 1 diagnostic inventory is mandatory before Phase 2
+implementation. The diagnostic must identify source inputs, relevant baseline /
+provider / semantic boundaries, route buckets, the selected route, rejected
+routes, write scope, fences, and validation plan.
+
+Do not patch first and backfill the route later. If diagnosis shows that
+provider, baseline, WordPress, plugin, or lock-file changes are needed, stop and
+return for review before implementation.
+
+This lock does not require a full diagnostic report for tiny mechanical edits
+with explicit scope and no boundary risk. If a shortcut is taken, record why it
+is safe.
 
 ---
 

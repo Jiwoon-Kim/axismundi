@@ -1,11 +1,12 @@
-# NEXT-SESSION.md - Post-v3.6.9 Handoff
+# NEXT-SESSION.md - Post-v3.6.10 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot, v3.6.1 Token Architecture
 > Refactor, v3.6.2 WP Core Block Specimen Wall, v3.6.3 WP Block Bridge
 > Expansion, v3.6.4 WP Block Bridge Residual Cleanup, v3.6.5 WP Block
 > Bridge Editor Token Parity, v3.6.6 WP Block Bridge Ripple / Editor State
 > Parity, v3.6.7 WP Specimen Follow-On Editor Compatibility, v3.6.8 Wave 2A
-> Navigation Core, and v3.6.9 Wave 2A-2 Menu / Popover Consumer are closed.
+> Navigation Core, v3.6.9 Wave 2A-2 Menu / Popover Consumer, and v3.6.10
+> Wave 2B-1 Form Controls are closed.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-22.
 
@@ -20,47 +21,52 @@
 4. CHANGELOG.md latest entry
 5. ROADMAP.md current tail
 6. BACKLOG.md #41 / #44 / #46 / #47 / #21 / #14
-7. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-5-CLOSE.md
-8. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-3-VISUAL-QA.md
-9. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-2-REPORT.md
-10. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-1-REPORT.md
-11. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-0-PLAN.md
-12. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-5-CLOSE.md
-13. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-3-VISUAL-QA.md
-14. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-2-REPORT.md
-15. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-1-REPORT.md
-16. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-0-PLAN.md
-17. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
-18. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
-19. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-2-REPORT.md
-20. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-1-REPORT.md
-21. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-0-PLAN.md
-22. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-5-CLOSE.md
-23. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-3-VISUAL-QA.md
-24. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-2-REPORT.md
-25. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-1-REPORT.md
-26. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-0-PLAN.md
-27. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
-28. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
-29. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
-30. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
-31. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-0-PLAN.md
-32. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
-33. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
-34. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
-35. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
-36. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
-37. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
-38. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
-39. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
-40. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
-41. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
-42. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
-43. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
-44. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-45. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
-46. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-47. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+7. docs/v3.6.10/WAVE-2B-FORM-PHASE-5-CLOSE.md
+8. docs/v3.6.10/WAVE-2B-FORM-PHASE-3-VISUAL-QA.md
+9. docs/v3.6.10/WAVE-2B-FORM-PHASE-2-REPORT.md
+10. docs/v3.6.10/WAVE-2B-FORM-PHASE-1-REPORT.md
+11. docs/v3.6.10/WAVE-2B-FORM-PHASE-0-PLAN.md
+12. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-5-CLOSE.md
+13. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-3-VISUAL-QA.md
+14. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-2-REPORT.md
+15. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-1-REPORT.md
+16. docs/v3.6.9/WAVE-2A-MENU-POPOVER-CONSUMER-PHASE-0-PLAN.md
+17. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-5-CLOSE.md
+18. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-3-VISUAL-QA.md
+19. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-2-REPORT.md
+20. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-1-REPORT.md
+21. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-0-PLAN.md
+22. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
+23. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
+24. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-2-REPORT.md
+25. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-1-REPORT.md
+26. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-0-PLAN.md
+27. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-5-CLOSE.md
+28. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-3-VISUAL-QA.md
+29. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-2-REPORT.md
+30. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-1-REPORT.md
+31. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-0-PLAN.md
+32. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
+33. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
+34. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
+35. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
+36. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-0-PLAN.md
+37. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
+38. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
+39. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
+40. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
+41. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
+42. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
+43. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
+44. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
+45. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
+46. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
+47. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
+48. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+49. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+50. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+51. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+52. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -90,13 +96,16 @@ v3.6.6   WP Block Bridge Ripple / Editor State Parity CLOSED
 v3.6.7   WP Specimen Follow-On Editor Compatibility CLOSED
 v3.6.8   Wave 2A Navigation Core                    CLOSED
 v3.6.9   Wave 2A-2 Menu / Popover Consumer          CLOSED
+v3.6.10  Wave 2B-1 Form Controls                    CLOSED
 
 Next route:
   Start next cycle plan-first.
   Primary candidates:
-    Wave 2B Form.
+    Wave 2B-2 Dialog / Sheet.
     BACKLOG #21 Interpreter Plugin strategy.
   Alternative candidates:
+    Wave 2B-3 Date+Time #22+#23 PARTIAL completion.
+    Wave 2B-4 Actions consumers #5 / #7 / #8.
     BACKLOG #41 shared WordPress ripple runtime packaging decision.
     BACKLOG #44 remaining specimen coverage follow-ons.
     BACKLOG #46 disabled ripple host authoring hygiene.
@@ -116,32 +125,33 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.9 Close Summary
+## 2) v3.6.10 Close Summary
 
-Closed by v3.6.9:
+Closed by v3.6.10:
 
 ```txt
 Phase 1 inventory:
-  Existing components.css Menu primitive mapped
-  Existing styleguide static Menu specimens mapped
-  Existing popover provider contract mapped
-  Route A selected: Menu Consumer Closure, Provider Unchanged
-  Interactive submenu deferred
+  Wave 2B candidate rows mapped
+  Route B selected: Checkbox / Radio / Switch
+  Dialog / Sheet, Date+Time, and Actions consumers routed to later slices
+  Checkbox-only indeterminate scope recorded
+  Switch role=switch + native form behavior verification planned
 
 Phase 2 implementation:
-  Menu lab module added under modules/menu/
-  lab-menu.css and lab-menu-pattern.html added
-  SPEC / MEASUREMENT / RUNTIME / WP docs added
-  lab-menu.js not added
-  popover/ and ripple/ consumed unchanged
+  Checkbox lab module added
+  Radio lab module added
+  Switch lab module added
+  lab-checkbox.js added as fixture-only indeterminate setup
+  lab-radio.js not added
+  lab-switch.js not added
+  components.css and provider modules unchanged
 
 Phase 3 visual QA:
-  1 module x desktop/mobile x light/dark: console 0 / overflow 0
-  3 live popover-wired surfaces + 1 static structure specimen
-  forbidden .prose trigger non-open PASS
-  ArrowUp / ArrowDown / Home / End / Escape / focus restore PASS
-  10 enabled bounded ripple hosts, 2 disabled hosts with no ripple attribute
-  submenu defer note visible, interactive submenu triggers 0
+  3 modules x desktop/mobile x light/dark: console 0 / overflow 0
+  Checkbox indeterminate initial state and native click transition PASS
+  Radio native same-name selection and arrow navigation PASS
+  Switch role=switch + FormData participation PASS
+  25 interaction checks PASS
 ```
 
 Validation at close:
@@ -160,22 +170,20 @@ git diff --check                                     PASS
 Routed forward:
 
 ```txt
-BACKLOG #47:
-  popover provider menu-item-class logic extraction hygiene
-  Scope includes lab-popover.js menu-item selectors / keyboard behavior and
-  lab-popover.css §3 .ax-menu__item:focus-visible outline override
+Wave 2B-2:
+  Dialog #26 / Sheet #27 runtime
 
-BACKLOG #46:
-  disabled ripple host authoring hygiene
+Wave 2B-3:
+  Date+Time #22+#23 PARTIAL completion
 
-BACKLOG #41:
-  shared WordPress ripple runtime packaging decision remains unchanged
+Wave 2B-4:
+  Actions consumers #5 / #7 / #8
 
-BACKLOG #44:
-  remaining specimen coverage / validator polish remains unchanged
+BACKLOG #41 / #44 / #46 / #47:
+  unchanged
 
-Methodology:
-  diagnostic-first remains methodology finding, not Lock 5
+Lock 5:
+  diagnostic-first promoted after six clean cycles
 ```
 
 Phase 3 test target convention:
@@ -235,6 +243,20 @@ accepting a visual fix. Do not silently ignore the mismatch and do not collapse
 distinct core block structures into one generic CSS patch.
 ```
 
+```txt
+Lock 5 - diagnostic-first before implementation
+
+For plan-first cycles where the route, failure mode, or boundary risk is not
+already known, Phase 1 diagnostic inventory is mandatory before Phase 2
+implementation. The diagnostic names source inputs, baseline / provider /
+semantic boundaries, route buckets, selected and rejected routes, write scope,
+fences, and validation plan.
+
+Do not patch first and backfill the route later. Tiny mechanical edits with
+explicit scope and no boundary risk may skip the full report only when the
+shortcut is recorded as safe.
+```
+
 ## 4) Resume Checklist
 
 Start by running:
@@ -268,8 +290,8 @@ Choose the next cycle. Do not auto-start implementation without a Phase 0 plan.
 Recommended primary routes:
 
 ```txt
-Wave 2B Form:
-  Checkbox / Radio / Switch plus Dialog / Sheet and remaining Actions
+Wave 2B-2 Dialog / Sheet:
+  runtime-heavy feedback surfaces, plan-first with portal / overlay smoke
 
 BACKLOG #21 Interpreter Plugin strategy:
   plugin-tier strategy, with Lock 3/4 routing kept explicit
@@ -278,6 +300,8 @@ BACKLOG #21 Interpreter Plugin strategy:
 Alternative routes:
 
 ```txt
+Wave 2B-3 Date+Time #22+#23 PARTIAL completion
+Wave 2B-4 Actions consumers #5 / #7 / #8
 BACKLOG #41 shared WordPress ripple runtime packaging decision
 BACKLOG #44 remaining specimen coverage / validator polish
 BACKLOG #46 disabled ripple host authoring hygiene

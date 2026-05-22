@@ -2279,6 +2279,55 @@ must not absorb consumer-specific semantics.
 - Do not edit `modules/popover/*` without a fresh Phase 0/1 route.
 - Do not fold this into BACKLOG #46 disabled ripple hygiene.
 
+### v3.6.10 Wave 2B-1 Form close evidence
+
+v3.6.10 closed the first Wave 2B slice by implementing Route B, Form Controls
+Core:
+
+```txt
+Checkbox #18: DONE
+Radio #19:    DONE
+Switch #20:   DONE
+```
+
+Close evidence:
+
+```txt
+Modules added:
+  modules/checkbox/
+  modules/radio/
+  modules/switch/
+
+Visual QA:
+  3 modules x desktop/mobile x light/dark = 12 cells
+  console errors 0 in all cells
+  horizontal overflow 0 in all cells
+
+Interactions:
+  Checkbox: 10 inputs, 2 error specimens, indeterminate initial state and native click transition verified
+  Radio: 2 fieldsets, 2 legends, 6 inputs, native same-name selection and arrow navigation verified
+  Switch: 6 role=switch checkbox inputs, FormData participation and Space toggle verified
+
+Validation:
+  npm test PASS, Axis A-G all 1.000
+```
+
+`window.labCheckbox = { init }` is accepted as a small fixture
+re-initialization convention for indeterminate examples. No BACKLOG item was
+created for it because it remains fixture setup, not component runtime or a
+provider surface.
+
+Wave 2B remaining scope after v3.6.10:
+
+```txt
+Wave 2B-2: Dialog #26 / Sheet #27 runtime
+Wave 2B-3: Date+Time #22+#23 PARTIAL completion
+Wave 2B-4: Actions consumers #5 / #7 / #8
+```
+
+Lock 5 was promoted in v3.6.10 after six diagnostic-first cycles with no P1/P2
+close defects, fence violations, lock violations, or provider/baseline drift.
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing

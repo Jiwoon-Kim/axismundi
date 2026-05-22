@@ -12,6 +12,16 @@
 > preserved in this audit document, CHANGELOG.md / ROADMAP.md, the
 > v3.X.Y zip freezes, and git history.
 
+> **v3.6.12 Completion Addendum:**
+> This document remains the v3.4.7 extraction and provenance audit. The
+> bounded Date grid a11y completion and modern Wave 2 module closure evidence
+> now live in `DATE-TIME-SPEC-AUDIT.md`,
+> `DATE-TIME-MEASUREMENT-AUDIT.md`, `DATE-TIME-RUNTIME-AUDIT.md`, and
+> `DATE-TIME-WP-MAPPING.md`. BACKLOG #19 is no longer treated as a fully open
+> inherited gap in current HEAD; v3.6.12 closes the remaining bounded Date grid
+> items while preserving Time picker, provider, baseline, plugin, and mobile
+> variant boundaries.
+
 > Bucket: D (theme interaction — runtime layer)
 > Charter: see `lab/docs/ARCHITECTURE-BOUNDARIES.md` §1 (four layers), §4 (theme can / plugin should), §5 (forbidden ancestor list)
 >

@@ -20,12 +20,12 @@
  *
  *   This module is NOT covered by docs/BEER-CSS-INTAKE.md.
  *
- * Carry-over policy (audit doc §4):
- *   v3.4.7 preserves the benchmark's existing partial accessibility
- *   level exactly. The WAI-ARIA Date Picker grid navigation pattern
- *   (role="grid"/"gridcell", ArrowKey nav, Home/End, PageUp/PageDown,
- *   aria-current="date", roving tabindex, month/year announcement) is
- *   NOT wired here. See BACKLOG #19 for the deferred a11y phase.
+ * v3.6.12 completion:
+ *   BACKLOG #19 is completed for the bounded lab Date grid contract.
+ *   The grid now exposes row/gridcell structure, aria-current,
+ *   aria-labelledby, roving tabindex, Arrow/Home/End/PageUp/PageDown
+ *   navigation, and polite month/year announcements. The Time picker
+ *   keeps its existing listbox/option dial contract.
  *
  * Minimum safety fixes vs. benchmark originals (v3.4.7):
  *   1. Module-scoped IIFE — no global helpers leaked.
@@ -110,6 +110,10 @@
     const addDays = (date, days) => makeDate(date.getFullYear(), date.getMonth(), date.getDate() + days);
     const sameDay = (a, b) => !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
     const toKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const fromKey = (key) => {
+      const [year, month, day] = String(key).split("-").map(Number);
+      return makeDate(year, month - 1, day);
+    };
     const formatInputDate = (date) => `${pad(date.getMonth() + 1)}/${pad(date.getDate())}/${date.getFullYear()}`;
     const formatShortDate = (date) => `${shortMonths[date.getMonth()]} ${date.getDate()}`;
     const formatHeadlineDate = (date) => `${date.toLocaleDateString("en-US", { weekday: "short" })}, ${formatShortDate(date)}`;
@@ -132,6 +136,7 @@
       const grid = qs("[data-date-grid]", root);
       const monthList = qs("[data-date-month-list]", root);
       const yearGrid = qs("[data-date-year-grid]", root);
+      const announcer = qs("[data-date-announcer]", root);
       const input = qs("[data-date-input]", root);
       const endInput = qs("[data-date-end-input]", root);
       const endField = qs("[data-date-end-field]", root);
@@ -154,6 +159,7 @@
         selected: cloneDate(committed.selected),
         rangeStart: cloneDate(committed.rangeStart),
         rangeEnd: cloneDate(committed.rangeEnd),
+        focusedDate: cloneDate(committed.selected),
       };
 
       function updateModeControls() {
@@ -196,6 +202,10 @@
         });
       }
 
+      function announceViewMonth() {
+        if (announcer) announcer.textContent = `${monthNames[state.viewMonth]} ${state.viewYear}`;
+      }
+
       function setView(view) {
         state.view = view;
         views.forEach((panel) => {
@@ -216,40 +226,51 @@
       function renderCalendar() {
         const first = makeDate(state.viewYear, state.viewMonth, 1);
         const start = addDays(first, -first.getDay());
-        const preferred = selectedForView();
+        const preferred = state.focusedDate || selectedForView();
         grid.innerHTML = "";
+        grid.setAttribute("aria-multiselectable", state.mode === "range" ? "true" : "false");
 
-        for (let index = 0; index < 42; index += 1) {
-          const date = addDays(start, index);
-          const button = document.createElement("button");
-          const isOutside = date.getMonth() !== state.viewMonth;
-          const isToday = sameDay(date, demoToday);
-          const isSingleSelected = state.mode === "single" && sameDay(date, state.selected);
-          const isRangeStart = state.mode === "range" && sameDay(date, state.rangeStart);
-          const isRangeEnd = state.mode === "range" && sameDay(date, state.rangeEnd);
-          const inRange = state.mode === "range" && dateInRange(date, state.rangeStart, state.rangeEnd);
+        for (let week = 0; week < 6; week += 1) {
+          const row = document.createElement("div");
+          row.className = "ax-date-benchmark__week";
+          row.setAttribute("role", "row");
 
-          button.type = "button";
-          button.className = "ax-date-picker__cell has-state-layer";
-          button.textContent = String(date.getDate());
-          button.dataset.date = toKey(date);
-          button.setAttribute("role", "gridcell");
-          button.setAttribute("aria-label", `${weekdays[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`);
-          button.setAttribute("aria-selected", isSingleSelected || isRangeStart || isRangeEnd ? "true" : "false");
-          button.tabIndex = sameDay(date, preferred) || (!preferred && !isOutside && date.getDate() === 1) ? 0 : -1;
+          for (let day = 0; day < 7; day += 1) {
+            const index = week * 7 + day;
+            const date = addDays(start, index);
+            const button = document.createElement("button");
+            const isOutside = date.getMonth() !== state.viewMonth;
+            const isToday = sameDay(date, demoToday);
+            const isSingleSelected = state.mode === "single" && sameDay(date, state.selected);
+            const isRangeStart = state.mode === "range" && sameDay(date, state.rangeStart);
+            const isRangeEnd = state.mode === "range" && sameDay(date, state.rangeEnd);
+            const inRange = state.mode === "range" && dateInRange(date, state.rangeStart, state.rangeEnd);
 
-          button.classList.toggle("is-outside", isOutside);
-          button.classList.toggle("is-today", isToday);
-          button.classList.toggle("is-selected", isSingleSelected || (state.mode === "range" && (isRangeStart || isRangeEnd)));
-          button.classList.toggle("is-in-range", inRange);
-          button.classList.toggle("is-range-start", isRangeStart);
-          button.classList.toggle("is-range-end", isRangeEnd);
-          button.classList.toggle("is-range-preview", inRange && !isRangeStart && !isRangeEnd);
+            button.type = "button";
+            button.className = "ax-date-picker__cell has-state-layer";
+            button.textContent = String(date.getDate());
+            button.dataset.date = toKey(date);
+            button.setAttribute("role", "gridcell");
+            button.setAttribute("aria-label", `${weekdays[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`);
+            button.setAttribute("aria-selected", isSingleSelected || isRangeStart || isRangeEnd ? "true" : "false");
+            if (isToday) button.setAttribute("aria-current", "date");
+            button.tabIndex = sameDay(date, preferred) || (!preferred && !isOutside && date.getDate() === 1) ? 0 : -1;
 
-          button.addEventListener("click", () => {
-            chooseDate(date);
-          });
-          grid.append(button);
+            button.classList.toggle("is-outside", isOutside);
+            button.classList.toggle("is-today", isToday);
+            button.classList.toggle("is-selected", isSingleSelected || (state.mode === "range" && (isRangeStart || isRangeEnd)));
+            button.classList.toggle("is-in-range", inRange);
+            button.classList.toggle("is-range-start", isRangeStart);
+            button.classList.toggle("is-range-end", isRangeEnd);
+            button.classList.toggle("is-range-preview", inRange && !isRangeStart && !isRangeEnd);
+
+            button.addEventListener("click", () => {
+              chooseDate(date);
+            });
+            row.append(button);
+          }
+
+          grid.append(row);
         }
       }
 
@@ -298,10 +319,20 @@
         renderYears();
       }
 
+      function focusDate(date) {
+        state.focusedDate = cloneDate(date);
+        state.viewYear = date.getFullYear();
+        state.viewMonth = date.getMonth();
+        render();
+        announceViewMonth();
+        qs(`[data-date-grid] [data-date="${toKey(date)}"]`, root)?.focus();
+      }
+
       function chooseDate(date) {
         const next = cloneDate(date);
         state.viewYear = next.getFullYear();
         state.viewMonth = next.getMonth();
+        state.focusedDate = cloneDate(next);
         if (state.mode === "single") {
           state.selected = next;
         } else if (!state.rangeStart || state.rangeEnd || next < state.rangeStart) {
@@ -320,6 +351,7 @@
         const active = selectedForView();
         state.viewYear = active.getFullYear();
         state.viewMonth = active.getMonth();
+        state.focusedDate = cloneDate(active);
       }
 
       function commitState() {
@@ -412,6 +444,7 @@
           state.viewYear -= 1;
         }
         render();
+        announceViewMonth();
       });
 
       qs("[data-date-next]", root)?.addEventListener("click", () => {
@@ -421,6 +454,7 @@
           state.viewYear += 1;
         }
         render();
+        announceViewMonth();
       });
 
       qs("[data-date-cancel]", root)?.addEventListener("click", () => {
@@ -446,12 +480,31 @@
         const focused = document.activeElement;
         if (!focused?.matches("[data-date-grid] .ax-date-picker__cell")) return;
         const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
-        if (!(event.key in offsets)) return;
+        let nextDate = null;
+
+        const currentDate = fromKey(focused.dataset.date);
+
+        if (event.key in offsets) {
+          nextDate = addDays(currentDate, offsets[event.key]);
+        } else if (event.key === "Home") {
+          nextDate = addDays(currentDate, -currentDate.getDay());
+        } else if (event.key === "End") {
+          nextDate = addDays(currentDate, 6 - currentDate.getDay());
+        } else if (event.key === "PageUp" || event.key === "PageDown") {
+          const delta = event.key === "PageUp" ? -1 : 1;
+          nextDate = event.shiftKey
+            ? makeDate(currentDate.getFullYear() + delta, currentDate.getMonth(), currentDate.getDate())
+            : makeDate(currentDate.getFullYear(), currentDate.getMonth() + delta, currentDate.getDate());
+        } else if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          focused.click();
+          return;
+        } else {
+          return;
+        }
+
         event.preventDefault();
-        const cells = qsa("[data-date-grid] .ax-date-picker__cell", root);
-        const index = cells.indexOf(focused);
-        const next = cells[Math.max(0, Math.min(cells.length - 1, index + offsets[event.key]))];
-        next?.focus();
+        focusDate(nextDate);
       });
 
       render();

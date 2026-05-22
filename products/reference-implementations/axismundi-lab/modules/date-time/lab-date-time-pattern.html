@@ -125,14 +125,15 @@
       </p>
     </aside>
 
-    <aside class="lab-banner lab-banner--warning">
-      <strong class="t-title-medium">Inherited a11y gap — WAI-ARIA Date Picker grid pattern</strong>
+    <aside class="lab-banner">
+      <strong class="t-title-medium">v3.6.12 completion — Date grid keyboard contract</strong>
       <p class="t-body-medium" style="margin: 0;">
-        The benchmark interaction lacks ArrowKey grid navigation, <code>role="grid"</code> /
-        <code>role="gridcell"</code>, <code>aria-current="date"</code>, Home/End/PageUp/PageDown,
-        and roving <code>tabindex</code>. v3.4.7 carries this gap over by design — see
-        <strong>BACKLOG #19</strong>. This module does NOT claim production-ready date picker
-        accessibility.
+        BACKLOG #19 is now handled inside this lab module's bounded Date grid:
+        Arrow keys, Home/End, PageUp/PageDown, Shift+PageUp/PageDown, roving
+        <code>tabindex</code>, <code>aria-current="date"</code>, grid labeling, and polite
+        month/year announcements are part of the validation surface. Time picker keeps its
+        current <code>listbox</code>/<code>option</code> dial contract; locale, timezone, plugin
+        binding, mobile full-screen, and full range-selection a11y remain out of scope.
       </p>
     </aside>
 
@@ -181,7 +182,7 @@
               <div class="ax-date-benchmark__body">
                 <div class="ax-date-benchmark__calendar" data-date-view="calendar">
                   <nav class="ax-date-picker__nav" aria-label="Month navigation">
-                    <button type="button" class="ax-date-benchmark__switch" data-date-view-button="month">August 2025</button>
+                    <button type="button" class="ax-date-benchmark__switch" id="date-grid-label" data-date-view-button="month">August 2025</button>
                     <span class="ax-date-benchmark__spacer"></span>
                     <button type="button" class="ax-icon-button is-standard has-state-layer" data-date-prev aria-label="Previous month">
                       <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chevron_left</span>
@@ -193,7 +194,13 @@
                   <div class="ax-date-picker__weekdays" aria-hidden="true">
                     <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
                   </div>
-                  <div class="ax-date-picker__grid" role="grid" data-date-grid></div>
+                  <div class="ax-date-picker__grid" role="grid" aria-labelledby="date-grid-label" data-date-grid></div>
+                  <p class="t-body-small lab-section__supporting" style="margin-block: 8px 0;">
+                    Keyboard: Arrow keys move by day/week, Home/End move to week bounds,
+                    PageUp/PageDown change month, Shift+PageUp/PageDown change year, and
+                    Enter/Space selects the focused date.
+                  </p>
+                  <div class="visually-hidden" aria-live="polite" data-date-announcer></div>
                 </div>
 
                 <div class="ax-date-benchmark__month-list" data-date-view="month" hidden>

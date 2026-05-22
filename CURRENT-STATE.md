@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-22 (v3.6.12 closed)
+> **Last updated**: 2026-05-22 (v3.6.13 closed)
 
 ---
 
@@ -43,24 +43,25 @@ v3.6.9   Wave 2A-2 Menu / Popover Consumer                              ✓ DONE
 v3.6.10  Wave 2B-1 Form Controls                                        ✓ DONE
 v3.6.11  Wave 2B-2 Dialog / Sheet                                       ✓ DONE
 v3.6.12  Wave 2B-3 DateTime                                             ✓ DONE
+v3.6.13  Wave 2B-4 Actions Consumers                                    ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.12 Wave 2B-3 DateTime
+Current release:   v3.6.13 Wave 2B-4 Actions Consumers
 Current phase:     CLOSED
-Current state:     Wave 2B-3 complete; DateTime #22+#23 DONE; BACKLOG #19 closed; Lock 5 second self-application held
-Next allowed work: Next cycle plan-first (Wave 2B-4 Actions / #21 / narrowed #41 / residual #44 / #46 / #47)
+Current state:     Wave 2B complete; FAB menu #5 / Split button #7 / Toolbar #8 DONE; Lock 5 third self-application held
+Next allowed work: Next cycle plan-first (remaining TODO components / #21 / narrowed #41 / residual #44 / #46 / #47 / VS Code diagnostics sweep)
 ```
 
 ## Matrix Snapshot
 
 ```txt
 34 TOC component rows:
-  DONE       24
-  PARTIAL     1
-  TODO        6
+  DONE       28
+  PARTIAL     0
+  TODO        3
   RECORD      3
 
 3 infrastructure provider rows:
@@ -731,6 +732,60 @@ Routed forward:
   BACKLOG #46 disabled ripple host authoring hygiene unchanged
   BACKLOG #47 popover provider menu-item-class logic extraction hygiene unchanged
   DateTime popover-provider matrix wording cleanup as light docs follow-on
+```
+
+## v3.6.13 Close Outcome
+
+```txt
+Mode:
+  Wave 2B-4 Actions Consumers multi-provider consumer composition
+
+Closed by v3.6.13:
+  Route A implemented
+  FAB menu #5 moved to DONE
+  Split button #7 moved to DONE
+  Toolbar #8 moved to DONE
+  Wave 2B complete
+  components.css unchanged
+  provider modules unchanged
+  scripts/theme.js unchanged and not loaded by the new pattern pages
+  WordPress/Pilot files unchanged
+  Lock 5 third post-promotion self-application held
+
+Phase 0 plan:
+  docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-5-CLOSE.md
+
+Validation:
+  node --check lab-fab-menu.js / lab-split-button.js / lab-toolbar.js PASS
+  wp-env run cli wp core version                      7.0
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS (Axis A-G all 1.000)
+  npm run validate:computed                            PASS
+  npm run publish:styleguide                           PASS, restored generated mirror
+  git diff --check                                     PASS
+
+Routed forward:
+  Remaining TODO component rows
+  BACKLOG #21 Interpreter Plugin strategy
+  BACKLOG #41 shared WordPress ripple runtime packaging decision unchanged
+  BACKLOG #44 residual coverage / validator polish unchanged
+  BACKLOG #46 disabled ripple host authoring hygiene unchanged
+  BACKLOG #47 popover provider menu-item-class logic extraction hygiene unchanged
+  VS Code diagnostics sweep after component modularization
 ```
 
 ## Discipline

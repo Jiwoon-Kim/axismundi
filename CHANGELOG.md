@@ -1,5 +1,58 @@
 # CHANGELOG
 
+## v3.6.13 - Wave 2B-4 Actions Consumers (2026-05-22)
+
+Multi-provider consumer-composition release that closes FAB menu #5, Split
+button #7, and Toolbar #8. This completes Wave 2B.
+
+### Added
+
+- Added the v3.6.13 Phase 0/1/2/3/5 docs under `docs/v3.6.13/`.
+- Added `modules/fab-menu/` with lab-scoped CSS, local runtime, pattern HTML,
+  and SPEC / MEASUREMENT / RUNTIME / WP audit docs.
+- Added `modules/split-button/` with lab-scoped CSS, local status runtime,
+  pattern HTML, and SPEC / MEASUREMENT / RUNTIME / WP audit docs.
+- Added `modules/toolbar/` with lab-scoped CSS, local `aria-pressed` runtime,
+  pattern HTML, and SPEC / MEASUREMENT / RUNTIME / WP audit docs.
+
+### Routed
+
+- Completed Wave 2B: Form Controls, Dialog / Sheet, DateTime, and Actions
+  Consumers are now closed.
+- Kept `popover/`, `ripple/`, and `icon-system/` unchanged; the new modules are
+  declarative consumers only.
+- Kept `scripts/theme.js` unchanged and unloaded by the Toolbar pattern page to
+  avoid the styleguide global toolbar precedent.
+- Kept BACKLOG #41, #44, #46, and #47 unchanged.
+- Carried the VS Code diagnostics sweep as a good post-module-coverage
+  candidate after component modularization.
+
+### Verified
+
+- 12 visual cells: 3 modules x desktop/mobile x light/dark, console 0, 4xx 0,
+  and overflow 0.
+- `theme.js` no-load verified in FAB menu, Split button, and Toolbar pattern
+  pages.
+- FAB menu: open, activation, Escape close, disabled no-ripple, and intentional
+  outside-click absence PASS.
+- Split button: primary action and trailing chevron popover trigger remained
+  distinct; primary has no `aria-haspopup`, `aria-controls`, or
+  `data-popover-trigger`.
+- Toolbar: lab-scoped `aria-pressed` / `.is-selected` toggle PASS without
+  `theme.js`.
+- Ripple count clarified for BACKLOG #46 separation: Toolbar has 7 icon buttons
+  total, 6 enabled unbounded ripple hosts, and 1 disabled no-ripple host.
+- `node --check` for all three new JS files: PASS.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `npm run publish:styleguide`: PASS, with generated mirror restored after
+  validation.
+- `git diff --check`: PASS.
+
 ## v3.6.12 - Wave 2B-3 DateTime (2026-05-22)
 
 Existing-module completion release that moves DateTime #22+#23 from PARTIAL to

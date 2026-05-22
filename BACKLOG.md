@@ -2359,6 +2359,51 @@ Evidence docs:
 - `docs/v3.6.12/WAVE-2B-DATE-TIME-PHASE-3-VISUAL-QA.md`
 - `docs/v3.6.12/WAVE-2B-DATE-TIME-PHASE-5-CLOSE.md`
 
+### v3.6.13 Wave 2B-4 Actions Consumers close evidence
+
+v3.6.13 closed the fourth and final Wave 2B slice by implementing Route A for
+Actions consumers.
+
+Closed:
+
+- FAB menu #5: DONE
+- Split button #7: DONE
+- Toolbar #8: DONE
+- Wave 2B: COMPLETE
+
+Evidence:
+
+- Added `modules/fab-menu/`, `modules/split-button/`, and `modules/toolbar/`
+  with lab CSS, module-local JS, pattern HTML, and four modern audit docs each.
+- 12-cell Phase 3 visual matrix passed with console 0, 4xx 0, and overflow 0.
+- FAB menu verified open/close, action activation, Escape close, disabled
+  no-ripple, and intentional outside-click absence.
+- Split button verified primary-action and trailing-chevron menu semantics:
+  primary segments have no `aria-haspopup`, `aria-controls`, or
+  `data-popover-trigger`.
+- Toolbar verified local `aria-pressed` / `.is-selected` state sync without
+  loading `scripts/theme.js`.
+- Toolbar ripple authoring uses 7 icon buttons total, 6 enabled unbounded ripple
+  hosts, and 1 disabled no-ripple host. This preserves BACKLOG #46 disabled-host
+  hygiene separation.
+- `popover/`, `ripple/`, and `icon-system/` provider files remained unchanged.
+- Lock 5 completed its third clean post-promotion self-application.
+
+Wave 2B outcome:
+
+- Wave 2B-1 Form Controls: Checkbox #18 / Radio #19 / Switch #20 DONE.
+- Wave 2B-2 Dialog / Sheet: Dialog #26 / Sheet #27 DONE.
+- Wave 2B-3 DateTime: Date picker #22 / Time picker #23 DONE.
+- Wave 2B-4 Actions: FAB menu #5 / Split button #7 / Toolbar #8 DONE.
+
+Evidence docs:
+
+- `docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-0-PLAN.md`
+- `docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-1-REPORT.md`
+- `docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-2-REPORT.md`
+- `docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-3-VISUAL-QA.md`
+- `docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-5-CLOSE.md`
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing

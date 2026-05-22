@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi - Sheet Module (v3.6.11)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="lab-sheet.css" />
+</head>
+<body>
+<main class="lab-sheet-demo" data-sheet-demo>
+  <aside class="lab-specimen-banner" role="note" style="margin: 16px auto; max-width: 1120px; padding: 12px 16px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface);">
+    <strong>Validation specimen.</strong>
+    Sheet uses custom <code>aside[role="dialog"]</code> hosts plus baseline
+    <code>components.css §13</code>. Drag-to-dismiss is visibly deferred.
+  </aside>
+
+  <header class="lab-sheet-header">
+    <p class="t-label-large">Axismundi v3.6.11 - Wave 2B-2 - Component-Coverage #27</p>
+    <h1 class="t-display-small">Sheet</h1>
+    <p class="t-body-medium lab-sheet-caption">
+      Bottom-modal and side-modal sheets with local focus containment, scrim
+      close, Escape close, and focus restoration.
+    </p>
+  </header>
+
+  <section class="lab-sheet-section">
+    <div class="lab-sheet-grid">
+      <article class="lab-sheet-card">
+        <h2 class="t-title-large">Bottom modal sheet</h2>
+        <p class="t-body-medium lab-sheet-caption">
+          Verifies bottom-modal layout, modal role, initial focus, Tab wrap,
+          Escape, scrim close, and close-button restoration.
+        </p>
+        <div class="lab-sheet-actions">
+          <button class="ax-button is-filled has-state-layer t-label-large"
+                  type="button"
+                  data-sheet-trigger
+                  aria-haspopup="dialog"
+                  aria-controls="sheet-bottom">
+            Open bottom sheet
+          </button>
+        </div>
+      </article>
+
+      <article class="lab-sheet-card">
+        <h2 class="t-title-large">Side modal sheet</h2>
+        <p class="t-body-medium lab-sheet-caption">
+          Verifies the fully modal side-sheet variant. This is a modal drawer,
+          not a non-modal navigation drawer.
+        </p>
+        <div class="lab-sheet-actions">
+          <button class="ax-button is-tonal has-state-layer t-label-large"
+                  type="button"
+                  data-sheet-trigger
+                  aria-haspopup="dialog"
+                  aria-controls="sheet-side">
+            Open side sheet
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <p class="t-body-small lab-sheet-note">
+      Drag-to-dismiss is deferred for v3.6.11. It needs pointer capture,
+      threshold, velocity, scroll coordination, and mobile-specific heuristics.
+    </p>
+  </section>
+
+  <div class="modal-scrim" data-sheet-scrim="false" aria-hidden="true"></div>
+
+  <aside id="sheet-bottom"
+         class="sheet sheet--bottom-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="sheet-bottom-title"
+         aria-hidden="true">
+    <div class="sheet__handle" aria-hidden="true"></div>
+    <header class="sheet__header">
+      <h2 class="sheet__title" id="sheet-bottom-title">공유</h2>
+    </header>
+    <div class="sheet__body">
+      <p class="t-body-medium">링크를 복사하거나 공개 범위를 조정합니다.</p>
+      <div class="lab-sheet-actions">
+        <button class="ax-button is-tonal has-state-layer t-label-large" type="button" data-sheet-initial-focus>링크 복사</button>
+        <button class="ax-button is-text has-state-layer t-label-large" type="button">권한 설정</button>
+        <button class="ax-button is-text has-state-layer t-label-large" type="button" data-sheet-close>닫기</button>
+      </div>
+    </div>
+  </aside>
+
+  <aside id="sheet-side"
+         class="sheet sheet--side-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="sheet-side-title"
+         aria-hidden="true">
+    <header class="sheet__header">
+      <h2 class="sheet__title t-title-large" id="sheet-side-title">필터</h2>
+    </header>
+    <div class="sheet__body">
+      <p class="t-body-medium">Side-modal sheet는 fully modal drawer입니다.</p>
+      <label class="ax-checkbox">
+        <input class="ax-checkbox__input" type="checkbox" name="filter" value="drafts" />
+        <span class="ax-checkbox__visual" aria-hidden="true"><svg class="ax-checkbox__check" viewBox="0 0 18 18"><path d="M4 9.5 7.5 13 14 5.5" /></svg></span>
+        <span class="ax-checkbox__label">초안 포함</span>
+      </label>
+      <div class="lab-sheet-actions">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button" data-sheet-initial-focus>적용</button>
+        <button class="ax-button is-text has-state-layer t-label-large" type="button" data-sheet-close>닫기</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script src="lab-sheet.js" defer></script>
+</body>
+</html>

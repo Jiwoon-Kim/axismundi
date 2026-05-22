@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## v3.6.12 - Wave 2B-3 DateTime (2026-05-22)
+
+Existing-module completion release that moves DateTime #22+#23 from PARTIAL to
+DONE and closes BACKLOG #19 Date Picker Grid Navigation A11y.
+
+### Added
+
+- Added the v3.6.12 Phase 0/1/2/3/5 docs under `docs/v3.6.12/`.
+- Completed the bounded Date grid a11y contract inside existing
+  `modules/date-time/`: row/gridcell structure, `aria-current`, grid labeling,
+  `aria-multiselectable`, Home/End, PageUp/PageDown, Shift+PageUp/Down,
+  Enter/Space activation, and polite month/year announcements.
+- Added modern DateTime SPEC / MEASUREMENT / RUNTIME / WP audit docs while
+  preserving `DATE-TIME-AUDIT.md` as the v3.4.7 provenance audit with a v3.6.12
+  addendum.
+
+### Routed
+
+- Closed BACKLOG #19 by accepting CDP `Accessibility.getFullAXTree` evidence as
+  the primary deterministic a11y evidence path for this cycle.
+- Kept Time picker APG redesign, full range-selection a11y, mobile full-screen
+  DateTime, locale/timezone/recurring behavior, plugin/WordPress binding, and
+  real `popover/` provider migration out of scope.
+- Kept the stale/aspirational DateTime `popover/` provider-matrix note as a
+  light future documentation cleanup, not a new BACKLOG item.
+- Kept BACKLOG #41, #44, #46, and #47 unchanged.
+
+### Verified
+
+- 4 visual cells: desktop/mobile x light/dark, console 0 and overflow 0.
+- Date grid structure: `grid: 1`, `row: 6`, `gridcell: 42`,
+  `aria-current="date": 1`, `tabindex="0": 1`.
+- Date keyboard: Arrow, Home/End, PageUp/PageDown, Shift+PageUp/Down,
+  Enter/Space, roving tabindex, and live month/year announcements PASS.
+- Time picker non-regression: `dialog` + `listbox` / `option`, 12h/24h switch,
+  hour/minute part switch, typed input commit, and Escape close PASS.
+- Forbidden-ancestor specimen remained inert.
+- `node --check products/reference-implementations/axismundi-lab/modules/date-time/lab-date-time.js`:
+  PASS.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `npm run publish:styleguide`: PASS, with generated mirror restored after
+  validation.
+- `git diff --check`: PASS.
+
 ## v3.6.11 - Wave 2B-2 Dialog / Sheet (2026-05-22)
 
 Interaction-runtime component-lab release that closes the second Wave 2B

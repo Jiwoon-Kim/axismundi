@@ -405,83 +405,6 @@ This audit is best preceded by the Pilot Block Theme Probe (already on ROADMAP a
 
 If the pilot probe is delayed, the audit can still run on the static styleguide corpus alone — but its decisions will need a follow-up pass after pilot exists.
 
-### 19. Date Picker Grid Navigation A11y
-
-- **Bucket**: D/E — Theme interaction / lab module a11y refinement
-- **Status**: Deferred
-- **Target**: v3.4.x Date/Time A11y Pass (post-v3.4.7 extraction, before v3.5.0 if feasible)
-- **Source**: v3.4.7 Date/Time Picker Interaction Extraction Phase 0 inventory. The GPT Codex-generated benchmark date picker interaction lacks the WAI-ARIA calendar grid navigation pattern. v3.4.7 explicitly carries this gap over rather than fixing it in-flight, because a complete WAI-ARIA Date Picker pattern is its own design decision and would balloon the extraction's scope.
-
-**The carry-over policy in v3.4.7**:
-
-```
-v3.4.7 = benchmark interaction layer를 date-time module로 추출
-       = 기존 a11y 수준을 정확히 기록
-       = critical gap은 숨기지 않고 BACKLOG #19로 라우팅
-
-v3.4.x later = Date Picker Grid Navigation a11y pass
-```
-
-**Missing a11y patterns** (date picker only — time picker has its own partial patterns):
-
-The benchmark date interaction code (`benchmark-interactions.js` L921–L1283) has only `role` 1× / `aria-selected` 1× / `aria-pressed` 1× / `aria-label` 1× / `tabindex` 1× / `event.key` 3× / `"Escape"` 1×. None of the WAI-ARIA Date Picker grid pattern is wired:
-
-```
-ARIA structure:
-  role="grid" on the calendar table
-  role="row" on each week row
-  role="gridcell" on each day cell
-  aria-current="date" on today's cell
-  aria-selected on the active selection
-  aria-readonly / aria-multiselectable as appropriate
-  aria-labelledby pointing to the month/year nav label
-
-Keyboard navigation:
-  ArrowLeft / ArrowRight  → previous/next day
-  ArrowUp / ArrowDown     → previous/next week
-  Home / End              → start/end of week
-  PageUp / PageDown       → previous/next month (Shift +PageUp/Down = year)
-  Enter / Space           → select date
-  Escape                  → close picker
-
-Roving tabindex:
-  Only one cell has tabindex="0" at a time (the focused date)
-  All other cells have tabindex="-1"
-  Focus follows arrow-key navigation
-
-Announcements:
-  Month/year changes announced when ArrowKey crosses month boundary
-  aria-live="polite" region for nav announcements
-```
-
-**Why this is a separate phase, not v3.4.7 scope**:
-
-1. **Scope honesty** — v3.4.7 is already 684 lines JS + 428 lines CSS extraction. Adding the full WAI-ARIA pattern would double the audit doc and require new design decisions (focus management on month boundary crossings, range-selection a11y interaction with single-date a11y, etc.).
-2. **Carry-over policy precedent** — v3.4.6 tooltip *did* fix the missing `aria-describedby` because it was a single defensive setAttribute / removeAttribute pair. The date picker grid pattern is qualitatively different — it's an ongoing design conversation, not a missing one-line attribute.
-3. **Audit doc transparency** — DATE-TIME-AUDIT.md records the a11y gap explicitly in its 5-criterion verdict as a known limitation: *"PASS as an interaction extraction module, with critical inherited a11y gaps deferred."*
-
-**Scope when triggered**:
-
-- `lab-date-time.js` — wire ArrowKey navigation, roving tabindex, Home/End/PageUp/PageDown, aria-live announcements
-- `lab-date-time.css` — `:focus-visible` ring on gridcell (currently relies on browser default)
-- `lab-date-time-pattern.html` — add keyboard-navigation demo section with instructions
-- `DATE-TIME-AUDIT.md` 5-criterion verdict — upgrade row 4 (keyboard/a11y) from "PASS (carry-over, partial)" to "PASS (full WAI-ARIA Date Picker pattern)"
-- Verify with at least one screen reader (NVDA or VoiceOver)
-
-**NOT in scope** of this BACKLOG entry:
-
-- Time picker a11y refinements (separate consideration — time picker uses different ARIA patterns, possibly `role="radiogroup"` for hour/minute selection)
-- Locale calendar systems (lunar / Hijri / Korean Sexagenary) — separate locale phase
-- Range selection a11y (BACKLOG could be split further if range selection is needed)
-- ActivityPub Event object integration
-- WordPress editor date binding
-
-**Sequencing**:
-
-- Best executed after v3.4.7 freeze stabilizes and at least one external pilot using the module surfaces real usage patterns.
-- May be bundled with the v3.4.x Pilot Block Theme Probe if the probe surfaces date-picker usage that needs a11y.
-- Independent of BACKLOG #15 (Snackbar Runtime) and #17 (Text Input Audit) — different surface, different a11y model.
-
 ### 20. Theme-only color customization policy
 
 - **Bucket**: F — Plugin / theme binding policy
@@ -2392,6 +2315,50 @@ If a future baseline cycle changes .dialog::backdrop from transparent to a
 visually styled layer, revisit native backdrop / external .modal-scrim layering.
 ```
 
+### v3.6.12 Wave 2B-3 DateTime close evidence
+
+v3.6.12 closed the third Wave 2B slice by completing existing `modules/date-time/`
+from PARTIAL to DONE.
+
+Closed:
+
+- Date picker #22: DONE
+- Time picker #23: DONE
+- BACKLOG #19 Date Picker Grid Navigation A11y: CLOSED
+
+Evidence:
+
+- Route A kept the existing self-contained `date-time/` module and did not enter
+  `popover/` provider migration.
+- Date grid exposes `role="grid"`, 6 `role="row"` wrappers, 42 `role="gridcell"`
+  cells, `aria-current="date"`, `aria-labelledby`, `aria-selected`, and
+  single/range `aria-multiselectable` state.
+- Date keyboard QA passed Arrow, Home/End, PageUp/PageDown,
+  Shift+PageUp/Down, Enter/Space, Escape, roving tabindex, and polite month/year
+  announcement checks.
+- Chrome DevTools Protocol `Accessibility.getFullAXTree` reported
+  `grid: 1`, `row: 6`, `gridcell: 42`.
+- Time picker retained the bounded `dialog` + `listbox` / `option` contract;
+  no radiogroup/spinbutton/native-time rewrite was added.
+- Modern SPEC / MEASUREMENT / RUNTIME / WP audit docs were added while
+  `DATE-TIME-AUDIT.md` remained provenance with a v3.6.12 addendum.
+
+Still out of scope:
+
+- Time picker APG redesign.
+- full range-selection a11y redesign.
+- mobile full-screen DateTime picker variant.
+- locale / timezone / recurring / plugin / WordPress binding.
+- real `popover/` provider migration.
+
+Evidence docs:
+
+- `docs/v3.6.12/WAVE-2B-DATE-TIME-PHASE-0-PLAN.md`
+- `docs/v3.6.12/WAVE-2B-DATE-TIME-PHASE-1-REPORT.md`
+- `docs/v3.6.12/WAVE-2B-DATE-TIME-PHASE-2-REPORT.md`
+- `docs/v3.6.12/WAVE-2B-DATE-TIME-PHASE-3-VISUAL-QA.md`
+- `docs/v3.6.12/WAVE-2B-DATE-TIME-PHASE-5-CLOSE.md`
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing
@@ -2400,7 +2367,7 @@ metadata, not closure.
 | Bucket | Items |
 |---|---|
 | Pilot-before | None currently. If `blocks.html` / `prose.html` verification surfaces a blocker, update this row before v3.6.0. |
-| Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #19 Date Picker Grid Navigation A11y; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency; #41 WordPress block bridge state and ripple enhancement; #42 Token Architecture Refactor; #43 WP core block specimen wall / full variation audit |
+| Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency; #41 WordPress block bridge state and ripple enhancement; #42 Token Architecture Refactor; #43 WP core block specimen wall / full variation audit |
 | Plugin territory | #6 Monotone SVG theming plugin concept; #21 M3 Interpreter Plugin separation; #38 Carousel plugin extraction |
 | Deferred / ongoing | #5 WordPress logo styleguide specimen; #7 Search bar leading icon known delta; #14 Material Symbols ligature layout shift; #16 Tooltip delay / touch long-press; #18 Snackbar class naming; #20 Theme-only color customization policy; #22 `data-theme="auto"` model; #23 Elevated Chip variants; #36 v4.0 directory restructure; #37 GitHub Pages dogfooding; #40 Modularized component CSS separation |
 
@@ -2409,6 +2376,7 @@ metadata, not closure.
 
 | # | Title | Closed at | Resolution summary |
 |---:|---|---|---|
+| 19 | Date Picker Grid Navigation A11y | v3.6.12 | Closed by Route A inside existing `modules/date-time/`. Date grid now exposes grid/row/gridcell semantics, `aria-current`, `aria-labelledby`, single/range `aria-multiselectable`, roving tabindex, Arrow/Home/End/PageUp/PageDown/Shift+PageUp/Down keyboard movement, Enter/Space activation, and polite month/year announcements. CDP accessibility tree verified `grid: 1`, `row: 6`, `gridcell: 42`. Time picker APG redesign, range a11y redesign, mobile full-screen, plugin/WP binding, locale/timezone, and real `popover/` provider migration remain out of scope. |
 | 45 | Wave 2A-2 Menu / popover consumer closure | v3.6.9 | Closed by Route A. Added `modules/menu/` with lab CSS, pattern HTML, and SPEC/MEASUREMENT/RUNTIME/WP docs. Menu consumes existing `popover/` and `ripple/` providers unchanged; no `lab-menu.js`; `components.css`, provider modules, WordPress/Pilot files, and prior Wave 2A modules unchanged. Phase 3 verified 4 visual cells console 0 / overflow 0, 3 live popover surfaces, forbidden-ancestor non-open, 10 enabled bounded ripple hosts, 2 disabled no-ripple hosts, and submenu deferred. |
 | 33 | List M3 full token coverage extension | v3.5.13 | Closed by Wave 1 cleanup Lane B. LIST-SPEC / MEASUREMENT gained the full-token extension; `components.css §26` now covers 3px focus indicator, selected-disabled 38% on-surface mix, transparent segmented wrapper with surface item containers, expand trailing icon container surface-container mapping, and no-wrap trailing supporting time. Drag/reorder and expand runtime remain deferred. |
 | 32 | Button family size variants — XS/S/M/L/XL coverage cycle | v3.5.13 | Closed by Wave 1 cleanup Lane A. `tokens.css` gained Button family size tokens; `components.css §2/§3/§28` now maps Button, Icon button, and Button group XS/S/M/L/XL variants. Playwright verified 32/40/56/96/136 size matrix and default no-size Button remains 40px. |

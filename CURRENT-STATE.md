@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-21 (v3.6.7 closed)
+> **Last updated**: 2026-05-22 (v3.6.8 closed)
 
 ---
 
@@ -38,24 +38,25 @@ v3.6.4   WP Block Bridge Residual Cleanup                              ✓ DONE
 v3.6.5   WP Block Bridge Editor Token Parity                           ✓ DONE
 v3.6.6   WP Block Bridge Ripple / Editor State Parity                   ✓ DONE
 v3.6.7   WP Specimen Follow-On Editor Compatibility                     ✓ DONE
+v3.6.8   Wave 2A Navigation Core                                        ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.7 WP Specimen Follow-On Editor Compatibility
+Current release:   v3.6.8 Wave 2A Navigation Core
 Current phase:     CLOSED
-Current state:     BACKLOG #44 narrowed to remaining coverage follow-ons and validator polish
-Next allowed work: Next cycle plan-first (Wave 2 / #21 / narrowed #41 packaging / residual #44 coverage)
+Current state:     Wave 2A core navigation modules closed; Menu routed to BACKLOG #45
+Next allowed work: Next cycle plan-first (Wave 2A-2 Menu / Wave 2B / #21 / narrowed #41 / residual #44 / #46)
 ```
 
 ## Matrix Snapshot
 
 ```txt
 34 TOC component rows:
-  DONE       13
+  DONE       17
   PARTIAL     2
-  TODO       16
+  TODO       12
   RECORD      3
 
 3 infrastructure provider rows:
@@ -457,6 +458,54 @@ Routed forward:
   BACKLOG #44 mark/highlight, long-line code, deep pullquote, Material Symbols coverage
   BACKLOG #44 validator hardening polish
   BACKLOG #41 shared WordPress ripple runtime packaging decision unchanged
+  diagnostic-first remains methodology finding, not Lock 5
+```
+
+## v3.6.8 Close Outcome
+
+```txt
+Mode:
+  Wave 2A Navigation Core component-lab cycle
+
+Closed by v3.6.8:
+  Route B implemented
+  App bar lab module added
+  Nav bar lab module added with bounded ripple consumers
+  Nav rail lab module added with bounded ripple consumers
+  Tabs lab module added with local keyboard runtime
+  4 modules x desktop/mobile x light/dark QA matrix PASS
+  Menu deferred to Wave 2A-2
+
+Phase 0 plan:
+  docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-5-CLOSE.md
+
+Validation:
+  wp-env run cli wp core version                      7.0
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS (Axis A-G all 1.000)
+  npm run validate:computed                            PASS
+  npm run publish:styleguide                           PASS, restored generated mirror
+  git diff --check                                     PASS
+
+Routed forward:
+  BACKLOG #45 Wave 2A-2 Menu / popover consumer closure
+  BACKLOG #46 disabled ripple host authoring hygiene
+  BACKLOG #41 shared WordPress ripple runtime packaging decision unchanged
+  BACKLOG #44 residual coverage / validator polish unchanged
   diagnostic-first remains methodology finding, not Lock 5
 ```
 

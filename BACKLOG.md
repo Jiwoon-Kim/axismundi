@@ -2212,6 +2212,78 @@ docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
 docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
 ```
 
+### 45. Wave 2A-2 Menu / popover consumer closure
+
+- **Bucket**: D — Theme interaction / component module consumer
+- **Status**: Open - routed by v3.6.8 after Wave 2A Navigation Core
+- **Priority**: Medium after v3.6.8
+- **Target**: Wave 2A-2 candidate
+- **Source**: v3.6.8 Phase 1/2/3/5 Navigation Core cycle
+
+**Scope**:
+
+- Add a Menu lab component module without reopening the closed `popover/`
+  provider implementation.
+- Preserve the DISTINCT but COUPLED boundary:
+  - Menu owns `role=menu/menuitem`, density, icon, shortcut, selected,
+    disabled, divider, and submenu semantics.
+  - `popover/` owns anchor, position, dismiss, outside-click, Escape, focus
+    restore, and viewport collision mechanics.
+- Decide how Menu consumes `popover/` without leaking consumer semantics into
+  the provider.
+- Verify bounded ripple and icon-system consumer usage without editing either
+  provider.
+
+**Non-goals**:
+
+- Do not edit `modules/popover/*` unless a new Phase 1 route explicitly
+  re-gates provider work.
+- Do not absorb Menu into popover.
+- Do not create a WordPress custom block.
+- Do not reopen core/button or #41 WordPress ripple packaging.
+
+**v3.6.8 routing evidence**:
+
+v3.6.8 implemented Route B for App bar, Nav bar, Nav rail, and Tabs while
+deferring Menu because it is the only Wave 2A row that is directly coupled to
+the existing popover provider.
+
+```txt
+docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-0-PLAN.md
+docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-1-REPORT.md
+docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-2-REPORT.md
+docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-3-VISUAL-QA.md
+docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-5-CLOSE.md
+```
+
+### 46. Disabled ripple host authoring hygiene
+
+- **Bucket**: D — Theme interaction / ripple authoring contract
+- **Status**: Open - routed by v3.6.8 Phase 3 review
+- **Priority**: Low
+- **Target**: future ripple hygiene cycle
+- **Source**: v3.6.8 Phase 3 review of Nav bar disabled destination
+
+**Issue**:
+
+`lab-nav-bar-pattern.html` includes a disabled button with
+`data-ax-ripple="bounded"`. Phase 3 verified that the disabled host does not
+create a ripple because disabled/pointer-event handling blocks activation, so
+this is not a v3.6.8 defect.
+
+**Decision pending**:
+
+- Option A: remove `data-ax-ripple` from disabled hosts as an authoring hygiene
+  rule.
+- Option B: document provider tolerance of disabled hosts as an explicit
+  Ripple v2 contract.
+
+**Non-goals**:
+
+- Do not patch v3.6.8 Navigation Core for this.
+- Do not change `modules/ripple/*` without a dedicated Phase 0/1 route.
+- Do not reinterpret the Nav bar component close evidence.
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing

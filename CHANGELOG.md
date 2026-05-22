@@ -1,5 +1,50 @@
 # CHANGELOG
 
+## v3.6.8 - Wave 2A Navigation Core (2026-05-22)
+
+Component-lab release for the first Wave 2A navigation slice. This cycle
+implements Route B: App bar, Nav bar, Nav rail, and Tabs, while deferring Menu
+to Wave 2A-2 because Menu is DISTINCT but COUPLED with the popover provider.
+
+### Added
+
+- Added the v3.6.8 Phase 0/1/2/3/5 docs under `docs/v3.6.8/`.
+- Added lab modules for App bar, Nav bar, Nav rail, and Tabs.
+- Added Tabs component-local runtime for click, ArrowLeft/ArrowRight, Home/End,
+  roving `tabindex`, `aria-selected`, and panel visibility.
+- Added BACKLOG #45 for Wave 2A-2 Menu / popover consumer closure.
+- Added BACKLOG #46 for disabled ripple host authoring hygiene.
+
+### Routed
+
+- Deferred Menu to Wave 2A-2 to preserve the Menu/popover DISTINCT but COUPLED
+  boundary.
+- Kept App bar action-slot ripple as CANDIDATE; no silent TARGET promotion.
+- Kept BACKLOG #41 shared WordPress ripple runtime packaging unchanged.
+- Kept BACKLOG #44 residual specimen coverage / validator polish unchanged.
+- Kept diagnostic-first as a methodology finding, not Lock 5.
+
+### Verified
+
+- `wp-env run cli wp core version`: 7.0.
+- 4 modules x desktop/mobile x light/dark: console 0, overflow 0 in all 16
+  cells.
+- Nav bar / Nav rail / Tabs: live bounded ripple provider attachment verified
+  by `.ax-ripple` creation.
+- App bar: `window.axRipple` undefined, host count 0, action-slot ripple still
+  CANDIDATE.
+- Tabs: click, ArrowLeft/ArrowRight, Home/End, disabled-skip, panel
+  hidden/show, and per-tabset roving state PASS.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `npm run publish:styleguide`: PASS, with generated mirror restored after
+  validation.
+- `git diff --check`: PASS.
+
 ## v3.6.7 - WP Specimen Follow-On Editor Compatibility (2026-05-21)
 
 Split-fixture release for BACKLOG #44. This cycle closes the specimen editor

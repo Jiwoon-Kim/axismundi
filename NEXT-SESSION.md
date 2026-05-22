@@ -1,13 +1,13 @@
-# NEXT-SESSION.md - Post-v3.6.7 Handoff
+# NEXT-SESSION.md - Post-v3.6.8 Handoff
 
 > **Status**: v3.6.0 Ontology Theme Pilot, v3.6.1 Token Architecture
 > Refactor, v3.6.2 WP Core Block Specimen Wall, v3.6.3 WP Block Bridge
 > Expansion, v3.6.4 WP Block Bridge Residual Cleanup, v3.6.5 WP Block
-> Bridge Editor Token Parity, and v3.6.6 WP Block Bridge Ripple / Editor
-> State Parity, and v3.6.7 WP Specimen Follow-On Editor Compatibility are
-> closed.
+> Bridge Editor Token Parity, v3.6.6 WP Block Bridge Ripple / Editor State
+> Parity, v3.6.7 WP Specimen Follow-On Editor Compatibility, and v3.6.8 Wave
+> 2A Navigation Core are closed.
 > **Use**: read at the start of the next Codex/Claude session.
-> **Last updated**: 2026-05-21.
+> **Last updated**: 2026-05-22.
 
 ---
 
@@ -19,38 +19,43 @@
 3. PROJECT-CONTEXT.md
 4. CHANGELOG.md latest entry
 5. ROADMAP.md current tail
-6. BACKLOG.md #41 / #44 / #21 / #14
-7. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
-8. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
-9. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-2-REPORT.md
-10. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-1-REPORT.md
-11. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-0-PLAN.md
-12. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-5-CLOSE.md
-13. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-3-VISUAL-QA.md
-14. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-2-REPORT.md
-15. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-1-REPORT.md
-16. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-0-PLAN.md
-17. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
-18. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
-19. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
-20. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
-21. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-0-PLAN.md
-22. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
-23. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
-24. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
-25. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
-26. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
-27. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
-28. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
-29. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
-30. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
-31. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
-32. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
-33. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
-34. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
-35. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
-36. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
-37. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
+6. BACKLOG.md #41 / #44 / #45 / #46 / #21 / #14
+7. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-5-CLOSE.md
+8. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-3-VISUAL-QA.md
+9. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-2-REPORT.md
+10. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-1-REPORT.md
+11. docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-0-PLAN.md
+12. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
+13. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
+14. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-2-REPORT.md
+15. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-1-REPORT.md
+16. docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-0-PLAN.md
+17. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-5-CLOSE.md
+18. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-3-VISUAL-QA.md
+19. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-2-REPORT.md
+20. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-1-REPORT.md
+21. docs/v3.6.6/WP-BLOCK-BRIDGE-RIPPLE-EDITOR-STATE-PARITY-PHASE-0-PLAN.md
+22. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-5-CLOSE.md
+23. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-3-VISUAL-QA.md
+24. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-2-REPORT.md
+25. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-1-REPORT.md
+26. docs/v3.6.5/WP-BLOCK-BRIDGE-EDITOR-TOKEN-PARITY-PHASE-0-PLAN.md
+27. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-5-CLOSE.md
+28. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-3-VISUAL-QA.md
+29. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-2-REPORT.md
+30. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-1-REPORT.md
+31. docs/v3.6.4/WP-BLOCK-BRIDGE-RESIDUAL-CLEANUP-PHASE-0-PLAN.md
+32. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-5-CLOSE.md
+33. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-SEMANTIC-DECISIONS.md
+34. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-3-VISUAL-QA.md
+35. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-2-REPORT.md
+36. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-1-REPORT.md
+37. docs/v3.6.3/WP-BLOCK-BRIDGE-EXPANSION-PHASE-0-PLAN.md
+38. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-5-CLOSE.md
+39. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-2-CLASSIFICATION.md
+40. docs/v3.6.2/WP-CORE-BLOCK-SPECIMEN-WALL-PHASE-3-VISUAL-QA.md
+41. bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md §1-2
+42. docs/v3.6.0/PILOT-LESSONS-AND-TOKEN-ARCHITECTURE.md
 ```
 
 Repo docs remain authority. Chat is relay, not source of truth.
@@ -78,15 +83,18 @@ v3.6.4   WP Block Bridge Residual Cleanup           CLOSED
 v3.6.5   WP Block Bridge Editor Token Parity        CLOSED
 v3.6.6   WP Block Bridge Ripple / Editor State Parity CLOSED
 v3.6.7   WP Specimen Follow-On Editor Compatibility CLOSED
+v3.6.8   Wave 2A Navigation Core                    CLOSED
 
 Next route:
   Start next cycle plan-first.
   Primary candidates:
-    Wave 2 plan-first.
+    Wave 2A-2 Menu.
+    Wave 2B Form.
     BACKLOG #21 Interpreter Plugin strategy.
   Alternative candidates:
     BACKLOG #41 shared WordPress ripple runtime packaging decision.
     BACKLOG #44 remaining specimen coverage follow-ons.
+    BACKLOG #46 disabled ripple host authoring hygiene.
 ```
 
 Public repository:
@@ -102,51 +110,63 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.7 Close Summary
+## 2) v3.6.8 Close Summary
 
-Closed by v3.6.7:
+Closed by v3.6.8:
 
 ```txt
 Phase 1 inventory:
-  Existing specimen wall editor mismatch reproduced at 56 raw / 28 unique
-  mismatches mapped to committed fixture/save output differences
+  Existing components.css primitives and styleguide traces mapped for App bar,
+  Nav bar, Nav rail, Tabs, and Menu
+  Route B selected: Navigation Core First
+  Menu deferred because it is DISTINCT but COUPLED with popover/
 
 Phase 2 implementation:
-  Route C implemented
-  original front-end specimen wall preserved
-  editor-valid smoke fixture added at core-block-editor-smoke.html
-  importer and existing validate:specimen-wall gate extended
+  App bar lab module added
+  Nav bar lab module added with bounded ripple consumers
+  Nav rail lab module added with bounded ripple consumers
+  Tabs lab module added with local keyboard runtime
+  Menu module not created
 
 Phase 3 visual QA:
-  front-end wall: 200 / console 0 / overflow 0 / Tier 1 11/11
-  editor smoke FE: 200 / console 0 / overflow 0 / sections 6 / buttons 5 / searches 2
-  editor smoke editor: iframe 1 / console 0 / block validation 0 / invalid UI 0 / recovery UI 0
-  existing wall editor reference remains intentionally isolated at 56 / 56
+  4 modules x desktop/mobile x light/dark: console 0 / overflow 0
+  App bar: no ripple hosts, action slots remain CANDIDATE
+  Nav bar: 7 DOM ripple hosts, live bounded ripple created
+  Nav rail: 6 DOM ripple hosts, live bounded ripple created
+  Tabs: 8 DOM ripple hosts, live bounded ripple created
+  Tabs click/Arrow/Home/End/disabled-skip/panel visibility PASS
 ```
 
 Validation at close:
 
 ```txt
+wp-env run cli wp core version                      7.0
 python tools/generators/build_pilot_specimen_wall.py PASS
 npm run validate:specimen-wall                       PASS
 php -l products/reference-implementations/axismundi-pilot/functions.php PASS
 npm test                                             PASS (Axis A-G all 1.000)
 npm run validate:computed                            PASS
+npm run publish:styleguide                           PASS, generated mirror restored
 git diff --check                                     PASS
 ```
 
 Routed forward:
 
 ```txt
-BACKLOG #44:
-  mark/highlight coverage
-  long-line code coverage
-  deep pullquote coverage
-  Material Symbols follow-on coverage / BACKLOG #14 cross-reference
-  validator hardening polish
+BACKLOG #45:
+  Wave 2A-2 Menu / popover consumer closure
+
+BACKLOG #46:
+  disabled ripple host authoring hygiene
 
 BACKLOG #41:
   shared WordPress ripple runtime packaging decision remains unchanged
+
+BACKLOG #44:
+  remaining specimen coverage / validator polish remains unchanged
+
+Methodology:
+  diagnostic-first remains methodology finding, not Lock 5
 ```
 
 ## 3) Lesson Locks
@@ -229,21 +249,23 @@ Choose the next cycle. Do not auto-start implementation without a Phase 0 plan.
 Recommended primary routes:
 
 ```txt
-BACKLOG #44 specimen follow-on coverage + editor compatibility:
-  editor-invalid-content
-  mark/highlight coverage
-  Material Symbols font constraint
-  deeper pullquote coverage if needed
+Wave 2A-2 Menu:
+  implement the Menu component as a popover consumer without changing
+  the closed popover provider contract
 
-Wave 2 plan-first:
-  navigation / form / remaining component planning after Pilot feedback slices
+Wave 2B Form:
+  Checkbox / Radio / Switch plus Dialog / Sheet and remaining Actions
+
+BACKLOG #21 Interpreter Plugin strategy:
+  plugin-tier strategy, with Lock 3/4 routing kept explicit
 ```
 
 Alternative routes:
 
 ```txt
-BACKLOG #21 Interpreter Plugin strategy
 BACKLOG #41 shared WordPress ripple runtime packaging decision
+BACKLOG #44 remaining specimen coverage / validator polish
+BACKLOG #46 disabled ripple host authoring hygiene
 ```
 
 Phase cadence:

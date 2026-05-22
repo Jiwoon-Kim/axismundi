@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-22 (v3.6.10 closed)
+> **Last updated**: 2026-05-22 (v3.6.11 closed)
 
 ---
 
@@ -41,24 +41,25 @@ v3.6.7   WP Specimen Follow-On Editor Compatibility                     ✓ DONE
 v3.6.8   Wave 2A Navigation Core                                        ✓ DONE
 v3.6.9   Wave 2A-2 Menu / Popover Consumer                              ✓ DONE
 v3.6.10  Wave 2B-1 Form Controls                                        ✓ DONE
+v3.6.11  Wave 2B-2 Dialog / Sheet                                       ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.10 Wave 2B-1 Form Controls
+Current release:   v3.6.11 Wave 2B-2 Dialog / Sheet
 Current phase:     CLOSED
-Current state:     Wave 2B-1 complete; Checkbox / Radio / Switch closed; Lock 5 promoted
-Next allowed work: Next cycle plan-first (Wave 2B-2 Dialog / Sheet / #21 / narrowed #41 / residual #44 / #46 / #47)
+Current state:     Wave 2B-2 complete; Dialog / Sheet closed; Lock 5 first self-application held
+Next allowed work: Next cycle plan-first (Wave 2B-3 Date+Time / #21 / Wave 2B-4 Actions / narrowed #41 / residual #44 / #46 / #47)
 ```
 
 ## Matrix Snapshot
 
 ```txt
 34 TOC component rows:
-  DONE       21
+  DONE       23
   PARTIAL     2
-  TODO        8
+  TODO        6
   RECORD      3
 
 3 infrastructure provider rows:
@@ -617,6 +618,62 @@ Routed forward:
   BACKLOG #44 residual coverage / validator polish unchanged
   BACKLOG #46 disabled ripple host authoring hygiene unchanged
   BACKLOG #47 popover provider menu-item-class logic extraction hygiene unchanged
+```
+
+## v3.6.11 Close Outcome
+
+```txt
+Mode:
+  Wave 2B-2 Dialog / Sheet interaction-runtime component-lab cycle
+
+Closed by v3.6.11:
+  Route A implemented
+  Dialog module added
+  Sheet module added
+  native <dialog>.showModal() used for Dialog modal semantics
+  custom .sheet role=dialog hosts used for Sheet modal variants
+  components.css unchanged
+  scripts/style-guide.js unchanged
+  provider modules unchanged
+  WordPress/Pilot files unchanged
+  2 modules x desktop/mobile x light/dark QA matrix PASS
+  Dialog real pointer backdrop path PASS
+  Dialog defensive .modal-scrim path PASS
+  Sheet focus containment / scrim close / focus restore PASS
+  Lock 5 first post-promotion self-application held
+
+Phase 0 plan:
+  docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-0-PLAN.md
+
+Phase 1 report:
+  docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-1-REPORT.md
+
+Phase 2 report:
+  docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-2-REPORT.md
+
+Phase 3 visual QA:
+  docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-3-VISUAL-QA.md
+
+Phase 5 close:
+  docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-5-CLOSE.md
+
+Validation:
+  node --check products/reference-implementations/axismundi-lab/modules/dialog/lab-dialog.js PASS
+  node --check products/reference-implementations/axismundi-lab/modules/sheet/lab-sheet.js PASS
+  wp-env run cli wp core version                      7.0
+  python tools/generators/build_pilot_specimen_wall.py PASS
+  npm run validate:specimen-wall                       PASS
+  php -l products/reference-implementations/axismundi-pilot/functions.php PASS
+  npm test                                             PASS (Axis A-G all 1.000)
+  npm run validate:computed                            PASS
+  npm run publish:styleguide                           PASS, restored generated mirror
+  git diff --check                                     PASS
+
+Routed forward:
+  Wave 2B-3 Date+Time #22+#23 PARTIAL completion
+  Wave 2B-4 Actions consumers #5 / #7 / #8
+  Sheet drag-to-dismiss follow-on note via ROADMAP / NEXT-SESSION, no BACKLOG item
+  Native .dialog::backdrop visual styling changes must revisit external .modal-scrim layering
 ```
 
 ## Discipline

@@ -1,5 +1,59 @@
 # CHANGELOG
 
+## v3.6.11 - Wave 2B-2 Dialog / Sheet (2026-05-22)
+
+Interaction-runtime component-lab release that closes the second Wave 2B
+slice: Dialog #26 and Sheet #27. This cycle implements Route A, Dialog + Sheet
+module-local runtime, and is the first full self-application cycle after Lock 5
+promotion.
+
+### Added
+
+- Added the v3.6.11 Phase 0/1/2/3/5 docs under `docs/v3.6.11/`.
+- Added `modules/dialog/` with lab-scoped CSS, native `<dialog>` pattern HTML,
+  `lab-dialog.js`, and SPEC/MEASUREMENT/RUNTIME/WP audit docs.
+- Added `modules/sheet/` with lab-scoped CSS, modal Sheet pattern HTML,
+  `lab-sheet.js`, and SPEC/MEASUREMENT/RUNTIME/WP audit docs.
+
+### Routed
+
+- Kept `components.css`, `blocks.css`, `style-guide.html`,
+  `scripts/style-guide.js`, and provider modules unchanged.
+- Kept Dialog / Sheet independent and did not reinterpret either surface as a
+  popover consumer.
+- Deferred Sheet drag-to-dismiss as a Wave 2B-2 follow-on note in ROADMAP /
+  CURRENT-STATE / NEXT-SESSION, without creating a new BACKLOG item.
+- Routed future `.dialog::backdrop` visual styling changes to revisit native
+  backdrop / external `.modal-scrim` layering.
+- Kept BACKLOG #41, #44, #46, and #47 unchanged.
+
+### Verified
+
+- `wp-env run cli wp core version`: 7.0.
+- 2 modules x desktop/mobile x light/dark: console 0 and overflow 0 in all 8
+  cells.
+- Dialog: 2 triggers, 2 native `dialog.dialog` hosts, 1 scrim, basic and
+  full-screen open / close / focus restoration PASS.
+- Dialog backdrop: real pointer outside the basic dialog hit the native dialog
+  backdrop path (`scrimClicks=0`, `dialogBackdropClicks=1`); programmatic
+  `.modal-scrim` click used the defensive scrim path; no double-fire observed.
+- Sheet: 2 triggers, 2 `.sheet[role="dialog"]` hosts, 1 scrim, bottom and side
+  open / close / focus containment / focus restoration PASS.
+- Drag-to-dismiss defer note visible; no interactive drag runtime added.
+- `node --check products/reference-implementations/axismundi-lab/modules/dialog/lab-dialog.js`:
+  PASS.
+- `node --check products/reference-implementations/axismundi-lab/modules/sheet/lab-sheet.js`:
+  PASS.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `npm run publish:styleguide`: PASS, with generated mirror restored after
+  validation.
+- `git diff --check`: PASS.
+
 ## v3.6.10 - Wave 2B-1 Form Controls (2026-05-22)
 
 Input-domain component-lab release that closes the first Wave 2B slice:

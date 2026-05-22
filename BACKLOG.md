@@ -2328,6 +2328,70 @@ Wave 2B-4: Actions consumers #5 / #7 / #8
 Lock 5 was promoted in v3.6.10 after six diagnostic-first cycles with no P1/P2
 close defects, fence violations, lock violations, or provider/baseline drift.
 
+### v3.6.11 Wave 2B-2 Dialog / Sheet close evidence
+
+v3.6.11 closed the second Wave 2B slice by implementing Route A, Dialog + Sheet
+module-local runtime:
+
+```txt
+Dialog #26: DONE
+Sheet #27: DONE
+```
+
+Close evidence:
+
+```txt
+Dialog module:
+  native <dialog>.showModal() owns modal semantics and focus containment
+  lab-dialog.js owns trigger wiring, scrim sync, close paths, initial focus,
+  and focus restoration
+  real pointer backdrop click -> native dialog backdrop path
+  programmatic .modal-scrim click -> defensive scrim path
+  no double-fire observed
+
+Sheet module:
+  custom .sheet host with role=dialog and aria-modal=true
+  lab-sheet.js owns .is-open state, local focus containment, Escape, scrim,
+  close-button dismissal, and focus restoration
+  bottom and side modal variants verified
+  drag-to-dismiss intentionally deferred
+
+Visual / interaction QA:
+  2 modules x desktop/mobile x light/dark = 8 clean cells
+  console errors: 0
+  horizontal overflow at 390px: 0
+  Dialog basic + full-screen interactions PASS
+  Sheet bottom + side interactions PASS
+```
+
+Files added:
+
+```txt
+products/reference-implementations/axismundi-lab/modules/dialog/
+products/reference-implementations/axismundi-lab/modules/sheet/
+docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-0-PLAN.md
+docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-1-REPORT.md
+docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-2-REPORT.md
+docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-3-VISUAL-QA.md
+docs/v3.6.11/WAVE-2B-DIALOG-SHEET-PHASE-5-CLOSE.md
+```
+
+Wave 2B remaining scope after v3.6.11:
+
+```txt
+Wave 2B-3: Date+Time #22+#23 PARTIAL completion
+Wave 2B-4: Actions consumers #5 / #7 / #8
+Wave 2B-2 follow-on: Sheet drag-to-dismiss enhancement note, routed through
+  ROADMAP / CURRENT-STATE / NEXT-SESSION rather than a new BACKLOG item
+```
+
+Backdrop follow-on note:
+
+```txt
+If a future baseline cycle changes .dialog::backdrop from transparent to a
+visually styled layer, revisit native backdrop / external .modal-scrim layering.
+```
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing

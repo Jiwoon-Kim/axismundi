@@ -2212,50 +2212,6 @@ docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-3-VISUAL-QA.md
 docs/v3.6.7/WP-SPECIMEN-FOLLOWON-EDITOR-COMPATIBILITY-PHASE-5-CLOSE.md
 ```
 
-### 45. Wave 2A-2 Menu / popover consumer closure
-
-- **Bucket**: D — Theme interaction / component module consumer
-- **Status**: Open - routed by v3.6.8 after Wave 2A Navigation Core
-- **Priority**: Medium after v3.6.8
-- **Target**: Wave 2A-2 candidate
-- **Source**: v3.6.8 Phase 1/2/3/5 Navigation Core cycle
-
-**Scope**:
-
-- Add a Menu lab component module without reopening the closed `popover/`
-  provider implementation.
-- Preserve the DISTINCT but COUPLED boundary:
-  - Menu owns `role=menu/menuitem`, density, icon, shortcut, selected,
-    disabled, divider, and submenu semantics.
-  - `popover/` owns anchor, position, dismiss, outside-click, Escape, focus
-    restore, and viewport collision mechanics.
-- Decide how Menu consumes `popover/` without leaking consumer semantics into
-  the provider.
-- Verify bounded ripple and icon-system consumer usage without editing either
-  provider.
-
-**Non-goals**:
-
-- Do not edit `modules/popover/*` unless a new Phase 1 route explicitly
-  re-gates provider work.
-- Do not absorb Menu into popover.
-- Do not create a WordPress custom block.
-- Do not reopen core/button or #41 WordPress ripple packaging.
-
-**v3.6.8 routing evidence**:
-
-v3.6.8 implemented Route B for App bar, Nav bar, Nav rail, and Tabs while
-deferring Menu because it is the only Wave 2A row that is directly coupled to
-the existing popover provider.
-
-```txt
-docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-0-PLAN.md
-docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-1-REPORT.md
-docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-2-REPORT.md
-docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-3-VISUAL-QA.md
-docs/v3.6.8/WAVE-2A-NAVIGATION-PHASE-5-CLOSE.md
-```
-
 ### 46. Disabled ripple host authoring hygiene
 
 - **Bucket**: D — Theme interaction / ripple authoring contract
@@ -2284,6 +2240,45 @@ this is not a v3.6.8 defect.
 - Do not change `modules/ripple/*` without a dedicated Phase 0/1 route.
 - Do not reinterpret the Nav bar component close evidence.
 
+### 47. Popover provider menu-item-class logic extraction hygiene
+
+- **Bucket**: D — Theme interaction / provider hygiene
+- **Status**: Open - routed by v3.6.9 Phase 3 review
+- **Priority**: Low
+- **Target**: future provider hygiene cycle
+- **Source**: v3.6.9 Phase 1/2/3 Menu / popover consumer cycle
+
+**Issue**:
+
+v3.6.9 closed Menu as a consumer of the existing `popover/` provider without
+editing the provider. During that cycle, review confirmed that `popover/`
+already contains menu-item-class logic as a pre-existing condition:
+
+- `lab-popover.js` uses `.ax-menu__item` / `[role="menuitem"]` selectors for
+  first-item focus, ArrowUp / ArrowDown / Home / End navigation, Tab dismiss,
+  and item-click close.
+- `lab-popover.css §3` overrides `.ax-menu__item:focus-visible` with a 3px
+  outline for menu items focused by `lab-popover.js`.
+
+This is not a v3.6.9 defect because v3.6.9 intentionally accepted the factual
+provider contract and did not reopen provider implementation. It is a future
+hygiene question because PROMOTION-CRITERIA §5.2 says infrastructure providers
+must not absorb consumer-specific semantics.
+
+**Decision pending**:
+
+- Option A: leave the existing provider contract documented as-is, because
+  `popover/` is an anchored Menu provider in practice.
+- Option B: extract menu-item selectors / keyboard logic / focus outline into
+  a clearer Menu-owned helper while preserving `popover/` for anchor,
+  position, dismiss, focus restore, and viewport collision.
+
+**Non-goals**:
+
+- Do not reopen v3.6.9 Menu close evidence.
+- Do not edit `modules/popover/*` without a fresh Phase 0/1 route.
+- Do not fold this into BACKLOG #46 disabled ripple hygiene.
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing
@@ -2301,6 +2296,7 @@ metadata, not closure.
 
 | # | Title | Closed at | Resolution summary |
 |---:|---|---|---|
+| 45 | Wave 2A-2 Menu / popover consumer closure | v3.6.9 | Closed by Route A. Added `modules/menu/` with lab CSS, pattern HTML, and SPEC/MEASUREMENT/RUNTIME/WP docs. Menu consumes existing `popover/` and `ripple/` providers unchanged; no `lab-menu.js`; `components.css`, provider modules, WordPress/Pilot files, and prior Wave 2A modules unchanged. Phase 3 verified 4 visual cells console 0 / overflow 0, 3 live popover surfaces, forbidden-ancestor non-open, 10 enabled bounded ripple hosts, 2 disabled no-ripple hosts, and submenu deferred. |
 | 33 | List M3 full token coverage extension | v3.5.13 | Closed by Wave 1 cleanup Lane B. LIST-SPEC / MEASUREMENT gained the full-token extension; `components.css §26` now covers 3px focus indicator, selected-disabled 38% on-surface mix, transparent segmented wrapper with surface item containers, expand trailing icon container surface-container mapping, and no-wrap trailing supporting time. Drag/reorder and expand runtime remain deferred. |
 | 32 | Button family size variants — XS/S/M/L/XL coverage cycle | v3.5.13 | Closed by Wave 1 cleanup Lane A. `tokens.css` gained Button family size tokens; `components.css §2/§3/§28` now maps Button, Icon button, and Button group XS/S/M/L/XL variants. Playwright verified 32/40/56/96/136 size matrix and default no-size Button remains 40px. |
 | 27 | data-ax-ripple opt-in introduction | v3.5.6 | Closed by the Ripple v2 stable declarative contract. `[data-ax-ripple]` is now the public authoring path, with bounded/unbounded values and `window.axRipple.attach/detach/refresh` for imperative attachment. The previous HOST_SELECTOR allowlist remains transitional compatibility only. |

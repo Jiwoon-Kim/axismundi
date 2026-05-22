@@ -1,5 +1,55 @@
 # CHANGELOG
 
+## v3.6.9 - Wave 2A-2 Menu / Popover Consumer (2026-05-22)
+
+Component-lab release that completes Wave 2A by closing BACKLOG #45. This
+cycle implements Route A: Menu Consumer Closure, Provider Unchanged.
+
+### Added
+
+- Added the v3.6.9 Phase 0/1/2/3/5 docs under `docs/v3.6.9/`.
+- Added `modules/menu/` with lab-scoped CSS, pattern HTML, and
+  SPEC/MEASUREMENT/RUNTIME/WP audit docs.
+- Added a live Menu pattern that consumes existing `popover/` and `ripple/`
+  providers without adding `lab-menu.js`.
+- Added BACKLOG #47 for future popover provider menu-item-class logic
+  extraction hygiene.
+
+### Routed
+
+- Closed BACKLOG #45 and marked Wave 2A complete.
+- Deferred interactive submenu runtime to a future provider-contract review.
+- Kept BACKLOG #46 disabled ripple host authoring hygiene open by omitting
+  `data-ax-ripple` from disabled Menu item hosts.
+- Kept BACKLOG #41 shared WordPress ripple runtime packaging unchanged.
+- Kept BACKLOG #44 remaining specimen coverage / validator polish unchanged.
+- Kept diagnostic-first as a methodology finding, not Lock 5.
+
+### Verified
+
+- `wp-env run cli wp core version`: 7.0.
+- 1 module x desktop/mobile x light/dark: console 0 and overflow 0 in all 4
+  cells.
+- Menu visual surfaces: 3 popover-wired surfaces, 1 static structure specimen,
+  4 total `.ax-menu` surfaces.
+- Menu interactions: trigger open, first enabled item focus, ArrowDown,
+  ArrowUp, Home, End, Escape close/focus restore, outside pointerdown close,
+  and item-click close all PASS.
+- Forbidden `.prose` trigger: `aria-expanded=false`, `.is-open=false`,
+  `visibility:hidden`, `opacity:0`.
+- Ripple: 10 enabled bounded hosts, 2 disabled hosts, 0 disabled ripple hosts,
+  `.ax-ripple` creation confirmed on enabled item click.
+- Submenu: defer note visible, interactive submenu triggers 0.
+- `python tools/generators/build_pilot_specimen_wall.py`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `npm run publish:styleguide`: PASS, with generated mirror restored after
+  validation.
+- `git diff --check`: PASS.
+
 ## v3.6.8 - Wave 2A Navigation Core (2026-05-22)
 
 Component-lab release for the first Wave 2A navigation slice. This cycle

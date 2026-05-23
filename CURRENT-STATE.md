@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-23 (v3.6.16 closed)
+> **Last updated**: 2026-05-23 (v3.6.17 closed)
 
 ---
 
@@ -47,15 +47,16 @@ v3.6.13  Wave 2B-4 Actions Consumers                                    ✓ DONE
 v3.6.14  Wave 3 Closure - Inputs / Feedback Final                       ✓ DONE
 v3.6.15  VS Code Diagnostics Sweep                                       ✓ DONE
 v3.6.16  Lab A11y Diagnostics Fix Sweep                                  ✓ DONE
+v3.6.17  WP Ripple Runtime Packaging Decision                            ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.16 Lab A11y Diagnostics Fix Sweep
+Current release:   v3.6.17 WP Ripple Runtime Packaging Decision
 Current phase:     CLOSED
-Current state:     BACKLOG #48 resolved; four VS Code Problems target diagnostics cleared; Lock 5 sixth self-application held
-Next allowed work: Next cycle plan-first (#21 / narrowed #41 / residual #44 / #46 / #47 / Pilot revision / diagnostics policy follow-ons)
+Current state:     BACKLOG #41 resolved as no-code layered runtime packaging decision; Lock 5 seventh self-application held
+Next allowed work: Next cycle plan-first (#21 / residual #44 / #46 / #47 / Pilot revision / diagnostics policy follow-ons)
 ```
 
 ## Matrix Snapshot
@@ -205,6 +206,60 @@ Routed forward:
   authoritative.
 - Lock 5 sixth clean self-application held (fifth implementation-cycle
   application after v3.6.15's diagnostic-only variant).
+
+## v3.6.17 Close Outcome
+
+Closed by v3.6.17:
+
+- WP Ripple Runtime Packaging Decision.
+- BACKLOG #41.
+- The remaining shared WordPress ripple runtime packaging decision narrowed by
+  v3.6.6.
+
+Evidence:
+
+- Recorded a no-code layered route:
+  - Route D: split CSS state-layer parity from animated JS ripple.
+  - Route C: shared animated WordPress ripple runtime belongs to a future
+    plugin/custom-binding or dedicated WordPress runtime package if pursued.
+  - Route A: v3.6.17 execution shape was a no-code decision report.
+- Preserved the lab Ripple v2 forbidden-ancestor policy for `.prose`,
+  `.wp-block-post-content`, `.entry-content`, and `[contenteditable]`.
+- Kept the current Pilot front-end button ripple Pilot-only, not shared runtime
+  authority.
+- Kept editor parity as CSS state-layer parity where WordPress exposes a state;
+  no animated runtime enters editor-owned content in this cycle.
+- Phase 3 front-end smoke confirmed `pilot-block-bridge.js/css` still load,
+  `window.axRipple` remains undefined, 5 / 5 post-content button links retain
+  Pilot-only markers, and console/page errors are 0.
+
+Validation:
+
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`.
+- PASS: `git diff --check`.
+- Validator-generated report churn was restored.
+
+Routed forward:
+
+- BACKLOG #21 Interpreter Plugin strategy.
+- BACKLOG #44 remaining specimen coverage follow-ons.
+- BACKLOG #46 disabled ripple host authoring hygiene.
+- BACKLOG #47 popover provider menu-item-class extraction hygiene.
+- Pilot theme revision and diagnostics policy follow-ons.
+- Future shared animated WordPress ripple runtime, if pursued, should be opened
+  as a new plugin/custom-binding or dedicated WordPress runtime packaging item,
+  not as a theme-side reopening of #41.
+
+Lock impact:
+
+- Lock 1/2 preserved: no theme.json, wp-custom, or md-sys literal changes.
+- Lock 3/4 preserved: v3.6.3 core/button route was not reopened; post-content
+  and editor-owned surface mismatches were routed as packaging policy.
+- Lock 5 seventh clean self-application held; fifth implementation-cycle count
+  remains unchanged because v3.6.17 is a no-code packaging-decision variant.
 
 ## v3.6.0 Closed Notes
 

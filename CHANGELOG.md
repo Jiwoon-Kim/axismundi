@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## v3.6.17 - WP Ripple Runtime Packaging Decision (2026-05-23)
+
+No-code architecture decision release that closes the remaining BACKLOG #41
+shared WordPress ripple runtime packaging decision.
+
+### Added
+
+- Added the v3.6.17 Phase 0/1/2/3/5 docs under `docs/v3.6.17/`.
+- Recorded the layered route decision for shared WordPress ripple runtime
+  packaging:
+  - Route D: split CSS state-layer parity from animated JS ripple.
+  - Route C: classify shared animated WordPress ripple runtime as future
+    plugin/custom-binding or dedicated WordPress runtime package territory.
+  - Route A: keep v3.6.17 itself as a no-code decision report.
+
+### Routed
+
+- Closed BACKLOG #41.
+- Preserved the lab Ripple v2 forbidden-ancestor policy for `.prose`,
+  `.wp-block-post-content`, `.entry-content`, and `[contenteditable]`.
+- Kept the current Pilot front-end button ripple as Pilot-only evidence, not a
+  shared runtime authority.
+- Kept editor parity as CSS state-layer parity where WordPress exposes a state;
+  no animated runtime enters editor-owned content in this cycle.
+- Kept BACKLOG #21, #44, #46, #47, Pilot revision, and diagnostics policy
+  follow-ons separate.
+
+### Verified
+
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`: PASS.
+- Front-end smoke probe confirmed `pilot-block-bridge.js/css` still load,
+  `window.axRipple` remains undefined, 5 / 5 post-content button links retain
+  Pilot-only markers, and console/page errors are 0.
+- Validator-generated report churn was restored.
+- `git diff --check`: PASS.
+
 ## v3.6.16 - Lab A11y Diagnostics Fix Sweep (2026-05-23)
 
 Implementation release that resolves BACKLOG #48, the v3.6.15 VS Code Problems

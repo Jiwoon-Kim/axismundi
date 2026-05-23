@@ -1611,9 +1611,9 @@ BACKLOG #38
 ### 41. WordPress block bridge state and ripple enhancement
 
 - **Bucket**: B — WordPress binding / block bridge
-- **Status**: Open - narrowed by v3.6.6 to shared WordPress ripple runtime packaging decision
+- **Status**: **Resolved / closed at v3.6.17.**
 - **Priority**: Medium post-Pilot
-- **Target**: v3.6.x or v3.7.x
+- **Target**: v3.6.17 — **DONE**
 - **Source**: v3.6.0 Pilot Phase 3 visual QA / Phase 2E minimum bridge
 
 **Scope**:
@@ -1837,6 +1837,67 @@ Sub-decisions:
 v3.6.6 did not edit implementation files, did not add plugin/custom-block
 behavior, did not change `theme.json`, did not edit lab ripple files, and did
 not expand fixtures.
+
+**v3.6.17 close evidence (2026-05-23)**:
+
+v3.6.17 closed the remaining #41 shared WordPress ripple runtime packaging
+decision as a no-code architecture decision. This consumes the v3.6.6 narrowing
+lineage after v3.6.3 / v3.6.4 / v3.6.5 / v3.6.6 progressively closed the
+bridge, semantic, editor-token, and editor-state slices.
+
+Layered route:
+
+```txt
+Route D = packaging policy:
+  split CSS state-layer parity from animated JS ripple.
+
+Route C = future owner classification:
+  shared animated WordPress ripple runtime belongs to a future plugin/custom-
+  binding or dedicated WordPress runtime package if pursued.
+
+Route A = v3.6.17 execution shape:
+  no-code decision report.
+```
+
+Sub-decisions:
+
+```txt
+1. Post-content anchors:
+   do not graduate lab Ripple v2 as-is onto .wp-block-post-content anchors
+   because the lab provider forbids that ancestor.
+
+2. Editor-owned surfaces:
+   no animated ripple runtime enters editor content in v3.6.17; editor parity
+   remains CSS state-layer parity where exposed.
+
+3. Forbidden ancestors:
+   preserve lab Ripple v2 .prose / .wp-block-post-content / .entry-content /
+   [contenteditable] guards.
+
+4. Lifecycle:
+   current Pilot DOMContentLoaded scan is not a shared runtime lifecycle;
+   future package needs explicit attach/detach/refresh or equivalent WordPress
+   bootstrap.
+
+5. Token aliases:
+   no shared alias relocation in v3.6.17; future runtime aliases must remain
+   downstream from md-sys/md-ref and must not become wp-custom literals.
+```
+
+No provider, Pilot bridge, WordPress enqueue, generator, validator, or
+styleguide implementation files changed. Future shared animated WordPress
+ripple runtime should be opened as a new plugin/custom-binding or dedicated
+WordPress runtime packaging item, not as a theme-side reopening of #41.
+
+Evidence docs:
+
+```txt
+docs/v3.6.17/WP-RIPPLE-RUNTIME-PACKAGING-PHASE-0-PLAN.md
+docs/v3.6.17/WP-RIPPLE-RUNTIME-PACKAGING-PHASE-1-REPORT.md
+docs/v3.6.17/WP-RIPPLE-RUNTIME-PACKAGING-PHASE-2-DECISION.md
+docs/v3.6.17/WP-RIPPLE-RUNTIME-PACKAGING-PHASE-3-VISUAL-QA.md
+docs/v3.6.17/WP-RIPPLE-RUNTIME-PACKAGING-PHASE-5-CLOSE.md
+```
 
 TT5 note:
 
@@ -2552,6 +2613,7 @@ metadata, not closure.
 
 | # | Title | Closed at | Resolution summary |
 |---:|---|---|---|
+| 41 | WordPress block bridge state and ripple enhancement | v3.6.17 | Closed after v3.6.3-v3.6.6 narrowed and consumed the reset, bridge, semantic, editor-token, and editor-state slices. v3.6.17 records the final shared WordPress ripple runtime packaging decision as a no-code layered route: Route D splits CSS state-layer parity from animated JS ripple; Route C classifies shared animated WordPress ripple runtime as future plugin/custom-binding or dedicated WordPress runtime package territory if pursued; Route A is the no-code execution shape. No provider, Pilot bridge, WordPress enqueue, generator, validator, or styleguide implementation files changed. |
 | 19 | Date Picker Grid Navigation A11y | v3.6.12 | Closed by Route A inside existing `modules/date-time/`. Date grid now exposes grid/row/gridcell semantics, `aria-current`, `aria-labelledby`, single/range `aria-multiselectable`, roving tabindex, Arrow/Home/End/PageUp/PageDown/Shift+PageUp/Down keyboard movement, Enter/Space activation, and polite month/year announcements. CDP accessibility tree verified `grid: 1`, `row: 6`, `gridcell: 42`. Time picker APG redesign, range a11y redesign, mobile full-screen, plugin/WP binding, locale/timezone, and real `popover/` provider migration remain out of scope. |
 | 45 | Wave 2A-2 Menu / popover consumer closure | v3.6.9 | Closed by Route A. Added `modules/menu/` with lab CSS, pattern HTML, and SPEC/MEASUREMENT/RUNTIME/WP docs. Menu consumes existing `popover/` and `ripple/` providers unchanged; no `lab-menu.js`; `components.css`, provider modules, WordPress/Pilot files, and prior Wave 2A modules unchanged. Phase 3 verified 4 visual cells console 0 / overflow 0, 3 live popover surfaces, forbidden-ancestor non-open, 10 enabled bounded ripple hosts, 2 disabled no-ripple hosts, and submenu deferred. |
 | 33 | List M3 full token coverage extension | v3.5.13 | Closed by Wave 1 cleanup Lane B. LIST-SPEC / MEASUREMENT gained the full-token extension; `components.css §26` now covers 3px focus indicator, selected-disabled 38% on-surface mix, transparent segmented wrapper with surface item containers, expand trailing icon container surface-container mapping, and no-wrap trailing supporting time. Drag/reorder and expand runtime remain deferred. |

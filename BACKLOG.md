@@ -2009,6 +2009,14 @@ BACKLOG #21
   theme.json custom downstream refs.
 - BACKLOG #20 closed as part of this cycle.
 
+**v3.6.18 routing note (2026-05-23)**:
+
+v3.6.18 Core Block Mapping Audit kept `bindings/wordpress-material3/` read-only
+and routed D-layer binding-map rewrites, generated-map promotion,
+interpreter-schema work, and runtime strategy back to BACKLOG #21 / ontology /
+Interpreter Plugin planning. The audit output is a crosswalk, not a replacement
+for the D-layer authorities.
+
 ### 43. WP core block specimen wall / full variation audit
 
 - **Bucket**: B / D — WordPress binding QA
@@ -2181,6 +2189,14 @@ Remaining #44 scope after v3.6.7:
    - strict section count if the smoke fixture contract should freeze
    - less timing-sensitive editor settle wait if flakiness appears
    - generic tmp output directory name instead of phase1-specific naming
+```
+
+v3.6.18 routing note:
+
+```txt
+The Core Block Mapping Audit confirmed long-line code and deep pullquote as
+still belonging to BACKLOG #44 specimen / validator coverage. v3.6.18 did not
+add specimens, edit validators, or change Pilot fixtures.
 ```
 
 v3.6.7 did not enter BACKLOG #41's narrowed shared WordPress ripple runtime

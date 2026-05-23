@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-23 (v3.6.17 closed)
+> **Last updated**: 2026-05-23 (v3.6.18 closed)
 
 ---
 
@@ -48,15 +48,16 @@ v3.6.14  Wave 3 Closure - Inputs / Feedback Final                       ✓ DONE
 v3.6.15  VS Code Diagnostics Sweep                                       ✓ DONE
 v3.6.16  Lab A11y Diagnostics Fix Sweep                                  ✓ DONE
 v3.6.17  WP Ripple Runtime Packaging Decision                            ✓ DONE
+v3.6.18  Core Block Mapping Audit                                        ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.17 WP Ripple Runtime Packaging Decision
+Current release:   v3.6.18 Core Block Mapping Audit
 Current phase:     CLOSED
-Current state:     BACKLOG #41 resolved as no-code layered runtime packaging decision; Lock 5 seventh self-application held
-Next allowed work: Next cycle plan-first (#21 / residual #44 / #46 / #47 / Pilot revision / diagnostics policy follow-ons)
+Current state:     Core-block mapping crosswalk closed as no-code layered decision; Lock 5 eighth self-application held
+Next allowed work: Next cycle plan-first (Pilot/distributable theme bootstrap / brand assets follow-on / lab catalog split / media catalog / #21 / #44 / #46 / #47 / diagnostics policy follow-ons)
 ```
 
 ## Matrix Snapshot
@@ -260,6 +261,62 @@ Lock impact:
   and editor-owned surface mismatches were routed as packaging policy.
 - Lock 5 seventh clean self-application held; fifth implementation-cycle count
   remains unchanged because v3.6.17 is a no-code packaging-decision variant.
+
+## v3.6.18 Close Outcome
+
+Closed by v3.6.18:
+
+- Core Block Mapping Audit.
+- Current WordPress core-block mapping crosswalk after v3.6.2-v3.6.7 and
+  v3.6.17.
+
+Evidence:
+
+- Recorded a five-layer no-code decision:
+  - Layer 1: Tier 1 block status is closed or routed.
+  - Layer 2: WordPress categories split into Text, Media, Design, Widgets,
+    Theme, and Embeds.
+  - Layer 3: `style-guide-blocks.html` routes to a future category-aware lab
+    catalog split.
+  - Layer 4: `style-guide-prose.html` remains the Markdown / Custom HTML prose
+    inheritance surface.
+  - Layer 5: D-layer binding files remain read-only and route to BACKLOG #21 /
+    ontology / Interpreter Plugin work.
+- Preserved Embeds as excluded until source/privacy, provider whitelist, iframe
+  policy, oEmbed cache, and responsive-token policy are explicit.
+- Recorded out-of-cycle asset commits `1eed48a`, `6a6d27b`, and `4bec70d` as
+  brand-slot / placeholder-media lineage outside the mapping audit.
+
+Validation:
+
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`.
+- PASS: `git diff --check`.
+- Validator-generated report churn was restored.
+
+Routed forward:
+
+- Pilot vs distributable theme bootstrap.
+- Brand asset migration follow-on.
+- Lab catalog split for `style-guide-blocks.html`.
+- Theme / FSE template work.
+- Media catalog implementation.
+- BACKLOG #21 Interpreter Plugin strategy.
+- BACKLOG #44 remaining specimen / validator coverage.
+- BACKLOG #46 disabled ripple host hygiene.
+- BACKLOG #47 popover provider hygiene.
+- Diagnostics policy follow-ons.
+
+Lock impact:
+
+- Lock 1-4 preserved; no implementation surface changed.
+- Lock 5 eighth clean self-application held.
+- Fifth implementation-cycle count remains unchanged because v3.6.18 is a
+  no-code decision-only variant.
+- Out-of-cycle asset commits occupy neither the overall self-application slot
+  nor the implementation-cycle slot.
 
 ## v3.6.0 Closed Notes
 

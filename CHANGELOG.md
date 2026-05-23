@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## v3.6.18 - Core Block Mapping Audit (2026-05-23)
+
+No-code mapping audit release that consolidates WordPress core-block ownership
+after the v3.6.2 specimen wall, v3.6.3-v3.6.7 bridge / fixture cycles, and
+v3.6.17 ripple runtime packaging decision.
+
+### Added
+
+- Added the v3.6.18 Phase 0/1/2/3/5 docs under `docs/v3.6.18/`.
+- Recorded a five-layer core-block mapping decision:
+  - Tier 1 block status remains closed or routed.
+  - WordPress categories split into Text, Media, Design, Widgets, Theme, and
+    Embeds.
+  - `style-guide-blocks.html` routes to a future category-aware lab catalog
+    split.
+  - `style-guide-prose.html` remains the Markdown / Custom HTML prose
+    inheritance surface.
+  - D-layer binding files remain read-only and route to BACKLOG #21 /
+    ontology / Interpreter Plugin work.
+
+### Routed
+
+- Kept BACKLOG #44 long-line code / deep pullquote coverage as specimen /
+  validator follow-on work.
+- Kept BACKLOG #46, #47, #21, Pilot theme revision, and diagnostics policy
+  follow-ons separate.
+- Excluded Embeds until source/privacy, provider whitelist, iframe policy,
+  oEmbed cache, and responsive-token policy are explicit.
+- Recorded out-of-cycle asset commits `1eed48a`, `6a6d27b`, and `4bec70d` as
+  brand-slot / placeholder-media lineage outside the v3.6.18 mapping audit.
+
+### Verified
+
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`: PASS.
+- Playwright probes were intentionally not rerun; Phase 1 reused v3.6.7 and
+  v3.6.17 close evidence.
+- Validator-generated report churn was restored.
+- `git diff --check`: PASS.
+
 ## v3.6.17 - WP Ripple Runtime Packaging Decision (2026-05-23)
 
 No-code architecture decision release that closes the remaining BACKLOG #41

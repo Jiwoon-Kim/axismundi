@@ -2404,6 +2404,49 @@ Evidence docs:
 - `docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-3-VISUAL-QA.md`
 - `docs/v3.6.13/WAVE-2B-ACTIONS-PHASE-5-CLOSE.md`
 
+### v3.6.14 Wave 3 Closure close evidence
+
+v3.6.14 closed the remaining TODO component rows by implementing Route A for
+Inputs / Feedback final components.
+
+Closed:
+
+- Slider #21: DONE
+- Loading #30: DONE
+- Progress #31: DONE
+- Component matrix TODO rows: 0
+
+Evidence:
+
+- Added `modules/slider/`, `modules/loading/`, and `modules/progress/` with
+  lab-scoped CSS, pattern HTML, and modern audit docs.
+- Slider owns `lab-slider.js` and therefore uses SPEC / MEASUREMENT / RUNTIME /
+  WP docs. Loading and Progress remain CSS / SVG / ARIA-only with SPEC /
+  MEASUREMENT / WP docs.
+- 12-cell Phase 3 visual matrix passed with console 0, 4xx 0, overflow 0, and
+  `theme.js` no-load.
+- `npm test` passed with Axis A/B/C/D/E/F/G all 1.000, preserving Lock 1 and
+  Lock 2.
+- Docker-dependent validation was deferred because Docker Desktop / `wp-env`
+  was unavailable at close time. Next session should rerun
+  `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed` if Docker is available.
+
+Routed observations:
+
+- Loading inline-in-button "Saving" contrast and Progress linear determinate
+  dark-mode contrast are low-priority visual follow-ons, not v3.6.14 blockers.
+- Optional styleguide integration for Slider / Loading / Progress module pages
+  remains a future cycle candidate.
+
+Evidence docs:
+
+- `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-0-PLAN.md`
+- `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-1-REPORT.md`
+- `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-2-REPORT.md`
+- `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-3-VISUAL-QA.md`
+- `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-5-CLOSE.md`
+
 ## Pre-Pilot classification snapshot (v3.5.18)
 
 This snapshot classifies open items before v3.6.0 Pilot entry. It is routing

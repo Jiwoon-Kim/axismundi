@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi - Progress Module (v3.6.14)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="lab-progress.css" />
+</head>
+<body>
+<main class="lab-progress-demo">
+  <aside class="lab-specimen-banner" role="note" style="margin: 16px 0; padding: 12px 16px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface);">
+    <strong>Validation specimen.</strong>
+    Progress uses authored <code>--_value</code> values and ARIA attributes. No
+    lab runtime is loaded.
+  </aside>
+
+  <header class="lab-progress-header">
+    <p class="t-label-large">Axismundi v3.6.14 - Wave 3 - Component-Coverage #31</p>
+    <h1 class="t-display-small">Progress</h1>
+    <p class="t-body-medium lab-progress-caption">
+      Linear and circular progress indicators using baseline
+      <code>.ax-progress-*</code> primitives, determinate values, and
+      indeterminate motion states.
+    </p>
+  </header>
+
+  <section class="lab-progress-section">
+    <div class="lab-progress-grid">
+      <article class="lab-progress-card">
+        <h2 class="t-title-medium">Linear determinate</h2>
+        <div class="lab-progress-stage">
+          <div class="lab-progress-stack">
+            <div class="ax-progress-linear is-determinate" style="--_value: 25%;" role="progressbar" aria-label="Upload progress 25 percent" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="ax-progress-linear is-determinate" style="--_value: 60%;" role="progressbar" aria-label="Upload progress 60 percent" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="ax-progress-linear is-determinate" style="--_value: 90%;" role="progressbar" aria-label="Upload progress 90 percent" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="lab-progress-card">
+        <h2 class="t-title-medium">Linear indeterminate</h2>
+        <div class="lab-progress-stage">
+          <div class="ax-progress-linear is-indeterminate" role="progressbar" aria-label="Sync in progress"></div>
+        </div>
+        <p class="t-body-small lab-progress-note">
+          Indeterminate progress does not expose <code>aria-valuenow</code>.
+        </p>
+      </article>
+
+      <article class="lab-progress-card">
+        <h2 class="t-title-medium">Circular determinate</h2>
+        <div class="lab-progress-stage">
+          <div class="lab-progress-row">
+            <span class="ax-progress-circular is-determinate" style="--_value: 25;" role="progressbar" aria-label="Sync progress 25 percent" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
+              <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ax-progress-circular__track" cx="20" cy="20" r="18"></circle>
+                <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+              </svg>
+            </span>
+            <span class="ax-progress-circular is-determinate" style="--_value: 60;" role="progressbar" aria-label="Sync progress 60 percent" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
+              <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ax-progress-circular__track" cx="20" cy="20" r="18"></circle>
+                <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+              </svg>
+            </span>
+            <span class="ax-progress-circular is-determinate" style="--_value: 90;" role="progressbar" aria-label="Sync progress 90 percent" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100">
+              <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+                <circle class="ax-progress-circular__track" cx="20" cy="20" r="18"></circle>
+                <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <article class="lab-progress-card">
+        <h2 class="t-title-medium">Circular indeterminate</h2>
+        <div class="lab-progress-stage">
+          <span class="ax-progress-circular is-indeterminate" role="progressbar" aria-label="Background task in progress">
+            <svg class="ax-progress-circular__svg" viewBox="0 0 40 40" aria-hidden="true">
+              <circle class="ax-progress-circular__track" cx="20" cy="20" r="18"></circle>
+              <circle class="ax-progress-circular__active" cx="20" cy="20" r="18"></circle>
+            </svg>
+          </span>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+</body>
+</html>

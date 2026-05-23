@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-22 (v3.6.13 closed)
+> **Last updated**: 2026-05-23 (v3.6.14 closed)
 
 ---
 
@@ -44,24 +44,25 @@ v3.6.10  Wave 2B-1 Form Controls                                        ✓ DONE
 v3.6.11  Wave 2B-2 Dialog / Sheet                                       ✓ DONE
 v3.6.12  Wave 2B-3 DateTime                                             ✓ DONE
 v3.6.13  Wave 2B-4 Actions Consumers                                    ✓ DONE
+v3.6.14  Wave 3 Closure - Inputs / Feedback Final                       ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.13 Wave 2B-4 Actions Consumers
+Current release:   v3.6.14 Wave 3 Closure - Inputs / Feedback Final
 Current phase:     CLOSED
-Current state:     Wave 2B complete; FAB menu #5 / Split button #7 / Toolbar #8 DONE; Lock 5 third self-application held
-Next allowed work: Next cycle plan-first (remaining TODO components / #21 / narrowed #41 / residual #44 / #46 / #47 / VS Code diagnostics sweep)
+Current state:     All TODO component rows closed; Slider #21 / Loading #30 / Progress #31 DONE; Lock 5 fourth self-application held
+Next allowed work: Next cycle plan-first (VS Code diagnostics sweep primary / #21 / narrowed #41 / residual #44 / #46 / #47 / Pilot revision)
 ```
 
 ## Matrix Snapshot
 
 ```txt
 34 TOC component rows:
-  DONE       28
+  DONE       31
   PARTIAL     0
-  TODO        3
+  TODO        0
   RECORD      3
 
 3 infrastructure provider rows:
@@ -75,6 +76,50 @@ Next allowed work: Next cycle plan-first (remaining TODO components / #21 / narr
 v3.6.0 does not change component row status yet. Carousel #34 remains
 historically DONE from v3.5.12, but is Pilot-excluded / plugin-routed for the
 theme Pilot.
+
+## v3.6.14 Close Outcome
+
+Closed by v3.6.14:
+
+- Wave 3 Closure - Inputs / Feedback Final.
+- Slider #21, Loading #30, and Progress #31.
+- The remaining TODO component rows.
+
+Evidence:
+
+- Added `modules/slider/`, `modules/loading/`, and `modules/progress/` with
+  lab-scoped CSS, pattern HTML, and modern audit docs.
+- Slider owns `lab-slider.js` as a fixture-local value-sync runtime and uses
+  the SPEC / MEASUREMENT / RUNTIME / WP 4-doc shape.
+- Loading and Progress remain CSS / SVG / ARIA-only and use the 3-doc shape.
+- 12 Phase 3 visual cells passed with console 0, 4xx 0, overflow 0, and
+  `theme.js` no-load.
+- Slider keyboard/value sync, visible label / `aria-labelledby`, Loading
+  `role=status`, Progress `role=progressbar`, and Loading/Progress
+  reduced-motion evidence passed.
+- Lock 5 fourth clean post-promotion self-application held.
+
+Validation:
+
+- PASS: `node --check` for `lab-slider.js`.
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `npm run publish:styleguide`, with generated mirror restored.
+- PASS: `git diff --check`.
+- BLOCKED: `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed` because Docker Desktop / `wp-env` was unavailable at
+  close time.
+
+Routed forward:
+
+- VS Code diagnostics sweep as the primary post-component-modularization
+  candidate.
+- Docker-dependent validation retry once Docker Desktop / `wp-env` is
+  available.
+- Optional styleguide integration follow-on for
+  `lab/modules/{slider,loading,progress}/`.
+- Low-priority visual observations: Loading inline-in-button contrast and
+  Progress linear determinate dark-mode contrast.
 
 ## v3.6.0 Closed Notes
 

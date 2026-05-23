@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi - Loading Module (v3.6.14)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="lab-loading.css" />
+</head>
+<body>
+<main class="lab-loading-demo">
+  <aside class="lab-specimen-banner" role="note" style="margin: 16px 0; padding: 12px 16px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface);">
+    <strong>Validation specimen.</strong>
+    Loading is CSS/SVG only. Reduced motion is handled by the baseline media
+    query.
+  </aside>
+
+  <header class="lab-loading-header">
+    <p class="t-label-large">Axismundi v3.6.14 - Wave 3 - Component-Coverage #30</p>
+    <h1 class="t-display-small">Loading</h1>
+    <p class="t-body-medium lab-loading-caption">
+      Default, contained, and inline loading indicators using baseline
+      <code>.ax-loading</code> primitives and <code>role="status"</code>.
+    </p>
+  </header>
+
+  <section class="lab-loading-section">
+    <div class="lab-loading-grid">
+      <article class="lab-loading-card">
+        <h2 class="t-title-medium">Default</h2>
+        <div class="lab-loading-stage">
+          <span class="ax-loading" role="status" aria-label="Loading content">
+            <svg class="ax-loading__svg" viewBox="0 0 50 50" aria-hidden="true">
+              <circle class="ax-loading__circle" cx="25" cy="25" r="20"></circle>
+            </svg>
+          </span>
+        </div>
+      </article>
+
+      <article class="lab-loading-card">
+        <h2 class="t-title-medium">Contained</h2>
+        <div class="lab-loading-stage">
+          <span class="ax-loading is-contained" role="status" aria-label="Loading panel">
+            <svg class="ax-loading__svg" viewBox="0 0 50 50" aria-hidden="true">
+              <circle class="ax-loading__circle" cx="25" cy="25" r="20"></circle>
+            </svg>
+          </span>
+        </div>
+      </article>
+
+      <article class="lab-loading-card">
+        <h2 class="t-title-medium">Inline</h2>
+        <div class="lab-loading-stage">
+          <div class="lab-loading-row">
+            <button type="button" class="ax-button is-filled has-state-layer">
+              <span class="ax-loading is-small" aria-hidden="true">
+                <svg class="ax-loading__svg" viewBox="0 0 50 50">
+                  <circle class="ax-loading__circle" cx="25" cy="25" r="20"></circle>
+                </svg>
+              </span>
+              <span class="t-label-large">Saving</span>
+            </button>
+          </div>
+        </div>
+        <p class="t-body-small lab-loading-note">
+          Inline decorative spinners are hidden from assistive technology when
+          the parent control already communicates the action state.
+        </p>
+      </article>
+    </div>
+  </section>
+</main>
+</body>
+</html>

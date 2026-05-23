@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi - Slider Module (v3.6.14)</title>
+
+  <link rel="stylesheet" href="../../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../../stylesheets/base.css" />
+  <link rel="stylesheet" href="../../stylesheets/components.css" />
+  <link rel="stylesheet" href="../../stylesheets/prose.css" />
+  <link rel="stylesheet" href="lab-slider.css" />
+</head>
+<body>
+<main class="lab-slider-demo">
+  <aside class="lab-specimen-banner" role="note" style="margin: 16px 0; padding: 12px 16px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface);">
+    <strong>Validation specimen.</strong>
+    Slider uses native <code>input[type="range"]</code> controls. The lab
+    runtime only syncs display value and <code>--_value</code>.
+  </aside>
+
+  <header class="lab-slider-header">
+    <p class="t-label-large">Axismundi v3.6.14 - Wave 3 - Component-Coverage #21</p>
+    <h1 class="t-display-small">Slider</h1>
+    <p class="t-body-medium lab-slider-caption">
+      Native range inputs using baseline <code>.ax-slider</code> primitives,
+      visible labels, live value text, keyboard semantics, and disabled state.
+    </p>
+  </header>
+
+  <section class="lab-slider-section">
+    <div class="lab-slider-grid">
+      <article class="lab-slider-card">
+        <h2 class="t-title-medium">Continuous value</h2>
+        <div class="lab-slider-stack">
+          <div class="lab-slider-field">
+            <div class="lab-slider-row">
+              <label class="t-body-medium" id="slider-volume-label" for="slider-volume">Volume</label>
+              <span class="t-label-large lab-slider-value" data-slider-output aria-hidden="true">40</span>
+            </div>
+            <div class="ax-slider">
+              <input id="slider-volume" class="ax-slider__input" type="range" min="0" max="100" value="40" aria-labelledby="slider-volume-label" />
+            </div>
+          </div>
+
+          <div class="lab-slider-field">
+            <div class="lab-slider-row">
+              <label class="t-body-medium" id="slider-brightness-label" for="slider-brightness">Brightness</label>
+              <span class="t-label-large lab-slider-value" data-slider-output aria-hidden="true">75</span>
+            </div>
+            <div class="ax-slider">
+              <input id="slider-brightness" class="ax-slider__input" type="range" min="0" max="100" value="75" aria-labelledby="slider-brightness-label" />
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="lab-slider-card">
+        <h2 class="t-title-medium">Bounded range</h2>
+        <div class="lab-slider-field">
+          <div class="lab-slider-row">
+            <label class="t-body-medium" id="slider-density-label" for="slider-density">Density</label>
+            <span class="t-label-large lab-slider-value" data-slider-output aria-hidden="true">3</span>
+          </div>
+          <div class="ax-slider">
+            <input id="slider-density" class="ax-slider__input" type="range" min="1" max="5" step="1" value="3" aria-labelledby="slider-density-label" />
+          </div>
+        </div>
+        <p class="t-body-small lab-slider-note">
+          Native range inputs expose min, max, and current value. Phase 3 should
+          verify keyboard value changes and accessible labeling.
+        </p>
+      </article>
+
+      <article class="lab-slider-card">
+        <h2 class="t-title-medium">Disabled</h2>
+        <div class="lab-slider-field">
+          <div class="lab-slider-row">
+            <label class="t-body-medium" id="slider-disabled-label" for="slider-disabled">Disabled value</label>
+            <span class="t-label-large lab-slider-value" data-slider-output aria-hidden="true">30</span>
+          </div>
+          <div class="ax-slider">
+            <input id="slider-disabled" class="ax-slider__input" type="range" min="0" max="100" value="30" aria-labelledby="slider-disabled-label" disabled />
+          </div>
+        </div>
+      </article>
+
+      <article class="lab-slider-card">
+        <h2 class="t-title-medium">Runtime boundary</h2>
+        <p class="t-body-medium">
+          <code>lab-slider.js</code> updates <code>--_value</code> and visible
+          output text inside this specimen only. It does not replace native
+          range semantics and does not attach global listeners.
+        </p>
+      </article>
+    </div>
+  </section>
+</main>
+<script src="lab-slider.js" defer></script>
+</body>
+</html>

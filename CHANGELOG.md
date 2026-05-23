@@ -1,5 +1,60 @@
 # CHANGELOG
 
+## v3.6.14 - Wave 3 Closure - Inputs / Feedback Final (2026-05-23)
+
+Route A component-lab release that closes Slider #21, Loading #30, and
+Progress #31. This brings the current component matrix to DONE 31 / PARTIAL 0 /
+TODO 0 / RECORD 3.
+
+### Added
+
+- Added the v3.6.14 Phase 0/1/2/3/5 docs under `docs/v3.6.14/`.
+- Added `modules/slider/` with lab-scoped CSS, a fixture-local value-sync
+  runtime, pattern HTML, and SPEC / MEASUREMENT / RUNTIME / WP audit docs.
+- Added `modules/loading/` with lab-scoped CSS, pattern HTML, and SPEC /
+  MEASUREMENT / WP audit docs.
+- Added `modules/progress/` with lab-scoped CSS, pattern HTML, and SPEC /
+  MEASUREMENT / WP audit docs.
+
+### Routed
+
+- Closed the remaining TODO component rows while keeping baseline
+  `components.css`, provider modules, Pilot files, styleguide sources,
+  validators, and generators unchanged.
+- Kept `docs/v3.5.0/MODULE-STATUS-MATRIX.md` as a historical row-ID source;
+  `CURRENT-STATE.md` is authoritative for the v3.6.x matrix snapshot.
+- Carried Docker-dependent WP validation debt to the next-session checklist
+  because Docker Desktop / `wp-env` remained unavailable at close time.
+- Routed Loading inline-in-button contrast and Progress linear determinate
+  dark-mode contrast as low-priority visual observations, not v3.6.14 blockers.
+- Carried VS Code diagnostics sweep as the primary post-component-modularization
+  candidate.
+
+### Verified
+
+- 12 visual cells: 3 modules x desktop/mobile x light/dark, console 0, 4xx 0,
+  and overflow 0.
+- `theme.js` no-load verified in Slider, Loading, and Progress pattern pages.
+- Slider: 4 native range inputs, 4 labelled inputs, 1 disabled input, visible
+  output sync, ArrowRight/Home keyboard sync, and `aria-labelledby` evidence
+  PASS.
+- Loading: 2 `role=status` surfaces, inline decorative spinner
+  `aria-hidden=true`, no JS runtime, and reduced-motion CDP emulation PASS.
+- Progress: 8 `role=progressbar` surfaces, 6 determinate / 2 indeterminate
+  states, indeterminate `aria-valuenow` absence, no JS runtime, and
+  reduced-motion CDP emulation PASS.
+- `node --check products/reference-implementations/axismundi-lab/modules/slider/lab-slider.js`:
+  PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run publish:styleguide`: PASS, with generated mirror restored after
+  validation.
+- `git diff --check`: PASS.
+- `python tools/generators/build_pilot_specimen_wall.py`,
+  `npm run validate:specimen-wall`, and `npm run validate:computed`: BLOCKED by
+  Docker Desktop / `wp-env` availability, routed forward.
+
 ## v3.6.13 - Wave 2B-4 Actions Consumers (2026-05-22)
 
 Multi-provider consumer-composition release that closes FAB menu #5, Split

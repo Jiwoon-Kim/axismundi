@@ -1,0 +1,85 @@
+/*
+ * v3.6.14 - Slider lab module
+ * Lab-scoped page scaffolding only. Baseline authority remains components.css
+ * section 25. This file does not redefine unscoped .ax-slider selectors.
+ */
+
+.lab-slider-demo {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.lab-slider-header,
+.lab-slider-section {
+  margin-block: 28px;
+}
+
+.lab-slider-header {
+  display: grid;
+  gap: 8px;
+}
+
+.lab-slider-caption {
+  max-width: 72ch;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-slider-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.lab-slider-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.lab-slider-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.lab-slider-field {
+  display: grid;
+  gap: 10px;
+}
+
+.lab-slider-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lab-slider-value {
+  min-width: 4ch;
+  text-align: end;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-slider-card .ax-slider {
+  width: 100%;
+}
+
+.lab-slider-note {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+@media (max-width: 720px) {
+  .lab-slider-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .lab-slider-demo {
+    padding-inline: 16px;
+  }
+}

@@ -117,8 +117,8 @@
   background: transparent;
   cursor: grab;
   touch-action: pan-y;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
 .ax-material-slider.ax-carousel {
@@ -203,8 +203,8 @@
   transform: translate3d(var(--ax-material-shift, 0px), 0, 0);
   transform-origin: left center;
   will-change: inline-size, transform;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   transition:
     inline-size var(--md-sys-motion-curve-default-spatial-duration)
       var(--md-sys-motion-curve-default-spatial),
@@ -230,8 +230,8 @@
   block-size: 100%;
   object-fit: cover;
   pointer-events: none;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   -webkit-user-drag: none;
   transform: scale(var(--ax-material-image-scale, 1));
   transform-origin: center;
@@ -265,8 +265,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   transition: opacity var(--md-sys-motion-curve-fast-effects-duration)
     var(--md-sys-motion-curve-fast-effects);
 }

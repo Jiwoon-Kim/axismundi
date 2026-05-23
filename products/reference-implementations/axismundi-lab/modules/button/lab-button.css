@@ -128,6 +128,7 @@
 }
 .lab-button-snippet > summary {
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   font-family: var(--md-sys-typescale-label-medium-font);
   font-size:   var(--md-sys-typescale-label-medium-size);

@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## v3.6.15 - VS Code Diagnostics Sweep (2026-05-23)
+
+Diagnostic-only release that corrects the sweep scope to the VS Code Problems
+panel, resolves v3.6.14 Docker-dependent validation debt, and routes lab module
+a11y diagnostics to a dedicated follow-on.
+
+### Added
+
+- Added the v3.6.15 Phase 0/1/5 docs under `docs/v3.6.15/`.
+- Added an in-place Phase 0/1 scope correction: VS Code Problems panel
+  diagnostics are primary evidence; parser / validator checks are supporting
+  evidence.
+
+### Routed
+
+- Routed four existing lab module Problems-panel findings to a v3.6.16 primary
+  candidate:
+  `date-time` CSS nested comment hygiene, `menu` invalid `aria-selected` on
+  `role=menuitem`, `nav-bar` invalid `aria-selected` on a plain button, and
+  `ripple` standalone `role=menuitem` without required parent.
+- Routed Microsoft Edge Tools / webhint policy decisions to a future hygiene
+  cycle: no-inline-styles on pattern critical styles, compat-api/css warnings,
+  prefix-order hints, and whether repo-level VS Code diagnostics config should
+  become normative.
+- Kept v3.6.15 diagnostic-only; no source implementation files were changed.
+
+### Verified
+
+- VS Code Problems panel user capture: Wave 3 priority slice
+  `slider/loading/progress` had 0 source errors and 9 no-inline-styles warnings
+  from shared pattern-page critical styles.
+- Parser / validator support sweep: JavaScript 25/25 PASS, PHP 8/8 PASS,
+  Python compile PASS, JSON 50/50 PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run publish:styleguide`: PASS, with generated mirror restored.
+- Docker-dependent validation debt resolved after Docker Desktop launch:
+  `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed` all PASS.
+- `git diff --check`: PASS.
+
 ## v3.6.14 - Wave 3 Closure - Inputs / Feedback Final (2026-05-23)
 
 Route A component-lab release that closes Slider #21, Loading #30, and

@@ -2202,6 +2202,53 @@ must not absorb consumer-specific semantics.
 - Do not edit `modules/popover/*` without a fresh Phase 0/1 route.
 - Do not fold this into BACKLOG #46 disabled ripple hygiene.
 
+### 48. v3.6.15 diagnostic sweep follow-on — lab module a11y/CSS narrow fix
+
+- **Bucket**: D — lab module diagnostics / accessibility hygiene
+- **Status**: Open - routed by v3.6.15 Phase 1 corrected review
+- **Priority**: Medium
+- **Target**: v3.6.16 primary candidate
+- **Source**: v3.6.15 VS Code Problems panel diagnostics sweep
+
+**Issue**:
+
+The corrected v3.6.15 diagnostic sweep used user-captured VS Code Problems panel
+output as primary evidence. The v3.6.14 Wave 3 priority slice had 0 source
+errors, but four existing lab module diagnostics need a dedicated plan-first
+fix cycle:
+
+```txt
+date-time/lab-date-time.css:22-31
+  CSS parser hygiene: nested comment marker in the header comment.
+
+menu/lab-menu-pattern.html:77
+  aria-selected is invalid on role=menuitem.
+
+nav-bar/lab-nav-bar-pattern.html:81
+  aria-selected is invalid on a plain button nav item.
+
+ripple/lab-ripple-pattern.html:190
+  standalone role=menuitem lacks required menu/menubar/group parent.
+```
+
+**Decision pending**:
+
+- DateTime is likely a mechanical source-comment cleanup.
+- Menu needs a selected-menu semantics decision, likely `aria-checked` or
+  visual-only state.
+- Nav bar needs a navigation semantics decision, likely `aria-current` or a tab
+  model.
+- Ripple needs a specimen semantics decision: add a valid parent context or
+  change the standalone specimen role.
+
+**Non-goals**:
+
+- Do not treat broad Microsoft Edge Tools / webhint warnings as normative until
+  a separate policy decision accepts them.
+- Do not fold this into BACKLOG #46 or #47 without a fresh Phase 0 route.
+- Do not mutate provider runtime files merely to resolve a pattern-page
+  diagnostic.
+
 ### v3.6.10 Wave 2B-1 Form close evidence
 
 v3.6.10 closed the first Wave 2B slice by implementing Route B, Form Controls
@@ -2427,10 +2474,10 @@ Evidence:
   `theme.js` no-load.
 - `npm test` passed with Axis A/B/C/D/E/F/G all 1.000, preserving Lock 1 and
   Lock 2.
-- Docker-dependent validation was deferred because Docker Desktop / `wp-env`
-  was unavailable at close time. Next session should rerun
+- Docker-dependent validation was deferred at v3.6.14 close because Docker
+  Desktop / `wp-env` was unavailable. v3.6.15 resolved this evidence debt:
   `build_pilot_specimen_wall`, `validate:specimen-wall`, and
-  `validate:computed` if Docker is available.
+  `validate:computed` all passed after Docker Desktop launched.
 
 Routed observations:
 
@@ -2446,6 +2493,29 @@ Evidence docs:
 - `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-2-REPORT.md`
 - `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-3-VISUAL-QA.md`
 - `docs/v3.6.14/WAVE-3-COMPONENTS-PHASE-5-CLOSE.md`
+
+### v3.6.15 VS Code Diagnostics Sweep close evidence
+
+v3.6.15 closed as a diagnostic-only cycle.
+
+Evidence:
+
+- Scope was corrected from repo-level parser checks to user-captured VS Code
+  Problems panel diagnostics.
+- Wave 3 priority slice (`slider/loading/progress`) had 0 source errors; 9
+  no-inline-styles warnings were shared pattern-page critical style signals.
+- JavaScript 25/25, PHP 8/8, Python compile, JSON 50/50, `npm test`, and
+  `publish:styleguide` all passed.
+- v3.6.14 Docker-dependent validation debt was resolved:
+  `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed` all passed.
+- Four existing lab module diagnostics were routed to BACKLOG #48.
+
+Evidence docs:
+
+- `docs/v3.6.15/VS-CODE-DIAGNOSTICS-SWEEP-PHASE-0-PLAN.md`
+- `docs/v3.6.15/VS-CODE-DIAGNOSTICS-SWEEP-PHASE-1-REPORT.md`
+- `docs/v3.6.15/VS-CODE-DIAGNOSTICS-SWEEP-PHASE-5-CLOSE.md`
 
 ## Pre-Pilot classification snapshot (v3.5.18)
 

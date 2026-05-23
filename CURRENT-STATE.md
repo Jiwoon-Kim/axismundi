@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-23 (v3.6.14 closed)
+> **Last updated**: 2026-05-23 (v3.6.15 closed)
 
 ---
 
@@ -45,15 +45,16 @@ v3.6.11  Wave 2B-2 Dialog / Sheet                                       ✓ DONE
 v3.6.12  Wave 2B-3 DateTime                                             ✓ DONE
 v3.6.13  Wave 2B-4 Actions Consumers                                    ✓ DONE
 v3.6.14  Wave 3 Closure - Inputs / Feedback Final                       ✓ DONE
+v3.6.15  VS Code Diagnostics Sweep                                       ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.14 Wave 3 Closure - Inputs / Feedback Final
+Current release:   v3.6.15 VS Code Diagnostics Sweep
 Current phase:     CLOSED
-Current state:     All TODO component rows closed; Slider #21 / Loading #30 / Progress #31 DONE; Lock 5 fourth self-application held
-Next allowed work: Next cycle plan-first (VS Code diagnostics sweep primary / #21 / narrowed #41 / residual #44 / #46 / #47 / Pilot revision)
+Current state:     Diagnostic-only sweep closed; v3.6.14 Docker validation debt resolved; Lock 5 fifth diagnostic-only self-application held
+Next allowed work: Next cycle plan-first (v3.6.16 lab module a11y diagnostics fix sweep primary / #21 / narrowed #41 / residual #44 / #46 / #47 / Pilot revision)
 ```
 
 ## Matrix Snapshot
@@ -120,6 +121,41 @@ Routed forward:
   `lab/modules/{slider,loading,progress}/`.
 - Low-priority visual observations: Loading inline-in-button contrast and
   Progress linear determinate dark-mode contrast.
+
+## v3.6.15 Close Outcome
+
+Closed by v3.6.15:
+
+- VS Code Diagnostics Sweep.
+- Scope correction from repo-level parser sweep to user-captured VS Code
+  Problems panel diagnostics.
+- v3.6.14 Docker-dependent validation debt.
+
+Evidence:
+
+- Phase 0 / Phase 1 docs amended in-place to record the corrected diagnostic
+  surface: Problems panel primary, parser / validator sweep supporting.
+- Wave 3 priority slice (`slider/loading/progress`) showed 0 source errors and
+  9 no-inline-styles warnings from shared pattern-page critical styles.
+- JavaScript 25/25, PHP 8/8, Python compile, and JSON 50/50 checks passed.
+- `npm test` passed with Axis A/B/C/D/E/F/G all 1.000.
+- `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed` passed after Docker Desktop / wp-env became available.
+- No source implementation files changed; generated artifacts were restored.
+
+Routed forward:
+
+- v3.6.16 primary candidate: Lab Module A11y Diagnostics Fix Sweep.
+- Forward-routed P2 items:
+  - `date-time/lab-date-time.css` nested comment marker cleanup.
+  - `menu/lab-menu-pattern.html` invalid `aria-selected` on `role=menuitem`.
+  - `nav-bar/lab-nav-bar-pattern.html` invalid `aria-selected` on a plain
+    button.
+  - `ripple/lab-ripple-pattern.html` standalone `role=menuitem` without
+    required parent.
+- Low-priority policy routing: VS Code workspace diagnostics config,
+  Microsoft Edge Tools / webhint normative status, no-inline-styles policy,
+  and compat-api/css broad warnings.
 
 ## v3.6.0 Closed Notes
 

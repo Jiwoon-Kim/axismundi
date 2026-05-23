@@ -21,6 +21,8 @@
 | Ontology / data | `core/`, `bindings/`, status matrices, binding maps, schema/data projections | CC BY-SA 4.0 |
 | WordPress-derived corpus | `corpus/refined/dev-handbook-clean/` and related WordPress documentation derivatives | Original WordPress documentation terms apply; see section 2 |
 | Third-party assets | Fonts, icons, upstream material preserved in asset folders | Original upstream license preserved |
+| Project media placeholders | `assets/media/` image/audio/video placeholders | Per-file license in `assets/LICENSES.md` |
+| Brand identity assets | `assets/brand/` project symbol variants | Project-owned brand assets; see `assets/LICENSES.md` |
 
 When a file mixes code and explanatory prose, the code portions follow the code
 license and the surrounding documentation follows the documentation license
@@ -142,7 +144,21 @@ Open Font License 1.1. Each font subdirectory includes a verbatim `OFL.txt`.
 
 ---
 
-## 9. WordPress.org Submission Compatibility
+## 9. Project Brand And Placeholder Media
+
+| Field | Value |
+|---|---|
+| Path | `assets/brand/`, `assets/media/` |
+| License file | `assets/LICENSES.md` |
+| Brand assets | Original project identity assets by Jiwoon Kim; reserved for Axismundi project/theme/plugin identity use |
+| Image placeholder | WordPress Photo Directory CC0 photo by Jiwoon Kim |
+| Audio placeholder | Project-author supplied AI-generated Suno demo audio; Opus/Ogg derivative included |
+| Video placeholder | Pixabay Content License video by Evgeniy__Mironov; not project-owned |
+| Status | Placeholder assets for block catalog / theme template work; not all assets share one license |
+
+---
+
+## 10. WordPress.org Submission Compatibility
 
 WordPress.org theme submission expects the theme package contents to be GPL or
 GPL-compatible.
@@ -173,4 +189,3 @@ Public repository license matrix:
 - Beer CSS: MIT attribution for historical inspiration
 
 For attribution details, see `NOTICE.md`.
-

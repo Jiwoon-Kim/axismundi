@@ -10,6 +10,9 @@
 *.jpeg binary
 *.gif binary
 *.webp binary
+*.mp3 binary
+*.ogg binary
+*.webm binary
 *.ico binary
 *.woff binary
 *.woff2 binary

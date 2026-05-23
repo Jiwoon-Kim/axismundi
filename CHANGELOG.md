@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## v3.6.16 - Lab A11y Diagnostics Fix Sweep (2026-05-23)
+
+Implementation release that resolves BACKLOG #48, the v3.6.15 VS Code Problems
+panel follow-on for four lab module a11y/CSS diagnostics.
+
+### Changed
+
+- Fixed `date-time/lab-date-time.css` source-comment hygiene by replacing the
+  nested `/* EXTRACTED */` marker prose with `[EXTRACTED]`.
+- Fixed `menu/lab-menu-pattern.html` by changing the checkable "Autosave on"
+  item to `role="menuitemcheckbox"` with `aria-checked="true"`.
+- Fixed `nav-bar/lab-nav-bar-pattern.html` by using `aria-current="page"` for
+  the active destination, restoring intra-module specimen consistency.
+- Fixed `ripple/lab-ripple-pattern.html` by adding a local `role="menu"` parent
+  around the menuitem TARGET specimen while keeping the ripple target unchanged.
+- Added short v3.6.16 diagnostic addenda to the Menu, Nav Bar, and Ripple audit
+  docs.
+
+### Routed
+
+- Closed BACKLOG #48.
+- Kept Microsoft Edge Tools / webhint normative policy, no-inline-styles policy,
+  broad compat-api/css handling, VS Code workspace diagnostics config, and the
+  button-group `inline-size: fit-content` compatibility warning routed as future
+  policy/hygiene candidates.
+- Recorded the Phase 2 mount-staleness artifact range (roughly 22-67h stale
+  source snapshots) as a non-blocking verification note.
+
+### Verified
+
+- User-side VS Code Problems panel re-sweep: the four BACKLOG #48 severity-8
+  target diagnostics are absent after the fix.
+- `node --check` for DateTime and Ripple lab runtimes: PASS.
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`: PASS.
+- `npm run publish:styleguide`: PASS, with generated mirror restored.
+- `git diff --check`: PASS.
+
 ## v3.6.15 - VS Code Diagnostics Sweep (2026-05-23)
 
 Diagnostic-only release that corrects the sweep scope to the VS Code Problems

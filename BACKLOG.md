@@ -2205,9 +2205,9 @@ must not absorb consumer-specific semantics.
 ### 48. v3.6.15 diagnostic sweep follow-on — lab module a11y/CSS narrow fix
 
 - **Bucket**: D — lab module diagnostics / accessibility hygiene
-- **Status**: Open - routed by v3.6.15 Phase 1 corrected review
+- **Status**: Resolved by v3.6.16
 - **Priority**: Medium
-- **Target**: v3.6.16 primary candidate
+- **Target**: v3.6.16 closed
 - **Source**: v3.6.15 VS Code Problems panel diagnostics sweep
 
 **Issue**:
@@ -2248,6 +2248,24 @@ ripple/lab-ripple-pattern.html:190
 - Do not fold this into BACKLOG #46 or #47 without a fresh Phase 0 route.
 - Do not mutate provider runtime files merely to resolve a pattern-page
   diagnostic.
+
+**Resolution (v3.6.16)**:
+
+```txt
+date-time: nested comment marker replaced with [EXTRACTED].
+menu:      checkable "Autosave on" item uses role=menuitemcheckbox + aria-checked.
+nav-bar:   active destination uses aria-current=page.
+ripple:    menuitem TARGET specimen is contained by a local role=menu host.
+```
+
+Close evidence:
+
+- User-side VS Code Problems panel re-sweep showed 0 errors on the four target
+  files.
+- The four BACKLOG #48 severity-8 target diagnostics are absent after v3.6.16.
+- Remaining warnings are non-target no-inline-styles / compat-api/css policy
+  items and stay routed outside this resolved item.
+- `npm test` passed with Axis A/B/C/D/E/F/G all 1.000.
 
 ### v3.6.10 Wave 2B-1 Form close evidence
 

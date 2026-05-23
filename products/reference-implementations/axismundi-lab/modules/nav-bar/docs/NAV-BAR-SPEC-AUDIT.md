@@ -22,3 +22,9 @@ Index note: `#12` in this cycle means the Component Coverage Map TOC index from 
 - Destinations expose stable labels and icons.
 - Disabled destination is visibly disabled and not focusable in the specimen.
 - Ripple usage is consumer-only; provider code remains untouched.
+
+## v3.6.16 Diagnostic Addendum
+
+- Active navigation destinations use `aria-current="page"`.
+- The nav bar lab pattern does not use the `tablist` / `tab` model, and it does
+  not use `aria-selected` for destination state.

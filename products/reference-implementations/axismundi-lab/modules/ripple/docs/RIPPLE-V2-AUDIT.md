@@ -880,3 +880,10 @@ create <md-ripple>
 ship keyboard-centered ripple
 ship data-ax-ripple-for
 ```
+
+## v3.6.16 Diagnostic Addendum
+
+- Menu item TARGET consumer specimens in lab pattern pages must be contained by
+  a `role="menu"` host.
+- The ripple target remains the menu item itself with `data-ax-ripple`; the
+  wrapper only supplies the ARIA parent context required by the specimen.

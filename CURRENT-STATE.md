@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-23 (v3.6.15 closed)
+> **Last updated**: 2026-05-23 (v3.6.16 closed)
 
 ---
 
@@ -46,15 +46,16 @@ v3.6.12  Wave 2B-3 DateTime                                             ✓ DONE
 v3.6.13  Wave 2B-4 Actions Consumers                                    ✓ DONE
 v3.6.14  Wave 3 Closure - Inputs / Feedback Final                       ✓ DONE
 v3.6.15  VS Code Diagnostics Sweep                                       ✓ DONE
+v3.6.16  Lab A11y Diagnostics Fix Sweep                                  ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.15 VS Code Diagnostics Sweep
+Current release:   v3.6.16 Lab A11y Diagnostics Fix Sweep
 Current phase:     CLOSED
-Current state:     Diagnostic-only sweep closed; v3.6.14 Docker validation debt resolved; Lock 5 fifth diagnostic-only self-application held
-Next allowed work: Next cycle plan-first (v3.6.16 lab module a11y diagnostics fix sweep primary / #21 / narrowed #41 / residual #44 / #46 / #47 / Pilot revision)
+Current state:     BACKLOG #48 resolved; four VS Code Problems target diagnostics cleared; Lock 5 sixth self-application held
+Next allowed work: Next cycle plan-first (#21 / narrowed #41 / residual #44 / #46 / #47 / Pilot revision / diagnostics policy follow-ons)
 ```
 
 ## Matrix Snapshot
@@ -156,6 +157,54 @@ Routed forward:
 - Low-priority policy routing: VS Code workspace diagnostics config,
   Microsoft Edge Tools / webhint normative status, no-inline-styles policy,
   and compat-api/css broad warnings.
+
+## v3.6.16 Close Outcome
+
+Closed by v3.6.16:
+
+- Lab A11y Diagnostics Fix Sweep.
+- BACKLOG #48.
+- Four user-captured VS Code Problems panel target diagnostics.
+
+Evidence:
+
+- DateTime: replaced the nested `/* EXTRACTED */` prose in
+  `lab-date-time.css` with `[EXTRACTED]`.
+- Menu: changed the checkable "Autosave on" item to
+  `role="menuitemcheckbox"` with `aria-checked="true"`.
+- Nav bar: changed the second active destination specimen to
+  `aria-current="page"`, matching the first specimen.
+- Ripple: wrapped the menuitem TARGET specimen in a local `role="menu"` host
+  while keeping `data-ax-ripple` on the menuitem.
+- Added short v3.6.16 diagnostic addenda to Menu, Nav Bar, and Ripple audit
+  docs.
+- User-side VS Code Problems panel re-sweep showed 0 errors on the four target
+  files; the four BACKLOG #48 target diagnostics are absent.
+
+Validation:
+
+- PASS: `node --check` for DateTime and Ripple lab runtimes.
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`.
+- PASS: `npm run publish:styleguide`, with generated mirror restored.
+- PASS: `git diff --check`.
+
+Routed forward:
+
+- Policy / diagnostics follow-ons: VS Code workspace diagnostics config,
+  Microsoft Edge Tools / webhint normative policy, no-inline-styles policy,
+  broad compat-api/css handling, and the button-group `inline-size:
+  fit-content` compatibility warning.
+- Primary candidate set remains plan-first: BACKLOG #21, narrowed #41,
+  residual #44, #46, #47, Pilot revision, or one of the diagnostics policy
+  follow-ons.
+- Mount staleness was observed again during Phase 2 review with roughly
+  22-67h stale source snapshots; local byte-clean verification remained
+  authoritative.
+- Lock 5 sixth clean self-application held (fifth implementation-cycle
+  application after v3.6.15's diagnostic-only variant).
 
 ## v3.6.0 Closed Notes
 

@@ -37,3 +37,10 @@ placement. This module consumes that provider unchanged.
   cycle, keeping BACKLOG #46 open as a separate hygiene question.
 - Destructive item color uses existing `--md-sys-color-error` tokens inside
   lab-scoped CSS only. No new color route or baseline token is introduced.
+
+## v3.6.16 Diagnostic Addendum
+
+- Checkable menu examples use `role="menuitemcheckbox"` with `aria-checked`
+  instead of `aria-selected`.
+- The lab pattern may retain `.is-selected` for visual state styling; the
+  accessible checked state is carried by `aria-checked`.

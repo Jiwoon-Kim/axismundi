@@ -12,6 +12,7 @@
 *.webp binary
 *.mp3 binary
 *.ogg binary
+*.opus binary
 *.webm binary
 *.ico binary
 *.woff binary

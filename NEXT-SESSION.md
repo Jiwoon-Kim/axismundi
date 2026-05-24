@@ -1,24 +1,53 @@
-# NEXT-SESSION.md - Post-v3.6.21 Handoff
+# NEXT-SESSION.md - Post-v3.6.24 Handoff
 
-> **Status**: v3.6.0 Ontology Theme Pilot, v3.6.1 Token Architecture
-> Refactor, v3.6.2 WP Core Block Specimen Wall, v3.6.3 WP Block Bridge
-> Expansion, v3.6.4 WP Block Bridge Residual Cleanup, v3.6.5 WP Block
-> Bridge Editor Token Parity, v3.6.6 WP Block Bridge Ripple / Editor State
-> Parity, v3.6.7 WP Specimen Follow-On Editor Compatibility, v3.6.8 Wave 2A
-> Navigation Core, v3.6.9 Wave 2A-2 Menu / Popover Consumer, v3.6.10
-> Wave 2B-1 Form Controls, v3.6.11 Wave 2B-2 Dialog / Sheet, v3.6.12
-> Wave 2B-3 DateTime, v3.6.13 Wave 2B-4 Actions Consumers, and v3.6.14
-> Wave 3 Closure - Inputs / Feedback Final, v3.6.15 VS Code Diagnostics
-> Sweep, v3.6.16 Lab A11y Diagnostics Fix Sweep, v3.6.17 WP Ripple
-> Runtime Packaging Decision, v3.6.18 Core Block Mapping Audit, v3.6.19 Asset
-> Surface Audit + Cross-Reference Index, v3.6.20 Pilot vs Distributable
-> Bootstrap, and v3.6.21 Theme Switcher Contract are closed.
+> **Status**: v3.6.0-v3.6.24 are closed. The latest closed cycle is v3.6.24
+> Core Block Style Guide Full Spec, which completed the v3.6.18 routed-forward
+> catalog work across v3.6.23 + v3.6.24.
 > **Use**: read at the start of the next Codex/Claude session.
 > **Last updated**: 2026-05-24.
 
 ---
 
-## 0) Reading Order
+## 0) Current Reading Order Addendum
+
+Read these current sources before using the historical reading order below:
+
+```txt
+1. AGENTS.md or CLAUDE.md
+2. CURRENT-STATE.md
+3. PROJECT-CONTEXT.md
+4. CHANGELOG.md latest entries v3.6.24 / v3.6.23 / v3.6.22
+5. ROADMAP.md current tail
+6. BACKLOG.md #21 / #22 / #44 / #46 / #47 / #14
+7. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-5-CLOSE.md
+8. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-3-VERIFICATION.md
+9. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-2-IMPLEMENTATION.md
+10. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-1-REPORT.md
+11. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-0-PLAN.md
+12. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-5-CLOSE.md
+13. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-3-VERIFICATION.md
+14. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-2-IMPLEMENTATION.md
+15. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-1-REPORT.md
+16. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-0-PLAN.md
+17. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-5-CLOSE.md
+18. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-3-VERIFICATION.md
+19. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-2-IMPLEMENTATION.md
+20. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-1-REPORT.md
+21. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-0-PLAN.md
+22. docs/v3.6.21/THEME-SWITCHER-CONTRACT-PHASE-5-CLOSE.md
+```
+
+The next route is not distributable skeleton yet. Follow the current order:
+
+```txt
+cycle-external: WP block styleguide human visual QA
+v3.6.25:       Webdesign decision matrix ontology
+v3.6.26:       TT5 docs + codebase audit
+v3.6.27:       Pilot template implementation pass + Google Sites extraction
+v3.6.28+:      distributable skeleton bootstrap, only with explicit user slug GO
+```
+
+## 0a) Historical Reading Order
 
 ```txt
 1. AGENTS.md or CLAUDE.md
@@ -168,31 +197,16 @@ v3.6.18  Core Block Mapping Audit                    CLOSED
 v3.6.19  Asset Surface Audit + Cross-Reference Index CLOSED
 v3.6.20  Pilot vs Distributable Bootstrap            CLOSED
 v3.6.21  Theme Switcher Contract                     CLOSED
+v3.6.22  Explicit data-theme auto root state          CLOSED
+v3.6.23  Core Block Catalog 6-Category Split          CLOSED
+v3.6.24  Core Block Style Guide Full Spec             CLOSED
 
 Next route:
-  Start next cycle plan-first.
-  Candidate set:
-    Theme Switcher Route B comment hygiene.
-    BACKLOG #22 explicit auto-state implementation.
-    Core Block Catalog 6-category split.
-    Distributable skeleton bootstrap (requires user slug / product GO).
-    Release-seal derivative generation.
-    Distributable build-copy pipeline.
-    Webdesign-craftsman workflow ontology.
-    Media catalog implementation.
-    Pixabay video isolation.
-    ontology-theme-pilot/assets modernization or freeze.
-    BACKLOG #21 Interpreter Plugin strategy.
-    BACKLOG #44 remaining specimen coverage follow-ons.
-    BACKLOG #46 disabled ripple host authoring hygiene.
-    BACKLOG #47 popover provider menu-item-class logic extraction hygiene.
-    Sheet drag-to-dismiss follow-on.
-    Styleguide integration for Slider / Loading / Progress module pages.
-    VS Code workspace diagnostics config policy.
-    Microsoft Edge Tools / webhint normative policy for lab module pages.
-    no-inline-styles policy for pattern critical styles.
-    broad compat-api/css handling policy.
-    button-group inline-size: fit-content compatibility warning.
+  Cycle-external WP block styleguide human visual QA first.
+  Then start v3.6.25 plan-first as Webdesign decision matrix ontology.
+  TT5 docs/codebase audit follows only after the ontology framework exists.
+  Pilot template implementation and Google Sites extraction follow TT5 audit.
+  Distributable skeleton remains blocked until explicit user slug GO.
 ```
 
 Public repository:
@@ -208,7 +222,70 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.21 Close Summary
+## 2) v3.6.24 Close Summary
+
+Closed by v3.6.24:
+
+- Core Block Style Guide Full Spec.
+- 15-section catalog structure with full-spec specimens and explicit gap rows.
+- Heading, Cover, and Media & Text specimens.
+- M3 publish-tooling route with optional cleanup of untracked generated
+  artifacts.
+
+Evidence:
+
+- Preserved `#blocks-table`, `#blocks-search`, and `#blocks-theme`.
+- Added `#blocks-heading`, `#blocks-text-gaps`, and `#blocks-design-gaps`.
+- Four-state classification propagated into implemented specimens, gap rows,
+  external prerequisites, and out-of-scope route notes.
+- Browser smoke passed through local HTTP with 15 sections, 6 anchors, console
+  errors 0, and no horizontal overflow.
+- Full validation passed; Axis A-G stayed 1.000.
+- Lock 5 fourteenth overall self-application held; ninth implementation-cycle
+  count and third consecutive narrow implementation cycle.
+
+Routed next:
+
+- WP block styleguide human visual QA as a cycle-external task.
+- Webdesign decision matrix ontology before TT5 / Pilot template / Google Sites
+  extraction work.
+- Distributable skeleton only after explicit user slug GO.
+
+## 2a) v3.6.23 Close Summary
+
+Closed by v3.6.23:
+
+- Core Block Catalog 6-Category Split.
+- v3.6.18 Layer 3 routed-forward catalog shell execution.
+- M3 publish-tooling source/mirror route for `styleguide/blocks.html`.
+
+Evidence:
+
+- `style-guide-blocks.html` split into Text, Media, Design, Widgets, and Theme
+  categories, with Embeds excluded.
+- `#blocks-table` validator anchor was preserved.
+- `#blocks-search` and `#blocks-theme` category anchors were added.
+- Full validation and browser smoke passed; unrelated generated churn was
+  restored.
+
+## 2b) v3.6.22 Close Summary
+
+Closed by v3.6.22:
+
+- BACKLOG #22 explicit `data-theme="auto"` root-state implementation.
+- JS, CSS, and Pilot front-end root-default alignment.
+- v3.6.17 Pilot bridge source/copy byte-identical contract restoration after
+  Phase 2 amend.
+
+Evidence:
+
+- Auto mode writes `data-theme="auto"` instead of removing the attribute.
+- CSS now treats absent root theme and explicit auto as deliberate states.
+- Pilot PHP root default is guarded out of admin/editor contexts.
+- Full validation, browser/runtime checks, and bridge source/copy SHA256 checks
+  passed.
+
+## 2c) v3.6.21 Close Summary
 
 Closed by v3.6.21:
 

@@ -1,5 +1,109 @@
 # CHANGELOG
 
+## v3.6.24 - Core Block Style Guide Full Spec (2026-05-24)
+
+Narrow implementation release completing the core block style-guide catalog
+after the v3.6.23 six-category shell.
+
+### Added
+
+- Added the v3.6.24 Phase 0/1/2/3/5 docs under `docs/v3.6.24/`.
+- Expanded `style-guide-blocks.html` from 12 to 15 catalog sections.
+- Added implemented specimens for Heading, Cover, and Media & Text.
+- Added explicit gap rows across Text, Media, Design, Widgets, and Theme/FSE
+  surfaces using the v3.6.24 four-state classification.
+- Preserved `#blocks-table`, `#blocks-search`, and `#blocks-theme`; added
+  `#blocks-heading`, `#blocks-text-gaps`, and `#blocks-design-gaps`.
+
+### Routed
+
+- Kept distributable skeleton creation blocked until explicit user slug GO.
+- Routed WP block styleguide human visual QA as a cycle-external check.
+- Routed the next main cycle toward Webdesign decision matrix ontology before
+  TT5 / Pilot template / Google Sites extraction work.
+- Kept Pattern Overrides, Block Bindings, Theme/FSE implementation, Embeds,
+  and wp.org submission files out of scope.
+
+### Verified
+
+- `npm run publish:styleguide`: PASS; only intended `styleguide/blocks.html`
+  output retained.
+- `npm run validate:computed`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- Local HTTP browser smoke passed with 15 sections, 6 anchors, console errors
+  0, and no horizontal overflow.
+- Validator-generated report churn and unrelated generated publish churn were
+  restored; untracked generated module stylesheets were removed.
+- `git diff --check`: PASS.
+
+## v3.6.23 - Core Block Catalog 6-Category Split (2026-05-24)
+
+Narrow implementation release executing the v3.6.18 routed-forward catalog
+split as a six-category lab style-guide shell.
+
+### Added
+
+- Added the v3.6.23 Phase 0/1/2/3/5 docs under `docs/v3.6.23/`.
+- Reorganized `style-guide-blocks.html` around Text, Media, Design, Widgets,
+  and Theme, with Embeds explicitly excluded.
+- Added category anchors for Search and Theme while preserving the validator
+  anchor `#blocks-table`.
+- Regenerated `styleguide/blocks.html` through publish tooling.
+
+### Routed
+
+- Routed full-spec specimen and gap-row completion to v3.6.24.
+- Kept switcher shell consistency, Pilot/distributable templates, Pattern
+  Overrides, Block Bindings, and release-seal work out of scope.
+- Recorded WP upstream snapshot discipline and source/mirror handling as
+  reusable guardrails.
+
+### Verified
+
+- `npm run publish:styleguide`: PASS.
+- `npm run validate:computed`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- Browser smoke passed with category nav, preserved anchors, console errors 0,
+  and no horizontal overflow.
+- Unrelated generated churn was restored.
+- `git diff --check`: PASS.
+
+## v3.6.22 - Explicit `data-theme="auto"` Root State (2026-05-24)
+
+Narrow implementation release closing BACKLOG #22 for explicit theme auto-state
+handling across lab, generated styleguide, and Pilot surfaces.
+
+### Changed
+
+- Updated theme switcher JS to write `data-theme="auto"` instead of removing
+  the root attribute for auto mode.
+- Replaced implicit dark-mode CSS selectors with explicit absent / auto
+  selectors.
+- Added a Pilot-only `language_attributes` root-default filter guarded away
+  from admin/editor contexts.
+- Updated BACKLOG #22 status and relevant cross-references to resolved.
+- Restored the v3.6.17 Pilot bridge source/copy byte-identical contract after
+  Phase 2 amend.
+
+### Routed
+
+- Kept editor preview UI, HCT, Global Styles sync, Pattern Overrides, and
+  Block Bindings as BACKLOG #21 / future plugin territory.
+- Preserved Pilot/distributable boundary: the Pilot PHP pattern does not become
+  distributable inheritance.
+
+### Verified
+
+- Full validation suite passed; Axis A/B/C/D/E/F/G all 1.000.
+- Six JS files passed `node --check`.
+- Browser/runtime verification passed across lab, generated styleguide, and
+  Pilot paths.
+- Pilot bridge source/copy SHA256 matched after amend.
+- Validator-generated report churn was restored.
+- `git diff --check`: PASS.
+
 ## v3.6.21 - Theme Switcher Contract (2026-05-24)
 
 No-code contract decision for the theme switcher after the Pilot/distributable

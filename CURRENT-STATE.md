@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-24 (v3.6.21 closed)
+> **Last updated**: 2026-05-24 (v3.6.24 closed)
 
 ---
 
@@ -52,15 +52,18 @@ v3.6.18  Core Block Mapping Audit                                        ✓ DON
 v3.6.19  Asset Surface Audit + Cross-Reference Index                     ✓ DONE
 v3.6.20  Pilot vs Distributable Bootstrap                                ✓ DONE
 v3.6.21  Theme Switcher Contract                                         ✓ DONE
+v3.6.22  Explicit data-theme auto root state                              ✓ DONE
+v3.6.23  Core Block Catalog 6-Category Split                              ✓ DONE
+v3.6.24  Core Block Style Guide Full Spec                                 ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.21 Theme Switcher Contract
+Current release:   v3.6.24 Core Block Style Guide Full Spec
 Current phase:     CLOSED
-Current state:     Theme-switcher selector / attribute / storage contract closed as no-code decision; Lock 5 eleventh self-application held
-Next allowed work: Next cycle plan-first (Route B comment hygiene / BACKLOG #22 explicit auto-state / Core Block Catalog split / distributable skeleton / workflow ontology / #21 / #44 / #46 / #47 / diagnostics policy follow-ons)
+Current state:     Core block style-guide catalog full spec closed; v3.6.18 routed-forward catalog work completed across v3.6.23 + v3.6.24
+Next allowed work: Cycle-external WP block styleguide human visual QA; then v3.6.25 plan-first Webdesign decision matrix ontology before TT5 / Pilot template / Google Sites extraction work
 ```
 
 ## Matrix Snapshot
@@ -83,6 +86,102 @@ Next allowed work: Next cycle plan-first (Route B comment hygiene / BACKLOG #22 
 v3.6.0 does not change component row status yet. Carousel #34 remains
 historically DONE from v3.5.12, but is Pilot-excluded / plugin-routed for the
 theme Pilot.
+
+## v3.6.24 Close Outcome
+
+Closed by v3.6.24:
+
+- Core Block Style Guide Full Spec.
+- Full-spec catalog completion after the v3.6.23 six-category shell.
+- Heading, Cover, and Media & Text implemented specimens.
+- Text / Media / Design / Widgets / Theme gap-row classification.
+
+Evidence:
+
+- `style-guide-blocks.html` and generated `styleguide/blocks.html` now carry 15
+  sections with preserved anchors `#blocks-table`, `#blocks-search`, and
+  `#blocks-theme`, plus new anchors `#blocks-heading`, `#blocks-text-gaps`, and
+  `#blocks-design-gaps`.
+- The v3.6.24 four-state classification propagated into DOM shape: implemented
+  specimens, reference/gap rows, external prerequisite rows, and out-of-scope
+  route notes.
+- M3 publish-tooling discipline held: source edit, publish, keep intended
+  mirror, restore unrelated generated churn, verify source/mirror alignment,
+  and remove untracked generated artifacts.
+- Local HTTP browser smoke passed with 15 sections, 6 anchors, console errors
+  0, and no horizontal overflow.
+- Lock 5 fourteenth clean self-application held; ninth implementation-cycle
+  application and third consecutive narrow implementation cycle.
+
+Validation:
+
+- PASS: `npm run publish:styleguide`.
+- PASS: `npm run validate:computed`.
+- PASS: `npm run validate:specimen-wall`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `git diff --check`.
+
+Routed forward:
+
+- WP block styleguide human visual QA as a cycle-external check.
+- Webdesign decision matrix ontology as the next plan-first cycle.
+- TT5 docs/codebase audit after the ontology framework exists.
+- Pilot template implementation pass and Google Sites responsive layout /
+  component extraction after TT5 audit.
+- Distributable skeleton remains blocked until explicit user slug GO and after
+  Pilot/application evidence is ready.
+
+## v3.6.23 Close Outcome
+
+Closed by v3.6.23:
+
+- Core Block Catalog 6-Category Split.
+- v3.6.18 Layer 3 routed-forward catalog split execution.
+- M3 publish-tooling mirror route for `styleguide/blocks.html`.
+
+Evidence:
+
+- `style-guide-blocks.html` reorganized around Text, Media, Design, Widgets,
+  and Theme; Embeds remained excluded.
+- `#blocks-table` validator anchor was preserved while `#blocks-search` and
+  `#blocks-theme` category anchors were added.
+- Generated mirror `styleguide/blocks.html` was regenerated through
+  `tools/generators/publish_styleguide.py`.
+- M9 source-of-authority inventory and validator-anchor preservation prevented
+  the v3.6.22 bridge-source miss pattern from repeating.
+
+Validation:
+
+- PASS: `npm run publish:styleguide`.
+- PASS: `npm run validate:computed`.
+- PASS: `npm run validate:specimen-wall`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: browser smoke and `git diff --check`.
+
+## v3.6.22 Close Outcome
+
+Closed by v3.6.22:
+
+- BACKLOG #22 explicit `data-theme="auto"` root-state implementation.
+- Lab, generated styleguide, and Pilot theme-switcher auto-state alignment.
+- Pilot-only PHP root default for front-end contexts.
+
+Evidence:
+
+- JS root mutation now writes `data-theme="auto"` for auto mode instead of
+  removing the attribute.
+- CSS dark-mode selectors explicitly distinguish absent root theme from
+  `data-theme="auto"`.
+- Pilot `language_attributes` filter is guarded out of admin/editor contexts.
+- v3.6.17 Pilot bridge source/copy byte-identical contract was restored during
+  Phase 2 amend.
+
+Validation:
+
+- PASS: full validation suite; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `node --check` for six JS files.
+- PASS: browser/runtime checks across lab, generated styleguide, and Pilot.
+- PASS: Pilot bridge source/copy SHA256 match and `git diff --check`.
 
 ## v3.6.14 Close Outcome
 

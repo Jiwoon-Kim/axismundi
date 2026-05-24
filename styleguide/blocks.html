@@ -286,19 +286,22 @@
       <nav class="sg-nav" aria-label="Block sections">
         <div class="t-label-small sg-nav__group-label">Text</div>
         <a class="t-body-medium" href="#blocks-paragraph">Paragraph</a>
+        <a class="t-body-medium" href="#blocks-heading">Heading</a>
         <a class="t-body-medium" href="#blocks-quote">Quote / Pullquote</a>
         <a class="t-body-medium" href="#blocks-code">Code / Verse</a>
         <a class="t-body-medium" href="#blocks-list">List</a>
         <a class="t-body-medium" href="#blocks-table">Table</a>
+        <a class="t-body-medium" href="#blocks-text-gaps">Text gaps</a>
 
         <div class="t-label-small sg-nav__group-label">Media</div>
-        <a class="t-body-medium" href="#blocks-media">Image / Gallery</a>
+        <a class="t-body-medium" href="#blocks-media">Media specimens</a>
 
         <div class="t-label-small sg-nav__group-label">Design</div>
         <a class="t-body-medium" href="#blocks-alignment">Alignment helpers</a>
         <a class="t-body-medium" href="#blocks-separator">Separator</a>
         <a class="t-body-medium" href="#blocks-group">Columns / Group / Card</a>
         <a class="t-body-medium" href="#blocks-button">Buttons</a>
+        <a class="t-body-medium" href="#blocks-design-gaps">Design gaps</a>
 
         <div class="t-label-small sg-nav__group-label">Widgets</div>
         <a class="t-body-medium" href="#blocks-search">Search</a>
@@ -343,6 +346,30 @@
             <p class="has-text-align-left">왼쪽 정렬 (기본).</p>
             <p class="has-text-align-center">중앙 정렬.</p>
             <p class="has-text-align-right">오른쪽 정렬.</p>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Heading ========== -->
+      <section class="sg-section" id="blocks-heading">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <h2 class="t-headline-medium">Heading</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/heading</code> is already covered by v3.6.2 Tier 1 snapshots and by <code>base.css</code> semantic heading mapping. It does not require a <code>blocks.css</code> selector.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">H1 / H2 / H3 scale</h3>
+          <div class="sg-demo prose">
+            <h1>H1 heading specimen</h1>
+            <p>Lead paragraph directly under an H1 heading.</p>
+            <h2>H2 heading specimen</h2>
+            <p>Section paragraph directly under an H2 heading.</p>
+            <h3>H3 heading specimen</h3>
+            <p>Subsection paragraph directly under an H3 heading.</p>
           </div>
         </div>
       </section>
@@ -628,11 +655,34 @@ console.log(greet('World'));</code></pre>
       </section>
 
 
+      <!-- ========== Text gaps ========== -->
+      <section class="sg-section" id="blocks-text-gaps">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text · reference / gap rows</div>
+          <h2 class="t-headline-medium">Text block gaps</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            These rows make unsupported Text blocks explicit without reopening v3.6.2 Tier 1 or claiming implementation.
+          </p>
+        </header>
+
+        <div class="sg-demo prose">
+          <ul>
+            <li><strong>Details</strong> — reference / gap row. No Axismundi specimen or support contract yet.</li>
+            <li><strong>Math</strong> — WP 7.0 reference-only block. Future route, no implementation in v3.6.24.</li>
+            <li><strong>Classic</strong> — legacy/editor surface. Out of scope for the block catalog.</li>
+          </ul>
+        </div>
+      </section>
+
+
       <!-- ========== Image / Gallery ========== -->
       <section class="sg-section" id="blocks-media">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Media</div>
-          <h2 class="t-headline-medium">Image &amp; Gallery</h2>
+          <h2 class="t-headline-medium">Image / Gallery / Cover / Media &amp; Text</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            v3.6.24 keeps Media specimens bounded to image-derived surfaces. Audio, video, file, and icon remain explicit gap rows until their source and product policies are closed.
+          </p>
         </header>
 
         <div class="sg-subsection">
@@ -655,6 +705,46 @@ console.log(greet('World'));</code></pre>
               <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
               <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
               <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/cover — image placeholder</h3>
+          <div class="sg-demo">
+            <div class="wp-block-cover alignwide" style="min-block-size: 220px; display: grid; place-items: center; padding: var(--space-lg); border-radius: var(--radius-lg); overflow: hidden; background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));">
+              <div style="max-inline-size: 42ch; text-align: center;">
+                <p class="t-label-medium" style="margin: 0 0 var(--space-xs); color: var(--md-sys-color-on-primary-container);">core/cover</p>
+                <p class="t-headline-small" style="margin: 0; color: var(--md-sys-color-on-primary-container);">Cover specimen with overlay text</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/media-text — image plus content</h3>
+          <div class="sg-demo">
+            <div class="wp-block-media-text" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-lg); align-items: center;">
+              <figure class="wp-block-image" style="margin: 0;">
+                <div class="sg-sample-img"></div>
+              </figure>
+              <div>
+                <p class="t-label-medium" style="margin: 0 0 var(--space-xs); color: var(--md-sys-color-primary);">core/media-text</p>
+                <h3 class="t-title-large" style="margin: 0 0 var(--space-sm);">Media &amp; Text specimen</h3>
+                <p class="t-body-medium" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">Uses existing image placeholder and text composition. No new CSS contract is created in v3.6.24.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Media gap rows</h3>
+          <div class="sg-demo prose">
+            <ul>
+              <li><strong>Audio</strong> — external prerequisite. Project-author audio exists, but native control styling is not yet a catalog support contract.</li>
+              <li><strong>Video</strong> — external prerequisite. Placeholder video is Pixabay-sourced; isolation policy remains routed forward.</li>
+              <li><strong>File</strong> — external prerequisite. No local placeholder file asset is available.</li>
+              <li><strong>Icon</strong> — WP 7.0 reference-only block. No implementation in v3.6.24.</li>
             </ul>
           </div>
         </div>
@@ -818,6 +908,26 @@ console.log(greet('World'));</code></pre>
       </section>
 
 
+      <!-- ========== Design gaps ========== -->
+      <section class="sg-section" id="blocks-design-gaps">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design · reference / gap rows</div>
+          <h2 class="t-headline-medium">Design block gaps</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            These WordPress design blocks are acknowledged as upstream catalog entries, but v3.6.24 does not add their visual contracts.
+          </p>
+        </header>
+
+        <div class="sg-demo prose">
+          <ul>
+            <li><strong>Accordion</strong> — WP 7.0 reference-only block. Future route.</li>
+            <li><strong>Row / Stack / Grid</strong> — layout block family. Future layout contract.</li>
+            <li><strong>More / Page Break / Spacer</strong> — content-flow utilities. Future route or out-of-scope decision.</li>
+          </ul>
+        </div>
+      </section>
+
+
       <!-- ========== Search ========== -->
       <section class="sg-section" id="blocks-search">
         <header class="sg-section__head">
@@ -839,6 +949,18 @@ console.log(greet('World'));</code></pre>
             </form>
           </div>
         </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Widget gap rows</h3>
+          <div class="sg-demo prose">
+            <ul>
+              <li><strong>Custom HTML</strong> — routed to <code>style-guide-prose.html</code>, not the block catalog.</li>
+              <li><strong>Archives / Calendar / Terms List / Categories List</strong> — reference rows. No local specimen contract.</li>
+              <li><strong>Latest Comments / Latest Posts / Page List / RSS</strong> — reference rows. No local specimen contract.</li>
+              <li><strong>Shortcode / Social Icons / Tag Cloud</strong> — reference or legacy surfaces. Future route.</li>
+            </ul>
+          </div>
+        </div>
       </section>
 
 
@@ -856,6 +978,20 @@ console.log(greet('World'));</code></pre>
           <p class="t-body-medium" style="margin: 0;">
             Theme block specimens are routed to future template and plugin cycles. Embeds remain excluded from this catalog until source, privacy, provider, and responsive-token policy exists.
           </p>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Theme gap rows</h3>
+          <div class="sg-demo prose">
+            <ul>
+              <li><strong>Navigation</strong> — template/FSE surface. Future template or plugin route.</li>
+              <li><strong>Query Loop / Post Template</strong> — theme template surface. No catalog specimen in v3.6.24.</li>
+              <li><strong>Site Logo / Site Title / Site Tagline</strong> — product identity and theme context required.</li>
+              <li><strong>Template Part</strong> — FSE structure surface. Future route.</li>
+              <li><strong>Breadcrumbs</strong> — WP 7.0 reference-only block. Future route.</li>
+              <li><strong>Comments / terms / post metadata family</strong> — theme context required; no implementation claim.</li>
+            </ul>
+          </div>
         </div>
       </section>
 

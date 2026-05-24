@@ -72,6 +72,24 @@ function axismundi_pilot_setup() : void {
 add_action( 'after_setup_theme', 'axismundi_pilot_setup' );
 
 /**
+ * Add the explicit theme auto state to the Pilot front-end root element.
+ *
+ * Pilot-only BACKLOG #22 evidence. Do not copy this filter into distributable
+ * themes without an explicit distributable skeleton bootstrap decision.
+ *
+ * @param string $output Existing language attributes.
+ * @return string Language attributes with a default data-theme when absent.
+ */
+function axismundi_pilot_language_attributes( string $output ) : string {
+	if ( is_admin() || false !== strpos( $output, 'data-theme=' ) ) {
+		return $output;
+	}
+
+	return trim( $output . ' data-theme="auto"' );
+}
+add_filter( 'language_attributes', 'axismundi_pilot_language_attributes', 20 );
+
+/**
  * Enqueue copied Pilot assets when Phase 2B has produced them.
  */
 function axismundi_pilot_enqueue_assets() : void {

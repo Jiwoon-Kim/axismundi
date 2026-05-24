@@ -102,11 +102,7 @@
       const buttons = document.querySelectorAll("[data-theme-button]");
 
       function apply(mode) {
-        if (mode === "auto") {
-          html.removeAttribute("data-theme");
-        } else {
-          html.setAttribute("data-theme", mode);
-        }
+        html.setAttribute("data-theme", mode);
         buttons.forEach((b) => {
           const active = b.dataset.themeButton === mode;
           /* 3-marker pattern (per components.css §27.5):

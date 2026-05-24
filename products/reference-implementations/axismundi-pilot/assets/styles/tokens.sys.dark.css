@@ -14,10 +14,10 @@
  *   1. :root[data-theme="dark"]
  *      → explicit user choice. Highest priority. Wins over both
  *        the light defaults in :root and the auto media query.
- *   2. @media (prefers-color-scheme: dark) :root:not([data-theme="light"])
- *      → auto-follow OS. Suppressed only when the user has
- *        explicitly picked light. data-theme="auto" or absent
- *        → media query takes effect.
+ *   2. @media (prefers-color-scheme: dark)
+ *        :root:not([data-theme]),
+ *        :root[data-theme="auto"]
+ *      → auto-follow OS for absent legacy state and explicit auto.
  *
  * The two blocks share an identical token set so cascade order
  * is enough; no !important needed.
@@ -82,7 +82,8 @@
  * §2.3 Auto mode — follow OS preference unless user picked light
  * ------------------------------------------------------------ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]),
+  :root[data-theme="auto"] {
     /* --- Brand: primary --- */
     --md-sys-color-primary:              var(--md-ref-palette-primary-80);
     --md-sys-color-on-primary:           var(--md-ref-palette-primary-20);
@@ -149,7 +150,8 @@
   --md-sys-elevation-shadow-level5: none;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]),
+  :root[data-theme="auto"] {
     --md-sys-elevation-shadow-level1: none;
     --md-sys-elevation-shadow-level2: none;
     --md-sys-elevation-shadow-level3: none;
@@ -157,5 +159,4 @@
     --md-sys-elevation-shadow-level5: none;
   }
 }
-
 

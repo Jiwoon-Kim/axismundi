@@ -449,7 +449,7 @@ This is the **honest default** — visible controls behave because non-functiona
 - Can be bundled with v3.5.0 Public Surface Reframe or executed standalone as a quick patch.
 - Independent of all other v3.4.x items.
 
-- **v3.5.0 Phase 1B charter pointer (2026-05-15)**: Recorded in `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md §6.2`. Execution scheduled for a v3.5.x mini-release ("theme policy") alongside BACKLOG #22 implementation. NOT closed until that mini-release lands.
+- **v3.5.0 Phase 1B charter pointer (2026-05-15)**: Recorded in `docs/v3.5.0/PUBLIC-SURFACE-CHARTER.md §6.2`. Originally scheduled for a v3.5.x mini-release ("theme policy") alongside BACKLOG #22 implementation. BACKLOG #22 closed at v3.6.22 outside that mini-release route; this charter pointer remains NOT closed until the theme-policy mini-release lands.
 - **v3.6.0 Pilot validation (2026-05-19)**: `axismundi-pilot/theme.json`
   confirms `settings.color.custom = false`, `settings.color.defaultPalette =
   false`, and 24 editor-facing M3 semantic color slugs. This validates the
@@ -520,7 +520,7 @@ axismundi-m3-interpreter/
 │   │   ├── m3-controls.js             (InspectorControls for M3 role/variant)
 │   │   └── preview-sync.js            (editor canvas / frontend sync)
 │   ├── runtime/
-│   │   ├── theme-mode.js              (data-theme auto/light/dark — paired with BACKLOG #22)
+│   │   ├── theme-mode.js              (data-theme auto/light/dark — v3.6.22 theme implementation closed; plugin module remains future BACKLOG #21 territory if needed)
 │   │   ├── token-resolver.js          (HCT → sys token computation)
 │   │   └── block-role-map.js          (core block → M3 role mapping table)
 │   └── styles/
@@ -564,7 +564,7 @@ The `role-map.json` is the ontology bridge:
 **Sequencing dependencies**:
 
 - BACKLOG #20 (theme-only color policy) should land first to establish the "no plugin = no customization" honest default.
-- BACKLOG #22 (explicit `data-theme="auto"` 3-state) should land in the plugin's runtime module (`src/runtime/theme-mode.js`).
+- BACKLOG #22 (explicit `data-theme="auto"` 3-state) landed in theme surfaces at v3.6.22; any future plugin runtime module scope belongs to BACKLOG #21.
 - The plugin's `role-map.json` becomes a downstream consumer of completed Component modules (BACKLOG #17 text input mapping, future text-field-WP-mapping, etc.).
 
 **Sub-decisions at execution time**:
@@ -582,9 +582,17 @@ The `role-map.json` is the ontology bridge:
 ### 22. Explicit `data-theme="auto"` 3-state model
 
 - **Bucket**: D/E — Theme runtime / lab module candidate
-- **Status**: Deferred
+- **Status**: Resolved / closed at v3.6.22.
 - **Target**: v3.5.0 Public Surface Reframe (paired with BACKLOG #11)
 - **Source**: `bindings/wordpress-material3/FEEDBACK-AND-STRATEGY.md` §6 (Impact on current v3.4.x work)
+- **v3.6.22 route**: JS writes explicit `data-theme="auto"`, CSS uses absent +
+  explicit-auto dark-mode selectors, Pilot front-end defaults root
+  `data-theme="auto"` via a Pilot-only `language_attributes` filter, and the
+  old inline head-script note is deferred to product-context / BACKLOG #21
+  territory.
+- **v3.6.22 close evidence**: `docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-5-CLOSE.md`
+  closes the current Axismundi surfaces after full validation, browser/runtime
+  verification, and v3.6.17 Pilot bridge source/copy contract restoration.
 
 **The current state**:
 
@@ -2622,7 +2630,9 @@ metadata, not closure.
 | Pilot-before | None currently. If `blocks.html` / `prose.html` verification surfaces a blocker, update this row before v3.6.0. |
 | Post-Pilot | #2 Avatar size tokens; #3 Floating toolbar selected color; #29 Card behavior patterns; #30 Extended FAB behavior patterns; #34 residual module picker/dialog UX; #35 root index Korean version and language toggle; #39 blocks/prose shell consistency; #41 WordPress block bridge state and ripple enhancement; #42 Token Architecture Refactor; #43 WP core block specimen wall / full variation audit |
 | Plugin territory | #6 Monotone SVG theming plugin concept; #21 M3 Interpreter Plugin separation; #38 Carousel plugin extraction |
-| Deferred / ongoing | #5 WordPress logo styleguide specimen; #7 Search bar leading icon known delta; #14 Material Symbols ligature layout shift; #16 Tooltip delay / touch long-press; #18 Snackbar class naming; #20 Theme-only color customization policy; #22 `data-theme="auto"` model; #23 Elevated Chip variants; #36 v4.0 directory restructure; #37 GitHub Pages dogfooding; #40 Modularized component CSS separation |
+| Deferred / ongoing | #5 WordPress logo styleguide specimen; #7 Search bar leading icon known delta; #14 Material Symbols ligature layout shift; #16 Tooltip delay / touch long-press; #18 Snackbar class naming; #20 Theme-only color customization policy; #23 Elevated Chip variants; #36 v4.0 directory restructure; #37 GitHub Pages dogfooding; #40 Modularized component CSS separation |
+
+Note: BACKLOG #22 `data-theme="auto"` model closed at v3.6.22; future plugin runtime expansion is routed through BACKLOG #21.
 
 
 ## Closed items

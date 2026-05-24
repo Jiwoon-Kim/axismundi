@@ -52,9 +52,10 @@ html {
   text-size-adjust: 100%;
 }
 
-/* Auto mode (no [data-theme] set) — follow system */
+/* Auto mode (explicit auto or absent legacy state) — follow system */
 @media (prefers-color-scheme: dark) {
-  html:not([data-theme="light"]) {
+  html:not([data-theme]),
+  html[data-theme="auto"] {
     color-scheme: dark;
   }
 }

@@ -105,11 +105,7 @@
   }
 
   function apply(mode) {
-    if (mode === "auto") {
-      ROOT.removeAttribute("data-theme");
-    } else {
-      ROOT.setAttribute("data-theme", mode);
-    }
+    ROOT.setAttribute("data-theme", mode);
 
     document.querySelectorAll("[data-theme-set]").forEach((button) => {
       const active = button.getAttribute("data-theme-set") === mode;

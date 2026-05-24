@@ -446,8 +446,8 @@
  * §8 Theme switcher (light / dark / auto)
  *
  * Reads stored preference from localStorage(`ax-theme`) and
- * applies it via `[data-theme]` on <html> (or removes it for
- * `auto`, falling back to `prefers-color-scheme`).
+ * applies it via `[data-theme]` on <html> (`auto` remains explicit
+ * and falls back to `prefers-color-scheme`).
  *
  * Markup contract — anywhere you want a theme switcher, drop
  * the radiogroup pattern (matches §6 keyboard nav).
@@ -505,11 +505,7 @@
   }
 
   function apply(mode) {
-    if (mode === "auto") {
-      ROOT.removeAttribute("data-theme");
-    } else {
-      ROOT.setAttribute("data-theme", mode);
-    }
+    ROOT.setAttribute("data-theme", mode);
   }
 
   function syncSwitchers(mode) {

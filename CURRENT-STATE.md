@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-23 (v3.6.18 closed)
+> **Last updated**: 2026-05-24 (v3.6.21 closed)
 
 ---
 
@@ -49,15 +49,18 @@ v3.6.15  VS Code Diagnostics Sweep                                       ✓ DON
 v3.6.16  Lab A11y Diagnostics Fix Sweep                                  ✓ DONE
 v3.6.17  WP Ripple Runtime Packaging Decision                            ✓ DONE
 v3.6.18  Core Block Mapping Audit                                        ✓ DONE
+v3.6.19  Asset Surface Audit + Cross-Reference Index                     ✓ DONE
+v3.6.20  Pilot vs Distributable Bootstrap                                ✓ DONE
+v3.6.21  Theme Switcher Contract                                         ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.18 Core Block Mapping Audit
+Current release:   v3.6.21 Theme Switcher Contract
 Current phase:     CLOSED
-Current state:     Core-block mapping crosswalk closed as no-code layered decision; Lock 5 eighth self-application held
-Next allowed work: Next cycle plan-first (Pilot/distributable theme bootstrap / brand assets follow-on / lab catalog split / media catalog / #21 / #44 / #46 / #47 / diagnostics policy follow-ons)
+Current state:     Theme-switcher selector / attribute / storage contract closed as no-code decision; Lock 5 eleventh self-application held
+Next allowed work: Next cycle plan-first (Route B comment hygiene / BACKLOG #22 explicit auto-state / Core Block Catalog split / distributable skeleton / workflow ontology / #21 / #44 / #46 / #47 / diagnostics policy follow-ons)
 ```
 
 ## Matrix Snapshot
@@ -317,6 +320,135 @@ Lock impact:
   no-code decision-only variant.
 - Out-of-cycle asset commits occupy neither the overall self-application slot
   nor the implementation-cycle slot.
+
+## v3.6.19 Close Outcome
+
+Closed by v3.6.19:
+
+- Asset Surface Audit + Cross-Reference Index.
+- Cross-cutting `docs/ASSET-SURFACE-INDEX.md`.
+- Stale Material Symbols README wording.
+- Stale `Opus/Ogg` wording in root license / notice docs.
+- Brand source-vs-release-seal README wording.
+
+Evidence:
+
+- Added `docs/ASSET-SURFACE-INDEX.md` and recorded seven asset surfaces:
+  `assets/brand/`, `assets/media/`, `compare/brand-assets-research/`,
+  `core/design-systems/material3/assets/`, Pilot assets,
+  `ontology-theme-pilot/assets/`, and generated `styleguide/`.
+- Preserved path-as-policy; no asset paths were consolidated.
+- Clarified the Material Symbols policy: all three style sets are stored, but
+  current runtime registers Rounded only.
+- Clarified MP3 source/reference plus Opus derivative wording in `NOTICE.md`
+  and `LICENSE-MATRIX.md`.
+
+Validation:
+
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`.
+- PASS: `git diff --check`.
+- Validator-generated report churn was restored.
+
+Lock impact:
+
+- Lock 1-4 preserved; no runtime, token, template, asset binary, or D-layer
+  route changed.
+- Lock 5 ninth clean self-application held.
+- Sixth implementation-cycle count recorded because v3.6.19 performed narrow
+  docs hygiene after diagnostic evidence.
+
+## v3.6.20 Close Outcome
+
+Closed by v3.6.20:
+
+- Pilot vs Distributable Bootstrap boundary decision.
+- `axismundi-pilot` remains a probe / reference implementation.
+- Future distributables must live under
+  `products/distributables/themes/<slug>/`.
+- `axismundi` is the default first-distributable slug candidate pending user
+  slug / product-name GO.
+
+Evidence:
+
+- Recorded that Pilot cannot become a distributable by rename: Pilot namespace,
+  constants, style header, text domain, pattern category slugs, readme, and
+  screenshot are probe-oriented.
+- Classified `axismundi-microblog` as stale for first-distributable guidance
+  and deferred as a possible future ActivityPub / microblog product.
+- Classified Pilot `readme.txt` and `screenshot.png` as probe artifacts, not
+  WordPress.org submission / release-seal artifacts.
+- Kept release-seal derivatives blocked until product context exists.
+
+Validation:
+
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`.
+- PASS: `git diff --check`.
+- Validator-generated report churn was restored.
+
+Lock impact:
+
+- Lock 1-4 preserved; no implementation surface changed.
+- Lock 5 tenth clean self-application held.
+- Sixth implementation-cycle count remained unchanged because v3.6.20 was a
+  no-code boundary decision variant.
+
+## v3.6.21 Close Outcome
+
+Closed by v3.6.21:
+
+- Theme Switcher Contract.
+- `.sg-theme` / `.ax-theme-switcher` selector ownership.
+- `data-theme-button` / `data-theme-set` attribute ownership.
+- owner-specific storage key contract.
+- BACKLOG #22 narrowing to explicit `data-theme="auto"` root-state
+  implementation.
+
+Evidence:
+
+- Formalized `.sg-theme` as the lab / styleguide / module selector contract.
+- Formalized `.ax-theme-switcher` as the Pilot / future product-facing selector
+  contract.
+- Confirmed current runtime already tolerates both selectors, so the drift was
+  contract wording, not a click-path defect.
+- Formalized `data-theme-button` as styleguide-local and `data-theme-set` as
+  production / module / Pilot runtime vocabulary.
+- Recorded occupied storage keys:
+  - `ax-theme` = lab module/prototype runtime;
+  - `axismundi.theme` = lab/styleguide catalog-local runtime;
+  - `axismundi-pilot-theme` = Pilot front-end runtime.
+- Recorded that future distributables must choose their own visitor storage key
+  during the skeleton / product-context cycle.
+
+Validation:
+
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`.
+- PASS: `git diff --check`.
+- Validator-generated report churn was restored.
+
+Routed forward:
+
+- Route B comment hygiene.
+- BACKLOG #22 explicit auto-state implementation.
+- Core Block Catalog 6-category split.
+- Distributable skeleton bootstrap, requiring user slug / product GO.
+- Root meta-doc maintenance was intentionally separated and is now in progress
+  as a maintenance commit.
+
+Lock impact:
+
+- Lock 1-4 preserved; no implementation surface changed.
+- Lock 5 eleventh clean self-application held.
+- Sixth implementation-cycle count remained unchanged because v3.6.21 was a
+  no-code contract decision variant.
 
 ## v3.6.0 Closed Notes
 

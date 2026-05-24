@@ -1,5 +1,110 @@
 # CHANGELOG
 
+## v3.6.21 - Theme Switcher Contract (2026-05-24)
+
+No-code contract decision for the theme switcher after the Pilot/distributable
+boundary decision.
+
+### Added
+
+- Added the v3.6.21 Phase 0/1/2/3/5 docs under `docs/v3.6.21/`.
+- Formalized selector ownership:
+  - `.sg-theme` remains the lab / styleguide / module selector contract.
+  - `.ax-theme-switcher` remains the Pilot / future product-facing selector
+    contract.
+- Formalized attribute and storage separation:
+  - `data-theme-button` remains styleguide-local.
+  - `data-theme-set` remains production / module / Pilot runtime vocabulary.
+  - storage keys remain owner-specific and are not globally unified.
+
+### Routed
+
+- Kept BACKLOG #22 open and narrowed it to explicit `data-theme="auto"`
+  root-state implementation across JS mutation, CSS cascade review, future PHP
+  root default, and multi-path verification.
+- Kept BACKLOG #21 as plugin territory for HCT, editor UI, Global Styles sync,
+  and custom color regeneration.
+- Routed Route B comment hygiene, BACKLOG #22 implementation, Core Block
+  Catalog split, distributable skeleton storage-key choice, and root meta-doc
+  maintenance as follow-ons.
+
+### Verified
+
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`: PASS.
+- Validator-generated report churn was restored.
+- `git diff --check`: PASS.
+
+## v3.6.20 - Pilot vs Distributable Bootstrap (2026-05-24)
+
+No-code boundary decision release separating the Pilot probe from any future
+distributable theme skeleton.
+
+### Added
+
+- Added the v3.6.20 Phase 0/1/2/3/5 docs under `docs/v3.6.20/`.
+- Recorded that `products/reference-implementations/axismundi-pilot/` remains a
+  probe / reference implementation and cannot become a distributable by rename.
+- Recorded `products/distributables/themes/<slug>/` as the future distributable
+  path shape, with `axismundi` as the default first-distributable slug candidate
+  pending explicit user slug / product-name GO.
+
+### Routed
+
+- Classified `axismundi-microblog` as stale for first-distributable guidance but
+  deferred as a possible future ActivityPub / microblog product.
+- Classified Pilot `readme.txt` and `screenshot.png` as probe artifacts, not
+  submission-ready release-seal derivatives.
+- Kept release-seal derivatives, asset-copy policy, Theme Switcher Contract,
+  Core Block Catalog split, and root meta-doc catch-up as follow-ons.
+
+### Verified
+
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`: PASS.
+- Validator-generated report churn was restored.
+- `git diff --check`: PASS.
+
+## v3.6.19 - Asset Surface Audit + Cross-Reference Index (2026-05-24)
+
+Narrow documentation-hygiene release that records asset-surface authority
+without consolidating paths, moving assets, or changing runtime references.
+
+### Added
+
+- Added the v3.6.19 Phase 0/1/2/3/5 docs under `docs/v3.6.19/`.
+- Added `docs/ASSET-SURFACE-INDEX.md` as a cross-cutting project document that
+  indexes asset authority, ownership, shipping posture, and known follow-ons.
+- Recorded seven asset surfaces: root brand/media, brand research, M3 core
+  assets, Pilot assets, ontology-theme-pilot assets, and generated styleguide
+  mirror.
+
+### Changed
+
+- Clarified `core/design-systems/material3/assets/README.md`: all three
+  Material Symbols style sets are stored, while current runtime registers
+  Rounded only.
+- Updated `NOTICE.md` and `LICENSE-MATRIX.md` from stale `Opus/Ogg` wording to
+  MP3 source/reference plus Opus derivative wording.
+- Updated `assets/brand/README.md` to state that source SVGs are complete while
+  deployment derivatives remain unlocked.
+
+### Verified
+
+- `php -l products/reference-implementations/axismundi-pilot/functions.php`:
+  PASS.
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `build_pilot_specimen_wall`, `validate:specimen-wall`, and
+  `validate:computed`: PASS.
+- Validator-generated report churn was restored.
+- `git diff --check`: PASS.
+
 ## v3.6.18 - Core Block Mapping Audit (2026-05-23)
 
 No-code mapping audit release that consolidates WordPress core-block ownership

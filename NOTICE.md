@@ -163,7 +163,7 @@ Summary:
 - `assets/media/image/image-placeholder-mogu-1024.webp` is a CC0 WordPress
   Photo Directory photo by Jiwoon Kim.
 - `assets/media/audio/` contains project-author supplied Suno-generated demo
-  audio and an Opus/Ogg conversion for theme demo use.
+  audio, with an MP3 source/reference and an Opus derivative for theme demo use.
 - `assets/media/video/video-placeholder-gwangan-720p.webm` is converted from a
   Pixabay video by Evgeniy__Mironov and remains under the Pixabay Content
   License. It is not project-owned.

@@ -13,11 +13,17 @@ assets/
 │   ├── noto-sans-kr/               ← Korean fallback (unicode-range)
 │   └── noto-serif-kr/
 └── icons/                          ← Apache 2.0
-    └── material-symbols-rounded/   ← M3 chrome icons (4-axis variable)
+    ├── material-symbols-outlined/  ← Stored design-system asset
+    ├── material-symbols-rounded/   ← Current theme chrome runtime style
+    └── material-symbols-sharp/     ← Stored design-system asset
 ```
 
-Material Symbols Outlined and Sharp are NOT included here — they are
-plugin territory (see ROADMAP). The theme ships only Rounded.
+Material Symbols Outlined, Rounded, and Sharp are stored here as design-system
+asset authority files.
+
+Current lab / Pilot / styleguide runtime CSS registers **Rounded only**. Outlined
+and Sharp remain plugin / future variation territory until a future cycle
+explicitly enables them in runtime CSS.
 
 ## Consumer paths
 

@@ -152,7 +152,7 @@ Open Font License 1.1. Each font subdirectory includes a verbatim `OFL.txt`.
 | License file | `assets/LICENSES.md` |
 | Brand assets | Original project identity assets by Jiwoon Kim; reserved for Axismundi project/theme/plugin identity use |
 | Image placeholder | WordPress Photo Directory CC0 photo by Jiwoon Kim |
-| Audio placeholder | Project-author supplied AI-generated Suno demo audio; Opus/Ogg derivative included |
+| Audio placeholder | Project-author supplied AI-generated Suno demo audio; MP3 source/reference plus Opus derivative included |
 | Video placeholder | Pixabay Content License video by Evgeniy__Mironov; not project-owned |
 | Status | Placeholder assets for block catalog / theme template work; not all assets share one license |
 

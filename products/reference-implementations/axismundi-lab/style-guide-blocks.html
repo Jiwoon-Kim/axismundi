@@ -277,21 +277,27 @@
       </nav>
 
       <nav class="sg-nav" aria-label="Block sections">
-        <div class="t-label-small sg-nav__group-label">Layout</div>
-        <a class="t-body-medium" href="#blocks-alignment">Alignment</a>
-
         <div class="t-label-small sg-nav__group-label">Text</div>
         <a class="t-body-medium" href="#blocks-paragraph">Paragraph</a>
         <a class="t-body-medium" href="#blocks-quote">Quote / Pullquote</a>
         <a class="t-body-medium" href="#blocks-code">Code / Verse</a>
         <a class="t-body-medium" href="#blocks-list">List</a>
+        <a class="t-body-medium" href="#blocks-table">Table</a>
+
+        <div class="t-label-small sg-nav__group-label">Media</div>
+        <a class="t-body-medium" href="#blocks-media">Image / Gallery</a>
 
         <div class="t-label-small sg-nav__group-label">Design</div>
+        <a class="t-body-medium" href="#blocks-alignment">Alignment helpers</a>
         <a class="t-body-medium" href="#blocks-separator">Separator</a>
-        <a class="t-body-medium" href="#blocks-table">Table</a>
-        <a class="t-body-medium" href="#blocks-media">Image / Gallery</a>
         <a class="t-body-medium" href="#blocks-group">Columns / Group / Card</a>
         <a class="t-body-medium" href="#blocks-button">Buttons</a>
+
+        <div class="t-label-small sg-nav__group-label">Widgets</div>
+        <a class="t-body-medium" href="#blocks-search">Search</a>
+
+        <div class="t-label-small sg-nav__group-label">Theme</div>
+        <a class="t-body-medium" href="#blocks-theme">Theme blocks route</a>
       </nav>
     </aside>
 
@@ -303,45 +309,9 @@
       <header style="margin-block-end: var(--space-xl);">
         <h1 class="t-display-small">WordPress Block Catalog</h1>
         <p class="t-body-large" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-sm); max-inline-size: 64ch;">
-          Visual reference for every <code>.wp-block-*</code> core block styled by <code>blocks.css</code>. Markup mirrors what the WordPress block editor emits — copy the snippets directly into a post or template.
+          Category-aware reference for WordPress core block surfaces styled by <code>blocks.css</code>. The catalog follows the Block Inserter categories Text, Media, Design, Widgets, and Theme; Embeds remain excluded pending source and privacy policy.
         </p>
       </header>
-
-      <!-- ========== Alignment ========== -->
-      <section class="sg-section" id="blocks-alignment">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Layout</div>
-          <h2 class="t-headline-medium">Alignment helpers</h2>
-          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            <code>.alignleft</code>, <code>.alignright</code>, <code>.aligncenter</code> for inline-flow alignment. <code>.alignwide</code>, <code>.alignfull</code> for content-width breakouts. Both wide/full <strong>require a bounded parent</strong> — the demo container below sets <code>max-inline-size</code> to ensure correct behavior.
-          </p>
-        </header>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Float left / right</h3>
-          <div class="sg-demo">
-            <div class="alignleft sg-sample-img sg-sample-img--small" style="inline-size: 120px;"></div>
-            <p class="t-body-medium">왼쪽 정렬 이미지 옆으로 본문이 흘러갑니다. <code>.alignleft</code>는 <code>float: left</code>와 <code>margin-inline-end: var(--space-md)</code>를 적용합니다. RTL 환경에서는 logical property가 자동으로 반대편으로 띄웁니다. 영문 sample text follows the floated image to demonstrate the wrap behavior across mixed scripts.</p>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Center</h3>
-          <div class="sg-demo">
-            <div class="aligncenter sg-sample-img" style="max-inline-size: 320px;"></div>
-            <p class="t-body-medium" style="margin-block-start: var(--space-md);">중앙 정렬된 figure 또는 image.</p>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Wide / full</h3>
-          <div class="sg-demo">
-            <p class="t-body-medium">기본 콘텐츠 폭의 본문.</p>
-            <div class="alignwide sg-sample-img" style="block-size: 80px;"></div>
-            <p class="t-body-medium" style="margin-block-start: var(--space-md);"><code>.alignwide</code>는 부모의 <code>max-inline-size</code>를 해제합니다. 이 demo 컨테이너 자체가 720px이라 그 안에서만 늘어납니다.</p>
-          </div>
-        </div>
-      </section>
 
       <!-- ========== Paragraph ========== -->
       <section class="sg-section" id="blocks-paragraph">
@@ -369,6 +339,7 @@
           </div>
         </div>
       </section>
+
 
       <!-- ========== Quote / Pullquote ========== -->
       <section class="sg-section" id="blocks-quote">
@@ -401,11 +372,12 @@
         </div>
       </section>
 
+
       <!-- ========== Code / Preformatted / Verse ========== -->
       <section class="sg-section" id="blocks-code">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Text</div>
-          <h2 class="t-headline-medium">Code / Preformatted / Verse</h2>
+          <h2 class="t-headline-medium">Code / Preformatted / Poetry</h2>
         </header>
 
         <div class="sg-subsection">
@@ -430,7 +402,7 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">core/verse</h3>
+          <h3 class="t-title-medium sg-subsection__head">core/verse — Poetry</h3>
           <div class="sg-demo">
 <pre class="wp-block-verse">진달래꽃
 김소월
@@ -441,6 +413,7 @@ console.log(greet('World'));</code></pre>
           </div>
         </div>
       </section>
+
 
       <!-- ========== List ========== -->
       <section class="sg-section" id="blocks-list">
@@ -492,35 +465,11 @@ console.log(greet('World'));</code></pre>
         </div>
       </section>
 
-      <!-- ========== Separator ========== -->
-      <section class="sg-section" id="blocks-separator">
-        <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Design</div>
-          <h2 class="t-headline-medium">Separator — 5 styles</h2>
-        </header>
-
-        <div class="sg-demo">
-          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant);">Default (25% width)</p>
-          <hr class="wp-block-separator">
-
-          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Wide (100%)</p>
-          <hr class="wp-block-separator is-style-wide">
-
-          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Dots (centered ···)</p>
-          <hr class="wp-block-separator is-style-dots">
-
-          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Divider inset (Axismundi block style)</p>
-          <hr class="wp-block-separator is-style-divider-inset">
-
-          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Divider middle-inset</p>
-          <hr class="wp-block-separator is-style-divider-middle-inset">
-        </div>
-      </section>
 
       <!-- ========== Table ========== -->
       <section class="sg-section" id="blocks-table">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
           <h2 class="t-headline-medium">Table</h2>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             <code>core/table</code>은 <code>&lt;figure class="wp-block-table"&gt;</code> 안에 <code>&lt;table&gt;</code>이 들어있는 형태로 출력됩니다. <code>blocks.css</code>가 figure를 wrapper로 활용 (border, radius, overflow-x).
@@ -671,10 +620,11 @@ console.log(greet('World'));</code></pre>
         </div>
       </section>
 
+
       <!-- ========== Image / Gallery ========== -->
       <section class="sg-section" id="blocks-media">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <div class="t-label-medium sg-section__eyebrow">Media</div>
           <h2 class="t-headline-medium">Image &amp; Gallery</h2>
         </header>
 
@@ -702,6 +652,70 @@ console.log(greet('World'));</code></pre>
           </div>
         </div>
       </section>
+
+
+      <!-- ========== Alignment ========== -->
+      <section class="sg-section" id="blocks-alignment">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design · local layout helper</div>
+          <h2 class="t-headline-medium">Alignment helpers</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>.alignleft</code>, <code>.alignright</code>, <code>.aligncenter</code> for inline-flow alignment. <code>.alignwide</code>, <code>.alignfull</code> for content-width breakouts. Both wide/full <strong>require a bounded parent</strong> — the demo container below sets <code>max-inline-size</code> to ensure correct behavior.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Float left / right</h3>
+          <div class="sg-demo">
+            <div class="alignleft sg-sample-img sg-sample-img--small" style="inline-size: 120px;"></div>
+            <p class="t-body-medium">왼쪽 정렬 이미지 옆으로 본문이 흘러갑니다. <code>.alignleft</code>는 <code>float: left</code>와 <code>margin-inline-end: var(--space-md)</code>를 적용합니다. RTL 환경에서는 logical property가 자동으로 반대편으로 띄웁니다. 영문 sample text follows the floated image to demonstrate the wrap behavior across mixed scripts.</p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Center</h3>
+          <div class="sg-demo">
+            <div class="aligncenter sg-sample-img" style="max-inline-size: 320px;"></div>
+            <p class="t-body-medium" style="margin-block-start: var(--space-md);">중앙 정렬된 figure 또는 image.</p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Wide / full</h3>
+          <div class="sg-demo">
+            <p class="t-body-medium">기본 콘텐츠 폭의 본문.</p>
+            <div class="alignwide sg-sample-img" style="block-size: 80px;"></div>
+            <p class="t-body-medium" style="margin-block-start: var(--space-md);"><code>.alignwide</code>는 부모의 <code>max-inline-size</code>를 해제합니다. 이 demo 컨테이너 자체가 720px이라 그 안에서만 늘어납니다.</p>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Separator ========== -->
+      <section class="sg-section" id="blocks-separator">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Separator — 5 styles</h2>
+        </header>
+
+        <div class="sg-demo">
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant);">Default (25% width)</p>
+          <hr class="wp-block-separator">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Wide (100%)</p>
+          <hr class="wp-block-separator is-style-wide">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Dots (centered ···)</p>
+          <hr class="wp-block-separator is-style-dots">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Divider inset (Axismundi block style)</p>
+          <hr class="wp-block-separator is-style-divider-inset">
+
+          <p class="t-body-small" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-lg);">Divider middle-inset</p>
+          <hr class="wp-block-separator is-style-divider-middle-inset">
+        </div>
+      </section>
+
 
       <!-- ========== Group / Columns / Card variants ========== -->
       <section class="sg-section" id="blocks-group">
@@ -764,6 +778,7 @@ console.log(greet('World'));</code></pre>
         </div>
       </section>
 
+
       <!-- ========== Buttons ========== -->
       <section class="sg-section" id="blocks-button">
         <header class="sg-section__head">
@@ -792,6 +807,48 @@ console.log(greet('World'));</code></pre>
               <a class="wp-block-button__link">Text</a>
             </div>
           </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Search ========== -->
+      <section class="sg-section" id="blocks-search">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Widgets</div>
+          <h2 class="t-headline-medium">Search</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/search</code> is represented because <code>blocks.css</code> already defines <code>is-style-filled-search</code> and Pilot fixtures carry the same block style. This does not open broader widget coverage.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filled search</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search is-style-filled-search" role="search" aria-label="Search">
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" id="ax-block-catalog-search" type="search" aria-label="Search" placeholder="Search components, blocks, and prose" />
+                <button class="wp-block-search__button" type="submit">Search</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Theme blocks ========== -->
+      <section class="sg-section" id="blocks-theme">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Theme</div>
+          <h2 class="t-headline-medium">Theme blocks route</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            Theme blocks such as Navigation, Query, Post Template, Site Logo, and Breadcrumbs are FSE/template surfaces. v3.6.23 records the category route without implementing templates, pattern overrides, or block bindings.
+          </p>
+        </header>
+
+        <div class="sg-demo">
+          <p class="t-body-medium" style="margin: 0;">
+            Theme block specimens are routed to future template and plugin cycles. Embeds remain excluded from this catalog until source, privacy, provider, and responsive-token policy exists.
+          </p>
         </div>
       </section>
 

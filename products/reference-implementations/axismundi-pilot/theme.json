@@ -1,13 +1,13 @@
 {
-  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "$schema": "https://schemas.wp.org/wp/6.7/theme.json",
   "version": 3,
   "settings": {
     "_axismundi_provenance": "v3.6.0 Phase 2A scaffold. Theme-only mode; tokens.css remains source of truth; theme.json is the Gutenberg slug registry and compatibility contract.",
     "appearanceTools": true,
     "useRootPaddingAwareAlignments": true,
     "layout": {
-      "contentSize": "640px",
-      "wideSize": "1280px"
+      "contentSize": "645px",
+      "wideSize": "1340px"
     },
     "color": {
       "custom": false,

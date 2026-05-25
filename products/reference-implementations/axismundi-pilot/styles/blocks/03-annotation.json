@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schemas.wp.org/wp/6.7/theme.json",
+  "version": 3,
+  "title": "Annotation",
+  "slug": "text-annotation",
+  "blockTypes": ["core/heading", "core/paragraph"],
+  "styles": {
+    "css": "width: fit-content",
+    "typography": {
+      "fontSize": "var:preset|font-size|label-medium",
+      "lineHeight": "var(--md-sys-typescale-label-medium-line-height)",
+      "fontWeight": "var(--md-sys-typescale-label-medium-weight)",
+      "letterSpacing": "var(--md-sys-typescale-label-medium-tracking)"
+    },
+    "border": {
+      "color": "currentColor",
+      "style": "solid",
+      "width": "1px",
+      "radius": "var(--md-sys-shape-corner-full)"
+    },
+    "spacing": {
+      "padding": {
+        "top": "var:preset|spacing|xs",
+        "right": "var:preset|spacing|sm",
+        "bottom": "var:preset|spacing|xs",
+        "left": "var:preset|spacing|sm"
+      }
+    },
+    "elements": {
+      "link": {
+        "typography": {
+          "textDecoration": "none"
+        }
+      }
+    }
+  }
+}

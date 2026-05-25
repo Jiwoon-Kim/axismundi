@@ -1,0 +1,26 @@
+<?php
+/**
+ * Title: Axismundi Pilot header
+ * Slug: axismundi-pilot/header
+ * Categories: header
+ * Block Types: core/template-part/header
+ * Description: Pilot header with site title, navigation, search, and theme mode controls.
+ */
+?>
+<!-- wp:group {"className":"is-style-card-filled","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
+<div class="wp-block-group is-style-card-filled">
+	<!-- wp:site-title {"level":0} /-->
+
+	<!-- wp:navigation {"layout":{"type":"flex","justifyContent":"right"}} /-->
+
+	<!-- wp:search {"label":"Search","showLabel":false,"buttonText":"Search"} /-->
+
+	<!-- wp:html -->
+	<div class="ax-theme-switcher" role="radiogroup" aria-label="Theme">
+		<button type="button" data-theme-set="light" role="radio" aria-checked="false">Light</button>
+		<button type="button" data-theme-set="dark" role="radio" aria-checked="false">Dark</button>
+		<button type="button" data-theme-set="auto" role="radio" aria-checked="true">Auto</button>
+	</div>
+	<!-- /wp:html -->
+</div>
+<!-- /wp:group -->

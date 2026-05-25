@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.wp.org/wp/6.7/theme.json",
+  "version": 3,
+  "slug": "section-5",
+  "title": "Section 5",
+  "blockTypes": ["core/group", "core/columns", "core/column"],
+  "styles": {
+    "color": {
+      "background": "var(--md-sys-color-inverse-surface)",
+      "text": "var(--md-sys-color-inverse-on-surface)"
+    },
+    "elements": {
+      "link": {
+        "color": {
+          "text": "currentColor"
+        }
+      }
+    }
+  }
+}

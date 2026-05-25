@@ -141,6 +141,7 @@
     },
     "typography": {
       "customFontSize": false,
+      "defaultFontSizes": false,
       "fluid": true,
       "fontFamilies": [
         {
@@ -304,10 +305,36 @@
           "slug": "label-small",
           "name": "Label Small",
           "size": "var(--md-sys-typescale-label-small-size)"
+        },
+        {
+          "slug": "small",
+          "name": "Small",
+          "size": "var(--md-sys-typescale-body-small-size)"
+        },
+        {
+          "slug": "medium",
+          "name": "Medium",
+          "size": "var(--md-sys-typescale-body-medium-size)"
+        },
+        {
+          "slug": "large",
+          "name": "Large",
+          "size": "var(--md-sys-typescale-title-large-size)"
+        },
+        {
+          "slug": "x-large",
+          "name": "X Large",
+          "size": "var(--md-sys-typescale-headline-medium-size)"
+        },
+        {
+          "slug": "xx-large",
+          "name": "XX Large",
+          "size": "var(--md-sys-typescale-headline-large-size)"
         }
       ]
     },
     "spacing": {
+      "defaultSpacingSizes": false,
       "blockGap": true,
       "margin": true,
       "padding": true,
@@ -315,32 +342,67 @@
         {
           "slug": "xs",
           "name": "XS",
-          "size": "4px"
+          "size": "var(--space-xs)"
         },
         {
           "slug": "sm",
           "name": "SM",
-          "size": "8px"
+          "size": "var(--space-sm)"
         },
         {
           "slug": "md",
           "name": "MD",
-          "size": "16px"
+          "size": "var(--space-md)"
         },
         {
           "slug": "lg",
           "name": "LG",
-          "size": "24px"
+          "size": "var(--space-lg)"
         },
         {
           "slug": "xl",
           "name": "XL",
-          "size": "32px"
+          "size": "var(--space-xl)"
         },
         {
-          "slug": "xxl",
-          "name": "XXL",
-          "size": "48px"
+          "slug": "10",
+          "name": "10",
+          "size": "var(--space-xs)"
+        },
+        {
+          "slug": "20",
+          "name": "20",
+          "size": "var(--space-sm)"
+        },
+        {
+          "slug": "30",
+          "name": "30",
+          "size": "var(--space-md)"
+        },
+        {
+          "slug": "40",
+          "name": "40",
+          "size": "var(--space-lg)"
+        },
+        {
+          "slug": "50",
+          "name": "50",
+          "size": "var(--space-xl)"
+        },
+        {
+          "slug": "60",
+          "name": "60",
+          "size": "calc(var(--space-xl) + var(--space-sm))"
+        },
+        {
+          "slug": "70",
+          "name": "70",
+          "size": "calc(var(--space-xl) + var(--space-md))"
+        },
+        {
+          "slug": "80",
+          "name": "80",
+          "size": "calc(var(--space-xl) * 2)"
         }
       ],
       "units": [

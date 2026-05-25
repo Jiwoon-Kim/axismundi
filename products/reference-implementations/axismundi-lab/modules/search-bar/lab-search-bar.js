@@ -39,13 +39,14 @@
 
   function parseSuggestions(bar) {
     const raw = bar.getAttribute("data-search-suggestions");
+    const iconOverride = bar.getAttribute("data-search-suggestion-icon");
     if (!raw) return DEFAULT_SUGGESTIONS;
 
     const labels = raw.split("|").map((item) => item.trim()).filter(Boolean);
     if (!labels.length) return DEFAULT_SUGGESTIONS;
 
     return labels.map((label, index) => ({
-      icon: index === 0 ? "history" : "search",
+      icon: iconOverride || (index === 0 ? "history" : "search"),
       label
     }));
   }

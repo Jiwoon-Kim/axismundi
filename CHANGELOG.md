@@ -1,5 +1,94 @@
 # CHANGELOG
 
+## v3.6.27 - Pilot TT5 Structural Transplant (2026-05-25)
+
+Multi-surface Pilot implementation cycle using TT5 1.5 as structural evidence,
+not visual/content source.
+
+### Changed
+
+- Updated Pilot compatibility metadata to `0.2.0-pilot`, WordPress 6.7 floor,
+  and WP 7.0 tested header.
+- Updated Pilot `theme.json` schema to WP 6.7 and layout to `645px` /
+  `1340px`.
+- Converted Pilot header to a pattern-driven part via
+  `patterns/header.php`.
+
+### Added
+
+- Added the v3.6.27 Phase 0/1/2/3/5 docs under `docs/v3.6.27/`.
+- Added five Pilot templates: `404.html`, `archive.html`, `home.html`,
+  `page-no-title.html`, and `search.html`.
+- Added additive JSON style variations under `styles/blocks/` and
+  `styles/sections/`: Display, Subtitle, Annotation, and Section 1-5.
+
+### Routed
+
+- Kept footer pattern conversion, header-large-title/sidebar parts, PHP
+  `register_block_style()` migration, inverse palette slug normalization,
+  `.wp-env.json` version hygiene, Google Sites extraction, and distributable
+  skeleton out of scope.
+- Kept TT5 hex palette, Manrope / Fira Code, TT5 pattern content, and
+  `twentytwentyfive` namespace out of Pilot.
+
+### Verified
+
+- `npm test`: PASS; Axis A/B/C/D/E/F/G all 1.000.
+- `npm run validate:computed`: PASS.
+- `npm run validate:specimen-wall`: PASS.
+- `php -l functions.php`: PASS.
+- wp-env runtime reported WordPress 7.0 and active theme `Axismundi Pilot`
+  `0.2.0-pilot`.
+- `WP_Theme_JSON_Resolver::get_style_variations("block")` returned all 8
+  added JSON variations.
+- Front-end smoke passed `/`, search, single, author archive, and 404 routes
+  with no horizontal overflow.
+- `git diff --check`: PASS.
+
+## v3.6.26 - TT5 Docs + Codebase Audit Phase 0 (2026-05-25)
+
+Plan-first audit cycle establishing TT5 as an official WordPress comparator
+before Pilot template work.
+
+### Added
+
+- Added `docs/v3.6.26/TT5-DOCS-CODEBASE-AUDIT-PHASE-0-PLAN.md`.
+- Added official WordPress.org TT5 documentation as behavior/documentation
+  evidence.
+- Confirmed local TT5 1.5 inventory: templates 8, parts 7, patterns 98,
+  style variation JSON files 8 plus default, block style JSON files 4,
+  section style JSON files 5.
+
+### Routed
+
+- Preserved source boundary: WordPress.org doc = behavior evidence, local TT5
+  code = schema/template evidence, v3.6.25 matrix = evaluation frame.
+- Kept implementation, Google Sites extraction, `decisions/`, and M16/M17
+  promotion out of Phase 0.
+
+## v3.6.25 - Webdesign Decision Matrix Ontology (2026-05-25)
+
+Narrow documentation/ontology implementation cycle promoting the webdesign
+methodology notes into Axismundi corpus / atlas / core.
+
+### Added
+
+- Added the v3.6.25 Phase 0/1/2/3/5 docs under `docs/v3.6.25/`.
+- Added refined corpus seed under `corpus/webdesign-craftsman-written/`.
+- Added `atlas/web-production-workflow/` workflow, decision-point,
+  deliverable, and retention-policy atlas files.
+- Added `core/web-production/web-production-ontology.md`.
+- Established five-tier documentation retention policy: keep / archive / fold /
+  restore_remove / route_forward.
+
+### Routed
+
+- Kept `decisions/` route-forward.
+- Avoided a broad `knowledge/` umbrella.
+- Kept TT5, Google Sites, Pilot implementation, and distributable work as
+  later matrix consumers.
+- Promoted M15; kept M16 and M17 on watch pending second-cycle evidence.
+
 ## v3.6.24 - Core Block Style Guide Full Spec (2026-05-24)
 
 Narrow implementation release completing the core block style-guide catalog

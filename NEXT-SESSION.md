@@ -1,10 +1,10 @@
-# NEXT-SESSION.md - Post-v3.6.24 Handoff
+# NEXT-SESSION.md - Post-v3.6.27 Handoff
 
-> **Status**: v3.6.0-v3.6.24 are closed. The latest closed cycle is v3.6.24
-> Core Block Style Guide Full Spec, which completed the v3.6.18 routed-forward
-> catalog work across v3.6.23 + v3.6.24.
+> **Status**: v3.6.0-v3.6.27 are closed. The latest closed cycle is v3.6.27
+> Pilot TT5 Structural Transplant, which used TT5 1.5 as structural evidence
+> for the Axismundi Pilot without importing TT5 visual/content values.
 > **Use**: read at the start of the next Codex/Claude session.
-> **Last updated**: 2026-05-24.
+> **Last updated**: 2026-05-25.
 
 ---
 
@@ -16,35 +16,34 @@ Read these current sources before using the historical reading order below:
 1. AGENTS.md or CLAUDE.md
 2. CURRENT-STATE.md
 3. PROJECT-CONTEXT.md
-4. CHANGELOG.md latest entries v3.6.24 / v3.6.23 / v3.6.22
+4. CHANGELOG.md latest entries v3.6.27 / v3.6.26 / v3.6.25
 5. ROADMAP.md current tail
 6. BACKLOG.md #21 / #22 / #44 / #46 / #47 / #14
-7. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-5-CLOSE.md
-8. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-3-VERIFICATION.md
-9. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-2-IMPLEMENTATION.md
-10. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-1-REPORT.md
-11. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-0-PLAN.md
-12. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-5-CLOSE.md
-13. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-3-VERIFICATION.md
-14. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-2-IMPLEMENTATION.md
-15. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-1-REPORT.md
-16. docs/v3.6.23/CORE-BLOCK-CATALOG-SPLIT-PHASE-0-PLAN.md
-17. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-5-CLOSE.md
-18. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-3-VERIFICATION.md
-19. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-2-IMPLEMENTATION.md
-20. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-1-REPORT.md
-21. docs/v3.6.22/THEME-SWITCHER-AUTO-STATE-PHASE-0-PLAN.md
-22. docs/v3.6.21/THEME-SWITCHER-CONTRACT-PHASE-5-CLOSE.md
+7. docs/v3.6.27/PILOT-TT5-TRANSPLANT-PHASE-5-CLOSE.md
+8. docs/v3.6.27/PILOT-TT5-TRANSPLANT-PHASE-3-VERIFICATION.md
+9. docs/v3.6.27/PILOT-TT5-TRANSPLANT-PHASE-2-IMPLEMENTATION.md
+10. docs/v3.6.27/PILOT-TT5-TRANSPLANT-PHASE-1-REPORT.md
+11. docs/v3.6.27/PILOT-TT5-TRANSPLANT-PHASE-0-PLAN.md
+12. docs/v3.6.26/TT5-DOCS-CODEBASE-AUDIT-PHASE-0-PLAN.md
+13. docs/v3.6.25/WEBDESIGN-DECISION-MATRIX-ONTOLOGY-PHASE-5-CLOSE.md
+14. docs/v3.6.25/WEBDESIGN-DECISION-MATRIX-ONTOLOGY-PHASE-3-VERIFICATION.md
+15. docs/v3.6.25/WEBDESIGN-DECISION-MATRIX-ONTOLOGY-PHASE-2-IMPLEMENTATION.md
+16. docs/v3.6.25/WEBDESIGN-DECISION-MATRIX-ONTOLOGY-PHASE-1-REPORT.md
+17. docs/v3.6.25/WEBDESIGN-DECISION-MATRIX-ONTOLOGY-PHASE-0-PLAN.md
+18. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-5-CLOSE.md
+19. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-3-VERIFICATION.md
+20. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-2-IMPLEMENTATION.md
+21. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-1-REPORT.md
+22. docs/v3.6.24/CORE-BLOCK-STYLE-GUIDE-FULL-SPEC-PHASE-0-PLAN.md
 ```
 
-The next route is not distributable skeleton yet. Follow the current order:
+The next route is not distributable skeleton yet. Current candidates:
 
 ```txt
-cycle-external: WP block styleguide human visual QA
-v3.6.25:       Webdesign decision matrix ontology
-v3.6.26:       TT5 docs + codebase audit
-v3.6.27:       Pilot template implementation pass + Google Sites extraction
-v3.6.28+:      distributable skeleton bootstrap, only with explicit user slug GO
+v3.6.28 candidate A: Google Sites extraction through v3.6.25 matrix + v3.6.27 Pilot structure
+v3.6.28 candidate B: Pilot hygiene - inverse palette slugs / `.wp-env.json` 7.0 staleness / optional footer pattern route
+v3.6.28 candidate C: another routed-forward audit chosen by user
+blocked: distributable skeleton until explicit user slug GO
 ```
 
 ## 0a) Historical Reading Order
@@ -200,12 +199,12 @@ v3.6.21  Theme Switcher Contract                     CLOSED
 v3.6.22  Explicit data-theme auto root state          CLOSED
 v3.6.23  Core Block Catalog 6-Category Split          CLOSED
 v3.6.24  Core Block Style Guide Full Spec             CLOSED
+v3.6.25  Webdesign Decision Matrix Ontology           CLOSED
+v3.6.26  TT5 Docs + Codebase Audit Phase 0            CLOSED
+v3.6.27  Pilot TT5 Structural Transplant              CLOSED
 
 Next route:
-  Cycle-external WP block styleguide human visual QA first.
-  Then start v3.6.25 plan-first as Webdesign decision matrix ontology.
-  TT5 docs/codebase audit follows only after the ontology framework exists.
-  Pilot template implementation and Google Sites extraction follow TT5 audit.
+  Decide v3.6.28: Google Sites extraction vs Pilot hygiene vs another audit.
   Distributable skeleton remains blocked until explicit user slug GO.
 ```
 
@@ -222,7 +221,53 @@ Local workspace:
 C:\Users\thaum\dev\axismundi
 ```
 
-## 2) v3.6.24 Close Summary
+## 2) v3.6.27 Close Summary
+
+Closed by v3.6.27:
+
+- Pilot TT5 Structural Transplant.
+- TT5 structural evidence transplanted into `products/reference-implementations/axismundi-pilot/`.
+- Pilot theme metadata updated to `0.2.0-pilot`, WP 6.7 floor, WP 7.0 tested.
+- Pilot `theme.json` schema moved to WP 6.7, layout moved to `645px` / `1340px`.
+- Templates expanded to 8 files.
+- Header converted to pattern-driven part.
+- Additive JSON style variations added for Display, Subtitle, Annotation, and Section 1-5.
+
+Evidence:
+
+- `npm test` PASS, Axis A-G all 1.000.
+- `validate:computed` and `validate:specimen-wall` PASS.
+- wp-env runtime reported WordPress 7.0 and active theme `Axismundi Pilot|0.2.0-pilot`.
+- `WP_Theme_JSON_Resolver::get_style_variations("block")` returned all 8 JSON variations.
+- Front-end smoke passed `/`, search, single, author archive, and 404 with overflowX 0.
+- No TT5 hex, TT5 font, TT5 pattern body, or TT5 namespace import.
+
+Routed next:
+
+- Google Sites extraction candidate.
+- Pilot hygiene candidate: inverse palette slugs, `.wp-env.json` runtime-version staleness, optional footer pattern conversion.
+- Distributable skeleton still blocked until explicit user slug GO.
+
+## 2a) v3.6.26 Close Summary
+
+Closed by v3.6.26:
+
+- TT5 docs + codebase audit Phase 0 plan.
+- Official WordPress.org TT5 documentation added as behavior evidence.
+- Local TT5 1.5 inventory confirmed.
+- Source boundary locked: official doc / local TT5 code / v3.6.25 matrix.
+
+## 2b) v3.6.25 Close Summary
+
+Closed by v3.6.25:
+
+- Webdesign Decision Matrix Ontology.
+- Refined corpus, web-production workflow atlas, and core web-production ontology.
+- Five-tier documentation retention policy.
+- `decisions/` remains route-forward; `knowledge/` umbrella not created.
+- M15 promoted; M16 and M17 remain watch.
+
+## 2c) v3.6.24 Close Summary
 
 Closed by v3.6.24:
 
@@ -251,7 +296,7 @@ Routed next:
   extraction work.
 - Distributable skeleton only after explicit user slug GO.
 
-## 2a) v3.6.23 Close Summary
+## 2d) v3.6.23 Close Summary
 
 Closed by v3.6.23:
 

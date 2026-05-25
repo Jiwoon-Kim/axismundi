@@ -4,7 +4,7 @@
 > boundaries.
 > **Stable architecture**: see `PROJECT-CONTEXT.md`.
 > **Session handoff**: see `NEXT-SESSION.md`.
-> **Last updated**: 2026-05-24 (v3.6.24 closed)
+> **Last updated**: 2026-05-25 (v3.6.27 closed)
 
 ---
 
@@ -55,15 +55,18 @@ v3.6.21  Theme Switcher Contract                                         ✓ DON
 v3.6.22  Explicit data-theme auto root state                              ✓ DONE
 v3.6.23  Core Block Catalog 6-Category Split                              ✓ DONE
 v3.6.24  Core Block Style Guide Full Spec                                 ✓ DONE
+v3.6.25  Webdesign Decision Matrix Ontology                               ✓ DONE
+v3.6.26  TT5 Docs + Codebase Audit Phase 0                                ✓ DONE
+v3.6.27  Pilot TT5 Structural Transplant                                  ✓ DONE
 ```
 
 ## Current Phase
 
 ```txt
-Current release:   v3.6.24 Core Block Style Guide Full Spec
+Current release:   v3.6.27 Pilot TT5 Structural Transplant
 Current phase:     CLOSED
-Current state:     Core block style-guide catalog full spec closed; v3.6.18 routed-forward catalog work completed across v3.6.23 + v3.6.24
-Next allowed work: Cycle-external WP block styleguide human visual QA; then v3.6.25 plan-first Webdesign decision matrix ontology before TT5 / Pilot template / Google Sites extraction work
+Current state:     TT5 structural evidence transplanted into Axismundi Pilot; Pilot now has 8-template surface, pattern-driven header, and additive WP theme.json block/section style variations
+Next allowed work: Decide v3.6.28 route: Google Sites extraction, Pilot palette / wp-env hygiene, or another routed-forward audit. Distributable skeleton remains blocked until explicit user slug GO.
 ```
 
 ## Matrix Snapshot
@@ -83,9 +86,88 @@ Next allowed work: Cycle-external WP block styleguide human visual QA; then v3.6
 37 canonical entries total.
 ```
 
-v3.6.0 does not change component row status yet. Carousel #34 remains
+v3.6.0-v3.6.27 do not change component row status. Carousel #34 remains
 historically DONE from v3.5.12, but is Pilot-excluded / plugin-routed for the
 theme Pilot.
+
+## v3.6.27 Close Outcome
+
+Closed by v3.6.27:
+
+- Pilot TT5 Structural Transplant.
+- TT5-derived structural surface imported into Pilot without copying TT5 visual
+  values or content.
+- Pilot `theme.json` updated to WP 6.7 schema with `645px` / `1340px` layout.
+- Pilot `style.css` / `functions.php` version synchronized at `0.2.0-pilot`.
+- Pilot templates expanded to 8 default hierarchy files.
+- Header converted to pattern-driven part via `patterns/header.php`.
+- Additive `styles/blocks/` and `styles/sections/` JSON style variations added.
+
+Evidence:
+
+- `WP_Theme_JSON_Resolver::get_style_variations("block")` under wp-env
+  WordPress 7.0 returned all 8 JSON variations: Display, Subtitle, Annotation,
+  and Section 1-5.
+- Front-end smoke passed for `/`, search, single, author archive, and 404
+  routes with no horizontal overflow.
+- `home.html` is now the blog home template and preserves the computed filled
+  button gate.
+- TT5 import guard found no TT5 hex palette, Manrope / Fira Code,
+  `twentytwentyfive` namespace, or `accent-*` imports.
+
+Validation:
+
+- PASS: `npm test`; Axis A/B/C/D/E/F/G all 1.000.
+- PASS: `npm run validate:computed`.
+- PASS: `npm run validate:specimen-wall`.
+- PASS: `php -l products/reference-implementations/axismundi-pilot/functions.php`.
+- PASS: JSON parse over new `styles/**/*.json`.
+- PASS: `git diff --check`.
+
+Routed forward:
+
+- `inverse-surface` / `inverse-on-surface` Pilot palette slug registration and
+  section-5 `var:preset` normalization.
+- Optional footer pattern conversion.
+- `.wp-env.json` version staleness cleanup: file says `6.9.4`, runtime reports
+  `7.0`.
+- `header-large-title` and `sidebar` parts only when consumed by templates.
+- PHP `register_block_style()` to JSON style variation migration as a separate
+  hygiene cycle.
+- Google Sites extraction as v3.6.28+ candidate.
+- Distributable skeleton only after explicit user slug GO.
+
+## v3.6.26 Close Outcome
+
+Closed by v3.6.26:
+
+- TT5 docs + codebase audit Phase 0 plan.
+- Official WordPress.org TT5 documentation added as behavior/documentation
+  evidence.
+- Local TT5 1.5 inventory confirmed: templates, parts, patterns, style
+  variations, block style files, section style files, typography, and color
+  presets.
+- Source boundary locked: WordPress.org doc = behavior evidence, local TT5 code
+  = schema/template evidence, v3.6.25 matrix = evaluation frame.
+
+## v3.6.25 Close Outcome
+
+Closed by v3.6.25:
+
+- Webdesign Decision Matrix Ontology.
+- Promoted refined corpus seed under `corpus/webdesign-craftsman-written/`.
+- Added `atlas/web-production-workflow/` workflow / decision / deliverable /
+  retention atlas files.
+- Added `core/web-production/web-production-ontology.md`.
+- Established five-tier documentation retention policy:
+  keep / archive / fold / restore_remove / route_forward.
+- Kept `decisions/` route-forward and avoided a broad `knowledge/` umbrella.
+
+Memory:
+
+- M15 promoted: project Axismundi documentation retention policy.
+- M16 watch: web-production core ontology.
+- M17 watch: layered Decision Matrix schema.
 
 ## v3.6.24 Close Outcome
 

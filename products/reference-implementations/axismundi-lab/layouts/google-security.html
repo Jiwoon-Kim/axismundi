@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ko" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Axismundi Lab - Google Account Security Layout</title>
+
+  <link rel="stylesheet" href="../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../stylesheets/base.css" />
+  <link rel="stylesheet" href="../stylesheets/components.css" />
+  <link rel="stylesheet" href="../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../modules/ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="../modules/app-bar/lab-app-bar.css" />
+  <link rel="stylesheet" href="../modules/nav-rail/lab-nav-rail.css" />
+  <link rel="stylesheet" href="../modules/nav-bar/lab-nav-bar.css" />
+  <link rel="stylesheet" href="../modules/list/lab-list.css" />
+  <link rel="stylesheet" href="../modules/card/lab-card.css" />
+  <link rel="stylesheet" href="../modules/chip/lab-chip.css" />
+  <link rel="stylesheet" href="../modules/search-bar/lab-search-bar.css" />
+  <link rel="stylesheet" href="../modules/button/lab-button.css" />
+  <link rel="stylesheet" href="../modules/switch/lab-switch.css" />
+
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+
+    body.google-security-demo {
+      margin: 0;
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface);
+    }
+
+    .google-account-shell {
+      display: grid;
+      grid-template-rows: 64px minmax(0, 1fr);
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-block-size: 100dvh;
+      background: var(--md-sys-color-surface);
+    }
+
+    .google-account-shell__topbar {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 20;
+      grid-row: 1;
+      grid-column: 1 / -1;
+      background: var(--md-sys-color-surface-container-low);
+    }
+
+    .google-account-shell__topbar .app-bar {
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .google-account-brand {
+      display: inline-flex;
+      gap: 8px;
+      align-items: baseline;
+      white-space: nowrap;
+    }
+
+    .google-account-brand__mark {
+      font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .google-account-brand__label {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .google-account-shell__topbar .app-bar__title {
+      flex: 1 1 auto;
+      min-inline-size: 0;
+      padding-inline: 8px;
+    }
+
+    .google-account-search {
+      inline-size: min(100%, 720px);
+      min-inline-size: 0;
+      background: var(--md-sys-color-surface-container-high);
+      box-shadow: none;
+    }
+
+    .google-account-theme {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .google-account-theme .chip {
+      block-size: 32px;
+      padding-inline: 12px;
+    }
+
+    .google-account-shell__side {
+      position: sticky;
+      inset-block-start: 64px;
+      grid-row: 2;
+      grid-column: 1;
+      align-self: start;
+      block-size: calc(100dvh - 64px);
+      padding-block: 24px 16px;
+      overflow: auto;
+      background: var(--md-sys-color-surface);
+    }
+
+    .google-account-shell__side .nav-rail.is-expanded {
+      width: 255px;
+      max-width: 255px;
+      gap: 0;
+      padding-block: 0;
+      padding-inline: 20px;
+    }
+
+    .google-account-shell__side .nav-rail__item {
+      gap: 12px;
+      padding-inline: 8px 16px;
+    }
+
+    .google-account-shell__side .nav-rail__icon {
+      display: grid;
+      place-items: center;
+      inline-size: 40px;
+      block-size: 40px;
+      border-radius: var(--md-sys-shape-corner-full);
+      background: var(--md-sys-color-surface-container-high);
+      color: var(--md-sys-color-primary);
+    }
+
+    .google-account-shell__side .nav-rail__item.is-active .nav-rail__icon {
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+    }
+
+    .google-account-side-footer {
+      display: flex;
+      gap: 20px;
+      padding: 88px 28px 0;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .google-account-side-footer a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .google-account-shell__main {
+      grid-row: 2;
+      grid-column: 2;
+      min-inline-size: 0;
+      padding: 0 24px 56px;
+    }
+
+    .google-security-content {
+      display: grid;
+      gap: 32px;
+      inline-size: min(100%, 640px);
+      margin-inline: auto;
+      padding-block: 32px;
+    }
+
+    .google-security-hero {
+      display: grid;
+      gap: 8px;
+    }
+
+    .google-security-hero h1,
+    .google-security-section h2,
+    .google-security-section p {
+      margin: 0;
+    }
+
+    .google-security-hero p,
+    .google-security-section__supporting {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .google-security-section {
+      display: grid;
+      gap: 14px;
+    }
+
+    .google-security-section__head {
+      display: grid;
+      gap: 4px;
+      padding-inline: 8px;
+    }
+
+    .google-security-stack {
+      display: grid;
+      gap: 2px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .google-security-stack .ax-list__item {
+      min-block-size: 64px;
+      border-radius: 4px;
+      background: var(--md-sys-color-surface-container);
+    }
+
+    .google-security-stack .ax-list__item:first-child {
+      border-start-start-radius: 20px;
+      border-start-end-radius: 20px;
+    }
+
+    .google-security-stack .ax-list__item:last-child {
+      border-end-start-radius: 20px;
+      border-end-end-radius: 20px;
+    }
+
+    .google-security-stack .ax-list__leading {
+      color: var(--md-sys-color-primary);
+    }
+
+    .google-security-count {
+      display: inline-grid;
+      place-items: center;
+      min-inline-size: 36px;
+      block-size: 36px;
+      padding-inline: 8px;
+      border-radius: var(--md-sys-shape-corner-full);
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface-container-high);
+    }
+
+    .google-security-feature {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      padding: 20px 24px;
+      border-radius: 20px;
+      background: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .google-security-feature__icon {
+      display: grid;
+      place-items: center;
+      inline-size: 40px;
+      block-size: 40px;
+      border-radius: var(--md-sys-shape-corner-full);
+      color: var(--md-sys-color-on-secondary-container);
+      background: var(--md-sys-color-secondary-container);
+    }
+
+    .google-security-feature__body {
+      display: grid;
+      gap: 6px;
+      min-inline-size: 0;
+    }
+
+    .google-security-chip {
+      justify-self: start;
+      color: var(--md-sys-color-on-primary-container);
+      background: var(--md-sys-color-primary-container);
+      border-color: transparent;
+    }
+
+    .google-security-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-inline: 8px;
+    }
+
+    .google-account-mobile-nav {
+      display: none;
+      position: sticky;
+      inset-block-end: 0;
+      z-index: 30;
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container);
+    }
+
+    @media (max-width: 999px) {
+      .google-account-shell {
+        grid-template-columns: 96px minmax(0, 1fr);
+      }
+
+      .google-account-shell__side .nav-rail.is-expanded {
+        width: 88px;
+        padding-inline: 8px;
+      }
+
+      .google-account-shell__side .nav-rail__item {
+        justify-content: center;
+        padding-inline: 0;
+      }
+
+      .google-account-shell__side .nav-rail__label,
+      .google-account-side-footer,
+      .google-account-theme {
+        display: none;
+      }
+    }
+
+    @media (max-width: 599px) {
+      .google-account-shell {
+        display: block;
+        min-block-size: auto;
+      }
+
+      .google-account-shell__topbar {
+        position: sticky;
+        inset-block-start: 0;
+      }
+
+      .google-account-shell__topbar .app-bar {
+        padding-inline: 8px;
+      }
+
+      .google-account-brand {
+        display: none;
+      }
+
+      .google-account-shell__side {
+        display: none;
+      }
+
+      .google-account-shell__main {
+        padding: 0 16px 16px;
+      }
+
+      .google-security-content {
+        gap: 24px;
+        padding-block: 24px 96px;
+      }
+
+      .google-security-feature {
+        grid-template-columns: 1fr;
+        padding: 18px;
+      }
+
+      .google-security-stack .ax-list__item {
+        padding-inline: 14px;
+      }
+
+      .google-account-mobile-nav {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body class="google-security-demo">
+  <div class="google-account-shell">
+    <header class="google-account-shell__topbar">
+      <div class="app-bar app-bar--small" role="banner" aria-label="Account layout top bar">
+        <div class="app-bar__leading">
+          <span class="google-account-brand t-title-large" aria-label="Account">
+            <span class="google-account-brand__mark">Account</span>
+            <span class="google-account-brand__label">Lab</span>
+          </span>
+        </div>
+        <div class="app-bar__title">
+          <label class="search-bar google-account-search">
+            <span class="search-bar__leading-icon">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">search</span>
+            </span>
+            <input class="search-bar__input" name="q" type="search" placeholder="계정 검색" aria-label="계정 검색" />
+            <span class="search-bar__trailing"></span>
+          </label>
+        </div>
+        <div class="app-bar__trailing">
+          <div class="google-account-theme" role="radiogroup" aria-label="Theme">
+            <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false">
+              <span class="chip__label">Light</span>
+            </button>
+            <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false">
+              <span class="chip__label">Dark</span>
+            </button>
+            <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true">
+              <span class="chip__label">Auto</span>
+            </button>
+          </div>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Help" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">help</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Apps" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">apps</span>
+          </button>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Profile" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <aside class="google-account-shell__side" aria-label="Account sections">
+      <nav class="nav-rail is-expanded" aria-label="Account navigation">
+        <a class="nav-rail__item" href="#" aria-label="홈" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+          </span>
+          <span class="nav-rail__label">홈</span>
+        </a>
+        <a class="nav-rail__item" href="#" aria-label="개인 정보" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">badge</span>
+          </span>
+          <span class="nav-rail__label">개인 정보</span>
+        </a>
+        <a class="nav-rail__item is-active" href="#" aria-current="page" aria-label="보안 및 로그인" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">lock</span>
+          </span>
+          <span class="nav-rail__label">보안 및 로그인</span>
+        </a>
+        <a class="nav-rail__item" href="#" aria-label="비밀번호" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">password</span>
+          </span>
+          <span class="nav-rail__label">비밀번호</span>
+        </a>
+        <a class="nav-rail__item" href="#" aria-label="연결된 앱" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">hub</span>
+          </span>
+          <span class="nav-rail__label">연결된 앱</span>
+        </a>
+        <a class="nav-rail__item" href="#" aria-label="데이터 보호" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">toggle_on</span>
+          </span>
+          <span class="nav-rail__label">데이터 보호</span>
+        </a>
+      </nav>
+      <div class="google-account-side-footer t-label-medium" aria-label="Policy links">
+        <a href="#">약관</a>
+        <a href="#">도움말</a>
+        <a href="#">정보</a>
+      </div>
+    </aside>
+
+    <main class="google-account-shell__main">
+      <div class="google-security-content">
+        <header class="google-security-hero">
+          <p class="t-label-large">Google Account pattern extraction</p>
+          <h1 class="t-display-small">보안 및 로그인</h1>
+          <p class="t-body-medium">
+            계정 상태, 로그인 방법, 연결된 앱, 브라우징 보호를 한 column 안에서
+            stacked action surface로 보여주는 레이아웃 실험입니다.
+          </p>
+        </header>
+
+        <section class="google-security-section" aria-labelledby="security-activity-heading">
+          <div class="google-security-section__head">
+            <h2 class="t-title-medium" id="security-activity-heading">최근 보안 활동</h2>
+            <p class="t-body-small google-security-section__supporting">활동을 검토하고 계정 접근 흐름을 확인합니다.</p>
+          </div>
+          <ul class="ax-list google-security-stack">
+            <li>
+              <a class="ax-list__item ax-list__item--two-line has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">verified_user</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">새 앱에 액세스 권한 부여됨</span>
+                  <span class="ax-list__supporting">오늘 오전</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="ax-list__item has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">history</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">보안 활동 검토</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="google-security-section" aria-labelledby="signin-heading">
+          <div class="google-security-section__head">
+            <h2 class="t-title-medium" id="signin-heading">로그인하는 방법</h2>
+            <p class="t-body-small google-security-section__supporting">계정 접근에 필요한 인증 수단을 모아 보여줍니다.</p>
+          </div>
+          <ul class="ax-list google-security-stack">
+            <li>
+              <a class="ax-list__item ax-list__item--two-line has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">phonelink_lock</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">2단계 인증</span>
+                  <span class="ax-list__supporting">사용 중</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="chip chip--filter google-security-chip t-label-large" aria-label="Enabled">
+                    <span class="chip__label">사용</span>
+                  </span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="ax-list__item ax-list__item--two-line has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">key</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">패스키 및 보안 키</span>
+                  <span class="ax-list__supporting">패스키 2개</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="ax-list__item ax-list__item--two-line has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">password</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">비밀번호</span>
+                  <span class="ax-list__supporting">최근 변경됨</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="google-security-section" aria-labelledby="devices-heading">
+          <div class="google-security-section__head">
+            <h2 class="t-title-medium" id="devices-heading">내 기기</h2>
+            <p class="t-body-small google-security-section__supporting">로그인된 기기와 전체 관리 진입점을 분리합니다.</p>
+          </div>
+          <ul class="ax-list google-security-stack">
+            <li>
+              <a class="ax-list__item has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">devices</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">분실 기기 찾기</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="ax-list__item has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__content">
+                  <span class="ax-list__label">모든 기기 관리</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="google-security-count t-label-large">9</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="google-security-section" aria-labelledby="apps-heading">
+          <div class="google-security-section__head">
+            <h2 class="t-title-medium" id="apps-heading">연결된 앱</h2>
+            <p class="t-body-small google-security-section__supporting">최근 연결된 앱과 전체 목록 진입점을 같은 surface 안에 둡니다.</p>
+          </div>
+          <ul class="ax-list google-security-stack">
+            <li>
+              <a class="ax-list__item has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">extension</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">Creative Cloud</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="ax-list__item has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__leading">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">palette</span>
+                </span>
+                <span class="ax-list__content">
+                  <span class="ax-list__label">Design Board</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">chevron_right</span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a class="ax-list__item has-state-layer" href="#" data-ax-ripple="bounded">
+                <span class="ax-list__content">
+                  <span class="ax-list__label">연결된 앱 모두 보기</span>
+                </span>
+                <span class="ax-list__trailing">
+                  <span class="google-security-count t-label-large">52</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <article class="google-security-feature">
+          <span class="google-security-feature__icon">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">travel_explore</span>
+          </span>
+          <div class="google-security-feature__body">
+            <h2 class="t-title-medium">향상된 세이프 브라우징</h2>
+            <p class="t-body-medium">위험한 웹사이트, 다운로드, 확장 프로그램으로부터 계정을 보호하는 설정 카드입니다.</p>
+            <span class="chip chip--filter google-security-chip t-label-large">
+              <span class="material-symbols-rounded notranslate chip__leading-icon" translate="no" aria-hidden="true" draggable="false">check_circle</span>
+              <span class="chip__label">사용</span>
+            </span>
+          </div>
+        </article>
+
+        <article class="google-security-feature">
+          <span class="google-security-feature__icon">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">vpn_key</span>
+          </span>
+          <div class="google-security-feature__body">
+            <h2 class="t-title-medium">비밀번호 관리자</h2>
+            <p class="t-body-medium">저장된 비밀번호와 로그인된 기기의 사용 상태를 summary card로 보여줍니다.</p>
+          </div>
+        </article>
+
+        <div class="google-security-actions">
+          <button class="ax-button is-outlined has-state-layer t-label-large" type="button" data-ax-ripple>
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">search</span>
+            <span>계정 검색</span>
+          </button>
+          <button class="ax-button is-outlined has-state-layer t-label-large" type="button" data-ax-ripple>
+            <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">help</span>
+            <span>도움말 보기</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <nav class="nav-bar google-account-mobile-nav" aria-label="Mobile account navigation">
+      <button class="nav-bar__item" type="button" aria-label="홈" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">home</span>
+        </span>
+        <span class="nav-bar__label">홈</span>
+      </button>
+      <button class="nav-bar__item is-active" type="button" aria-current="page" aria-label="보안" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">lock</span>
+        </span>
+        <span class="nav-bar__label">보안</span>
+      </button>
+      <button class="nav-bar__item" type="button" aria-label="앱" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">hub</span>
+        </span>
+        <span class="nav-bar__label">앱</span>
+      </button>
+      <button class="nav-bar__item" type="button" aria-label="도움말" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">help</span>
+        </span>
+        <span class="nav-bar__label">도움말</span>
+      </button>
+    </nav>
+  </div>
+
+  <script defer src="../modules/ripple/lab-ripple.js"></script>
+  <script defer src="../modules/search-bar/lab-search-bar.js"></script>
+  <script defer src="../scripts/theme.js"></script>
+</body>
+</html>

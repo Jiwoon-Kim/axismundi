@@ -1581,9 +1581,10 @@ textarea.text-field__input {
  * surface and lives in Chunk D.
  *
  * Container: surface-container-high, level3, corner-full, 56px.
- * Hover surface = state layer Pattern A on the host.
- * Focus indicator = standard outer +2px (§0.11) — search bar
- * stands alone, no clipping concern.
+ * Expressive contained layout: action-bearing bars collapse inline
+ * space/gap to 4px while no-action bars keep 16px edge space.
+ * Hover/pressed surface = state layer Pattern A on the host.
+ * Focus indicator = Search-specific 3px outline.
  * ============================================================ */
 .search-bar {
   position: relative;
@@ -1632,6 +1633,15 @@ textarea.text-field__input {
 .search-bar:hover::before {
   opacity: var(--md-sys-state-hover-state-layer-opacity);
 }
+.search-bar:active::before {
+  opacity: var(--md-sys-state-pressed-state-layer-opacity);
+}
+
+/* Expressive contained layout when trailing actions are present. */
+.search-bar:has(.search-bar__trailing > *) {
+  gap: var(--space-xs);
+  padding-inline: var(--space-xs);
+}
 
 .search-bar__leading-icon,
 .search-bar__trailing {
@@ -1656,7 +1666,7 @@ textarea.text-field__input {
 
 .search-bar__trailing {
   color: var(--md-sys-color-on-surface-variant);
-  gap: var(--space-sm);
+  gap: 0;
 }
 .search-bar__trailing > svg,
 .search-bar__trailing > .ax-icon {
@@ -1677,9 +1687,9 @@ textarea.text-field__input {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* Focus — standard outer +2px (§0.11) */
+/* Focus — Search-specific 3px outline */
 .search-bar:focus-within {
-  outline: 2px solid var(--md-sys-color-secondary);
+  outline: 3px solid var(--md-sys-color-secondary);
   outline-offset: 2px;
 }
 

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Axismundi Lab - TT5 Header Large Title Part</title>
+
+  <link rel="stylesheet" href="../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../stylesheets/base.css" />
+  <link rel="stylesheet" href="../stylesheets/components.css" />
+  <link rel="stylesheet" href="../modules/ripple/lab-ripple.css" />
+
+  <style>
+    :root { color-scheme: light dark; }
+
+    body.tt5-part-demo {
+      margin: 0;
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface);
+    }
+
+    .tt5-large-header {
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface);
+    }
+
+    .tt5-large-header__inner {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 24px;
+      align-items: center;
+      justify-content: space-between;
+      inline-size: min(100% - 32px, 1340px);
+      margin-inline: auto;
+      padding-block: 12px;
+    }
+
+    .tt5-large-header__title {
+      color: inherit;
+      font-size: 100px;
+      line-height: 1.2;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .tt5-large-header__nav {
+      display: grid;
+      gap: 0;
+      justify-items: end;
+      text-align: end;
+    }
+
+    .tt5-large-header__nav a {
+      color: inherit;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .tt5-part-context {
+      block-size: 120px;
+      background: var(--md-sys-color-surface-container-low);
+    }
+
+    @media (max-width: 760px) {
+      .tt5-large-header__inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .tt5-large-header__title {
+        font-size: clamp(56px, 18vw, 100px);
+      }
+
+      .tt5-large-header__nav {
+        justify-items: start;
+        text-align: start;
+      }
+    }
+  </style>
+</head>
+<body class="tt5-part-demo">
+  <!--
+    @fragment (template-part/header-large-title; standalone specimen shell only)
+    @tt5-source
+    file: parts/header-large-title.html -> patterns/header-large-title.php
+    pattern-slug: twentytwentyfive/header-large-title
+    blocks:
+      wp:group[constrained, border-bottom=accent-6 1px, padding-top/bottom=0]
+        wp:group[align=wide, padding-top/bottom=spacing-30, flex nowrap, justifyContent=space-between, verticalAlignment=center]
+          wp:site-title[level=0, fontSize=100px, lineHeight=1.2]
+          wp:group[constrained, padding-left/right=0]
+            wp:navigation[orientation=vertical, justifyContent=right, blockGap=0]
+
+    @layout-ontology v0.1
+    wp-template-role: template-part/header-large-title
+    layout-decision: 100px site title left, vertical right-aligned navigation, bottom border accent-6 mapped to outline-variant
+    layout-intent: high-emphasis brand header with compact vertical navigation
+    lab-mapping: site-title[100px] -> direct CSS font-size; vertical navigation -> right-aligned link stack
+    evidence-source: local TT5 1.5 parts/header-large-title.html + patterns/header-large-title.php
+    evaluation-lens: brand-scale, navigation-orientation, header-variant
+    axismundi-route: Pilot_harness_later
+    source-confidence: official_source
+  -->
+
+  <header class="tt5-large-header">
+    <div class="tt5-large-header__inner">
+      <a class="tt5-large-header__title" href="#">Axismundi</a>
+      <nav class="tt5-large-header__nav t-body-large" aria-label="Primary">
+        <a href="#">Blog</a>
+        <a href="#">About</a>
+        <a href="#">FAQs</a>
+        <a href="#">Authors</a>
+      </nav>
+    </div>
+  </header>
+  <div class="tt5-part-context" aria-hidden="true"></div>
+
+  <script defer src="../modules/ripple/lab-ripple.js"></script>
+</body>
+</html>

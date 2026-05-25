@@ -229,6 +229,42 @@ input.search-bar__input[type="search"]::-ms-reveal {
   background: color-mix(in srgb, var(--md-sys-color-error-container) 36%, transparent);
 }
 
+.lab-search-bar-google-account {
+  max-inline-size: 720px;
+  block-size: 48px;
+  padding-inline: 0;
+  gap: 0;
+  border-radius: 28px;
+  box-shadow: none;
+}
+
+.lab-search-bar-card .lab-search-bar-google-account {
+  max-inline-size: 720px;
+}
+
+.lab-search-bar-google-account:has(.search-bar__trailing > *) {
+  padding-inline: 0;
+  gap: 0;
+}
+
+.lab-search-bar-google-account .search-bar__leading-action,
+.lab-search-bar-google-account .search-bar__trailing .ax-icon-button {
+  flex: 0 0 auto;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.lab-search-bar-google-account .search-bar__leading-action {
+  order: -1;
+}
+
+.lab-search-bar-google-account .search-bar__input {
+  block-size: 46px;
+}
+
+.lab-search-bar-google-account .search-bar__trailing {
+  gap: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .search-bar {
     transition: background-color 0s, box-shadow 0s, transform 0s;

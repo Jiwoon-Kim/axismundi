@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ko" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Axismundi Lab - TT5 Archive Layout</title>
+
+  <link rel="stylesheet" href="../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../stylesheets/base.css" />
+  <link rel="stylesheet" href="../stylesheets/components.css" />
+  <link rel="stylesheet" href="../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../modules/ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="../modules/app-bar/lab-app-bar.css" />
+  <link rel="stylesheet" href="../modules/button/lab-button.css" />
+
+  <style>
+    :root { color-scheme: light dark; }
+
+    body.tt5-layout-demo {
+      margin: 0;
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface);
+    }
+
+    .tt5-site-header {
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface);
+    }
+
+    .tt5-site-header .app-bar {
+      inline-size: min(100% - 32px, 1340px);
+      margin-inline: auto;
+      padding-inline: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .tt5-site-title {
+      color: inherit;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .tt5-navigation {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-end;
+    }
+
+    .tt5-navigation a {
+      display: inline-flex;
+      align-items: center;
+      min-block-size: 40px;
+      padding-inline: 14px;
+      border-radius: var(--md-sys-shape-corner-full);
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+    }
+
+    .tt5-navigation a:hover {
+      background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+
+    .tt5-layout-main {
+      inline-size: min(100% - 32px, 645px);
+      margin-inline: auto;
+      margin-block-start: 40px;
+      padding-block-end: 72px;
+    }
+
+    .tt5-archive-head {
+      display: grid;
+      gap: 12px;
+      margin-block-end: 40px;
+    }
+
+    .tt5-archive-head h1,
+    .tt5-archive-head p {
+      margin: 0;
+    }
+
+    .tt5-archive-head em {
+      color: var(--md-sys-color-primary);
+      font-style: normal;
+    }
+
+    .tt5-archive-head p {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .tt5-post-list {
+      display: grid;
+      gap: 0;
+    }
+
+    .tt5-post {
+      display: grid;
+      gap: 20px;
+      padding-block: 40px;
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .tt5-post:first-child {
+      border-block-start: 0;
+      padding-block-start: 0;
+    }
+
+    .tt5-post__image {
+      display: block;
+      overflow: hidden;
+      aspect-ratio: 3 / 2;
+      border-radius: 20px;
+      background:
+        linear-gradient(135deg, var(--md-sys-color-primary-container), transparent 72%),
+        linear-gradient(315deg, var(--md-sys-color-tertiary-container), var(--md-sys-color-secondary-container));
+    }
+
+    .tt5-post__image.is-alt {
+      background:
+        linear-gradient(135deg, var(--md-sys-color-secondary-container), transparent 72%),
+        linear-gradient(315deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));
+    }
+
+    .tt5-post__image.is-muted {
+      background:
+        linear-gradient(135deg, var(--md-sys-color-surface-container-highest), transparent 72%),
+        linear-gradient(315deg, var(--md-sys-color-secondary-container), var(--md-sys-color-surface-variant));
+    }
+
+    .tt5-post h2,
+    .tt5-post p {
+      margin: 0;
+    }
+
+    .tt5-post h2 a {
+      color: inherit;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+
+    .tt5-post time {
+      display: inline-flex;
+      margin-block-start: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .tt5-pagination {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      padding-block-start: 40px;
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .tt5-pagination__numbers {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .tt5-site-footer {
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-low);
+    }
+
+    .tt5-site-footer__inner {
+      display: grid;
+      gap: 32px;
+      inline-size: min(100% - 32px, 1340px);
+      margin-inline: auto;
+      padding-block: 48px 40px;
+    }
+
+    .tt5-footer-main {
+      display: grid;
+      gap: 32px;
+    }
+
+    .tt5-footer-brand {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tt5-footer-brand p {
+      max-inline-size: 42ch;
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .tt5-footer-navs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px 56px;
+    }
+
+    .tt5-footer-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tt5-footer-nav a,
+    .tt5-footer-bottom a {
+      color: inherit;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .tt5-footer-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      justify-content: space-between;
+      padding-block-start: 32px;
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .tt5-footer-bottom p {
+      margin: 0;
+    }
+
+    @media (min-width: 760px) {
+      .tt5-footer-main {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .tt5-site-header .app-bar {
+        inline-size: min(100% - 24px, 1340px);
+      }
+
+      .tt5-navigation {
+        display: none;
+      }
+
+      .tt5-layout-main {
+        inline-size: min(100% - 24px, 645px);
+        margin-block-start: 32px;
+      }
+
+      .tt5-pagination {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .tt5-pagination__numbers {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body class="tt5-layout-demo">
+  <!--
+    @tt5-source
+    file: templates/archive.html
+    source-doc: https://wordpress.org/documentation/article/twenty-twenty-five/
+    blocks:
+      template-part/header
+      wp:group[tagName=main, margin-top=spacing-60, layout=constrained]
+        wp:query-title[type=archive]
+        wp:term-description
+        wp:pattern[twentytwentyfive/template-query-loop]
+          wp:query[perPage=3, inherit=true]
+          per post: featured-image[3/2] + post-title[x-large] + post-content[full] + post-date[small]
+          query-pagination[paginationArrow=arrow, justifyContent=space-between]
+      template-part/footer
+  -->
+  <!--
+    @layout-ontology v0.1
+    wp-template-role: archive (category/tag/date/author archive; higher priority than index)
+    layout-decision: constrained 645px, archive title with taxonomy context, optional term-description, same query-loop as index
+    layout-intent: contextual browsing with scoped taxonomy context while preserving index reading flow
+    lab-mapping: query-title[archive] -> h1 with taxonomy type + term name; term-description -> optional supporting paragraph; template-query-loop -> identical 1-col full-post list
+    evidence-source: local TT5 1.5 templates/archive.html + patterns/template-query-loop.php
+    evaluation-lens: content-density, taxonomy-navigation, reading-flow
+    axismundi-route: Pilot_harness_later
+    source-confidence: official_source
+  -->
+
+  <header class="tt5-site-header">
+    <div class="app-bar app-bar--small" role="banner" aria-label="Site header">
+      <div class="app-bar__leading">
+        <a class="tt5-site-title t-title-large" href="#">Axismundi</a>
+      </div>
+      <nav class="app-bar__title tt5-navigation t-label-large" aria-label="Primary">
+        <a href="#">Blog</a>
+        <a href="#">About</a>
+        <a href="#">FAQs</a>
+        <a href="#">Authors</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="tt5-layout-main">
+    <header class="tt5-archive-head">
+      <h1 class="t-display-small">Category: <em>Design</em></h1>
+      <p class="t-body-large">Notes about design systems, WordPress block themes, and typography decisions.</p>
+    </header>
+
+    <section class="tt5-post-list" aria-label="Archive posts">
+      <article class="tt5-post">
+        <a class="tt5-post__image" href="#" aria-label="Archive taxonomy context"></a>
+        <h2 class="t-headline-large"><a href="#">Archive taxonomy context</a></h2>
+        <div class="prose">
+          <p>The archive template adds contextual heading and optional term description before reusing the same default query loop as index and home.</p>
+          <p>That means taxonomy browsing changes the scope of the list, not the shape of each post entry.</p>
+        </div>
+        <time class="t-body-small" datetime="2026-05-26">May 26, 2026</time>
+      </article>
+
+      <article class="tt5-post">
+        <a class="tt5-post__image is-alt" href="#" aria-label="Scoped reading flow"></a>
+        <h2 class="t-headline-large"><a href="#">Scoped reading flow</a></h2>
+        <div class="prose">
+          <p>The same 3:2 featured image, linked title, full content, and date rhythm remains in place. The ontology entry records this as contextual browsing over a stable reading pattern.</p>
+          <p>For Pilot extraction, archive can share most index styling and only specialize the heading surface.</p>
+        </div>
+        <time class="t-body-small" datetime="2026-05-25">May 25, 2026</time>
+      </article>
+
+      <article class="tt5-post">
+        <a class="tt5-post__image is-muted" href="#" aria-label="Term description"></a>
+        <h2 class="t-headline-large"><a href="#">Term description as optional support</a></h2>
+        <div class="prose">
+          <p>The term description block may render empty depending on taxonomy data. This specimen shows it as a supporting paragraph to preserve the layout slot.</p>
+          <p>That optionality matters for route-forward decisions in a later Pilot harness.</p>
+        </div>
+        <time class="t-body-small" datetime="2026-05-24">May 24, 2026</time>
+      </article>
+    </section>
+
+    <nav class="tt5-pagination" aria-label="Archive pagination">
+      <button class="ax-button is-text has-state-layer t-label-large" type="button" data-ax-ripple>
+        <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">arrow_back</span>
+        <span>Previous</span>
+      </button>
+      <span class="tt5-pagination__numbers" aria-label="Page numbers">
+        <button class="ax-button is-filled has-state-layer t-label-large" type="button" aria-current="page" data-ax-ripple>1</button>
+        <button class="ax-button is-text has-state-layer t-label-large" type="button" data-ax-ripple>2</button>
+        <button class="ax-button is-text has-state-layer t-label-large" type="button" data-ax-ripple>3</button>
+      </span>
+      <button class="ax-button is-text has-state-layer t-label-large" type="button" data-ax-ripple>
+        <span>Next</span>
+        <span class="material-symbols-rounded notranslate ax-button-icon" translate="no" aria-hidden="true" draggable="false">arrow_forward</span>
+      </button>
+    </nav>
+  </main>
+
+  <footer class="tt5-site-footer">
+    <div class="tt5-site-footer__inner">
+      <div class="tt5-footer-main">
+        <div class="tt5-footer-brand">
+          <span class="t-headline-small">Axismundi</span>
+          <p class="t-body-medium">A lab translation of the Twenty Twenty-Five archive template.</p>
+        </div>
+        <div class="tt5-footer-navs t-body-medium" aria-label="Footer navigation">
+          <nav class="tt5-footer-nav" aria-label="Site">
+            <a href="#">Blog</a>
+            <a href="#">About</a>
+            <a href="#">FAQs</a>
+            <a href="#">Authors</a>
+          </nav>
+          <nav class="tt5-footer-nav" aria-label="Explore">
+            <a href="#">Events</a>
+            <a href="#">Shop</a>
+            <a href="#">Patterns</a>
+            <a href="#">Themes</a>
+          </nav>
+        </div>
+      </div>
+      <div class="tt5-footer-bottom t-body-small">
+        <p>Twenty Twenty-Five</p>
+        <p>Designed with <a href="https://wordpress.org">WordPress</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script defer src="../modules/ripple/lab-ripple.js"></script>
+  <script defer src="../scripts/theme.js"></script>
+</body>
+</html>

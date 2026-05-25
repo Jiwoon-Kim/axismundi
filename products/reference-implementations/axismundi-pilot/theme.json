@@ -457,6 +457,13 @@
       "background": "var(--md-sys-color-background)",
       "text": "var(--md-sys-color-on-background)"
     },
+    "spacing": {
+      "blockGap": "var(--space-md)",
+      "padding": {
+        "left": "var:preset|spacing|50",
+        "right": "var:preset|spacing|50"
+      }
+    },
     "typography": {
       "fontFamily": "var(--wp--preset--font-family--roboto-flex)",
       "fontSize": "var(--md-sys-typescale-body-large-size)",

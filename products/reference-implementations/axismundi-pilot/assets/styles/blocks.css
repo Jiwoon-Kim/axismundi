@@ -53,35 +53,13 @@
   margin-inline: auto;
 }
 
-/* alignwide / alignfull — content-width breakout helpers.
+/* alignwide / alignfull — core-owned breakout helpers.
  *
- * Both rely on a BOUNDED PARENT to read sensibly:
- *   - alignwide expects parent's max-inline-size to be set
- *     (e.g. 65ch for prose) so removing it widens the block
- *     within the layout column, not across the viewport.
- *   - alignfull uses the `calc(50% - 50vw)` margin trick which
- *     ASSUMES the parent has a max-inline-size narrower than
- *     the viewport. If the parent already spans 100vw, the
- *     negative margin pushes the block off-screen.
- *
- * Phase 3 wiring: theme.json's `settings.layout.contentSize` /
- * `wideSize` make the layout container apply max-inline-size
- * to its children automatically — alignwide/full breakouts then
- * "just work" in the editor + front-end.
- *
- * Phase 2A standalone preview: ensure these classes are used
- * inside a container that has its own max-inline-size set, e.g.
- * `<main style="max-inline-size: 65ch; margin-inline: auto;">`.
- * Without that, alignfull may overflow horizontally. */
-.alignwide {
-  inline-size: 100%;
-  max-inline-size: none;
-}
-.alignfull {
-  inline-size: 100vw;
-  max-inline-size: none;
-  margin-inline: calc(50% - 50vw);
-}
+ * WordPress 7.0 emits root-padding-aware layout CSS from
+ * theme.json. Re-defining `.alignfull` here with a 100vw breakout
+ * bypasses that core contract and pulls TT5 footer rows to the
+ * viewport edge. Keep alignment sizing owned by core; this layer
+ * only styles block chrome below. */
 
 /* Per-block text alignment helpers.
  *

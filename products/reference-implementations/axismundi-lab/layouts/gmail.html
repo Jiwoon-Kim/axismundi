@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Axismundi Lab - Gmail Layout</title>
+
+  <link rel="stylesheet" href="../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../stylesheets/base.css" />
+  <link rel="stylesheet" href="../stylesheets/components.css" />
+  <link rel="stylesheet" href="../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../modules/ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="../modules/app-bar/lab-app-bar.css" />
+  <link rel="stylesheet" href="../modules/nav-rail/lab-nav-rail.css" />
+  <link rel="stylesheet" href="../modules/nav-bar/lab-nav-bar.css" />
+  <link rel="stylesheet" href="../modules/fab/lab-fab.css" />
+  <link rel="stylesheet" href="../modules/list/lab-list.css" />
+  <link rel="stylesheet" href="../modules/chip/lab-chip.css" />
+  <link rel="stylesheet" href="../modules/search-bar/lab-search-bar.css" />
+
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+
+    body.gmail-layout-demo {
+      margin: 0;
+      overflow: hidden;
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface);
+    }
+
+    .ax-layout-gmail {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-columns: 88px minmax(0, 1fr);
+      min-block-size: 100dvh;
+      max-block-size: 100dvh;
+      overflow: hidden;
+      background: var(--md-sys-color-surface);
+    }
+
+    .ax-layout-gmail__topbar {
+      grid-column: 1 / -1;
+      z-index: 10;
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container);
+    }
+
+    .ax-layout-gmail__topbar .app-bar {
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .ax-layout-gmail__topbar .app-bar__title {
+      min-inline-size: 0;
+      flex: 1 1 auto;
+    }
+
+    .gmail-search {
+      inline-size: min(100%, 720px);
+      max-inline-size: 720px;
+      min-inline-size: 0;
+      margin-inline: auto;
+      background: var(--md-sys-color-surface-container-high);
+      box-shadow: none;
+    }
+
+    .gmail-search .search-bar__input {
+      min-inline-size: 0;
+    }
+
+    .gmail-theme-switcher {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    .gmail-theme-switcher .chip {
+      min-inline-size: 0;
+      block-size: 32px;
+      padding-inline: 12px;
+    }
+
+    .ax-layout-gmail__nav {
+      grid-row: 2;
+      grid-column: 1;
+      min-inline-size: 0;
+      overflow-y: auto;
+      border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface);
+    }
+
+    .ax-layout-gmail__nav .nav-rail {
+      inline-size: 88px;
+      min-block-size: 100%;
+      padding-block: 12px 96px;
+    }
+
+    .ax-layout-gmail__main {
+      grid-row: 2;
+      grid-column: 2;
+      display: flex;
+      min-inline-size: 0;
+      min-block-size: 0;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--md-sys-color-surface);
+    }
+
+    .ax-layout-gmail__chips {
+      display: flex;
+      gap: 8px;
+      min-inline-size: 0;
+      padding: 8px 16px;
+      overflow-x: auto;
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface);
+    }
+
+    .ax-layout-gmail__chips .chip {
+      flex: 0 0 auto;
+    }
+
+    .ax-layout-gmail__chips .chip[aria-pressed="true"] {
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      border-color: transparent;
+    }
+
+    .ax-layout-gmail__list {
+      flex: 1 1 auto;
+      min-block-size: 0;
+      overflow: auto;
+      background: var(--md-sys-color-surface-container-lowest);
+    }
+
+    .ax-list.gmail-mail-list {
+      inline-size: 100%;
+      max-inline-size: none;
+      min-inline-size: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      background: transparent;
+    }
+
+    .ax-list__item.gmail-mail-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      column-gap: 16px;
+      align-items: center;
+      min-block-size: 84px;
+      padding-inline: 16px 24px;
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface);
+      cursor: default;
+    }
+
+    .ax-list__item.gmail-mail-row::before {
+      display: none;
+    }
+
+    .gmail-mail-row.is-unread {
+      background: var(--md-sys-color-surface-container-low);
+    }
+
+    .gmail-mail-row.is-unread .ax-list__label,
+    .gmail-mail-row.is-unread .gmail-mail-subject {
+      font-weight: 700;
+    }
+
+    .gmail-avatar {
+      display: grid;
+      place-items: center;
+      inline-size: 40px;
+      block-size: 40px;
+      border-radius: var(--md-sys-shape-corner-full);
+      color: var(--md-sys-color-on-primary-container);
+      background: var(--md-sys-color-primary-container);
+    }
+
+    .gmail-avatar .material-symbols-rounded {
+      font-size: 24px;
+    }
+
+    .gmail-mail-content {
+      display: grid;
+      gap: 2px;
+      min-inline-size: 0;
+    }
+
+    .gmail-mail-meta {
+      display: flex;
+      gap: 10px;
+      min-inline-size: 0;
+      align-items: baseline;
+    }
+
+    .gmail-mail-subject {
+      min-inline-size: 0;
+      overflow: hidden;
+      color: var(--md-sys-color-on-surface);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gmail-mail-preview {
+      min-inline-size: 0;
+      overflow: hidden;
+      color: var(--md-sys-color-on-surface-variant);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gmail-mail-time {
+      color: var(--md-sys-color-on-surface-variant);
+      white-space: nowrap;
+    }
+
+    .ax-layout-gmail__fab {
+      position: absolute;
+      inset-block-end: 24px;
+      inset-inline-start: 16px;
+      z-index: 20;
+    }
+
+    .ax-layout-gmail__nav-bar {
+      display: none;
+      grid-row: 3;
+      grid-column: 1;
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container);
+    }
+
+    @media (max-width: 899px) {
+      .gmail-theme-switcher {
+        display: none;
+      }
+
+      .gmail-search {
+        inline-size: 100%;
+      }
+    }
+
+    @media (max-width: 599px) {
+      body.gmail-layout-demo {
+        overflow: hidden;
+      }
+
+      .ax-layout-gmail {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .ax-layout-gmail__topbar {
+        grid-row: 1;
+        grid-column: 1;
+      }
+
+      .ax-layout-gmail__topbar .app-bar {
+        padding-inline: 8px;
+      }
+
+      .ax-layout-gmail__topbar .app-bar__leading {
+        display: none;
+      }
+
+      .ax-layout-gmail__nav {
+        display: none;
+      }
+
+      .ax-layout-gmail__main {
+        grid-row: 2;
+        grid-column: 1;
+      }
+
+      .ax-layout-gmail__chips {
+        padding-inline: 12px;
+      }
+
+      .gmail-mail-row {
+        grid-template-columns: auto minmax(0, 1fr);
+        padding-inline: 12px;
+      }
+
+      .gmail-mail-time {
+        display: none;
+      }
+
+      .gmail-mail-meta {
+        display: grid;
+        gap: 0;
+      }
+
+      .ax-layout-gmail__fab {
+        inset-inline-start: auto;
+        inset-inline-end: 16px;
+        inset-block-end: 96px;
+      }
+
+      .ax-layout-gmail__nav-bar {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body class="gmail-layout-demo">
+  <div class="ax-layout-gmail">
+    <header class="ax-layout-gmail__topbar">
+      <div class="app-bar app-bar--small" role="banner" aria-label="Gmail layout top bar">
+        <div class="app-bar__leading">
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Open navigation" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">menu</span>
+          </button>
+        </div>
+        <div class="app-bar__title">
+          <label class="search-bar gmail-search">
+            <span class="search-bar__leading-icon">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">search</span>
+            </span>
+            <input class="search-bar__input" name="q" type="search" placeholder="Search mail" aria-label="Search mail" />
+            <span class="search-bar__trailing">
+              <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Search options" data-ax-ripple="unbounded">
+                <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">tune</span>
+              </button>
+            </span>
+          </label>
+        </div>
+        <div class="app-bar__trailing">
+          <div class="gmail-theme-switcher" role="radiogroup" aria-label="Theme">
+            <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="light" type="button" role="radio" aria-checked="false">
+              <span class="chip__label">Light</span>
+            </button>
+            <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="dark" type="button" role="radio" aria-checked="false">
+              <span class="chip__label">Dark</span>
+            </button>
+            <button class="chip chip--filter has-state-layer t-label-large" data-theme-set="auto" type="button" role="radio" aria-checked="true">
+              <span class="chip__label">Auto</span>
+            </button>
+          </div>
+          <button class="ax-icon-button is-standard has-state-layer" type="button" aria-label="Account" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <aside class="ax-layout-gmail__nav" aria-label="Mail folders">
+      <nav class="nav-rail is-narrow" aria-label="Primary">
+        <button class="nav-rail__item is-active" type="button" aria-label="Inbox" aria-current="page" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">inbox</span>
+          </span>
+          <span class="nav-rail__label">Inbox</span>
+        </button>
+        <button class="nav-rail__item" type="button" aria-label="Starred" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">star</span>
+          </span>
+          <span class="nav-rail__label">Starred</span>
+        </button>
+        <button class="nav-rail__item" type="button" aria-label="Snoozed" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">schedule</span>
+          </span>
+          <span class="nav-rail__label">Snoozed</span>
+        </button>
+        <button class="nav-rail__item" type="button" aria-label="Sent" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">send</span>
+          </span>
+          <span class="nav-rail__label">Sent</span>
+        </button>
+        <button class="nav-rail__item" type="button" aria-label="Drafts" data-ax-ripple="bounded">
+          <span class="nav-rail__icon has-state-layer">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">draft</span>
+          </span>
+          <span class="nav-rail__label">Drafts</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="ax-layout-gmail__main" aria-label="Inbox">
+      <div class="ax-layout-gmail__chips" aria-label="Mailbox categories">
+        <button class="chip chip--filter has-state-layer t-label-large" type="button" aria-pressed="true" data-ax-ripple>
+          <span class="chip__label">Primary</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" type="button" aria-pressed="false" data-ax-ripple>
+          <span class="chip__label">Promotions</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" type="button" aria-pressed="false" data-ax-ripple>
+          <span class="chip__label">Social</span>
+        </button>
+        <button class="chip chip--filter has-state-layer t-label-large" type="button" aria-pressed="false" data-ax-ripple>
+          <span class="chip__label">Updates</span>
+        </button>
+      </div>
+
+      <section class="ax-layout-gmail__list" aria-label="Email list">
+        <ul class="ax-list gmail-mail-list">
+          <li class="ax-list__item ax-list__item--three-line gmail-mail-row is-unread" data-demo-static="true">
+            <span class="ax-list__leading gmail-avatar">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+            </span>
+            <span class="ax-list__content gmail-mail-content">
+              <span class="ax-list__label">Design Ops</span>
+              <span class="gmail-mail-meta">
+                <span class="gmail-mail-subject">Weekly component audit is ready</span>
+                <span class="gmail-mail-preview">Nav rail, search, chips, and list density all passed the morning sweep.</span>
+              </span>
+            </span>
+            <span class="ax-list__trailing-text gmail-mail-time">9:42 AM</span>
+          </li>
+          <li class="ax-list__item ax-list__item--three-line gmail-mail-row is-unread" data-demo-static="true">
+            <span class="ax-list__leading gmail-avatar">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+            </span>
+            <span class="ax-list__content gmail-mail-content">
+              <span class="ax-list__label">Theme Review</span>
+              <span class="gmail-mail-meta">
+                <span class="gmail-mail-subject">Block variation resolver notes</span>
+                <span class="gmail-mail-preview">The JSON styles are now visible through the resolver path.</span>
+              </span>
+            </span>
+            <span class="ax-list__trailing-text gmail-mail-time">8:17 AM</span>
+          </li>
+          <li class="ax-list__item ax-list__item--three-line gmail-mail-row" data-demo-static="true">
+            <span class="ax-list__leading gmail-avatar">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+            </span>
+            <span class="ax-list__content gmail-mail-content">
+              <span class="ax-list__label">Ji-woon</span>
+              <span class="gmail-mail-meta">
+                <span class="gmail-mail-subject">Try a Gmail-style shell first</span>
+                <span class="gmail-mail-preview">Desktop rail, mobile bar, static rows, and a real MD3 search surface.</span>
+              </span>
+            </span>
+            <span class="ax-list__trailing-text gmail-mail-time">Yesterday</span>
+          </li>
+          <li class="ax-list__item ax-list__item--three-line gmail-mail-row" data-demo-static="true">
+            <span class="ax-list__leading gmail-avatar">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+            </span>
+            <span class="ax-list__content gmail-mail-content">
+              <span class="ax-list__label">Material Lab</span>
+              <span class="gmail-mail-meta">
+                <span class="gmail-mail-subject">Search bar runtime hooked in</span>
+                <span class="gmail-mail-preview">Focus the field to confirm elevation and active state behavior.</span>
+              </span>
+            </span>
+            <span class="ax-list__trailing-text gmail-mail-time">Mon</span>
+          </li>
+          <li class="ax-list__item ax-list__item--three-line gmail-mail-row" data-demo-static="true">
+            <span class="ax-list__leading gmail-avatar">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+            </span>
+            <span class="ax-list__content gmail-mail-content">
+              <span class="ax-list__label">Pilot Theme</span>
+              <span class="gmail-mail-meta">
+                <span class="gmail-mail-subject">Home template smoke passed</span>
+                <span class="gmail-mail-preview">The front page route still preserves the computed validator expectation.</span>
+              </span>
+            </span>
+            <span class="ax-list__trailing-text gmail-mail-time">May 23</span>
+          </li>
+          <li class="ax-list__item ax-list__item--three-line gmail-mail-row" data-demo-static="true">
+            <span class="ax-list__leading gmail-avatar">
+              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">account_circle</span>
+            </span>
+            <span class="ax-list__content gmail-mail-content">
+              <span class="ax-list__label">Ontology</span>
+              <span class="gmail-mail-meta">
+                <span class="gmail-mail-subject">Route-forward list updated</span>
+                <span class="gmail-mail-preview">Inverse palette slugs and footer pattern conversion remain future work.</span>
+              </span>
+            </span>
+            <span class="ax-list__trailing-text gmail-mail-time">May 22</span>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <button class="ax-fab has-state-layer ax-layout-gmail__fab" type="button" aria-label="Compose" data-ax-ripple="unbounded">
+      <span class="material-symbols-rounded notranslate ax-icon ax-fab-icon" translate="no" aria-hidden="true" draggable="false">edit</span>
+    </button>
+
+    <nav class="nav-bar ax-layout-gmail__nav-bar" aria-label="Mobile navigation">
+      <button class="nav-bar__item is-active" type="button" aria-label="Mail" aria-current="page" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mail</span>
+        </span>
+        <span class="nav-bar__label">Mail</span>
+      </button>
+      <button class="nav-bar__item" type="button" aria-label="Chat" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chat_bubble</span>
+        </span>
+        <span class="nav-bar__label">Chat</span>
+      </button>
+      <button class="nav-bar__item" type="button" aria-label="Spaces" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">groups</span>
+        </span>
+        <span class="nav-bar__label">Spaces</span>
+      </button>
+      <button class="nav-bar__item" type="button" aria-label="Meet" data-ax-ripple="bounded">
+        <span class="nav-bar__icon has-state-layer">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">videocam</span>
+        </span>
+        <span class="nav-bar__label">Meet</span>
+      </button>
+    </nav>
+  </div>
+
+  <script defer src="../modules/ripple/lab-ripple.js"></script>
+  <script defer src="../modules/search-bar/lab-search-bar.js"></script>
+  <script defer src="../scripts/theme.js"></script>
+</body>
+</html>

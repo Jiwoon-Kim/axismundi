@@ -321,5 +321,9 @@ function axismundi_pilot_register_pattern_categories() : void {
 		'axismundi-prose',
 		array( 'label' => __( 'Axismundi Prose', 'axismundi-pilot' ) )
 	);
+	register_block_pattern_category(
+		'axismundi-dev',
+		array( 'label' => __( 'Axismundi Dev', 'axismundi-pilot' ) )
+	);
 }
 add_action( 'init', 'axismundi_pilot_register_pattern_categories' );

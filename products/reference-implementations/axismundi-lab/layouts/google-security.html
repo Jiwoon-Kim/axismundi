@@ -85,9 +85,32 @@
 
     .google-account-search {
       inline-size: min(100%, 720px);
+      block-size: 48px;
+      padding-inline: 0;
+      gap: 0;
       min-inline-size: 0;
+      border-radius: 28px;
       background: var(--md-sys-color-surface-container-high);
       box-shadow: none;
+    }
+
+    .google-account-search:has(.search-bar__trailing > *) {
+      padding-inline: 0;
+      gap: 0;
+    }
+
+    .google-account-search .search-bar__leading-action,
+    .google-account-search .search-bar__trailing .ax-icon-button {
+      flex: 0 0 auto;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .google-account-search .search-bar__input {
+      block-size: 46px;
+    }
+
+    .google-account-search .search-bar__trailing {
+      gap: 0;
     }
 
     .google-account-theme {
@@ -364,13 +387,17 @@
           </span>
         </div>
         <div class="app-bar__title">
-          <label class="search-bar google-account-search">
-            <span class="search-bar__leading-icon">
+          <form class="search-bar google-account-search" role="search" action="#" method="get">
+            <button class="search-bar__leading-action ax-icon-button is-standard is-size-s has-state-layer" type="submit" aria-label="검색" data-ax-ripple="unbounded">
               <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">search</span>
+            </button>
+            <input class="search-bar__input" name="q" type="text" autocomplete="off" placeholder="계정 검색" aria-label="계정 검색" role="combobox" />
+            <span class="search-bar__trailing">
+              <button class="ax-icon-button is-standard is-size-s has-state-layer" type="button" aria-label="검색어 지우기" data-ax-ripple="unbounded">
+                <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">close</span>
+              </button>
             </span>
-            <input class="search-bar__input" name="q" type="search" placeholder="계정 검색" aria-label="계정 검색" />
-            <span class="search-bar__trailing"></span>
-          </label>
+          </form>
         </div>
         <div class="app-bar__trailing">
           <div class="google-account-theme" role="radiogroup" aria-label="Theme">

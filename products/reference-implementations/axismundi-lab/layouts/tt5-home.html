@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Axismundi Lab - TT5 Index Layout</title>
+  <title>Axismundi Lab - TT5 Home Layout</title>
 
   <link rel="stylesheet" href="../stylesheets/fonts.css" />
   <link rel="stylesheet" href="../stylesheets/icons.css" />
@@ -248,7 +248,7 @@
 <body class="tt5-layout-demo">
   <!--
     @tt5-source
-    file: templates/index.html
+    file: templates/home.html
     source-doc: https://wordpress.org/documentation/article/twenty-twenty-five/
     blocks:
       template-part/header
@@ -263,11 +263,11 @@
   -->
   <!--
     @layout-ontology v0.1
-    wp-template-role: index (WP hierarchy lowest fallback)
+    wp-template-role: home (posts page; same TT5 default blog structure as index)
     layout-decision: 1-col constrained, full-post display, minimal chrome
-    layout-intent: typography-first reading flow; preserve complete post content rather than excerpts
+    layout-intent: typography-first posts page; preserve complete post content rather than excerpts
     lab-mapping: template-part/header -> app-bar + nav; template-query-loop -> article list; query-pagination -> button nav; footer -> logo/title/tagline/nav columns/credit
-    evidence-source: official WordPress.org TT5 docs + local TT5 1.5 templates/index.html + patterns/template-query-loop.php
+    evidence-source: official WordPress.org TT5 docs + local TT5 1.5 templates/home.html + patterns/template-query-loop.php
     evaluation-lens: reading-flow, content-density, typography, template-hierarchy-role
     axismundi-route: Pilot_harness_later
     source-confidence: official_source
@@ -292,31 +292,31 @@
 
     <section class="tt5-post-list" aria-label="Posts">
       <article class="tt5-post">
-        <a class="tt5-post__image" href="#" aria-label="Pattern-driven templates"></a>
-        <h2 class="t-headline-large"><a href="#">Pattern-driven templates</a></h2>
+        <a class="tt5-post__image" href="#" aria-label="Home template as posts page"></a>
+        <h2 class="t-headline-large"><a href="#">Home template as posts page</a></h2>
         <div class="prose">
-          <p>Twenty Twenty-Five keeps the outer template sparse and lets patterns carry the visible body. The index template is a short chain: header, constrained main, hidden blog heading, query loop, and footer.</p>
-          <p>This specimen keeps that decision intact. The post body is shown as full content, not as an excerpt, because the default TT5 blog templates are designed for complete reading flow.</p>
+          <p>Twenty Twenty-Five ships the home template with the same default blog structure as index. In WordPress hierarchy terms, this route represents the posts page before the ultimate fallback is needed.</p>
+          <p>The lab specimen keeps that role visible: a posts list, not a landing page and not a card-based magazine grid.</p>
         </div>
         <time class="t-body-small" datetime="2026-05-26">May 26, 2026</time>
       </article>
 
       <article class="tt5-post">
-        <a class="tt5-post__image is-alt" href="#" aria-label="One-column query loop"></a>
-        <h2 class="t-headline-large"><a href="#">One-column query loop</a></h2>
+        <a class="tt5-post__image is-alt" href="#" aria-label="Full content rhythm"></a>
+        <h2 class="t-headline-large"><a href="#">Full content rhythm</a></h2>
         <div class="prose">
-          <p>The source query loop uses a single post column with a 3:2 featured image, x-large linked title, full post content, and a small linked date. There are no cards and no masonry grid in the default index route.</p>
-          <p>That restraint matters for ontology capture: the layout role is fallback blog reading, not magazine browsing or portfolio scanning.</p>
+          <p>The official TT5 documentation describes the default blog templates as simple and suitable for long or short posts, with entire post content shown instead of excerpts.</p>
+          <p>That behavior is the data point this extraction preserves for the web design ontology: content completeness is part of the layout decision.</p>
         </div>
         <time class="t-body-small" datetime="2026-05-25">May 25, 2026</time>
       </article>
 
       <article class="tt5-post">
-        <a class="tt5-post__image is-muted" href="#" aria-label="Footer as template part"></a>
-        <h2 class="t-headline-large"><a href="#">Footer as template part</a></h2>
+        <a class="tt5-post__image is-muted" href="#" aria-label="Pattern reuse"></a>
+        <h2 class="t-headline-large"><a href="#">Pattern reuse</a></h2>
         <div class="prose">
-          <p>The footer pattern combines site identity, tagline, two vertical navigation groups, and a small credit row. In this lab translation it remains structurally plain, so the template hierarchy stays readable.</p>
-          <p>Future Pilot work can map the same structure into block patterns without copying TT5 visual tokens, palette values, or font choices.</p>
+          <p>The template delegates visible structure to the hidden blog heading and query loop patterns. This makes the template file itself tiny while still allowing alternate template designs through pattern replacement.</p>
+          <p>For Pilot work, that points toward pattern-first implementation rather than expanding every template with unique block markup.</p>
         </div>
         <time class="t-body-small" datetime="2026-05-24">May 24, 2026</time>
       </article>
@@ -344,7 +344,7 @@
       <div class="tt5-footer-main">
         <div class="tt5-footer-brand">
           <span class="t-headline-small">Axismundi</span>
-          <p class="t-body-medium">A lab translation of the Twenty Twenty-Five default blog template structure.</p>
+          <p class="t-body-medium">A lab translation of the Twenty Twenty-Five home/posts template structure.</p>
         </div>
         <div class="tt5-footer-navs t-body-medium" aria-label="Footer navigation">
           <nav class="tt5-footer-nav" aria-label="Site">

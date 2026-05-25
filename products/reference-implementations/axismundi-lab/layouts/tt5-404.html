@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Axismundi Lab - TT5 404 Layout</title>
+
+  <link rel="stylesheet" href="../stylesheets/fonts.css" />
+  <link rel="stylesheet" href="../stylesheets/icons.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="../stylesheets/tokens.css" />
+  <link rel="stylesheet" href="../stylesheets/base.css" />
+  <link rel="stylesheet" href="../stylesheets/components.css" />
+  <link rel="stylesheet" href="../stylesheets/prose.css" />
+  <link rel="stylesheet" href="../modules/ripple/lab-ripple.css" />
+  <link rel="stylesheet" href="../modules/app-bar/lab-app-bar.css" />
+  <link rel="stylesheet" href="../modules/button/lab-button.css" />
+  <link rel="stylesheet" href="../modules/search-bar/lab-search-bar.css" />
+
+  <style>
+    :root { color-scheme: light dark; }
+
+    body.tt5-layout-demo {
+      margin: 0;
+      color: var(--md-sys-color-on-surface);
+      background: var(--md-sys-color-surface);
+    }
+
+    .tt5-site-header {
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface);
+    }
+
+    .tt5-site-header .app-bar {
+      inline-size: min(100% - 32px, 1340px);
+      margin-inline: auto;
+      padding-inline: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .tt5-site-title {
+      color: inherit;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .tt5-navigation {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-end;
+    }
+
+    .tt5-navigation a {
+      display: inline-flex;
+      align-items: center;
+      min-block-size: 40px;
+      padding-inline: 14px;
+      border-radius: var(--md-sys-shape-corner-full);
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+    }
+
+    .tt5-navigation a:hover {
+      background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+
+    .tt5-404-main {
+      padding: 24px;
+    }
+
+    .tt5-404-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 520px);
+      gap: 24px;
+      align-items: stretch;
+      inline-size: min(100%, 1340px);
+      min-block-size: min(720px, calc(100dvh - 112px));
+      margin-inline: auto;
+    }
+
+    .tt5-404-image {
+      min-block-size: 420px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 42% 22%, var(--md-sys-color-tertiary-container), transparent 32%),
+        linear-gradient(145deg, var(--md-sys-color-primary-container), var(--md-sys-color-surface-container-highest) 52%, var(--md-sys-color-secondary-container));
+      background-size: cover;
+    }
+
+    .tt5-404-copy {
+      display: grid;
+      align-self: end;
+      gap: 20px;
+      padding-block-end: 4px;
+    }
+
+    .tt5-404-copy h1,
+    .tt5-404-copy p {
+      margin: 0;
+    }
+
+    .tt5-404-copy p {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .tt5-inline-search {
+      inline-size: min(100%, 420px);
+      block-size: 56px;
+      padding-inline: 8px;
+      gap: 4px;
+      box-shadow: none;
+    }
+
+    .tt5-inline-search:has(.search-bar__trailing > *) {
+      padding-inline: 8px;
+      gap: 4px;
+    }
+
+    .tt5-inline-search .search-bar__input {
+      block-size: 54px;
+    }
+
+    .tt5-site-footer {
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-low);
+    }
+
+    .tt5-site-footer__inner {
+      display: grid;
+      gap: 32px;
+      inline-size: min(100% - 32px, 1340px);
+      margin-inline: auto;
+      padding-block: 48px 40px;
+    }
+
+    .tt5-footer-main {
+      display: grid;
+      gap: 32px;
+    }
+
+    .tt5-footer-brand {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tt5-footer-brand p {
+      max-inline-size: 42ch;
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .tt5-footer-navs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px 56px;
+    }
+
+    .tt5-footer-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tt5-footer-nav a,
+    .tt5-footer-bottom a {
+      color: inherit;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .tt5-footer-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      justify-content: space-between;
+      padding-block-start: 32px;
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .tt5-footer-bottom p {
+      margin: 0;
+    }
+
+    @media (min-width: 760px) {
+      .tt5-footer-main {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .tt5-navigation {
+        display: none;
+      }
+
+      .tt5-404-main {
+        padding: 24px 12px;
+      }
+
+      .tt5-404-layout {
+        grid-template-columns: minmax(0, 1fr);
+        min-block-size: auto;
+      }
+
+      .tt5-404-image {
+        min-block-size: 260px;
+      }
+    }
+  </style>
+</head>
+<body class="tt5-layout-demo">
+  <!--
+    @tt5-source
+    file: templates/404.html
+    source-doc: https://wordpress.org/documentation/article/twenty-twenty-five/
+    blocks:
+      template-part/header
+      wp:group[tagName=main, padding=spacing-50 all sides, layout=default]
+        wp:pattern[twentytwentyfive/hidden-404]
+          wp:group[constrained, padding-left/right=0]
+          wp:columns[align=wide, blockGap=spacing-50]
+            column: wp:image[404-image.webp, object-fit=cover]
+            column[verticalAlignment=bottom]
+              wp:heading[level=1] "Page not found"
+              wp:paragraph recovery copy
+              wp:pattern[twentytwentyfive/hidden-search]
+      template-part/footer
+  -->
+  <!--
+    @layout-ontology v0.1
+    wp-template-role: 404 (error page; shown when requested URL has no content)
+    layout-decision: default layout, padding-all spacing-50, wide 2-col split image/text, bottom-aligned recovery copy
+    layout-intent: visual texture plus actionable recovery through inline search
+    lab-mapping: hidden-404 -> css-grid 2-col + gradient placeholder + inline search-bar; 404-image.webp -> non-copied placeholder
+    evidence-source: local TT5 1.5 templates/404.html + patterns/hidden-404.php + patterns/hidden-search.php
+    evaluation-lens: error-recovery, visual-hierarchy, action-affordance
+    axismundi-route: Pilot_harness_later
+    source-confidence: official_source
+  -->
+
+  <header class="tt5-site-header">
+    <div class="app-bar app-bar--small" role="banner" aria-label="Site header">
+      <div class="app-bar__leading">
+        <a class="tt5-site-title t-title-large" href="#">Axismundi</a>
+      </div>
+      <nav class="app-bar__title tt5-navigation t-label-large" aria-label="Primary">
+        <a href="#">Blog</a>
+        <a href="#">About</a>
+        <a href="#">FAQs</a>
+        <a href="#">Authors</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="tt5-404-main">
+    <section class="tt5-404-layout" aria-labelledby="tt5-404-heading">
+      <div class="tt5-404-image" role="img" aria-label="Abstract placeholder for the TT5 404 nature image"></div>
+      <div class="tt5-404-copy">
+        <h1 class="t-display-small" id="tt5-404-heading">Page not found</h1>
+        <p class="t-body-large">The page you are looking for doesn't exist, or it has been moved. Please try searching using the form below.</p>
+        <form class="search-bar tt5-inline-search" role="search" action="#" method="get">
+          <button class="search-bar__leading-action ax-icon-button is-standard is-size-s has-state-layer" type="submit" aria-label="Search" data-ax-ripple="unbounded">
+            <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">search</span>
+          </button>
+          <input class="search-bar__input" name="s" type="search" autocomplete="off" placeholder="Type here..." aria-label="Search" />
+          <span class="search-bar__trailing">
+            <button class="ax-icon-button is-standard is-size-s has-state-layer" type="button" aria-label="Clear search" data-ax-ripple="unbounded">
+              <span class="material-symbols-rounded notranslate ax-icon" translate="no" aria-hidden="true" draggable="false">close</span>
+            </button>
+          </span>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="tt5-site-footer">
+    <div class="tt5-site-footer__inner">
+      <div class="tt5-footer-main">
+        <div class="tt5-footer-brand">
+          <span class="t-headline-small">Axismundi</span>
+          <p class="t-body-medium">A lab translation of the Twenty Twenty-Five 404 recovery template.</p>
+        </div>
+        <div class="tt5-footer-navs t-body-medium" aria-label="Footer navigation">
+          <nav class="tt5-footer-nav" aria-label="Site">
+            <a href="#">Blog</a>
+            <a href="#">About</a>
+            <a href="#">FAQs</a>
+            <a href="#">Authors</a>
+          </nav>
+          <nav class="tt5-footer-nav" aria-label="Explore">
+            <a href="#">Events</a>
+            <a href="#">Shop</a>
+            <a href="#">Patterns</a>
+            <a href="#">Themes</a>
+          </nav>
+        </div>
+      </div>
+      <div class="tt5-footer-bottom t-body-small">
+        <p>Twenty Twenty-Five</p>
+        <p>Designed with <a href="https://wordpress.org">WordPress</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script defer src="../modules/ripple/lab-ripple.js"></script>
+  <script defer src="../modules/search-bar/lab-search-bar.js"></script>
+  <script defer src="../scripts/theme.js"></script>
+</body>
+</html>

@@ -284,6 +284,8 @@
         <a class="t-body-medium" href="#blocks-code">Code / Verse</a>
         <a class="t-body-medium" href="#blocks-list">List</a>
         <a class="t-body-medium" href="#blocks-table">Table</a>
+        <a class="t-body-medium" href="#blocks-details">Details</a>
+        <a class="t-body-medium" href="#blocks-footnotes">Footnotes</a>
         <a class="t-body-medium" href="#blocks-text-gaps">Text gaps</a>
 
         <div class="t-label-small sg-nav__group-label">Media</div>
@@ -505,6 +507,7 @@ console.log(greet('World'));</code></pre>
 
         <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Default</h3>
+          <p class="sg-helper">WP core 기본 렌더링. 전체 셀 격자 테두리. <code>thead</code> / <code>tbody</code> / <code>tfoot</code> 모두 지원.</p>
           <div class="sg-demo prose">
             <figure class="wp-block-table">
               <table>
@@ -516,6 +519,31 @@ console.log(greet('World'));</code></pre>
                   <tr><td>이서연</td><td>편집자</td><td>2024-03-22</td></tr>
                   <tr><td>박지훈</td><td>작성자</td><td>2024-05-08</td></tr>
                 </tbody>
+                <tfoot>
+                  <tr><td>합계</td><td colspan="2">3명</td></tr>
+                </tfoot>
+              </table>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Row separators (<code>is-style-row-separators</code>)</h3>
+          <p class="sg-helper">수직 경계선 제거 — 수평 row 구분선만 남김. 데이터 밀도가 높거나 열 수가 많아 수직선이 시각적 노이즈가 될 때 사용.</p>
+          <div class="sg-demo prose">
+            <figure class="wp-block-table is-style-row-separators">
+              <table>
+                <thead>
+                  <tr><th>이름</th><th>역할</th><th>가입일</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>김민수</td><td>관리자</td><td>2024-01-15</td></tr>
+                  <tr><td>이서연</td><td>편집자</td><td>2024-03-22</td></tr>
+                  <tr><td>박지훈</td><td>작성자</td><td>2024-05-08</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr><td>합계</td><td colspan="2">3명</td></tr>
+                </tfoot>
               </table>
             </figure>
           </div>
@@ -534,14 +562,17 @@ console.log(greet('World'));</code></pre>
                   <tr><td>Pro</td><td>$29/mo</td></tr>
                   <tr><td>Enterprise</td><td>Contact</td></tr>
                 </tbody>
+                <tfoot>
+                  <tr><td>총 플랜 수</td><td>3</td></tr>
+                </tfoot>
               </table>
             </figure>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Wide table — horizontal scroll (default)</h3>
-          <p class="sg-helper">기본 동작: 셀이 줄바꿈 없이 자연 너비 유지 → wrapper의 <code>overflow-x: auto</code>로 가로 스크롤. 데모는 <code>white-space: nowrap</code>을 셀에 인라인 적용해서 작은 viewport에서도 overflow 발생을 보장.</p>
+          <h3 class="t-title-medium sg-subsection__head">Wide table — horizontal scroll (PHP wrapper needed)</h3>
+          <p class="sg-helper">셀에 <code>white-space: nowrap</code>이 있으면 table이 figure 밖으로 overflow됩니다. 스크롤 격리는 <code>&lt;div class="wp-table-scroll"&gt;</code> wrapper가 필요하며, WP core/table 블록에서는 <code>render_block</code> 필터로 주입해야 합니다. 현재 catalog는 PHP 미적용 상태 — overflow 동작을 그대로 노출합니다.</p>
           <div class="sg-demo prose">
             <figure class="wp-block-table">
               <table>
@@ -600,37 +631,10 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Vertical borders (<code>is-style-vertical-borders</code>)</h3>
-          <p class="sg-helper">Adds column separators. Use when cells merge (rowspan / colspan) — vertical lines communicate the merged structure.</p>
-          <div class="sg-demo prose">
-            <figure class="wp-block-table is-style-vertical-borders">
-              <table>
-                <thead>
-                  <tr>
-                    <th rowspan="2">분기</th>
-                    <th colspan="2">매출</th>
-                    <th rowspan="2">증감</th>
-                  </tr>
-                  <tr>
-                    <th>2024</th>
-                    <th>2025</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Q1</td><td>120</td><td>145</td><td>+21%</td></tr>
-                  <tr><td>Q2</td><td>135</td><td>168</td><td>+24%</td></tr>
-                  <tr><td>Q3</td><td>140</td><td>178</td><td>+27%</td></tr>
-                </tbody>
-              </table>
-            </figure>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">With figcaption</h3>
-          <p class="sg-helper">core/table에서 caption 입력 시 figure 하위에 figcaption으로 출력. wrapper 외부에 위치하므로 가로 스크롤 영역 밖에서 그대로 보임.</p>
+          <p class="sg-helper">core/table에서 caption 입력 시 <code>&lt;figure&gt;</code> 내부 <code>&lt;table&gt;</code> 다음 형제로 <code>&lt;figcaption&gt;</code> 출력. 테이블의 border/radius는 <code>&lt;table&gt;</code>이 소유하므로 caption은 테두리 밖에 놓입니다.</p>
           <div class="sg-demo prose">
-            <figure class="wp-block-table is-style-stripes">
+            <figure class="wp-block-table">
               <table>
                 <thead>
                   <tr><th>제품</th><th>가격</th></tr>
@@ -648,6 +652,64 @@ console.log(greet('World'));</code></pre>
       </section>
 
 
+      <!-- ========== Details ========== -->
+      <section class="sg-section" id="blocks-details">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <h2 class="t-headline-medium">Details</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/details</code> (WP 6.4+) — <code>&lt;details class="wp-block-details"&gt;&lt;summary&gt;...&lt;/summary&gt;[inner blocks]&lt;/details&gt;</code>. 내부에 임의의 블록을 중첩할 수 있는 토글 컨테이너. Axismundi CSS 없음 — 브라우저 기본 disclosure 위젯 그대로 사용.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default (closed)</h3>
+          <div class="sg-demo prose">
+            <details class="wp-block-details">
+              <summary>접근성 지침 요약</summary>
+              <ul class="wp-block-list">
+                <li>모든 이미지에 <code>alt</code> 텍스트를 제공하세요.</li>
+                <li>색상만으로 정보를 전달하지 마세요.</li>
+                <li>키보드로 모든 인터랙션에 접근할 수 있어야 합니다.</li>
+              </ul>
+            </details>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Open (<code>open</code> attribute)</h3>
+          <div class="sg-demo prose">
+            <details class="wp-block-details" open>
+              <summary>디자인 토큰이란</summary>
+              <p>디자인 토큰은 색상, 타이포그래피, 간격 같은 시각적 결정을 플랫폼 독립적인 값으로 저장한 단위입니다. <code>--md-sys-color-primary</code>처럼 CSS custom property로 노출되며, 테마 전환 시 단일 지점에서 변경됩니다.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Footnotes ========== -->
+      <section class="sg-section" id="blocks-footnotes">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <h2 class="t-headline-medium">Footnotes</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/footnotes</code> (WP 6.3+) — 포스트 말미에 <code>&lt;ol class="wp-block-footnotes"&gt;</code>로 렌더링. 인라인 각주 링크는 편집기가 자동 생성. <code>prose.css</code> <code>ol</code> 룰로 커버되며 별도 Axismundi CSS 없음.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default</h3>
+          <div class="sg-demo prose">
+            <ol class="wp-block-footnotes">
+              <li id="footnote-1">Smith, J. (2024). <em>Design Systems at Scale</em>. Material Design Press. p. 42. <a href="#footnote-ref-1" aria-label="각주 1로 돌아가기">↩︎</a></li>
+              <li id="footnote-2">"디자인 토큰은 디자인 결정의 단일 진실 공급원이다." — W3C Design Tokens Community Group. <a href="#footnote-ref-2" aria-label="각주 2로 돌아가기">↩︎</a></li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+
       <!-- ========== Text gaps ========== -->
       <section class="sg-section" id="blocks-text-gaps">
         <header class="sg-section__head">
@@ -660,8 +722,7 @@ console.log(greet('World'));</code></pre>
 
         <div class="sg-demo prose">
           <ul>
-            <li><strong>Details</strong> — reference / gap row. No Axismundi specimen or support contract yet.</li>
-            <li><strong>Math</strong> — WP 7.0 reference-only block. Future route, no implementation in v3.6.24.</li>
+            <li><strong>Math</strong> — WP 6.9+ reference-only block. Future route, no implementation in v3.6.24.</li>
             <li><strong>Classic</strong> — legacy/editor surface. Out of scope for the block catalog.</li>
           </ul>
         </div>

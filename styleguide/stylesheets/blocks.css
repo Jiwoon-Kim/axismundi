@@ -250,15 +250,39 @@
  * ============================================================ */
 
 /* core/table renders as <figure class="wp-block-table"><table>…</table></figure>.
- * The figure itself is the wrapper — apply containment + scroll. */
+ * The figure is rhythm only. The table owns the visual frame so an optional
+ * figcaption remains outside the bordered/radius table surface. */
 .wp-block-table {
   margin-block: var(--space-md);
-  overflow-x: auto;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-small);
 }
 
-.wp-block-table thead {
+/* table owns frame + radius (figure is rhythm only) */
+.wp-block-table table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  inline-size: 100%;
+}
+
+.wp-block-table thead tr:first-child > th:first-child {
+  border-start-start-radius: calc(var(--md-sys-shape-corner-small) - 1px);
+}
+.wp-block-table thead tr:first-child > th:last-child {
+  border-start-end-radius: calc(var(--md-sys-shape-corner-small) - 1px);
+}
+
+.wp-block-table thead th {
+  border-block-end: 1px solid var(--md-sys-color-outline);
+}
+
+.wp-block-table tfoot tr:first-child > th,
+.wp-block-table tfoot tr:first-child > td {
+  border-block-start: 1px solid var(--md-sys-color-outline);
+}
+
+.wp-block-table tfoot tr:last-child > th,
+.wp-block-table tfoot tr:last-child > td {
   border-block-end: 0;
 }
 
@@ -273,6 +297,13 @@
   padding-block: var(--space-sm);
   padding-inline: var(--space-md);
   border-block-end: 1px solid var(--md-sys-color-outline-variant);
+  border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Last cell in each row — prevent double border with wrapper outline */
+.wp-block-table tr > th:last-child,
+.wp-block-table tr > td:last-child {
+  border-inline-end: 0;
 }
 
 .wp-block-table tbody tr:last-child > th,
@@ -309,28 +340,23 @@
 .wp-block-table.is-style-stripes tbody tr:nth-child(even) > td {
   background-color: var(--md-sys-color-surface-container-high);
 }
-.wp-block-table.is-style-stripes {
-  border-block-end: 1px solid var(--md-sys-color-outline-variant);
-}
 /* Stripes variant drops the row separator (the bg banding does the job) */
 .wp-block-table.is-style-stripes th,
 .wp-block-table.is-style-stripes td {
   border: 0;
   border-block-end: 0;
 }
-
-/* ----- is-style-vertical-borders -----
- * Adds 1px column separators between cells. Pairs naturally with the
- * default horizontal separators (prose.css §11.3) to create a fully
- * gridded table read — matches M3 spec table reference imagery.
- * Last cell in each row drops its inline-end border so the table
- * wrapper's outer outline isn't doubled. */
-.wp-block-table.is-style-vertical-borders th,
-.wp-block-table.is-style-vertical-borders td {
-  border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+.wp-block-table.is-style-stripes tfoot tr:first-child > th,
+.wp-block-table.is-style-stripes tfoot tr:first-child > td {
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
 }
-.wp-block-table.is-style-vertical-borders tr > th:last-child,
-.wp-block-table.is-style-vertical-borders tr > td:last-child {
+
+/* ----- is-style-row-separators -----
+ * Strips column separators — horizontal row lines only.
+ * Use for dense data tables where vertical grid adds visual noise,
+ * or when the outer wrapper border gives enough structure. */
+.wp-block-table.is-style-row-separators th,
+.wp-block-table.is-style-row-separators td {
   border-inline-end: 0;
 }
 

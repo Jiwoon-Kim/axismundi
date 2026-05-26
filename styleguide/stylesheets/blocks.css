@@ -17,12 +17,14 @@
  *   §4  Code / Preformatted
  *   §5  Separator + 5 style variants
  *   §6  Table — WP variants layered on prose.css
- *   §7  Image / Gallery / Embed-stub
- *   §8  Columns / Row / Group + 3 card style variants
+ *   §7  Image / Gallery / Video / Icon
+ *   §8  Columns / Row / Stack / Grid / Group + card variants
  *   §9  Buttons (core/button) + 5 style variants (PHP-composed —
  *       see §9 header for ax-button class wiring note)
  *   §10 Search — is-style-filled-search
- *   §11 List — is-style-list-segmented
+ *   §11 Widgets — Social Icons / Tag Cloud
+ *   §12 Theme identity blocks
+ *   §13 List — is-style-list-segmented
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -438,7 +440,7 @@
 }
 
 /* ============================================================
- * §7 Image / Gallery
+ * §7 Image / Gallery / Video / Icon
  *
  * core/image → <figure class="wp-block-image"><img>[<figcaption>]</figure>.
  * Default image style uses Axismundi's medium radius. The registered
@@ -503,12 +505,28 @@
   display: block;
 }
 
+/* core/icon — SVG icon block. WP owns the SVG source; Axismundi owns
+ * theme-token sizing and currentColor inheritance only. */
+.wp-block-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-sys-color-on-surface);
+  line-height: 0;
+}
+
+.wp-block-icon svg {
+  inline-size: 1.5em;
+  block-size: 1.5em;
+  fill: currentColor;
+}
+
 /* ============================================================
- * §8 Columns / Row / Group + card style variants
+ * §8 Columns / Row / Stack / Grid / Group + card style variants
  *
- * core/columns / core/group / core/row produce flex/grid wrappers
- * with no chrome by default — surface only. Card variants
- * (per BLOCK-COMPONENT-MAP §0.3) skin a Group as M3 Card.
+ * core/columns / core/group / core/row / core/stack / core/grid
+ * produce layout wrappers with no chrome by default — surface only.
+ * Card variants (per BLOCK-COMPONENT-MAP §0.3) skin a Group as M3 Card.
  * ============================================================ */
 .wp-block-columns {
   display: flex;
@@ -531,6 +549,73 @@
 
 .wp-block-group {
   /* No chrome by default — just surface */
+}
+
+/* Row / Stack / Grid — theme-level gap normalisation only.
+ * WP layout support owns the final flex/grid display and alignment attrs. */
+.wp-block-row,
+.wp-block-group.is-layout-flex {
+  gap: var(--space-md);
+}
+
+.wp-block-stack,
+.wp-block-group.is-vertical {
+  gap: var(--space-md);
+}
+
+.wp-block-grid,
+.wp-block-group.is-layout-grid {
+  gap: var(--space-md);
+}
+
+/* core/accordion — WP 6.9+ coordinated disclosure list.
+ * Interactivity API owns expanded/collapsed behavior. This layer sets
+ * neutral M3 surfaces, spacing, and typography. */
+.wp-block-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-block: var(--space-md);
+}
+
+.wp-block-accordion-item {
+  overflow: hidden;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-accordion-heading {
+  margin: 0;
+  font-family:    var(--md-sys-typescale-title-medium-font);
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+
+.wp-block-accordion-heading__toggle {
+  gap: var(--space-sm);
+  padding: var(--space-md);
+}
+
+.wp-block-accordion-heading__toggle:focus-visible {
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: -3px;
+}
+
+.wp-block-accordion-heading__toggle-icon {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-accordion-panel {
+  padding: 0 var(--space-md) var(--space-md);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-accordion-item:not(.is-open) .wp-block-accordion-panel {
+  display: none;
 }
 
 /* Card style variants — registered via register_block_style().
@@ -701,7 +786,140 @@
 }
 
 /* ============================================================
- * §11 List — is-style-list-segmented
+ * §11 Widgets — Social Icons / Tag Cloud
+ *
+ * CSS-only widget contracts that do not require template context.
+ * Brand-specific social colors remain WP core responsibility; Axismundi
+ * defines only neutral default surfaces and geometry.
+ * ============================================================ */
+.wp-block-social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: 0;
+  margin-block: var(--space-md);
+  list-style: none;
+}
+
+.wp-block-social-link {
+  display: inline-flex;
+}
+
+.wp-block-social-link a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-social-link a:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.wp-block-social-link svg {
+  inline-size: 20px;
+  block-size: 20px;
+  fill: currentColor;
+}
+
+.wp-block-social-links.is-style-logos-only .wp-block-social-link a {
+  background-color: transparent;
+}
+
+.wp-block-social-links.is-style-pill-shape .wp-block-social-link a {
+  inline-size: auto;
+  padding-inline: var(--space-md);
+}
+
+.wp-block-tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-block: var(--space-md);
+}
+
+.wp-block-tag-cloud a,
+.wp-block-tag-cloud .tag-cloud-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size) !important;
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  text-decoration: none;
+}
+
+.wp-block-tag-cloud a:hover,
+.wp-block-tag-cloud .tag-cloud-link:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.wp-block-tag-cloud.is-style-outline a,
+.wp-block-tag-cloud.is-style-outline .tag-cloud-link {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline-variant);
+}
+
+/* ============================================================
+ * §12 Theme identity blocks
+ *
+ * CSS-only theme blocks that can be represented without rendering an
+ * actual template. Navigation / Query Loop / Template Part remain routed
+ * to the pattern/template styleguide.
+ * ============================================================ */
+.wp-block-site-title {
+  margin-block: 0;
+  font-family:    var(--md-sys-typescale-title-large-font);
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+
+.wp-block-site-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wp-block-site-tagline {
+  margin-block: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-body-medium-font);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+
+.wp-block-site-logo {
+  margin-block: 0;
+  line-height: 0;
+}
+
+.wp-block-site-logo img {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.wp-block-site-logo.is-style-rounded img {
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* ============================================================
+ * §13 List — is-style-list-segmented
  *
  * Axismundi block style (registered via register_block_style on
  * core/list). Mirrors .ax-list--segmented from components.css §26 —

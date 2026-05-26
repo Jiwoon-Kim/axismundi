@@ -172,6 +172,9 @@ def main():
                 'href="typography-axis.html"',
                 'href="../products/reference-implementations/axismundi-lab/typography-axis.html"'
             )
+            # Shared demo assets live at repository-root /assets. Lab HTML is
+            # three levels below the root; the publish mirror is one level below.
+            html = html.replace('../../../assets/', '../assets/')
             # Add publish-mirror banner (HTML comment, no visible change)
             banner = (
                 "<!-- ============================================================\n"

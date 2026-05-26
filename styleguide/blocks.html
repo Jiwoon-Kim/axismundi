@@ -304,14 +304,18 @@
         <a class="t-body-medium" href="#blocks-alignment">Alignment helpers</a>
         <a class="t-body-medium" href="#blocks-separator">Separator</a>
         <a class="t-body-medium" href="#blocks-group">Columns / Group / Card</a>
+        <a class="t-body-medium" href="#blocks-accordion">Accordion</a>
+        <a class="t-body-medium" href="#blocks-layout">Row / Stack / Grid</a>
         <a class="t-body-medium" href="#blocks-button">Buttons</a>
         <a class="t-body-medium" href="#blocks-design-gaps">Design gaps</a>
 
         <div class="t-label-small sg-nav__group-label">Widgets</div>
         <a class="t-body-medium" href="#blocks-search">Search</a>
+        <a class="t-body-medium" href="#blocks-social-icons">Social Icons</a>
+        <a class="t-body-medium" href="#blocks-tag-cloud">Tag Cloud</a>
 
         <div class="t-label-small sg-nav__group-label">Theme</div>
-        <a class="t-body-medium" href="#blocks-theme">Theme blocks route</a>
+        <a class="t-body-medium" href="#blocks-theme">Theme identity</a>
       </nav>
     </aside>
 
@@ -818,6 +822,19 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/icon — SVG icon</h3>
+          <p class="sg-helper">WP 6.9+ media block. SVG source는 block content가 소유하고, Axismundi는 <code>currentColor</code> 상속과 geometry만 계약.</p>
+          <div class="sg-demo" style="display: flex; gap: var(--space-md); align-items: center;">
+            <div class="wp-block-icon" style="color: var(--md-sys-color-primary); font-size: 32px;" aria-label="Search icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9.5 3a6.5 6.5 0 0 1 5.18 10.43l4.44 4.44-1.25 1.25-4.44-4.44A6.5 6.5 0 1 1 9.5 3Zm0 1.75a4.75 4.75 0 1 0 0 9.5 4.75 4.75 0 0 0 0-9.5Z"></path>
+              </svg>
+            </div>
+            <p class="t-body-medium" style="margin: 0;">Icon block inherits text color and uses SVG <code>fill: currentColor</code>.</p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">core/video — with text tracks</h3>
           <p class="sg-helper">브라우저 native controls 사용. Axismundi는 geometric frame만 계약 (<code>border-radius: corner-medium</code>, <code>margin-block</code>). <code>&lt;track kind="captions"&gt;</code>은 structural HTML — CC 버튼은 브라우저 UI.</p>
           <div class="sg-demo">
@@ -866,7 +883,6 @@ console.log(greet('World'));</code></pre>
             <ul>
               <li><strong>Audio</strong> — native control styling은 catalog 미계약. 앨범 아트 레이아웃은 <code>axismundi_pilot_get_audio_cover_attachment_id()</code> PHP 훅 준비 완료 → future visual contract.</li>
               <li><strong>File</strong> — intended: 리사이즈 버전 드롭다운 (Download button → Small / Medium / Large / Original). PHP <code>render_block_core/file</code> 필터 + JS 토글 필요. 레이아웃 참조: <a href="https://wordpress.org/photos/photo/68268b47ae/" rel="noopener">WordPress Photo Directory</a>. Phase 4에서 구현.</li>
-              <li><strong>Icon</strong> — WP 7.0 reference-only block. No implementation in v3.6.24.</li>
             </ul>
           </div>
         </div>
@@ -998,6 +1014,114 @@ console.log(greet('World'));</code></pre>
       </section>
 
 
+      <!-- ========== Accordion ========== -->
+      <section class="sg-section" id="blocks-accordion">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Accordion</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/accordion</code> (WP 6.9+) — coordinated disclosure list. Unlike <code>core/details</code>, an Accordion contains multiple <code>core/accordion-item</code> children and can auto-close siblings. WP Interactivity API owns behavior; <code>blocks.css</code> owns neutral M3 surfaces.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default — one item open</h3>
+          <div class="sg-demo">
+            <div class="wp-block-accordion" data-wp-interactive="core/accordion" data-wp-context='{ "autoclose": true, "accordionItems": [] }'>
+              <div class="wp-block-accordion-item is-open">
+                <h3 class="wp-block-accordion-heading">
+                  <button class="wp-block-accordion-heading__toggle" type="button" aria-expanded="true" aria-controls="accordion-demo-1-panel" id="accordion-demo-1">
+                    <span class="wp-block-accordion-heading__toggle-title">배송 정책</span>
+                    <span class="wp-block-accordion-heading__toggle-icon" aria-hidden="true">⌄</span>
+                  </button>
+                </h3>
+                <div class="wp-block-accordion-panel" id="accordion-demo-1-panel" aria-labelledby="accordion-demo-1">
+                  <p class="t-body-medium" style="margin: 0;">주문 후 2-3영업일 안에 발송됩니다. 지역과 재고 상태에 따라 일정이 달라질 수 있습니다.</p>
+                </div>
+              </div>
+              <div class="wp-block-accordion-item">
+                <h3 class="wp-block-accordion-heading">
+                  <button class="wp-block-accordion-heading__toggle" type="button" aria-expanded="false" aria-controls="accordion-demo-2-panel" id="accordion-demo-2">
+                    <span class="wp-block-accordion-heading__toggle-title">반품 기준</span>
+                    <span class="wp-block-accordion-heading__toggle-icon" aria-hidden="true">⌄</span>
+                  </button>
+                </h3>
+                <div class="wp-block-accordion-panel" id="accordion-demo-2-panel" aria-labelledby="accordion-demo-2" inert>
+                  <p class="t-body-medium" style="margin: 0;">수령 후 7일 이내 미사용 상품만 반품할 수 있습니다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Icon left</h3>
+          <p class="sg-helper">WP attribute <code>iconPosition:left</code>은 toggle 안에서 icon과 title의 순서를 바꿉니다. Theme CSS는 gap과 색상만 제공.</p>
+          <div class="sg-demo">
+            <div class="wp-block-accordion">
+              <div class="wp-block-accordion-item is-open">
+                <h3 class="wp-block-accordion-heading">
+                  <button class="wp-block-accordion-heading__toggle" type="button" aria-expanded="true">
+                    <span class="wp-block-accordion-heading__toggle-icon" aria-hidden="true">⌄</span>
+                    <span class="wp-block-accordion-heading__toggle-title">접근성 메모</span>
+                  </button>
+                </h3>
+                <div class="wp-block-accordion-panel">
+                  <p class="t-body-medium" style="margin: 0;">Heading은 button 역할을 하며, panel은 <code>aria-labelledby</code>로 연결됩니다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Layout blocks ========== -->
+      <section class="sg-section" id="blocks-layout">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Design</div>
+          <h2 class="t-headline-medium">Row / Stack / Grid</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            Layout blocks are chrome-free composition surfaces. WP layout support owns display mode, alignment, and author controls; Axismundi normalizes gap tokens only.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Row (<code>core/row</code>)</h3>
+          <div class="sg-demo">
+            <div class="wp-block-row is-layout-flex" style="display: flex; flex-wrap: wrap;">
+              <div class="wp-block-group is-style-card-filled"><p class="t-body-medium" style="margin: 0;">Alpha</p></div>
+              <div class="wp-block-group is-style-card-filled"><p class="t-body-medium" style="margin: 0;">Beta</p></div>
+              <div class="wp-block-group is-style-card-filled"><p class="t-body-medium" style="margin: 0;">Gamma</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Stack (<code>core/stack</code>)</h3>
+          <div class="sg-demo">
+            <div class="wp-block-stack is-layout-flex is-vertical" style="display: flex; flex-direction: column;">
+              <div class="wp-block-group is-style-card-outlined"><p class="t-body-medium" style="margin: 0;">Step one</p></div>
+              <div class="wp-block-group is-style-card-outlined"><p class="t-body-medium" style="margin: 0;">Step two</p></div>
+              <div class="wp-block-group is-style-card-outlined"><p class="t-body-medium" style="margin: 0;">Step three</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Grid (<code>core/grid</code>)</h3>
+          <div class="sg-demo">
+            <div class="wp-block-grid is-layout-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+              <div class="wp-block-group is-style-card-elevated"><p class="t-body-medium" style="margin: 0;">One</p></div>
+              <div class="wp-block-group is-style-card-elevated"><p class="t-body-medium" style="margin: 0;">Two</p></div>
+              <div class="wp-block-group is-style-card-elevated"><p class="t-body-medium" style="margin: 0;">Three</p></div>
+              <div class="wp-block-group is-style-card-elevated"><p class="t-body-medium" style="margin: 0;">Four</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
       <!-- ========== Buttons ========== -->
       <section class="sg-section" id="blocks-button">
         <header class="sg-section__head">
@@ -1042,9 +1166,8 @@ console.log(greet('World'));</code></pre>
 
         <div class="sg-demo prose">
           <ul>
-            <li><strong>Accordion</strong> — WP 7.0 reference-only block. Future route.</li>
-            <li><strong>Row / Stack / Grid</strong> — layout block family. Future layout contract.</li>
-            <li><strong>More / Page Break / Spacer</strong> — content-flow utilities. Future route or out-of-scope decision.</li>
+            <li><strong>Spacer</strong> — content-flow utility. Runtime output is an empty div with inline block size; no additional Axismundi chrome.</li>
+            <li><strong>More / Page Break</strong> — editor/runtime pagination utilities. Future route or out-of-scope decision.</li>
           </ul>
         </div>
       </section>
@@ -1079,8 +1202,73 @@ console.log(greet('World'));</code></pre>
               <li><strong>Custom HTML</strong> — routed to <code>style-guide-prose.html</code>, not the block catalog.</li>
               <li><strong>Archives / Calendar / Terms List / Categories List</strong> — reference rows. No local specimen contract.</li>
               <li><strong>Latest Comments / Latest Posts / Page List / RSS</strong> — reference rows. No local specimen contract.</li>
-              <li><strong>Shortcode / Social Icons / Tag Cloud</strong> — reference or legacy surfaces. Future route.</li>
+              <li><strong>Shortcode</strong> — legacy execution surface. No local specimen contract.</li>
             </ul>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Social Icons ========== -->
+      <section class="sg-section" id="blocks-social-icons">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Widgets</div>
+          <h2 class="t-headline-medium">Social Icons</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/social-links</code> + <code>core/social-link</code>. Axismundi defines neutral default geometry only; service brand colors remain WordPress core responsibility.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Neutral default</h3>
+          <div class="sg-demo">
+            <ul class="wp-block-social-links">
+              <li class="wp-social-link wp-block-social-link">
+                <a href="#" aria-label="WordPress">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .01 0ZM4 12c0-1.16.25-2.26.7-3.25l3.82 10.47A8.01 8.01 0 0 1 4 12Zm8 8c-.78 0-1.53-.11-2.24-.32l2.4-6.98 2.46 6.73A7.9 7.9 0 0 1 12 20Zm1.1-11.75c.48-.03.92-.08.92-.08.43-.05.38-.68-.05-.66 0 0-1.3.1-2.13.1-.78 0-2.1-.1-2.1-.1-.43-.02-.48.64-.05.66 0 0 .4.05.84.08l1.25 3.43-1.76 5.28-2.93-8.7c.48-.03.92-.08.92-.08.43-.05.38-.68-.05-.66 0 0-1.3.1-2.13.1-.15 0-.33 0-.52-.01A8 8 0 0 1 18.56 5.2c-.04 0-.07-.01-.11-.01-.78 0-1.33.68-1.33 1.4 0 .65.38 1.2.78 1.85.3.53.66 1.2.66 2.18 0 .68-.26 1.47-.61 2.6l-.8 2.67-2.9-8.62Zm4.9 10.4 2.44-7.05c.46-1.15.61-2.07.61-2.9 0-.3-.02-.58-.06-.84A8 8 0 0 1 18 18.65Z"></path></svg>
+                </a>
+              </li>
+              <li class="wp-social-link wp-block-social-link">
+                <a href="#" aria-label="GitHub">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 8.36 22.9c.58.1.79-.25.79-.56v-2.15c-3.2.7-3.88-1.36-3.88-1.36-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18A10.9 10.9 0 0 1 12 6.04c.98 0 1.96.13 2.88.39 2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.42-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.16c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"></path></svg>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Tag Cloud ========== -->
+      <section class="sg-section" id="blocks-tag-cloud">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Widgets</div>
+          <h2 class="t-headline-medium">Tag Cloud</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            <code>core/tag-cloud</code> renders taxonomy links with optional counts. Axismundi normalizes the cloud to a chip row and ignores WP's frequency-based font-size ramp.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default chips</h3>
+          <div class="sg-demo">
+            <p class="wp-block-tag-cloud">
+              <a href="#" class="tag-cloud-link" style="font-size: 22pt;">Material 3</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 14pt;">WordPress</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 8pt;">Typography</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 16pt;">Blocks</a>
+            </p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Outline style</h3>
+          <div class="sg-demo">
+            <p class="wp-block-tag-cloud is-style-outline">
+              <a href="#" class="tag-cloud-link">design <span class="tag-link-count">(12)</span></a>
+              <a href="#" class="tag-cloud-link">tokens <span class="tag-link-count">(8)</span></a>
+              <a href="#" class="tag-cloud-link">pilot <span class="tag-link-count">(4)</span></a>
+            </p>
           </div>
         </div>
       </section>
@@ -1090,16 +1278,30 @@ console.log(greet('World'));</code></pre>
       <section class="sg-section" id="blocks-theme">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow">Theme</div>
-          <h2 class="t-headline-medium">Theme blocks route</h2>
+          <h2 class="t-headline-medium">Theme identity blocks</h2>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            Theme blocks such as Navigation, Query, Post Template, Site Logo, and Breadcrumbs are FSE/template surfaces. v3.6.23 records the category route without implementing templates, pattern overrides, or block bindings.
+            CSS-only theme blocks that can be represented without rendering a full FSE template. Navigation, Query Loop, Template Part, and Comments stay routed to the future pattern/template styleguide.
           </p>
         </header>
 
-        <div class="sg-demo">
-          <p class="t-body-medium" style="margin: 0;">
-            Theme block specimens are routed to future template and plugin cycles. Embeds remain excluded from this catalog until source, privacy, provider, and responsive-token policy exists.
-          </p>
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Site Logo (<code>core/site-logo</code>)</h3>
+          <div class="sg-demo" style="display: flex; gap: var(--space-lg); align-items: center;">
+            <figure class="wp-block-site-logo">
+              <img src="../assets/brand/axismundi-symbol.svg" alt="Axismundi symbol" style="inline-size: 64px;">
+            </figure>
+            <figure class="wp-block-site-logo is-style-rounded">
+              <img src="../assets/brand/axismundi-symbol.svg" alt="Axismundi symbol rounded" style="inline-size: 64px;">
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Site Title / Site Tagline</h3>
+          <div class="sg-demo">
+            <h1 class="wp-block-site-title"><a href="#">Axismundi Pilot</a></h1>
+            <p class="wp-block-site-tagline">Material 3 design system for WordPress block themes.</p>
+          </div>
         </div>
 
         <div class="sg-subsection">
@@ -1108,7 +1310,6 @@ console.log(greet('World'));</code></pre>
             <ul>
               <li><strong>Navigation</strong> — template/FSE surface. Future template or plugin route.</li>
               <li><strong>Query Loop / Post Template</strong> — theme template surface. No catalog specimen in v3.6.24.</li>
-              <li><strong>Site Logo / Site Title / Site Tagline</strong> — product identity and theme context required.</li>
               <li><strong>Template Part</strong> — FSE structure surface. Future route.</li>
               <li><strong>Breadcrumbs</strong> — WP 7.0 reference-only block. Future route.</li>
               <li><strong>Comments / terms / post metadata family</strong> — theme context required; no implementation claim.</li>

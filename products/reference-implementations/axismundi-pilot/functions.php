@@ -219,6 +219,28 @@ add_filter( 'pre_option_wp_attachment_pages_enabled', 'axismundi_pilot_enable_at
 remove_filter( 'the_content', 'prepend_attachment' );
 
 /**
+ * Register Pilot attachment metadata fields.
+ *
+ * `axismundi_video_tracks` stores a JSON array of WebVTT track definitions for
+ * video attachment pages. Editing UI is intentionally deferred; during the
+ * Pilot phase the field can be managed through WP-CLI or Custom Fields.
+ *
+ * @return void
+ */
+function axismundi_pilot_register_attachment_meta() : void {
+	register_post_meta( 'attachment', 'axismundi_video_tracks', array(
+		'type'              => 'string',
+		'single'            => true,
+		'show_in_rest'      => true,
+		'sanitize_callback' => 'axismundi_pilot_sanitize_video_tracks_meta',
+		'auth_callback'     => static function() : bool {
+			return current_user_can( 'edit_posts' );
+		},
+	) );
+}
+add_action( 'init', 'axismundi_pilot_register_attachment_meta' );
+
+/**
  * Render the media portion of attachment pages through a PHP partial hierarchy.
  *
  * @param string   $block_content Existing Post Content block output.
@@ -333,6 +355,97 @@ function axismundi_pilot_get_attachment_common_meta( int $attachment_id ) : arra
 		__( 'File name', 'axismundi-pilot' )     => $file_path ? wp_basename( $file_path ) : '',
 		__( 'File size', 'axismundi-pilot' )     => ( $file_path && file_exists( $file_path ) ) ? size_format( filesize( $file_path ) ) : '',
 	);
+}
+
+/**
+ * Sanitize the JSON video track metadata field.
+ *
+ * @param mixed $value Raw meta value.
+ * @return string JSON-encoded track list.
+ */
+function axismundi_pilot_sanitize_video_tracks_meta( $value ) : string {
+	$tracks = is_string( $value ) ? json_decode( $value, true ) : $value;
+
+	if ( ! is_array( $tracks ) ) {
+		return '';
+	}
+
+	$sanitized = array();
+	foreach ( $tracks as $track ) {
+		if ( ! is_array( $track ) ) {
+			continue;
+		}
+
+		$src = isset( $track['src'] ) ? esc_url_raw( (string) $track['src'] ) : '';
+		if ( ! $src ) {
+			continue;
+		}
+
+		$kind = isset( $track['kind'] ) ? sanitize_key( (string) $track['kind'] ) : 'captions';
+		if ( ! in_array( $kind, array( 'subtitles', 'captions', 'descriptions', 'chapters', 'metadata' ), true ) ) {
+			$kind = 'captions';
+		}
+
+		$sanitized[] = array(
+			'src'     => $src,
+			'kind'    => $kind,
+			'srclang' => isset( $track['srclang'] ) ? sanitize_key( (string) $track['srclang'] ) : '',
+			'label'   => isset( $track['label'] ) ? sanitize_text_field( (string) $track['label'] ) : '',
+			'default' => ! empty( $track['default'] ),
+		);
+	}
+
+	return $sanitized ? wp_json_encode( $sanitized ) : '';
+}
+
+/**
+ * Read WebVTT track definitions for a video attachment.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_pilot_get_video_tracks( int $attachment_id ) : array {
+	$raw = get_post_meta( $attachment_id, 'axismundi_video_tracks', true );
+	if ( ! $raw ) {
+		return array();
+	}
+
+	$tracks = is_array( $raw ) ? $raw : json_decode( (string) $raw, true );
+	if ( ! is_array( $tracks ) ) {
+		return array();
+	}
+
+	$sanitized = axismundi_pilot_sanitize_video_tracks_meta( $tracks );
+	$decoded   = $sanitized ? json_decode( $sanitized, true ) : array();
+
+	return is_array( $decoded ) ? $decoded : array();
+}
+
+/**
+ * Render WebVTT track tags for a video attachment.
+ *
+ * @param array<int,array<string,mixed>> $tracks Track definitions.
+ * @return string HTML track tags.
+ */
+function axismundi_pilot_render_video_tracks( array $tracks ) : string {
+	$html = '';
+
+	foreach ( $tracks as $track ) {
+		if ( empty( $track['src'] ) ) {
+			continue;
+		}
+
+		$html .= sprintf(
+			'<track kind="%1$s" src="%2$s"%3$s%4$s%5$s>',
+			esc_attr( $track['kind'] ?? 'captions' ),
+			esc_url( $track['src'] ),
+			! empty( $track['srclang'] ) ? ' srclang="' . esc_attr( $track['srclang'] ) . '"' : '',
+			! empty( $track['label'] ) ? ' label="' . esc_attr( $track['label'] ) . '"' : '',
+			! empty( $track['default'] ) ? ' default' : ''
+		);
+	}
+
+	return $html;
 }
 
 /**

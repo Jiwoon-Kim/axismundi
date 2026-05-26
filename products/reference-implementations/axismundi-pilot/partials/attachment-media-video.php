@@ -11,11 +11,21 @@ defined( 'ABSPATH' ) || exit;
 
 $url        = wp_get_attachment_url( $attachment_id );
 $metadata   = wp_get_attachment_metadata( $attachment_id );
+$tracks     = axismundi_pilot_get_video_tracks( $attachment_id );
+$track_html = axismundi_pilot_render_video_tracks( $tracks );
+$block_attrs = array(
+	'id'  => (int) $attachment_id,
+	'src' => esc_url_raw( (string) $url ),
+);
+if ( $tracks ) {
+	$block_attrs['tracks'] = $tracks;
+}
 $video_html = $url ? do_blocks(
 	sprintf(
-		'<!-- wp:video {"id":%1$d,"src":"%2$s"} --><figure class="wp-block-video"><video controls src="%2$s"></video></figure><!-- /wp:video -->',
-		(int) $attachment_id,
-		esc_url( $url )
+		'<!-- wp:video %1$s --><figure class="wp-block-video"><video controls src="%2$s">%3$s</video></figure><!-- /wp:video -->',
+		wp_json_encode( $block_attrs ),
+		esc_url( $url ),
+		$track_html
 	)
 ) : '';
 
@@ -32,6 +42,7 @@ $meta_items = array_merge( axismundi_pilot_get_attachment_common_meta( $attachme
 	__( 'Format', 'axismundi-pilot' )  => $metadata['fileformat'] ?? '',
 	__( 'Data format', 'axismundi-pilot' ) => $metadata['dataformat'] ?? '',
 	__( 'Bitrate', 'axismundi-pilot' ) => ! empty( $metadata['bitrate'] ) ? size_format( (int) ( $metadata['bitrate'] / 8 ) ) . '/s' : '',
+	__( 'Text tracks', 'axismundi-pilot' ) => $tracks ? count( $tracks ) : '',
 ) );
 
 $raw_meta = array(

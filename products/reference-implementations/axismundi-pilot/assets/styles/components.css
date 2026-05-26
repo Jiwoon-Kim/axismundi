@@ -6220,6 +6220,115 @@ input.ax-time-picker__field:focus-visible {
 }
 
 /* ============================================================
+ * Axismundi Pilot attachment media
+ * ============================================================ */
+
+.ax-attachment-media {
+  display: grid;
+  gap: var(--space-lg);
+  margin-block: var(--wp--preset--spacing--60);
+}
+
+.ax-attachment-media__figure,
+.ax-attachment-media__cover {
+  margin: 0;
+}
+
+.ax-attachment-media__figure img,
+.ax-attachment-media__cover img,
+.ax-attachment-media__image {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+.ax-attachment-media .wp-block-audio,
+.ax-attachment-media .wp-block-video,
+.ax-attachment-media .wp-block-file {
+  margin: 0;
+}
+
+.ax-attachment-meta {
+  display: grid;
+  gap: var(--space-md);
+  min-inline-size: 0;
+}
+
+.ax-attachment-meta__summary {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: var(--space-sm) var(--space-md);
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+}
+
+.ax-attachment-meta__summary dt {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+}
+
+.ax-attachment-meta__summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ax-attachment-meta__raw {
+  min-inline-size: 0;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.ax-attachment-meta__raw summary {
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+}
+
+.ax-attachment-meta__raw pre {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  max-block-size: 24rem;
+  margin: 0;
+  padding: var(--space-md);
+  overflow-x: auto;
+  overflow-y: auto;
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+
+.ax-attachment-meta__raw code {
+  display: block;
+  inline-size: max-content;
+  min-inline-size: 100%;
+  white-space: pre;
+}
+
+@media (max-width: 599px) {
+  .ax-attachment-meta__summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
  * Date / Time picker — usage patterns (reference, not enforced)
  *
  * The picker components above are visual primitives. Real-world use

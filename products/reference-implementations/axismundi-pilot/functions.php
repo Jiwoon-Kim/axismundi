@@ -71,23 +71,131 @@ function axismundi_pilot_setup() : void {
 }
 add_action( 'after_setup_theme', 'axismundi_pilot_setup' );
 
+// ---------------------------------------------------------------------------
+// Theme colour-scheme — cookie / user-meta helpers
+// ---------------------------------------------------------------------------
+
 /**
- * Add the explicit theme auto state to the Pilot front-end root element.
+ * Cookie and user-meta key for the stored colour scheme.
+ * Must match the JS constant `cookieName` passed via wp_interactivity_state().
+ */
+define( 'AXISMUNDI_PILOT_SCHEME_KEY', 'axismundi-pilot-theme' );
+
+/**
+ * Register the colour-scheme user meta so logged-in users can persist their
+ * preference server-side and it is accessible through the REST API.
+ */
+function axismundi_pilot_register_scheme_meta() : void {
+	$sanitize = static fn( string $value ) : string =>
+		in_array( $value, array( 'light', 'dark', 'auto' ), true ) ? $value : '';
+
+	register_meta( 'user', AXISMUNDI_PILOT_SCHEME_KEY, array(
+		'label'             => __( 'Colour Scheme', 'axismundi-pilot' ),
+		'description'       => __( 'Stores the preferred colour scheme for the Axismundi Pilot site.', 'axismundi-pilot' ),
+		'default'           => '',
+		'sanitize_callback' => $sanitize,
+		'show_in_rest'      => true,
+		'single'            => true,
+		'type'              => 'string',
+	) );
+}
+add_action( 'init', 'axismundi_pilot_register_scheme_meta' );
+
+/**
+ * Return the user's current colour scheme preference.
+ *
+ * Priority: user meta (logged-in) → cookie → 'auto'.
+ *
+ * @return 'light'|'dark'|'auto'
+ */
+function axismundi_pilot_get_color_scheme() : string {
+	$key   = AXISMUNDI_PILOT_SCHEME_KEY;
+	$valid = array( 'light', 'dark', 'auto' );
+
+	// Cookie is checked first: JS writes the cookie synchronously on every
+	// click, whereas the user-meta REST write is async and may not have
+	// completed before the next page load.  Giving the cookie higher priority
+	// means SSR always reflects the most-recent user choice, with user meta
+	// serving as a cross-device / cross-browser fallback when no cookie exists.
+	if ( isset( $_COOKIE[ $key ] ) ) {
+		$stored = sanitize_key( wp_unslash( $_COOKIE[ $key ] ) );
+		if ( $stored && in_array( $stored, $valid, true ) ) {
+			return $stored;
+		}
+	}
+
+	if ( is_user_logged_in() ) {
+		$stored = get_user_meta( get_current_user_id(), $key, true );
+		if ( $stored && in_array( $stored, $valid, true ) ) {
+			return $stored;
+		}
+	}
+
+	return 'auto';
+}
+
+/**
+ * Add the explicit theme state to the Pilot front-end root element.
+ *
+ * Reads the user's stored preference from cookie / user meta so the correct
+ * data-theme is rendered server-side — eliminating the flash of unstyled
+ * content that occurred when the previous implementation always wrote "auto"
+ * and relied on JavaScript to correct it.
  *
  * Pilot-only BACKLOG #22 evidence. Do not copy this filter into distributable
  * themes without an explicit distributable skeleton bootstrap decision.
  *
  * @param string $output Existing language attributes.
- * @return string Language attributes with a default data-theme when absent.
+ * @return string Language attributes with the resolved data-theme value.
  */
 function axismundi_pilot_language_attributes( string $output ) : string {
 	if ( is_admin() || false !== strpos( $output, 'data-theme=' ) ) {
 		return $output;
 	}
 
-	return trim( $output . ' data-theme="auto"' );
+	$scheme = axismundi_pilot_get_color_scheme();
+	return trim( $output . ' data-theme="' . esc_attr( $scheme ) . '"' );
 }
 add_filter( 'language_attributes', 'axismundi_pilot_language_attributes', 20 );
+
+/**
+ * Enqueue the Interactivity API colour-scheme script module and set the
+ * initial server-side state for the theme switcher.
+ *
+ * The script module is only registered when the compiled asset file is
+ * present (i.e. after `npm run build` has been executed).
+ */
+function axismundi_pilot_enqueue_color_scheme() : void {
+	$asset_file = get_template_directory() . '/public/js/color-scheme.asset.php';
+
+	if ( ! file_exists( $asset_file ) ) {
+		return;
+	}
+
+	$asset = include $asset_file;
+
+	wp_enqueue_script_module(
+		'axismundi-pilot-color-scheme',
+		get_template_directory_uri() . '/public/js/color-scheme.js',
+		$asset['dependencies'],
+		$asset['version']
+	);
+
+	// Enqueue wp-api-fetch only when the user is logged in so the meta
+	// endpoint call in the JS module has its transport available.
+	if ( is_user_logged_in() ) {
+		wp_enqueue_script( 'wp-api-fetch' );
+	}
+
+	wp_interactivity_state( 'axismundi-pilot/color-scheme', array(
+		'colorScheme'  => axismundi_pilot_get_color_scheme(),
+		'userId'       => get_current_user_id(),
+		'cookieName'   => AXISMUNDI_PILOT_SCHEME_KEY,
+		'cookiePath'   => COOKIEPATH,
+		'cookieDomain' => (string) COOKIE_DOMAIN,
+	) );
+}
+add_action( 'wp_enqueue_scripts', 'axismundi_pilot_enqueue_color_scheme' );
 
 /**
  * Enqueue copied Pilot assets when Phase 2B has produced them.

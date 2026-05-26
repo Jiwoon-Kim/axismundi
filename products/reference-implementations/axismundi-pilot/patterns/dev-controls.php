@@ -8,9 +8,36 @@
  */
 ?>
 <!-- wp:html -->
-<div class="ax-theme-switcher" role="radiogroup" aria-label="Theme">
-	<button type="button" data-theme-set="light" role="radio" aria-checked="false">Light</button>
-	<button type="button" data-theme-set="dark" role="radio" aria-checked="false">Dark</button>
-	<button type="button" data-theme-set="auto" role="radio" aria-checked="true">Auto</button>
+<div
+	class="ax-theme-switcher"
+	role="radiogroup"
+	aria-label="<?php esc_attr_e( 'Theme', 'axismundi-pilot' ); ?>"
+	data-wp-interactive="axismundi-pilot/color-scheme"
+	data-wp-watch="callbacks.updateTheme"
+>
+	<button
+		type="button"
+		class="ax-theme-btn"
+		role="radio"
+		data-wp-context='{"mode":"light"}'
+		data-wp-on--click="actions.setScheme"
+		data-wp-bind--aria-checked="state.isActive"
+	>Light</button>
+	<button
+		type="button"
+		class="ax-theme-btn"
+		role="radio"
+		data-wp-context='{"mode":"dark"}'
+		data-wp-on--click="actions.setScheme"
+		data-wp-bind--aria-checked="state.isActive"
+	>Dark</button>
+	<button
+		type="button"
+		class="ax-theme-btn"
+		role="radio"
+		data-wp-context='{"mode":"auto"}'
+		data-wp-on--click="actions.setScheme"
+		data-wp-bind--aria-checked="state.isActive"
+	>Auto</button>
 </div>
 <!-- /wp:html -->

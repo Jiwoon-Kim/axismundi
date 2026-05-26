@@ -6,11 +6,11 @@
 
 | Style | Path | License | Axes |
 |---|---|---|---|
-| Outlined | `material-symbols-outlined/material-symbols-outlined.woff2` | Apache 2.0 | FILL, GRAD, opsz, wght |
-| Rounded | `material-symbols-rounded/material-symbols-rounded.woff2` | Apache 2.0 | FILL, GRAD, opsz, wght |
-| Sharp | `material-symbols-sharp/material-symbols-sharp.woff2` | Apache 2.0 | FILL, GRAD, opsz, wght |
+| Outlined | `../fonts/material-symbols-outlined/material-symbols-outlined.woff2` | Apache 2.0 | FILL, GRAD, opsz, wght |
+| Rounded | `../fonts/material-symbols-rounded/material-symbols-rounded.woff2` | Apache 2.0 | FILL, GRAD, opsz, wght |
+| Sharp | `../fonts/material-symbols-sharp/material-symbols-sharp.woff2` | Apache 2.0 | FILL, GRAD, opsz, wght |
 
-All 3 styles are variable fonts with full glyph table preserved (no subset). LICENSE.txt is preserved in each subdirectory per Apache 2.0 §4(d).
+All 3 styles are variable fonts with full glyph table preserved (no subset). LICENSE.txt is preserved in each font subdirectory per Apache 2.0 §4(d).
 
 ## Scope policy (ALLOWED / FORBIDDEN zones)
 

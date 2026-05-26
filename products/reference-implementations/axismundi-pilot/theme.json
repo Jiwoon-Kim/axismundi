@@ -228,6 +228,22 @@
               ]
             }
           ]
+        },
+        {
+          "name": "Material Symbols Rounded",
+          "slug": "material-symbols-rounded",
+          "fontFamily": "'Material Symbols Rounded', sans-serif",
+          "fontFace": [
+            {
+              "fontFamily": "Material Symbols Rounded",
+              "fontStyle": "normal",
+              "fontWeight": "100 700",
+              "fontDisplay": "block",
+              "src": [
+                "file:./assets/fonts/material-symbols-rounded/material-symbols-rounded.woff2"
+              ]
+            }
+          ]
         }
       ],
       "fontSizes": [

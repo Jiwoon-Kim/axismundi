@@ -4,7 +4,7 @@
  * Slug: axismundi-pilot/dev-controls
  * Categories: axismundi-dev
  * Inserter: true
- * Description: Theme mode toggle for development use. Not part of any template.
+ * Description: Theme mode toggle for development use.
  */
 ?>
 <!-- wp:html -->

@@ -11,7 +11,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_PILOT_VERSION' ) ) {
-	define( 'AXISMUNDI_PILOT_VERSION', '0.2.0-pilot' );
+	define( 'AXISMUNDI_PILOT_VERSION', '0.2.1-pilot' );
 }
 
 /**

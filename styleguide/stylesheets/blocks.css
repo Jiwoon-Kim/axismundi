@@ -441,18 +441,19 @@
  * §7 Image / Gallery
  *
  * core/image → <figure class="wp-block-image"><img>[<figcaption>]</figure>.
- * prose.css §9 already gives images radius-medium + figcaption
- * styling. This section adds WP-specific size hooks + gallery
- * grid layout.
+ * Default image style is square/no radius, matching WP core. The registered
+ * `is-style-rounded` variant owns radius. prose.css §9 may apply
+ * corner-medium inside long-form prose contexts as an editorial choice.
  * ============================================================ */
 .wp-block-image {
   margin-block: var(--space-md);
 }
 .wp-block-image img {
-  /* prose.css gives radius-medium; preserve here for non-prose contexts */
-  border-radius: var(--md-sys-shape-corner-medium);
   max-inline-size: 100%;
   block-size: auto;
+}
+.wp-block-image.is-style-rounded img {
+  border-radius: var(--md-sys-shape-corner-full);
 }
 .wp-block-image.size-thumbnail img { inline-size: auto; }
 .wp-block-image.is-resized img      { inline-size: auto; }
@@ -476,6 +477,28 @@
 
 .wp-block-gallery .wp-block-image {
   margin: 0; /* gap owns spacing */
+}
+
+/* ============================================================
+ * §7.x Video
+ *
+ * core/video → <figure class="wp-block-video">
+ *                <video controls src="…"><track>…</video>
+ *                [<figcaption>]
+ *              </figure>
+ *
+ * Browser-native controls — Axismundi sets geometric frame only.
+ * <track> (subtitles / captions) is structural HTML, no CSS contract.
+ * ============================================================ */
+.wp-block-video {
+  margin-block: var(--space-md);
+}
+
+.wp-block-video video {
+  border-radius: var(--md-sys-shape-corner-medium);
+  max-inline-size: 100%;
+  block-size: auto;
+  display: block;
 }
 
 /* ============================================================

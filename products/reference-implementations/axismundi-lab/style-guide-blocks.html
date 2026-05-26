@@ -181,8 +181,9 @@
         linear-gradient(135deg,
           var(--md-sys-color-primary-container) 0%,
           var(--md-sys-color-tertiary-container) 100%);
-      border-radius: var(--md-sys-shape-corner-medium);
+      border-radius: 0;
     }
+    .sg-sample-img--rounded { border-radius: var(--md-sys-shape-corner-full); }
     .sg-sample-img--small { block-size: 100px; }
 
     /* ---- Mobile ---- */
@@ -770,16 +771,27 @@ console.log(greet('World'));</code></pre>
           <div class="t-label-medium sg-section__eyebrow">Media</div>
           <h2 class="t-headline-medium">Image / Gallery / Cover / Media &amp; Text</h2>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            v3.6.24 keeps Media specimens bounded to image-derived surfaces. Audio, video, file, and icon remain explicit gap rows until their source and product policies are closed.
+            v3.6.24 keeps Media specimens bounded to image-derived surfaces. Audio, file, and icon remain explicit gap rows. Video specimen is promoted with text track structure.
           </p>
         </header>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">core/image</h3>
+          <h3 class="t-title-medium sg-subsection__head">core/image — default, no radius</h3>
+          <p class="sg-helper">WP core 기본 렌더링. <code>border-radius: 0</code>. prose 컨텍스트 안에서는 <code>prose.css §9</code>가 <code>corner-medium</code>을 적용.</p>
           <div class="sg-demo">
             <figure class="wp-block-image">
               <div class="sg-sample-img"></div>
-              <figcaption>이미지 캡션은 <code>prose.css</code>의 figcaption 스타일을 따릅니다 (body-small, on-surface-variant, center).</figcaption>
+              <figcaption>이미지 캡션 — body-small, on-surface-variant, center.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/image — rounded (<code>is-style-rounded</code>)</h3>
+          <p class="sg-helper">WP core 등록 스타일. <code>border-radius: corner-full (9999px)</code>. 정사각형 이미지에서 원형으로 처리됨.</p>
+          <div class="sg-demo">
+            <figure class="wp-block-image is-style-rounded" style="max-inline-size: 200px;">
+              <div class="sg-sample-img sg-sample-img--rounded" style="block-size: 200px;"></div>
             </figure>
           </div>
         </div>
@@ -795,6 +807,21 @@ console.log(greet('World'));</code></pre>
               <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
               <li class="wp-block-image"><div class="sg-sample-img sg-sample-img--small"></div></li>
             </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/video — with text tracks</h3>
+          <p class="sg-helper">브라우저 native controls 사용. Axismundi는 geometric frame만 계약 (<code>border-radius: corner-medium</code>, <code>margin-block</code>). <code>&lt;track&gt;</code>은 structural HTML — CC 버튼은 브라우저 UI.</p>
+          <div class="sg-demo">
+            <figure class="wp-block-video">
+              <video controls preload="metadata" style="inline-size: 100%; min-block-size: 140px; background: var(--md-sys-color-surface-container);">
+                <source src="../../../assets/media/video/video-placeholder-gwangan-720p.webm" type="video/webm">
+                <track kind="subtitles" src="../../../assets/media/video/video-placeholder-gwangan-720p.ko.vtt" srclang="ko" label="한국어" default>
+                <track kind="subtitles" src="../../../assets/media/video/video-placeholder-gwangan-720p.en.vtt" srclang="en" label="English">
+              </video>
+              <figcaption>core/video — subtitles 2개 (ko/en). 광안대교 placeholder video와 WebVTT track 파일 연결.</figcaption>
+            </figure>
           </div>
         </div>
 
@@ -830,9 +857,8 @@ console.log(greet('World'));</code></pre>
           <h3 class="t-title-medium sg-subsection__head">Media gap rows</h3>
           <div class="sg-demo prose">
             <ul>
-              <li><strong>Audio</strong> — external prerequisite. Project-author audio exists, but native control styling is not yet a catalog support contract.</li>
-              <li><strong>Video</strong> — external prerequisite. Placeholder video is Pixabay-sourced; isolation policy remains routed forward.</li>
-              <li><strong>File</strong> — external prerequisite. No local placeholder file asset is available.</li>
+              <li><strong>Audio</strong> — native control styling은 catalog 미계약. 앨범 아트 레이아웃은 <code>axismundi_pilot_get_audio_cover_attachment_id()</code> PHP 훅 준비 완료 → future visual contract.</li>
+              <li><strong>File</strong> — intended: 리사이즈 버전 드롭다운 (Download button → Small / Medium / Large / Original). PHP <code>render_block_core/file</code> 필터 + JS 토글 필요. 레이아웃 참조: <a href="https://wordpress.org/photos/photo/68268b47ae/" rel="noopener">WordPress Photo Directory</a>. Phase 4에서 구현.</li>
               <li><strong>Icon</strong> — WP 7.0 reference-only block. No implementation in v3.6.24.</li>
             </ul>
           </div>

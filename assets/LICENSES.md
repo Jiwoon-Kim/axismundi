@@ -52,6 +52,8 @@ Duration:
 | File | Source | License | Notes |
 |---|---|---|---|
 | `media/video/video-placeholder-gwangan-720p.webm` | Pixabay video by Evgeniy__Mironov | Pixabay Content License | Not project-owned; converted to 720p AV1 WebM |
+| `media/video/video-placeholder-gwangan-720p.ko.vtt` | Project-authored by Jiwoon Kim | Project-owned demo asset | Korean subtitles for gwangan video placeholder |
+| `media/video/video-placeholder-gwangan-720p.en.vtt` | Project-authored by Jiwoon Kim | Project-owned demo asset | English subtitles for gwangan video placeholder |
 
 Source:
 

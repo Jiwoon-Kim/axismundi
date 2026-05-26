@@ -293,6 +293,7 @@
         <a class="t-body-medium" href="#blocks-table">Table</a>
         <a class="t-body-medium" href="#blocks-details">Details</a>
         <a class="t-body-medium" href="#blocks-footnotes">Footnotes</a>
+        <a class="t-body-medium" href="#blocks-post-meta">Post metadata</a>
         <a class="t-body-medium" href="#blocks-text-gaps">Text gaps</a>
 
         <div class="t-label-small sg-nav__group-label">Media</div>
@@ -712,6 +713,40 @@ console.log(greet('World'));</code></pre>
               <li id="footnote-1">Smith, J. (2024). <em>Design Systems at Scale</em>. Material Design Press. p. 42. <a href="#footnote-ref-1" aria-label="각주 1로 돌아가기">↩︎</a></li>
               <li id="footnote-2">"디자인 토큰은 디자인 결정의 단일 진실 공급원이다." — W3C Design Tokens Community Group. <a href="#footnote-ref-2" aria-label="각주 2로 돌아가기">↩︎</a></li>
             </ol>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Post metadata ========== -->
+      <section class="sg-section" id="blocks-post-meta">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Text · template</div>
+          <h2 class="t-headline-medium">Post metadata</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            Query Loop / Single post template 전용 블록. 일반 포스트 content 편집기에서 삽입 불가. <code>blocks.css §6.x</code>가 visual contract 담당.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Post Terms (<code>core/post-terms</code>, WP 5.8+)</h3>
+          <p class="sg-helper">포스트에 연결된 taxonomy term을 chip row로 렌더. <code>.wp-block-post-terms__separator</code>는 <code>display: none</code>으로 숨김 — chip 간 gap이 대신함.</p>
+          <div class="sg-demo">
+            <div class="wp-block-post-terms">
+              <a href="#">디자인 시스템</a>
+              <span class="wp-block-post-terms__separator">, </span>
+              <a href="#">Material 3</a>
+              <span class="wp-block-post-terms__separator">, </span>
+              <a href="#">WordPress</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Time to Read (<code>core/post-time-to-read</code>, WP 6.4+)</h3>
+          <p class="sg-helper">추정 읽기 시간 텍스트. <code>::before</code>로 <code>schedule</code> Material Symbol 주입 — theme chrome 스코프 내 사용.</p>
+          <div class="sg-demo">
+            <p class="wp-block-post-time-to-read">5 minute read</p>
           </div>
         </div>
       </section>

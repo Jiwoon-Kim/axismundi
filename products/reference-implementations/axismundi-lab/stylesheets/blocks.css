@@ -361,6 +361,83 @@
 }
 
 /* ============================================================
+ * §6.x Post metadata blocks
+ *
+ * Theme template context only (Query Loop / Single post template).
+ * Not available in regular post content editor.
+ *
+ *   core/post-terms        → chip row
+ *   core/post-time-to-read → label + schedule icon
+ * ============================================================ */
+
+/* --- core/post-terms ---
+ * <div class="wp-block-post-terms">
+ *   <a>Term</a>
+ *   <span class="wp-block-post-terms__separator">, </span>
+ *   <a>Term</a>
+ * </div>
+ * Chip gap replaces separator — hide the text separator. */
+.wp-block-post-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-block: var(--space-sm);
+}
+
+.wp-block-post-terms a {
+  display: inline-flex;
+  align-items: center;
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-post-terms a:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+/* Separator hidden — chip gap handles spacing */
+.wp-block-post-terms__separator {
+  display: none;
+}
+
+/* --- core/post-time-to-read ---
+ * <p class="wp-block-post-time-to-read">5 minute read</p>
+ * schedule icon injected via ::before (Material Symbols — theme chrome scope). */
+.wp-block-post-time-to-read {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-block: var(--space-sm);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-post-time-to-read::before {
+  content: 'schedule';
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-style:  normal;
+  font-size:   16px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  line-height: 1;
+  color: inherit;
+}
+
+/* ============================================================
  * §7 Image / Gallery
  *
  * core/image → <figure class="wp-block-image"><img>[<figcaption>]</figure>.

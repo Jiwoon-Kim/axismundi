@@ -181,7 +181,7 @@
         linear-gradient(135deg,
           var(--md-sys-color-primary-container) 0%,
           var(--md-sys-color-tertiary-container) 100%);
-      border-radius: 0;
+      border-radius: var(--md-sys-shape-corner-medium);
     }
     .sg-sample-img--rounded { border-radius: var(--md-sys-shape-corner-full); }
     .sg-sample-img--small { block-size: 100px; }
@@ -776,8 +776,8 @@ console.log(greet('World'));</code></pre>
         </header>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">core/image — default, no radius</h3>
-          <p class="sg-helper">WP core 기본 렌더링. <code>border-radius: 0</code>. prose 컨텍스트 안에서는 <code>prose.css §9</code>가 <code>corner-medium</code>을 적용.</p>
+          <h3 class="t-title-medium sg-subsection__head">core/image — default</h3>
+          <p class="sg-helper">Axismundi 기본 이미지 스타일. <code>border-radius: corner-medium</code>. WP core의 rounded style과 source-order 충돌이 생기지 않도록 <code>is-style-rounded</code>는 blocks.css에서 명시적으로 재선언.</p>
           <div class="sg-demo">
             <figure class="wp-block-image">
               <div class="sg-sample-img"></div>
@@ -788,7 +788,7 @@ console.log(greet('World'));</code></pre>
 
         <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">core/image — rounded (<code>is-style-rounded</code>)</h3>
-          <p class="sg-helper">WP core 등록 스타일. <code>border-radius: corner-full (9999px)</code>. 정사각형 이미지에서 원형으로 처리됨.</p>
+          <p class="sg-helper">WP core 등록 스타일. <code>border-radius: corner-full (9999px)</code> — 정사각형 이미지에서 원형으로 처리. blocks.css에서 명시적 재선언으로 source-order 충돌 방어.</p>
           <div class="sg-demo">
             <figure class="wp-block-image is-style-rounded" style="max-inline-size: 200px;">
               <div class="sg-sample-img sg-sample-img--rounded" style="block-size: 200px;"></div>
@@ -812,15 +812,15 @@ console.log(greet('World'));</code></pre>
 
         <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">core/video — with text tracks</h3>
-          <p class="sg-helper">브라우저 native controls 사용. Axismundi는 geometric frame만 계약 (<code>border-radius: corner-medium</code>, <code>margin-block</code>). <code>&lt;track&gt;</code>은 structural HTML — CC 버튼은 브라우저 UI.</p>
+          <p class="sg-helper">브라우저 native controls 사용. Axismundi는 geometric frame만 계약 (<code>border-radius: corner-medium</code>, <code>margin-block</code>). <code>&lt;track kind="captions"&gt;</code>은 structural HTML — CC 버튼은 브라우저 UI.</p>
           <div class="sg-demo">
             <figure class="wp-block-video">
-              <video controls preload="metadata" style="inline-size: 100%; min-block-size: 140px; background: var(--md-sys-color-surface-container);">
+              <video controls preload="metadata" crossorigin="anonymous" style="inline-size: 100%; min-block-size: 140px; background: var(--md-sys-color-surface-container);">
                 <source src="../../../assets/media/video/video-placeholder-gwangan-720p.webm" type="video/webm">
-                <track kind="subtitles" src="../../../assets/media/video/video-placeholder-gwangan-720p.ko.vtt" srclang="ko" label="한국어" default>
-                <track kind="subtitles" src="../../../assets/media/video/video-placeholder-gwangan-720p.en.vtt" srclang="en" label="English">
+                <track kind="captions" src="../../../assets/media/video/video-placeholder-gwangan-720p.ko.vtt" srclang="ko" label="한국어" default>
+                <track kind="captions" src="../../../assets/media/video/video-placeholder-gwangan-720p.en.vtt" srclang="en" label="English">
               </video>
-              <figcaption>core/video — subtitles 2개 (ko/en). 광안대교 placeholder video와 WebVTT track 파일 연결.</figcaption>
+              <figcaption>core/video — captions 2개 (ko/en). 광안대교 placeholder video와 WebVTT track 파일 연결.</figcaption>
             </figure>
           </div>
         </div>

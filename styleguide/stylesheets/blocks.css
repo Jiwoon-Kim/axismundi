@@ -441,17 +441,19 @@
  * §7 Image / Gallery
  *
  * core/image → <figure class="wp-block-image"><img>[<figcaption>]</figure>.
- * Default image style is square/no radius, matching WP core. The registered
- * `is-style-rounded` variant owns radius. prose.css §9 may apply
- * corner-medium inside long-form prose contexts as an editorial choice.
+ * Default image style uses Axismundi's medium radius. The registered
+ * `is-style-rounded` variant is explicitly re-declared here so this later
+ * stylesheet does not override WP core's rounded style by source order.
  * ============================================================ */
 .wp-block-image {
   margin-block: var(--space-md);
 }
 .wp-block-image img {
+  border-radius: var(--md-sys-shape-corner-medium);
   max-inline-size: 100%;
   block-size: auto;
 }
+/* is-style-rounded — WP core source-order guard. */
 .wp-block-image.is-style-rounded img {
   border-radius: var(--md-sys-shape-corner-full);
 }

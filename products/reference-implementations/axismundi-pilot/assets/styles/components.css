@@ -6198,6 +6198,17 @@ input.ax-time-picker__field:focus-visible {
   letter-spacing: var(--md-sys-typescale-label-medium-tracking);
   line-height: var(--md-sys-typescale-label-medium-line-height);
   cursor: pointer;
+  /* Icon + label layout */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Material Symbols icon inside theme switcher button: 20dp compact size */
+.ax-theme-btn .material-symbols-rounded {
+  font-size: 18px;
+  --md-icon-opsz: 20;
+  line-height: 1;
 }
 
 .ax-theme-btn:hover {

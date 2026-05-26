@@ -19,25 +19,28 @@
 		type="button"
 		class="ax-theme-btn"
 		role="radio"
+		aria-label="<?php esc_attr_e( 'Light', 'axismundi-pilot' ); ?>"
 		data-wp-context='{"mode":"light"}'
 		data-wp-on--click="actions.setScheme"
 		data-wp-bind--aria-checked="state.isActive"
-	>Light</button>
+	><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">light_mode</span><span class="ax-theme-btn__label"><?php esc_html_e( 'Light', 'axismundi-pilot' ); ?></span></button>
 	<button
 		type="button"
 		class="ax-theme-btn"
 		role="radio"
+		aria-label="<?php esc_attr_e( 'Dark', 'axismundi-pilot' ); ?>"
 		data-wp-context='{"mode":"dark"}'
 		data-wp-on--click="actions.setScheme"
 		data-wp-bind--aria-checked="state.isActive"
-	>Dark</button>
+	><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">dark_mode</span><span class="ax-theme-btn__label"><?php esc_html_e( 'Dark', 'axismundi-pilot' ); ?></span></button>
 	<button
 		type="button"
 		class="ax-theme-btn"
 		role="radio"
+		aria-label="<?php esc_attr_e( 'Auto', 'axismundi-pilot' ); ?>"
 		data-wp-context='{"mode":"auto"}'
 		data-wp-on--click="actions.setScheme"
 		data-wp-bind--aria-checked="state.isActive"
-	>Auto</button>
+	><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">brightness_auto</span><span class="ax-theme-btn__label"><?php esc_html_e( 'Auto', 'axismundi-pilot' ); ?></span></button>
 </div>
 <!-- /wp:html -->

@@ -861,6 +861,27 @@ function axismundi_pilot_enqueue_assets() : void {
 add_action( 'wp_enqueue_scripts', 'axismundi_pilot_enqueue_assets' );
 
 /**
+ * Enqueue icon font assets for editor-side previews.
+ *
+ * `add_editor_style()` covers the iframe canvas. The Custom HTML block can also
+ * render previews in editor chrome, so the icon font itself must be available
+ * through block editor assets as well. Keep this intentionally narrow to avoid
+ * leaking the full Pilot component stylesheet into WordPress admin UI.
+ */
+function axismundi_pilot_enqueue_editor_icon_assets() : void {
+	$fonts = axismundi_pilot_asset_uri( 'assets/styles/fonts.css' );
+	if ( null !== $fonts ) {
+		wp_enqueue_style( 'axismundi-pilot-editor-fonts', $fonts, array(), AXISMUNDI_PILOT_VERSION );
+	}
+
+	$icons = axismundi_pilot_asset_uri( 'assets/styles/icons.css' );
+	if ( null !== $icons ) {
+		wp_enqueue_style( 'axismundi-pilot-editor-icons', $icons, array( 'axismundi-pilot-editor-fonts' ), AXISMUNDI_PILOT_VERSION );
+	}
+}
+add_action( 'enqueue_block_editor_assets', 'axismundi_pilot_enqueue_editor_icon_assets' );
+
+/**
  * Register Axismundi's bundled text fonts as a WordPress Font Library collection.
  *
  * The theme also registers these families in theme.json with `fontFace.src`.

@@ -25,6 +25,8 @@
  *   §11 Widgets — Social Icons / Tag Cloud
  *   §12 Theme identity blocks
  *   §13 List — is-style-list-segmented
+ *   §14 Query Loop / Post Template inner blocks
+ *   §15 Pagination — Query + Post Navigation
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -942,4 +944,200 @@
  * still applies; segmented already has list-style: none). */
 .wp-block-list.is-style-list-segmented > li > input[type="checkbox"]:first-child {
   margin-inline-end: var(--space-sm);
+}
+
+/* ============================================================
+ * §14 Query Loop / Post Template inner blocks
+ *
+ * CSS contract for theme-template post lists:
+ *   core/query                  → no chrome
+ *   core/post-template          → list reset
+ *   core/post-featured-image    → image frame
+ *   core/post-title             → linked title
+ *   core/post-date              → metadata label
+ *   core/post-excerpt           → constrained supporting copy
+ *   core/post-author-name       → metadata label
+ *   core/avatar                 → circular author media
+ * ============================================================ */
+.wp-block-query {
+  /* Query itself is a data container; child blocks own visuals. */
+}
+
+.wp-block-post-template {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.wp-block-post-featured-image {
+  margin-block: 0;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.wp-block-post-featured-image img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.wp-block-post-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+}
+
+.wp-block-post-title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.wp-block-post-date {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+
+.wp-block-post-date a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wp-block-post-excerpt__excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--md-sys-color-on-surface-variant);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.wp-block-post-excerpt__more-link {
+  color: var(--md-sys-color-primary);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  text-decoration: none;
+}
+
+.wp-block-post-author-name {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+
+.wp-block-post-author-name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wp-block-avatar img {
+  display: block;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* ============================================================
+ * §15 Pagination — Query Pagination + Post Navigation Link
+ *
+ * Query pagination is a chip row. Single-post navigation is a paired
+ * text-button surface; layout wrappers can decide left/right placement.
+ * ============================================================ */
+.wp-block-query-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.wp-block-query-pagination-previous a,
+.wp-block-query-pagination-next a {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-primary);
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-query-pagination-previous a:hover,
+.wp-block-query-pagination-next a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.wp-block-query-pagination-numbers {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.wp-block-query-pagination-numbers .page-numbers {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 36px;
+  min-block-size: 36px;
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-query-pagination-numbers a.page-numbers:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.wp-block-query-pagination-numbers .page-numbers.current {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.wp-block-query-pagination-numbers .page-numbers.dots {
+  min-inline-size: auto;
+  padding-inline: var(--space-xs);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-post-navigation-link {
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+
+.wp-block-post-navigation-link a {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-post-navigation-link a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
 }

@@ -1298,14 +1298,80 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Query / Post Template — post card</h3>
+          <p class="sg-helper">TT5 <code>template-query-loop</code>와 <code>more-posts</code> 패턴을 받치는 inner block contract. Query 자체는 data wrapper이고, title/date/excerpt/featured-image가 시각 계약을 소유.</p>
+          <div class="sg-demo">
+            <div class="wp-block-query">
+              <ul class="wp-block-post-template" style="display: grid; gap: var(--space-lg);">
+                <li class="wp-block-post">
+                  <article class="wp-block-group is-style-card-outlined">
+                    <figure class="wp-block-post-featured-image">
+                      <div class="sg-sample-img"></div>
+                    </figure>
+                    <h3 class="wp-block-post-title t-headline-small" style="margin-block: var(--space-md) var(--space-xs);">
+                      <a href="#">포스트 제목 — 스타일 시스템과 디자인 토큰의 관계</a>
+                    </h3>
+                    <div class="wp-block-post-date"><time datetime="2026-05-27">2026년 5월 27일</time></div>
+                    <div class="wp-block-post-excerpt" style="margin-block-start: var(--space-sm);">
+                      <p class="wp-block-post-excerpt__excerpt">디자인 토큰은 색상, 타이포그래피, 간격 같은 시각적 결정을 플랫폼 독립적인 값으로 저장한 단위입니다. WordPress block theme에서는 theme.json preset과 CSS custom property 사이의 연결이 핵심입니다.</p>
+                      <a class="wp-block-post-excerpt__more-link" href="#">Continue reading</a>
+                    </div>
+                  </article>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Post author metadata</h3>
+          <div class="sg-demo" style="display: flex; gap: var(--space-sm); align-items: center;">
+            <figure class="wp-block-avatar" style="margin: 0;">
+              <div class="sg-sample-img" style="inline-size: 48px; block-size: 48px; border-radius: var(--md-sys-shape-corner-full);"></div>
+            </figure>
+            <div class="wp-block-post-author-name"><a href="#">Ji-woon Kim</a></div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Query Pagination</h3>
+          <div class="sg-demo">
+            <nav class="wp-block-query-pagination" aria-label="Posts pagination">
+              <div class="wp-block-query-pagination-previous"><a href="#">← Previous</a></div>
+              <div class="wp-block-query-pagination-numbers">
+                <a class="page-numbers" href="#">1</a>
+                <span class="page-numbers current" aria-current="page">2</span>
+                <a class="page-numbers" href="#">3</a>
+                <span class="page-numbers dots">…</span>
+                <a class="page-numbers" href="#">8</a>
+              </div>
+              <div class="wp-block-query-pagination-next"><a href="#">Next →</a></div>
+            </nav>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Post Navigation</h3>
+          <div class="sg-demo">
+            <nav aria-label="Post navigation" style="display: flex; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap;">
+              <div class="wp-block-post-navigation-link wp-block-post-navigation-link--previous">
+                <a href="#">← 이전 포스트 제목</a>
+              </div>
+              <div class="wp-block-post-navigation-link wp-block-post-navigation-link--next">
+                <a href="#">다음 포스트 제목 →</a>
+              </div>
+            </nav>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Theme gap rows</h3>
           <div class="sg-demo prose">
             <ul>
               <li><strong>Navigation</strong> — template/FSE surface. Future template or plugin route.</li>
-              <li><strong>Query Loop / Post Template</strong> — theme template surface. No catalog specimen in v3.6.24.</li>
               <li><strong>Template Part</strong> — FSE structure surface. Future route.</li>
               <li><strong>Breadcrumbs</strong> — WP 7.0 reference-only block. Future route.</li>
-              <li><strong>Comments / terms / post metadata family</strong> — theme context required; no implementation claim.</li>
+              <li><strong>Comments</strong> — comment template/form surface. Future route.</li>
             </ul>
           </div>
         </div>

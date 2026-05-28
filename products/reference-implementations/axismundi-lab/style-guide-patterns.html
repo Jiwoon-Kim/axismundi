@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axismundi — Pattern Styleguide</title>
+  <link rel="stylesheet" href="stylesheets/fonts.css" />
+  <link rel="stylesheet" href="stylesheets/tokens.ref.css" />
+  <link rel="stylesheet" href="stylesheets/tokens.sys.light.css" />
+  <link rel="stylesheet" href="stylesheets/tokens.comp.css" />
+  <link rel="stylesheet" href="stylesheets/tokens.sys.dark.css" />
+  <link rel="stylesheet" href="stylesheets/wp-preset.bridge.css" />
+  <link rel="stylesheet" href="stylesheets/wp-custom.bridge.css" />
+  <link rel="stylesheet" href="stylesheets/tokens.css" />
+  <link rel="stylesheet" href="stylesheets/base.css" />
+  <link rel="stylesheet" href="stylesheets/icons.css" />
+  <link rel="stylesheet" href="stylesheets/components.css" />
+  <link rel="stylesheet" href="stylesheets/prose.css" />
+  <link rel="stylesheet" href="stylesheets/blocks.css" />
+  <style>
+    /* =====================================================
+     * style-guide-blocks.html — local layout only.
+     * Mirrors style-guide.html shell. No component
+     * re-styling. No literal type/color values.
+     * ===================================================== */
+
+    /* ---- Layout shell ---- */
+    .sg-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+    .sg-sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      overflow-y: auto;
+      padding: var(--space-lg) var(--space-md);
+      background-color: var(--md-sys-color-surface-container-low);
+      border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+    .sg-brand {
+      color: var(--md-sys-color-on-surface);
+      letter-spacing: 0.04em;
+    }
+    .sg-brand-meta {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: var(--space-xs);
+    }
+    /* Cross-guide nav (3 guides — current highlighted) */
+    .sg-guide-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      padding-block: var(--space-sm);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-guide-nav__label {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-bottom: var(--space-xs);
+    }
+    .sg-guide-nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-small);
+    }
+    .sg-guide-nav a:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .sg-guide-nav a[aria-current="page"] {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+    .sg-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-nav__group-label {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-top: var(--space-md);
+      margin-bottom: var(--space-xs);
+    }
+    .sg-nav a {
+      color: var(--md-sys-color-on-surface);
+      text-decoration: none;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-small);
+    }
+    .sg-nav a:hover {
+      background-color: color-mix(
+        in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+
+    .sg-main {
+      padding: var(--space-xl) var(--space-xl);
+      /* Bounded container — required by .alignfull's calc(50% - 50vw) */
+      max-inline-size: 1280px;
+      /* CSS Grid 1fr child needs explicit min-inline-size: 0 to
+       * prevent overflow children (long <pre>, wide <table>) from
+       * forcing the track to expand. */
+      min-inline-size: 0;
+    }
+
+    .sg-section {
+      padding-block: var(--space-xl);
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .sg-section:last-child { border-bottom: 0; }
+    .sg-section__head {
+      margin-bottom: var(--space-xl);
+    }
+    .sg-section__eyebrow {
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      margin-bottom: var(--space-xs);
+    }
+    .sg-subsection {
+      margin-top: var(--space-xl);
+    }
+    .sg-subsection__head {
+      margin-bottom: var(--space-md);
+      color: var(--md-sys-color-on-surface);
+    }
+
+    /* Demo container — frame around block samples so the block's
+     * own visual containment is distinguishable from page chrome. */
+    .sg-demo {
+      padding: var(--space-md);
+      border: 1px dashed var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-surface-container-low);
+      /* Block samples that use alignwide/alignfull need their own
+       * bounded parent; this demo's max-inline-size provides it. */
+      max-inline-size: 720px;
+      margin-block: var(--space-md);
+      /* Re-flow as a content column so alignfull's calc(50% - 50vw)
+       * doesn't push out of the demo frame. The demo's own bounds
+       * also constrain alignwide. */
+      overflow: hidden;
+    }
+    .sg-demo--wide {
+      max-inline-size: none; /* for showcasing alignfull within main */
+    }
+
+    .sg-helper {
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: var(--space-sm);
+    }
+    .sg-snippet {
+      margin-top: var(--space-md);
+      padding: var(--space-md);
+      background-color: var(--md-sys-color-surface-container);
+      color: var(--md-sys-color-on-surface);
+      border-radius: var(--md-sys-shape-corner-medium);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      overflow-x: auto;
+    }
+    .sg-snippet code {
+      font-family: var(--md-ref-typeface-mono);
+      font-size:   var(--md-sys-typescale-body-small-size);
+      line-height: var(--md-sys-typescale-body-small-line-height);
+      color: inherit;
+      white-space: pre;
+    }
+
+    /* Sample image — neutral placeholder, no external request */
+    .sg-sample-img {
+      display: block;
+      inline-size: 100%;
+      block-size: 200px;
+      background:
+        linear-gradient(135deg,
+          var(--md-sys-color-primary-container) 0%,
+          var(--md-sys-color-tertiary-container) 100%);
+      border-radius: var(--md-sys-shape-corner-medium);
+    }
+    .sg-sample-img--rounded { border-radius: var(--md-sys-shape-corner-full); }
+    .sg-sample-img--small { block-size: 100px; }
+
+    /* ---- Mobile ---- */
+    @media (max-width: 720px) {
+      .sg-layout { grid-template-columns: 1fr; }
+      .sg-sidebar {
+        position: static;
+        height: auto;
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      }
+      .sg-main { padding: var(--space-lg); }
+      .sg-demo { max-inline-size: 100%; }
+    }
+
+    /* ---- Footer ---- */
+    .sg-footer {
+      border-block-start: 1px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-low);
+      padding-block: var(--space-xl);
+      padding-inline: var(--space-xl);
+    }
+    .sg-footer__inner {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .sg-footer__title { margin: 0; }
+    .sg-footer__meta {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-footer a {
+      color: var(--md-sys-color-primary);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+    @media (max-width: 720px) {
+      .sg-footer { padding-inline: var(--space-lg); }
+    }
+    /* ---- Themed thin scrollbars (sidebar / toc-rail) ---- */
+    .sg-sidebar,
+    .sg-toc-rail {
+      scrollbar-width: thin;
+      scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+    }
+    .sg-sidebar::-webkit-scrollbar,
+    .sg-toc-rail::-webkit-scrollbar {
+      inline-size: 8px;
+      block-size:  8px;
+    }
+    .sg-sidebar::-webkit-scrollbar-track,
+    .sg-toc-rail::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+    .sg-sidebar::-webkit-scrollbar-thumb,
+    .sg-toc-rail::-webkit-scrollbar-thumb {
+      background-color: var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+    .sg-sidebar::-webkit-scrollbar-thumb:hover,
+    .sg-toc-rail::-webkit-scrollbar-thumb:hover {
+      background-color: var(--md-sys-color-outline);
+    }
+    .sg-sidebar::-webkit-scrollbar-button,
+    .sg-toc-rail::-webkit-scrollbar-button {
+      display: none;
+    }
+
+    /* ---- Pattern metadata strip ---- */
+    .sg-pattern-meta {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: var(--space-xs) var(--space-md);
+      align-items: baseline;
+      margin-block: var(--space-sm) var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--md-sys-color-surface-container);
+      border-radius: var(--md-sys-shape-corner-small);
+      border-inline-start: 3px solid var(--md-sys-color-primary);
+    }
+    .sg-pattern-meta dt {
+      font-family: var(--md-sys-typescale-label-small-font);
+      font-size:   var(--md-sys-typescale-label-small-size);
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .sg-pattern-meta dd {
+      font-family: var(--md-sys-typescale-body-small-font);
+      font-size:   var(--md-sys-typescale-body-small-size);
+      color: var(--md-sys-color-on-surface);
+      margin-inline-start: 0;
+    }
+    .sg-pattern-meta code {
+      background: var(--md-sys-color-surface-container-high);
+      padding-inline: 3px;
+      border-radius: 3px;
+    }
+    .sg-badge {
+      display: inline-flex;
+      align-items: center;
+      padding-inline: var(--space-xs);
+      border-radius: var(--md-sys-shape-corner-full);
+      font-family: var(--md-sys-typescale-label-small-font);
+      font-size:   var(--md-sys-typescale-label-small-size);
+      font-weight: 600;
+      vertical-align: middle;
+    }
+    .sg-badge--true  { background: var(--md-sys-color-primary-container);     color: var(--md-sys-color-on-primary-container); }
+    .sg-badge--false { background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface-variant); }
+
+    .sg-pattern-frame {
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: var(--md-sys-shape-corner-medium);
+      overflow: hidden;
+      background: var(--md-sys-color-surface);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="sg-layout">
+
+    <aside class="sg-sidebar">
+      <div>
+        <div class="t-headline-small sg-brand">Axismundi</div>
+        <div class="t-label-small sg-brand-meta">Pattern styleguide · v1.0.0-rc1</div>
+      </div>
+
+      <nav class="sg-guide-nav" aria-label="Style guides">
+        <div class="t-label-small sg-guide-nav__label">Guides</div>
+        <a class="t-body-medium" href="style-guide.html">Components (33)</a>
+        <a class="t-body-medium" href="style-guide-blocks.html">WP Blocks</a>
+        <a class="t-body-medium" href="style-guide-prose.html">Prose / Long-form</a>
+        <a class="t-body-medium" href="style-guide-patterns.html" aria-current="page">Patterns</a>
+      </nav>
+
+      <nav class="sg-nav" aria-label="Pattern sections">
+        <div class="t-label-small sg-nav__group-label">Template Parts</div>
+        <a class="t-body-medium" href="#pattern-header">Header</a>
+        <a class="t-body-medium" href="#pattern-footer">Footer</a>
+        <a class="t-body-medium" href="#pattern-sidebar">Sidebar</a>
+
+        <div class="t-label-small sg-nav__group-label">Query &amp; Feeds</div>
+        <a class="t-body-medium" href="#pattern-query-loop">Template Query Loop</a>
+        <a class="t-body-medium" href="#pattern-more-posts">More Posts</a>
+
+        <div class="t-label-small sg-nav__group-label">Post Context</div>
+        <a class="t-body-medium" href="#pattern-post-navigation">Post Navigation</a>
+        <a class="t-body-medium" href="#pattern-written-by">Written By</a>
+        <a class="t-body-medium" href="#pattern-blog-heading">Blog Heading</a>
+
+        <div class="t-label-small sg-nav__group-label">Comments</div>
+        <a class="t-body-medium" href="#pattern-comments">Comments</a>
+
+        <div class="t-label-small sg-nav__group-label">Utility</div>
+        <a class="t-body-medium" href="#pattern-hidden-search">Hidden Search</a>
+        <a class="t-body-medium" href="#pattern-404">404</a>
+
+        <div class="t-label-small sg-nav__group-label">Dev &amp; Gaps</div>
+        <a class="t-body-medium" href="#pattern-dev-gaps">Dev Controls &amp; gaps</a>
+      </nav>
+    </aside>
+
+    <main class="sg-main">
+
+      <header style="margin-block-end: var(--space-xl);">
+        <h1 class="t-display-small">Pattern Styleguide</h1>
+        <p class="t-body-large" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-sm); max-inline-size: 64ch;">
+          Axismundi Pilot 패턴 조합 계약. 각 섹션은 <code>patterns/*.php</code> source, 소비하는 block contracts (§N), Inserter 상태, TT5 relation을 명시합니다. 패턴은 §1–§18 block contract를 재료로 삼는 상위 조합 계층입니다.
+        </p>
+      </header>
+
+      <section class="sg-section" id="pattern-header">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Template Parts</div><h2 class="t-headline-medium">Header</h2></header>
+        <dl class="sg-pattern-meta">
+          <dt>Source</dt><dd><code>axismundi-pilot/patterns/header.php</code></dd>
+          <dt>Slug</dt><dd><code>axismundi-pilot/header</code></dd>
+          <dt>Block Types</dt><dd><code>core/template-part/header</code></dd>
+          <dt>Inserter</dt><dd><span class="sg-badge sg-badge--true">true</span> — category: header</dd>
+          <dt>Consumed contracts</dt><dd><code>§12</code> site-title · <code>§17</code> Navigation. Overlay color slugs <code>base</code>/<code>contrast</code> are resolved by §17 token rules, not theme.json palette classes.</dd>
+          <dt>TT5 relation</dt><dd>Adapted — same flex space-between header bar. Mobile hamburger state depends on WP Interactivity API and must be verified in the Pilot WP instance.</dd>
+        </dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Desktop specimen</h3>
+          <div class="sg-demo sg-demo--wide" style="max-inline-size:none;padding:0;">
+            <div class="wp-block-group alignfull" style="background:var(--md-sys-color-surface);border-bottom:1px solid var(--md-sys-color-outline-variant);">
+              <div style="max-inline-size:var(--wp--style--global--wide-size,1200px);margin-inline:auto;padding-inline:var(--space-lg);">
+                <div class="wp-block-group alignwide" style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);padding-block:var(--wp--preset--spacing--30);">
+                  <h1 class="wp-block-site-title" style="margin:0;font-size:inherit;"><a href="#" style="color:var(--md-sys-color-on-surface);text-decoration:none;">Axismundi Pilot</a></h1>
+                  <nav class="wp-block-navigation" aria-label="Primary navigation"><ul class="wp-block-navigation__container" style="list-style:none;padding:0;margin:0;display:flex;gap:var(--space-xs);align-items:center;"><li class="wp-block-navigation-item current-menu-item"><a class="wp-block-navigation-item__content" href="#">홈</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">블로그</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">소개</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">문의</a></li></ul></nav>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sg-section" id="pattern-footer">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Template Parts</div><h2 class="t-headline-medium">Footer</h2></header>
+        <dl class="sg-pattern-meta">
+          <dt>Source</dt><dd><code>axismundi-pilot/patterns/footer.php</code></dd>
+          <dt>Slug</dt><dd><code>axismundi-pilot/footer</code></dd>
+          <dt>Block Types</dt><dd><code>core/template-part/footer</code></dd>
+          <dt>Inserter</dt><dd><span class="sg-badge sg-badge--true">true</span> — category: footer</dd>
+          <dt>Consumed contracts</dt><dd><code>§12</code> site-logo / site-title / site-tagline · <code>§17</code> Navigation (vertical, <code>overlayMenu:"never"</code>) × 2 columns</dd>
+          <dt>TT5 relation</dt><dd>Adapted — TT5 footer column structure preserved; MD3 token layer supplies surface, type, and link styling.</dd>
+        </dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3>
+          <div class="sg-demo sg-demo--wide" style="max-inline-size:none;padding:0;">
+            <footer class="wp-block-group" style="padding:var(--wp--preset--spacing--60) var(--space-lg) var(--wp--preset--spacing--50);border-top:1px solid var(--md-sys-color-outline-variant);">
+              <div style="max-inline-size:var(--wp--style--global--wide-size,1200px);margin-inline:auto;">
+                <figure class="wp-block-site-logo" style="margin-block-end:var(--space-lg);margin-inline-start:0;"><img src="../../../assets/brand/axismundi-symbol.svg" alt="Axismundi" style="inline-size:48px;"></figure>
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-xl);align-items:flex-start;"><div><h2 class="wp-block-site-title" style="margin:0 0 var(--space-xs);">Axismundi Pilot</h2><p class="wp-block-site-tagline" style="margin:0;">Material 3 design system for WordPress block themes.</p></div><div style="display:flex;gap:var(--space-xl);flex-wrap:wrap;"><nav class="wp-block-navigation"><ul class="wp-block-navigation__container" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-xs);"><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">Blog</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">About</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">FAQs</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">Authors</a></li></ul></nav><nav class="wp-block-navigation"><ul class="wp-block-navigation__container" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-xs);"><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">Events</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">Shop</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">Patterns</a></li><li class="wp-block-navigation-item"><a class="wp-block-navigation-item__content" href="#">Themes</a></li></ul></nav></div></div>
+                <div style="margin-block-start:var(--wp--preset--spacing--70);display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-sm);border-top:1px solid var(--md-sys-color-outline-variant);padding-block-start:var(--space-md);"><p class="has-small-font-size" style="margin:0;color:var(--md-sys-color-on-surface-variant);">Axismundi Pilot</p><p class="has-small-font-size" style="margin:0;color:var(--md-sys-color-on-surface-variant);">Designed with <a href="https://wordpress.org" style="color:var(--md-sys-color-primary);">WordPress</a></p></div>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="sg-section" id="pattern-sidebar">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Template Parts</div><h2 class="t-headline-medium">Sidebar</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/hidden-sidebar.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/hidden-sidebar</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--false">false</span> — embedded in single-post template</dd><dt>Consumed contracts</dt><dd><code>§14</code> post-title · post-date</dd><dt>TT5 relation</dt><dd>Adapted — 4-post query list, date desc. Uppercase label heading added; category widgets deferred.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3><div class="sg-demo"><h2 class="wp-block-heading has-small-font-size" style="font-weight:600;letter-spacing:1.6px;text-transform:uppercase;margin-block-end:var(--space-md);">Other Posts</h2><ul class="wp-block-post-template" style="display:flex;flex-direction:column;gap:var(--space-md);"><li class="wp-block-post"><h3 class="wp-block-post-title has-medium-font-size"><a href="#">스타일 시스템과 디자인 토큰의 관계</a></h3><div class="wp-block-post-date"><time>2026년 5월 27일</time></div></li><li class="wp-block-post"><h3 class="wp-block-post-title has-medium-font-size"><a href="#">Attachment metadata와 오디오 블록</a></h3><div class="wp-block-post-date"><time>2026년 5월 26일</time></div></li><li class="wp-block-post"><h3 class="wp-block-post-title has-medium-font-size"><a href="#">TT5 구조를 Pilot theme으로 옮기기</a></h3><div class="wp-block-post-date"><time>2026년 5월 24일</time></div></li></ul></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-query-loop">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Query &amp; Feeds</div><h2 class="t-headline-medium">Template Query Loop</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/template-query-loop.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/template-query-loop</code></dd><dt>Block Types</dt><dd><code>core/query</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--false">false</span> — embedded in home / index templates</dd><dt>Consumed contracts</dt><dd><code>§14</code> post-featured-image / post-title / post-content / post-date · <code>§15</code> query-pagination</dd><dt>TT5 relation</dt><dd>Copied structure — full-width single-column article feed; <code>inherit:true</code> uses the main query.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen — 2 posts</h3><div class="sg-demo sg-demo--wide" style="max-inline-size:none;"><div class="wp-block-query alignfull"><ul class="wp-block-post-template"><li class="wp-block-post" style="border-bottom:1px solid var(--md-sys-color-outline-variant);"><div style="padding-block:var(--wp--preset--spacing--60);max-inline-size:var(--wp--style--global--content-size,768px);margin-inline:auto;padding-inline:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-md);"><figure class="wp-block-post-featured-image"><div class="sg-sample-img"></div></figure><h2 class="wp-block-post-title has-x-large-font-size"><a href="#">스타일 시스템과 디자인 토큰의 관계</a></h2><div class="wp-block-post-content has-medium-font-size"><p>디자인 토큰은 색상, 타이포그래피, 간격 같은 시각적 결정을 플랫폼 독립적인 값으로 저장한 단위입니다.</p></div><div class="wp-block-post-date has-small-font-size"><time>2026년 5월 27일</time></div></div></li><li class="wp-block-post"><div style="padding-block:var(--wp--preset--spacing--60);max-inline-size:var(--wp--style--global--content-size,768px);margin-inline:auto;padding-inline:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-md);"><figure class="wp-block-post-featured-image"><div class="sg-sample-img" style="background:linear-gradient(135deg,var(--md-sys-color-secondary-container),var(--md-sys-color-primary-container));"></div></figure><h2 class="wp-block-post-title has-x-large-font-size"><a href="#">TT5 구조를 Pilot theme으로 옮기기</a></h2><div class="wp-block-post-content has-medium-font-size"><p>Twenty Twenty-Five의 template 구조를 분석하고 Pilot baseline으로 변환하는 과정을 기록합니다.</p></div><div class="wp-block-post-date has-small-font-size"><time>2026년 5월 24일</time></div></div></li></ul><nav class="wp-block-query-pagination" aria-label="Posts pagination" style="padding-block:var(--wp--preset--spacing--60);"><div class="wp-block-query-pagination-previous"><a href="#">← Previous</a></div><div class="wp-block-query-pagination-numbers"><a class="page-numbers" href="#">1</a><span class="page-numbers current">2</span><a class="page-numbers" href="#">3</a></div><div class="wp-block-query-pagination-next"><a href="#">Next →</a></div></nav></div></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-more-posts">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Query &amp; Feeds</div><h2 class="t-headline-medium">More Posts</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/more-posts.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/more-posts</code></dd><dt>Block Types</dt><dd><code>core/query</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--true">true</span> — category: query</dd><dt>Consumed contracts</dt><dd><code>§14</code> post-title · post-date · outline-variant row dividers</dd><dt>TT5 relation</dt><dd>Adapted — row-list density variant with uppercase label heading.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3><div class="sg-demo"><h2 class="wp-block-heading has-small-font-size" style="font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">More posts</h2><ul style="list-style:none;padding:0;margin:0;"><li style="display:flex;justify-content:space-between;gap:var(--space-md);border-bottom:1px solid var(--md-sys-color-outline-variant);padding-block:var(--wp--preset--spacing--30);"><h3 class="wp-block-post-title has-large-font-size" style="margin:0;"><a href="#">스타일 시스템과 디자인 토큰의 관계</a></h3><div class="wp-block-post-date"><time>2026년 5월 27일</time></div></li><li style="display:flex;justify-content:space-between;gap:var(--space-md);border-bottom:1px solid var(--md-sys-color-outline-variant);padding-block:var(--wp--preset--spacing--30);"><h3 class="wp-block-post-title has-large-font-size" style="margin:0;"><a href="#">TT5 구조를 Pilot theme으로 옮기기</a></h3><div class="wp-block-post-date"><time>2026년 5월 24일</time></div></li></ul></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-post-navigation">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Post Context</div><h2 class="t-headline-medium">Post Navigation</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/post-navigation.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/post-navigation</code></dd><dt>Block Types</dt><dd><code>core/post-navigation-link</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--true">true</span> — category: text</dd><dt>Consumed contracts</dt><dd><code>§15</code> post-navigation-link · outline-variant top border</dd><dt>TT5 relation</dt><dd>Copied — flex space-between previous/next navigation with arrow labels.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3><div class="sg-demo"><nav aria-label="Post navigation" style="border-top:1px solid var(--md-sys-color-outline-variant);padding-block:var(--wp--preset--spacing--40);display:flex;justify-content:space-between;gap:var(--space-md);"><div class="wp-block-post-navigation-link wp-block-post-navigation-link--previous"><a href="#">← 이전 포스트 제목</a></div><div class="wp-block-post-navigation-link wp-block-post-navigation-link--next"><a href="#">다음 포스트 제목 →</a></div></nav></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-written-by">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Post Context</div><h2 class="t-headline-medium">Written By</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/hidden-written-by.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/hidden-written-by</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--false">false</span> — embedded in single-post template</dd><dt>Consumed contracts</dt><dd><code>§14</code> post-author-name · <code>§6.x</code> post-terms · WP small font preset</dd><dt>TT5 relation</dt><dd>Adapted — inline flex attribution line for single-post density.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3><div class="sg-demo"><div class="wp-block-group has-small-font-size" style="display:flex;flex-wrap:wrap;gap:.2em;align-items:baseline;"><p style="margin:0;">Written by</p><div class="wp-block-post-author-name"><a href="#">Ji-woon Kim</a></div><p style="margin:0;">in</p><div class="wp-block-post-terms" style="margin:0;font-weight:300;"><a href="#">Design Systems</a></div></div></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-blog-heading">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Post Context</div><h2 class="t-headline-medium">Blog Heading</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/hidden-blog-heading.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/hidden-blog-heading</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--false">false</span> — embedded in home / index templates</dd><dt>Consumed contracts</dt><dd><code>§2</code> h1 heading</dd><dt>TT5 relation</dt><dd>Copied — utility h1 for archive and blog templates.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3><div class="sg-demo"><h1 class="wp-block-heading has-text-align-left">Blog</h1></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-comments">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Comments</div><h2 class="t-headline-medium">Comments</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/comments.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/comments</code></dd><dt>Block Types</dt><dd><code>core/comments</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--true">true</span> — category: text</dd><dt>Consumed contracts</dt><dd><code>§18</code> full comments family and form</dd><dt>TT5 relation</dt><dd>Adapted — same avatar + content-column structure; MD3 input/button tokens replace TT5 form styling.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Thread + form specimen</h3><div class="sg-demo"><div class="wp-block-comments"><h2 class="wp-block-heading has-x-large-font-size">Comments</h2><h3 class="wp-block-comments-title has-large-font-size">2 thoughts on "스타일 시스템과 디자인 토큰의 관계"</h3><ol class="wp-block-comment-template" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-lg);"><li class="comment"><div style="display:flex;gap:var(--space-sm);align-items:flex-start;"><div class="wp-block-avatar"><div style="width:50px;height:50px;border-radius:var(--comp-avatar-radius);background:var(--md-sys-color-primary-container);"></div></div><div style="display:flex;flex-direction:column;gap:var(--space-xs);"><div class="wp-block-comment-date"><a href="#"><time>2026년 5월 27일</time></a></div><div class="wp-block-comment-author-name"><a href="#">Mina</a></div><div class="wp-block-comment-content"><p>surface-container 계층이 자연스럽고 댓글 폼 토큰도 검색 입력과 일관됩니다.</p></div><div class="wp-block-comment-reply-link"><a href="#">Reply</a></div></div></div></li></ol><div class="wp-block-post-comments-form" style="margin-block-start:var(--space-lg);"><form class="comment-form" novalidate><p class="comment-form-comment"><label for="pattern-comment">Comment <span class="required">*</span></label><textarea id="pattern-comment" rows="5"></textarea></p><p class="comment-form-author"><label for="pattern-author">Name <span class="required">*</span></label><input id="pattern-author" type="text"></p><p class="form-submit"><input class="submit" type="submit" value="Post Comment"></p></form></div></div></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-hidden-search">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Utility</div><h2 class="t-headline-medium">Hidden Search</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/hidden-search.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/hidden-search</code></dd><dt>Block Types</dt><dd><code>core/search</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--false">false</span> — embedded in search / 404 templates</dd><dt>Consumed contracts</dt><dd><code>§10</code> Search — filled-search, button outside, hidden label</dd><dt>TT5 relation</dt><dd>Copied utility slot; visual surface mapped to MD3 filled search bar.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3><div class="sg-demo"><form class="wp-block-search is-style-filled-search wp-block-search__button-outside" role="search"><label class="wp-block-search__label screen-reader-text">Search</label><div class="wp-block-search__inside-wrapper"><input class="wp-block-search__input" type="search" placeholder="Type here..." aria-label="Search"></div><button class="wp-block-search__button wp-element-button" type="submit">Search</button></form></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-404">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Utility</div><h2 class="t-headline-medium">404</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/hidden-404.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/hidden-404</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--false">false</span> — embedded in 404 template</dd><dt>Consumed contracts</dt><dd><code>§7</code> media surface · <code>§10</code> search · <code>§8</code> two-column layout</dd><dt>TT5 relation</dt><dd>Copied recovery pattern: visual texture plus actionable search. TT5 photo is represented as a local gradient placeholder.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Specimen</h3><div class="sg-demo sg-demo--wide" style="max-inline-size:none;"><div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,520px);gap:var(--wp--preset--spacing--50);align-items:end;"><div class="sg-sample-img" style="min-block-size:320px;background:linear-gradient(135deg,var(--md-sys-color-surface-container-high),var(--md-sys-color-primary-container));"></div><div><h1 class="wp-block-heading">Page not found</h1><p>The page you are looking for doesn't exist, or it has been moved.</p><form class="wp-block-search is-style-filled-search wp-block-search__button-outside" role="search"><label class="wp-block-search__label screen-reader-text">Search</label><div class="wp-block-search__inside-wrapper"><input class="wp-block-search__input" type="search" placeholder="Type here..." aria-label="Search"></div><button class="wp-block-search__button wp-element-button" type="submit">Search</button></form></div></div></div></div>
+      </section>
+
+      <section class="sg-section" id="pattern-dev-gaps">
+        <header class="sg-section__head"><div class="t-label-medium sg-section__eyebrow">Dev &amp; Gaps</div><h2 class="t-headline-medium">Dev Controls &amp; pattern gaps</h2></header>
+        <dl class="sg-pattern-meta"><dt>Source</dt><dd><code>axismundi-pilot/patterns/dev-controls.php</code></dd><dt>Slug</dt><dd><code>axismundi-pilot/dev-controls</code></dd><dt>Inserter</dt><dd><span class="sg-badge sg-badge--true">true</span> — development-only</dd><dt>Consumed contracts</dt><dd>Theme switcher component + Material Symbols font. Not part of TT5 template parity.</dd><dt>TT5 relation</dt><dd>None — Pilot-only test control. Header keeps TT5 parity by separating this pattern from template parts.</dd></dl>
+        <div class="sg-subsection"><h3 class="t-title-medium sg-subsection__head">Route-forward gaps</h3><div class="sg-demo prose"><ul><li><strong>TT5 header-large-title / vertical-header</strong> — template-part variants deferred until a template actually consumes them.</li><li><strong>Navigation mobile overlay</strong> — §17 desktop token layer exists; open/close state requires Pilot WP runtime verification.</li><li><strong>Sidebar taxonomy widgets</strong> — can use §16 widget-list contracts once a sidebar template needs them.</li><li><strong>Attachment media patterns</strong> — handled by attachment partials, not the block pattern layer.</li></ul></div></div>
+      </section>
+
+      <footer style="margin-block-start: var(--space-xl); padding-block-start: var(--space-lg); border-top: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);">
+        <p class="t-body-small">Generated from Axismundi Lab source. Edit <code>products/reference-implementations/axismundi-lab/style-guide-patterns.html</code>, not the publish mirror.</p>
+      </footer>
+    </main>
+  </div>
+
+  <script src="scripts/theme.js"></script>
+</body>
+</html>

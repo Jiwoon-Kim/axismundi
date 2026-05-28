@@ -48,6 +48,7 @@ STYLE_GUIDES = [
     ("style-guide.html", "index.html"),                  # canonical entry
     ("style-guide-blocks.html", "blocks.html"),
     ("style-guide-prose.html", "prose.html"),
+    ("style-guide-patterns.html", "patterns.html"),
 ]
 
 
@@ -153,6 +154,7 @@ def main():
                 ("style-guide.html", "index.html"),
                 ("style-guide-blocks.html", "blocks.html"),
                 ("style-guide-prose.html", "prose.html"),
+                ("style-guide-patterns.html", "patterns.html"),
             ]:
                 html = html.replace(f'href="{from_name}"', f'href="{to_name}"')
                 # Also `./` prefix variant

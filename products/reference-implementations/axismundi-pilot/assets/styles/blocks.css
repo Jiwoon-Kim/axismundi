@@ -17,12 +17,19 @@
  *   §4  Code / Preformatted
  *   §5  Separator + 5 style variants
  *   §6  Table — WP variants layered on prose.css
- *   §7  Image / Gallery / Embed-stub
- *   §8  Columns / Row / Group + 3 card style variants
+ *   §7  Image / Gallery / Video / Icon
+ *   §8  Columns / Row / Stack / Grid / Group + card style variants
  *   §9  Buttons (core/button) + 5 style variants (PHP-composed —
  *       see §9 header for ax-button class wiring note)
- *   §10 Search — is-style-filled-search
- *   §11 List — is-style-list-segmented
+ *   §10 Search — button-outside / inside / no-button / button-only + is-style-filled-search
+ *   §11 Widgets — Social Icons / Tag Cloud
+ *   §12 Theme identity blocks
+ *   §13 List — is-style-list-segmented
+ *   §14 Query Loop / Post Template inner blocks
+ *   §15 Pagination — Query Pagination + Post Navigation Link
+ *   §16 Widget lists
+ *   §17 Navigation — core/navigation
+ *   §18 Comments
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -331,6 +338,10 @@
 }
 .wp-block-image.size-thumbnail img { inline-size: auto; }
 .wp-block-image.is-resized img      { inline-size: auto; }
+/* is-style-rounded — WP core source-order guard. */
+.wp-block-image.is-style-rounded img {
+  border-radius: var(--md-sys-shape-corner-full);
+}
 
 /* core/gallery — <ul> grid of <figure> items. WP emits .columns-N. */
 .wp-block-gallery {
@@ -351,6 +362,44 @@
 
 .wp-block-gallery .wp-block-image {
   margin: 0; /* gap owns spacing */
+}
+
+/* ============================================================
+ * §7.x Video
+ *
+ * core/video → <figure class="wp-block-video">
+ *                <video controls src="…"><track>…</video>
+ *                [<figcaption>]
+ *              </figure>
+ *
+ * Browser-native controls — Axismundi sets geometric frame only.
+ * <track> (subtitles / captions) is structural HTML, no CSS contract.
+ * ============================================================ */
+.wp-block-video {
+  margin-block: var(--space-md);
+}
+
+.wp-block-video video {
+  border-radius: var(--md-sys-shape-corner-medium);
+  max-inline-size: 100%;
+  block-size: auto;
+  display: block;
+}
+
+/* core/icon — SVG icon block. WP owns the SVG source; Axismundi owns
+ * theme-token sizing and currentColor inheritance only. */
+.wp-block-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-sys-color-on-surface);
+  line-height: 0;
+}
+
+.wp-block-icon svg {
+  inline-size: 1.5em;
+  block-size: 1.5em;
+  fill: currentColor;
 }
 
 /* ============================================================
@@ -381,6 +430,73 @@
 
 .wp-block-group {
   /* No chrome by default — just surface */
+}
+
+/* Row / Stack / Grid — theme-level gap normalisation only.
+ * WP layout support owns the final flex/grid display and alignment attrs. */
+.wp-block-row,
+.wp-block-group.is-layout-flex {
+  gap: var(--space-md);
+}
+
+.wp-block-stack,
+.wp-block-group.is-vertical {
+  gap: var(--space-md);
+}
+
+.wp-block-grid,
+.wp-block-group.is-layout-grid {
+  gap: var(--space-md);
+}
+
+/* core/accordion — WP 6.9+ coordinated disclosure list.
+ * Interactivity API owns expanded/collapsed behavior. This layer sets
+ * neutral M3 surfaces, spacing, and typography. */
+.wp-block-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-block: var(--space-md);
+}
+
+.wp-block-accordion-item {
+  overflow: hidden;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-accordion-heading {
+  margin: 0;
+  font-family:    var(--md-sys-typescale-title-medium-font);
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+
+.wp-block-accordion-heading__toggle {
+  gap: var(--space-sm);
+  padding: var(--space-md);
+}
+
+.wp-block-accordion-heading__toggle:focus-visible {
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: -3px;
+}
+
+.wp-block-accordion-heading__toggle-icon {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-accordion-panel {
+  padding: 0 var(--space-md) var(--space-md);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-accordion-item:not(.is-open) .wp-block-accordion-panel {
+  display: none;
 }
 
 /* Card style variants — registered via register_block_style().
@@ -476,82 +592,430 @@
 }
 
 /* ============================================================
- * §10 Search — is-style-filled-search
+ * §10 Search
  *
- * Axismundi block style (registered via register_block_style on
- * core/search). Keeps WP's native search form contract while mapping
- * the visual surface to the Search bar rest-state token family.
+ * core/search block contracts. Four button-position modifiers
+ * (button-outside / button-inside / no-button / button-only)
+ * × two styles (default outlined / is-style-filled-search)
+ * + icon-button variant (has-icon on button element).
+ *
+ * WP always adds one of the four button-position classes.
+ * Pilot fixture: hidden-search.php — showLabel:false, button-outside.
  * ============================================================ */
-.wp-block-search.is-style-filled-search {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-block-size: 56px;
-  padding: 0 var(--space-md);
-  border-radius: var(--md-sys-shape-corner-full);
-  background-color: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface);
-  box-shadow: var(--md-sys-elevation-shadow-level3);
-}
-.wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  inline-size: 100%;
-  border: 0;
+
+/* §10.0 screen-reader-text polyfill (WP core owns this in prod;
+   lab needs it to faithfully render label-hidden specimens) */
+.wp-block-search .screen-reader-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   padding: 0;
-}
-.wp-block-search.is-style-filled-search .wp-block-search__input {
-  min-inline-size: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
   border: 0;
+}
+
+/* ---- 10.1 Label ---- */
+.wp-block-search__label {
+  flex: 0 0 100%;
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---- 10.2 Default input — outlined pill, 48px ---- */
+.wp-block-search__input {
+  min-inline-size: 0;
+  min-block-size: 48px;
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
   color: var(--md-sys-color-on-surface);
   font-family: var(--md-sys-typescale-body-large-font);
   font-size: var(--md-sys-typescale-body-large-size);
   line-height: var(--md-sys-typescale-body-large-line-height);
 }
+
+.wp-block-search__input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-search__input:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -1px;
+  border-color: var(--md-sys-color-primary);
+}
+
+/* ---- 10.3 Button base — filled primary pill ---- */
+.wp-block-search__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--comp-button-radius);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  min-block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+}
+
+/* ---- 10.4 Icon button (has-icon) ---- */
+.wp-block-search__button.has-icon {
+  min-inline-size: 40px;
+  min-block-size: 40px;
+  padding-inline: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  box-shadow: none;
+}
+
+.wp-block-search__button.has-icon:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.wp-block-search__button.has-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* ---- 10.5 Button-outside layout ---- */
+.wp-block-search__button-outside {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.wp-block-search__button-outside .wp-block-search__inside-wrapper {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.wp-block-search__button-outside .wp-block-search__input {
+  inline-size: 100%;
+}
+
+/* ---- 10.6 Button-inside layout ---- */
+.wp-block-search__button-inside .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  min-block-size: 48px;
+  padding-inline: var(--space-md) var(--space-xs);
+  overflow: hidden;
+}
+
+.wp-block-search__button-inside .wp-block-search__input {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-block-size: auto;
+  flex: 1 1 auto;
+}
+
+.wp-block-search__button-inside .wp-block-search__input:focus-visible {
+  outline: none;
+}
+
+.wp-block-search__button-inside .wp-block-search__button {
+  min-block-size: 40px;
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+  box-shadow: none;
+}
+
+.wp-block-search__button-inside .wp-block-search__button:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.wp-block-search__button-inside .wp-block-search__button.has-icon {
+  min-inline-size: 40px;
+  min-block-size: 40px;
+  padding-inline: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---- 10.7 No-button layout ---- */
+.wp-block-search__no-button {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* ---- 10.8 Button-only layout ---- */
+.wp-block-search__button-only {
+  display: flex;
+}
+
+/* ============================================================
+ * §10.9 is-style-filled-search — MD3 Search Bar surface
+ *
+ * Filled pill: surface-container-high + elevation-shadow-level3.
+ * "Pill surface" lands on different elements per button position:
+ *   button-inside  → form root  (button + input share the pill)
+ *   button-outside → __inside-wrapper  (button floats right)
+ *   no-button      → __inside-wrapper  (input-only pill)
+ *   button-only    → governed by button-base (§10.3/10.4)
+ * ============================================================ */
+
+/* Shared filled-input reset (overrides outlined defaults §10.2) */
+.wp-block-search.is-style-filled-search .wp-block-search__input {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-block-size: auto;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
 .wp-block-search.is-style-filled-search .wp-block-search__input::placeholder {
   color: var(--md-sys-color-on-surface-variant);
 }
-.wp-block-search .wp-block-search__button {
-  border: 0;
-  border-radius: var(--comp-button-radius);
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  min-block-size: var(--comp-button-height);
-  padding-inline: var(--space-lg);
-  font-family: var(--md-sys-typescale-label-large-font);
-  font-size: var(--md-sys-typescale-label-large-size);
-  line-height: var(--md-sys-typescale-label-large-line-height);
-  font-weight: var(--md-sys-typescale-label-large-weight);
-}
-.wp-block-search.is-style-filled-search .wp-block-search__button {
-  border: 0;
-  border-radius: var(--comp-button-radius);
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  min-block-size: var(--comp-button-height);
-  padding-inline: var(--space-lg);
-  font-family: var(--md-sys-typescale-label-large-font);
-  font-size: var(--md-sys-typescale-label-large-size);
-  line-height: var(--md-sys-typescale-label-large-line-height);
-  font-weight: var(--md-sys-typescale-label-large-weight);
+
+.wp-block-search.is-style-filled-search .wp-block-search__input:focus-visible {
+  outline: none;
 }
 
+/* Filled — button-inside (canonical MD3 search bar) */
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-corner-full);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  inline-size: 100%;
+  min-block-size: 56px;
+  padding-inline: var(--space-md) var(--space-xs);
+  border: 0;
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__button {
+  min-block-size: 40px;
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  box-shadow: none;
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__button.has-icon {
+  min-inline-size: 40px;
+  min-block-size: 40px;
+  padding-inline: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Filled — button-outside (pill on wrapper; button floats right) */
+.wp-block-search.is-style-filled-search.wp-block-search__button-outside {
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-outside .wp-block-search__inside-wrapper {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  min-block-size: 56px;
+  padding-inline: var(--space-md);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+
+/* Filled — no-button (pill on wrapper; input fills it) */
+.wp-block-search.is-style-filled-search.wp-block-search__no-button .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  min-block-size: 56px;
+  padding-inline: var(--space-md);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__no-button .wp-block-search__input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* ---- 10.10 Responsive ---- */
 @media (max-inline-size: 600px) {
-  .wp-block-search.is-style-filled-search,
-  .wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
-    align-items: stretch;
+  .wp-block-search__button-outside {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .wp-block-search.is-style-filled-search {
-    padding-block: var(--space-sm);
+  .wp-block-search__button-outside .wp-block-search__inside-wrapper,
+  .wp-block-search__button-outside .wp-block-search__button {
+    inline-size: 100%;
   }
 }
 
 /* ============================================================
- * §11 List — is-style-list-segmented
+ * §11 Widgets — Social Icons / Tag Cloud
+ *
+ * CSS-only widget contracts that do not require template context.
+ * Brand-specific social colors remain WP core responsibility; Axismundi
+ * defines only neutral default surfaces and geometry.
+ * ============================================================ */
+.wp-block-social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: 0;
+  margin-block: var(--space-md);
+  list-style: none;
+}
+
+.wp-block-social-link {
+  display: inline-flex;
+}
+
+.wp-block-social-link a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-social-link a:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.wp-block-social-link svg {
+  inline-size: 20px;
+  block-size: 20px;
+  fill: currentColor;
+}
+
+.wp-block-social-links.is-style-logos-only .wp-block-social-link a {
+  background-color: transparent;
+}
+
+.wp-block-social-links.is-style-pill-shape .wp-block-social-link a {
+  inline-size: auto;
+  padding-inline: var(--space-md);
+}
+
+.wp-block-tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-block: var(--space-md);
+}
+
+.wp-block-tag-cloud a,
+.wp-block-tag-cloud .tag-cloud-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size) !important;
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  text-decoration: none;
+}
+
+.wp-block-tag-cloud a:hover,
+.wp-block-tag-cloud .tag-cloud-link:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.wp-block-tag-cloud.is-style-outline a,
+.wp-block-tag-cloud.is-style-outline .tag-cloud-link {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline-variant);
+}
+
+/* ============================================================
+ * §12 Theme identity blocks
+ *
+ * CSS-only theme blocks that can be represented without rendering an
+ * actual template. Navigation / Query Loop / Template Part remain routed
+ * to the pattern/template styleguide.
+ * ============================================================ */
+.wp-block-site-title {
+  margin-block: 0;
+  font-family:    var(--md-sys-typescale-title-large-font);
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+
+.wp-block-site-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wp-block-site-tagline {
+  margin-block: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-body-medium-font);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+
+.wp-block-site-logo {
+  margin-block: 0;
+  line-height: 0;
+}
+
+.wp-block-site-logo img {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.wp-block-site-logo.is-style-rounded img {
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* ============================================================
+ * §13 List — is-style-list-segmented
  *
  * Axismundi block style (registered via register_block_style on
  * core/list). Mirrors .ax-list--segmented from components.css §26 —
@@ -574,4 +1038,640 @@
  * still applies; segmented already has list-style: none). */
 .wp-block-list.is-style-list-segmented > li > input[type="checkbox"]:first-child {
   margin-inline-end: var(--space-sm);
+}
+
+/* ============================================================
+ * §14 Query Loop / Post Template inner blocks
+ *
+ * CSS contract for theme-template post lists:
+ *   core/query                  → no chrome
+ *   core/post-template          → list reset
+ *   core/post-featured-image    → image frame
+ *   core/post-title             → linked title
+ *   core/post-date              → metadata label
+ *   core/post-excerpt           → constrained supporting copy
+ *   core/post-author-name       → metadata label
+ *   core/avatar                 → circular author media
+ * ============================================================ */
+.wp-block-query {
+  /* Query itself is a data container; child blocks own visuals. */
+}
+
+.wp-block-post-template {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.wp-block-post-featured-image {
+  margin-block: 0;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.wp-block-post-featured-image img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.wp-block-post-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+}
+
+.wp-block-post-title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.wp-block-post-date {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+
+.wp-block-post-date a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wp-block-post-excerpt__excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--md-sys-color-on-surface-variant);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.wp-block-post-excerpt__more-link {
+  color: var(--md-sys-color-primary);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  text-decoration: none;
+}
+
+.wp-block-post-author-name {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+
+.wp-block-post-author-name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wp-block-avatar img {
+  display: block;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* ============================================================
+ * §15 Pagination — Query Pagination + Post Navigation Link
+ *
+ * Query pagination is a chip row. Single-post navigation is a paired
+ * text-button surface; layout wrappers can decide left/right placement.
+ * ============================================================ */
+.wp-block-query-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.wp-block-query-pagination-previous a,
+.wp-block-query-pagination-next a {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-primary);
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-query-pagination-previous a:hover,
+.wp-block-query-pagination-next a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.wp-block-query-pagination-numbers {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.wp-block-query-pagination-numbers .page-numbers {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 36px;
+  min-block-size: 36px;
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-query-pagination-numbers a.page-numbers:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.wp-block-query-pagination-numbers .page-numbers.current {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.wp-block-query-pagination-numbers .page-numbers.dots {
+  min-inline-size: auto;
+  padding-inline: var(--space-xs);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-post-navigation-link {
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+
+.wp-block-post-navigation-link a {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-post-navigation-link a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+/* ============================================================
+ * §16 Widget lists
+ *
+ * Shared contract for sidebar/footer information lists.
+ * The list widgets all use the same reset + link token + metadata label
+ * pattern; Calendar and RSS remain outside this contract.
+ *
+ *   core/latest-posts    → <ul class="wp-block-latest-posts">
+ *   core/archives        → <ul class="wp-block-archives">
+ *   core/categories      → <ul class="wp-block-categories">
+ *   core/page-list       → <ul class="wp-block-page-list">
+ *   core/latest-comments → <ol class="wp-block-latest-comments">
+ * ============================================================ */
+.wp-block-latest-posts,
+.wp-block-archives,
+.wp-block-categories,
+.wp-block-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.wp-block-page-list .wp-block-page-list,
+.wp-block-categories .children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-inline-start: var(--space-md);
+  margin-block-start: var(--space-xs);
+  list-style: none;
+}
+
+.wp-block-latest-posts a,
+.wp-block-archives a,
+.wp-block-categories a,
+.wp-block-page-list .wp-block-pages-list__item__link {
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  text-decoration: none;
+}
+
+.wp-block-latest-posts a:hover,
+.wp-block-archives a:hover,
+.wp-block-categories a:hover,
+.wp-block-page-list .wp-block-pages-list__item__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.wp-block-latest-posts__post-date,
+.wp-block-latest-posts__post-author {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-small-font);
+  font-size: var(--md-sys-typescale-label-small-size);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+  font-weight: var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+.wp-block-latest-posts__post-excerpt {
+  margin-block-start: var(--space-xs);
+}
+
+.wp-block-latest-posts__post-excerpt p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.wp-block-latest-posts__featured-image {
+  display: block;
+  overflow: hidden;
+  margin-block-end: var(--space-xs);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-latest-posts__featured-image img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.wp-block-archives-dropdown select,
+.wp-block-categories-dropdown select {
+  inline-size: 100%;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.wp-block-latest-comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.wp-block-latest-comments__comment-meta {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-small-font);
+  font-size: var(--md-sys-typescale-label-small-size);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+  font-weight: var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+.wp-block-latest-comments__comment-author,
+.wp-block-latest-comments__comment-link {
+  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.wp-block-latest-comments__comment-author:hover,
+.wp-block-latest-comments__comment-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.wp-block-latest-comments__comment-date {
+  display: block;
+  margin-block-start: 2px;
+}
+
+.wp-block-latest-comments__comment-excerpt p {
+  display: -webkit-box;
+  margin: var(--space-xs) 0 0;
+  overflow: hidden;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* ============================================================
+ * §17 Navigation — core/navigation
+ *
+ * WP core block styles handle: positioning, z-index, hidden-by-default,
+ * hamburger show/hide, submenu absolute positioning, and responsive menu
+ * state. Axismundi adds visual token contract only.
+ *
+ * Mobile overlay visual tokens are set here, but toggle state
+ * (`is-menu-open`) is WP Interactivity API. Verify on the Pilot WP
+ * instance before marking mobile navigation PASS.
+ *
+ * TT5 uses overlayBackgroundColor:"base" / overlayTextColor:"contrast".
+ * Those slugs are not in axismundi-pilot/theme.json, so the overlay uses
+ * explicit MD3 sys tokens below.
+ * ============================================================ */
+.wp-block-navigation-item__content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-navigation-item:hover > .wp-block-navigation-item__content,
+.wp-block-navigation-item.is-item-focused > .wp-block-navigation-item__content {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.wp-block-navigation-item.current-menu-item > .wp-block-navigation-item__content,
+.wp-block-navigation-item[class*="current-menu"] > .wp-block-navigation-item__content {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.wp-block-navigation-submenu__toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+}
+
+.wp-block-navigation__submenu-container {
+  padding-block: var(--space-xs);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+}
+
+.wp-block-navigation__submenu-container .wp-block-navigation-item__content {
+  inline-size: 100%;
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-navigation__responsive-container-open,
+.wp-block-navigation__responsive-container-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: none;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.wp-block-navigation__responsive-container-open:hover,
+.wp-block-navigation__responsive-container-close:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.wp-block-navigation__responsive-container {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-navigation__responsive-container .wp-block-navigation-item__content {
+  inline-size: 100%;
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* ============================================================
+ * §18 Comments
+ *
+ * core/comments block family. Pilot fixture: patterns/comments.php
+ *
+ * Block map:
+ *   wp-block-comments            → outer wrapper (spacing only, WP owns)
+ *   wp-block-comments-title      → "N thoughts on…" heading
+ *   wp-block-avatar              → circle crop
+ *   wp-block-comment-date        → body-small, on-surface-variant
+ *   wp-block-comment-author-name → label-medium, on-surface
+ *   wp-block-comment-content     → body-medium (inherits)
+ *   wp-block-comment-reply-link  → text button, primary
+ *   wp-block-comment-edit-link   → text button, primary (admin)
+ *   wp-block-comments-pagination → same token set as §15 query pagination
+ *   wp-block-post-comments-form  → outlined inputs + filled submit
+ *
+ * WP owns: nested threading (ol.children indent), avatar fetch,
+ * comment moderation state, form validation, AJAX submit.
+ * Axismundi: visual token layer only.
+ * ============================================================ */
+.wp-block-comments-title {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-avatar img {
+  display: block;
+  border-radius: var(--comp-avatar-radius);
+}
+
+.wp-block-comment-date a {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size:   var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  text-decoration: none;
+}
+
+.wp-block-comment-author-name a {
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size:   var(--md-sys-typescale-label-medium-size);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  text-decoration: none;
+}
+
+.wp-block-comment-content {
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size:   var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.wp-block-comment-reply-link a,
+.wp-block-comment-edit-link a {
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-xs);
+  border-radius: var(--md-sys-shape-corner-small);
+  color: var(--md-sys-color-primary);
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size:   var(--md-sys-typescale-label-medium-size);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-comment-reply-link a:hover,
+.wp-block-comment-edit-link a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.wp-block-comments-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.wp-block-comments-pagination-previous a,
+.wp-block-comments-pagination-next a {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-primary);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size:   var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-comments-pagination-previous a:hover,
+.wp-block-comments-pagination-next a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.comment-form label {
+  display: block;
+  margin-block-end: var(--space-xs);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size:   var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+}
+
+.comment-form .required {
+  color: var(--md-sys-color-error);
+}
+
+.comment-form p {
+  margin-block: 0 var(--space-md);
+}
+
+.comment-form input[type="text"],
+.comment-form input[type="email"],
+.comment-form input[type="url"] {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size:   var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
+.comment-form input[type="text"]:focus-visible,
+.comment-form input[type="email"]:focus-visible,
+.comment-form input[type="url"]:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -1px;
+  border-color: var(--md-sys-color-primary);
+}
+
+.comment-form textarea {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 120px;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size:   var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  resize: vertical;
+}
+
+.comment-form textarea:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -1px;
+  border-color: var(--md-sys-color-primary);
+}
+
+.comment-form .submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  border: 0;
+  border-radius: var(--comp-button-radius);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size:   var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+  transition: filter 150ms;
+}
+
+.comment-form .submit:hover {
+  filter: brightness(0.92);
 }

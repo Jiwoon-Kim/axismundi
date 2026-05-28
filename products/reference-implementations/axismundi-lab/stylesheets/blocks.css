@@ -29,6 +29,7 @@
  *   §15 Pagination — Query + Post Navigation
  *   §16 Widget lists
  *   §17 Navigation
+ *   §18 Comments
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -1609,4 +1610,192 @@
 .wp-block-navigation__responsive-container .wp-block-navigation-item__content {
   inline-size: 100%;
   border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* ============================================================
+ * §18 Comments
+ *
+ * core/comments block family. Pilot fixture: patterns/comments.php
+ *
+ * Block map:
+ *   wp-block-comments            → outer wrapper (spacing only, WP owns)
+ *   wp-block-comments-title      → "N thoughts on…" heading
+ *   wp-block-avatar              → circle crop
+ *   wp-block-comment-date        → body-small, on-surface-variant
+ *   wp-block-comment-author-name → label-medium, on-surface
+ *   wp-block-comment-content     → body-medium (inherits)
+ *   wp-block-comment-reply-link  → text button, primary
+ *   wp-block-comment-edit-link   → text button, primary (admin)
+ *   wp-block-comments-pagination → same token set as §15 query pagination
+ *   wp-block-post-comments-form  → outlined inputs + filled submit
+ *
+ * WP owns: nested threading (ol.children indent), avatar fetch,
+ * comment moderation state, form validation, AJAX submit.
+ * Axismundi: visual token layer only.
+ * ============================================================ */
+.wp-block-comments-title {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-avatar img {
+  display: block;
+  border-radius: var(--comp-avatar-radius);
+}
+
+.wp-block-comment-date a {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size:   var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  text-decoration: none;
+}
+
+.wp-block-comment-author-name a {
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size:   var(--md-sys-typescale-label-medium-size);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  text-decoration: none;
+}
+
+.wp-block-comment-content {
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size:   var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.wp-block-comment-reply-link a,
+.wp-block-comment-edit-link a {
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-xs);
+  border-radius: var(--md-sys-shape-corner-small);
+  color: var(--md-sys-color-primary);
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size:   var(--md-sys-typescale-label-medium-size);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-comment-reply-link a:hover,
+.wp-block-comment-edit-link a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.wp-block-comments-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.wp-block-comments-pagination-previous a,
+.wp-block-comments-pagination-next a {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-primary);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size:   var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-comments-pagination-previous a:hover,
+.wp-block-comments-pagination-next a:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+}
+
+.comment-form label {
+  display: block;
+  margin-block-end: var(--space-xs);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size:   var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+}
+
+.comment-form .required {
+  color: var(--md-sys-color-error);
+}
+
+.comment-form p {
+  margin-block: 0 var(--space-md);
+}
+
+.comment-form input[type="text"],
+.comment-form input[type="email"],
+.comment-form input[type="url"] {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size:   var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
+.comment-form input[type="text"]:focus-visible,
+.comment-form input[type="email"]:focus-visible,
+.comment-form input[type="url"]:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -1px;
+  border-color: var(--md-sys-color-primary);
+}
+
+.comment-form textarea {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 120px;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size:   var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  resize: vertical;
+}
+
+.comment-form textarea:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -1px;
+  border-color: var(--md-sys-color-primary);
+}
+
+.comment-form .submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  border: 0;
+  border-radius: var(--comp-button-radius);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size:   var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+  transition: filter 150ms;
+}
+
+.comment-form .submit:hover {
+  filter: brightness(0.92);
 }

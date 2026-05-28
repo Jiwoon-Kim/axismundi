@@ -310,6 +310,7 @@
 
         <div class="t-label-small sg-nav__group-label">Theme</div>
         <a class="t-body-medium" href="#blocks-theme">Theme identity</a>
+        <a class="t-body-medium" href="#blocks-comments">Comments</a>
       </nav>
     </aside>
 
@@ -1518,7 +1519,7 @@ console.log(greet('World'));</code></pre>
           <div class="t-label-medium sg-section__eyebrow">Theme</div>
           <h2 class="t-headline-medium">Theme identity blocks</h2>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            CSS-only theme blocks that can be represented without rendering a full FSE template. Navigation, Query Loop, Template Part, and Comments stay routed to the future pattern/template styleguide.
+            CSS-only theme blocks that can be represented without rendering a full FSE template. Query Loop and Template Part stay routed to the future pattern/template styleguide.
           </p>
         </header>
 
@@ -1649,8 +1650,88 @@ console.log(greet('World'));</code></pre>
             <ul>
               <li><strong>Template Part</strong> — FSE structure surface. Future route.</li>
               <li><strong>Breadcrumbs</strong> — WP 7.0 reference-only block. Future route.</li>
-              <li><strong>Comments</strong> — comment template/form surface. Future route.</li>
             </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Comments — thread (<code>core/comments</code>)</h3>
+          <p class="sg-helper">Static specimen — Pilot fixture: <code>patterns/comments.php</code>. Avatar는 WP가 Gravatar로 채움. WP는 nested threading indent, moderation state를 소유. <code>blocks.css §18</code>.</p>
+          <div class="sg-demo">
+            <div class="wp-block-comments">
+              <h3 class="wp-block-comments-title has-large-font-size">2 thoughts on "스타일 시스템과 디자인 토큰의 관계"</h3>
+              <ol class="wp-block-comment-template" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-lg);">
+                <li id="ax-demo-comment-1" class="comment">
+                  <div class="wp-block-group" style="display:flex;gap:var(--space-sm);align-items:flex-start;">
+                    <div class="wp-block-avatar" style="flex-shrink:0;">
+                      <div style="width:50px;height:50px;border-radius:var(--comp-avatar-radius);background:var(--md-sys-color-primary-container);display:flex;align-items:center;justify-content:center;">
+                        <span style="font-family:var(--md-sys-typescale-label-large-font);font-size:var(--md-sys-typescale-label-large-size);color:var(--md-sys-color-on-primary-container);">M</span>
+                      </div>
+                    </div>
+                    <div class="wp-block-group" style="flex:1 1 0;min-inline-size:0;display:flex;flex-direction:column;gap:var(--space-xs);">
+                      <div class="wp-block-comment-date"><a href="#ax-demo-comment-1"><time datetime="2026-05-27">2026년 5월 27일</time></a></div>
+                      <div class="wp-block-comment-author-name"><a href="#">Mina</a></div>
+                      <div class="wp-block-comment-content"><p>MD3 토큰 레이어와 WP 블록 구조의 분리가 명확하게 잘 구현되어 있습니다. surface-container 계층이 자연스럽네요.</p></div>
+                      <div class="wp-block-group" style="display:flex;gap:var(--space-xs);">
+                        <div class="wp-block-comment-reply-link"><a href="#">Reply</a></div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li id="ax-demo-comment-2" class="comment">
+                  <div class="wp-block-group" style="display:flex;gap:var(--space-sm);align-items:flex-start;">
+                    <div class="wp-block-avatar" style="flex-shrink:0;">
+                      <div style="width:50px;height:50px;border-radius:var(--comp-avatar-radius);background:var(--md-sys-color-secondary-container);display:flex;align-items:center;justify-content:center;">
+                        <span style="font-family:var(--md-sys-typescale-label-large-font);font-size:var(--md-sys-typescale-label-large-size);color:var(--md-sys-color-on-secondary-container);">J</span>
+                      </div>
+                    </div>
+                    <div class="wp-block-group" style="flex:1 1 0;min-inline-size:0;display:flex;flex-direction:column;gap:var(--space-xs);">
+                      <div class="wp-block-comment-date"><a href="#ax-demo-comment-2"><time datetime="2026-05-26">2026년 5월 26일</time></a></div>
+                      <div class="wp-block-comment-author-name"><a href="#">Joon</a></div>
+                      <div class="wp-block-comment-content"><p>comment-form의 outlined input이 §10 Search와 동일한 토큰을 쓰는 점도 일관성 있어 보입니다.</p></div>
+                      <div class="wp-block-group" style="display:flex;gap:var(--space-xs);">
+                        <div class="wp-block-comment-reply-link"><a href="#">Reply</a></div>
+                        <div class="wp-block-comment-edit-link"><a href="#">Edit</a></div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+              <div class="wp-block-comments-pagination" style="margin-block-start:var(--space-lg);">
+                <div class="wp-block-comments-pagination-previous"><a href="#">← Older comments</a></div>
+                <div class="wp-block-comments-pagination-next"><a href="#">Newer comments →</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection" id="blocks-comments">
+          <h3 class="t-title-medium sg-subsection__head">Comments — form (<code>core/post-comments-form</code>)</h3>
+          <p class="sg-helper">Outlined pill inputs (동일 토큰: §10 Search / §18.9) + corner-medium textarea + filled primary submit. WP는 nonce, moderation, validation, AJAX submit을 소유.</p>
+          <div class="sg-demo">
+            <div class="wp-block-post-comments-form">
+              <form id="ax-demo-commentform" class="comment-form" novalidate="">
+                <p class="comment-form-comment">
+                  <label for="ax-demo-comment">Comment <span class="required">*</span></label>
+                  <textarea id="ax-demo-comment" name="comment" rows="6" required=""></textarea>
+                </p>
+                <p class="comment-form-author">
+                  <label for="ax-demo-author">Name <span class="required">*</span></label>
+                  <input id="ax-demo-author" name="author" type="text" required="">
+                </p>
+                <p class="comment-form-email">
+                  <label for="ax-demo-email">Email <span class="required">*</span></label>
+                  <input id="ax-demo-email" name="email" type="email" required="">
+                </p>
+                <p class="comment-form-url">
+                  <label for="ax-demo-url">Website</label>
+                  <input id="ax-demo-url" name="url" type="url">
+                </p>
+                <p class="form-submit">
+                  <input id="ax-demo-submit" name="submit" type="submit" value="Post Comment" class="submit">
+                </p>
+              </form>
+            </div>
           </div>
         </div>
       </section>

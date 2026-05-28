@@ -94,40 +94,7 @@
   });
 })();
 
-/* ----- Main runtime: snackbar / dialog / sheet / theme switcher / palette painter ----- */
-/* ---------------- Theme switcher ---------------- */
-    (function () {
-      const KEY = "axismundi.theme";
-      const html = document.documentElement;
-      const buttons = document.querySelectorAll("[data-theme-button]");
-
-      function apply(mode) {
-        html.setAttribute("data-theme", mode);
-        buttons.forEach((b) => {
-          const active = b.dataset.themeButton === mode;
-          /* 3-marker pattern (per components.css §27.5):
-           * - aria-checked: true ARIA radio state (radiogroup pattern)
-           * - aria-pressed: legacy toggle marker (kept for backward compat
-           *   if external tooling reads it)
-           * - .is-selected: CSS-only marker (works without JS)
-           */
-          b.setAttribute("aria-checked", active ? "true" : "false");
-          b.setAttribute("aria-pressed", active ? "true" : "false");
-          b.classList.toggle("is-selected", active);
-        });
-      }
-
-      const saved = localStorage.getItem(KEY) || "auto";
-      apply(saved);
-
-      buttons.forEach((b) => {
-        b.addEventListener("click", () => {
-          const mode = b.dataset.themeButton;
-          localStorage.setItem(KEY, mode);
-          apply(mode);
-        });
-      });
-    })();
+/* ----- Main runtime: snackbar / dialog / sheet / palette painter ----- */
 
     /* ---------------- Generic toggle (.sg-toggle) ----------------
      * Click flips aria-pressed so toggle variants demo selected state. */

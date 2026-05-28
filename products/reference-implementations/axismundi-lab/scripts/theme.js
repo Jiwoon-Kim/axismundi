@@ -445,7 +445,7 @@
 /* ============================================================
  * §8 Theme switcher (light / dark / auto)
  *
- * Reads stored preference from localStorage(`ax-theme`) and
+ * Reads stored preference from localStorage(`axismundi.theme`) and
  * applies it via `[data-theme]` on <html> (`auto` remains explicit
  * and falls back to `prefers-color-scheme`).
  *
@@ -472,7 +472,7 @@
  * This IIFE adds: click → set theme, persist, sync aria-checked,
  * react to OS prefers-color-scheme changes when in `auto` mode.
  *
- * Why localStorage(`ax-theme`):
+ * Why localStorage(`axismundi.theme`):
  *   - Survives reloads and per-page navigation in the static
  *     prototype.
  *   - Phase 3 PHP integration can replace with WP user meta
@@ -480,17 +480,8 @@
  *     keeping localStorage for visitors.
  * ============================================================ */
 (function () {
-  var STORAGE_KEY = "ax-theme";
+  var STORAGE_KEY = "axismundi.theme";
   var ROOT = document.documentElement;
-  var hasProductionSwitcher = !!document.querySelector("[data-theme-set]");
-  var hasStyleGuideSwitcher = !!document.querySelector("[data-theme-button]");
-
-  /* style-guide.js owns the catalog theme switcher. Without this guard,
-   * theme.js can run after style-guide.js and overwrite the selected
-   * light/dark mode with the production storage key, making the sidebar
-   * look like it has the opposite theme. */
-  if (!hasProductionSwitcher && hasStyleGuideSwitcher) return;
-
   function getStored() {
     try {
       var v = localStorage.getItem(STORAGE_KEY);

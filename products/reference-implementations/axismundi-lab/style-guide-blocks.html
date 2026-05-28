@@ -255,6 +255,443 @@
     .sg-toc-rail::-webkit-scrollbar-button {
       display: none;
     }
+
+    /* ===== Improvements v1.1 (style-guide-blocks) ===== */
+
+    /* ---- Theme switcher (segmented, label + icon) ---- */
+    .sg-theme {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      padding: var(--space-sm);
+      background-color: var(--md-sys-color-surface-container);
+      border-radius: var(--md-sys-shape-corner-medium);
+    }
+    .sg-theme__label {
+      color: var(--md-sys-color-on-surface-variant);
+      padding-inline: var(--space-xs);
+    }
+    .sg-theme__row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      padding: 2px;
+      background-color: var(--md-sys-color-surface-container-high);
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+    .sg-theme__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xs);
+      min-block-size: 32px;
+      padding-inline: var(--space-sm);
+      border: 0;
+      border-radius: var(--md-sys-shape-corner-full);
+      background: transparent;
+      color: var(--md-sys-color-on-surface-variant);
+      font-family: var(--md-sys-typescale-label-medium-font);
+      font-size: var(--md-sys-typescale-label-small-size);
+      font-weight: var(--md-sys-typescale-label-medium-weight);
+      letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+      cursor: pointer;
+      transition: background-color 150ms, color 150ms;
+    }
+    .sg-theme__btn:hover {
+      background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .sg-theme__btn.is-selected,
+    .sg-theme__btn[aria-checked="true"] {
+      background-color: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      box-shadow: var(--md-sys-elevation-shadow-level1);
+    }
+    .sg-theme__btn span[aria-hidden] {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    /* ---- Page header polish ---- */
+    .sg-page-header {
+      padding-block-end: var(--space-xl);
+      border-block-end: 1px solid var(--md-sys-color-outline-variant);
+      margin-block-end: var(--space-xl);
+    }
+    .sg-page-lede {
+      margin-block-start: var(--space-md);
+      color: var(--md-sys-color-on-surface-variant);
+      max-inline-size: 64ch;
+    }
+    .sg-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      margin-block-start: var(--space-lg);
+      padding-block-start: var(--space-md);
+      border-block-start: 1px dashed var(--md-sys-color-outline-variant);
+      align-items: center;
+    }
+    .sg-legend__label {
+      margin-inline-end: var(--space-xs);
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ---- Category color hints on eyebrow ----
+     * Small leading dot keyed to Block Inserter category. */
+    .sg-cat {
+      --cat: var(--md-sys-color-on-surface-variant);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .sg-cat::before {
+      content: "";
+      inline-size: 8px;
+      block-size: 8px;
+      border-radius: 50%;
+      background-color: var(--cat);
+      flex-shrink: 0;
+    }
+    .sg-cat--text    { --cat: var(--md-sys-color-primary); }
+    .sg-cat--media   { --cat: var(--md-sys-color-tertiary); }
+    .sg-cat--design  { --cat: var(--md-sys-color-secondary); }
+    .sg-cat--widgets { --cat: color-mix(in srgb, var(--md-sys-color-primary) 55%, var(--md-sys-color-tertiary)); }
+    .sg-cat--theme   { --cat: var(--md-sys-color-error); }
+
+    /* Nav group label: same dot system, smaller dot */
+    .sg-nav__group-label.sg-cat::before {
+      inline-size: 6px;
+      block-size: 6px;
+    }
+
+    /* ---- Status badges ---- */
+    .sg-status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+      margin-block-start: var(--space-sm);
+    }
+    .sg-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding-block: 2px;
+      padding-inline: var(--space-sm);
+      border-radius: var(--md-sys-shape-corner-full);
+      font-family: var(--md-sys-typescale-label-small-font);
+      font-size: var(--md-sys-typescale-label-small-size);
+      font-weight: var(--md-sys-typescale-label-small-weight);
+      letter-spacing: var(--md-sys-typescale-label-small-tracking);
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .sg-badge::before {
+      content: "";
+      inline-size: 6px;
+      block-size: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.7;
+    }
+    .sg-badge--ready {
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+    }
+    .sg-badge--php {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+    .sg-badge--gap {
+      background-color: var(--md-sys-color-surface-container-high);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-badge--source {
+      background: transparent;
+      border-color: var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface-variant);
+      font-family: var(--md-ref-typeface-mono);
+    }
+    .sg-badge--source::before { display: none; }
+
+    /* ---- Gap row — consolidated "not implemented" treatment ---- */
+    .sg-demo--gaps {
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+    .sg-gap-list {
+      display: grid;
+      gap: var(--space-xs);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .sg-gap-row {
+      display: grid;
+      grid-template-columns: minmax(140px, auto) 1fr;
+      gap: var(--space-md);
+      align-items: baseline;
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background-color: var(--md-sys-color-surface-container-low);
+      border-inline-start: 3px solid var(--md-sys-color-outline-variant);
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-gap-row__name {
+      font-family: var(--md-ref-typeface-mono);
+      font-size: var(--md-sys-typescale-label-large-size);
+      color: var(--md-sys-color-on-surface);
+    }
+    .sg-gap-row__why {
+      font-family: var(--md-sys-typescale-body-small-font);
+      font-size: var(--md-sys-typescale-body-small-size);
+      line-height: var(--md-sys-typescale-body-small-line-height);
+    }
+    .sg-gap-row__why code {
+      font-size: inherit;
+    }
+    @media (max-width: 640px) {
+      .sg-gap-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-xs);
+      }
+    }
+
+
+    /* ===== blocks-search redesign v1.2 ===== */
+
+    /* Search redesign demo container — multi-column layout for layout variants */
+    .sg-search-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      gap: var(--space-lg);
+    }
+    .sg-search-cell {
+      display: grid;
+      gap: var(--space-sm);
+    }
+    .sg-search-cell__label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      color: var(--md-sys-color-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .sg-search-cell__when {
+      color: var(--md-sys-color-on-surface-variant);
+      margin: 0;
+    }
+
+    /* ---- Aesthetic skin overrides (scoped to .sg-skin) ---- */
+    .sg-skin {
+      /* a wrapper class — does nothing by itself; scope hook for skin variants */
+    }
+    /* Skin: outlined (default) — keep as blocks.css default. No override. */
+
+    /* Skin: filled-pill — surface-container-high + corner-full, no border */
+    .sg-skin--filled-pill .wp-block-search__input {
+      background: var(--md-sys-color-surface-container-high);
+      border-color: transparent;
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+    .sg-skin--filled-pill .wp-block-search__input:focus-visible {
+      outline: 2px solid var(--md-sys-color-primary);
+      outline-offset: -2px;
+      border-color: transparent;
+    }
+    .sg-skin--filled-pill .wp-block-search__button {
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+    .sg-skin--filled-pill.wp-block-search__button-inside .wp-block-search__inside-wrapper {
+      background: var(--md-sys-color-surface-container-high);
+      border: 0;
+      border-radius: var(--md-sys-shape-corner-full);
+    }
+
+    /* Skin: soft-square — surface-container-low + corner-medium (form-like, less rounded) */
+    .sg-skin--soft-square .wp-block-search__input {
+      background: var(--md-sys-color-surface-container-low);
+      border-color: transparent;
+      border-radius: var(--md-sys-shape-corner-medium);
+      min-block-size: 48px;
+    }
+    .sg-skin--soft-square .wp-block-search__input:focus-visible {
+      outline: 2px solid var(--md-sys-color-primary);
+      outline-offset: -2px;
+    }
+    .sg-skin--soft-square .wp-block-search__button {
+      border-radius: var(--md-sys-shape-corner-medium);
+    }
+    .sg-skin--soft-square.wp-block-search__button-inside .wp-block-search__inside-wrapper {
+      background: var(--md-sys-color-surface-container-low);
+      border: 0;
+      border-radius: var(--md-sys-shape-corner-medium);
+    }
+
+    /* ---- State demos ---- */
+    .sg-state-row {
+      display: grid;
+      gap: var(--space-md);
+    }
+    .sg-state-card {
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .sg-state-card__title {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      color: var(--md-sys-color-on-surface);
+    }
+    .sg-state-card__title::before {
+      content: "";
+      inline-size: 6px;
+      block-size: 6px;
+      border-radius: 50%;
+      background: var(--md-sys-color-on-surface-variant);
+    }
+    .sg-state-card[data-state="focus"] .sg-state-card__title::before { background: var(--md-sys-color-primary); }
+    .sg-state-card[data-state="typed"] .sg-state-card__title::before { background: var(--md-sys-color-tertiary); }
+    .sg-state-card[data-state="loading"] .sg-state-card__title::before { background: var(--md-sys-color-secondary); }
+    .sg-state-card[data-state="disabled"] .sg-state-card__title::before { background: var(--md-sys-color-outline); }
+
+    /* Force a visible focus ring on the demo input (since real focus isn't on it) */
+    .wp-block-search.is-state-focus .wp-block-search__input {
+      outline: 2px solid var(--md-sys-color-primary);
+      outline-offset: -2px;
+      border-color: var(--md-sys-color-primary);
+    }
+    /* Loading state — animated spinner inside button */
+    .wp-block-search.is-state-loading .wp-block-search__button {
+      pointer-events: none;
+      color: var(--md-sys-color-on-primary);
+    }
+    .sg-spinner {
+      inline-size: 16px;
+      block-size: 16px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      animation: sg-spin 0.9s linear infinite;
+    }
+    @keyframes sg-spin {
+      to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sg-spinner { animation-duration: 3s; }
+    }
+    /* Disabled state */
+    .wp-block-search.is-state-disabled .wp-block-search__input {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+    .wp-block-search.is-state-disabled .wp-block-search__button {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+
+    /* ---- M3 Search Bar (separate Axismundi component pattern; NOT core/search) ---- */
+    .ax-search-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      inline-size: 100%;
+      max-inline-size: 720px;
+      min-block-size: 56px;
+      padding-inline: var(--space-md);
+      background: var(--md-sys-color-surface-container-high);
+      border-radius: var(--md-sys-shape-corner-full);
+      box-shadow: var(--md-sys-elevation-shadow-level1);
+      color: var(--md-sys-color-on-surface);
+    }
+    .ax-search-bar__leading {
+      display: inline-flex;
+      align-items: center;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-search-bar__leading svg {
+      inline-size: 22px;
+      block-size: 22px;
+      fill: currentColor;
+    }
+    .ax-search-bar__input {
+      flex: 1 1 auto;
+      min-inline-size: 0;
+      border: 0;
+      background: transparent;
+      color: var(--md-sys-color-on-surface);
+      font-family: var(--md-sys-typescale-body-large-font);
+      font-size: var(--md-sys-typescale-body-large-size);
+      line-height: var(--md-sys-typescale-body-large-line-height);
+    }
+    .ax-search-bar__input:focus { outline: none; }
+    .ax-search-bar__input::placeholder {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .ax-search-bar__trailing {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .ax-search-bar__icon-btn {
+      display: inline-grid;
+      place-items: center;
+      inline-size: 40px;
+      block-size: 40px;
+      padding: 0;
+      border: 0;
+      border-radius: var(--md-sys-shape-corner-full);
+      background: transparent;
+      color: var(--md-sys-color-on-surface-variant);
+      cursor: pointer;
+    }
+    .ax-search-bar__icon-btn:hover {
+      background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+    }
+    .ax-search-bar__icon-btn svg {
+      inline-size: 20px;
+      block-size: 20px;
+      fill: currentColor;
+    }
+    .ax-search-bar__avatar {
+      inline-size: 32px;
+      block-size: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container));
+    }
+
+    /* ---- Distinction callout — separates M3 Search Bar from core/search ---- */
+    .sg-callout {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      border-radius: var(--md-sys-shape-corner-medium);
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+    .sg-callout__icon {
+      display: inline-grid;
+      place-items: center;
+      inline-size: 24px;
+      block-size: 24px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 16%, transparent);
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .sg-callout p { margin: 0; }
+    .sg-callout p + p { margin-top: var(--space-xs); }
+    .sg-callout code {
+      background: color-mix(in srgb, var(--md-sys-color-on-secondary-container) 12%, transparent);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
   </style>
 </head>
 <body>
@@ -265,8 +702,25 @@
          ========================================================= -->
     <aside class="sg-sidebar">
       <div>
-        <div class="t-headline-small sg-brand">Axismundi</div>
-        <div class="t-label-small sg-brand-meta">Block catalog · v1.0.0-rc1</div>
+        <div class="t-title-large sg-brand">AXISMUNDI</div>
+        <div class="t-label-medium sg-brand-meta">Block catalog</div>
+        <div class="t-label-small sg-brand-meta">v1.0.0-rc1 · WordPress core</div>
+      </div>
+
+      <!-- Theme switcher (production [data-theme-set] contract; theme.js §8) -->
+      <div class="sg-theme" role="radiogroup" aria-label="Theme switcher">
+        <div class="t-label-small sg-theme__label">Theme</div>
+        <div class="sg-theme__row">
+          <button class="sg-theme__btn" data-theme-set="light" role="radio" aria-checked="false" type="button">
+            <span aria-hidden="true">☀</span><span>Light</span>
+          </button>
+          <button class="sg-theme__btn" data-theme-set="dark" role="radio" aria-checked="false" type="button">
+            <span aria-hidden="true">☾</span><span>Dark</span>
+          </button>
+          <button class="sg-theme__btn" data-theme-set="auto" role="radio" aria-checked="true" type="button">
+            <span aria-hidden="true">◐</span><span>Auto</span>
+          </button>
+        </div>
       </div>
 
       <nav class="sg-guide-nav" aria-label="Style guides">
@@ -279,7 +733,7 @@
       </nav>
 
       <nav class="sg-nav" aria-label="Block sections">
-        <div class="t-label-small sg-nav__group-label">Text</div>
+        <div class="t-label-small sg-nav__group-label sg-cat sg-cat--text"><span>Text</span></div>
         <a class="t-body-medium" href="#blocks-paragraph">Paragraph</a>
         <a class="t-body-medium" href="#blocks-heading">Heading</a>
         <a class="t-body-medium" href="#blocks-quote">Quote / Pullquote</a>
@@ -291,10 +745,10 @@
         <a class="t-body-medium" href="#blocks-post-meta">Post metadata</a>
         <a class="t-body-medium" href="#blocks-text-gaps">Text gaps</a>
 
-        <div class="t-label-small sg-nav__group-label">Media</div>
+        <div class="t-label-small sg-nav__group-label sg-cat sg-cat--media"><span>Media</span></div>
         <a class="t-body-medium" href="#blocks-media">Media specimens</a>
 
-        <div class="t-label-small sg-nav__group-label">Design</div>
+        <div class="t-label-small sg-nav__group-label sg-cat sg-cat--design"><span>Design</span></div>
         <a class="t-body-medium" href="#blocks-alignment">Alignment helpers</a>
         <a class="t-body-medium" href="#blocks-separator">Separator</a>
         <a class="t-body-medium" href="#blocks-group">Columns / Group / Card</a>
@@ -303,13 +757,13 @@
         <a class="t-body-medium" href="#blocks-button">Buttons</a>
         <a class="t-body-medium" href="#blocks-design-gaps">Design gaps</a>
 
-        <div class="t-label-small sg-nav__group-label">Widgets</div>
+        <div class="t-label-small sg-nav__group-label sg-cat sg-cat--widgets"><span>Widgets</span></div>
         <a class="t-body-medium" href="#blocks-search">Search</a>
         <a class="t-body-medium" href="#blocks-widget-lists">Widget lists</a>
         <a class="t-body-medium" href="#blocks-social-icons">Social Icons</a>
         <a class="t-body-medium" href="#blocks-tag-cloud">Tag Cloud</a>
 
-        <div class="t-label-small sg-nav__group-label">Theme</div>
+        <div class="t-label-small sg-nav__group-label sg-cat sg-cat--theme"><span>Theme</span></div>
         <a class="t-body-medium" href="#blocks-theme">Theme identity</a>
         <a class="t-body-medium" href="#blocks-comments">Comments</a>
       </nav>

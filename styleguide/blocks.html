@@ -1180,17 +1180,150 @@ console.log(greet('World'));</code></pre>
           <div class="t-label-medium sg-section__eyebrow">Widgets</div>
           <h2 class="t-headline-medium">Search</h2>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            <code>core/search</code> is represented because <code>blocks.css</code> already defines <code>is-style-filled-search</code> and Pilot fixtures carry the same block style. This does not open broader widget coverage.
+            <code>core/search</code> contracts. Four button-position modifiers (<code>button-outside</code>, <code>button-inside</code>, <code>no-button</code>, <code>button-only</code>) × two styles (default outlined / <code>is-style-filled-search</code>) + icon button variant. <code>blocks.css §10</code>.
           </p>
         </header>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Filled search</h3>
+          <h3 class="t-title-medium sg-subsection__head">Default — Button outside</h3>
           <div class="sg-demo">
-            <form class="wp-block-search is-style-filled-search" role="search" aria-label="Search">
+            <form class="wp-block-search wp-block-search__button-outside" role="search">
+              <label class="wp-block-search__label screen-reader-text">Search</label>
               <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" id="ax-block-catalog-search" type="search" aria-label="Search" placeholder="Search components, blocks, and prose" />
-                <button class="wp-block-search__button" type="submit">Search</button>
+                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+              </div>
+              <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default — Button outside + label shown</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search wp-block-search__button-outside" role="search">
+              <label class="wp-block-search__label">Search this site</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search this site">
+              </div>
+              <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default — Button inside</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search wp-block-search__button-inside" role="search">
+              <label class="wp-block-search__label screen-reader-text">Search</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default — No button</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search wp-block-search__no-button" role="search">
+              <label class="wp-block-search__label screen-reader-text">Search</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default — Button only (icon)</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search wp-block-search__button-only" role="search">
+              <div class="wp-block-search__inside-wrapper">
+                <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 10.5c-2.5 0-4.5-2-4.5-4.5S10.5 6.5 13 6.5s4.5 2 4.5 4.5-2 4.5-4.5 4.5zM7.1 18.5l-4.8-4.8-1.1 1.1 4.8 4.8 1.1-1.1z"/></svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Default — Icon button outside</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search wp-block-search__button-outside" role="search">
+              <label class="wp-block-search__label screen-reader-text">Search</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+              </div>
+              <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 10.5c-2.5 0-4.5-2-4.5-4.5S10.5 6.5 13 6.5s4.5 2 4.5 4.5-2 4.5-4.5 4.5zM7.1 18.5l-4.8-4.8-1.1 1.1 4.8 4.8 1.1-1.1z"/></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filled — Button inside (canonical MD3)</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search is-style-filled-search wp-block-search__button-inside" role="search">
+              <label class="wp-block-search__label screen-reader-text">Search</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search components, blocks, and prose" aria-label="Search">
+                <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 10.5c-2.5 0-4.5-2-4.5-4.5S10.5 6.5 13 6.5s4.5 2 4.5 4.5-2 4.5-4.5 4.5zM7.1 18.5l-4.8-4.8-1.1 1.1 4.8 4.8 1.1-1.1z"/></svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filled — Button inside + label shown</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search is-style-filled-search wp-block-search__button-inside" role="search">
+              <label class="wp-block-search__label">Search this site</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search components, blocks, and prose" aria-label="Search this site">
+                <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filled — Button outside</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search is-style-filled-search wp-block-search__button-outside" role="search">
+              <label class="wp-block-search__label screen-reader-text">Search</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+              </div>
+              <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filled — No button (nav search)</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search is-style-filled-search wp-block-search__no-button" role="search">
+              <label class="wp-block-search__label screen-reader-text">Search</label>
+              <div class="wp-block-search__inside-wrapper">
+                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Filled — Button only (icon)</h3>
+          <div class="sg-demo">
+            <form class="wp-block-search is-style-filled-search wp-block-search__button-only" role="search">
+              <div class="wp-block-search__inside-wrapper">
+                <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 10.5c-2.5 0-4.5-2-4.5-4.5S10.5 6.5 13 6.5s4.5 2 4.5 4.5-2 4.5-4.5 4.5zM7.1 18.5l-4.8-4.8-1.1 1.1 4.8 4.8 1.1-1.1z"/></svg>
+                </button>
               </div>
             </form>
           </div>

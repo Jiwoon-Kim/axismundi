@@ -714,77 +714,255 @@
 }
 
 /* ============================================================
- * §10 Search — is-style-filled-search
+ * §10 Search
  *
- * Axismundi block style (registered via register_block_style on
- * core/search). Keeps WP's native search form contract while mapping
- * the visual surface to the Search bar rest-state token family.
+ * core/search block contracts. Four button-position modifiers
+ * (button-outside / button-inside / no-button / button-only)
+ * × two styles (default outlined / is-style-filled-search)
+ * + icon-button variant (has-icon on button element).
+ *
+ * WP always adds one of the four button-position classes.
+ * Pilot fixture: hidden-search.php — showLabel:false, button-outside.
  * ============================================================ */
-.wp-block-search.is-style-filled-search {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-block-size: 56px;
-  padding: 0 var(--space-md);
-  border-radius: var(--md-sys-shape-corner-full);
-  background-color: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface);
-  box-shadow: var(--md-sys-elevation-shadow-level3);
-}
-.wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  inline-size: 100%;
-  border: 0;
+
+/* §10.0 screen-reader-text polyfill (WP core owns this in prod;
+   lab needs it to faithfully render label-hidden specimens) */
+.wp-block-search .screen-reader-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   padding: 0;
-}
-.wp-block-search.is-style-filled-search .wp-block-search__input {
-  min-inline-size: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
   border: 0;
+}
+
+/* ---- 10.1 Label ---- */
+.wp-block-search__label {
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---- 10.2 Default input — outlined pill, 48px ---- */
+.wp-block-search__input {
+  min-inline-size: 0;
+  min-block-size: 48px;
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
   color: var(--md-sys-color-on-surface);
   font-family: var(--md-sys-typescale-body-large-font);
   font-size: var(--md-sys-typescale-body-large-size);
   line-height: var(--md-sys-typescale-body-large-line-height);
 }
+
+.wp-block-search__input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wp-block-search__input:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -1px;
+  border-color: var(--md-sys-color-primary);
+}
+
+/* ---- 10.3 Button base — filled primary pill ---- */
+.wp-block-search__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--comp-button-radius);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  min-block-size: var(--comp-button-height);
+  padding-inline: var(--space-lg);
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+}
+
+/* ---- 10.4 Icon button (has-icon) ---- */
+.wp-block-search__button.has-icon {
+  padding-inline: var(--space-sm);
+  min-inline-size: var(--comp-button-height);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+.wp-block-search__button.has-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* ---- 10.5 Button-outside layout ---- */
+.wp-block-search__button-outside {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.wp-block-search__button-outside .wp-block-search__inside-wrapper {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* ---- 10.6 Button-inside layout ---- */
+.wp-block-search__button-inside .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  min-block-size: 48px;
+  padding-inline: var(--space-md) var(--space-xs);
+  overflow: hidden;
+}
+
+.wp-block-search__button-inside .wp-block-search__input {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-block-size: auto;
+  flex: 1 1 auto;
+}
+
+.wp-block-search__button-inside .wp-block-search__input:focus-visible {
+  outline: none;
+}
+
+.wp-block-search__button-inside .wp-block-search__button {
+  min-block-size: 36px;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* ---- 10.7 No-button layout ---- */
+.wp-block-search__no-button {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* ---- 10.8 Button-only layout ---- */
+.wp-block-search__button-only {
+  display: flex;
+}
+
+/* ============================================================
+ * §10.9 is-style-filled-search — MD3 Search Bar surface
+ *
+ * Filled pill: surface-container-high + elevation-shadow-level3.
+ * "Pill surface" lands on different elements per button position:
+ *   button-inside  → form root  (button + input share the pill)
+ *   button-outside → __inside-wrapper  (button floats right)
+ *   no-button      → __inside-wrapper  (input-only pill)
+ *   button-only    → governed by button-base (§10.3/10.4)
+ * ============================================================ */
+
+/* Shared filled-input reset (overrides outlined defaults §10.2) */
+.wp-block-search.is-style-filled-search .wp-block-search__input {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-block-size: auto;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
 .wp-block-search.is-style-filled-search .wp-block-search__input::placeholder {
   color: var(--md-sys-color-on-surface-variant);
 }
-.wp-block-search .wp-block-search__button {
-  border: 0;
-  border-radius: var(--comp-button-radius);
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  min-block-size: var(--comp-button-height);
-  padding-inline: var(--space-lg);
-  font-family: var(--md-sys-typescale-label-large-font);
-  font-size: var(--md-sys-typescale-label-large-size);
-  line-height: var(--md-sys-typescale-label-large-line-height);
-  font-weight: var(--md-sys-typescale-label-large-weight);
-}
-.wp-block-search.is-style-filled-search .wp-block-search__button {
-  border: 0;
-  border-radius: var(--comp-button-radius);
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
-  min-block-size: var(--comp-button-height);
-  padding-inline: var(--space-lg);
-  font-family: var(--md-sys-typescale-label-large-font);
-  font-size: var(--md-sys-typescale-label-large-size);
-  line-height: var(--md-sys-typescale-label-large-line-height);
-  font-weight: var(--md-sys-typescale-label-large-weight);
+
+.wp-block-search.is-style-filled-search .wp-block-search__input:focus-visible {
+  outline: none;
 }
 
+/* Filled — button-inside (canonical MD3 search bar) */
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-corner-full);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  min-block-size: 56px;
+  padding-inline: var(--space-md) var(--space-xs);
+  border: 0;
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__button {
+  min-block-size: 40px;
+}
+
+/* Filled — button-outside (pill on wrapper; button floats right) */
+.wp-block-search.is-style-filled-search.wp-block-search__button-outside {
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-outside .wp-block-search__inside-wrapper {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  min-block-size: 56px;
+  padding-inline: var(--space-md);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+
+/* Filled — no-button (pill on wrapper; input fills it) */
+.wp-block-search.is-style-filled-search.wp-block-search__no-button .wp-block-search__inside-wrapper {
+  display: flex;
+  align-items: center;
+  min-block-size: 56px;
+  padding-inline: var(--space-md);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-shadow-level3);
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__no-button .wp-block-search__input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* ---- 10.10 Responsive ---- */
 @media (max-inline-size: 600px) {
-  .wp-block-search.is-style-filled-search,
-  .wp-block-search.is-style-filled-search .wp-block-search__inside-wrapper {
-    align-items: stretch;
+  .wp-block-search__button-outside {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .wp-block-search.is-style-filled-search {
-    padding-block: var(--space-sm);
+  .wp-block-search__button-outside .wp-block-search__inside-wrapper,
+  .wp-block-search__button-outside .wp-block-search__button {
+    inline-size: 100%;
   }
 }
 

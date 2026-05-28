@@ -311,6 +311,7 @@
 
         <div class="t-label-small sg-nav__group-label">Widgets</div>
         <a class="t-body-medium" href="#blocks-search">Search</a>
+        <a class="t-body-medium" href="#blocks-widget-lists">Widget lists</a>
         <a class="t-body-medium" href="#blocks-social-icons">Social Icons</a>
         <a class="t-body-medium" href="#blocks-tag-cloud">Tag Cloud</a>
 
@@ -1200,10 +1201,121 @@ console.log(greet('World'));</code></pre>
           <div class="sg-demo prose">
             <ul>
               <li><strong>Custom HTML</strong> — routed to <code>style-guide-prose.html</code>, not the block catalog.</li>
-              <li><strong>Archives / Calendar / Terms List / Categories List</strong> — reference rows. No local specimen contract.</li>
-              <li><strong>Latest Comments / Latest Posts / Page List / RSS</strong> — reference rows. No local specimen contract.</li>
+              <li><strong>Calendar</strong> — table-based widget with month navigation. Future table-widget contract.</li>
+              <li><strong>Terms List</strong> — taxonomy context surface. HTML structure needs WP render capture before contract.</li>
+              <li><strong>RSS</strong> — external feed/privacy surface. No local specimen contract.</li>
               <li><strong>Shortcode</strong> — legacy execution surface. No local specimen contract.</li>
             </ul>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========== Widget lists ========== -->
+      <section class="sg-section" id="blocks-widget-lists">
+        <header class="sg-section__head">
+          <div class="t-label-medium sg-section__eyebrow">Widgets</div>
+          <h2 class="t-headline-medium">Widget lists</h2>
+          <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
+            Sidebar/footer information lists. <code>blocks.css §16</code> normalizes list reset, link tokens, metadata labels, dropdown controls, and excerpt clamping.
+          </p>
+        </header>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Latest Posts (<code>core/latest-posts</code>)</h3>
+          <div class="sg-demo">
+            <ul class="wp-block-latest-posts">
+              <li>
+                <a href="#">스타일 시스템과 디자인 토큰의 관계</a>
+                <time class="wp-block-latest-posts__post-date" datetime="2026-05-27">2026년 5월 27일</time>
+              </li>
+              <li>
+                <a href="#">TT5 구조를 Pilot theme으로 옮기기</a>
+                <span class="wp-block-latest-posts__post-author">Ji-woon Kim</span>
+                <div class="wp-block-latest-posts__post-excerpt">
+                  <p>패턴, 템플릿, 블록 스타일 variation을 유지하면서 Material 3 토큰으로 다시 매핑하는 과정입니다.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Archives &amp; Categories</h3>
+          <div class="sg-demo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-lg);">
+            <ul class="wp-block-archives">
+              <li><a href="#">2026년 5월</a></li>
+              <li><a href="#">2026년 4월</a></li>
+              <li><a href="#">2026년 3월</a></li>
+            </ul>
+            <ul class="wp-block-categories">
+              <li><a href="#">Design systems</a></li>
+              <li><a href="#">WordPress</a>
+                <ul class="children">
+                  <li><a href="#">Block themes</a></li>
+                  <li><a href="#">Patterns</a></li>
+                </ul>
+              </li>
+            </ul>
+            <div class="wp-block-archives-dropdown">
+              <label class="t-label-medium" for="archives-dropdown-demo">Archives dropdown</label>
+              <select id="archives-dropdown-demo">
+                <option>월 선택</option>
+                <option>2026년 5월</option>
+                <option>2026년 4월</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Page List (<code>core/page-list</code>)</h3>
+          <div class="sg-demo">
+            <ul class="wp-block-page-list">
+              <li class="wp-block-pages-list__item">
+                <a class="wp-block-pages-list__item__link" href="#">About</a>
+              </li>
+              <li class="wp-block-pages-list__item">
+                <a class="wp-block-pages-list__item__link" href="#">Projects</a>
+                <ul class="wp-block-page-list">
+                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">Axismundi Pilot</a></li>
+                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">Material 3 Lab</a></li>
+                </ul>
+              </li>
+              <li class="wp-block-pages-list__item">
+                <a class="wp-block-pages-list__item__link" href="#">Contact</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Latest Comments (<code>core/latest-comments</code>)</h3>
+          <div class="sg-demo">
+            <ol class="wp-block-latest-comments">
+              <li class="wp-block-latest-comments__comment">
+                <article>
+                  <footer class="wp-block-latest-comments__comment-meta">
+                    <a class="wp-block-latest-comments__comment-author" href="#">Mina</a> on <a class="wp-block-latest-comments__comment-link" href="#">TT5 구조를 Pilot theme으로 옮기기</a>
+                    <time class="wp-block-latest-comments__comment-date" datetime="2026-05-27">2026년 5월 27일</time>
+                  </footer>
+                  <div class="wp-block-latest-comments__comment-excerpt">
+                    <p>Query Loop 패턴을 먼저 잡아두니 사이드바와 more-posts 구성이 훨씬 명확해졌습니다.</p>
+                  </div>
+                </article>
+              </li>
+              <li class="wp-block-latest-comments__comment">
+                <article>
+                  <footer class="wp-block-latest-comments__comment-meta">
+                    <a class="wp-block-latest-comments__comment-author" href="#">Joon</a> on <a class="wp-block-latest-comments__comment-link" href="#">Attachment metadata</a>
+                    <time class="wp-block-latest-comments__comment-date" datetime="2026-05-26">2026년 5월 26일</time>
+                  </footer>
+                  <div class="wp-block-latest-comments__comment-excerpt">
+                    <p>VTT track 메타데이터를 attachment page와 연결하는 방식이 오디오 커버 이미지 연결과 어떻게 다른지 잘 보입니다.</p>
+                  </div>
+                </article>
+              </li>
+            </ol>
           </div>
         </div>
       </section>

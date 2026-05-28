@@ -27,6 +27,7 @@
  *   §13 List — is-style-list-segmented
  *   §14 Query Loop / Post Template inner blocks
  *   §15 Pagination — Query + Post Navigation
+ *   §16 Widget lists
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -1140,4 +1141,162 @@
 
 .wp-block-post-navigation-link a:hover {
   background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+/* ============================================================
+ * §16 Widget lists
+ *
+ * Shared contract for sidebar/footer information lists.
+ * The list widgets all use the same reset + link token + metadata label
+ * pattern; Calendar and RSS remain outside this contract.
+ *
+ *   core/latest-posts    → <ul class="wp-block-latest-posts">
+ *   core/archives        → <ul class="wp-block-archives">
+ *   core/categories      → <ul class="wp-block-categories">
+ *   core/page-list       → <ul class="wp-block-page-list">
+ *   core/latest-comments → <ol class="wp-block-latest-comments">
+ * ============================================================ */
+.wp-block-latest-posts,
+.wp-block-archives,
+.wp-block-categories,
+.wp-block-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.wp-block-page-list .wp-block-page-list,
+.wp-block-categories .children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-inline-start: var(--space-md);
+  margin-block-start: var(--space-xs);
+  list-style: none;
+}
+
+.wp-block-latest-posts a,
+.wp-block-archives a,
+.wp-block-categories a,
+.wp-block-page-list .wp-block-pages-list__item__link {
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  text-decoration: none;
+}
+
+.wp-block-latest-posts a:hover,
+.wp-block-archives a:hover,
+.wp-block-categories a:hover,
+.wp-block-page-list .wp-block-pages-list__item__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.wp-block-latest-posts__post-date,
+.wp-block-latest-posts__post-author {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-small-font);
+  font-size: var(--md-sys-typescale-label-small-size);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+  font-weight: var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+.wp-block-latest-posts__post-excerpt {
+  margin-block-start: var(--space-xs);
+}
+
+.wp-block-latest-posts__post-excerpt p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.wp-block-latest-posts__featured-image {
+  display: block;
+  overflow: hidden;
+  margin-block-end: var(--space-xs);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-latest-posts__featured-image img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.wp-block-archives-dropdown select,
+.wp-block-categories-dropdown select {
+  inline-size: 100%;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.wp-block-latest-comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.wp-block-latest-comments__comment-meta {
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-label-small-font);
+  font-size: var(--md-sys-typescale-label-small-size);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+  font-weight: var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+.wp-block-latest-comments__comment-author,
+.wp-block-latest-comments__comment-link {
+  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.wp-block-latest-comments__comment-author:hover,
+.wp-block-latest-comments__comment-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.wp-block-latest-comments__comment-date {
+  display: block;
+  margin-block-start: 2px;
+}
+
+.wp-block-latest-comments__comment-excerpt p {
+  display: -webkit-box;
+  margin: var(--space-xs) 0 0;
+  overflow: hidden;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }

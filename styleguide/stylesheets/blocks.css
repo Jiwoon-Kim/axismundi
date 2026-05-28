@@ -741,6 +741,7 @@
 
 /* ---- 10.1 Label ---- */
 .wp-block-search__label {
+  flex: 0 0 100%;
   font-family: var(--md-sys-typescale-label-large-font);
   font-size: var(--md-sys-typescale-label-large-size);
   line-height: var(--md-sys-typescale-label-large-line-height);
@@ -793,9 +794,17 @@
 
 /* ---- 10.4 Icon button (has-icon) ---- */
 .wp-block-search__button.has-icon {
-  padding-inline: var(--space-sm);
-  min-inline-size: var(--comp-button-height);
+  min-inline-size: 40px;
+  min-block-size: 40px;
+  padding-inline: 0;
   border-radius: var(--md-sys-shape-corner-full);
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  box-shadow: none;
+}
+
+.wp-block-search__button.has-icon:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
 }
 
 .wp-block-search__button.has-icon svg {
@@ -816,6 +825,10 @@
 .wp-block-search__button-outside .wp-block-search__inside-wrapper {
   flex: 1 1 auto;
   min-inline-size: 0;
+}
+
+.wp-block-search__button-outside .wp-block-search__input {
+  inline-size: 100%;
 }
 
 /* ---- 10.6 Button-inside layout ---- */
@@ -843,8 +856,22 @@
 }
 
 .wp-block-search__button-inside .wp-block-search__button {
-  min-block-size: 36px;
+  min-block-size: 40px;
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
   border-radius: var(--md-sys-shape-corner-full);
+  box-shadow: none;
+}
+
+.wp-block-search__button-inside .wp-block-search__button:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.wp-block-search__button-inside .wp-block-search__button.has-icon {
+  min-inline-size: 40px;
+  min-block-size: 40px;
+  padding-inline: 0;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* ---- 10.7 No-button layout ---- */
@@ -902,7 +929,7 @@
 .wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__inside-wrapper {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   inline-size: 100%;
   min-block-size: 56px;
   padding-inline: var(--space-md) var(--space-xs);
@@ -916,6 +943,16 @@
 
 .wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__button {
   min-block-size: 40px;
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  box-shadow: none;
+}
+
+.wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__button.has-icon {
+  min-inline-size: 40px;
+  min-block-size: 40px;
+  padding-inline: 0;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* Filled — button-outside (pill on wrapper; button floats right) */

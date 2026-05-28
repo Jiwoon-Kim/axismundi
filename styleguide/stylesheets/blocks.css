@@ -28,6 +28,7 @@
  *   §14 Query Loop / Post Template inner blocks
  *   §15 Pagination — Query + Post Navigation
  *   §16 Widget lists
+ *   §17 Navigation
  *
  * Specificity: rules sit at (0,1,0)–(0,2,0). When wrapped in
  * `.prose .entry-content`, prose layer wins on shared elements
@@ -1514,4 +1515,98 @@
   line-height: var(--md-sys-typescale-body-small-line-height);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+/* ============================================================
+ * §17 Navigation — core/navigation
+ *
+ * WP core block styles handle: positioning, z-index, hidden-by-default,
+ * hamburger show/hide, submenu absolute positioning, and responsive menu
+ * state. Axismundi adds visual token contract only.
+ *
+ * Mobile overlay visual tokens are set here, but toggle state
+ * (`is-menu-open`) is WP Interactivity API. Verify on the Pilot WP
+ * instance before marking mobile navigation PASS.
+ *
+ * TT5 uses overlayBackgroundColor:"base" / overlayTextColor:"contrast".
+ * Those slugs are not in axismundi-pilot/theme.json, so the overlay uses
+ * explicit MD3 sys tokens below.
+ * ============================================================ */
+.wp-block-navigation-item__content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  text-decoration: none;
+  transition: background-color 150ms;
+}
+
+.wp-block-navigation-item:hover > .wp-block-navigation-item__content,
+.wp-block-navigation-item.is-item-focused > .wp-block-navigation-item__content {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.wp-block-navigation-item.current-menu-item > .wp-block-navigation-item__content,
+.wp-block-navigation-item[class*="current-menu"] > .wp-block-navigation-item__content {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.wp-block-navigation-submenu__toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+}
+
+.wp-block-navigation__submenu-container {
+  padding-block: var(--space-xs);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+}
+
+.wp-block-navigation__submenu-container .wp-block-navigation-item__content {
+  inline-size: 100%;
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-navigation__responsive-container-open,
+.wp-block-navigation__responsive-container-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: none;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.wp-block-navigation__responsive-container-open:hover,
+.wp-block-navigation__responsive-container-close:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.wp-block-navigation__responsive-container {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.wp-block-navigation__responsive-container .wp-block-navigation-item__content {
+  inline-size: 100%;
+  border-radius: var(--md-sys-shape-corner-small);
 }

@@ -1610,10 +1610,43 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">core/navigation — desktop (static specimen)</h3>
+          <p class="sg-helper">데스크탑 수평 메뉴. <code>current-menu-item</code>은 secondary-container 활성 표시. Submenu는 surface-container-high + elevation-level2. Mobile overlay는 WP Interactivity API 상태 의존 — Pilot WP 인스턴스에서 검증 필요.</p>
+          <div class="sg-demo">
+            <nav class="wp-block-navigation" aria-label="Primary navigation">
+              <ul class="wp-block-navigation__container" style="list-style:none;padding:0;margin:0;display:flex;gap:var(--space-xs);align-items:center;">
+                <li class="wp-block-navigation-item current-menu-item">
+                  <a class="wp-block-navigation-item__content" href="#">홈</a>
+                </li>
+                <li class="wp-block-navigation-item">
+                  <a class="wp-block-navigation-item__content" href="#">소개</a>
+                </li>
+                <li class="wp-block-navigation-item has-child" style="position:relative;">
+                  <a class="wp-block-navigation-item__content" href="#">블로그</a>
+                  <button class="wp-block-navigation-submenu__toggle" type="button" aria-expanded="true">
+                    <span class="wp-block-navigation__submenu-icon" aria-hidden="true">▾</span>
+                  </button>
+                  <ul class="wp-block-navigation__submenu-container" style="list-style:none;padding:var(--space-xs);min-inline-size:180px;">
+                    <li class="wp-block-navigation-item">
+                      <a class="wp-block-navigation-item__content" href="#">디자인</a>
+                    </li>
+                    <li class="wp-block-navigation-item">
+                      <a class="wp-block-navigation-item__content" href="#">개발</a>
+                    </li>
+                  </ul>
+                </li>
+                <li class="wp-block-navigation-item">
+                  <a class="wp-block-navigation-item__content" href="#">문의</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Theme gap rows</h3>
           <div class="sg-demo prose">
             <ul>
-              <li><strong>Navigation</strong> — template/FSE surface. Future template or plugin route.</li>
               <li><strong>Template Part</strong> — FSE structure surface. Future route.</li>
               <li><strong>Breadcrumbs</strong> — WP 7.0 reference-only block. Future route.</li>
               <li><strong>Comments</strong> — comment template/form surface. Future route.</li>

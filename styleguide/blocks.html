@@ -986,10 +986,15 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Table ========== -->
-      <section class="sg-section" id="blocks-table">
+      <section class="sg-section" id="blocks-table" data-screen-label="table">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">Table</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--php">PHP layer needed</span>
+            <span class="sg-badge sg-badge--source">blocks.css §6</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             <code>core/table</code>은 <code>&lt;figure class="wp-block-table"&gt;</code> 안에 <code>&lt;table&gt;</code>이 들어있는 형태로 출력됩니다. <code>blocks.css</code>가 figure를 wrapper로 활용 (border, radius, overflow-x).
           </p>
@@ -1209,10 +1214,14 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Post metadata ========== -->
-      <section class="sg-section" id="blocks-post-meta">
+      <section class="sg-section" id="blocks-post-meta" data-screen-label="post meta">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text · template</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text · template</span></div>
           <h2 class="t-headline-medium">Post metadata</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §6.x</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             Query Loop / Single post template 전용 블록. 일반 포스트 content 편집기에서 삽입 불가. <code>blocks.css §6.x</code>가 visual contract 담당.
           </p>
@@ -1243,10 +1252,14 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Text gaps ========== -->
-      <section class="sg-section" id="blocks-text-gaps">
+      <section class="sg-section" id="blocks-text-gaps" data-screen-label="text gaps">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text · reference / gap rows</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text · reference / gap rows</span></div>
           <h2 class="t-headline-medium">Text block gaps</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--gap">Future / gap</span>
+            <span class="sg-badge sg-badge--source">—</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             These rows make unsupported Text blocks explicit without reopening v3.6.2 Tier 1 or claiming implementation.
           </p>

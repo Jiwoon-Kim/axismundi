@@ -688,6 +688,8 @@
   font-weight:    var(--md-sys-typescale-label-large-weight);
   letter-spacing: var(--md-sys-typescale-label-large-tracking);
   text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
   cursor: pointer;
   transition:
     border-radius
@@ -717,6 +719,11 @@
     opacity
       var(--md-sys-motion-curve-fast-effects-duration)
       var(--md-sys-motion-curve-fast-effects);
+}
+
+.wp-block-button__link:hover,
+.wp-block-button__link.is-hovered {
+  text-decoration: none;
 }
 
 .wp-block-button__link:hover::before,

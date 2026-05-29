@@ -775,7 +775,7 @@
   border-color: var(--md-sys-color-primary);
 }
 
-/* ---- 10.3 Button base — filled primary pill ---- */
+/* ---- 10.3 Button base — tonal pill ---- */
 .wp-block-search__button {
   display: inline-flex;
   align-items: center;
@@ -783,8 +783,8 @@
   flex-shrink: 0;
   border: 0;
   border-radius: var(--comp-button-radius);
-  background-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
   min-block-size: var(--comp-button-height);
   padding-inline: var(--space-lg);
   font-family: var(--md-sys-typescale-label-large-font);
@@ -816,12 +816,19 @@
   flex-shrink: 0;
 }
 
-/* ---- 10.5 Button-outside layout ---- */
+.wp-block-search__button.has-icon .material-symbols-rounded {
+  font-size: 20px;
+  --md-icon-opsz: 20;
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* ---- 10.5 Button-outside — Connected layout ---- */
 .wp-block-search__button-outside {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
+  gap: 0;
+  flex-wrap: nowrap;
 }
 
 .wp-block-search__button-outside .wp-block-search__inside-wrapper {
@@ -831,6 +838,17 @@
 
 .wp-block-search__button-outside .wp-block-search__input {
   inline-size: 100%;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  border-inline-end: 0;
+}
+
+.wp-block-search__button-outside .wp-block-search__button {
+  min-block-size: 48px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-start-end-radius: var(--md-sys-shape-corner-full);
+  border-end-end-radius: var(--md-sys-shape-corner-full);
 }
 
 /* ---- 10.6 Button-inside layout ---- */
@@ -934,7 +952,7 @@
   gap: var(--space-xs);
   inline-size: 100%;
   min-block-size: 56px;
-  padding-inline: var(--space-md) var(--space-xs);
+  padding-inline: var(--space-xs) var(--space-md);
   border: 0;
 }
 
@@ -944,9 +962,10 @@
 }
 
 .wp-block-search.is-style-filled-search.wp-block-search__button-inside .wp-block-search__button {
+  order: -1;
   min-block-size: 40px;
   background-color: transparent;
-  color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-surface-variant);
   box-shadow: none;
 }
 
@@ -994,14 +1013,8 @@
 
 /* ---- 10.10 Responsive ---- */
 @media (max-inline-size: 600px) {
-  .wp-block-search__button-outside {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .wp-block-search__button-outside .wp-block-search__inside-wrapper,
   .wp-block-search__button-outside .wp-block-search__button {
-    inline-size: 100%;
+    padding-inline: var(--space-md);
   }
 }
 

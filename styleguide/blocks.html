@@ -1608,31 +1608,89 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Buttons ========== -->
-      <section class="sg-section" id="blocks-button">
+      <section class="sg-section" id="blocks-button" data-screen-label="Buttons">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Design</div>
-          <h2 class="t-headline-medium">Buttons — 5 style variants</h2>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--design">Design</div>
+          <h2 class="t-headline-medium">Buttons — variants, icons, and states</h2>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            <code>core/button</code> + <code>is-style-{fill|tonal|elevated|outline|text}</code>. WordPress core의 <code>fill</code>/<code>outline</code> 기본 스타일을 M3 Filled/Outlined로 매핑하고, 나머지 3개 스타일만 theme이 등록합니다.
+            <code>core/button</code> + <code>is-style-{fill|tonal|elevated|outline|text}</code>. WordPress core의 <code>fill</code>/<code>outline</code> 기본 스타일을 M3 Filled/Outlined로 매핑하고, hover / focus / pressed / disabled state layer를 <code>blocks.css §9</code>에서 제공합니다.
           </p>
+          <div class="sg-status-row" aria-label="Button block status">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--php">PHP style registration</span>
+            <span class="sg-badge sg-badge--source">blocks.css §9</span>
+          </div>
         </header>
 
-        <div class="sg-demo">
-          <div class="wp-block-buttons">
-            <div class="wp-block-button is-style-fill">
-              <a class="wp-block-button__link">Filled</a>
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Variants — label only</h3>
+          <div class="sg-demo">
+            <div class="wp-block-buttons">
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#"><span>Filled</span></a></div>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#"><span>Tonal</span></a></div>
+              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#"><span>Elevated</span></a></div>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#"><span>Outlined</span></a></div>
+              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" href="#"><span>Text</span></a></div>
             </div>
-            <div class="wp-block-button is-style-tonal">
-              <a class="wp-block-button__link">Tonal</a>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">With leading icon</h3>
+          <p class="sg-helper">Material Symbols glyphs use the same icon scope policy as component buttons: <code>material-symbols-rounded</code>, <code>notranslate</code>, <code>translate="no"</code>, <code>aria-hidden="true"</code>.</p>
+          <div class="sg-demo">
+            <div class="wp-block-buttons">
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span><span>Add</span></a></div>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">check</span><span>Confirm</span></a></div>
+              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">menu</span><span>Menu</span></a></div>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_back</span><span>Back</span></a></div>
+              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chat_bubble</span><span>Reply</span></a></div>
             </div>
-            <div class="wp-block-button is-style-elevated">
-              <a class="wp-block-button__link">Elevated</a>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Interaction states</h3>
+          <p class="sg-helper">Static state classes mirror component behavior for visual QA. Real hover / active / focus still work through native pseudo-classes.</p>
+          <div class="sg-state-row">
+            <div class="sg-state-card">
+              <span class="t-label-small sg-demo-meta">Hover</span>
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link is-hovered" href="#"><span>Hover</span></a></div>
             </div>
-            <div class="wp-block-button is-style-outline">
-              <a class="wp-block-button__link">Outlined</a>
+            <div class="sg-state-card">
+              <span class="t-label-small sg-demo-meta">Pressed</span>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Pressed</span></a></div>
             </div>
-            <div class="wp-block-button is-style-text">
-              <a class="wp-block-button__link">Text</a>
+            <div class="sg-state-card">
+              <span class="t-label-small sg-demo-meta">Focus visible</span>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link is-focus-visible" href="#"><span>Focus</span></a></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Toggle (4 variants — text excluded)</h3>
+          <p class="sg-helper"><code>core/button</code> is link markup, so this is a static visual contract for selected states. Interactive toggles should use the component button layer.</p>
+          <div class="sg-demo">
+            <div class="wp-block-buttons">
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Filled</span></a></div>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Tonal</span></a></div>
+              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Elevated</span></a></div>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Outlined</span></a></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Disabled (Pattern A)</h3>
+          <p class="sg-helper">Anchor output cannot use <code>disabled</code>; use <code>aria-disabled="true"</code> and remove from tab order with <code>tabindex="-1"</code>.</p>
+          <div class="sg-demo">
+            <div class="wp-block-buttons">
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Filled</span></a></div>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Tonal</span></a></div>
+              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Elevated</span></a></div>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Outlined</span></a></div>
+              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Text</span></a></div>
             </div>
           </div>
         </div>

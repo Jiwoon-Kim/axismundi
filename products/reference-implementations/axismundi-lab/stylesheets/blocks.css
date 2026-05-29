@@ -649,15 +649,15 @@
 }
 
 /* ============================================================
- * §9 Buttons — core/button + 5 style variants
+ * §9 Buttons — core/button + 5 style variants + interaction states
  *
  * WP core already owns the `fill` and `outline` Button styles.
  * Axismundi maps those native slugs to M3 Filled / Outlined, then registers
  * only the missing M3 styles: tonal, elevated, and text.
  *
- * For Phase 2A standalone preview (no PHP layer yet), the
- * fallbacks below give the editor + front-end render a usable
- * approximation of each variant using only block-class selectors.
+ * core/button renders as an anchor, so this contract documents visual states
+ * with state classes / aria attributes. For real toggle semantics, prefer the
+ * component button layer; for post content links, keep core/button as a link.
  * ============================================================ */
 .wp-block-button {
   margin-block: var(--space-xs);
@@ -669,11 +669,15 @@
   margin-block: var(--space-md);
 }
 
-/* Core link — minimal common reset (matches .ax-button base) */
+/* Core link — common reset (matches .ax-button base) */
 .wp-block-button__link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-sm);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   block-size: var(--comp-button-height);
   padding-inline: var(--space-lg);
   border: 0;
@@ -685,6 +689,73 @@
   letter-spacing: var(--md-sys-typescale-label-large-tracking);
   text-decoration: none;
   cursor: pointer;
+  transition:
+    border-radius
+      var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial),
+    background-color
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    color
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects),
+    box-shadow
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+/* State layer — same opacity contract as components.css §0. */
+.wp-block-button__link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+.wp-block-button__link:hover::before,
+.wp-block-button__link.is-hovered::before {
+  opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+
+.wp-block-button__link:focus-visible,
+.wp-block-button__link.is-focus-visible {
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
+}
+
+.wp-block-button__link:focus-visible::before,
+.wp-block-button__link.is-focus-visible::before {
+  opacity: var(--md-sys-state-focus-state-layer-opacity);
+}
+
+.wp-block-button__link:active,
+.wp-block-button__link.is-pressed,
+.wp-block-button__link[aria-pressed="true"] {
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.wp-block-button__link:active::before,
+.wp-block-button__link.is-pressed::before,
+.wp-block-button__link[aria-pressed="true"]::before {
+  opacity: var(--md-sys-state-pressed-state-layer-opacity);
+}
+
+.wp-block-button__link .material-symbols-rounded {
+  font-size: 18px;
+  line-height: 1;
+  --md-icon-opsz: 20;
+  pointer-events: none;
+}
+
+.wp-block-button__link > span {
+  position: relative;
 }
 
 /* 5 variant fallbacks. Defaults to filled when no style set. */
@@ -703,6 +774,10 @@
   color: var(--md-sys-color-primary);
   box-shadow: var(--md-sys-elevation-shadow-level1);
 }
+.wp-block-button.is-style-elevated .wp-block-button__link:hover,
+.wp-block-button.is-style-elevated .wp-block-button__link.is-hovered {
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+}
 .wp-block-button.is-style-outline .wp-block-button__link,
 .wp-block-button.is-style-outlined .wp-block-button__link {
   background-color: transparent;
@@ -713,6 +788,45 @@
   background-color: transparent;
   color: var(--md-sys-color-primary);
   padding-inline: var(--space-md);
+}
+
+/* Toggle selected states — static visual contract for core/button links. */
+.wp-block-button.is-style-fill .wp-block-button__link[aria-pressed="true"],
+.wp-block-button.is-style-filled .wp-block-button__link[aria-pressed="true"] {
+  background-color: var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary);
+}
+.wp-block-button.is-style-tonal .wp-block-button__link[aria-pressed="true"] {
+  background-color: var(--md-sys-color-secondary);
+  color: var(--md-sys-color-on-secondary);
+}
+.wp-block-button.is-style-elevated .wp-block-button__link[aria-pressed="true"] {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  box-shadow: var(--md-sys-elevation-shadow-level0);
+}
+.wp-block-button.is-style-outline .wp-block-button__link[aria-pressed="true"],
+.wp-block-button.is-style-outlined .wp-block-button__link[aria-pressed="true"] {
+  background-color: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+/* Disabled links use aria-disabled because core/button is an anchor.
+ * Repeat the block wrapper in the selector so disabled beats variant styles. */
+.wp-block-button .wp-block-button__link[aria-disabled="true"],
+.wp-block-button .wp-block-button__link.is-disabled {
+  pointer-events: none;
+  cursor: default;
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 10%, transparent);
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+  box-shadow: none;
+}
+
+.wp-block-button.is-style-text .wp-block-button__link[aria-disabled="true"],
+.wp-block-button.is-style-text .wp-block-button__link.is-disabled {
+  background-color: transparent;
+  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
 }
 
 /* ============================================================

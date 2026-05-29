@@ -1914,164 +1914,286 @@ console.log(greet('World'));</code></pre>
           </p>
         </header>
 
+        <!-- ===== Section A: WP core/search · form fundamentals ===== -->
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Default — Button outside</h3>
+          <h3 class="t-title-medium sg-subsection__head">A. WP core/search — 4 button-position layouts</h3>
+          <p class="sg-helper">
+            WP <code>core/search</code>는 본질적으로 <strong>&lt;form&gt;</strong>입니다 — label + input + submit. WP editor가 노출하는 4가지 layout 옵션이 있고, 각각 의도가 다릅니다. 같은 form, 다른 배치.
+          </p>
           <div class="sg-demo">
-            <form class="wp-block-search wp-block-search__button-outside" role="search">
-              <label class="wp-block-search__label screen-reader-text">Search</label>
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/search</span>
+              <span class="sg-tag sg-tag--modifier">4 layouts</span>
+            </div>
+            <div class="sg-search-grid">
+              <div class="sg-search-cell">
+                <div class="t-label-small sg-search-cell__label">button-outside</div>
+                <p class="t-body-small sg-search-cell__when">Explicit submit. 폼이라는 점을 가장 또렷이 보여줌. 기본 default.</p>
+                <form class="wp-block-search wp-block-search__button-outside" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                  </div>
+                  <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
+                </form>
+              </div>
+              <div class="sg-search-cell">
+                <div class="t-label-small sg-search-cell__label">button-inside</div>
+                <p class="t-body-small sg-search-cell__when">Compact. 헤더처럼 가로 공간 제약이 있을 때.</p>
+                <form class="wp-block-search wp-block-search__button-inside" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                  </div>
+                </form>
+              </div>
+              <div class="sg-search-cell">
+                <div class="t-label-small sg-search-cell__label">no-button</div>
+                <p class="t-body-small sg-search-cell__when">Enter로만 제출. 자동 완성·실시간 검색과 조합.</p>
+                <form class="wp-block-search wp-block-search__no-button" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Type and press Enter" aria-label="Search">
+                  </div>
+                </form>
+              </div>
+              <div class="sg-search-cell">
+                <div class="t-label-small sg-search-cell__label">button-only</div>
+                <p class="t-body-small sg-search-cell__when">검색 오버레이를 여는 trigger. 실제 input은 다른 곳에서.</p>
+                <form class="wp-block-search wp-block-search__button-only" role="search" style="display: inline-flex;">
+                  <div class="wp-block-search__inside-wrapper">
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Open search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">A.1 With visible label</h3>
+          <p class="sg-helper">실제 form context에서는 label을 보이게 두는 편이 명확합니다 (검색 페이지의 hero 검색, 회원 가입 폼 등). <code>showLabel: true</code>.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/search</span>
+              <span class="sg-tag sg-tag--modifier">showLabel</span>
+            </div>
+            <form class="wp-block-search wp-block-search__button-outside" role="search" style="max-inline-size: 480px;">
+              <label class="wp-block-search__label" for="sg-search-labeled">Search this site</label>
               <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                <input id="sg-search-labeled" class="wp-block-search__input" type="search" placeholder="Keyword, tag, or author" aria-describedby="sg-search-help">
               </div>
               <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
             </form>
+            <p id="sg-search-help" class="t-label-small" style="margin-block-start: var(--space-xs); color: var(--md-sys-color-on-surface-variant);">Tip: 큰따옴표로 완전 일치 검색 가능. 예: <code>"design tokens"</code></p>
           </div>
         </div>
 
+        <!-- ===== Section B: Aesthetic skins ===== -->
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Default — Button outside + label shown</h3>
+          <h3 class="t-title-medium sg-subsection__head">B. Aesthetic skins — 3 honest variants</h3>
+          <p class="sg-helper">동일한 form을 다른 surface 위에 어울리도록 입힌 시각 skin. 기능은 동일하고, 어디에 두느냐에 따라 골라 씀.</p>
           <div class="sg-demo">
-            <form class="wp-block-search wp-block-search__button-outside" role="search">
-              <label class="wp-block-search__label">Search this site</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search this site">
-              </div>
-              <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Default — Button inside</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search wp-block-search__button-inside" role="search">
-              <label class="wp-block-search__label screen-reader-text">Search</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
-                <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Default — No button</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search wp-block-search__no-button" role="search">
-              <label class="wp-block-search__label screen-reader-text">Search</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Default — Button only (icon)</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search wp-block-search__button-only" role="search">
-              <div class="wp-block-search__inside-wrapper">
-                <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="검색">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/search</span>
+              <span class="sg-tag sg-tag--modifier">3 skins</span>
+            </div>
+            <div class="sg-search-grid">
+              <div class="sg-search-cell">
+                <div class="t-label-small sg-search-cell__label">Outlined (default)</div>
+                <p class="t-body-small sg-search-cell__when">본문 안에 inline. 1px outline pill. 가장 minimal.</p>
+                <form class="wp-block-search wp-block-search__button-inside" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
                   <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
                 </button>
+                  </div>
+                </form>
               </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Default — Icon button outside</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search wp-block-search__button-outside" role="search">
-              <label class="wp-block-search__label screen-reader-text">Search</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
-              </div>
-              <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="검색">
-                <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
-              </button>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Filled — Button inside (canonical MD3)</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search is-style-filled-search wp-block-search__button-inside" role="search">
-              <label class="wp-block-search__label screen-reader-text">Search</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search components, blocks, and prose" aria-label="Search">
-                <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="검색">
+              <div class="sg-search-cell">
+                <div class="t-label-small sg-search-cell__label">Filled · pill</div>
+                <p class="t-body-small sg-search-cell__when">surface-container-high 위에 corner-full. Header / nav 영역에 자연스럽게 안착.</p>
+                <form class="wp-block-search wp-block-search__button-inside sg-skin sg-skin--filled-pill" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search posts, tags, authors" aria-label="Search">
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
                   <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
                 </button>
+                  </div>
+                </form>
               </div>
-            </form>
+              <div class="sg-search-cell">
+                <div class="t-label-small sg-search-cell__label">Soft · square</div>
+                <p class="t-body-small sg-search-cell__when">surface-container-low + corner-medium. 다른 form input과 같은 줄에 둘 때.</p>
+                <form class="wp-block-search wp-block-search__button-outside sg-skin sg-skin--soft-square" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Filter results" aria-label="Search">
+                  </div>
+                  <button class="wp-block-search__button wp-element-button" type="submit">Apply</button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
 
+        <!-- ===== Section C: States ===== -->
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Filled — Button inside + label shown</h3>
+          <h3 class="t-title-medium sg-subsection__head">C. States — idle / focus / typed / loading / disabled</h3>
+          <p class="sg-helper">WP는 input의 native state (focus, disabled)만 다룸. Theme이 책임지는 부분: focus ring 가시성, typed 값 시각 처리, loading state 표시 (필터·실시간 검색과 페어), disabled 처리.</p>
           <div class="sg-demo">
-            <form class="wp-block-search is-style-filled-search wp-block-search__button-inside" role="search">
-              <label class="wp-block-search__label">Search this site</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search components, blocks, and prose" aria-label="Search this site">
-                <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Filled — Button outside</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search is-style-filled-search wp-block-search__button-outside" role="search">
-              <label class="wp-block-search__label screen-reader-text">Search</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
-              </div>
-              <button class="wp-block-search__button wp-element-button" type="submit">Search</button>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Filled — No button (nav search)</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search is-style-filled-search wp-block-search__no-button" role="search">
-              <label class="wp-block-search__label screen-reader-text">Search</label>
-              <div class="wp-block-search__inside-wrapper">
-                <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Filled — Button only (icon)</h3>
-          <div class="sg-demo">
-            <form class="wp-block-search is-style-filled-search wp-block-search__button-only" role="search">
-              <div class="wp-block-search__inside-wrapper">
-                <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="검색">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/search</span>
+              <span class="sg-tag sg-tag--modifier">states</span>
+            </div>
+            <div class="sg-state-row">
+              <div class="sg-state-card" data-state="idle">
+                <div class="t-label-medium sg-state-card__title">Idle</div>
+                <form class="wp-block-search wp-block-search__button-inside" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
                   <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
                 </button>
+                  </div>
+                </form>
               </div>
-            </form>
+              <div class="sg-state-card" data-state="focus">
+                <div class="t-label-medium sg-state-card__title">Focus · 2px primary outline</div>
+                <form class="wp-block-search wp-block-search__button-inside is-state-focus" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                  </div>
+                </form>
+              </div>
+              <div class="sg-state-card" data-state="typed">
+                <div class="t-label-medium sg-state-card__title">Typed · with clear button</div>
+                <form class="wp-block-search wp-block-search__button-inside" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" value="design tokens" aria-label="Search">
+                    <button class="wp-block-search__button has-icon wp-element-button" type="button" aria-label="Clear" style="background: transparent; color: var(--md-sys-color-on-surface-variant);">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                  </div>
+                </form>
+              </div>
+              <div class="sg-state-card" data-state="loading">
+                <div class="t-label-medium sg-state-card__title">Loading · async filter</div>
+                <form class="wp-block-search wp-block-search__button-inside is-state-loading" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" value="material 3" aria-label="Search" aria-busy="true">
+                    <span class="wp-block-search__button has-icon wp-element-button" role="status" aria-label="Loading"><span class="sg-spinner" aria-hidden="true"></span></span>
+                  </div>
+                </form>
+              </div>
+              <div class="sg-state-card" data-state="disabled">
+                <div class="t-label-medium sg-state-card__title">Disabled</div>
+                <form class="wp-block-search wp-block-search__button-inside is-state-disabled" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search unavailable" aria-label="Search" disabled>
+                    <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search" disabled>
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Section D: Contexts ===== -->
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">D. Contexts — search where it actually lives</h3>
+          <p class="sg-helper">단독 form이 아니라 페이지의 한 부분으로 등장할 때의 사용 패턴. 각 컨텍스트마다 다른 skin / layout / size 조합이 자연스럽습니다.</p>
+        </div>
+
+        <div class="sg-subsection">
+          <h4 class="t-title-small sg-subsection__head">D.1 Sidebar widget — narrow outlined</h4>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">sidebar</span>
+            </div>
+            <aside class="wp-block-group is-style-card-outlined" style="max-inline-size: 280px;">
+              <h3 class="t-title-small" style="margin: 0 0 var(--space-sm); color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.06em;">Search the archive</h3>
+              <form class="wp-block-search wp-block-search__button-outside" role="search">
+                <label class="wp-block-search__label screen-reader-text">Search</label>
+                <div class="wp-block-search__inside-wrapper">
+                  <input class="wp-block-search__input" type="search" placeholder="Keyword" aria-label="Search">
+                </div>
+                <button class="wp-block-search__button wp-element-button" type="submit">Go</button>
+              </form>
+            </aside>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Widget gap rows</h3>
-          <div class="sg-demo prose">
-            <ul>
-              <li><strong>Custom HTML</strong> — routed to <code>style-guide-prose.html</code>, not the block catalog.</li>
-              <li><strong>Calendar</strong> — table-based widget with month navigation. Future table-widget contract.</li>
-              <li><strong>Terms List</strong> — taxonomy context surface. HTML structure needs WP render capture before contract.</li>
-              <li><strong>RSS</strong> — external feed/privacy surface. No local specimen contract.</li>
-              <li><strong>Shortcode</strong> — legacy execution surface. No local specimen contract.</li>
-            </ul>
+          <h4 class="t-title-small sg-subsection__head">D.2 Search results header — wide pill with query</h4>
+          <p class="sg-helper">검색 결과 페이지 상단. 쿼리 단어가 input 안에 들어있고, 사용자가 바로 refine 가능.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">results header</span>
+            </div>
+            <header style="display: grid; gap: var(--space-md);">
+              <h1 class="t-display-small" style="margin: 0;">Results for: <em style="font-style: normal; color: var(--md-sys-color-primary);">"design tokens"</em></h1>
+              <form class="wp-block-search wp-block-search__button-inside sg-skin sg-skin--filled-pill" role="search" style="max-inline-size: 560px;">
+                <label class="wp-block-search__label screen-reader-text">Refine search</label>
+                <div class="wp-block-search__inside-wrapper">
+                  <input class="wp-block-search__input" type="search" value="design tokens" aria-label="Refine search">
+                  <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                </div>
+              </form>
+              <p class="t-body-medium" style="margin: 0; color: var(--md-sys-color-on-surface-variant);">5 posts · 3 tags · 2 categories matched</p>
+            </header>
           </div>
         </div>
-      </section>
+
+        <div class="sg-subsection">
+          <h4 class="t-title-small sg-subsection__head">D.3 404 recovery — large hero search</h4>
+          <p class="sg-helper">에러 페이지의 핵심 액션. 큰 표면 + helper text로 recovery path를 명확히.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">404 recovery</span>
+            </div>
+            <section style="display: grid; gap: var(--space-lg); padding: var(--space-xl); border-radius: var(--md-sys-shape-corner-large); background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-tertiary-container)); max-inline-size: 640px;">
+              <div>
+                <p class="t-label-medium" style="margin: 0 0 var(--space-xs); color: var(--md-sys-color-on-primary-container); text-transform: uppercase; letter-spacing: 0.08em;">404</p>
+                <h2 class="t-display-small" style="margin: 0 0 var(--space-sm); color: var(--md-sys-color-on-primary-container);">Page not found</h2>
+                <p class="t-body-large" style="margin: 0; color: var(--md-sys-color-on-primary-container);">찾고 계신 페이지가 사라졌거나, 주소가 정확하지 않습니다. 다른 단어로 다시 시도해 보세요.</p>
+              </div>
+              <form class="wp-block-search wp-block-search__button-inside" role="search" style="background: var(--md-sys-color-surface); border-radius: var(--md-sys-shape-corner-full); padding: 4px;">
+                <label class="wp-block-search__label screen-reader-text">Search the site</label>
+                <div class="wp-block-search__inside-wrapper">
+                  <input class="wp-block-search__input" type="search" placeholder="Try a keyword…" aria-label="Search" style="border: 0;">
+                  <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search" style="border-radius: var(--md-sys-shape-corner-full);">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                </div>
+              </form>
+            </section>
 
 
       <!-- ========== Widget lists ========== -->

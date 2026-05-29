@@ -2075,28 +2075,61 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Widget lists ========== -->
-      <section class="sg-section" id="blocks-widget-lists">
+      <section class="sg-section" id="blocks-widget-lists" data-screen-label="widget lists">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Widgets</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--widgets"><span>Widgets</span></div>
           <h2 class="t-headline-medium">Widget lists</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §16</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             Sidebar/footer information lists. <code>blocks.css §16</code> normalizes list reset, link tokens, metadata labels, dropdown controls, and excerpt clamping.
           </p>
         </header>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Latest Posts (<code>core/latest-posts</code>)</h3>
+          <h3 class="t-title-medium sg-subsection__head">Latest Posts — bare list</h3>
+          <p class="sg-helper">최소 출력. Title link만. Sidebar의 dense vertical list로 적합.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/latest-posts</span>
+            </div>
+            <ul class="wp-block-latest-posts">
+              <li><a href="#">스타일 시스템과 디자인 토큰의 관계</a></li>
+              <li><a href="#">TT5 구조를 Pilot theme으로 옮기기</a></li>
+              <li><a href="#">M3 expressive: shape 시스템의 새로운 default</a></li>
+              <li><a href="#">Block theme에서 patterns vs templates</a></li>
+              <li><a href="#">한글 long-form을 위한 line-height와 letter-spacing</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Latest Posts — with date + author + excerpt</h3>
+          <p class="sg-helper">Date / author / excerpt 옵션을 모두 켠 verbose 변형. Theme은 metadata에 label-small + on-surface-variant, excerpt는 2-line clamp.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/latest-posts</span>
+              <span class="sg-tag sg-tag--modifier">displayPostDate</span>
+              <span class="sg-tag sg-tag--modifier">displayAuthor</span>
+              <span class="sg-tag sg-tag--modifier">displayExcerpt</span>
+            </div>
             <ul class="wp-block-latest-posts">
               <li>
                 <a href="#">스타일 시스템과 디자인 토큰의 관계</a>
                 <time class="wp-block-latest-posts__post-date" datetime="2026-05-27">2026년 5월 27일</time>
+                <span class="wp-block-latest-posts__post-author">Ji-woon Kim</span>
+                <div class="wp-block-latest-posts__post-excerpt">
+                  <p>디자인 토큰은 색상, 타이포그래피, 간격 같은 시각적 결정을 플랫폼 독립적인 값으로 저장한 단위입니다. WordPress block theme에서는 theme.json preset과 CSS custom property 사이의 연결이 핵심입니다.</p>
+                </div>
               </li>
               <li>
                 <a href="#">TT5 구조를 Pilot theme으로 옮기기</a>
-                <span class="wp-block-latest-posts__post-author">Ji-woon Kim</span>
+                <time class="wp-block-latest-posts__post-date" datetime="2026-05-24">2026년 5월 24일</time>
+                <span class="wp-block-latest-posts__post-author">Mina Park</span>
                 <div class="wp-block-latest-posts__post-excerpt">
-                  <p>패턴, 템플릿, 블록 스타일 variation을 유지하면서 Material 3 토큰으로 다시 매핑하는 과정입니다.</p>
+                  <p>패턴, 템플릿, 블록 스타일 variation을 유지하면서 Material 3 토큰으로 다시 매핑하는 과정을 단계별로 정리했습니다.</p>
                 </div>
               </li>
             </ul>
@@ -2104,57 +2137,111 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Archives &amp; Categories</h3>
-          <div class="sg-demo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-lg);">
-            <ul class="wp-block-archives">
-              <li><a href="#">2026년 5월</a></li>
-              <li><a href="#">2026년 4월</a></li>
-              <li><a href="#">2026년 3월</a></li>
-            </ul>
-            <ul class="wp-block-categories">
-              <li><a href="#">Design systems</a></li>
-              <li><a href="#">WordPress</a>
-                <ul class="children">
-                  <li><a href="#">Block themes</a></li>
-                  <li><a href="#">Patterns</a></li>
-                </ul>
+          <h3 class="t-title-medium sg-subsection__head">Latest Posts — with featured image</h3>
+          <p class="sg-helper">Image grid-style. Featured image는 corner-small radius + 100% width. List 항목은 column gap만 분리.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/latest-posts</span>
+              <span class="sg-tag sg-tag--modifier">displayFeaturedImage</span>
+            </div>
+            <ul class="wp-block-latest-posts" style="gap: var(--space-md);">
+              <li>
+                <a class="wp-block-latest-posts__featured-image" href="#"><div class="sg-sample-img" style="block-size: 140px;"></div></a>
+                <a href="#">스타일 시스템과 디자인 토큰의 관계</a>
+                <time class="wp-block-latest-posts__post-date" datetime="2026-05-27">2026년 5월 27일</time>
+              </li>
+              <li>
+                <a class="wp-block-latest-posts__featured-image" href="#"><div class="sg-sample-img" style="block-size: 140px;"></div></a>
+                <a href="#">TT5 구조를 Pilot theme으로 옮기기</a>
+                <time class="wp-block-latest-posts__post-date" datetime="2026-05-24">2026년 5월 24일</time>
               </li>
             </ul>
-            <div class="wp-block-archives-dropdown">
-              <label class="t-label-medium" for="archives-dropdown-demo">Archives dropdown</label>
-              <select id="archives-dropdown-demo">
-                <option>월 선택</option>
-                <option>2026년 5월</option>
-                <option>2026년 4월</option>
-              </select>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Archives + Categories + Dropdown</h3>
+          <p class="sg-helper">3가지 navigation widget을 나란히. Categories는 hierarchical (<code>.children</code> 중첩 지원).</p>
+          <div class="sg-demo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-lg);">
+            <div>
+              <div class="sg-demo-meta"><span class="sg-tag">core/archives</span></div>
+              <ul class="wp-block-archives">
+                <li><a href="#">2026년 5월 <span style="color: var(--md-sys-color-on-surface-variant);">(8)</span></a></li>
+                <li><a href="#">2026년 4월 <span style="color: var(--md-sys-color-on-surface-variant);">(12)</span></a></li>
+                <li><a href="#">2026년 3월 <span style="color: var(--md-sys-color-on-surface-variant);">(7)</span></a></li>
+                <li><a href="#">2026년 2월 <span style="color: var(--md-sys-color-on-surface-variant);">(9)</span></a></li>
+              </ul>
+            </div>
+            <div>
+              <div class="sg-demo-meta"><span class="sg-tag">core/categories</span></div>
+              <ul class="wp-block-categories">
+                <li><a href="#">Design systems</a>
+                  <ul class="children">
+                    <li><a href="#">Tokens</a></li>
+                    <li><a href="#">Components</a></li>
+                  </ul>
+                </li>
+                <li><a href="#">WordPress</a>
+                  <ul class="children">
+                    <li><a href="#">Block themes</a></li>
+                    <li><a href="#">Patterns</a></li>
+                  </ul>
+                </li>
+                <li><a href="#">Typography</a></li>
+              </ul>
+            </div>
+            <div>
+              <div class="sg-demo-meta"><span class="sg-tag">core/archives</span><span class="sg-tag sg-tag--modifier">displayAsDropdown</span></div>
+              <div class="wp-block-archives-dropdown">
+                <label class="t-label-medium" for="archives-dd" style="display: block; margin-block-end: var(--space-xs); color: var(--md-sys-color-on-surface-variant);">월별 아카이브</label>
+                <select id="archives-dd">
+                  <option>월 선택</option>
+                  <option>2026년 5월 (8)</option>
+                  <option>2026년 4월 (12)</option>
+                  <option>2026년 3월 (7)</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Page List (<code>core/page-list</code>)</h3>
+          <h3 class="t-title-medium sg-subsection__head">Page List — hierarchical</h3>
+          <p class="sg-helper">Site의 모든 page를 hierarchical하게 나열. 2단 indent까지 시연.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/page-list</span>
+            </div>
             <ul class="wp-block-page-list">
+              <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">홈</a></li>
               <li class="wp-block-pages-list__item">
-                <a class="wp-block-pages-list__item__link" href="#">About</a>
-              </li>
-              <li class="wp-block-pages-list__item">
-                <a class="wp-block-pages-list__item__link" href="#">Projects</a>
+                <a class="wp-block-pages-list__item__link" href="#">소개</a>
                 <ul class="wp-block-page-list">
-                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">Axismundi Pilot</a></li>
-                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">Material 3 Lab</a></li>
+                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">팀</a></li>
+                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">미션</a></li>
                 </ul>
               </li>
               <li class="wp-block-pages-list__item">
-                <a class="wp-block-pages-list__item__link" href="#">Contact</a>
+                <a class="wp-block-pages-list__item__link" href="#">프로젝트</a>
+                <ul class="wp-block-page-list">
+                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">Axismundi Pilot</a></li>
+                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">Material 3 Lab</a></li>
+                  <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">Pattern library</a></li>
+                </ul>
               </li>
+              <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">블로그</a></li>
+              <li class="wp-block-pages-list__item"><a class="wp-block-pages-list__item__link" href="#">문의</a></li>
             </ul>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Latest Comments (<code>core/latest-comments</code>)</h3>
+          <h3 class="t-title-medium sg-subsection__head">Latest Comments</h3>
+          <p class="sg-helper">Author / post link / date / excerpt 패턴. Sidebar에서 reader engagement를 surface.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/latest-comments</span>
+            </div>
             <ol class="wp-block-latest-comments">
               <li class="wp-block-latest-comments__comment">
                 <article>
@@ -2178,17 +2265,61 @@ console.log(greet('World'));</code></pre>
                   </div>
                 </article>
               </li>
+              <li class="wp-block-latest-comments__comment">
+                <article>
+                  <footer class="wp-block-latest-comments__comment-meta">
+                    <a class="wp-block-latest-comments__comment-author" href="#">Soyoung</a> on <a class="wp-block-latest-comments__comment-link" href="#">스타일 시스템과 디자인 토큰의 관계</a>
+                    <time class="wp-block-latest-comments__comment-date" datetime="2026-05-25">2026년 5월 25일</time>
+                  </footer>
+                  <div class="wp-block-latest-comments__comment-excerpt">
+                    <p>tokens.ref.css → tokens.sys.css → tokens.comp.css 계층이 직관적입니다. 추후 dark scheme의 ref override는 어떻게 다루실 건가요?</p>
+                  </div>
+                </article>
+              </li>
             </ol>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">In sidebar — composition</h3>
+          <p class="sg-helper">Latest Posts + Categories + Tag Cloud를 sidebar widget 영역에 stack. 각 widget은 outlined card로 wrap.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">sidebar</span>
+            </div>
+            <aside style="max-inline-size: 320px; display: grid; gap: var(--space-lg);">
+              <section class="wp-block-group is-style-card-outlined">
+                <h3 class="t-title-small" style="margin: 0 0 var(--space-sm); color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.06em;">Latest posts</h3>
+                <ul class="wp-block-latest-posts">
+                  <li><a href="#">스타일 시스템과 디자인 토큰의 관계</a></li>
+                  <li><a href="#">TT5 구조를 Pilot theme으로 옮기기</a></li>
+                  <li><a href="#">M3 expressive: shape 시스템의 새로운 default</a></li>
+                </ul>
+              </section>
+              <section class="wp-block-group is-style-card-outlined">
+                <h3 class="t-title-small" style="margin: 0 0 var(--space-sm); color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.06em;">Categories</h3>
+                <ul class="wp-block-categories">
+                  <li><a href="#">Design systems</a></li>
+                  <li><a href="#">WordPress</a></li>
+                  <li><a href="#">Typography</a></li>
+                </ul>
+              </section>
+            </aside>
           </div>
         </div>
       </section>
 
 
       <!-- ========== Social Icons ========== -->
-      <section class="sg-section" id="blocks-social-icons">
+      <section class="sg-section" id="blocks-social-icons" data-screen-label="social icons">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Widgets</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--widgets"><span>Widgets</span></div>
           <h2 class="t-headline-medium">Social Icons</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §11</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             <code>core/social-links</code> + <code>core/social-link</code>. Axismundi defines neutral default geometry only; service brand colors remain WordPress core responsibility.
           </p>
@@ -2215,88 +2346,194 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Tag Cloud ========== -->
-      <section class="sg-section" id="blocks-tag-cloud">
+      <section class="sg-section" id="blocks-tag-cloud" data-screen-label="tag cloud">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Widgets</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--widgets"><span>Widgets</span></div>
           <h2 class="t-headline-medium">Tag Cloud</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §11</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             <code>core/tag-cloud</code> renders taxonomy links with optional counts. Axismundi normalizes the cloud to a chip row and ignores WP's frequency-based font-size ramp.
           </p>
         </header>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Default chips</h3>
+          <h3 class="t-title-medium sg-subsection__head">Default — frequency-weighted cloud</h3>
+          <p class="sg-helper">WP는 taxonomy frequency에 따라 font-size를 8pt–22pt 사이에서 ramp. Theme은 cloud를 chip row로 재해석. (font-size는 inline style로 보존되지만 chip framing은 그대로.)</p>
           <div class="sg-demo">
-            <p class="wp-block-tag-cloud">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/tag-cloud</span>
+              <span class="sg-tag sg-tag--modifier">frequency-weighted</span>
+            </div>
+            <p class="wp-block-tag-cloud" style="margin: 0;">
               <a href="#" class="tag-cloud-link" style="font-size: 22pt;">Material 3</a>
-              <a href="#" class="tag-cloud-link" style="font-size: 14pt;">WordPress</a>
-              <a href="#" class="tag-cloud-link" style="font-size: 8pt;">Typography</a>
-              <a href="#" class="tag-cloud-link" style="font-size: 16pt;">Blocks</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 18pt;">WordPress</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 16pt;">Tokens</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 14pt;">Typography</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 14pt;">Blocks</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 12pt;">Themes</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 12pt;">Color</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 10pt;">Patterns</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 10pt;">Spacing</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 9pt;">Shadows</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 8pt;">Motion</a>
+              <a href="#" class="tag-cloud-link" style="font-size: 8pt;">Accessibility</a>
+            </p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">With counts (<code>showTagCounts: true</code>)</h3>
+          <p class="sg-helper">각 tag 옆에 post count 표시. WP는 <code>&lt;span class="tag-link-count"&gt;</code>으로 wrap.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/tag-cloud</span>
+              <span class="sg-tag sg-tag--modifier">showTagCounts</span>
+            </div>
+            <p class="wp-block-tag-cloud" style="margin: 0;">
+              <a href="#" class="tag-cloud-link">Material 3 <span class="tag-link-count">(24)</span></a>
+              <a href="#" class="tag-cloud-link">WordPress <span class="tag-link-count">(18)</span></a>
+              <a href="#" class="tag-cloud-link">Tokens <span class="tag-link-count">(12)</span></a>
+              <a href="#" class="tag-cloud-link">Blocks <span class="tag-link-count">(9)</span></a>
+              <a href="#" class="tag-cloud-link">Color <span class="tag-link-count">(7)</span></a>
+              <a href="#" class="tag-cloud-link">Typography <span class="tag-link-count">(5)</span></a>
+              <a href="#" class="tag-cloud-link">Spacing <span class="tag-link-count">(3)</span></a>
             </p>
           </div>
         </div>
 
         <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Outline style</h3>
+          <p class="sg-helper">Axismundi 등록 block style. transparent + 1px outline-variant. Sidebar widget의 quiet 변형.</p>
           <div class="sg-demo">
-            <p class="wp-block-tag-cloud is-style-outline">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/tag-cloud</span>
+              <span class="sg-tag sg-tag--modifier">is-style-outline</span>
+            </div>
+            <p class="wp-block-tag-cloud is-style-outline" style="margin: 0;">
               <a href="#" class="tag-cloud-link">design <span class="tag-link-count">(12)</span></a>
               <a href="#" class="tag-cloud-link">tokens <span class="tag-link-count">(8)</span></a>
               <a href="#" class="tag-cloud-link">pilot <span class="tag-link-count">(4)</span></a>
+              <a href="#" class="tag-cloud-link">audit <span class="tag-link-count">(3)</span></a>
+              <a href="#" class="tag-cloud-link">a11y <span class="tag-link-count">(2)</span></a>
             </p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">In sidebar widget context</h3>
+          <p class="sg-helper">Sidebar / footer widget으로 typical 사용 — outlined card로 wrap, heading + cloud composition.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">sidebar widget</span>
+            </div>
+            <aside class="wp-block-group is-style-card-outlined" style="max-inline-size: 280px;">
+              <h3 class="t-title-small" style="margin: 0 0 var(--space-sm); color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.06em;">Popular tags</h3>
+              <p class="wp-block-tag-cloud" style="margin: 0;">
+                <a href="#" class="tag-cloud-link">Material 3</a>
+                <a href="#" class="tag-cloud-link">WordPress</a>
+                <a href="#" class="tag-cloud-link">Tokens</a>
+                <a href="#" class="tag-cloud-link">Blocks</a>
+                <a href="#" class="tag-cloud-link">Color</a>
+                <a href="#" class="tag-cloud-link">Typography</a>
+              </p>
+            </aside>
           </div>
         </div>
       </section>
 
 
       <!-- ========== Theme blocks ========== -->
-      <section class="sg-section" id="blocks-theme">
+      <section class="sg-section" id="blocks-theme" data-screen-label="theme">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Theme</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--theme"><span>Theme</span></div>
           <h2 class="t-headline-medium">Theme identity blocks</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--php">PHP layer needed</span>
+            <span class="sg-badge sg-badge--source">blocks.css §12-17</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             CSS-only theme blocks that can be represented without rendering a full FSE template. Query Loop and Template Part stay routed to the future pattern/template styleguide.
           </p>
         </header>
 
+        <!-- ===== Site identity ===== -->
         <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Site Logo (<code>core/site-logo</code>)</h3>
+          <p class="sg-helper">Default + <code>is-style-rounded</code> 변형. Theme은 max-inline-size: 100% + corner radius만 계약.</p>
           <div class="sg-demo" style="display: flex; gap: var(--space-lg); align-items: center;">
+            <div class="sg-demo-meta" style="position: absolute;"><span class="sg-tag">core/site-logo</span></div>
             <figure class="wp-block-site-logo">
-              <img src="../../../assets/brand/axismundi-symbol.svg" alt="Axismundi symbol" style="inline-size: 64px;">
+              <img src="assets/brand/axismundi-symbol.svg" alt="Axismundi symbol" style="inline-size: 64px;">
             </figure>
             <figure class="wp-block-site-logo is-style-rounded">
-              <img src="../../../assets/brand/axismundi-symbol.svg" alt="Axismundi symbol rounded" style="inline-size: 64px;">
+              <img src="assets/brand/axismundi-symbol.svg" alt="Axismundi symbol rounded" style="inline-size: 64px;">
             </figure>
           </div>
         </div>
 
         <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Site Title / Site Tagline</h3>
+          <p class="sg-helper">Header chrome. Title은 title-large, tagline은 body-medium + on-surface-variant.</p>
           <div class="sg-demo">
-            <h1 class="wp-block-site-title"><a href="#">Axismundi Pilot</a></h1>
-            <p class="wp-block-site-tagline">Material 3 design system for WordPress block themes.</p>
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/site-title</span>
+              <span class="sg-tag">core/site-tagline</span>
+            </div>
+            <h1 class="wp-block-site-title" style="margin: 0;"><a href="#">Axismundi Pilot</a></h1>
+            <p class="wp-block-site-tagline" style="margin: var(--space-xs) 0 0;">Material 3 design system for WordPress block themes.</p>
           </div>
         </div>
 
+        <!-- ===== Query / Post Template ===== -->
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Query / Post Template — post card</h3>
-          <p class="sg-helper">TT5 <code>template-query-loop</code>와 <code>more-posts</code> 패턴을 받치는 inner block contract. Query 자체는 data wrapper이고, title/date/excerpt/featured-image가 시각 계약을 소유.</p>
+          <h3 class="t-title-medium sg-subsection__head">Query / Post Template — 3-column grid</h3>
+          <p class="sg-helper">Blog index / archive의 default layout. core/post-template이 list 컨테이너, 각 item이 featured image + title + meta + excerpt + CTA.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/query</span>
+              <span class="sg-tag">core/post-template</span>
+              <span class="sg-tag sg-tag--modifier">layout: grid · cols: 3</span>
+            </div>
             <div class="wp-block-query">
-              <ul class="wp-block-post-template" style="display: grid; gap: var(--space-lg);">
+              <ul class="wp-block-post-template" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-lg);">
                 <li class="wp-block-post">
-                  <article class="wp-block-group is-style-card-outlined">
-                    <figure class="wp-block-post-featured-image">
-                      <div class="sg-sample-img"></div>
-                    </figure>
-                    <h3 class="wp-block-post-title t-headline-small" style="margin-block: var(--space-md) var(--space-xs);">
-                      <a href="#">포스트 제목 — 스타일 시스템과 디자인 토큰의 관계</a>
-                    </h3>
-                    <div class="wp-block-post-date"><time datetime="2026-05-27">2026년 5월 27일</time></div>
-                    <div class="wp-block-post-excerpt" style="margin-block-start: var(--space-sm);">
-                      <p class="wp-block-post-excerpt__excerpt">디자인 토큰은 색상, 타이포그래피, 간격 같은 시각적 결정을 플랫폼 독립적인 값으로 저장한 단위입니다. WordPress block theme에서는 theme.json preset과 CSS custom property 사이의 연결이 핵심입니다.</p>
-                      <a class="wp-block-post-excerpt__more-link" href="#">Continue reading</a>
+                  <article class="wp-block-group is-style-card-outlined" style="padding: 0; overflow: hidden;">
+                    <figure class="wp-block-post-featured-image" style="margin: 0;"><div class="sg-sample-img" style="block-size: 160px;"></div></figure>
+                    <div style="padding: var(--space-md);">
+                      <h3 class="wp-block-post-title t-title-medium" style="margin: 0 0 var(--space-xs);"><a href="#">스타일 시스템과 디자인 토큰의 관계</a></h3>
+                      <div class="wp-block-post-date"><time datetime="2026-05-27">2026년 5월 27일</time></div>
+                      <div class="wp-block-post-excerpt" style="margin-block-start: var(--space-sm);">
+                        <p class="wp-block-post-excerpt__excerpt">디자인 토큰은 색상, 타이포그래피, 간격을 플랫폼 독립적으로 저장합니다.</p>
+                      </div>
+                    </div>
+                  </article>
+                </li>
+                <li class="wp-block-post">
+                  <article class="wp-block-group is-style-card-outlined" style="padding: 0; overflow: hidden;">
+                    <figure class="wp-block-post-featured-image" style="margin: 0;"><div class="sg-sample-img" style="block-size: 160px;"></div></figure>
+                    <div style="padding: var(--space-md);">
+                      <h3 class="wp-block-post-title t-title-medium" style="margin: 0 0 var(--space-xs);"><a href="#">TT5 구조를 Pilot theme으로 옮기기</a></h3>
+                      <div class="wp-block-post-date"><time datetime="2026-05-24">2026년 5월 24일</time></div>
+                      <div class="wp-block-post-excerpt" style="margin-block-start: var(--space-sm);">
+                        <p class="wp-block-post-excerpt__excerpt">패턴, 템플릿, 블록 스타일 variation을 Material 3 토큰으로 다시 매핑하는 과정.</p>
+                      </div>
+                    </div>
+                  </article>
+                </li>
+                <li class="wp-block-post">
+                  <article class="wp-block-group is-style-card-outlined" style="padding: 0; overflow: hidden;">
+                    <figure class="wp-block-post-featured-image" style="margin: 0;"><div class="sg-sample-img" style="block-size: 160px;"></div></figure>
+                    <div style="padding: var(--space-md);">
+                      <h3 class="wp-block-post-title t-title-medium" style="margin: 0 0 var(--space-xs);"><a href="#">M3 expressive: shape 시스템의 새로운 default</a></h3>
+                      <div class="wp-block-post-date"><time datetime="2026-05-22">2026년 5월 22일</time></div>
+                      <div class="wp-block-post-excerpt" style="margin-block-start: var(--space-sm);">
+                        <p class="wp-block-post-excerpt__excerpt">2025 M3 expressive에서 도입된 5가지 shape family를 token 레이어에서 어떻게 받을지.</p>
+                      </div>
                     </div>
                   </article>
                 </li>
@@ -2306,18 +2543,120 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Post author metadata</h3>
-          <div class="sg-demo" style="display: flex; gap: var(--space-sm); align-items: center;">
-            <figure class="wp-block-avatar" style="margin: 0;">
-              <div class="sg-sample-img" style="inline-size: 48px; block-size: 48px; border-radius: var(--md-sys-shape-corner-full);"></div>
-            </figure>
-            <div class="wp-block-post-author-name"><a href="#">Ji-woon Kim</a></div>
+          <h3 class="t-title-medium sg-subsection__head">Query / Post Template — list with side image</h3>
+          <p class="sg-helper">Archive / search results의 dense list layout. Featured image left, content right. 12-column-friendly.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/post-template</span>
+              <span class="sg-tag sg-tag--modifier">layout: list</span>
+            </div>
+            <div class="wp-block-query">
+              <ul class="wp-block-post-template" style="display: grid; gap: var(--space-lg);">
+                <li class="wp-block-post" style="display: grid; grid-template-columns: minmax(140px, 200px) 1fr; gap: var(--space-md); align-items: start;">
+                  <figure class="wp-block-post-featured-image" style="margin: 0;"><div class="sg-sample-img" style="block-size: 120px;"></div></figure>
+                  <div>
+                    <h3 class="wp-block-post-title t-title-large" style="margin: 0 0 var(--space-xs);"><a href="#">스타일 시스템과 디자인 토큰의 관계</a></h3>
+                    <div style="display: flex; gap: var(--space-sm); align-items: center; margin-block-end: var(--space-sm);">
+                      <div class="wp-block-post-date"><time datetime="2026-05-27">2026년 5월 27일</time></div>
+                      <span aria-hidden="true" style="color: var(--md-sys-color-outline-variant);">·</span>
+                      <div class="wp-block-post-author-name"><a href="#">Ji-woon Kim</a></div>
+                    </div>
+                    <div class="wp-block-post-excerpt">
+                      <p class="wp-block-post-excerpt__excerpt">디자인 토큰은 색상, 타이포그래피, 간격 같은 시각적 결정을 플랫폼 독립적인 값으로 저장한 단위입니다. WordPress block theme에서는 theme.json preset과 CSS custom property 사이의 연결이 핵심입니다.</p>
+                      <a class="wp-block-post-excerpt__more-link" href="#">Continue reading →</a>
+                    </div>
+                  </div>
+                </li>
+                <li class="wp-block-post" style="display: grid; grid-template-columns: minmax(140px, 200px) 1fr; gap: var(--space-md); align-items: start;">
+                  <figure class="wp-block-post-featured-image" style="margin: 0;"><div class="sg-sample-img" style="block-size: 120px;"></div></figure>
+                  <div>
+                    <h3 class="wp-block-post-title t-title-large" style="margin: 0 0 var(--space-xs);"><a href="#">한글 long-form을 위한 line-height와 letter-spacing</a></h3>
+                    <div style="display: flex; gap: var(--space-sm); align-items: center; margin-block-end: var(--space-sm);">
+                      <div class="wp-block-post-date"><time datetime="2026-05-20">2026년 5월 20일</time></div>
+                      <span aria-hidden="true" style="color: var(--md-sys-color-outline-variant);">·</span>
+                      <div class="wp-block-post-author-name"><a href="#">Soyoung Lee</a></div>
+                    </div>
+                    <div class="wp-block-post-excerpt">
+                      <p class="wp-block-post-excerpt__excerpt">한글과 영문을 같은 본문에서 다룰 때, line-height는 1.7 이상이 안정적이지만 letter-spacing은 0 또는 약한 negative가 더 자연스럽습니다.</p>
+                      <a class="wp-block-post-excerpt__more-link" href="#">Continue reading →</a>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Query Pagination</h3>
+          <h3 class="t-title-medium sg-subsection__head">Query / Post Template — hero + 4 small (TT5 more-posts)</h3>
+          <p class="sg-helper">TT5의 <code>more-posts</code> 패턴. 첫 항목은 hero (full image + large title), 나머지는 dense list.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/post-template</span>
+              <span class="sg-tag sg-tag--modifier">pattern: more-posts</span>
+              <span class="sg-tag sg-tag--modifier">1 hero + 4 small</span>
+            </div>
+            <div class="wp-block-query" style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-lg); align-items: start;">
+              <article class="wp-block-post wp-block-group is-style-card-outlined" style="padding: 0; overflow: hidden;">
+                <figure class="wp-block-post-featured-image" style="margin: 0;"><div class="sg-sample-img" style="block-size: 240px;"></div></figure>
+                <div style="padding: var(--space-lg);">
+                  <h3 class="wp-block-post-title t-headline-small" style="margin: 0 0 var(--space-sm);"><a href="#">스타일 시스템과 디자인 토큰의 관계</a></h3>
+                  <div class="wp-block-post-date" style="margin-block-end: var(--space-sm);"><time datetime="2026-05-27">2026년 5월 27일</time></div>
+                  <div class="wp-block-post-excerpt">
+                    <p class="wp-block-post-excerpt__excerpt">디자인 토큰은 색상, 타이포그래피, 간격 같은 시각적 결정을 플랫폼 독립적인 값으로 저장한 단위입니다.</p>
+                  </div>
+                </div>
+              </article>
+              <ul class="wp-block-post-template" style="display: grid; gap: var(--space-md);">
+                <li class="wp-block-post" style="display: grid; gap: 2px; padding-block-end: var(--space-md); border-block-end: 1px solid var(--md-sys-color-outline-variant);">
+                  <h4 class="wp-block-post-title t-title-medium" style="margin: 0;"><a href="#">TT5 구조를 Pilot theme으로 옮기기</a></h4>
+                  <div class="wp-block-post-date"><time datetime="2026-05-24">2026년 5월 24일</time></div>
+                </li>
+                <li class="wp-block-post" style="display: grid; gap: 2px; padding-block-end: var(--space-md); border-block-end: 1px solid var(--md-sys-color-outline-variant);">
+                  <h4 class="wp-block-post-title t-title-medium" style="margin: 0;"><a href="#">M3 expressive: shape 시스템의 새로운 default</a></h4>
+                  <div class="wp-block-post-date"><time datetime="2026-05-22">2026년 5월 22일</time></div>
+                </li>
+                <li class="wp-block-post" style="display: grid; gap: 2px; padding-block-end: var(--space-md); border-block-end: 1px solid var(--md-sys-color-outline-variant);">
+                  <h4 class="wp-block-post-title t-title-medium" style="margin: 0;"><a href="#">Block theme에서 patterns vs templates</a></h4>
+                  <div class="wp-block-post-date"><time datetime="2026-05-20">2026년 5월 20일</time></div>
+                </li>
+                <li class="wp-block-post" style="display: grid; gap: 2px;">
+                  <h4 class="wp-block-post-title t-title-medium" style="margin: 0;"><a href="#">한글 long-form을 위한 line-height와 letter-spacing</a></h4>
+                  <div class="wp-block-post-date"><time datetime="2026-05-18">2026년 5월 18일</time></div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Post author meta — avatar + name + date</h3>
+          <p class="sg-helper">단독 사용 (post header inset). Avatar는 circular, name은 label-medium link, date 옆 배치.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/avatar</span>
+              <span class="sg-tag">core/post-author-name</span>
+              <span class="sg-tag">core/post-date</span>
+            </div>
+            <div style="display: flex; gap: var(--space-sm); align-items: center;">
+              <figure class="wp-block-avatar" style="margin: 0;"><div style="inline-size: 40px; block-size: 40px; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-primary-container); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="t-label-large" style="color: var(--md-sys-color-on-primary-container);">J</span></div></figure>
+              <div>
+                <div class="wp-block-post-author-name" style="margin: 0;"><a href="#" style="font-weight: 500;">Ji-woon Kim</a></div>
+                <div class="wp-block-post-date" style="margin: 0;"><time datetime="2026-05-27">2026년 5월 27일 · 5 min read</time></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Pagination ===== -->
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Query Pagination — full (numbers + prev/next)</h3>
+          <p class="sg-helper">Default. Prev / 1 … current 2 … last / Next 패턴. Current는 secondary-container chip.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/query-pagination</span>
+              <span class="sg-tag sg-tag--modifier">full</span>
+            </div>
             <nav class="wp-block-query-pagination" aria-label="Posts pagination">
               <div class="wp-block-query-pagination-previous"><a href="#">← Previous</a></div>
               <div class="wp-block-query-pagination-numbers">
@@ -2333,47 +2672,89 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Post Navigation</h3>
+          <h3 class="t-title-medium sg-subsection__head">Query Pagination — numbers only / prev-next only</h3>
+          <div class="sg-demo" style="display: grid; gap: var(--space-lg);">
+            <div>
+              <div class="sg-demo-meta"><span class="sg-tag sg-tag--modifier">numbers only</span></div>
+              <nav class="wp-block-query-pagination" aria-label="Posts pagination">
+                <div class="wp-block-query-pagination-numbers">
+                  <a class="page-numbers" href="#">1</a>
+                  <a class="page-numbers" href="#">2</a>
+                  <span class="page-numbers current" aria-current="page">3</span>
+                  <a class="page-numbers" href="#">4</a>
+                  <a class="page-numbers" href="#">5</a>
+                  <span class="page-numbers dots">…</span>
+                  <a class="page-numbers" href="#">12</a>
+                </div>
+              </nav>
+            </div>
+            <div>
+              <div class="sg-demo-meta"><span class="sg-tag sg-tag--modifier">prev / next only</span></div>
+              <nav class="wp-block-query-pagination" aria-label="Posts pagination" style="justify-content: space-between;">
+                <div class="wp-block-query-pagination-previous"><a href="#">← 이전 페이지</a></div>
+                <div class="wp-block-query-pagination-next"><a href="#">다음 페이지 →</a></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Post Navigation — adjacent post</h3>
+          <p class="sg-helper">Single post 하단의 prev/next post link. Theme은 surface-container 칩, hover 시 state layer.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/post-navigation-link</span>
+            </div>
             <nav aria-label="Post navigation" style="display: flex; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap;">
               <div class="wp-block-post-navigation-link wp-block-post-navigation-link--previous">
-                <a href="#">← 이전 포스트 제목</a>
+                <a href="#">← TT5 구조를 Pilot theme으로 옮기기</a>
               </div>
               <div class="wp-block-post-navigation-link wp-block-post-navigation-link--next">
-                <a href="#">다음 포스트 제목 →</a>
+                <a href="#">M3 expressive: shape 시스템의 새로운 default →</a>
               </div>
             </nav>
           </div>
         </div>
 
+        <!-- ===== core/navigation ===== -->
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">core/navigation — desktop (static specimen)</h3>
-          <p class="sg-helper">데스크탑 수평 메뉴. <code>current-menu-item</code>은 secondary-container 활성 표시. Submenu는 surface-container-high + elevation-level2. Mobile overlay는 WP Interactivity API 상태 의존 — Pilot WP 인스턴스에서 검증 필요.</p>
+          <h3 class="t-title-medium sg-subsection__head">core/navigation — desktop horizontal</h3>
+          <p class="sg-helper">데스크탑 기본. <code>current-menu-item</code>은 secondary-container active marker. Submenu hover 시 surface-container-high + elevation-2.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/navigation</span>
+              <span class="sg-tag sg-tag--modifier">layout: flex</span>
+            </div>
             <nav class="wp-block-navigation" aria-label="Primary navigation">
-              <ul class="wp-block-navigation__container" style="list-style:none;padding:0;margin:0;display:flex;gap:var(--space-xs);align-items:center;">
+              <ul class="wp-block-navigation__container" style="list-style:none; padding:0; margin:0; display:flex; gap:var(--space-xs); align-items:center; flex-wrap: wrap;">
                 <li class="wp-block-navigation-item current-menu-item">
-                  <a class="wp-block-navigation-item__content" href="#">홈</a>
+                  <a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); text-decoration: none;">홈</a>
                 </li>
                 <li class="wp-block-navigation-item">
-                  <a class="wp-block-navigation-item__content" href="#">소개</a>
+                  <a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface); text-decoration: none;">소개</a>
                 </li>
                 <li class="wp-block-navigation-item has-child" style="position:relative;">
-                  <a class="wp-block-navigation-item__content" href="#">블로그</a>
-                  <button class="wp-block-navigation-submenu__toggle" type="button" aria-expanded="true">
+                  <a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface); text-decoration: none;">블로그</a>
+                  <button class="wp-block-navigation-submenu__toggle" type="button" aria-expanded="true" style="background:transparent; border:0; padding: 0 var(--space-xs); color: var(--md-sys-color-on-surface-variant); cursor:pointer;">
                     <span class="wp-block-navigation__submenu-icon" aria-hidden="true">▾</span>
                   </button>
-                  <ul class="wp-block-navigation__submenu-container" style="list-style:none;padding:var(--space-xs);min-inline-size:180px;">
+                  <ul class="wp-block-navigation__submenu-container" style="list-style:none; padding:var(--space-xs); margin:var(--space-xs) 0 0; min-inline-size:200px; background: var(--md-sys-color-surface-container-high); border-radius: var(--md-sys-shape-corner-medium); box-shadow: var(--md-sys-elevation-shadow-level2); display: grid; gap: 2px;">
                     <li class="wp-block-navigation-item">
-                      <a class="wp-block-navigation-item__content" href="#">디자인</a>
+                      <a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-xs) var(--space-sm); border-radius: var(--md-sys-shape-corner-small); color: var(--md-sys-color-on-surface); text-decoration: none;">디자인</a>
                     </li>
                     <li class="wp-block-navigation-item">
-                      <a class="wp-block-navigation-item__content" href="#">개발</a>
+                      <a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-xs) var(--space-sm); border-radius: var(--md-sys-shape-corner-small); color: var(--md-sys-color-on-surface); text-decoration: none;">개발</a>
+                    </li>
+                    <li class="wp-block-navigation-item">
+                      <a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-xs) var(--space-sm); border-radius: var(--md-sys-shape-corner-small); color: var(--md-sys-color-on-surface); text-decoration: none;">디자인 시스템</a>
                     </li>
                   </ul>
                 </li>
                 <li class="wp-block-navigation-item">
-                  <a class="wp-block-navigation-item__content" href="#">문의</a>
+                  <a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface); text-decoration: none;">아카이브</a>
+                </li>
+                <li class="wp-block-navigation-item">
+                  <a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface); text-decoration: none;">문의</a>
                 </li>
               </ul>
             </nav>
@@ -2381,61 +2762,161 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Theme gap rows</h3>
-          <div class="sg-demo prose">
-            <ul>
-              <li><strong>Template Part</strong> — FSE structure surface. Future route.</li>
-              <li><strong>Breadcrumbs</strong> — WP 7.0 reference-only block. Future route.</li>
-            </ul>
+          <h3 class="t-title-medium sg-subsection__head">core/navigation — centered with site identity</h3>
+          <p class="sg-helper">TT5 header 패턴. Site logo + nav가 중앙 정렬되고, right slot에 search 또는 CTA가 들어감.</p>
+          <div class="sg-demo" style="max-inline-size: none;">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">centered header</span>
+            </div>
+            <header style="display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-lg); align-items: center; padding: var(--space-md) var(--space-lg); background: var(--md-sys-color-surface-container-low); border-radius: var(--md-sys-shape-corner-medium);">
+              <div class="wp-block-site-title" style="margin: 0;"><a href="#" style="color: inherit; text-decoration: none;">Axismundi</a></div>
+              <nav class="wp-block-navigation" aria-label="Primary navigation" style="justify-self: center;">
+                <ul class="wp-block-navigation__container" style="list-style:none; padding:0; margin:0; display:flex; gap:var(--space-xs);">
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface); text-decoration: none;">홈</a></li>
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); text-decoration: none;">블로그</a></li>
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface); text-decoration: none;">아카이브</a></li>
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: inline-flex; padding: var(--space-xs) var(--space-md); border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface); text-decoration: none;">문의</a></li>
+                </ul>
+              </nav>
+              <div class="wp-block-button is-style-tonal" style="margin: 0;"><a class="wp-block-button__link" href="#">Subscribe</a></div>
+            </header>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Comments — thread (<code>core/comments</code>)</h3>
-          <p class="sg-helper">Static specimen — Pilot fixture: <code>patterns/comments.php</code>. Avatar는 WP가 Gravatar로 채움. WP는 nested threading indent, moderation state를 소유. <code>blocks.css §18</code>.</p>
+          <h3 class="t-title-medium sg-subsection__head">core/navigation — mobile overlay (static specimen)</h3>
+          <p class="sg-helper">모바일에서 hamburger trigger → full-screen overlay. WP Interactivity API의 <code>open</code> state. Lab specimen은 always-open static.</p>
+          <div class="sg-demo" style="max-inline-size: 360px;">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/navigation</span>
+              <span class="sg-tag sg-tag--modifier">overlayMenu: always</span>
+              <span class="sg-tag sg-tag--modifier">open</span>
+            </div>
+            <div style="background: var(--md-sys-color-surface); border-radius: var(--md-sys-shape-corner-medium); border: 1px solid var(--md-sys-color-outline-variant); overflow: hidden;">
+              <header style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-md); border-block-end: 1px solid var(--md-sys-color-outline-variant);">
+                <div class="wp-block-site-title" style="font-size: var(--md-sys-typescale-title-medium-size);"><a href="#" style="color: inherit; text-decoration: none;">Axismundi</a></div>
+                <button type="button" aria-label="Close menu" style="background: transparent; border: 0; padding: var(--space-xs); color: var(--md-sys-color-on-surface); cursor: pointer; font-size: 20px; line-height: 1;">✕</button>
+              </header>
+              <nav class="wp-block-navigation" aria-label="Mobile navigation" style="padding: var(--space-md);">
+                <ul class="wp-block-navigation__container" style="list-style:none; padding:0; margin:0; display:flex; flex-direction: column; gap: 2px;">
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-md); border-radius: var(--md-sys-shape-corner-small); color: var(--md-sys-color-on-surface); text-decoration: none;">홈</a></li>
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-md); border-radius: var(--md-sys-shape-corner-small); background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); text-decoration: none;">블로그</a></li>
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-md); border-radius: var(--md-sys-shape-corner-small); color: var(--md-sys-color-on-surface); text-decoration: none;">소개</a></li>
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-md); border-radius: var(--md-sys-shape-corner-small); color: var(--md-sys-color-on-surface); text-decoration: none;">아카이브</a></li>
+                  <li><a class="wp-block-navigation-item__content" href="#" style="display: block; padding: var(--space-md); border-radius: var(--md-sys-shape-corner-small); color: var(--md-sys-color-on-surface); text-decoration: none;">문의</a></li>
+                </ul>
+              </nav>
+              <div style="padding: var(--space-md); border-block-start: 1px solid var(--md-sys-color-outline-variant);">
+                <form class="wp-block-search is-style-filled-search wp-block-search__no-button" role="search">
+                  <label class="wp-block-search__label screen-reader-text">Search</label>
+                  <div class="wp-block-search__inside-wrapper">
+                    <input class="wp-block-search__input" type="search" placeholder="Search…" aria-label="Search">
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Theme gap rows ===== -->
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Theme gap rows</h3>
+          <div class="sg-demo sg-demo--gaps">
+            <ul class="sg-gap-list">
+              <li class="sg-gap-row">
+                <span class="sg-gap-row__name">Template Part</span>
+                <span class="sg-gap-row__why">FSE structure surface. Future route.</span>
+              </li>
+              <li class="sg-gap-row">
+                <span class="sg-gap-row__name">Breadcrumbs</span>
+                <span class="sg-gap-row__why">WP 7.0 reference-only block. Future route.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- ===== Comments ===== -->
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Comments — thread with nested reply (<code>core/comments</code>)</h3>
+          <p class="sg-helper">Static specimen — Pilot fixture: <code>patterns/comments.php</code>. Avatar는 WP가 Gravatar로 채움. Nested threading은 child <code>&lt;ol&gt;</code> indent. Moderation pending은 <code>.comment--pending</code> 변형 (Axismundi 추가).</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/comments</span>
+              <span class="sg-tag">core/comment-template</span>
+              <span class="sg-tag sg-tag--modifier">depth: 2</span>
+              <span class="sg-tag sg-tag--modifier">+ moderation</span>
+            </div>
             <div class="wp-block-comments">
-              <h3 class="wp-block-comments-title has-large-font-size">2 thoughts on "스타일 시스템과 디자인 토큰의 관계"</h3>
-              <ol class="wp-block-comment-template" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-lg);">
-                <li id="ax-demo-comment-1" class="comment">
-                  <div class="wp-block-group" style="display:flex;gap:var(--space-sm);align-items:flex-start;">
-                    <div class="wp-block-avatar" style="flex-shrink:0;">
-                      <div style="width:50px;height:50px;border-radius:var(--comp-avatar-radius);background:var(--md-sys-color-primary-container);display:flex;align-items:center;justify-content:center;">
-                        <span style="font-family:var(--md-sys-typescale-label-large-font);font-size:var(--md-sys-typescale-label-large-size);color:var(--md-sys-color-on-primary-container);">M</span>
+              <h3 class="wp-block-comments-title" style="margin: 0 0 var(--space-lg); font-family: var(--md-sys-typescale-headline-small-font); font-size: var(--md-sys-typescale-headline-small-size); line-height: var(--md-sys-typescale-headline-small-line-height);">3 thoughts on "스타일 시스템과 디자인 토큰의 관계"</h3>
+              <ol class="wp-block-comment-template" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:var(--space-lg);">
+                <li id="ax-c1" class="comment">
+                  <div style="display:flex; gap:var(--space-sm); align-items:flex-start;">
+                    <div class="wp-block-avatar" style="flex-shrink:0;"><div style="inline-size: 40px; block-size: 40px; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-primary-container); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="t-label-large" style="color: var(--md-sys-color-on-primary-container);">M</span></div></div>
+                    <div style="flex:1 1 0; min-inline-size:0; display:flex; flex-direction:column; gap:var(--space-xs);">
+                      <div style="display: flex; gap: var(--space-sm); align-items: baseline; flex-wrap: wrap;">
+                        <div class="wp-block-comment-author-name"><a href="#" style="font-weight: 500;">Mina</a></div>
+                        <div class="wp-block-comment-date"><a href="#" style="color: var(--md-sys-color-on-surface-variant); text-decoration: none;"><time datetime="2026-05-27">2026년 5월 27일 오후 2:14</time></a></div>
                       </div>
-                    </div>
-                    <div class="wp-block-group" style="flex:1 1 0;min-inline-size:0;display:flex;flex-direction:column;gap:var(--space-xs);">
-                      <div class="wp-block-comment-date"><a href="#ax-demo-comment-1"><time datetime="2026-05-27">2026년 5월 27일</time></a></div>
-                      <div class="wp-block-comment-author-name"><a href="#">Mina</a></div>
-                      <div class="wp-block-comment-content"><p>MD3 토큰 레이어와 WP 블록 구조의 분리가 명확하게 잘 구현되어 있습니다. surface-container 계층이 자연스럽네요.</p></div>
-                      <div class="wp-block-group" style="display:flex;gap:var(--space-xs);">
-                        <div class="wp-block-comment-reply-link"><a href="#">Reply</a></div>
+                      <div class="wp-block-comment-content"><p style="margin: 0;">MD3 토큰 레이어와 WP 블록 구조의 분리가 명확하게 잘 구현되어 있습니다. surface-container 계층이 자연스럽네요.</p></div>
+                      <div style="display:flex; gap:var(--space-xs); align-items: center;">
+                        <div class="wp-block-comment-reply-link"><a href="#">↩ Reply</a></div>
                       </div>
                     </div>
                   </div>
-                </li>
-                <li id="ax-demo-comment-2" class="comment">
-                  <div class="wp-block-group" style="display:flex;gap:var(--space-sm);align-items:flex-start;">
-                    <div class="wp-block-avatar" style="flex-shrink:0;">
-                      <div style="width:50px;height:50px;border-radius:var(--comp-avatar-radius);background:var(--md-sys-color-secondary-container);display:flex;align-items:center;justify-content:center;">
-                        <span style="font-family:var(--md-sys-typescale-label-large-font);font-size:var(--md-sys-typescale-label-large-size);color:var(--md-sys-color-on-secondary-container);">J</span>
+                  <ol class="children" style="list-style:none; padding-inline-start: calc(40px + var(--space-sm)); margin-block-start: var(--space-lg); display:flex; flex-direction:column; gap:var(--space-lg);">
+                    <li id="ax-c1-r1" class="comment">
+                      <div style="display:flex; gap:var(--space-sm); align-items:flex-start;">
+                        <div class="wp-block-avatar" style="flex-shrink:0;"><div style="inline-size: 40px; block-size: 40px; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-secondary-container); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="t-label-large" style="color: var(--md-sys-color-on-secondary-container);">J</span></div></div>
+                        <div style="flex:1 1 0; min-inline-size:0; display:flex; flex-direction:column; gap:var(--space-xs);">
+                          <div style="display: flex; gap: var(--space-sm); align-items: baseline; flex-wrap: wrap;">
+                            <div class="wp-block-comment-author-name"><a href="#" style="font-weight: 500;">Ji-woon Kim</a></div>
+                            <span class="sg-badge sg-badge--ready" style="font-size: 10px;">Author</span>
+                            <div class="wp-block-comment-date"><a href="#" style="color: var(--md-sys-color-on-surface-variant); text-decoration: none;"><time datetime="2026-05-27">2026년 5월 27일 오후 3:02</time></a></div>
+                          </div>
+                          <div class="wp-block-comment-content"><p style="margin: 0;">감사합니다. surface-container 계층은 M3 spec을 충실히 따른 거고, 다만 lab 시점에 lowest까지 5단을 모두 쓰진 않습니다 — 보통 low / base / high 3단이 충분하더라고요.</p></div>
+                          <div style="display:flex; gap:var(--space-xs); align-items: center;">
+                            <div class="wp-block-comment-reply-link"><a href="#">↩ Reply</a></div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div class="wp-block-group" style="flex:1 1 0;min-inline-size:0;display:flex;flex-direction:column;gap:var(--space-xs);">
-                      <div class="wp-block-comment-date"><a href="#ax-demo-comment-2"><time datetime="2026-05-26">2026년 5월 26일</time></a></div>
-                      <div class="wp-block-comment-author-name"><a href="#">Joon</a></div>
-                      <div class="wp-block-comment-content"><p>comment-form의 outlined input이 §10 Search와 동일한 토큰을 쓰는 점도 일관성 있어 보입니다.</p></div>
-                      <div class="wp-block-group" style="display:flex;gap:var(--space-xs);">
-                        <div class="wp-block-comment-reply-link"><a href="#">Reply</a></div>
+                    </li>
+                  </ol>
+                </li>
+                <li id="ax-c2" class="comment">
+                  <div style="display:flex; gap:var(--space-sm); align-items:flex-start;">
+                    <div class="wp-block-avatar" style="flex-shrink:0;"><div style="inline-size: 40px; block-size: 40px; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-tertiary-container); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="t-label-large" style="color: var(--md-sys-color-on-tertiary-container);">S</span></div></div>
+                    <div style="flex:1 1 0; min-inline-size:0; display:flex; flex-direction:column; gap:var(--space-xs);">
+                      <div style="display: flex; gap: var(--space-sm); align-items: baseline; flex-wrap: wrap;">
+                        <div class="wp-block-comment-author-name"><a href="#" style="font-weight: 500;">Soyoung</a></div>
+                        <div class="wp-block-comment-date"><a href="#" style="color: var(--md-sys-color-on-surface-variant); text-decoration: none;"><time datetime="2026-05-26">2026년 5월 26일 오전 10:48</time></a></div>
+                      </div>
+                      <div class="wp-block-comment-content"><p style="margin: 0;">comment-form의 outlined input이 §10 Search와 동일한 토큰을 쓰는 점도 일관성 있어 보입니다. textarea도 같은 패턴인가요?</p></div>
+                      <div style="display:flex; gap:var(--space-xs); align-items: center;">
+                        <div class="wp-block-comment-reply-link"><a href="#">↩ Reply</a></div>
                         <div class="wp-block-comment-edit-link"><a href="#">Edit</a></div>
                       </div>
                     </div>
                   </div>
                 </li>
+                <li id="ax-c3" class="comment comment--pending" style="opacity: 0.85;">
+                  <div style="display:flex; gap:var(--space-sm); align-items:flex-start; padding: var(--space-sm); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-low); border-inline-start: 3px solid var(--md-sys-color-secondary);">
+                    <div class="wp-block-avatar" style="flex-shrink:0;"><div style="inline-size: 40px; block-size: 40px; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-secondary-container); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="t-label-large" style="color: var(--md-sys-color-on-secondary-container);">?</span></div></div>
+                    <div style="flex:1 1 0; min-inline-size:0; display:flex; flex-direction:column; gap:var(--space-xs);">
+                      <div style="display: flex; gap: var(--space-sm); align-items: baseline; flex-wrap: wrap;">
+                        <div class="wp-block-comment-author-name"><span style="font-weight: 500; color: var(--md-sys-color-on-surface);">Anonymous</span></div>
+                        <span class="sg-badge sg-badge--php" style="font-size: 10px;">Pending moderation</span>
+                      </div>
+                      <div class="wp-block-comment-content"><p style="margin: 0;">댓글이 관리자 승인을 기다리는 중입니다. 승인되면 표시됩니다.</p></div>
+                    </div>
+                  </div>
+                </li>
               </ol>
-              <div class="wp-block-comments-pagination" style="margin-block-start:var(--space-lg);">
-                <div class="wp-block-comments-pagination-previous"><a href="#">← Older comments</a></div>
-                <div class="wp-block-comments-pagination-next"><a href="#">Newer comments →</a></div>
+              <div class="wp-block-comments-pagination" style="margin-block-start: var(--space-lg);">
+                <nav aria-label="Comments pagination" style="display: flex; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap;">
+                  <div class="wp-block-comments-pagination-previous"><a href="#">← Older comments</a></div>
+                  <div class="wp-block-comments-pagination-next"><a href="#">Newer comments →</a></div>
+                </nav>
               </div>
             </div>
           </div>
@@ -2445,26 +2926,37 @@ console.log(greet('World'));</code></pre>
           <h3 class="t-title-medium sg-subsection__head">Comments — form (<code>core/post-comments-form</code>)</h3>
           <p class="sg-helper">Outlined pill inputs (동일 토큰: §10 Search / §18.9) + corner-medium textarea + filled primary submit. WP는 nonce, moderation, validation, AJAX submit을 소유.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/post-comments-form</span>
+            </div>
             <div class="wp-block-post-comments-form">
-              <form id="ax-demo-commentform" class="comment-form" novalidate="">
-                <p class="comment-form-comment">
-                  <label for="ax-demo-comment">Comment <span class="required">*</span></label>
-                  <textarea id="ax-demo-comment" name="comment" rows="6" required=""></textarea>
+              <p style="margin: 0 0 var(--space-md); color: var(--md-sys-color-on-surface-variant);" class="t-body-medium">이메일은 공개되지 않습니다. 필수 항목은 <span class="required" style="color: var(--md-sys-color-error);">*</span>로 표시됩니다.</p>
+              <form id="ax-demo-commentform" class="comment-form" novalidate style="display: grid; gap: var(--space-md);">
+                <p class="comment-form-comment" style="display: grid; gap: var(--space-xs); margin: 0;">
+                  <label for="ax-demo-comment" class="t-label-medium">Comment <span class="required" style="color: var(--md-sys-color-error);">*</span></label>
+                  <textarea id="ax-demo-comment" name="comment" rows="6" required placeholder="생각을 적어주세요…" style="padding: var(--space-md); border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-medium); background: transparent; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: var(--md-sys-typescale-body-large-size); line-height: var(--md-sys-typescale-body-large-line-height); resize: vertical;"></textarea>
                 </p>
-                <p class="comment-form-author">
-                  <label for="ax-demo-author">Name <span class="required">*</span></label>
-                  <input id="ax-demo-author" name="author" type="text" required="">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: var(--space-md);">
+                  <p class="comment-form-author" style="display: grid; gap: var(--space-xs); margin: 0;">
+                    <label for="ax-demo-author" class="t-label-medium">Name <span class="required" style="color: var(--md-sys-color-error);">*</span></label>
+                    <input id="ax-demo-author" name="author" type="text" required placeholder="홍길동" style="min-block-size: 48px; padding: 0 var(--space-md); border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-full); background: transparent; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: var(--md-sys-typescale-body-large-size);">
+                  </p>
+                  <p class="comment-form-email" style="display: grid; gap: var(--space-xs); margin: 0;">
+                    <label for="ax-demo-email" class="t-label-medium">Email <span class="required" style="color: var(--md-sys-color-error);">*</span></label>
+                    <input id="ax-demo-email" name="email" type="email" required placeholder="you@example.com" style="min-block-size: 48px; padding: 0 var(--space-md); border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-full); background: transparent; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: var(--md-sys-typescale-body-large-size);">
+                  </p>
+                </div>
+                <p class="comment-form-url" style="display: grid; gap: var(--space-xs); margin: 0;">
+                  <label for="ax-demo-url" class="t-label-medium">Website</label>
+                  <input id="ax-demo-url" name="url" type="url" placeholder="https://" style="min-block-size: 48px; padding: 0 var(--space-md); border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-full); background: transparent; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: var(--md-sys-typescale-body-large-size);">
                 </p>
-                <p class="comment-form-email">
-                  <label for="ax-demo-email">Email <span class="required">*</span></label>
-                  <input id="ax-demo-email" name="email" type="email" required="">
+                <p style="display: flex; gap: var(--space-sm); align-items: center; margin: 0;">
+                  <input type="checkbox" id="ax-demo-save" name="save" style="inline-size: 18px; block-size: 18px; accent-color: var(--md-sys-color-primary);">
+                  <label for="ax-demo-save" class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant);">다음에 사용할 수 있도록 이름, 이메일, 사이트 주소 저장</label>
                 </p>
-                <p class="comment-form-url">
-                  <label for="ax-demo-url">Website</label>
-                  <input id="ax-demo-url" name="url" type="url">
-                </p>
-                <p class="form-submit">
-                  <input id="ax-demo-submit" name="submit" type="submit" value="Post Comment" class="submit">
+                <p class="form-submit" style="display: flex; gap: var(--space-sm); align-items: center; margin: 0;">
+                  <input id="ax-demo-submit" name="submit" type="submit" value="Post comment" class="submit" style="min-block-size: 40px; padding: 0 var(--space-lg); border: 0; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-family: inherit; font-size: var(--md-sys-typescale-label-large-size); font-weight: var(--md-sys-typescale-label-large-weight); cursor: pointer;">
+                  <span class="t-label-small" style="color: var(--md-sys-color-on-surface-variant);">관리자 승인 후 게시됩니다.</span>
                 </p>
               </form>
             </div>

@@ -1728,86 +1728,122 @@ console.log(greet('World'));</code></pre>
       <section class="sg-section" id="blocks-button" data-screen-label="button">
         <header class="sg-section__head">
           <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--design"><span>Design</span></div>
-          <h2 class="t-headline-medium">Buttons — variants, icons, and states</h2>
+          <h2 class="t-headline-medium">Buttons — 5 style variants</h2>
           <div class="sg-status-row">
             <span class="sg-badge sg-badge--ready">Ready</span>
-            <span class="sg-badge sg-badge--php">PHP style registration</span>
             <span class="sg-badge sg-badge--source">blocks.css §9</span>
           </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
-            <code>core/button</code> + <code>is-style-{fill|tonal|elevated|outline|text}</code>. WordPress core의 <code>fill</code>/<code>outline</code> 기본 스타일을 M3 Filled/Outlined로 매핑하고, hover / focus / pressed / disabled state layer를 <code>blocks.css §9</code>에서 제공합니다.
+            <code>core/button</code> + <code>is-style-{fill|tonal|elevated|outline|text}</code>. WordPress core의 <code>fill</code>/<code>outline</code> 기본 스타일을 M3 Filled/Outlined로 매핑하고, 나머지 3개 스타일만 theme이 등록합니다.
           </p>
         </header>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Variants — label only</h3>
+          <h3 class="t-title-medium sg-subsection__head">5 style variants — label only</h3>
+          <p class="sg-helper">M3 Filled / Tonal / Elevated / Outlined / Text. <code>is-style-{fill|tonal|elevated|outline|text}</code>. WP core는 fill/outline만 등록하고 theme이 나머지 3개를 추가.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/buttons</span>
+              <span class="sg-tag">core/button</span>
+              <span class="sg-tag sg-tag--modifier">5 styles</span>
+            </div>
             <div class="wp-block-buttons">
-              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#"><span>Filled</span></a></div>
-              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#"><span>Tonal</span></a></div>
-              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#"><span>Elevated</span></a></div>
-              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#"><span>Outlined</span></a></div>
-              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" href="#"><span>Text</span></a></div>
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#">Filled</a></div>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#">Tonal</a></div>
+              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#">Elevated</a></div>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#">Outlined</a></div>
+              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" href="#">Text</a></div>
             </div>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">With leading icon</h3>
-          <p class="sg-helper">Material Symbols glyphs use the same icon scope policy as component buttons: <code>material-symbols-rounded</code>, <code>notranslate</code>, <code>translate="no"</code>, <code>aria-hidden="true"</code>.</p>
+          <h3 class="t-title-medium sg-subsection__head">Leading + trailing icons</h3>
+          <p class="sg-helper">Editor에서 inline SVG를 link 안에 직접 삽입. Theme은 icon sizing (1em)과 gap만 계약 — icon 선택은 author 결정.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag sg-tag--modifier">+ inline SVG</span>
+            </div>
             <div class="wp-block-buttons">
-              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">add</span><span>Add</span></a></div>
-              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">check</span><span>Confirm</span></a></div>
-              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">menu</span><span>Menu</span></a></div>
-              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">arrow_back</span><span>Back</span></a></div>
-              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" href="#"><span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">chat_bubble</span><span>Reply</span></a></div>
+              <div class="wp-block-button is-style-fill">
+                <a class="wp-block-button__link" href="#" style="gap: var(--space-xs);">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M5 20h14v-2H5v2zM12 2 5.3 12h13.4L12 2z"/></svg>
+                  <span>Upload</span>
+                </a>
+              </div>
+              <div class="wp-block-button is-style-tonal">
+                <a class="wp-block-button__link" href="#" style="gap: var(--space-xs);">
+                  <span>Continue</span>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6 13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg>
+                </a>
+              </div>
+              <div class="wp-block-button is-style-outline">
+                <a class="wp-block-button__link" href="#" style="gap: var(--space-xs);">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+                  <span>Add item</span>
+                </a>
+              </div>
+              <div class="wp-block-button is-style-text">
+                <a class="wp-block-button__link" href="#" style="gap: var(--space-xs);">
+                  <span>Learn more</span>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3h-7zM19 19H5V5h7V3H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z"/></svg>
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Interaction states</h3>
-          <p class="sg-helper">Static state classes mirror component behavior for visual QA. Real hover / active / focus still work through native pseudo-classes.</p>
-          <div class="sg-state-row">
-            <div class="sg-state-card">
-              <span class="t-label-small sg-demo-meta">Hover</span>
-              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link is-hovered" href="#"><span>Hover</span></a></div>
+          <h3 class="t-title-medium sg-subsection__head">Disabled state</h3>
+          <p class="sg-helper">WP는 anchor에 <code>aria-disabled="true"</code>를 부여. Theme은 0.38 opacity + <code>cursor: not-allowed</code>로 시각적 비활성화. 모든 5가지 variant에 동일 패턴.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag sg-tag--modifier">aria-disabled</span>
             </div>
-            <div class="sg-state-card">
-              <span class="t-label-small sg-demo-meta">Pressed</span>
-              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Pressed</span></a></div>
-            </div>
-            <div class="sg-state-card">
-              <span class="t-label-small sg-demo-meta">Focus visible</span>
-              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link is-focus-visible" href="#"><span>Focus</span></a></div>
+            <div class="wp-block-buttons">
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" aria-disabled="true" style="opacity: 0.38; cursor: not-allowed; pointer-events: none;">Filled</a></div>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" aria-disabled="true" style="opacity: 0.38; cursor: not-allowed; pointer-events: none;">Tonal</a></div>
+              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" aria-disabled="true" style="opacity: 0.38; cursor: not-allowed; pointer-events: none;">Elevated</a></div>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" aria-disabled="true" style="opacity: 0.38; cursor: not-allowed; pointer-events: none;">Outlined</a></div>
+              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" aria-disabled="true" style="opacity: 0.38; cursor: not-allowed; pointer-events: none;">Text</a></div>
             </div>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Toggle (4 variants — text excluded)</h3>
-          <p class="sg-helper"><code>core/button</code> is link markup, so this is a static visual contract for selected states. Interactive toggles should use the component button layer.</p>
+          <h3 class="t-title-medium sg-subsection__head">Width — 100% / 50% / 50%</h3>
+          <p class="sg-helper">WP <code>width</code> attribute로 link가 25/50/75/100% 폭으로 확장. Container/checkout/사용 시 흔한 패턴.</p>
           <div class="sg-demo">
-            <div class="wp-block-buttons">
-              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Filled</span></a></div>
-              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Tonal</span></a></div>
-              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Elevated</span></a></div>
-              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Outlined</span></a></div>
+            <div class="sg-demo-meta">
+              <span class="sg-tag sg-tag--modifier">width: 100</span>
+              <span class="sg-tag sg-tag--modifier">width: 50</span>
+            </div>
+            <div class="wp-block-buttons" style="max-inline-size: 480px;">
+              <div class="wp-block-button is-style-fill" style="flex-basis: 100%;"><a class="wp-block-button__link" href="#" style="inline-size: 100%;">결제 진행 — ₩42,000</a></div>
+              <div class="wp-block-button is-style-outline" style="flex: 1 1 calc(50% - var(--space-sm));"><a class="wp-block-button__link" href="#" style="inline-size: 100%;">취소</a></div>
+              <div class="wp-block-button is-style-tonal" style="flex: 1 1 calc(50% - var(--space-sm));"><a class="wp-block-button__link" href="#" style="inline-size: 100%;">장바구니 담기</a></div>
             </div>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Disabled (Pattern A)</h3>
-          <p class="sg-helper">Anchor output cannot use <code>disabled</code>; use <code>aria-disabled="true"</code> and remove from tab order with <code>tabindex="-1"</code>.</p>
-          <div class="sg-demo">
+          <h3 class="t-title-medium sg-subsection__head">CTA pair — in long-form context</h3>
+          <p class="sg-helper">Long-form 본문 끝의 단일 CTA 패턴. 주요 액션은 Filled + leading icon, secondary는 Text.</p>
+          <div class="sg-demo prose">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">CTA pair</span>
+            </div>
+            <h3>워크숍 안내</h3>
+            <p>이 가이드의 패턴을 직접 적용해 보고 싶다면, 2일짜리 실습 워크숍에서 같이 만들어 봅니다. 다음 회차는 6월 15–16일 부산.</p>
             <div class="wp-block-buttons">
-              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Filled</span></a></div>
-              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Tonal</span></a></div>
-              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Elevated</span></a></div>
-              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Outlined</span></a></div>
-              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" aria-disabled="true" tabindex="-1"><span>Text</span></a></div>
+              <div class="wp-block-button is-style-fill">
+                <a class="wp-block-button__link" href="#" style="gap: var(--space-xs);">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M9 19V5l11 7-11 7z"/></svg>
+                  <span>워크숍 신청</span>
+                </a>
+              </div>
+              <div class="wp-block-button is-style-text"><a class="wp-block-button__link" href="#">상세 안내</a></div>
             </div>
           </div>
         </div>

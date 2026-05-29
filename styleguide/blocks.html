@@ -789,10 +789,14 @@
       </header>
 
       <!-- ========== Paragraph ========== -->
-      <section class="sg-section" id="blocks-paragraph">
+      <section class="sg-section" id="blocks-paragraph" data-screen-label="paragraph">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">Paragraph</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §2</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             기본 출력은 <code>prose.css</code>의 typography를 따릅니다. <code>.has-drop-cap</code> 변형만 <code>blocks.css</code>가 추가합니다.
           </p>
@@ -817,10 +821,14 @@
 
 
       <!-- ========== Heading ========== -->
-      <section class="sg-section" id="blocks-heading">
+      <section class="sg-section" id="blocks-heading" data-screen-label="heading">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">Heading</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">base.css + prose.css</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             <code>core/heading</code> is already covered by v3.6.2 Tier 1 snapshots and by <code>base.css</code> semantic heading mapping. It does not require a <code>blocks.css</code> selector.
           </p>
@@ -841,10 +849,14 @@
 
 
       <!-- ========== Quote / Pullquote ========== -->
-      <section class="sg-section" id="blocks-quote">
+      <section class="sg-section" id="blocks-quote" data-screen-label="quote">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">Quote &amp; Pullquote</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §3</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             Quote는 <code>prose.css</code>의 primary-bordered blockquote을 그대로 사용. Pullquote는 <code>blocks.css</code>가 정의한 별도 스타일 — headline-medium serif italic, top/bottom dividers.
           </p>
@@ -873,10 +885,14 @@
 
 
       <!-- ========== Code / Preformatted / Verse ========== -->
-      <section class="sg-section" id="blocks-code">
+      <section class="sg-section" id="blocks-code" data-screen-label="code">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">Code / Preformatted / Poetry</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §4</span>
+          </div>
         </header>
 
         <div class="sg-subsection">
@@ -915,10 +931,14 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== List ========== -->
-      <section class="sg-section" id="blocks-list">
+      <section class="sg-section" id="blocks-list" data-screen-label="list">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">List</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">blocks.css §13</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             기본 ul/ol는 <code>base.css</code> + <code>prose.css</code>가 처리. <code>is-style-list-segmented</code>는 <code>blocks.css</code>의 Axismundi block style — surface-container 셀이 2px 간격으로 쌓이는 segmented 변형.
           </p>
@@ -1123,10 +1143,14 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Details ========== -->
-      <section class="sg-section" id="blocks-details">
+      <section class="sg-section" id="blocks-details" data-screen-label="details">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">Details</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">browser native</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             <code>core/details</code> (WP 6.4+) — <code>&lt;details class="wp-block-details"&gt;&lt;summary&gt;...&lt;/summary&gt;[inner blocks]&lt;/details&gt;</code>. 내부에 임의의 블록을 중첩할 수 있는 토글 컨테이너. Axismundi CSS 없음 — 브라우저 기본 disclosure 위젯 그대로 사용.
           </p>
@@ -1159,10 +1183,14 @@ console.log(greet('World'));</code></pre>
 
 
       <!-- ========== Footnotes ========== -->
-      <section class="sg-section" id="blocks-footnotes">
+      <section class="sg-section" id="blocks-footnotes" data-screen-label="footnotes">
         <header class="sg-section__head">
-          <div class="t-label-medium sg-section__eyebrow">Text</div>
+          <div class="t-label-medium sg-section__eyebrow sg-cat sg-cat--text"><span>Text</span></div>
           <h2 class="t-headline-medium">Footnotes</h2>
+          <div class="sg-status-row">
+            <span class="sg-badge sg-badge--ready">Ready</span>
+            <span class="sg-badge sg-badge--source">prose.css</span>
+          </div>
           <p class="t-body-medium" style="color: var(--md-sys-color-on-surface-variant); margin-block-start: var(--space-xs); max-inline-size: 64ch;">
             <code>core/footnotes</code> (WP 6.3+) — 포스트 말미에 <code>&lt;ol class="wp-block-footnotes"&gt;</code>로 렌더링. 인라인 각주 링크는 편집기가 자동 생성. <code>prose.css</code> <code>ol</code> 룰로 커버되며 별도 Axismundi CSS 없음.
           </p>

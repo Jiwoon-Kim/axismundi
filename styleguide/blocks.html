@@ -1811,6 +1811,40 @@ console.log(greet('World'));</code></pre>
         </div>
 
         <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Interaction states</h3>
+          <p class="sg-helper">Static state classes mirror component behavior for visual QA. Real hover / active / focus still work through native pseudo-classes.</p>
+          <div class="sg-state-row">
+            <div class="sg-state-card">
+              <span class="t-label-small sg-demo-meta">Hover</span>
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link is-hovered" href="#"><span>Hover</span></a></div>
+            </div>
+            <div class="sg-state-card">
+              <span class="t-label-small sg-demo-meta">Pressed</span>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Pressed</span></a></div>
+            </div>
+            <div class="sg-state-card">
+              <span class="t-label-small sg-demo-meta">Focus visible</span>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link is-focus-visible" href="#"><span>Focus</span></a></div>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Toggle (4 variants — text excluded)</h3>
+          <p class="sg-helper"><code>core/button</code> is link markup, so this is a static visual contract for selected states. Interactive toggles should use the component button layer.</p>
+          <div class="sg-demo">
+            <div class="wp-block-buttons">
+              <div class="wp-block-button is-style-fill"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Filled</span></a></div>
+              <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Tonal</span></a></div>
+              <div class="wp-block-button is-style-elevated"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Elevated</span></a></div>
+              <div class="wp-block-button is-style-outline"><a class="wp-block-button__link" href="#" aria-pressed="true"><span>Outlined</span></a></div>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="sg-subsection">
           <h3 class="t-title-medium sg-subsection__head">Width — 100% / 50% / 50%</h3>
           <p class="sg-helper">WP <code>width</code> attribute로 link가 25/50/75/100% 폭으로 확장. Container/checkout/사용 시 흔한 패턴.</p>
           <div class="sg-demo">

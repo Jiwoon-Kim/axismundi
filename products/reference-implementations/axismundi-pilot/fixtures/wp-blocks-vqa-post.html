@@ -1,0 +1,103 @@
+<!-- wp:heading {"level":1} -->
+<h1 class="wp-block-heading">Axismundi WP Blocks VQA Wall</h1>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>This post exposes WordPress core blocks and Axismundi style variations in the real Pilot theme runtime.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading --><h2 class="wp-block-heading">Text blocks</h2><!-- /wp:heading -->
+<!-- wp:paragraph --><p>Paragraph text with <strong>bold</strong>, <em>italic</em>, <a href="#">link</a>, <code>inline code</code>, and enough copy to verify line-height, rhythm, and link color.</p><!-- /wp:paragraph -->
+<!-- wp:heading {"level":1} --><h1 class="wp-block-heading">Heading H1 specimen</h1><!-- /wp:heading -->
+<!-- wp:heading --><h2 class="wp-block-heading">Heading H2 specimen</h2><!-- /wp:heading -->
+<!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Heading H3 specimen</h3><!-- /wp:heading -->
+<!-- wp:heading {"level":4} --><h4 class="wp-block-heading">Heading H4 specimen</h4><!-- /wp:heading -->
+<!-- wp:heading {"level":5} --><h5 class="wp-block-heading">Heading H5 specimen</h5><!-- /wp:heading -->
+<!-- wp:heading {"level":6} --><h6 class="wp-block-heading">Heading H6 specimen</h6><!-- /wp:heading -->
+<!-- wp:list --><ul class="wp-block-list"><li>Unordered list item</li><li>Second item with enough text to wrap onto another line for indentation checks.</li><li>Third item</li></ul><!-- /wp:list -->
+<!-- wp:list {"ordered":true} --><ol class="wp-block-list"><li>Ordered list item</li><li>Second ordered item</li><li>Third ordered item</li></ol><!-- /wp:list -->
+<!-- wp:list {"className":"is-style-list-segmented"} --><ul class="wp-block-list is-style-list-segmented"><li><input type="checkbox" checked> Completed segmented item</li><li><input type="checkbox"> Pending segmented item</li><li>Plain segmented item</li></ul><!-- /wp:list -->
+<!-- wp:quote --><blockquote class="wp-block-quote"><p>Quote block specimen with a short citation.</p><cite>Axismundi VQA</cite></blockquote><!-- /wp:quote -->
+<!-- wp:quote {"className":"is-style-plain"} --><blockquote class="wp-block-quote is-style-plain"><p>Plain quote style specimen.</p><cite>Plain Quote</cite></blockquote><!-- /wp:quote -->
+<!-- wp:pullquote --><figure class="wp-block-pullquote"><blockquote><p>Pullquote specimen for large quotation styling.</p><cite>Pullquote</cite></blockquote></figure><!-- /wp:pullquote -->
+<!-- wp:code --><pre class="wp-block-code"><code>add_theme_support( 'wp-block-styles' );</code></pre><!-- /wp:code -->
+<!-- wp:preformatted --><pre class="wp-block-preformatted">Preformatted block
+preserves spacing and line breaks.</pre><!-- /wp:preformatted -->
+<!-- wp:verse --><pre class="wp-block-verse">Verse block line one
+Verse block line two
+Verse block line three</pre><!-- /wp:verse -->
+<!-- wp:details --><details class="wp-block-details"><summary>Details default closed</summary><p>Details body content verifies disclosure spacing.</p></details><!-- /wp:details -->
+<!-- wp:details {"showContent":true} --><details class="wp-block-details" open><summary>Details open by default</summary><p>Open state content verifies block rhythm.</p></details><!-- /wp:details -->
+<!-- wp:footnotes --><ol class="wp-block-footnotes"><li id="vqa-footnote-1">Footnote specimen. <a href="#vqa-footnote-ref-1">↩︎</a></li></ol><!-- /wp:footnotes -->
+
+<!-- wp:separator {"className":"is-style-wide"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/><!-- /wp:separator -->
+<!-- wp:heading --><h2 class="wp-block-heading">Tables</h2><!-- /wp:heading -->
+<!-- wp:table --><figure class="wp-block-table"><table><thead><tr><th>Name</th><th>Role</th><th>Date</th></tr></thead><tbody><tr><td>Mina</td><td>Editor</td><td>2026-05-27</td></tr><tr><td>Joon</td><td>Author</td><td>2026-05-28</td></tr></tbody><tfoot><tr><td>Total</td><td colspan="2">2 people</td></tr></tfoot></table><figcaption>Default full-grid table with tfoot.</figcaption></figure><!-- /wp:table -->
+<!-- wp:table {"className":"is-style-row-separators"} --><figure class="wp-block-table is-style-row-separators"><table><thead><tr><th>Name</th><th>Role</th><th>Date</th></tr></thead><tbody><tr><td>Mina</td><td>Editor</td><td>2026-05-27</td></tr><tr><td>Joon</td><td>Author</td><td>2026-05-28</td></tr></tbody><tfoot><tr><td>Total</td><td colspan="2">2 people</td></tr></tfoot></table><figcaption>Row separators style.</figcaption></figure><!-- /wp:table -->
+<!-- wp:table {"className":"is-style-stripes"} --><figure class="wp-block-table is-style-stripes"><table><thead><tr><th>Plan</th><th>Seats</th><th>Status</th></tr></thead><tbody><tr><td>Starter</td><td>3</td><td>Active</td></tr><tr><td>Studio</td><td>12</td><td>Active</td></tr><tr><td>Enterprise</td><td>48</td><td>Pending</td></tr></tbody><tfoot><tr><td>Total plans</td><td colspan="2">3</td></tr></tfoot></table></figure><!-- /wp:table -->
+
+<!-- wp:separator {"className":"is-style-wide"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/><!-- /wp:separator -->
+<!-- wp:heading --><h2 class="wp-block-heading">Media blocks</h2><!-- /wp:heading -->
+<!-- wp:image {"className":"size-full"} --><figure class="wp-block-image size-full"><img src="/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp" alt="Mogu placeholder"/><figcaption>Default image.</figcaption></figure><!-- /wp:image -->
+<!-- wp:image {"className":"is-style-rounded size-full"} --><figure class="wp-block-image is-style-rounded size-full"><img src="/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp" alt="Rounded Mogu placeholder"/></figure><!-- /wp:image -->
+<!-- wp:gallery {"columns":3,"linkTo":"none"} --><figure class="wp-block-gallery has-nested-images columns-3 is-cropped"><!-- wp:image --><figure class="wp-block-image"><img src="/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp" alt="Gallery 1"/></figure><!-- /wp:image --><!-- wp:image --><figure class="wp-block-image"><img src="/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp" alt="Gallery 2"/></figure><!-- /wp:image --><!-- wp:image --><figure class="wp-block-image"><img src="/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp" alt="Gallery 3"/></figure><!-- /wp:image --></figure><!-- /wp:gallery -->
+<!-- wp:cover {"url":"/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp","dimRatio":40,"minHeight":220,"isDark":false} --><div class="wp-block-cover is-light" style="min-height:220px"><span aria-hidden="true" class="wp-block-cover__background has-background-dim-40 has-background-dim"></span><img class="wp-block-cover__image-background" alt="" src="/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp" data-object-fit="cover"/><div class="wp-block-cover__inner-container"><!-- wp:paragraph {"align":"center","fontSize":"large"} --><p class="has-text-align-center has-large-font-size">Cover block specimen</p><!-- /wp:paragraph --></div></div><!-- /wp:cover -->
+<!-- wp:media-text {"mediaPosition":"left","mediaType":"image","mediaUrl":"/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp"} --><div class="wp-block-media-text is-stacked-on-mobile"><figure class="wp-block-media-text__media"><img src="/wp-content/themes/axismundi-pilot/assets/media/image/image-placeholder-mogu-1024.webp" alt="Media text"/></figure><div class="wp-block-media-text__content"><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Media &amp; Text</h3><!-- /wp:heading --><!-- wp:paragraph --><p>Media-text specimen for responsive layout checks.</p><!-- /wp:paragraph --></div></div><!-- /wp:media-text -->
+<!-- wp:video --><figure class="wp-block-video"><video controls src="/wp-content/themes/axismundi-pilot/assets/media/video/video-placeholder-gwangan-720p.webm"><track kind="subtitles" src="/wp-content/themes/axismundi-pilot/assets/media/video/video-placeholder-gwangan-720p.ko.vtt" srclang="ko" label="한국어" default><track kind="subtitles" src="/wp-content/themes/axismundi-pilot/assets/media/video/video-placeholder-gwangan-720p.en.vtt" srclang="en" label="English"></video><figcaption>Video with text tracks.</figcaption></figure><!-- /wp:video -->
+<!-- wp:audio --><figure class="wp-block-audio"><audio controls src="/wp-content/themes/axismundi-pilot/assets/media/audio/audio-placeholder-jazzy-lofi.mp3"></audio><figcaption>Audio block specimen.</figcaption></figure><!-- /wp:audio -->
+<!-- wp:file {"href":"#"} --><div class="wp-block-file"><a href="#">Example file.pdf</a><a href="#" class="wp-block-file__button wp-element-button" download>Download</a></div><!-- /wp:file -->
+
+<!-- wp:separator {"className":"is-style-wide"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/><!-- /wp:separator -->
+<!-- wp:heading --><h2 class="wp-block-heading">Design blocks</h2><!-- /wp:heading -->
+<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Filled</a></div><!-- /wp:button --><!-- wp:button {"className":"is-style-outline"} --><div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#">Outlined</a></div><!-- /wp:button --><!-- wp:button {"className":"is-style-tonal"} --><div class="wp-block-button is-style-tonal"><a class="wp-block-button__link wp-element-button" href="#">Tonal</a></div><!-- /wp:button --><!-- wp:button {"className":"is-style-elevated"} --><div class="wp-block-button is-style-elevated"><a class="wp-block-button__link wp-element-button" href="#">Elevated</a></div><!-- /wp:button --><!-- wp:button {"className":"is-style-text"} --><div class="wp-block-button is-style-text"><a class="wp-block-button__link wp-element-button" href="#">Text</a></div><!-- /wp:button --></div><!-- /wp:buttons -->
+<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" aria-pressed="true" href="#">Pressed</a></div><!-- /wp:button --><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" aria-disabled="true" href="#">Disabled</a></div><!-- /wp:button --></div><!-- /wp:buttons -->
+<!-- wp:separator --><hr class="wp-block-separator has-alpha-channel-opacity"/><!-- /wp:separator -->
+<!-- wp:separator {"className":"is-style-dots"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-dots"/><!-- /wp:separator -->
+<!-- wp:separator {"className":"is-style-divider-inset"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-divider-inset"/><!-- /wp:separator -->
+<!-- wp:separator {"className":"is-style-divider-middle-inset"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-divider-middle-inset"/><!-- /wp:separator -->
+<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><p>Column one</p></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><p>Column two</p></div><!-- /wp:column --></div><!-- /wp:columns -->
+<!-- wp:group {"className":"is-style-card-filled","layout":{"type":"constrained"}} --><div class="wp-block-group is-style-card-filled"><!-- wp:paragraph --><p>Card filled group.</p><!-- /wp:paragraph --></div><!-- /wp:group -->
+<!-- wp:group {"className":"is-style-card-elevated","layout":{"type":"constrained"}} --><div class="wp-block-group is-style-card-elevated"><!-- wp:paragraph --><p>Card elevated group.</p><!-- /wp:paragraph --></div><!-- /wp:group -->
+<!-- wp:group {"className":"is-style-card-outlined","layout":{"type":"constrained"}} --><div class="wp-block-group is-style-card-outlined"><!-- wp:paragraph --><p>Card outlined group.</p><!-- /wp:paragraph --></div><!-- /wp:group -->
+<!-- wp:accordion --><div class="wp-block-accordion"><!-- wp:accordion-item --><div class="wp-block-accordion-item is-open"><h3 class="wp-block-accordion-heading"><button class="wp-block-accordion-heading__toggle">Accordion item open<span class="wp-block-accordion-heading__toggle-icon">⌄</span></button></h3><div class="wp-block-accordion-panel"><p>Accordion panel content.</p></div></div><!-- /wp:accordion-item --><!-- wp:accordion-item --><div class="wp-block-accordion-item"><h3 class="wp-block-accordion-heading"><button class="wp-block-accordion-heading__toggle">Accordion item closed<span class="wp-block-accordion-heading__toggle-icon">⌄</span></button></h3><div class="wp-block-accordion-panel"><p>Closed panel content.</p></div></div><!-- /wp:accordion-item --></div><!-- /wp:accordion -->
+
+<!-- wp:separator {"className":"is-style-wide"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/><!-- /wp:separator -->
+<!-- wp:heading --><h2 class="wp-block-heading">Search blocks</h2><!-- /wp:heading -->
+<!-- wp:search {"label":"Search outside","showLabel":true,"placeholder":"Search outside…","buttonText":"Search","buttonPosition":"button-outside"} /-->
+<!-- wp:search {"label":"Search inside","showLabel":false,"placeholder":"Search inside…","buttonText":"Search","buttonPosition":"button-inside"} /-->
+<!-- wp:search {"label":"Search no button","showLabel":false,"placeholder":"Search no button…","buttonPosition":"no-button"} /-->
+<!-- wp:search {"label":"Search icon only","showLabel":false,"buttonUseIcon":true,"buttonPosition":"button-only"} /-->
+<!-- wp:search {"label":"Filled search","showLabel":false,"placeholder":"Filled inside…","buttonUseIcon":true,"buttonPosition":"button-inside","className":"is-style-filled-search"} /-->
+<!-- wp:search {"label":"Filled outside","showLabel":false,"placeholder":"Filled outside…","buttonText":"Search","buttonPosition":"button-outside","className":"is-style-filled-search"} /-->
+<!-- wp:search {"label":"Filled no button","showLabel":false,"placeholder":"Filled no button…","buttonPosition":"no-button","className":"is-style-filled-search"} /-->
+
+<!-- wp:separator {"className":"is-style-wide"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/><!-- /wp:separator -->
+<!-- wp:heading --><h2 class="wp-block-heading">Widget blocks</h2><!-- /wp:heading -->
+<!-- wp:social-links --><ul class="wp-block-social-links"><!-- wp:social-link {"url":"#","service":"wordpress"} /--><!-- wp:social-link {"url":"#","service":"github"} /--><!-- wp:social-link {"url":"#","service":"youtube"} /--></ul><!-- /wp:social-links -->
+<!-- wp:social-links {"className":"is-style-logos-only"} --><ul class="wp-block-social-links is-style-logos-only"><!-- wp:social-link {"url":"#","service":"wordpress"} /--><!-- wp:social-link {"url":"#","service":"github"} /--></ul><!-- /wp:social-links -->
+<!-- wp:social-links {"className":"is-style-pill-shape"} --><ul class="wp-block-social-links is-style-pill-shape"><!-- wp:social-link {"url":"#","service":"wordpress"} /--><!-- wp:social-link {"url":"#","service":"github"} /--></ul><!-- /wp:social-links -->
+<!-- wp:tag-cloud {"showTagCounts":true} /-->
+<!-- wp:tag-cloud {"showTagCounts":true,"className":"is-style-outline"} /-->
+<!-- wp:latest-posts {"postsToShow":5,"displayPostDate":true,"displayAuthor":true,"displayFeaturedImage":true,"featuredImageSizeSlug":"thumbnail","addLinkToFeaturedImage":true} /-->
+<!-- wp:archives {"showPostCounts":true} /-->
+<!-- wp:categories {"showPostCounts":true,"showHierarchy":true} /-->
+<!-- wp:page-list /-->
+<!-- wp:latest-comments {"commentsToShow":3,"displayDate":true,"displayExcerpt":true} /-->
+
+<!-- wp:separator {"className":"is-style-wide"} --><hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/><!-- /wp:separator -->
+<!-- wp:heading --><h2 class="wp-block-heading">Theme blocks</h2><!-- /wp:heading -->
+<!-- wp:site-logo {"width":64} /-->
+<!-- wp:site-title /-->
+<!-- wp:site-tagline /-->
+<!-- wp:post-title {"level":3,"isLink":true} /-->
+<!-- wp:post-date {"isLink":true} /-->
+<!-- wp:post-author-name {"isLink":true} /-->
+<!-- wp:avatar {"size":48} /-->
+<!-- wp:post-excerpt {"moreText":"Continue reading"} /-->
+<!-- wp:post-terms {"term":"category","prefix":"Categories: "} /-->
+<!-- wp:post-time-to-read /-->
+<!-- wp:navigation {"overlayMenu":"never"} --><!-- wp:navigation-link {"label":"Home","url":"#"} /--><!-- wp:navigation-link {"label":"Blog","url":"#"} /--><!-- wp:navigation-link {"label":"About","url":"#"} /--><!-- /wp:navigation -->
+<!-- wp:query {"query":{"perPage":3,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false}} --><div class="wp-block-query"><!-- wp:post-template --><!-- wp:post-featured-image {"isLink":true,"aspectRatio":"3/2"} /--><!-- wp:post-title {"isLink":true,"level":3} /--><!-- wp:post-date /--><!-- wp:post-excerpt {"moreText":"Read more"} /--><!-- /wp:post-template --><!-- wp:query-pagination --><!-- wp:query-pagination-previous /--><!-- wp:query-pagination-numbers /--><!-- wp:query-pagination-next /--><!-- /wp:query-pagination --></div><!-- /wp:query -->
+<!-- wp:post-navigation-link {"type":"previous","showTitle":true} /-->
+<!-- wp:post-navigation-link {"type":"next","showTitle":true} /-->
+<!-- wp:comments --><div class="wp-block-comments"><!-- wp:comments-title /--><!-- wp:comment-template --><!-- wp:columns --><div class="wp-block-columns"><!-- wp:column {"width":"48px"} --><div class="wp-block-column" style="flex-basis:48px"><!-- wp:avatar {"size":48} /--></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:comment-author-name /--><!-- wp:comment-date /--><!-- wp:comment-content /--><!-- wp:comment-reply-link /--></div><!-- /wp:column --></div><!-- /wp:columns --><!-- /wp:comment-template --><!-- wp:comments-pagination --><!-- wp:comments-pagination-previous /--><!-- wp:comments-pagination-next /--><!-- /wp:comments-pagination --><!-- wp:post-comments-form /--></div><!-- /wp:comments -->

@@ -31,6 +31,7 @@ PILOT_STYLES = PILOT_ASSETS / "styles"
 PILOT_SCRIPTS = PILOT_ASSETS / "scripts"
 PILOT_FONTS = PILOT_ASSETS / "fonts"
 PILOT_ICONS = PILOT_ASSETS / "icons"
+PILOT_MEDIA = PILOT_ASSETS / "media"
 
 STYLE_ORDER = (
     "fonts.css",
@@ -172,12 +173,14 @@ def main() -> int:
     script_count = copy_scripts()
     font_count = copy_asset_tree(M3_ASSETS / "fonts", PILOT_FONTS)
     icon_count = copy_asset_tree(M3_ASSETS / "icons", PILOT_ICONS)
+    media_count = copy_asset_tree(ROOT / "assets/media", PILOT_MEDIA)
     assert_rewrites()
 
     print(f"  ✓ assets/styles/ ({style_count} files)")
     print(f"  ✓ assets/scripts/ ({script_count} files)")
     print(f"  ✓ assets/fonts/  ({font_count} files)")
     print(f"  ✓ assets/icons/  ({icon_count} files)")
+    print(f"  ✓ assets/media/  ({media_count} files)")
     print("  ✓ fonts.css paths rewritten to Pilot-local assets")
     print("\nDone.")
     return 0

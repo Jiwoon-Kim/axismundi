@@ -902,6 +902,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
   border: 0;
   border-radius: var(--comp-button-radius);
   background-color: var(--md-sys-color-secondary-container);
@@ -912,7 +914,51 @@
   font-size: var(--md-sys-typescale-label-large-size);
   line-height: var(--md-sys-typescale-label-large-line-height);
   font-weight: var(--md-sys-typescale-label-large-weight);
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
   cursor: pointer;
+  transition:
+    border-radius
+      var(--md-sys-motion-curve-fast-spatial-duration)
+      var(--md-sys-motion-curve-fast-spatial),
+    box-shadow
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+.wp-block-search__button:hover {
+  text-decoration: none;
+}
+
+.wp-block-search__button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity
+      var(--md-sys-motion-curve-fast-effects-duration)
+      var(--md-sys-motion-curve-fast-effects);
+}
+
+.wp-block-search__button:hover::after {
+  opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+
+.wp-block-search__button:focus-visible::after {
+  opacity: var(--md-sys-state-focus-state-layer-opacity);
+}
+
+.wp-block-search__button:active {
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.wp-block-search__button:active::after {
+  opacity: var(--md-sys-state-pressed-state-layer-opacity);
 }
 
 /* ---- 10.4 Icon button (has-icon) ---- */

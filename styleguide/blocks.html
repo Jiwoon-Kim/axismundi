@@ -620,10 +620,13 @@
       align-items: center;
       color: var(--md-sys-color-on-surface-variant);
     }
-    .ax-search-bar__leading svg {
+    .ax-search-bar__leading svg,
+    .ax-search-bar__leading .material-symbols-rounded {
       inline-size: 22px;
       block-size: 22px;
+      font-size: 22px;
       fill: currentColor;
+      line-height: 1;
     }
     .ax-search-bar__input {
       flex: 1 1 auto;
@@ -659,10 +662,13 @@
     .ax-search-bar__icon-btn:hover {
       background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
     }
-    .ax-search-bar__icon-btn svg {
+    .ax-search-bar__icon-btn svg,
+    .ax-search-bar__icon-btn .material-symbols-rounded {
       inline-size: 20px;
       block-size: 20px;
+      font-size: 20px;
       fill: currentColor;
+      line-height: 1;
     }
     .ax-search-bar__avatar {
       inline-size: 32px;
@@ -2093,7 +2099,7 @@ console.log(greet('World'));</code></pre>
                   <div class="wp-block-search__inside-wrapper">
                     <input class="wp-block-search__input" type="search" value="design tokens" aria-label="Search">
                     <button class="wp-block-search__button has-icon wp-element-button" type="button" aria-label="Clear" style="background: transparent; color: var(--md-sys-color-on-surface-variant);">
-                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
                 </button>
                     <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
                   <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
@@ -2201,6 +2207,126 @@ console.log(greet('World'));</code></pre>
                 </div>
               </form>
             </section>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h4 class="t-title-small sg-subsection__head">D.4 Header bar — center-anchored</h4>
+          <p class="sg-helper">3-col grid header의 가운데 슬롯. Site logo · search · CTA 순.</p>
+          <div class="sg-demo" style="max-inline-size: none;">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">site header</span>
+            </div>
+            <header style="display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-lg); align-items: center; padding: var(--space-sm) var(--space-lg); background: var(--md-sys-color-surface-container-low); border-radius: var(--md-sys-shape-corner-medium);">
+              <div class="t-title-large">Axismundi</div>
+              <form class="wp-block-search wp-block-search__button-inside sg-skin sg-skin--filled-pill" role="search" style="max-inline-size: 480px; justify-self: center; inline-size: 100%;">
+                <label class="wp-block-search__label screen-reader-text">Search</label>
+                <div class="wp-block-search__inside-wrapper">
+                  <input class="wp-block-search__input" type="search" placeholder="Search posts, pages, components" aria-label="Search">
+                  <button class="wp-block-search__button has-icon wp-element-button" type="submit" aria-label="Search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+                </button>
+                </div>
+              </form>
+              <nav style="display: flex; gap: var(--space-md); align-items: center;">
+                <a href="#" class="t-label-large" style="color: var(--md-sys-color-on-surface); text-decoration: none;">Blog</a>
+                <div class="wp-block-button is-style-tonal"><a class="wp-block-button__link" href="#">Sign in</a></div>
+              </nav>
+            </header>
+          </div>
+        </div>
+
+        <!-- ===== Section E: M3 Search Bar (separate component) ===== -->
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">E. M3 Search Bar — separate Axismundi component (NOT core/search)</h3>
+          <div class="sg-callout">
+            <span class="sg-callout__icon" aria-hidden="true">!</span>
+            <div>
+              <p class="t-body-medium"><strong>M3 Search Bar는 <code>core/search</code>로 매핑하지 않습니다.</strong> 형태는 비슷하지만 의도가 다릅니다 — Search Bar는 <em>컴포넌트</em>, core/search는 <em>폼</em>.</p>
+              <p class="t-body-small">M3 Search Bar = leading 아이콘 + 입력 + (선택) trailing 액션, submit 버튼 없음, focus 시 Search View로 expand. core/search는 별도 polish가 필요한 form. 워드프레스에서 M3 Search Bar 패턴을 쓰려면 <code>register_block_type()</code>으로 custom block을 만들거나, pattern으로 hardcoded하는 식이 자연스럽습니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h4 class="t-title-small sg-subsection__head">E.1 Default — leading icon · placeholder</h4>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">ax/search-bar</span>
+              <span class="sg-tag sg-tag--modifier">custom block</span>
+            </div>
+            <div class="ax-search-bar" role="search">
+              <span class="ax-search-bar__leading material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+              <input class="ax-search-bar__input" type="search" placeholder="Search components, blocks, and prose" aria-label="Search">
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h4 class="t-title-small sg-subsection__head">E.2 With trailing actions — voice · avatar</h4>
+          <p class="sg-helper">M3 Search Bar의 흔한 변형. 우측 슬롯에 마이크 / 필터 / 사용자 아바타 같은 부수 액션. submit 버튼은 없음 (Enter로 제출, 또는 expand 후 결과 즉시 표시).</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">ax/search-bar</span>
+              <span class="sg-tag sg-tag--modifier">trailing actions</span>
+            </div>
+            <div class="ax-search-bar" role="search">
+              <span class="ax-search-bar__leading material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+              <input class="ax-search-bar__input" type="search" placeholder="Search…" aria-label="Search">
+              <div class="ax-search-bar__trailing">
+                <button class="ax-search-bar__icon-btn" type="button" aria-label="Voice search">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">mic</span>
+                </button>
+                <span class="ax-search-bar__avatar" aria-label="Account"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h4 class="t-title-small sg-subsection__head">E.3 With value · clear · filter</h4>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">ax/search-bar</span>
+              <span class="sg-tag sg-tag--modifier">filled value</span>
+            </div>
+            <div class="ax-search-bar" role="search">
+              <span class="ax-search-bar__leading material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">search</span>
+              <input class="ax-search-bar__input" type="search" value="design tokens material 3" aria-label="Search">
+              <div class="ax-search-bar__trailing">
+                <button class="ax-search-bar__icon-btn" type="button" aria-label="Clear">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">close</span>
+                </button>
+                <button class="ax-search-bar__icon-btn" type="button" aria-label="Filters">
+                  <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true" draggable="false">tune</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Migration note ===== -->
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Migration notes — v1.2</h3>
+          <div class="sg-demo sg-demo--gaps">
+            <ul class="sg-gap-list">
+              <li class="sg-gap-row">
+                <span class="sg-gap-row__name">v1.1 → v1.2</span>
+                <span class="sg-gap-row__why"><code>is-style-filled-search</code> 는 "M3 Search Bar 모방" 위치에서 "filled · pill aesthetic skin" 위치로 강등. M3 Search Bar 자체는 별도 컴포넌트 <code>ax/search-bar</code>로 분리.</span>
+              </li>
+              <li class="sg-gap-row">
+                <span class="sg-gap-row__name">core/search vs ax/search-bar</span>
+                <span class="sg-gap-row__why">core/search는 form (label + input + submit). ax/search-bar는 component (leading icon + input + trailing actions, no submit). 두 추상화를 강제로 합치지 않습니다.</span>
+              </li>
+              <li class="sg-gap-row">
+                <span class="sg-gap-row__name">States</span>
+                <span class="sg-gap-row__why">focus / typed (with clear) / loading (with spinner) / disabled — WP가 다루지 않는 4가지 state를 theme이 명시.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
 
       <!-- ========== Widget lists ========== -->

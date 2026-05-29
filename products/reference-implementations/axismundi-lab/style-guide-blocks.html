@@ -1221,24 +1221,108 @@ console.log(greet('World'));</code></pre>
         </header>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Post Terms (<code>core/post-terms</code>, WP 5.8+)</h3>
-          <p class="sg-helper">포스트에 연결된 taxonomy term을 chip row로 렌더. <code>.wp-block-post-terms__separator</code>는 <code>display: none</code>으로 숨김 — chip 간 gap이 대신함.</p>
+          <h3 class="t-title-medium sg-subsection__head">Post Terms — bare list</h3>
+          <p class="sg-helper">기본 출력. Taxonomy term을 chip row로. <code>__separator</code>는 hidden, gap이 spacing 담당.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/post-terms</span>
+            </div>
             <div class="wp-block-post-terms">
               <a href="#">디자인 시스템</a>
               <span class="wp-block-post-terms__separator">, </span>
               <a href="#">Material 3</a>
               <span class="wp-block-post-terms__separator">, </span>
               <a href="#">WordPress</a>
+              <span class="wp-block-post-terms__separator">, </span>
+              <a href="#">Pilot</a>
+              <span class="wp-block-post-terms__separator">, </span>
+              <a href="#">Tokens</a>
             </div>
           </div>
         </div>
 
         <div class="sg-subsection">
-          <h3 class="t-title-medium sg-subsection__head">Time to Read (<code>core/post-time-to-read</code>, WP 6.4+)</h3>
-          <p class="sg-helper">추정 읽기 시간 텍스트. <code>::before</code>로 <code>schedule</code> Material Symbol 주입 — theme chrome 스코프 내 사용.</p>
+          <h3 class="t-title-medium sg-subsection__head">Post Terms — prefixed label</h3>
+          <p class="sg-helper">WP <code>prefix</code> attribute. Term group 앞에 "Categories: " 등 라벨이 prepend. Theme은 라벨에 label-medium tone 적용.</p>
           <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/post-terms</span>
+              <span class="sg-tag sg-tag--modifier">prefix</span>
+            </div>
+            <div class="wp-block-post-terms" style="gap: var(--space-sm);">
+              <span class="wp-block-post-terms__prefix t-label-medium" style="color: var(--md-sys-color-on-surface-variant);">Categories:</span>
+              <a href="#">Design</a>
+              <span class="wp-block-post-terms__separator">, </span>
+              <a href="#">Engineering</a>
+              <span class="wp-block-post-terms__separator">, </span>
+              <a href="#">Strategy</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">Time to Read</h3>
+          <p class="sg-helper">추정 읽기 시간 텍스트. <code>::before</code>로 <code>schedule</code> Material Symbol 주입 — theme chrome 스코프.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">core/post-time-to-read</span>
+            </div>
             <p class="wp-block-post-time-to-read">5 minute read</p>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">In post header — meta row composition</h3>
+          <p class="sg-helper">Title 하위의 metadata row. Date · Time-to-Read · Terms 조합. WP는 각 블록을 개별로 emit하므로 row 컴포지션은 theme의 책임.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">post header</span>
+            </div>
+            <article style="display: grid; gap: var(--space-sm);">
+              <h2 class="wp-block-post-title t-headline-small" style="margin: 0;">
+                <a href="#" style="color: inherit; text-decoration: none;">디자인 시스템과 워드프레스: 결합의 다섯 가지 방법</a>
+              </h2>
+              <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center;">
+                <div class="wp-block-post-date" style="margin: 0;"><time datetime="2026-05-27">2026년 5월 27일</time></div>
+                <span aria-hidden="true" style="color: var(--md-sys-color-outline-variant);">·</span>
+                <p class="wp-block-post-time-to-read" style="margin: 0;">5 minute read</p>
+                <span aria-hidden="true" style="color: var(--md-sys-color-outline-variant);">·</span>
+                <div class="wp-block-post-author-name" style="display: inline-flex;"><a href="#">Ji-woon Kim</a></div>
+              </div>
+              <div class="wp-block-post-terms">
+                <a href="#">디자인 시스템</a>
+                <span class="wp-block-post-terms__separator">, </span>
+                <a href="#">Material 3</a>
+                <span class="wp-block-post-terms__separator">, </span>
+                <a href="#">WordPress</a>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="sg-subsection">
+          <h3 class="t-title-medium sg-subsection__head">In post footer — tag row</h3>
+          <p class="sg-helper">Long-form 본문 끝에 놓이는 tag row 패턴. 본문과 distinct하게 surface-container 위에 chip.</p>
+          <div class="sg-demo">
+            <div class="sg-demo-meta">
+              <span class="sg-tag">composition</span>
+              <span class="sg-tag sg-tag--modifier">post footer</span>
+            </div>
+            <footer style="padding: var(--space-md); border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-low); display: grid; gap: var(--space-sm);">
+              <div class="t-label-medium" style="color: var(--md-sys-color-on-surface-variant);">Tagged in</div>
+              <div class="wp-block-post-terms">
+                <a href="#">Material 3</a>
+                <span class="wp-block-post-terms__separator">, </span>
+                <a href="#">Tokens</a>
+                <span class="wp-block-post-terms__separator">, </span>
+                <a href="#">M3 expressive</a>
+                <span class="wp-block-post-terms__separator">, </span>
+                <a href="#">Theme.json</a>
+                <span class="wp-block-post-terms__separator">, </span>
+                <a href="#">Block themes</a>
+              </div>
+            </footer>
           </div>
         </div>
       </section>

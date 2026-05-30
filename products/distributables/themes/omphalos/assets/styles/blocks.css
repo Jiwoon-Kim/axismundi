@@ -26,6 +26,24 @@
  * ============================================================ */
 
 /* ============================================================
+ * §0 core/image — corner radius variations
+ *
+ * prose.css §8 gives every post-content image the default medium radius. This
+ * section adds the two style variations on top:
+ *   - is-style-rounded   (core-provided)  -> corner-full
+ *   - is-style-no-rounding (theme-owned)  -> corner-none (M3 corner scale `none`)
+ * Both target the <img>, not the figure, so the caption is unaffected. Lives in
+ * blocks.css which is enqueued for the editor canvas too, so the variations
+ * preview correctly in the editor (front + editor parity).
+ * ============================================================ */
+.wp-block-post-content .wp-block-image.is-style-rounded img {
+  border-radius: var(--md-sys-shape-corner-full);
+}
+.wp-block-post-content .wp-block-image.is-style-no-rounding img {
+  border-radius: var(--md-sys-shape-corner-none);
+}
+
+/* ============================================================
  * §1 core/paragraph — drop cap
  *
  * Drop cap is owned by core/paragraph, not the theme: WordPress ships

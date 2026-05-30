@@ -128,6 +128,16 @@ function omphalos_register_block_styles() : void {
 			'label' => __( 'Segmented list', 'omphalos' ),
 		)
 	);
+	// core/image ships Default + Rounded itself. Add a "No rounding" option so
+	// the M3 corner scale's `none` is selectable without killing the default
+	// medium radius. CSS for all three is in blocks.css §1.
+	register_block_style(
+		'core/image',
+		array(
+			'name'  => 'no-rounding',
+			'label' => __( 'No rounding', 'omphalos' ),
+		)
+	);
 }
 add_action( 'init', 'omphalos_register_block_styles' );
 

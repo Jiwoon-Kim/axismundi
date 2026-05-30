@@ -169,6 +169,11 @@
 :is(.wp-block-post-content, .prose) li > input[type="checkbox"]:first-child {
   margin-inline-end: var(--space-xs);
   vertical-align: -2px;
+  /* Keep the native checkbox — a Markdown task list is document content, not
+   * an interactive form control, so the .ax-checkbox component contract (with
+   * its own visual/label spans, state layer, focus ring) does not apply here.
+   * Just tint the native control to the theme primary. */
+  accent-color: var(--md-sys-color-primary);
 }
 /* Definition lists */
 :is(.wp-block-post-content, .prose) dt { font-weight: var(--md-ref-typeface-weight-medium); }

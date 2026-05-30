@@ -12,9 +12,7 @@
  */
 ?>
 <!-- wp:html -->
-<article class="prose">
-
-	<h1 id="article-title">한글 본문과 영문이 섞인 글의 typography</h1>
+<h1 id="article-title">한글 본문과 영문이 섞인 글의 typography</h1>
 
 	<p>이 페이지는 <code>prose.css</code>의 모든 케이스를 한 페이지에서 검증합니다. <strong>한글</strong>과 영문이 자연스럽게 섞여있을 때 mixed-script line-height parity가 어떻게 작동하는지, blockquote / code / table / image / figure / list / heading anchor 같은 요소가 vertical rhythm을 어떻게 따라가는지 직접 확인할 수 있습니다.</p>
 
@@ -107,15 +105,15 @@ function open() {
 
 	<h2 id="tables">표</h2>
 
-	<p>표는 <code>.table-wrapper</code> 또는 <code>&lt;figure&gt;</code> 안에 넣어 가로 overflow를 처리합니다. wrapper가 outer border + radius를 그리고, table 자체는 안쪽 cell 스타일만 담당.</p>
+	<p>표는 wrapper div 없이 raw <code>&lt;figure&gt;</code> + <code>&lt;table&gt;</code> 구조 그대로 둡니다. 좁은 viewport에서 가로 overflow가 어떻게 처리되는지, <code>thead</code> / <code>tbody</code> / <code>tfoot</code> / <code>figcaption</code>이 vertical rhythm을 따르는지 직접 검증합니다.</p>
 
-	<div class="table-wrapper">
+	<figure>
 		<table>
 			<thead>
 				<tr>
 					<th>토큰</th>
 					<th>값</th>
-					<th>용도</th>
+					<th>용도 (long-form description to force horizontal overflow on narrow viewports)</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -145,8 +143,16 @@ function open() {
 					<td>section 사이 spacing, heading 위 간격</td>
 				</tr>
 			</tbody>
+			<tfoot>
+				<tr>
+					<td>요약</td>
+					<td>—</td>
+					<td>5개 spacing 토큰 — xs 4px 부터 xl 32px 까지</td>
+				</tr>
+			</tfoot>
 		</table>
-	</div>
+		<figcaption>Table 1. Spacing 토큰 스케일 — tfoot 합계 행 + figcaption 포함.</figcaption>
+	</figure>
 
 	<h2 id="images-figures">이미지 &amp; figure</h2>
 
@@ -197,6 +203,4 @@ function open() {
 	</ol>
 
 	<p>문제가 보이면 다음 chat에서 spot-fix.</p>
-
-</article>
 <!-- /wp:html -->

@@ -182,16 +182,27 @@
  * in light mode (≈surface) but a bright band in dark mode. So target the row at
  * the same level core does, and use surface for the "base" rows so nothing
  * shows through. */
+/* core also puts a literal `border-bottom: 1px solid #f0f0f0` on the FIGURE for
+ * the stripes style — a bright line under the table in dark mode. Reset it; the
+ * table element keeps the M3 outer frame. */
+.wp-block-post-content .wp-block-table.is-style-stripes {
+  border-block-end: 0;
+}
 .wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) {
   background-color: var(--md-sys-color-surface);
 }
 .wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(even) {
   background-color: var(--md-sys-color-surface-container-high);
 }
-.wp-block-post-content .wp-block-table.is-style-stripes :is(th, td) {
+/* Cell reset is limited to tbody/tfoot — thead must KEEP its header tint and
+ * is not part of the zebra. (A blanket :is(th,td) reset would blank the head.) */
+.wp-block-post-content .wp-block-table.is-style-stripes :is(tbody, tfoot) :is(th, td) {
   background-color: transparent;   /* let the row tone show; no per-cell paint */
   border-block-end: 0;
   border-inline-end: 0;
+}
+.wp-block-post-content .wp-block-table.is-style-stripes thead :is(th, td) {
+  background-color: var(--md-sys-color-surface-container-high);
 }
 
 /* ============================================================

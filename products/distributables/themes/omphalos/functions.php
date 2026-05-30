@@ -51,6 +51,7 @@ function omphalos_setup() : void {
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.sys.core.css' ) ? 'assets/styles/tokens.sys.core.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.comp.css' ) ? 'assets/styles/tokens.comp.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.sys.dark.css' ) ? 'assets/styles/tokens.sys.dark.css' : null,
+				file_exists( get_stylesheet_directory() . '/assets/styles/prose.css' ) ? 'assets/styles/prose.css' : null,
 			)
 		)
 	);
@@ -68,14 +69,20 @@ add_action( 'after_setup_theme', 'omphalos_setup' );
  * themes; this layers the Axismundi token + style cascade on top.
  */
 function omphalos_enqueue_assets() : void {
-	// Canonical Axismundi token load order:
-	// ref -> sys.light -> sys.core -> comp -> sys.dark.
+	// Token layers, then the scoped style layer. In an FSE child theme the
+	// global element baseline (html/body/headings/links) is owned by WordPress
+	// core + theme.json + the parent theme, so the lab's global base.css reset
+	// is intentionally NOT loaded. prose.css re-contracts that prose layer for
+	// FSE: it is scoped to the long-form surfaces (.prose and
+	// .wp-block-post-content) only and consumes token vars, so it never leaks
+	// into UI chrome. blocks.css / components.css land in Phase 8.
 	$styles = array(
 		'omphalos-tokens-ref'       => array( 'assets/styles/tokens.ref.css', array() ),
 		'omphalos-tokens-sys-light' => array( 'assets/styles/tokens.sys.light.css', array( 'omphalos-tokens-ref' ) ),
 		'omphalos-tokens-sys-core'  => array( 'assets/styles/tokens.sys.core.css', array( 'omphalos-tokens-sys-light' ) ),
 		'omphalos-tokens-comp'      => array( 'assets/styles/tokens.comp.css', array( 'omphalos-tokens-sys-core' ) ),
 		'omphalos-tokens-sys-dark'  => array( 'assets/styles/tokens.sys.dark.css', array( 'omphalos-tokens-comp' ) ),
+		'omphalos-prose'            => array( 'assets/styles/prose.css', array( 'omphalos-tokens-sys-dark' ) ),
 	);
 
 	$previous = array();

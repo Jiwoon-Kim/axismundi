@@ -1,0 +1,447 @@
+/* ============================================================
+ * Omphalos — prose.css (FSE prose contract)
+ * v0.1.0 — Phase 6.5
+ *
+ * Long-form typography for a WordPress block (FSE) child theme.
+ *
+ * The Axismundi lab ships a standalone base.css that styles bare
+ * html/body/* elements globally. That global reset must NOT load in
+ * an FSE theme: WordPress core + theme.json + the Twenty Twenty-Five
+ * parent already own the global element baseline, and a second global
+ * reset would fight them and leak into editor chrome, query-loop cards,
+ * navigation, and comment forms.
+ *
+ * So Omphalos does not enqueue base.css. Instead this file re-contracts
+ * the lab's prose layer for FSE: every rule is scoped to a long-form
+ * surface, and the small element baselines that the lab kept in base.css
+ * (inline-code pill, blockquote bar thickness, list padding, table
+ * baseline, etc.) are absorbed here — scoped, not global.
+ *
+ * Scope surfaces (the "prose surface"):
+ *   .prose                    raw HTML / Markdown specimen (Custom HTML block)
+ *   .wp-block-post-content    core text blocks in post/page content
+ *
+ * Both are targeted together via the shared selector lists below. UI
+ * surfaces (Query Loop cards, sidebars, navigation, comment forms) are
+ * NOT prose surfaces, so prose never leaks into them.
+ *
+ * Core text blocks carry their own wrappers (.wp-block-heading,
+ * .wp-block-quote, .wp-block-code, .wp-block-table, .wp-block-pullquote,
+ * .wp-block-list); raw HTML inside a Custom HTML block carries bare tags
+ * (h1-h6, blockquote, pre, code, table). Selectors cover both forms.
+ *
+ * Token-only: every value resolves to --md-sys-* / --space-* / --md-ref-*
+ * from the token layers (ref -> sys.light -> sys.core -> comp -> sys.dark).
+ * ============================================================ */
+
+/* ============================================================
+ * §0 Prose surface baseline
+ *
+ * Pin body-large on the surface so long-form content reads at a
+ * consistent size regardless of the parent block's font-size.
+ * ============================================================ */
+.prose,
+.wp-block-post-content {
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* ============================================================
+ * §1 Headings — M3 typescale (absorbed from base, scoped)
+ *
+ * Raw <h1>-<h6> in a Custom HTML block get no theme.json preset,
+ * so the typescale must be applied here. Core heading blocks
+ * (.wp-block-heading) pick up font-size from theme.json presets when
+ * the author sets one; this pins the role typescale for the default.
+ * ============================================================ */
+.prose :is(h1, h2, h3, h4, h5, h6),
+.wp-block-post-content > .wp-block-heading {
+  color: inherit;
+  text-wrap: balance;
+}
+
+.prose h1,
+.wp-block-post-content > h1.wp-block-heading {
+  font-family:    var(--md-sys-typescale-headline-large-font);
+  font-size:      var(--md-sys-typescale-headline-large-size);
+  line-height:    var(--md-sys-typescale-headline-large-line-height);
+  font-weight:    var(--md-sys-typescale-headline-large-weight);
+  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+}
+.prose h2,
+.wp-block-post-content > h2.wp-block-heading {
+  font-family:    var(--md-sys-typescale-headline-medium-font);
+  font-size:      var(--md-sys-typescale-headline-medium-size);
+  line-height:    var(--md-sys-typescale-headline-medium-line-height);
+  font-weight:    var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+}
+.prose h3,
+.wp-block-post-content > h3.wp-block-heading {
+  font-family:    var(--md-sys-typescale-headline-small-font);
+  font-size:      var(--md-sys-typescale-headline-small-size);
+  line-height:    var(--md-sys-typescale-headline-small-line-height);
+  font-weight:    var(--md-sys-typescale-headline-small-weight);
+  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+}
+.prose h4,
+.wp-block-post-content > h4.wp-block-heading {
+  font-family:    var(--md-sys-typescale-title-large-font);
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+.prose h5,
+.wp-block-post-content > h5.wp-block-heading {
+  font-family:    var(--md-sys-typescale-title-medium-font);
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+.prose h6,
+.wp-block-post-content > h6.wp-block-heading {
+  font-family:    var(--md-sys-typescale-title-small-font);
+  font-size:      var(--md-sys-typescale-title-small-size);
+  line-height:    var(--md-sys-typescale-title-small-line-height);
+  font-weight:    var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+
+/* Heading content margins — asymmetric vertical rhythm. */
+.prose h1, .prose h2,
+.wp-block-post-content > h1.wp-block-heading,
+.wp-block-post-content > h2.wp-block-heading {
+  margin-block: var(--space-xl) var(--space-md);
+}
+.prose h3,
+.wp-block-post-content > h3.wp-block-heading {
+  margin-block: var(--space-lg) var(--space-sm);
+}
+.prose h4,
+.wp-block-post-content > h4.wp-block-heading {
+  margin-block: var(--space-md) var(--space-sm);
+}
+.prose h5, .prose h6,
+.wp-block-post-content > h5.wp-block-heading,
+.wp-block-post-content > h6.wp-block-heading {
+  margin-block: var(--space-md) var(--space-xs);
+}
+.prose > :is(h1, h2, h3, h4, h5, h6):first-child,
+.wp-block-post-content > .wp-block-heading:first-child {
+  margin-block-start: 0;
+}
+
+/* ============================================================
+ * §2 Vertical rhythm
+ *
+ * Raw HTML in a Custom HTML block flows as a single subtree, so the
+ * lobotomized-owl pattern governs it. Core blocks are spaced by the
+ * theme.json blockGap, so the owl is scoped to .prose only; core
+ * blocks just get per-element block margins from the sections below.
+ * ============================================================ */
+.prose > * + * {
+  margin-block-start: var(--space-md);
+}
+.prose > :first-child { margin-block-start: 0; }
+.prose > :last-child  { margin-block-end: 0; }
+
+.prose > p + p {
+  margin-block-start: 1.25em;
+}
+.prose p { margin-block: 0; }
+
+.prose > blockquote,
+.prose > pre,
+.prose > ol,
+.prose > ul,
+.prose > hr,
+.prose > table,
+.prose > figure {
+  margin-block: var(--space-md);
+}
+
+/* ============================================================
+ * §3 Lists (absorbed from base, scoped)
+ * ============================================================ */
+.prose :is(ul, ol),
+.wp-block-post-content .wp-block-list {
+  padding-inline-start: var(--space-xl);
+}
+.prose li::marker,
+.wp-block-post-content .wp-block-list li::marker {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.prose li + li {
+  margin-block-start: var(--space-xs);
+}
+.prose li > :is(ul, ol) {
+  margin-block: var(--space-xs);
+}
+/* Markdown task lists: <li><input type="checkbox"> ... */
+.prose li:has(> input[type="checkbox"]:first-child) {
+  list-style: none;
+}
+.prose li > input[type="checkbox"]:first-child {
+  margin-inline-end: var(--space-xs);
+  vertical-align: -2px;
+}
+/* Definition lists */
+.prose dt { font-weight: var(--md-ref-typeface-weight-medium); }
+.prose dd {
+  margin-inline-start: var(--space-lg);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.prose dd + dt { margin-block-start: var(--space-md); }
+
+/* ============================================================
+ * §4 Blockquote — bar thickness (base) + primary bump (prose)
+ *
+ * Raw <blockquote> and core .wp-block-quote both get the M3 bar.
+ * ============================================================ */
+.prose blockquote,
+.wp-block-post-content .wp-block-quote {
+  margin-inline: 0;
+  padding-block: var(--space-sm);
+  padding-inline-start: var(--space-lg);
+  border-inline-start: 4px solid var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-surface);
+}
+.prose blockquote > p,
+.wp-block-post-content .wp-block-quote > p {
+  color: inherit;
+}
+.prose blockquote cite,
+.wp-block-post-content .wp-block-quote cite {
+  display: block;
+  margin-block-start: var(--space-sm);
+  font-style: normal;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+.prose blockquote cite::before { content: "— "; }
+
+/* core/pullquote — distinct centered emphasis */
+.wp-block-post-content .wp-block-pullquote {
+  margin-block: var(--space-xl);
+  padding-block: var(--space-lg);
+  border-block: 1px solid var(--md-sys-color-outline-variant);
+  text-align: center;
+  color: var(--md-sys-color-on-surface);
+}
+
+/* ============================================================
+ * §5 HR / separator
+ * ============================================================ */
+.prose hr,
+.wp-block-post-content > .wp-block-separator {
+  border: 0;
+  block-size: 1px;
+  background-color: var(--md-sys-color-outline-variant);
+  margin-block: var(--space-xl);
+  color: transparent;
+}
+
+/* ============================================================
+ * §6 Code — inline pill (base) + block bump (prose)
+ *
+ * Inline <code> / core inline code → subtle surface-container pill.
+ * <pre> / core/code block → padded card with overflow-x scroll.
+ * ============================================================ */
+.prose code,
+.wp-block-post-content code {
+  font-family:    var(--md-ref-typeface-mono);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  padding-inline: 0.3em;
+  padding-block:  0.15em;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+.prose pre,
+.wp-block-post-content :is(pre, .wp-block-code) {
+  display: block;
+  overflow-x: auto;
+  padding: var(--space-lg);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  tab-size: 2;
+  font-family: var(--md-ref-typeface-mono);
+}
+/* <code> inside <pre>/code block is decorative — strip the pill. */
+.prose pre code,
+.wp-block-post-content :is(pre, .wp-block-code) code {
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+  font-size: inherit;
+}
+.prose kbd,
+.wp-block-post-content kbd {
+  padding-inline: 0.4em;
+  padding-block:  0.1em;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: inset 0 -1px 0 0 var(--md-sys-color-outline-variant);
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 0.875em;
+}
+
+/* ============================================================
+ * §7 Inline rich text — mark / del / s / ins / abbr (base, scoped)
+ * ============================================================ */
+.prose mark,
+.wp-block-post-content mark {
+  background-color: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  padding-inline: 0.2em;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+}
+.prose :is(del, s),
+.wp-block-post-content :is(del, s) {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.prose ins,
+.wp-block-post-content ins {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--md-sys-color-primary);
+}
+.prose abbr[title],
+.wp-block-post-content abbr[title] {
+  text-decoration: underline dotted;
+  text-decoration-skip-ink: auto;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+.prose :is(strong, b),
+.wp-block-post-content :is(strong, b) {
+  font-weight: var(--md-ref-typeface-weight-medium);
+}
+
+/* ============================================================
+ * §8 Images & figures (base reset + prose framing, scoped)
+ * ============================================================ */
+.prose figure,
+.wp-block-post-content :is(.wp-block-image, figure) {
+  margin: 0;
+}
+.prose img,
+.wp-block-post-content .wp-block-image img {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+.prose figure img { inline-size: 100%; }
+.prose figcaption,
+.wp-block-post-content figcaption {
+  margin-block-start: var(--space-sm);
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+
+/* ============================================================
+ * §9 Links — always-underline in prose (a11y; WCAG 1.4.1)
+ * ============================================================ */
+.prose a,
+.wp-block-post-content a {
+  color: var(--md-sys-color-primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.prose a:hover,
+.wp-block-post-content a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ============================================================
+ * §10 Tables — baseline (base) + full styling (prose), scoped
+ *
+ * Raw markdown tables use .table-wrapper for horizontal overflow.
+ * core/table renders <figure class="wp-block-table"><table>; its
+ * caption sits below, so the frame is applied to the table element.
+ * ============================================================ */
+.prose .table-wrapper,
+.prose figure:has(> table):not(.wp-block-table) {
+  overflow-x: auto;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+.prose table,
+.wp-block-post-content .wp-block-table table {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size:   var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+.prose :is(th, td),
+.wp-block-post-content .wp-block-table :is(th, td) {
+  text-align: start;
+  vertical-align: top;
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+  border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+}
+.prose tr > :is(th, td):last-child,
+.wp-block-post-content .wp-block-table tr > :is(th, td):last-child {
+  border-inline-end: 0;
+}
+.prose tbody tr:last-child > :is(th, td),
+.wp-block-post-content .wp-block-table tbody tr:last-child > :is(th, td) {
+  border-block-end: 0;
+}
+.prose th,
+.wp-block-post-content .wp-block-table th {
+  font-weight: var(--md-ref-typeface-weight-medium);
+  background-color: var(--md-sys-color-surface-container-high);
+}
+.prose thead :is(th, td),
+.wp-block-post-content .wp-block-table thead :is(th, td) {
+  border-block-end: 1px solid var(--md-sys-color-outline);
+}
+.prose caption,
+.wp-block-post-content .wp-block-table figcaption {
+  caption-side: bottom;
+  margin-block-start: var(--space-sm);
+  text-align: start;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+
+/* ============================================================
+ * §11 Icon font scope policy (Material Symbols)
+ *
+ * Material Symbols are theme chrome only. If an icon class lands
+ * inside prose content (e.g. copied HTML), revert the font so the
+ * literal ligature text renders instead of a glyph — federation-safe
+ * graceful degradation.
+ * ============================================================ */
+.prose [class*="material-symbols"],
+.wp-block-post-content [class*="material-symbols"] {
+  font-family: inherit !important;
+  font-variation-settings: normal !important;
+  font-feature-settings: normal !important;
+  letter-spacing: normal !important;
+}

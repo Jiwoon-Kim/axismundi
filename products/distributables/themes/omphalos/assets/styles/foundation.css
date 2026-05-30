@@ -1,0 +1,43 @@
+/* ============================================================
+ * Omphalos — foundation.css
+ * v0.1.0 — Phase 8
+ *
+ * FSE-safe document-level contracts ONLY. This file declares how the
+ * document behaves for the browser / native UA UI — NOT a CSS reset,
+ * not typography, not layout, not tokens.
+ *
+ * Why this is separate:
+ *   - tokens.* define VALUES (--md-sys-color-*, --space-*, typescale).
+ *   - color-scheme is not a value; it tells the browser which native
+ *     rendering mode to use for UA shadow UI — <video>/<audio> controls
+ *     (incl. the video "more options" popover), form controls, and
+ *     scrollbars. That is a document foundation, not a token, so it lives
+ *     here rather than in tokens.sys.core.css.
+ *
+ * Do NOT add element resets (html/body/*), typography, or layout here.
+ * The global element baseline is owned by WordPress core + theme.json +
+ * the Twenty Twenty-Five parent.
+ * ============================================================ */
+
+/* color-scheme — light by default; follow OS when the scheme is auto/unset;
+ * honor an explicit data-theme override (Phase 7 sets data-theme via SSR
+ * language_attributes + the Interactivity switcher; the selectors below are in
+ * place ahead of that so the auto path already works). */
+html {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]),
+  html[data-theme="auto"] {
+    color-scheme: dark;
+  }
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}

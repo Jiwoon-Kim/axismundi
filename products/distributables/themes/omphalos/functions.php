@@ -51,6 +51,7 @@ function omphalos_setup() : void {
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.sys.core.css' ) ? 'assets/styles/tokens.sys.core.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.comp.css' ) ? 'assets/styles/tokens.comp.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.sys.dark.css' ) ? 'assets/styles/tokens.sys.dark.css' : null,
+				file_exists( get_stylesheet_directory() . '/assets/styles/foundation.css' ) ? 'assets/styles/foundation.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/prose.css' ) ? 'assets/styles/prose.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/blocks.css' ) ? 'assets/styles/blocks.css' : null,
 			)
@@ -84,7 +85,8 @@ function omphalos_enqueue_assets() : void {
 		'omphalos-tokens-sys-core'  => array( 'assets/styles/tokens.sys.core.css', array( 'omphalos-tokens-sys-light' ) ),
 		'omphalos-tokens-comp'      => array( 'assets/styles/tokens.comp.css', array( 'omphalos-tokens-sys-core' ) ),
 		'omphalos-tokens-sys-dark'  => array( 'assets/styles/tokens.sys.dark.css', array( 'omphalos-tokens-comp' ) ),
-		'omphalos-prose'            => array( 'assets/styles/prose.css', array( 'omphalos-tokens-sys-dark' ) ),
+		'omphalos-foundation'       => array( 'assets/styles/foundation.css', array( 'omphalos-tokens-sys-dark' ) ),
+		'omphalos-prose'            => array( 'assets/styles/prose.css', array( 'omphalos-foundation' ) ),
 		'omphalos-blocks'           => array( 'assets/styles/blocks.css', array( 'omphalos-prose' ) ),
 	);
 

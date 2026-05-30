@@ -22,9 +22,6 @@ The earlier v3.2.0 approach (Latin subset for Roboto) dropped ₩, ←→, ≈�
 | Roboto Mono | `roboto-mono/axismundi-roboto-mono.woff2` + italic | OFL 1.1 | 876 glyphs (full) | wght |
 | Noto Sans KR | `noto-sans-kr/axismundi-noto-sans-kr.woff2` | OFL 1.1 | Korean subset (Hangul + Jamo) via unicode-range | wght |
 | Noto Serif KR | `noto-serif-kr/axismundi-noto-serif-kr.woff2` | OFL 1.1 | Korean subset (Hangul + Jamo) via unicode-range | wght |
-| Material Symbols Rounded | `material-symbols-rounded/material-symbols-rounded.woff2` | Apache 2.0 | Icon ligature glyph table | FILL, GRAD, opsz, wght |
-| Material Symbols Outlined | `material-symbols-outlined/material-symbols-outlined.woff2` | Apache 2.0 | Icon ligature glyph table | FILL, GRAD, opsz, wght |
-| Material Symbols Sharp | `material-symbols-sharp/material-symbols-sharp.woff2` | Apache 2.0 | Icon ligature glyph table | FILL, GRAD, opsz, wght |
 
 ## @font-face example (current)
 

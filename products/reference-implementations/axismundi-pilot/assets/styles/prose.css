@@ -336,28 +336,24 @@
  *     </table>
  *   </div>
  *
- * The wrapper handles horizontal overflow on narrow viewports
- * (a table at body-medium with 4+ columns rarely fits in a
- * 360px-wide phone). Without the wrapper, wide tables push
- * the parent layout. Markdown post-processing or WP's core/
- * table block (`<figure class="wp-block-table">`) supplies the
- * wrapper; for raw markdown without post-processing, authors
- * are expected to wrap manually.
+ * Raw markdown tables can use `.table-wrapper` for horizontal overflow.
+ * WP core/table is handled by blocks.css so `figure.wp-block-table`
+ * does not place figcaption inside a bordered or scrolling wrapper.
  * ============================================================ */
 
-/* --- §11.1 Wrapper — horizontal scroll on overflow ---
+/* --- §11.1 Wrapper — block rhythm only ---
  *
- * Both wrapper variants supported, identical visual treatment:
+ * Both wrapper variants supported:
  *   (a) <div class="table-wrapper"><table>…</table></div>
  *       — for raw markdown post-processing
  *   (b) <figure class="wp-block-table"><table>…</table></figure>
  *       — for WP core/table block output (matched via :has)
  *
- * Same border + radius on both so prose tables read consistently
- * regardless of source. blocks.css §6 may layer WP-specific
- * variants (stripes, fixed-layout) on top — visual frame stays. */
+ * These wrappers handle non-WP table scroll + frame only. WP core/table
+ * is excluded because blocks.css assigns the visual frame to the table
+ * element, leaving figcaption outside that frame. */
 .prose .table-wrapper,
-.prose figure:has(> table) {
+.prose figure:has(> table):not(.wp-block-table) {
   overflow-x: auto;
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-small);
@@ -366,23 +362,33 @@
 /* --- §11.2 Table — sized to its container --- */
 .prose table {
   inline-size: 100%;
-  /* base sets border-collapse: collapse + border-spacing: 0 */
+  border-collapse: separate;
+  border-spacing: 0;
   font-family:    var(--md-sys-typescale-body-medium-font);
   font-size:      var(--md-sys-typescale-body-medium-size);
   line-height:    var(--md-sys-typescale-body-medium-line-height);
   font-weight:    var(--md-sys-typescale-body-medium-weight);
   letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
 }
 
-/* --- §11.3 Cells — padding + row separator --- */
+/* --- §11.3 Cells — padding + full-grid separator --- */
 .prose th,
 .prose td {
   padding-block: var(--space-sm);
   padding-inline: var(--space-md);
   border-block-end: 1px solid var(--md-sys-color-outline-variant);
+  border-inline-end: 1px solid var(--md-sys-color-outline-variant);
 }
 
-/* Last row — clean bottom edge (wrapper border draws it) */
+/* Last cell in each row — prevent double border with wrapper outline */
+.prose tr > th:last-child,
+.prose tr > td:last-child {
+  border-inline-end: 0;
+}
+
+/* Last tbody row — tfoot top border or table border draws the edge */
 .prose tbody tr:last-child > th,
 .prose tbody tr:last-child > td {
   border-block-end: 0;
@@ -391,12 +397,27 @@
 /* --- §11.4 Header — subtle bg + stronger separator --- */
 .prose th {
   background-color: var(--md-sys-color-surface-container-high);
-  /* Heavier line under the header row (full outline, not -variant) */
-  border-block-end: 1px solid var(--md-sys-color-outline);
   /* base.css §10 already sets font-weight: medium */
 }
 
-/* --- §11.5 Caption — sits below the table per base §10.
+.prose thead th,
+.prose thead td {
+  /* Heavier line under the header row (full outline, not -variant) */
+  border-block-end: 1px solid var(--md-sys-color-outline);
+}
+
+/* --- §11.5 Footer — header-symmetric separator --- */
+.prose tfoot tr:first-child > th,
+.prose tfoot tr:first-child > td {
+  border-block-start: 1px solid var(--md-sys-color-outline);
+}
+
+.prose tfoot tr:last-child > th,
+.prose tfoot tr:last-child > td {
+  border-block-end: 0;
+}
+
+/* --- §11.6 Caption — sits below the table per base §10.
  *      Bump margin in prose for legibility separation. --- */
 .prose caption {
   /* base sets caption-side: bottom + body-small typography */

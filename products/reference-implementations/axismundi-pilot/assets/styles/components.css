@@ -1581,9 +1581,10 @@ textarea.text-field__input {
  * surface and lives in Chunk D.
  *
  * Container: surface-container-high, level3, corner-full, 56px.
- * Hover surface = state layer Pattern A on the host.
- * Focus indicator = standard outer +2px (§0.11) — search bar
- * stands alone, no clipping concern.
+ * Expressive contained layout: action-bearing bars collapse inline
+ * space/gap to 4px while no-action bars keep 16px edge space.
+ * Hover/pressed surface = state layer Pattern A on the host.
+ * Focus indicator = Search-specific 3px outline.
  * ============================================================ */
 .search-bar {
   position: relative;
@@ -1632,6 +1633,15 @@ textarea.text-field__input {
 .search-bar:hover::before {
   opacity: var(--md-sys-state-hover-state-layer-opacity);
 }
+.search-bar:active::before {
+  opacity: var(--md-sys-state-pressed-state-layer-opacity);
+}
+
+/* Expressive contained layout when trailing actions are present. */
+.search-bar:has(.search-bar__trailing > *) {
+  gap: var(--space-xs);
+  padding-inline: var(--space-xs);
+}
 
 .search-bar__leading-icon,
 .search-bar__trailing {
@@ -1656,7 +1666,7 @@ textarea.text-field__input {
 
 .search-bar__trailing {
   color: var(--md-sys-color-on-surface-variant);
-  gap: var(--space-sm);
+  gap: 0;
 }
 .search-bar__trailing > svg,
 .search-bar__trailing > .ax-icon {
@@ -1677,9 +1687,9 @@ textarea.text-field__input {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* Focus — standard outer +2px (§0.11) */
+/* Focus — Search-specific 3px outline */
 .search-bar:focus-within {
-  outline: 2px solid var(--md-sys-color-secondary);
+  outline: 3px solid var(--md-sys-color-secondary);
   outline-offset: 2px;
 }
 
@@ -6165,178 +6175,6 @@ input.ax-time-picker__field:focus-visible {
    handles validation). Per Jetpack Compose `is24Hour=true` pattern. */
 .ax-time-picker.is-24h .ax-time-picker__period {
   display: none;
-}
-
-/* ============================================================
- * Axismundi Pilot theme switcher
- * ============================================================ */
-
-.ax-theme-switcher {
-  position: fixed;
-  z-index: 9000;
-  inset-block-end: var(--space-md);
-  inset-inline-end: var(--space-md);
-  display: inline-flex;
-  gap: 0;
-  padding: 4px;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-surface-container-high);
-  box-shadow: var(--md-sys-elevation-shadow-level2);
-}
-
-.ax-theme-btn {
-  min-block-size: 32px;
-  padding-inline: var(--space-sm);
-  border: 0;
-  border-radius: var(--md-sys-shape-corner-full);
-  background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  font-family: var(--md-sys-typescale-label-medium-font);
-  font-size: var(--md-sys-typescale-label-medium-size);
-  font-weight: var(--md-sys-typescale-label-medium-weight);
-  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
-  line-height: var(--md-sys-typescale-label-medium-line-height);
-  cursor: pointer;
-  /* Icon + label layout */
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Material Symbols icon inside theme switcher button: 20dp compact size */
-.ax-theme-btn .material-symbols-rounded {
-  font-size: 18px;
-  --md-icon-opsz: 20;
-  line-height: 1;
-}
-
-.ax-theme-btn:hover {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface)
-    calc(var(--md-sys-state-hover-state-layer-opacity) * 100%),
-    transparent
-  );
-}
-
-.ax-theme-btn[aria-checked="true"] {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.ax-theme-btn:focus-visible {
-  outline: 3px solid var(--md-sys-color-secondary);
-  outline-offset: 2px;
-}
-
-/* ============================================================
- * Axismundi Pilot attachment media
- * ============================================================ */
-
-.ax-attachment-media {
-  display: grid;
-  gap: var(--space-lg);
-  margin-block: var(--wp--preset--spacing--60);
-}
-
-.ax-attachment-media__figure,
-.ax-attachment-media__cover {
-  margin: 0;
-}
-
-.ax-attachment-media__figure img,
-.ax-attachment-media__cover img,
-.ax-attachment-media__image {
-  display: block;
-  inline-size: 100%;
-  block-size: auto;
-  border-radius: var(--md-sys-shape-corner-large);
-}
-
-.ax-attachment-media .wp-block-audio,
-.ax-attachment-media .wp-block-video,
-.ax-attachment-media .wp-block-file {
-  margin: 0;
-}
-
-.ax-attachment-meta {
-  display: grid;
-  gap: var(--space-md);
-  min-inline-size: 0;
-}
-
-.ax-attachment-meta__summary {
-  display: grid;
-  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
-  gap: var(--space-sm) var(--space-md);
-  margin: 0;
-  padding: var(--space-md);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-medium);
-  background: var(--md-sys-color-surface-container-low);
-  color: var(--md-sys-color-on-surface);
-}
-
-.ax-attachment-meta__summary dt {
-  color: var(--md-sys-color-on-surface-variant);
-  font-family: var(--md-sys-typescale-label-medium-font);
-  font-size: var(--md-sys-typescale-label-medium-size);
-  font-weight: var(--md-sys-typescale-label-medium-weight);
-  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
-  line-height: var(--md-sys-typescale-label-medium-line-height);
-}
-
-.ax-attachment-meta__summary dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.ax-attachment-meta__raw {
-  min-inline-size: 0;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-medium);
-  background: var(--md-sys-color-surface-container-lowest);
-  color: var(--md-sys-color-on-surface);
-}
-
-.ax-attachment-meta__raw summary {
-  padding: var(--space-sm) var(--space-md);
-  cursor: pointer;
-  color: var(--md-sys-color-on-surface-variant);
-  font-family: var(--md-sys-typescale-label-medium-font);
-  font-size: var(--md-sys-typescale-label-medium-size);
-  font-weight: var(--md-sys-typescale-label-medium-weight);
-  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
-  line-height: var(--md-sys-typescale-label-medium-line-height);
-}
-
-.ax-attachment-meta__raw pre {
-  inline-size: 100%;
-  max-inline-size: 100%;
-  box-sizing: border-box;
-  max-block-size: 24rem;
-  margin: 0;
-  padding: var(--space-md);
-  overflow-x: auto;
-  overflow-y: auto;
-  border-block-start: 1px solid var(--md-sys-color-outline-variant);
-  font-family: var(--md-sys-typescale-body-medium-font);
-  font-size: var(--md-sys-typescale-body-small-size);
-  line-height: var(--md-sys-typescale-body-small-line-height);
-}
-
-.ax-attachment-meta__raw code {
-  display: block;
-  inline-size: max-content;
-  min-inline-size: 100%;
-  white-space: pre;
-}
-
-@media (max-width: 599px) {
-  .ax-attachment-meta__summary {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ============================================================

@@ -6,17 +6,19 @@
  * Inserter: false
  * Description: Core media block specimens for Phase 8 Media-group VQA. This is a
  *              SEED-BOUND template, not a directly insertable pattern: the
- *              __*_ID__ / __*_URL__ placeholders below are substituted with the
- *              installation's real attachment IDs/URLs by scripts/seed.ps1 when
- *              it builds the /vqa-media/ page. Inserting this pattern as-is would
- *              drop literal placeholders and broken media, so Inserter is false.
- *              The /vqa-media/ page produced by the seed is the canonical output.
+ *              __*_ID__ / __*_URL__ / __*_PERMALINK__ placeholders below are
+ *              substituted with the installation's real attachment values by
+ *              scripts/seed.ps1 when it builds the /vqa-media/ page. Inserting
+ *              this pattern as-is would drop literal placeholders and broken
+ *              media, so Inserter is false. The /vqa-media/ page produced by the
+ *              seed is the canonical output.
  *
  *              Media blocks (image, gallery, audio, video, cover, media-text,
  *              file) are dynamic and attachment-aware — they render env-specific
  *              IDs/URLs (wp-image-N, /uploads/YYYY/MM/...), so hard-coding IDs
  *              would break on reseed or another install. Markup mirrors the
- *              editor's canonical save output (captions use wp-element-caption).
+ *              editor's canonical save output (captions use wp-element-caption;
+ *              cover img precedes the dim span; video carries a tracks attr).
  *
  * @package Omphalos
  */
@@ -68,11 +70,11 @@
 <!-- /wp:audio -->
 
 <!-- wp:heading -->
-<h2 class="wp-block-heading">Video — tracks (en/ko) + caption</h2>
+<h2 class="wp-block-heading">Video — subtitle track (ko) + caption</h2>
 <!-- /wp:heading -->
 
-<!-- wp:video {"id":__VIDEO_ID__} -->
-<figure class="wp-block-video"><video controls src="__VIDEO_URL__"><track src="__VTT_EN_URL__" kind="subtitles" srclang="en" label="English"><track src="__VTT_KO_URL__" kind="subtitles" srclang="ko" label="Korean"></video><figcaption class="wp-element-caption">Video caption — WebM with English/Korean subtitle tracks.</figcaption></figure>
+<!-- wp:video {"id":__VIDEO_ID__,"tracks":[{"src":"__VTT_KO_URL__","label":"한국어","srcLang":"ko-KR","kind":"subtitles","default":true,"id":__VTT_KO_ID__}]} -->
+<figure class="wp-block-video"><video controls src="__VIDEO_URL__"><track src="__VTT_KO_URL__" label="한국어" srclang="ko-KR" kind="subtitles" default/></video><figcaption class="wp-element-caption">Video caption — WebM with a Korean subtitle track.</figcaption></figure>
 <!-- /wp:video -->
 
 <!-- wp:heading -->
@@ -80,7 +82,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:cover {"url":"__IMAGE_URL__","id":__IMAGE_ID__,"dimRatio":50,"isUserOverlayColor":true,"minHeight":280,"contentPosition":"center center"} -->
-<div class="wp-block-cover" style="min-height:280px"><span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span><img class="wp-block-cover__image-background wp-image-__IMAGE_ID__" alt="" src="__IMAGE_URL__" data-object-fit="cover"/><div class="wp-block-cover__inner-container"><!-- wp:paragraph {"align":"center","fontSize":"x-large"} -->
+<div class="wp-block-cover" style="min-height:280px"><img class="wp-block-cover__image-background wp-image-__IMAGE_ID__" alt="" src="__IMAGE_URL__" data-object-fit="cover"/><span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span><div class="wp-block-cover__inner-container"><!-- wp:paragraph {"style":{"typography":{"textAlign":"center"}},"fontSize":"x-large"} -->
 <p class="has-text-align-center has-x-large-font-size">Cover heading over image</p>
 <!-- /wp:paragraph --></div></div>
 <!-- /wp:cover -->
@@ -99,6 +101,6 @@
 <h2 class="wp-block-heading">File — download button</h2>
 <!-- /wp:heading -->
 
-<!-- wp:file {"id":__AUDIO_ID__,"href":"__AUDIO_URL__"} -->
-<div class="wp-block-file"><a id="wp-block-file--media-__AUDIO_ID__" href="__AUDIO_URL__">audio-placeholder-jazzy-lofi.ogg</a><a href="__AUDIO_URL__" class="wp-block-file__button wp-element-button" download>Download</a></div>
+<!-- wp:file {"id":__AUDIO_ID__,"href":"__AUDIO_PERMALINK__"} -->
+<div class="wp-block-file"><a id="wp-block-file--media-__AUDIO_ID__" href="__AUDIO_PERMALINK__" target="_blank" rel="noreferrer noopener">audio-placeholder-jazzy-lofi.ogg</a><a href="__AUDIO_URL__" class="wp-block-file__button wp-element-button" download aria-describedby="wp-block-file--media-__AUDIO_ID__">Download</a></div>
 <!-- /wp:file -->

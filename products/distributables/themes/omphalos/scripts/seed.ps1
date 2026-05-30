@@ -119,11 +119,19 @@ function Attachment-Url([string]$id) {
     return $null
 }
 
-$imageUrl = Attachment-Url $image
-$audioUrl = Attachment-Url $audOgg
-$videoUrl = Attachment-Url $video
-$vttEnUrl = Attachment-Url $capEn
-$vttKoUrl = Attachment-Url $capKo
+function Attachment-Permalink([string]$id) {
+    if (-not $id) { return $null }
+    $u = npx wp-env run cli wp post url $id 2>&1 |
+        Where-Object { $_ -match '^https?://' } | Select-Object -First 1
+    if ($u) { return $u.Trim() }
+    return $null
+}
+
+$imageUrl     = Attachment-Url $image
+$audioUrl     = Attachment-Url $audOgg
+$audioLink    = Attachment-Permalink $audOgg   # file block first link = attachment page
+$videoUrl     = Attachment-Url $video
+$vttKoUrl     = Attachment-Url $capKo
 
 # Cover/second-gallery image: reuse the WEBP image so the page is self-contained.
 $coverId  = $image
@@ -137,8 +145,9 @@ if ($image -and $audOgg -and $video -and $capEn -and $capKo) {
     $body = $body.Replace('__IMAGE_ID__',  $image ).Replace('__IMAGE_URL__',  $imageUrl)
     $body = $body.Replace('__COVER_ID__',  $coverId).Replace('__COVER_URL__',  $coverUrl)
     $body = $body.Replace('__AUDIO_ID__',  $audOgg).Replace('__AUDIO_URL__',  $audioUrl)
+    $body = $body.Replace('__AUDIO_PERMALINK__', $audioLink)
     $body = $body.Replace('__VIDEO_ID__',  $video ).Replace('__VIDEO_URL__',  $videoUrl)
-    $body = $body.Replace('__VTT_EN_URL__', $vttEnUrl).Replace('__VTT_KO_URL__', $vttKoUrl)
+    $body = $body.Replace('__VTT_KO_URL__', $vttKoUrl).Replace('__VTT_KO_ID__', $capKo)
 
     # Write the substituted content to a file inside the theme (mounted into the
     # container) and update the page from it — avoids shell-quoting the markup.

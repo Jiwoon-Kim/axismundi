@@ -84,6 +84,17 @@ function omphalos_enqueue_assets() : void {
 }
 add_action( 'wp_enqueue_scripts', 'omphalos_enqueue_assets' );
 
+/**
+ * Register Omphalos block pattern categories.
+ */
+function omphalos_register_pattern_categories() : void {
+	register_block_pattern_category(
+		'omphalos',
+		array( 'label' => __( 'Omphalos', 'omphalos' ) )
+	);
+}
+add_action( 'init', 'omphalos_register_pattern_categories' );
+
 // Attachment media object templates (ported from axismundi-pilot).
 $omphalos_attachment = get_stylesheet_directory() . '/inc/attachment.php';
 if ( file_exists( $omphalos_attachment ) ) {

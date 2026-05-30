@@ -3,8 +3,73 @@
   "version": 3,
   "settings": {
     "appearanceTools": true,
+    "color": {
+      "custom": false,
+      "customDuotone": false,
+      "customGradient": false,
+      "defaultDuotone": false,
+      "defaultGradients": false,
+      "defaultPalette": false,
+      "palette": [
+        { "slug": "primary", "name": "Primary", "color": "var(--md-sys-color-primary)" },
+        { "slug": "on-primary", "name": "On Primary", "color": "var(--md-sys-color-on-primary)" },
+        { "slug": "primary-container", "name": "Primary Container", "color": "var(--md-sys-color-primary-container)" },
+        { "slug": "on-primary-container", "name": "On Primary Container", "color": "var(--md-sys-color-on-primary-container)" },
+        { "slug": "secondary", "name": "Secondary", "color": "var(--md-sys-color-secondary)" },
+        { "slug": "on-secondary", "name": "On Secondary", "color": "var(--md-sys-color-on-secondary)" },
+        { "slug": "secondary-container", "name": "Secondary Container", "color": "var(--md-sys-color-secondary-container)" },
+        { "slug": "on-secondary-container", "name": "On Secondary Container", "color": "var(--md-sys-color-on-secondary-container)" },
+        { "slug": "tertiary", "name": "Tertiary", "color": "var(--md-sys-color-tertiary)" },
+        { "slug": "on-tertiary", "name": "On Tertiary", "color": "var(--md-sys-color-on-tertiary)" },
+        { "slug": "tertiary-container", "name": "Tertiary Container", "color": "var(--md-sys-color-tertiary-container)" },
+        { "slug": "on-tertiary-container", "name": "On Tertiary Container", "color": "var(--md-sys-color-on-tertiary-container)" },
+        { "slug": "error", "name": "Error", "color": "var(--md-sys-color-error)" },
+        { "slug": "on-error", "name": "On Error", "color": "var(--md-sys-color-on-error)" },
+        { "slug": "error-container", "name": "Error Container", "color": "var(--md-sys-color-error-container)" },
+        { "slug": "on-error-container", "name": "On Error Container", "color": "var(--md-sys-color-on-error-container)" },
+        { "slug": "surface", "name": "Surface", "color": "var(--md-sys-color-surface)" },
+        { "slug": "on-surface", "name": "On Surface", "color": "var(--md-sys-color-on-surface)" },
+        { "slug": "surface-variant", "name": "Surface Variant", "color": "var(--md-sys-color-surface-variant)" },
+        { "slug": "on-surface-variant", "name": "On Surface Variant", "color": "var(--md-sys-color-on-surface-variant)" },
+        { "slug": "surface-container", "name": "Surface Container", "color": "var(--md-sys-color-surface-container)" },
+        { "slug": "background", "name": "Background", "color": "var(--md-sys-color-background)" },
+        { "slug": "on-background", "name": "On Background", "color": "var(--md-sys-color-on-background)" },
+        { "slug": "outline", "name": "Outline", "color": "var(--md-sys-color-outline)" },
+        { "slug": "outline-variant", "name": "Outline Variant", "color": "var(--md-sys-color-outline-variant)" },
+        { "slug": "base", "name": "Base", "color": "var(--md-sys-color-surface)" },
+        { "slug": "contrast", "name": "Contrast", "color": "var(--md-sys-color-on-surface)" },
+        { "slug": "accent-1", "name": "Accent 1", "color": "var(--md-sys-color-primary)" },
+        { "slug": "accent-2", "name": "Accent 2", "color": "var(--md-sys-color-secondary)" },
+        { "slug": "accent-3", "name": "Accent 3", "color": "var(--md-sys-color-tertiary)" },
+        { "slug": "accent-4", "name": "Accent 4", "color": "var(--md-sys-color-outline)" },
+        { "slug": "accent-5", "name": "Accent 5", "color": "var(--md-sys-color-surface-container)" },
+        { "slug": "accent-6", "name": "Accent 6", "color": "var(--md-sys-color-surface-variant)" }
+      ]
+    },
     "typography": {
       "fluid": true,
+      "fontSizes": [
+        { "slug": "display-large", "name": "Display Large", "size": "var(--md-sys-typescale-display-large-size)" },
+        { "slug": "display-medium", "name": "Display Medium", "size": "var(--md-sys-typescale-display-medium-size)" },
+        { "slug": "display-small", "name": "Display Small", "size": "var(--md-sys-typescale-display-small-size)" },
+        { "slug": "headline-large", "name": "Headline Large", "size": "var(--md-sys-typescale-headline-large-size)" },
+        { "slug": "headline-medium", "name": "Headline Medium", "size": "var(--md-sys-typescale-headline-medium-size)" },
+        { "slug": "headline-small", "name": "Headline Small", "size": "var(--md-sys-typescale-headline-small-size)" },
+        { "slug": "title-large", "name": "Title Large", "size": "var(--md-sys-typescale-title-large-size)" },
+        { "slug": "title-medium", "name": "Title Medium", "size": "var(--md-sys-typescale-title-medium-size)" },
+        { "slug": "title-small", "name": "Title Small", "size": "var(--md-sys-typescale-title-small-size)" },
+        { "slug": "body-large", "name": "Body Large", "size": "var(--md-sys-typescale-body-large-size)" },
+        { "slug": "body-medium", "name": "Body Medium", "size": "var(--md-sys-typescale-body-medium-size)" },
+        { "slug": "body-small", "name": "Body Small", "size": "var(--md-sys-typescale-body-small-size)" },
+        { "slug": "label-large", "name": "Label Large", "size": "var(--md-sys-typescale-label-large-size)" },
+        { "slug": "label-medium", "name": "Label Medium", "size": "var(--md-sys-typescale-label-medium-size)" },
+        { "slug": "label-small", "name": "Label Small", "size": "var(--md-sys-typescale-label-small-size)" },
+        { "slug": "small", "name": "Small", "size": "var(--md-sys-typescale-body-small-size)" },
+        { "slug": "medium", "name": "Medium", "size": "var(--md-sys-typescale-body-medium-size)" },
+        { "slug": "large", "name": "Large", "size": "var(--md-sys-typescale-title-large-size)" },
+        { "slug": "x-large", "name": "X Large", "size": "var(--md-sys-typescale-headline-medium-size)" },
+        { "slug": "xx-large", "name": "XX Large", "size": "var(--md-sys-typescale-headline-large-size)" }
+      ],
       "fontFamilies": [
         {
           "slug": "roboto-flex",
@@ -94,6 +159,17 @@
           ]
         }
       ]
+    }
+  },
+  "styles": {
+    "color": {
+      "background": "var(--md-sys-color-background)",
+      "text": "var(--md-sys-color-on-background)"
+    },
+    "typography": {
+      "fontFamily": "var(--wp--preset--font-family--roboto-flex)",
+      "fontSize": "var(--md-sys-typescale-body-large-size)",
+      "lineHeight": "var(--md-sys-typescale-body-large-line-height)"
     }
   }
 }

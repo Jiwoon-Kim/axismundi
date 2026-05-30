@@ -52,5 +52,24 @@ if ($logo) {
     Write-Host "Site Logo set to attachment $logo"
 }
 
+# Prose VQA page — embeds the omphalos/prose-vqa pattern (Custom HTML specimen).
+# Clear the theme's block-pattern cache first: WP caches the patterns/ file scan
+# per theme, so a freshly added pattern file is otherwise invisible until the
+# cache expires.
+Write-Host "== Clearing theme pattern cache =="
+npx wp-env run cli wp eval 'wp_clean_themes_cache(); wp_get_theme()->cache_delete();' 2>&1 | Out-Null
+
+Write-Host "== Creating Prose VQA page =="
+$existing = npx wp-env run cli wp post list --post_type=page --name=prose-vqa --field=ID 2>&1 |
+    Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+if (-not $existing) {
+    $content = '<!-- wp:pattern {"slug":"omphalos/prose-vqa"} /-->'
+    npx wp-env run cli wp post create --post_type=page --post_status=publish `
+        --post_title="Prose VQA" --post_name=prose-vqa --post_content="$content"
+    Write-Host "Prose VQA page created at /prose-vqa/"
+} else {
+    Write-Host "Prose VQA page already exists (ID $existing)"
+}
+
 Write-Host "== Done. Attachment permalinks: =="
 npx wp-env run cli wp post list --post_type=attachment --field=guid

@@ -73,8 +73,8 @@
 <h2 class="wp-block-heading">Video — subtitle track (ko) + caption</h2>
 <!-- /wp:heading -->
 
-<!-- wp:video {"id":__VIDEO_ID__,"tracks":[{"src":"__VTT_KO_URL__","label":"한국어","srcLang":"ko-KR","kind":"subtitles","default":true,"id":__VTT_KO_ID__}]} -->
-<figure class="wp-block-video"><video controls src="__VIDEO_URL__"><track src="__VTT_KO_URL__" label="한국어" srclang="ko-KR" kind="subtitles" default/></video><figcaption class="wp-element-caption">Video caption — WebM with a Korean subtitle track.</figcaption></figure>
+<!-- wp:video {"id":__VIDEO_ID__,"tracks":[{"src":"__VTT_KO_URL__","label":"한국어","srcLang":"ko","kind":"subtitles"}]} -->
+<figure class="wp-block-video"><video controls src="__VIDEO_URL__"><track src="__VTT_KO_URL__" label="한국어" srclang="ko" kind="subtitles"/></video><figcaption class="wp-element-caption">Video caption — WebM with a Korean subtitle track. WP core supports one VTT track per video; multi-track is plugin/child-render territory.</figcaption></figure>
 <!-- /wp:video -->
 
 <!-- wp:heading -->
@@ -101,6 +101,6 @@
 <h2 class="wp-block-heading">File — download button</h2>
 <!-- /wp:heading -->
 
-<!-- wp:file {"id":__AUDIO_ID__,"href":"__AUDIO_PERMALINK__"} -->
+<!-- wp:file {"id":__AUDIO_ID__,"href":"__AUDIO_URL__","textLinkHref":"__AUDIO_PERMALINK__","textLinkTarget":"_blank","displayPreview":false} -->
 <div class="wp-block-file"><a id="wp-block-file--media-__AUDIO_ID__" href="__AUDIO_PERMALINK__" target="_blank" rel="noreferrer noopener">audio-placeholder-jazzy-lofi.ogg</a><a href="__AUDIO_URL__" class="wp-block-file__button wp-element-button" download aria-describedby="wp-block-file--media-__AUDIO_ID__">Download</a></div>
 <!-- /wp:file -->

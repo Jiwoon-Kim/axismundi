@@ -147,7 +147,7 @@ if ($image -and $audOgg -and $video -and $capEn -and $capKo) {
     $body = $body.Replace('__AUDIO_ID__',  $audOgg).Replace('__AUDIO_URL__',  $audioUrl)
     $body = $body.Replace('__AUDIO_PERMALINK__', $audioLink)
     $body = $body.Replace('__VIDEO_ID__',  $video ).Replace('__VIDEO_URL__',  $videoUrl)
-    $body = $body.Replace('__VTT_KO_URL__', $vttKoUrl).Replace('__VTT_KO_ID__', $capKo)
+    $body = $body.Replace('__VTT_KO_URL__', $vttKoUrl)
 
     # Write the substituted content to a file inside the theme (mounted into the
     # container) and update the page from it — avoids shell-quoting the markup.

@@ -75,6 +75,15 @@
  * from a normal quote. Covers both the legacy <figure><blockquote><p>
  * markup and the <figure><p> form.
  * ============================================================ */
+/* The legacy pullquote markup nests a <blockquote>. prose.css §4 styles every
+ * blockquote in the surface with the quote bar (border-inline-start + padding),
+ * but a pullquote is a centered display device, not a quote — strip that bar so
+ * the pullquote isn't drawn with a left rule. */
+.wp-block-post-content .wp-block-pullquote blockquote {
+  margin: 0;
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
 .wp-block-post-content .wp-block-pullquote :is(p, blockquote p) {
   font-family:    var(--md-sys-typescale-headline-medium-font);
   font-size:      var(--md-sys-typescale-headline-medium-size);
@@ -123,18 +132,63 @@
  * §5 core/table — style variations
  *
  * prose.css frames the base table (border, header tint, cell padding,
- * tfoot separator). This adds the core "Stripes" style variation as a
- * zebra-row treatment. The stripe tone starts from the header so the
- * alternation reads as one continuous rhythm.
+ * tfoot separator). This adds the core "Stripes" (is-style-stripes) style.
+ *
+ * The header band is surface-container-high (prose §10 th). To make the zebra
+ * read as ONE continuous alternation starting FROM the header, the striped
+ * rows use the SAME tone (even rows, since row 1 sits directly under the
+ * header and stays base):
+ *   header  surface-container-high
+ *   row 1   base
+ *   row 2   surface-container-high  <- same as header
+ *   row 3   base ...
+ * The bg banding carries the rhythm, so per-cell grid lines are dropped.
  * ============================================================ */
-.wp-block-post-content .wp-block-table.is-style-stripes table {
-  border-block-end: 0;
-}
 .wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) > :is(th, td) {
-  background-color: var(--md-sys-color-surface-container);
+  background-color: transparent;
+}
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(even) > :is(th, td) {
+  background-color: var(--md-sys-color-surface-container-high);
 }
 .wp-block-post-content .wp-block-table.is-style-stripes :is(th, td) {
-  /* stripes carry the row rhythm; drop the per-cell grid lines */
   border-block-end: 0;
   border-inline-end: 0;
+}
+
+/* ============================================================
+ * §6 core/list — Segmented list (is-style-list-segmented)
+ *
+ * Theme-registered style (register_block_style in functions.php). Each item
+ * becomes a filled surface-container card with a large radius; a 2px gap
+ * separates them instead of bullets/borders.
+ * ============================================================ */
+.wp-block-post-content .wp-block-list.is-style-list-segmented {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wp-block-post-content .wp-block-list.is-style-list-segmented > li {
+  margin: 0;
+  padding: var(--space-md);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+.wp-block-post-content .wp-block-list.is-style-list-segmented > li::marker {
+  content: none;
+}
+
+/* ============================================================
+ * §7 core/quote — Plain (is-style-plain)
+ *
+ * Core ships the "Plain" quote variation. It drops the emphasis bar that
+ * prose.css §4 gives every blockquote, leaving an unadorned quote that still
+ * keeps the surface typography. (core/quote registers is-style-plain itself;
+ * no theme registration needed — this is the visual contract only.)
+ * ============================================================ */
+.wp-block-post-content .wp-block-quote.is-style-plain {
+  padding-inline-start: 0;
+  border-inline-start: 0;
 }

@@ -111,6 +111,24 @@ function omphalos_register_pattern_categories() : void {
 }
 add_action( 'init', 'omphalos_register_pattern_categories' );
 
+/**
+ * Register Omphalos block style variations.
+ *
+ * Only theme-owned variations are registered here. WordPress core already
+ * ships core/quote "Plain" (is-style-plain) and core/table "Stripes"
+ * (is-style-stripes); those need CSS (blocks.css) but no registration.
+ */
+function omphalos_register_block_styles() : void {
+	register_block_style(
+		'core/list',
+		array(
+			'name'  => 'list-segmented',
+			'label' => __( 'Segmented list', 'omphalos' ),
+		)
+	);
+}
+add_action( 'init', 'omphalos_register_block_styles' );
+
 // Attachment media object templates (ported from axismundi-pilot).
 $omphalos_attachment = get_stylesheet_directory() . '/inc/attachment.php';
 if ( file_exists( $omphalos_attachment ) ) {

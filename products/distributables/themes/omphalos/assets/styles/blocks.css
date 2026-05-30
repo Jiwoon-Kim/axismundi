@@ -202,7 +202,11 @@
   border-inline-end: 0;
 }
 .wp-block-post-content .wp-block-table.is-style-stripes thead :is(th, td) {
+  /* keep the header tint + bottom separator, but a striped table has no
+   * vertical grid — drop the header's inline-end rule too. */
   background-color: var(--md-sys-color-surface-container-high);
+  border-inline-end: 0;
+  border-block-end: 1px solid var(--md-sys-color-outline);
 }
 
 /* ============================================================

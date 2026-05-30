@@ -372,6 +372,16 @@
 .wp-block-post-content thead :is(th, td) {
   border-block-end: 1px solid var(--md-sys-color-outline);
 }
+/* Round the header band's outer corners to the table frame. With
+ * border-collapse: separate the header cell background is a square that would
+ * otherwise poke outside the rounded table border (visible top corners). Match
+ * the inner radius (frame radius minus the 1px border). */
+.wp-block-post-content thead tr:first-child > :is(th, td):first-child {
+  border-start-start-radius: calc(var(--md-sys-shape-corner-small) - 1px);
+}
+.wp-block-post-content thead tr:first-child > :is(th, td):last-child {
+  border-start-end-radius: calc(var(--md-sys-shape-corner-small) - 1px);
+}
 /* tfoot — header-symmetric top separator, no bottom border on last row. */
 .wp-block-post-content tfoot tr:first-child > :is(th, td) {
   border-block-start: 1px solid var(--md-sys-color-outline);

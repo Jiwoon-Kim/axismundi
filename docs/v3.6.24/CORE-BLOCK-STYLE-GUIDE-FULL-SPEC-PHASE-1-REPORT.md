@@ -340,8 +340,7 @@ Local media assets:
 
 ```txt
 assets/media/image/image-placeholder-mogu-1024.webp
-assets/media/audio/audio-placeholder-jazzy-lofi.mp3
-assets/media/audio/audio-placeholder-jazzy-lofi.opus
+assets/media/audio/audio-placeholder-jazzy-lofi.ogg
 assets/media/video/video-placeholder-gwangan-720p.webm
 ```
 
@@ -886,4 +885,3 @@ Expected status after writing this report:
 ```
 
 No implementation file should be modified by Phase 1.
-

@@ -500,9 +500,9 @@ function axismundi_pilot_filter_webp_attachment_metadata( array $metadata, int $
 add_filter( 'wp_generate_attachment_metadata', 'axismundi_pilot_filter_webp_attachment_metadata', 10, 2 );
 
 /**
- * Supplement OPUS/Ogg attachment metadata with Vorbis comments.
+ * Supplement Opus-in-Ogg attachment metadata with Vorbis comments.
  *
- * getID3 exposes the stream data and embedded image, but this fixture's OPUS
+ * getID3 exposes the stream data and embedded image, but this fixture's Opus
  * `artist` and `album` fields are empty after WordPress import despite being
  * present in the `OpusTags` packet. Pilot reads that packet directly so the
  * attachment object can surface the original media tags.
@@ -513,7 +513,7 @@ add_filter( 'wp_generate_attachment_metadata', 'axismundi_pilot_filter_webp_atta
  */
 function axismundi_pilot_filter_opus_attachment_metadata( array $metadata, int $attachment_id ) : array {
 	$mime_type = get_post_mime_type( $attachment_id );
-	if ( ! in_array( $mime_type, array( 'audio/ogg', 'audio/opus' ), true ) && 'opus' !== ( $metadata['dataformat'] ?? '' ) ) {
+	if ( 'audio/ogg' !== $mime_type && 'opus' !== ( $metadata['dataformat'] ?? '' ) ) {
 		return $metadata;
 	}
 

@@ -69,8 +69,7 @@ Root media placeholders have per-file provenance:
 
 ```txt
 image-placeholder-mogu-1024.webp       CC0 WordPress Photo Directory image by Jiwoon Kim
-audio-placeholder-jazzy-lofi.mp3       Project-author supplied Suno demo source/reference
-audio-placeholder-jazzy-lofi.opus      Opus derivative with album art preserved
+audio-placeholder-jazzy-lofi.ogg       Opus-in-Ogg derivative with album art preserved
 video-placeholder-gwangan-720p.webm    Pixabay Content License, not project-owned
 ```
 

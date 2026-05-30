@@ -13,8 +13,8 @@
 	<div class="wp-block-group alignwide">
 		<!-- wp:site-logo /-->
 
-		<!-- wp:group {"align":"full","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between","verticalAlignment":"top"}} -->
-		<div class="wp-block-group alignfull">
+		<!-- wp:group {"align":"wide","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between","verticalAlignment":"top"}} -->
+		<div class="wp-block-group alignwide">
 			<!-- wp:columns -->
 			<div class="wp-block-columns">
 				<!-- wp:column {"width":"100%"} -->
@@ -64,8 +64,8 @@
 		<div style="height:var(--wp--preset--spacing--70)" aria-hidden="true" class="wp-block-spacer"></div>
 		<!-- /wp:spacer -->
 
-		<!-- wp:group {"align":"full","style":{"spacing":{"blockGap":"var:preset|spacing|20"}},"layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
-		<div class="wp-block-group alignfull">
+		<!-- wp:group {"align":"wide","style":{"spacing":{"blockGap":"var:preset|spacing|20"}},"layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
+		<div class="wp-block-group alignwide">
 			<!-- wp:paragraph {"fontSize":"small"} -->
 			<p class="has-small-font-size"><?php esc_html_e( 'Axismundi Pilot', 'axismundi-pilot' ); ?></p>
 			<!-- /wp:paragraph -->

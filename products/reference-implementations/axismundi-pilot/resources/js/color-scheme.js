@@ -11,9 +11,6 @@
 
 import { store, getContext } from '@wordpress/interactivity';
 
-/** Mirrors the OS preference — used only when colorScheme is 'auto'. */
-const prefersDark = window.matchMedia( '(prefers-color-scheme: dark)' );
-
 /**
  * Resolve the effective data-theme value for a given colorScheme.
  *
@@ -33,12 +30,18 @@ function resolveTheme( colorScheme ) {
  * @param {string} mode   'light' | 'dark' | 'auto'
  * @param {object} state  Interactivity API shared state
  */
+/** One year, in seconds — keeps the anonymous visitor's choice across sessions. */
+const COOKIE_MAX_AGE = 31536000;
+
 function persist( mode, state ) {
 	const name   = state.cookieName;
 	const path   = state.cookiePath   || '/';
 	const domain = state.cookieDomain ? `; domain=${ state.cookieDomain }` : '';
 
-	document.cookie = `${ name }=${ mode }; path=${ path }${ domain }`;
+	// max-age makes this a persistent (not session) cookie so a logged-out
+	// visitor's choice survives a browser restart and SSR can read it back.
+	// SameSite=Lax matches WordPress's own cookie defaults.
+	document.cookie = `${ name }=${ mode }; path=${ path }${ domain }; max-age=${ COOKIE_MAX_AGE }; SameSite=Lax`;
 
 	if ( state.userId > 0 && typeof wp !== 'undefined' && wp.apiFetch ) {
 		wp.apiFetch( {
@@ -84,17 +87,7 @@ const { state } = store( 'axismundi-pilot/color-scheme', {
 	},
 } );
 
-/**
- * When the user is in 'auto' mode, keep aria-checked in sync if the OS
- * preference changes (e.g. dusk/dawn system automatic switching).
- * The CSS media query already handles visual colour; this only updates ARIA.
- */
-prefersDark.addEventListener( 'change', () => {
-	if ( state.colorScheme === 'auto' ) {
-		// Trigger a reactive update without changing the stored scheme.
-		// Reassigning to itself nudges the Interactivity API to re-evaluate
-		// derived state for any watchers.
-		// eslint-disable-next-line no-self-assign
-		state.colorScheme = state.colorScheme;
-	}
-} );
+// Note: when colorScheme is 'auto' the OS preference is resolved entirely in
+// CSS via the `@media (prefers-color-scheme: dark)` block in tokens.sys.dark.css,
+// and aria-checked (state.isActive) does not depend on the OS preference, so no
+// JS listener on `prefersDark` change is required here.

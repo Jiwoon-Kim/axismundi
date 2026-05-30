@@ -210,13 +210,22 @@
 
 .wp-block-post-content :where(.wp-block-code, .wp-block-preformatted, pre) {
   overflow-x: auto;
-  max-inline-size: 100%;
   padding: var(--space-lg);
   border: 0;
 }
 
 .wp-block-post-content :where(.wp-block-code, .wp-block-preformatted, pre) code {
   white-space: pre;
+}
+
+/* core/post-time-to-read and core/icon are styled inline-flex by the shared
+ * block layer (blocks.css) so the icon and label sit on one line. But as a
+ * DIRECT child of the constrained post content, an inline-level box ignores the
+ * `margin-inline: auto` the constrained layout applies, so it snaps to the
+ * content-area left edge instead of aligning with the readable text column.
+ * Promote them to block-level flex here so they share the body column. */
+.wp-block-post-content > :where(.wp-block-post-time-to-read, .wp-block-icon) {
+  display: flex;
 }
 
 .wp-block-post-content img {

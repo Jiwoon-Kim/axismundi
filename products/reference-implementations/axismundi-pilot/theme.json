@@ -486,6 +486,15 @@
       "lineHeight": "var(--md-sys-typescale-body-large-line-height)"
     }
   },
+  "customTemplates": [
+    {
+      "name": "page-no-title",
+      "title": "Page (No Title)",
+      "postTypes": [
+        "page"
+      ]
+    }
+  ],
   "templateParts": [
     {
       "name": "header",
@@ -496,6 +505,11 @@
       "name": "footer",
       "title": "Footer",
       "area": "footer"
+    },
+    {
+      "name": "sidebar",
+      "title": "Sidebar",
+      "area": "uncategorized"
     }
   ]
 }

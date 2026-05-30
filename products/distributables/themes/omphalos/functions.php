@@ -48,6 +48,7 @@ function omphalos_setup() : void {
 			array(
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.ref.css' ) ? 'assets/styles/tokens.ref.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.sys.light.css' ) ? 'assets/styles/tokens.sys.light.css' : null,
+				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.comp.css' ) ? 'assets/styles/tokens.comp.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.sys.dark.css' ) ? 'assets/styles/tokens.sys.dark.css' : null,
 			)
 		)
@@ -66,10 +67,17 @@ add_action( 'after_setup_theme', 'omphalos_setup' );
  * themes; this layers the Axismundi token + style cascade on top.
  */
 function omphalos_enqueue_assets() : void {
+	// Canonical Axismundi token load order: ref -> sys.light -> comp -> sys.dark.
+	// tokens.comp.css carries the --md-sys-* system tokens (typescale, shape,
+	// state, motion, elevation) plus --space-* and the --comp-* component
+	// tokens. The typescale + spacing tokens are what theme.json's font-size
+	// presets and spacing presets resolve to; the --comp-* tokens have no
+	// consumers until the Phase 8 component stylesheets land, so they are inert.
 	$styles = array(
-		'omphalos-tokens-ref'      => array( 'assets/styles/tokens.ref.css', array() ),
+		'omphalos-tokens-ref'       => array( 'assets/styles/tokens.ref.css', array() ),
 		'omphalos-tokens-sys-light' => array( 'assets/styles/tokens.sys.light.css', array( 'omphalos-tokens-ref' ) ),
-		'omphalos-tokens-sys-dark' => array( 'assets/styles/tokens.sys.dark.css', array( 'omphalos-tokens-sys-light' ) ),
+		'omphalos-tokens-comp'      => array( 'assets/styles/tokens.comp.css', array( 'omphalos-tokens-sys-light' ) ),
+		'omphalos-tokens-sys-dark'  => array( 'assets/styles/tokens.sys.dark.css', array( 'omphalos-tokens-comp' ) ),
 	);
 
 	$previous = array();

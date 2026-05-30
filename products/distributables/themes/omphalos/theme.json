@@ -159,6 +159,27 @@
           ]
         }
       ]
+    },
+    "spacing": {
+      "defaultSpacingSizes": false,
+      "blockGap": true,
+      "margin": true,
+      "padding": true,
+      "units": [ "px", "rem", "%" ],
+      "spacingSizes": [
+        { "slug": "xs", "name": "XS", "size": "var(--space-xs)" },
+        { "slug": "sm", "name": "SM", "size": "var(--space-sm)" },
+        { "slug": "md", "name": "MD", "size": "var(--space-md)" },
+        { "slug": "lg", "name": "LG", "size": "var(--space-lg)" },
+        { "slug": "xl", "name": "XL", "size": "var(--space-xl)" },
+        { "slug": "20", "name": "20", "size": "var(--space-sm)" },
+        { "slug": "30", "name": "30", "size": "var(--space-md)" },
+        { "slug": "40", "name": "40", "size": "var(--space-lg)" },
+        { "slug": "50", "name": "50", "size": "var(--space-xl)" },
+        { "slug": "60", "name": "60", "size": "calc(var(--space-xl) + var(--space-sm))" },
+        { "slug": "70", "name": "70", "size": "calc(var(--space-xl) + var(--space-md))" },
+        { "slug": "80", "name": "80", "size": "calc(var(--space-xl) * 2)" }
+      ]
     }
   },
   "styles": {

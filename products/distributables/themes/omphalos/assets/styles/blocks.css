@@ -1,0 +1,140 @@
+/* ============================================================
+ * Omphalos — blocks.css (FSE core-block chrome)
+ * v0.1.0 — Phase 8: Text group
+ *
+ * Block-level chrome for WordPress core blocks, layered on top of
+ * prose.css. prose.css owns the long-form text baseline (typescale,
+ * rhythm, inline elements, list/quote/code/table framing). This file
+ * owns the per-block visual decisions that belong to a specific
+ * `core/*` block and its style variations — things that are NOT a
+ * generic text baseline:
+ *
+ *   §1  core/paragraph   — drop cap
+ *   §2  core/quote       — cite row
+ *   §3  core/pullquote   — headline italic + dividers
+ *   §4  core/code|preformatted|verse — separate the three surfaces
+ *   §5  core/table       — stripes / row variations
+ *
+ * Scope: every rule is bound to `.wp-block-post-content` so block chrome
+ * never leaks into UI surfaces (Query Loop cards, navigation, comment
+ * forms). The lab pilot's blocks.css is a reference only — selectors are
+ * re-contracted here for the FSE post-content surface rather than the
+ * standalone `.prose`/`.sg-demo` styleguide context.
+ *
+ * Enqueue order: tokens -> prose.css -> blocks.css. base.css is unused.
+ * Token-only values (--md-sys-* / --space-* / --md-ref-*).
+ * ============================================================ */
+
+/* ============================================================
+ * §1 core/paragraph — drop cap
+ *
+ * Drop cap is owned by core/paragraph, not the theme: WordPress ships
+ *   .has-drop-cap:not(:focus)::first-letter {
+ *     float:left; font-size:8.4em; line-height:0.68; font-weight:100;
+ *     margin:0.05em 0.1em 0 0; text-transform:uppercase; font-style:normal;
+ *   }
+ * in wp-includes/blocks/paragraph/style.css. TT5 does not touch drop cap.
+ * Omphalos overrides that core default inside the post-content surface:
+ *   - 8.4em is oversized, especially for a Hangul first glyph -> 3.2em.
+ *   - core weight 100 is too thin for the M3 tone -> brand medium.
+ *   - core forces uppercase (Latin-only intent, meaningless for Hangul)
+ *     -> text-transform: none.
+ *   - colour the cap with the brand primary; use the brand typeface.
+ * ============================================================ */
+.wp-block-post-content .wp-block-paragraph.has-drop-cap::first-letter,
+.wp-block-post-content p.has-drop-cap::first-letter {
+  float: left;
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 3.2em;
+  line-height: 0.78;
+  font-weight: var(--md-ref-typeface-weight-medium);
+  margin-block-start: var(--space-xs);
+  margin-inline-end: var(--space-sm);
+  text-transform: none;
+  font-style: normal;
+  color: var(--md-sys-color-primary);
+}
+
+/* ============================================================
+ * §2 core/quote — cite row
+ *
+ * prose.css already styles the blockquote bar + padding. core/quote
+ * outputs <cite> as a sibling of the inner paragraph; ensure it sits on
+ * its own line (prose.css §4 cite styling — typescale/colour — applies).
+ * ============================================================ */
+.wp-block-post-content .wp-block-quote cite {
+  display: block;
+}
+
+/* ============================================================
+ * §3 core/pullquote — distinct from quote
+ *
+ * A pullquote is a display device, not a citation. prose.css gives it a
+ * centered box with top/bottom dividers; this section sets the headline
+ * type treatment (serif italic, headline-medium) that distinguishes it
+ * from a normal quote. Covers both the legacy <figure><blockquote><p>
+ * markup and the <figure><p> form.
+ * ============================================================ */
+.wp-block-post-content .wp-block-pullquote :is(p, blockquote p) {
+  font-family:    var(--md-sys-typescale-headline-medium-font);
+  font-size:      var(--md-sys-typescale-headline-medium-size);
+  line-height:    var(--md-sys-typescale-headline-medium-line-height);
+  font-weight:    var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+  font-style: italic;
+}
+.wp-block-post-content .wp-block-pullquote cite {
+  display: block;
+  margin-block-start: var(--space-md);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size:   var(--md-sys-typescale-body-small-size);
+  font-style: normal;
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ============================================================
+ * §4 core/code · core/preformatted · core/verse — three surfaces
+ *
+ * prose.css §6 frames pre/.wp-block-code as a mono code card. That is
+ * correct for code and preformatted, but core/verse is poetry, not a
+ * code specimen: it must read in the body typeface, keep its line breaks,
+ * and drop the code-card surface. Re-contract verse here.
+ * ============================================================ */
+.wp-block-post-content .wp-block-verse {
+  /* Undo the prose.css code-card treatment: poetry is body text. */
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface);
+  padding: 0;
+  border-radius: 0;
+  overflow-x: visible;
+  white-space: pre-wrap;          /* preserve poetic line breaks, allow wrap */
+  font-family: var(--md-ref-typeface-serif);
+  font-size:   var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+.wp-block-post-content .wp-block-verse code {
+  /* defensive: no inline pill if a verse ever wraps text in <code> */
+  background-color: transparent;
+  padding: 0;
+}
+
+/* ============================================================
+ * §5 core/table — style variations
+ *
+ * prose.css frames the base table (border, header tint, cell padding,
+ * tfoot separator). This adds the core "Stripes" style variation as a
+ * zebra-row treatment. The stripe tone starts from the header so the
+ * alternation reads as one continuous rhythm.
+ * ============================================================ */
+.wp-block-post-content .wp-block-table.is-style-stripes table {
+  border-block-end: 0;
+}
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) > :is(th, td) {
+  background-color: var(--md-sys-color-surface-container);
+}
+.wp-block-post-content .wp-block-table.is-style-stripes :is(th, td) {
+  /* stripes carry the row rhythm; drop the per-cell grid lines */
+  border-block-end: 0;
+  border-inline-end: 0;
+}

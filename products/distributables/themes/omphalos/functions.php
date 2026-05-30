@@ -52,6 +52,7 @@ function omphalos_setup() : void {
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.comp.css' ) ? 'assets/styles/tokens.comp.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/tokens.sys.dark.css' ) ? 'assets/styles/tokens.sys.dark.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/prose.css' ) ? 'assets/styles/prose.css' : null,
+				file_exists( get_stylesheet_directory() . '/assets/styles/blocks.css' ) ? 'assets/styles/blocks.css' : null,
 			)
 		)
 	);
@@ -69,13 +70,14 @@ add_action( 'after_setup_theme', 'omphalos_setup' );
  * themes; this layers the Axismundi token + style cascade on top.
  */
 function omphalos_enqueue_assets() : void {
-	// Token layers, then the scoped style layer. In an FSE child theme the
+	// Token layers, then the scoped style layers. In an FSE child theme the
 	// global element baseline (html/body/headings/links) is owned by WordPress
 	// core + theme.json + the parent theme, so the lab's global base.css reset
-	// is intentionally NOT loaded. prose.css re-contracts that prose layer for
-	// FSE: it is scoped to the long-form surfaces (.prose and
-	// .wp-block-post-content) only and consumes token vars, so it never leaks
-	// into UI chrome. blocks.css / components.css land in Phase 8.
+	// is intentionally NOT loaded. prose.css re-contracts the prose layer for
+	// FSE, scoped to the long-form surface (.wp-block-post-content); blocks.css
+	// layers core-block chrome (drop cap, pullquote, verse, table variations)
+	// on top, also scoped to post content so nothing leaks into UI chrome.
+	// components.css lands later in Phase 8.
 	$styles = array(
 		'omphalos-tokens-ref'       => array( 'assets/styles/tokens.ref.css', array() ),
 		'omphalos-tokens-sys-light' => array( 'assets/styles/tokens.sys.light.css', array( 'omphalos-tokens-ref' ) ),
@@ -83,6 +85,7 @@ function omphalos_enqueue_assets() : void {
 		'omphalos-tokens-comp'      => array( 'assets/styles/tokens.comp.css', array( 'omphalos-tokens-sys-core' ) ),
 		'omphalos-tokens-sys-dark'  => array( 'assets/styles/tokens.sys.dark.css', array( 'omphalos-tokens-comp' ) ),
 		'omphalos-prose'            => array( 'assets/styles/prose.css', array( 'omphalos-tokens-sys-dark' ) ),
+		'omphalos-blocks'           => array( 'assets/styles/blocks.css', array( 'omphalos-prose' ) ),
 	);
 
 	$previous = array();

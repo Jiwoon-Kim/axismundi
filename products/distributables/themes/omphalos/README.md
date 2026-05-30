@@ -14,7 +14,7 @@ native block theme as a compatibility pilot.
 
 Consumes (pilot from `axismundi-pilot`):
 
-- Material 3 `tokens.ref` / `tokens.sys` color + scale layer
+- Material 3 `tokens.ref` / `tokens.sys` color + core scale layer
 - bundled Roboto / Noto fonts + Material Symbols icon font (Font Library)
 - dynamic attachment media object templates
 - 3-state (light / dark / auto) theme switcher (Interactivity API)
@@ -22,7 +22,7 @@ Consumes (pilot from `axismundi-pilot`):
 Does **not** implement:
 
 - custom blocks
-- the full Axismundi component system / `tokens.comp`
+- the full Axismundi component system
 - editor toolkit / HCT runtime / ActivityPub UI
 
 ## Develop with wp-env

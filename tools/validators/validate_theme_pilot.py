@@ -277,6 +277,7 @@ def axis_f_bridge_layering(styles_dir):
     token_files = [
         styles_dir / "tokens.ref.css",
         styles_dir / "tokens.sys.light.css",
+        styles_dir / "tokens.sys.core.css",
         styles_dir / "tokens.sys.dark.css",
         styles_dir / "tokens.comp.css",
     ]
@@ -342,6 +343,7 @@ def collect_upstream_tokens(styles_dir):
     token_files = [
         styles_dir / "tokens.ref.css",
         styles_dir / "tokens.sys.light.css",
+        styles_dir / "tokens.sys.core.css",
         styles_dir / "tokens.sys.dark.css",
         styles_dir / "tokens.comp.css",
     ]

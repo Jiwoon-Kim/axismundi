@@ -6,8 +6,9 @@
  * v3.6.1 loads token layers explicitly in this order:
  *   1. tokens.ref.css
  *   2. tokens.sys.light.css
- *   3. tokens.comp.css
- *   4. tokens.sys.dark.css
+ *   3. tokens.sys.core.css
+ *   4. tokens.comp.css
+ *   5. tokens.sys.dark.css
  *
  * Source authority moved to the layer files above during
  * Token Architecture Refactor Phase 1A.

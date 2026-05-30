@@ -37,6 +37,7 @@ STYLE_ORDER = (
     "fonts.css",
     "tokens.ref.css",
     "tokens.sys.light.css",
+    "tokens.sys.core.css",
     "tokens.comp.css",
     "tokens.sys.dark.css",
     "wp-preset.bridge.css",

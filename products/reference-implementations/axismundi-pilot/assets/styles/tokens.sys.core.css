@@ -1,0 +1,404 @@
+/* ============================================================
+ * Axismundi — tokens.sys.core.css
+ * v3.6.1 — Token Architecture Refactor Phase 1A
+ *
+ * Component-facing contracts, typography utilities, semantic aliases, and layout tokens.
+ * Non-mode system tokens: typescale, shape, spacing, state,
+ * motion, and elevation.
+ * ============================================================ */
+
+/* ============================================================
+ * §3 Typescale system — 15 roles, atomic tokens
+ *
+ * Atomic structure: each role exposes 5 properties separately
+ * (font / size / line-height / weight / tracking). Components
+ * compose them à la carte — you can override one axis without
+ * losing the rest.
+ *
+ * Family mapping (prompt-v2 §2.2):
+ *   display-*, headline-*, title-large → brand
+ *   everything else                    → plain
+ *
+ * Weight mapping (prompt-v2 §2.2):
+ *   display-*, headline-*, title-large, body-* → 400 (regular)
+ *   title-medium, title-small, label-*         → 500 (medium)
+ *
+ * Units: px throughout. No dp/pt. No variable-font axis tokens.
+ * ============================================================ */
+:root {
+  /* --- display-large --- */
+  --md-sys-typescale-display-large-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-large-size:        57px;
+  --md-sys-typescale-display-large-line-height: 64px;
+  --md-sys-typescale-display-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-display-large-tracking:    -0.25px;
+
+  /* --- display-medium --- */
+  --md-sys-typescale-display-medium-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-medium-size:        45px;
+  --md-sys-typescale-display-medium-line-height: 52px;
+  --md-sys-typescale-display-medium-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-display-medium-tracking:    0px;
+
+  /* --- display-small --- */
+  --md-sys-typescale-display-small-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-display-small-size:        36px;
+  --md-sys-typescale-display-small-line-height: 44px;
+  --md-sys-typescale-display-small-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-display-small-tracking:    0px;
+
+  /* --- headline-large --- */
+  --md-sys-typescale-headline-large-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-large-size:        32px;
+  --md-sys-typescale-headline-large-line-height: 40px;
+  --md-sys-typescale-headline-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-headline-large-tracking:    0px;
+
+  /* --- headline-medium --- */
+  --md-sys-typescale-headline-medium-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-medium-size:        28px;
+  --md-sys-typescale-headline-medium-line-height: 36px;
+  --md-sys-typescale-headline-medium-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-headline-medium-tracking:    0px;
+
+  /* --- headline-small --- */
+  --md-sys-typescale-headline-small-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-small-size:        24px;
+  --md-sys-typescale-headline-small-line-height: 32px;
+  --md-sys-typescale-headline-small-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-headline-small-tracking:    0px;
+
+  /* --- title-large --- (uses brand per §2.2) */
+  --md-sys-typescale-title-large-font:        var(--md-ref-typeface-brand);
+  --md-sys-typescale-title-large-size:        22px;
+  --md-sys-typescale-title-large-line-height: 28px;
+  --md-sys-typescale-title-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-title-large-tracking:    0px;
+
+  /* --- title-medium --- */
+  --md-sys-typescale-title-medium-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-medium-size:        16px;
+  --md-sys-typescale-title-medium-line-height: 24px;
+  --md-sys-typescale-title-medium-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-title-medium-tracking:    0.15px;
+
+  /* --- title-small --- */
+  --md-sys-typescale-title-small-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-title-small-size:        14px;
+  --md-sys-typescale-title-small-line-height: 20px;
+  --md-sys-typescale-title-small-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-title-small-tracking:    0.1px;
+
+  /* --- body-large --- */
+  --md-sys-typescale-body-large-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-large-size:        16px;
+  --md-sys-typescale-body-large-line-height: 24px;
+  --md-sys-typescale-body-large-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-body-large-tracking:    0.5px;
+
+  /* --- body-medium --- */
+  --md-sys-typescale-body-medium-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-medium-size:        14px;
+  --md-sys-typescale-body-medium-line-height: 20px;
+  --md-sys-typescale-body-medium-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-body-medium-tracking:    0.25px;
+
+  /* --- body-small --- */
+  --md-sys-typescale-body-small-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-small-size:        12px;
+  --md-sys-typescale-body-small-line-height: 16px;
+  --md-sys-typescale-body-small-weight:      var(--md-ref-typeface-weight-regular);
+  --md-sys-typescale-body-small-tracking:    0.4px;
+
+  /* --- label-large --- */
+  --md-sys-typescale-label-large-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-large-size:        14px;
+  --md-sys-typescale-label-large-line-height: 20px;
+  --md-sys-typescale-label-large-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-label-large-tracking:    0.1px;
+
+  /* --- label-medium --- */
+  --md-sys-typescale-label-medium-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-medium-size:        12px;
+  --md-sys-typescale-label-medium-line-height: 16px;
+  --md-sys-typescale-label-medium-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-label-medium-tracking:    0.5px;
+
+  /* --- label-small --- */
+  --md-sys-typescale-label-small-font:        var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-small-size:        11px;
+  --md-sys-typescale-label-small-line-height: 16px;
+  --md-sys-typescale-label-small-weight:      var(--md-ref-typeface-weight-medium);
+  --md-sys-typescale-label-small-tracking:    0.5px;
+}
+
+/* ============================================================
+ * §3.1 Typescale utility classes — 15 roles
+ *
+ * NOTE: provisional location. May move to base.css when
+ * base.css is built. Kept here for now so the typescale stays
+ * self-contained and easy to validate against §3 atomic tokens.
+ *
+ * §2.3 Emphasis modifier (prompt-v2 §2.3):
+ *   .t-label-large.is-prominent / .t-label-medium.is-prominent
+ *     → weight bumped to bold (700). No new tokens.
+ * ============================================================ */
+.t-display-large {
+  font-family:    var(--md-sys-typescale-display-large-font);
+  font-size:      var(--md-sys-typescale-display-large-size);
+  line-height:    var(--md-sys-typescale-display-large-line-height);
+  font-weight:    var(--md-sys-typescale-display-large-weight);
+  letter-spacing: var(--md-sys-typescale-display-large-tracking);
+}
+.t-display-medium {
+  font-family:    var(--md-sys-typescale-display-medium-font);
+  font-size:      var(--md-sys-typescale-display-medium-size);
+  line-height:    var(--md-sys-typescale-display-medium-line-height);
+  font-weight:    var(--md-sys-typescale-display-medium-weight);
+  letter-spacing: var(--md-sys-typescale-display-medium-tracking);
+}
+.t-display-small {
+  font-family:    var(--md-sys-typescale-display-small-font);
+  font-size:      var(--md-sys-typescale-display-small-size);
+  line-height:    var(--md-sys-typescale-display-small-line-height);
+  font-weight:    var(--md-sys-typescale-display-small-weight);
+  letter-spacing: var(--md-sys-typescale-display-small-tracking);
+}
+.t-headline-large {
+  font-family:    var(--md-sys-typescale-headline-large-font);
+  font-size:      var(--md-sys-typescale-headline-large-size);
+  line-height:    var(--md-sys-typescale-headline-large-line-height);
+  font-weight:    var(--md-sys-typescale-headline-large-weight);
+  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+}
+.t-headline-medium {
+  font-family:    var(--md-sys-typescale-headline-medium-font);
+  font-size:      var(--md-sys-typescale-headline-medium-size);
+  line-height:    var(--md-sys-typescale-headline-medium-line-height);
+  font-weight:    var(--md-sys-typescale-headline-medium-weight);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+}
+.t-headline-small {
+  font-family:    var(--md-sys-typescale-headline-small-font);
+  font-size:      var(--md-sys-typescale-headline-small-size);
+  line-height:    var(--md-sys-typescale-headline-small-line-height);
+  font-weight:    var(--md-sys-typescale-headline-small-weight);
+  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+}
+.t-title-large {
+  font-family:    var(--md-sys-typescale-title-large-font);
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+.t-title-medium {
+  font-family:    var(--md-sys-typescale-title-medium-font);
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+.t-title-small {
+  font-family:    var(--md-sys-typescale-title-small-font);
+  font-size:      var(--md-sys-typescale-title-small-size);
+  line-height:    var(--md-sys-typescale-title-small-line-height);
+  font-weight:    var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+.t-body-large {
+  font-family:    var(--md-sys-typescale-body-large-font);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+}
+.t-body-medium {
+  font-family:    var(--md-sys-typescale-body-medium-font);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+.t-body-small {
+  font-family:    var(--md-sys-typescale-body-small-font);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+.t-label-large {
+  font-family:    var(--md-sys-typescale-label-large-font);
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+.t-label-large.is-prominent { font-weight: var(--md-ref-typeface-weight-bold); }
+
+.t-label-medium {
+  font-family:    var(--md-sys-typescale-label-medium-font);
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+.t-label-medium.is-prominent { font-weight: var(--md-ref-typeface-weight-bold); }
+
+.t-label-small {
+  font-family:    var(--md-sys-typescale-label-small-font);
+  font-size:      var(--md-sys-typescale-label-small-size);
+  line-height:    var(--md-sys-typescale-label-small-line-height);
+  font-weight:    var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+/* ============================================================
+ * §4 Shape scale (prompt-v2 §3.2 — M3 Expressive full scale)
+ *
+ * 10 tiers + 3 directional modifiers. Component-specific
+ * sub-xs literals (e.g. checkbox 2px) stay at component layer.
+ * Directional modifiers are full border-radius shorthand
+ * values (TL TR BR BL) — apply via `border-radius: var(...)`.
+ * ============================================================ */
+:root {
+  --md-sys-shape-corner-none:                  0;
+  --md-sys-shape-corner-extra-small:           4px;
+  --md-sys-shape-corner-small:                 8px;
+  --md-sys-shape-corner-medium:                12px;
+  --md-sys-shape-corner-large:                 16px;
+  --md-sys-shape-corner-large-increased:       20px;
+  --md-sys-shape-corner-extra-large:           28px;
+  --md-sys-shape-corner-extra-large-increased: 32px;
+  --md-sys-shape-corner-extra-extra-large:     48px;
+  --md-sys-shape-corner-full:                  9999px;
+  --md-sys-shape-corner-pill-stable:           50%;
+
+  /* --- Directional modifiers (full shorthand: TL TR BR BL) --- */
+  --md-sys-shape-corner-extra-large-top: 28px 28px 0 0;   /* bottom sheet, filled text field */
+  --md-sys-shape-corner-extra-small-top: 4px 4px 0 0;     /* filled text field active */
+  --md-sys-shape-corner-large-start:     16px 0 0 16px;   /* modal side sheet (LTR) */
+}
+
+/* ============================================================
+ * §5 Spacing (prompt-v2 §3.1)
+ * ============================================================ */
+:root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+}
+
+/* ============================================================
+ * §6 State layer opacity (prompt-v2 §4.1)
+ *
+ * M3 Expressive correct values: 0.08 / 0.10 / 0.10 / 0.16
+ * (NOT legacy 0.12 — see audit §2.2). Token names use full M3
+ * form for portability with the spec.
+ *
+ * Implementation: see prompt-v2 §4.2 — Pattern A (currentColor
+ * + opacity token, preferred for state layers) and Pattern B
+ * (explicit color token + transparent N%, for non-state
+ * overlays). Reference snippets live in components.css.
+ * ============================================================ */
+:root {
+  --md-sys-state-hover-state-layer-opacity:    0.08;
+  --md-sys-state-focus-state-layer-opacity:    0.10;
+  --md-sys-state-pressed-state-layer-opacity:  0.10;
+  --md-sys-state-dragged-state-layer-opacity:  0.16;
+}
+
+/* ============================================================
+ * §7 Motion — M3 Expressive spring physics (prompt-v2 §5)
+ *
+ * §7.1 Spring tokens — raw physics. Damping + stiffness are
+ *      unitless and exposed as separate vars so native runtimes
+ *      (Compose, Motion One, Framer Motion) can consume them.
+ *
+ * §7.2 CSS cubic-bezier tokens — curve + duration pairs for
+ *      transition-timing-function / animation. Each curve has a
+ *      paired duration token.
+ *
+ * Style:
+ *   spatial → shape/size/position (slight overshoot)
+ *   effects → color/opacity (no overshoot)
+ * Speed:
+ *   fast / default / slow
+ * ============================================================ */
+:root {
+  /* --- §7.1 Spring physics (12 tokens — raw) --- */
+  --md-sys-motion-spring-fast-spatial-damping:      0.6;
+  --md-sys-motion-spring-fast-spatial-stiffness:    800;
+  --md-sys-motion-spring-default-spatial-damping:   0.8;
+  --md-sys-motion-spring-default-spatial-stiffness: 380;
+  --md-sys-motion-spring-slow-spatial-damping:      0.8;
+  --md-sys-motion-spring-slow-spatial-stiffness:    200;
+
+  --md-sys-motion-spring-fast-effects-damping:      1;
+  --md-sys-motion-spring-fast-effects-stiffness:    3800;
+  --md-sys-motion-spring-default-effects-damping:   1;
+  --md-sys-motion-spring-default-effects-stiffness: 1600;
+  --md-sys-motion-spring-slow-effects-damping:      1;
+  --md-sys-motion-spring-slow-effects-stiffness:    800;
+
+  /* --- §7.2 CSS curves (12 tokens — 6 curves + 6 durations) --- */
+  --md-sys-motion-curve-fast-spatial:             cubic-bezier(0.42, 1.67, 0.21, 0.90);
+  --md-sys-motion-curve-fast-spatial-duration:    350ms;
+  --md-sys-motion-curve-default-spatial:          cubic-bezier(0.38, 1.21, 0.22, 1.00);
+  --md-sys-motion-curve-default-spatial-duration: 500ms;
+  --md-sys-motion-curve-slow-spatial:             cubic-bezier(0.39, 1.29, 0.35, 0.98);
+  --md-sys-motion-curve-slow-spatial-duration:    650ms;
+
+  --md-sys-motion-curve-fast-effects:             cubic-bezier(0.31, 0.94, 0.34, 1.00);
+  --md-sys-motion-curve-fast-effects-duration:    150ms;
+  --md-sys-motion-curve-default-effects:          cubic-bezier(0.34, 0.80, 0.34, 1.00);
+  --md-sys-motion-curve-default-effects-duration: 200ms;
+  --md-sys-motion-curve-slow-effects:             cubic-bezier(0.34, 0.88, 0.34, 1.00);
+  --md-sys-motion-curve-slow-effects-duration:    300ms;
+}
+
+/* ============================================================
+ * §8 Elevation (prompt-v2 §6)
+ *
+ * §8.1 Six dp levels. Levels 0-3 = resting; 4-5 = interaction
+ *      states only (hover, dragged).
+ *
+ * §8.2 Light/dark policy (audit §1.2):
+ *      - Light mode → tonal containers + shadows
+ *      - Dark mode  → tonal only; shadows suppressed to none
+ *
+ * §8.3 Shadow specs use color-mix(in srgb, shadow, transparent N%)
+ *      so they respect the active scheme's shadow token (currently
+ *      #000 in both, but extensible).
+ *
+ * surface-tint is intentionally NOT defined (deprecated).
+ * ============================================================ */
+:root {
+  /* --- §8.1 dp levels --- */
+  --md-sys-elevation-level0: 0;
+  --md-sys-elevation-level1: 1px;
+  --md-sys-elevation-level2: 3px;
+  --md-sys-elevation-level3: 6px;
+  --md-sys-elevation-level4: 8px;   /* interaction only — hover, dragged */
+  --md-sys-elevation-level5: 12px;  /* interaction only */
+
+  /* --- §8.3 Light-mode shadow specs --- */
+  --md-sys-elevation-shadow-level0: none;
+  --md-sys-elevation-shadow-level1:
+    0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%),
+    0 1px 3px 1px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%);
+  --md-sys-elevation-shadow-level2:
+    0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%),
+    0 2px 6px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%);
+  --md-sys-elevation-shadow-level3:
+    0 4px 8px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+    0 1px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+  --md-sys-elevation-shadow-level4:
+    0 6px 10px 4px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+    0 2px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+  --md-sys-elevation-shadow-level5:
+    0 8px 12px 6px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+    0 4px 4px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+}

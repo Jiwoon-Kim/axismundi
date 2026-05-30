@@ -129,11 +129,43 @@
 }
 
 /* ============================================================
- * §5 core/table — style variations
+ * §5 core/table — reset core borders + style variations
  *
- * prose.css frames the base table (border, header tint, cell padding,
- * tfoot separator). This adds the core "Stripes" (is-style-stripes) style.
- *
+ * WordPress core ships full per-cell borders for core/table:
+ *   .wp-block-table td, .wp-block-table th { border: 1px solid; }
+ *   .wp-block-table thead { border-bottom: 3px solid; }
+ *   .wp-block-table tfoot { border-top: 3px solid; }
+ * prose.css §10 only sets border-block-end / border-inline-end on cells, so the
+ * core top/left 1px and the 3px thead/tfoot rules survive underneath and clash
+ * with the M3 outer frame (doubled/!= weight lines). Reset the core cell border
+ * to zero here, then redraw just the M3 separators the design wants: a single
+ * 1px grid (right + bottom), a stronger 1px outline under the header, and a
+ * 1px outline above the footer. (prose.css keeps the outer frame + radius +
+ * header tint + cell padding; this owns the internal rules.)
+ * ============================================================ */
+.wp-block-post-content .wp-block-table :is(th, td) {
+  border: 0;
+  border-block-end: 1px solid var(--md-sys-color-outline-variant);
+  border-inline-end: 1px solid var(--md-sys-color-outline-variant);
+}
+.wp-block-post-content .wp-block-table tr > :is(th, td):last-child {
+  border-inline-end: 0;
+}
+.wp-block-post-content .wp-block-table tbody tr:last-child > :is(th, td) {
+  border-block-end: 0;
+}
+/* Stronger 1px outline under the header and above the footer (core uses 3px). */
+.wp-block-post-content .wp-block-table thead :is(th, td) {
+  border-block-end: 1px solid var(--md-sys-color-outline);
+}
+.wp-block-post-content .wp-block-table tfoot tr:first-child > :is(th, td) {
+  border-block-start: 1px solid var(--md-sys-color-outline);
+}
+.wp-block-post-content .wp-block-table tfoot tr:last-child > :is(th, td) {
+  border-block-end: 0;
+}
+
+/* --- Stripes variation -----------------------------------------------------
  * The header band is surface-container-high (prose §10 th). To make the zebra
  * read as ONE continuous alternation starting FROM the header, the striped
  * rows use the SAME tone (even rows, since row 1 sits directly under the
@@ -142,8 +174,7 @@
  *   row 1   base
  *   row 2   surface-container-high  <- same as header
  *   row 3   base ...
- * The bg banding carries the rhythm, so per-cell grid lines are dropped.
- * ============================================================ */
+ * The bg banding carries the rhythm, so per-cell grid lines are dropped. */
 .wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) > :is(th, td) {
   background-color: transparent;
 }

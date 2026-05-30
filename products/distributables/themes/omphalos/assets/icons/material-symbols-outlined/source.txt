@@ -1,0 +1,5 @@
+Source: https://fonts.google.com/icons (Material Symbols family)
+Original file: MaterialSymbolsOutlined-VariableFont_FILL,GRAD,opsz,wght.ttf
+Processing: pyftsubset → WOFF2 with full glyph table preserved (icon fonts MUST NOT be glyph-subset; ligatures depend on full glyph table). 4 axes preserved: FILL, GRAD, opsz, wght.
+Conversion date: 2026-05-13
+License: Apache License 2.0

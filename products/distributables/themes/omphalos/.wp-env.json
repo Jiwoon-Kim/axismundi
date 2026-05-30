@@ -1,0 +1,27 @@
+{
+  "core": "WordPress/WordPress#7.0",
+  "themes": [
+    ".",
+    "C:/Users/thaum/dev/twentytwentyfive.1.5/twentytwentyfive"
+  ],
+  "plugins": [
+    "https://downloads.wordpress.org/plugin/create-block-theme.zip"
+  ],
+  "port": 8884,
+  "testsPort": 8885,
+  "config": {
+    "WP_DEBUG": true,
+    "SCRIPT_DEBUG": true
+  },
+  "lifecycleScripts": {
+    "afterStart": "node scripts/setup-wp-env.cjs"
+  },
+  "env": {
+    "development": {
+      "core": "WordPress/WordPress#7.0"
+    },
+    "tests": {
+      "core": "WordPress/WordPress#7.0"
+    }
+  }
+}

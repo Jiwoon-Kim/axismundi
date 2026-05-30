@@ -1,0 +1,99 @@
+{
+  "$schema": "https://schemas.wp.org/wp/6.8/theme.json",
+  "version": 3,
+  "settings": {
+    "appearanceTools": true,
+    "typography": {
+      "fluid": true,
+      "fontFamilies": [
+        {
+          "slug": "roboto-flex",
+          "name": "Roboto Flex",
+          "fontFamily": "\"Roboto Flex\", \"Noto Sans KR\", system-ui, sans-serif",
+          "fontFace": [
+            {
+              "fontFamily": "Roboto Flex",
+              "fontStyle": "oblique -10deg 0deg",
+              "fontWeight": "100 1000",
+              "fontStretch": "25% 151%",
+              "src": [ "file:./assets/fonts/roboto-flex/axismundi-roboto-flex.woff2" ]
+            }
+          ]
+        },
+        {
+          "slug": "noto-sans-kr",
+          "name": "Noto Sans KR",
+          "fontFamily": "\"Noto Sans KR\", sans-serif",
+          "fontFace": [
+            {
+              "fontFamily": "Noto Sans KR",
+              "fontStyle": "normal",
+              "fontWeight": "100 900",
+              "src": [ "file:./assets/fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2" ]
+            }
+          ]
+        },
+        {
+          "slug": "roboto-serif",
+          "name": "Roboto Serif",
+          "fontFamily": "\"Roboto Serif\", \"Noto Serif KR\", Georgia, serif",
+          "fontFace": [
+            {
+              "fontFamily": "Roboto Serif",
+              "fontStyle": "normal",
+              "fontWeight": "100 900",
+              "fontStretch": "50% 150%",
+              "src": [ "file:./assets/fonts/roboto-serif/axismundi-roboto-serif.woff2" ]
+            }
+          ]
+        },
+        {
+          "slug": "noto-serif-kr",
+          "name": "Noto Serif KR",
+          "fontFamily": "\"Noto Serif KR\", serif",
+          "fontFace": [
+            {
+              "fontFamily": "Noto Serif KR",
+              "fontStyle": "normal",
+              "fontWeight": "100 900",
+              "src": [ "file:./assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2" ]
+            }
+          ]
+        },
+        {
+          "slug": "roboto-mono",
+          "name": "Roboto Mono",
+          "fontFamily": "\"Roboto Mono\", monospace",
+          "fontFace": [
+            {
+              "fontFamily": "Roboto Mono",
+              "fontStyle": "normal",
+              "fontWeight": "100 700",
+              "src": [ "file:./assets/fonts/roboto-mono/axismundi-roboto-mono.woff2" ]
+            },
+            {
+              "fontFamily": "Roboto Mono",
+              "fontStyle": "italic",
+              "fontWeight": "100 700",
+              "src": [ "file:./assets/fonts/roboto-mono/axismundi-roboto-mono-italic.woff2" ]
+            }
+          ]
+        },
+        {
+          "slug": "material-symbols-outlined",
+          "name": "Material Symbols Outlined",
+          "fontFamily": "\"Material Symbols Outlined\", sans-serif",
+          "fontFace": [
+            {
+              "fontFamily": "Material Symbols Outlined",
+              "fontStyle": "normal",
+              "fontWeight": "100 700",
+              "fontDisplay": "block",
+              "src": [ "file:./assets/icons/material-symbols-outlined/material-symbols-outlined.woff2" ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

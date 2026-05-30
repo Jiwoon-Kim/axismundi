@@ -7,6 +7,14 @@
       "enabled": true,
       "allowEditing": true
     },
+    "blocks": {
+      "core/image": {
+        "lightbox": {
+          "enabled": true,
+          "allowEditing": true
+        }
+      }
+    },
     "color": {
       "custom": false,
       "customDuotone": false,

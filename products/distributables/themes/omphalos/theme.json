@@ -3,6 +3,10 @@
   "version": 3,
   "settings": {
     "appearanceTools": true,
+    "lightbox": {
+      "enabled": true,
+      "allowEditing": true
+    },
     "color": {
       "custom": false,
       "customDuotone": false,

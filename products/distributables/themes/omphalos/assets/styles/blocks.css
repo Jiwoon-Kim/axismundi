@@ -174,14 +174,22 @@
  *   row 1   base
  *   row 2   surface-container-high  <- same as header
  *   row 3   base ...
- * The bg banding carries the rhythm, so per-cell grid lines are dropped. */
-.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) > :is(th, td) {
-  background-color: transparent;
+ * The bg banding carries the rhythm, so per-cell grid lines are dropped.
+ *
+ * IMPORTANT: core ships `is-style-stripes tbody tr:nth-child(odd){ background:
+ * #f0f0f0 }` as a literal hex on the ROW. Setting our tone on the cells alone
+ * leaves that core row background showing through transparent cells — invisible
+ * in light mode (≈surface) but a bright band in dark mode. So target the row at
+ * the same level core does, and use surface for the "base" rows so nothing
+ * shows through. */
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) {
+  background-color: var(--md-sys-color-surface);
 }
-.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(even) > :is(th, td) {
+.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(even) {
   background-color: var(--md-sys-color-surface-container-high);
 }
 .wp-block-post-content .wp-block-table.is-style-stripes :is(th, td) {
+  background-color: transparent;   /* let the row tone show; no per-cell paint */
   border-block-end: 0;
   border-inline-end: 0;
 }

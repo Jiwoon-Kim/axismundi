@@ -71,5 +71,39 @@ if (-not $existing) {
     Write-Host "Prose VQA page already exists (ID $existing)"
 }
 
+# Text block VQA page — pure core text blocks only. This replaces the earlier
+# ad-hoc /core-vqa/ page so Phase 8 can proceed group-by-group.
+Write-Host "== Creating Text Block VQA page =="
+$textVqa = npx wp-env run cli wp post list --post_type=page --name=vqa-text --field=ID 2>&1 |
+    Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+$legacyCoreVqa = npx wp-env run cli wp post list --post_type=page --name=core-vqa --field=ID 2>&1 |
+    Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+$textContent = '<!-- wp:pattern {"slug":"omphalos/vqa-text"} /-->'
+
+if ($textVqa) {
+    $textVqaId = $textVqa
+    npx wp-env run cli wp post update $textVqaId --post_title="VQA Text" --post_name=vqa-text --post_content="$textContent" | Out-Null
+    Write-Host "Text VQA page updated at /vqa-text/ (ID $textVqaId)"
+} elseif ($legacyCoreVqa) {
+    $textVqaId = $legacyCoreVqa
+    npx wp-env run cli wp post update $textVqaId --post_title="VQA Text" --post_name=vqa-text --post_content="$textContent" | Out-Null
+    Write-Host "Legacy Core VQA page renamed to /vqa-text/ (ID $textVqaId)"
+} else {
+    $textVqaId = npx wp-env run cli wp post create --post_type=page --post_status=publish `
+        --post_title="VQA Text" --post_name=vqa-text --post_content="$textContent" --porcelain 2>&1 |
+        Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+    Write-Host "Text VQA page created at /vqa-text/ (ID $textVqaId)"
+}
+
+# core/footnotes is dynamic: it renders the page's `footnotes` meta keyed by the
+# inline <sup data-fn="UUID"> refs in the vqa-text pattern. Seed the matching
+# meta so the footnotes list actually renders (otherwise it is empty by design).
+# The two UUIDs must stay in sync with patterns/vqa-text.php.
+if ($textVqaId) {
+    $footnotesMeta = '[{"id":"1e3b8bdd-8cf2-475b-b015-54c86f93e1b1","content":"첫 번째 각주 — Markdown/HTML 본문의 인라인 각주 참조."},{"id":"7873f5ac-f713-4c02-84fa-0356553a6d1a","content":"두 번째 각주 — core/footnotes 동적 블록이 post meta에서 생성."}]'
+    npx wp-env run cli wp post meta update $textVqaId footnotes $footnotesMeta | Out-Null
+    Write-Host "Footnotes meta seeded on VQA Text page (ID $textVqaId)"
+}
+
 Write-Host "== Done. Attachment permalinks: =="
 npx wp-env run cli wp post list --post_type=attachment --field=guid

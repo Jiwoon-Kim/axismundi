@@ -424,7 +424,11 @@
  * ============================================================ */
 .wp-block-post-content :is(pre, .wp-block-code) {
   scrollbar-width: thin;
-  scrollbar-color: var(--md-sys-color-outline) transparent;
+  /* The thumb is a subtle "scrollable here" affordance, not a strong boundary,
+   * so it uses the weaker outline-variant (the divider/subtle-boundary token)
+   * at rest and bumps to outline on hover — matching the styleguide aside rail
+   * and M3's outline vs outline-variant distinction. */
+  scrollbar-color: var(--md-sys-color-outline-variant) transparent;
 }
 .wp-block-post-content :is(pre, .wp-block-code)::-webkit-scrollbar {
   block-size: 8px;
@@ -434,9 +438,9 @@
   background: transparent;
 }
 .wp-block-post-content :is(pre, .wp-block-code)::-webkit-scrollbar-thumb {
-  background-color: var(--md-sys-color-outline);
+  background-color: var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-full);
 }
 .wp-block-post-content :is(pre, .wp-block-code)::-webkit-scrollbar-thumb:hover {
-  background-color: var(--md-sys-color-on-surface-variant);
+  background-color: var(--md-sys-color-outline);
 }

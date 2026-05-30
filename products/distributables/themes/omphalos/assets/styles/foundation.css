@@ -22,9 +22,17 @@
 /* color-scheme — light by default; follow OS when the scheme is auto/unset;
  * honor an explicit data-theme override (Phase 7 sets data-theme via SSR
  * language_attributes + the Interactivity switcher; the selectors below are in
- * place ahead of that so the auto path already works). */
+ * place ahead of that so the auto path already works).
+ *
+ * scrollbar-gutter: stable reserves the page scrollbar's space so content does
+ * not shift when a scrollbar appears/disappears. This is document stability,
+ * NOT decoration — the page/document scrollbar keeps the browser/OS default
+ * skin (it only follows light/dark via color-scheme). Thin, theme-coloured
+ * scrollbars are applied to IN-PAGE overflow surfaces (pre/code/table) by
+ * prose.css, never to the document scrollbar here. */
 html {
   color-scheme: light;
+  scrollbar-gutter: stable;
 }
 
 @media (prefers-color-scheme: dark) {

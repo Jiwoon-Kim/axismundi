@@ -6,7 +6,9 @@
  * Inserter: true
  * Description: Pure WordPress core text blocks for Phase 8 baseline VQA. Markup
  *              matches the editor's canonical save output (validated in wp-env)
- *              so the blocks never trip "unexpected or invalid content".
+ *              so the blocks never trip "unexpected or invalid content". Covers
+ *              default + style-variation specimens (list segmented, quote plain,
+ *              table stripes).
  *
  *              core/footnotes is a dynamic block: it renders from the post's
  *              `footnotes` meta keyed by the inline <sup data-fn="UUID"> refs
@@ -69,6 +71,10 @@
 
 <!-- wp:paragraph {"dropCap":true} -->
 <p class="has-drop-cap">처음 글자가 큰 드롭캡으로 표시됩니다. 본문은 자연스럽게 흘러갑니다. WordPress block editor에서 paragraph block의 "Drop cap" 옵션을 켜면 자동으로 <code>has-drop-cap</code> 클래스가 추가됩니다. 한글 첫 글자도 드롭캡 처리되며 brand typeface로 강조됩니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Bold</strong>, <em>Italic</em>, <mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-primary-color">Highlight</mark>, <code>inline code</code>, <kbd>Keyboard Input</kbd>, <bdo lang="ko-KR" dir="ltr">언어</bdo>, <math data-latex="x^2"><semantics><msup><mi>x</mi><mn>2</mn></msup><annotation encoding="application/x-tex">x^2</annotation></semantics></math>, <s>Strikethrough</s>, Subscript<sub>sub</sub>, Superscript<sup>Sup</sup></p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
@@ -141,6 +147,20 @@
 <!-- /wp:list-item --></ol>
 <!-- /wp:list -->
 
+<!-- wp:list {"className":"wp-block-list is-style-list-segmented"} -->
+<ul class="wp-block-list is-style-list-segmented"><!-- wp:list-item -->
+<li><input type="checkbox" checked=""> Completed segmented item</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li><input type="checkbox"> Pending segmented item</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>Plain segmented item</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">Quote and Pullquote</h2>
 <!-- /wp:heading -->
@@ -149,6 +169,12 @@
 <blockquote class="wp-block-quote"><!-- wp:paragraph -->
 <p>좋은 디자인은 가능한 적은 디자인을 한다.</p>
 <!-- /wp:paragraph --><cite>Dieter Rams</cite></blockquote>
+<!-- /wp:quote -->
+
+<!-- wp:quote {"className":"is-style-plain"} -->
+<blockquote class="wp-block-quote is-style-plain"><!-- wp:paragraph -->
+<p>Plain quote style specimen.</p>
+<!-- /wp:paragraph --><cite>Plain Quote</cite></blockquote>
 <!-- /wp:quote -->
 
 <!-- wp:pullquote -->
@@ -181,12 +207,16 @@ without becoming a code specimen.</pre>
 <figure class="wp-block-table"><table class="has-fixed-layout"><thead><tr><th>토큰</th><th>값</th><th>설명</th></tr></thead><tbody><tr><td><code>--space-xs</code></td><td>4px</td><td>작은 inline gap.</td></tr><tr><td><code>--space-md</code></td><td>16px</td><td>본문 rhythm 기본 단위.</td></tr><tr><td><code>--space-xl</code></td><td>48px</td><td>섹션 간격.</td></tr></tbody><tfoot><tr><td>요약</td><td colspan="2">5개 spacing token 중 일부.</td></tr></tfoot></table><figcaption class="wp-element-caption">Table 1. Core table block with thead, tbody, tfoot, and figcaption. No custom wrapper.</figcaption></figure>
 <!-- /wp:table -->
 
+<!-- wp:table {"hasFixedLayout":false,"className":"is-style-stripes"} -->
+<figure class="wp-block-table is-style-stripes"><table><thead><tr><th>Plan</th><th>Seats</th><th>Status</th></tr></thead><tbody><tr><td>Starter</td><td>3</td><td>Active</td></tr><tr><td>Studio</td><td>12</td><td>Active</td></tr><tr><td>Enterprise</td><td>48</td><td>Pending</td></tr></tbody><tfoot><tr><td>Total plans</td><td colspan="2">3</td></tr></tfoot></table></figure>
+<!-- /wp:table -->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">Details</h2>
 <!-- /wp:heading -->
 
-<!-- wp:details -->
-<details class="wp-block-details"><summary>접근성 지침 요약</summary><!-- wp:list -->
+<!-- wp:details {"showContent":true} -->
+<details class="wp-block-details" open><summary>접근성 지침 요약</summary><!-- wp:list -->
 <ul class="wp-block-list"><!-- wp:list-item -->
 <li>모든 이미지에 대체 텍스트를 제공합니다.</li>
 <!-- /wp:list-item -->

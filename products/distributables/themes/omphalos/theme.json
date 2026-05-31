@@ -213,6 +213,14 @@
         "border": {
           "radius": "var(--comp-button-radius)"
         },
+        "spacing": {
+          "padding": {
+            "top": "0px",
+            "bottom": "0px",
+            "left": "var(--space-lg)",
+            "right": "var(--space-lg)"
+          }
+        },
         "typography": {
           "fontFamily": "var(--md-sys-typescale-label-large-font)",
           "fontSize": "var(--md-sys-typescale-label-large-size)",

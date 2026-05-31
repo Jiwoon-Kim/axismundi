@@ -330,13 +330,21 @@
  * State layer (hover/pressed) is a deliberate follow-up; focus-visible only here.
  * ============================================================ */
 .wp-element-button {
+  position: relative;       /* contains the ::after state layer */
+  overflow: hidden;         /* clip the state layer to the (morphing) radius */
+  isolation: isolate;       /* keep the state layer below the label, above the fill */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-block-size: var(--comp-button-height);
-  padding-block: 0;
-  padding-inline: var(--space-lg);
+  min-block-size: var(--comp-button-height);   /* SIZE: default 40px only; the xs..xl
+                                                * matrix stays a future contract. */
+  /* Padding lives in theme.json styles.elements.button (block 0 + inline space-lg)
+   * so it overrides the parent TT5 button padding at the global-styles layer —
+   * an editor CSS rule here loses to global styles for the same property. With
+   * padding-block 0 + min-block-size, the pill resolves to the M3 default 40px. */
   border: 0;
+  user-select: none;
+  -webkit-user-select: none;
   /* Filled is the default surface. theme.json sets these too, but WP emits the
    * element-button color at :where() (zero specificity), which the <a> link
    * colour beats on core/button — so re-assert here at class specificity so every
@@ -346,10 +354,37 @@
   color: var(--md-sys-color-on-primary);
   text-decoration: none;
   cursor: pointer;
+  transition: border-radius var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+/* M3 state layer — a currentColor veil over the container (below the label via
+ * z-index), fading in per state. hover .08 / focus .10 / pressed .10. */
+.wp-element-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-color: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+.wp-element-button:hover::after { opacity: 0.08; }
+.wp-element-button:focus-visible::after { opacity: 0.10; }
+.wp-element-button:active::after { opacity: 0.10; }
+/* Pressed shape morph: pill → corner-medium. */
+.wp-element-button:active {
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 .wp-element-button:focus-visible {
   outline: 3px solid var(--md-sys-color-secondary);
   outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wp-element-button,
+  .wp-element-button::after {
+    transition: none;
+  }
 }
 
 /* core/button variants — override the Filled base color (higher specificity than
@@ -367,6 +402,11 @@
   background-color: transparent;
   color: var(--md-sys-color-on-surface-variant);
   border: 0; /* drop core's outline border; M3 uses an inset hairline */
+  /* Core's is-style-outline ships its own padding (border-compensated) at this
+   * same specificity, which beats the theme.json base — reset it so the outlined
+   * button keeps the 40px pill like the others. */
+  padding-block: 0;
+  padding-inline: var(--space-lg);
   box-shadow: inset 0 0 0 1px var(--md-sys-color-outline-variant);
 }
 .wp-block-button.is-style-text .wp-block-button__link {

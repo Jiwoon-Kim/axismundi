@@ -124,6 +124,33 @@ Theme should NOT: form submission, validation, AJAX, nonce/auth, federation
 - No icon-button, FAB, or split-button.
 - No nav / post-nav / pagination styling (links, not buttons).
 
-Next step (after review): port the lab §9 button + §10 search contract into
-Omphalos `blocks.css`, register tonal/elevated/text, decide §5.1 scope, add VQA
-specimens, and verify computed values per scheme.
+---
+
+## §7 — Contract status
+
+**Implemented** (verified computed, front + editor, both schemes):
+- Global base on `.wp-element-button` (theme.json elements.button: label-large
+  type, pill radius, Filled colour, padding block-0 / inline space-lg → 40px) +
+  blocks.css §9 (interaction layout, focus ring). §5.1 resolved = **global**.
+- Five variants: Filled (default) / Tonal / Elevated / Outlined / Text — exact M3
+  role tokens; outline padding reset so all five are the 40px pill.
+- Interaction states (M3 state layer, currentColor veil below the label via
+  isolation/z-index): hover .08, focus-visible .10 (+ a11y focus ring),
+  pressed `:active` .10 with a pill→corner-medium shape morph; `prefers-reduced-
+  motion` disables transitions. `user-select:none`. Prose link colour/underline
+  excluded from `.wp-element-button`.
+
+**Deferred — recorded as spec, not built (avoid matrix sprawl):**
+- **Size matrix.** Only the 40px default is contracted (`--comp-button-height`).
+  The xs..xl token matrix + any `compact` / `large` block styles stay future; do
+  not open until a real size need lands.
+- **Toggle / selected.** `core/button` has no toggle semantics; real toggle
+  behaviour is plugin/JS. A theme could style `.wp-element-button[aria-pressed]`,
+  but the M3 selected treatment differs per variant (filled/tonal → stronger
+  container; outlined/text → selected container / state layer), which opens a
+  variant × selected matrix. Left for a separate design pass; not seeded yet
+  (core/button markup can't carry `aria-pressed` without breaking block save).
+- **Disabled.** Not implemented (intentionally; revisit later).
+- **file / search / comments layout overrides.** They already inherit the global
+  base; their connected-layout / icon-position overrides come with the
+  Widgets/Theme VQA groups (search-submit is text vs icon; icon = icon-button).

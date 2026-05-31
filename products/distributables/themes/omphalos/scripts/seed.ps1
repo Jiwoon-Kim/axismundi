@@ -136,6 +136,25 @@ if ($textVqaId) {
     Write-Host "Footnotes meta seeded on VQA Text page (ID $textVqaId)"
 }
 
+# Design block VQA page — pure core "Design" category blocks (buttons, columns,
+# group + Row/Stack/Grid, separator, spacer). Like vqa-text it is non-media, so
+# the page just embeds the omphalos/vqa-design pattern by slug; the specimen
+# markup (incl. Korean labels) lives in the pattern and renders server-side.
+Write-Host "== Creating Design Block VQA page =="
+$designVqa = npx wp-env run cli wp post list --post_type=page --name=vqa-design --field=ID 2>&1 |
+    Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+$designContent = '<!-- wp:pattern {"slug":"omphalos/vqa-design"} /-->'
+
+if ($designVqa) {
+    npx wp-env run cli wp post update $designVqa --post_title="VQA Design" --post_name=vqa-design --post_content="$designContent" | Out-Null
+    Write-Host "Design VQA page updated at /vqa-design/ (ID $designVqa)"
+} else {
+    $designVqaId = npx wp-env run cli wp post create --post_type=page --post_status=publish `
+        --post_title="VQA Design" --post_name=vqa-design --post_content="$designContent" --porcelain 2>&1 |
+        Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+    Write-Host "Design VQA page created at /vqa-design/ (ID $designVqaId)"
+}
+
 # Media VQA page — patterns/vqa-media.php is a seed-bound template with
 # __*_ID__ / __*_URL__ placeholders (Inserter:false). The include + placeholder
 # substitution + page write all happen server-side in scripts/seed-vqa-media.php

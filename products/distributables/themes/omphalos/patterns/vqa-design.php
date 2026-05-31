@@ -286,3 +286,121 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:omphalos/theme-switcher /-->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Card usage — pattern / template compositions</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>card 자체는 <code>is-style-card-*</code> group, 내부 버튼은 버튼 contract(<code>.wp-element-button</code>)를 그대로 소비합니다. whole-card clickable은 보류이고, 이 조합들은 패턴/템플릿에서 바로 쓸 형태의 미리보기입니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:group {"className":"is-style-card-filled","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-filled"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Content card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>제목 + 본문 + 액션. filled 카드에 버튼을 얹어 카드 안 버튼 contract 소비를 같이 검증합니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:buttons -->
+<div class="wp-block-buttons"><!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Action</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"is-style-text"} -->
+<div class="wp-block-button is-style-text"><a class="wp-block-button__link wp-element-button" href="#">Cancel</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"is-style-card-elevated","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-elevated"><!-- wp:image {"sizeSlug":"large"} -->
+<figure class="wp-block-image size-large"><img src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/media/image/image-placeholder-mogu-1024.webp' ); ?>" alt="Mogu placeholder"/></figure>
+<!-- /wp:image -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Media card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>이미지 + 제목 + 본문. elevated 카드. 이미지가 카드 폭을 넘지 않고(max-width) radius와 함께 들어가는지 확인.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"is-style-card-outlined","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-outlined"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Metadata card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><strong>Dimensions</strong> 1024 × 768 px</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Format</strong> WebP</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Uploaded</strong> 2026-05-31</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Card grid (group layout:grid)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:group {"layout":{"type":"grid","minimumColumnWidth":"14rem"}} -->
+<div class="wp-block-group"><!-- wp:group {"className":"is-style-card-filled","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-filled"><!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Filled</h4>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>grid 셀 안의 카드.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"is-style-card-elevated","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-elevated"><!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Elevated</h4>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>grid 셀 안의 카드.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"is-style-card-outlined","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-outlined"><!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Outlined</h4>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>grid 셀 안의 카드.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group --></div>
+<!-- /wp:group -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Query card mock (post 카드 미리보기)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:group {"className":"is-style-card-outlined","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-outlined"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">예시 글 제목</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph {"fontSize":"label-small"} -->
+<p class="has-label-small-font-size">2026-05-31 · 카테고리</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>발췌(excerpt) mock 텍스트. 실제 Query Loop의 post-title / post-date / post-excerpt / post-terms 조합을 카드로 감싼 형태의 미리보기 — 추후 Theme/Query VQA로 연결됩니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph {"fontSize":"label-small"} -->
+<p class="has-label-small-font-size">#tag-one #tag-two</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->

@@ -231,3 +231,9 @@ $omphalos_attachment = get_stylesheet_directory() . '/inc/attachment.php';
 if ( file_exists( $omphalos_attachment ) ) {
 	require_once $omphalos_attachment;
 }
+
+// Theme switcher infrastructure (cache-safe data-theme head script; block later).
+$omphalos_theme_switcher = get_stylesheet_directory() . '/inc/theme-switcher.php';
+if ( file_exists( $omphalos_theme_switcher ) ) {
+	require_once $omphalos_theme_switcher;
+}

@@ -141,6 +141,32 @@ function omphalos_register_block_styles() : void {
 }
 add_action( 'init', 'omphalos_register_block_styles' );
 
+/**
+ * Surface this theme's name where the parent prints its own as the footer credit.
+ *
+ * Twenty Twenty-Five's footer patterns (footer, footer-columns, footer-newsletter,
+ * page-portfolio-home) print a literal `Twenty Twenty-Five` credit via
+ * esc_html_e( 'Twenty Twenty-Five', 'twentytwentyfive' ). That string is a
+ * theme-chosen credit, not site-owner data, so an Omphalos child theme should
+ * show "Omphalos" there. Filtering the parent textdomain's exact string (rather
+ * than overriding/cloning the whole footer pattern) keeps the change to one line
+ * and tracks parent footer markup updates. Returns the active theme's Name header
+ * so it stays a single source of truth (style.css) and covers every parent footer
+ * variant at once. Scoped to the gettext_twentytwentyfive hook, so only the
+ * parent textdomain is affected.
+ *
+ * @param string $translation Translated text.
+ * @param string $text        Original (untranslated) text.
+ * @return string
+ */
+function omphalos_theme_name_credit( $translation, $text ) {
+	if ( 'Twenty Twenty-Five' === $text ) {
+		return wp_get_theme()->get( 'Name' );
+	}
+	return $translation;
+}
+add_filter( 'gettext_twentytwentyfive', 'omphalos_theme_name_credit', 10, 2 );
+
 // Attachment media object templates (ported from axismundi-pilot).
 $omphalos_attachment = get_stylesheet_directory() . '/inc/attachment.php';
 if ( file_exists( $omphalos_attachment ) ) {

@@ -15,9 +15,17 @@
 .ax-attachment-media {
   margin-block: var(--space-lg);
 }
+/* Center the figure as a UNIT, shrunk to the image (fit-content). Centering the
+ * image inside a full-width figure instead would leave the core/image lightbox
+ * trigger — positioned relative to the figure — detached from a small (narrower
+ * than content) image. With a fit-content figure the trigger lands on the image's
+ * own top-right corner. */
 .ax-attachment-media__figure,
 .ax-attachment-media__cover {
-  margin: 0;
+  margin-block: 0;
+  margin-inline: auto;
+  inline-size: fit-content;
+  max-inline-size: 100%;
 }
 
 /* Fit the proportional media (image incl. the raw SVG branch; video) to the
@@ -31,6 +39,5 @@
   block-size: auto;
 }
 .ax-attachment-media :is(img) {
-  margin-inline: auto;
   border-radius: var(--md-sys-shape-corner-medium);
 }

@@ -12,14 +12,25 @@ defined( 'ABSPATH' ) || exit;
 $url             = wp_get_attachment_url( $attachment_id );
 $metadata        = wp_get_attachment_metadata( $attachment_id );
 $cover_image_id  = omphalos_get_audio_cover_attachment_id( $attachment_id );
-$cover_image     = $cover_image_id ? wp_get_attachment_image(
-	$cover_image_id,
-	'large',
-	false,
-	array(
-		'class' => 'ax-attachment-media__cover-image',
-	)
-) : '';
+$cover_image     = '';
+if ( $cover_image_id ) {
+	$cover_img = wp_get_attachment_image(
+		$cover_image_id,
+		'large',
+		false,
+		array(
+			'class' => 'wp-image-' . (int) $cover_image_id,
+		)
+	);
+	// Render the cover through the real core/image block (do_blocks) so it gets
+	// the per-block lightbox like the image-attachment hero — one consistent
+	// object surface. The figure carries the .ax-attachment-media__cover hook.
+	$cover_image = $cover_img ? do_blocks( sprintf(
+		'<!-- wp:image {"id":%1$d,"sizeSlug":"large","linkDestination":"none"} --><figure class="wp-block-image size-large ax-attachment-media__cover">%2$s</figure><!-- /wp:image -->',
+		(int) $cover_image_id,
+		$cover_img
+	) ) : '';
+}
 $audio_block     = $url ? do_blocks(
 	sprintf(
 		'<!-- wp:audio {"id":%1$d,"src":"%2$s"} --><figure class="wp-block-audio"><audio controls src="%2$s"></audio></figure><!-- /wp:audio -->',
@@ -66,11 +77,10 @@ $raw_meta = array(
 
 ?>
 <div class="ax-attachment-media ax-attachment-media--audio">
-	<?php if ( $cover_image ) : ?>
-		<figure class="wp-block-image size-large ax-attachment-media__cover">
-			<?php echo $cover_image; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		</figure>
-	<?php endif; ?>
+	<?php
+	// $cover_image is already a complete core/image <figure> (built via do_blocks).
+	echo $cover_image; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	?>
 	<?php echo $audio_block; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 	<?php omphalos_render_attachment_meta( $meta_items, $raw_meta ); ?>
 </div>

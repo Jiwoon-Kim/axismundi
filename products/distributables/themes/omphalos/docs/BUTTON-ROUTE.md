@@ -151,6 +151,14 @@ Theme should NOT: form submission, validation, AJAX, nonce/auth, federation
   variant × selected matrix. Left for a separate design pass; not seeded yet
   (core/button markup can't carry `aria-pressed` without breaking block save).
 - **Disabled.** Not implemented (intentionally; revisit later).
+- **Ripple.** Intentionally deferred. Omphalos uses M3 state-layer feedback for
+  baseline button interaction; ripple is not part of the baseline theme contract.
+  It requires a runtime decision (JS + DOM/CSS-var injection for click-origin) and
+  must NOT be copied from BeerCSS without reconciling with Material Web behaviour
+  (pressed origin, bounded/unbounded, state-layer overlap), reduced motion, and
+  WordPress anchor-vs-button (`<a>` / `<button>`) event semantics — and it would
+  hit every `.wp-element-button` surface globally. Future enhancement / plugin /
+  runtime route; the lab/pilot may retain the ripple experiment as evidence.
 - **file / search / comments layout overrides.** They already inherit the global
   base; their connected-layout / icon-position overrides come with the
   Widgets/Theme VQA groups (search-submit is text vs icon; icon = icon-button).

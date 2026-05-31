@@ -414,3 +414,26 @@
   color: var(--md-sys-color-primary);
   padding-inline: var(--space-md);
 }
+
+/* ============================================================
+ * §10 core/file — download row (consumes the §9 button base)
+ *
+ * core/file renders a filename link + a `.wp-block-file__button.wp-element-button`
+ * download button. The button already inherits the global §9 button base (40px
+ * Filled pill, no underline — prose §9 excludes .wp-element-button), so this does
+ * NOT redefine its colour / height / radius; it only lays out the row and drops
+ * core's `.wp-block-file__button { margin-left }` so the flex `gap` owns spacing.
+ * The filename link stays a prose link (prose §9). Embedded-preview (PDF) layout
+ * and the download-size control are out of scope (Media follow-up only).
+ * ============================================================ */
+.wp-block-post-content .wp-block-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+}
+.wp-block-post-content .wp-block-file .wp-block-file__button {
+  margin-inline-start: 0; /* drop core's margin-left; the row gap owns spacing */
+  flex-shrink: 0;
+}

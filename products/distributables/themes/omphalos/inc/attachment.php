@@ -28,6 +28,35 @@ add_filter( 'pre_option_wp_attachment_pages_enabled', 'omphalos_enable_attachmen
 remove_filter( 'the_content', 'prepend_attachment' );
 
 /**
+ * Enqueue the attachment media stylesheet — attachment pages only.
+ *
+ * The attachment template renders media OUTSIDE `.wp-block-post-content` and as
+ * raw markup (e.g. wp_get_attachment_image), not parsed core blocks. So neither
+ * prose.css (post-content scoped) nor the core block stylesheets (enqueued only
+ * for real blocks) reach it — a full-size <img> would otherwise render at its
+ * native width and overflow the content column. This sheet gives the
+ * `.ax-attachment-media` surface its baseline (chiefly max-width on the media).
+ *
+ * @return void
+ */
+function omphalos_enqueue_attachment_styles() : void {
+	if ( ! is_attachment() ) {
+		return;
+	}
+	$uri = function_exists( 'omphalos_asset_uri' ) ? omphalos_asset_uri( 'assets/styles/attachment.css' ) : null;
+	if ( null === $uri ) {
+		return;
+	}
+	wp_enqueue_style(
+		'omphalos-attachment',
+		$uri,
+		array(),
+		defined( 'OMPHALOS_VERSION' ) ? OMPHALOS_VERSION : false
+	);
+}
+add_action( 'wp_enqueue_scripts', 'omphalos_enqueue_attachment_styles', 20 );
+
+/**
  * Register Pilot attachment metadata fields.
  *
  * `omphalos_video_tracks` stores a JSON array of WebVTT track definitions for

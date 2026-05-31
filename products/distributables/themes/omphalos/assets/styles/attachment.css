@@ -1,0 +1,35 @@
+/* ============================================================
+ * Omphalos — attachment.css
+ *
+ * Media surface for attachment pages (templates/attachment.html +
+ * partials/attachment-media-*.php). This media renders OUTSIDE
+ * `.wp-block-post-content` and as raw markup (wp_get_attachment_image), not
+ * parsed core blocks, so neither prose.css (post-content scoped) nor the core
+ * block stylesheets (only enqueued for real blocks) constrain it. Without the
+ * rule below a full-size `<img width="1024">` renders at its native width and
+ * overflows the content column. Enqueued only on is_attachment() (inc/attachment).
+ *
+ * Token-only values. The container/figure are already width-constrained by the
+ * template's constrained layout; this just makes the media fit inside them.
+ * ============================================================ */
+.ax-attachment-media {
+  margin-block: var(--space-lg);
+}
+.ax-attachment-media__figure,
+.ax-attachment-media__cover {
+  margin: 0;
+}
+
+/* Fit any attachment media to the (already content-width) figure/wrapper. */
+.ax-attachment-media :is(img, video, audio) {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+.ax-attachment-media :is(img) {
+  margin-inline: auto;
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+.ax-attachment-media audio {
+  inline-size: 100%;
+}

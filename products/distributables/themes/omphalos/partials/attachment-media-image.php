@@ -21,19 +21,26 @@ if ( 'image/svg+xml' === $mime_type && $url ) {
 		esc_attr( $alt )
 	);
 } else {
+	// Canonical core/image img: class `wp-image-N`, figure carries `size-large`.
 	$image = wp_get_attachment_image(
 		$attachment_id,
 		'large',
 		false,
 		array(
-			'class' => 'ax-attachment-media__image',
+			'class' => 'wp-image-' . (int) $attachment_id,
 		)
 	);
 
-	$media_html = $image ? sprintf(
-		'<figure class="wp-block-image size-large ax-attachment-media__figure">%s</figure>',
+	// Render through the real core/image block (do_blocks), like the audio/video
+	// partials. This puts the attachment hero on the same path as content images:
+	// responsive srcset, the core image stylesheet, and the per-block lightbox we
+	// enable in theme.json (linkDestination "none" → click-to-zoom). The
+	// .ax-attachment-media surface still owns layout/rhythm via attachment.css.
+	$media_html = $image ? do_blocks( sprintf(
+		'<!-- wp:image {"id":%1$d,"sizeSlug":"large","linkDestination":"none"} --><figure class="wp-block-image size-large ax-attachment-media__figure">%2$s</figure><!-- /wp:image -->',
+		(int) $attachment_id,
 		$image
-	) : '';
+	) ) : '';
 }
 
 $meta_items = omphalos_get_attachment_common_meta( $attachment_id );

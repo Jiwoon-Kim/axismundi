@@ -11,11 +11,15 @@
 
 defined( 'ABSPATH' ) || exit;
 /**
- * Enable front-end attachment pages in the Pilot dev environment.
+ * Keep attachment pages enabled — a deliberate product decision.
  *
- * WordPress disables attachment pages for new installs. The Pilot keeps them
- * enabled so media object templates can be tested. Do not copy this override
- * into a distributable theme without an explicit product decision.
+ * Omphalos treats media attachments as FIRST-CLASS object pages, not throwaway
+ * redirects: rich media metadata (EXIF / OPUS tags), direct media permalinks,
+ * and a dedicated media-object surface (.ax-attachment-media). This also sets up
+ * future ActivityPub object surfaces, where an attachment maps to a federated
+ * media object. WordPress disables attachment pages for new installs (6.4+); this
+ * opt-in keeps them on for the theme on purpose. The object-surface CSS contract
+ * lives in assets/styles/attachment.css (enqueued only on is_attachment()).
  *
  * @return bool
  */

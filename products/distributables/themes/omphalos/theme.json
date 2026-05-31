@@ -93,6 +93,7 @@
               "fontStyle": "oblique -10deg 0deg",
               "fontWeight": "100 1000",
               "fontStretch": "25% 151%",
+              "fontDisplay": "swap",
               "src": [ "file:./assets/fonts/roboto-flex/axismundi-roboto-flex.woff2" ]
             }
           ]
@@ -107,6 +108,7 @@
               "fontStyle": "normal",
               "fontWeight": "100 900",
               "unicodeRange": "U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF",
+              "fontDisplay": "swap",
               "src": [ "file:./assets/fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2" ]
             }
           ]
@@ -121,6 +123,7 @@
               "fontStyle": "normal",
               "fontWeight": "100 900",
               "fontStretch": "50% 150%",
+              "fontDisplay": "swap",
               "src": [ "file:./assets/fonts/roboto-serif/axismundi-roboto-serif.woff2" ]
             }
           ]
@@ -135,6 +138,7 @@
               "fontStyle": "normal",
               "fontWeight": "100 900",
               "unicodeRange": "U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF",
+              "fontDisplay": "swap",
               "src": [ "file:./assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2" ]
             }
           ]
@@ -148,12 +152,14 @@
               "fontFamily": "Roboto Mono",
               "fontStyle": "normal",
               "fontWeight": "100 700",
+              "fontDisplay": "swap",
               "src": [ "file:./assets/fonts/roboto-mono/axismundi-roboto-mono.woff2" ]
             },
             {
               "fontFamily": "Roboto Mono",
               "fontStyle": "italic",
               "fontWeight": "100 700",
+              "fontDisplay": "swap",
               "src": [ "file:./assets/fonts/roboto-mono/axismundi-roboto-mono-italic.woff2" ]
             }
           ]

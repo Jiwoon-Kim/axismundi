@@ -1,13 +1,27 @@
 <#
-  Omphalos dev seed — import placeholder media and set the Site Logo.
+  Omphalos dev seed — import placeholder media and build the VQA pages.
 
   Run from the omphalos theme directory AFTER `npm run start` (wp-env up):
       pwsh ./scripts/seed.ps1
+      pwsh ./scripts/seed.ps1 -SetDemoLogo   # also set a demo Site Logo
 
   Media is imported from the theme's bundled assets (mounted into the container
   at wp-content/themes/omphalos/assets). Re-running creates duplicate
   attachments; destroy/reset the env first if you need a clean slate.
+
+  Site Logo is NOT set by default. site_logo / custom_logo are SITE-OWNER data
+  (the installation's identity), not a theme fixture — a distributable theme must
+  not silently overwrite them on activate/seed. The brand mark lives in the theme
+  as an asset (assets/brand/axismundi-symbol.svg); if a demo really needs a logo
+  in the Site Logo slot, pass -SetDemoLogo to opt in explicitly (dev/VQA only).
+
+  Parameters:
+    -SetDemoLogo  Opt in to setting a demo Site Logo (default: off). SVG upload is
+                  blocked by core, so this falls back to the raster placeholder.
 #>
+param(
+    [switch] $SetDemoLogo
+)
 $ErrorActionPreference = "Stop"
 $themePath = "wp-content/themes/omphalos"
 
@@ -49,18 +63,24 @@ if ($video -and $capEn) {
     Write-Host "  npx wp-env run cli wp post meta update $video omphalos_video_tracks '<json>'"
 }
 
-# Site Logo from the Axismundi brand mark. Core blocks SVG uploads by default;
-# if the SVG import fails, fall back to the raster placeholder image.
-Write-Host "== Setting Site Logo =="
-$logo = Import-Media "assets/brand/axismundi-symbol.svg"
-if (-not $logo) {
-    Write-Warning "SVG import blocked by core (expected). Falling back to the placeholder image as Site Logo."
-    $logo = $image
-}
-if ($logo) {
-    npx wp-env run cli wp option update site_logo $logo
-    npx wp-env run cli wp theme mod set custom_logo $logo
-    Write-Host "Site Logo set to attachment $logo"
+# Site Logo — OFF by default. site_logo / custom_logo are site-owner identity,
+# not a theme fixture, so the seed must not overwrite them unless asked. Opt in
+# with -SetDemoLogo for a dev/VQA demo. Core blocks SVG uploads, so this falls
+# back to the raster placeholder image.
+if ($SetDemoLogo) {
+    Write-Host "== Setting demo Site Logo (-SetDemoLogo) =="
+    $logo = Import-Media "assets/brand/axismundi-symbol.svg"
+    if (-not $logo) {
+        Write-Warning "SVG import blocked by core (expected). Falling back to the placeholder image as Site Logo."
+        $logo = $image
+    }
+    if ($logo) {
+        npx wp-env run cli wp option update site_logo $logo
+        npx wp-env run cli wp theme mod set custom_logo $logo
+        Write-Host "Demo Site Logo set to attachment $logo"
+    }
+} else {
+    Write-Host "== Skipping Site Logo (site-owner data; pass -SetDemoLogo to opt in) =="
 }
 
 # Prose VQA page — embeds the omphalos/prose-vqa pattern (Custom HTML specimen).

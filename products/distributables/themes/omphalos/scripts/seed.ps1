@@ -117,65 +117,18 @@ if ($textVqaId) {
 }
 
 # Media VQA page — patterns/vqa-media.php is a seed-bound template with
-# __*_ID__ / __*_URL__ placeholders (Inserter:false). Resolve this install's
-# real attachment IDs + URLs and substitute them, so the page works on any
-# install / after a reset without hard-coded IDs.
+# __*_ID__ / __*_URL__ placeholders (Inserter:false). The include + placeholder
+# substitution + page write all happen server-side in scripts/seed-vqa-media.php
+# (run via `wp eval-file`), so the pattern body — Korean text + em dashes, incl.
+# inside the wp:video tracks JSON — never crosses the PowerShell/console text
+# boundary, which is code-page dependent and would mojibake multibyte chars.
+# PowerShell only resolves attachment IDs and hands them to PHP; the PHP derives
+# URLs/permalinks itself and self-validates (no leftover placeholders + block
+# round-trip stable), failing the seed if either check fails.
 Write-Host "== Creating Media VQA page =="
 
-function Attachment-Url([string]$id) {
-    if (-not $id) { return $null }
-    $u = npx wp-env run cli wp post get $id --field=guid 2>&1 |
-        Where-Object { $_ -match '^https?://' } | Select-Object -First 1
-    if ($u) { return $u.Trim() }
-    return $null
-}
-
-function Attachment-Permalink([string]$id) {
-    if (-not $id) { return $null }
-    $u = npx wp-env run cli wp post url $id 2>&1 |
-        Where-Object { $_ -match '^https?://' } | Select-Object -First 1
-    if ($u) { return $u.Trim() }
-    return $null
-}
-
-$imageUrl     = Attachment-Url $image
-$audioUrl     = Attachment-Url $audOgg
-$audioLink    = Attachment-Permalink $audOgg   # file block first link = attachment page
-$videoUrl     = Attachment-Url $video
-$vttKoUrl     = Attachment-Url $capKo
-
-# Cover/second-gallery image: reuse the WEBP image so the page is self-contained.
-$coverId  = $image
-$coverUrl = $imageUrl
-
 if ($image -and $audOgg -and $video -and $capEn -and $capKo) {
-    # Read the pattern's block markup (include the PHP, capture output), strip
-    # the PHP header, substitute this install's IDs/URLs for the placeholders.
-    $raw  = npx wp-env run cli wp eval "ob_start(); include get_stylesheet_directory().'/patterns/vqa-media.php'; echo ob_get_clean();" 2>&1 | Out-String
-    $body = $raw.Substring($raw.IndexOf('<!-- wp:'))
-    $body = $body.Replace('__IMAGE_ID__',  $image ).Replace('__IMAGE_URL__',  $imageUrl)
-    $body = $body.Replace('__COVER_ID__',  $coverId).Replace('__COVER_URL__',  $coverUrl)
-    $body = $body.Replace('__AUDIO_ID__',  $audOgg).Replace('__AUDIO_URL__',  $audioUrl)
-    $body = $body.Replace('__AUDIO_PERMALINK__', $audioLink)
-    $body = $body.Replace('__VIDEO_ID__',  $video ).Replace('__VIDEO_URL__',  $videoUrl)
-    $body = $body.Replace('__VTT_KO_URL__', $vttKoUrl)
-
-    # Write the substituted content to a file inside the theme (mounted into the
-    # container) and update the page from it — avoids shell-quoting the markup.
-    $contentRel  = "scripts/.vqa-media-content.html"
-    Set-Content -Path (Join-Path (Get-Location) $contentRel) -Value $body -Encoding UTF8 -NoNewline
-
-    $mediaVqaId = npx wp-env run cli wp post list --post_type=page --name=vqa-media --field=ID 2>&1 |
-        Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
-    if ($mediaVqaId) {
-        npx wp-env run cli wp post update $mediaVqaId --post_title="VQA Media" --post_name=vqa-media "$themePath/$contentRel" | Out-Null
-    } else {
-        $mediaVqaId = npx wp-env run cli wp post create --post_type=page --post_status=publish `
-            --post_title="VQA Media" --post_name=vqa-media "$themePath/$contentRel" --porcelain 2>&1 |
-            Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
-    }
-    Remove-Item (Join-Path (Get-Location) $contentRel) -Force -ErrorAction SilentlyContinue
-    Write-Host "Media VQA page seeded at /vqa-media/ (ID $mediaVqaId)"
+    npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-media.php" $image $audOgg $video $capKo
 } else {
     Write-Warning "Skipping VQA Media page — one or more media imports failed."
 }

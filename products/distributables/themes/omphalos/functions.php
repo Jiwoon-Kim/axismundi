@@ -177,6 +177,22 @@ function omphalos_register_block_styles() : void {
 			)
 		);
 	}
+	// core/separator — M3 inset dividers. Core ships default / wide / dots; the
+	// theme adds the two inset variants. CSS in blocks.css §11.
+	foreach (
+		array(
+			'divider-inset'        => __( 'Inset divider', 'omphalos' ),
+			'divider-middle-inset' => __( 'Middle-inset divider', 'omphalos' ),
+		) as $name => $label
+	) {
+		register_block_style(
+			'core/separator',
+			array(
+				'name'  => $name,
+				'label' => $label,
+			)
+		);
+	}
 }
 add_action( 'init', 'omphalos_register_block_styles' );
 

@@ -194,7 +194,7 @@
 <!-- /wp:group -->
 
 <!-- wp:heading -->
-<h2 class="wp-block-heading">Separator — default / wide / dots</h2>
+<h2 class="wp-block-heading">Separator — default / wide / dots / inset / middle-inset</h2>
 <!-- /wp:heading -->
 
 <!-- wp:separator -->
@@ -207,6 +207,14 @@
 
 <!-- wp:separator {"className":"is-style-dots"} -->
 <hr class="wp-block-separator has-alpha-channel-opacity is-style-dots"/>
+<!-- /wp:separator -->
+
+<!-- wp:separator {"className":"is-style-divider-inset"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-divider-inset"/>
+<!-- /wp:separator -->
+
+<!-- wp:separator {"className":"is-style-divider-middle-inset"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-divider-middle-inset"/>
 <!-- /wp:separator -->
 
 <!-- wp:heading -->

@@ -437,3 +437,47 @@
   margin-inline-start: 0; /* drop core's margin-left; the row gap owns spacing */
   flex-shrink: 0;
 }
+
+/* ============================================================
+ * §11 core/separator — M3 divider + style variants
+ *
+ * core/separator emits <hr class="wp-block-separator …">. Core ships the
+ * default / wide / dots styles (client block.json); the theme registers
+ * divider-inset / divider-middle-inset (functions.php). Ported from the lab
+ * separator contract, re-contracted for the FSE post-content surface. The M3
+ * divider is a 1px outline-variant line; dots read in on-surface-variant.
+ * ============================================================ */
+.wp-block-post-content .wp-block-separator {
+  inline-size: 25%;          /* core's short centered default, M3-recoloured */
+  margin-inline: auto;
+  block-size: 1px;
+  border: 0;
+  background-color: var(--md-sys-color-outline-variant);
+}
+.wp-block-post-content .wp-block-separator.is-style-wide {
+  inline-size: 100%;
+}
+.wp-block-post-content .wp-block-separator.is-style-dots {
+  inline-size: auto;
+  background: none;          /* no line — just the dot row */
+  block-size: auto;
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-post-content .wp-block-separator.is-style-dots::before {
+  content: "···";
+  letter-spacing: var(--space-sm);
+  font-size: 1.5em;
+}
+/* Theme-registered inset dividers (centered line, inset on both edges).
+ * FSE re-contract: the constrained layout clamps a separator to the content size
+ * (max-width: --wp--style--global--content-size), so insetting off 100% (the full
+ * post-content width) gets clamped back and the two insets collapse to the same
+ * width. Inset off the CONTENT size instead so each variant is genuinely narrower
+ * (base rule centers them via margin-inline: auto). */
+.wp-block-post-content .wp-block-separator.is-style-divider-inset {
+  inline-size: calc(var(--wp--style--global--content-size) - 2 * var(--space-md));
+}
+.wp-block-post-content .wp-block-separator.is-style-divider-middle-inset {
+  inline-size: calc(var(--wp--style--global--content-size) - 2 * var(--space-xl));
+}

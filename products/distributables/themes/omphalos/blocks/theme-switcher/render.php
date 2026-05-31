@@ -40,7 +40,7 @@ $omphalos_wrapper = get_block_wrapper_attributes(
 	<?php foreach ( $omphalos_modes as $omphalos_mode => $omphalos_m ) : ?>
 		<button
 			type="button"
-			class="omphalos-theme-switcher__button"
+			class="omphalos-theme-switcher__button wp-element-button"
 			data-theme-mode="<?php echo esc_attr( $omphalos_mode ); ?>"
 			<?php echo wp_interactivity_data_wp_context( array( 'mode' => $omphalos_mode ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			data-wp-on--click="actions.setScheme"

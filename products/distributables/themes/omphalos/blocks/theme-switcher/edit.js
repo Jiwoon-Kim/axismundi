@@ -35,7 +35,7 @@
 						{
 							key: m.mode,
 							type: 'button',
-							className: 'omphalos-theme-switcher__button',
+							className: 'omphalos-theme-switcher__button wp-element-button',
 							'data-theme-mode': m.mode,
 							'aria-pressed': m.mode === 'auto' ? 'true' : 'false',
 						},

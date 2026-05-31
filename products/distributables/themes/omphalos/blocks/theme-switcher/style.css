@@ -1,17 +1,18 @@
 /* ============================================================
  * omphalos/theme-switcher — M3 segmented control (front + editor)
  *
- * Block-scoped (block.json "style"), so it loads only where the block is used.
- * Three mode buttons (Auto / Light / Dark): a surface-container track, with the
- * active mode tinted secondary-container. Tokens are global; this file only
- * lays out the control. The buttons are NOT .wp-element-button — they have their
- * own treatment so the global button base (blocks.css §9) does not apply.
+ * Block-scoped (block.json "style"). The segments CONSUME the global M3 button
+ * contract: each button carries `.wp-element-button`, so blocks.css §9 +
+ * theme.json own the state layer (hover/focus/pressed), focus ring, 40px sizing,
+ * label-large type, and pill radius. This file only adds the segmented track and
+ * re-skins the per-segment colours (the contract's filled-pill base → a
+ * transparent segment, the selected one tinted secondary-container). Hover/press
+ * feedback is the button state layer — no icon-fill animation.
  * ============================================================ */
 .wp-block-omphalos-theme-switcher {
 	/* Block-level + shrink-to-content so the constrained layout (margin-inline:
-	 * auto) keeps it inside the content column. inline-flex made it an inline box
-	 * that ignores auto margins, so it sat at the page-padding edge, outside the
-	 * content column. */
+	 * auto) keeps it inside the content column (inline-flex would sit at the
+	 * page-padding edge, outside the column). */
 	display: flex;
 	inline-size: fit-content;
 	max-inline-size: 100%;
@@ -21,57 +22,33 @@
 	border-radius: var(--md-sys-shape-corner-full);
 }
 
-.omphalos-theme-switcher__button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+/* Per-segment re-skin (scoped so it beats the §9 .wp-element-button base). The
+ * contract supplies sizing / type / state layer / focus / radius; here we only
+ * set the segmented colours, the icon+label gap, and a tighter inline padding. */
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button {
 	gap: var(--space-xs);
-	min-block-size: 40px;
 	padding-inline: var(--space-md);
-	border: 0;
-	border-radius: var(--md-sys-shape-corner-full);
 	background-color: transparent;
 	color: var(--md-sys-color-on-surface-variant);
-	font-family: var(--md-sys-typescale-label-large-font);
-	font-size: var(--md-sys-typescale-label-large-size);
-	font-weight: var(--md-sys-typescale-label-large-weight);
-	letter-spacing: var(--md-sys-typescale-label-large-tracking);
-	line-height: 1;
-	cursor: pointer;
-	/* Smooth the active-mode change (the lab style-guide's selected-button
-	 * transition), scoped to the control — not a page-wide colour fade. */
+	/* Smooth the active-mode colour change; keep the contract's radius morph. */
 	transition:
 		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
-		color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+		color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+		border-radius var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
 }
 
-@media (prefers-reduced-motion: reduce) {
-	.omphalos-theme-switcher__button,
-	.omphalos-theme-switcher__button .material-symbols-outlined {
-		transition: none;
-	}
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button[aria-pressed="true"] {
+	background-color: var(--md-sys-color-secondary-container);
+	color: var(--md-sys-color-on-secondary-container);
 }
 
 .omphalos-theme-switcher__button .material-symbols-outlined {
 	font-size: 20px;
 	--md-icon-opsz: 20;
-	/* Animate the FILL axis (Material Symbols variable font) for hover/active. */
-	transition: font-variation-settings var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
 }
 
-/* Fill the icon on hover and on the active (selected) mode — M3 selected
- * segmented buttons read filled. FILL 0 → 1 animates via the transition above. */
-.omphalos-theme-switcher__button:hover .material-symbols-outlined,
-.omphalos-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
-	--md-icon-fill: 1;
-}
-
-.omphalos-theme-switcher__button[aria-pressed="true"] {
-	background-color: var(--md-sys-color-secondary-container);
-	color: var(--md-sys-color-on-secondary-container);
-}
-
-.omphalos-theme-switcher__button:focus-visible {
-	outline: 3px solid var(--md-sys-color-secondary);
-	outline-offset: 2px;
+@media (prefers-reduced-motion: reduce) {
+	.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button {
+		transition: none;
+	}
 }

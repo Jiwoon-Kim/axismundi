@@ -155,6 +155,25 @@ if ($designVqa) {
     Write-Host "Design VQA page created at /vqa-design/ (ID $designVqaId)"
 }
 
+# Widgets block VQA page — core "Widgets" category blocks (search, social icons,
+# tag cloud, the widget lists, calendar). Non-media: embeds the omphalos/vqa-widgets
+# pattern by slug. The dynamic widgets render this install's real content, so the
+# lists look sparse on a fresh install (and tag-cloud is empty until tags exist).
+Write-Host "== Creating Widgets Block VQA page =="
+$widgetsVqa = npx wp-env run cli wp post list --post_type=page --name=vqa-widgets --field=ID 2>&1 |
+    Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+$widgetsContent = '<!-- wp:pattern {"slug":"omphalos/vqa-widgets"} /-->'
+
+if ($widgetsVqa) {
+    npx wp-env run cli wp post update $widgetsVqa --post_title="VQA Widgets" --post_name=vqa-widgets --post_content="$widgetsContent" | Out-Null
+    Write-Host "Widgets VQA page updated at /vqa-widgets/ (ID $widgetsVqa)"
+} else {
+    $widgetsVqaId = npx wp-env run cli wp post create --post_type=page --post_status=publish `
+        --post_title="VQA Widgets" --post_name=vqa-widgets --post_content="$widgetsContent" --porcelain 2>&1 |
+        Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+    Write-Host "Widgets VQA page created at /vqa-widgets/ (ID $widgetsVqaId)"
+}
+
 # Media VQA page — patterns/vqa-media.php is a seed-bound template with
 # __*_ID__ / __*_URL__ placeholders (Inserter:false). The include + placeholder
 # substitution + page write all happen server-side in scripts/seed-vqa-media.php

@@ -106,6 +106,7 @@
               "fontFamily": "Noto Sans KR",
               "fontStyle": "normal",
               "fontWeight": "100 900",
+              "unicodeRange": "U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF",
               "src": [ "file:./assets/fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2" ]
             }
           ]
@@ -133,6 +134,7 @@
               "fontFamily": "Noto Serif KR",
               "fontStyle": "normal",
               "fontWeight": "100 900",
+              "unicodeRange": "U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF",
               "src": [ "file:./assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2" ]
             }
           ]

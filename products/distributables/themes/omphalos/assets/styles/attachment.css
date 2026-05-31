@@ -20,8 +20,12 @@
   margin: 0;
 }
 
-/* Fit any attachment media to the (already content-width) figure/wrapper. */
-.ax-attachment-media :is(img, video, audio) {
+/* Fit the proportional media (image incl. the raw SVG branch; video) to the
+ * already content-width figure/wrapper. Audio is deliberately EXCLUDED: it is not
+ * a proportional replaced element, so block-size:auto collapses its native
+ * controls to 0 height (it disappears). core/audio (the partial always renders it
+ * via do_blocks) already widths the player and keeps the controls' native height. */
+.ax-attachment-media :is(img, video) {
   display: block;
   max-inline-size: 100%;
   block-size: auto;
@@ -29,7 +33,4 @@
 .ax-attachment-media :is(img) {
   margin-inline: auto;
   border-radius: var(--md-sys-shape-corner-medium);
-}
-.ax-attachment-media audio {
-  inline-size: 100%;
 }

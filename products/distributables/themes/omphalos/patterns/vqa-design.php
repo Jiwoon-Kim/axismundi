@@ -19,8 +19,12 @@
  *              this page surfaces the default so that decision can be made, but it
  *              does not yet apply an M3 button contract.
  *
- *              core/accordion is a real specimen (Interactivity API: the bare
- *              heading button is wired with the toggle directives at render).
+ *              core/accordion is a real specimen. Its markup must be the block's
+ *              canonical save() output (heading toggle button with the
+ *              __toggle-title / __toggle-icon spans, role="group" / role="region",
+ *              is-open on the default-open item) — a simplified-but-round-trippable
+ *              version still trips editor block validation. The Interactivity
+ *              directives are wired onto this static markup at render.
  *              core/more and core/nextpage are page/editor-context controls
  *              (read-more split, pagination) with no standalone-page visual —
  *              they are described in a note, not rendered (core/nextpage would
@@ -238,13 +242,13 @@
 <!-- /wp:heading -->
 
 <!-- wp:accordion -->
-<div class="wp-block-accordion"><!-- wp:accordion-item {"openByDefault":true} -->
-<div class="wp-block-accordion-item"><!-- wp:accordion-heading -->
-<h3 class="wp-block-accordion-heading"><button class="wp-block-accordion-heading__toggle" type="button">첫 번째 항목 (기본 열림)</button></h3>
+<div role="group" class="wp-block-accordion"><!-- wp:accordion-item {"openByDefault":true} -->
+<div class="wp-block-accordion-item is-open"><!-- wp:accordion-heading -->
+<h3 class="wp-block-accordion-heading"><button type="button" class="wp-block-accordion-heading__toggle"><span class="wp-block-accordion-heading__toggle-title">첫 번째 항목 (기본 열림)</span><span class="wp-block-accordion-heading__toggle-icon" aria-hidden="true">+</span></button></h3>
 <!-- /wp:accordion-heading -->
 
 <!-- wp:accordion-panel -->
-<div class="wp-block-accordion-panel"><!-- wp:paragraph -->
+<div role="region" class="wp-block-accordion-panel"><!-- wp:paragraph -->
 <p>패널 본문. heading 토글로 열고 닫힙니다(Interactivity API가 디렉티브를 렌더 시 wiring).</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:accordion-panel --></div>
@@ -252,11 +256,11 @@
 
 <!-- wp:accordion-item -->
 <div class="wp-block-accordion-item"><!-- wp:accordion-heading -->
-<h3 class="wp-block-accordion-heading"><button class="wp-block-accordion-heading__toggle" type="button">두 번째 항목 (중첩 콘텐츠)</button></h3>
+<h3 class="wp-block-accordion-heading"><button type="button" class="wp-block-accordion-heading__toggle"><span class="wp-block-accordion-heading__toggle-title">두 번째 항목 (중첩 콘텐츠)</span><span class="wp-block-accordion-heading__toggle-icon" aria-hidden="true">+</span></button></h3>
 <!-- /wp:accordion-heading -->
 
 <!-- wp:accordion-panel -->
-<div class="wp-block-accordion-panel"><!-- wp:list -->
+<div role="region" class="wp-block-accordion-panel"><!-- wp:list -->
 <ul class="wp-block-list"><!-- wp:list-item -->
 <li>중첩 리스트 항목 1</li>
 <!-- /wp:list-item -->
@@ -276,6 +280,10 @@
 <!-- wp:paragraph -->
 <p><code>core/more</code>(Read More)와 <code>core/nextpage</code>(Page Break)는 post/editor 컨텍스트 컨트롤입니다 — core/more는 아카이브·발췌의 "더 보기" 분할, core/nextpage는 글 페이지네이션을 만듭니다. 단일 페이지 프런트엔드에는 시각적 계약이 없어 specimen으로 두지 않습니다. 특히 core/nextpage는 페이지를 실제로 분할하므로 VQA 본문에 넣으면 안 됩니다. → editor utility / route-forward로 기록.</p>
 <!-- /wp:paragraph -->
+
+<!-- wp:separator {"className":"is-style-divider-inset"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-divider-inset"/>
+<!-- /wp:separator -->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">Theme switcher (omphalos/theme-switcher)</h2>

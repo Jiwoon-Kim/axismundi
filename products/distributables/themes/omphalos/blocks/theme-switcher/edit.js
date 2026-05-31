@@ -10,7 +10,7 @@
 	var useBlockProps = blockEditor.useBlockProps;
 
 	var MODES = [
-		{ mode: 'auto', icon: 'brightness_auto', label: 'Auto' },
+		{ mode: 'auto', icon: 'brightness_medium', label: 'Auto' },
 		{ mode: 'light', icon: 'light_mode', label: 'Light' },
 		{ mode: 'dark', icon: 'dark_mode', label: 'Dark' },
 	];

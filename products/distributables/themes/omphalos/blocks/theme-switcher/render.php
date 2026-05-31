@@ -14,7 +14,7 @@
 defined( 'ABSPATH' ) || exit;
 
 $omphalos_modes = array(
-	'auto'  => array( 'icon' => 'brightness_auto', 'label' => __( 'Auto', 'omphalos' ) ),
+	'auto'  => array( 'icon' => 'brightness_medium', 'label' => __( 'Auto', 'omphalos' ) ),
 	'light' => array( 'icon' => 'light_mode', 'label' => __( 'Light', 'omphalos' ) ),
 	'dark'  => array( 'icon' => 'dark_mode', 'label' => __( 'Dark', 'omphalos' ) ),
 );

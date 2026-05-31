@@ -462,12 +462,10 @@
   background: none;          /* no line — just the dot row */
   block-size: auto;
   text-align: center;
+  /* M3 colour only. Core owns the dot row itself (::before with content "···",
+   * letter-spacing 2em, padding + serif) — don't override it, or the dots get
+   * cramped; just recolour via currentColor. */
   color: var(--md-sys-color-on-surface-variant);
-}
-.wp-block-post-content .wp-block-separator.is-style-dots::before {
-  content: "···";
-  letter-spacing: var(--space-sm);
-  font-size: 1.5em;
 }
 /* Theme-registered inset dividers (centered line, inset on both edges).
  * FSE re-contract: the constrained layout clamps a separator to the content size

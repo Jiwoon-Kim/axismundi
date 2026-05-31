@@ -138,6 +138,25 @@ function omphalos_register_block_styles() : void {
 			'label' => __( 'No rounding', 'omphalos' ),
 		)
 	);
+	// core/group as M3 Card. Bare group stays a plain layout container; only these
+	// opt-in variations turn a group into a Card surface (filled / elevated /
+	// outlined), so layout groups in patterns never accidentally read as cards.
+	// CSS for all three is in blocks.css §8.
+	foreach (
+		array(
+			'card-filled'   => __( 'Card (filled)', 'omphalos' ),
+			'card-elevated' => __( 'Card (elevated)', 'omphalos' ),
+			'card-outlined' => __( 'Card (outlined)', 'omphalos' ),
+		) as $name => $label
+	) {
+		register_block_style(
+			'core/group',
+			array(
+				'name'  => $name,
+				'label' => $label,
+			)
+		);
+	}
 }
 add_action( 'init', 'omphalos_register_block_styles' );
 

@@ -87,6 +87,44 @@
 <!-- /wp:group -->
 
 <!-- wp:heading -->
+<h2 class="wp-block-heading">Group — Card variations (M3)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Bare group은 카드가 아닙니다(위 layout 컨테이너). 아래 세 style variation만 M3 Card surface로 간주합니다 — filled / elevated / outlined. 콘텐츠 카드이며, whole-card action/navigation은 별도 마크업·semantic 결정 사항입니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:group {"className":"is-style-card-filled","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-filled"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Filled card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>surface-container-highest 배경. 그림자/외곽선 없이 채워진 면으로 구분되는 가장 낮은 강조의 카드입니다.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"is-style-card-elevated","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-elevated"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Elevated card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>surface-container-low 배경 + level-1 elevation 그림자. 다크 모드에서는 M3 규칙대로 그림자 대신 surface tint로 분리됩니다.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"is-style-card-outlined","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-outlined"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Outlined card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>surface 배경 + outline-variant 1px 외곽선(offset -1px). 그림자 없이 윤곽선으로만 구분되는 카드입니다.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:heading -->
 <h2 class="wp-block-heading">Row — horizontal flex</h2>
 <!-- /wp:heading -->
 

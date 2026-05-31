@@ -8,7 +8,13 @@
  * own treatment so the global button base (blocks.css §9) does not apply.
  * ============================================================ */
 .wp-block-omphalos-theme-switcher {
-	display: inline-flex;
+	/* Block-level + shrink-to-content so the constrained layout (margin-inline:
+	 * auto) keeps it inside the content column. inline-flex made it an inline box
+	 * that ignores auto margins, so it sat at the page-padding edge, outside the
+	 * content column. */
+	display: flex;
+	inline-size: fit-content;
+	max-inline-size: 100%;
 	gap: 2px;
 	padding: 2px;
 	background-color: var(--md-sys-color-surface-container);
@@ -32,6 +38,17 @@
 	letter-spacing: var(--md-sys-typescale-label-large-tracking);
 	line-height: 1;
 	cursor: pointer;
+	/* Smooth the active-mode change (the lab style-guide's selected-button
+	 * transition), scoped to the control — not a page-wide colour fade. */
+	transition:
+		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+		color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.omphalos-theme-switcher__button {
+		transition: none;
+	}
 }
 
 .omphalos-theme-switcher__button .material-symbols-outlined {

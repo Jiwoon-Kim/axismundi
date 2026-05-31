@@ -1,0 +1,50 @@
+/* ============================================================
+ * omphalos/theme-switcher — M3 segmented control (front + editor)
+ *
+ * Block-scoped (block.json "style"), so it loads only where the block is used.
+ * Three mode buttons (Auto / Light / Dark): a surface-container track, with the
+ * active mode tinted secondary-container. Tokens are global; this file only
+ * lays out the control. The buttons are NOT .wp-element-button — they have their
+ * own treatment so the global button base (blocks.css §9) does not apply.
+ * ============================================================ */
+.wp-block-omphalos-theme-switcher {
+	display: inline-flex;
+	gap: 2px;
+	padding: 2px;
+	background-color: var(--md-sys-color-surface-container);
+	border-radius: var(--md-sys-shape-corner-full);
+}
+
+.omphalos-theme-switcher__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-xs);
+	min-block-size: 40px;
+	padding-inline: var(--space-md);
+	border: 0;
+	border-radius: var(--md-sys-shape-corner-full);
+	background-color: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	font-family: var(--md-sys-typescale-label-large-font);
+	font-size: var(--md-sys-typescale-label-large-size);
+	font-weight: var(--md-sys-typescale-label-large-weight);
+	letter-spacing: var(--md-sys-typescale-label-large-tracking);
+	line-height: 1;
+	cursor: pointer;
+}
+
+.omphalos-theme-switcher__button .material-symbols-outlined {
+	font-size: 20px;
+	--md-icon-opsz: 20;
+}
+
+.omphalos-theme-switcher__button[aria-pressed="true"] {
+	background-color: var(--md-sys-color-secondary-container);
+	color: var(--md-sys-color-on-secondary-container);
+}
+
+.omphalos-theme-switcher__button:focus-visible {
+	outline: 3px solid var(--md-sys-color-secondary);
+	outline-offset: 2px;
+}

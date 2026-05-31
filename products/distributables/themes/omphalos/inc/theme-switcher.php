@@ -36,3 +36,20 @@ function omphalos_theme_scheme_head_script() : void {
 	<?php
 }
 add_action( 'wp_head', 'omphalos_theme_scheme_head_script', 0 );
+
+/**
+ * Register the omphalos/theme-switcher block.
+ *
+ * Phase 2: shell only — server render (render.php) + static editor preview
+ * (edit.js) + block-scoped style. No view module yet, so the front-end buttons
+ * have no behaviour; the Interactivity toggle lands in Phase 3.
+ *
+ * @return void
+ */
+function omphalos_register_theme_switcher_block() : void {
+	$dir = get_stylesheet_directory() . '/blocks/theme-switcher';
+	if ( file_exists( $dir . '/block.json' ) ) {
+		register_block_type( $dir );
+	}
+}
+add_action( 'init', 'omphalos_register_theme_switcher_block' );

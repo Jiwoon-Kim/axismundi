@@ -408,11 +408,15 @@
 /* ============================================================
  * §11 Icon font scope policy (Material Symbols)
  *
- * Material Symbols are theme chrome only. If an icon class lands inside
- * prose content (e.g. copied HTML), revert the font so literal ligature
- * text renders instead of a glyph — federation-safe graceful degradation.
+ * The explicit `.material-symbols-outlined` utility (icons.css) is intentional
+ * chrome and renders everywhere, INCLUDING post content — e.g. a theme-control
+ * block placed on a page — and it degrades to its ligature text when CSS/font is
+ * stripped (federation / reader safe). What we still guard against is the icon
+ * FONT being applied to ordinary prose via the editor font picker (the
+ * `has-…-font-family` preset), which would turn body words into glyphs. So revert
+ * any material-symbols class in prose EXCEPT the explicit utility.
  * ============================================================ */
-.wp-block-post-content [class*="material-symbols"] {
+.wp-block-post-content [class*="material-symbols"]:not(.material-symbols-outlined) {
   font-family: inherit !important;
   font-variation-settings: normal !important;
   font-feature-settings: normal !important;

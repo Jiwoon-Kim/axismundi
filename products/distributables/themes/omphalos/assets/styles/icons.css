@@ -1,0 +1,39 @@
+/* ============================================================
+ * Omphalos — icons.css (Material Symbols utility)
+ *
+ * The explicit icon utility for theme chrome / control blocks (theme switcher,
+ * future icon buttons, nav affordances). Enqueued GLOBALLY — front end AND the
+ * editor canvas — so an icon renders identically in both. This is intentional,
+ * opt-in chrome: only an element that carries the `.material-symbols-outlined`
+ * class becomes an icon. Ordinary text never does (it never gets the icon font),
+ * and prose.css §11 still reverts the FONT PRESET if it is applied to body text.
+ *
+ * Usage: <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+ * The ligature text ("settings") is also the graceful-degradation fallback when
+ * CSS/font is stripped (federation / reader views).
+ *
+ * The @font-face itself is registered in theme.json (Material Symbols Outlined);
+ * this file only contracts the rendering. FILL/wght/GRAD/opsz are themeable via
+ * --md-icon-* custom properties (defaults match the M3 baseline 24/400/0/0).
+ * ============================================================ */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined", sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: var(--md-icon-size, 24px);
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";        /* ligatures: "settings" -> glyph */
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    "FILL" var(--md-icon-fill, 0),
+    "wght" var(--md-icon-wght, 400),
+    "GRAD" var(--md-icon-grad, 0),
+    "opsz" var(--md-icon-opsz, 24);
+}

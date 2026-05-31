@@ -54,6 +54,7 @@ function omphalos_setup() : void {
 				file_exists( get_stylesheet_directory() . '/assets/styles/foundation.css' ) ? 'assets/styles/foundation.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/prose.css' ) ? 'assets/styles/prose.css' : null,
 				file_exists( get_stylesheet_directory() . '/assets/styles/blocks.css' ) ? 'assets/styles/blocks.css' : null,
+				file_exists( get_stylesheet_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
 			)
 		)
 	);
@@ -88,6 +89,9 @@ function omphalos_enqueue_assets() : void {
 		'omphalos-foundation'       => array( 'assets/styles/foundation.css', array( 'omphalos-tokens-sys-dark' ) ),
 		'omphalos-prose'            => array( 'assets/styles/prose.css', array( 'omphalos-foundation' ) ),
 		'omphalos-blocks'           => array( 'assets/styles/blocks.css', array( 'omphalos-prose' ) ),
+		// Global Material Symbols utility — front + editor (added to add_editor_style
+		// in omphalos_setup too) so theme-control icons render the same in both.
+		'omphalos-icons'            => array( 'assets/styles/icons.css', array( 'omphalos-blocks' ) ),
 	);
 
 	$previous = array();

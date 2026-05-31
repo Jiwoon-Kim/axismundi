@@ -157,6 +157,26 @@ function omphalos_register_block_styles() : void {
 			)
 		);
 	}
+	// core/button as M3 Button. Core already ships `fill` (default) and `outline`
+	// block styles, mapped to M3 Filled / Outlined in blocks.css §9 — only the
+	// three missing M3 variants are registered here. The cross-surface button
+	// base (.wp-element-button) lives in theme.json styles.elements.button +
+	// blocks.css §9; these are the per-variant color treatments for core/button.
+	foreach (
+		array(
+			'tonal'    => __( 'Tonal', 'omphalos' ),
+			'elevated' => __( 'Elevated', 'omphalos' ),
+			'text'     => __( 'Text', 'omphalos' ),
+		) as $name => $label
+	) {
+		register_block_style(
+			'core/button',
+			array(
+				'name'  => $name,
+				'label' => $label,
+			)
+		);
+	}
 }
 add_action( 'init', 'omphalos_register_block_styles' );
 

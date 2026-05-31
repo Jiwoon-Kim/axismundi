@@ -31,20 +31,32 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>이 페이지는 WordPress core의 <strong>Design</strong> 카테고리 블록(구조·레이아웃)만 배치한 baseline입니다. 현재 Omphalos는 M3 color palette, spacing preset, theme.json layout까지만 적용된 상태이고, Design 블록 전용 chrome은 아직 <code>blocks.css</code>에 없습니다. 이 화면은 코어 기본 렌더링이 어디까지 감당하는지 확인하는 진단 기준점입니다. <code>core/button</code>은 semantic route(navigation vs action) 결정 전이라 M3 버튼 contract 없이 코어 기본만 노출합니다.</p>
+<p>이 페이지는 WordPress core의 <strong>Design</strong> 카테고리 블록(구조·레이아웃)만 배치한 baseline입니다. 현재 Omphalos는 M3 color palette, spacing preset, theme.json layout까지만 적용된 상태이고, Design 블록 전용 chrome은 아직 <code>blocks.css</code>에 없습니다. 이 화면은 코어 기본 렌더링이 어디까지 감당하는지 확인하는 진단 기준점입니다. <code>core/button</code>은 semantic route 확정 후 M3 Button contract가 적용됩니다(Filled / Tonal / Elevated / Outlined / Text). base는 <code>.wp-element-button</code>(전역)에 앉아 file/search submit까지 일관됩니다.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading -->
-<h2 class="wp-block-heading">Buttons — filled + outline</h2>
+<h2 class="wp-block-heading">Buttons — M3 variants</h2>
 <!-- /wp:heading -->
 
 <!-- wp:buttons -->
 <div class="wp-block-buttons"><!-- wp:button -->
-<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Filled button</a></div>
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Filled</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"is-style-tonal"} -->
+<div class="wp-block-button is-style-tonal"><a class="wp-block-button__link wp-element-button" href="#">Tonal</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"is-style-elevated"} -->
+<div class="wp-block-button is-style-elevated"><a class="wp-block-button__link wp-element-button" href="#">Elevated</a></div>
 <!-- /wp:button -->
 
 <!-- wp:button {"className":"is-style-outline"} -->
-<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#">Outline button</a></div>
+<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#">Outlined</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"is-style-text"} -->
+<div class="wp-block-button is-style-text"><a class="wp-block-button__link wp-element-button" href="#">Text</a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons -->
 

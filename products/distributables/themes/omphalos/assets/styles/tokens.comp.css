@@ -16,9 +16,10 @@
  * are isolation candidates: kept for now (no deletion), tracked in
  * docs/TOKENS-COMP-AUDIT.md, and migrated to tokens.comp.future.css (or dropped
  * from the Omphalos copy) per-phase as each contract settles — never big-bang.
- * As of the latest audit, only --comp-card-padding / --comp-card-radius are
- * consumed by Omphalos (blocks.css §8 core/group Card); the rest await their
- * block contract (notably the core/button family). See the audit for the table.
+ * As of the latest audit, --comp-card-padding / --comp-card-radius (blocks.css §8
+ * core/group Card) and --comp-button-height / --comp-button-radius (blocks.css §9
+ * + theme.json button) are consumed; the rest await their block contract (e.g.
+ * the button size matrix, icon sizes). See the audit for the table.
  * ============================================================ */
 
 /* ============================================================

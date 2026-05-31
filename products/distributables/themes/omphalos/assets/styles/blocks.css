@@ -306,3 +306,71 @@
   outline: 1px solid var(--md-sys-color-outline-variant);
   outline-offset: -1px; /* sit on the box edge, not outside it */
 }
+
+/* ============================================================
+ * §9 core/button + button-surface base (.wp-element-button) — GLOBAL
+ *
+ * Unlike the rest of blocks.css (post-content scoped), the button base is GLOBAL
+ * on purpose. `.wp-element-button` is WordPress's shared hook for every
+ * button-shaped control — core/button's <a>, the core/search + comments submit
+ * <button>, the core/file download <a> — and these live outside post content
+ * (template parts, search form, comment form). Consistency across the
+ * action/control surface matters more than the post-content fence here.
+ * Navigation / pagination / post-nav links carry NO `.wp-element-button`, so the
+ * global base never reaches them (that's why global is safe; see docs/BUTTON-ROUTE).
+ *
+ * Layering: theme.json `styles.elements.button` owns the minimal cross-surface
+ * base that must reach the editor + every template (label-large type, pill
+ * radius, Filled color = primary / on-primary). This section adds the
+ * interaction layout the JSON element can't express, focus, and the core/button
+ * variant color treatments. Filled needs no rule here — it IS the theme.json
+ * base; core ships the `fill` (default) / `outline` style slugs and the theme
+ * registers tonal / elevated / text (functions.php). First consumer of
+ * --comp-button-height / --comp-button-radius (promoted in the comp-token audit).
+ * State layer (hover/pressed) is a deliberate follow-up; focus-visible only here.
+ * ============================================================ */
+.wp-element-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--comp-button-height);
+  padding-block: 0;
+  padding-inline: var(--space-lg);
+  border: 0;
+  /* Filled is the default surface. theme.json sets these too, but WP emits the
+   * element-button color at :where() (zero specificity), which the <a> link
+   * colour beats on core/button — so re-assert here at class specificity so every
+   * button surface (incl. the file download <a>) reads on-primary, not the link
+   * colour. Variants below override at higher specificity. */
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+.wp-element-button:focus-visible {
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
+}
+
+/* core/button variants — override the Filled base color (higher specificity than
+ * the theme.json `.wp-element-button` base). The link is itself .wp-element-button. */
+.wp-block-button.is-style-tonal .wp-block-button__link {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+.wp-block-button.is-style-elevated .wp-block-button__link {
+  background-color: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-primary);
+  box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+.wp-block-button.is-style-outline .wp-block-button__link {
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  border: 0; /* drop core's outline border; M3 uses an inset hairline */
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-outline-variant);
+}
+.wp-block-button.is-style-text .wp-block-button__link {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  padding-inline: var(--space-md);
+}

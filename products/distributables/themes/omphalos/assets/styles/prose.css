@@ -317,14 +317,20 @@
 
 /* ============================================================
  * §9 Links — always-underline in prose (a11y; WCAG 1.4.1)
+ *
+ * Excludes `.wp-element-button`: a core/button (and file-download) link is a
+ * button SURFACE, not a prose link — it must not inherit the prose link colour
+ * or underline (that would beat the global button base on specificity, since
+ * `.wp-block-post-content a` (0,1,1) > `.wp-element-button` (0,1,0)). blocks.css
+ * §9 owns those surfaces.
  * ============================================================ */
-.wp-block-post-content a {
+.wp-block-post-content a:not(.wp-element-button) {
   color: var(--md-sys-color-primary);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
-.wp-block-post-content a:hover {
+.wp-block-post-content a:not(.wp-element-button):hover {
   text-decoration-thickness: 2px;
 }
 

@@ -34,12 +34,14 @@ Omphalos contract consumes them. Promotion is per-phase, never a big-bang move.
 
 ## Findings — Omphalos runtime usage
 
-Of ~50 tokens defined, **2** are consumed by Omphalos shipped CSS:
+Of ~50 tokens defined, **4** are consumed by Omphalos shipped CSS / theme.json:
 
 | Token | Consumed by | Disposition |
 |---|---|---|
 | `--comp-card-padding` | `blocks.css §8` (core/group card) | **KEEP** |
 | `--comp-card-radius` | `blocks.css §8` (core/group card) | **KEEP** |
+| `--comp-button-height` | `blocks.css §9` (button base — min-block-size) | **KEEP** |
+| `--comp-button-radius` | `theme.json` elements.button + `blocks.css §9` | **KEEP** |
 
 Everything else is unreferenced by Omphalos (defined-only).
 
@@ -47,13 +49,15 @@ Everything else is unreferenced by Omphalos (defined-only).
 
 ## Isolation candidates (defined, not used by Omphalos yet)
 
-### A. Core-block-relevant — likely promoted when the block contract lands
+### A. Core-block-relevant
 
-These map to WordPress core blocks Omphalos has not contracted yet (chiefly
-`core/button` / `core/buttons`, pending its semantic route). Keep nearby.
+The core/button contract (blocks.css §9 + theme.json elements.button) landed and
+**promoted `--comp-button-height` / `--comp-button-radius`** into the KEEP set
+above. The rest describe a button SIZE system (xs…xl) Omphalos does not implement
+yet (single default size), so they stay future candidates until a button-size
+contract needs them:
 
 ```txt
---comp-button-height            --comp-button-radius
 --comp-button-height-{xs,s,m,l,xl}
 --comp-button-padding-inline-{xs,s,m,l,xl}
 --comp-button-icon-size-{xs,s,m,l,xl}

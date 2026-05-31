@@ -19,9 +19,12 @@
  *              this page surfaces the default so that decision can be made, but it
  *              does not yet apply an M3 button contract.
  *
- *              core/more and core/nextpage are omitted: they are post-context
- *              controls (read-more split, pagination) that render nothing on a
- *              standalone page, so a static VQA page cannot exercise them.
+ *              core/accordion is a real specimen (Interactivity API: the bare
+ *              heading button is wired with the toggle directives at render).
+ *              core/more and core/nextpage are page/editor-context controls
+ *              (read-more split, pagination) with no standalone-page visual —
+ *              they are described in a note, not rendered (core/nextpage would
+ *              actually split the page).
  *
  * @package Omphalos
  */
@@ -220,4 +223,48 @@
 
 <!-- wp:paragraph -->
 <p>Spacer 후.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Accordion — open / closed, nested content</h2>
+<!-- /wp:heading -->
+
+<!-- wp:accordion -->
+<div class="wp-block-accordion"><!-- wp:accordion-item {"openByDefault":true} -->
+<div class="wp-block-accordion-item"><!-- wp:accordion-heading -->
+<h3 class="wp-block-accordion-heading"><button class="wp-block-accordion-heading__toggle" type="button">첫 번째 항목 (기본 열림)</button></h3>
+<!-- /wp:accordion-heading -->
+
+<!-- wp:accordion-panel -->
+<div class="wp-block-accordion-panel"><!-- wp:paragraph -->
+<p>패널 본문. heading 토글로 열고 닫힙니다(Interactivity API가 디렉티브를 렌더 시 wiring).</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:accordion-panel --></div>
+<!-- /wp:accordion-item -->
+
+<!-- wp:accordion-item -->
+<div class="wp-block-accordion-item"><!-- wp:accordion-heading -->
+<h3 class="wp-block-accordion-heading"><button class="wp-block-accordion-heading__toggle" type="button">두 번째 항목 (중첩 콘텐츠)</button></h3>
+<!-- /wp:accordion-heading -->
+
+<!-- wp:accordion-panel -->
+<div class="wp-block-accordion-panel"><!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li>중첩 리스트 항목 1</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>중첩 리스트 항목 2</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list --></div>
+<!-- /wp:accordion-panel --></div>
+<!-- /wp:accordion-item --></div>
+<!-- /wp:accordion -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Page-context controls — More / Page Break</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><code>core/more</code>(Read More)와 <code>core/nextpage</code>(Page Break)는 post/editor 컨텍스트 컨트롤입니다 — core/more는 아카이브·발췌의 "더 보기" 분할, core/nextpage는 글 페이지네이션을 만듭니다. 단일 페이지 프런트엔드에는 시각적 계약이 없어 specimen으로 두지 않습니다. 특히 core/nextpage는 페이지를 실제로 분할하므로 VQA 본문에 넣으면 안 됩니다. → editor utility / route-forward로 기록.</p>
 <!-- /wp:paragraph -->

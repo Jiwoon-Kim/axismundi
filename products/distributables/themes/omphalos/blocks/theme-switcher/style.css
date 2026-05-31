@@ -45,10 +45,20 @@
 .omphalos-theme-switcher__button .material-symbols-outlined {
 	font-size: 20px;
 	--md-icon-opsz: 20;
+	/* Animate the FILL axis (Material Symbols variable font) for hover/active. */
+	transition: font-variation-settings var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+
+/* Fill the icon on hover and on the active (selected) mode — alongside the button
+ * state layer. M3 selected segmented buttons read filled. */
+.omphalos-theme-switcher__button:hover .material-symbols-outlined,
+.omphalos-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
+	--md-icon-fill: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button {
+	.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button,
+	.omphalos-theme-switcher__button .material-symbols-outlined {
 		transition: none;
 	}
 }

@@ -34,6 +34,13 @@
  *              core/file's textLink href/target are sourced from markup, not the
  *              block comment).
  *
+ *              core/icon (WP-category "media") is also here but is NOT
+ *              attachment-bound: its `icon` attribute is a library reference
+ *              (core/<name>, e.g. core/star-filled) and the block is dynamic
+ *              (render emits inline SVG, fill: currentColor), so its markup has no
+ *              seed placeholders. Distinct from the .material-symbols-outlined
+ *              font utility (ligature glyph) — core/icon is inline SVG.
+ *
  * @package Omphalos
  */
 ?>
@@ -136,3 +143,25 @@
 <!-- wp:file {"id":__AUDIO_ID__,"href":"__AUDIO_URL__","displayPreview":false} -->
 <div class="wp-block-file"><a id="wp-block-file--media-__AUDIO_ID__" href="__AUDIO_PERMALINK__" target="_blank" rel="noreferrer noopener">audio-placeholder-jazzy-lofi.ogg</a><a href="__AUDIO_URL__" class="wp-block-file__button wp-element-button" download aria-describedby="wp-block-file--media-__AUDIO_ID__">Download</a></div>
 <!-- /wp:file -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Icon — core/icon (SVG symbol)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>core/icon은 라이브러리 SVG 심볼 블록입니다(<code>icon</code>=<code>core/&lt;name&gt;</code>, render가 inline SVG 출력, <code>fill: currentColor</code>). 폰트 글리프인 <code>.material-symbols-outlined</code> 유틸과는 별개 표면 — 이건 inline SVG, 저건 ligature 폰트. 코어 기본(24px, currentColor)이 합리적이라 theme가 크기를 강제하지 않습니다. <code>textColor</code>로 색, <code>dimensions.width</code>로 크기를 줍니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:icon {"icon":"core/star-filled"} /-->
+
+<!-- wp:icon {"icon":"core/at-symbol","textColor":"primary"} /-->
+
+<!-- wp:icon {"icon":"core/download","style":{"dimensions":{"width":"48px"}}} /-->
+
+<!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap"}} -->
+<div class="wp-block-group"><!-- wp:icon {"icon":"core/star-empty"} /-->
+
+<!-- wp:icon {"icon":"core/star-filled"} /-->
+
+<!-- wp:icon {"icon":"core/star-half"} /--></div>
+<!-- /wp:group -->

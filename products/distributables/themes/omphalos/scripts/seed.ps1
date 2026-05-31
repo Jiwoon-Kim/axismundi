@@ -11,6 +11,17 @@
 $ErrorActionPreference = "Stop"
 $themePath = "wp-content/themes/omphalos"
 
+# Pin UTF-8 for native-command (wp-cli) capture + file writes. wp-cli emits
+# UTF-8, but PowerShell decodes a native command's stdout via
+# [Console]::OutputEncoding, which on Windows defaults to a non-UTF-8 code page.
+# Without this, capturing the vqa-media pattern body (which contains Korean +
+# em dashes) mojibakes multibyte chars — and inside the wp:video `tracks` JSON
+# attribute that corruption eats a quote and breaks the block (invalid content).
+# Pinning here makes the seed deterministic regardless of the caller's terminal.
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding  = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding           = [System.Text.UTF8Encoding]::new($false)
+
 function Import-Media([string]$relPath) {
     # --porcelain prints just the new attachment ID; grab the last numeric line.
     $out = npx wp-env run cli wp media import "$themePath/$relPath" --porcelain 2>&1

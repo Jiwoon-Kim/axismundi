@@ -16,8 +16,9 @@
  * crosses that boundary, so this path is encoding-safe by construction.
  *
  * Positional args ($args):
- *   0 image attachment ID  (also reused as the cover / 2nd gallery image)
- *   1 audio (.ogg) attachment ID
+ *   0 image attachment ID  (main raster; also the cover + media-text image)
+ *   1 audio (.ogg) attachment ID  (its embedded cover art becomes the gallery's
+ *                                  2nd tile, derived here via _thumbnail_id)
  *   2 video (.webm) attachment ID
  *   3 Korean WebVTT attachment ID
  *
@@ -34,7 +35,17 @@ if ( ! $image || ! $audio || ! $video || ! $vtt_ko ) {
 	WP_CLI::error( 'seed-vqa-media: missing attachment IDs (need image audio video vttKo).' );
 }
 
-$cover = $image; // Reuse the WEBP image for cover + 2nd gallery tile (self-contained).
+// The gallery's 2nd tile uses the cover art embedded in the audio file (a
+// DISTINCT image from the main raster), so the WP 7.0 lightbox carousel visibly
+// advances between two different pictures instead of two identical ones. WP saves
+// that embedded art as the audio attachment's featured image (_thumbnail_id), so
+// derive it here — no extra bundled binary, no hard-coded ID. Fall back to the
+// main image (with a warning) if this install's audio has no embedded art.
+$audio_image = (int) get_post_thumbnail_id( $audio );
+if ( ! $audio_image ) {
+	WP_CLI::warning( 'seed-vqa-media: audio has no embedded cover art; gallery 2nd tile falls back to the main image (carousel will show identical tiles).' );
+	$audio_image = $image;
+}
 
 ob_start();
 include get_stylesheet_directory() . '/patterns/vqa-media.php';
@@ -51,8 +62,8 @@ $body = strtr(
 	array(
 		'__IMAGE_ID__'        => (string) $image,
 		'__IMAGE_URL__'       => wp_get_attachment_url( $image ),
-		'__COVER_ID__'        => (string) $cover,
-		'__COVER_URL__'       => wp_get_attachment_url( $cover ),
+		'__AUDIO_IMAGE_ID__'  => (string) $audio_image,
+		'__AUDIO_IMAGE_URL__' => wp_get_attachment_url( $audio_image ),
 		'__AUDIO_ID__'        => (string) $audio,
 		'__AUDIO_URL__'       => wp_get_attachment_url( $audio ),
 		'__AUDIO_PERMALINK__' => get_permalink( $audio ),

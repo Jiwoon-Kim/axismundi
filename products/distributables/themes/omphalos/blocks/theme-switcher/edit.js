@@ -16,6 +16,11 @@
 	];
 
 	blocks.registerBlockType( 'omphalos/theme-switcher', {
+		// Tint the inserter/toolbar icon with the brand primary so this
+		// theme-owned control reads distinctly from generic core blocks. (Icon
+		// shape unchanged — block.json's admin-appearance dashicon, just coloured.
+		// A literal hex is required here: the editor chrome has no theme tokens.)
+		icon: { src: 'admin-appearance', foreground: '#6750A4' },
 		edit: function () {
 			var blockProps = useBlockProps( {
 				role: 'group',

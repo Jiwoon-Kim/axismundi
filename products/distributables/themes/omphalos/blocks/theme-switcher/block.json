@@ -6,7 +6,7 @@
 	"title": "Theme Switcher",
 	"category": "design",
 	"icon": "admin-appearance",
-	"description": "Auto / Light / Dark colour-scheme control. Sets the persisted scheme via cookie + <html data-theme>.",
+	"description": "Switches between Auto, Light, and Dark theme modes.",
 	"keywords": [ "theme", "dark mode", "color scheme", "appearance", "light", "dark" ],
 	"textdomain": "omphalos",
 	"supports": {

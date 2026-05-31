@@ -276,3 +276,13 @@
 <!-- wp:paragraph -->
 <p><code>core/more</code>(Read More)와 <code>core/nextpage</code>(Page Break)는 post/editor 컨텍스트 컨트롤입니다 — core/more는 아카이브·발췌의 "더 보기" 분할, core/nextpage는 글 페이지네이션을 만듭니다. 단일 페이지 프런트엔드에는 시각적 계약이 없어 specimen으로 두지 않습니다. 특히 core/nextpage는 페이지를 실제로 분할하므로 VQA 본문에 넣으면 안 됩니다. → editor utility / route-forward로 기록.</p>
 <!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Theme switcher (omphalos/theme-switcher)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>테마 소유 Design 컨트롤 블록. Auto / Light / Dark 클릭 시 <code>&lt;html data-theme&gt;</code>를 바꿔 토큰·<code>color-scheme</code>·native UI가 즉시 따라가고 cookie로 영속됩니다. 헤더/푸터 배치는 별도 UX 결정이고, 여기서는 블록 표면(inserter·canvas·front render·icon·active state·interactivity)을 검증합니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:omphalos/theme-switcher /-->

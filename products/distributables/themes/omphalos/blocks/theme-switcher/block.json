@@ -11,9 +11,11 @@
 	"textdomain": "omphalos",
 	"supports": {
 		"html": false,
-		"align": false
+		"align": false,
+		"interactivity": true
 	},
 	"editorScript": "file:./edit.js",
 	"style": "file:./style.css",
-	"render": "file:./render.php"
+	"render": "file:./render.php",
+	"viewScriptModule": "file:./view.js"
 }

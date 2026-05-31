@@ -30,14 +30,23 @@ if ( isset( $_COOKIE['omphalos_theme'] ) ) {
 
 $omphalos_wrapper = get_block_wrapper_attributes(
 	array(
-		'role'       => 'group',
-		'aria-label' => __( 'Color scheme', 'omphalos' ),
+		'role'                => 'group',
+		'aria-label'          => __( 'Color scheme', 'omphalos' ),
+		'data-wp-interactive' => 'omphalos/theme-switcher',
 	)
 );
 ?>
 <div <?php echo $omphalos_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<?php foreach ( $omphalos_modes as $omphalos_mode => $omphalos_m ) : ?>
-		<button type="button" class="omphalos-theme-switcher__button" data-theme-mode="<?php echo esc_attr( $omphalos_mode ); ?>" aria-pressed="<?php echo $omphalos_mode === $omphalos_current ? 'true' : 'false'; ?>">
+		<button
+			type="button"
+			class="omphalos-theme-switcher__button"
+			data-theme-mode="<?php echo esc_attr( $omphalos_mode ); ?>"
+			<?php echo wp_interactivity_data_wp_context( array( 'mode' => $omphalos_mode ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			data-wp-on--click="actions.setScheme"
+			data-wp-bind--aria-pressed="state.isActive"
+			aria-pressed="<?php echo $omphalos_mode === $omphalos_current ? 'true' : 'false'; ?>"
+		>
 			<span class="material-symbols-outlined" aria-hidden="true"><?php echo esc_html( $omphalos_m['icon'] ); ?></span>
 			<span class="omphalos-theme-switcher__label"><?php echo esc_html( $omphalos_m['label'] ); ?></span>
 		</button>

@@ -315,6 +315,26 @@
 <!-- /wp:buttons --></div>
 <!-- /wp:group -->
 
+<!-- wp:group {"className":"is-style-card-outlined","layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-outlined"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Action card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>본문(body) 위에 supporting text, 그 아래 supplemental action row를 별도 anatomy로 둡니다. M3 카드 actions는 하단에 일관되게(여기선 우측 정렬) 배치하고 2개 이하로 둡니다 — overflow menu는 보류.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"right"}} -->
+<div class="wp-block-buttons"><!-- wp:button {"className":"is-style-text"} -->
+<div class="wp-block-button is-style-text"><a class="wp-block-button__link wp-element-button" href="#">Cancel</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"is-style-tonal"} -->
+<div class="wp-block-button is-style-tonal"><a class="wp-block-button__link wp-element-button" href="#">Confirm</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
+<!-- /wp:group -->
+
 <!-- wp:group {"className":"is-style-card-elevated","layout":{"type":"constrained"}} -->
 <div class="wp-block-group is-style-card-elevated"><!-- wp:image {"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large"><img src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/media/image/image-placeholder-mogu-1024.webp' ); ?>" alt="Mogu placeholder"/></figure>
@@ -404,3 +424,7 @@
 <p class="has-label-small-font-size">#tag-one #tag-two</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:group -->
+
+<!-- wp:paragraph {"fontSize":"label-small"} -->
+<p class="has-label-small-font-size"><strong>Deferred (M3 card anatomy, future):</strong> full-bleed media card(상단 미디어가 카드 edge까지 — padding 탈출 + overflow:clip을 실제로 행사하는 별도 contract 필요), clickable whole-card(semantic/keyboard/ripple route), draggable/checkable cards(Omphalos core-block 범위 밖). 현재 media card는 안정적인 padded 버전을 유지합니다.</p>
+<!-- /wp:paragraph -->

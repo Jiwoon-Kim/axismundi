@@ -464,8 +464,9 @@
   text-align: center;
   /* M3 colour only. Core owns the dot row itself (::before with content "···",
    * letter-spacing 2em, padding + serif) — don't override it, or the dots get
-   * cramped; just recolour via currentColor. */
-  color: var(--md-sys-color-on-surface-variant);
+   * cramped; just recolour via currentColor. Divider colour = outline-variant,
+   * same as the line separators above. */
+  color: var(--md-sys-color-outline-variant);
 }
 /* Theme-registered inset dividers (centered line, inset on both edges).
  * FSE re-contract: the constrained layout clamps a separator to the content size

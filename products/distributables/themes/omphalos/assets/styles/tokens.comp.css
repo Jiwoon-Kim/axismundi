@@ -4,6 +4,21 @@
  *
  * Component, semantic alias, and layout tokens. Non-mode system
  * tokens moved to tokens.sys.core.css.
+ *
+ * ── Omphalos admission policy ──────────────────────────────
+ * This file is the runtime component-token layer Omphalos ships and enqueues.
+ * A token belongs here when EITHER:
+ *   (1) it is referenced by active Omphalos CSS (blocks/prose/foundation) or
+ *       theme.json, OR
+ *   (2) it backs an active Omphalos registered block-style / component contract.
+ *
+ * Tokens defined but only meaningful to lab / app-shell / future component work
+ * are isolation candidates: kept for now (no deletion), tracked in
+ * docs/TOKENS-COMP-AUDIT.md, and migrated to tokens.comp.future.css (or dropped
+ * from the Omphalos copy) per-phase as each contract settles — never big-bang.
+ * As of the latest audit, only --comp-card-padding / --comp-card-radius are
+ * consumed by Omphalos (blocks.css §8 core/group Card); the rest await their
+ * block contract (notably the core/button family). See the audit for the table.
  * ============================================================ */
 
 /* ============================================================

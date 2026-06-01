@@ -71,15 +71,15 @@
 
 <!-- wp:social-link {"url":"#","service":"mastodon"} /-->
 
-<!-- wp:social-link {"service":"facebook"} /-->
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
 
-<!-- wp:social-link {"service":"instagram"} /-->
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
 
-<!-- wp:social-link {"service":"threads"} /-->
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
 
-<!-- wp:social-link {"service":"youtube"} /-->
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
 
-<!-- wp:social-link {"service":"x"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:social-links {"showLabels":true,"className":"is-style-default","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
@@ -89,15 +89,15 @@
 
 <!-- wp:social-link {"url":"#","service":"mastodon"} /-->
 
-<!-- wp:social-link {"service":"facebook"} /-->
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
 
-<!-- wp:social-link {"service":"instagram"} /-->
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
 
-<!-- wp:social-link {"service":"threads"} /-->
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
 
-<!-- wp:social-link {"service":"youtube"} /-->
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
 
-<!-- wp:social-link {"service":"x"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:social-links {"className":"is-style-logos-only","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
@@ -107,15 +107,15 @@
 
 <!-- wp:social-link {"url":"#","service":"mastodon"} /-->
 
-<!-- wp:social-link {"service":"facebook"} /-->
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
 
-<!-- wp:social-link {"service":"instagram"} /-->
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
 
-<!-- wp:social-link {"service":"threads"} /-->
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
 
-<!-- wp:social-link {"service":"youtube"} /-->
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
 
-<!-- wp:social-link {"service":"x"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:social-links {"showLabels":true,"className":"is-style-logos-only","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
@@ -125,15 +125,15 @@
 
 <!-- wp:social-link {"url":"#","service":"mastodon"} /-->
 
-<!-- wp:social-link {"service":"facebook"} /-->
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
 
-<!-- wp:social-link {"service":"instagram"} /-->
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
 
-<!-- wp:social-link {"service":"threads"} /-->
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
 
-<!-- wp:social-link {"service":"youtube"} /-->
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
 
-<!-- wp:social-link {"service":"x"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:social-links {"className":"is-style-pill-shape","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
@@ -143,15 +143,15 @@
 
 <!-- wp:social-link {"url":"#","service":"mastodon"} /-->
 
-<!-- wp:social-link {"service":"facebook"} /-->
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
 
-<!-- wp:social-link {"service":"instagram"} /-->
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
 
-<!-- wp:social-link {"service":"threads"} /-->
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
 
-<!-- wp:social-link {"service":"youtube"} /-->
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
 
-<!-- wp:social-link {"service":"x"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:social-links {"showLabels":true,"size":"has-large-icon-size","className":"is-style-pill-shape","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
@@ -161,15 +161,15 @@
 
 <!-- wp:social-link {"url":"#","service":"mastodon"} /-->
 
-<!-- wp:social-link {"service":"facebook"} /-->
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
 
-<!-- wp:social-link {"service":"instagram"} /-->
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
 
-<!-- wp:social-link {"service":"threads"} /-->
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
 
-<!-- wp:social-link {"service":"youtube"} /-->
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
 
-<!-- wp:social-link {"service":"x"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:heading -->

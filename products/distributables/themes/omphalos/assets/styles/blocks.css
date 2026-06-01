@@ -733,29 +733,51 @@
  * `box-sizing: border-box` keeps the padding inside core's width calc. The LIST
  * view is a bare `<ul>` with no core responsive grid, so there we DO own a simple
  * single-column stack + gap (below). */
-.wp-block-post-content .wp-block-latest-posts > li,
-.wp-block-post-content .wp-block-rss > li {
-  box-sizing: border-box;
-  padding: var(--space-md);
-  border-radius: var(--comp-card-radius);
-  background-color: var(--md-sys-color-surface-container);
-  box-shadow: none;
+/* container reset — ALL four uls (incl. the grid): drop the default <ul> list
+ * indent + markers. Core does NOT reset the grid ul's padding-inline-start, so
+ * without this the grid sits ~40px in from the left (the reported left gap). */
+.wp-block-post-content .wp-block-latest-posts,
+.wp-block-post-content .wp-block-rss {
+  list-style: none;
+  margin-inline: 0;
+  padding: 0;
 }
 .wp-block-post-content .wp-block-latest-posts > li::marker,
 .wp-block-post-content .wp-block-rss > li::marker {
   content: none;
 }
 
-/* LIST view = a single-column stack of the same cards, with a gap. The bare list
- * (`:not(.is-grid)`) has NO core responsive grid, so we own this simple layout —
- * unlike the grid, where the layout stays core's. */
-.wp-block-post-content .wp-block-latest-posts:not(.is-grid),
-.wp-block-post-content .wp-block-rss:not(.is-grid) {
-  list-style: none;
-  margin-inline: 0;
-  padding: 0;
+/* card surface — Latest Posts items (list + grid) AND RSS GRID items are each a
+ * filled, shadow-less card. RSS LIST is the one exception: a grouped feed card
+ * (below), not per-item cards. */
+.wp-block-post-content .wp-block-latest-posts > li,
+.wp-block-post-content .wp-block-rss.is-grid > li {
+  box-sizing: border-box;
+  padding: var(--space-md);
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container);
+  box-shadow: none;
+}
+
+/* Latest Posts list = a single-column stack of cards with a gap. */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) {
   display: grid;
   gap: var(--space-sm);
+}
+
+/* RSS list = ONE grouped feed card; rows split by dividers (a dense feed reads
+ * better grouped than as separate cards). */
+.wp-block-post-content .wp-block-rss:not(.is-grid) {
+  overflow: clip;
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container);
+}
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li {
+  box-sizing: border-box;
+  padding: var(--space-md);
+}
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li + li {
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
 }
 
 /* Featured image = the card media frame. Theme owns fit / aspect / radius; WP

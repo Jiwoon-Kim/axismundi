@@ -90,6 +90,13 @@ if ($SetDemoLogo) {
 Write-Host "== Clearing theme pattern cache =="
 npx wp-env run cli wp eval 'wp_clean_themes_cache(); wp_get_theme()->cache_delete();' 2>&1 | Out-Null
 
+# VQA demo posts — core/latest-posts is dynamic, so the list/grid VQA needs real
+# posts to be meaningful (a fresh install has only "Hello World"). Idempotent
+# update-or-create by deterministic slug; the Korean titles/content live inside
+# the PHP (wp eval-file) so they never cross the PowerShell/console text boundary.
+Write-Host "== Ensuring VQA demo posts =="
+npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-posts.php"
+
 Write-Host "== Creating Prose VQA page =="
 $existing = npx wp-env run cli wp post list --post_type=page --name=prose-vqa --field=ID 2>&1 |
     Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1

@@ -172,9 +172,14 @@ existing `--space-*`, `--comp-card-*`, `--md-sys-color-*`, and typescale tokens.
    removed (headline); date/author = `body-small` on-surface-variant; excerpt
    on-surface-variant. Scope `.wp-block-post-content … :not(.is-grid)`. Verified
    computed both schemes (LP card surface-container #211F26 / #F3EDF7, r12, gap 8;
-   RSS grouped surface-container-low #1D1B20 / #F7F2FA). *Seed note*: 3 demo posts
-   were added to the dev env for LP observation (ephemeral) — the seed should
-   create a few demo posts for a reproducible Latest Posts VQA.
-3. **Grid collection / card contract** (blocks.css): filled card grid, scoped to
-   `.is-grid` only; verify computed both schemes (filled surface, no shadow,
-   radius 12, gap md).
+   RSS grouped surface-container-low #1D1B20 / #F7F2FA). *Seed*: the seed now
+   ensures 4 idempotent demo posts (`scripts/seed-vqa-posts.php`, wired into
+   `seed.ps1`) so the Latest Posts VQA is reproducible after an env reset.
+3. ~~Grid collection / card contract~~ — **DONE (blocks.css §17)**. Filled,
+   shadow-less card grid (Drive reference), `.is-grid` ONLY: a real CSS grid track
+   (columns-N → `grid-template-columns`, gap `--space-md`, overriding WP's flex);
+   each `li` = a `surface-container` card (radius 12, padding `--space-md`,
+   `box-shadow: none`, inner content grid gap `--space-xs`). Shared shell +
+   typography (title-small headline; date/author/excerpt body-small
+   on-surface-variant). Verified computed both schemes (LP 3-col / RSS 2-col; card
+   surface-container #211F26 / #F3EDF7, r12, no shadow).

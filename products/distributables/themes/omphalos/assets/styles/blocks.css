@@ -792,3 +792,60 @@
 .wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-excerpt {
   color: var(--md-sys-color-on-surface-variant);
 }
+
+/* ============================================================
+ * §17 core/latest-posts + core/rss — Grid view = FILLED card grid (.is-grid ONLY)
+ *
+ * The grid output (LIST-GRID-ROUTE §4). Per the Drive reference the grid card is
+ * a FILLED, shadow-less surface — NOT elevated. Shared card shell; item
+ * typography mirrors §16. Scope = `.is-grid` ONLY (never the bare list). The track
+ * is real CSS grid (overriding WP's flex) so columns are even and the gap is
+ * tokenised; the columns-N class sets the count. Tokens all existing. */
+.wp-block-post-content .wp-block-latest-posts.is-grid,
+.wp-block-post-content .wp-block-rss.is-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--_grid-cols, 2), minmax(0, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+}
+.wp-block-post-content .is-grid.columns-1 { --_grid-cols: 1; }
+.wp-block-post-content .is-grid.columns-3 { --_grid-cols: 3; }
+.wp-block-post-content .is-grid.columns-4 { --_grid-cols: 4; }
+.wp-block-post-content .is-grid.columns-5 { --_grid-cols: 5; }
+.wp-block-post-content .is-grid.columns-6 { --_grid-cols: 6; }
+
+/* the card — shared shell (filled, NOT elevated) */
+.wp-block-post-content .wp-block-latest-posts.is-grid > li,
+.wp-block-post-content .wp-block-rss.is-grid > li {
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container);
+  box-shadow: none;                 /* filled surface card — no elevation (Drive) */
+  overflow: clip;
+  display: grid;
+  gap: var(--space-xs);
+  align-content: start;
+}
+.wp-block-post-content .wp-block-latest-posts.is-grid > li::marker,
+.wp-block-post-content .wp-block-rss.is-grid > li::marker {
+  content: none;
+}
+
+/* card typography — mirrors §16 (headline title + on-surface-variant meta/excerpt,
+ * compacted to body-small for the denser card body). */
+.wp-block-post-content .wp-block-latest-posts.is-grid .wp-block-latest-posts__post-title,
+.wp-block-post-content .wp-block-rss.is-grid .wp-block-rss__item-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  font-size: var(--md-sys-typescale-title-small-size);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+  font-weight: var(--md-sys-typescale-title-small-weight);
+}
+.wp-block-post-content .wp-block-latest-posts.is-grid :is(.wp-block-latest-posts__post-date, .wp-block-latest-posts__post-author, .wp-block-latest-posts__post-excerpt),
+.wp-block-post-content .wp-block-rss.is-grid :is(.wp-block-rss__item-publish-date, .wp-block-rss__item-author, .wp-block-rss__item-excerpt) {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}

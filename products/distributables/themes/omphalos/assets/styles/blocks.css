@@ -587,11 +587,14 @@
 }
 
 /* ============================================================
- * §14 core/search — field shell contract (Phase 1: Google-home-like field)
+ * §14 core/search — in-content search field bridge (M3 Search Bar tokens @ 48px)
  *
- * core/search is a content/page search field, NOT the tall M3 Search Bar
- * (app-bar surface) — see SEARCH-ROUTE §3. The target is the lower/lighter
- * Google-home-like field: a ~48px pill on a tonal surface.
+ * core/search is an in-content WP search field. The button-inside variant is
+ * promoted to an M3 Search Bar BRIDGE — Search Bar tokens (surface-container-high,
+ * elevation, full shape, body-large text) adapted to a 48px container. The
+ * canonical Search Bar is 56dp; 48px is an intentional in-content deviation (56
+ * reads too tall inside block-theme content). The other variants stay WP
+ * search-form / icon-button variants. See SEARCH-ROUTE §3.
  *
  * Owns core/search by OVERRIDING the parent Twenty Twenty-Five residue
  * (styles.blocks.core/search.css: input border-radius 3.125rem / 25px padding /
@@ -615,6 +618,10 @@
   min-block-size: 48px;
   padding-block: 0;
   padding-inline: var(--space-md);
+  /* body-large (16/24, tracking .5) — Search Bar input/supporting text size. */
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
 }
 .wp-block-search .wp-block-search__input::placeholder {
   color: var(--md-sys-color-on-surface-variant);
@@ -637,14 +644,14 @@
   padding: 4px;
   align-items: center;
   transition:
-    box-shadow var(--md-sys-motion-curve-default-effects-duration) var(--md-sys-motion-curve-default-effects),
-    background-color var(--md-sys-motion-curve-default-effects-duration) var(--md-sys-motion-curve-default-effects);
+    box-shadow var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+    background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
 }
-/* Focus indicator that survives dark (where the elevation shadow is none): a
- * primary ring on the whole bar. */
+/* Focus indicator — M3 Search Bar spec: 3dp / 2dp offset, secondary colour
+ * (#625B71). Survives dark (where the elevation shadow is none). */
 .wp-block-search__button-inside .wp-block-search__inside-wrapper:focus-within {
-  outline: 2px solid var(--md-sys-color-primary);
-  outline-offset: 1px;
+  outline: 3px solid var(--md-sys-color-secondary);
+  outline-offset: 2px;
 }
 .wp-block-search__button-inside .wp-block-search__input {
   background-color: transparent;
@@ -665,8 +672,10 @@
   box-shadow: none;
 }
 .wp-block-search__button-inside .wp-block-search__button:not(.has-icon) {
-  background-color: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  box-shadow: none;
+  padding-inline: var(--space-md);   /* compact text button, not the 24px filled pill */
 }
 
 /* — Cross-variant alignment + focus — */

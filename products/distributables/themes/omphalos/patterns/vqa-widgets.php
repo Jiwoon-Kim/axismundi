@@ -267,16 +267,6 @@
 <!-- wp:categories /-->
 
 <!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">Latest Posts</h3>
-<!-- /wp:heading -->
-
-<!-- wp:latest-posts {"displayPostDate":true} /-->
-
-<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true,"addLinkToFeaturedImage":true} /-->
-
-<!-- wp:latest-posts {"displayPostDate":true,"postLayout":"grid"} /-->
-
-<!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Latest Comments</h3>
 <!-- /wp:heading -->
 
@@ -287,6 +277,38 @@
 <!-- /wp:heading -->
 
 <!-- wp:page-list /-->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Content collections — list / grid (Latest Posts / RSS)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Latest Posts / RSS는 content-collection 블록입니다. toolbar의 list/grid 옵션은 프런트 출력 클래스(<code>is-grid columns-N</code>)로 나타나며, 테마는 그 출력을 해석합니다 — <strong>list view = M3 List + Divider</strong>, <strong>grid view = filled(비-elevated) Card grid</strong>(<code>is-grid</code>에만 카드화). 둘 다 동적·데이터 의존이라 새 설치에선 sparse하고, RSS는 외부 fetch(wp-env offline 시 실패 가능)입니다. 계약: <code>docs/LIST-GRID-ROUTE.md</code>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Latest Posts — List view</h3>
+<!-- /wp:heading -->
+
+<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true} /-->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Latest Posts — Grid view</h3>
+<!-- /wp:heading -->
+
+<!-- wp:latest-posts {"postLayout":"grid","columns":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true} /-->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">RSS — List view</h3>
+<!-- /wp:heading -->
+
+<!-- wp:rss {"feedURL":"https://wordpress.org/news/feed/","displayExcerpt":true,"displayAuthor":true,"displayDate":true} /-->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">RSS — Grid view</h3>
+<!-- /wp:heading -->
+
+<!-- wp:rss {"blockLayout":"grid","columns":2,"feedURL":"https://wordpress.org/news/feed/","displayExcerpt":true,"displayAuthor":true,"displayDate":true} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">Calendar</h2>
@@ -309,7 +331,5 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p><code>core/html</code>(Custom HTML)는 raw HTML 표면이라 Prose VQA / custom-HTML baseline 쪽 — Widgets에는 route note만. <code>core/shortcode</code>는 plugin/runtime 출력이라 theme contract 대상 아님. <code>core/rss</code>는 외부 feed/privacy/network 의존(wp-env offline에선 fetch 실패)이라 중립 공개 피드로만 둡니다 — 배포 패턴에 개인 피드 URL을 박지 않습니다.</p>
+<p><code>core/html</code>(Custom HTML)는 raw HTML 표면이라 Prose VQA / custom-HTML baseline 쪽 — Widgets에는 route note만. <code>core/shortcode</code>는 plugin/runtime 출력이라 theme contract 대상 아님. <code>core/rss</code>는 위 <strong>Content collections</strong> 섹션에서 list/grid specimen으로 다룹니다(외부 fetch 의존 — 중립 공개 피드, 개인 피드 URL 금지).</p>
 <!-- /wp:paragraph -->
-
-<!-- wp:rss {"blockLayout":"grid","feedURL":"https://wordpress.org/news/feed/","displayExcerpt":true,"displayAuthor":true,"displayDate":true} /-->

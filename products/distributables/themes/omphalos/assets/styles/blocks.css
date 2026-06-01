@@ -772,15 +772,31 @@
   content: none;
 }
 
-/* Item typography: title = headline (on-surface, no prose-link underline);
- * date / author = body-small on-surface-variant; excerpt = on-surface-variant. */
+/* Item typography. Title = headline: NO resting underline (it would read like a
+ * body link in a collection where the whole item is the affordance); underline on
+ * hover/focus only. LP list (editorial teaser) gets the larger title-medium;
+ * RSS list (feed density) keeps title-small. Meta = body-small; excerpt =
+ * body-medium with a little top margin so it separates from the meta. */
 .wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title,
 .wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a {
   color: var(--md-sys-color-on-surface);
   text-decoration: none;
+  font-weight: var(--md-ref-typeface-weight-medium);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+}
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a {
   font-size: var(--md-sys-typescale-title-small-size);
   line-height: var(--md-sys-typescale-title-small-line-height);
-  font-weight: var(--md-sys-typescale-title-small-weight);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title:hover,
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title:focus-visible,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a:hover,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 .wp-block-post-content .wp-block-latest-posts:not(.is-grid) :is(.wp-block-latest-posts__post-date, .wp-block-latest-posts__post-author),
 .wp-block-post-content .wp-block-rss:not(.is-grid) :is(.wp-block-rss__item-publish-date, .wp-block-rss__item-author) {
@@ -791,6 +807,9 @@
 .wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-excerpt,
 .wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-excerpt {
   color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  margin-block-start: var(--space-xs);
 }
 
 /* ============================================================
@@ -879,7 +898,10 @@
 }
 .wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image {
   float: inline-start;
-  inline-size: 33%;
+  /* 33% of the card, but floored at 96px (stays a thumbnail on a ~320px mobile
+   * card) and capped at 200px (no oversized image on a wide card). A mobile
+   * unfloat breakpoint is deferred to the mobile VQA pass. */
+  inline-size: clamp(96px, 33%, 200px);
   margin-inline-end: var(--space-md);
   margin-block-end: var(--space-xs);
 }

@@ -168,9 +168,11 @@ existing `--space-*`, `--comp-card-*`, `--md-sys-color-*`, and typescale tokens.
      filled card (`surface-container`, radius 12, padding `--space-md`),
      gap-separated (`display: grid; gap: --space-sm`) — a "post preview
      collection", one tier up from the RSS grouped surface.
-   Shared item typography: title = `title-small` on-surface, prose-link underline
-   removed (headline); date/author = `body-small` on-surface-variant; excerpt
-   on-surface-variant. Scope `.wp-block-post-content … :not(.is-grid)`. Verified
+   Item typography: title = on-surface headline, NO resting underline (underline
+   on hover/focus only) — LP list `title-medium` 16/24 (editorial), RSS list
+   `title-small` 14/20 (feed density); date/author = `body-small` on-surface-
+   variant; excerpt = `body-medium` 14/20 on-surface-variant with a `--space-xs`
+   top margin. Scope `.wp-block-post-content … :not(.is-grid)`. Verified
    computed both schemes (LP card surface-container #211F26 / #F3EDF7, r12, gap 8;
    RSS grouped surface-container-low #1D1B20 / #F7F2FA). *Seed*: the seed now
    ensures 4 idempotent demo posts (`scripts/seed-vqa-posts.php`, wired into
@@ -188,7 +190,8 @@ existing `--space-*`, `--comp-card-*`, `--md-sys-color-*`, and typescale tokens.
    row gaps) — released with `inline-size: auto` so the card fills its cell;
    (b) the **Latest Posts featured image** (3:2, `object-fit: cover`, corner-small
    radius) is laid out PER VIEW — GRID = a top media / preview pane (full card
-   width); LIST = a leading thumbnail FLOATED inline-start (33%) so the title /
-   meta / excerpt sit beside it (an editorial teaser, not a full-width banner; the
+   width); LIST = a leading thumbnail FLOATED inline-start
+   (`clamp(96px, 33%, 200px)` — floored for mobile, capped for wide cards) so the
+   title / meta / excerpt sit beside it (an editorial teaser, not a full-width banner; the
    list card is `display: flow-root` to contain the float). The seed sets a
    featured image on one demo post so it is observable.

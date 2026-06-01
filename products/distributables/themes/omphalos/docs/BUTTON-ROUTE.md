@@ -113,7 +113,9 @@ Theme should NOT: form submission, validation, AJAX, nonce/auth, federation
    the file download button needs anything beyond the base (the earlier
    "File download button styling deferred" item resolves here).
 4. **Icon search button + icon-button** are a separate route (Interactivity +
-   icon sizing). Out of this Button step.
+   icon sizing). Out of this Button step — now cut in `docs/ICON-BUTTON-ROUTE.md`
+   (M3 icon-button size matrix stored in `tokens.comp.css`; social-links cluster
+   is the observation surface).
 
 ---
 

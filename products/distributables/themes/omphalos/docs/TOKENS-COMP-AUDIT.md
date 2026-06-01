@@ -66,6 +66,26 @@ contract needs them:
 --comp-touch-target
 ```
 
+The **icon-button family** (added 2026-06-01, `docs/ICON-BUTTON-ROUTE.md`) is the
+same kind of stored-not-yet-consumed matrix: it backs the icon-button contract
+(`core/social-links` cluster, theme-switcher segment, `core/search` icon submit)
+but no Omphalos CSS consumes it yet, so it is a Bucket-A isolation candidate.
+Shape leaves reference the sys corner scale and the morph spring references the
+sys motion layer (not fresh literals), so only the raw dimensions are local.
+
+```txt
+--comp-icon-button-height-{xs,s,m,l,xl}
+--comp-icon-button-icon-size-{xs,s,m,l,xl}
+--comp-icon-button-space-{xs,s,m,l,xl}[-narrow|-wide]
+--comp-icon-button-outline-width-{xs,s,m,l,xl}
+--comp-icon-button-shape-round
+--comp-icon-button-shape-square-{xs,s,m,l,xl}
+--comp-icon-button-shape-pressed-{xs,s,m,l,xl}
+--comp-icon-button-shape-selected-round-{xs,s,m,l,xl}
+--comp-icon-button-shape-selected-square
+--comp-icon-button-morph-spring-{damping,stiffness}
+```
+
 ### B. App-component — not a core block; isolate out of Omphalos runtime
 
 These describe app-shell / composite surfaces (feed, avatar, nav rail, dialogs,

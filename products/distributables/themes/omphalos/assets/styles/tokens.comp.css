@@ -64,6 +64,81 @@
   --comp-button-outline-width-l:  2px;
   --comp-button-outline-width-xl: 3px;
 
+  /* Icon button family size matrix (M3 Expressive —
+   * m3.material.io/components/icon-buttons/specs). The icon-button contract that
+   * core/social-links' icon cluster, the theme-switcher segment, the core/search
+   * icon submit, and any future standalone icon button converge on. WP
+   * social-links sizes map small/normal(default)/large/huge → XS/S/M/L (see
+   * docs/ICON-BUTTON-ROUTE.md). Stored now, consumed when that contract lands
+   * (isolation candidate — see docs/TOKENS-COMP-AUDIT.md). Raw dimensions are
+   * literal dp; every shape references the sys corner scale, and the pressed /
+   * selected shape morph reuses the sys fast-spatial spring. */
+
+  /* container height (dp) */
+  --comp-icon-button-height-xs: 32px;
+  --comp-icon-button-height-s:  40px;   /* default */
+  --comp-icon-button-height-m:  56px;
+  --comp-icon-button-height-l:  96px;
+  --comp-icon-button-height-xl: 136px;
+
+  /* icon glyph size (dp) */
+  --comp-icon-button-icon-size-xs: 20px;
+  --comp-icon-button-icon-size-s:  24px;
+  --comp-icon-button-icon-size-m:  24px;
+  --comp-icon-button-icon-size-l:  32px;
+  --comp-icon-button-icon-size-xl: 40px;
+
+  /* leading/trailing inline space — symmetric; width variants narrow / (default) / wide */
+  --comp-icon-button-space-xs-narrow: 4px;
+  --comp-icon-button-space-xs:        6px;
+  --comp-icon-button-space-xs-wide:   10px;
+  --comp-icon-button-space-s-narrow:  4px;
+  --comp-icon-button-space-s:         8px;
+  --comp-icon-button-space-s-wide:    14px;
+  --comp-icon-button-space-m-narrow:  12px;
+  --comp-icon-button-space-m:         16px;
+  --comp-icon-button-space-m-wide:    24px;
+  --comp-icon-button-space-l-narrow:  16px;
+  --comp-icon-button-space-l:         32px;
+  --comp-icon-button-space-l-wide:    48px;
+  --comp-icon-button-space-xl-narrow: 32px;
+  --comp-icon-button-space-xl:        48px;
+  --comp-icon-button-space-xl-wide:   72px;
+
+  /* outline width (outlined variant, dp) */
+  --comp-icon-button-outline-width-xs: 1px;
+  --comp-icon-button-outline-width-s:  1px;
+  --comp-icon-button-outline-width-m:  1px;
+  --comp-icon-button-outline-width-l:  2px;
+  --comp-icon-button-outline-width-xl: 3px;
+
+  /* shape — resting round = Circular (full); square + pressed-morph + selected
+   * reference the sys corner scale (dp noted for provenance). */
+  --comp-icon-button-shape-round:     var(--md-sys-shape-corner-full);
+  --comp-icon-button-shape-square-xs: var(--md-sys-shape-corner-medium);      /* 12 */
+  --comp-icon-button-shape-square-s:  var(--md-sys-shape-corner-medium);      /* 12 */
+  --comp-icon-button-shape-square-m:  var(--md-sys-shape-corner-large);       /* 16 */
+  --comp-icon-button-shape-square-l:  var(--md-sys-shape-corner-extra-large); /* 28 */
+  --comp-icon-button-shape-square-xl: var(--md-sys-shape-corner-extra-large); /* 28 */
+
+  --comp-icon-button-shape-pressed-xs: var(--md-sys-shape-corner-small);  /* 8 */
+  --comp-icon-button-shape-pressed-s:  var(--md-sys-shape-corner-small);  /* 8 */
+  --comp-icon-button-shape-pressed-m:  var(--md-sys-shape-corner-medium); /* 12 */
+  --comp-icon-button-shape-pressed-l:  var(--md-sys-shape-corner-large);  /* 16 */
+  --comp-icon-button-shape-pressed-xl: var(--md-sys-shape-corner-large);  /* 16 */
+
+  /* selected: round variant morphs to a rounded square; square variant morphs to Circular */
+  --comp-icon-button-shape-selected-round-xs: var(--md-sys-shape-corner-medium);      /* 12 */
+  --comp-icon-button-shape-selected-round-s:  var(--md-sys-shape-corner-medium);      /* 12 */
+  --comp-icon-button-shape-selected-round-m:  var(--md-sys-shape-corner-large);       /* 16 */
+  --comp-icon-button-shape-selected-round-l:  var(--md-sys-shape-corner-extra-large); /* 28 */
+  --comp-icon-button-shape-selected-round-xl: var(--md-sys-shape-corner-extra-large); /* 28 */
+  --comp-icon-button-shape-selected-square:   var(--md-sys-shape-corner-full);        /* Circular */
+
+  /* pressed / selected shape-morph spring — reuse the sys fast-spatial spring (0.6 / 800) */
+  --comp-icon-button-morph-spring-damping:   var(--md-sys-motion-spring-fast-spatial-damping);
+  --comp-icon-button-morph-spring-stiffness: var(--md-sys-motion-spring-fast-spatial-stiffness);
+
   /* Feed */
   --comp-feed-gap: var(--space-sm);
   --comp-feed-max: 640px;

@@ -1,0 +1,196 @@
+/* ISOLATED (not enqueued) — former blocks.css §16/§17 + featured image:
+ * the core/latest-posts + core/rss list/grid collection contracts. Temporarily
+ * extracted so the two blocks fall back to their CORE baseline while we redesign
+ * from scratch. functions.php does not load this file. Restore by folding the
+ * redesigned rules back into blocks.css. */
+
+/* ============================================================
+ * §16 core/rss + core/latest-posts — List view collection contracts
+ *
+ * TWO different list ontologies (LIST-GRID-ROUTE §3):
+ *  • core/rss list = a dense external FEED → ONE grouped surface split by
+ *    dividers (M3 List + Divider; the Drive segmented-list reading).
+ *  • core/latest-posts list = a POST-TEASER collection → each item is its OWN
+ *    filled card, gap-separated (a "post preview collection", not a document
+ *    list; closer to §6's segmented cards). One tier up (surface-container) from
+ *    the RSS grouped surface (surface-container-low) so it reads as cards.
+ * They SHARE the item typography. Scope = list output only (`:not(.is-grid)`);
+ * the grid view (`.is-grid`) is the filled-card grid (next). Tokens all existing. */
+
+/* — core/rss: grouped feed list (one surface + dividers) — */
+.wp-block-post-content .wp-block-rss:not(.is-grid) {
+  list-style: none;
+  margin-inline: 0;
+  padding: 0;
+  overflow: clip;                  /* clip the rows to the rounded frame (first/last) */
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li {
+  margin: 0;
+  padding: var(--space-md);
+}
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li + li {
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* — core/latest-posts: gap-separated teaser cards (each li = a filled card) — */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) {
+  list-style: none;
+  margin-inline: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-sm);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li {
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+/* markers off (both) */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li::marker,
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li::marker {
+  content: none;
+}
+
+/* Item typography. Title = headline: NO resting underline (it would read like a
+ * body link in a collection where the whole item is the affordance); underline on
+ * hover/focus only. LP list (editorial teaser) gets the larger title-medium;
+ * RSS list (feed density) keeps title-small. Meta = body-small; excerpt =
+ * body-medium with a little top margin so it separates from the meta. */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  font-weight: var(--md-ref-typeface-weight-medium);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+}
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a {
+  font-size: var(--md-sys-typescale-title-small-size);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title:hover,
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title:focus-visible,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a:hover,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) :is(.wp-block-latest-posts__post-date, .wp-block-latest-posts__post-author),
+.wp-block-post-content .wp-block-rss:not(.is-grid) :is(.wp-block-rss__item-publish-date, .wp-block-rss__item-author) {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-excerpt,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-excerpt {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  margin-block-start: var(--space-xs);
+}
+
+/* ============================================================
+ * §17 core/latest-posts + core/rss — Grid view = FILLED card grid (.is-grid ONLY)
+ *
+ * The grid output (LIST-GRID-ROUTE §4). Per the Drive reference the grid card is
+ * a FILLED, shadow-less surface — NOT elevated. Shared card shell; item
+ * typography mirrors §16. Scope = `.is-grid` ONLY (never the bare list). The track
+ * is real CSS grid (overriding WP's flex) so columns are even and the gap is
+ * tokenised; the columns-N class sets the count. Tokens all existing. */
+.wp-block-post-content .wp-block-latest-posts.is-grid,
+.wp-block-post-content .wp-block-rss.is-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--_grid-cols, 2), minmax(0, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+}
+.wp-block-post-content .is-grid.columns-1 { --_grid-cols: 1; }
+.wp-block-post-content .is-grid.columns-3 { --_grid-cols: 3; }
+.wp-block-post-content .is-grid.columns-4 { --_grid-cols: 4; }
+.wp-block-post-content .is-grid.columns-5 { --_grid-cols: 5; }
+.wp-block-post-content .is-grid.columns-6 { --_grid-cols: 6; }
+
+/* the card — shared shell (filled, NOT elevated) */
+.wp-block-post-content .wp-block-latest-posts.is-grid > li,
+.wp-block-post-content .wp-block-rss.is-grid > li {
+  margin: 0;
+  /* core sizes the item with `width: calc(100% / N …)` for ITS flex track; our
+   * real grid already splits into columns, so that calc re-divides each cell by N
+   * (→ ~1/3-width cards). Release it so the item fills its grid cell. */
+  inline-size: auto;
+  padding: var(--space-md);
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container);
+  box-shadow: none;                 /* filled surface card — no elevation (Drive) */
+  overflow: clip;
+  display: grid;
+  gap: var(--space-xs);
+  align-content: start;
+}
+.wp-block-post-content .wp-block-latest-posts.is-grid > li::marker,
+.wp-block-post-content .wp-block-rss.is-grid > li::marker {
+  content: none;
+}
+
+/* card typography — mirrors §16 (headline title + on-surface-variant meta/excerpt,
+ * compacted to body-small for the denser card body). */
+.wp-block-post-content .wp-block-latest-posts.is-grid .wp-block-latest-posts__post-title,
+.wp-block-post-content .wp-block-rss.is-grid .wp-block-rss__item-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  font-size: var(--md-sys-typescale-title-small-size);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+  font-weight: var(--md-sys-typescale-title-small-weight);
+}
+.wp-block-post-content .wp-block-latest-posts.is-grid :is(.wp-block-latest-posts__post-date, .wp-block-latest-posts__post-author, .wp-block-latest-posts__post-excerpt),
+.wp-block-post-content .wp-block-rss.is-grid :is(.wp-block-rss__item-publish-date, .wp-block-rss__item-author, .wp-block-rss__item-excerpt) {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+
+/* — Latest Posts featured image — the theme owns only the FRAME (fit / aspect /
+ * radius / margin rhythm) and maps the BLOCK's alignment class to a float. The
+ * BLOCK owns the WIDTH (`featuredImageSizeWidth` → inline `max-width:Npx`) and the
+ * alignment (`featuredImageAlign` → `alignleft` / `alignright` / `aligncenter`),
+ * both editor settings. The theme must NOT hardcode a width or force a float — a
+ * fixed 33% / forced float would ignore the user's Featured-image panel choices.
+ * 33%-ish / "image left" is therefore a VQA *specimen* default (block attrs),
+ * not a CSS contract. The grid card with no alignment falls through to a
+ * full-width top pane. */
+.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image a {
+  display: block;
+}
+.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image img {
+  display: block;
+  inline-size: 100%;          /* fill the block's (max-width) box */
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: var(--md-sys-shape-corner-small);
+}
+/* list view: contain a possible float, give a little rhythm, and honour the
+ * block's alignment classes (the grid card keeps the full-width top pane). */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li {
+  display: flow-root;
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image {
+  margin-block-end: var(--space-sm);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image.alignleft {
+  float: inline-start;
+  margin-inline-end: var(--space-md);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image.alignright {
+  float: inline-end;
+  margin-inline-start: var(--space-md);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image.aligncenter {
+  margin-inline: auto;
+}

@@ -60,22 +60,33 @@ the submit stays a real button.
 
 ---
 
-## section 3 - Visual target: Google-home field, NOT the full Search Bar
+## section 3 - Visual target: a COMPACT Search Bar bridge (48px), not the 56dp bar
 
-The user's read (confirmed): the canonical M3 Search Bar feels vertically heavy
-because it is an app-bar / navigation surface. core/search is a content/page
-search field, which matches the lab .lab-search-bar-google-home specimen - a
-lower, lighter field (search-bar__input { block-size: 50px }) rather than the
-tall Search Bar.
+The button-inside variant is an M3 Search Bar **bridge** — it brings the Search
+Bar PRINCIPLES (surface-container-high colour, body-large type, elevation, full
+shape, trailing-icon treatment, focus) at a **compact 48px** container, not the
+canonical 56dp. Framing: "M3 Search Bar tokens adapted to a compact in-content WP
+search bridge", NOT a literal Search Bar. (The lab `.lab-search-bar-google-home`
+specimen is the precedent for a lower, lighter in-content field vs the tall
+app-bar Search Bar.)
+
+**Height decision — keep 48 (do not promote to 56 now).** 56dp reads too tall in
+block-theme body content, and promoting cascades:
 
 ```txt
-full M3 Search Bar       = app top-bar / nav-centric UI        (NOT core/search)
-Google-home-like field   = in-content / in-page search field   (core/search yes)
+48px compact bridge          56px canonical Search Bar
+  wrapper 48                   wrapper 56
+  inner padding 4              inner padding 4
+  trailing icon button 40      trailing target ~48 reads more natural
+  input 16/24                  input 16/24
+  -> balanced, design closed   -> needs a new 48 trailing token (icon-button
+                                  matrix is S=40 / M=56 — no clean 48), and forces
+                                  outside / no-button / connected to re-derive height
 ```
 
-So when Omphalos owns styles.blocks.core/search, it overrides the parent pill /
-accent-6 residue toward a Google-home-like field shape (tokenised), not the tall
-Search Bar.
+So the in-content `core/search` block stays 48. The canonical 56dp Search Bar is
+deferred to future surfaces where the app-bar weight fits — header / overlay /
+app-bar / docked search, or a Search View plugin.
 
 ---
 
@@ -83,10 +94,10 @@ Search Bar.
 
 | Variant | Route |
 |---|---|
-| button-outside (default) | Respect as the WP form block: connected field + submit. WP-specific layout; not forced into a Search Bar. |
+| button-outside (default) | **Separated** WP form — field + a standalone submit (the classic WP search form; kept, option A). A *connected* input+submit group is a deferred variation (section 8), modelled on **Button group** 2-segment, NOT the Search Bar. |
 | button-inside + icon | The M3 search-ish bridge. inside-wrapper = the field shell; trailing .has-icon button = a default icon button (open/submit). Closest structural match. |
-| button-inside + text | input + tonal submit button (.wp-element-button.is-style-tonal), like the Google-home ax-button is-tonal. |
-| button-outside + icon/text | connected field + separate submit, WP-specific. |
+| button-inside + text | input + a **text button** submit (transparent / primary label — container-less, matching the icon submit). |
+| button-outside + icon/text | Separated field + a standalone submit. |
 | no-button | input-only search field (shell + states, no control). |
 | button-only | standalone default icon button (the collapsed/expand trigger). |
 
@@ -179,11 +190,20 @@ Theme must NOT: WP_Query behaviour, result ranking, autocomplete/remote data,
    on-surface-variant / state layer), text = **TEXT button** (transparent /
    **primary** label — tonal was reverted: secondary-container muddied against the
    surface-container-high field). Verified computed both schemes.
-   **Remaining**: button-outside / button-only / no-button colour (outside keeps
-   the base filled or a compact submit; button-only icon = standalone standard
-   icon button), the connected button-outside layout, an optional Search Bar
-   hover/pressed state layer (verify weight first), and a reduced-motion guard.
-   Scope stays `.wp-block-search` (never global input).
+   **Remaining (in scope)**: button-outside / button-only / no-button colour
+   (outside keeps the base filled or a compact submit; button-only icon =
+   standalone standard icon button), an optional Search Bar hover/pressed state
+   layer (verify weight first), and a reduced-motion guard.
+   **Deferred (separate experiments, not now)**: (a) the *connected* button-outside
+   layout — a "Connected search form" modelled on **Button group** 2-segment
+   (shared height / joined radius / gap-0 / single silhouette / border-join ONLY;
+   it must NOT take button-group selected / toggle / ripple / equal-width /
+   field-state-layer semantics — the input is a field segment, not a button);
+   (b) the canonical **56dp** Search Bar, kept for future header / overlay /
+   app-bar / docked search or a Search View plugin (promoting in-content to 56
+   cascades — trailing target ~48, icon-button token mismatch S=40 / M=56, and an
+   outside / connected height re-think). Scope stays `.wp-block-search` (never
+   global input).
 3. Verify computed front + editor, both schemes; no aria-pressed; native submit works.
 4. Icon-button lane: icon submit **geometry DONE** (blocks.css section 13,
    `.has-icon` only — 40x40 round S default icon button, both <svg> and Material

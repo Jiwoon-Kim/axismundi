@@ -668,3 +668,22 @@
   background-color: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
 }
+
+/* — Cross-variant alignment + focus — */
+
+/* The inside-wrapper is a flex row holding the field and the submit (WP nests the
+ * submit INSIDE the wrapper for every variant). WP leaves align-items normal, so a
+ * 40px icon/text submit top-aligns ~4px above the 48px field's centre — centre
+ * the row. Covers button-outside / button-only / no-button (button-inside already
+ * sets this above). */
+.wp-block-search__inside-wrapper {
+  align-items: center;
+}
+
+/* button-inside: the WRAPPER owns the focus indicator (its focus-within ring), so
+ * the transparent input must NOT also paint the base field's inset focus outline
+ * — that is the stray "border box" that appears on click inside the search bar. */
+.wp-block-search__button-inside .wp-block-search__input:focus {
+  outline: 0;
+  border-color: transparent;
+}

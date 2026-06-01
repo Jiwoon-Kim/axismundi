@@ -115,7 +115,8 @@ Theme should NOT: form submission, validation, AJAX, nonce/auth, federation
 4. **Icon search button + icon-button** are a separate route (Interactivity +
    icon sizing). Out of this Button step — now cut in `docs/ICON-BUTTON-ROUTE.md`
    (M3 icon-button size matrix stored in `tokens.comp.css`; social-links cluster
-   is the observation surface).
+   is the observation surface). The core/search field shell + submit (icon =
+   default icon button; text = tonal submit) route is cut in `docs/SEARCH-ROUTE.md`.
 
 ---
 

@@ -164,6 +164,26 @@ transparent) stays **deferred** — it opens a colour × size × shape matrix.
 **Policy (KO)**: theme는 size/shape/gap만 정규화하고 색은 빼앗지 않는다.
 default·logos-only는 서비스 브랜드 색 유지, neutral(tonal)은 opt-in.
 
+### Default vs toggle (M3 icon-button guideline)
+
+M3 splits icon buttons into **default** (opens / runs an action — menu, search)
+and **toggle** (a binary on/off/selected control — favorite, bookmark). Sorting
+this lane's surfaces:
+
+```txt
+core/social-links icons   = DEFAULT icon link buttons   (open a profile/site)
+core/search icon submit   = DEFAULT icon button         (run/submit search)  [SEARCH-ROUTE §5]
+theme mode / favorite / bookmark = TOGGLE (binary selected) — the only toggle lane
+```
+
+So social icons and the search submit get **hover / focus / pressed state layer
+only — no `aria-pressed`, no selected shape morph**. The stored
+`--comp-icon-button-shape-selected-*` / `-morph-spring-*` tokens belong to the
+**toggle** lane (theme-switcher segment is the nearest real selected-state
+surface) and stay unwired until a genuine binary control needs them. Forcing
+`aria-pressed` onto a default control (e.g. core/search's submit) is both wrong
+M3 semantics and a native-form-submit hazard.
+
 ---
 
 ## §6 — Explicitly NOT in this step

@@ -722,24 +722,49 @@
 }
 
 /* ============================================================
- * §16 core/latest-posts + core/rss — Grid view card (.is-grid)
+ * §16 core/latest-posts + core/rss — collection cards (list + grid)
  *
- * Grid output (LIST-GRID-ROUTE §4): each item = a FILLED, shadow-less card (Drive
- * reference — NOT elevated). CRITICAL: WordPress core ALREADY ships the responsive
- * grid — `.is-grid` is flex; `columns-N` set the column widths at ≥600px; on
- * mobile each item is full-width (a single column). So we style ONLY the card
- * SURFACE and never touch `display` / `width` / the grid layout — overriding it
- * (e.g. our own `grid-template-columns`) would throw away core's mobile collapse.
- * `box-sizing: border-box` keeps the card padding inside core's width calc. */
-.wp-block-post-content .wp-block-latest-posts.is-grid > li,
-.wp-block-post-content .wp-block-rss.is-grid > li {
+ * Every item = a FILLED, shadow-less card (Drive reference — NOT elevated), in
+ * both the list and the grid view. CRITICAL for the GRID: WordPress core ALREADY
+ * ships its responsive grid — `.is-grid` is flex; `columns-N` set the widths at
+ * ≥600px; on mobile each item is full-width (single column). So in the grid we
+ * style ONLY the card SURFACE and never touch `display` / `width` / the layout —
+ * an own `grid-template-columns` would throw away core's mobile collapse.
+ * `box-sizing: border-box` keeps the padding inside core's width calc. The LIST
+ * view is a bare `<ul>` with no core responsive grid, so there we DO own a simple
+ * single-column stack + gap (below). */
+.wp-block-post-content .wp-block-latest-posts > li,
+.wp-block-post-content .wp-block-rss > li {
   box-sizing: border-box;
   padding: var(--space-md);
   border-radius: var(--comp-card-radius);
   background-color: var(--md-sys-color-surface-container);
   box-shadow: none;
 }
-.wp-block-post-content .wp-block-latest-posts.is-grid > li::marker,
-.wp-block-post-content .wp-block-rss.is-grid > li::marker {
+.wp-block-post-content .wp-block-latest-posts > li::marker,
+.wp-block-post-content .wp-block-rss > li::marker {
   content: none;
+}
+
+/* LIST view = a single-column stack of the same cards, with a gap. The bare list
+ * (`:not(.is-grid)`) has NO core responsive grid, so we own this simple layout —
+ * unlike the grid, where the layout stays core's. */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid),
+.wp-block-post-content .wp-block-rss:not(.is-grid) {
+  list-style: none;
+  margin-inline: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-sm);
+}
+
+/* Featured image = the card media frame. Theme owns fit / aspect / radius; WP
+ * owns the WIDTH + ALIGNMENT (featuredImageSizeWidth / featuredImageAlign), so we
+ * cap with max-inline-size (never force a width) and let core's float/centre
+ * class place it. */
+.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image img {
+  max-inline-size: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: var(--md-sys-shape-corner-small);
 }

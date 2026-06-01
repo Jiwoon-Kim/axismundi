@@ -720,3 +720,56 @@
   border-block-start: 0;
   border-inline-start: 0;
 }
+
+/* ============================================================
+ * §16 core/latest-posts + core/rss — List view collection contract
+ *
+ * The LIST output of the two content-collection blocks (LIST-GRID-ROUTE §3).
+ * Borrows the M3 SEGMENTED-LIST principle (cf. §6 core/list) but as a single
+ * grouped surface whose rows are split by dividers (Drive-style), NOT the
+ * gap-separated cards of §6. Scope = the list output only (`:not(.is-grid)`);
+ * the grid view (`.is-grid`) is the filled-card contract (next, separate). All
+ * tokens are existing — no new ones. */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid),
+.wp-block-post-content .wp-block-rss:not(.is-grid) {
+  list-style: none;
+  margin-inline: 0;
+  padding: 0;
+  overflow: clip;                  /* clip the rows to the rounded frame (first/last) */
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li,
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li {
+  margin: 0;
+  padding: var(--space-md);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li::marker,
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li::marker {
+  content: none;
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li + li,
+.wp-block-post-content .wp-block-rss:not(.is-grid) > li + li {
+  border-block-start: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Item typography: title = headline (on-surface, no prose-link underline);
+ * date / author = body-small on-surface-variant; excerpt = on-surface-variant. */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-title,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  font-size: var(--md-sys-typescale-title-small-size);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+  font-weight: var(--md-sys-typescale-title-small-weight);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) :is(.wp-block-latest-posts__post-date, .wp-block-latest-posts__post-author),
+.wp-block-post-content .wp-block-rss:not(.is-grid) :is(.wp-block-rss__item-publish-date, .wp-block-rss__item-author) {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__post-excerpt,
+.wp-block-post-content .wp-block-rss:not(.is-grid) .wp-block-rss__item-excerpt {
+  color: var(--md-sys-color-on-surface-variant);
+}

@@ -630,22 +630,41 @@
  * so the wrapper owns the surface/shape (input + trailing control share one pill). */
 .wp-block-search__button-inside .wp-block-search__inside-wrapper {
   background-color: var(--md-sys-color-surface-container-high);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  border: 0;        /* the search-bar bridge reads via elevation, not a hairline */
   border-radius: var(--md-sys-shape-corner-full);
+  box-shadow: var(--md-sys-elevation-shadow-level3);  /* light only; dark token = none → surface-tint separation */
   min-block-size: 48px;
   padding: 4px;
   align-items: center;
+  transition:
+    box-shadow var(--md-sys-motion-curve-default-effects-duration) var(--md-sys-motion-curve-default-effects),
+    background-color var(--md-sys-motion-curve-default-effects-duration) var(--md-sys-motion-curve-default-effects);
 }
+/* Focus indicator that survives dark (where the elevation shadow is none): a
+ * primary ring on the whole bar. */
 .wp-block-search__button-inside .wp-block-search__inside-wrapper:focus-within {
-  border-color: var(--md-sys-color-primary);
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 1px;
 }
 .wp-block-search__button-inside .wp-block-search__input {
   background-color: transparent;
   border: 0;
   border-radius: 0;
+  outline: 0;
   min-block-size: auto;
   color: var(--md-sys-color-on-surface);
 }
-.wp-block-search__button-inside .wp-block-search__input:focus {
-  outline: 0;
+
+/* The trailing submit inside the bar is NOT the global filled button:
+ *  - icon submit = STANDARD icon button (transparent, on-surface-variant, state
+ *    layer only) — sits ON the field surface, must not carry a filled container.
+ *  - text submit = compact TONAL submit (secondary-container). */
+.wp-block-search__button-inside .wp-block-search__button.has-icon {
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  box-shadow: none;
+}
+.wp-block-search__button-inside .wp-block-search__button:not(.has-icon) {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }

@@ -166,10 +166,19 @@ Theme must NOT: WP_Query behaviour, result ranking, autocomplete/remote data,
    transparent; for outside / no-button the input is the field. Verified computed
    both schemes (light #ECE6F0 / #CAC4D0, dark #2B2930) — resolves the search
    dark-mode token-linkage gap.
-2. **Remaining (Phase 2)**: per-variant COLOUR (the submit treatments — inside
-   transparent on-surface-variant, button-only standard, button-outside compact
-   tonal), the connected button-outside layout (connected vs separated), and a
-   focus-state polish. Scope stays `.wp-block-search` (never global input).
+2. **Phase 2 — button-inside search-bar bridge DONE** (blocks.css section 14):
+   borderless + elevation-level3 (light only; dark token = none → surface-tint
+   separation), bg / box-shadow transition, a primary focus-within ring (survives
+   dark, where the shadow is none). The trailing submit is reskinned OFF the
+   global filled base — icon = **STANDARD** icon button (transparent /
+   on-surface-variant / state layer only), text = compact **TONAL**
+   (secondary-container). Verified computed both schemes (light shadow present +
+   icon #49454F / tonal #E8DEF8; dark shadow none + #CAC4D0 / #4A4458).
+   **Remaining**: button-outside / button-only / no-button colour (outside keeps
+   the base filled or a compact submit; button-only icon = standalone standard
+   icon button), the connected button-outside layout, and a reduced-motion guard.
+   Scope stays `.wp-block-search` (never global input). Naming: this is the WP
+   search-form **in-content field bridge**, not "the M3 Search Bar".
 3. Verify computed front + editor, both schemes; no aria-pressed; native submit works.
 4. Icon-button lane: icon submit **geometry DONE** (blocks.css section 13,
    `.has-icon` only — 40x40 round S default icon button, both <svg> and Material

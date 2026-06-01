@@ -186,7 +186,9 @@ existing `--space-*`, `--comp-card-*`, `--md-sys-color-*`, and typescale tokens.
    (a) core sizes the grid item with `width: calc(100% / N …)` for its OWN flex
    track, which re-divides each real grid cell by N (~1/3-width cards → broken
    row gaps) — released with `inline-size: auto` so the card fills its cell;
-   (b) the **Latest Posts featured image** is styled as the card media / preview
-   pane (full content width, 3:2, `object-fit: cover`, corner-small radius; it is
-   first in the card) for list + grid, and the seed sets a featured image on one
-   demo post so it is observable.
+   (b) the **Latest Posts featured image** (3:2, `object-fit: cover`, corner-small
+   radius) is laid out PER VIEW — GRID = a top media / preview pane (full card
+   width); LIST = a leading thumbnail FLOATED inline-start (33%) so the title /
+   meta / excerpt sit beside it (an editorial teaser, not a full-width banner; the
+   list card is `display: flow-root` to contain the float). The seed sets a
+   featured image on one demo post so it is observable.

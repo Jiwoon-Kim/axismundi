@@ -854,11 +854,12 @@
   line-height: var(--md-sys-typescale-body-small-line-height);
 }
 
-/* — Latest Posts featured image = the card media / preview pane (§16 list + §17
- * grid). A Drive-like inset preview: full content width, fixed 3:2 aspect,
- * cover-cropped, rounded. The __featured-image div is first in the card (above
- * the title), so any source size gets a consistent media area instead of a raw
- * (often tiny) thumbnail. */
+/* — Latest Posts featured image — a Drive-like preview, laid out PER VIEW:
+ *   • GRID card = a top media / preview pane (full card width, above the title).
+ *   • LIST card = a leading thumbnail FLOATED to the inline-start, so the
+ *     title / meta / excerpt sit beside it (an editorial teaser, not a full-width
+ *     banner). The img normalises any source size (fills its area, 3:2, cover,
+ *     rounded) instead of a raw, often tiny thumbnail. */
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image {
   margin: 0;
 }
@@ -867,8 +868,18 @@
 }
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image img {
   display: block;
-  width: 100%;
+  inline-size: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
   border-radius: var(--md-sys-shape-corner-small);
+}
+/* list view: float a leading thumbnail; the card establishes a BFC to contain it. */
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li {
+  display: flow-root;
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image {
+  float: inline-start;
+  inline-size: 33%;
+  margin-inline-end: var(--space-md);
+  margin-block-end: var(--space-xs);
 }

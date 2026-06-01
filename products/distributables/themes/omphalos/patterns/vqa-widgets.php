@@ -290,13 +290,13 @@
 <h3 class="wp-block-heading">Latest Posts — List view</h3>
 <!-- /wp:heading -->
 
-<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true,"addLinkToFeaturedImage":true,"featuredImageAlign":"left","featuredImageSizeWidth":160} /-->
+<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageAlign":"left","addLinkToFeaturedImage":true} /-->
 
 <!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Latest Posts — Grid view</h3>
 <!-- /wp:heading -->
 
-<!-- wp:latest-posts {"postLayout":"grid","columns":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true,"addLinkToFeaturedImage":true} /-->
+<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"postLayout":"grid","displayFeaturedImage":true,"featuredImageAlign":"center","addLinkToFeaturedImage":true} /-->
 
 <!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">RSS — List view</h3>
@@ -308,7 +308,7 @@
 <h3 class="wp-block-heading">RSS — Grid view</h3>
 <!-- /wp:heading -->
 
-<!-- wp:rss {"blockLayout":"grid","columns":2,"feedURL":"https://wordpress.org/news/feed/","displayExcerpt":true,"displayAuthor":true,"displayDate":true} /-->
+<!-- wp:rss {"blockLayout":"grid","feedURL":"https://wordpress.org/news/feed/","displayExcerpt":true,"displayAuthor":true,"displayDate":true} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">Calendar</h2>

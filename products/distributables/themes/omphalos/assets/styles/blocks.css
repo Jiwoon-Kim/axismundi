@@ -780,6 +780,18 @@
   border-block-start: 1px solid var(--md-sys-color-outline-variant);
 }
 
+/* Below core's 600px columns breakpoint the grid is a single column, but core
+ * still leaves each item a column `margin-right` (its `:nth-child(Nn){margin-right:0}`
+ * only fires at >=600px) — so the card stops short with dead space on the right.
+ * Zero the inline-end margin there so the single-column card fills the row. (We do
+ * NOT touch the >=600px multi-column layout, which keeps core's gaps.) */
+@media (max-width: 599.98px) {
+  .wp-block-post-content .wp-block-latest-posts.is-grid > li,
+  .wp-block-post-content .wp-block-rss.is-grid > li {
+    margin-inline-end: 0;
+  }
+}
+
 /* Featured image = the card media frame. Theme owns fit / aspect / radius; WP
  * owns the WIDTH + ALIGNMENT (featuredImageSizeWidth / featuredImageAlign), so we
  * cap with max-inline-size (never force a width) and let core's float/centre

@@ -538,31 +538,13 @@
   border-radius: var(--comp-icon-button-shape-round);
 }
 
-/* a11y: guarantee a 48px-min tap target even when the visual container is smaller
- * (XS 32, S 40 are below the 48 min). The pad is transparent and centered on the
- * anchor, so the visible container/background (on the li) keeps the M3 visual
- * while the hit area meets --comp-touch-target.
- *
- * FRONT END ONLY (body:not(.editor-styles-wrapper)): in the editor each social
- * link is a <button> and Gutenberg positions its per-link selection overlay
- * against the nearest positioned ancestor — so making the anchor
- * `position:relative` (to host this ::after) shifts that overlay and the
- * selection outline renders off the icon. The tap target is a touch concern for
- * the live site only, so scope both the positioning and the pad out of the canvas. */
-body:not(.editor-styles-wrapper) .wp-block-social-links .wp-block-social-link-anchor {
-  position: relative;
-}
-body:not(.editor-styles-wrapper) .wp-block-social-links .wp-block-social-link-anchor::after {
-  content: "";
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  translate: -50% -50%;
-  inline-size: 100%;
-  block-size: 100%;
-  min-inline-size: var(--comp-touch-target);
-  min-block-size: var(--comp-touch-target);
-}
+/* Touch target — DEFERRED. XS (32) / S (40) visual containers fall below the
+ * 48px a11y minimum. The first cut used a transparent centered ::after of
+ * --comp-touch-target, but hosting it needed `position:relative` on the anchor,
+ * which shifted Gutenberg's per-social-link selection overlay in the editor
+ * (the outline rendered off the icon). Reverted; revisit with anchor padding
+ * (no positioned overlay) when the icon-button interaction states land.
+ * See ICON-BUTTON-ROUTE §7. */
 
 /* Cluster gap normalized to the M3 small spacing step. */
 .wp-block-social-links.is-layout-flex {

@@ -119,9 +119,10 @@ the M3 column, not WP's. Treating the cluster as an icon-button, Omphalos
 Per-size rationale (confirmed 2026-06-01):
 
 - **small → XS** — WP's 16px glyph is too small; XS (32 / 20) is the a11y-safer
-  floor. *Touch target*: XS container 32 < the 48px minimum, so the anchor's tap
-  area must be guaranteed separately (padding / min-size on the link, or
-  `--comp-touch-target`) — tracked for the consumption step.
+  floor. *Touch target*: XS container 32 (and S 40) sit below the 48px minimum;
+  the 48px tap-target floor is **deferred** — the first `::after` overlay was
+  reverted (it needed `position:relative`, which shifted the editor selection).
+  Revisit with anchor padding (no overlay). See §7.
 - **normal → S** — the natural anchor: WP default icon 24 = M3 S icon 24,
   container 40.
 - **large → M** — normalize to M3 M (container 56 / icon 24); do **not** carry
@@ -206,12 +207,13 @@ geometry, neutral colour is opt-in). The consumption step is deliberately narrow
 1. ~~**social-links size / shape / gap ONLY, first.**~~ **DONE** — `blocks.css §12`.
    The four WP `size` classes map to `--comp-icon-button-*` (icon `font-size` +
    container `min-size`); gap = `--space-sm`; round shape; colour untouched.
-   XS/S visual 32/40 carry a transparent `::after` ≥48px tap target. Computed-
-   verified on the front end: icon 20/24/24/32, container 32/40/56/96, tap ≥48,
+   Computed-verified on the front end: icon 20/24/24/32, container 32/40/56/96,
    logos-only = icon-only (no container). `blocks.css` is in `add_editor_style`,
-   so the editor canvas loads the same rule. *Known trade-off*: at XS the 48px
-   tap targets of adjacent icons slightly overlap (dense M3 size vs the 48 a11y
-   floor) — acceptable; revisit if a denser cluster needs it.
+   so the editor canvas loads the same rule (selection overlay aligned).
+   **Touch target deferred**: the first cut added a 48px `::after` tap target, but
+   the `position:relative` it needed shifted Gutenberg's per-link selection
+   overlay — reverted. XS/S keep their visual 32/40 hit area until a
+   padding-based (non-overlay) tap target lands.
 2. **Colour is separate + opt-in** — verified via the existing neutral VQA
    specimen (tonal `secondary-container`), not applied to the default style.
 3. Then reconcile the theme-switcher segment + `core/search` icon submit onto the

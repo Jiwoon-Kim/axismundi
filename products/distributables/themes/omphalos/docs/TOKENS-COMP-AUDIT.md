@@ -46,7 +46,6 @@ is defined-only — see Isolation candidates):
 | `--comp-icon-button-icon-size-{xs,s,m,l}` | `blocks.css §12` (social-links icon font-size) | **KEEP** |
 | `--comp-icon-button-height-{xs,s,m,l}` | `blocks.css §12` (social-links container affordance) | **KEEP** |
 | `--comp-icon-button-shape-round` | `blocks.css §12` (social-link li radius) | **KEEP** |
-| `--comp-touch-target` | `blocks.css §12` (social-link 48px tap target) | **KEEP** |
 
 Everything else is unreferenced by Omphalos (defined-only).
 
@@ -94,10 +93,12 @@ sys motion layer (not fresh literals), so only the raw dimensions are local.
 > **Update (2026-06-01, blocks.css §12)** — the `core/social-links` icon-button
 > *geometry* contract consumed the geometry subset:
 > `--comp-icon-button-icon-size-{xs,s,m,l}`, `--comp-icon-button-height-{xs,s,m,l}`,
-> `--comp-icon-button-shape-round`, and `--comp-touch-target` — **promoted to KEEP**
-> above. The `-xl` step, `-space-*` (width axis), `-outline-width-*`,
-> `-shape-square-*` / `-shape-pressed-*` / `-shape-selected-*`, and
-> `-morph-spring-*` stay candidates until the square / width / toggle variants land.
+> and `--comp-icon-button-shape-round` — **promoted to KEEP** above. The `-xl`
+> step, `-space-*` (width axis), `-outline-width-*`, `-shape-square-*` /
+> `-shape-pressed-*` / `-shape-selected-*`, and `-morph-spring-*` stay candidates
+> until the square / width / toggle variants land. `--comp-touch-target` is **not**
+> consumed: the §12 48px tap-target overlay was reverted (it shifted the editor
+> selection) — deferred to a padding-based pass, so it stays a Bucket-A candidate.
 
 ### B. App-component — not a core block; isolate out of Omphalos runtime
 

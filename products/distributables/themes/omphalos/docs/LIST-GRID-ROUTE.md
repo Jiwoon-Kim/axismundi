@@ -182,4 +182,11 @@ existing `--space-*`, `--comp-card-*`, `--md-sys-color-*`, and typescale tokens.
    `box-shadow: none`, inner content grid gap `--space-xs`). Shared shell +
    typography (title-small headline; date/author/excerpt body-small
    on-surface-variant). Verified computed both schemes (LP 3-col / RSS 2-col; card
-   surface-container #211F26 / #F3EDF7, r12, no shadow).
+   surface-container #211F26 / #F3EDF7, r12, no shadow). Post-review fixes:
+   (a) core sizes the grid item with `width: calc(100% / N …)` for its OWN flex
+   track, which re-divides each real grid cell by N (~1/3-width cards → broken
+   row gaps) — released with `inline-size: auto` so the card fills its cell;
+   (b) the **Latest Posts featured image** is styled as the card media / preview
+   pane (full content width, 3:2, `object-fit: cover`, corner-small radius; it is
+   first in the card) for list + grid, and the seed sets a featured image on one
+   demo post so it is observable.

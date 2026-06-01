@@ -290,13 +290,13 @@
 <h3 class="wp-block-heading">Latest Posts — List view</h3>
 <!-- /wp:heading -->
 
-<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true} /-->
+<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true,"addLinkToFeaturedImage":true} /-->
 
 <!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Latest Posts — Grid view</h3>
 <!-- /wp:heading -->
 
-<!-- wp:latest-posts {"postLayout":"grid","columns":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true} /-->
+<!-- wp:latest-posts {"postLayout":"grid","columns":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true,"addLinkToFeaturedImage":true} /-->
 
 <!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">RSS — List view</h3>

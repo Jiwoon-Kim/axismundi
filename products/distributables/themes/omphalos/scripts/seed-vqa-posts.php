@@ -59,4 +59,15 @@ foreach ( $demo as $p ) {
 	}
 	$done++;
 }
+
+// Give the first demo post a featured image (the imported mogu placeholder) so the
+// Latest Posts featured-image preview pane is observable in the list/grid VQA.
+// Idempotent; no-op if the media import has not run yet.
+$img   = get_posts( array( 'post_type' => 'attachment', 'name' => 'image-placeholder-mogu-1024', 'post_status' => 'inherit', 'numberposts' => 1, 'fields' => 'ids' ) );
+$first = get_posts( array( 'post_type' => 'post', 'name' => 'vqa-demo-m3-bridge', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
+if ( $img && $first ) {
+	set_post_thumbnail( $first[0], $img[0] );
+	WP_CLI::log( 'Featured image set on vqa-demo-m3-bridge (attachment ' . $img[0] . ')' );
+}
+
 WP_CLI::log( 'VQA demo posts ensured: ' . $done );

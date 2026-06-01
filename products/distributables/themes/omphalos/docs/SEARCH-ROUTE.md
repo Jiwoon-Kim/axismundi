@@ -156,15 +156,21 @@ Theme must NOT: WP_Query behaviour, result ranking, autocomplete/remote data,
 
 ## section 8 - Next (implementation, after review)
 
-1. Own styles.blocks.core/search in the child theme.json - override the parent
-   pill/accent-6 residue toward a Google-home-like field (tokenised shape: likely
-   corner small/extra-small, outline-variant border, surface field bg), with
-   dark-mode colour linkage (the gap flagged earlier).
-2. blocks.css search layout - connected button-inside shell; the icon submit
-   consumes --comp-icon-button-* (default icon button); the text submit uses the
-   tonal variant. Scope to .wp-block-search (never global input).
-3. Verify computed front + editor, both schemes; confirm no aria-pressed and the
-   native submit still works.
+1. ~~Own styles.blocks.core/search~~ — **field shell DONE (blocks.css section 14)**,
+   in blocks.css NOT theme.json: the parent pill / accent-6 / dark-bg residue is
+   overridden by class specificity (parent `:root :where(...)` 0,1,0 < the
+   `.wp-block-search ...` rules 0,2,0), so no theme.json css-string is needed and
+   the contract stays with the other block contracts (sections 1-13). Google-home-
+   like field: a full-pill shell on surface-container-high + outline-variant border,
+   min 48px; for button-inside the inside-wrapper is the shell and the input is
+   transparent; for outside / no-button the input is the field. Verified computed
+   both schemes (light #ECE6F0 / #CAC4D0, dark #2B2930) — resolves the search
+   dark-mode token-linkage gap.
+2. **Remaining (Phase 2)**: per-variant COLOUR (the submit treatments — inside
+   transparent on-surface-variant, button-only standard, button-outside compact
+   tonal), the connected button-outside layout (connected vs separated), and a
+   focus-state polish. Scope stays `.wp-block-search` (never global input).
+3. Verify computed front + editor, both schemes; no aria-pressed; native submit works.
 4. Icon-button lane: icon submit **geometry DONE** (blocks.css section 13,
    `.has-icon` only — 40x40 round S default icon button, both <svg> and Material
    Symbols). Remaining = per-variant COLOUR: button-inside = transparent /

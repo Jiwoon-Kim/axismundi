@@ -585,3 +585,67 @@
   font-size: var(--comp-icon-button-icon-size-s);
   fill: currentColor;
 }
+
+/* ============================================================
+ * §14 core/search — field shell contract (Phase 1: Google-home-like field)
+ *
+ * core/search is a content/page search field, NOT the tall M3 Search Bar
+ * (app-bar surface) — see SEARCH-ROUTE §3. The target is the lower/lighter
+ * Google-home-like field: a ~48px pill on a tonal surface.
+ *
+ * Owns core/search by OVERRIDING the parent Twenty Twenty-Five residue
+ * (styles.blocks.core/search.css: input border-radius 3.125rem / 25px padding /
+ * accent-6 border, plus a dark input bg) via class specificity — the parent rule
+ * is `:root :where(.wp-block-search .wp-block-search__input)` (0,1,0); these are
+ * (0,2,0). No theme.json edit needed. Scoped to `.wp-block-search` — never a
+ * global `input[type=search]` (SEARCH-BAR-WP-MAPPING anti-pattern).
+ *
+ * Two shells: for button-outside / no-button the INPUT is the field surface; for
+ * button-inside the INSIDE-WRAPPER is the field and the input goes transparent
+ * (the trailing §13 icon button / base text submit sits inside it). The text
+ * submit keeps its base pill; the icon submit keeps §13. Per-variant colour
+ * refinement + the connected button-outside layout are SEARCH-ROUTE Phase 2. */
+
+/* The input AS the field (button-outside / no-button). */
+.wp-block-search .wp-block-search__input {
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface);
+  min-block-size: 48px;
+  padding-block: 0;
+  padding-inline: var(--space-md);
+}
+.wp-block-search .wp-block-search__input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 1;
+}
+.wp-block-search .wp-block-search__input:focus {
+  border-color: var(--md-sys-color-primary);
+  outline: 1px solid var(--md-sys-color-primary);
+  outline-offset: -2px;
+}
+
+/* button-inside: the inside-wrapper IS the field shell; the input goes transparent
+ * so the wrapper owns the surface/shape (input + trailing control share one pill). */
+.wp-block-search__button-inside .wp-block-search__inside-wrapper {
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  min-block-size: 48px;
+  padding: 4px;
+  align-items: center;
+}
+.wp-block-search__button-inside .wp-block-search__inside-wrapper:focus-within {
+  border-color: var(--md-sys-color-primary);
+}
+.wp-block-search__button-inside .wp-block-search__input {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  min-block-size: auto;
+  color: var(--md-sys-color-on-surface);
+}
+.wp-block-search__button-inside .wp-block-search__input:focus {
+  outline: 0;
+}

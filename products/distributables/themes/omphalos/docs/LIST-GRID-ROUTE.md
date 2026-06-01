@@ -159,18 +159,22 @@ existing `--space-*`, `--comp-card-*`, `--md-sys-color-*`, and typescale tokens.
 
 1. Confirm the VQA specimens: Latest Posts — List / Grid, RSS — List / Grid
    (RSS list added; latest-posts grid enriched with content).
-2. ~~List collection contract~~ — **DONE (blocks.css §16)**. Borrows the M3
-   segmented-list principle as a single grouped surface (NOT §6's gap-separated
-   cards): `surface-container-low` container, `--comp-card-radius` (12), `overflow:
-   clip` for first/last-row clipping, `li` padding `--space-md`, `li + li`
-   `outline-variant` divider, markers off. Typography: title = `title-small`
-   on-surface with the prose-link underline removed (headline); date/author =
-   `body-small` on-surface-variant; excerpt on-surface-variant. Scope
-   `.wp-block-post-content … :not(.is-grid)` (like §5/§6/§15). Verified computed
-   both schemes (dark surface-container-low #1D1B20 / divider #49454F; light
-   #F7F2FA / #CAC4D0). *Note*: latest-posts shows only the 1 seed post — the RSS
-   list (5 feed items) is the rich specimen; richer Latest Posts needs more seed
-   content.
+2. ~~List collection contract~~ — **DONE (blocks.css §16)**, SPLIT into two
+   ontologies (per review — RSS and Latest Posts read differently):
+   - **core/rss list** = a dense feed → ONE grouped surface
+     (`surface-container-low`, `--comp-card-radius` 12, `overflow: clip`) split by
+     `li + li` `outline-variant` dividers (M3 List + Divider).
+   - **core/latest-posts list** = a post-teaser collection → each `li` is its OWN
+     filled card (`surface-container`, radius 12, padding `--space-md`),
+     gap-separated (`display: grid; gap: --space-sm`) — a "post preview
+     collection", one tier up from the RSS grouped surface.
+   Shared item typography: title = `title-small` on-surface, prose-link underline
+   removed (headline); date/author = `body-small` on-surface-variant; excerpt
+   on-surface-variant. Scope `.wp-block-post-content … :not(.is-grid)`. Verified
+   computed both schemes (LP card surface-container #211F26 / #F3EDF7, r12, gap 8;
+   RSS grouped surface-container-low #1D1B20 / #F7F2FA). *Seed note*: 3 demo posts
+   were added to the dev env for LP observation (ephemeral) — the seed should
+   create a few demo posts for a reproducible Latest Posts VQA.
 3. **Grid collection / card contract** (blocks.css): filled card grid, scoped to
    `.is-grid` only; verify computed both schemes (filled surface, no shadow,
    radius 12, gap md).

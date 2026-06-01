@@ -696,3 +696,19 @@
   outline: 0;
   border-color: transparent;
 }
+
+/* ============================================================
+ * §15 core/calendar — dark-safe table ink (recolour core's hardcoded colour)
+ *
+ * core/calendar's own style.css hardcodes non-scheme-aware colours:
+ *   :where(table:not(.has-text-color)) { color: #40464d }   ← dark-grey ink
+ *   :where(...) th, td { border-color: #ddd }                (overridden by prose)
+ *   :where(... th) { background: #ddd }                      (overridden by prose)
+ * The #40464d ink survives on the dark surface, so the dates are nearly invisible
+ * in dark mode. core/calendar is NOT `.wp-block-table`, so the §5 table contract
+ * never reaches it; the prose generic `table` rules give it the M3 frame / header /
+ * borders (scheme-aware) but set no text colour. Recolour the ink to on-surface,
+ * keeping core's `:not(.has-text-color)` guard so a user text colour still wins. */
+.wp-block-post-content .wp-block-calendar table:not(.has-text-color) {
+  color: var(--md-sys-color-on-surface);
+}

@@ -480,3 +480,84 @@
 .wp-block-post-content .wp-block-separator.is-style-divider-middle-inset {
   inline-size: calc(var(--wp--style--global--content-size) - 2 * var(--space-xl));
 }
+
+/* ============================================================
+ * §12 core/social-links — icon-button sizing contract (geometry only)
+ *
+ * Treats the social-links icon cluster as an M3 icon-button cluster:
+ * normalizes SIZE / SHAPE / GAP onto the --comp-icon-button-* tokens. It does
+ * NOT touch colour — each service keeps its brand hue (default) and the neutral
+ * M3 tonal set stays opt-in (per-block iconColor / iconBackgroundColor). See
+ * docs/ICON-BUTTON-ROUTE.md (section 4 size map, section 5 colour policy).
+ *
+ * WP sizing model: the size class sets font-size on .wp-block-social-links and
+ * each service svg is 1em, so font-size == icon px. WP's raw 16/24/36/48 is
+ * RE-INTERPRETED as M3 container sizes (the name's ordinal, not its px): the
+ * icon size follows the M3 column and the CONTAINER grows independently, so
+ * "large" / "huge" buy container affordance, not a bigger glyph.
+ *
+ *   has-small-icon-size  -> XS   icon-size-xs (20)   height-xs (32)
+ *   default / has-normal -> S    icon-size-s  (24)   height-s  (40)
+ *   has-large-icon-size  -> M    icon-size-m  (24)   height-m  (56)
+ *   has-huge-icon-size   -> L    icon-size-l  (32)   height-l  (96)
+ *
+ * Scope: the social-links block wherever it renders (Widgets surface — post
+ * content AND template parts), not .wp-block-post-content-limited; geometry is
+ * inherent to the block (like the section 9 button base).
+ * ============================================================ */
+.wp-block-social-links,
+.wp-block-social-links.has-normal-icon-size {
+  font-size: var(--comp-icon-button-icon-size-s);
+  --_ib-container: var(--comp-icon-button-height-s);
+}
+.wp-block-social-links.has-small-icon-size {
+  font-size: var(--comp-icon-button-icon-size-xs);
+  --_ib-container: var(--comp-icon-button-height-xs);
+}
+.wp-block-social-links.has-large-icon-size {
+  font-size: var(--comp-icon-button-icon-size-m);
+  --_ib-container: var(--comp-icon-button-height-m);
+}
+.wp-block-social-links.has-huge-icon-size {
+  font-size: var(--comp-icon-button-icon-size-l);
+  --_ib-container: var(--comp-icon-button-height-l);
+}
+
+/* Container affordance: a square container sized to the M3 height, icon centered
+ * (round via the li radius below). NOT for logos-only — that style has no
+ * container, just the icon (per ICON-BUTTON-ROUTE section 5). */
+.wp-block-social-links:not(.is-style-logos-only) .wp-block-social-link-anchor {
+  min-inline-size: var(--_ib-container);
+  min-block-size: var(--_ib-container);
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Resting shape = M3 round (full); matches core's 9999px, re-asserted via token. */
+.wp-block-social-links .wp-social-link {
+  border-radius: var(--comp-icon-button-shape-round);
+}
+
+/* a11y: guarantee a 48px-min tap target even when the visual container is smaller
+ * (XS 32, S 40 are below the 48 min). The pad is transparent and centered on the
+ * anchor, so the visible container/background (on the li) keeps the M3 visual
+ * while the hit area meets --comp-touch-target. */
+.wp-block-social-links .wp-block-social-link-anchor {
+  position: relative;
+}
+.wp-block-social-links .wp-block-social-link-anchor::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  translate: -50% -50%;
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: var(--comp-touch-target);
+  min-block-size: var(--comp-touch-target);
+}
+
+/* Cluster gap normalized to the M3 small spacing step. */
+.wp-block-social-links.is-layout-flex {
+  gap: var(--space-sm);
+}

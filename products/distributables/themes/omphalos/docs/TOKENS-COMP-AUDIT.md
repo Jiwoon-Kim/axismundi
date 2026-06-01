@@ -34,7 +34,8 @@ Omphalos contract consumes them. Promotion is per-phase, never a big-bang move.
 
 ## Findings — Omphalos runtime usage
 
-Of ~50 tokens defined, **4** are consumed by Omphalos shipped CSS / theme.json:
+The following are consumed by Omphalos shipped CSS / theme.json (everything else
+is defined-only — see Isolation candidates):
 
 | Token | Consumed by | Disposition |
 |---|---|---|
@@ -42,6 +43,10 @@ Of ~50 tokens defined, **4** are consumed by Omphalos shipped CSS / theme.json:
 | `--comp-card-radius` | `blocks.css §8` (core/group card) | **KEEP** |
 | `--comp-button-height` | `blocks.css §9` (button base — min-block-size) | **KEEP** |
 | `--comp-button-radius` | `theme.json` elements.button + `blocks.css §9` | **KEEP** |
+| `--comp-icon-button-icon-size-{xs,s,m,l}` | `blocks.css §12` (social-links icon font-size) | **KEEP** |
+| `--comp-icon-button-height-{xs,s,m,l}` | `blocks.css §12` (social-links container affordance) | **KEEP** |
+| `--comp-icon-button-shape-round` | `blocks.css §12` (social-link li radius) | **KEEP** |
+| `--comp-touch-target` | `blocks.css §12` (social-link 48px tap target) | **KEEP** |
 
 Everything else is unreferenced by Omphalos (defined-only).
 
@@ -85,6 +90,14 @@ sys motion layer (not fresh literals), so only the raw dimensions are local.
 --comp-icon-button-shape-selected-square
 --comp-icon-button-morph-spring-{damping,stiffness}
 ```
+
+> **Update (2026-06-01, blocks.css §12)** — the `core/social-links` icon-button
+> *geometry* contract consumed the geometry subset:
+> `--comp-icon-button-icon-size-{xs,s,m,l}`, `--comp-icon-button-height-{xs,s,m,l}`,
+> `--comp-icon-button-shape-round`, and `--comp-touch-target` — **promoted to KEEP**
+> above. The `-xl` step, `-space-*` (width axis), `-outline-width-*`,
+> `-shape-square-*` / `-shape-pressed-*` / `-shape-selected-*`, and
+> `-morph-spring-*` stay candidates until the square / width / toggle variants land.
 
 ### B. App-component — not a core block; isolate out of Omphalos runtime
 

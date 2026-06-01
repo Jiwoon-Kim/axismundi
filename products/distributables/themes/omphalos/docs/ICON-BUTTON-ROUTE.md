@@ -5,9 +5,10 @@
 > sibling of `BUTTON-ROUTE.md` (text button) — the icon-button was explicitly
 > split out there (§2 search-icon row, §5.4, §6) as a separate route.
 > **Spec authority**: M3 Expressive — `m3.material.io/components/icon-buttons/specs`.
-> **Status**: route + token storage only. No block styles registered, no
-> blocks.css rule, no theme.json change, no social-links rendering change.
-> Consumption is the NEXT step, after review.
+> **Status**: route + tokens, plus the first consumption slice — `core/social-links`
+> SIZE / SHAPE / GAP geometry (`blocks.css §12`, computed-verified). Colour is
+> untouched (brand stays; neutral tonal is opt-in). Remaining consumption
+> (theme-switcher / search-icon reconcile; square / width / toggle variants) pending.
 > **Date**: 2026-06-01 · WP 7.0 · M3 Expressive.
 
 ---
@@ -182,11 +183,15 @@ default·logos-only는 서비스 브랜드 색 유지, neutral(tonal)은 opt-in.
 §4 size map is **confirmed**; the §5 colour policy is set (theme normalizes
 geometry, neutral colour is opt-in). The consumption step is deliberately narrow:
 
-1. **social-links size / shape / gap ONLY, first.** Map the four WP `size`
-   classes to the `--comp-icon-button-*` container / icon / space tokens and
-   normalize the cluster gap; do **not** touch colour (default keeps the service
-   brand). Verify computed values front + editor, both schemes; mind the XS
-   touch-target floor (§4).
+1. ~~**social-links size / shape / gap ONLY, first.**~~ **DONE** — `blocks.css §12`.
+   The four WP `size` classes map to `--comp-icon-button-*` (icon `font-size` +
+   container `min-size`); gap = `--space-sm`; round shape; colour untouched.
+   XS/S visual 32/40 carry a transparent `::after` ≥48px tap target. Computed-
+   verified on the front end: icon 20/24/24/32, container 32/40/56/96, tap ≥48,
+   logos-only = icon-only (no container). `blocks.css` is in `add_editor_style`,
+   so the editor canvas loads the same rule. *Known trade-off*: at XS the 48px
+   tap targets of adjacent icons slightly overlap (dense M3 size vs the 48 a11y
+   floor) — acceptable; revisit if a denser cluster needs it.
 2. **Colour is separate + opt-in** — verified via the existing neutral VQA
    specimen (tonal `secondary-container`), not applied to the default style.
 3. Then reconcile the theme-switcher segment + `core/search` icon submit onto the

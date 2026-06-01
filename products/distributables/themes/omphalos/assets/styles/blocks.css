@@ -720,3 +720,26 @@
   border-block-start: 0;
   border-inline-start: 0;
 }
+
+/* ============================================================
+ * §16 core/latest-posts + core/rss — Grid view card (.is-grid)
+ *
+ * Grid output (LIST-GRID-ROUTE §4): each item = a FILLED, shadow-less card (Drive
+ * reference — NOT elevated). CRITICAL: WordPress core ALREADY ships the responsive
+ * grid — `.is-grid` is flex; `columns-N` set the column widths at ≥600px; on
+ * mobile each item is full-width (a single column). So we style ONLY the card
+ * SURFACE and never touch `display` / `width` / the grid layout — overriding it
+ * (e.g. our own `grid-template-columns`) would throw away core's mobile collapse.
+ * `box-sizing: border-box` keeps the card padding inside core's width calc. */
+.wp-block-post-content .wp-block-latest-posts.is-grid > li,
+.wp-block-post-content .wp-block-rss.is-grid > li {
+  box-sizing: border-box;
+  padding: var(--space-md);
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container);
+  box-shadow: none;
+}
+.wp-block-post-content .wp-block-latest-posts.is-grid > li::marker,
+.wp-block-post-content .wp-block-rss.is-grid > li::marker {
+  content: none;
+}

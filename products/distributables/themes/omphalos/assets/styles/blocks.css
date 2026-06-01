@@ -550,3 +550,38 @@
 .wp-block-social-links.is-layout-flex {
   gap: var(--space-sm);
 }
+
+/* ============================================================
+ * §13 core/search icon submit — default icon-button geometry (.has-icon ONLY)
+ *
+ * The icon search submit is a textbook M3 *default* icon button (it runs/opens
+ * search — not a toggle, no aria-pressed; see SEARCH-ROUTE §5). It consumes the
+ * S icon-button geometry tokens. By default the `.wp-element-button` base makes
+ * it a 40-tall pill that is WIDER than tall (space-lg inline padding + the 24px
+ * glyph → ~72x40); this squares it to the S container and rounds it.
+ *
+ * ISOLATION: scope to `.has-icon` only. A text submit ("Search" /
+ * "Expand search field") must keep the base pill — fixing its inline-size to 40
+ * would clip the label. So this never touches `.wp-block-search__button` bare.
+ * The base already supplies inline-flex centring, the M3 state layer, and the
+ * filled colour; §13 is geometry only — per-variant COLOUR (transparent /
+ * on-surface-variant inside, standard, tonal) is the next SEARCH-ROUTE step.
+ *
+ * Icon: support BOTH core's inline <svg> and the Material Symbols font utility,
+ * but do NOT replace core's icon (that is plugin / custom-block territory —
+ * SEARCH-ROUTE option C). a11y aria-label is core-owned; do not hide it. */
+.wp-block-search__button.has-icon {
+  inline-size: var(--comp-icon-button-height-s);
+  min-inline-size: var(--comp-icon-button-height-s);
+  block-size: var(--comp-icon-button-height-s);
+  min-block-size: var(--comp-icon-button-height-s);
+  padding: 0;
+  border-radius: var(--comp-icon-button-shape-round);
+}
+.wp-block-search__button.has-icon svg,
+.wp-block-search__button.has-icon .material-symbols-outlined {
+  inline-size: var(--comp-icon-button-icon-size-s);
+  block-size: var(--comp-icon-button-icon-size-s);
+  font-size: var(--comp-icon-button-icon-size-s);
+  fill: currentColor;
+}

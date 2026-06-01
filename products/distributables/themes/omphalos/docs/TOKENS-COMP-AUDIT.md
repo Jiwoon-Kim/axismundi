@@ -99,6 +99,11 @@ sys motion layer (not fresh literals), so only the raw dimensions are local.
 > until the square / width / toggle variants land. `--comp-touch-target` is **not**
 > consumed: the §12 48px tap-target overlay was reverted (it shifted the editor
 > selection) — deferred to a padding-based pass, so it stays a Bucket-A candidate.
+>
+> **Update (blocks.css §13)** — `core/search`'s `.has-icon` submit is a second
+> consumer of the `-s` geometry subset (`--comp-icon-button-height-s` /
+> `-icon-size-s` / `-shape-round`), as the M3 S default icon button. Same KEEP set;
+> no new tokens promoted.
 
 ### B. App-component — not a core block; isolate out of Omphalos runtime
 

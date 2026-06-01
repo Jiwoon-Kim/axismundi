@@ -93,6 +93,19 @@ Search Bar.
 Only button-inside (+ icon or tonal text) bridges toward the search-bar shell;
 the rest stay honest WP search variants.
 
+**Icon submit — geometry consumed (blocks.css section 13, DONE).** Only
+`.wp-block-search__button.has-icon` consumes the S icon-button geometry tokens
+(`--comp-icon-button-height-s` 40 / `--comp-icon-button-icon-size-s` 24 /
+`--comp-icon-button-shape-round`), squaring the base pill (~72x40) to a 40x40
+round default icon button. A **text** submit ("Search" / "Expand search field")
+keeps the `.wp-element-button` base pill — the `.has-icon` isolation is
+load-bearing: fixing a text button to 40px clips the label. The rule supports
+core's inline `<svg>` AND `.material-symbols-outlined`, but does **not replace**
+core's icon (option C — replacement is plugin / custom-block territory). The base
+already supplies inline-flex centring + the M3 state layer; a11y `aria-label` is
+core-owned (theme must not hide it). Colour stays the base filled for now —
+per-variant colour is section 8.
+
 ---
 
 ## section 5 - Default icon button, NOT toggle (M3 guideline)
@@ -152,6 +165,8 @@ Theme must NOT: WP_Query behaviour, result ranking, autocomplete/remote data,
    tonal variant. Scope to .wp-block-search (never global input).
 3. Verify computed front + editor, both schemes; confirm no aria-pressed and the
    native submit still works.
-4. Reconcile with the icon-button lane: the button-only / button-inside+icon
-   submit is the third surface (after social-links, theme-switcher) to converge on
-   --comp-icon-button-*.
+4. Icon-button lane: icon submit **geometry DONE** (blocks.css section 13,
+   `.has-icon` only — 40x40 round S default icon button, both <svg> and Material
+   Symbols). Remaining = per-variant COLOUR: button-inside = transparent /
+   on-surface-variant; button-only = standard transparent; button-outside may stay
+   a compact tonal submit. That colour pass composes with the field shell (item 1).

@@ -753,6 +753,7 @@
 .wp-block-post-content .wp-block-latest-posts > li,
 .wp-block-post-content .wp-block-rss.is-grid > li {
   box-sizing: border-box;
+  margin: 0;        /* spacing is owned by the list/grid gap below, not core's per-item margins */
   padding: var(--space-md);
   border-radius: var(--comp-card-radius);
   background-color: var(--md-sys-color-surface-container);
@@ -762,7 +763,7 @@
 /* Latest Posts list = a single-column stack of cards with a gap. */
 .wp-block-post-content .wp-block-latest-posts:not(.is-grid) {
   display: grid;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 /* RSS list = ONE grouped feed card; rows split by dividers (a dense feed reads
@@ -780,37 +781,25 @@
   border-block-start: 1px solid var(--md-sys-color-outline-variant);
 }
 
-/* Below core's 600px columns breakpoint the grid is a single column, but core
- * still leaves each item a column `margin-right` (its `:nth-child(Nn){margin-right:0}`
- * only fires at >=600px) — so the card stops short with dead space on the right.
- * Zero the inline-end margin there so the single-column card fills the row. (We do
- * NOT touch the >=600px multi-column layout, which keeps core's gaps.) */
-@media (max-width: 599.98px) {
-  .wp-block-post-content .wp-block-latest-posts.is-grid > li,
-  .wp-block-post-content .wp-block-rss.is-grid > li {
-    margin-inline-end: 0;
-  }
+/* GRID layout — UNIFIED for both blocks. Core ships the responsive grid
+ * (columns-N widths at >=600px, single column below) via per-item margins that
+ * differ per block (latest-posts 1.25em, rss 1em) AND leave a trailing column gap
+ * (rss never clears the last column). Replace those margins with ONE tokenised
+ * flex `gap`, so every collection — Latest Posts list, both grids — shares the
+ * same `--space-md` gap; recompute the column width as `(100% - (N-1)*gap)/N` so
+ * the row fills exactly. Responsive kept: core's base `width:100%` gives the
+ * single column below 600px, and the card surface above already zeroed the item
+ * margins (so no trailing/mobile margin remains). */
+.wp-block-post-content .wp-block-latest-posts.is-grid,
+.wp-block-post-content .wp-block-rss.is-grid {
+  gap: var(--space-md);
 }
-
-/* RSS grid right gap. Core (unlike latest-posts) never zeroes the last column's
- * margin, and its width is `calc(100%/N - 1em)` assuming EVERY item keeps that 1em
- * margin — so the right column leaves ~1em of dead space, and just zeroing the
- * last margin underfills (the width already subtracted it). Instead switch the
- * >=600px grid to a clean flex `gap`: drop the item margins and recompute the
- * width as `(100% - (N-1)*gap)/N`, which fills the row exactly. The responsive
- * structure is kept (columns-N at >=600px; a single column below, handled above). */
 @media (min-width: 600px) {
-  .wp-block-post-content .wp-block-rss.is-grid {
-    gap: var(--space-md);
-  }
-  .wp-block-post-content .wp-block-rss.is-grid > li {
-    margin: 0;
-  }
-  .wp-block-post-content .wp-block-rss.is-grid.columns-2 > li { inline-size: calc((100% - var(--space-md)) / 2); }
-  .wp-block-post-content .wp-block-rss.is-grid.columns-3 > li { inline-size: calc((100% - 2 * var(--space-md)) / 3); }
-  .wp-block-post-content .wp-block-rss.is-grid.columns-4 > li { inline-size: calc((100% - 3 * var(--space-md)) / 4); }
-  .wp-block-post-content .wp-block-rss.is-grid.columns-5 > li { inline-size: calc((100% - 4 * var(--space-md)) / 5); }
-  .wp-block-post-content .wp-block-rss.is-grid.columns-6 > li { inline-size: calc((100% - 5 * var(--space-md)) / 6); }
+  .wp-block-post-content :is(.wp-block-latest-posts, .wp-block-rss).is-grid.columns-2 > li { inline-size: calc((100% - var(--space-md)) / 2); }
+  .wp-block-post-content :is(.wp-block-latest-posts, .wp-block-rss).is-grid.columns-3 > li { inline-size: calc((100% - 2 * var(--space-md)) / 3); }
+  .wp-block-post-content :is(.wp-block-latest-posts, .wp-block-rss).is-grid.columns-4 > li { inline-size: calc((100% - 3 * var(--space-md)) / 4); }
+  .wp-block-post-content :is(.wp-block-latest-posts, .wp-block-rss).is-grid.columns-5 > li { inline-size: calc((100% - 4 * var(--space-md)) / 5); }
+  .wp-block-post-content :is(.wp-block-latest-posts, .wp-block-rss).is-grid.columns-6 > li { inline-size: calc((100% - 5 * var(--space-md)) / 6); }
 }
 
 /* Featured image = the card media frame. Theme owns fit / aspect / radius; WP

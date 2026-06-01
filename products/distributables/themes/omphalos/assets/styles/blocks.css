@@ -712,3 +712,11 @@
 .wp-block-post-content .wp-block-calendar table:not(.has-text-color) {
   color: var(--md-sys-color-on-surface);
 }
+/* core paints a full 1px #ddd border on EVERY cell side; the prose generic table
+ * rules only re-colour bottom + right (the M3 grid), so core's #ddd survives on
+ * top + left — light gridlines in dark. Drop top/left; the prose bottom/right +
+ * the outer table frame own a single-colour outline-variant grid. */
+.wp-block-post-content .wp-block-calendar :is(th, td) {
+  border-block-start: 0;
+  border-inline-start: 0;
+}

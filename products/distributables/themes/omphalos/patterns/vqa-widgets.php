@@ -18,9 +18,11 @@
  *              The list blocks render this install's real content (posts, pages,
  *              categories, comments) and are sparse on a fresh install. Tag Cloud
  *              uses the CATEGORY taxonomy (post_tag is empty on a fresh install).
- *              Social Icons demonstrate the colour policy: the first set overrides
- *              the per-service brand colours with M3 tokens (secondary-container
- *              background + on-secondary-container icon); the rest use defaults.
+ *              Social Icons run the §12 icon-button geometry: a size row
+ *              (small/normal/large/huge → M3 XS/S/M/L container) plus labels /
+ *              logos-only / pill. Colour policy: the M3-toned sets override the
+ *              per-service brand with tonal tokens (secondary-container /
+ *              on-secondary-container); logos-only / pill keep the service brand.
  *
  *              core/rss needs the network (errors offline in wp-env) — it uses a
  *              neutral public feed here; a distributable must not hard-code a
@@ -64,8 +66,74 @@
 <h2 class="wp-block-heading">Social Icons — default / logos-only / pill</h2>
 <!-- /wp:heading -->
 
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(\u002d\u002dmd-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(\u002d\u002dmd-sys-color-secondary-container)","size":"has-small-icon-size","className":"is-style-default","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
+<ul class="wp-block-social-links has-small-icon-size has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /-->
+
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
+
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
+
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
+
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
+
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
+<!-- /wp:social-links -->
+
 <!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(\u002d\u002dmd-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(\u002d\u002dmd-sys-color-secondary-container)","className":"is-style-default","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
 <ul class="wp-block-social-links has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /-->
+
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
+
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
+
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
+
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
+
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(\u002d\u002dmd-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(\u002d\u002dmd-sys-color-secondary-container)","size":"has-large-icon-size","className":"is-style-default","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
+<ul class="wp-block-social-links has-large-icon-size has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /-->
+
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
+
+<!-- wp:social-link {"url":"#","service":"instagram"} /-->
+
+<!-- wp:social-link {"url":"#","service":"threads"} /-->
+
+<!-- wp:social-link {"url":"#","service":"youtube"} /-->
+
+<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(\u002d\u002dmd-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(\u002d\u002dmd-sys-color-secondary-container)","size":"has-huge-icon-size","className":"is-style-default","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
+<ul class="wp-block-social-links has-huge-icon-size has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /-->
+
+<!-- wp:social-link {"url":"#","service":"facebook"} /-->
+
+<!-- wp:social-link {"url":"#","service":"instagram"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(\u002d\u002dmd-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(\u002d\u002dmd-sys-color-secondary-container)","showLabels":true,"className":"is-style-default","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->
+<ul class="wp-block-social-links has-visible-labels has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
 
 <!-- wp:social-link {"url":"#","service":"github"} /-->
 
@@ -127,13 +195,7 @@
 
 <!-- wp:social-link {"url":"#","service":"facebook"} /-->
 
-<!-- wp:social-link {"url":"#","service":"instagram"} /-->
-
-<!-- wp:social-link {"url":"#","service":"threads"} /-->
-
-<!-- wp:social-link {"url":"#","service":"youtube"} /-->
-
-<!-- wp:social-link {"url":"#","service":"x"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"instagram"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:social-links {"className":"is-style-pill-shape","layout":{"type":"flex","flexWrap":"wrap","orientation":"horizontal","justifyContent":"left"}} -->

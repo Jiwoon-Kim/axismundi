@@ -873,35 +873,41 @@
   line-height: var(--md-sys-typescale-body-small-line-height);
 }
 
-/* — Latest Posts featured image — a Drive-like preview, laid out PER VIEW:
- *   • GRID card = a top media / preview pane (full card width, above the title).
- *   • LIST card = a leading thumbnail FLOATED to the inline-start, so the
- *     title / meta / excerpt sit beside it (an editorial teaser, not a full-width
- *     banner). The img normalises any source size (fills its area, 3:2, cover,
- *     rounded) instead of a raw, often tiny thumbnail. */
-.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image {
-  margin: 0;
-}
+/* — Latest Posts featured image — the theme owns only the FRAME (fit / aspect /
+ * radius / margin rhythm) and maps the BLOCK's alignment class to a float. The
+ * BLOCK owns the WIDTH (`featuredImageSizeWidth` → inline `max-width:Npx`) and the
+ * alignment (`featuredImageAlign` → `alignleft` / `alignright` / `aligncenter`),
+ * both editor settings. The theme must NOT hardcode a width or force a float — a
+ * fixed 33% / forced float would ignore the user's Featured-image panel choices.
+ * 33%-ish / "image left" is therefore a VQA *specimen* default (block attrs),
+ * not a CSS contract. The grid card with no alignment falls through to a
+ * full-width top pane. */
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image a {
   display: block;
 }
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__featured-image img {
   display: block;
-  inline-size: 100%;
+  inline-size: 100%;          /* fill the block's (max-width) box */
   aspect-ratio: 3 / 2;
   object-fit: cover;
   border-radius: var(--md-sys-shape-corner-small);
 }
-/* list view: float a leading thumbnail; the card establishes a BFC to contain it. */
+/* list view: contain a possible float, give a little rhythm, and honour the
+ * block's alignment classes (the grid card keeps the full-width top pane). */
 .wp-block-post-content .wp-block-latest-posts:not(.is-grid) > li {
   display: flow-root;
 }
 .wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image {
+  margin-block-end: var(--space-sm);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image.alignleft {
   float: inline-start;
-  /* 33% of the card, but floored at 96px (stays a thumbnail on a ~320px mobile
-   * card) and capped at 200px (no oversized image on a wide card). A mobile
-   * unfloat breakpoint is deferred to the mobile VQA pass. */
-  inline-size: clamp(96px, 33%, 200px);
   margin-inline-end: var(--space-md);
-  margin-block-end: var(--space-xs);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image.alignright {
+  float: inline-end;
+  margin-inline-start: var(--space-md);
+}
+.wp-block-post-content .wp-block-latest-posts:not(.is-grid) .wp-block-latest-posts__featured-image.aligncenter {
+  margin-inline: auto;
 }

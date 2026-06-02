@@ -33,11 +33,17 @@ IFRAME (10)        ma.tt · wordpress.com · gutenbergtimes  (WordPress post emb
                    spotify · soundcloud   (audio, provider-rounded iframe)
                    pinterest
 WP-EMBED FALLBACK (2)   wordpress.org/plugins/activitypub · /themes/twentytwentyfive
-                        → a plugin/theme DIRECTORY page is not a normal post embed:
-                          oEmbed discovery yields a wp-embed iframe to `.../embed/`
-                          that fails to load (the URL even doubles the `#?secret=`),
-                          so wp-embed.js never gets a height and the
-                          `blockquote.wp-embedded-content` titled-link fallback stays
+                        → the Plugin/Theme Directory `/embed/` page completes the
+                          oEmbed (200, framed, secret OK) and posts `ready`, but
+                          NEVER posts a `height` message — so the parent wp-embed.js
+                          keeps the iframe hidden and the
+                          `blockquote.wp-embedded-content` titled-link fallback stays.
+                          (Verified by capturing the postMessage exchange: ma.tt /
+                          wordpress.com post `height` and load; the directory pages
+                          post only `ready`. NOT a secret/CSS/cache issue — the
+                          doubled `#?secret=` is normal and present on the working
+                          embeds too. It is an UPSTREAM wordpress.org behaviour the
+                          theme cannot fix.)
 BLOCKQUOTE + <script> (2)   bluesky (.bluesky-embed) · reddit (.reddit-embed-bq)
                             → the provider script swaps the quote for an iframe
                               client-side within ~1s

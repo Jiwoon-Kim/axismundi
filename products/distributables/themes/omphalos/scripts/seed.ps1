@@ -16,8 +16,8 @@
   in the Site Logo slot, pass -SetDemoLogo to opt in explicitly (dev/VQA only).
 
   Parameters:
-    -SetDemoLogo  Opt in to setting a demo Site Logo (default: off). SVG upload is
-                  blocked by core, so this falls back to the raster placeholder.
+    -SetDemoLogo  Opt in to setting a demo Site Logo (default: off). Uses the PNG
+                  Axismundi mark (assets/brand/axismundi-logo.png); core blocks SVG.
 #>
 param(
     [switch] $SetDemoLogo
@@ -69,9 +69,10 @@ if ($video -and $capEn) {
 # back to the raster placeholder image.
 if ($SetDemoLogo) {
     Write-Host "== Setting demo Site Logo (-SetDemoLogo) =="
-    $logo = Import-Media "assets/brand/axismundi-symbol.svg"
+    # Use the PNG mark — core blocks SVG uploads, so the SVG fell back to a placeholder.
+    $logo = Import-Media "assets/brand/axismundi-logo.png"
     if (-not $logo) {
-        Write-Warning "SVG import blocked by core (expected). Falling back to the placeholder image as Site Logo."
+        Write-Warning "Logo import failed. Falling back to the placeholder image as Site Logo."
         $logo = $image
     }
     if ($logo) {

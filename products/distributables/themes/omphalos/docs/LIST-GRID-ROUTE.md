@@ -155,48 +155,52 @@ existing `--space-*`, `--comp-card-*`, `--md-sys-color-*`, and typescale tokens.
 
 ---
 
-## §9 — Next (after review)
+## section 9 - Implementation (DONE - list/grid redesign)
 
-1. Confirm the VQA specimens: Latest Posts — List / Grid, RSS — List / Grid
-   (RSS list added; latest-posts grid enriched with content).
-2. ~~List collection contract~~ — **DONE (blocks.css §16)**, SPLIT into two
-   ontologies (per review — RSS and Latest Posts read differently):
-   - **core/rss list** = a dense feed → ONE grouped surface
-     (`surface-container-low`, `--comp-card-radius` 12, `overflow: clip`) split by
-     `li + li` `outline-variant` dividers (M3 List + Divider).
-   - **core/latest-posts list** = a post-teaser collection → each `li` is its OWN
-     filled card (`surface-container`, radius 12, padding `--space-md`),
-     gap-separated (`display: grid; gap: --space-sm`) — a "post preview
-     collection", one tier up from the RSS grouped surface.
-   Item typography: title = on-surface headline, NO resting underline (underline
-   on hover/focus only) — LP list `title-medium` 16/24 (editorial), RSS list
-   `title-small` 14/20 (feed density); date/author = `body-small` on-surface-
-   variant; excerpt = `body-medium` 14/20 on-surface-variant with a `--space-xs`
-   top margin. Scope `.wp-block-post-content … :not(.is-grid)`. Verified
-   computed both schemes (LP card surface-container #211F26 / #F3EDF7, r12, gap 8;
-   RSS grouped surface-container-low #1D1B20 / #F7F2FA). *Seed*: the seed now
-   ensures 4 idempotent demo posts (`scripts/seed-vqa-posts.php`, wired into
-   `seed.ps1`) so the Latest Posts VQA is reproducible after an env reset.
-3. ~~Grid collection / card contract~~ — **DONE (blocks.css §17)**. Filled,
-   shadow-less card grid (Drive reference), `.is-grid` ONLY: a real CSS grid track
-   (columns-N → `grid-template-columns`, gap `--space-md`, overriding WP's flex);
-   each `li` = a `surface-container` card (radius 12, padding `--space-md`,
-   `box-shadow: none`, inner content grid gap `--space-xs`). Shared shell +
-   typography (title-small headline; date/author/excerpt body-small
-   on-surface-variant). Verified computed both schemes (LP 3-col / RSS 2-col; card
-   surface-container #211F26 / #F3EDF7, r12, no shadow). Post-review fixes:
-   (a) core sizes the grid item with `width: calc(100% / N …)` for its OWN flex
-   track, which re-divides each real grid cell by N (~1/3-width cards → broken
-   row gaps) — released with `inline-size: auto` so the card fills its cell;
-   (b) the **Latest Posts featured image** — the theme owns ONLY the frame (3:2,
-   `object-fit: cover`, corner-small radius, margin rhythm) and maps the block's
-   alignment class to a float (`alignleft` → float inline-start, `alignright` →
-   inline-end, `aligncenter` → centred; the list card is `flow-root` to contain
-   it). The BLOCK owns the WIDTH (`featuredImageSizeWidth` → inline `max-width:Npx`)
-   and the alignment (`featuredImageAlign`) — both are editor settings (the
-   Featured-image panel), so the theme must NOT hardcode them; the earlier fixed
-   `clamp(33%)` float was reverted because it ignored those settings. The grid card
-   (no alignment) falls through to a full-width top pane. "image left, ~25-33%" is
-   a VQA *specimen* default, not a CSS contract — the list specimen sets
-   `featuredImageAlign:"left"` + `featuredImageSizeWidth:160` and the seed sets a
-   featured image on one demo post so it is observable.
+The first cut was **isolated to the core baseline and redesigned** after review.
+
+**Key lesson - respect what core already owns.** core/latest-posts + core/rss ship
+their OWN responsive grid (`.is-grid` flex; `columns-N` widths at >=600px; single
+column below). The first version overrode the layout with its own
+`grid-template-columns`, which threw away core's mobile collapse. The redesign
+styles ONLY the visual card chrome and leaves the grid LAYOUT to core.
+
+Final contract = **blocks.css section 16** (one collection section; the earlier
+separate grid section is folded in):
+
+- container reset (all four uls, incl. the grid): drop the default `<ul>` indent +
+  markers - core never resets the grid ul's `padding-inline-start`, which left the
+  grid ~40px in from the left.
+- card surface - Latest Posts items (list + grid) AND RSS GRID items: a filled,
+  shadow-less card (`surface-container`, `--comp-card-radius` 12, `--space-md`
+  padding, `margin:0`).
+- Latest Posts list = a single-column stack of teaser cards (`display:grid;
+  gap:--space-md`).
+- RSS list = ONE grouped feed card (`surface-container`, `overflow:clip`) with its
+  rows split by `outline-variant` dividers (`li + li`) - a dense feed reads better
+  grouped than as separate cards.
+- grid layout (both blocks, UNIFIED): one tokenised flex `gap:--space-md` replacing
+  core's per-item margins (which differed per block and left a trailing column gap,
+  esp. RSS); the column width is recomputed `(100% - (N-1)*--space-md)/N`
+  (columns-2..6, >=600px) so the row fills exactly. core's base `width:100%` still
+  gives the single column below 600px.
+- featured image = the card media FRAME only (`aspect-ratio:3/2`,
+  `object-fit:cover`, corner-small radius, `max-inline-size:100%`); the BLOCK owns
+  the WIDTH (`featuredImageSizeWidth`) + ALIGNMENT (`featuredImageAlign` -> core's
+  alignleft/alignright/aligncenter placement). The theme never hardcodes a width or
+  forces a float.
+- typography (list + grid): title = on-surface headline at **title-small**, no
+  resting underline (underline on hover/focus, offset .15em); meta = body-small
+  on-surface-variant; excerpt = body-medium on-surface-variant + `--space-xs` top
+  margin. (title-small everywhere for now - the narrow grid card wraps title-medium
+  too much; bump the LP list later if it reads weak.)
+
+Every collection gap is **--space-md (16px)**, consistent across LP list, both
+grids, and mobile row gaps. Verified computed both schemes + at desktop 900
+(LP 3-col / RSS 2-col, flush, gap 16, right gap 0) and mobile 400 (single column,
+full width, 16px row gap).
+
+Specimens (Content collections section): LP list (`featuredImageAlign:left`), LP
+grid (`featuredImageAlign:center`), RSS list / grid - width/columns left to core
+defaults. The seed (`scripts/seed-vqa-posts.php`, wired into `seed.ps1`) creates 4
+idempotent demo posts + a featured image on one, so the VQA is reproducible.

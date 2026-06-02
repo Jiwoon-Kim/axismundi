@@ -217,5 +217,12 @@ if ($image -and $audOgg -and $video -and $capEn -and $capKo) {
     Write-Warning "Skipping VQA Media page — one or more media imports failed."
 }
 
+# Embed Template VQA page — the /embed/ Object Card our own post/page renders as when
+# embedded elsewhere. Self-embeds 5 demo specimens (post/page × featured-image shape)
+# so each renders the real wp-embedded-content iframe → /embed/ card. Builds its own
+# demo content + a wide GD image (rectangular branch); Korean stays inside the PHP.
+Write-Host "== Creating Embed Template VQA page =="
+npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-embed-template.php"
+
 Write-Host "== Done. Attachment permalinks: =="
 npx wp-env run cli wp post list --post_type=attachment --field=guid

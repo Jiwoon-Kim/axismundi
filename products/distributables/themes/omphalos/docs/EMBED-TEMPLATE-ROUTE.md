@@ -15,6 +15,12 @@
 > schemes — identical to v1 (heading 16/24, excerpt 14/20, footer 12/16; card #fff
 > light / #1d1b20 dark). Article variant ONLY; attachment (2b/2c) + activity still
 > future. WP-to-WP compatibility preserved (structure + hooks unchanged from core).
+> **VQA**: dedicated page `/vqa-embed-template/` (seeded by
+> `scripts/seed-vqa-embed-template.php`) SELF-EMBEDS 5 specimens — post/page ×
+> featured-image shape (square float / rectangular hero / none) — so each renders
+> the real `/embed/` card; post & page share one article card, meta is the only
+> per-type difference to observe. (Kept separate from `/vqa-embeds/`, which is the
+> consumer block lane.) 404/error + attachment variants are out of this first VQA.
 > **Date**: 2026-06-02 · WP 7.0 · M3 Expressive.
 
 ---

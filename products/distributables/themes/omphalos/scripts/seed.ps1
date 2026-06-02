@@ -181,6 +181,25 @@ if ($widgetsVqa) {
     Write-Host "Widgets VQA page created at /vqa-widgets/ (ID $widgetsVqaId)"
 }
 
+# Embeds block VQA page — core "Embeds" category (core/embed providers). Non-media:
+# embeds the omphalos/vqa-embeds pattern by slug. The providers resolve via oEmbed
+# (external fetch) on first render, so the page may be slow the first time and the
+# fragile providers (X/Threads/Instagram) are EXPECTED to fall back to a link.
+Write-Host "== Creating Embeds Block VQA page =="
+$embedsVqa = npx wp-env run cli wp post list --post_type=page --name=vqa-embeds --field=ID 2>&1 |
+    Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+$embedsContent = '<!-- wp:pattern {"slug":"omphalos/vqa-embeds"} /-->'
+
+if ($embedsVqa) {
+    npx wp-env run cli wp post update $embedsVqa --post_title="VQA Embeds" --post_name=vqa-embeds --post_content="$embedsContent" | Out-Null
+    Write-Host "Embeds VQA page updated at /vqa-embeds/ (ID $embedsVqa)"
+} else {
+    $embedsVqaId = npx wp-env run cli wp post create --post_type=page --post_status=publish `
+        --post_title="VQA Embeds" --post_name=vqa-embeds --post_content="$embedsContent" --porcelain 2>&1 |
+        Where-Object { $_ -match '^\d+\s*$' } | Select-Object -First 1
+    Write-Host "Embeds VQA page created at /vqa-embeds/ (ID $embedsVqaId)"
+}
+
 # Media VQA page — patterns/vqa-media.php is a seed-bound template with
 # __*_ID__ / __*_URL__ placeholders (Inserter:false). The include + placeholder
 # substitution + page write all happen server-side in scripts/seed-vqa-media.php

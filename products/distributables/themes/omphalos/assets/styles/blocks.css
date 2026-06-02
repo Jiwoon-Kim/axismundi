@@ -812,3 +812,40 @@
   object-fit: cover;
   border-radius: var(--md-sys-shape-corner-small);
 }
+
+/* item typography (list + grid). The title is the collection item's headline, not
+ * a body link: drop the prose blue/underline at rest (in a card where the whole
+ * item is the affordance, an underlined link reads as a body link and weakens the
+ * title) and recolour to on-surface at title-small. Underline only on hover/focus.
+ * title-small everywhere for now — the narrow grid card wraps title-medium too
+ * much; bump the LP list later if it reads weak. Meta = body-small; excerpt =
+ * body-medium with a small top margin. */
+.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-title,
+.wp-block-post-content .wp-block-rss .wp-block-rss__item-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+  font-size: var(--md-sys-typescale-title-small-size);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+  font-weight: var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-title:hover,
+.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-title:focus-visible,
+.wp-block-post-content .wp-block-rss .wp-block-rss__item-title a:hover,
+.wp-block-post-content .wp-block-rss .wp-block-rss__item-title a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.wp-block-post-content .wp-block-latest-posts :is(.wp-block-latest-posts__post-date, .wp-block-latest-posts__post-author),
+.wp-block-post-content .wp-block-rss :is(.wp-block-rss__item-publish-date, .wp-block-rss__item-author) {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+.wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-excerpt,
+.wp-block-post-content .wp-block-rss .wp-block-rss__item-excerpt {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  margin-block-start: var(--space-xs);
+}

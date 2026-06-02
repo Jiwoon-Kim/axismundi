@@ -914,18 +914,6 @@
   margin-inline: auto;
 }
 
-/* iframe canvas bridge — a cross-origin embed whose CONTENT is transparent at the
- * corners (a rounded provider card, e.g. bluesky/pinterest) lets the iframe's
- * DEFAULT white canvas show through, which reads as a white notch outside the card
- * on a dark page (in light it happens to match the near-white page). Painting the
- * iframe element's own background with the page background token makes that canvas
- * match the page in BOTH schemes. This does NOT touch the provider's opaque card
- * interior (cross-origin) — only the transparent corner gap. */
-.wp-block-post-content .wp-block-embed-bluesky-social iframe,
-.wp-block-post-content .wp-block-embed-pinterest iframe {
-  background-color: var(--md-sys-color-background);
-}
-
 /* WordPress post embeds (iframe.wp-embedded-content) ship at a fixed width="500"
  * and sit LEFT-ALIGNED in the wider content column (a ~145px dead strip on the
  * right). Unlike provider video/audio iframes — which own a fixed aspect — the WP

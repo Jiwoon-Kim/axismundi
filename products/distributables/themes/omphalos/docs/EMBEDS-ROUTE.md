@@ -113,16 +113,17 @@ Takeaways:
   is a no-op for the full-width ones; verified it does NOT break the WP-embed
   handshake (margin is not clipping). (bluesky uses an internal `width:100%` so it
   stays left — a provider quirk, left as-is.)
-- **Dark is provider-owned (interior) — but the iframe CANVAS is ours.** spotify
-  adapts to dark; reddit / pinterest / bluesky are light-only, and their opaque card
-  INTERIOR is cross-origin (a light card on our dark page is correct, unfixable).
-  HOWEVER, where a provider's content is TRANSPARENT at the rounded-card corners, the
-  iframe's DEFAULT white canvas shows through → a white notch outside the card (in
-  dark; in light it happens to match the near-white page). Painting the iframe
-  ELEMENT's `background-color: var(--md-sys-color-background)` makes that canvas match
-  the page in both schemes (bluesky/pinterest). It does NOT touch the opaque card.
-  (Earlier I wrongly called this unfixable — the eyedropper showed corner #fff in
-  dark vs page-matching in light; the canvas bridge fixes it.)
+- **Dark is provider-owned, full stop (cross-origin, not theme-fixable).** spotify
+  adapts to dark; reddit / pinterest / bluesky are light-only and render an OPAQUE
+  white card in dark — the whole card, corners included, is the provider's content.
+  An `iframe { background-color }` bridge does NOT help: the dark page would only show
+  through TRANSPARENT areas, but the loaded card is opaque, so it paints over our
+  iframe background. (I twice misread this: a half-loaded bluesky stub at 150px looked
+  transparent/fixed, but once the widget hydrates to its full height the card is solid
+  white over our bg. Always verify against the FULLY-loaded widget, not the stub.) A
+  light provider card on our dark page is correct and expected; the only lever is a
+  provider theme param (server-side, fixed, not scheme-responsive) — out of scope per
+  the consume-side policy.
 - **Radius**: our `corner-medium` (12) applies to every iframe, but a provider's
   own inline radius wins (reddit 8, spotify 12) — fine, the provider owns its chrome.
 - **Buckets confirm**: stable iframe (youtube/ted/videopress/spotify/soundcloud),

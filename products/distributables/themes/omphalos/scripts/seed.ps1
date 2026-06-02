@@ -224,5 +224,12 @@ if ($image -and $audOgg -and $video -and $capEn -and $capKo) {
 Write-Host "== Creating Embed Template VQA page =="
 npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-embed-template.php"
 
+# Core Theme VQA page — site identity / navigation / Query Loop + post-context blocks
+# / post navigation / template infra. Builds its own demo posts (featured + none),
+# category/tag, comments, and an author bio so the dynamic Query Loop + post-meta
+# blocks render meaningfully. Korean stays inside the PHP.
+Write-Host "== Creating Theme VQA page =="
+npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-theme.php"
+
 Write-Host "== Done. Attachment permalinks: =="
 npx wp-env run cli wp post list --post_type=attachment --field=guid

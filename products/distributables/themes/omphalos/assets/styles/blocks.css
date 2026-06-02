@@ -879,3 +879,51 @@
   line-height: var(--md-sys-typescale-body-medium-line-height);
   margin-block-start: var(--space-sm);
 }
+
+/* ============================================================================
+ * §17 core/embed — the embed OUTER SHELL only
+ *
+ * core/embed is static save() + `the_content` autoembed (oEmbed): the figure + a
+ * bare URL saves, and the provider HTML is injected at render. So the DOM is
+ * PROVIDER-owned and falls into three buckets (see docs/EMBEDS-ROUTE.md): an
+ * IFRAME, a BLOCKQUOTE the provider <script> later swaps for an iframe, or — when
+ * the provider is unsupported/unreachable — the bare URL as text. The theme styles
+ * the OUTER shell ONLY: figure rhythm, the media frame radius/clip, and a surface
+ * for the unresolved fallback. It never reaches inside the provider iframe/script,
+ * and it does NOT set width or aspect — core already owns those via
+ * `wp-embed-aspect-*` / `wp-has-aspect-ratio`. (figcaption is owned by prose.css.) */
+
+/* figure rhythm — tokenise the browser-default, uneven embed figure margin. */
+.wp-block-post-content .wp-block-embed {
+  margin-block: var(--space-md);
+}
+
+/* media frame — radius + clip on the WRAPPER (not the iframe), so it also frames a
+ * provider-swapped iframe (reddit/bluesky) and a provider's own rounded media; the
+ * iframe/media just fills the frame. Width + aspect stay core's. */
+.wp-block-post-content .wp-block-embed__wrapper {
+  border-radius: var(--md-sys-shape-corner-medium);
+  overflow: clip;
+}
+.wp-block-post-content .wp-block-embed iframe {
+  display: block;
+  max-inline-size: 100%;
+}
+
+/* unresolved fallback — when oEmbed can't resolve, the wrapper holds the bare URL
+ * as TEXT (no iframe, no provider blockquote). Box it in a quiet surface so it does
+ * not read as naked text. Scoped with :has() to wrappers that have NEITHER an
+ * iframe NOR a provider blockquote, so resolved/loading embeds never get a
+ * redundant surface behind their media. A truly clickable LINK card needs the raw
+ * URL wrapped in an <a>, which CSS cannot do — that is a render_block_core/embed
+ * step, deferred (see EMBEDS-ROUTE.md §7). */
+.wp-block-post-content .wp-block-embed__wrapper:not(:has(iframe)):not(:has(blockquote)) {
+  box-sizing: border-box;
+  padding: var(--space-md);
+  background-color: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  overflow-wrap: anywhere;
+}

@@ -59,6 +59,18 @@ https://gutenbergtimes.com/wordpress-7-0-source-of-truth/
 </div></figure>
 <!-- /wp:embed -->
 
+<!-- wp:embed {"url":"https://wordpress.org/plugins/activitypub/","type":"wp-embed","providerNameSlug":"wordpress-org"} -->
+<figure class="wp-block-embed is-type-wp-embed is-provider-wordpress-org wp-block-embed-wordpress-org"><div class="wp-block-embed__wrapper">
+https://wordpress.org/plugins/activitypub/
+</div></figure>
+<!-- /wp:embed -->
+
+<!-- wp:embed {"url":"https://wordpress.org/themes/twentytwentyfive/","type":"wp-embed","providerNameSlug":"wordpress-org"} -->
+<figure class="wp-block-embed is-type-wp-embed is-provider-wordpress-org wp-block-embed-wordpress-org"><div class="wp-block-embed__wrapper">
+https://wordpress.org/themes/twentytwentyfive/
+</div></figure>
+<!-- /wp:embed -->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">2. Video</h2>
 <!-- /wp:heading -->

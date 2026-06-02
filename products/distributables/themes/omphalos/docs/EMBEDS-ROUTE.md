@@ -7,8 +7,10 @@
 > **References**: WordPress [Embed blocks](https://wordpress.org/documentation/category/embed-blocks/),
 > [Embed block](https://wordpress.org/documentation/article/embed-block/),
 > [Embeds](https://wordpress.org/documentation/article/embeds/).
-> **Status**: route + curated VQA specimen + CSS-0 diagnostic inventory. **No CSS,
-> no token contract applied yet.** Implementation is the NEXT step.
+> **Status**: route + curated VQA specimen + CSS-0 diagnostic + **§17 outer-shell
+> CSS implemented** (figure rhythm, wrapper radius/clip, iframe fill, fallback
+> surface — verified computed both schemes). The `/embed/` TEMPLATE (when our post
+> is embedded elsewhere) is a SEPARATE adjacent lane — see §9.
 > **Date**: 2026-06-02 · WP 7.0 · M3 Expressive.
 
 ---
@@ -26,7 +28,8 @@ This wp-env **does** resolve oEmbed (outbound network OK), so the curated specim
 CSS-0 inventory of the 18 specimens:
 
 ```txt
-IFRAME (10)        ma.tt · wordpress.com · gutenbergtimes  (WordPress post embeds)
+IFRAME (12)        ma.tt · wordpress.com · gutenbergtimes  (WordPress post embeds)
+                   wordpress.org/plugins/activitypub · wordpress.org/themes/twentytwentyfive
                    wordpress.tv · videopress · youtube · ted   (video, 16:9 aspect)
                    spotify · soundcloud   (audio, provider-rounded iframe)
                    pinterest
@@ -150,24 +153,77 @@ for a live provider render. A distributable theme must degrade gracefully here.
 
 ---
 
-## §7 — Write scope, fences, validation plan (for the NEXT step)
+## §7 — Write scope, fences, validation (DONE — blocks.css §17)
 
-- **Write scope**: `assets/styles/blocks.css` new `§17 core/embed` section only.
-  No `theme.json`, no provider JS, no baseline files.
-- **Fences**: scope every selector under `.wp-block-post-content .wp-block-embed`
-  (+ `__wrapper`, `figcaption`, the fallback class). Never a bare `iframe {}` or
-  `blockquote {}` rule. No `!important` into provider markup.
-- **Validation**: computed front-end gate, both schemes — figure margin = space-md;
-  media border-radius = corner-medium + overflow clip; video still responsive (core
-  aspect intact, no width override); fallback card surface/outline/link present;
-  fragile providers render the fallback card without error.
+- **Write scope**: `assets/styles/blocks.css` `§17 core/embed` only. No `theme.json`,
+  no provider JS, no baseline files.
+- **Fences**: every selector under `.wp-block-post-content .wp-block-embed`
+  (+ `__wrapper`). No bare `iframe {}` / `blockquote {}` rule; no `!important` into
+  provider markup. `figcaption` is LEFT to prose.css (it already styles
+  `.wp-block-post-content figcaption` = body-small / on-surface-variant / space-sm),
+  so §17 adds no caption rule. The fallback surface is scoped with
+  `:not(:has(iframe)):not(:has(blockquote))` so it lands ONLY on the unresolved
+  raw-URL wrapper, never behind a resolved/loading provider media.
+- **Validation (computed, both schemes)**:
+  - figure `margin-block` = 16px (`--space-md`) ✓
+  - wrapper `border-radius` = 12px (corner-medium) + `overflow: clip` ✓; iframe
+    `display:block; max-inline-size:100%` ✓; video still responsive (core aspect
+    intact, NO width/aspect override) ✓
+  - iframe wrapper `background` = transparent ✓ (the `:has()` scope keeps the
+    fallback surface OFF resolved embeds)
+  - raw-URL fallback wrapper = `surface-container-low` + 1px `outline-variant` +
+    16px padding, both schemes (dark 29,27,32 / light 247,242,250) ✓
+- **Deferred**: a truly CLICKABLE link card (wrap the bare URL in `<a>`) is not
+  possible in CSS — it needs a `render_block_core/embed` filter. §17 stops at the
+  fallback SURFACE, as agreed.
 
 ---
 
-## §8 — Explicitly NOT in this step
+## §8 — Explicitly NOT in this lane
 
-- No CSS / token contract yet (this doc is the diagnostic baseline only).
-- No new tokens (compose existing `--space-*`, `--md-sys-shape-*`, `--comp-card-*`).
-- No provider-specific styling beyond the generic shell + fallback.
-- No editor-side capture refinement of the specimen attributes unless the rendered
-  DOM shows the authored `is-provider-*` class diverges from core's.
+- No styling INSIDE provider iframe / script / blockquote UI.
+- No new tokens (composes existing `--space-*`, `--md-sys-shape-*`,
+  `--md-sys-color-*`).
+- No `render_block_core/embed` filter yet (the clickable fallback link card is
+  deferred — §7).
+- No `/embed/` template work — that is the SEPARATE adjacent lane below (§9).
+
+---
+
+## §9 — Adjacent lane (SEPARATE): the `/embed/` template — "Self / WP Embed Card"
+
+There are **two distinct embed surfaces**; this doc (§1–§8) is only the first:
+
+```txt
+1. core/embed BLOCK   = external content placed INSIDE our post   → THIS doc
+2. /embed/ TEMPLATE   = OUR post rendered as a card when embedded
+                        on another (or our own) WordPress site     → this section
+```
+
+When someone pastes our post URL, their site fetches our **`/post-slug/embed/`**
+endpoint (oEmbed discovery — no manual embed code needed between WordPress sites)
+and drops it in an `<iframe>`. The layout of THAT card is owned by **our** theme's
+embed template, customised through a different hook family than block CSS:
+
+```txt
+embed.php / embed template hierarchy   the /embed/ screen structure
+enqueue_embed_scripts                  embed-only CSS inside the iframe
+embed_head                             inline CSS if needed
+embed_thumbnail_image_shape            featured image rectangular(top) vs floated
+embed_thumbnail_image_size             embed-only image size
+embed_content                          extra meta under the excerpt (e.g. date)
+embed_content_meta                     footer action area
+embed_site_title_html                  site name / logo
+```
+
+`add_theme_support('responsive-embeds')` may be ON, but the real contract there is
+the `/embed/` template CSS — distinct from the core-embed wrapper we respect here.
+
+**Why a separate lane**: this card belongs with the **ActivityPub object card /
+attachment page** family (our content presented AS an object), not with the
+external-embed-block shell. Plan: open a "Self / WP Embed Card" VQA — put a demo
+post URL in an Embed block AND open `/demo-post/embed/` directly — observe the
+WP-default embed card, then design an M3 Card/List contract for it.
+
+Reference: WordPress Developer Blog,
+[Customize WordPress embeds to match your theme](https://developer.wordpress.org/news/2025/02/customize-wordpress-embeds-to-match-your-theme/).

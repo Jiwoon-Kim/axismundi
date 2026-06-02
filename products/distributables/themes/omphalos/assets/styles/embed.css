@@ -21,6 +21,10 @@
     "Segoe UI", sans-serif);
 }
 
+.wp-embed-featured-image img {
+  border-radius: var(--md-sys-shape-corner-small, 8px);
+}
+
 .wp-embed a {
   color: var(--md-sys-color-on-surface-variant, #50575e);
 }

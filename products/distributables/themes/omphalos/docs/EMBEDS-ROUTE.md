@@ -87,6 +87,43 @@ C. RAW/URL fallback (unsupported / unreachable provider)
 
 ---
 
+## §2b — Provider behaviour matrix (measured, hydrated, dark scheme)
+
+```txt
+provider     shape(hydrated)  iframe w   fills 645  dark response   own radius
+youtube      iframe           645        yes        player-dark     —
+ted          iframe           645        yes        —               —
+videopress   iframe           645        yes        —               —
+spotify      iframe           645        yes        ADAPTS to dark  12px (inline)
+soundcloud   iframe           500        NO         —               —
+reddit       blockquote→iframe 640       ~no        LIGHT-only      8px (inline)
+bluesky      blockquote→iframe 600       no         —               —
+tumblr       link→iframe      542 (tall) no         —               —
+pinterest    iframe           450 (tall) NO         LIGHT-only      —
+mastodon/x/instagram/threads   RAW → our fallback surface (dark-aware, uses our tokens)
+```
+
+Takeaways:
+- **Width is the real inconsistency.** Many providers ship a FIXED width narrower
+  than the content column (soundcloud 500, reddit 640, bluesky 600, tumblr 542,
+  pinterest 450) and sit LEFT-stuck with a dead strip. We must NOT force them to
+  100% — their interior is laid out for that fixed width (and stretching a provider
+  iframe risks the same class of breakage as the WP-embed clip). The safe fix is to
+  **centre** them: `iframe { margin-inline: auto }` centres a fixed-width embed and
+  is a no-op for the full-width ones; verified it does NOT break the WP-embed
+  handshake (margin is not clipping). (bluesky uses an internal `width:100%` so it
+  stays left — a provider quirk, left as-is.)
+- **Dark is provider-owned.** spotify adapts to the dark scheme; reddit / pinterest
+  are light-only. The interior is cross-origin — a light provider card on our dark
+  page is CORRECT and expected; we do not (and cannot) restyle it.
+- **Radius**: our `corner-medium` (12) applies to every iframe, but a provider's
+  own inline radius wins (reddit 8, spotify 12) — fine, the provider owns its chrome.
+- **Buckets confirm**: stable iframe (youtube/ted/videopress/spotify/soundcloud),
+  script-hydrated (reddit/bluesky/tumblr), raw fallback (mastodon/x/instagram/threads);
+  pinterest actually resolves to an iframe (not fragile).
+
+---
+
 ## §3 — Selected route: theme owns the outer shell, nothing inside
 
 - **Figure spacing**: tokenise the figure's vertical rhythm to `--space-md` (it is
@@ -116,6 +153,11 @@ C. RAW/URL fallback (unsupported / unreachable provider)
   failure; provider blockquotes (`.reddit-embed-bq` / `.bluesky-embed`) are a
   different class and are not matched.
 - **Alignment**: respect `alignwide` / `alignfull` / `aligncenter` (core layout).
+- **Centre fixed-width provider embeds**: `iframe { margin-inline: auto }`. Many
+  providers ship a fixed width narrower than the column (pinterest 450, soundcloud
+  500, tumblr 542, reddit 640) and sit left-stuck; auto margins centre them and are
+  a no-op for full-width embeds. We do NOT force their width (provider interiors are
+  laid out for a fixed width). Verified it does not break the WP-embed handshake.
 - **WordPress-post embeds** (`iframe.wp-embedded-content` — ma.tt, wordpress.com,
   gutenbergtimes, wordpress.org plugins/themes): ship at a fixed `width="500"`,
   LEFT-aligned in the wider content column (a ~145px dead strip). Unlike fixed-aspect

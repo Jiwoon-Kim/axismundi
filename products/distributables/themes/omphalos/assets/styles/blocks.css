@@ -898,16 +898,19 @@
   margin-block: var(--space-md);
 }
 
-/* media frame — radius + clip on the WRAPPER (not the iframe), so it also frames a
- * provider-swapped iframe (reddit/bluesky) and a provider's own rounded media; the
- * iframe/media just fills the frame. Width + aspect stay core's. */
-.wp-block-post-content .wp-block-embed__wrapper {
-  border-radius: var(--md-sys-shape-corner-medium);
-  overflow: clip;
-}
+/* media frame — round the iframe ITSELF (a replaced element clips to its own
+ * border-radius) rather than `overflow: clip` on the wrapper. The wrapper-clip
+ * approach broke WordPress-POST embeds: their iframe completes the wp-embed
+ * height handshake while `position: absolute; visibility: hidden`, and a clipping
+ * wrapper suppressed the child's `height` postMessage so the iframe was never
+ * un-hidden (verified: ma.tt tolerated it, the wordpress.org directory pages did
+ * not). border-radius on the iframe is paint-only, so it rounds youtube / spotify /
+ * the provider-swapped reddit·bluesky iframe AND the WP-embed card without touching
+ * the handshake. Width + aspect stay core's. */
 .wp-block-post-content .wp-block-embed iframe {
   display: block;
   max-inline-size: 100%;
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 
 /* WordPress post embeds (iframe.wp-embedded-content) ship at a fixed width="500"
@@ -934,6 +937,7 @@
   padding: var(--space-md);
   background-color: var(--md-sys-color-surface-container-low);
   border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   color: var(--md-sys-color-on-surface-variant);
   font-size: var(--md-sys-typescale-body-small-size);
   line-height: var(--md-sys-typescale-body-small-line-height);

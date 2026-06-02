@@ -28,22 +28,11 @@ This wp-env **does** resolve oEmbed (outbound network OK), so the curated specim
 CSS-0 inventory of the 18 specimens:
 
 ```txt
-IFRAME (10)        ma.tt · wordpress.com · gutenbergtimes  (WordPress post embeds)
+IFRAME (12)        ma.tt · wordpress.com · gutenbergtimes
+                   wordpress.org/plugins/activitypub · /themes/twentytwentyfive
                    wordpress.tv · videopress · youtube · ted   (video, 16:9 aspect)
                    spotify · soundcloud   (audio, provider-rounded iframe)
                    pinterest
-WP-EMBED FALLBACK (2)   wordpress.org/plugins/activitypub · /themes/twentytwentyfive
-                        → the Plugin/Theme Directory `/embed/` page completes the
-                          oEmbed (200, framed, secret OK) and posts `ready`, but
-                          NEVER posts a `height` message — so the parent wp-embed.js
-                          keeps the iframe hidden and the
-                          `blockquote.wp-embedded-content` titled-link fallback stays.
-                          (Verified by capturing the postMessage exchange: ma.tt /
-                          wordpress.com post `height` and load; the directory pages
-                          post only `ready`. NOT a secret/CSS/cache issue — the
-                          doubled `#?secret=` is normal and present on the working
-                          embeds too. It is an UPSTREAM wordpress.org behaviour the
-                          theme cannot fix.)
 BLOCKQUOTE + <script> (2)   bluesky (.bluesky-embed) · reddit (.reddit-embed-bq)
                             → the provider script swaps the quote for an iframe
                               client-side within ~1s
@@ -102,9 +91,20 @@ C. RAW/URL fallback (unsupported / unreachable provider)
 
 - **Figure spacing**: tokenise the figure's vertical rhythm to `--space-md` (it is
   browser-default + uneven at CSS-0), consistent with the rest of post-content.
-- **Media frame**: `border-radius: --md-sys-shape-corner-medium` + `overflow: clip`
-  + `max-inline-size: 100%` on the embed media; **respect** core's aspect classes
-  (do not set width/height/aspect-ratio ourselves).
+- **Media frame**: round the **iframe element itself**
+  (`border-radius: --md-sys-shape-corner-medium`; a replaced element clips to its
+  own radius) + `max-inline-size: 100%`; **respect** core's aspect classes (do not
+  set width/height/aspect-ratio ourselves).
+  - ⚠ **GOTCHA (cost me two wrong diagnoses)**: do NOT round via `overflow: clip`
+    on `.wp-block-embed__wrapper`. A WordPress-POST embed iframe completes its
+    wp-embed height handshake while `position: absolute; visibility: hidden`, and a
+    clipping wrapper suppresses the child's `height` postMessage — so the iframe is
+    never un-hidden and the blockquote fallback stays. ma.tt tolerated the clip; the
+    wordpress.org Plugin/Theme directory embeds did not, which first looked like (a)
+    a doubled `#?secret=` and then (b) an upstream "no height" — both WRONG. The real
+    cause was this theme's own wrapper clip. Removing it + rounding the iframe makes
+    all 12 iframe embeds load. (The doubled secret is normal and present on the
+    working embeds too.)
 - **Caption**: `figcaption.wp-element-caption` → body-small / on-surface-variant
   with a small top margin (matches the media-VQA caption contract).
 - **Fallback card**: the RAW/URL bucket → a filled, outlined SURFACE around the bare
@@ -193,14 +193,17 @@ for a live provider render. A distributable theme must degrade gracefully here.
   raw-URL wrapper, never behind a resolved/loading provider media.
 - **Validation (computed, both schemes)**:
   - figure `margin-block` = 16px (`--space-md`) ✓
-  - wrapper `border-radius` = 12px (corner-medium) + `overflow: clip` ✓; iframe
-    `display:block; max-inline-size:100%` ✓; video still responsive (core aspect
-    intact, NO width/aspect override) ✓
+  - iframe `border-radius` = 12px (corner-medium) + `display:block;
+    max-inline-size:100%` ✓ (rounded on the iframe, NOT via wrapper clip — see the
+    gotcha in §3); video still responsive (core aspect intact, NO width/aspect
+    override) ✓
   - iframe wrapper `background` = transparent ✓ (the `:has()` scope keeps the
     fallback surface OFF resolved embeds)
   - WordPress-post embeds: `iframe.wp-embedded-content` width 500 → 645 (content,
-    no left dead strip), height re-adjusted by wp-embed.js (no clip); provider
-    iframes (youtube/spotify) unaffected — they lack `.wp-embedded-content` ✓
+    no left dead strip), height re-adjusted by wp-embed.js; provider iframes
+    (youtube/spotify) unaffected — they lack `.wp-embedded-content` ✓
+  - all 12 iframe embeds (incl. the two wordpress.org directory pages) LOAD — the
+    handshake works once the wrapper clip is gone ✓
   - raw-URL fallback wrapper = `surface-container-low` + 1px `outline-variant` +
     16px padding, both schemes (dark 29,27,32 / light 247,242,250) ✓
 - **Deferred**: a truly CLICKABLE link card (wrap the bare URL in `<a>`) is not

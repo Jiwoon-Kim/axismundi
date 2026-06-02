@@ -143,3 +143,52 @@ Excluded entirely: post-types-label, posts-list.
   pattern; front-end render of every specimen (no PHP/console errors); editor opens
   the page with NO block-invalid warnings (esp. navigation). Computed CSS is a LATER
   step.
+
+---
+
+## §7 — CSS-0 observation → M3 component mapping (contract route)
+
+Baseline observed on `/vqa-theme/` (current theme base, no theme-block CSS yet). The
+load-bearing finding: **the Query-Loop post-meta blocks inherit the prose
+always-underline link style** (they sit in `.wp-block-post-content`), so terms,
+read-more, comments-link, and pagination all render as underlined primary BODY LINKS
+with no structure — a wall of links, not an object card with a metadata cluster.
+
+**Baseline computed (dark):**
+```txt
+nav-link    14 / on-surface / no-underline / no padding   (already text-link-ish)
+breadcrumbs 16 / on-surface / "Home▮VQA Theme" no separator
+terms       12 / primary / UNDERLINED                     (prose link)
+read-more   16 / primary / UNDERLINED                     (prose link)
+comments-lk 16 / primary / UNDERLINED                     (prose link)
+pagination# 14 / primary / UNDERLINED                     (prose link)
+date        12 / on-surface-variant                       (ok = body-small meta)
+author-name 16 / on-surface                               (too big for meta vs date 12)
+navigation  → renders the PAGE-LIST FALLBACK, not the inline menu (canonical risk).
+```
+
+**M3 component mapping (the contract route — observe-first, per priority A–F):**
+```txt
+A. Site identity + Navigation
+   site-logo   → brand mark (size/align contract); site-title → title; tagline → body
+   navigation  → Navigation Bar: items are TEXT links (NOT tabs/buttons); M3 spacing
+                 + state layer; submenu → Menu SURFACE (surface-container + elevation)
+   breadcrumbs → compact navigation aid: body-small links + a separator, on-surface-variant
+B. Query Loop / Post Template → Card / List (reuse the collections ontology)
+   list  → teaser-card stack ; grid → filled card grid ; featured-image → card media
+   read-more → TEXT BUTTON (not a prose link)
+C. Post-meta cluster (de-prose-ify — this is the biggest baseline gap)
+   terms       → chips (assist/suggestion) OR de-underlined meta links
+   date/author → body-small / on-surface-variant metadata row (one rhythm)
+   comments-count/-link → text action, not a body link
+D. Author identity
+   avatar (size matrix) + author/author-name → compact identity row ;
+   author-biography → supporting text
+E. Pagination / Post navigation
+   query-pagination(numbers/prev/next) → Pagination component (current-page emphasis);
+   post-navigation-link → text link / nav button (mind the button-vs-link contract)
+F. Comments family → separate phase (/vqa-theme-comments/), many M3 components mixed
+
+First contracts: A (nav) + B (query-loop card/list). NOTE: navigation needs a real
+`wp_navigation` menu (a bare nav falls back to the page list) before the
+submenu/home-link/custom-link specimens are observable — seed one for the A contract.

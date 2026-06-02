@@ -128,20 +128,21 @@ Takeaways:
 
 - **Figure spacing**: tokenise the figure's vertical rhythm to `--space-md` (it is
   browser-default + uneven at CSS-0), consistent with the rest of post-content.
-- **Media frame**: round the **iframe element itself**
-  (`border-radius: --md-sys-shape-corner-medium`; a replaced element clips to its
-  own radius) + `max-inline-size: 100%`; **respect** core's aspect classes (do not
-  set width/height/aspect-ratio ourselves).
-  - ⚠ **GOTCHA (cost me two wrong diagnoses)**: do NOT round via `overflow: clip`
-    on `.wp-block-embed__wrapper`. A WordPress-POST embed iframe completes its
+- **Media frame**: `display:block; max-inline-size:100%` + centre (below). **NO
+  theme radius on embed media** — providers carry their own, very different corner
+  treatments (spotify 12, reddit 8, square players, none), so imposing one
+  `corner-medium` reads inconsistent across the lane; let each provider keep its own
+  chrome. **Respect** core's aspect classes (do not set width/height/aspect-ratio).
+  - ⚠ **GOTCHA (cost two wrong diagnoses)**: never round via `overflow: clip` on
+    `.wp-block-embed__wrapper` (and that is the main reason the radius is on neither
+    the wrapper nor the iframe now). A WordPress-POST embed iframe completes its
     wp-embed height handshake while `position: absolute; visibility: hidden`, and a
     clipping wrapper suppresses the child's `height` postMessage — so the iframe is
     never un-hidden and the blockquote fallback stays. ma.tt tolerated the clip; the
     wordpress.org Plugin/Theme directory embeds did not, which first looked like (a)
-    a doubled `#?secret=` and then (b) an upstream "no height" — both WRONG. The real
-    cause was this theme's own wrapper clip. Removing it + rounding the iframe makes
-    all 12 iframe embeds load. (The doubled secret is normal and present on the
-    working embeds too.)
+    a doubled `#?secret=` then (b) an upstream "no height" — both WRONG; the real
+    cause was this theme's own wrapper clip. (The doubled secret is normal — present
+    on the working embeds too.)
 - **Caption**: `figcaption.wp-element-caption` → body-small / on-surface-variant
   with a small top margin (matches the media-VQA caption contract).
 - **Fallback card**: the RAW/URL bucket → a filled, outlined SURFACE around the bare
@@ -158,6 +159,16 @@ Takeaways:
   500, tumblr 542, reddit 640) and sit left-stuck; auto margins centre them and are
   a no-op for full-width embeds. We do NOT force their width (provider interiors are
   laid out for a fixed width). Verified it does not break the WP-embed handshake.
+- **EDITOR ≠ front-end (inherent; front-end is canonical)**: in the block editor
+  EVERY embed is shown in a FULL-WIDTH (column-width) preview iframe, with the
+  provider's fixed-width content rendered INSIDE it. So (a) `margin-inline:auto` is a
+  no-op in the editor (the outer preview iframe is already full-width — nothing to
+  centre; the fixed width is inside a cross-origin preview we can't reach), and (b)
+  a provider's light card (reddit/pinterest) shows a "white background" inside that
+  full-width preview. Our CSS DOES load in the editor (`.wp-block-post-content` is
+  present there), but it cannot reach inside the preview iframe. This is a Gutenberg
+  editor-preview behaviour, not a theme bug — the front-end (real provider iframe,
+  centred) is canonical.
 - **WordPress-post embeds** (`iframe.wp-embedded-content` — ma.tt, wordpress.com,
   gutenbergtimes, wordpress.org plugins/themes): ship at a fixed `width="500"`,
   LEFT-aligned in the wider content column (a ~145px dead strip). Unlike fixed-aspect
@@ -235,10 +246,9 @@ for a live provider render. A distributable theme must degrade gracefully here.
   raw-URL wrapper, never behind a resolved/loading provider media.
 - **Validation (computed, both schemes)**:
   - figure `margin-block` = 16px (`--space-md`) ✓
-  - iframe `border-radius` = 12px (corner-medium) + `display:block;
-    max-inline-size:100%` ✓ (rounded on the iframe, NOT via wrapper clip — see the
-    gotcha in §3); video still responsive (core aspect intact, NO width/aspect
-    override) ✓
+  - iframe `display:block; max-inline-size:100%; margin-inline:auto` ✓; NO theme
+    radius (providers keep their own — spotify 12 / reddit 8 / others square); video
+    still responsive (core aspect intact, NO width/aspect override) ✓
   - iframe wrapper `background` = transparent ✓ (the `:has()` scope keeps the
     fallback surface OFF resolved embeds)
   - WordPress-post embeds: `iframe.wp-embedded-content` width 500 → 645 (content,

@@ -898,20 +898,20 @@
   margin-block: var(--space-md);
 }
 
-/* media frame — round the iframe ITSELF (a replaced element clips to its own
- * border-radius) rather than `overflow: clip` on the wrapper. The wrapper-clip
- * approach broke WordPress-POST embeds: their iframe completes the wp-embed
- * height handshake while `position: absolute; visibility: hidden`, and a clipping
- * wrapper suppressed the child's `height` postMessage so the iframe was never
- * un-hidden (verified: ma.tt tolerated it, the wordpress.org directory pages did
- * not). border-radius on the iframe is paint-only, so it rounds youtube / spotify /
- * the provider-swapped reddit·bluesky iframe AND the WP-embed card without touching
- * the handshake. Width + aspect stay core's. */
+/* media — fill + centre only; NO theme radius. We deliberately do NOT round embed
+ * media: providers carry their own, very different corner treatments (reddit 8,
+ * spotify 12, square players, none), so imposing one corner reads inconsistent
+ * across the lane. Equally important — NEVER round via `overflow: clip` on the
+ * wrapper: a WordPress-POST embed iframe completes its wp-embed height handshake
+ * while `position: absolute; visibility: hidden`, and a clipping wrapper suppresses
+ * the child's `height` postMessage so the iframe is never un-hidden (ma.tt tolerated
+ * it; the wordpress.org directory embeds did not). Width + aspect stay core's;
+ * fixed-width provider embeds are centred (margin-inline:auto — a no-op for the
+ * full-width ones). */
 .wp-block-post-content .wp-block-embed iframe {
   display: block;
   max-inline-size: 100%;
   margin-inline: auto;
-  border-radius: var(--md-sys-shape-corner-medium);
 }
 
 /* WordPress post embeds (iframe.wp-embedded-content) ship at a fixed width="500"

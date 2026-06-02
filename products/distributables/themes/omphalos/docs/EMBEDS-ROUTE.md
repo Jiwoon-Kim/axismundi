@@ -180,6 +180,11 @@ Takeaways:
   500, tumblr 542, reddit 640) and sit left-stuck; auto margins centre them and are
   a no-op for full-width embeds. We do NOT force their width (provider interiors are
   laid out for a fixed width). Verified it does not break the WP-embed handshake.
+  - X/Twitter is a SPECIAL case: widgets.js hydrates the blockquote into a
+    fixed-width `.twitter-tweet-rendered` CONTAINER that holds the iframe, so
+    `margin-inline:auto` on the iframe only centres within that ~500px box. Centre
+    THAT container instead (`.wp-block-embed .twitter-tweet-rendered`) — verified
+    500px in a 645 column → 73px each side.
 - **EDITOR ≠ front-end (inherent; front-end is canonical)**: in the block editor
   EVERY embed is shown in a FULL-WIDTH (column-width) preview iframe, with the
   provider's fixed-width content rendered INSIDE it. So (a) `margin-inline:auto` is a

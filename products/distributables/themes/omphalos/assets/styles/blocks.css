@@ -914,6 +914,16 @@
   margin-inline: auto;
 }
 
+/* X/Twitter centring — widgets.js hydrates the blockquote into a FIXED-WIDTH
+ * `.twitter-tweet-rendered` container that holds the iframe, so `margin-inline:auto`
+ * on the iframe only centres it WITHIN that ~500px box (no effect; the box sits left
+ * in the wider column). Centre the provider OUTER container instead — still not
+ * touching the iframe interior. (`.twitter-tweet-rendered` is X-specific, so this is
+ * figure-class-agnostic across the x/twitter provider-slug variants.) */
+.wp-block-post-content .wp-block-embed .twitter-tweet-rendered {
+  margin-inline: auto;
+}
+
 /* WordPress post embeds (iframe.wp-embedded-content) ship at a fixed width="500"
  * and sit LEFT-ALIGNED in the wider content column (a ~145px dead strip on the
  * right). Unlike provider video/audio iframes — which own a fixed aspect — the WP

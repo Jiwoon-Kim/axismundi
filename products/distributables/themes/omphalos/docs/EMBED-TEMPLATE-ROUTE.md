@@ -13,8 +13,12 @@
 > structural selectors. Enqueued via `enqueue_embed_scripts` (depends on core
 > `wp-embed-template`); dark via `prefers-color-scheme`. Verified computed both
 > schemes — identical to v1 (heading 16/24, excerpt 14/20, footer 12/16; card #fff
-> light / #1d1b20 dark). Article variant ONLY; attachment (2b/2c) + activity still
-> future. WP-to-WP compatibility preserved (structure + hooks unchanged from core).
+> light / #1d1b20 dark). **Phase 2a-2 META POLICY**: a POST gets a published date in
+> the footer meta; a PAGE (static object) does NOT — verified post-only (post shows
+> "2026년 06월 02일", page omits it). The only template change from core is that
+> post-only date; hooks intact, WP-to-WP compatibility preserved. **LANE PARKED here**
+> — the article embed card is complete; attachment (2b/2c) + activity variants wait
+> on the attachment-page / metadata work, not entered yet.
 > **VQA**: dedicated page `/vqa-embed-template/` (seeded by
 > `scripts/seed-vqa-embed-template.php`) SELF-EMBEDS 5 specimens — post/page ×
 > featured-image shape (square float / rectangular hero / none) — so each renders

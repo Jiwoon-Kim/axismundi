@@ -91,6 +91,14 @@
 
 			<div class="wp-embed-meta">
 				<?php
+				// Omphalos meta policy (Phase 2a-2): a POST is temporal, so it gets a
+				// published date; a PAGE is a static object, so it does not. Everything
+				// else (site title, comments, share via the core hook) stays shared.
+				if ( 'post' === get_post_type() ) :
+					?>
+					<time class="wp-embed-meta-date" datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>"><?php echo esc_html( get_the_date() ); ?></time>
+					<?php
+				endif;
 				/** This action is documented in wp-includes/theme-compat/embed-content.php */
 				do_action( 'embed_content_meta' );
 				?>

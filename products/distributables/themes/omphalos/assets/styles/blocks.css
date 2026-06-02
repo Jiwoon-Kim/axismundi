@@ -914,13 +914,14 @@
   margin-inline: auto;
 }
 
-/* X/Twitter centring — widgets.js hydrates the blockquote into a FIXED-WIDTH
- * `.twitter-tweet-rendered` container that holds the iframe, so `margin-inline:auto`
- * on the iframe only centres it WITHIN that ~500px box (no effect; the box sits left
- * in the wider column). Centre the provider OUTER container instead — still not
- * touching the iframe interior. (`.twitter-tweet-rendered` is X-specific, so this is
- * figure-class-agnostic across the x/twitter provider-slug variants.) */
-.wp-block-post-content .wp-block-embed .twitter-tweet-rendered {
+/* Script-hydrated social centring — X (widgets.js) and Bluesky (embed.js) hydrate
+ * their blockquote into a FIXED-WIDTH container that HOLDS the iframe
+ * (`.twitter-tweet-rendered` ~500px, `.bluesky-embed` ~600px), so `margin-inline:
+ * auto` on the iframe only centres WITHIN that box (no effect — the box itself sits
+ * left in the wider column). Centre the provider OUTER container instead — still not
+ * touching the iframe interior. (Both classes are provider-specific, so this stays
+ * agnostic to the provider-slug figure variants.) */
+.wp-block-post-content .wp-block-embed :is(.twitter-tweet-rendered, .bluesky-embed) {
   margin-inline: auto;
 }
 

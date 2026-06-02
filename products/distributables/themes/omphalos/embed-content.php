@@ -13,51 +13,67 @@
  * web embed compatibility is preserved. attachment / activity variants are a later
  * phase (EMBED-TEMPLATE-ROUTE §10.1, §8 Phase 2b/2c).
  *
+ * The featured-image shape + presence are computed UP FRONT and emitted as state
+ * classes on `.wp-embed` (the class route — no `:has()`, friendlier to the embed
+ * iframe document and to future object/activity variant routing):
+ *   has-embed-media / has-no-embed-media
+ *   is-embed-media-rectangular / is-embed-media-square
+ * The shape-adaptive treatment (rectangular → hero band, no-media → accent rail,
+ * square → core float) lives in embed.css.
+ *
  * @package Omphalos
  */
-?>
-	<div <?php post_class( 'wp-embed' ); ?>>
-		<?php
-		$thumbnail_id = 0;
 
-		if ( has_post_thumbnail() ) {
-			$thumbnail_id = get_post_thumbnail_id();
-		}
+$thumbnail_id = 0;
 
-		if ( 'attachment' === get_post_type() && wp_attachment_is_image() ) {
-			$thumbnail_id = get_the_ID();
-		}
+if ( has_post_thumbnail() ) {
+	$thumbnail_id = get_post_thumbnail_id();
+}
 
-		/** This filter is documented in wp-includes/theme-compat/embed-content.php */
-		$thumbnail_id = apply_filters( 'embed_thumbnail_id', $thumbnail_id );
+if ( 'attachment' === get_post_type() && wp_attachment_is_image() ) {
+	$thumbnail_id = get_the_ID();
+}
 
-		if ( $thumbnail_id ) {
-			$aspect_ratio = 1;
-			$measurements = array( 1, 1 );
-			$image_size   = 'full'; // Fallback.
+/** This filter is documented in wp-includes/theme-compat/embed-content.php */
+$thumbnail_id = apply_filters( 'embed_thumbnail_id', $thumbnail_id );
 
-			$meta = wp_get_attachment_metadata( $thumbnail_id );
-			if ( ! empty( $meta['sizes'] ) ) {
-				foreach ( $meta['sizes'] as $size => $data ) {
-					if ( $data['height'] > 0 && $data['width'] / $data['height'] > $aspect_ratio ) {
-						$aspect_ratio = $data['width'] / $data['height'];
-						$measurements = array( $data['width'], $data['height'] );
-						$image_size   = $size;
-					}
-				}
+$image_size = 'full';
+$shape      = '';
+
+if ( $thumbnail_id ) {
+	$aspect_ratio = 1;
+	$measurements = array( 1, 1 );
+
+	$meta = wp_get_attachment_metadata( $thumbnail_id );
+	if ( ! empty( $meta['sizes'] ) ) {
+		foreach ( $meta['sizes'] as $size => $data ) {
+			if ( $data['height'] > 0 && $data['width'] / $data['height'] > $aspect_ratio ) {
+				$aspect_ratio = $data['width'] / $data['height'];
+				$measurements = array( $data['width'], $data['height'] );
+				$image_size   = $size;
 			}
-
-			/** This filter is documented in wp-includes/theme-compat/embed-content.php */
-			$image_size = apply_filters( 'embed_thumbnail_image_size', $image_size, $thumbnail_id );
-
-			$shape = $measurements[0] / $measurements[1] >= 1.75 ? 'rectangular' : 'square';
-
-			/** This filter is documented in wp-includes/theme-compat/embed-content.php */
-			$shape = apply_filters( 'embed_thumbnail_image_shape', $shape, $thumbnail_id );
 		}
+	}
 
-		if ( $thumbnail_id && 'rectangular' === $shape ) :
-			?>
+	/** This filter is documented in wp-includes/theme-compat/embed-content.php */
+	$image_size = apply_filters( 'embed_thumbnail_image_size', $image_size, $thumbnail_id );
+
+	$shape = $measurements[0] / $measurements[1] >= 1.75 ? 'rectangular' : 'square';
+
+	/** This filter is documented in wp-includes/theme-compat/embed-content.php */
+	$shape = apply_filters( 'embed_thumbnail_image_shape', $shape, $thumbnail_id );
+}
+
+// State classes drive the shape-adaptive treatment in embed.css (class route).
+$embed_classes   = array( 'wp-embed' );
+$embed_classes[] = $thumbnail_id ? 'has-embed-media' : 'has-no-embed-media';
+if ( $shape ) {
+	$embed_classes[] = 'is-embed-media-' . $shape;
+}
+?>
+	<div <?php post_class( $embed_classes ); ?>>
+
+		<?php if ( $thumbnail_id && 'rectangular' === $shape ) : ?>
 			<div class="wp-embed-featured-image rectangular">
 				<a href="<?php the_permalink(); ?>" target="_top">
 					<?php echo wp_get_attachment_image( $thumbnail_id, $image_size ); ?>

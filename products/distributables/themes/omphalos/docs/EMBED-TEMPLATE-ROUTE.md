@@ -274,9 +274,25 @@ magazine feel). All step the title up to title-large and clamp the excerpt. They
 too strong / too divergent from core's square-float ontology to be the WP-to-WP
 DEFAULT; they belong to the future Object/Activity Card system as per-TYPE variants
 (e.g. attachment → Hero, activity → Split), introduced as opt-in `.ev--*` modifiers.
-The default `/embed/` stays the core-faithful article card. One refinement WAS adopted
-from the review: `.wp-embed { display: flow-root }` to contain the square float via a
-BFC (verified — heights / 200px floor / float intact).
+Rather than ship the directions as separate variants, the default card was made
+**SHAPE-ADAPTIVE** — it respects core's featured-image branch and only changes the
+TREATMENT per shape (this read more natural than full variants):
+
+```txt
+rectangular featured → HERO     : a consistent 16:9 media band above the title
+square featured      → core FLOAT: small thumb + text wrap (compact, unchanged)
+no featured image    → SPLIT-ish : a primary accent rail down the start edge
+                                   (also gives the 200px-floor card an intentional
+                                    object silhouette instead of dead space)
+```
+
+Driven by **state classes** the owned `embed-content.php` computes up front and emits
+on `.wp-embed` (the CLASS route, not `:has()` — friendlier to the embed iframe doc
+and to future object/activity variant routing): `has-embed-media` /
+`has-no-embed-media` / `is-embed-media-{rectangular,square}`. Also adopted from the
+review: `.wp-embed { display: flow-root }` to contain the square float via a BFC.
+Verified both schemes on /vqa-embed-template/ — heights / 200px floor / square float
+all intact; rectangular shows the 16:9 hero band, no-image the accent rail.
 
 ### 10.2 — Typography consumes the existing typescale contract
 No new embed-only type. Same rule as the collection lane:

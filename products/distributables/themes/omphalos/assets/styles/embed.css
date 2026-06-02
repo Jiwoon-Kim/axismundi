@@ -97,6 +97,35 @@ body { margin: 0; }
 .wp-embed .wp-embed-featured-image img { border-radius: var(--md-sys-shape-corner-small, 8px); }
 .wp-embed .wp-embed-featured-image.square { margin-inline-end: var(--space-md, 16px); }
 
+/* shape-adaptive treatment — the layout follows what the post HAS, driven by the
+ * state classes embed-content.php puts on `.wp-embed` (class route, no :has()):
+ *   rectangular featured → HERO: a consistent 16:9 media band above the title
+ *   square featured      → the core FLOAT (image beside the content) — unchanged
+ *   no featured image    → SPLIT silhouette: a primary accent rail down the start
+ *     (also gives the otherwise-empty 200px-floor card an intentional object look). */
+.wp-embed .wp-embed-featured-image.rectangular {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-small, 8px);
+}
+.wp-embed .wp-embed-featured-image.rectangular a { display: block; block-size: 100%; }
+.wp-embed .wp-embed-featured-image.rectangular img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+.wp-embed.has-no-embed-media { position: relative; }
+.wp-embed.has-no-embed-media::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 3px;
+  background: var(--md-sys-color-primary, #6750a4);
+  border-start-start-radius: var(--md-sys-shape-corner-medium, 12px);
+  border-end-start-radius: var(--md-sys-shape-corner-medium, 12px);
+}
+
 /* footer — LAYOUT (typography = t-body-small) */
 .wp-embed .wp-embed-footer {
   display: flex;

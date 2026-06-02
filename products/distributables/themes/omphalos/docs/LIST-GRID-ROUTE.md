@@ -189,20 +189,25 @@ separate grid section is folded in):
   the WIDTH (`featuredImageSizeWidth`) + ALIGNMENT (`featuredImageAlign` -> core's
   alignleft/alignright/aligncenter placement). The theme never hardcodes a width or
   forces a float.
-- typography (list + grid): title = on-surface headline at **title-small**, no
-  resting underline (underline on hover/focus, offset .15em); meta = body-small
-  on-surface-variant; excerpt = body-medium on-surface-variant. (title-small
-  everywhere for now - the narrow grid card wraps title-medium too much; bump the
-  LP list later if it reads weak.) These are the CSS equivalent of the theme's
-  typescale utilities (`.t-title-small` / `.t-body-small` / `.t-body-medium`),
-  applied by selector because the blocks are DYNAMIC (PHP render can't carry a
-  utility class) — a future `render_block` filter could inject the classes.
-- card interior rhythm: the card PADDING owns all four edges; stacked items are a
-  uniform `--space-xs` apart. core's ad-hoc per-element margins are reset first
-  (latest-posts excerpt `0.5em / 1em`, centred featured-image `1em`) — they left an
-  uneven rhythm: title->meta gap 0, and the LAST child doubled its `1em` (~14px)
-  bottom margin against the 16px card padding (~30px bottom edge). Margin-based (not
-  flex `gap`) because featuredImageAlign uses float, which a flex container drops.
+- typography (list + grid): title = on-surface headline at **title-medium (16/24)**,
+  no resting underline (underline on hover/focus, offset .15em); meta = body-small
+  (12/16) on-surface-variant; excerpt = body-medium (14/20) on-surface-variant. The
+  title MUST out-rank the excerpt — at title-small they were both 14/20, which
+  flattened the hierarchy so the title read as body text regardless of underline.
+  The underline policy is IDENTICAL for latest-posts and rss (a one-sided underline
+  would be a bug). These are the CSS equivalent of the theme's typescale utilities
+  (`.t-title-medium` / `.t-body-small` / `.t-body-medium`), applied by selector
+  because the blocks are DYNAMIC (PHP render can't carry a utility class) — a future
+  `render_block` filter could inject the classes.
+- card interior rhythm: the card PADDING (`--space-md`) owns all four edges; stacked
+  items are a generic `--space-xs` apart, EXCEPT the excerpt (the body summary),
+  which gets `--space-sm` above so it doesn't read cramped under the meta. core's
+  ad-hoc per-element margins are reset first (latest-posts excerpt `0.5em / 1em`,
+  centred featured-image `1em`) — they left an uneven rhythm: title->meta gap 0, and
+  the LAST child doubled its `1em` (~14px) bottom margin against the 16px card padding
+  (~30px bottom edge). Margin-based (not flex `gap`) because featuredImageAlign uses
+  float, which a flex container drops. Rhythm: title→meta 4px, meta→excerpt 8px,
+  edges 16px — verified computed both schemes across LP/RSS × list/grid.
 
 Every collection gap is **--space-md (16px)**, consistent across LP list, both
 grids, and mobile row gaps. Verified computed both schemes + at desktop 900

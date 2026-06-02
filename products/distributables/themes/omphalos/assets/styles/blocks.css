@@ -838,21 +838,23 @@
  * just add `class="… t-title-small"`). A future `render_block` filter (HTML Tag
  * Processor) could inject the classes and retire this duplication.
  *
- * The title is the item HEADLINE, not a body link: drop the prose blue/underline at
- * rest (in a card where the whole item is the affordance an underlined link reads
- * as body text and weakens the title); underline on hover/focus only. title-small
- * everywhere for now — the narrow grid card wraps title-medium too much; bump the
- * LP list later if it reads weak. */
+ * The title is the item HEADLINE, not a body link, and must OUT-RANK the
+ * body-medium (14/20) excerpt — so it is title-MEDIUM (16/24). title-small collided
+ * with the excerpt size (both 14/20) and flattened the hierarchy, which made the
+ * title read as body text regardless of the underline. Drop the prose blue/underline
+ * at rest (in a card where the whole item is the affordance an underlined link reads
+ * as body text and weakens the title); underline on hover/focus only. The policy is
+ * IDENTICAL for latest-posts and rss — a one-sided underline would be a bug. */
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-title,
 .wp-block-post-content .wp-block-rss .wp-block-rss__item-title a {
-  /* = .t-title-small + headline colour, no resting underline */
+  /* = .t-title-medium + headline colour, no resting underline */
   color: var(--md-sys-color-on-surface);
   text-decoration: none;
-  font-family: var(--md-sys-typescale-title-small-font);
-  font-size: var(--md-sys-typescale-title-small-size);
-  line-height: var(--md-sys-typescale-title-small-line-height);
-  font-weight: var(--md-sys-typescale-title-small-weight);
-  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+  font-family: var(--md-sys-typescale-title-medium-font);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+  font-weight: var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
 }
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-title:hover,
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-title:focus-visible,
@@ -869,8 +871,11 @@
 }
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-excerpt,
 .wp-block-post-content .wp-block-rss .wp-block-rss__item-excerpt {
-  /* = .t-body-medium; vertical spacing is owned by the card interior rhythm above */
+  /* = .t-body-medium. The excerpt is the body summary, so it gets a wider gap than
+   * the generic --space-xs sibling rhythm — --space-sm above (more specific than the
+   * owl rule above, so it wins) keeps it from reading cramped under the meta. */
   color: var(--md-sys-color-on-surface-variant);
   font-size: var(--md-sys-typescale-body-medium-size);
   line-height: var(--md-sys-typescale-body-medium-line-height);
+  margin-block-start: var(--space-sm);
 }

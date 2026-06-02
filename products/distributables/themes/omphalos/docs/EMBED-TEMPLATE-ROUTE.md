@@ -24,7 +24,9 @@
 
 The compatibility asymmetry is the whole point: when we CONSUME a third-party WP
 embed we cannot normalise its interior (ma.tt's rules, wordpress.com's rules,
-wordpress.org's rules). When we PROVIDE our embed we set the policy.
+wordpress.org's rules). When we PROVIDE our embed we set the policy — and our
+provided card is an **OBJECT CARD system** (§10.1), not merely a post card:
+`article` is only its first variant.
 
 ---
 
@@ -203,4 +205,76 @@ embed_site_title_html                  site name / logo markup
 - No CSS / hooks yet (this doc is the diagnostic baseline).
 - No parent↔iframe scheme synchronisation (out of WP-to-WP standard compat).
 - No `--comp-*` dependency in the embed layer.
-- No change to the consumer `core/embed` BLOCK lane (EMBEDS-ROUTE.md is closed).
+- No change to the consumer `core/embed` BLOCK lane (EMBEDS-ROUTE.md).
+
+---
+
+## §10 — Locked pre-implementation decisions (before any `embed.css`)
+
+The layout build is on HOLD (provider experiments in the consumer lane come first).
+These three are fixed now so the first cut does not close the surface as a mere
+"post card".
+
+### 10.1 — `/embed/` is an OBJECT CARD surface, not a Post Card
+The core DOM is post-shaped, but Omphalos/Axismundi treat `/embed/` as an Object
+Card SYSTEM; the WordPress post embed is just the `article` variant. Keep the shell
++ variants open:
+
+```txt
+article / post            ← first variant (this lane's first cut)
+note                      (short, ActivityPub-style)
+attachment:image          ← Omphalos attachment-page family
+attachment:video
+attachment:audio
+activity:like             ← actor + "liked" + object preview   (needs AP bridge)
+activity:announce (boost) ← actor + "boosted" + object card     (needs AP bridge)
+```
+
+Split of ownership: the THEME owns the card shell + variant LAYOUT + M3 tokens +
+media rendering; `object_type` / `activity_type` / actor·object metadata come from
+the **ActivityPub plugin/bridge** (it injects a class/context, e.g.
+`.ax-embed--object-note`). Objects (article / note / attachment) are partly
+theme-doable via `get_post_type()` / MIME / featured image; activities (like / boost
+/ reply) need the AP data bridge (actor, object, target, published, attribution).
+Design the shell to RECEIVE variants — do not hardcode "post card".
+
+### 10.2 — Typography consumes the existing typescale contract
+No new embed-only type. Same rule as the collection lane:
+
+```txt
+owned / copied template   → attach t-* utility classes
+                            (t-title-medium / t-body-medium / t-body-small)
+untouched core template   → selector-based utility EQUIVALENT using --md-sys-typescale-*
+font-family NAMES may be declared; @font-face is NOT enqueued into the embed iframe
+```
+
+Declaring brand font NAMES is compatibility-safe: with no `@font-face` there is no
+download, and an absent font simply falls through. Korean falls back Noto Sans KR →
+system. Canonical stack:
+
+```css
+font-family: var(--md-sys-typescale-body-medium-font,
+  "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
+  "Segoe UI", sans-serif);
+```
+
+### 10.3 — Token loading: self-contained first (A), embed-safe subset later (B)
+The embed doc is isolated. The FIRST cut is **A**: `embed.css` is SELF-CONTAINED —
+`var(--md-sys-*, <core-compatible fallback>)` everywhere; do NOT enqueue the full
+`tokens.ref/sys.*` into the iframe (too heavy for a portable compat surface). Dark
+gets a `prefers-color-scheme` fallback so it works even with no token layer:
+
+```css
+@media (prefers-color-scheme: dark) {
+  .wp-embed {
+    background:   var(--md-sys-color-surface-container-low, #1d1b20);
+    color:        var(--md-sys-color-on-surface, #e6e0e9);
+    border-color: var(--md-sys-color-outline-variant, #49454f);
+    color-scheme: dark;
+  }
+}
+```
+
+LATER = **B**: a small shared `embed.tokens.css` (color / shape / space / typescale
+subset) for Omphalos ↔ future Axismundi theme. Never depend on `--comp-*` in the
+embed layer.

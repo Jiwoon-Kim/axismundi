@@ -5,8 +5,13 @@
 > here) via the `/embed/` oEmbed endpoint. This is the OTHER half of the embeds work:
 > the `core/embed` BLOCK lane (`docs/EMBEDS-ROUTE.md`) is the CONSUMER side (external
 > content inside our post); THIS is the PROVIDER side (our content as an object card).
-> **Status**: route + CSS-0 diagnostic of the core default embed template. **No CSS,
-> no hooks wired yet.** Implementation is the NEXT step.
+> **Status**: route + CSS-0 diagnostic + **Phase 1 (article card v1) IMPLEMENTED** —
+> `assets/styles/embed.css` enqueued via `enqueue_embed_scripts` (depends on core
+> `wp-embed-template` so it wins order; child selectors `.wp-embed <child>` to beat
+> core's `p.wp-embed-heading` specificity). Self-contained token-aware-with-fallback;
+> dark via `prefers-color-scheme`. Verified computed both schemes (light: heading
+> title-medium 16/24 on-surface, card #fff/outline; dark: card #1d1b20, heading
+> #e6e0e9, excerpt #cac4d0). Object/activity variants still future.
 > **Date**: 2026-06-02 · WP 7.0 · M3 Expressive.
 
 ---

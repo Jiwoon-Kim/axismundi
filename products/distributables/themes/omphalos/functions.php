@@ -107,6 +107,23 @@ function omphalos_enqueue_assets() : void {
 add_action( 'wp_enqueue_scripts', 'omphalos_enqueue_assets' );
 
 /**
+ * Load the /embed/ Object Card stylesheet INSIDE the embed iframe document only
+ * (the card our posts render as when embedded elsewhere). Self-contained and
+ * token-aware-with-fallbacks; deliberately NO token CSS and NO @font-face are
+ * enqueued into the iframe (font NAMES fall through). See
+ * docs/EMBED-TEMPLATE-ROUTE.md §10. Article/post variant v1.
+ */
+function omphalos_enqueue_embed_styles() : void {
+	$uri = omphalos_asset_uri( 'assets/styles/embed.css' );
+	if ( null !== $uri ) {
+		// Depend on core's `wp-embed-template` so our card styles print AFTER its
+		// inline CSS and win on equal specificity (no !important needed).
+		wp_enqueue_style( 'omphalos-embed', $uri, array( 'wp-embed-template' ), OMPHALOS_VERSION );
+	}
+}
+add_action( 'enqueue_embed_scripts', 'omphalos_enqueue_embed_styles' );
+
+/**
  * Register Omphalos block pattern categories.
  */
 function omphalos_register_pattern_categories() : void {

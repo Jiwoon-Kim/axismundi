@@ -243,6 +243,15 @@ theme-doable via `get_post_type()` / MIME / featured image; activities (like / b
 / reply) need the AP data bridge (actor, object, target, published, attribution).
 Design the shell to RECEIVE variants — do not hardcode "post card".
 
+**NOT the ActivityPub s2s render path (correction).** `/embed/` is the WP-to-WP /
+web **iframe card our content is CONSUMED as** — a presentation surface. It is NOT
+ActivityPub server-to-server rendering, which is a SEPARATE lane: receive remote AP
+**JSON-LD** → our server interprets the object/activity → render local HTML. The two
+only SHARE the card **ONTOLOGY** (article / note / attachment / like / boost
+layouts); the implementation SURFACES differ (iframe embed template vs a JSON-LD
+renderer). So reuse the variant-layout system across both, but keep the lanes
+distinct — earlier notes over-coupled `/embed/` to AP s2s.
+
 ### 10.2 — Typography consumes the existing typescale contract
 No new embed-only type. Same rule as the collection lane:
 

@@ -36,9 +36,11 @@ IFRAME (12)        ma.tt · wordpress.com · gutenbergtimes
 BLOCKQUOTE + <script> (2)   bluesky (.bluesky-embed) · reddit (.reddit-embed-bq)
                             → the provider script swaps the quote for an iframe
                               client-side within ~1s
-RAW/URL fallback (5)   mastodon · x/twitter · threads · instagram · example.com
+RAW/URL fallback (4)   mastodon · threads · instagram · example.com
                        → unresolved: the wrapper keeps the BARE URL as text
                          (not even an <a>), one line ~24px tall
+                       (x/twitter is NOT fixed here — it is conditionally
+                        script-hydrated; see the correction below)
 LINK + <script> (1)    tumblr
 ```
 
@@ -244,11 +246,26 @@ Don't:
 
 ## §6 — Fragile providers & fallback policy
 
-`x/twitter`, `threads`, `instagram` (and often `mastodon`, `tumblr`) need
-auth/script policies that fail under wp-env / server-side oEmbed; at CSS-0 they fall
-to the RAW/URL bucket. They are kept in an explicit **"expected fallback"** section
-of the specimen and are acceptance-tested ONLY for the fallback-card contract, never
-for a live provider render. A distributable theme must degrade gracefully here.
+`threads`, `instagram` (and often `mastodon`, `tumblr`) need auth/script policies
+that fail under wp-env / server-side oEmbed; at CSS-0 they fall to the RAW/URL bucket
+and are acceptance-tested ONLY for the fallback-card contract.
+
+**`x/twitter` is FRAGILE / SCRIPT-HYDRATED, not a guaranteed raw fallback** (see §2b):
+a fresh CLI `wp_oembed_get()` is FALSE, but the editor REST-proxy can cache a
+`twitter-tweet` blockquote + `platform.x.com/widgets.js` that the front-end then
+hydrates to a `platform.twitter.com` iframe. So X has TWO coexisting states (cache
+present → embeds; cache absent → raw). Do not assert one CLI result as truth — the
+hydrated runtime DOM is.
+
+**theme param (opt-in, fragile layer — NOT the base contract).** X's widget defaults
+`theme=light` because the blockquote carries no hint; the lever is the provider's
+INPUT (`blockquote[data-theme]` for X; a URL/iframe param for Bluesky; Pinterest
+likely none), not CSS. A pure server-side `data-theme` is fixed at render. BUT
+Omphalos already sets `data-theme` in a head script BEFORE paint, so a client init JS
+could inject the provider hint BEFORE `widgets.js` runs and follow the real scheme.
+That is a per-provider fragile experiment lane, kept OUT of the default consume-side
+contract (we respect the provider interior by default). A distributable theme must
+degrade gracefully regardless.
 
 ---
 

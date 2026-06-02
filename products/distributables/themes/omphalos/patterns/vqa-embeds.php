@@ -13,18 +13,19 @@
  *              HTML at render. So the DOM shape is provider-dependent and falls into
  *              three buckets — (1) IFRAME (youtube/ted/videopress/spotify): theme
  *              owns the outer frame only; (2) BLOCKQUOTE + provider <script>
- *              (reddit/bluesky/mastodon): the script upgrades the quote client-side,
- *              theme styles only the pre-script fallback; (3) LINK fallback when the
+ *              (reddit/bluesky): the script upgrades the quote client-side, theme
+ *              styles only the pre-script fallback; (3) LINK fallback when the
  *              provider is unsupported/unreachable: theme owns a fallback card. The
  *              theme must NEVER style inside the provider iframe/script UI.
  *
  *              oEmbed is an external fetch: the first render of this page populates
- *              the per-post _oembed_* cache. Fragile providers (X/Threads/Instagram)
- *              need auth/script policies that usually fail in wp-env — they are kept
- *              in an explicit "expected fallback" section, NOT treated as test
- *              failures. URLs are public WordPress-ecosystem references; no personal
- *              accounts. Provider/type classes here are authored to the documented
- *              oEmbed result and re-verified against the rendered DOM in the route doc.
+ *              the per-post _oembed_* cache. Fragile providers (X / Tumblr) depend on
+ *              auth/script policies and oEmbed state — they may hydrate (X via
+ *              widgets.js) or fall back to a link; the LINK fallback is NOT treated
+ *              as a test failure (the hydrated runtime DOM is the truth, not one CLI
+ *              call). URLs are public WordPress-ecosystem references; no personal
+ *              accounts. Provider/type classes here mirror the documented oEmbed
+ *              result and are re-verified against the rendered DOM in the route doc.
  *
  * @package Omphalos
  */
@@ -41,14 +42,14 @@
 <h2 class="wp-block-heading">1. Article / WordPress ecosystem</h2>
 <!-- /wp:heading -->
 
-<!-- wp:embed {"url":"https://ma.tt/2026/04/theopensource/","type":"wp-embed","providerNameSlug":"ma-tt"} -->
-<figure class="wp-block-embed is-type-wp-embed is-provider-ma-tt wp-block-embed-ma-tt"><div class="wp-block-embed__wrapper">
+<!-- wp:embed {"url":"https://ma.tt/2026/04/theopensource/","type":"wp-embed","providerNameSlug":"matt-mullenweg"} -->
+<figure class="wp-block-embed is-type-wp-embed is-provider-matt-mullenweg wp-block-embed-matt-mullenweg"><div class="wp-block-embed__wrapper">
 https://ma.tt/2026/04/theopensource/
 </div></figure>
 <!-- /wp:embed -->
 
-<!-- wp:embed {"url":"https://wordpress.com/blog/2026/05/28/reader-social-bluesky-mastodon-fediverse/","type":"wp-embed","providerNameSlug":"wordpress-com"} -->
-<figure class="wp-block-embed is-type-wp-embed is-provider-wordpress-com wp-block-embed-wordpress-com"><div class="wp-block-embed__wrapper">
+<!-- wp:embed {"url":"https://wordpress.com/blog/2026/05/28/reader-social-bluesky-mastodon-fediverse/","type":"wp-embed","providerNameSlug":"wordpress-com-news"} -->
+<figure class="wp-block-embed is-type-wp-embed is-provider-wordpress-com-news wp-block-embed-wordpress-com-news"><div class="wp-block-embed__wrapper">
 https://wordpress.com/blog/2026/05/28/reader-social-bluesky-mastodon-fediverse/
 </div></figure>
 <!-- /wp:embed -->
@@ -59,14 +60,14 @@ https://gutenbergtimes.com/wordpress-7-0-source-of-truth/
 </div></figure>
 <!-- /wp:embed -->
 
-<!-- wp:embed {"url":"https://wordpress.org/plugins/activitypub/","type":"wp-embed","providerNameSlug":"wordpress-org"} -->
-<figure class="wp-block-embed is-type-wp-embed is-provider-wordpress-org wp-block-embed-wordpress-org"><div class="wp-block-embed__wrapper">
+<!-- wp:embed {"url":"https://wordpress.org/plugins/activitypub/","type":"wp-embed","providerNameSlug":"plugin-directory"} -->
+<figure class="wp-block-embed is-type-wp-embed is-provider-plugin-directory wp-block-embed-plugin-directory"><div class="wp-block-embed__wrapper">
 https://wordpress.org/plugins/activitypub/
 </div></figure>
 <!-- /wp:embed -->
 
-<!-- wp:embed {"url":"https://wordpress.org/themes/twentytwentyfive/","type":"wp-embed","providerNameSlug":"wordpress-org"} -->
-<figure class="wp-block-embed is-type-wp-embed is-provider-wordpress-org wp-block-embed-wordpress-org"><div class="wp-block-embed__wrapper">
+<!-- wp:embed {"url":"https://wordpress.org/themes/twentytwentyfive/","type":"wp-embed","providerNameSlug":"theme-directory"} -->
+<figure class="wp-block-embed is-type-wp-embed is-provider-theme-directory wp-block-embed-theme-directory"><div class="wp-block-embed__wrapper">
 https://wordpress.org/themes/twentytwentyfive/
 </div></figure>
 <!-- /wp:embed -->
@@ -75,8 +76,8 @@ https://wordpress.org/themes/twentytwentyfive/
 <h2 class="wp-block-heading">2. Video</h2>
 <!-- /wp:heading -->
 
-<!-- wp:embed {"url":"https://wordpress.tv/2025/07/14/wceu-2025-after-movie/","type":"video","providerNameSlug":"videopress","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
-<figure class="wp-block-embed is-type-video is-provider-videopress wp-block-embed-videopress wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+<!-- wp:embed {"url":"https://wordpress.tv/2025/07/14/wceu-2025-after-movie/","type":"video","providerNameSlug":"wordpress-tv-embed","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
+<figure class="wp-block-embed is-type-video is-provider-wordpress-tv-embed wp-block-embed-wordpress-tv-embed wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
 https://wordpress.tv/2025/07/14/wceu-2025-after-movie/
 </div></figure>
 <!-- /wp:embed -->
@@ -103,15 +104,9 @@ https://www.ted.com/talks/matt_mullenweg_why_working_from_home_is_good_for_busin
 <h2 class="wp-block-heading">3. Social / Fediverse</h2>
 <!-- /wp:heading -->
 
-<!-- wp:embed {"url":"https://bsky.app/profile/wordpress.org/post/3mmcnxsbl7323","type":"rich","providerNameSlug":"bluesky"} -->
-<figure class="wp-block-embed is-type-rich is-provider-bluesky wp-block-embed-bluesky"><div class="wp-block-embed__wrapper">
+<!-- wp:embed {"url":"https://bsky.app/profile/wordpress.org/post/3mmcnxsbl7323","type":"rich","providerNameSlug":"bluesky-social"} -->
+<figure class="wp-block-embed is-type-rich is-provider-bluesky-social wp-block-embed-bluesky-social"><div class="wp-block-embed__wrapper">
 https://bsky.app/profile/wordpress.org/post/3mmcnxsbl7323
-</div></figure>
-<!-- /wp:embed -->
-
-<!-- wp:embed {"url":"https://mastodon.world/@WordPress/116608604100921521","type":"rich","providerNameSlug":"mastodon"} -->
-<figure class="wp-block-embed is-type-rich is-provider-mastodon wp-block-embed-mastodon"><div class="wp-block-embed__wrapper">
-https://mastodon.world/@WordPress/116608604100921521
 </div></figure>
 <!-- /wp:embed -->
 
@@ -141,9 +136,9 @@ https://soundcloud.com/taalexer/cold-glass
 <h2 class="wp-block-heading">5. Image / Pin</h2>
 <!-- /wp:heading -->
 
-<!-- wp:embed {"url":"https://kr.pinterest.com/pin/1086212003911511156/","type":"rich","providerNameSlug":"pinterest"} -->
+<!-- wp:embed {"url":"https://kr.pinterest.com/pin/817403401161299388/","type":"rich","providerNameSlug":"pinterest"} -->
 <figure class="wp-block-embed is-type-rich is-provider-pinterest wp-block-embed-pinterest"><div class="wp-block-embed__wrapper">
-https://kr.pinterest.com/pin/1086212003911511156/
+https://kr.pinterest.com/pin/817403401161299388/
 </div></figure>
 <!-- /wp:embed -->
 
@@ -155,21 +150,9 @@ https://kr.pinterest.com/pin/1086212003911511156/
 <p>auth/script 정책 때문에 wp-env/oEmbed에서 자주 실패한다. fallback(링크)로 떨어지는 것이 정상이며 테스트 실패로 보지 않는다.</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:embed {"url":"https://x.com/WordPress/status/1868689630931059186","type":"rich","providerNameSlug":"twitter"} -->
-<figure class="wp-block-embed is-type-rich is-provider-twitter wp-block-embed-twitter"><div class="wp-block-embed__wrapper">
-https://x.com/WordPress/status/1868689630931059186
-</div></figure>
-<!-- /wp:embed -->
-
-<!-- wp:embed {"url":"https://www.threads.com/@wordpress/post/DYkpR-EGLkF","type":"rich","providerNameSlug":"threads"} -->
-<figure class="wp-block-embed is-type-rich is-provider-threads wp-block-embed-threads"><div class="wp-block-embed__wrapper">
-https://www.threads.com/@wordpress/post/DYkpR-EGLkF
-</div></figure>
-<!-- /wp:embed -->
-
-<!-- wp:embed {"url":"https://www.instagram.com/p/DYkuHnHGCXE/","type":"rich","providerNameSlug":"instagram"} -->
-<figure class="wp-block-embed is-type-rich is-provider-instagram wp-block-embed-instagram"><div class="wp-block-embed__wrapper">
-https://www.instagram.com/p/DYkuHnHGCXE/
+<!-- wp:embed {"url":"https://twitter.com/WordPress/status/1868689630931059186","type":"rich","providerNameSlug":"x","responsive":true} -->
+<figure class="wp-block-embed is-type-rich is-provider-x wp-block-embed-x"><div class="wp-block-embed__wrapper">
+https://twitter.com/WordPress/status/1868689630931059186
 </div></figure>
 <!-- /wp:embed -->
 

@@ -28,11 +28,16 @@ This wp-env **does** resolve oEmbed (outbound network OK), so the curated specim
 CSS-0 inventory of the 18 specimens:
 
 ```txt
-IFRAME (12)        ma.tt · wordpress.com · gutenbergtimes  (WordPress post embeds)
-                   wordpress.org/plugins/activitypub · wordpress.org/themes/twentytwentyfive
+IFRAME (10)        ma.tt · wordpress.com · gutenbergtimes  (WordPress post embeds)
                    wordpress.tv · videopress · youtube · ted   (video, 16:9 aspect)
                    spotify · soundcloud   (audio, provider-rounded iframe)
                    pinterest
+WP-EMBED FALLBACK (2)   wordpress.org/plugins/activitypub · /themes/twentytwentyfive
+                        → a plugin/theme DIRECTORY page is not a normal post embed:
+                          oEmbed discovery yields a wp-embed iframe to `.../embed/`
+                          that fails to load (the URL even doubles the `#?secret=`),
+                          so wp-embed.js never gets a height and the
+                          `blockquote.wp-embedded-content` titled-link fallback stays
 BLOCKQUOTE + <script> (2)   bluesky (.bluesky-embed) · reddit (.reddit-embed-bq)
                             → the provider script swaps the quote for an iframe
                               client-side within ~1s
@@ -96,8 +101,14 @@ C. RAW/URL fallback (unsupported / unreachable provider)
   (do not set width/height/aspect-ratio ourselves).
 - **Caption**: `figcaption.wp-element-caption` → body-small / on-surface-variant
   with a small top margin (matches the media-VQA caption contract).
-- **Fallback card**: the RAW/URL bucket → a filled, outlined card with the URL as a
-  link. This is theme-owned chrome, NOT a provider concern.
+- **Fallback card**: the RAW/URL bucket → a filled, outlined SURFACE around the bare
+  URL text (CSS can't make it a link — that's the deferred render_block step). The
+  separate **WP-embed fallback** (`blockquote.wp-embedded-content`, shown when a WP
+  post embed can't load — e.g. a wordpress.org directory page) ALREADY contains a
+  real `<a>`, so the same surface makes it a proper fallback LINK card. wp-embed.js
+  hides this blockquote on a successful iframe load, so the styling only shows on
+  failure; provider blockquotes (`.reddit-embed-bq` / `.bluesky-embed`) are a
+  different class and are not matched.
 - **Alignment**: respect `alignwide` / `alignfull` / `aligncenter` (core layout).
 - **WordPress-post embeds** (`iframe.wp-embedded-content` — ma.tt, wordpress.com,
   gutenbergtimes, wordpress.org plugins/themes): ship at a fixed `width="500"`,

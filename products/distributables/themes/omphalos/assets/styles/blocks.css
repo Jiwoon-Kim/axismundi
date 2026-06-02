@@ -939,3 +939,20 @@
   line-height: var(--md-sys-typescale-body-small-line-height);
   overflow-wrap: anywhere;
 }
+
+/* WordPress-embed fallback (blockquote.wp-embedded-content) — WP's OWN no-JS /
+ * failed-load fallback, a titled LINK. wp-embed.js sets it display:none once the
+ * iframe loads successfully, so this surfaces ONLY when the embed can't render
+ * (e.g. a wordpress.org plugin/theme DIRECTORY page, which has no working /embed/
+ * endpoint and so leaves the blockquote). Unlike the raw-URL bucket this fallback
+ * already contains a real <a>, so the same quiet surface makes it a proper fallback
+ * LINK card. (provider blockquotes — .reddit-embed-bq / .bluesky-embed — are a
+ * different class and are NOT matched here; their script upgrades them.) */
+.wp-block-post-content .wp-block-embed blockquote.wp-embedded-content {
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--space-md);
+  background-color: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}

@@ -119,8 +119,19 @@ Takeaways:
 - **Radius**: our `corner-medium` (12) applies to every iframe, but a provider's
   own inline radius wins (reddit 8, spotify 12) — fine, the provider owns its chrome.
 - **Buckets confirm**: stable iframe (youtube/ted/videopress/spotify/soundcloud),
-  script-hydrated (reddit/bluesky/tumblr), raw fallback (mastodon/x/instagram/threads);
+  script-hydrated (reddit/bluesky/tumblr), raw fallback (mastodon/instagram/threads);
   pinterest actually resolves to an iframe (not fragile).
+- **X/Twitter — CORRECTION (CLI is not the final truth)**: `wp_oembed_get('x.com/…')`
+  returns FALSE on a fresh CLI fetch (core's provider regex is twitter.com-oriented),
+  which earlier read as "raw fallback". But the EDITOR's REST-oembed-proxy path DOES
+  resolve it and caches a `<blockquote class="twitter-tweet" …>` + `platform.x.com/
+  widgets.js` into the post `_oembed_*` meta — so the FRONT-END then renders that
+  blockquote and the widget hydrates it into a `platform.twitter.com/embed/Tweet.html`
+  iframe. So X is a SCRIPT-HYDRATED provider, NOT a guaranteed raw fallback; the
+  hydrated runtime DOM (not a single CLI call) is the truth. The widget defaults the
+  iframe to `theme=light` (added by widgets.js, NOT in our HTML); to influence it
+  you'd filter the rendered oEmbed HTML to add `data-theme` to the blockquote
+  (server-side, fixed at render — not scheme-responsive), not CSS.
 
 ---
 

@@ -99,6 +99,16 @@ C. RAW/URL fallback (unsupported / unreachable provider)
 - **Fallback card**: the RAW/URL bucket → a filled, outlined card with the URL as a
   link. This is theme-owned chrome, NOT a provider concern.
 - **Alignment**: respect `alignwide` / `alignfull` / `aligncenter` (core layout).
+- **WordPress-post embeds** (`iframe.wp-embedded-content` — ma.tt, wordpress.com,
+  gutenbergtimes, wordpress.org plugins/themes): ship at a fixed `width="500"`,
+  LEFT-aligned in the wider content column (a ~145px dead strip). Unlike fixed-aspect
+  provider media, the WP embed card is FLUID, so stretch it to content width
+  (`inline-size: 100%`); `wp-embed.js` re-reports the height. We do **not** wrap it
+  in our own card surface — its interior is already a card, and it is **cross-origin**
+  (the source site owns its colours / dark-mode; a dark page can show a light embed
+  card and that is correct). Ontology: **external WP embed = full-width framed
+  iframe** (we own width + frame), **our own post = M3 embed card** (the `/embed/`
+  template lane, §9).
 
 **Rejected routes**
 
@@ -171,6 +181,9 @@ for a live provider render. A distributable theme must degrade gracefully here.
     intact, NO width/aspect override) ✓
   - iframe wrapper `background` = transparent ✓ (the `:has()` scope keeps the
     fallback surface OFF resolved embeds)
+  - WordPress-post embeds: `iframe.wp-embedded-content` width 500 → 645 (content,
+    no left dead strip), height re-adjusted by wp-embed.js (no clip); provider
+    iframes (youtube/spotify) unaffected — they lack `.wp-embedded-content` ✓
   - raw-URL fallback wrapper = `surface-container-low` + 1px `outline-variant` +
     16px padding, both schemes (dark 29,27,32 / light 247,242,250) ✓
 - **Deferred**: a truly CLICKABLE link card (wrap the bare URL in `<a>`) is not

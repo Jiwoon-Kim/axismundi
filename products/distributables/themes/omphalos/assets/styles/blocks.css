@@ -910,6 +910,18 @@
   max-inline-size: 100%;
 }
 
+/* WordPress post embeds (iframe.wp-embedded-content) ship at a fixed width="500"
+ * and sit LEFT-ALIGNED in the wider content column (a ~145px dead strip on the
+ * right). Unlike provider video/audio iframes — which own a fixed aspect — the WP
+ * embed card is fluid, so stretch it to the content width. wp-embed.js drives only
+ * HEIGHT, so width:100% reflows the card and the script re-reports the height. The
+ * iframe INTERIOR is cross-origin: its colours / dark-mode belong to that site, not
+ * us — we own width + frame only. (Our OWN posts get a real M3 embed card in the
+ * separate /embed/ template lane; see EMBEDS-ROUTE.md §9.) */
+.wp-block-post-content .wp-block-embed iframe.wp-embedded-content {
+  inline-size: 100%;
+}
+
 /* unresolved fallback — when oEmbed can't resolve, the wrapper holds the bare URL
  * as TEXT (no iframe, no provider blockquote). Box it in a quiet surface so it does
  * not read as naked text. Scoped with :has() to wrappers that have NEITHER an

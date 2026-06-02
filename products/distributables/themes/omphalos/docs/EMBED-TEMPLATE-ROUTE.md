@@ -5,20 +5,18 @@
 > here) via the `/embed/` oEmbed endpoint. This is the OTHER half of the embeds work:
 > the `core/embed` BLOCK lane (`docs/EMBEDS-ROUTE.md`) is the CONSUMER side (external
 > content inside our post); THIS is the PROVIDER side (our content as an object card).
-> **Status**: route + CSS-0 diagnostic + **Phase 2a IMPLEMENTED** — the theme now
-> OWNS the markup (`embed-content.php`, copied from core) and attaches the typescale
-> UTILITY classes (`t-title-medium` / `t-body-medium` / `t-body-small`) directly;
-> `embed.css` defines those utilities self-contained (`var(--md-sys-*, fallback)`,
-> scoped `.wp-embed .t-*` at 0,2,0 to beat core) and keeps colour/layout on the
-> structural selectors. Enqueued via `enqueue_embed_scripts` (depends on core
-> `wp-embed-template`); dark via `prefers-color-scheme`. Verified computed both
-> schemes — identical to v1 (heading 16/24, excerpt 14/20, footer 12/16; card #fff
-> light / #1d1b20 dark). **Phase 2a-2 META POLICY**: a POST gets a published date in
-> the footer meta; a PAGE (static object) does NOT — verified post-only (post shows
-> "2026년 06월 02일", page omits it). The only template change from core is that
-> post-only date; hooks intact, WP-to-WP compatibility preserved. **LANE PARKED here**
-> — the article embed card is complete; attachment (2b/2c) + activity variants wait
-> on the attachment-page / metadata work, not entered yet.
+> **Status**: route + CSS-0 diagnostic + **compatibility skin IMPLEMENTED** — the
+> theme owns a narrow `embed-content.php` copy so the extension point is explicit,
+> but the markup remains core-faithful. `embed.css` deliberately skins ONLY
+> theme-aware colour + font-family; core keeps layout, spacing, image branch,
+> headline scale, excerpt rhythm, footer layout, and the 200px iframe floor.
+> Enqueued via `enqueue_embed_scripts` (depends on core `wp-embed-template`); dark
+> via `prefers-color-scheme`. The previous proportional/card redesign
+> (title-large, full-bleed rectangular hero, no-image rail, post-only date meta) was
+> rolled back because square/no-image cards read worse than the core template.
+> **LANE PARKED here** — article embed is a compatibility surface with Omphalos
+> colour/font only; attachment (2b/2c) + activity variants wait on the
+> attachment-page / metadata work, not entered yet.
 > **VQA**: dedicated page `/vqa-embed-template/` (seeded by
 > `scripts/seed-vqa-embed-template.php`) SELF-EMBEDS 5 specimens — post/page ×
 > featured-image shape (square float / rectangular hero / none) — so each renders
@@ -56,7 +54,7 @@ Demo post `/?p=47&embed=true` (`vqa-demo-m3-bridge`), featured image = mogu
 
 ```txt
 div.wp-embed (+ post-class)
-  p.wp-embed-heading > a                 ← title link
+  p.wp-embed-heading > a                 ← headline link (core class name)
   div.wp-embed-featured-image.square     ← shape branch (below)
     > a > img.attachment-medium
   div.wp-embed-excerpt > p               ← excerpt
@@ -71,7 +69,7 @@ div.wp-embed (+ post-class)
 **Featured-image shape branch** (`embed-content.php` line 61):
 `$shape = $w / $h >= 1.75 ? 'rectangular' : 'square';`
 - `rectangular` (≥1.75, wide) → `.wp-embed-featured-image.rectangular`, shown ABOVE
-  the title (hero).
+  the headline (core's media-above treatment).
 - `square` (< 1.75, square-ish) → `.wp-embed-featured-image.square`, shown NEXT TO
   the content (float). (mogu 1.333 → square, as observed.)
 Core comment, verbatim: *“Rectangular images are shown above the title while square
@@ -89,7 +87,7 @@ DARK: identical — the core embed card is LIGHT-ONLY (bg stays #fff under a dar
 ```
 
 So the card is the place to add M3 + dark; the screenshot confirms a clean white
-card (title / square thumbnail float / excerpt / footer with site-icon + comments +
+card (headline / square thumbnail float / excerpt / footer with site-icon + comments +
 share) with no dark response.
 
 ---
@@ -161,7 +159,7 @@ themes that share the M3 layer:
 --md-sys-color-outline-variant
 --md-sys-color-primary
 --md-sys-shape-corner-medium
---md-sys-typescale-title-medium-*  (heading)
+--md-sys-typescale-title-medium-*  (headline, if a future owned variant opts in)
 --md-sys-typescale-body-medium-*   (excerpt)
 --md-sys-typescale-body-small-*    (meta / site title)
 --space-xs / -sm / -md
@@ -214,7 +212,7 @@ embed_site_title_html                  site name / logo markup
   tokens when present (surface/on-surface/outline), degrades to WP core colours when
   the token CSS is removed; dark follows the embed doc's own scheme; the square
   vs rectangular branch both read; the footer (site title / comments / share) stays
-  legible. Also verify a wide (≥1.75) featured image renders the rectangular hero.
+  legible.
 
 ---
 
@@ -266,40 +264,22 @@ renderer). So reuse the variant-layout system across both, but keep the lanes
 distinct — earlier notes over-coupled `/embed/` to AP s2s.
 
 **Visual directions explored** (design candidates, NOT the default — prototyped in a
-scratch lab): *Hero* (full-bleed 16:9 media band + title-large, unifying the
-square/rectangular branch into one band), *Split* (a 40% media rail beside a flex
-body — good for feed/object lists; needs an `.ev-body` wrapper and is risky in the
-narrow embed iframe), *Editorial* (overlaid title on a scrim / big display title —
-magazine feel). All step the title up to title-large and clamp the excerpt. They are
-too strong / too divergent from core's square-float ontology to be the WP-to-WP
-DEFAULT; they belong to the future Object/Activity Card system as per-TYPE variants
-(e.g. attachment → Hero, activity → Split), introduced as opt-in `.ev--*` modifiers.
-Rather than ship the directions as separate variants, the default card was made
-**SHAPE-ADAPTIVE** — it respects core's featured-image branch and only changes the
-TREATMENT per shape (this read more natural than full variants):
-
-```txt
-rectangular featured → HERO     : a consistent 16:9 media band above the title
-square featured      → core FLOAT: small thumb + text wrap (compact, unchanged)
-no featured image    → SPLIT-ish : a primary accent rail down the start edge
-                                   (also gives the 200px-floor card an intentional
-                                    object silhouette instead of dead space)
-```
-
-Driven by **state classes** the owned `embed-content.php` computes up front and emits
-on `.wp-embed` (the CLASS route, not `:has()` — friendlier to the embed iframe doc
-and to future object/activity variant routing): `has-embed-media` /
-`has-no-embed-media` / `is-embed-media-{rectangular,square}`. Also adopted from the
-review: `.wp-embed { display: flow-root }` to contain the square float via a BFC.
-Verified both schemes on /vqa-embed-template/ — heights / 200px floor / square float
-all intact; rectangular shows the 16:9 hero band, no-image the accent rail.
+scratch lab): *Hero* (full-bleed 16:9 media band + title-large), *Split* (media rail
+beside a flex body), *Editorial* (overlaid headline on a scrim). They are too strong
+/ too divergent from core's square-float ontology to be the WP-to-WP DEFAULT. A
+shape-adaptive trial (rectangular hero, square core float, no-image rail) was also
+tested and rolled back: rectangular improved, but square/no-image became worse than
+core. Keep these as future Object/Activity Card variants, not the current
+compatibility embed template.
 
 ### 10.2 — Typography consumes the existing typescale contract
 No new embed-only type. Same rule as the collection lane:
 
 ```txt
-owned / copied template   → attach t-* utility classes
+owned object-card variant → attach t-* utility classes
                             (t-title-medium / t-body-medium / t-body-small)
+compatibility embed skin  → leave core headline/excerpt/footer scale intact;
+                            set colour + font-family only
 untouched core template   → selector-based utility EQUIVALENT using --md-sys-typescale-*
 font-family NAMES may be declared; @font-face is NOT enqueued into the embed iframe
 ```

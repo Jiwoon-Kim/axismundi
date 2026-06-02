@@ -1,175 +1,43 @@
 /* ============================================================================
- * Omphalos — /embed/ Object Card  (article variant — v2: proportional redesign)
+ * Omphalos — /embed/ compatibility skin
  *
- * The card OUR post renders as when embedded on another WP site (or self-embedded)
- * via the /embed/ oEmbed endpoint. Loaded INSIDE the embed iframe only
- * (enqueue_embed_scripts), depending on core `wp-embed-template` so it prints AFTER
- * core's inline CSS. The embed iframe does NOT load the global token/utility CSS, so
- * the typescale utilities are DEFINED HERE self-contained (`var(--md-sys-*, <WP-core
- * fallback>)`); no token CSS or @font-face is enqueued. Dark follows the iframe's OWN
- * prefers-color-scheme.
- *
- * v2 reads the card as an M3 object-summary card, not a core float preview: a real
- * proportional system — pad 20, corner-large radius, title-LARGE (22/28) headline,
- * clamped excerpt — and a SHAPE-ADAPTIVE treatment driven by the state classes
- * embed-content.php emits (class route, no :has()):
- *   is-embed-media-rectangular → HERO: full-bleed 16:9 media band above the title
- *   is-embed-media-square      → core FLOAT (image beside the content)
- *   has-no-embed-media         → a primary accent rail (object silhouette)
+ * Loaded inside WordPress's /embed/ iframe only (enqueue_embed_scripts), after
+ * core `wp-embed-template`. Core keeps the layout, spacing, image shape branch,
+ * footer table, iframe-height floor, and typography scale. Omphalos only supplies
+ * theme-aware colour and a font-family stack. No @font-face or token CSS is loaded.
  * ========================================================================= */
 
-:root { color-scheme: light dark; }
-
-/* Fill the iframe's FLOOR. wp-embed.js floors the embed iframe at 200px, so a SHORT
- * card (no featured image) otherwise leaves a transparent gap below the card. Match
- * the floor with a FIXED `min-block-size: 200px` (a relative `100vh`/`100%` fill
- * feeds back into the height handshake and collapses every card to one height). */
-body { margin: 0; }
-.wp-embed { min-block-size: 200px; }
-
-/* typescale utilities — self-contained (the embed iframe has no global utility CSS) */
-.wp-embed .t-title-large {
-  font-family:    var(--md-sys-typescale-title-large-font,
-    "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  font-size:      var(--md-sys-typescale-title-large-size, 22px);
-  line-height:    var(--md-sys-typescale-title-large-line-height, 28px);
-  font-weight:    var(--md-sys-typescale-title-large-weight, 400);
-  letter-spacing: var(--md-sys-typescale-title-large-tracking, 0);
-}
-.wp-embed .t-body-medium {
-  font-family:    var(--md-sys-typescale-body-medium-font,
-    "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  font-size:      var(--md-sys-typescale-body-medium-size, 14px);
-  line-height:    var(--md-sys-typescale-body-medium-line-height, 20px);
-  font-weight:    var(--md-sys-typescale-body-medium-weight, 400);
-  letter-spacing: var(--md-sys-typescale-body-medium-tracking, 0.25px);
-}
-.wp-embed .t-body-small {
-  font-family:    var(--md-sys-typescale-body-small-font,
-    "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  font-size:      var(--md-sys-typescale-body-small-size, 12px);
-  line-height:    var(--md-sys-typescale-body-small-line-height, 16px);
-  font-weight:    var(--md-sys-typescale-body-small-weight, 400);
-  letter-spacing: var(--md-sys-typescale-body-small-tracking, 0.4px);
+:root {
+  color-scheme: light dark;
 }
 
-/* card surface — proportional system. overflow:hidden is SAFE here (this is our own
- * /embed/ document, not the core/embed consumer wrapper that wraps a provider iframe)
- * and lets the full-bleed hero media clip to the card radius; it also forms a BFC
- * that contains the square float. */
 .wp-embed {
-  --embed-pad: 20px;
-  --embed-radius: var(--md-sys-shape-corner-large, 16px);
-  box-sizing: border-box;
-  overflow: hidden;
-  padding: var(--embed-pad);
   background: var(--md-sys-color-surface-container-low, #fff);
   color: var(--md-sys-color-on-surface-variant, #50575e);
-  border: 1px solid var(--md-sys-color-outline-variant, #dcdcde);
-  border-radius: var(--embed-radius);
-  box-shadow: none;
+  border-color: var(--md-sys-color-outline-variant, #dcdcde);
   font-family: var(--md-sys-typescale-body-medium-font,
     "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif);
 }
 
-/* title — title-large headline COLOUR + no resting underline (font = t-title-large) */
-.wp-embed .wp-embed-heading { margin: 0 0 var(--space-sm, 8px); text-wrap: balance; }
-.wp-embed .wp-embed-heading a {
-  color: var(--md-sys-color-on-surface, #1d2327);
-  text-decoration: none;
-}
-.wp-embed .wp-embed-heading a:hover,
-.wp-embed .wp-embed-heading a:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
-}
-
-/* excerpt — body-medium, clamped so the cards keep an even rhythm (font = t-body-medium) */
-.wp-embed .wp-embed-excerpt,
-.wp-embed .wp-embed-excerpt p {
-  margin: 0;
+.wp-embed a {
   color: var(--md-sys-color-on-surface-variant, #50575e);
 }
-.wp-embed .wp-embed-excerpt p {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
+
+.wp-embed-heading a,
+.wp-embed-heading a:active,
+.wp-embed-heading a:hover,
+.wp-embed-heading a:visited,
+.wp-embed-site-title a {
+  color: var(--md-sys-color-on-surface, #32373c);
 }
 
-/* footer — site title + meta (date / comments / share); body-small (font = t-body-small) */
-.wp-embed .wp-embed-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm, 8px);
-  clear: both;
-  margin-block-start: var(--space-md, 16px);
-}
-.wp-embed .wp-embed-site-title a {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs, 4px);
-  color: var(--md-sys-color-on-surface, #1d2327);
-  text-decoration: none;
-  font-weight: 500;
-}
-.wp-embed .wp-embed-site-icon {
-  inline-size: 20px;
-  block-size: 20px;
-  border-radius: 50%;
-  flex: none;
-}
-.wp-embed .wp-embed-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm, 8px);
-}
-.wp-embed .wp-embed-meta-date { white-space: nowrap; }
-.wp-embed .wp-embed-meta-date,
-.wp-embed .wp-embed-comments a,
-.wp-embed .wp-embed-share-dialog-open {
+.wp-embed-meta,
+.wp-embed-comments a,
+.wp-embed-share-dialog-open {
   color: var(--md-sys-color-on-surface-variant, #50575e);
-  text-decoration: none;
 }
 
-/* ---------------------------------------------------------- shape-adaptive media */
-
-/* square featured → core FLOAT (image beside the content), v2 spacing */
-.wp-embed .wp-embed-featured-image { margin-block-end: var(--space-sm, 8px); }
-.wp-embed .wp-embed-featured-image img { border-radius: var(--md-sys-shape-corner-small, 8px); }
-.wp-embed .wp-embed-featured-image.square { margin-inline-end: var(--space-md, 16px); }
-
-/* rectangular featured → HERO: full-bleed 16:9 media band above the title. The
- * negative margins bleed it to the card's padding edges; the card's overflow:hidden
- * + corner-large radius clip the band's top corners. */
-.wp-embed .wp-embed-featured-image.rectangular {
-  margin: calc(var(--embed-pad) * -1) calc(var(--embed-pad) * -1) var(--embed-pad);
-  aspect-ratio: 16 / 9;
-}
-.wp-embed .wp-embed-featured-image.rectangular a { display: block; block-size: 100%; }
-.wp-embed .wp-embed-featured-image.rectangular img {
-  inline-size: 100%;
-  block-size: 100%;
-  object-fit: cover;
-  border-radius: 0;
-}
-.wp-embed.is-embed-media-rectangular .wp-embed-excerpt p { -webkit-line-clamp: 2; }
-
-/* no featured image → a primary accent rail down the start edge (object silhouette;
- * also fills the otherwise-empty 200px-floor card with intent). */
-.wp-embed.has-no-embed-media { position: relative; }
-.wp-embed.has-no-embed-media::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  inline-size: 4px;
-  background: var(--md-sys-color-primary, #6750a4);
-}
-
-/* dark — the iframe follows its OWN scheme; M3-dark fallbacks keep it correct. */
 @media (prefers-color-scheme: dark) {
   .wp-embed {
     background: var(--md-sys-color-surface-container-low, #1d1b20);
@@ -177,11 +45,22 @@ body { margin: 0; }
     border-color: var(--md-sys-color-outline-variant, #49454f);
     color-scheme: dark;
   }
-  .wp-embed .wp-embed-heading a,
-  .wp-embed .wp-embed-site-title a { color: var(--md-sys-color-on-surface, #e6e0e9); }
-  .wp-embed .wp-embed-excerpt,
-  .wp-embed .wp-embed-excerpt p,
-  .wp-embed .wp-embed-meta-date,
-  .wp-embed .wp-embed-comments a,
-  .wp-embed .wp-embed-share-dialog-open { color: var(--md-sys-color-on-surface-variant, #cac4d0); }
+
+  .wp-embed a {
+    color: var(--md-sys-color-on-surface-variant, #cac4d0);
+  }
+
+  .wp-embed-heading a,
+  .wp-embed-heading a:active,
+  .wp-embed-heading a:hover,
+  .wp-embed-heading a:visited,
+  .wp-embed-site-title a {
+    color: var(--md-sys-color-on-surface, #e6e0e9);
+  }
+
+  .wp-embed-meta,
+  .wp-embed-comments a,
+  .wp-embed-share-dialog-open {
+    color: var(--md-sys-color-on-surface-variant, #cac4d0);
+  }
 }

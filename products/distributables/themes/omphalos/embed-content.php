@@ -3,23 +3,14 @@
  * Omphalos embed content template part (the /embed/ Object Card markup).
  *
  * Theme-OWNED copy of core's wp-includes/theme-compat/embed-content.php so we can
- * attach the theme's typescale UTILITY classes (t-title-medium / t-body-medium /
- * t-body-small) directly on the markup instead of inferring them with selector
- * equivalents. The utilities are defined self-contained (with WP-core fallbacks) in
- * assets/styles/embed.css — no token CSS is enqueued into the iframe (route §10.3).
+ * keep a narrow theme-owned seam while preserving core's markup structure and
+ * compatibility hooks. assets/styles/embed.css intentionally skins only colour and
+ * font-family; core keeps the layout, spacing, image branch, and typography scale.
  *
  * Phase 2a = article/post variant only; the structure, hooks, and the
  * rectangular/square featured-image branch are kept identical to core so WP-to-WP /
  * web embed compatibility is preserved. attachment / activity variants are a later
  * phase (EMBED-TEMPLATE-ROUTE §10.1, §8 Phase 2b/2c).
- *
- * The featured-image shape + presence are computed UP FRONT and emitted as state
- * classes on `.wp-embed` (the class route — no `:has()`, friendlier to the embed
- * iframe document and to future object/activity variant routing):
- *   has-embed-media / has-no-embed-media
- *   is-embed-media-rectangular / is-embed-media-square
- * The shape-adaptive treatment (rectangular → hero band, no-media → accent rail,
- * square → core float) lives in embed.css.
  *
  * @package Omphalos
  */
@@ -64,14 +55,8 @@ if ( $thumbnail_id ) {
 	$shape = apply_filters( 'embed_thumbnail_image_shape', $shape, $thumbnail_id );
 }
 
-// State classes drive the shape-adaptive treatment in embed.css (class route).
-$embed_classes   = array( 'wp-embed' );
-$embed_classes[] = $thumbnail_id ? 'has-embed-media' : 'has-no-embed-media';
-if ( $shape ) {
-	$embed_classes[] = 'is-embed-media-' . $shape;
-}
 ?>
-	<div <?php post_class( $embed_classes ); ?>>
+	<div <?php post_class( 'wp-embed' ); ?>>
 
 		<?php if ( $thumbnail_id && 'rectangular' === $shape ) : ?>
 			<div class="wp-embed-featured-image rectangular">
@@ -81,7 +66,7 @@ if ( $shape ) {
 			</div>
 		<?php endif; ?>
 
-		<p class="wp-embed-heading t-title-large">
+		<p class="wp-embed-heading">
 			<a href="<?php the_permalink(); ?>" target="_top">
 				<?php the_title(); ?>
 			</a>
@@ -95,26 +80,18 @@ if ( $shape ) {
 			</div>
 		<?php endif; ?>
 
-		<div class="wp-embed-excerpt t-body-medium"><?php the_excerpt_embed(); ?></div>
+		<div class="wp-embed-excerpt"><?php the_excerpt_embed(); ?></div>
 
 		<?php
 		/** This action is documented in wp-includes/theme-compat/embed-content.php */
 		do_action( 'embed_content' );
 		?>
 
-		<div class="wp-embed-footer t-body-small">
+		<div class="wp-embed-footer">
 			<?php the_embed_site_title(); ?>
 
 			<div class="wp-embed-meta">
 				<?php
-				// Omphalos meta policy (Phase 2a-2): a POST is temporal, so it gets a
-				// published date; a PAGE is a static object, so it does not. Everything
-				// else (site title, comments, share via the core hook) stays shared.
-				if ( 'post' === get_post_type() ) :
-					?>
-					<time class="wp-embed-meta-date" datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>"><?php echo esc_html( get_the_date() ); ?></time>
-					<?php
-				endif;
 				/** This action is documented in wp-includes/theme-compat/embed-content.php */
 				do_action( 'embed_content_meta' );
 				?>

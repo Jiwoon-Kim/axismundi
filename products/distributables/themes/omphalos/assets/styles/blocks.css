@@ -813,17 +813,25 @@
   border-radius: var(--md-sys-shape-corner-small);
 }
 
-/* item typography (list + grid). The title is the collection item's headline, not
- * a body link: drop the prose blue/underline at rest (in a card where the whole
- * item is the affordance, an underlined link reads as a body link and weakens the
- * title) and recolour to on-surface at title-small. Underline only on hover/focus.
- * title-small everywhere for now — the narrow grid card wraps title-medium too
- * much; bump the LP list later if it reads weak. Meta = body-small; excerpt =
- * body-medium with a small top margin. */
+/* item typography (list + grid). These rules are the CSS EQUIVALENT of the theme's
+ * typescale utility classes — `.t-title-small` (title), `.t-body-small` (meta),
+ * `.t-body-medium` (excerpt) — applied by SELECTOR rather than as a class because
+ * core/latest-posts + core/rss are DYNAMIC blocks: their render markup is built in
+ * PHP and can't carry a utility class declaratively (a static pattern we own would
+ * just add `class="… t-title-small"`). A future `render_block` filter (HTML Tag
+ * Processor) could inject the classes and retire this duplication.
+ *
+ * The title is the item HEADLINE, not a body link: drop the prose blue/underline at
+ * rest (in a card where the whole item is the affordance an underlined link reads
+ * as body text and weakens the title); underline on hover/focus only. title-small
+ * everywhere for now — the narrow grid card wraps title-medium too much; bump the
+ * LP list later if it reads weak. */
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-title,
 .wp-block-post-content .wp-block-rss .wp-block-rss__item-title a {
+  /* = .t-title-small + headline colour, no resting underline */
   color: var(--md-sys-color-on-surface);
   text-decoration: none;
+  font-family: var(--md-sys-typescale-title-small-font);
   font-size: var(--md-sys-typescale-title-small-size);
   line-height: var(--md-sys-typescale-title-small-line-height);
   font-weight: var(--md-sys-typescale-title-small-weight);

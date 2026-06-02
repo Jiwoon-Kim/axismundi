@@ -18,6 +18,16 @@
 
 :root { color-scheme: light dark; }
 
+/* Fill the iframe's FLOOR. wp-embed.js floors the embed iframe at 200px, so a SHORT
+ * card (e.g. no featured image, ~143px) otherwise leaves a transparent gap below the
+ * bordered card — reads as a weird gap before the next block. Match that floor with
+ * a FIXED `min-block-size: 200px` so a short card fills exactly to the floored iframe
+ * (no gap) while a taller card keeps its own height. A fixed value is essential: a
+ * relative fill (`100vh` / `100%`) feeds back into wp-embed.js's height handshake and
+ * collapses every card to one height (clipping the tall ones). */
+body { margin: 0; }
+.wp-embed { min-block-size: 200px; }
+
 /* typescale utilities — self-contained (embed iframe has no global utility CSS). */
 .wp-embed .t-title-medium {
   font-family:    var(--md-sys-typescale-title-medium-font,

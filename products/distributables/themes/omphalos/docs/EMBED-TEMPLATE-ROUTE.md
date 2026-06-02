@@ -27,6 +27,11 @@
 
 ---
 
+> **READING NOTE**: §§1–§10 below are the EXPLORATION RECORD (diagnosis + the fuller
+> object-card direction that was explored and then narrowed). The authoritative,
+> shipped outcome is **§11 — FINAL STATE (compatibility skin)**. Where the body and
+> §11 disagree, §11 wins.
+
 ## §1 — Two embed surfaces (don't conflate them)
 
 ```txt
@@ -141,10 +146,11 @@ CSS. So the embed stylesheet must inline its own fallbacks. Pattern:
 }
 ```
 
-`var(--token, fallback)` alone also works, but because this surface travels off-site
-the explicit fallback values are kept (belt-and-braces). The token CSS itself
-(`tokens.ref/sys.*`) must be enqueued INTO the embed document (via
-`enqueue_embed_scripts`) for layer B to activate.
+**(SHIPPED, see §11):** the skin uses `var(--token, fallback)` ALONE — no `@supports`
+two-layer, and **no token CSS / `@font-face` is enqueued** into the iframe. The
+explicit fallbacks render as WP-core / M3-flavoured values, and a host that already
+carries the sys tokens picks them up. The `@supports` + token-enqueue approach above
+was an explored alternative that was NOT taken (too heavy for a portable surface).
 
 ---
 
@@ -314,3 +320,41 @@ gets a `prefers-color-scheme` fallback so it works even with no token layer:
 LATER = **B**: a small shared `embed.tokens.css` (color / shape / space / typescale
 subset) for Omphalos ↔ future Axismundi theme. Never depend on `--comp-*` in the
 embed layer.
+
+---
+
+## §11 — FINAL STATE (lane closed) — the compatibility skin
+
+After exploring the fuller object-card direction (§3–§10 + a scratch-lab proportional
+redesign), the lane was deliberately narrowed and CLOSED here. **§§1–§10 are the
+EXPLORATION RECORD; this section is the authoritative outcome.**
+
+**Shipped** — `/embed/` is a COMPATIBILITY SKIN, not a redesigned card:
+- `embed-content.php` is owned but **core-faithful**: a narrow seam only. The markup,
+  hooks, shape branch, footer, and meta are core's — NO `t-*` classes, NO state
+  classes, NO per-type (post/page) meta.
+- `embed.css` (enqueued via `enqueue_embed_scripts`, after `wp-embed-template`) skins
+  **only** theme-aware COLOUR + FONT-FAMILY + card/image RADIUS. Core keeps the
+  layout, spacing, headline/excerpt/footer scale, the shape branch, and the 200px
+  iframe-height floor.
+- Self-contained `var(--md-sys-*, <WP-core fallback>)`; **no token CSS and no
+  `@font-face` enqueued** into the iframe. Dark via the iframe's own
+  `prefers-color-scheme` with M3-dark fallbacks; no parent-scheme sync.
+
+**Why so conservative**: the card is a document that travels off-site (WP-to-WP) and
+must read in any host/theme and with no token layer. Conservative LAYOUT + progressive
+COLOUR/FONT compatibility beats an over-closed redesign here. A scratch-lab v2
+(title-large, full-bleed rectangular hero, corner-large, no-image rail, post-only
+date) was built and ROLLED BACK — rectangular improved, but square / no-image read
+worse than the core template.
+
+**Deferred — keep `embed-content.php` as the future variant seam**:
+- attachment `image / video / audio` embed variants (wordpress.org plugin/theme pages
+  render differently) — the most likely next reason to re-open ownership;
+- object / activity card variants (note / like / boost) + the ActivityPub bridge;
+- `t-*` utility attachment, post/page meta split, hero/split/editorial treatments,
+  token enqueue (`embed.tokens.css` subset).
+
+**Rule**: `embed-content.php` stays core-faithful — **no structural change** until a
+real variant needs it; diff it against core's `theme-compat/embed-content.php` on WP
+core updates.

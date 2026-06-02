@@ -7,11 +7,52 @@
 > **References**: WordPress [Embed blocks](https://wordpress.org/documentation/category/embed-blocks/),
 > [Embed block](https://wordpress.org/documentation/article/embed-block/),
 > [Embeds](https://wordpress.org/documentation/article/embeds/).
-> **Status**: route + curated VQA specimen + CSS-0 diagnostic + **§17 outer-shell
-> CSS implemented** (figure rhythm, wrapper radius/clip, iframe fill, fallback
-> surface — verified computed both schemes). The `/embed/` TEMPLATE (when our post
-> is embedded elsewhere) is a SEPARATE adjacent lane — see §9.
+> **Status**: route + curated VQA specimen + CSS-0 diagnostic + **§17 outer-shell CSS
+> implemented + LANE CLOSED** (final rules below). The `/embed/` TEMPLATE (when our
+> post is embedded elsewhere) is a SEPARATE adjacent lane — see §9 / `EMBED-TEMPLATE-
+> ROUTE.md`.
 > **Date**: 2026-06-02 · WP 7.0 · M3 Expressive.
+
+---
+
+## §0 — LANE CLOSED: final consumer-lane rules + deferred
+
+Authoritative summary of `core/embed` (external content INSIDE our post). The
+sections below are the diagnosis + history; these are the conclusions.
+
+**Final rules (what `blocks.css §17` does):**
+- Provider iframe / script / blockquote INTERNALS are provider-owned — never styled.
+- `figure` gets a tokenised vertical rhythm (`--space-md`); the iframe is `display:
+  block; max-inline-size:100%`.
+- **NO theme radius on embed media** — providers carry their own (spotify 12, reddit
+  8, square players, none); imposing one reads inconsistent.
+- **NEVER `overflow: clip/hidden` on the embed wrapper** — it suppresses a
+  WordPress-POST embed's `height` postMessage handshake (the iframe handshakes while
+  `position:absolute; visibility:hidden`). This was THE costly bug of the lane.
+- Fixed-width provider iframes (pinterest/soundcloud/tumblr/reddit) are **centred**
+  on the front-end (`margin-inline:auto`); X / Bluesky hydrate into a fixed-width
+  CONTAINER (`.twitter-tweet-rendered` / `.bluesky-embed`) that is centred instead.
+- Unresolved / raw-URL → a quiet `surface-container-low` + `outline-variant` fallback
+  card (incl. the `blockquote.wp-embedded-content` no-JS fallback).
+- **The EDITOR preview differs from the front-end** (it wraps every embed in a
+  full-width preview iframe) — the front-end is canonical.
+- **X/Twitter** is FRAGILE / SCRIPT-HYDRATED, not a fixed raw fallback (the cached
+  twitter-tweet blockquote + widgets.js hydrate it); judge by the HYDRATED runtime
+  DOM, not one `wp_oembed_get()` CLI call.
+- **Bluesky / Pinterest** render an opaque light card in dark — their interior is
+  cross-origin and NOT theme-fixable; a light card on a dark page is expected.
+
+**Deferred (out of this lane):**
+- provider `theme=dark` / `data-theme` param experiments (opt-in fragile layer);
+- the `render_block_core/embed` clickable fallback link card;
+- `/embed/` attachment + object/activity variants (the PROVIDER lane).
+
+**Both embed lanes (consumer `core/embed` + provider `/embed/`) are CLOSED. Next
+Phase-8 project lane: Core Theme VQA** (Navigation / Site Logo·Title·Tagline /
+Template Part·Header·Footer / Query Loop·Post Template·meta / Pagination·Post
+Navigation / Comments family). Also re-joins here: the Widgets items parked earlier —
+Latest Comments (with the Comments VQA), Archives / Categories / Page List / Terms
+(after template/sidebar placement).
 
 ---
 

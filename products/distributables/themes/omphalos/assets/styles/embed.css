@@ -1,41 +1,40 @@
 /* ============================================================================
- * Omphalos — /embed/ Object Card  (article/post variant — Phase 2a)
+ * Omphalos — /embed/ Object Card  (article variant — v2: proportional redesign)
  *
  * The card OUR post renders as when embedded on another WP site (or self-embedded)
  * via the /embed/ oEmbed endpoint. Loaded INSIDE the embed iframe only
  * (enqueue_embed_scripts), depending on core `wp-embed-template` so it prints AFTER
- * core's inline CSS.
+ * core's inline CSS. The embed iframe does NOT load the global token/utility CSS, so
+ * the typescale utilities are DEFINED HERE self-contained (`var(--md-sys-*, <WP-core
+ * fallback>)`); no token CSS or @font-face is enqueued. Dark follows the iframe's OWN
+ * prefers-color-scheme.
  *
- * Phase 2a OWNS the markup (theme `embed-content.php`) and attaches the typescale
- * UTILITY classes (t-title-medium / t-body-medium / t-body-small) directly. The
- * embed iframe does NOT load the global token/utility CSS, so the utilities are
- * DEFINED HERE, self-contained, as `var(--md-sys-*, <WP-core fallback>)` — same
- * names/contract as the theme's .t-* utilities, no token CSS or @font-face enqueued
- * (route §10.2/§10.3). Selectors are scoped `.wp-embed <child>` (0,2,0) to beat
- * core's embed typography. Dark follows the iframe's OWN prefers-color-scheme.
- * Article variant only; attachment/activity variants are a later phase.
+ * v2 reads the card as an M3 object-summary card, not a core float preview: a real
+ * proportional system — pad 20, corner-large radius, title-LARGE (22/28) headline,
+ * clamped excerpt — and a SHAPE-ADAPTIVE treatment driven by the state classes
+ * embed-content.php emits (class route, no :has()):
+ *   is-embed-media-rectangular → HERO: full-bleed 16:9 media band above the title
+ *   is-embed-media-square      → core FLOAT (image beside the content)
+ *   has-no-embed-media         → a primary accent rail (object silhouette)
  * ========================================================================= */
 
 :root { color-scheme: light dark; }
 
 /* Fill the iframe's FLOOR. wp-embed.js floors the embed iframe at 200px, so a SHORT
- * card (e.g. no featured image, ~143px) otherwise leaves a transparent gap below the
- * bordered card — reads as a weird gap before the next block. Match that floor with
- * a FIXED `min-block-size: 200px` so a short card fills exactly to the floored iframe
- * (no gap) while a taller card keeps its own height. A fixed value is essential: a
- * relative fill (`100vh` / `100%`) feeds back into wp-embed.js's height handshake and
- * collapses every card to one height (clipping the tall ones). */
+ * card (no featured image) otherwise leaves a transparent gap below the card. Match
+ * the floor with a FIXED `min-block-size: 200px` (a relative `100vh`/`100%` fill
+ * feeds back into the height handshake and collapses every card to one height). */
 body { margin: 0; }
 .wp-embed { min-block-size: 200px; }
 
-/* typescale utilities — self-contained (embed iframe has no global utility CSS). */
-.wp-embed .t-title-medium {
-  font-family:    var(--md-sys-typescale-title-medium-font,
+/* typescale utilities — self-contained (the embed iframe has no global utility CSS) */
+.wp-embed .t-title-large {
+  font-family:    var(--md-sys-typescale-title-large-font,
     "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  font-size:      var(--md-sys-typescale-title-medium-size, 16px);
-  line-height:    var(--md-sys-typescale-title-medium-line-height, 24px);
-  font-weight:    var(--md-sys-typescale-title-medium-weight, 500);
-  letter-spacing: var(--md-sys-typescale-title-medium-tracking, 0);
+  font-size:      var(--md-sys-typescale-title-large-size, 22px);
+  line-height:    var(--md-sys-typescale-title-large-line-height, 28px);
+  font-weight:    var(--md-sys-typescale-title-large-weight, 400);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking, 0);
 }
 .wp-embed .t-body-medium {
   font-family:    var(--md-sys-typescale-body-medium-font,
@@ -54,27 +53,28 @@ body { margin: 0; }
   letter-spacing: var(--md-sys-typescale-body-small-tracking, 0.4px);
 }
 
-/* card surface */
+/* card surface — proportional system. overflow:hidden is SAFE here (this is our own
+ * /embed/ document, not the core/embed consumer wrapper that wraps a provider iframe)
+ * and lets the full-bleed hero media clip to the card radius; it also forms a BFC
+ * that contains the square float. */
 .wp-embed {
+  --embed-pad: 20px;
+  --embed-radius: var(--md-sys-shape-corner-large, 16px);
   box-sizing: border-box;
-  /* flow-root = a block formatting context: contains the floated square featured
-   * image cleanly (independent of the footer's `clear`), and does not drop the float
-   * the way `flex` would. Height handshake / 200px floor are unaffected. */
-  display: flow-root;
-  padding: var(--space-md, 16px);
+  overflow: hidden;
+  padding: var(--embed-pad);
   background: var(--md-sys-color-surface-container-low, #fff);
   color: var(--md-sys-color-on-surface-variant, #50575e);
   border: 1px solid var(--md-sys-color-outline-variant, #dcdcde);
-  border-radius: var(--md-sys-shape-corner-medium, 12px);
+  border-radius: var(--embed-radius);
   box-shadow: none;
-  /* base font for any unclassed text; the classed parts use the t-* utilities. */
   font-family: var(--md-sys-typescale-body-medium-font,
     "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif);
 }
 
-/* title — headline COLOUR + no resting underline (typography = t-title-medium) */
-.wp-embed .wp-embed-heading { margin: 0 0 var(--space-xs, 4px); }
+/* title — title-large headline COLOUR + no resting underline (font = t-title-large) */
+.wp-embed .wp-embed-heading { margin: 0 0 var(--space-sm, 8px); text-wrap: balance; }
 .wp-embed .wp-embed-heading a {
   color: var(--md-sys-color-on-surface, #1d2327);
   text-decoration: none;
@@ -85,48 +85,20 @@ body { margin: 0; }
   text-underline-offset: 0.15em;
 }
 
-/* excerpt — COLOUR (typography = t-body-medium) */
+/* excerpt — body-medium, clamped so the cards keep an even rhythm (font = t-body-medium) */
 .wp-embed .wp-embed-excerpt,
 .wp-embed .wp-embed-excerpt p {
   margin: 0;
   color: var(--md-sys-color-on-surface-variant, #50575e);
 }
-
-/* featured image — core branches rectangular (above) vs square (float beside) */
-.wp-embed .wp-embed-featured-image { margin-block-end: var(--space-sm, 8px); }
-.wp-embed .wp-embed-featured-image img { border-radius: var(--md-sys-shape-corner-small, 8px); }
-.wp-embed .wp-embed-featured-image.square { margin-inline-end: var(--space-md, 16px); }
-
-/* shape-adaptive treatment — the layout follows what the post HAS, driven by the
- * state classes embed-content.php puts on `.wp-embed` (class route, no :has()):
- *   rectangular featured → HERO: a consistent 16:9 media band above the title
- *   square featured      → the core FLOAT (image beside the content) — unchanged
- *   no featured image    → SPLIT silhouette: a primary accent rail down the start
- *     (also gives the otherwise-empty 200px-floor card an intentional object look). */
-.wp-embed .wp-embed-featured-image.rectangular {
-  aspect-ratio: 16 / 9;
+.wp-embed .wp-embed-excerpt p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   overflow: hidden;
-  border-radius: var(--md-sys-shape-corner-small, 8px);
-}
-.wp-embed .wp-embed-featured-image.rectangular a { display: block; block-size: 100%; }
-.wp-embed .wp-embed-featured-image.rectangular img {
-  inline-size: 100%;
-  block-size: 100%;
-  object-fit: cover;
-}
-.wp-embed.has-no-embed-media { position: relative; }
-.wp-embed.has-no-embed-media::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  inline-size: 3px;
-  background: var(--md-sys-color-primary, #6750a4);
-  border-start-start-radius: var(--md-sys-shape-corner-medium, 12px);
-  border-end-start-radius: var(--md-sys-shape-corner-medium, 12px);
 }
 
-/* footer — LAYOUT (typography = t-body-small) */
+/* footer — site title + meta (date / comments / share); body-small (font = t-body-small) */
 .wp-embed .wp-embed-footer {
   display: flex;
   align-items: center;
@@ -147,17 +119,54 @@ body { margin: 0; }
   inline-size: 20px;
   block-size: 20px;
   border-radius: 50%;
+  flex: none;
 }
 .wp-embed .wp-embed-meta {
   display: flex;
   align-items: center;
   gap: var(--space-sm, 8px);
 }
+.wp-embed .wp-embed-meta-date { white-space: nowrap; }
 .wp-embed .wp-embed-meta-date,
 .wp-embed .wp-embed-comments a,
 .wp-embed .wp-embed-share-dialog-open {
   color: var(--md-sys-color-on-surface-variant, #50575e);
   text-decoration: none;
+}
+
+/* ---------------------------------------------------------- shape-adaptive media */
+
+/* square featured → core FLOAT (image beside the content), v2 spacing */
+.wp-embed .wp-embed-featured-image { margin-block-end: var(--space-sm, 8px); }
+.wp-embed .wp-embed-featured-image img { border-radius: var(--md-sys-shape-corner-small, 8px); }
+.wp-embed .wp-embed-featured-image.square { margin-inline-end: var(--space-md, 16px); }
+
+/* rectangular featured → HERO: full-bleed 16:9 media band above the title. The
+ * negative margins bleed it to the card's padding edges; the card's overflow:hidden
+ * + corner-large radius clip the band's top corners. */
+.wp-embed .wp-embed-featured-image.rectangular {
+  margin: calc(var(--embed-pad) * -1) calc(var(--embed-pad) * -1) var(--embed-pad);
+  aspect-ratio: 16 / 9;
+}
+.wp-embed .wp-embed-featured-image.rectangular a { display: block; block-size: 100%; }
+.wp-embed .wp-embed-featured-image.rectangular img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+.wp-embed.is-embed-media-rectangular .wp-embed-excerpt p { -webkit-line-clamp: 2; }
+
+/* no featured image → a primary accent rail down the start edge (object silhouette;
+ * also fills the otherwise-empty 200px-floor card with intent). */
+.wp-embed.has-no-embed-media { position: relative; }
+.wp-embed.has-no-embed-media::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 4px;
+  background: var(--md-sys-color-primary, #6750a4);
 }
 
 /* dark — the iframe follows its OWN scheme; M3-dark fallbacks keep it correct. */

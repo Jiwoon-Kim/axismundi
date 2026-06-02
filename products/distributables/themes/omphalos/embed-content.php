@@ -81,7 +81,7 @@ if ( $shape ) {
 			</div>
 		<?php endif; ?>
 
-		<p class="wp-embed-heading t-title-medium">
+		<p class="wp-embed-heading t-title-large">
 			<a href="<?php the_permalink(); ?>" target="_top">
 				<?php the_title(); ?>
 			</a>

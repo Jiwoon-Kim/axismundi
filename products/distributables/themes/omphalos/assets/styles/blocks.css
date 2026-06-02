@@ -781,6 +781,23 @@
   border-block-start: 1px solid var(--md-sys-color-outline-variant);
 }
 
+/* card interior vertical rhythm. The card PADDING owns the edges; a single token
+ * gap stacks the items. We reset core's ad-hoc per-element margins first
+ * (latest-posts excerpt `0.5em / 1em`, centred featured-image `1em`) because they
+ * left the rhythm uneven: the title→meta gap was 0, while the LAST child (excerpt)
+ * doubled its `1em` (~14px) bottom margin against the card's 16px padding for a
+ * ~30px bottom edge. Now every stacked item is one `--space-xs` apart and the card
+ * padding alone owns all four edges. (No flex `gap`: featuredImageAlign uses
+ * float, which a flex container would drop — so the rhythm is margin-based.) */
+.wp-block-post-content .wp-block-latest-posts > li > *,
+.wp-block-post-content .wp-block-rss > li > * {
+  margin-block: 0;
+}
+.wp-block-post-content .wp-block-latest-posts > li > * + *,
+.wp-block-post-content .wp-block-rss > li > * + * {
+  margin-block-start: var(--space-xs);
+}
+
 /* GRID layout — UNIFIED for both blocks. Core ships the responsive grid
  * (columns-N widths at >=600px, single column below) via per-item margins that
  * differ per block (latest-posts 1.25em, rss 1em) AND leave a trailing column gap
@@ -852,8 +869,8 @@
 }
 .wp-block-post-content .wp-block-latest-posts .wp-block-latest-posts__post-excerpt,
 .wp-block-post-content .wp-block-rss .wp-block-rss__item-excerpt {
+  /* = .t-body-medium; vertical spacing is owned by the card interior rhythm above */
   color: var(--md-sys-color-on-surface-variant);
   font-size: var(--md-sys-typescale-body-medium-size);
   line-height: var(--md-sys-typescale-body-medium-line-height);
-  margin-block-start: var(--space-xs);
 }

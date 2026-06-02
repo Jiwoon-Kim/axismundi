@@ -191,9 +191,18 @@ separate grid section is folded in):
   forces a float.
 - typography (list + grid): title = on-surface headline at **title-small**, no
   resting underline (underline on hover/focus, offset .15em); meta = body-small
-  on-surface-variant; excerpt = body-medium on-surface-variant + `--space-xs` top
-  margin. (title-small everywhere for now - the narrow grid card wraps title-medium
-  too much; bump the LP list later if it reads weak.)
+  on-surface-variant; excerpt = body-medium on-surface-variant. (title-small
+  everywhere for now - the narrow grid card wraps title-medium too much; bump the
+  LP list later if it reads weak.) These are the CSS equivalent of the theme's
+  typescale utilities (`.t-title-small` / `.t-body-small` / `.t-body-medium`),
+  applied by selector because the blocks are DYNAMIC (PHP render can't carry a
+  utility class) — a future `render_block` filter could inject the classes.
+- card interior rhythm: the card PADDING owns all four edges; stacked items are a
+  uniform `--space-xs` apart. core's ad-hoc per-element margins are reset first
+  (latest-posts excerpt `0.5em / 1em`, centred featured-image `1em`) — they left an
+  uneven rhythm: title->meta gap 0, and the LAST child doubled its `1em` (~14px)
+  bottom margin against the 16px card padding (~30px bottom edge). Margin-based (not
+  flex `gap`) because featuredImageAlign uses float, which a flex container drops.
 
 Every collection gap is **--space-md (16px)**, consistent across LP list, both
 grids, and mobile row gaps. Verified computed both schemes + at desktop 900

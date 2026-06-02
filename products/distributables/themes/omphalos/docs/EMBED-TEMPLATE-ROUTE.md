@@ -265,6 +265,19 @@ layouts); the implementation SURFACES differ (iframe embed template vs a JSON-LD
 renderer). So reuse the variant-layout system across both, but keep the lanes
 distinct — earlier notes over-coupled `/embed/` to AP s2s.
 
+**Visual directions explored** (design candidates, NOT the default — prototyped in a
+scratch lab): *Hero* (full-bleed 16:9 media band + title-large, unifying the
+square/rectangular branch into one band), *Split* (a 40% media rail beside a flex
+body — good for feed/object lists; needs an `.ev-body` wrapper and is risky in the
+narrow embed iframe), *Editorial* (overlaid title on a scrim / big display title —
+magazine feel). All step the title up to title-large and clamp the excerpt. They are
+too strong / too divergent from core's square-float ontology to be the WP-to-WP
+DEFAULT; they belong to the future Object/Activity Card system as per-TYPE variants
+(e.g. attachment → Hero, activity → Split), introduced as opt-in `.ev--*` modifiers.
+The default `/embed/` stays the core-faithful article card. One refinement WAS adopted
+from the review: `.wp-embed { display: flow-root }` to contain the square float via a
+BFC (verified — heights / 200px floor / float intact).
+
 ### 10.2 — Typography consumes the existing typescale contract
 No new embed-only type. Same rule as the collection lane:
 

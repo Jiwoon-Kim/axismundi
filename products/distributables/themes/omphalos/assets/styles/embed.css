@@ -57,6 +57,10 @@ body { margin: 0; }
 /* card surface */
 .wp-embed {
   box-sizing: border-box;
+  /* flow-root = a block formatting context: contains the floated square featured
+   * image cleanly (independent of the footer's `clear`), and does not drop the float
+   * the way `flex` would. Height handshake / 200px floor are unaffected. */
+  display: flow-root;
   padding: var(--space-md, 16px);
   background: var(--md-sys-color-surface-container-low, #fff);
   color: var(--md-sys-color-on-surface-variant, #50575e);

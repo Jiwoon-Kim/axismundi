@@ -1,22 +1,50 @@
 /* ============================================================================
- * Omphalos — /embed/ Object Card  (article/post variant, v1)
+ * Omphalos — /embed/ Object Card  (article/post variant — Phase 2a)
  *
  * The card OUR post renders as when embedded on another WP site (or self-embedded)
  * via the /embed/ oEmbed endpoint. Loaded INSIDE the embed iframe only
- * (enqueue_embed_scripts), and depends on core's `wp-embed-template` so it prints
- * AFTER core's inline CSS. Child selectors are scoped `.wp-embed <child>` (0,2,0)
- * to beat core's heading/link rules (some of which are `p.wp-embed-heading` etc.).
+ * (enqueue_embed_scripts), depending on core `wp-embed-template` so it prints AFTER
+ * core's inline CSS.
  *
- * The embed document is isolated, so this file is SELF-CONTAINED: every M3 token is
- * `var(--token, <WP-core-compatible fallback>)`, and NO token CSS / @font-face is
- * enqueued into the iframe (font NAMES are declared, so an absent brand font falls
- * through). Dark follows the iframe's OWN prefers-color-scheme — no parent sync.
- * This is the `article` variant of an Object Card system; attachment / ActivityPub
- * variants come later. See docs/EMBED-TEMPLATE-ROUTE.md §10.
+ * Phase 2a OWNS the markup (theme `embed-content.php`) and attaches the typescale
+ * UTILITY classes (t-title-medium / t-body-medium / t-body-small) directly. The
+ * embed iframe does NOT load the global token/utility CSS, so the utilities are
+ * DEFINED HERE, self-contained, as `var(--md-sys-*, <WP-core fallback>)` — same
+ * names/contract as the theme's .t-* utilities, no token CSS or @font-face enqueued
+ * (route §10.2/§10.3). Selectors are scoped `.wp-embed <child>` (0,2,0) to beat
+ * core's embed typography. Dark follows the iframe's OWN prefers-color-scheme.
+ * Article variant only; attachment/activity variants are a later phase.
  * ========================================================================= */
 
 :root { color-scheme: light dark; }
 
+/* typescale utilities — self-contained (embed iframe has no global utility CSS). */
+.wp-embed .t-title-medium {
+  font-family:    var(--md-sys-typescale-title-medium-font,
+    "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size:      var(--md-sys-typescale-title-medium-size, 16px);
+  line-height:    var(--md-sys-typescale-title-medium-line-height, 24px);
+  font-weight:    var(--md-sys-typescale-title-medium-weight, 500);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking, 0);
+}
+.wp-embed .t-body-medium {
+  font-family:    var(--md-sys-typescale-body-medium-font,
+    "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size:      var(--md-sys-typescale-body-medium-size, 14px);
+  line-height:    var(--md-sys-typescale-body-medium-line-height, 20px);
+  font-weight:    var(--md-sys-typescale-body-medium-weight, 400);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking, 0.25px);
+}
+.wp-embed .t-body-small {
+  font-family:    var(--md-sys-typescale-body-small-font,
+    "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size:      var(--md-sys-typescale-body-small-size, 12px);
+  line-height:    var(--md-sys-typescale-body-small-line-height, 16px);
+  font-weight:    var(--md-sys-typescale-body-small-weight, 400);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking, 0.4px);
+}
+
+/* card surface */
 .wp-embed {
   box-sizing: border-box;
   padding: var(--space-md, 16px);
@@ -25,21 +53,14 @@
   border: 1px solid var(--md-sys-color-outline-variant, #dcdcde);
   border-radius: var(--md-sys-shape-corner-medium, 12px);
   box-shadow: none;
+  /* base font for any unclassed text; the classed parts use the t-* utilities. */
   font-family: var(--md-sys-typescale-body-medium-font,
     "Roboto Flex", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif);
-  font-size:   var(--md-sys-typescale-body-medium-size, 14px);
-  line-height: var(--md-sys-typescale-body-medium-line-height, 20px);
 }
 
-/* title — the item HEADLINE (title-medium), on-surface, no resting underline */
-.wp-embed .wp-embed-heading {
-  margin: 0 0 var(--space-xs, 4px);
-  font-size:      var(--md-sys-typescale-title-medium-size, 16px);
-  line-height:    var(--md-sys-typescale-title-medium-line-height, 24px);
-  font-weight:    var(--md-sys-typescale-title-medium-weight, 500);
-  letter-spacing: var(--md-sys-typescale-title-medium-tracking, 0);
-}
+/* title — headline COLOUR + no resting underline (typography = t-title-medium) */
+.wp-embed .wp-embed-heading { margin: 0 0 var(--space-xs, 4px); }
 .wp-embed .wp-embed-heading a {
   color: var(--md-sys-color-on-surface, #1d2327);
   text-decoration: none;
@@ -50,24 +71,19 @@
   text-underline-offset: 0.15em;
 }
 
-/* excerpt — body-medium, on-surface-variant */
+/* excerpt — COLOUR (typography = t-body-medium) */
 .wp-embed .wp-embed-excerpt,
 .wp-embed .wp-embed-excerpt p {
   margin: 0;
   color: var(--md-sys-color-on-surface-variant, #50575e);
 }
 
-/* featured image — core branches `.rectangular` (above title) vs `.square`
- * (float beside content); keep that layout, just round + tokenise the gap. */
+/* featured image — core branches rectangular (above) vs square (float beside) */
 .wp-embed .wp-embed-featured-image { margin-block-end: var(--space-sm, 8px); }
-.wp-embed .wp-embed-featured-image img {
-  border-radius: var(--md-sys-shape-corner-small, 8px);
-}
-.wp-embed .wp-embed-featured-image.square {
-  margin-inline-end: var(--space-md, 16px);
-}
+.wp-embed .wp-embed-featured-image img { border-radius: var(--md-sys-shape-corner-small, 8px); }
+.wp-embed .wp-embed-featured-image.square { margin-inline-end: var(--space-md, 16px); }
 
-/* footer — site title + meta (comments / share), body-small, on-surface-variant */
+/* footer — LAYOUT (typography = t-body-small) */
 .wp-embed .wp-embed-footer {
   display: flex;
   align-items: center;
@@ -75,8 +91,6 @@
   gap: var(--space-sm, 8px);
   clear: both;
   margin-block-start: var(--space-md, 16px);
-  font-size:   var(--md-sys-typescale-body-small-size, 12px);
-  line-height: var(--md-sys-typescale-body-small-line-height, 16px);
 }
 .wp-embed .wp-embed-site-title a {
   display: inline-flex;
@@ -102,8 +116,7 @@
   text-decoration: none;
 }
 
-/* dark — the iframe follows its OWN scheme; if no token layer is present the
- * M3-dark fallbacks below keep it dark-correct (no parent synchronisation). */
+/* dark — the iframe follows its OWN scheme; M3-dark fallbacks keep it correct. */
 @media (prefers-color-scheme: dark) {
   .wp-embed {
     background: var(--md-sys-color-surface-container-low, #1d1b20);

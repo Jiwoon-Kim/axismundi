@@ -81,32 +81,25 @@ if ( $admin && '' === trim( (string) get_user_meta( $admin->ID, 'description', t
 // core/navigation falls back to the page list). Idempotent by slug; the pattern
 // (patterns/vqa-theme.php) looks this up and references it via `ref`.
 //
-// Structured as a VQA SITEMAP with 2-4 levels of nesting so the desktop submenu
-// popover / overlay collapsible-section specimens are observable at depth (1-level
-// "More" was not enough — nested flyout positioning + hover-path stability need
-// real depth). Real page / attachment permalinks (ASCII ?page_id= / ?attachment_id=
-// to stay mojibake-safe). Labels read as the actual VQA lanes.
+// Structured as a small VQA SITEMAP with one nested submenu so the dropdown / overlay
+// nested-section + description specimens are observable WITHOUT bloat. "VQA Theme" is a
+// submenu whose children are the FUTURE Phase-2/3 subpages (Comments / Archive) — they
+// don't exist yet (placeholder anchors), they just give the nested level + a real
+// reason to nest. Embeds / Embed Template / Attachment links were pulled (they belong
+// in their own lanes / a footer site-map, not the Theme nav). Two items carry a
+// `description` to specimen core/navigation-link description rendering (it renders).
+// Korean lives in this eval-file (mojibake-safe), never PowerShell stdout.
 $u = static function ( $q ) { return home_url( '/' ) . '?' . $q; };
 $nav_content = '<!-- wp:home-link {"label":"Home"} /-->'
 	. '<!-- wp:navigation-submenu {"label":"VQA","url":"#vqa","kind":"custom"} -->'
-	.   '<!-- wp:navigation-link {"label":"Prose VQA","url":"' . $u( 'page_id=12' ) . '","kind":"custom"} /-->'
-	.   '<!-- wp:navigation-link {"label":"VQA Text","url":"' . $u( 'page_id=13' ) . '","kind":"custom"} /-->'
+	.   '<!-- wp:navigation-link {"label":"Prose VQA","url":"' . $u( 'page_id=12' ) . '","kind":"custom","description":"Markdown 장문 prose 블록"} /-->'
+	.   '<!-- wp:navigation-link {"label":"VQA Text","url":"' . $u( 'page_id=13' ) . '","kind":"custom","description":"텍스트 / 타이포 블록"} /-->'
 	.   '<!-- wp:navigation-link {"label":"VQA Media","url":"' . $u( 'page_id=14' ) . '","kind":"custom"} /-->'
 	.   '<!-- wp:navigation-link {"label":"VQA Design","url":"' . $u( 'page_id=21' ) . '","kind":"custom"} /-->'
 	.   '<!-- wp:navigation-link {"label":"VQA Widgets","url":"' . $u( 'page_id=33' ) . '","kind":"custom"} /-->'
 	.   '<!-- wp:navigation-submenu {"label":"VQA Theme","url":"' . $u( 'page_id=68' ) . '","kind":"custom"} -->'
-	.     '<!-- wp:navigation-link {"label":"VQA Embeds","url":"' . $u( 'page_id=52' ) . '","kind":"custom"} /-->'
-	.     '<!-- wp:navigation-link {"label":"VQA Embed Template","url":"' . $u( 'page_id=63' ) . '","kind":"custom"} /-->'
-	.   '<!-- /wp:navigation-submenu -->'
-	.   '<!-- wp:navigation-submenu {"label":"Attachments","url":"#attachments","kind":"custom"} -->'
-	.     '<!-- wp:navigation-submenu {"label":"Images","url":"#images","kind":"custom"} -->'
-	.       '<!-- wp:navigation-link {"label":"Image (webp)","url":"' . $u( 'attachment_id=6' ) . '","kind":"custom"} /-->'
-	.       '<!-- wp:navigation-link {"label":"Image (jpeg)","url":"' . $u( 'attachment_id=8' ) . '","kind":"custom"} /-->'
-	.       '<!-- wp:navigation-link {"label":"Logo (png)","url":"' . $u( 'attachment_id=73' ) . '","kind":"custom"} /-->'
-	.       '<!-- wp:navigation-link {"label":"Wide (png)","url":"' . $u( 'attachment_id=57' ) . '","kind":"custom"} /-->'
-	.     '<!-- /wp:navigation-submenu -->'
-	.     '<!-- wp:navigation-link {"label":"Audio (ogg)","url":"' . $u( 'attachment_id=7' ) . '","kind":"custom"} /-->'
-	.     '<!-- wp:navigation-link {"label":"Video (webm)","url":"' . $u( 'attachment_id=9' ) . '","kind":"custom"} /-->'
+	.     '<!-- wp:navigation-link {"label":"VQA Comments","url":"#vqa-comments-future","kind":"custom","description":"Phase 2 (예정)"} /-->'
+	.     '<!-- wp:navigation-link {"label":"VQA Archive","url":"#vqa-archive-future","kind":"custom","description":"Phase 3 (예정)"} /-->'
 	.   '<!-- /wp:navigation-submenu -->'
 	. '<!-- /wp:navigation-submenu -->'
 	. '<!-- wp:loginout /-->';

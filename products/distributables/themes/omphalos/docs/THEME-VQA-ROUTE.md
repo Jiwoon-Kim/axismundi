@@ -380,3 +380,42 @@ route than a seeded `<hr>` — **deferred** until a divider is actually needed i
 makes the full-screen `fixed inset:0` overlay a desktop surface too; needs scrim +
 max-inline-size + collapsible sections, leans on core interactivity), A4 icon-button
 toggle, nav current/active, and the nested-flyout positioning engine.
+
+### §9.4 — A2 cleanup (M3-faithful, core-leaning — corrected over the first cut)
+
+Review caught over-correction + wrong targets in the first A2 cut. Reworked (blocks.css
+§19 rewrite), verified dark+light:
+
+- **Surface = `surface-container-low`, NO border** (was `surface-container-high` +
+  outline-variant hairline — too bright / over-skinned; M3 standard menu is
+  surface-container-low). Dark page base = rgb(20,18,24), surface-container-low =
+  rgb(29,27,32) — still a tone above base, so it lifts WITHOUT shadow (dark suppresses
+  shadow); light keeps elevation-shadow-level2.
+- **State layer on the ROW (`li`), not the anchor** (M3 menu item: the row owns the
+  state layer). on-surface @ 8% hover / 12% focus-within. **Submenu rows only** —
+  top-level stays conservative.
+- **Top-level typography/padding LEFT TO CORE.** The first cut forced label-large
+  (line-height 20) + padding on the top-level anchor, which shifted the front-end
+  baseline ~1px vs header/editor (the reported bug). Now only de-underline + a
+  conservative hover underline (no box, geometry stays core's; top-level computed pad
+  0/0, line-height 24 = core).
+- **Overlay = fully core via a single-direction gate** (no skin+reset). Gate =
+  `nav.wp-block-navigation:not(:has(.…responsive-container.is-menu-open))`. **The leading
+  `nav` type selector is load-bearing**: the INNER `<ul
+  class="wp-block-navigation__container wp-block-navigation">` also carries the
+  `wp-block-navigation` class but sits *inside* the responsive container, so a class-only
+  gate is satisfied by that inner ul (no is-menu-open descendant) and the skin leaks back
+  into the open overlay — only the outer `<nav>` both carries the class and *contains* the
+  responsive container. Verified: always-overlay-open @1000px submenu = static /
+  transparent / radius 0 / no-shadow (fully core); this also fixes the reported
+  desktop≠mobile color difference for `always`.
+- **Menu item description support.** `core/navigation-link` has a `description` attr and
+  renders it, but core hides it (`.…item__description { display:none }`) unless the theme
+  opts in. We opt in for the INLINE menu (gated; overlay stays core) → M3 label +
+  supporting text (body-small / on-surface-variant). Two seed items carry a description
+  specimen.
+
+**Sitemap shrunk** (was over-stuffed): Home · VQA → [Prose · Text · Media · Design ·
+Widgets · VQA Theme → [VQA Comments · VQA Archive — the FUTURE Phase-2/3 subpages, the
+real reason to nest]] · Log in. Embeds / Embed Template / Attachment links pulled (they
+belong in their own lanes / a footer site-map, not the Theme nav).

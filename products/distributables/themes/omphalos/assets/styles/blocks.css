@@ -1059,117 +1059,80 @@
 }
 
 /* ============================================================================
- * §19 core/navigation — chrome contract A1 + A2  [DESKTOP-ONLY first cut]
+ * §19 core/navigation — chrome contract A1 + A2  [cleanup: M3-faithful, core-leaning]
  *
- * core/navigation renders a real wp_navigation menu (seeded; a bare nav falls back
- * to the page list). The block is CONTEXT-SENSITIVE and core/TT5 already lay the
- * SUBMENU out two different ways — verified on this install:
+ * The submenu is CONTEXT-SENSITIVE (THEME-VQA-ROUTE §9.1) — core renders it two ways:
+ *   inline dropdown (header / never-overlay / mobile>=600)  → position:absolute
+ *   responsive overlay (mobile<600 / always, .is-menu-open) → position:static, nested
+ * So the menu SURFACE applies to the INLINE DROPDOWN only. The gate is a single
+ * direction: `nav.wp-block-navigation:not(:has(… .is-menu-open))` — in a nav whose
+ * overlay is OPEN, NONE of the A2 skin applies, so the submenu stays core's nested
+ * section (fully core). No media query, no skin+reset; "if .is-menu-open exists, don't
+ * touch it" (per review). The leading `nav` type selector is load-bearing (see the A2
+ * comment — the inner container ul also carries the class). A3 side-sheet + A4
+ * icon-button stay deferred.
  *
- *   header/horizontal context (>=600px, hamburger hidden):
- *     .wp-block-navigation__submenu-container  position:ABSOLUTE  (detached dropdown,
- *     bg, but boxShadow:NONE → reads FLAT, not as a menu)        ← A2 target
- *   responsive overlay context (<600px, .is-menu-open):
- *     .wp-block-navigation__submenu-container  position:STATIC  bg:transparent  no
- *     border/shadow  padding 19.2/32/0  → an in-flow, INDENTED nested nav section
- *
- * So the submenu is a DROPDOWN MENU SURFACE on the header but a COLLAPSIBLE NAV
- * SECTION in the overlay. NEVER style `.wp-block-navigation__submenu-container`
- * globally as a popover — it would clobber the overlay's nested layout. The whole
- * dropdown-surface block lives inside `@media (min-width:600px)`; below 600px the
- * overlay keeps core's nested layout untouched (no reset needed because no global
- * popover rule exists). The overlay side-sheet + the toggle/close icon-button swap
- * are SEPARATE contracts (A3/A4 — see THEME-VQA-ROUTE §9), deferred (overlay layout
- * leans on core interactivity/markup; the toggle is a raw core SVG).
- *
- * Nav items are DESTINATION LINKS, not action buttons — no `.wp-element-button`
- * contract. current/active treatment is deferred until the current-menu class is
- * observed. FIRST CUT = item typography (label-large) + de-underline + a desktop
- * hover/focus state layer + the desktop submenu MENU SURFACE (tone + elevation +
- * corner). Dark suppresses shadow (tonal elevation) → the menu reads via
- * surface-container-high; light adds elevation-shadow-level2. */
+ * Targets (corrected): nav items are DESTINATION LINKS (no `.wp-element-button`).
+ * Top-level TYPOGRAPHY/PADDING is LEFT TO CORE — overriding line-height/padding shifted
+ * the front-end baseline ~1px in the content specimen; we only de-underline + a
+ * conservative hover underline (no box, so geometry stays core's). The state layer
+ * lives on the menu ROW (`li`), not the anchor (M3 menu item: the row owns the state
+ * layer), and only for SUBMENU rows — top-level stays conservative. */
 
-/* A1 — nav item typography (both contexts; type only, safe) + de-underline. The
- * post-content-scoped selector (0,2,1) ties the §9 prose link rule and wins by load
- * order (blocks.css after prose.css); the bare selector covers real header placement. */
-.wp-block-navigation a.wp-block-navigation-item__content,
-.wp-block-post-content .wp-block-navigation a.wp-block-navigation-item__content {
-  font-family:    var(--md-sys-typescale-label-large-font, inherit);
-  font-size:      var(--md-sys-typescale-label-large-size, 14px);
-  line-height:    var(--md-sys-typescale-label-large-line-height, 20px);
-  font-weight:    var(--md-sys-typescale-label-large-weight, 500);
-  letter-spacing: var(--md-sys-typescale-label-large-tracking, 0.1px);
-}
+/* A1 — chrome de-underline (both contexts; theme block is chrome, not prose; the
+ * post-content-scoped selector ties the §9 prose rule and wins by load order). */
 .wp-block-navigation a,
 .wp-block-post-content .wp-block-navigation a {
   text-decoration: none;
 }
+.wp-block-navigation a.wp-block-navigation-item__content:hover,
+.wp-block-navigation a.wp-block-navigation-item__content:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
 
-/* A1 (desktop) + A2 (desktop submenu surface): scoped to the header context. Below
- * 600px this whole block is inert, so the overlay submenu keeps core's nested layout. */
-@media (min-width: 600px) {
-  /* A1 — desktop nav item state layer (M3 text nav item, NOT a button). */
-  .wp-block-navigation a.wp-block-navigation-item__content {
-    padding-block: var(--space-xs, 4px);
-    padding-inline: var(--space-sm, 8px);
-    border-radius: var(--md-sys-shape-corner-small, 8px);
-    transition: background-color 0.15s ease;
-  }
-  .wp-block-navigation a.wp-block-navigation-item__content:hover {
-    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
-  }
-  .wp-block-navigation a.wp-block-navigation-item__content:focus-visible {
-    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
-    outline: 2px solid var(--md-sys-color-primary);
-    outline-offset: 2px;
-  }
-
-  /* A2 — desktop submenu = Menu SURFACE (dropdown). Replace core's flat panel with a
-   * toned, elevated, rounded menu. The submenu carries the `has-base-background-color`
-   * PRESET utility (background-color: var(--wp--preset--color--base) !important — the
-   * page base surface, so the dropdown reads FLAT against the page); a non-important
-   * declaration can't beat a preset !important regardless of specificity/order, so the
-   * surface tone must also be !important. Dark suppresses elevation shadow (tonal
-   * elevation), so an outline-variant hairline delineates the menu there; light gets
-   * the real elevation-shadow-level2. */
-  .wp-block-navigation .wp-block-navigation__submenu-container {
-    background-color: var(--md-sys-color-surface-container-high) !important;
-    border: 1px solid var(--md-sys-color-outline-variant) !important;
-    border-radius: var(--md-sys-shape-corner-small, 8px);
-    box-shadow: var(--md-sys-elevation-shadow-level2);
-    padding-block: var(--space-xs, 4px);
-    padding-inline: 0;
-    min-inline-size: 11rem;
-  }
-  /* submenu items = full-width menu rows (override the top-level pill state layer). */
-  .wp-block-navigation .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
-    border-radius: 0;
-    padding-block: var(--space-sm, 8px);
-    padding-inline: var(--space-md, 16px);
-    color: var(--md-sys-color-on-surface);
-  }
-  .wp-block-navigation .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:hover {
-    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
-  }
-  .wp-block-navigation .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
-    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
-    outline: 2px solid var(--md-sys-color-primary);
-    outline-offset: -2px;
-  }
-
-  /* OVERLAY GUARD — context-sensitivity (THEME-VQA-ROUTE §9.1). overlayMenu:"always"
-   * opens the MODAL overlay at >=600px too, where core lays the submenu out as a
-   * STATIC, transparent, INDENTED nested nav section (verified). core resets position
-   * + background there, but NOT border-radius / border / box-shadow / min-width — so
-   * the A2 dropdown-surface above leaks a floating-card look into the overlay. Undo the
-   * popover treatment inside an open overlay so it stays a nested section, never a
-   * popover. (Below 600px the whole block is inert, so the mobile overlay is untouched
-   * to begin with; this guard only matters for always-overlay at desktop.) */
-  .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__submenu-container {
-    background-color: transparent !important;
-    border: 0 !important;
-    border-radius: 0;
-    box-shadow: none;
-    min-inline-size: 0;
-    padding-block: 0;
-  }
+/* A2 — inline-dropdown submenu = M3 standard Menu surface. Gated OFF when this nav's
+ * responsive overlay is open (:not(:has(.is-menu-open))) → overlay is fully core. The
+ * submenu carries the `has-base-background-color` preset utility (background-color:
+ * var(--wp--preset--color--base) !important — the page base surface, reads FLAT), so
+ * the surface tone must also be !important to win. M3 menu = surface-container-low, NO
+ * border; light gets elevation-shadow-level2, dark uses the tonal/elevation policy
+ * (shadow suppressed). */
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container {
+  background-color: var(--md-sys-color-surface-container-low) !important;
+  border: 0 !important;
+  border-radius: var(--md-sys-shape-corner-small, 8px);
+  box-shadow: var(--md-sys-elevation-shadow-level2);
+  padding-block: var(--space-xs, 4px);
+  padding-inline: 0;
+  min-inline-size: 11rem;
+}
+/* menu ROW state layer (li owns it, M3 menu item) — submenu rows only; top-level stays
+ * conservative (A1 underline). on-surface @ 8% hover / 12% focus-within. */
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container .wp-block-navigation-item:hover,
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container .wp-block-navigation-item:focus-within {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+/* menu row anchor — full-width row, padding + on-surface; the row state layer (above)
+ * is the affordance, so no resting/hover underline inside the menu. */
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
+  display: block;
+  padding-block: var(--space-sm, 8px);
+  padding-inline: var(--space-md, 16px);
+  color: var(--md-sys-color-on-surface);
+}
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:hover,
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
+  text-decoration: none;
+}
+/* menu item supporting text (core/navigation-link `description`) → label + supporting
+ * text (M3 menu item). core renders the description in markup but hides it
+ * (`…__description { display:none }`) unless the theme opts in — we opt in for the
+ * INLINE menu only (gated like A2; overlay stays core). body-small / on-surface-variant. */
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container .wp-block-navigation-item__description {
+  display: block;
+  margin-block-start: 2px;
+  font-size:   var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  color: var(--md-sys-color-on-surface-variant);
 }

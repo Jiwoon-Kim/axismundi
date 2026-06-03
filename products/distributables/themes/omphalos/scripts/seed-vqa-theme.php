@@ -77,6 +77,27 @@ if ( $admin && '' === trim( (string) get_user_meta( $admin->ID, 'description', t
 	wp_update_user( array( 'ID' => $admin->ID, 'description' => 'Omphalos 데모 작성자 — Twenty Twenty-Five 위에 Material Design 3를 브릿지하는 파일럿을 만듭니다.' ) );
 }
 
+// --- a real wp_navigation menu so the nav specimen renders an ACTUAL menu (a bare
+// core/navigation falls back to the page list). Idempotent by slug; the pattern
+// (patterns/vqa-theme.php) looks this up and references it via `ref`.
+$nav_content = '<!-- wp:home-link {"label":"Home"} /-->'
+	. '<!-- wp:navigation-link {"label":"About","url":"#about","kind":"custom"} /-->'
+	. '<!-- wp:navigation-link {"label":"Blog","url":"#blog","kind":"custom"} /-->'
+	. '<!-- wp:navigation-submenu {"label":"More","url":"#more","kind":"custom"} -->'
+	. '<!-- wp:navigation-link {"label":"Categories","url":"#categories","kind":"custom"} /-->'
+	. '<!-- wp:navigation-link {"label":"Tags","url":"#tags","kind":"custom"} /-->'
+	. '<!-- /wp:navigation-submenu -->'
+	. '<!-- wp:loginout /-->';
+$nav_exist = get_posts( array( 'post_type' => 'wp_navigation', 'name' => 'vqa-theme-nav', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
+$nav_args  = array( 'post_type' => 'wp_navigation', 'post_status' => 'publish', 'post_title' => 'VQA Theme Nav', 'post_name' => 'vqa-theme-nav', 'post_content' => $nav_content );
+if ( $nav_exist ) {
+	$nav_args['ID'] = $nav_exist[0];
+	wp_update_post( $nav_args );
+	$nav_id = $nav_exist[0];
+} else {
+	$nav_id = wp_insert_post( $nav_args );
+}
+
 // --- a site tagline so the core/site-tagline specimen renders (only if empty —
 // blogdescription is site-owner data, like the Site Logo).
 if ( '' === trim( (string) get_option( 'blogdescription' ) ) ) {
@@ -100,4 +121,4 @@ if ( $vexist ) {
 	$vid = wp_insert_post( $vargs );
 }
 
-WP_CLI::log( 'Theme VQA ready: ' . get_permalink( $vid ) . ' (cat=' . $cat_id . ', tag=' . $tag_id . ', posts=' . implode( ',', $ids ) . ')' );
+WP_CLI::log( 'Theme VQA ready: ' . get_permalink( $vid ) . ' (cat=' . $cat_id . ', tag=' . $tag_id . ', nav=' . $nav_id . ', posts=' . implode( ',', $ids ) . ')' );

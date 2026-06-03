@@ -224,3 +224,54 @@ no-underline; read-more primary no-underline.
 read-more → text button, pagination component, the metadata-cluster layout, the
 navigation/submenu surfaces, and bumping `core/post-title` to its card headline size
 (the B contract).
+
+---
+
+## §9 — Navigation (A contract) — real-menu seed + CSS-0 DOM/overlay diagnosis
+
+A bare `core/navigation` renders the **page-list fallback** (canonical risk, §5). So
+the A contract first needs a real menu: `scripts/seed-vqa-theme.php` seeds an
+idempotent `wp_navigation` post (slug `vqa-theme-nav`: home-link · About · Blog ·
+More→[Categories · Tags] · loginout), and `patterns/vqa-theme.php` looks it up at
+pattern-include time and references it via `{"ref":N}` (PHP-in-pattern runs at
+registration). **Verified**: the specimen renders the ACTUAL menu (Home · About · Blog
+· More · Categories · Tags · Log in), submenu present, NO page-list fallback.
+
+**CSS-0 DOM/overlay diagnosis** (dark; wide 1000px + narrow 380px, no nav CSS yet):
+
+```txt
+DESKTOP (wide)
+  nav            <nav> display:flex  (horizontal bar)
+  nav item       <a> 14px / on-surface (rgb 230,224,233) / underline:NONE / pad:0
+                 → already de-prosed by §18; reads as a text nav item
+  submenu trig   a.wp-block-navigation-item__content + chevron SVG (has icon)
+  submenu panel  position:absolute · visibility:hidden · opacity:0 (CSS hover/focus
+                 toggle) · display:flex · bg rgb(20,18,24)  ← flat, NO elevation/shadow
+
+MOBILE (narrow, overlayMenu:"mobile")
+  toggle         <button> SVG-icon (hamburger) · 24×24 · color on-surface
+  overlay open   position:fixed · inset:0 · bg rgb(20,18,24) OPAQUE · FULL-SCREEN
+  close          <button> SVG-icon (X)
+```
+
+**Observed → M3 target (mapping notes, NOT contracts — no CSS this step):**
+
+```txt
+desktop nav item → M3 text nav item: §18 already did color/size/no-underline; the gap
+                   is M3 spacing + a state layer (hover/focus/active), not type/color.
+submenu panel    → M3 Menu SURFACE: surface-container + elevation (shadow) + corner +
+                   padding. Currently a FLAT absolute dropdown with no elevation.
+mobile toggle    → M3 ICON BUTTON, Material Symbols `menu`. Currently raw core SVG.
+mobile overlay   → user wants a SIDE MODAL SHEET; core gives a FULL-SCREEN fixed
+                   inset:0 modal. Gap = anchor to a side + max-inline-size + scrim
+                   behind, not inset:0 fill.
+close            → M3 ICON BUTTON, Material Symbols `menu_open` / `close`.
+```
+
+The three real gaps (item type/color already handled by §18): (1) submenu = flat
+popover with no elevation; (2) overlay = full-screen, not a side sheet; (3)
+toggle/close = raw core SVG, not M3 icon buttons. Backlog refs for the contract:
+styleguide `#components-sheet` ("Static — side modal"), `lab-popover-pattern` (submenu
+surface), icon-system (Material Symbols `menu`/`menu_open`). **Next: the A CSS
+contract** (desktop item state layer + submenu Menu surface + overlay side-sheet +
+icon-button toggle) — separate step, after this diagnosis is reviewed.

@@ -23,6 +23,12 @@
  *
  * @package Omphalos
  */
+
+// Reference the seeded wp_navigation menu by id so the nav specimen renders an
+// ACTUAL menu (a bare core/navigation falls back to the page list). Computed at
+// pattern-include time; falls back to a bare nav if the menu has not been seeded.
+$omph_nav     = get_posts( array( 'post_type' => 'wp_navigation', 'name' => 'vqa-theme-nav', 'post_status' => 'publish', 'numberposts' => 1, 'fields' => 'ids' ) );
+$omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 ?>
 <!-- wp:heading {"level":1} -->
 <h1 class="wp-block-heading">Core Theme VQA — baseline</h1>
@@ -46,14 +52,11 @@
 <h2 class="wp-block-heading">2. Navigation</h2>
 <!-- /wp:heading -->
 
-<!-- wp:navigation {"overlayMenu":"never"} -->
-<!-- wp:home-link {"label":"Home"} /-->
-<!-- wp:navigation-link {"label":"About","url":"#about","kind":"custom"} /-->
-<!-- wp:navigation-submenu {"label":"More","url":"#","kind":"custom"} -->
-<!-- wp:navigation-link {"label":"Sub one","url":"#sub-one","kind":"custom"} /-->
-<!-- wp:navigation-link {"label":"Sub two","url":"#sub-two","kind":"custom"} /-->
-<!-- /wp:navigation-submenu -->
-<!-- /wp:navigation -->
+<?php if ( $omph_nav_ref ) : ?>
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"mobile"} /-->
+<?php else : ?>
+<!-- wp:navigation {"overlayMenu":"mobile"} /-->
+<?php endif; ?>
 
 <!-- wp:breadcrumbs /-->
 

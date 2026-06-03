@@ -272,6 +272,51 @@ The three real gaps (item type/color already handled by §18): (1) submenu = fla
 popover with no elevation; (2) overlay = full-screen, not a side sheet; (3)
 toggle/close = raw core SVG, not M3 icon buttons. Backlog refs for the contract:
 styleguide `#components-sheet` ("Static — side modal"), `lab-popover-pattern` (submenu
-surface), icon-system (Material Symbols `menu`/`menu_open`). **Next: the A CSS
-contract** (desktop item state layer + submenu Menu surface + overlay side-sheet +
-icon-button toggle) — separate step, after this diagnosis is reviewed.
+surface), icon-system (Material Symbols `menu`/`menu_open`).
+
+### §9.1 — Submenu is CONTEXT-SENSITIVE (the load-bearing scoping rule)
+
+A bare `.wp-block-navigation__submenu-container` must **never** be styled as a popover
+globally — core/TT5 already lay it out two different ways (verified on this install):
+
+```txt
+header/horizontal (>=600px, hamburger hidden)
+  submenu = position:ABSOLUTE detached dropdown, bg, boxShadow:NONE (reads FLAT)
+  → M3 target: Menu SURFACE (tone + elevation + corner)
+responsive overlay (<600px, .is-menu-open)
+  submenu = position:STATIC, bg:transparent, no border/shadow, padding 19.2/32/0
+  → already a COLLAPSIBLE nested nav section (NOT a popover); leave core's layout
+```
+
+**Breakpoint = exactly 600px** (sweep: hamburger <=599px, inline >=600px). So the
+desktop dropdown-surface CSS lives entirely inside `@media (min-width:600px)`; below
+600px no rule touches the submenu, so the overlay keeps its nested layout. NO reset
+needed because no global popover rule exists. TT5 confirms the split — never collapse
+the two contexts into one `.wp-block-navigation__submenu-container` popover patch.
+
+### §9.2 — A1 + A2 implemented (blocks.css §19, DESKTOP-ONLY first cut — DONE)
+
+- **A1 nav item** (both contexts, type only + de-underline): label-large (14/20/500,
+  0.1px), resting underline removed (the post-content-scoped selector ties the §9
+  prose rule and wins by order). Items are DESTINATION LINKS — no `.wp-element-button`.
+- **A1 desktop state layer** (`@media min-width:600px`): item gets padding (4/8),
+  corner-small radius, hover = on-surface @ 8%, focus-visible = on-surface @ 12% +
+  primary outline. (Below 600px the overlay rows keep core's layout — A3.)
+- **A2 desktop submenu surface** (`@media min-width:600px`): the container carries the
+  `has-base-background-color` PRESET utility (`background-color: var(--wp--preset--
+  color--base) !important`), so the surface tone MUST also be `!important` to win
+  (specificity/order can't beat a preset important). → surface-container-high +
+  outline-variant hairline + corner-small + elevation-shadow-level2 + menu-row padding.
+  Dark suppresses shadow (tonal elevation), so the high surface tone + hairline
+  delineate the menu; light gets the real shadow.
+
+Verified computed: item 14/20/500 no-underline, hover on-surface@8%, radius 8px;
+submenu dark bg rgb(43,41,48)=surface-container-high (vs page rgb(20,18,24)) shadow
+none, light bg rgb(236,230,240) + real shadow; overlay submenu UNCHANGED
+(static/transparent/no-shadow — no leak). Screenshots confirm a proper menu surface.
+
+**Deferred (separate contracts):** A3 overlay side-sheet (full-screen `fixed inset:0`
+→ side modal sheet + scrim + max-inline-size; leans on core interactivity/markup),
+A4 toggle/close icon-button swap (raw core SVG → Material Symbols `menu`/`menu_open`;
+needs icon-system + possibly markup/filter), and nav current/active treatment (until
+the current-menu class is observed).

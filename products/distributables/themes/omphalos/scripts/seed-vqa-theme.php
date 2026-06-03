@@ -80,12 +80,34 @@ if ( $admin && '' === trim( (string) get_user_meta( $admin->ID, 'description', t
 // --- a real wp_navigation menu so the nav specimen renders an ACTUAL menu (a bare
 // core/navigation falls back to the page list). Idempotent by slug; the pattern
 // (patterns/vqa-theme.php) looks this up and references it via `ref`.
+//
+// Structured as a VQA SITEMAP with 2-4 levels of nesting so the desktop submenu
+// popover / overlay collapsible-section specimens are observable at depth (1-level
+// "More" was not enough — nested flyout positioning + hover-path stability need
+// real depth). Real page / attachment permalinks (ASCII ?page_id= / ?attachment_id=
+// to stay mojibake-safe). Labels read as the actual VQA lanes.
+$u = static function ( $q ) { return home_url( '/' ) . '?' . $q; };
 $nav_content = '<!-- wp:home-link {"label":"Home"} /-->'
-	. '<!-- wp:navigation-link {"label":"About","url":"#about","kind":"custom"} /-->'
-	. '<!-- wp:navigation-link {"label":"Blog","url":"#blog","kind":"custom"} /-->'
-	. '<!-- wp:navigation-submenu {"label":"More","url":"#more","kind":"custom"} -->'
-	. '<!-- wp:navigation-link {"label":"Categories","url":"#categories","kind":"custom"} /-->'
-	. '<!-- wp:navigation-link {"label":"Tags","url":"#tags","kind":"custom"} /-->'
+	. '<!-- wp:navigation-submenu {"label":"VQA","url":"#vqa","kind":"custom"} -->'
+	.   '<!-- wp:navigation-link {"label":"Prose VQA","url":"' . $u( 'page_id=12' ) . '","kind":"custom"} /-->'
+	.   '<!-- wp:navigation-link {"label":"VQA Text","url":"' . $u( 'page_id=13' ) . '","kind":"custom"} /-->'
+	.   '<!-- wp:navigation-link {"label":"VQA Media","url":"' . $u( 'page_id=14' ) . '","kind":"custom"} /-->'
+	.   '<!-- wp:navigation-link {"label":"VQA Design","url":"' . $u( 'page_id=21' ) . '","kind":"custom"} /-->'
+	.   '<!-- wp:navigation-link {"label":"VQA Widgets","url":"' . $u( 'page_id=33' ) . '","kind":"custom"} /-->'
+	.   '<!-- wp:navigation-submenu {"label":"VQA Theme","url":"' . $u( 'page_id=68' ) . '","kind":"custom"} -->'
+	.     '<!-- wp:navigation-link {"label":"VQA Embeds","url":"' . $u( 'page_id=52' ) . '","kind":"custom"} /-->'
+	.     '<!-- wp:navigation-link {"label":"VQA Embed Template","url":"' . $u( 'page_id=63' ) . '","kind":"custom"} /-->'
+	.   '<!-- /wp:navigation-submenu -->'
+	.   '<!-- wp:navigation-submenu {"label":"Attachments","url":"#attachments","kind":"custom"} -->'
+	.     '<!-- wp:navigation-submenu {"label":"Images","url":"#images","kind":"custom"} -->'
+	.       '<!-- wp:navigation-link {"label":"Image (webp)","url":"' . $u( 'attachment_id=6' ) . '","kind":"custom"} /-->'
+	.       '<!-- wp:navigation-link {"label":"Image (jpeg)","url":"' . $u( 'attachment_id=8' ) . '","kind":"custom"} /-->'
+	.       '<!-- wp:navigation-link {"label":"Logo (png)","url":"' . $u( 'attachment_id=73' ) . '","kind":"custom"} /-->'
+	.       '<!-- wp:navigation-link {"label":"Wide (png)","url":"' . $u( 'attachment_id=57' ) . '","kind":"custom"} /-->'
+	.     '<!-- /wp:navigation-submenu -->'
+	.     '<!-- wp:navigation-link {"label":"Audio (ogg)","url":"' . $u( 'attachment_id=7' ) . '","kind":"custom"} /-->'
+	.     '<!-- wp:navigation-link {"label":"Video (webm)","url":"' . $u( 'attachment_id=9' ) . '","kind":"custom"} /-->'
+	.   '<!-- /wp:navigation-submenu -->'
 	. '<!-- /wp:navigation-submenu -->'
 	. '<!-- wp:loginout /-->';
 $nav_exist = get_posts( array( 'post_type' => 'wp_navigation', 'name' => 'vqa-theme-nav', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );

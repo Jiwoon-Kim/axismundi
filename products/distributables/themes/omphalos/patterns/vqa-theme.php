@@ -52,10 +52,29 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 <h2 class="wp-block-heading">2. Navigation</h2>
 <!-- /wp:heading -->
 
+<!-- wp:paragraph -->
+<p>VQA sitemap 메뉴 (2~4 depth nested). 좌측 정렬(justifyContent:left) — 깊은 submenu에서 우측 정렬은 시각적으로 불규칙해짐. <strong>주의</strong>: content-context specimen은 DOM 관찰용이며 interaction(hover-path)은 header/template context와 다를 수 있다(실제 헤더 = TT5 header 패턴 nav).</p>
+<!-- /wp:paragraph -->
+
 <?php if ( $omph_nav_ref ) : ?>
-<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"mobile"} /-->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"left"}} /-->
 <?php else : ?>
-<!-- wp:navigation {"overlayMenu":"mobile"} /-->
+<!-- wp:navigation {"overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"left"}} /-->
+<?php endif; ?>
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">2b. Overlay Visibility specimens (never / mobile / always)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>같은 메뉴, <code>overlayMenu</code>만 다름. <code>always</code>는 desktop에서도 hamburger overlay → desktop submenu surface 규칙(@media min-width:600px)이 새는지 진단 대상.</p>
+<!-- /wp:paragraph -->
+
+<?php if ( $omph_nav_ref ) : ?>
+<!-- wp:paragraph --><p><strong>never</strong> (overlay off — always inline):</p><!-- /wp:paragraph -->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"never","layout":{"type":"flex","justifyContent":"left"}} /-->
+<!-- wp:paragraph --><p><strong>always</strong> (overlay at every width):</p><!-- /wp:paragraph -->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"always","layout":{"type":"flex","justifyContent":"left"}} /-->
 <?php endif; ?>
 
 <!-- wp:breadcrumbs /-->

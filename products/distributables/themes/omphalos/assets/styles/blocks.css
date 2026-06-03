@@ -1155,4 +1155,21 @@
     outline: 2px solid var(--md-sys-color-primary);
     outline-offset: -2px;
   }
+
+  /* OVERLAY GUARD — context-sensitivity (THEME-VQA-ROUTE §9.1). overlayMenu:"always"
+   * opens the MODAL overlay at >=600px too, where core lays the submenu out as a
+   * STATIC, transparent, INDENTED nested nav section (verified). core resets position
+   * + background there, but NOT border-radius / border / box-shadow / min-width — so
+   * the A2 dropdown-surface above leaks a floating-card look into the overlay. Undo the
+   * popover treatment inside an open overlay so it stays a nested section, never a
+   * popover. (Below 600px the whole block is inert, so the mobile overlay is untouched
+   * to begin with; this guard only matters for always-overlay at desktop.) */
+  .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__submenu-container {
+    background-color: transparent !important;
+    border: 0 !important;
+    border-radius: 0;
+    box-shadow: none;
+    min-inline-size: 0;
+    padding-block: 0;
+  }
 }

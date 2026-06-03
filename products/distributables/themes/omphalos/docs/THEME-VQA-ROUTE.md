@@ -320,3 +320,63 @@ none, light bg rgb(236,230,240) + real shadow; overlay submenu UNCHANGED
 A4 toggle/close icon-button swap (raw core SVG → Material Symbols `menu`/`menu_open`;
 needs icon-system + possibly markup/filter), and nav current/active treatment (until
 the current-menu class is observed).
+
+### §9.3 — VQA sitemap menu + overlay-visibility / nested / divider diagnosis
+
+The 1-level "More" specimen was too shallow. The seed menu (`vqa-theme-nav`) was rebuilt
+as a **VQA sitemap with 2–4 levels of nesting**, real `?page_id=` / `?attachment_id=`
+permalinks (ASCII, mojibake-safe): Home · VQA → [Prose · Text · Media · Design · Widgets
+· VQA Theme → [Embeds · Embed Template] · Attachments → [Images → [webp · jpeg · png ·
+wide] · Audio · Video]] · Log in. Round-trip stable; nested depth verified (4 submenu
+containers, max nest depth 3). The pattern now also carries three overlay-visibility
+specimens (`never` / `mobile` / `always`), all `justifyContent:left` (deep submenus read
+ragged when right-justified — the user's call; alignment follows the nav toolbar's
+justify-items, a per-block layout attr).
+
+**Header vs content context (resolves the "header reacts to theme color, content doesn't"
+observation):** the omphalos `header` template part is just `<!-- wp:pattern
+{"slug":"twentytwentyfive/header"} /-->` — so the real site-header nav is the **TT5
+header pattern's** navigation, which sets overlay colors + justification, hence it reacts
+to the theme. The `/vqa-theme/` nav is an in-`post-content` specimen WITHOUT those attrs,
+so it looks default and — critically — its **interaction is NOT faithful**: the
+hover-bridge between trigger and dropdown breaks in content (must click the
+`__submenu-icon` toggle to traverse), while the header nav hovers fine. **Conclusion: the
+content specimen is for DOM / structure / CSS-surface observation only; the canonical
+INTERACTION + overlay-color context is the header/template-part nav.** (This is why we
+never trusted the content nav for the hover path.)
+
+**Overlay-visibility DOM/class (CSS-safety — verified):**
+```txt
+overlayMenu  nav class        hamburger @>=600   hamburger @<600   submenu when open
+never        (no is-responsive) never            never             inline dropdown (A2 surface)
+mobile       is-responsive      hidden           shown             <600 = overlay nested
+always       is-responsive      SHOWN            shown             modal overlay at ALL widths
+```
+Visibility is baked into markup/classes (the open button gets `always-shown` for
+`always`), NOT purely a media query — so `@media (min-width:600px)` is necessary but not
+sufficient. **The leak the lock warned about, confirmed:** `always` opens the modal at
+>=600px, where core resets the submenu `position`→static + `background`→transparent but
+NOT `border-radius` / `border` / `box-shadow` / `min-width` — so A2 leaked a floating-card
+look into the overlay's nested section. **Fixed (blocks.css §19 OVERLAY GUARD):**
+`.wp-block-navigation__responsive-container.is-menu-open .…__submenu-container { reset
+radius/border/shadow/min-width/bg }`, inside the same `@media (min-width:600px)`. Verified:
+always-overlay-open @1000px submenu now radius 0 / static / transparent / no-shadow; the
+inline desktop dropdown (mobile/never) keeps the surface (bg surface-container-high, radius
+8, min 11rem). never-nav has no `.is-menu-open` so the guard never touches it.
+
+**Nested flyouts:** each nested `__submenu-container` also gets the A2 surface (correct —
+they're dropdown flyouts). Core positions child submenus `position:absolute` with NO
+collision detection, so 3–4-deep flyouts can overflow the viewport edge — a real popover
+positioning engine is out of CSS-only scope (defer; ref `lab-popover-pattern`).
+
+**Divider probe (isolated render, menu never at risk):** `core/separator` inside a nav
+submenu round-trips stable and renders an `<hr>` — but as a non-`<li>` child of the menu
+`<ul>` (structurally questionable), and the editor inserter likely won't expose it
+(seed-only). `core/spacer` likewise valid. For a menu divider, full-width
+(`is-style-wide`) is the natural choice, but a CSS-drawn row separator is the cleaner
+route than a seeded `<hr>` — **deferred** until a divider is actually needed in the menu.
+
+**Still deferred / next:** A3 overlay = side modal sheet (now doubly motivated — `always`
+makes the full-screen `fixed inset:0` overlay a desktop surface too; needs scrim +
+max-inline-size + collapsible sections, leans on core interactivity), A4 icon-button
+toggle, nav current/active, and the nested-flyout positioning engine.

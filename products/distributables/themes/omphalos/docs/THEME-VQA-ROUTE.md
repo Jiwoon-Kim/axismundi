@@ -489,13 +489,44 @@ Do **not** style `.wp-block-navigation__submenu-container` globally as a menu. V
 does not leak. The Nav rail / drawer lane (vertical / always) is SEPARATE and must not
 inherit the dropdown measurements.
 
+**Row ownership = the `li` (M3 menu item).** The first cut put the row box (min-height +
+padding) on the ANCHOR, which is wrong — the row, state layer, hit area, height and item
+padding belong to the `li`; the anchor (label) and the toggle button are content/action
+SLOTS inside it. Corrected:
+
+```txt
+ul  …__submenu-container   padding 2 / 4 (block/inline) · gap 2 · surface-container-low · radius 16 · overflow visible
+li  …navigation-item       min-block-size 48 · padding-inline 12 · gap 8 · shape 4 (first/last outer 12)
+                           → state layer + hit area + height live here
+a   …__content             padding 0 · min-block-size auto · flex-grow 1 · label/supporting typography only
+button …__submenu-icon     20px slot · margin 0 (core gives ~3.5px → zeroed) · Material Symbols arrow_right
+effective leading/trailing = ul 4 + li 12 = 16 ; a↔button gap = 8 (verified exact)
+```
+
+`a` is `flex-grow:1` on EVERY submenu row, leaf items included — a leaf anchor grows to
+fill the remaining row width, so its click/hit area becomes the FULL row (a deliberate
+change from core's content-width hit area; a full-row target is the menu norm). State
+layer is on the `li`; focus targets stay the real focusables (`a` / `button`).
+
+**Navigation taxonomy (corrected — Tabs removed):**
+```txt
+horizontal WP navigation        ≈ M3 Navigation BAR (role: horizontal destination switch).
+                                  WP nav is text-only by default; M3 nav bar is icon-led →
+                                  not a 1:1 map, but closer to Nav bar than Tabs.
+vertical / submenuVisibility:always / overlay nested
+                                ≈ Navigation RAIL (expanded) / drawer-like nested nav.
+                                  NOT a Menu/Popover — the dropdown measurements are forbidden.
+collapsed rail                  = a SEPARATE later lane (the earlier "overlaps Tabs" framing
+                                  was inaccurate; it is Nav rail collapsed, not Tabs).
+```
+
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 
 ```txt
-container: bg surface-container-low · border 0 · radius 16 · padding 2 · gap 2 · overflow visible
-row:       middle radius 4 · first/last outer radius 12 · min-block-size 48 · padding-inline 12 · padding-block 8
-label:     label-large 14/20/500/0.1
+container: bg surface-container-low · border 0 · radius 16 · padding 2/4 · gap 2 · overflow visible
+row(li):   middle radius 4 · first/last outer radius 12 · min-block-size 48 · padding-inline 12 · gap 8
+anchor(a): padding 0 · min-block-size auto · flex-grow 1 · label-large 14/20/500/0.1
 support:   body-small 12/16/400/0.4 · on-surface-variant · margin-top 2
-trailing:  chevron 20 · on-surface-variant
-overlay:   static/transparent/radius 0, anchor auto/14px (core; no Menu skin)
+trailing:  Material Symbols arrow_right · 20 · on-surface-variant · margin 0 ; gap 8 / trailing inset 16 (exact)
+overlay/vertical/open-always: core (no Menu skin) — verified excluded
 ```

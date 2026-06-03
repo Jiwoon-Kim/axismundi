@@ -1141,12 +1141,20 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
     border: 0 !important;
     border-radius: var(--md-sys-shape-corner-large);
     box-shadow: var(--md-sys-elevation-shadow-level2);
-    padding: 2px;            /* M3 menu group padding 2dp */
+    padding: 2px 4px;        /* M3 menu group padding: 2dp block / 4dp inline */
     min-inline-size: 11rem;
   }
-  /* menu rows: M3 item shape 4dp; 48dp container height; 12dp horizontal content
-   * padding. label + supporting text stack when description is present. */
-  & .wp-block-navigation__submenu-container .wp-block-navigation-item { border-radius: var(--md-sys-shape-corner-extra-small); }
+  /* menu ROW = the li (M3 menu item): the li owns the row box, state layer, hit area,
+   * height and item padding; the anchor (label) + the toggle button are content/action
+   * SLOTS inside it. min 48dp · padding-inline 12dp (effective leading/trailing =
+   * ul 4 + li 12 = 16dp) · gap 8dp between the label slot and the trailing icon button.
+   * Item shape 4dp; first/last outer corners 12dp. (li is already flex-row/align-center.) */
+  & .wp-block-navigation__submenu-container .wp-block-navigation-item {
+    min-block-size: 48px;
+    padding-inline: 12px;
+    gap: 8px;
+    border-radius: var(--md-sys-shape-corner-extra-small);
+  }
   /* first/last menu item outer corners = corner-medium 12dp (hug the 16dp container
    * inset by the 2dp group padding: 16 − 2 − 2 = 12). Middle rows keep 4dp. */
   & .wp-block-navigation__submenu-container > .wp-block-navigation-item:first-child {
@@ -1157,13 +1165,20 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
     border-end-start-radius: var(--md-sys-shape-corner-medium);
     border-end-end-radius:   var(--md-sys-shape-corner-medium);
   }
+  /* anchor = the LABEL slot only. NO padding / NO min-height — the li owns the row box
+   * (above). flex-grow:1 so the label fills the remaining row width and pushes the
+   * trailing toggle button to the row's trailing edge (the 8dp li gap is the min space
+   * between them). DECISION: this applies to leaf items too — a leaf anchor also grows
+   * to fill the row, so its click/hit area becomes the full row width (a deliberate
+   * change from core's content-width hit area; a full-row target is the M3/menu norm).
+   * Internally flex-column so label + supporting text stack. */
   & .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-block-size: 48px;
-    padding-block: var(--space-sm, 8px);
-    padding-inline: 12px;
+    flex-grow: 1;
+    min-block-size: auto;
+    padding: 0;
     color: var(--md-sys-color-on-surface);
     font-size:      var(--md-sys-typescale-label-large-size);
     line-height:    var(--md-sys-typescale-label-large-line-height);
@@ -1199,6 +1214,8 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
     justify-content: center;
     inline-size: 20px;
     block-size: 20px;
+    margin: 0;     /* core gives the toggle a ~3.5px inline margin → zero it so the
+                    * li gap (8) and trailing inset (li 12 + ul 4 = 16) are exact */
     background-color: transparent;
     color: var(--md-sys-color-on-surface-variant);
   }

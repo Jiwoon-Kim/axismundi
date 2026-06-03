@@ -82,14 +82,14 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>Vertical orientation(<code>is-vertical</code>) / <code>submenuVisibility:always</code>(<code>.open-always</code>)는 floating dropdown이 아니라 nav-rail/drawer nested section이다. §19 Menu 측정값(surface, 16dp, elevation, first/last corner)이 여기로 새면 안 된다 — gate 제외 검증용.</p>
+<p>Vertical orientation(<code>is-vertical</code>) / <code>submenuVisibility:always</code>(<code>.open-always</code>)는 floating dropdown이 아니라 nav-rail/drawer nested section이다. §19 Menu 측정값(surface, 16dp, elevation, first/last corner)이 여기로 새면 안 된다 — gate 제외 검증용. <strong>주의</strong>: <code>submenuVisibility:always</code>는 <em>vertical</em>에서만 정합(가로 nav는 submenu가 absolute dropdown이라 always-open이 성립 안 됨 → 에디터가 horizontal+always를 안 반영). 그래서 두 specimen 모두 vertical nav-rail-like로 둔다.</p>
 <!-- /wp:paragraph -->
 
 <?php if ( $omph_nav_ref ) : ?>
-<!-- wp:paragraph --><p><strong>vertical</strong> (orientation vertical, overlay off):</p><!-- /wp:paragraph -->
-<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"never","layout":{"type":"flex","orientation":"vertical"}} /-->
-<!-- wp:paragraph --><p><strong>submenu always</strong> (horizontal, submenuVisibility always — static nested, tests the <code>.open-always</code> gate independently of vertical):</p><!-- /wp:paragraph -->
-<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"never","submenuVisibility":"always","layout":{"type":"flex","justifyContent":"left"}} /-->
+<!-- wp:paragraph --><p><strong>vertical</strong> (orientation vertical, overlay off, submenu open-on-click):</p><!-- /wp:paragraph -->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"submenuVisibility":"click","overlayMenu":"never","layout":{"type":"flex","orientation":"vertical"}} /-->
+<!-- wp:paragraph --><p><strong>submenu always</strong> (vertical, submenuVisibility always = always-expanded nav-rail/tree; submenu icon hidden, flex-wrap):</p><!-- /wp:paragraph -->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"showSubmenuIcon":false,"submenuVisibility":"always","overlayMenu":"never","layout":{"type":"flex","justifyContent":"left","orientation":"vertical","flexWrap":"wrap"}} /-->
 <?php endif; ?>
 
 <!-- wp:breadcrumbs /-->

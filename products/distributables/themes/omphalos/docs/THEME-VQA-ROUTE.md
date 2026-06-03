@@ -484,9 +484,14 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.…r
 
 The leading `nav` type is load-bearing (the inner container ul also carries the class).
 Do **not** style `.wp-block-navigation__submenu-container` globally as a menu. Verified
-(2c specimens — vertical + horizontal-submenu-always): excluded submenus stay CORE
-(vertical bg = core default, not surface-container-low; radius 0, not 16) — the Menu skin
-does not leak. The Nav rail / drawer lane (vertical / always) is SEPARATE and must not
+(2c specimens, both vertical): the `submenuVisibility:click` rail and the
+`submenuVisibility:always` always-expanded rail both stay CORE (bg = core default, not
+surface-container-low; radius 0, not 16) — the Menu skin does not leak. **NOTE:**
+`submenuVisibility:always` is only coherent for a VERTICAL nav (an always-expanded
+rail/tree); on a horizontal nav the submenu is an absolute dropdown, so "always-open"
+has no meaningful state — the editor does not honor horizontal+always (front renders the
+`.open-always` class but it is not an editor-faithful config). So both nav-rail specimens
+are vertical. The Nav rail / drawer lane (vertical / always) is SEPARATE and must not
 inherit the dropdown measurements.
 
 **Row ownership = the `li` (M3 menu item).** The first cut put the row box (min-height +

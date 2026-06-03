@@ -1091,8 +1091,19 @@
  * also carries `.wp-block-navigation` but sits inside the responsive container, so a
  * class-only gate leaks the skin into the open overlay. Values follow the M3 standard
  * Menu spec; state-layer opacities + focus-indicator come from the sys.state tokens
- * (mechanics), color is role-chosen. */
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+ * (mechanics), color is role-chosen. Measurements here are the dropdown/popover Menu
+ * measurements only; overlay / vertical navigation is a nav-rail/drawer-like surface
+ * and is intentionally excluded by the open-overlay gate. */
+/* CONTEXT GATE — the Menu/popover measurements apply ONLY to the horizontal FLOATING
+ * dropdown. core/navigation-submenu is NOT always a Menu: by `submenuVisibility` /
+ * `orientation` / overlay it becomes a nav-rail/drawer-like NESTED SECTION where popover
+ * elevation + floating container + first/last menu-item corners do not belong. Verified
+ * class signals (PHP render): vertical → `nav.is-vertical`; submenuVisibility "always" →
+ * the submenu li gets `.open-always` (static, always-open nested list); overlay open →
+ * `.…responsive-container.is-menu-open`. The gate excludes all three; what remains is the
+ * hover/click FLOATING dropdown. `nav` type still load-bearing (inner ul carries the
+ * class too). The nav-rail (expanded) contract for vertical/always is a SEPARATE lane. */
+nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
   /* baseline fix: the top-level submenu trigger li carries a stray margin-block-start
    * (~4px) that drops the submenu label ~1px below its non-submenu siblings (Home /
    * Log in). Zero it so the whole top row shares one baseline. */
@@ -1107,6 +1118,9 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
   & .wp-block-navigation-item:focus-within {
     background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
   }
+  & .wp-block-navigation-item:active {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+  }
   & .wp-block-navigation__container > .wp-block-navigation-item { border-radius: var(--md-sys-shape-corner-small); }
   /* keyboard focus ring (M3 focus indicator: secondary, 3px) — outer offset on the
    * top-level pill. */
@@ -1116,26 +1130,40 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
   }
 
   /* A2 — submenu = M3 standard Menu surface. surface-container-low, NO border, elevation
-   * level2 (light shadow; dark = tonal lift), container corner-large, group padding —
-   * NO overflow:hidden (it would clip the nested flyouts). The submenu carries the
+   * level2 (light shadow; dark = tonal lift), container corner-large, 2dp group padding/gap —
+   * NO overflow:hidden (it would clip nested flyouts). The submenu carries the
    * has-base-background-color preset (!important), so the tone must be !important too. */
   & .wp-block-navigation__submenu-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;                /* M3 menu group gap 2dp */
     background-color: var(--md-sys-color-surface-container-low) !important;
     border: 0 !important;
     border-radius: var(--md-sys-shape-corner-large);
     box-shadow: var(--md-sys-elevation-shadow-level2);
-    padding: var(--space-xs, 4px);
+    padding: 2px;            /* M3 menu group padding 2dp */
     min-inline-size: 11rem;
   }
-  /* menu rows: M3 item shape 4dp; label + supporting text stacked; min target 44px. */
+  /* menu rows: M3 item shape 4dp; 48dp container height; 12dp horizontal content
+   * padding. label + supporting text stack when description is present. */
   & .wp-block-navigation__submenu-container .wp-block-navigation-item { border-radius: var(--md-sys-shape-corner-extra-small); }
+  /* first/last menu item outer corners = corner-medium 12dp (hug the 16dp container
+   * inset by the 2dp group padding: 16 − 2 − 2 = 12). Middle rows keep 4dp. */
+  & .wp-block-navigation__submenu-container > .wp-block-navigation-item:first-child {
+    border-start-start-radius: var(--md-sys-shape-corner-medium);
+    border-start-end-radius:   var(--md-sys-shape-corner-medium);
+  }
+  & .wp-block-navigation__submenu-container > .wp-block-navigation-item:last-child {
+    border-end-start-radius: var(--md-sys-shape-corner-medium);
+    border-end-end-radius:   var(--md-sys-shape-corner-medium);
+  }
   & .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-block-size: 44px;
+    min-block-size: 48px;
     padding-block: var(--space-sm, 8px);
-    padding-inline: var(--space-md, 16px);
+    padding-inline: 12px;
     color: var(--md-sys-color-on-surface);
     font-size:      var(--md-sys-typescale-label-large-size);
     line-height:    var(--md-sys-typescale-label-large-line-height);
@@ -1165,5 +1193,9 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
     color: var(--md-sys-color-on-surface-variant);
     background-color: transparent;
   }
-  & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon svg { fill: currentColor; }
+  & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon svg {
+    fill: currentColor;
+    width: 20px;   /* M3 menu trailing icon 20dp */
+    height: 20px;
+  }
 }

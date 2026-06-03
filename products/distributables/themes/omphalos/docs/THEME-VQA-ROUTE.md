@@ -440,10 +440,11 @@ verified dark+light:
   to on-surface-variant (M3 trailing icon) + transparent bg (so it doesn't double the row
   state layer).
 - **M3 Menu spec values.** Container = surface-container-low · NO border · corner-large
-  (16dp) · elevation-shadow-level2 (light) / tonal lift (dark) · group padding · NO
-  overflow:hidden (it would clip the nested flyouts — overflow stays visible). Rows =
-  corner-extra-small (4dp) · label-large (14/20/500/0.1) · min-block-size 44 · padding
-  8/16 · supporting text body-small (12/16/400/0.4) on-surface-variant.
+  (16dp) · elevation-shadow-level2 (light) / tonal lift (dark) · group padding/gap 2 ·
+  NO overflow:hidden (it would clip the nested flyouts — overflow stays visible). Rows =
+  middle corner-extra-small (4dp), first/last outer corners 12dp · label-large
+  (14/20/500/0.1) · min-block-size 48 · padding 8/12 · trailing icon 20 · supporting
+  text body-small (12/16/400/0.4) on-surface-variant.
 - **Focus indicator tokens (NEW).** Audit: `--md-sys-state-*-state-layer-opacity` already
   existed (reused, NOT reinvented); the focus-ring MECHANICS did not, so added to
   `tokens.sys.core.css` §6: `--md-sys-state-focus-indicator-{thickness:3px, outer-offset:
@@ -456,5 +457,45 @@ verified dark+light:
 **Sitemap re-expanded with hierarchy** (the shrink was a misread — the ask was structure,
 not removal): Home · VQA → [Prose · Text · Media · Design · Widgets · VQA Theme →
 [Comments · Archive (future)] · VQA Embeds · VQA Embed Template · Attachment page →
-[Images → [webp · jpeg · png · wide] · Audio · Video]] · Log in. Real `?page_id=` /
+[Images → [webp · jpeg · png · wide] · Audio → [ogg] · Video → [webm · caption #10 · caption #11]]] · Log in. Real `?page_id=` /
 `?attachment_id=` permalinks; two description specimens.
+
+### §9.6 — Dropdown Menu measurements vs Nav-rail-like navigation (locked)
+
+Apply **Menu/Popover measurements only to horizontal inline dropdown submenus**. The
+navigation block has other modes that are not menus:
+
+- `overlayMenu: always` / mobile overlay: a responsive overlay with in-flow nested
+  submenu sections.
+- `orientation: vertical` + `overlayMenu: never` + always-visible submenus: visually
+  closer to an expanded navigation rail / drawer than a popover menu.
+
+**Class signals (verified, PHP render + DOM):** `submenuVisibility` enum = `hover` /
+`click` / `always` (default hover); `always` puts `.open-always` on the submenu li (a
+static, always-open nested list). `orientation: vertical` puts `.is-vertical` on the
+`<nav>`. Overlay open = `.…responsive-container.is-menu-open`. hover/click both produce a
+FLOATING absolute dropdown (= Menu); only always/vertical/overlay are nested sections.
+
+Therefore the Menu contract is gated to the floating dropdown with THREE exclusions:
+
+```css
+nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.…responsive-container.is-menu-open)) { … }
+```
+
+The leading `nav` type is load-bearing (the inner container ul also carries the class).
+Do **not** style `.wp-block-navigation__submenu-container` globally as a menu. Verified
+(2c specimens — vertical + horizontal-submenu-always): excluded submenus stay CORE
+(vertical bg = core default, not surface-container-low; radius 0, not 16) — the Menu skin
+does not leak. The Nav rail / drawer lane (vertical / always) is SEPARATE and must not
+inherit the dropdown measurements.
+
+Current measured dropdown values (front, dark, `/vqa-theme/`):
+
+```txt
+container: bg surface-container-low · border 0 · radius 16 · padding 2 · gap 2 · overflow visible
+row:       middle radius 4 · first/last outer radius 12 · min-block-size 48 · padding-inline 12 · padding-block 8
+label:     label-large 14/20/500/0.1
+support:   body-small 12/16/400/0.4 · on-surface-variant · margin-top 2
+trailing:  chevron 20 · on-surface-variant
+overlay:   static/transparent/radius 0, anchor auto/14px (core; no Menu skin)
+```

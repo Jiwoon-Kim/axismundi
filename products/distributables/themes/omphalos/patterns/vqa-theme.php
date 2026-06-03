@@ -77,6 +77,21 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 <!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"always","layout":{"type":"flex","justifyContent":"left"}} /-->
 <?php endif; ?>
 
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">2c. Orientation / Submenu-visibility specimens (nav-rail-like — Menu skin must NOT apply)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Vertical orientation(<code>is-vertical</code>) / <code>submenuVisibility:always</code>(<code>.open-always</code>)는 floating dropdown이 아니라 nav-rail/drawer nested section이다. §19 Menu 측정값(surface, 16dp, elevation, first/last corner)이 여기로 새면 안 된다 — gate 제외 검증용.</p>
+<!-- /wp:paragraph -->
+
+<?php if ( $omph_nav_ref ) : ?>
+<!-- wp:paragraph --><p><strong>vertical</strong> (orientation vertical, overlay off):</p><!-- /wp:paragraph -->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"never","layout":{"type":"flex","orientation":"vertical"}} /-->
+<!-- wp:paragraph --><p><strong>submenu always</strong> (horizontal, submenuVisibility always — static nested, tests the <code>.open-always</code> gate independently of vertical):</p><!-- /wp:paragraph -->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"overlayMenu":"never","submenuVisibility":"always","layout":{"type":"flex","justifyContent":"left"}} /-->
+<?php endif; ?>
+
 <!-- wp:breadcrumbs /-->
 
 <!-- wp:heading -->

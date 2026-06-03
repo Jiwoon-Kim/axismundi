@@ -1086,6 +1086,19 @@
   text-decoration: none;
 }
 
+/* A1 — navigation uls are CHROME, not prose lists. prose.css gives every post-content
+ * `:is(ul,ol)` a list indent (padding-inline-start: --space-xl = 32px); that LEAKS onto
+ * the nav container + submenu uls, indenting the depth-1 items (Home / submenu sit 32px
+ * right of loginout, which core renders OUTSIDE the container ul). Strip the prose list
+ * indent + markers on nav uls — ALL nav contexts (horizontal / vertical / overlay), so
+ * depth-1 items share one line. Scoped to post-content (a real header/template-part nav
+ * never gets prose.css, so no leak there). The Menu skin's own submenu padding (§19
+ * gated) still wins by specificity for the horizontal dropdown. */
+.wp-block-post-content :is(.wp-block-navigation__container, .wp-block-navigation__submenu-container) {
+  padding-inline-start: 0;
+  list-style: none;
+}
+
 /* A1 + A2 — INLINE context only (gated; the open overlay stays fully core). The leading
  * `nav` type selector is load-bearing: the inner `ul.wp-block-navigation__container`
  * also carries `.wp-block-navigation` but sits inside the responsive container, so a

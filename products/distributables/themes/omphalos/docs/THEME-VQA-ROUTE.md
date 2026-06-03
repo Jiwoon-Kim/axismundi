@@ -508,6 +508,15 @@ button …__submenu-icon     20px slot · margin 0 (core gives ~3.5px → zeroed
 effective leading/trailing = ul 4 + li 12 = 16 ; a↔button gap = 8 (verified exact)
 ```
 
+**Prose-list leak (all nav contexts).** prose.css indents every post-content
+`:is(ul,ol)` (`padding-inline-start: --space-xl = 32px`); that leaks onto the nav
+container + submenu uls, pushing the depth-1 items (Home / submenu) 32px right of
+`loginout` (which core renders OUTSIDE the container ul) — visible only on the front
+(prose.css doesn't reach the editor canvas the same way). Reset in blocks.css §19
+(un-gated, post-content-scoped): nav uls get `padding-inline-start:0` + `list-style:none`,
+so depth-1 items share one line in EVERY orientation. The gated Menu submenu padding
+(2/4) still wins by specificity for the horizontal dropdown.
+
 `a` is `flex-grow:1` on EVERY submenu row, leaf items included — a leaf anchor grows to
 fill the remaining row width, so its click/hit area becomes the FULL row (a deliberate
 change from core's content-width hit area; a full-row target is the menu norm). State

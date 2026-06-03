@@ -1134,7 +1134,29 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
   & .wp-block-navigation-item:active {
     background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
   }
-  & .wp-block-navigation__container > .wp-block-navigation-item { border-radius: var(--md-sys-shape-corner-small); }
+  /* A2b — top-level item = M3 Nav bar item, "Nav bar-LITE" (header-nav bridge). The WP
+   * horizontal nav root is HEADER-TEMPLATE CHROME, not a standalone bottom nav, so the
+   * theme owns only SELECTED pieces: item SHAPE (corner-full pill), the state layer
+   * (above), and the current-page active INDICATOR. EXTERNAL layout — container height /
+   * gap / justify / item spacing / header row rhythm — is left to the header/template
+   * (NO 64dp container, NO min-height, NO container gap here). Pill internal padding is
+   * minimal (space-sm) pending header-context measurement. Label stays label-large 14 —
+   * the M3 nav-bar 12dp label-medium is a lab reference, too small for a header site nav
+   * (recorded, NOT applied). */
+  & .wp-block-navigation__container > .wp-block-navigation-item {
+    border-radius: var(--md-sys-shape-corner-full);
+    padding-inline: var(--space-sm, 8px);
+  }
+  /* current-page active indicator: secondary-container pill + secondary label (M3 nav
+   * bar active item). core marks the current item with aria-current="page" on the anchor.
+   * (Inactive label color = on-surface-variant is a candidate, left to header-context
+   * review; not applied here.) */
+  & .wp-block-navigation__container > .wp-block-navigation-item:has(> a[aria-current="page"]) {
+    background-color: var(--md-sys-color-secondary-container);
+  }
+  & .wp-block-navigation__container > .wp-block-navigation-item > a[aria-current="page"] {
+    color: var(--md-sys-color-secondary);
+  }
   /* keyboard focus ring (M3 focus indicator: secondary, 3px) — outer offset on the
    * top-level pill. */
   & .wp-block-navigation__container > .wp-block-navigation-item > a.wp-block-navigation-item__content:focus-visible {

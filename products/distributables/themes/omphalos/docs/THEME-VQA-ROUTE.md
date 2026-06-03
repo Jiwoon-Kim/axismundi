@@ -534,6 +534,33 @@ collapsed rail                  = a SEPARATE later lane (the earlier "overlaps T
                                   was inaccurate; it is Nav rail collapsed, not Tabs).
 ```
 
+### §9.6b — A2b horizontal nav root = "Nav bar-LITE" (header-nav bridge, NOT full adoption)
+
+Closed so far is ONLY A2a (horizontal submenu dropdown = Menu/Popover). The horizontal
+nav ROOT (A2b) and the vertical root (A2c, nav-rail) and overlay (A3) are still open.
+
+A2b is NOT a full M3 Nav bar component port — the WP horizontal nav root is usually
+HEADER-TEMPLATE CHROME, so forcing the standalone bottom-nav geometry (64dp container,
+item gap 0, 40/16 pills, 12dp label) would over-occupy the header. Split of ownership:
+
+```txt
+theme owns          item SHAPE (corner-full pill) · state layer (hover/focus/pressed) ·
+                    current-page active INDICATOR (secondary-container pill + secondary label)
+header/template owns container height · gap · justify · item external spacing · row rhythm
+deferred / review   inactive label color (on-surface-variant candidate) · 12dp label-medium
+                    (lab reference; header nav keeps label-large 14) · pill min-height +
+                    padding (header-context measured; v1 uses minimal padding-inline space-sm,
+                    no min-height, no container gap)
+```
+
+Implemented (blocks.css §19, inside the horizontal gate): top-level item → corner-full +
+padding-inline space-sm; current item (`:has(> a[aria-current="page"])`) →
+secondary-container bg + secondary label. Verified (front, dark+light): rest = transparent,
+current = secondary-container pill (#4A4458) + secondary label, hover = on-surface @ 0.08
+pill, label stays 14. NOTE: the current-item pill currently suppresses the hover state
+layer (both set `background-color`); a ::before state-layer overlay (the lab `.nav-bar__
+item::before` pattern) is the refinement for active+hover layering — deferred.
+
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 
 ```txt

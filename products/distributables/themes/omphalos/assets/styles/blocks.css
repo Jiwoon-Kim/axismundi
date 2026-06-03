@@ -1186,16 +1186,30 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
     letter-spacing: var(--md-sys-typescale-body-small-tracking);
     color: var(--md-sys-color-on-surface-variant);
   }
-  /* trailing chevron = M3 menu trailing icon (on-surface-variant). It rendered BLACK in
-   * the NESTED dropdown (the button color didn't inherit the theme color); fix it and
-   * make its bg transparent so it doesn't double the row state layer. */
+  /* trailing submenu indicator = M3 menu trailing icon. core ships a 12-unit inline
+   * <svg> chevron (button ~8px); forcing it to 20px stretched the path. Replace it with
+   * Material Symbols `arrow_right` (the cascading-submenu glyph) at the 20dp measurement
+   * via the theme icon font (registered in theme.json, full glyph table). Hide the core
+   * svg; render the glyph on the button. on-surface-variant; transparent bg so it does
+   * not double the row state layer. Scoped to the dropdown only (the top-level down
+   * chevron stays core). */
   & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon {
-    color: var(--md-sys-color-on-surface-variant);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 20px;
+    block-size: 20px;
     background-color: transparent;
+    color: var(--md-sys-color-on-surface-variant);
   }
-  & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon svg {
-    fill: currentColor;
-    width: 20px;   /* M3 menu trailing icon 20dp */
-    height: 20px;
+  & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon svg { display: none; }
+  & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon::after {
+    content: "arrow_right";
+    font-family: "Material Symbols Outlined", sans-serif;
+    font-size: 20px;          /* M3 menu trailing icon 20dp */
+    line-height: 1;
+    font-feature-settings: "liga";
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    color: var(--md-sys-color-on-surface-variant);
   }
 }

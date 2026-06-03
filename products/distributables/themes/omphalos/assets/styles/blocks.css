@@ -1144,8 +1144,11 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
    * the M3 nav-bar 12dp label-medium is a lab reference, too small for a header site nav
    * (recorded, NOT applied). */
   & .wp-block-navigation__container > .wp-block-navigation-item {
+    display: flex;
+    align-items: center;
+    min-block-size: 40px;                  /* M3 nav bar horizontal active-indicator height 40dp */
+    padding-inline: var(--space-md, 16px); /* M3 active-indicator leading/trailing 16dp */
     border-radius: var(--md-sys-shape-corner-full);
-    padding-inline: var(--space-sm, 8px);
   }
   /* current-page active indicator: secondary-container pill + secondary label (M3 nav
    * bar active item). core marks the current item with aria-current="page" on the anchor.

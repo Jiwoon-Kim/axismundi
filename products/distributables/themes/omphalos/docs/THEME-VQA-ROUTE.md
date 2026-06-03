@@ -548,18 +548,22 @@ theme owns          item SHAPE (corner-full pill) · state layer (hover/focus/pr
                     current-page active INDICATOR (secondary-container pill + secondary label)
 header/template owns container height · gap · justify · item external spacing · row rhythm
 deferred / review   inactive label color (on-surface-variant candidate) · 12dp label-medium
-                    (lab reference; header nav keeps label-large 14) · pill min-height +
-                    padding (header-context measured; v1 uses minimal padding-inline space-sm,
-                    no min-height, no container gap)
+                    (lab reference; header nav keeps label-large 14) · container height /
+                    gap / justify (left to header/template — NO 64dp container, NO gap)
 ```
 
-Implemented (blocks.css §19, inside the horizontal gate): top-level item → corner-full +
-padding-inline space-sm; current item (`:has(> a[aria-current="page"])`) →
-secondary-container bg + secondary label. Verified (front, dark+light): rest = transparent,
-current = secondary-container pill (#4A4458) + secondary label, hover = on-surface @ 0.08
-pill, label stays 14. NOTE: the current-item pill currently suppresses the hover state
-layer (both set `background-color`); a ::before state-layer overlay (the lab `.nav-bar__
-item::before` pattern) is the refinement for active+hover layering — deferred.
+Implemented (blocks.css §19, inside the horizontal gate): top-level item → the M3 nav-bar
+horizontal ACTIVE-INDICATOR geometry — `min-block-size: 40` (indicator height 40dp) ·
+`padding-inline: 16` (leading/trailing 16dp) · `corner-full` (pill) · flex/align-center;
+current item (`:has(> a[aria-current="page"])`) → secondary-container bg + secondary label.
+The 40/16 is the INDICATOR (item) spec, not the CONTAINER (the 64dp container / gap /
+justify stay with the header/template). Verified (front, dark+light): item 40px tall, pad
+16, radius corner-full; rest = transparent; current = secondary-container pill (#4A4458) +
+secondary label; non-current hover = on-surface @ 0.08 pill; label stays 14. NOTE: the
+current-item pill currently suppresses the hover state layer (both set `background-color`);
+a ::before state-layer overlay (the lab `.nav-bar__item::before` pattern) is the refinement
+for active+hover layering — deferred. (loginout renders OUTSIDE the container ul, so the
+pill treatment doesn't reach "Log in" yet — a separate structural item.)
 
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 

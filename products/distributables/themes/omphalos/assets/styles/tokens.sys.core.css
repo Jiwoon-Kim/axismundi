@@ -308,6 +308,15 @@
   --md-sys-state-focus-state-layer-opacity:    0.10;
   --md-sys-state-pressed-state-layer-opacity:  0.10;
   --md-sys-state-dragged-state-layer-opacity:  0.16;
+
+  /* Focus indicator (M3 focus ring) — MECHANICS only (thickness / offsets); the COLOR
+   * is role-chosen by the component (M3 default = secondary). outer-offset for a ring
+   * that sits OUTSIDE the box (buttons), inner-offset for one that sits INSIDE so it is
+   * not clipped by a parent (menu rows, list items, full-bleed targets). Audited in:
+   * .wp-element-button:focus-visible (3px secondary / +2), block focus rings. */
+  --md-sys-state-focus-indicator-thickness:    3px;
+  --md-sys-state-focus-indicator-outer-offset:  2px;
+  --md-sys-state-focus-indicator-inner-offset: -3px;
 }
 
 /* ============================================================

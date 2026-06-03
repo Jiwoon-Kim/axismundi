@@ -1079,60 +1079,91 @@
  * lives on the menu ROW (`li`), not the anchor (M3 menu item: the row owns the state
  * layer), and only for SUBMENU rows — top-level stays conservative. */
 
-/* A1 — chrome de-underline (both contexts; theme block is chrome, not prose; the
- * post-content-scoped selector ties the §9 prose rule and wins by load order). */
+/* A1 — chrome de-underline (both contexts; theme block is chrome, not prose). The nav
+ * item affordance is the ROW STATE LAYER (M3: the li owns it), NOT an underline. */
 .wp-block-navigation a,
 .wp-block-post-content .wp-block-navigation a {
   text-decoration: none;
 }
-.wp-block-navigation a.wp-block-navigation-item__content:hover,
-.wp-block-navigation a.wp-block-navigation-item__content:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
 
-/* A2 — inline-dropdown submenu = M3 standard Menu surface. Gated OFF when this nav's
- * responsive overlay is open (:not(:has(.is-menu-open))) → overlay is fully core. The
- * submenu carries the `has-base-background-color` preset utility (background-color:
- * var(--wp--preset--color--base) !important — the page base surface, reads FLAT), so
- * the surface tone must also be !important to win. M3 menu = surface-container-low, NO
- * border; light gets elevation-shadow-level2, dark uses the tonal/elevation policy
- * (shadow suppressed). */
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container {
-  background-color: var(--md-sys-color-surface-container-low) !important;
-  border: 0 !important;
-  border-radius: var(--md-sys-shape-corner-small, 8px);
-  box-shadow: var(--md-sys-elevation-shadow-level2);
-  padding-block: var(--space-xs, 4px);
-  padding-inline: 0;
-  min-inline-size: 11rem;
-}
-/* menu ROW state layer (li owns it, M3 menu item) — submenu rows only; top-level stays
- * conservative (A1 underline). on-surface @ 8% hover / 12% focus-within. */
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container .wp-block-navigation-item:hover,
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container .wp-block-navigation-item:focus-within {
-  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
-}
-/* menu row anchor — full-width row, padding + on-surface; the row state layer (above)
- * is the affordance, so no resting/hover underline inside the menu. */
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
-  display: block;
-  padding-block: var(--space-sm, 8px);
-  padding-inline: var(--space-md, 16px);
-  color: var(--md-sys-color-on-surface);
-}
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:hover,
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
-  text-decoration: none;
-}
-/* menu item supporting text (core/navigation-link `description`) → label + supporting
- * text (M3 menu item). core renders the description in markup but hides it
- * (`…__description { display:none }`) unless the theme opts in — we opt in for the
- * INLINE menu only (gated like A2; overlay stays core). body-small / on-surface-variant. */
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) .wp-block-navigation__submenu-container .wp-block-navigation-item__description {
-  display: block;
-  margin-block-start: 2px;
-  font-size:   var(--md-sys-typescale-body-small-size);
-  line-height: var(--md-sys-typescale-body-small-line-height);
-  color: var(--md-sys-color-on-surface-variant);
+/* A1 + A2 — INLINE context only (gated; the open overlay stays fully core). The leading
+ * `nav` type selector is load-bearing: the inner `ul.wp-block-navigation__container`
+ * also carries `.wp-block-navigation` but sits inside the responsive container, so a
+ * class-only gate leaks the skin into the open overlay. Values follow the M3 standard
+ * Menu spec; state-layer opacities + focus-indicator come from the sys.state tokens
+ * (mechanics), color is role-chosen. */
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+  /* baseline fix: the top-level submenu trigger li carries a stray margin-block-start
+   * (~4px) that drops the submenu label ~1px below its non-submenu siblings (Home /
+   * Log in). Zero it so the whole top row shares one baseline. */
+  & .wp-block-navigation-submenu { margin-block-start: 0; }
+
+  /* item ROW state layer (M3 nav item: the li owns it; covers label + trailing icon).
+   * BOTH top-level and submenu rows. NO box padding on top-level, so its geometry/
+   * baseline stays core. hover/focus opacities from sys.state. */
+  & .wp-block-navigation-item:hover {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+  }
+  & .wp-block-navigation-item:focus-within {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+  }
+  & .wp-block-navigation__container > .wp-block-navigation-item { border-radius: var(--md-sys-shape-corner-small); }
+  /* keyboard focus ring (M3 focus indicator: secondary, 3px) — outer offset on the
+   * top-level pill. */
+  & .wp-block-navigation__container > .wp-block-navigation-item > a.wp-block-navigation-item__content:focus-visible {
+    outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
+    outline-offset: var(--md-sys-state-focus-indicator-outer-offset);
+  }
+
+  /* A2 — submenu = M3 standard Menu surface. surface-container-low, NO border, elevation
+   * level2 (light shadow; dark = tonal lift), container corner-large, group padding —
+   * NO overflow:hidden (it would clip the nested flyouts). The submenu carries the
+   * has-base-background-color preset (!important), so the tone must be !important too. */
+  & .wp-block-navigation__submenu-container {
+    background-color: var(--md-sys-color-surface-container-low) !important;
+    border: 0 !important;
+    border-radius: var(--md-sys-shape-corner-large);
+    box-shadow: var(--md-sys-elevation-shadow-level2);
+    padding: var(--space-xs, 4px);
+    min-inline-size: 11rem;
+  }
+  /* menu rows: M3 item shape 4dp; label + supporting text stacked; min target 44px. */
+  & .wp-block-navigation__submenu-container .wp-block-navigation-item { border-radius: var(--md-sys-shape-corner-extra-small); }
+  & .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-block-size: 44px;
+    padding-block: var(--space-sm, 8px);
+    padding-inline: var(--space-md, 16px);
+    color: var(--md-sys-color-on-surface);
+    font-size:      var(--md-sys-typescale-label-large-size);
+    line-height:    var(--md-sys-typescale-label-large-line-height);
+    font-weight:    var(--md-sys-typescale-label-large-weight);
+    letter-spacing: var(--md-sys-typescale-label-large-tracking);
+  }
+  & .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
+    outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
+    outline-offset: var(--md-sys-state-focus-indicator-inner-offset);
+  }
+  /* menu item supporting text (core/navigation-link `description`) → M3 supporting text.
+   * core hides it (`…__description { display:none }`) unless the theme opts in — we opt
+   * in for the INLINE menu (overlay stays core). body-small + 0.4 tracking. */
+  & .wp-block-navigation__submenu-container .wp-block-navigation-item__description {
+    display: block;
+    margin-block-start: 2px;
+    font-size:      var(--md-sys-typescale-body-small-size);
+    line-height:    var(--md-sys-typescale-body-small-line-height);
+    font-weight:    var(--md-sys-typescale-body-small-weight);
+    letter-spacing: var(--md-sys-typescale-body-small-tracking);
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  /* trailing chevron = M3 menu trailing icon (on-surface-variant). It rendered BLACK in
+   * the NESTED dropdown (the button color didn't inherit the theme color); fix it and
+   * make its bg transparent so it doesn't double the row state layer. */
+  & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon {
+    color: var(--md-sys-color-on-surface-variant);
+    background-color: transparent;
+  }
+  & .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon svg { fill: currentColor; }
 }

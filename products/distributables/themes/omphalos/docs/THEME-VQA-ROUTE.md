@@ -419,3 +419,42 @@ Review caught over-correction + wrong targets in the first A2 cut. Reworked (blo
 Widgets · VQA Theme → [VQA Comments · VQA Archive — the FUTURE Phase-2/3 subpages, the
 real reason to nest]] · Log in. Embeds / Embed Template / Attachment links pulled (they
 belong in their own lanes / a footer site-map, not the Theme nav).
+
+### §9.5 — A2 follow-up (M3 Menu spec values + sys.state tokens + fixes)
+
+Second review pass — measured corrections against the M3 standard Menu spec, plus a
+sitemap re-expansion (the shrink over-corrected). blocks.css §19 reworked as ONE gated
+nested block (`nav.…:not(:has(.is-menu-open))`, the `nav` type still load-bearing);
+verified dark+light:
+
+- **Baseline (the 1px).** Cause found: the top-level submenu trigger `li.wp-block-
+  navigation-submenu` carries a stray `margin-block-start: ~4px` (not in our CSS — core/
+  TT5), dropping the submenu label below its non-submenu siblings. Zeroed it (gated) →
+  Home / VQA / Log in now share one top (725.6 == 725.6).
+- **State layer on the ROW (`li`), top-level INCLUDED.** First cleanup removed top-level
+  hover entirely; restored as a li state layer (covers label + trailing icon), NO box
+  padding so top-level geometry stays core. NO hover underline. Opacities now come from
+  `--md-sys-state-{hover,focus}-state-layer-opacity` (0.08 / 0.10), not hardcoded.
+- **Nested trailing chevron was BLACK.** `.…__submenu-icon` in the dropdown rendered
+  rgb(0,0,0) (its button color didn't inherit the theme color); top-level was fine. Set
+  to on-surface-variant (M3 trailing icon) + transparent bg (so it doesn't double the row
+  state layer).
+- **M3 Menu spec values.** Container = surface-container-low · NO border · corner-large
+  (16dp) · elevation-shadow-level2 (light) / tonal lift (dark) · group padding · NO
+  overflow:hidden (it would clip the nested flyouts — overflow stays visible). Rows =
+  corner-extra-small (4dp) · label-large (14/20/500/0.1) · min-block-size 44 · padding
+  8/16 · supporting text body-small (12/16/400/0.4) on-surface-variant.
+- **Focus indicator tokens (NEW).** Audit: `--md-sys-state-*-state-layer-opacity` already
+  existed (reused, NOT reinvented); the focus-ring MECHANICS did not, so added to
+  `tokens.sys.core.css` §6: `--md-sys-state-focus-indicator-{thickness:3px, outer-offset:
+  2px, inner-offset:-3px}` (color stays role-chosen = secondary). §19 uses outer-offset
+  on the top-level pill, inner-offset on menu rows (so the ring isn't clipped). NOTE: the
+  pre-existing hardcoded focus rings (`.wp-element-button:focus-visible` 3px/+2, block
+  focus rings) can adopt these tokens in a later sweep — left untouched here (no naming
+  sweep this turn).
+
+**Sitemap re-expanded with hierarchy** (the shrink was a misread — the ask was structure,
+not removal): Home · VQA → [Prose · Text · Media · Design · Widgets · VQA Theme →
+[Comments · Archive (future)] · VQA Embeds · VQA Embed Template · Attachment page →
+[Images → [webp · jpeg · png · wide] · Audio · Video]] · Log in. Real `?page_id=` /
+`?attachment_id=` permalinks; two description specimens.

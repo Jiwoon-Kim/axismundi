@@ -77,6 +77,12 @@ if ( $admin && '' === trim( (string) get_user_meta( $admin->ID, 'description', t
 	wp_update_user( array( 'ID' => $admin->ID, 'description' => 'Omphalos 데모 작성자 — Twenty Twenty-Five 위에 Material Design 3를 브릿지하는 파일럿을 만듭니다.' ) );
 }
 
+// --- a site tagline so the core/site-tagline specimen renders (only if empty —
+// blogdescription is site-owner data, like the Site Logo).
+if ( '' === trim( (string) get_option( 'blogdescription' ) ) ) {
+	update_option( 'blogdescription', 'Twenty Twenty-Five 위의 Material Design 3 브릿지' );
+}
+
 // --- the VQA page (pattern reference).
 $vexist = get_posts( array( 'post_type' => 'page', 'name' => 'vqa-theme', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
 $vargs  = array(

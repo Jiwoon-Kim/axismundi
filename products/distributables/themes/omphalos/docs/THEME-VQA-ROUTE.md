@@ -192,3 +192,35 @@ F. Comments family → separate phase (/vqa-theme-comments/), many M3 components
 First contracts: A (nav) + B (query-loop card/list). NOTE: navigation needs a real
 `wp_navigation` menu (a bare nav falls back to the page list) before the
 submenu/home-link/custom-link specimens are observable — seed one for the A contract.
+
+---
+
+## §8 — Theme blocks are CHROME, not prose (first contract — DONE)
+
+The single biggest fix: theme blocks are template CHROME, so they must NOT inherit
+the prose long-form link treatment (the §9 always-underline) nor the prose body size.
+
+**Why the baseline looked wrong (the post-content-context trap):** the VQA renders
+these blocks INSIDE `.wp-block-post-content`, where a real header/footer would render
+them in a template part. So `core/site-title` (a `<p>`) inherited the 16px body size
+(not TT5's ~22px header size, which comes from the header instance/context), and
+every meta/title link inherited the prose underline+primary. This is a VQA-context
+artifact AND a real leakage wherever a theme block is placed in content.
+
+**Fix (blocks.css §18, first cut — loads after prose.css, ties+wins on order):**
+- Site identity: `core/site-title` → **title-large (22/28)** GLOBALLY (a site/brand
+  title, not a body line); `core/site-tagline` → body-small / on-surface-variant.
+  Logo set via `-SetDemoLogo`; tagline seeded if empty (both site-owner data).
+- De-prose-ify the theme-block links: post-title → on-surface HEADLINE (no resting
+  underline), meta/nav links (terms, comments-count/-link, pagination,
+  post-navigation-link) → on-surface-variant METADATA (no resting underline),
+  read-more keeps the primary affordance; all underline on hover/focus only.
+
+Verified computed (dark): site-title 22/28/400; tagline 12 on-surface-variant;
+post-title on-surface no-underline; terms/comments/pagination on-surface-variant
+no-underline; read-more primary no-underline.
+
+**Still first-cut** (deferred to the per-family contracts §7): terms → chips,
+read-more → text button, pagination component, the metadata-cluster layout, the
+navigation/submenu surfaces, and bumping `core/post-title` to its card headline size
+(the B contract).

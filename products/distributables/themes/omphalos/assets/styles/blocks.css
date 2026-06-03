@@ -972,3 +972,88 @@
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-medium);
 }
+
+/* ============================================================================
+ * §18 core/theme blocks — chrome baseline (NOT prose)  [first cut]
+ *
+ * Theme blocks (site identity, navigation, Query Loop post-meta) are template
+ * CHROME, not long-form prose. In a real header/footer they sit OUTSIDE
+ * .wp-block-post-content, but in the VQA (and any in-content placement) they inherit
+ * the prose body size + the §9 always-underline link, so meta / actions / titles read
+ * as body links. Re-own them here — blocks.css loads AFTER prose.css, so an
+ * equal-specificity rule (0,2,1) ties the prose link rule and wins by order.
+ *
+ * FIRST CUT = typography (site identity) + de-prose-ify (no resting underline,
+ * hover-only). The M3 component treatments — terms → chips, read-more → text button,
+ * pagination component, metadata cluster layout — are later contracts
+ * (THEME-VQA-ROUTE §7). */
+
+/* site identity: title = title-large (a header brand title, not a 16px body line);
+ * tagline = body-small / on-surface-variant. The size is also scoped under
+ * post-content so the VQA specimen (which inherits the 16px body) is corrected. */
+.wp-block-site-title,
+.wp-block-post-content .wp-block-site-title {
+  font-family:    var(--md-sys-typescale-title-large-font, inherit);
+  font-size:      var(--md-sys-typescale-title-large-size, 22px);
+  line-height:    var(--md-sys-typescale-title-large-line-height, 28px);
+  font-weight:    var(--md-sys-typescale-title-large-weight, 400);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking, 0);
+}
+.wp-block-post-content .wp-block-site-title a {
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+}
+.wp-block-post-content .wp-block-site-tagline {
+  font-size:   var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* de-prose-ify theme-block links — the post title is a HEADLINE (on-surface), the
+ * meta/nav links are METADATA (on-surface-variant); none keep the resting prose
+ * underline (hover/focus only). read-more keeps the primary affordance colour (it
+ * becomes a text button in the B contract). */
+.wp-block-post-content .wp-block-post-title a {
+  color: var(--md-sys-color-on-surface);
+}
+.wp-block-post-content :is(
+  .wp-block-post-terms,
+  .wp-block-post-comments-count,
+  .wp-block-post-comments-link,
+  .wp-block-query-pagination,
+  .wp-block-post-navigation-link
+) a {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-post-content :is(
+  .wp-block-post-title,
+  .wp-block-post-terms,
+  .wp-block-post-comments-count,
+  .wp-block-post-comments-link,
+  .wp-block-query-pagination,
+  .wp-block-post-navigation-link
+) a,
+.wp-block-post-content a.wp-block-read-more {
+  text-decoration: none;
+}
+.wp-block-post-content :is(
+  .wp-block-post-title,
+  .wp-block-post-terms,
+  .wp-block-post-comments-count,
+  .wp-block-post-comments-link,
+  .wp-block-query-pagination,
+  .wp-block-post-navigation-link
+) a:hover,
+.wp-block-post-content :is(
+  .wp-block-post-title,
+  .wp-block-post-terms,
+  .wp-block-post-comments-count,
+  .wp-block-post-comments-link,
+  .wp-block-query-pagination,
+  .wp-block-post-navigation-link
+) a:focus-visible,
+.wp-block-post-content a.wp-block-read-more:hover,
+.wp-block-post-content a.wp-block-read-more:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}

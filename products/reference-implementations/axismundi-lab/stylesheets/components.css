@@ -2737,6 +2737,83 @@ svg.chip__trailing-icon,
   pointer-events: none;
 }
 
+/* --- Horizontal item variant (WP navigation root bridge) ---
+ *
+ * The default .nav-bar item above is the M3 vertical item: icon over label,
+ * 56×32 active indicator on the icon slot. WordPress core/navigation horizontal
+ * roots are usually text-only destination links, so this variant models the M3
+ * horizontal nav-bar item geometry without requiring an icon.
+ *
+ * Spec notes:
+ * - nav bar container height: 64dp
+ * - horizontal active indicator height: 40dp
+ * - horizontal indicator leading/trailing space: 16dp
+ * - icon/label gap, when an icon exists: 4dp
+ * - label type: 12/16/500/0.5
+ */
+.nav-bar.is-horizontal {
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
+}
+
+.nav-bar.is-horizontal .nav-bar__item {
+  flex: 0 0 auto;
+  flex-direction: row;
+  gap: var(--space-xs);
+  min-block-size: 40px;
+  padding-block: 0;
+  padding-inline: var(--space-md);
+  border-radius: var(--md-sys-shape-corner-full);
+
+  font-family: var(--md-sys-typescale-label-medium-font);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+
+.nav-bar.is-horizontal .nav-bar__item::before {
+  inset: 0;
+  width: auto;
+  height: auto;
+  transform: none;
+  border-radius: inherit;
+}
+
+.nav-bar.is-horizontal .nav-bar__icon {
+  width: var(--comp-icon-size-md);
+  height: var(--comp-icon-size-md);
+  margin-block-end: 0;
+  background-color: transparent;
+}
+
+.nav-bar.is-horizontal .nav-bar__label {
+  text-align: start;
+}
+
+.nav-bar.is-horizontal .nav-bar__item.is-active,
+.nav-bar.is-horizontal .nav-bar__item[aria-current="page"],
+.nav-bar.is-horizontal .nav-bar__item[aria-selected="true"] {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-secondary);
+}
+
+.nav-bar.is-horizontal .nav-bar__item.is-active .nav-bar__icon,
+.nav-bar.is-horizontal .nav-bar__item[aria-current="page"] .nav-bar__icon,
+.nav-bar.is-horizontal .nav-bar__item[aria-selected="true"] .nav-bar__icon {
+  background-color: transparent;
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.nav-bar.is-horizontal .nav-bar__item.is-active .nav-bar__label,
+.nav-bar.is-horizontal .nav-bar__item[aria-current="page"] .nav-bar__label,
+.nav-bar.is-horizontal .nav-bar__item[aria-selected="true"] .nav-bar__label {
+  color: var(--md-sys-color-secondary);
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+}
+
 
 /* ============================================================
  * §18 Badge — M3-COMPONENT-SPECS §2

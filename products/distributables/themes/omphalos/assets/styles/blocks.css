@@ -1168,44 +1168,18 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
   }
 }
 
-/* Top-level submenu disclosure icon. This is NOT a Nav bar / Nav rail item icon and
- * NOT the cascading Menu trailing icon; it is the submenu's own disclosure affordance.
- * Use Material Symbols arrow_drop_down/up. Nested floating Menu submenus override this
- * later in §19b with arrow_right. */
-.wp-block-navigation .wp-block-navigation-submenu > button.wp-block-navigation__submenu-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 24px;
-  block-size: 24px;
-  margin: 0;
-  background-color: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-}
-.wp-block-navigation .wp-block-navigation-submenu > button.wp-block-navigation__submenu-icon svg { display: none; }
-.wp-block-navigation .wp-block-navigation-submenu > button.wp-block-navigation__submenu-icon::after {
-  content: "arrow_drop_down";
-  font-family: "Material Symbols Outlined", sans-serif;
-  font-size: 24px;
-  line-height: 1;
-  font-feature-settings: "liga";
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-  color: var(--md-sys-color-on-surface-variant);
-}
-.wp-block-navigation .wp-block-navigation-submenu > button.wp-block-navigation__submenu-icon[aria-expanded="true"]::after {
-  content: "arrow_drop_up";
-}
-
 /* ----------------------------------------------------------------------------
  * §19b core/navigation — SUBMENU = M3 Menu surface (popover) [UNIFIED]
  *
- * The Menu/popover SURFACE applies to the HORIZONTAL floating dropdown only. Vertical
- * `submenuVisibility:"click"` is a nav-rail-like observation specimen with a different core
- * structure (`li > button + span + ul`), not a Menu. Two more cases stay excluded:
- * submenuVisibility "always" (`.open-always` = static always-expanded tree) and the open
- * responsive OVERLAY (`.is-menu-open`). core OWNS submenu POSITION; the theme owns the
- * surface + menu-row skin only in this horizontal floating dropdown context. */
-nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+ * "All submenus = popover" (user directive). The Menu/popover SURFACE applies to BOTH
+ * horizontal and vertical CLICK/HOVER FLOATING submenus. Two cases stay EXCLUDED:
+ * submenuVisibility "always" (`.open-always` = static always-expanded tree, kept as the
+ * §20 nav-rail tree by design) and the open responsive OVERLAY (`.is-menu-open`). core
+ * OWNS submenu POSITION (absolute floating, both orientations); the theme owns the surface
+ * + menu-row skin only. The top-level Nav-bar-lite skin (above) is HORIZONTAL-only (vertical
+ * top-level = §20 56dp capsule), so it keeps its `:not(.is-vertical)` gate; this block drops
+ * it so vertical click submenus get the same popover Menu. */
+nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
   /* submenu row STATE LAYER (M3: the li owns it) — SUBMENU rows only, so the vertical
    * top-level li keeps its §20 ::before paint (a li-direct bg would tint the whole subtree). */
   & .wp-block-navigation__submenu-container .wp-block-navigation-item:hover {

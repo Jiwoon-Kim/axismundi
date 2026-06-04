@@ -462,8 +462,8 @@ not removal): Home · VQA → [Prose · Text · Media · Design · Widgets · VQ
 
 ### §9.6 — Dropdown Menu measurements vs Nav-rail-like navigation (locked)
 
-Apply **Menu/Popover measurements only to floating dropdown submenus**. The navigation block
-has other modes that are not menus:
+Apply **Menu/Popover measurements only to horizontal inline dropdown submenus**. The
+navigation block has other modes that are not menus:
 
 - `overlayMenu: always` / mobile overlay: a responsive overlay with in-flow nested
   submenu sections.
@@ -473,29 +473,26 @@ has other modes that are not menus:
 **Class signals (verified, PHP render + DOM):** `submenuVisibility` enum = `hover` /
 `click` / `always` (default hover); `always` puts `.open-always` on the submenu li (a
 static, always-open nested list). `orientation: vertical` puts `.is-vertical` on the
-`<nav>`. Overlay open = `.…responsive-container.is-menu-open`. Default hover/click
-(`.open-on-hover-click`) preserves the destination structure `li > a + button + ul` and is
-a FLOATING absolute dropdown (= Menu). Explicit `submenuVisibility:"click"` changes the
-saved front-end structure to `li > button + span + ul`; the 2c vertical specimen
-intentionally keeps this setting because it is the problematic nav-rail-like/editor-control
-state we need to observe. Restoring `li > a + button + ul` while keeping click-only behavior
-is not a pure theme-CSS task; it belongs to a plugin/render lane.
+`<nav>`. Overlay open = `.…responsive-container.is-menu-open`. hover/click both produce a
+FLOATING absolute dropdown (= Menu); only always/vertical/overlay are nested sections.
 
-Therefore the Menu contract is gated to the horizontal floating dropdown with THREE exclusions:
+Therefore the Menu contract is gated to the floating dropdown with THREE exclusions:
 
 ```css
 nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.…responsive-container.is-menu-open)) { … }
 ```
 
 The leading `nav` type is load-bearing (the inner container ul also carries the class).
-Do **not** style `.wp-block-navigation__submenu-container` globally as a menu. Verified 2c:
-vertical `submenuVisibility:"click"` and vertical `submenuVisibility:"always"` are
-nav-rail-like observation states and must not receive the Menu surface. **NOTE:**
+Do **not** style `.wp-block-navigation__submenu-container` globally as a menu. Verified
+(2c specimens, both vertical): the `submenuVisibility:click` rail and the
+`submenuVisibility:always` always-expanded rail both stay CORE (bg = core default, not
+surface-container-low; radius 0, not 16) — the Menu skin does not leak. **NOTE:**
 `submenuVisibility:always` is only coherent for a VERTICAL nav (an always-expanded
-rail/tree); on a horizontal nav the submenu is an absolute dropdown, so "always-open" has
-no meaningful state — the editor does not honor horizontal+always (front renders the
-`.open-always` class but it is not an editor-faithful config). The Nav rail / drawer lane
-(vertical / click / always) is SEPARATE and must not inherit the dropdown measurements.
+rail/tree); on a horizontal nav the submenu is an absolute dropdown, so "always-open"
+has no meaningful state — the editor does not honor horizontal+always (front renders the
+`.open-always` class but it is not an editor-faithful config). So both nav-rail specimens
+are vertical. The Nav rail / drawer lane (vertical / always) is SEPARATE and must not
+inherit the dropdown measurements.
 
 **Row ownership = the `li` (M3 menu item).** The first cut put the row box (min-height +
 padding) on the ANCHOR, which is wrong — the row, state layer, hit area, height and item
@@ -509,20 +506,6 @@ li  …navigation-item       min-block-size 48 · padding-inline 12 · gap 8 · 
 a   …__content             padding 0 · min-block-size auto · flex-grow 1 · label/supporting typography only
 button …__submenu-icon     20px slot · margin 0 (core gives ~3.5px → zeroed) · Material Symbols arrow_right
 effective leading/trailing = ul 4 + li 12 = 16 ; a↔button gap = 8 (verified exact)
-```
-
-**Submenu indicator ontology (not Nav bar / rail icon).** M3 Navigation bar / rail icons are
-primary destination icons; they do **not** define a trailing submenu affordance for a
-text-only WP navigation item. WP submenu indicators therefore split by context:
-
-```txt
-top-level disclosure button      li > a + button + ul   → Material Symbols arrow_drop_down / arrow_drop_up
-                                24px, on-surface-variant, disclosure affordance only
-cascading floating menu submenu  Menu row trailing slot → Material Symbols arrow_right
-                                20px, on-surface-variant, Menu trailing icon pattern
-vertical always tree             no submenu button      → no trailing icon in baseline
-explicit click-only submenu       li > button + span + ul → problematic core structure;
-                                restore-link + disclosure semantics belong to plugin/render lane
 ```
 
 **Prose-list leak (all nav contexts).** prose.css indents every post-content
@@ -715,8 +698,6 @@ container: bg surface-container-low · border 0 · radius 16 · padding 2/4 · g
 row(li):   middle radius 4 · first/last outer radius 12 · min-block-size 48 · padding-inline 12 · gap 8
 anchor(a): padding 0 · min-block-size auto · flex-grow 1 · label-large 14/20/500/0.1
 support:   body-small 12/16/400/0.4 · on-surface-variant · margin-top 2
-trailing:  cascading horizontal submenu = Material Symbols arrow_right · 20 · on-surface-variant · margin 0 ;
-           top-level disclosure = arrow_drop_down/up · 24 · on-surface-variant
-vertical / overlay / open-always: core or vertical-nav skin (NO Menu surface) — verified excluded
-explicit vertical submenuVisibility:click stays as 2c observation; restoring link+button semantics is plugin/render work
+trailing:  Material Symbols arrow_right · 20 · on-surface-variant · margin 0 ; gap 8 / trailing inset 16 (exact)
+overlay/vertical/open-always: core (no Menu skin) — verified excluded
 ```

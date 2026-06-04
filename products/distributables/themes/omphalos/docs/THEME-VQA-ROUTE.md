@@ -608,6 +608,27 @@ this — this is a core tree nav + capsule affordance."
 loginout-merge + indent clamp / deep-level right-popover become justified. `:has(.open-
 always)` alone is not "a rail"; the rail needs a real header/sidebar template context.
 
+**M3 Nav rail spec (reference for the opt-in)** — the EXPANDED rail item is the M3 *Horizontal*
+item variant (icon+label ROW; WP is label-only); the COLLAPSED rail is the *Vertical*
+item (icon-over-label, icon-first) → EXCLUDED for text-only WP nav.
+```txt
+container (standalone)  width clamp(220, 360) · top-space 44 · elevation 0 · color surface ·
+                        shape 0   (NOT 16 — 16 is the MODAL variant only)
+container (modal sheet) elevation 3 · color surface-container-high · shape 16   (→ A3 territory)
+item                    height 56 (short) / 64 · container shape 0 · vertical gap 6
+  label                 label-large 14/20/500/0.1   (NB: nav BAR item is 12dp; rail item is 14dp)
+  active indicator      FULL-WIDTH · height 56 · circular (corner-full) · leading 16 / trailing 16
+                        · icon-label 8 · icon 24
+states                  active indicator = secondary-container · active label = secondary ·
+                        inactive label = on-surface-variant · hover 0.08 / focus 0.10 / pressed 0.10
+collapsed (excluded)    container 96 (narrow 80) · vertical item · label-medium 12/16/500/0.5 ·
+                        indicator 56×32 around the icon · top-space 44 · item gap 4
+```
+So the rolled-back §20 rail was ~correct EXCEPT: container shape should be 0 (not 16; 16 = modal
+only) + color surface + top-space 44 + item gap 6 + width clamp(220,360). The opt-in rebuilds it
+behind `.is-style-expanded-rail` with these values (registration = a functions.php
+`register_block_style`, a WP change → review per CLAUDE.md §15 before building).
+
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 
 ```txt

@@ -12,12 +12,14 @@
   Site Logo is NOT set by default. site_logo / custom_logo are SITE-OWNER data
   (the installation's identity), not a theme fixture — a distributable theme must
   not silently overwrite them on activate/seed. The brand mark lives in the theme
-  as an asset (assets/brand/axismundi-symbol.svg); if a demo really needs a logo
-  in the Site Logo slot, pass -SetDemoLogo to opt in explicitly (dev/VQA only).
+  as an asset (assets/brand/axismundi-symbol.svg). A distributable theme does
+  not bundle a raster Site Logo; if a demo really needs a Site Logo slot, pass
+  -SetDemoLogo to opt in explicitly (dev/VQA only).
 
   Parameters:
-    -SetDemoLogo  Opt in to setting a demo Site Logo (default: off). Uses the PNG
-                  Axismundi mark (assets/brand/axismundi-logo.png); core blocks SVG.
+    -SetDemoLogo  Opt in to setting a demo Site Logo (default: off). Uses the
+                  imported placeholder image, because core blocks SVG uploads
+                  and the distributable theme does not bundle a raster logo.
 #>
 param(
     [switch] $SetDemoLogo
@@ -65,20 +67,18 @@ if ($video -and $capEn) {
 
 # Site Logo — OFF by default. site_logo / custom_logo are site-owner identity,
 # not a theme fixture, so the seed must not overwrite them unless asked. Opt in
-# with -SetDemoLogo for a dev/VQA demo. Core blocks SVG uploads, so this falls
-# back to the raster placeholder image.
+# with -SetDemoLogo for a dev/VQA demo. Core blocks SVG uploads and the
+# distributable theme does not bundle a raster logo, so this uses the imported
+# placeholder image.
 if ($SetDemoLogo) {
     Write-Host "== Setting demo Site Logo (-SetDemoLogo) =="
-    # Use the PNG mark — core blocks SVG uploads, so the SVG fell back to a placeholder.
-    $logo = Import-Media "assets/brand/axismundi-logo.png"
-    if (-not $logo) {
-        Write-Warning "Logo import failed. Falling back to the placeholder image as Site Logo."
-        $logo = $image
-    }
+    $logo = $image
     if ($logo) {
         npx wp-env run cli wp option update site_logo $logo
         npx wp-env run cli wp theme mod set custom_logo $logo
         Write-Host "Demo Site Logo set to attachment $logo"
+    } else {
+        Write-Warning "Placeholder image import failed; Site Logo was not changed."
     }
 } else {
     Write-Host "== Skipping Site Logo (site-owner data; pass -SetDemoLogo to opt in) =="

@@ -599,8 +599,20 @@ current-page indicator  `li:has(> a[aria-current="page"])::before` → filled se
 supporting text         core hides description (display:none) → opt in (display:block,
                         body-small/on-surface-variant); the content stacks label + supporting
                         text via flex-column `:has(.description)`.
-core still owns          width · flexWrap · justifyContent · alignment · indent · flow (no
-                        nav-level width / justify re-implementation / !important).
+submenu (parent) trigger the parent li wraps its subtree, so the 56dp row + padding go on
+                        the TRIGGER `.…__content` (not the li). `min-block-size:56` ·
+                        padding-inline 16.
+gap / margin            core's vertical submenu gap is `gap: var(--wp--style--block-gap)`
+                        (1.2rem ≈ 19.2px) — too large; zero the VAR (`--wp--style--block-gap:
+                        0` on the nav; a plain `gap:0` loses to core's generated layout rule).
+                        Drop the stray 4px `margin-block-start` on the submenu li. NOTE:
+                        zeroing the var also drops the nested INDENT (it shared the var) →
+                        the tree is FLUSH; a per-level hierarchy indent is a follow-up if
+                        wanted (an explicit logical `padding-inline-start`, since §19's prose
+                        reset + core both keep it at 0).
+core still owns          width · flexWrap · justifyContent · alignment · flow (no nav-level
+                        width / justify re-implementation / !important; block-gap var is a
+                        theme-token override, not a layout fight).
 ```
 prose ul-indent leak removal + link de-underline already live in §19 (un-gated). Applies to
 BOTH 2c vertical variants (click accordion §21 + always tree). Verified (front, dark): leaf

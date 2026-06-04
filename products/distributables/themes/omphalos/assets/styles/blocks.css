@@ -1692,3 +1692,78 @@ nav.wp-block-navigation.is-vertical {
     color: var(--md-sys-color-on-surface-variant);
   }
 }
+
+/* ============================================================================
+ * §21 core/comments — comment display chrome (B contract P2, GLOBAL token binding)
+ *
+ * DIAGNOSTIC (THEME-VQA-ROUTE §11): the comments family renders in the SINGLE-POST
+ * TEMPLATE (TT5 single.html → main.wp-block-group), OUTSIDE `.wp-block-post-content` —
+ * the same template-context boundary found for the Query Loop. Comments are unambiguous
+ * CHROME (never prose), so — like §19 navigation — they are bound by their own block
+ * classes GLOBALLY (NOT post-content-scoped), which reaches the real TT5 template with no
+ * prose-leak risk. TOKEN BINDING ONLY: typescale + role colour + de-prose links. Thread /
+ * list LAYOUT stays core/TT5-owned. The comment FORM inputs (textarea/inputs surface +
+ * radius) are DEFERRED to a form/input component lane; the submit button is already M3
+ * (theme.json button element); here the form only gets label/helper typography + colour. */
+
+/* comments section title → title-large / on-surface */
+.wp-block-comments-title {
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* comment list = chrome, not a prose ol — drop default markers (thread INDENT stays core). */
+.wp-block-comment-template {
+  list-style: none;
+}
+
+/* comment META (author / date / reply / edit) → body-small / on-surface-variant */
+.wp-block-comment-author-name,
+.wp-block-comment-date,
+.wp-block-comment-reply-link,
+.wp-block-comment-edit-link {
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* comment body → body-medium / on-surface (inner paragraph bound too; no prose in template) */
+.wp-block-comment-content,
+.wp-block-comment-content :is(p, .wp-block-paragraph) {
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* de-prose comment links — metadata/action links, no resting underline (hover/focus only) */
+.wp-block-comment-author-name a,
+.wp-block-comment-reply-link a,
+.wp-block-comment-edit-link a {
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: none;
+}
+.wp-block-comment-author-name a:hover,
+.wp-block-comment-author-name a:focus-visible,
+.wp-block-comment-reply-link a:hover,
+.wp-block-comment-reply-link a:focus-visible,
+.wp-block-comment-edit-link a:hover,
+.wp-block-comment-edit-link a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* comment FORM — label / helper typography + colour ONLY (input surface/radius deferred to a
+ * form/input lane; submit stays the M3 button element). */
+.wp-block-post-comments-form :is(label, .comment-notes, .comment-form-cookies-consent label, .logged-in-as) {
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}

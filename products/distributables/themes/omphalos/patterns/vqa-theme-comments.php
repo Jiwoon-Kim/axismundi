@@ -38,28 +38,9 @@
 <!-- wp:post-comments-link /-->
 
 <!-- wp:heading {"level":2} -->
-<h2 class="wp-block-heading">2. Comments block (title · template · pagination · form)</h2>
+<h2 class="wp-block-heading">2. Comments block (rendered by the page TEMPLATE)</h2>
 <!-- /wp:heading -->
 
-<!-- wp:comments -->
-<div class="wp-block-comments">
-<!-- wp:comments-title {"showPostTitle":false} /-->
-
-<!-- wp:comment-template -->
-<!-- wp:avatar {"size":40} /-->
-<!-- wp:comment-author-name /-->
-<!-- wp:comment-date /-->
-<!-- wp:comment-content /-->
-<!-- wp:comment-reply-link /-->
-<!-- wp:comment-edit-link /-->
-<!-- /wp:comment-template -->
-
-<!-- wp:comments-pagination -->
-<!-- wp:comments-pagination-previous /-->
-<!-- wp:comments-pagination-numbers /-->
-<!-- wp:comments-pagination-next /-->
-<!-- /wp:comments-pagination -->
-
-<!-- wp:post-comments-form /-->
-</div>
-<!-- /wp:comments -->
+<!-- wp:paragraph -->
+<p>이 페이지는 <strong>Page (with comments)</strong> 커스텀 템플릿(<code>templates/page-with-comments.html</code>)을 쓴다. <code>core/comments</code> 패밀리(title · comment-template[avatar/author/date/content/reply/edit] · pagination · form)는 <code>core/post-content</code> <em>아래</em>, 즉 <strong>template context</strong>(<code>insidePostContent:false</code>)에서 렌더된다 — 실사용 single-post 맥락(§11)과 동일. 그래서 여기 in-content에는 중복 배치하지 않는다(이중 렌더 방지). 아래 본문 끝에서 실제 댓글 패밀리를 관찰할 것.</p>
+<!-- /wp:paragraph -->

@@ -17,7 +17,18 @@
 $admin    = get_user_by( 'login', 'admin' );
 $admin_id = $admin ? (int) $admin->ID : 0;
 
-// --- the Comments VQA page (pattern reference), comments OPEN.
+// Threaded comments must be ON with depth >= 5 for the depth-5 reply chain below to nest
+// (core caps display at thread_comments_depth; deeper replies flatten otherwise).
+update_option( 'thread_comments', 1 );
+if ( (int) get_option( 'thread_comments_depth' ) < 5 ) {
+	update_option( 'thread_comments_depth', 5 );
+}
+
+// Parent = the Theme VQA page (page hierarchy: Comments is a child of VQA Theme).
+$omph_parent    = get_posts( array( 'post_type' => 'page', 'name' => 'vqa-theme', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
+$omph_parent_id = $omph_parent ? (int) $omph_parent[0] : 0;
+
+// --- the Comments VQA page (pattern reference), comments OPEN, child of VQA Theme.
 $slug   = 'vqa-theme-comments';
 $exist  = get_posts( array( 'post_type' => 'page', 'name' => $slug, 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) );
 $args   = array(
@@ -25,8 +36,10 @@ $args   = array(
 	'post_status'    => 'publish',
 	'post_title'     => 'VQA Theme Comments',
 	'post_name'      => $slug,
+	'post_parent'    => $omph_parent_id,
 	'post_content'   => '<!-- wp:pattern {"slug":"omphalos/vqa-theme-comments"} /-->',
 	'comment_status' => 'open',
+	'page_template'  => 'page-with-comments',
 );
 if ( $exist ) {
 	$args['ID'] = $exist[0];
@@ -36,38 +49,36 @@ if ( $exist ) {
 }
 // Force comments open even if WP defaults closed them for pages.
 wp_update_post( array( 'ID' => $pid, 'comment_status' => 'open' ) );
+// Assign the custom page template that renders core/comments in TEMPLATE context.
+update_post_meta( $pid, '_wp_page_template', 'page-with-comments' );
 
-// --- seed comments on the PAGE (so core/comments renders them). Two top-level + one reply.
+// --- seed comments on the PAGE (so core/comments renders them): a single 5-DEEP reply chain
+// (depth 1 → 5, to the thread_comments_depth limit) so comment-template nesting is observable
+// at every level, plus a second top-level comment for list breadth.
+$want = 6;
 $have = (int) get_comments( array( 'post_id' => $pid, 'count' => true ) );
-if ( $have < 3 ) {
+if ( $have < $want ) {
 	// clear any partial set so the threaded structure is deterministic.
 	foreach ( get_comments( array( 'post_id' => $pid, 'fields' => 'ids' ) ) as $cid ) {
 		wp_delete_comment( (int) $cid, true );
 	}
-	$c1 = wp_insert_comment( array(
-		'comment_post_ID'      => $pid,
-		'comment_author'       => '김지운',
-		'comment_author_email' => 'kim@example.com',
-		'comment_content'      => '첫 번째 최상위 댓글 — comment-author-name / -date / -content / -reply-link specimen.',
-		'comment_approved'     => 1,
-		'user_id'              => $admin_id,
-	) );
-	wp_insert_comment( array(
-		'comment_post_ID'      => $pid,
-		'comment_author'       => 'omphalos',
-		'comment_author_email' => 'omphalos@example.com',
-		'comment_content'      => '두 번째 최상위 댓글 — 목록 rhythm / 두 번째 항목 관찰용.',
-		'comment_approved'     => 1,
-	) );
-	wp_insert_comment( array(
-		'comment_post_ID'      => $pid,
-		'comment_author'       => '김지운',
-		'comment_author_email' => 'kim@example.com',
-		'comment_content'      => '대댓글(threaded reply) — comment-template 중첩 / 들여쓰기 specimen.',
-		'comment_approved'     => 1,
-		'comment_parent'       => (int) $c1,
-		'user_id'              => $admin_id,
-	) );
+	$mk = static function ( $pid, $author, $email, $content, $parent, $uid ) {
+		return (int) wp_insert_comment( array(
+			'comment_post_ID'      => $pid,
+			'comment_author'       => $author,
+			'comment_author_email' => $email,
+			'comment_content'      => $content,
+			'comment_approved'     => 1,
+			'comment_parent'       => (int) $parent,
+			'user_id'              => (int) $uid,
+		) );
+	};
+	$d1 = $mk( $pid, '김지운',   'kim@example.com',      '깊이 1 — 최상위 댓글 (threaded chain 1/5).',                 0,   $admin_id );
+	$d2 = $mk( $pid, 'omphalos', 'omphalos@example.com', '깊이 2 — 대댓글 (2/5).',                                     $d1, 0 );
+	$d3 = $mk( $pid, '김지운',   'kim@example.com',      '깊이 3 — 대대댓글 (3/5).',                                   $d2, $admin_id );
+	$d4 = $mk( $pid, 'omphalos', 'omphalos@example.com', '깊이 4 — (4/5).',                                            $d3, 0 );
+	$mk( $pid, '김지운',   'kim@example.com',      '깊이 5 — 최대 깊이 (5/5, thread_comments_depth 한계).',      $d4, $admin_id );
+	$mk( $pid, '방문자',   'guest@example.com',    '두 번째 최상위 댓글 — 목록 rhythm / breadth 관찰용.',         0,   0 );
 }
 
 WP_CLI::log( 'Comments VQA ready: ' . get_permalink( $pid ) . ' (page=' . $pid . ', comments=' . (int) get_comments( array( 'post_id' => $pid, 'count' => true ) ) . ')' );

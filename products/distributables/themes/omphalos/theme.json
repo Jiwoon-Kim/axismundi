@@ -1,6 +1,13 @@
 {
   "$schema": "https://schemas.wp.org/wp/6.8/theme.json",
   "version": 3,
+  "customTemplates": [
+    {
+      "name": "page-with-comments",
+      "title": "Page (with comments)",
+      "postTypes": [ "page" ]
+    }
+  ],
   "settings": {
     "appearanceTools": true,
     "lightbox": {

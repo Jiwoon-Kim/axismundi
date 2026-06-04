@@ -751,7 +751,9 @@ post-excerpt      body-large / on-surface
 meta cluster      body-small / on-surface-variant     (date·terms·time-to-read·comments·total·byline)
 author-biography  body-medium / on-surface-variant
 read-more         label-large / primary  (TEXT-button-LITE)
-pagination        label-large            (links on-surface-variant via §18 de-prose)
+pagination        label-large + pagination-lite
+                  (32px page-number pills; current=secondary-container,
+                   links=on-surface-variant; full button module deferred)
 layout            CORE-owned (flow/gap/columns untouched)
 link colour/underline = §18 de-prose block (title on-surface, meta on-surface-variant, read-more primary)
 ```
@@ -794,6 +796,7 @@ small pass can test 32/24 without changing the row ontology.
   a `.is-style-cards` specimen in the VQA pattern (renders live via the pattern reference).
 - **Featured image treatment** — corner-large / aspect / cover → media route (with card).
 - **read-more / pagination as full M3 buttons** — button module CSS, Phase 2 (forbidden in
-  Phase 1 without authorization); Phase 1 stops at text-button-lite typescale.
+  Phase 1 without authorization); Phase 1 stops at read-more text-button-lite and compact
+  pagination-lite.
 - **terms as chips** (Filter/Assist chip ontology) vs plain meta text — open decision.
 - **spacing rhythm** — title keeps prose ~23px block margin; left to core block-gap for now.

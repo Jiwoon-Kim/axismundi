@@ -827,17 +827,25 @@ contract. Query Loop B Phase 1 is CLOSED.
 
 ## §11 — Comments (P2 contract — global token binding, DONE)
 
-Diagnostic (real single post `?p=65`, the seeded post with 2 comments — NO bespoke
-`/vqa-theme-comments/` harness needed): the comments family renders in the SINGLE-POST
-TEMPLATE (TT5 `single.html` → `main.wp-block-group`), **`insidePostContent: false`** — the
-SAME template-context boundary as the Query Loop. A single-page in-content comments harness
-would distort it (the same mistake the Query Loop close warned against), so observe + bind on
-the real template render instead.
+Diagnostic (real single post `?p=65`, the seeded post with 2 comments): the comments family
+renders in the SINGLE-POST TEMPLATE (TT5 `single.html` → `main.wp-block-group`),
+**`insidePostContent: false`** — the SAME template-context boundary as the Query Loop. So the
+BINDING is verified against the real template render, not invented in a page.
 
 **Decision — bind GLOBALLY (nav model), not post-content-scoped.** Comments are unambiguous
 CHROME (never prose), so the post-content prose-leak guard doesn't apply; like §19 navigation
 they're bound by their own block classes globally, which reaches the real TT5 template safely.
 Token binding only; thread / list LAYOUT stays core/TT5-owned.
+
+**Observation page (per §3 convention).** Phase 2 still gets its own VQA page like every other
+phase: `patterns/vqa-theme-comments.php` + `scripts/seed-vqa-theme-comments.php` (page 86,
+`/vqa-theme-comments/`, comments OPEN, 2 top-level + 1 threaded reply; live `wp:pattern` ref;
+wired into `seed.ps1`). On THIS page `core/comments` sits IN-CONTENT (`insidePostContent:true`),
+which makes the prose-leak visible — handled by lifting two bindings above prose specificity:
+`comments-title` → `.wp-block-comments .wp-block-comments-title` (0,2,0) beats prose `h2`
+(0,1,1); comment links → `.wp-block-comments :is(…author-name/date/reply/edit) a` (0,2,1) beats
+prose `a:not(.wp-element-button)` (0,2,1) on source order. The global binding is unchanged in
+the real template context. So both contexts (in-content page + template post) read identically.
 
 **Done (blocks.css §21):**
 

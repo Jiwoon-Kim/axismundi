@@ -865,6 +865,7 @@ future in-content placement, but are not needed in this template-context render.
 comments-title                         title-large / on-surface
 comment meta (author/date/reply/edit)  body-small / on-surface-variant
 comment-content (+ inner p)            body-medium / on-surface
+comment avatar                         M3 List leading avatar primitive: 40dp / circular
 comment links (author/reply/edit)      de-prose: no resting underline, hover/focus underline
 comment-template                       list-style:none (thread indent stays core)
 comment form label/helper              body-small / on-surface-variant
@@ -874,13 +875,21 @@ CSS-0 was TT5 light defaults (weight 300, mixed greys); binding normalises to M3
 (weight 400) + role colours. Verified: title 22/28 on-surface, meta 12/16 on-surface-variant,
 content 14/20 on-surface, reply link de-underlined, form label 12 on-surface-variant.
 
+**Avatar ontology note.** M3 does not currently expose Avatar as a normal standalone public
+component page in the same way as Button/List/Menu. The stable contract used here is **List >
+leading media > avatar**: 40dp, circular, avatar colour `primary-container`, label colour
+`on-primary-container`, label type 16/24/500. The local `ax-avatar` styleguide section is a
+record/composition primitive extracted from that leading-slot contract, not proof of a separate
+Material component. For WordPress comments we therefore bind only size/shape + fallback colour;
+real Gravatar images keep their pixels and are clipped circularly.
+
 **Deferred:**
 - **comment form INPUT surface** — textarea / name / email / url radius (4) + border → M3 text
   field. A form/input component lane (reuse the §14 Search Bar tokens). The submit button is
   already M3 (theme.json button element), left as-is.
 - **comments-pagination / comment-edit-link** — absent in this specimen (2 comments, no
   pagination; edit-link needs the cap); bind by class when a richer comment context exists.
-- **thread/nesting layout, avatar sizing** — core/TT5-owned (layout primitive).
+- **thread/nesting layout** — core/TT5-owned (layout primitive).
 
 Note: like the Query Loop, the real comments DESIGN beyond token binding (spacing, nesting
 affordance, form field components) belongs to the **template lane** — Omphalos binds tokens,

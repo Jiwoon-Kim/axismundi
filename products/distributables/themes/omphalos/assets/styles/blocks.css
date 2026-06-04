@@ -1723,6 +1723,27 @@ nav.wp-block-navigation.is-vertical {
   list-style: none;
 }
 
+/* comment avatar = M3 List leading avatar primitive (40dp, circular). M3 does not expose a
+ * standalone Avatar component page; the stable contract comes from List leading media. Real
+ * image avatars keep their pixels; initials/fallback colour, when present, uses the avatar
+ * composition tokens. */
+.wp-block-comments .wp-block-avatar,
+.wp-block-comments .wp-block-avatar :is(img, .avatar, .wp-block-avatar__image) {
+  inline-size: var(--comp-avatar-size);
+  block-size: var(--comp-avatar-size);
+  border-radius: var(--comp-avatar-radius);
+}
+.wp-block-comments .wp-block-avatar {
+  flex-shrink: 0;
+  overflow: hidden;
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+.wp-block-comments .wp-block-avatar :is(img, .avatar, .wp-block-avatar__image) {
+  display: block;
+  object-fit: cover;
+}
+
 /* comment META (author / date / reply / edit) → body-small / on-surface-variant */
 .wp-block-comment-author-name,
 .wp-block-comment-date,

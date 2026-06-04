@@ -1310,20 +1310,21 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
  * before clamping. v1 does NOT: collapse the rail, add icons, rewrite the trigger
  * semantics, or clamp the indent. */
 nav.wp-block-navigation.is-vertical:has(.open-always) {
-  /* rail surface: defined width + single-column flow (the rail's identity). */
-  inline-size: 220px;
-  max-inline-size: 360px;
-
+  /* The NAV BLOCK stays a NORMAL content-width block so it gets the same margins /
+   * content-width centering as every other post-content block (a fixed-width nav would
+   * float centered in the FULL post-content, misaligned from the left content column).
+   * The rail SURFACE WIDTH (the rail's identity: 220, ceiling 360, single column) lives
+   * on the CONTAINER + loginout instead, left-aligned within the content-width nav (so
+   * the rail sits at the content column's left edge, consistent with the text). */
+  & .wp-block-navigation__container,
+  & .wp-block-loginout {
+    inline-size: 220px;
+    max-inline-size: 360px;
+  }
   & .wp-block-navigation__container {
     flex-wrap: nowrap;
     align-items: stretch;   /* core left-justifies vertical items (flex-start) → stretch
                              * so the root rows fill the rail width (nested already do) */
-    inline-size: 100%;
-  }
-  /* loginout renders OUTSIDE the container ul (a nav child) — give the block full rail
-   * width so its anchor becomes a peer full-width pill row (DECISION 1). */
-  & .wp-block-loginout {
-    inline-size: 100%;
   }
 
   /* row = the anchor: full-width 56dp pill, label-large, padding-inline 16. inline-size

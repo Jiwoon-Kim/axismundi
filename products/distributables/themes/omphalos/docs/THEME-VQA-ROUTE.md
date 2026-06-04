@@ -609,9 +609,16 @@ submenu trigger stays a DESTINATION item (link + section parent), not a non-inte
 heading. (3) core's depth indent (~19.2px/level) KEPT for v1 (observe overflow before
 clamping). EXCLUDED: collapsed rail (icon-first; WP nav is text-only).
 
-Verified (front, dark+light): nav 220 / nowrap; root + loginout anchors 220 (full-width);
-nested 182 (indented 19); current = secondary-container full-width stadium pill + secondary
-label; submenu-parent li bg transparent (no subtree tint); supporting text shown; label 14.
+Verified (front, dark+light): root + loginout anchors 220 (full-width); nested 182
+(indented 19); current = secondary-container full-width stadium pill + secondary label;
+submenu-parent li bg transparent (no subtree tint); supporting text shown; label 14.
+
+**Block alignment fix:** the rail WIDTH lives on the `__container` + `.wp-block-loginout`
+(inline-size 220), NOT the nav block. A fixed-width *nav* floats CENTERED in the full
+post-content (a 220px block gets margin-inline auto → 500px margins), misaligned from the
+left content column. The nav now stays a NORMAL content-width block (645, margin-inline
+288/288 — identical to a sibling heading); the 220 rail sits left-justified inside it, so
+the root anchor's left edge == the heading's left edge (consistent with the body text).
 
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 

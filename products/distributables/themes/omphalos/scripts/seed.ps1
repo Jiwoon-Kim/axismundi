@@ -67,18 +67,36 @@ if ($video -and $capEn) {
 
 # Site Logo — OFF by default. site_logo / custom_logo are site-owner identity,
 # not a theme fixture, so the seed must not overwrite them unless asked. Opt in
-# with -SetDemoLogo for a dev/VQA demo. Core blocks SVG uploads and the
-# distributable theme does not bundle a raster logo, so this uses the imported
-# placeholder image.
+# with -SetDemoLogo for a dev/VQA demo. Core blocks SVG uploads for the site-logo
+# slot, so the demo logo is the brand RASTER: assets/brand/axismundi-logo.png.
+# That raster lives in the repo brand source (NOT bundled in the distributable
+# theme), so it is STAGED into the mounted theme dir, imported, and removed
+# (try/finally so a mid-run error never leaves the staged copy behind). The
+# bundled placeholder image is the fallback if the brand raster is absent.
 if ($SetDemoLogo) {
     Write-Host "== Setting demo Site Logo (-SetDemoLogo) =="
-    $logo = $image
+    $logoSrc   = Join-Path $PSScriptRoot "../../../../../assets/brand/axismundi-logo.png"
+    $logoStageDir = Join-Path $PSScriptRoot "../.seed-tmp"           # under the mounted theme dir
+    $logoStage    = Join-Path $logoStageDir "axismundi-logo.png"     # keep the real filename → clean attachment name
+    $logo = $null
+    try {
+        if (Test-Path $logoSrc) {
+            New-Item -ItemType Directory -Force -Path $logoStageDir | Out-Null
+            Copy-Item $logoSrc $logoStage -Force
+            $logo = Import-Media ".seed-tmp/axismundi-logo.png"      # imported via the container mount
+        } else {
+            Write-Warning "Brand raster not found at $logoSrc; falling back to placeholder image."
+            $logo = $image
+        }
+    } finally {
+        if (Test-Path $logoStageDir) { Remove-Item $logoStageDir -Recurse -Force }
+    }
     if ($logo) {
         npx wp-env run cli wp option update site_logo $logo
         npx wp-env run cli wp theme mod set custom_logo $logo
-        Write-Host "Demo Site Logo set to attachment $logo"
+        Write-Host "Demo Site Logo set to attachment $logo (axismundi-logo.png)"
     } else {
-        Write-Warning "Placeholder image import failed; Site Logo was not changed."
+        Write-Warning "Demo logo import failed; Site Logo was not changed."
     }
 } else {
     Write-Host "== Skipping Site Logo (site-owner data; pass -SetDemoLogo to opt in) =="

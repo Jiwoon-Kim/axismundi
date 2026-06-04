@@ -13,3 +13,6 @@ Thumbs.db
 
 .vscode/
 .idea/
+
+# Transient demo Site Logo staging dir (seed.ps1 -SetDemoLogo)
+.seed-tmp/

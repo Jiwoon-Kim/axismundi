@@ -565,6 +565,45 @@ a ::before state-layer overlay (the lab `.nav-bar__item::before` pattern) is the
 for active+hover layering — deferred. (loginout renders OUTSIDE the container ul, so the
 pill treatment doesn't reach "Log in" yet — a separate structural item.)
 
+### §9.6c — A2c vertical nav root = M3 Expanded Navigation RAIL (blocks.css §20, v1 DONE)
+
+`nav.is-vertical` (the §19 horizontal gate excludes it). Maps lab `.nav-rail.is-expanded`
+onto WP li/a. Closes the vertical-root lane (A2a submenu + A2b horizontal root were the
+prior closes).
+
+**Ownership model differs from §19 (load-bearing).** In a vertical nav the submenu
+container is STATIC + IN-FLOW *inside* the parent li (the li wraps its whole nested
+subtree), so a pill on the li would tint the entire subtree. The ROW treatment therefore
+sits on the ROW ANCHOR (`a.…__content`), NOT the li — verified the submenu parent li bg
+stays transparent. (In §19's horizontal dropdown the submenu is `position:absolute`, so
+there the li IS the row.)
+
+**Container = part of the rail identity** (unlike the A2b nav-bar, whose container is
+header chrome). An expanded rail is a vertical surface of a DEFINED WIDTH + single-column
+flow — without them the pills collapse to content-width and corner-full turns short labels
+into circular blobs (the "Home" current pill became a circle). So v1 sets:
+`inline-size: 220px` (ceiling 360; fixed 220 for diagnosis, a shell can clamp later) ·
+`__container { flex-wrap: nowrap; align-items: stretch; inline-size: 100% }` (core
+left-justifies vertical items → stretch so root rows fill the rail; nested already do).
+
+**Row (the M3 expanded-rail item):** `a.…__content` + `.wp-block-loginout a` →
+`box-sizing: border-box` · `inline-size: 100%` · `min-block-size: 56` · `padding-inline:
+16` · `corner-full` · label-large · flex-column (label + supporting text). State layer +
+focus ring on the anchor. current `a[aria-current="page"]` → full-width secondary-container
+pill + secondary label. description → supporting text (opt in). Nested anchor padding is
+reset by core via a submenu selector that loads after blocks.css → restored with
+`padding-inline:16 !important`.
+
+**DECISIONS:** (1) loginout — core renders it OUTSIDE the container ul; `.wp-block-loginout
+{ inline-size:100% }` merges it as a peer full-width pill row (DOM fact recorded). (2)
+submenu trigger stays a DESTINATION item (link + section parent), not a non-interactive
+heading. (3) core's depth indent (~19.2px/level) KEPT for v1 (observe overflow before
+clamping). EXCLUDED: collapsed rail (icon-first; WP nav is text-only).
+
+Verified (front, dark+light): nav 220 / nowrap; root + loginout anchors 220 (full-width);
+nested 182 (indented 19); current = secondary-container full-width stadium pill + secondary
+label; submenu-parent li bg transparent (no subtree tint); supporting text shown; label 14.
+
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 
 ```txt

@@ -1361,6 +1361,16 @@ nav.wp-block-navigation.is-style-expanded-rail {
   background-color: var(--md-sys-color-surface);
   border-radius: 0;
 
+  /* The rail's full-width rows can't justify (they fill the rail), so the toolbar
+   * justification positions the RAIL BLOCK within its container instead (a rail sits at
+   * an edge). Default = inline-start; center / right override. (This is legitimate for the
+   * opt-in rail, which owns its geometry — unlike the §20 baseline, which leaves layout to
+   * core.) Wins over the post-content layout's centering margin by specificity. */
+  margin-inline-start: 0 !important;
+  margin-inline-end: auto !important;
+  &.items-justified-center { margin-inline: auto !important; }
+  &.items-justified-right  { margin-inline-start: auto !important; margin-inline-end: 0 !important; }
+
   & .wp-block-navigation__container {
     flex-wrap: nowrap;
     align-items: stretch;

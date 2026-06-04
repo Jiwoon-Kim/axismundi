@@ -641,6 +641,14 @@ secondary-container stadium pill. Pattern: a 2c `.is-style-expanded-rail` specim
 the §20-baseline always specimen side by side. (Collapsed rail stays excluded — icon-first;
 the modal/sheet rail = A3 territory.)
 
+**Justify on the rail.** The rail's full-width rows can't justify (they fill the rail), so
+the toolbar justification positions the RAIL BLOCK within its container: default
+inline-start, `.items-justified-center` → centre, `.items-justified-right` → inline-end
+(margin-auto). These need `!important` to beat the post-content constrained-layout centering
+margin (which out-specifies a plain `nav.…` rule) — justified for an opt-in component that
+owns its own position. Verified: `justifyContent:right` → rail margin 861/0 (right-aligned);
+default → 0/auto (left).
+
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 
 ```txt

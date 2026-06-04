@@ -626,10 +626,10 @@ core still owns          width · flexWrap · justifyContent · alignment · flo
                         block-gap variable override).
 ```
 prose ul-indent leak removal + link de-underline already live in §19 (un-gated). Applies to
-BOTH 2c vertical variants (click accordion §21 + always tree). Verified (front, dark): leaf
-content 56 / padding-inline 16 / corner-full / full-width; the VQA submenu toggle is a
-full-width 56 capsule trigger (no subtree tint / no giant rounded box); current = filled
-capsule. = core tree nav + full-row capsule affordance.
+BOTH 2c vertical variants (click = core submenu behavior; always = open tree). Verified
+(front, dark): leaf content 56 / padding-inline 16 / corner-full / full-width; the VQA
+submenu toggle is a full-width 56 capsule trigger (no subtree tint / no giant rounded box);
+current = filled capsule. = core tree nav + full-row capsule affordance.
 
 **The real M3 EXPANDED RAIL is DEFERRED to an explicit opt-in** — a block style variation
 `.is-style-expanded-rail` or a template/sidebar context class (e.g. `.ax-navigation-rail`)
@@ -674,30 +674,22 @@ stays core-native. The real EXPANDED RAIL is deferred to a SEPARATE component/te
 must be re-specced with a full RTL audit (the M3 Nav rail values above are the reference) before
 any rebuild — `:has(.open-always)` + a content nav is not a rail.
 
-### §9.6d — vertical + submenuVisibility:click = ACCORDION / disclosure (blocks.css §21)
+### §9.6d — vertical + submenuVisibility:click accordion = PLUGIN / render lane (rolled back)
 
-A vertical click-to-open submenu reads better as an in-flow ACCORDION than a floating
-popover. Verified DOM: `li.open-on-click > button.…__toggle[aria-expanded]` + a SIBLING
-`ul.…__submenu-container` (core's collapsed state = `position:absolute; visibility:hidden`).
-core OWNS the disclosure state — it toggles `aria-expanded` + the container's `visibility`
-(a11y kept). The theme only RE-FLOWS it (logical, RTL/LTR-neutral, no left/right/width):
-```css
-nav.is-vertical .open-on-click { flex-wrap: wrap; }                  /* let the submenu wrap below */
-nav.is-vertical .open-on-click > .…__submenu-container {
-  position: static; flex-basis: 100%;                                /* drop BELOW the trigger, not beside */
-  overflow: hidden; max-block-size: 0; background: transparent; }    /* collapsed */
-nav.is-vertical .open-on-click > .…__toggle[aria-expanded="true"] ~ .…__submenu-container {
-  max-block-size: none; overflow: visible; }                         /* expanded */
-```
-(The submenu li is a flex ROW — toggle + chevron + submenu side by side — so a static
-submenu lands at the inline-END; `flex-wrap:wrap` + `flex-basis:100%` drop it onto its own
-row below the trigger. Verified: submenu below the button, not right.)
-Verified: collapsed → static / max-block-size 0 / height 2 / visibility hidden (core);
-click → aria-expanded true / static / max-block-size none / height 400 / visibility visible;
-submenu bg transparent (was a core white panel). NB: `max-block-size` can't auto-animate to
-content height → INSTANT disclosure; true `<details>` semantics = a later `render_block`-filter
-lane. Full context map: horizontal hover/click = Menu/Popover (§19) · vertical click =
-accordion (§21) · vertical open-always = tree + capsule (§20) · overlay nested = A3.
+A vertical click-to-open submenu would read better as an in-flow ACCORDION / disclosure than
+a floating popover. Verified DOM: `li.open-on-click > button.…__toggle[aria-expanded]` + a
+SIBLING `ul.…__submenu-container` (core's collapsed state = `position:absolute;
+visibility:hidden`). A CSS-only prototype re-flowed it with `flex-wrap`, `position:static`,
+`max-block-size`, and sibling selectors, but it kept fighting core/navigation's saved markup
+and interaction model (submenu placement, nested flow, height semantics, and no real
+`<details>` semantics). **That prototype was removed from theme CSS.**
+
+Decision: **do not implement accordion behavior in the theme baseline.** Keep the current
+core `submenuVisibility:"click"` behavior as core-owned. If accordion/details behavior is
+wanted, build it as a plugin / block extension / `render_block` lane that can own markup and
+semantics (`details/summary` or a proper disclosure controller), then test editor + front +
+RTL together. Theme CSS may keep the neutral vertical item capsule skin (§20), but it must
+not re-flow click submenus.
 
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 

@@ -1026,6 +1026,18 @@ same "component binding first, surface opt-in later" policy used for Query Loop.
   bound to 22/28 title-large.
 - seeded navigation now links "VQA Archive" to `?pagename=vqa-theme-archive`.
 
+**Parked Widgets (DONE — blocks.css §18e).** `core/archives` · `core/categories` · `core/page-list`
+— the list widgets parked in the Widgets lane, rejoined into the Theme/Archive family. Each is an
+in-content list of links with the SAME prose leak as the term/nav blocks (32px `:is(ul,ol)` indent
++ disc markers + always-underline PRIMARY link). Bound post-content-scoped: strip the indent +
+markers, de-prose the links (on-surface, hover/focus underline only), body-medium typography; the
+post-count text stays muted (on-surface-variant); nested children (categories hierarchy, page-list)
+keep a `--space-md` depth indent so depth still reads. Added as §4 of
+`patterns/vqa-theme-archive.php`. Verified light/dark on page 93: indent 0, markers none, links
+14/20 on-surface de-underlined, counts on-surface-variant, page-list hierarchy preserved. With this,
+the Phase-3 Archive/Term family — query-title (Archive + Search variations), terms-query + term
+blocks, and the parked widgets — is CLOSED.
+
 **Deferred.**
 
 - Archive/search template design (`archive.html`, `search.html`, `home.html`) — template lane.

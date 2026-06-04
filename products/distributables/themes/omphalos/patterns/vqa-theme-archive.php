@@ -60,3 +60,29 @@
 <!-- wp:term-count /-->
 <!-- /wp:term-template -->
 <!-- /wp:terms-query -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">4. Parked Widgets (Archive / Theme list family)</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><code>core/archives</code> · <code>core/categories</code> · <code>core/page-list</code> — in-content list CHROME (rejoined from the Widgets lane). Each is a list of links, so the prose list indent + always-underline leak onto them like the term/nav blocks; bind = list-indent reset + de-prose links + token typography.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">4a. Archives (post counts)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:archives {"showPostCounts":true} /-->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">4b. Categories (counts + hierarchy)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:categories {"showPostCounts":true,"showHierarchy":true} /-->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">4c. Page List</h3>
+<!-- /wp:heading -->
+
+<!-- wp:page-list /-->

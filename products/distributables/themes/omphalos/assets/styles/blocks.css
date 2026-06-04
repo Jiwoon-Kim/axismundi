@@ -1287,6 +1287,44 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* ----------------------------------------------------------------------------
+ * §18e core/archives + core/categories + core/page-list — Theme list WIDGETS
+ *
+ * Parked Widgets rejoined from the Widgets lane into the Theme/Archive family. Each is an
+ * in-content list of links, so the prose `:is(ul,ol)` indent (32px) + disc markers + the
+ * prose always-underline PRIMARY link all leak onto them (same trap as nav / term blocks).
+ * Bind (post-content-scoped): strip the indent + markers, de-prose the links (on-surface, no
+ * resting underline — hover/focus only), tokenise typography. NESTED children (categories
+ * hierarchy, page-list) keep a modest indent so depth still reads. The post-count text stays
+ * muted (on-surface-variant); the link is on-surface. The `:is(…)` (0,2,1) ties the prose
+ * link rule and wins on source order (blocks.css loads after prose.css). */
+.wp-block-post-content :is(.wp-block-archives, .wp-block-categories, .wp-block-page-list) {
+  padding-inline-start: 0;
+  list-style: none;
+  margin-block: 0;
+}
+.wp-block-post-content :is(.wp-block-archives, .wp-block-categories, .wp-block-page-list) ul {
+  list-style: none;
+  padding-inline-start: var(--space-md);      /* nested depth indent (hierarchy) */
+}
+.wp-block-post-content :is(.wp-block-archives, .wp-block-categories, .wp-block-page-list) li {
+  margin-block: 0;
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  color: var(--md-sys-color-on-surface-variant);     /* post-count / muted text */
+}
+.wp-block-post-content :is(.wp-block-archives, .wp-block-categories, .wp-block-page-list) a {
+  color: var(--md-sys-color-on-surface);             /* link = emphasised vs the muted count */
+  text-decoration: none;
+}
+.wp-block-post-content :is(.wp-block-archives, .wp-block-categories, .wp-block-page-list) a:hover,
+.wp-block-post-content :is(.wp-block-archives, .wp-block-categories, .wp-block-page-list) a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 /* ============================================================================
  * §19 core/navigation — chrome contract A1 + A2  [cleanup: M3-faithful, core-leaning]
  *

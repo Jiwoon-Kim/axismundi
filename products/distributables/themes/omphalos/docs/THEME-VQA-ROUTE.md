@@ -599,9 +599,12 @@ current-page indicator  `li:has(> a[aria-current="page"])::before` → filled se
 supporting text         core hides description (display:none) → opt in (display:block,
                         body-small/on-surface-variant); the content stacks label + supporting
                         text via flex-column `:has(.description)`.
-submenu (parent) trigger the parent li wraps its subtree, so the 56dp row + padding go on
-                        the TRIGGER `.…__content` (not the li). `min-block-size:56` ·
-                        padding-inline 16.
+submenu (parent) row     the parent li wraps its subtree, but it still owns the trigger
+                        row geometry: `li.wp-block-navigation-submenu` gets
+                        `min-block-size:56` + logical padding-inline 16. The first
+                        `.…__content` (anchor/button) and trailing submenu icon are slots
+                        inside that row: content grows, has 56px block-size, and keeps
+                        padding-inline 0; the following submenu `ul` wraps to the next row.
 gap / margin            core's vertical submenu gap is `gap: var(--wp--style--block-gap)`
                         (1.2rem ≈ 19.2px) — too large on the BLOCK axis. Do NOT zero the
                         variable: core also uses it for the INLINE nested indent. Override

@@ -1291,14 +1291,12 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
  * justified. (`:has(.open-always)` alone is not "a rail".) prose ul-indent leak removal
  * + link de-underline already live in §19 (un-gated). */
 nav.wp-block-navigation.is-vertical {
-  /* item ROW skin. The "row" is a LEAF li (it IS the row) OR a SUBMENU TRIGGER content
-   * (`.…__content`; a vertical PARENT li wraps its whole nested subtree IN-FLOW, so the
-   * row treatment goes on the trigger anchor/button, NOT the li — otherwise the li becomes
-   * one giant capsule over the open subtree). Uniform 56dp · logical padding-inline 16 ·
-   * capsule shape · hover / current. core owns width / flexWrap / justify / alignment /
-   * indent / flow. */
+  /* item ROW geometry. A vertical PARENT li wraps its nested subtree in-flow, but the
+   * trigger row still needs the same 56dp / 16dp geometry as leaf rows. Put geometry on
+   * the li; the first anchor/button and trailing span are slots inside it. State paint for
+   * parent submenu rows stays on the trigger content to avoid tinting the whole subtree. */
   & li.wp-block-navigation-item:not(.wp-block-navigation-submenu),
-  & .wp-block-navigation-submenu > .wp-block-navigation-item__content,
+  & li.wp-block-navigation-submenu,
   & .wp-block-loginout a {
     min-block-size: 56px;
     padding-inline: var(--space-md, 16px);
@@ -1359,6 +1357,8 @@ nav.wp-block-navigation.is-vertical {
     display: flex;
     align-items: center;
     flex-grow: 1;
+    min-block-size: 56px;
+    padding-inline: 0;
   }
   &.is-content-justification-left a.wp-block-navigation-item__content:has(.wp-block-navigation-item__description) {
     align-items: flex-start;

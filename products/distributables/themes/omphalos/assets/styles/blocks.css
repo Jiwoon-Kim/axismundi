@@ -1231,6 +1231,62 @@
   margin-block-start: var(--space-xs);
 }
 
+/* ----------------------------------------------------------------------------
+ * §18d core/query-title + term blocks — Theme VQA Phase 3 (archive / terms)
+ *
+ * Archive/Search `core/query-title` is TEMPLATE-CONTEXT chrome (outside
+ * .wp-block-post-content), so bind it globally like navigation/comments. The Terms Query
+ * specimen is in-content; it remains a core layout primitive and only gets list-indent
+ * reset + token binding for term name/description/count. */
+.wp-block-query-title {
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+.wp-block-post-content .wp-block-term-template {
+  padding-inline-start: 0;
+  list-style: none;
+  margin-block: 0;
+}
+.wp-block-post-content .wp-block-term + .wp-block-term {
+  margin-block-start: var(--space-md);
+}
+.wp-block-post-content .wp-block-term-name {
+  margin-block: 0;
+  font-size:      var(--md-sys-typescale-title-medium-size);
+  line-height:    var(--md-sys-typescale-title-medium-line-height);
+  font-weight:    var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+.wp-block-post-content .wp-block-term-name a {
+  color: inherit;
+  text-decoration: none;
+}
+.wp-block-post-content .wp-block-term-name a:hover,
+.wp-block-post-content .wp-block-term-name a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.wp-block-post-content .wp-block-term-description {
+  margin-block-start: var(--space-xs);
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-post-content .wp-block-term-count {
+  margin-block-start: var(--space-xs);
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
 /* ============================================================================
  * §19 core/navigation — chrome contract A1 + A2  [cleanup: M3-faithful, core-leaning]
  *

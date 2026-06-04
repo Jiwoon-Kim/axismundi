@@ -83,10 +83,9 @@ if ( $admin && '' === trim( (string) get_user_meta( $admin->ID, 'description', t
 //
 // Structured as a small VQA SITEMAP with one nested submenu so the dropdown / overlay
 // nested-section + description specimens are observable WITHOUT bloat. "VQA Theme" is a
-// submenu whose children are the FUTURE Phase-2/3 subpages (Comments / Archive) — they
-// don't exist yet (placeholder anchors), they just give the nested level + a real
-// reason to nest. Embeds / Embed Template / Attachment links were pulled (they belong
-// in their own lanes / a footer site-map, not the Theme nav). Two items carry a
+// submenu whose children are the Phase-2/3 subpages (Comments / Archive). Embeds /
+// Embed Template / Attachment links live here as deep nesting specimens for navigation
+// VQA, not as a recommended header sitemap. Two items carry a
 // `description` to specimen core/navigation-link description rendering (it renders).
 // Korean lives in this eval-file (mojibake-safe), never PowerShell stdout.
 $u = static function ( $q ) { return home_url( '/' ) . '?' . $q; };
@@ -99,7 +98,7 @@ $nav_content = '<!-- wp:home-link {"label":"Home"} /-->'
 	.   '<!-- wp:navigation-link {"label":"VQA Widgets","url":"' . $u( 'page_id=33' ) . '","kind":"custom"} /-->'
 	.   '<!-- wp:navigation-submenu {"label":"VQA Theme","url":"' . $u( 'page_id=68' ) . '","kind":"custom"} -->'
 	.     '<!-- wp:navigation-link {"label":"VQA Comments","url":"' . $u( 'pagename=vqa-theme-comments' ) . '","kind":"custom","description":"core/comments 패밀리"} /-->'
-	.     '<!-- wp:navigation-link {"label":"VQA Archive","url":"#vqa-archive-future","kind":"custom","description":"Phase 3 (예정)"} /-->'
+	.     '<!-- wp:navigation-link {"label":"VQA Archive","url":"' . $u( 'pagename=vqa-theme-archive' ) . '","kind":"custom","description":"Archive / Terms 블록"} /-->'
 	.   '<!-- /wp:navigation-submenu -->'
 	.   '<!-- wp:navigation-link {"label":"VQA Embeds","url":"' . $u( 'page_id=52' ) . '","kind":"custom"} /-->'
 	.   '<!-- wp:navigation-link {"label":"VQA Embed Template","url":"' . $u( 'page_id=63' ) . '","kind":"custom"} /-->'

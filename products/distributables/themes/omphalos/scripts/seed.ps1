@@ -256,5 +256,10 @@ npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-theme.php"
 Write-Host "== Creating Theme Comments VQA page =="
 npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-theme-comments.php"
 
+# Archive / Terms VQA page (THEME-VQA-ROUTE §3 Phase 3) — term blocks,
+# terms-query, and links to live archive/search template contexts.
+Write-Host "== Creating Theme Archive VQA page =="
+npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-theme-archive.php"
+
 Write-Host "== Done. Attachment permalinks: =="
 npx wp-env run cli wp post list --post_type=attachment --field=guid

@@ -982,3 +982,51 @@ per-comment inline composers) is a custom form/plugin lane: render a separate in
 with the right `comment_parent`, and handle guest fields/nonces safely. Until that lane exists,
 Omphalos keeps the root composer fixed at the bottom; reply links are visual/actions-only in the
 baseline.
+
+## §12 — Phase 3 Archive / Term blocks (DONE — token binding + VQA harness)
+
+Phase 3 follows the same boundary learned in Query Loop and Comments:
+
+```txt
+archive/search query-title chrome  → TEMPLATE context → global token binding
+terms-query / term-template blocks  → in-content harness → core layout + token binding
+```
+
+**Harness.** `patterns/vqa-theme-archive.php` + `scripts/seed-vqa-theme-archive.php` create
+`/vqa-theme-archive/` (page 93, child of `/vqa-theme/`). The page is a live pattern reference and
+contains:
+
+- links to real template contexts: category archive, tag archive, search results
+- category `core/terms-query` specimen
+- tag `core/terms-query` specimen
+
+The seed also gives the VQA category/tag real descriptions so `core/term-description` renders.
+The `termQuery` serialization was verified against runtime rendering; the valid attrs are
+`taxonomy`, `perPage`, `orderBy`, `order`, `hideEmpty` (using `number`/`orderby` produced core
+warnings).
+
+**Binding (blocks.css §18d).**
+
+```txt
+core/query-title       title-large / on-surface (GLOBAL; archive/search template context)
+term-template          list-style none + prose indent reset (in-content only)
+term-name              title-medium / on-surface, link de-prosed
+term-description       body-medium / on-surface-variant
+term-count             body-small / on-surface-variant
+```
+
+Layout remains core-owned. No term card/chip/list component is introduced in Phase 3; this is the
+same "component binding first, surface opt-in later" policy used for Query Loop.
+
+**Verification.**
+
+- `/vqa-theme-archive/`: term list renders, `wp-block-term-template` padding-inline-start = 0,
+  term-name = 16/24/500 on-surface, description = 14/20 variant, count = 12/16 variant.
+- `?cat=3`: `core/query-title` renders in template context (`insidePostContent:false`) and is
+  bound to 22/28 title-large.
+- seeded navigation now links "VQA Archive" to `?pagename=vqa-theme-archive`.
+
+**Deferred.**
+
+- Archive/search template design (`archive.html`, `search.html`, `home.html`) — template lane.
+- Term list/card/chip surface variants — opt-in style/pattern lane after real use cases.

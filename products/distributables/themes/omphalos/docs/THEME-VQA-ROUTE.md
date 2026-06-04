@@ -917,56 +917,50 @@ Note: like the Query Loop, the real comments DESIGN beyond token binding (spacin
 affordance, form field components) belongs to the **template lane** — Omphalos binds tokens,
 TT5/core own the template + layout.
 
-### §11.1 — comment-TEMPLATE ontology: a microblog FEED ITEM (source-grounded)
+### §11.1 — comment-TEMPLATE ontology: a FACEBOOK comment BUBBLE thread (source-grounded)
 
 `core/comment-template` (the displayed comment row — avatar / author / date / content / reply,
-nested) is NOT a "traditional blog comment" form-field problem; it is a **social feed / list
-item**. The comment FORM (text-field / checkbox above) and the comment ITEM are two different
-ontologies — the item is a List/feed object, not a form. Verified against the canonical sources
-(not browser scraping — SPA wrappers + virtualization are too noisy; the source is the truth):
+nested) is NOT a "traditional blog comment" form-field problem, and — after weighing two real
+models — it is NOT a microblog NOTE either. It is a **comment BUBBLE thread** (Facebook model).
+The comment FORM (text-field / checkbox) and the comment ITEM are different ontologies — the item
+is a feed/thread object, not a form. Sources read directly (not browser-scraped — SPA wrappers +
+virtualization are too noisy):
 
-- **Misskey** `packages/frontend/src/components/MkNote.vue` — `article` is a flex ROW:
-  leading `MkAvatar` (58→44dp, `flex-shrink:0`) + `.main` (`flex:1; min-width:0`) column =
-  `MkNoteHeader` (author/handle/time) → `.text` body → media → reactions → `footer` action row
-  (reply / renote / react / clip / menu).
-- **Mastodon** `app/javascript/mastodon/components/status.jsx` + `status/header.tsx` +
-  `status_action_bar/` — `.status__wrapper > .status` = `status__line` (thread connector) ·
-  `StatusHeader` → `.status__info` { **leading `.status__avatar`** + `.status__display-name` +
-  meta line `.status__relative-time` } · content · media · `StatusActionBar`
-  (reply / boost / favourite / bookmark / menu).
-
-**Both converge** on one structure:
+- **Microblog NOTE** — Mastodon `status.jsx` + `status/header.tsx` + `status_action_bar/` and
+  Misskey `MkNote.vue`: leading avatar + main column { header/meta (author · handle · date) →
+  body → media → reactions → action bar (reply / boost / favourite / renote / …) } + thread
+  connector. This is RICH — handles, reactions/boosts, relative timestamps, media, polls. That
+  richness belongs to a **custom post type / ActivityPub OBJECT renderer**, NOT
+  `core/comment-template` (WP comments have no handle / reaction / boost). The note model
+  OVER-FITS core comments.
+- **Facebook comment BUBBLE thread** — the right fit for WP core comments: leading avatar + a
+  rounded BUBBLE { author (top) + comment text } + a small action STRIP (date · reply · edit)
+  BELOW the bubble + a thread connector for nesting. Minimal — matches exactly what WP comments
+  carry.
 
 ```txt
-comment item = social feed/list item
-  LEADING media   : avatar (flex-shrink:0 column)
-  MAIN column (flex:1):
-    header/meta row : author (+ handle) · date          ← inline meta, author FIRST
-    body            : comment content
-    action row      : reply / edit (· react/boost = social-only, N/A for WP)
-  nested replies    : threaded list / conversation chain (core thread indent)
+ActivityPub / Mastodon / Misskey NOTE  → custom post type / object template / AP renderer (lane)
+WordPress core comments                → Facebook-style comment BUBBLE thread
 ```
 
-**WP mapping (DONE — pattern markup).** TT5's `core/comment-template` emits the blocks in
-`avatar / date / author / content / reply` order, stacked. `patterns/comments.php`
-(`omphalos/comments`) re-authors `core/comments` to the feed-item shape — per-comment = **leading
-avatar** (flex column, `flex-shrink:0`) + **main column** (`flex:1; min-width:0`) {
-`omph-comment-meta` row (author BEFORE date, inline) → `core/comment-content` → `omph-comment-
-actions` row (reply · edit) } — and `templates/page-with-comments.html` references it instead of
-`twentytwentyfive/comments`. The PATTERN owns the order/grouping; blocks.css §22 only does the
-flex glue (row · grow · shrink · gaps) — NOT a CSS reorder of the stack (the Navigation trap).
-Avatar stays 40dp (§11 List leading avatar). Thread nesting stays core-owned (the avatar+column
-repeats per level). The §21 token binding (typescale / role colour / de-prose / avatar) is
-unchanged and applies regardless of order. Verified on page 86: 6 items, avatar leading + author-
-first meta row + action row, thread depth 1→5.
+**WP mapping (DONE — Facebook bubble).** `patterns/comments.php` (`omphalos/comments`) re-authors
+`core/comments`: per-comment = **leading avatar** (`flex-shrink:0`) + **main column** {
+`omph-comment-bubble` (rounded `surface-container` · `corner-large` · `fit-content` so it HUGS the
+text) holding `comment-author-name` (bold, label-large, top) + `comment-content`; then an
+`omph-comment-actions` STRIP below the bubble = `comment-date` · `comment-reply-link` ·
+`comment-edit-link` (label-medium, muted, underline on hover) }. The note-style inline meta row is
+dropped — the date moved into the strip. `templates/page-with-comments.html` references it instead
+of `twentytwentyfive/comments`. Nested replies keep the core thread chain + a 2px outline-variant
+CONNECTOR rail (≈ under the parent avatar). The PATTERN owns structure; blocks.css §22 = bubble
+surface + strip + rail (no CSS stack reorder — the Navigation trap). The §21 token binding (avatar
+40 List-leading, role colours, de-prose) is unchanged. Verified light/dark on page 86:
+author/content in the bubble (surface-container · r16 · fit-content), date/reply in the strip
+below (mt 4 · 12 muted), bold name, thread rails, depth 1→5 — reads as a Facebook comment thread.
 
-**Visual pass (DONE — blocks.css §22).** The first §22 was glue (skeleton) only and did NOT yet
-look like a feed — recorded honestly. The visual treatment then landed: rhythm tightened (body
-2dp under meta, action row 8dp — from core's 16/19.2), meta hierarchy (author on-surface +
-medium, date muted), action row = compact corner-full button-lite (hover state layer), a 2px
-outline-variant THREAD RAIL on nested reply lists (≈ under the parent avatar), and item-density
-gaps. It now reads as a threaded microblog feed in both schemes.
+History: an earlier pass built the microblog NOTE layout (flat meta row + body + action row +
+per-level rail) and was reshaped into the bubble model once Facebook was used as the reference.
+The NOTE layout stays the reference for the future custom-post-type / ActivityPub object lane.
 
-Still deferred: action-row ICONS (reply arrow etc. — needs markup, not CSS); a continuous
-avatar-connected rail (vs the current per-level segments); and the social-only affordances WP
-comments lack — reaction/boost/favourite, relative "2h" timestamps, @handle.
+Still deferred: action-row ICONS / a Like affordance (needs markup); a continuous avatar-connected
+rail (vs per-level segments); an inline reply composer; and the AP-object / note renderer (its own
+lane, not core comments).

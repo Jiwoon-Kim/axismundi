@@ -653,11 +653,16 @@ popover. Verified DOM: `li.open-on-click > button.…__toggle[aria-expanded]` + 
 core OWNS the disclosure state — it toggles `aria-expanded` + the container's `visibility`
 (a11y kept). The theme only RE-FLOWS it (logical, RTL/LTR-neutral, no left/right/width):
 ```css
+nav.is-vertical .open-on-click { flex-wrap: wrap; }                  /* let the submenu wrap below */
 nav.is-vertical .open-on-click > .…__submenu-container {
-  position: static; overflow: hidden; max-block-size: 0; background: transparent; }   /* collapsed */
+  position: static; flex-basis: 100%;                                /* drop BELOW the trigger, not beside */
+  overflow: hidden; max-block-size: 0; background: transparent; }    /* collapsed */
 nav.is-vertical .open-on-click > .…__toggle[aria-expanded="true"] ~ .…__submenu-container {
-  max-block-size: none; overflow: visible; }                                           /* expanded */
+  max-block-size: none; overflow: visible; }                         /* expanded */
 ```
+(The submenu li is a flex ROW — toggle + chevron + submenu side by side — so a static
+submenu lands at the inline-END; `flex-wrap:wrap` + `flex-basis:100%` drop it onto its own
+row below the trigger. Verified: submenu below the button, not right.)
 Verified: collapsed → static / max-block-size 0 / height 2 / visibility hidden (core);
 click → aria-expanded true / static / max-block-size none / height 400 / visibility visible;
 submenu bg transparent (was a core white panel). NB: `max-block-size` can't auto-animate to

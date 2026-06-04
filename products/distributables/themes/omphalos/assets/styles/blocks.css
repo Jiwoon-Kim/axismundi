@@ -1353,8 +1353,15 @@ nav.wp-block-navigation.is-vertical:has(.open-always) {
  * accordion · vertical open-always = tree + capsule (§20) · overlay nested = A3.
  * NB: `max-block-size` cannot auto-animate to the content height → this is an INSTANT
  * disclosure; true `<details>`/`<summary>` semantics = a later `render_block`-filter lane. */
+/* the submenu li is a flex ROW (toggle button + chevron + the submenu ul side by side),
+ * so a static submenu lands to the INLINE-END (right) of the trigger. Let the row WRAP and
+ * give the submenu a full-row basis so it drops BELOW the trigger (a real accordion). */
+nav.wp-block-navigation.is-vertical .open-on-click {
+  flex-wrap: wrap;
+}
 nav.wp-block-navigation.is-vertical .open-on-click > .wp-block-navigation__submenu-container {
   position: static;
+  flex-basis: 100%;            /* wrap onto its own row, below the trigger */
   overflow: hidden;
   max-block-size: 0;            /* collapsed (core keeps visibility:hidden when closed) */
   /* core gives the vertical submenu an opaque (white) panel bg — wrong for an in-flow

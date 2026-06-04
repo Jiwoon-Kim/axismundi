@@ -1983,10 +1983,21 @@ nav.wp-block-navigation.is-vertical {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition: stroke 120ms ease, stroke-width 120ms ease;
+}
+.omph-comment-connector.is-reply-active {
+  stroke: var(--md-sys-color-primary);
+  stroke-width: 3;
 }
 .has-omph-comment-connectors .omph-comment-item {
   position: relative;
   z-index: 1;
+}
+.omph-comment-item.is-reply-target .wp-block-comment-reply-link a,
+.omph-comment-item.is-reply-target .wp-block-comment-reply-link a:hover,
+.omph-comment-item.is-reply-target .wp-block-comment-reply-link a:focus-visible {
+  color: var(--md-sys-color-primary);
+  text-decoration: none;
 }
 .wp-block-comment-template ol > li { position: relative; }
 

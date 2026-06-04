@@ -959,7 +959,11 @@ trap). The §21 token binding (avatar 40 List-leading, role colours, de-prose) i
 Verified light/dark on page 86: author/content in the bubble (surface-container · r16 ·
 fit-content), date/reply in the strip below (mt 4; date = body-small 400/0.4; reply/edit =
 label-medium 500/0.5), bold name, dynamic connector paths, depth 1→5 plus depth 2/3 sibling
-branches — reads as a Facebook comment thread.
+branches — reads as a Facebook comment thread. Connector affordance: hovering/focusing a comment
+does not highlight the tree; clicking Reply toggles a persistent reply-target state instead. While
+active, the Reply action turns primary and the full ancestor connector chain to that target is
+raised and highlighted (primary stroke), without moving the root composer. Clicking the same Reply
+again cancels the state.
 
 History: an earlier pass built the microblog NOTE layout (flat meta row + body + action row +
 per-level rail) and was reshaped into the bubble model once Facebook was used as the reference.

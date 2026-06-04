@@ -3,6 +3,7 @@
   const ITEM_SELECTOR = ":scope > .omph-comment-item";
   const AVATAR_SELECTOR = ":scope > .wp-block-avatar";
   const SVG_NS = "http://www.w3.org/2000/svg";
+  let activeReplyTargetId = "";
 
   const makeSvg = (width, height) => {
     const svg = document.createElementNS(SVG_NS, "svg");
@@ -15,10 +16,18 @@
     return svg;
   };
 
-  const makePath = (d) => {
+  const ensureId = (element, prefix) => {
+    if (!element.id) {
+      element.id = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    return element.id;
+  };
+
+  const makePath = (d, targetId) => {
     const path = document.createElementNS(SVG_NS, "path");
     path.setAttribute("d", d);
     path.setAttribute("class", "omph-comment-connector");
+    path.dataset.connectorTarget = targetId;
     return path;
   };
 
@@ -81,7 +90,9 @@
           continue;
         }
 
-        svg.appendChild(makePath(roundedConnector(railX, startY, childX, childY)));
+        const item = childLi.querySelector(ITEM_SELECTOR);
+        const targetId = item ? ensureId(item, "omph-comment-item") : "";
+        svg.appendChild(makePath(roundedConnector(railX, startY, childX, childY), targetId));
         pathCount += 1;
       }
     }
@@ -94,8 +105,82 @@
     }
   };
 
+  const escapeSelectorValue = (value) => {
+    if (window.CSS?.escape) {
+      return CSS.escape(value);
+    }
+
+    return value.replace(/["\\]/g, "\\$&");
+  };
+
+  const connectorPathsFor = (targetId) => document.querySelectorAll(
+    `.omph-comment-connector[data-connector-target="${escapeSelectorValue(targetId)}"]`
+  );
+
+  const closestCommentItem = (target) => {
+    if (!(target instanceof Element)) {
+      return null;
+    }
+
+    return target.closest(".omph-comment-item");
+  };
+
+  const chainItemsFor = (item) => {
+    const items = [];
+    let currentLi = item.closest("li");
+
+    while (currentLi) {
+      const currentItem = currentLi.querySelector(ITEM_SELECTOR);
+      if (currentItem?.id) {
+        items.unshift(currentItem);
+      }
+
+      const parentList = currentLi.parentElement?.closest("ol");
+      currentLi = parentList?.parentElement?.closest("li") || null;
+    }
+
+    return items;
+  };
+
+  const activateReplyChain = (item) => {
+    chainItemsFor(item).forEach((chainItem) => {
+      connectorPathsFor(chainItem.id).forEach((path) => {
+        path.classList.add("is-reply-active");
+        path.parentElement?.appendChild(path);
+      });
+    });
+  };
+
   const renderAll = () => {
     document.querySelectorAll(TEMPLATE_SELECTOR).forEach(renderTemplate);
+
+    if (activeReplyTargetId) {
+      const item = document.getElementById(activeReplyTargetId);
+      if (item) {
+        activateReplyChain(item);
+      }
+    }
+  };
+
+  const clearReplyState = () => {
+    activeReplyTargetId = "";
+    document
+      .querySelectorAll(".omph-comment-connector.is-reply-active")
+      .forEach((path) => path.classList.remove("is-reply-active"));
+    document
+      .querySelectorAll(".omph-comment-item.is-reply-target")
+      .forEach((item) => item.classList.remove("is-reply-target"));
+    document
+      .querySelectorAll(".wp-block-comment-reply-link a[aria-pressed='true']")
+      .forEach((link) => link.setAttribute("aria-pressed", "false"));
+  };
+
+  const setReplyState = (item, replyLink) => {
+    clearReplyState();
+    activeReplyTargetId = item.id;
+    item.classList.add("is-reply-target");
+    replyLink.setAttribute("aria-pressed", "true");
+    activateReplyChain(item);
   };
 
   const disableCoreReplyMove = () => {
@@ -107,6 +192,18 @@
 
       event.preventDefault();
       event.stopPropagation();
+
+      const item = closestCommentItem(replyLink);
+      if (!item) {
+        return;
+      }
+
+      if (item.classList.contains("is-reply-target")) {
+        clearReplyState();
+        return;
+      }
+
+      setReplyState(item, replyLink);
     }, true);
   };
 

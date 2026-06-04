@@ -123,7 +123,9 @@ function omphalos_enqueue_comment_assets() : void {
 
 	$uri = omphalos_asset_uri( 'assets/scripts/comment-thread-connectors.js' );
 	if ( null !== $uri ) {
-		wp_enqueue_script( 'omphalos-comment-connectors', $uri, array(), OMPHALOS_VERSION, true );
+		$path    = get_stylesheet_directory() . '/assets/scripts/comment-thread-connectors.js';
+		$version = file_exists( $path ) ? (string) filemtime( $path ) : OMPHALOS_VERSION;
+		wp_enqueue_script( 'omphalos-comment-connectors', $uri, array(), $version, true );
 	}
 }
 add_action( 'wp_enqueue_scripts', 'omphalos_enqueue_comment_assets', 100 );

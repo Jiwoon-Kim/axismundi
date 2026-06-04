@@ -1270,105 +1270,42 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 }
 
 /* ============================================================================
- * §20 core/navigation — VERTICAL root = M3 Expanded Navigation RAIL  [A2c v1]
+ * §20 core/navigation — open-always vertical = light BASELINE SKIN  [A2c rolled back]
  *
- * SCOPE: `nav.is-vertical:has(.open-always)` ONLY — i.e. an `submenuVisibility:always`
- * vertical nav (a static, always-expanded in-flow tree, the only real expanded-rail
- * candidate). `nav.is-vertical` ALONE is too generic: applying the rail to ALL vertical
- * navs over-claimed it (a) the `submenuVisibility:click` variant keeps its submenus
- * absolute/hidden, so forcing inline-size:100% / min-height:56 on those subtree anchors
- * broke the layout; (b) every simple vertical nav (footer, etc.) became a 220px rail; (c)
- * the forced rail width nullified the editor toolbar's align / justify / flex-wrap and
- * centred the fixed-width block in post-content. So the rail is gated to the always-open
- * tree. (Even `:has(.open-always)` is a proxy — a real rail ultimately needs a
- * header/sidebar TEMPLATE context, since vertical orientation alone isn't "a rail".)
+ * ROLLBACK. The earlier §20 implemented a full M3 EXPANDED RAIL on
+ * `nav.is-vertical:has(.open-always)` — forced rail width (220), re-implemented
+ * justifyContent with margin-auto, flex-wrap:nowrap, align-items:stretch, full-width
+ * 56dp pills, etc. That OWNED layout that core/navigation already does (orientation,
+ * flexWrap, justifyContent / alignment, container width, static nested layout, depth
+ * indent) — lowering core dependency and FIGHTING the editor toolbar (align/justify did
+ * two conflicting things on two layers). It also wrongly assumed open-always == a 220px
+ * rail; an always-open vertical nav is a TREE / expanded-section candidate, not
+ * necessarily an M3 rail, and deep nesting (depth 3-4 → label clamped to ~105px) is a
+ * tree/flyout problem, not an in-place-rail one.
  *
- * Maps lab `.nav-rail.is-expanded` values — full-width pill ROWS · min-height 56 ·
- * padding-inline 16 · corner-full · label-large · full-width secondary-container active
- * indicator · supporting text — onto WP's li/a. Text-only → no icon, no COLLAPSED rail.
- * DEEP NESTING: core indent (~19.2px/level) accumulates; by depth 3+ the label in a 220px
- * rail is too narrow → an indent CLAMP or a right-side POPOVER flyout for deep levels is
- * required (deferred; v1 keeps in-place + core indent, observe overflow).
- *
- * STRUCTURAL NOTE (differs from §19): in a vertical nav the submenu container is STATIC
- * and IN-FLOW *inside* the parent li, so the li wraps its whole nested subtree — a pill
- * on the li would tint the entire subtree. So the ROW treatment sits on the ROW ANCHOR
- * (`a.…__content`), NOT the li. (In §19's horizontal dropdown the submenu is
- * position:absolute, so there the li IS the row.)
- *
- * CONTAINER = part of the rail identity. Unlike the horizontal nav-bar (whose container
- * is header chrome), an EXPANDED RAIL is a vertical surface of a DEFINED WIDTH with a
- * single-column flow — width + no-wrap ARE the component (lab `.nav-rail.is-expanded`).
- * Without them the pills collapse to content-width and corner-full turns short labels
- * into circular blobs. So v1 sets the rail width (220, ceiling 360) + flex-wrap:nowrap +
- * full-width rows. (220 fixed for diagnosis now; a real shell can move to clamp later.)
- *
- * DECISIONS (THEME-VQA-ROUTE §9.6c): (1) loginout — core renders it OUTSIDE the
- * container ul; visually merged here as a peer pill row (DOM fact recorded). (2) submenu
- * trigger stays a DESTINATION item (link + section parent), not a non-interactive
- * heading. (3) core's depth indent (~19.2px/level) is KEPT for v1 — observe overflow
- * before clamping. v1 does NOT: collapse the rail, add icons, rewrite the trigger
- * semantics, or clamp the indent. */
+ * So core now OWNS: orientation · flexWrap · justifyContent/alignment · container width ·
+ * static nested layout · depth indent. The THEME keeps only a light skin here. The real
+ * EXPANDED RAIL is DEFERRED to an explicit opt-in (a block style variation
+ * `.is-style-expanded-rail`, or a template/sidebar context class like
+ * `.ax-navigation-rail`), where a defined width + single-column + pill rows become
+ * justified. (`:has(.open-always)` alone is not "a rail".) prose ul-indent leak removal
+ * + link de-underline already live in §19 (un-gated). */
 nav.wp-block-navigation.is-vertical:has(.open-always) {
-  /* The NAV BLOCK stays a NORMAL content-width block so it gets the same margins /
-   * content-width centering as every other post-content block (a fixed-width nav would
-   * float centered in the FULL post-content, misaligned from the left content column).
-   * The rail SURFACE WIDTH (the rail's identity: 220, ceiling 360, single column) lives
-   * on the CONTAINER + loginout instead, left-aligned within the content-width nav (so
-   * the rail sits at the content column's left edge, consistent with the text). */
-  & .wp-block-navigation__container,
-  & .wp-block-loginout {
-    inline-size: 220px;
-    max-inline-size: 360px;
-  }
-  & .wp-block-navigation__container {
-    flex-wrap: nowrap;
-    align-items: stretch;   /* core left-justifies vertical items (flex-start) → stretch
-                             * so the root rows fill the rail width (nested already do) */
-  }
-
-  /* row = the anchor: full-width 56dp pill, label-large, padding-inline 16. inline-size
-   * 100% so the anchor fills the rail width (full-width pill / hit area). */
-  & a.wp-block-navigation-item__content,
-  & .wp-block-loginout a {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    box-sizing: border-box;   /* inline-size:100% includes the 16dp padding (no overflow) */
-    inline-size: 100%;
-    min-block-size: 56px;
-    padding-inline: var(--space-md, 16px);
-    border-radius: var(--md-sys-shape-corner-full);
-    color: var(--md-sys-color-on-surface);
-    font-family:    var(--md-sys-typescale-label-large-font);
-    font-size:      var(--md-sys-typescale-label-large-size);
-    line-height:    var(--md-sys-typescale-label-large-line-height);
-    font-weight:    var(--md-sys-typescale-label-large-weight);
-    letter-spacing: var(--md-sys-typescale-label-large-tracking);
-  }
-  /* state layer on the row anchor (hover/focus); M3 focus ring (secondary, inner offset). */
-  & a.wp-block-navigation-item__content:hover,
-  & .wp-block-loginout a:hover {
-    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
-  }
-  & a.wp-block-navigation-item__content:focus-visible,
-  & .wp-block-loginout a:focus-visible {
-    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
-    outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
-    outline-offset: var(--md-sys-state-focus-indicator-inner-offset);
-  }
-  /* nested anchors: core resets their padding to 0 via a submenu selector that loads
-   * AFTER blocks.css (equal specificity → core wins by order), so restore the 16dp pill
-   * padding with !important so nested rows match the root rows. */
-  & .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
-    padding-inline: var(--space-md, 16px) !important;
-  }
-  /* current-page active indicator: full-width secondary-container pill + secondary label. */
+  /* current-page indicator — light (follows core's row width, no forced rail geometry). */
   & a[aria-current="page"] {
     background-color: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-secondary);
+    border-radius: var(--md-sys-shape-corner-small);
   }
-  /* description = M3 supporting text (core hides it; opt in for the rail). */
+  /* supporting text (description) — core hides it (`…__description { display:none }`);
+   * opt in for the tree. The anchor stacks label + supporting text (flex-column is the
+   * ONLY layout the skin owns — needed for the description to read as supporting text
+   * below the label, not beside it; no width / min-height / pill). body-small. */
+  & a.wp-block-navigation-item__content:has(.wp-block-navigation-item__description) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
   & .wp-block-navigation-item__description {
     display: block;
     margin-block-start: 2px;

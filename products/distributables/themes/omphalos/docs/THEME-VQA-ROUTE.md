@@ -565,60 +565,41 @@ a ::before state-layer overlay (the lab `.nav-bar__item::before` pattern) is the
 for active+hover layering — deferred. (loginout renders OUTSIDE the container ul, so the
 pill treatment doesn't reach "Log in" yet — a separate structural item.)
 
-### §9.6c — A2c vertical nav root = M3 Expanded Navigation RAIL (blocks.css §20, v1 DONE)
+### §9.6c — A2c open-always vertical = light BASELINE SKIN (blocks.css §20) + RAIL deferred
 
-**SCOPE: `nav.is-vertical:has(.open-always)` ONLY** (a `submenuVisibility:always` vertical
-nav = a static, always-expanded in-flow tree — the only real expanded-rail candidate). The
-first cut applied the rail to ALL `nav.is-vertical`, which OVER-CLAIMED it: (a) the
-`submenuVisibility:click` variant keeps its submenus absolute/hidden, so forcing
-inline-size:100% / min-height:56 on those subtree anchors broke the layout; (b) every
-simple vertical nav (footer, etc.) became a 220px rail; (c) the forced rail width nullified
-the editor toolbar's align / justify / flex-wrap and centred the fixed-width block in
-post-content. `:has(.open-always)` is itself a PROXY — a real rail ultimately needs a
-header/sidebar TEMPLATE context, since vertical orientation alone is not "a rail".
-Verified: the click variant reverts to core (anchor min-height auto / radius 0 / content
-width / wrap); only the always tree gets the rail. Maps lab `.nav-rail.is-expanded` onto WP
-li/a.
+**ROLLED BACK from a full expanded-rail to a light skin.** An earlier §20 implemented the
+M3 EXPANDED RAIL on `nav.is-vertical:has(.open-always)` — forced rail width (220),
+re-implemented `justifyContent` with margin-auto (incl. a loginout-must-match-the-container
+symmetry), `flex-wrap:nowrap`, `align-items:stretch`, full-width 56dp pills, box-sizing,
+nested-padding `!important`, a content-width-block-vs-rail-width split. That **OWNED layout
+that core/navigation already does** (orientation · flexWrap · justifyContent/alignment ·
+container width · static nested layout · depth indent) → it LOWERED core dependency and
+FOUGHT the editor toolbar (align/justify doing two conflicting things on two layers). It
+also wrongly equated `open-always` with a 220px rail: an always-open vertical nav is a TREE
+/ expanded-section candidate, not necessarily an M3 rail, and deep nesting (depth 3-4 →
+label clamped to ~105px) is a tree/flyout problem, not an in-place-rail one.
 
-**Ownership model differs from §19 (load-bearing).** In a vertical nav the submenu
-container is STATIC + IN-FLOW *inside* the parent li (the li wraps its whole nested
-subtree), so a pill on the li would tint the entire subtree. The ROW treatment therefore
-sits on the ROW ANCHOR (`a.…__content`), NOT the li — verified the submenu parent li bg
-stays transparent. (In §19's horizontal dropdown the submenu is `position:absolute`, so
-there the li IS the row.)
+**Now core OWNS** orientation · flexWrap · justifyContent/alignment · container width ·
+static nested layout · depth indent. The **theme keeps a light skin only**, on
+`nav.is-vertical:has(.open-always)`:
+```txt
+current-page indicator  a[aria-current="page"] → secondary-container bg + secondary label +
+                        corner-small (follows core's row width; no forced rail geometry)
+supporting text         core hides description (display:none) → opt in (display:block,
+                        body-small/on-surface-variant). The ONLY layout the skin owns is
+                        flex-column on the anchor `:has(.description)` so the supporting
+                        text stacks BELOW the label (not beside) — no width/min-height/pill.
+```
+prose ul-indent leak removal + link de-underline already live in §19 (un-gated). Verified
+(front, dark): core owns layout (nav 645 content-width, container content-width, wrap,
+anchor min-height auto, content width); only the current indicator + stacked supporting
+text come from the skin.
 
-**Container = part of the rail identity** (unlike the A2b nav-bar, whose container is
-header chrome). An expanded rail is a vertical surface of a DEFINED WIDTH + single-column
-flow — without them the pills collapse to content-width and corner-full turns short labels
-into circular blobs (the "Home" current pill became a circle). So v1 sets:
-`inline-size: 220px` (ceiling 360; fixed 220 for diagnosis, a shell can clamp later) ·
-`__container { flex-wrap: nowrap; align-items: stretch; inline-size: 100% }` (core
-left-justifies vertical items → stretch so root rows fill the rail; nested already do).
-
-**Row (the M3 expanded-rail item):** `a.…__content` + `.wp-block-loginout a` →
-`box-sizing: border-box` · `inline-size: 100%` · `min-block-size: 56` · `padding-inline:
-16` · `corner-full` · label-large · flex-column (label + supporting text). State layer +
-focus ring on the anchor. current `a[aria-current="page"]` → full-width secondary-container
-pill + secondary label. description → supporting text (opt in). Nested anchor padding is
-reset by core via a submenu selector that loads after blocks.css → restored with
-`padding-inline:16 !important`.
-
-**DECISIONS:** (1) loginout — core renders it OUTSIDE the container ul; `.wp-block-loginout
-{ inline-size:100% }` merges it as a peer full-width pill row (DOM fact recorded). (2)
-submenu trigger stays a DESTINATION item (link + section parent), not a non-interactive
-heading. (3) core's depth indent (~19.2px/level) KEPT for v1 (observe overflow before
-clamping). EXCLUDED: collapsed rail (icon-first; WP nav is text-only).
-
-Verified (front, dark+light): root + loginout anchors 220 (full-width); nested 182
-(indented 19); current = secondary-container full-width stadium pill + secondary label;
-submenu-parent li bg transparent (no subtree tint); supporting text shown; label 14.
-
-**Block alignment fix:** the rail WIDTH lives on the `__container` + `.wp-block-loginout`
-(inline-size 220), NOT the nav block. A fixed-width *nav* floats CENTERED in the full
-post-content (a 220px block gets margin-inline auto → 500px margins), misaligned from the
-left content column. The nav now stays a NORMAL content-width block (645, margin-inline
-288/288 — identical to a sibling heading); the 220 rail sits left-justified inside it, so
-the root anchor's left edge == the heading's left edge (consistent with the body text).
+**The real M3 EXPANDED RAIL is DEFERRED to an explicit opt-in** — a block style variation
+`.is-style-expanded-rail` or a template/sidebar context class (e.g. `.ax-navigation-rail`)
+— where a defined width (220, ceiling 360) + single-column + full-width pill rows +
+loginout-merge + indent clamp / deep-level right-popover become justified. `:has(.open-
+always)` alone is not "a rail"; the rail needs a real header/sidebar template context.
 
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 

@@ -1317,11 +1317,13 @@ nav.wp-block-navigation.is-vertical {
   & a[aria-current="page"] {
     color: var(--md-sys-color-secondary);
   }
-  /* the vertical nav/submenu gap is `gap: var(--wp--style--block-gap)` (1.2rem ≈ 19.2px) —
-   * too large for a tight tree; zero the VAR (a plain `gap:0` loses to core's generated
-   * layout rule). Also drop the stray 4px margin-block-start on the submenu li. Rows are
-   * sized by min-block-size 56, so they sit flush. */
-  --wp--style--block-gap: 0px;
+  /* The vertical nav/submenu row gap is `gap: var(--wp--style--block-gap)` (1.2rem ≈
+   * 19.2px) — too large for a tight tree. Do NOT zero the variable: core also uses it
+   * for the inline nested indent. Override only the BLOCK-axis gap and leave inline
+   * spacing/indent core-owned. */
+  & :is(.wp-block-navigation__container, .wp-block-navigation__submenu-container) {
+    row-gap: 0 !important;
+  }
   & .wp-block-navigation-submenu {
     margin-block-start: 0;
   }

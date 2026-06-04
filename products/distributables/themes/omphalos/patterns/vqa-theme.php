@@ -78,11 +78,11 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 <?php endif; ?>
 
 <!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">2c. Orientation / Submenu-visibility specimens (nav-rail-like — Menu skin must NOT apply)</h3>
+<h3 class="wp-block-heading">2c. Orientation / Submenu-visibility specimens</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>Vertical orientation(<code>is-vertical</code>) / <code>submenuVisibility:always</code>(<code>.open-always</code>)는 floating dropdown이 아니라 nav-rail/drawer nested section이다. §19 Menu 측정값(surface, 16dp, elevation, first/last corner)이 여기로 새면 안 된다 — gate 제외 검증용. <strong>주의</strong>: <code>submenuVisibility:always</code>는 <em>vertical</em>에서만 정합(가로 nav는 submenu가 absolute dropdown이라 always-open이 성립 안 됨 → 에디터가 horizontal+always를 안 반영). 그래서 두 specimen 모두 vertical nav-rail-like로 둔다.</p>
+<p><code>submenuVisibility:click</code>은 vertical에서도 floating dropdown이므로 §19 Menu surface가 적용된다. 반면 <code>submenuVisibility:always</code>(<code>.open-always</code>)는 floating dropdown이 아니라 nav-rail/drawer nested section이라 §19 Menu 측정값(surface, 16dp, elevation, first/last corner)이 새면 안 된다. <strong>주의</strong>: <code>submenuVisibility:always</code>는 <em>vertical</em>에서만 정합(가로 nav는 submenu가 absolute dropdown이라 always-open이 성립 안 됨 → 에디터가 horizontal+always를 안 반영).</p>
 <!-- /wp:paragraph -->
 
 <?php if ( $omph_nav_ref ) : ?>

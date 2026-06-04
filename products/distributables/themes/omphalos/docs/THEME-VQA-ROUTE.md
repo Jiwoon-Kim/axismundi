@@ -474,25 +474,25 @@ navigation block has other modes that are not menus:
 `click` / `always` (default hover); `always` puts `.open-always` on the submenu li (a
 static, always-open nested list). `orientation: vertical` puts `.is-vertical` on the
 `<nav>`. Overlay open = `.…responsive-container.is-menu-open`. hover/click both produce a
-FLOATING absolute dropdown (= Menu); only always/vertical/overlay are nested sections.
+FLOATING absolute dropdown (= Menu), including vertical `submenuVisibility:click`.
+Only always-expanded and overlay states are nested sections.
 
-Therefore the Menu contract is gated to the floating dropdown with THREE exclusions:
+Therefore the Menu contract is gated to the floating dropdown with TWO exclusions:
 
 ```css
-nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.…responsive-container.is-menu-open)) { … }
+nav.wp-block-navigation:not(:has(.open-always)):not(:has(.…responsive-container.is-menu-open)) { … }
 ```
 
 The leading `nav` type is load-bearing (the inner container ul also carries the class).
 Do **not** style `.wp-block-navigation__submenu-container` globally as a menu. Verified
-(2c specimens, both vertical): the `submenuVisibility:click` rail and the
-`submenuVisibility:always` always-expanded rail both stay CORE (bg = core default, not
-surface-container-low; radius 0, not 16) — the Menu skin does not leak. **NOTE:**
+(2c specimens): vertical `submenuVisibility:click` gets the Menu popover surface
+(surface-container-low, radius 16, 48dp rows), while `submenuVisibility:always` stays a
+transparent always-expanded tree and does not receive the Menu skin. **NOTE:**
 `submenuVisibility:always` is only coherent for a VERTICAL nav (an always-expanded
 rail/tree); on a horizontal nav the submenu is an absolute dropdown, so "always-open"
 has no meaningful state — the editor does not honor horizontal+always (front renders the
-`.open-always` class but it is not an editor-faithful config). So both nav-rail specimens
-are vertical. The Nav rail / drawer lane (vertical / always) is SEPARATE and must not
-inherit the dropdown measurements.
+`.open-always` class but it is not an editor-faithful config). The Nav rail / drawer lane
+(vertical / always) is SEPARATE and must not inherit the dropdown measurements.
 
 **Row ownership = the `li` (M3 menu item).** The first cut put the row box (min-height +
 padding) on the ANCHOR, which is wrong — the row, state layer, hit area, height and item
@@ -699,5 +699,6 @@ row(li):   middle radius 4 · first/last outer radius 12 · min-block-size 48 ·
 anchor(a): padding 0 · min-block-size auto · flex-grow 1 · label-large 14/20/500/0.1
 support:   body-small 12/16/400/0.4 · on-surface-variant · margin-top 2
 trailing:  Material Symbols arrow_right · 20 · on-surface-variant · margin 0 ; gap 8 / trailing inset 16 (exact)
-overlay/vertical/open-always: core (no Menu skin) — verified excluded
+overlay/open-always: core / tree (no Menu skin) — verified excluded
+vertical click: Menu popover applies (same surface/48dp rows as horizontal)
 ```

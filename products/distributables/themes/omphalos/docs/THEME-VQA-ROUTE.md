@@ -947,11 +947,19 @@ comment item = social feed/list item
   nested replies    : threaded list / conversation chain (core thread indent)
 ```
 
-**WP mapping + the gap.** TT5's `core/comment-template` currently emits the blocks in
-`avatar / date / author / content / reply` order, stacked. To read as a microblog feed item it
-wants: **avatar LEADING** (a flex column) + a MAIN column whose **meta row puts author BEFORE
-date** (inline) → content → reply action row. Avatar stays 40dp (the §11 List leading avatar,
-already bound). This is **comment-template PATTERN MARKUP** work (block reorder + group into a
-leading-avatar row + a meta row), NOT CSS — a future pattern/template lane, deferred. The
-existing §21 token binding (typescale / role colour / de-prose links / avatar) is unchanged and
-applies regardless of order.
+**WP mapping (DONE — pattern markup).** TT5's `core/comment-template` emits the blocks in
+`avatar / date / author / content / reply` order, stacked. `patterns/comments.php`
+(`omphalos/comments`) re-authors `core/comments` to the feed-item shape — per-comment = **leading
+avatar** (flex column, `flex-shrink:0`) + **main column** (`flex:1; min-width:0`) {
+`omph-comment-meta` row (author BEFORE date, inline) → `core/comment-content` → `omph-comment-
+actions` row (reply · edit) } — and `templates/page-with-comments.html` references it instead of
+`twentytwentyfive/comments`. The PATTERN owns the order/grouping; blocks.css §22 only does the
+flex glue (row · grow · shrink · gaps) — NOT a CSS reorder of the stack (the Navigation trap).
+Avatar stays 40dp (§11 List leading avatar). Thread nesting stays core-owned (the avatar+column
+repeats per level). The §21 token binding (typescale / role colour / de-prose / avatar) is
+unchanged and applies regardless of order. Verified on page 86: 6 items, avatar leading + author-
+first meta row + action row, thread depth 1→5.
+
+Still deferred (social-only, not WP comment semantics): reaction/boost/favourite affordances,
+relative "2h"-style timestamps, handle/@username (WP comments have no handle). The real comment
+DESIGN polish (spacing rhythm, action-row iconography) can refine on this structure later.

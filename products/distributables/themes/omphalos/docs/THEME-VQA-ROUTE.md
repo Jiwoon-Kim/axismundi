@@ -726,3 +726,43 @@ The top-level disclosure replaces core's caret `<svg>` for both core markups —
 swapping to `arrow_drop_up` (click: `button[aria-expanded] ~ icon`; hover: `icon[aria-expanded]`).
 Source measures: Menu / List / Chip rows in `axismundi-lab/stylesheets/components.css`
 (Menu ~3001, List ~4300, Chip ~1733).
+
+## §10 — Query Loop + post-context (B contract)
+
+Diagnostic (CSS-0, `/vqa-theme/` §3): `.wp-block-query.is-layout-flow` → `ul.wp-block-post-template`
+(flow LIST, `list-style:none`, no marker) → `li.wp-block-post` (display:list-item). Per-item
+blocks in order: featured-image · title(h2) · author+author-name+avatar · date · terms×2 ·
+excerpt · time-to-read · read-more · comments-count · comments-link · author-biography. Then
+`query-pagination` (flex/wrap, numbers+next) + `query-total`. **Confirmed prose leak**: the
+post-template `ul` inherits prose `:is(ul,ol)` `padding-inline-start:32` → whole loop shifted in.
+
+**Decision — flat by default, card opt-in deferred.** core/query is a layout PRIMITIVE reused
+across home / archive / search / category / related; a card baseline over-applies. So the
+post item is a **FLAT ARTICLE** by default. The card form is a DEFERRED opt-in block style
+(`.is-style-*` list/grid) that may reuse the §16 Latest Posts/RSS card ontology. This keeps
+the Navigation lesson: don't over-componentise a core layout primitive.
+
+**Phase 1 (DONE — blocks.css §18b), flat baseline only:**
+
+```txt
+post-template     prose indent reset (padding-inline-start:0, list-style:none)
+post-title        title-large / on-surface           (overrides prose h2 28/36)
+post-excerpt      body-large / on-surface
+meta cluster      body-small / on-surface-variant     (date·terms·time-to-read·comments·total·byline)
+author-biography  body-medium / on-surface-variant
+read-more         label-large / primary  (TEXT-button-LITE)
+pagination        label-large            (links on-surface-variant via §18 de-prose)
+layout            CORE-owned (flow/gap/columns untouched)
+link colour/underline = §18 de-prose block (title on-surface, meta on-surface-variant, read-more primary)
+```
+
+**Deferred buckets (NOT Phase 1):**
+- **Card / grid variation** — `.is-style-*` opt-in (surface-container, radius, padding, gap,
+  featured media corner/aspect). Reuse §16 ontology. Needs block-style registration.
+- **Meta-row composition** — author/date/terms/time are individually-stacked blocks; an M3
+  card meta ROW is MARKUP (group/row in the pattern), not CSS → pattern lane.
+- **Featured image treatment** — corner-large / aspect / cover → media route (with card).
+- **read-more / pagination as full M3 buttons** — button module CSS, Phase 2 (forbidden in
+  Phase 1 without authorization); Phase 1 stops at text-button-lite typescale.
+- **terms as chips** (Filter/Assist chip ontology) vs plain meta text — open decision.
+- **spacing rhythm** — title keeps prose ~23px block margin; left to core block-gap for now.

@@ -1291,11 +1291,31 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
  * justified. (`:has(.open-always)` alone is not "a rail".) prose ul-indent leak removal
  * + link de-underline already live in §19 (un-gated). */
 nav.wp-block-navigation.is-vertical:has(.open-always) {
-  /* current-page indicator — light (follows core's row width, no forced rail geometry). */
+  /* CAPSULE AFFORDANCE — the link reads as a capsule via SHAPE + STATE only, NOT row
+   * geometry. core keeps width / flexWrap / justify / alignment / indent / flow; the theme
+   * only rounds the link (corner-full) + a little inline padding + hover/focus/current
+   * state. FORBIDDEN here (= the deferred expanded-rail opt-in, not this baseline):
+   * inline-size / min-block-size / width:220 / flex-wrap:nowrap / align-items:stretch. */
+  & a.wp-block-navigation-item__content,
+  & .wp-block-loginout a {
+    border-radius: var(--md-sys-shape-corner-full);
+    padding-inline: var(--space-sm, 8px);
+  }
+  & a.wp-block-navigation-item__content:hover,
+  & .wp-block-loginout a:hover {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+  }
+  & a.wp-block-navigation-item__content:focus-visible,
+  & .wp-block-loginout a:focus-visible {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+    outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
+    outline-offset: var(--md-sys-state-focus-indicator-inner-offset);
+  }
+  /* current-page indicator = the capsule filled (secondary-container + secondary label);
+   * the corner-full shape comes from the row rule above (follows core's row width). */
   & a[aria-current="page"] {
     background-color: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-secondary);
-    border-radius: var(--md-sys-shape-corner-small);
   }
   /* supporting text (description) — core hides it (`…__description { display:none }`);
    * opt in for the tree. The anchor stacks label + supporting text (flex-column is the

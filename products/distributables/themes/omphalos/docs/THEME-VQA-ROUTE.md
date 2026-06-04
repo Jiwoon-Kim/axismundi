@@ -583,17 +583,24 @@ label clamped to ~105px) is a tree/flyout problem, not an in-place-rail one.
 static nested layout · depth indent. The **theme keeps a light skin only**, on
 `nav.is-vertical:has(.open-always)`:
 ```txt
-current-page indicator  a[aria-current="page"] → secondary-container bg + secondary label +
-                        corner-small (follows core's row width; no forced rail geometry)
+capsule affordance      the link reads as a CAPSULE via SHAPE + STATE only (NOT row
+                        geometry): `a.…__content` + loginout a → corner-full + padding-
+                        inline 8 + hover (on-surface 0.08) / focus (0.10 + secondary ring).
+current-page indicator  a[aria-current="page"] → the capsule FILLED (secondary-container bg
+                        + secondary label). corner-full comes from the row rule; follows
+                        core's row width — no forced rail geometry.
 supporting text         core hides description (display:none) → opt in (display:block,
                         body-small/on-surface-variant). The ONLY layout the skin owns is
                         flex-column on the anchor `:has(.description)` so the supporting
-                        text stacks BELOW the label (not beside) — no width/min-height/pill.
+                        text stacks BELOW the label (not beside) — no width/min-height/220.
+FORBIDDEN (= rail opt-in, not this baseline): inline-size · min-block-size · width:220 ·
+                        flex-wrap:nowrap · align-items:stretch.
 ```
 prose ul-indent leak removal + link de-underline already live in §19 (un-gated). Verified
-(front, dark): core owns layout (nav 645 content-width, container content-width, wrap,
-anchor min-height auto, content width); only the current indicator + stacked supporting
-text come from the skin.
+(front, dark): core owns layout (nav 645 content-width, container content-width/wrap, anchor
+min-height AUTO, content width); the skin adds only the capsule shape (corner-full /
+padding-inline 8) + hover/focus/current state + stacked supporting text. "expanded rail ≠
+this — this is a core tree nav + capsule affordance."
 
 **The real M3 EXPANDED RAIL is DEFERRED to an explicit opt-in** — a block style variation
 `.is-style-expanded-rail` or a template/sidebar context class (e.g. `.ax-navigation-rail`)

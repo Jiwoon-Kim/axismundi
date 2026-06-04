@@ -1325,6 +1325,42 @@
   text-underline-offset: 0.15em;
 }
 
+/* ----------------------------------------------------------------------------
+ * §18e2 core/breadcrumbs — navigation TRAIL (chrome)
+ *
+ * Secondary navigation trail. Typography + link colour are GLOBAL (chrome — works in a
+ * template too); the prose list-indent (32px) + always-underline link only leak IN-CONTENT,
+ * so those resets are post-content-scoped and lifted to (0,2,1) to beat the prose link rule.
+ * The trail is muted (body-small / on-surface-variant); the CURRENT (aria-current) crumb is
+ * on-surface. core owns the flex trail + separators. */
+.wp-block-breadcrumbs {
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-breadcrumbs a,
+.wp-block-post-content .wp-block-breadcrumbs a {
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: none;
+}
+.wp-block-breadcrumbs [aria-current="page"] {
+  color: var(--md-sys-color-on-surface);
+}
+.wp-block-post-content .wp-block-breadcrumbs :is(ol, ul) {
+  padding-inline-start: 0;
+  margin-block: 0;
+  list-style: none;
+}
+.wp-block-breadcrumbs a:hover,
+.wp-block-breadcrumbs a:focus-visible,
+.wp-block-post-content .wp-block-breadcrumbs a:hover,
+.wp-block-post-content .wp-block-breadcrumbs a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 /* ============================================================================
  * §19 core/navigation — chrome contract A1 + A2  [cleanup: M3-faithful, core-leaning]
  *

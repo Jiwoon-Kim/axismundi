@@ -174,6 +174,9 @@ A. Site identity + Navigation
    navigation  → Navigation Bar: items are TEXT links (NOT tabs/buttons); M3 spacing
                  + state layer; submenu → Menu SURFACE (surface-container + elevation)
    breadcrumbs → compact navigation aid: body-small links + a separator, on-surface-variant
+                 [DONE — blocks.css §18e2: global type/colour + post-content-scoped prose-indent
+                 + de-prose link resets; current (aria-current) crumb = on-surface; core owns the
+                 "/" separator. With this every registered Theme block carries a token binding.]
 B. Query Loop / Post Template → Card / List (reuse the collections ontology)
    list  → teaser-card stack ; grid → filled card grid ; featured-image → card media
    read-more → TEXT BUTTON (not a prose link)

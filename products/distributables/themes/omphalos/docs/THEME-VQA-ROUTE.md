@@ -609,6 +609,13 @@ gap / margin            core's vertical submenu gap is `gap: var(--wp--style--bl
                         to beat the generated layout rule), leaving `column-gap` / inline
                         padding / depth indent core-owned. Drop the stray 4px
                         `margin-block-start` on the submenu li.
+justification edge      for vertical submenu children, remove padding on the alignment edge
+                        only: left-justified → `padding-inline-start:0`; right-justified →
+                        `padding-inline-end:0`. This keeps the opposite-side hierarchy
+                        indent while letting the active edge align cleanly. Description
+                        anchors follow the same justification (`text-align:start/end`,
+                        `align-items:flex-start/end`), so label + supporting text align
+                        together.
 core still owns          width · flexWrap · justifyContent · alignment · flow · inline
                         depth indent (no nav-level width / justify re-implementation /
                         block-gap variable override).

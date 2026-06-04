@@ -1324,6 +1324,21 @@ nav.wp-block-navigation.is-vertical {
   & :is(.wp-block-navigation__container, .wp-block-navigation__submenu-container) {
     row-gap: 0 !important;
   }
+  /* Keep core's inline depth, but remove padding on the alignment edge for nested
+   * submenu rows. When the block is justified left, child rows should meet the inline
+   * start edge; when justified right, they should meet the inline end edge. */
+  &.is-content-justification-left .wp-block-navigation__submenu-container {
+    padding-inline-start: 0;
+  }
+  &.is-content-justification-left .wp-block-navigation__submenu-container > .wp-block-navigation-item {
+    padding-inline-start: 0;
+  }
+  &.is-content-justification-right .wp-block-navigation__submenu-container {
+    padding-inline-end: 0;
+  }
+  &.is-content-justification-right .wp-block-navigation__submenu-container > .wp-block-navigation-item {
+    padding-inline-end: 0;
+  }
   & .wp-block-navigation-submenu {
     margin-block-start: 0;
   }
@@ -1339,6 +1354,19 @@ nav.wp-block-navigation.is-vertical {
     display: flex;
     flex-direction: column;
     justify-content: center;
+  }
+  & .wp-block-navigation-submenu > .wp-block-navigation-item__content {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+  }
+  &.is-content-justification-left a.wp-block-navigation-item__content:has(.wp-block-navigation-item__description) {
+    align-items: flex-start;
+    text-align: start;
+  }
+  &.is-content-justification-right a.wp-block-navigation-item__content:has(.wp-block-navigation-item__description) {
+    align-items: flex-end;
+    text-align: end;
   }
   & .wp-block-navigation-item__description {
     display: block;

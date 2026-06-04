@@ -916,3 +916,42 @@ CSS-border checkmark (token-coloured → dark-safe) · focus 2px secondary. The 
 Note: like the Query Loop, the real comments DESIGN beyond token binding (spacing, nesting
 affordance, form field components) belongs to the **template lane** — Omphalos binds tokens,
 TT5/core own the template + layout.
+
+### §11.1 — comment-TEMPLATE ontology: a microblog FEED ITEM (source-grounded)
+
+`core/comment-template` (the displayed comment row — avatar / author / date / content / reply,
+nested) is NOT a "traditional blog comment" form-field problem; it is a **social feed / list
+item**. The comment FORM (text-field / checkbox above) and the comment ITEM are two different
+ontologies — the item is a List/feed object, not a form. Verified against the canonical sources
+(not browser scraping — SPA wrappers + virtualization are too noisy; the source is the truth):
+
+- **Misskey** `packages/frontend/src/components/MkNote.vue` — `article` is a flex ROW:
+  leading `MkAvatar` (58→44dp, `flex-shrink:0`) + `.main` (`flex:1; min-width:0`) column =
+  `MkNoteHeader` (author/handle/time) → `.text` body → media → reactions → `footer` action row
+  (reply / renote / react / clip / menu).
+- **Mastodon** `app/javascript/mastodon/components/status.jsx` + `status/header.tsx` +
+  `status_action_bar/` — `.status__wrapper > .status` = `status__line` (thread connector) ·
+  `StatusHeader` → `.status__info` { **leading `.status__avatar`** + `.status__display-name` +
+  meta line `.status__relative-time` } · content · media · `StatusActionBar`
+  (reply / boost / favourite / bookmark / menu).
+
+**Both converge** on one structure:
+
+```txt
+comment item = social feed/list item
+  LEADING media   : avatar (flex-shrink:0 column)
+  MAIN column (flex:1):
+    header/meta row : author (+ handle) · date          ← inline meta, author FIRST
+    body            : comment content
+    action row      : reply / edit (· react/boost = social-only, N/A for WP)
+  nested replies    : threaded list / conversation chain (core thread indent)
+```
+
+**WP mapping + the gap.** TT5's `core/comment-template` currently emits the blocks in
+`avatar / date / author / content / reply` order, stacked. To read as a microblog feed item it
+wants: **avatar LEADING** (a flex column) + a MAIN column whose **meta row puts author BEFORE
+date** (inline) → content → reply action row. Avatar stays 40dp (the §11 List leading avatar,
+already bound). This is **comment-template PATTERN MARKUP** work (block reorder + group into a
+leading-avatar row + a meta row), NOT CSS — a future pattern/template lane, deferred. The
+existing §21 token binding (typescale / role colour / de-prose links / avatar) is unchanged and
+applies regardless of order.

@@ -1294,6 +1294,52 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
   }
 }
 
+/* ----------------------------------------------------------------------------
+ * §19c core/navigation — TOP-LEVEL submenu DISCLOSURE control
+ *
+ * Ontology (route analysis): a top-level submenu trigger is a DESTINATION ROW + a DISCLOSURE
+ * control. That trailing affordance belongs to the List/disclosure family — NOT the Nav
+ * bar/rail icon slot (those are destination PRIMARIES; Nav bar/rail carry no trailing icon
+ * spec), and NOT the Menu cascading indicator (that is the nested popover `arrow_right`,
+ * §19b). Chip icon measures (18dp) are component-private and excluded. So replace core's
+ * tiny caret <svg> with Material Symbols arrow_drop_down (collapsed) / arrow_drop_up
+ * (expanded) at the List trailing-icon 24dp measurement, on-surface-variant. Applies to the
+ * TOP-LEVEL disclosure only (`__container > item > __submenu-icon`) — whether core renders it
+ * as a <span> (submenuVisibility:"click") or a <button> (hover toggle). The open-always TREE
+ * carries no trailing icon (showSubmenuIcon:false) per the Nav-rail baseline. The open
+ * overlay (.is-menu-open) stays fully core. Future: a 40dp corner-full container is the List
+ * expanded-parent pattern if a stronger disclosure target is wanted. */
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+  & .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 24px;       /* M3 List trailing icon 24dp */
+    block-size: 24px;
+    padding: 0;
+    background-color: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  & .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon > svg {
+    display: none;           /* hide core's caret svg */
+  }
+  & .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon::after {
+    content: "arrow_drop_down";
+    font-family: "Material Symbols Outlined", sans-serif;
+    font-size: 24px;
+    line-height: 1;
+    font-feature-settings: "liga";
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  /* expanded → arrow_drop_up. click: icon is a SIBLING span after the toggle <button>;
+   * hover: the icon IS the toggle <button> carrying aria-expanded. */
+  & .wp-block-navigation__container > .wp-block-navigation-item > button[aria-expanded="true"] ~ .wp-block-navigation__submenu-icon::after,
+  & .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon[aria-expanded="true"]::after {
+    content: "arrow_drop_up";
+  }
+}
+
 /* ============================================================================
  * §20 core/navigation — VERTICAL nav-rail skin: TOP-LEVEL capsule + open-always TREE
  * [A2c rolled back; submenu popover moved to §19b]

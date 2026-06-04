@@ -1138,6 +1138,35 @@
   letter-spacing: var(--md-sys-typescale-label-large-tracking);
 }
 
+/* ----------------------------------------------------------------------------
+ * §18c core/query `.is-style-cards` — SURFACE-only card opt-in (reuses §16 ontology)
+ *
+ * Opt-in block style (functions.php → core/query) turning each flat post item into a
+ * filled, shadow-less card — the SAME surface as the §16 Latest Posts/RSS cards. It owns
+ * ONLY the surface + interior rhythm; LAYOUT stays core (the Query/Post-Template List|Grid
+ * view + core's responsive column collapse). Like §16's grid note, we never touch
+ * `display` / `width` / `grid-template-columns` here — core's flow block-gap (list) and
+ * grid gap (grid) own the inter-card spacing, so a `.is-style-cards` loop works unchanged
+ * in BOTH List and Grid view. Media (featured-image corner/full-bleed) and meta-row
+ * composition remain deferred (§10). */
+.wp-block-post-content .wp-block-query.is-style-cards .wp-block-post {
+  box-sizing: border-box;
+  margin: 0;               /* inter-card spacing = core flow/grid gap, not per-item margin */
+  padding: var(--space-md);
+  border-radius: var(--comp-card-radius);
+  background-color: var(--md-sys-color-surface-container);
+  box-shadow: none;
+}
+/* card interior vertical rhythm — the card padding owns the edges; one token gap stacks the
+ * blocks (resets core's ad-hoc per-block margins, e.g. the post-title's prose block margin,
+ * so the top/bottom card edges stay even). */
+.wp-block-post-content .wp-block-query.is-style-cards .wp-block-post > * {
+  margin-block: 0;
+}
+.wp-block-post-content .wp-block-query.is-style-cards .wp-block-post > * + * {
+  margin-block-start: var(--space-xs);
+}
+
 /* ============================================================================
  * §19 core/navigation — chrome contract A1 + A2  [cleanup: M3-faithful, core-leaning]
  *

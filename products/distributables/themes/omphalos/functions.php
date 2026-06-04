@@ -214,6 +214,18 @@ function omphalos_register_block_styles() : void {
 			)
 		);
 	}
+	// core/query as M3 cards — SURFACE-only opt-in. The Query Loop post item is a flat
+	// article by default (blocks.css §18b); this variation turns each item into a filled
+	// card surface (reusing the §16 Latest Posts/RSS card ontology). It deliberately does
+	// NOT own layout: list / grid / columns stay core-owned (the Query/Post-Template
+	// List|Grid view + core's responsive collapse). CSS in blocks.css §18c.
+	register_block_style(
+		'core/query',
+		array(
+			'name'  => 'cards',
+			'label' => __( 'Cards', 'omphalos' ),
+		)
+	);
 }
 add_action( 'init', 'omphalos_register_block_styles' );
 

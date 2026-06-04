@@ -583,24 +583,27 @@ label clamped to ~105px) is a tree/flyout problem, not an in-place-rail one.
 static nested layout · depth indent. The **theme keeps a light skin only**, on
 `nav.is-vertical:has(.open-always)`:
 ```txt
-capsule affordance      the link reads as a CAPSULE via SHAPE + STATE only (NOT row
-                        geometry): `a.…__content` + loginout a → corner-full + padding-
-                        inline 8 + hover (on-surface 0.08) / focus (0.10 + secondary ring).
-current-page indicator  a[aria-current="page"] → the capsule FILLED (secondary-container bg
-                        + secondary label). corner-full comes from the row rule; follows
-                        core's row width — no forced rail geometry.
+item ROW capsule        the ROW CONTENT element (`.…__content` = the leaf anchor AND the
+                        submenu TOGGLE button) + loginout a → `flex-grow:1` (FULL-WIDTH row)
+                        · `min-block-size:56` · `padding-inline:16` · corner-full · hover
+                        (on-surface 0.08) / focus (0.10 + secondary ring). NOT the li: a
+                        vertical PARENT li wraps its whole nested subtree (~1.7k px), so
+                        li-level shape/bg rounds + tints the entire subtree. Targeting the
+                        content + flex-grow gives the clean FULL-ROW look (the per-anchor
+                        capsule looked messy only because it was content-width).
+current-page indicator  `.…__content[aria-current="page"]` → the row capsule FILLED
+                        (secondary-container bg + secondary label).
 supporting text         core hides description (display:none) → opt in (display:block,
-                        body-small/on-surface-variant). The ONLY layout the skin owns is
-                        flex-column on the anchor `:has(.description)` so the supporting
-                        text stacks BELOW the label (not beside) — no width/min-height/220.
-FORBIDDEN (= rail opt-in, not this baseline): inline-size · min-block-size · width:220 ·
-                        flex-wrap:nowrap · align-items:stretch.
+                        body-small/on-surface-variant); the content stacks label + supporting
+                        text via flex-column `:has(.description)`.
+core still owns          width · flexWrap · justifyContent · alignment · indent · flow (no
+                        nav-level width / justify re-implementation / !important).
 ```
-prose ul-indent leak removal + link de-underline already live in §19 (un-gated). Verified
-(front, dark): core owns layout (nav 645 content-width, container content-width/wrap, anchor
-min-height AUTO, content width); the skin adds only the capsule shape (corner-full /
-padding-inline 8) + hover/focus/current state + stacked supporting text. "expanded rail ≠
-this — this is a core tree nav + capsule affordance."
+prose ul-indent leak removal + link de-underline already live in §19 (un-gated). Applies to
+BOTH 2c vertical variants (click accordion §21 + always tree). Verified (front, dark): leaf
+content 56 / padding-inline 16 / corner-full / full-width; the VQA submenu toggle is a
+full-width 56 capsule trigger (no subtree tint / no giant rounded box); current = filled
+capsule. = core tree nav + full-row capsule affordance.
 
 **The real M3 EXPANDED RAIL is DEFERRED to an explicit opt-in** — a block style variation
 `.is-style-expanded-rail` or a template/sidebar context class (e.g. `.ax-navigation-rail`)

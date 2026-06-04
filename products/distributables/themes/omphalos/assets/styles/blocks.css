@@ -1290,37 +1290,38 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
  * `.ax-navigation-rail`), where a defined width + single-column + pill rows become
  * justified. (`:has(.open-always)` alone is not "a rail".) prose ul-indent leak removal
  * + link de-underline already live in §19 (un-gated). */
-nav.wp-block-navigation.is-vertical:has(.open-always) {
-  /* CAPSULE AFFORDANCE — the link reads as a capsule via SHAPE + STATE only, NOT row
-   * geometry. core keeps width / flexWrap / justify / alignment / indent / flow; the theme
-   * only rounds the link (corner-full) + a little inline padding + hover/focus/current
-   * state. FORBIDDEN here (= the deferred expanded-rail opt-in, not this baseline):
-   * inline-size / min-block-size / width:220 / flex-wrap:nowrap / align-items:stretch. */
-  & a.wp-block-navigation-item__content,
+nav.wp-block-navigation.is-vertical {
+  /* item ROW skin — uniform 56dp rows · logical padding-inline 16 · capsule shape · ROW
+   * hover + current. Target the ROW CONTENT element `.…__content` (the leaf anchor AND the
+   * submenu toggle button both carry this class) — NOT the li: in a vertical nav the
+   * PARENT li wraps its whole nested subtree (1678px), so li-level shape/bg would round +
+   * tint the entire subtree. `flex-grow:1` fills the row so the capsule is FULL-WIDTH (the
+   * per-anchor capsule looked messy only because it was content-width). core still owns
+   * the nav flow / orientation / justify / indent. */
+  & .wp-block-navigation-item__content,
   & .wp-block-loginout a {
+    flex-grow: 1;
+    min-block-size: 56px;
+    padding-inline: var(--space-md, 16px);
     border-radius: var(--md-sys-shape-corner-full);
-    padding-inline: var(--space-sm, 8px);
   }
-  & a.wp-block-navigation-item__content:hover,
+  & .wp-block-navigation-item__content:hover,
   & .wp-block-loginout a:hover {
     background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
   }
-  & a.wp-block-navigation-item__content:focus-visible,
+  & .wp-block-navigation-item__content:focus-visible,
   & .wp-block-loginout a:focus-visible {
     background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
     outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
     outline-offset: var(--md-sys-state-focus-indicator-inner-offset);
   }
-  /* current-page indicator = the capsule filled (secondary-container + secondary label);
-   * the corner-full shape comes from the row rule above (follows core's row width). */
-  & a[aria-current="page"] {
+  /* current-page indicator = the row capsule filled (secondary-container + secondary). */
+  & .wp-block-navigation-item__content[aria-current="page"] {
     background-color: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-secondary);
   }
-  /* supporting text (description) — core hides it (`…__description { display:none }`);
-   * opt in for the tree. The anchor stacks label + supporting text (flex-column is the
-   * ONLY layout the skin owns — needed for the description to read as supporting text
-   * below the label, not beside it; no width / min-height / pill). body-small. */
+  /* supporting text (description) — core hides it; opt in. The anchor stacks label +
+   * supporting text (flex-column, the only content layout the skin owns). body-small. */
   & a.wp-block-navigation-item__content:has(.wp-block-navigation-item__description) {
     display: flex;
     flex-direction: column;

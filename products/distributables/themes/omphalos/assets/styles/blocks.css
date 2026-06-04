@@ -1910,5 +1910,59 @@ nav.wp-block-navigation.is-vertical {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);                 /* reply ↔ edit */
+  gap: var(--space-xs);                  /* reply ↔ edit (compact) */
+}
+
+/* ---- §22 visual pass: feed-item RHYTHM + TREATMENT (THEME-VQA-ROUTE §11.1) -----------------
+ * The glue above only built the skeleton; this is the feed-item VISUAL treatment. Tighten the
+ * loose core block-gap into a microblog rhythm, give the meta a name/time hierarchy, turn the
+ * action row into a compact muted button-lite row, and signal thread depth with a rail.
+ * Spacing grounded in Mastodon `status` / Misskey `MkNote` (body 2-6dp under header, actions
+ * 8-12dp, flat items + thread rail). Icon affordances on the action row need markup → deferred. */
+
+/* main column rhythm — kill the core block-gap margins; body sits right under the meta, the
+ * action row keeps a small gap. (content was 16/16, actions mt 19.2 — far too loose.) */
+.omph-comment-main > * { margin-block: 0; }
+.omph-comment-main > .wp-block-comment-content { margin-block-start: 2px; }
+.omph-comment-content > * { margin-block: 0; }                       /* the inner <p> too */
+.omph-comment-main > .omph-comment-actions { margin-block-start: var(--space-sm); }
+
+/* meta hierarchy — author = emphasised (on-surface, medium weight); date stays muted (§21). */
+.omph-comment-meta .wp-block-comment-author-name,
+.omph-comment-meta .wp-block-comment-author-name a {
+  color: var(--md-sys-color-on-surface);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+}
+
+/* action row = compact muted button-LITE: reply/edit become small corner-full text buttons with
+ * a hover state layer. The negative inline-start margin pulls the first pill's label flush with
+ * the body text (cancels its padding). Icons (reply arrow, etc.) need markup → deferred. */
+.omph-comment-actions { margin-inline-start: calc(var(--space-sm) * -1); }
+.omph-comment-actions :is(.wp-block-comment-reply-link, .wp-block-comment-edit-link) { margin: 0; }
+.omph-comment-actions :is(.wp-block-comment-reply-link, .wp-block-comment-edit-link) a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 32px;
+  padding-inline: var(--space-sm);
+  border-radius: var(--md-sys-shape-corner-full);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+}
+.omph-comment-actions :is(.wp-block-comment-reply-link, .wp-block-comment-edit-link) a:hover,
+.omph-comment-actions :is(.wp-block-comment-reply-link, .wp-block-comment-edit-link) a:focus-visible {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+  text-decoration: none;
+}
+
+/* thread DEPTH rail — nested reply lists get a left rail + tighter indent (the leading avatar
+ * already carries most of the visual offset). Core owns the nesting; this is the depth SIGNAL,
+ * the rail sitting roughly under the parent avatar's centre. */
+.wp-block-comment-template ol {
+  margin-inline-start: 19px;
+  padding-inline-start: var(--space-md);
+  border-inline-start: 2px solid var(--md-sys-color-outline-variant);
+}
+
+/* item density — a gap between sibling comments at every level (flat feed; no heavy separator). */
+.wp-block-comment-template li + li {
+  margin-block-start: var(--space-md);
 }

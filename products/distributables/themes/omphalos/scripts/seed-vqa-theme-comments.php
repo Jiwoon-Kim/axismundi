@@ -52,10 +52,11 @@ wp_update_post( array( 'ID' => $pid, 'comment_status' => 'open' ) );
 // Assign the custom page template that renders core/comments in TEMPLATE context.
 update_post_meta( $pid, '_wp_page_template', 'page-with-comments' );
 
-// --- seed comments on the PAGE (so core/comments renders them): a single 5-DEEP reply chain
-// (depth 1 → 5, to the thread_comments_depth limit) so comment-template nesting is observable
-// at every level, plus a second top-level comment for list breadth.
-$want = 6;
+// --- seed comments on the PAGE (so core/comments renders them): a 5-DEEP reply chain
+// (depth 1 → 5, to the thread_comments_depth limit), plus sibling replies at depth 2 and
+// depth 3 so connector branching is observable, plus a second top-level comment for list
+// breadth.
+$want = 8;
 $have = (int) get_comments( array( 'post_id' => $pid, 'count' => true ) );
 if ( $have < $want ) {
 	// clear any partial set so the threaded structure is deterministic.
@@ -75,7 +76,9 @@ if ( $have < $want ) {
 	};
 	$d1 = $mk( $pid, '김지운',   'kim@example.com',      '깊이 1 — 최상위 댓글 (threaded chain 1/5).',                 0,   $admin_id );
 	$d2 = $mk( $pid, 'omphalos', 'omphalos@example.com', '깊이 2 — 대댓글 (2/5).',                                     $d1, 0 );
+	$mk( $pid, '방문자',   'guest@example.com',    '깊이 2-2 — 같은 부모를 공유하는 두 번째 대댓글.',             $d1, 0 );
 	$d3 = $mk( $pid, '김지운',   'kim@example.com',      '깊이 3 — 대대댓글 (3/5).',                                   $d2, $admin_id );
+	$mk( $pid, 'omphalos', 'omphalos@example.com', '깊이 3-2 — 깊이 2 댓글 아래 두 번째 가지.',                    $d2, 0 );
 	$d4 = $mk( $pid, 'omphalos', 'omphalos@example.com', '깊이 4 — (4/5).',                                            $d3, 0 );
 	$mk( $pid, '김지운',   'kim@example.com',      '깊이 5 — 최대 깊이 (5/5, thread_comments_depth 한계).',      $d4, $admin_id );
 	$mk( $pid, '방문자',   'guest@example.com',    '두 번째 최상위 댓글 — 목록 rhythm / breadth 관찰용.',         0,   0 );

@@ -1,6 +1,6 @@
 <?php
 /**
- * Title: Omphalos Comments (feed-item)
+ * Title: Omphalos Comments (bubble thread)
  * Slug: omphalos/comments
  * Inserter: false
  * Description: core/comments authored as a FACEBOOK-style comment BUBBLE thread (THEME-VQA-ROUTE

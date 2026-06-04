@@ -1947,51 +1947,40 @@ nav.wp-block-navigation.is-vertical {
   text-decoration: underline;
 }
 
-/* thread CONNECTOR (FB style) — a vertical rail descends from under each parent avatar; each
- * reply avatar is joined by an L-hook (rounded bottom-left corner = a rectangle's left+bottom
- * edge). Avatar = 40dp, so the rail sits at its 20px centre. Core owns the nesting; this draws
- * the connector. */
+/* thread indentation. The actual connector is drawn by
+ * assets/scripts/comment-thread-connectors.js from measured avatar positions; CSS-only fixed
+ * offsets drift as soon as a bubble wraps. */
 .wp-block-comment-template ol {
   position: relative;
   list-style: none;
   margin-inline-start: 0;
   padding-inline-start: 32px;                          /* reply column indent (per level) */
 }
-/* vertical rail — descends from the parent avatar's centre through the reply list. The nested
- * <ol> structurally follows the whole parent item (avatar + bubble + action strip), so pull the
- * rail UP to reach the parent avatar (≈ bubble + strip height above the ol). */
-.wp-block-comment-template ol::before {
-  content: "";
+
+.wp-block-comment-template {
+  position: relative;
+}
+.omph-comment-connectors {
   position: absolute;
-  inset-inline-start: 19px;                            /* ≈ parent avatar centre (40/2 − rail) */
-  inset-block-start: -44px;
-  inset-block-end: 0;
-  inline-size: 2px;
-  background-color: var(--md-sys-color-outline-variant);
+  inset: 0;
+  z-index: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.omph-comment-connector {
+  fill: none;
+  stroke: var(--md-sys-color-outline-variant);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.has-omph-comment-connectors .omph-comment-item {
+  position: relative;
+  z-index: 1;
 }
 .wp-block-comment-template ol > li { position: relative; }
-/* L-hook — joins the rail to each reply avatar's left (left + bottom edges, rounded corner) */
-.wp-block-comment-template ol > li > .omph-comment-item::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: -13px;                           /* avatar left (0) back to the rail (≈ −13) */
-  inset-block-start: 2px;
-  inline-size: 13px;
-  block-size: 18px;                                    /* down to ≈ the avatar's vertical centre */
-  border-inline-start: 2px solid var(--md-sys-color-outline-variant);
-  border-end-start-radius: 10px;
-  border-block-end: 2px solid var(--md-sys-color-outline-variant);
-}
-/* stop the rail dangling below the LAST reply: a surface-coloured cover from the last hook down */
-.wp-block-comment-template ol > li:last-child::after {
-  content: "";
-  position: absolute;
-  inset-inline-start: -14px;
-  inset-block-start: 20px;
-  block-size: 100%;
-  inline-size: 4px;
-  background-color: var(--md-sys-color-surface);
-}
 
 /* item density — a gap between sibling comments at every level. */
 .wp-block-comment-template li + li {

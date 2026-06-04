@@ -107,6 +107,28 @@ function omphalos_enqueue_assets() : void {
 add_action( 'wp_enqueue_scripts', 'omphalos_enqueue_assets' );
 
 /**
+ * Comments chrome runtime.
+ *
+ * WordPress core's `comment-reply` script moves the single `#respond` form under the
+ * target comment. Omphalos keeps the root composer at the bottom for now; inline
+ * per-comment composers are a future form/plugin lane. The tiny runtime here only
+ * draws comment-thread connector paths from measured avatar positions.
+ */
+function omphalos_enqueue_comment_assets() : void {
+	if ( is_admin() ) {
+		return;
+	}
+
+	wp_dequeue_script( 'comment-reply' );
+
+	$uri = omphalos_asset_uri( 'assets/scripts/comment-thread-connectors.js' );
+	if ( null !== $uri ) {
+		wp_enqueue_script( 'omphalos-comment-connectors', $uri, array(), OMPHALOS_VERSION, true );
+	}
+}
+add_action( 'wp_enqueue_scripts', 'omphalos_enqueue_comment_assets', 100 );
+
+/**
  * Load the /embed/ Object Card stylesheet INSIDE the embed iframe document only
  * (the card our posts render as when embedded elsewhere). Self-contained and
  * token-aware-with-fallbacks; deliberately NO token CSS and NO @font-face are

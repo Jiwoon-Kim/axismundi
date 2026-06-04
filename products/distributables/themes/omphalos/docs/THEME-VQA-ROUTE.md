@@ -950,27 +950,29 @@ text) holding `comment-author-name` (bold, label-large, top) + `comment-content`
 `omph-comment-actions` STRIP below the bubble = `comment-date` · `comment-reply-link` ·
 `comment-edit-link` (label-medium, muted, underline on hover) }. The note-style inline meta row is
 dropped — the date moved into the strip. `templates/page-with-comments.html` references it instead
-of `twentytwentyfive/comments`. Nested replies keep the core thread chain + a 2px outline-variant
-CONNECTOR rail (≈ under the parent avatar). The PATTERN owns structure; blocks.css §22 = bubble
-surface + strip + rail (no CSS stack reorder — the Navigation trap). The §21 token binding (avatar
-40 List-leading, role colours, de-prose) is unchanged. Verified light/dark on page 86:
-author/content in the bubble (surface-container · r16 · fit-content), date/reply in the strip
-below (mt 4 · 12 muted), bold name, thread rails, depth 1→5 — reads as a Facebook comment thread.
+of `twentytwentyfive/comments`. Nested replies keep the core thread chain; connector lines are
+drawn by `assets/scripts/comment-thread-connectors.js` from measured avatar positions (parent avatar
+bottom → reply avatar inline-start) instead of fixed CSS offsets. The PATTERN owns structure;
+blocks.css §22 = bubble surface + strip + SVG line styling (no CSS stack reorder — the Navigation
+trap). The §21 token binding (avatar 40 List-leading, role colours, de-prose) is unchanged.
+Verified light/dark on page 86: author/content in the bubble (surface-container · r16 ·
+fit-content), date/reply in the strip below (mt 4 · 12 muted), bold name, dynamic connector paths,
+depth 1→5 — reads as a Facebook comment thread.
 
 History: an earlier pass built the microblog NOTE layout (flat meta row + body + action row +
 per-level rail) and was reshaped into the bubble model once Facebook was used as the reference.
 The NOTE layout stays the reference for the future custom-post-type / ActivityPub object lane.
 
-Still deferred: action-row ICONS / a Like affordance (needs markup); a continuous avatar-connected
-rail (vs per-level segments); an inline reply composer; and the AP-object / note renderer (its own
-lane, not core comments).
+Still deferred: action-row ICONS / a Like affordance (needs markup); an inline reply composer; and
+the AP-object / note renderer (its own lane, not core comments).
 
 **Composer decision (baseline).** Keep the core single `post-comments-form` at the bottom of the
-comments block. Do NOT add a second `Comments Form` block for inline replies: core comment forms
-emit singleton IDs/fields (`respond`, `commentform`, `comment_parent`, cancel-reply affordance),
-and `comment-reply.js` is designed around moving that one form. Duplicating the block would create
-ID/state collisions. Facebook-style behaviour (bottom composer remains for root comments while
-reply clicks spawn per-comment inline composers) is a custom form/plugin lane: disable/replace the
-core move model, render a separate inline reply form with the right `comment_parent`, and handle
-guest fields/nonces safely. Until that lane exists, Omphalos keeps the WP default single form
-behaviour and only skins the displayed comment thread.
+comments block and keep it there: Omphalos dequeues core `comment-reply.js` and prevents reply-link
+clicks from moving `#respond` under a comment. Do NOT add a second `Comments Form` block for inline
+replies: core comment forms emit singleton IDs/fields (`respond`, `commentform`, `comment_parent`,
+cancel-reply affordance), so duplicating the block would create ID/state collisions.
+Facebook-style behaviour (bottom composer remains for root comments while reply clicks spawn
+per-comment inline composers) is a custom form/plugin lane: render a separate inline reply form
+with the right `comment_parent`, and handle guest fields/nonces safely. Until that lane exists,
+Omphalos keeps the root composer fixed at the bottom; reply links are visual/actions-only in the
+baseline.

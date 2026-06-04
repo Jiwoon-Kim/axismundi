@@ -590,10 +590,9 @@ item ROW capsule        on the LI (per review — per-anchor read messy). `li.�
                         on-surface 0.08; `:has(> a[aria-current="page"])::before` →
                         secondary-container. The `::before` is CLAMPED to `block-size:56`
                         (the trigger ROW) so a vertical PARENT li — which wraps its whole
-                        nested subtree (~1.7k px) — is NOT tinted/rounded as one giant box,
-                        only its top row; a LEAF li override gives `::before{block-size:100%}`
-                        (a leaf can be taller with supporting text). focus ring stays on the
-                        focusable anchor (a11y). z-index:-1 keeps it behind the label.
+                        nested subtree — is NOT tinted/rounded as one giant box, only its
+                        top row; a LEAF li override gives `::before{block-size:100%}`.
+                        focus ring stays on the focusable anchor (a11y).
 current-page indicator  `li:has(> a[aria-current="page"])::before` → filled secondary-
                         container capsule; `> a[aria-current]` → secondary label.
 supporting text         core hides description (display:none) → opt in (display:block,

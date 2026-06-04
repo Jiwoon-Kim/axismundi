@@ -960,6 +960,13 @@ repeats per level). The §21 token binding (typescale / role colour / de-prose /
 unchanged and applies regardless of order. Verified on page 86: 6 items, avatar leading + author-
 first meta row + action row, thread depth 1→5.
 
-Still deferred (social-only, not WP comment semantics): reaction/boost/favourite affordances,
-relative "2h"-style timestamps, handle/@username (WP comments have no handle). The real comment
-DESIGN polish (spacing rhythm, action-row iconography) can refine on this structure later.
+**Visual pass (DONE — blocks.css §22).** The first §22 was glue (skeleton) only and did NOT yet
+look like a feed — recorded honestly. The visual treatment then landed: rhythm tightened (body
+2dp under meta, action row 8dp — from core's 16/19.2), meta hierarchy (author on-surface +
+medium, date muted), action row = compact corner-full button-lite (hover state layer), a 2px
+outline-variant THREAD RAIL on nested reply lists (≈ under the parent avatar), and item-density
+gaps. It now reads as a threaded microblog feed in both schemes.
+
+Still deferred: action-row ICONS (reply arrow etc. — needs markup, not CSS); a continuous
+avatar-connected rail (vs the current per-level segments); and the social-only affordances WP
+comments lack — reaction/boost/favourite, relative "2h" timestamps, @handle.

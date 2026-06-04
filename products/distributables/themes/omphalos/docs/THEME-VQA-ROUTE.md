@@ -756,9 +756,23 @@ layout            CORE-owned (flow/gap/columns untouched)
 link colour/underline = §18 de-prose block (title on-surface, meta on-surface-variant, read-more primary)
 ```
 
-**Deferred buckets (NOT Phase 1):**
-- **Card / grid variation** — `.is-style-*` opt-in (surface-container, radius, padding, gap,
-  featured media corner/aspect). Reuse §16 ontology. Needs block-style registration.
+**Card opt-in (DONE — surface rail open; blocks.css §18c + functions.php):**
+`.is-style-cards` is a single `core/query` block style — **surface ONLY**. Name decided as
+`cards` (NOT `card-list` / `card-grid`): the name must mean *surface treatment*, so layout
+stays core. Reuses the §16 card ontology (filled, shadow-less, surface-container / corner /
+`--space-md` padding + `--space-xs` interior rhythm). Never touches `display` / `width` /
+`grid` → works unchanged in core's List **and** Grid view; inter-card spacing = core flow/grid
+gap. Avoids the §16 grid-override breakage and the Navigation layout-ownership trap.
+
+```txt
+Query Loop card opt-in = .is-style-cards   (core/query)
+Meaning: card SURFACE only. Does NOT imply list/grid.
+Post Template layout (list/grid/columns/responsive) remains CORE-owned.
+```
+
+**Deferred buckets (NOT done):**
+- **Card media + specimen** — featured-image full-bleed/corner treatment inside the card, and
+  a `.is-style-cards` specimen in the VQA pattern (page 68 needs reseed to render it live).
 - **Meta-row composition** — author/date/terms/time are individually-stacked blocks; an M3
   card meta ROW is MARKUP (group/row in the pattern), not CSS → pattern lane.
 - **Featured image treatment** — corner-large / aspect / cover → media route (with card).

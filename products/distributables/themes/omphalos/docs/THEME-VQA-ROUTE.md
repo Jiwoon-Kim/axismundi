@@ -964,3 +964,13 @@ The NOTE layout stays the reference for the future custom-post-type / ActivityPu
 Still deferred: action-row ICONS / a Like affordance (needs markup); a continuous avatar-connected
 rail (vs per-level segments); an inline reply composer; and the AP-object / note renderer (its own
 lane, not core comments).
+
+**Composer decision (baseline).** Keep the core single `post-comments-form` at the bottom of the
+comments block. Do NOT add a second `Comments Form` block for inline replies: core comment forms
+emit singleton IDs/fields (`respond`, `commentform`, `comment_parent`, cancel-reply affordance),
+and `comment-reply.js` is designed around moving that one form. Duplicating the block would create
+ID/state collisions. Facebook-style behaviour (bottom composer remains for root comments while
+reply clicks spawn per-comment inline composers) is a custom form/plugin lane: disable/replace the
+core move model, render a separate inline reply form with the right `comment_parent`, and handle
+guest fields/nonces safely. Until that lane exists, Omphalos keeps the WP default single form
+behaviour and only skins the displayed comment thread.

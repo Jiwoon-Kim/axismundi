@@ -88,8 +88,10 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 <?php if ( $omph_nav_ref ) : ?>
 <!-- wp:paragraph --><p><strong>vertical</strong> (orientation vertical, overlay off, submenu open-on-click):</p><!-- /wp:paragraph -->
 <!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"submenuVisibility":"click","overlayMenu":"never","layout":{"type":"flex","orientation":"vertical"}} /-->
-<!-- wp:paragraph --><p><strong>submenu always</strong> (vertical, submenuVisibility always = always-expanded nav-rail/tree; submenu icon hidden, flex-wrap):</p><!-- /wp:paragraph -->
+<!-- wp:paragraph --><p><strong>submenu always</strong> (vertical, submenuVisibility always = always-expanded tree → §20 core-leaning baseline skin: capsule affordance only, NO rail geometry):</p><!-- /wp:paragraph -->
 <!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"showSubmenuIcon":false,"submenuVisibility":"always","overlayMenu":"never","layout":{"type":"flex","justifyContent":"left","orientation":"vertical","flexWrap":"wrap"}} /-->
+<!-- wp:paragraph --><p><strong>expanded rail OPT-IN</strong> (<code>.is-style-expanded-rail</code> → §21 component: width clamp 220-360, full-width 56dp rows, label-large, circular active indicator; opt-in only, never auto-applied):</p><!-- /wp:paragraph -->
+<!-- wp:navigation {"ref":<?php echo $omph_nav_ref; ?>,"className":"is-style-expanded-rail","showSubmenuIcon":false,"submenuVisibility":"always","overlayMenu":"never","layout":{"type":"flex","orientation":"vertical"}} /-->
 <?php endif; ?>
 
 <!-- wp:breadcrumbs /-->

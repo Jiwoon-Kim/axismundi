@@ -625,9 +625,21 @@ collapsed (excluded)    container 96 (narrow 80) · vertical item · label-mediu
                         indicator 56×32 around the icon · top-space 44 · item gap 4
 ```
 So the rolled-back §20 rail was ~correct EXCEPT: container shape should be 0 (not 16; 16 = modal
-only) + color surface + top-space 44 + item gap 6 + width clamp(220,360). The opt-in rebuilds it
-behind `.is-style-expanded-rail` with these values (registration = a functions.php
-`register_block_style`, a WP change → review per CLAUDE.md §15 before building).
+only) + color surface + top-space 44 + item gap 6 + width clamp(220,360).
+
+**BUILT (blocks.css §21):** the opt-in rail lives behind `nav.is-style-expanded-rail` —
+CSS + the block's `className` only, NO auto-apply, NO PHP (a proper editor style variation
+= `register_block_style` in functions.php, a WP registration change → deferred per §15).
+Container: `inline-size: clamp` via `100% / min 220 / max 360` · `padding-block-start: 44`
+· `background: surface` · `border-radius: 0`. `__container { nowrap · align-items:stretch ·
+inline-size:100% · gap 6 }`. Item (full-width row): `inline-size:100% · min-block-size 56 ·
+padding-inline 16 · corner-full · label-large · color on-surface-variant`. current
+`a[aria-current="page"]` → secondary-container + secondary. nested padding restored (16
+!important). Verified (front, dark): nav 360 (clamped) · surface bg · radius 0 · pad-top 44
+· gap 6 · nowrap; rows full-width 56 · corner-full · label-large; current = full-width
+secondary-container stadium pill. Pattern: a 2c `.is-style-expanded-rail` specimen +
+the §20-baseline always specimen side by side. (Collapsed rail stays excluded — icon-first;
+the modal/sheet rail = A3 territory.)
 
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 

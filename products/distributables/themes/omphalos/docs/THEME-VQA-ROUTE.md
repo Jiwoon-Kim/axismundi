@@ -947,17 +947,19 @@ WordPress core comments                → Facebook-style comment BUBBLE thread
 `core/comments`: per-comment = **leading avatar** (`flex-shrink:0`) + **main column** {
 `omph-comment-bubble` (rounded `surface-container` · `corner-large` · `fit-content` so it HUGS the
 text) holding `comment-author-name` (bold, label-large, top) + `comment-content`; then an
-`omph-comment-actions` STRIP below the bubble = `comment-date` · `comment-reply-link` ·
-`comment-edit-link` (label-medium, muted, underline on hover) }. The note-style inline meta row is
-dropped — the date moved into the strip. `templates/page-with-comments.html` references it instead
+`omph-comment-actions` STRIP below the bubble = `comment-date` (body-small, muted) ·
+`comment-reply-link` / `comment-edit-link` (label-medium action, muted, underline on hover) }.
+The note-style inline meta row is dropped — the date moved into the strip.
+`templates/page-with-comments.html` references it instead
 of `twentytwentyfive/comments`. Nested replies keep the core thread chain; connector lines are
 drawn by `assets/scripts/comment-thread-connectors.js` from measured avatar positions (parent avatar
 bottom → reply avatar inline-start) instead of fixed CSS offsets. The PATTERN owns structure;
 blocks.css §22 = bubble surface + strip + SVG line styling (no CSS stack reorder — the Navigation
 trap). The §21 token binding (avatar 40 List-leading, role colours, de-prose) is unchanged.
 Verified light/dark on page 86: author/content in the bubble (surface-container · r16 ·
-fit-content), date/reply in the strip below (mt 4 · 12 muted), bold name, dynamic connector paths,
-depth 1→5 — reads as a Facebook comment thread.
+fit-content), date/reply in the strip below (mt 4; date = body-small 400/0.4; reply/edit =
+label-medium 500/0.5), bold name, dynamic connector paths, depth 1→5 plus depth 2/3 sibling
+branches — reads as a Facebook comment thread.
 
 History: an earlier pass built the microblog NOTE layout (flat meta row + body + action row +
 per-level rail) and was reshaped into the bubble model once Facebook was used as the reference.

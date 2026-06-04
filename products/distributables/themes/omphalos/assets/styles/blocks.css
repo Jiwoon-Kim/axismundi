@@ -1108,7 +1108,6 @@
   .wp-block-post-comments-count,
   .wp-block-post-comments-link,
   .wp-block-query-total,
-  .wp-block-post-author,
   .wp-block-post-author-name
 ) {
   font-size:      var(--md-sys-typescale-body-small-size);

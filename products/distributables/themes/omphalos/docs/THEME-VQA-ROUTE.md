@@ -770,9 +770,20 @@ Meaning: card SURFACE only. Does NOT imply list/grid.
 Post Template layout (list/grid/columns/responsive) remains CORE-owned.
 ```
 
+> NOTE — page 68 (`/vqa-theme/`) content is a LIVE pattern reference
+> (`<!-- wp:pattern {"slug":"omphalos/vqa-theme"} /-->`, seed-vqa-theme.php), so editing
+> `patterns/vqa-theme.php` markup reflects on the page (front + editor) immediately — no
+> reseed. (The nav specimen is the exception: its menu comes from the seeded `wp_navigation`
+> `ref`, so nav structure changes need the seed, not the pattern.)
+
+> DEPRECATION — `core/post-author` is deprecated by WP (use Avatar + Author Name + Author
+> Biography). The pattern's combined `post-author` block was removed; the trio (`avatar` +
+> `post-author-name` + `post-author-biography`) was already present and stays. blocks.css
+> §18b meta cluster dropped the dead `.wp-block-post-author` selector.
+
 **Deferred buckets (NOT done):**
 - **Card media + specimen** — featured-image full-bleed/corner treatment inside the card, and
-  a `.is-style-cards` specimen in the VQA pattern (page 68 needs reseed to render it live).
+  a `.is-style-cards` specimen in the VQA pattern (renders live via the pattern reference).
 - **Meta-row composition** — author/date/terms/time are individually-stacked blocks; an M3
   card meta ROW is MARKUP (group/row in the pattern), not CSS → pattern lane.
 - **Featured image treatment** — corner-large / aspect / cover → media route (with card).

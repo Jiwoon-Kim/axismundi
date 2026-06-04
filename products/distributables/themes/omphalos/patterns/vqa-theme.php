@@ -103,9 +103,8 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 <!-- wp:post-template -->
 <!-- wp:post-featured-image {"isLink":true} /-->
 <!-- wp:post-title {"isLink":true} /-->
-<!-- wp:post-author {"showAvatar":true,"showBio":false,"byline":"by"} /-->
-<!-- wp:post-author-name /-->
 <!-- wp:avatar {"size":40} /-->
+<!-- wp:post-author-name /-->
 <!-- wp:post-date /-->
 <!-- wp:post-terms {"term":"category"} /-->
 <!-- wp:post-terms {"term":"post_tag"} /-->

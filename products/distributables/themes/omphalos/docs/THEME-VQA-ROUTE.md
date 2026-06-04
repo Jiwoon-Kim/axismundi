@@ -781,11 +781,17 @@ Post Template layout (list/grid/columns/responsive) remains CORE-owned.
 > `post-author-name` + `post-author-biography`) was already present and stays. blocks.css
 > §18b meta cluster dropped the dead `.wp-block-post-author` selector.
 
+**Meta-row composition (DONE — pattern-owned):**
+`patterns/vqa-theme.php` groups Avatar + Author Name + Date + Categories + Tags +
+Time-to-read into `.omph-query-meta-row` inside the post-template. This is deliberately
+MARKUP-owned: CSS does not synthesize a row from loose sibling dynamic blocks. blocks.css
+§18b owns only row alignment/gap/margin cleanup (`flex-wrap`, center alignment, `4px/8px`
+gap). Avatar remains the existing 40px specimen for now; if it reads too heavy, a later
+small pass can test 32/24 without changing the row ontology.
+
 **Deferred buckets (NOT done):**
 - **Card media + specimen** — featured-image full-bleed/corner treatment inside the card, and
   a `.is-style-cards` specimen in the VQA pattern (renders live via the pattern reference).
-- **Meta-row composition** — author/date/terms/time are individually-stacked blocks; an M3
-  card meta ROW is MARKUP (group/row in the pattern), not CSS → pattern lane.
 - **Featured image treatment** — corner-large / aspect / cover → media route (with card).
 - **read-more / pagination as full M3 buttons** — button module CSS, Phase 2 (forbidden in
   Phase 1 without authorization); Phase 1 stops at text-button-lite typescale.

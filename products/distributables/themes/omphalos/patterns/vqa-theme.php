@@ -103,13 +103,17 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 <!-- wp:post-template -->
 <!-- wp:post-featured-image {"isLink":true} /-->
 <!-- wp:post-title {"isLink":true} /-->
+<!-- wp:group {"className":"omph-query-meta-row","layout":{"type":"flex","flexWrap":"wrap"}} -->
+<div class="wp-block-group omph-query-meta-row">
 <!-- wp:avatar {"size":40} /-->
 <!-- wp:post-author-name /-->
 <!-- wp:post-date /-->
 <!-- wp:post-terms {"term":"category"} /-->
 <!-- wp:post-terms {"term":"post_tag"} /-->
-<!-- wp:post-excerpt /-->
 <!-- wp:post-time-to-read /-->
+</div>
+<!-- /wp:group -->
+<!-- wp:post-excerpt /-->
 <!-- wp:read-more /-->
 <!-- wp:post-comments-count /-->
 <!-- wp:post-comments-link /-->

@@ -1117,6 +1117,23 @@
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* 4b) Query meta row is MARKUP-owned (patterns/vqa-theme.php): avatar, author, date,
+ * terms, and time-to-read are grouped into a flex row. CSS owns only alignment, gap and
+ * margin cleanup; it does not synthesize the row from loose sibling blocks. */
+.wp-block-post-content .omph-query-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.wp-block-post-content .omph-query-meta-row > * {
+  margin-block: 0;
+}
+.wp-block-post-content .omph-query-meta-row .wp-block-avatar {
+  flex-shrink: 0;
+}
+
 /* 5) author biography = supporting text → body-medium, on-surface-variant. */
 .wp-block-post-content .wp-block-post-author-biography {
   font-size:      var(--md-sys-typescale-body-medium-size);
@@ -1146,8 +1163,8 @@
  * view + core's responsive column collapse). Like §16's grid note, we never touch
  * `display` / `width` / `grid-template-columns` here — core's flow block-gap (list) and
  * grid gap (grid) own the inter-card spacing, so a `.is-style-cards` loop works unchanged
- * in BOTH List and Grid view. Media (featured-image corner/full-bleed) and meta-row
- * composition remain deferred (§10). */
+ * in BOTH List and Grid view. Media (featured-image corner/full-bleed) remains deferred
+ * (§10); meta-row composition is pattern-owned in §18b/`patterns/vqa-theme.php`. */
 .wp-block-post-content .wp-block-query.is-style-cards .wp-block-post {
   box-sizing: border-box;
   margin: 0;               /* inter-card spacing = core flow/grid gap, not per-item margin */

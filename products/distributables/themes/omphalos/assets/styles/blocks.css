@@ -1781,11 +1781,53 @@ nav.wp-block-navigation.is-vertical {
   text-underline-offset: 0.15em;
 }
 
-/* comment FORM — label / helper typography + colour ONLY (input surface/radius deferred to a
- * form/input lane; submit stays the M3 button element). */
+/* comment FORM — label / helper typography + colour. The submit stays the M3 button element. */
 .wp-block-post-comments-form :is(label, .comment-notes, .comment-form-cookies-consent label, .logged-in-as) {
   font-size:      var(--md-sys-typescale-body-small-size);
   line-height:    var(--md-sys-typescale-body-small-line-height);
   letter-spacing: var(--md-sys-typescale-body-small-tracking);
   color: var(--md-sys-color-on-surface-variant);
+}
+
+/* comment form INPUTS = M3 Text Field, OUTLINED — "text-field-LITE". Ontology: M3 §32 Text
+ * Field (a first-class component; lab `.text-field`, style-guide #components-text-field). core
+ * renders PLAIN <input>/<textarea> with NO `.text-field` structure, so this binds the OUTLINED
+ * SURFACE tokens only — shape · outline · (no) fill · focus active-indicator · typography — on
+ * the raw controls. The full component (floating label / __container / prefix-suffix slots /
+ * supporting + counter / error icon) needs comment_form MARKUP ownership and is a form/plugin
+ * lane (deferred). Also fixes core's hardcoded white field bg (broke dark mode). The cookies
+ * consent CHECKBOX stays untouched (M3 selection control = form plugin territory). */
+.comment-form :is(textarea, input[type="text"], input[type="email"], input[type="url"], input[type="tel"], input[type="number"]) {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 56px;                                    /* M3 single-line text field height */
+  padding: var(--space-md);                                /* 16dp; centres body-large in 56 */
+  border: 1px solid var(--md-sys-color-outline);           /* outlined rest indicator */
+  border-radius: var(--md-sys-shape-corner-extra-small);   /* 4dp */
+  background-color: transparent;                           /* outlined = no fill → dark-safe (was #fff) */
+  color: var(--md-sys-color-on-surface);
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+}
+.comment-form textarea {
+  min-block-size: 96px;                                    /* multi-line: a few rows */
+  resize: vertical;
+}
+.comment-form :is(textarea, input[type="text"], input[type="email"], input[type="url"])::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+}
+/* focus = M3 outlined active indicator: 2px primary. Use an inset shadow (not border-width)
+ * so the field does not reflow on focus; the global :focus-visible ring is suppressed. */
+.comment-form :is(textarea, input[type="text"], input[type="email"], input[type="url"], input[type="tel"], input[type="number"]):focus,
+.comment-form :is(textarea, input[type="text"], input[type="email"], input[type="url"], input[type="tel"], input[type="number"]):focus-visible {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-primary);
+  outline: none;
+}
+/* native validation (email/url, after interaction) → M3 error indicator */
+.comment-form :is(input[type="email"], input[type="url"]):user-invalid {
+  border-color: var(--md-sys-color-error);
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-error);
 }

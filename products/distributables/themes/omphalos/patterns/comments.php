@@ -3,13 +3,14 @@
  * Title: Omphalos Comments (feed-item)
  * Slug: omphalos/comments
  * Inserter: false
- * Description: core/comments authored as a MICROBLOG FEED ITEM (THEME-VQA-ROUTE §11.1) rather
- *              than the legacy blog-comment stack. Structure (grounded in Mastodon
- *              status.jsx / Misskey MkNote.vue): per-comment = LEADING avatar + MAIN column
- *              { meta row: author · date → body → action row: reply / edit }; nested replies =
- *              core thread chain. The PATTERN owns the structure (block order + Group/Row);
- *              CSS (blocks.css §22) only does the flex glue (grow / shrink / gaps). Referenced
- *              by templates/page-with-comments.html; replaces the TT5 comments pattern.
+ * Description: core/comments authored as a FACEBOOK-style comment BUBBLE thread (THEME-VQA-ROUTE
+ *              §11.1) rather than a microblog NOTE (the note model = custom post type /
+ *              ActivityPub object renderer, too rich for WP core comments). Structure: per-comment
+ *              = LEADING avatar + MAIN column { rounded BUBBLE (author top + comment text) →
+ *              action STRIP (date · reply · edit, below the bubble) }; nested replies = core
+ *              thread chain + a connector rail. The PATTERN owns the structure; CSS (blocks.css
+ *              §22) does the bubble surface + strip + rail. Referenced by
+ *              templates/page-with-comments.html; replaces the TT5 comments pattern.
  *
  * @package Omphalos
  */
@@ -25,17 +26,16 @@
 
 <!-- wp:group {"className":"omph-comment-main","layout":{"type":"default"}} -->
 <div class="wp-block-group omph-comment-main">
-<!-- wp:group {"className":"omph-comment-meta","layout":{"type":"flex","flexWrap":"wrap"}} -->
-<div class="wp-block-group omph-comment-meta">
+<!-- wp:group {"className":"omph-comment-bubble","layout":{"type":"default"}} -->
+<div class="wp-block-group omph-comment-bubble">
 <!-- wp:comment-author-name /-->
-<!-- wp:comment-date /-->
+<!-- wp:comment-content /-->
 </div>
 <!-- /wp:group -->
 
-<!-- wp:comment-content /-->
-
 <!-- wp:group {"className":"omph-comment-actions","layout":{"type":"flex","flexWrap":"wrap"}} -->
 <div class="wp-block-group omph-comment-actions">
+<!-- wp:comment-date /-->
 <!-- wp:comment-reply-link /-->
 <!-- wp:comment-edit-link /-->
 </div>

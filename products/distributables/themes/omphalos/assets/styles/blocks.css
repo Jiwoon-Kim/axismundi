@@ -1788,6 +1788,29 @@ nav.wp-block-navigation.is-vertical {
   letter-spacing: var(--md-sys-typescale-body-small-tracking);
   color: var(--md-sys-color-on-surface-variant);
 }
+.wp-block-post-comments-form :is(.comment-notes, .logged-in-as) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  margin-block: 0 var(--space-md);
+}
+.wp-block-post-comments-form :is(.comment-notes, .logged-in-as) a {
+  font-size:      var(--md-sys-typescale-label-medium-size);
+  line-height:    var(--md-sys-typescale-label-medium-line-height);
+  font-weight:    var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+  color: var(--md-sys-color-primary);
+  text-decoration: none;
+}
+.wp-block-post-comments-form :is(.comment-notes, .logged-in-as) a:hover,
+.wp-block-post-comments-form :is(.comment-notes, .logged-in-as) a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.wp-block-post-comments-form :is(.comment-notes, .logged-in-as) .required-field-message {
+  flex-basis: 100%;
+}
 
 /* comment form INPUTS = M3 Text Field, OUTLINED — "text-field-LITE". Ontology: M3 §32 Text
  * Field (a first-class component; lab `.text-field`, style-guide #components-text-field). core

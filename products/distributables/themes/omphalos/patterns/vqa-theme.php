@@ -128,6 +128,22 @@ $omph_nav_ref = $omph_nav ? (int) $omph_nav[0] : 0;
 </div>
 <!-- /wp:query -->
 
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">3b. Query no-results (empty query)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><code>core/query-no-results</code> 빈 상태 specimen. <code>offset</code>를 게시물 수보다 크게 줘서 강제로 empty 쿼리로 만든다(렌더는 no-results 블록만).</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:query {"queryId":11,"query":{"perPage":3,"offset":9999,"postType":"post","order":"desc","orderBy":"date","inherit":false}} -->
+<div class="wp-block-query">
+<!-- wp:query-no-results -->
+<!-- wp:paragraph --><p>표시할 게시물이 없습니다.</p><!-- /wp:paragraph -->
+<!-- /wp:query-no-results -->
+</div>
+<!-- /wp:query -->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">4. Post navigation (single-post context)</h2>
 <!-- /wp:heading -->

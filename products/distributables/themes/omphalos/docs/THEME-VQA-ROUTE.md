@@ -800,3 +800,25 @@ small pass can test 32/24 without changing the row ontology.
   pagination-lite.
 - **terms as chips** (Filter/Assist chip ontology) vs plain meta text — open decision.
 - **spacing rhythm** — title keeps prose ~23px block margin; left to core block-gap for now.
+
+### §10.1 — B contract Phase 1 CLOSE (binding-only; lean on TT5 patterns)
+
+Final small gaps closed: `query-pagination` current page = secondary-container pill + 32dp
+corner-full number affordance (hover state layer); `query-no-results` empty state =
+body-medium / on-surface-variant (observable via the §3b forced-empty `offset` specimen).
+
+**Strategic close (Omphalos = TT5 child).** The DURABLE Query-Loop work is the per-block
+**component binding** in §18b — each core post block (title/excerpt/date/terms/read-more/
+pagination/no-results) mapped to an M3 typescale + role colour **by CLASS**. So any in-content
+Query Loop — whether hand-authored or inserted from a **TT5/core starter pattern** — picks up
+the M3 binding for free; we do NOT hand-build layout per pattern. `.omph-query-meta-row`
+(pattern group) and `.is-style-cards` (surface opt-in) are observation specimens / opt-ins,
+NOT required bindings — they stay small and are not the product baseline.
+
+**Scope boundary (load-bearing).** The whole block bridge (§16/§18) is `.wp-block-post-content`-
+scoped, so it binds IN-CONTENT loops only. **Template-context loops** (`archive.html` /
+`home.html` / `index.html` — the real blog/archive product surface) sit OUTSIDE post-content
+and are NOT reached here; they are theme.json global styles + TT5 templates = a **separate
+template lane** (future), not the block bridge. This is why "just bind components and move on"
+is correct for Phase 1: the in-content binding is done, and template styling is a different
+contract. Query Loop B Phase 1 is CLOSED.

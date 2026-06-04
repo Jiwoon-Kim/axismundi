@@ -583,16 +583,19 @@ label clamped to ~105px) is a tree/flyout problem, not an in-place-rail one.
 static nested layout · depth indent. The **theme keeps a light skin only**, on
 `nav.is-vertical:has(.open-always)`:
 ```txt
-item ROW capsule        the ROW CONTENT element (`.…__content` = the leaf anchor AND the
-                        submenu TOGGLE button) + loginout a → `flex-grow:1` (FULL-WIDTH row)
-                        · `min-block-size:56` · `padding-inline:16` · corner-full · hover
-                        (on-surface 0.08) / focus (0.10 + secondary ring). NOT the li: a
-                        vertical PARENT li wraps its whole nested subtree (~1.7k px), so
-                        li-level shape/bg rounds + tints the entire subtree. Targeting the
-                        content + flex-grow gives the clean FULL-ROW look (the per-anchor
-                        capsule looked messy only because it was content-width).
-current-page indicator  `.…__content[aria-current="page"]` → the row capsule FILLED
-                        (secondary-container bg + secondary label).
+item ROW capsule        on the LI (per review — per-anchor read messy). `li.…-item`:
+                        `min-block-size:56` · logical `padding-inline:16` · `position:
+                        relative`. The hover/current capsule is a `::before` (corner-full),
+                        full-width by inset, painted by STATE: `:hover::before` →
+                        on-surface 0.08; `:has(> a[aria-current="page"])::before` →
+                        secondary-container. The `::before` is CLAMPED to `block-size:56`
+                        (the trigger ROW) so a vertical PARENT li — which wraps its whole
+                        nested subtree (~1.7k px) — is NOT tinted/rounded as one giant box,
+                        only its top row; a LEAF li override gives `::before{block-size:100%}`
+                        (a leaf can be taller with supporting text). focus ring stays on the
+                        focusable anchor (a11y). z-index:-1 keeps it behind the label.
+current-page indicator  `li:has(> a[aria-current="page"])::before` → filled secondary-
+                        container capsule; `> a[aria-current]` → secondary label.
 supporting text         core hides description (display:none) → opt in (display:block,
                         body-small/on-surface-variant); the content stacks label + supporting
                         text via flex-column `:has(.description)`.

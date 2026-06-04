@@ -883,10 +883,21 @@ record/composition primitive extracted from that leading-slot contract, not proo
 Material component. For WordPress comments we therefore bind only size/shape + fallback colour;
 real Gravatar images keep their pixels and are clipped circularly.
 
+**Comment form inputs = M3 Text Field, OUTLINED (DONE — text-field-lite).** Ontology: comment
+inputs are M3 §32 Text Field — a first-class component (lab `.text-field`,
+style-guide#components-text-field), grounded (unlike the List-derived avatar). But core renders
+PLAIN `<input>`/`<textarea>` with no `.text-field` structure, so the FULL component (floating
+label / `__container` / prefix-suffix slots / supporting + counter / error icon) needs
+`comment_form` MARKUP ownership and stays a form/plugin lane (deferred). The theme binds the
+OUTLINED SURFACE tokens only on the raw controls (blocks.css §21): 56dp · 16dp padding · 1px
+`--md-sys-color-outline` · corner-extra-small · transparent fill · body-large · focus 2px
+primary (inset shadow, no reflow) · `:user-invalid` error. This also FIXES core's hardcoded
+white field bg (broke dark mode). The cookies-consent CHECKBOX is untouched (M3 selection
+control = form plugin lane). Submit stays the M3 button element.
+
 **Deferred:**
-- **comment form INPUT surface** — textarea / name / email / url radius (4) + border → M3 text
-  field. A form/input component lane (reuse the §14 Search Bar tokens). The submit button is
-  already M3 (theme.json button element), left as-is.
+- **full Text Field component** — floating label / container / prefix-suffix / supporting +
+  counter / interactive trailing icons → needs `comment_form` markup ownership (form/plugin lane).
 - **comments-pagination / comment-edit-link** — absent in this specimen (2 comments, no
   pagination; edit-link needs the cap); bind by class when a richer comment context exists.
 - **thread/nesting layout** — core/TT5-owned (layout primitive).

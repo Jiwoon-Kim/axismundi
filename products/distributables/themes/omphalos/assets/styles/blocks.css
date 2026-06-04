@@ -1398,6 +1398,15 @@ nav.wp-block-navigation.is-vertical {
   & .wp-block-navigation-submenu {
     margin-block-start: 0;
   }
+  /* TOP-LEVEL click trigger trailing chevron: with submenuVisibility:"click" core renders
+   * the label as a <button> and the chevron as a SIBLING `span.__submenu-icon` carrying a
+   * ~-0.6em inline-start margin (authored for the icon-inside-button case). In the shrink-
+   * wrapped vertical trigger that negative margin drags the chevron over the label button →
+   * overlap. Neutralize it + small gap so label and chevron sit side by side. */
+  & .wp-block-navigation__container > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+    margin-inline-start: 4px;
+    margin-inline-end: 0;
+  }
   /* focus ring stays on the focusable anchor / toggle button (a11y). */
   & .wp-block-navigation-item__content:focus-visible,
   & .wp-block-loginout a:focus-visible {

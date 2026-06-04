@@ -1058,6 +1058,86 @@
   text-underline-offset: 0.15em;
 }
 
+/* ----------------------------------------------------------------------------
+ * §18b core/query-loop + post-context — B contract Phase 1 (FLAT article baseline)
+ *
+ * Route (THEME-VQA-ROUTE §10/B): the Query Loop post item is a FLAT ARTICLE by default —
+ * NOT a card. core/query is a layout PRIMITIVE reused across home / archive / search /
+ * category / related, so a card baseline would over-apply. The card form is a DEFERRED
+ * opt-in block style (.is-style-* list/grid) that can reuse the §16 Latest Posts/RSS card
+ * ontology. This baseline only: (1) strips the prose list indent off the post-template
+ * (chrome, not a prose list), (2) maps title / excerpt / meta / byline / read-more /
+ * pagination to M3 typescale + role colour. Layout (flow, gap, columns) stays CORE-owned;
+ * read-more / pagination get a TEXT-button-LITE typescale only (the full M3 button surface
+ * is the button module, Phase 2). Link colour/underline already set in the §18 de-prose
+ * block above. */
+
+/* 1) prose list-indent leak — the post-template ul is a query RESULT list (chrome), not a
+ *    prose list; prose's :is(ul,ol) padding-inline-start (~32px) shifts the whole loop in. */
+.wp-block-post-content .wp-block-post-template {
+  padding-inline-start: 0;
+  list-style: none;
+  margin-block: 0;
+}
+
+/* 2) post title = article HEADLINE → title-large (on-surface). Overrides the prose h2
+ *    (28/36 + ~23px block margin), wrong for a chrome article-list headline. */
+.wp-block-post-content .wp-block-post-title {
+  font-size:      var(--md-sys-typescale-title-large-size);
+  line-height:    var(--md-sys-typescale-title-large-line-height);
+  font-weight:    var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* 3) excerpt = body copy → body-large, on-surface. */
+.wp-block-post-content .wp-block-post-excerpt {
+  font-size:      var(--md-sys-typescale-body-large-size);
+  line-height:    var(--md-sys-typescale-body-large-line-height);
+  font-weight:    var(--md-sys-typescale-body-large-weight);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* 4) META cluster (date / terms / time-to-read / comments / total / byline) → body-small,
+ *    on-surface-variant. Unifies core's mixed defaults (date 12/grey, terms 12/600/ink). */
+.wp-block-post-content :is(
+  .wp-block-post-date,
+  .wp-block-post-terms,
+  .wp-block-post-time-to-read,
+  .wp-block-post-comments-count,
+  .wp-block-post-comments-link,
+  .wp-block-query-total,
+  .wp-block-post-author,
+  .wp-block-post-author-name
+) {
+  font-size:      var(--md-sys-typescale-body-small-size);
+  line-height:    var(--md-sys-typescale-body-small-line-height);
+  font-weight:    var(--md-sys-typescale-body-small-weight);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* 5) author biography = supporting text → body-medium, on-surface-variant. */
+.wp-block-post-content .wp-block-post-author-biography {
+  font-size:      var(--md-sys-typescale-body-medium-size);
+  line-height:    var(--md-sys-typescale-body-medium-line-height);
+  font-weight:    var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* 6) read-more + pagination = TEXT-button-LITE → label-large typescale only (colour from
+ *    the §18 de-prose block: read-more primary, pagination on-surface-variant). NO button
+ *    surface — that is the button module (Phase 2). */
+.wp-block-post-content a.wp-block-read-more,
+.wp-block-post-content .wp-block-query-pagination {
+  font-size:      var(--md-sys-typescale-label-large-size);
+  line-height:    var(--md-sys-typescale-label-large-line-height);
+  font-weight:    var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+
 /* ============================================================================
  * §19 core/navigation — chrome contract A1 + A2  [cleanup: M3-faithful, core-leaning]
  *

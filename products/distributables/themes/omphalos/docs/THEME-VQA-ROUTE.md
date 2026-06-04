@@ -645,6 +645,26 @@ stays core-native. The real EXPANDED RAIL is deferred to a SEPARATE component/te
 must be re-specced with a full RTL audit (the M3 Nav rail values above are the reference) before
 any rebuild — `:has(.open-always)` + a content nav is not a rail.
 
+### §9.6d — vertical + submenuVisibility:click = ACCORDION / disclosure (blocks.css §21)
+
+A vertical click-to-open submenu reads better as an in-flow ACCORDION than a floating
+popover. Verified DOM: `li.open-on-click > button.…__toggle[aria-expanded]` + a SIBLING
+`ul.…__submenu-container` (core's collapsed state = `position:absolute; visibility:hidden`).
+core OWNS the disclosure state — it toggles `aria-expanded` + the container's `visibility`
+(a11y kept). The theme only RE-FLOWS it (logical, RTL/LTR-neutral, no left/right/width):
+```css
+nav.is-vertical .open-on-click > .…__submenu-container {
+  position: static; overflow: hidden; max-block-size: 0; background: transparent; }   /* collapsed */
+nav.is-vertical .open-on-click > .…__toggle[aria-expanded="true"] ~ .…__submenu-container {
+  max-block-size: none; overflow: visible; }                                           /* expanded */
+```
+Verified: collapsed → static / max-block-size 0 / height 2 / visibility hidden (core);
+click → aria-expanded true / static / max-block-size none / height 400 / visibility visible;
+submenu bg transparent (was a core white panel). NB: `max-block-size` can't auto-animate to
+content height → INSTANT disclosure; true `<details>` semantics = a later `render_block`-filter
+lane. Full context map: horizontal hover/click = Menu/Popover (§19) · vertical click =
+accordion (§21) · vertical open-always = tree + capsule (§20) · overlay nested = A3.
+
 Current measured dropdown values (front, dark, `/vqa-theme/`):
 
 ```txt

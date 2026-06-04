@@ -1706,8 +1706,11 @@ nav.wp-block-navigation.is-vertical {
  * radius) are DEFERRED to a form/input component lane; the submit button is already M3
  * (theme.json button element); here the form only gets label/helper typography + colour. */
 
-/* comments section title → title-large / on-surface */
-.wp-block-comments-title {
+/* comments section title → title-large / on-surface. The `.wp-block-comments` prefix keeps
+ * this GLOBAL but lifts specificity to (0,2,0) so it wins over the prose `h2` (0,1,1) when a
+ * comments block sits IN-CONTENT (e.g. the VQA page) — the title is chrome, never a prose
+ * heading, in any context. */
+.wp-block-comments .wp-block-comments-title {
   font-size:      var(--md-sys-typescale-title-large-size);
   line-height:    var(--md-sys-typescale-title-large-line-height);
   font-weight:    var(--md-sys-typescale-title-large-weight);
@@ -1742,19 +1745,17 @@ nav.wp-block-navigation.is-vertical {
   color: var(--md-sys-color-on-surface);
 }
 
-/* de-prose comment links — metadata/action links, no resting underline (hover/focus only) */
-.wp-block-comment-author-name a,
-.wp-block-comment-reply-link a,
-.wp-block-comment-edit-link a {
+/* de-prose comment links — metadata/action links, no resting underline (hover/focus only).
+ * The `.wp-block-comments` prefix lifts specificity to (0,2,1) to beat the prose always-
+ * underline link rule `.wp-block-post-content a:not(.wp-element-button)` (0,2,1) on source
+ * order (blocks.css loads after prose.css) when comments sit IN-CONTENT; in the template
+ * context prose is absent and the rule applies globally anyway. */
+.wp-block-comments :is(.wp-block-comment-author-name, .wp-block-comment-date, .wp-block-comment-reply-link, .wp-block-comment-edit-link) a {
   color: var(--md-sys-color-on-surface-variant);
   text-decoration: none;
 }
-.wp-block-comment-author-name a:hover,
-.wp-block-comment-author-name a:focus-visible,
-.wp-block-comment-reply-link a:hover,
-.wp-block-comment-reply-link a:focus-visible,
-.wp-block-comment-edit-link a:hover,
-.wp-block-comment-edit-link a:focus-visible {
+.wp-block-comments :is(.wp-block-comment-author-name, .wp-block-comment-date, .wp-block-comment-reply-link, .wp-block-comment-edit-link) a:hover,
+.wp-block-comments :is(.wp-block-comment-author-name, .wp-block-comment-date, .wp-block-comment-reply-link, .wp-block-comment-edit-link) a:focus-visible {
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }

@@ -232,5 +232,11 @@ npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-embed-template.php"
 Write-Host "== Creating Theme VQA page =="
 npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-theme.php"
 
+# Comments VQA page (THEME-VQA-ROUTE §3 Phase 2) — core/comments family. The page has
+# comments OPEN + seeded comments (incl. a threaded reply) so core/comments renders a real
+# comment context. Korean stays inside the PHP.
+Write-Host "== Creating Theme Comments VQA page =="
+npx wp-env run cli wp eval-file "$themePath/scripts/seed-vqa-theme-comments.php"
+
 Write-Host "== Done. Attachment permalinks: =="
 npx wp-env run cli wp post list --post_type=attachment --field=guid

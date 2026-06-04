@@ -603,7 +603,10 @@ submenu (parent) row     the parent li wraps its subtree, but it still owns the 
                         `min-block-size:56` + logical padding-inline 16. The first
                         `.…__content` (anchor/button) and trailing submenu icon are slots
                         inside that row: content grows, has 56px block-size, and keeps
-                        padding-inline 0; the following submenu `ul` wraps to the next row.
+                        padding-inline 0; open-always nested content overrides core's
+                        `flex-grow:0`, and open-always parent triggers use `inline-size:100%`
+                        so leaf + submenu-heading rows both fill their row. The following
+                        submenu `ul` wraps to the next row.
 gap / margin            core's vertical submenu gap is `gap: var(--wp--style--block-gap)`
                         (1.2rem ≈ 19.2px) — too large on the BLOCK axis. Do NOT zero the
                         variable: core also uses it for the INLINE nested indent. Override

@@ -1370,12 +1370,21 @@ nav.wp-block-navigation.is-vertical {
     flex-direction: column;
     justify-content: center;
   }
-  & .wp-block-navigation-submenu > .wp-block-navigation-item__content {
+  & li.wp-block-navigation-item > .wp-block-navigation-item__content {
     display: flex;
     align-items: center;
     flex-grow: 1;
     min-block-size: 56px;
     padding-inline: 0;
+  }
+  /* core/open-always sets nested item content back to flex-grow:0; for the 56dp vertical
+   * row model, the first a/button slot should stretch across the row. */
+  & .has-child.open-always .wp-block-navigation__submenu-container > .wp-block-navigation-item > .wp-block-navigation-item__content,
+  & .has-child.open-always > .wp-block-navigation-item__content {
+    flex-grow: 1 !important;
+  }
+  & .has-child.open-always > .wp-block-navigation-item__content {
+    inline-size: 100%;
   }
   &.is-content-justification-left a.wp-block-navigation-item__content:has(.wp-block-navigation-item__description) {
     align-items: flex-start;

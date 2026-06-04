@@ -1166,6 +1166,31 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
     outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
     outline-offset: var(--md-sys-state-focus-indicator-outer-offset);
   }
+}
+
+/* ----------------------------------------------------------------------------
+ * §19b core/navigation — SUBMENU = M3 Menu surface (popover) [UNIFIED]
+ *
+ * "All submenus = popover" (user directive). The Menu/popover SURFACE applies to BOTH
+ * horizontal and vertical CLICK/HOVER FLOATING submenus. Two cases stay EXCLUDED:
+ * submenuVisibility "always" (`.open-always` = static always-expanded tree, kept as the
+ * §20 nav-rail tree by design) and the open responsive OVERLAY (`.is-menu-open`). core
+ * OWNS submenu POSITION (absolute floating, both orientations); the theme owns the surface
+ * + menu-row skin only. The top-level Nav-bar-lite skin (above) is HORIZONTAL-only (vertical
+ * top-level = §20 56dp capsule), so it keeps its `:not(.is-vertical)` gate; this block drops
+ * it so vertical click submenus get the same popover Menu. */
+nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+  /* submenu row STATE LAYER (M3: the li owns it) — SUBMENU rows only, so the vertical
+   * top-level li keeps its §20 ::before paint (a li-direct bg would tint the whole subtree). */
+  & .wp-block-navigation__submenu-container .wp-block-navigation-item:hover {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+  }
+  & .wp-block-navigation__submenu-container .wp-block-navigation-item:focus-within {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+  }
+  & .wp-block-navigation__submenu-container .wp-block-navigation-item:active {
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+  }
 
   /* A2 — submenu = M3 standard Menu surface. surface-container-low, NO border, elevation
    * level2 (light shadow; dark = tonal lift), container corner-large, 2dp group padding/gap —
@@ -1270,7 +1295,20 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 }
 
 /* ============================================================================
- * §20 core/navigation — open-always vertical = light BASELINE SKIN  [A2c rolled back]
+ * §20 core/navigation — VERTICAL nav-rail skin: TOP-LEVEL capsule + open-always TREE
+ * [A2c rolled back; submenu popover moved to §19b]
+ *
+ * SCOPE (post-"all submenus = popover"): the 56dp capsule rows + ::before paint apply to
+ * the vertical TOP-LEVEL items (`.wp-block-navigation__container > .wp-block-navigation-item`)
+ * and the always-expanded TREE rows (`.open-always …`) ONLY. A vertical CLICK submenu is now
+ * a FLOATING popover styled by §19b — so the capsule/row-gap rules here are scoped away from
+ * it, or it would get 56dp tree rows instead of the 48dp Menu rows.
+ *
+ * ELEMENT-AGNOSTIC: item selectors use the CLASS `.wp-block-navigation-item`, NOT `li…`. The
+ * front-end save renders items as `<li>`, but the BLOCK EDITOR wraps each inner block in a
+ * `<div class="block-editor-block-list__block … wp-block-navigation-item …">` (no `<li>`). A
+ * `li.…` qualifier matches the front only and the nav-rail skin never reaches the editor
+ * canvas (add_editor_style loads blocks.css there). The class form matches both.
  *
  * ROLLBACK. The earlier §20 implemented a full M3 EXPANDED RAIL on
  * `nav.is-vertical:has(.open-always)` — forced rail width (220), re-implemented
@@ -1295,17 +1333,16 @@ nav.wp-block-navigation.is-vertical {
    * trigger row still needs the same 56dp / 16dp geometry as leaf rows. Put geometry on
    * the li; the first anchor/button and trailing span are slots inside it. State paint for
    * parent submenu rows stays on the trigger content to avoid tinting the whole subtree. */
-  & li.wp-block-navigation-item:not(.wp-block-navigation-submenu),
-  & li.wp-block-navigation-submenu,
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item),
   & .wp-block-loginout a {
     min-block-size: 56px;
     padding-inline: var(--space-md, 16px);
     border-radius: var(--md-sys-shape-corner-full);
   }
-  & li.wp-block-navigation-item {
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item) {
     position: relative;
   }
-  & li.wp-block-navigation-item::before {
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item)::before {
     content: "";
     position: absolute;
     inset-block-start: 0;
@@ -1315,18 +1352,18 @@ nav.wp-block-navigation.is-vertical {
     pointer-events: none;
     z-index: -1;
   }
-  & li.wp-block-navigation-item:not(.wp-block-navigation-submenu)::before {
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item):not(.wp-block-navigation-submenu)::before {
     block-size: 100%;
   }
   & .wp-block-loginout a:hover {
     background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
   }
-  & li.wp-block-navigation-item:hover::before {
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item):hover::before {
     background-color: color-mix(in srgb, var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
   }
   /* current — a LEAF fills its li; a SUBMENU trigger fills itself; label → secondary. */
-  & li.wp-block-navigation-item:has(> a[aria-current="page"])::before,
-  & li.wp-block-navigation-item:has(> button[aria-expanded="true"])::before {
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item):has(> a[aria-current="page"])::before,
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item):has(> button[aria-expanded="true"])::before {
     background-color: var(--md-sys-color-secondary-container);
   }
   & a[aria-current="page"] {
@@ -1336,7 +1373,11 @@ nav.wp-block-navigation.is-vertical {
    * 19.2px) — too large for a tight tree. Do NOT zero the variable: core also uses it
    * for the inline nested indent. Override only the BLOCK-axis gap and leave inline
    * spacing/indent core-owned. */
-  & :is(.wp-block-navigation__container, .wp-block-navigation__submenu-container) {
+  & .wp-block-navigation__container {
+    row-gap: 0 !important;
+  }
+  /* always-TREE submenu block-gap → 0; the floating click popover keeps the §19b 2dp gap. */
+  &:has(.open-always) .wp-block-navigation__submenu-container {
     row-gap: 0 !important;
   }
   /* Keep core's inline depth, but remove padding on the opposite edge for nested submenu
@@ -1370,7 +1411,7 @@ nav.wp-block-navigation.is-vertical {
     flex-direction: column;
     justify-content: center;
   }
-  & li.wp-block-navigation-item > .wp-block-navigation-item__content {
+  & :is(.wp-block-navigation__container > .wp-block-navigation-item, .open-always .wp-block-navigation-item) > .wp-block-navigation-item__content {
     display: flex;
     align-items: center;
     flex-grow: 1;

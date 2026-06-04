@@ -837,15 +837,27 @@ CHROME (never prose), so the post-content prose-leak guard doesn't apply; like �
 they're bound by their own block classes globally, which reaches the real TT5 template safely.
 Token binding only; thread / list LAYOUT stays core/TT5-owned.
 
-**Observation page (per §3 convention).** Phase 2 still gets its own VQA page like every other
-phase: `patterns/vqa-theme-comments.php` + `scripts/seed-vqa-theme-comments.php` (page 86,
-`/vqa-theme-comments/`, comments OPEN, 2 top-level + 1 threaded reply; live `wp:pattern` ref;
-wired into `seed.ps1`). On THIS page `core/comments` sits IN-CONTENT (`insidePostContent:true`),
-which makes the prose-leak visible — handled by lifting two bindings above prose specificity:
-`comments-title` → `.wp-block-comments .wp-block-comments-title` (0,2,0) beats prose `h2`
-(0,1,1); comment links → `.wp-block-comments :is(…author-name/date/reply/edit) a` (0,2,1) beats
-prose `a:not(.wp-element-button)` (0,2,1) on source order. The global binding is unchanged in
-the real template context. So both contexts (in-content page + template post) read identically.
+**Observation page (per §3 convention).** Phase 2 gets its own VQA page like every other phase:
+`patterns/vqa-theme-comments.php` + `scripts/seed-vqa-theme-comments.php` (page 86,
+`/vqa-theme-comments/`; live `wp:pattern` ref; wired into `seed.ps1`). Final shape:
+
+- **Page hierarchy** — `post_parent` = the VQA Theme page (68); Comments is its child.
+- **Nav** — the seeded nav "VQA Comments" link → `?pagename=vqa-theme-comments` (resolves
+  regardless of seed order), replacing the `#vqa-comments-future` placeholder.
+- **Depth-5 thread** — comments OPEN; a single 5-deep reply chain (depth 1→5, the
+  `thread_comments_depth` limit, set defensively) + one more top-level = 6 comments, so
+  comment-template nesting is observable at every level.
+- **Real TEMPLATE render** — page 86 uses a custom template `page-with-comments`
+  (`templates/page-with-comments.html`, registered in `theme.json` `customTemplates`) = TT5's
+  `page.html` + the `twentytwentyfive/comments` pattern AFTER `post-content`. So `core/comments`
+  renders in TEMPLATE context (`insidePostContent:false`), identical to the real single-post
+  case (`?p=65`) — NOT in-content. The in-content `core/comments` was therefore REMOVED from the
+  pattern (no double render; the pattern keeps the intro + comments count/link specimens).
+
+Because the comments render in the template (outside `.wp-block-post-content`), prose does not
+leak and the §21 global binding applies cleanly. The §21 specificity lifts (`.wp-block-comments`
+prefix on the title + comment links, (0,2,0)/(0,2,1)) are KEPT as a harmless guard for any
+future in-content placement, but are not needed in this template-context render.
 
 **Done (blocks.css §21):**
 

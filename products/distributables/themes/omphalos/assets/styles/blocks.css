@@ -1878,3 +1878,37 @@ nav.wp-block-navigation.is-vertical {
   outline: 2px solid var(--md-sys-color-secondary);   /* M3 §13 focus */
   outline-offset: 2px;
 }
+
+/* ============================================================================
+ * §22 core/comment-template — MICROBLOG FEED ITEM layout glue (THEME-VQA-ROUTE §11.1)
+ *
+ * The STRUCTURE is owned by the PATTERN (patterns/comments.php): per-comment = leading avatar
+ * + main column { meta row (author · date) → body → action row (reply · edit) }, grounded in
+ * Mastodon `status` / Misskey `MkNote`. This is NOT a CSS reorder of TT5's stack (that path is
+ * the Navigation trap); the markup defines the order, CSS only does the FLEX GLUE — row, column
+ * grow, fixed leading avatar, and gaps. Thread nesting stays core-owned. */
+.omph-comment-item {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--space-md);                 /* avatar ↔ content column */
+}
+.omph-comment-item > .wp-block-avatar {
+  flex-shrink: 0;                        /* leading avatar = fixed 40dp column */
+}
+.omph-comment-main {
+  flex: 1 1 auto;
+  min-inline-size: 0;                    /* let long content wrap, not overflow the row */
+}
+.omph-comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-sm);              /* author ↔ date inline meta */
+}
+.omph-comment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);                 /* reply ↔ edit */
+}

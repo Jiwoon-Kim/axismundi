@@ -702,3 +702,27 @@ trailing:  Material Symbols arrow_right · 20 · on-surface-variant · margin 0 
 overlay/open-always: core / tree (no Menu skin) — verified excluded
 vertical click: Menu popover applies (same surface/48dp rows as horizontal)
 ```
+
+### §9.6e — Submenu trailing affordance ontology (where the icon spec comes from)
+
+A `core/navigation` submenu chevron is a TRAILING AFFORDANCE, and its measurement must be
+sourced from the right component ontology — NOT from Navigation itself. **Nav bar / Nav rail
+carry no trailing-icon spec**: their icon slots are destination PRIMARIES (the leading symbol
+of a destination), so they are not a basis for a submenu indicator. The two valid sources are
+**Menu** (cascading-submenu indicator: trailing icon 20dp, on-surface-variant) and **List**
+(row-level disclosure / expandable parent: trailing icon 24dp, on-surface-variant; a future
+stronger target is the List expanded-parent 40dp corner-full container). **Chip**'s icon
+(18dp) is component-private and must NOT be pulled into navigation. Mapping applied:
+
+```txt
+nested popover submenu  = Menu cascading indicator   → arrow_right        / 20 / on-surface-variant   (blocks.css §19b)
+top-level submenu        = List row disclosure         → arrow_drop_down/up / 24 / on-surface-variant   (blocks.css §19c)
+open-always tree         = Nav-rail baseline           → no trailing icon (showSubmenuIcon:false)
+chip                     = chip-private (18)           → NOT used in navigation
+```
+
+The top-level disclosure replaces core's caret `<svg>` for both core markups — a `<span>`
+(`submenuVisibility:"click"`) and a `<button>` toggle (hover) — with the expanded state
+swapping to `arrow_drop_up` (click: `button[aria-expanded] ~ icon`; hover: `icon[aria-expanded]`).
+Source measures: Menu / List / Chip rows in `axismundi-lab/stylesheets/components.css`
+(Menu ~3001, List ~4300, Chip ~1733).

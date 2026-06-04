@@ -1986,3 +1986,9 @@ nav.wp-block-navigation.is-vertical {
 .wp-block-comment-template li + li {
   margin-block-start: var(--space-md);
 }
+/* Parent → first reply otherwise reads too tight, while sibling branches already have enough
+ * separation from `li + li`. Add only a small parent→first-child step so branches keep their
+ * current rhythm. */
+.wp-block-comment-template ol > li:first-child {
+  margin-block-start: var(--space-sm);
+}

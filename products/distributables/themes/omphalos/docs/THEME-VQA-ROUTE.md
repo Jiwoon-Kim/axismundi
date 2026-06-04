@@ -822,3 +822,46 @@ and are NOT reached here; they are theme.json global styles + TT5 templates = a 
 template lane** (future), not the block bridge. This is why "just bind components and move on"
 is correct for Phase 1: the in-content binding is done, and template styling is a different
 contract. Query Loop B Phase 1 is CLOSED.
+
+---
+
+## §11 — Comments (P2 contract — global token binding, DONE)
+
+Diagnostic (real single post `?p=65`, the seeded post with 2 comments — NO bespoke
+`/vqa-theme-comments/` harness needed): the comments family renders in the SINGLE-POST
+TEMPLATE (TT5 `single.html` → `main.wp-block-group`), **`insidePostContent: false`** — the
+SAME template-context boundary as the Query Loop. A single-page in-content comments harness
+would distort it (the same mistake the Query Loop close warned against), so observe + bind on
+the real template render instead.
+
+**Decision — bind GLOBALLY (nav model), not post-content-scoped.** Comments are unambiguous
+CHROME (never prose), so the post-content prose-leak guard doesn't apply; like §19 navigation
+they're bound by their own block classes globally, which reaches the real TT5 template safely.
+Token binding only; thread / list LAYOUT stays core/TT5-owned.
+
+**Done (blocks.css §21):**
+
+```txt
+comments-title                         title-large / on-surface
+comment meta (author/date/reply/edit)  body-small / on-surface-variant
+comment-content (+ inner p)            body-medium / on-surface
+comment links (author/reply/edit)      de-prose: no resting underline, hover/focus underline
+comment-template                       list-style:none (thread indent stays core)
+comment form label/helper              body-small / on-surface-variant
+```
+
+CSS-0 was TT5 light defaults (weight 300, mixed greys); binding normalises to M3 typescale
+(weight 400) + role colours. Verified: title 22/28 on-surface, meta 12/16 on-surface-variant,
+content 14/20 on-surface, reply link de-underlined, form label 12 on-surface-variant.
+
+**Deferred:**
+- **comment form INPUT surface** — textarea / name / email / url radius (4) + border → M3 text
+  field. A form/input component lane (reuse the §14 Search Bar tokens). The submit button is
+  already M3 (theme.json button element), left as-is.
+- **comments-pagination / comment-edit-link** — absent in this specimen (2 comments, no
+  pagination; edit-link needs the cap); bind by class when a richer comment context exists.
+- **thread/nesting layout, avatar sizing** — core/TT5-owned (layout primitive).
+
+Note: like the Query Loop, the real comments DESIGN beyond token binding (spacing, nesting
+affordance, form field components) belongs to the **template lane** — Omphalos binds tokens,
+TT5/core own the template + layout.

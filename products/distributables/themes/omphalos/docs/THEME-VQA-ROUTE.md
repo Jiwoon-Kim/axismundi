@@ -889,11 +889,22 @@ style-guide#components-text-field), grounded (unlike the List-derived avatar). B
 PLAIN `<input>`/`<textarea>` with no `.text-field` structure, so the FULL component (floating
 label / `__container` / prefix-suffix slots / supporting + counter / error icon) needs
 `comment_form` MARKUP ownership and stays a form/plugin lane (deferred). The theme binds the
-OUTLINED SURFACE tokens only on the raw controls (blocks.css §21): 56dp · 16dp padding · 1px
-`--md-sys-color-outline` · corner-extra-small · transparent fill · body-large · focus 2px
-primary (inset shadow, no reflow) · `:user-invalid` error. This also FIXES core's hardcoded
-white field bg (broke dark mode). The cookies-consent CHECKBOX is untouched (M3 selection
-control = form plugin lane). Submit stays the M3 button element.
+OUTLINED SURFACE tokens only on the raw controls (blocks.css §21): 56dp · 16dp padding ·
+corner-extra-small · transparent fill · body-large. The OUTLINED active indicator follows the
+lab spec as an INSET BOX-SHADOW (not `border`) — 1px `--md-sys-color-outline` (rest) → 1px
+on-surface (hover) → 2px primary (focus) → 2px error (`:user-invalid`). box-shadow (which core
+does not set) is load-bearing: an earlier `border` version was overridden by core's form
+border-color (rendered a faint near-white #E7E0EC outline — the reported "thin line"); the
+shadow lets the true #79747E outline through. Rest stays 1px (M3 spec; the lab confirms — not
+thicker). Also FIXES core's hardcoded white field bg (broke dark mode). Submit stays the M3
+button element.
+
+**Cookies-consent CHECKBOX = M3 §13 Checkbox, OUTLINED-lite (DONE).** core renders a bare native
+`<input type="checkbox">` (no `.ax-checkbox__visual` markup), so bind the visual via
+`appearance:none` on the input (blocks.css §21): 18dp box · 2dp corner · 2px on-surface-variant
+outline (inset shadow, so core can't override the colour) · checked = primary fill + on-primary
+CSS-border checkmark (token-coloured → dark-safe) · focus 2px secondary. The full `.ax-checkbox`
+(40dp state-layer ripple + `__visual`/`__check` structure) needs markup = form/plugin lane.
 
 **Deferred:**
 - **full Text Field component** — floating label / container / prefix-suffix / supporting +

@@ -567,9 +567,18 @@ pill treatment doesn't reach "Log in" yet — a separate structural item.)
 
 ### §9.6c — A2c vertical nav root = M3 Expanded Navigation RAIL (blocks.css §20, v1 DONE)
 
-`nav.is-vertical` (the §19 horizontal gate excludes it). Maps lab `.nav-rail.is-expanded`
-onto WP li/a. Closes the vertical-root lane (A2a submenu + A2b horizontal root were the
-prior closes).
+**SCOPE: `nav.is-vertical:has(.open-always)` ONLY** (a `submenuVisibility:always` vertical
+nav = a static, always-expanded in-flow tree — the only real expanded-rail candidate). The
+first cut applied the rail to ALL `nav.is-vertical`, which OVER-CLAIMED it: (a) the
+`submenuVisibility:click` variant keeps its submenus absolute/hidden, so forcing
+inline-size:100% / min-height:56 on those subtree anchors broke the layout; (b) every
+simple vertical nav (footer, etc.) became a 220px rail; (c) the forced rail width nullified
+the editor toolbar's align / justify / flex-wrap and centred the fixed-width block in
+post-content. `:has(.open-always)` is itself a PROXY — a real rail ultimately needs a
+header/sidebar TEMPLATE context, since vertical orientation alone is not "a rail".
+Verified: the click variant reverts to core (anchor min-height auto / radius 0 / content
+width / wrap); only the always tree gets the rail. Maps lab `.nav-rail.is-expanded` onto WP
+li/a.
 
 **Ownership model differs from §19 (load-bearing).** In a vertical nav the submenu
 container is STATIC + IN-FLOW *inside* the parent li (the li wraps its whole nested

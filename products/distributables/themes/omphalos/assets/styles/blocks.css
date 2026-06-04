@@ -1272,11 +1272,23 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 /* ============================================================================
  * §20 core/navigation — VERTICAL root = M3 Expanded Navigation RAIL  [A2c v1]
  *
- * nav.is-vertical only (the §19 horizontal Menu/nav-bar gate excludes vertical). Maps
- * lab `.nav-rail.is-expanded` values — full-width pill ROWS · min-height 56 · padding-
- * inline 16 · corner-full · label-large · full-width secondary-container active indicator
- * · supporting text — onto WP's li/a. Text-only → no icon, no COLLAPSED rail (icon-first;
- * excluded).
+ * SCOPE: `nav.is-vertical:has(.open-always)` ONLY — i.e. an `submenuVisibility:always`
+ * vertical nav (a static, always-expanded in-flow tree, the only real expanded-rail
+ * candidate). `nav.is-vertical` ALONE is too generic: applying the rail to ALL vertical
+ * navs over-claimed it (a) the `submenuVisibility:click` variant keeps its submenus
+ * absolute/hidden, so forcing inline-size:100% / min-height:56 on those subtree anchors
+ * broke the layout; (b) every simple vertical nav (footer, etc.) became a 220px rail; (c)
+ * the forced rail width nullified the editor toolbar's align / justify / flex-wrap and
+ * centred the fixed-width block in post-content. So the rail is gated to the always-open
+ * tree. (Even `:has(.open-always)` is a proxy — a real rail ultimately needs a
+ * header/sidebar TEMPLATE context, since vertical orientation alone isn't "a rail".)
+ *
+ * Maps lab `.nav-rail.is-expanded` values — full-width pill ROWS · min-height 56 ·
+ * padding-inline 16 · corner-full · label-large · full-width secondary-container active
+ * indicator · supporting text — onto WP's li/a. Text-only → no icon, no COLLAPSED rail.
+ * DEEP NESTING: core indent (~19.2px/level) accumulates; by depth 3+ the label in a 220px
+ * rail is too narrow → an indent CLAMP or a right-side POPOVER flyout for deep levels is
+ * required (deferred; v1 keeps in-place + core indent, observe overflow).
  *
  * STRUCTURAL NOTE (differs from §19): in a vertical nav the submenu container is STATIC
  * and IN-FLOW *inside* the parent li, so the li wraps its whole nested subtree — a pill
@@ -1297,7 +1309,7 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
  * heading. (3) core's depth indent (~19.2px/level) is KEPT for v1 — observe overflow
  * before clamping. v1 does NOT: collapse the rail, add icons, rewrite the trigger
  * semantics, or clamp the indent. */
-nav.wp-block-navigation.is-vertical {
+nav.wp-block-navigation.is-vertical:has(.open-always) {
   /* rail surface: defined width + single-column flow (the rail's identity). */
   inline-size: 220px;
   max-inline-size: 360px;

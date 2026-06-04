@@ -22,6 +22,7 @@ WordPress.org assets
 | `axismundi-symbol.svg` | Canonical project identity source asset |
 | `axismundi-symbol-fallback.svg` | Fallback symbol variant |
 | `axismundi-symbol-glow.svg` | Glow / presentation variant |
+| `axismundi-logo.png` | Raster logo export — the demo **Site Logo** source (core blocks SVG uploads for the site-logo slot, so the slot needs a raster). Lives here in the repo brand source, NOT bundled in the distributable theme. |
 
 ## License
 

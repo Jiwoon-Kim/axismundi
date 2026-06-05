@@ -336,9 +336,6 @@
  * State layer (hover/pressed) is a deliberate follow-up; focus-visible only here.
  * ============================================================ */
 .wp-element-button {
-  position: relative;       /* contains the ::after state layer */
-  overflow: hidden;         /* clip the state layer to the (morphing) radius */
-  isolation: isolate;       /* keep the state layer below the label, above the fill */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -360,24 +357,19 @@
   color: var(--md-sys-color-on-primary);
   text-decoration: none;
   cursor: pointer;
-  transition: border-radius var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+  transition:
+    background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+    border-radius var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
 }
-/* M3 state layer — a currentColor veil over the container (below the label via
- * z-index), fading in per state. hover .08 / focus .10 / pressed .10. */
-.wp-element-button::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background-color: currentColor;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+.wp-element-button:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-primary));
 }
-.wp-element-button:hover::after { opacity: 0.08; }
-.wp-element-button:focus-visible::after { opacity: 0.10; }
-.wp-element-button:active::after { opacity: 0.10; }
+.wp-element-button:focus-visible {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--md-sys-color-primary));
+}
+.wp-element-button:active {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--md-sys-color-primary));
+}
 /* Pressed shape morph: pill → corner-medium. */
 .wp-element-button:active {
   border-radius: var(--md-sys-shape-corner-medium);
@@ -387,8 +379,7 @@
   outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .wp-element-button,
-  .wp-element-button::after {
+  .wp-element-button {
     transition: none;
   }
 }
@@ -399,10 +390,28 @@
   background-color: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
 }
+.wp-block-button.is-style-tonal .wp-block-button__link:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+.wp-block-button.is-style-tonal .wp-block-button__link:focus-visible {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+.wp-block-button.is-style-tonal .wp-block-button__link:active {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
 .wp-block-button.is-style-elevated .wp-block-button__link {
   background-color: var(--md-sys-color-surface-container-low);
   color: var(--md-sys-color-primary);
   box-shadow: var(--md-sys-elevation-shadow-level1);
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-surface-container-low));
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:focus-visible {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--md-sys-color-surface-container-low));
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:active {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--md-sys-color-surface-container-low));
 }
 .wp-block-button.is-style-outline .wp-block-button__link {
   background-color: transparent;
@@ -415,10 +424,28 @@
   padding-inline: var(--space-lg);
   box-shadow: inset 0 0 0 1px var(--md-sys-color-outline-variant);
 }
+.wp-block-button.is-style-outline .wp-block-button__link:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-outline .wp-block-button__link:focus-visible {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-outline .wp-block-button__link:active {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}
 .wp-block-button.is-style-text .wp-block-button__link {
   background-color: transparent;
   color: var(--md-sys-color-primary);
   padding-inline: var(--space-md);
+}
+.wp-block-button.is-style-text .wp-block-button__link:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-text .wp-block-button__link:focus-visible {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-text .wp-block-button__link:active {
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 }
 
 /* ============================================================

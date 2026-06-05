@@ -57,6 +57,32 @@
   text-wrap: balance;
 }
 
+/* Responsive prose mapping observed on m3.material.io: keep the system type
+ * ramp stable, but let long-form text choose denser semantic roles on narrow
+ * viewports. The token values remain fixed for Global Styles / Style Book. */
+@media (max-width: 600px) {
+  .wp-block-post-content {
+    font-size:      var(--md-sys-typescale-body-medium-size);
+    line-height:    var(--md-sys-typescale-body-medium-line-height);
+    font-weight:    var(--md-sys-typescale-body-medium-weight);
+    letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  }
+
+  .wp-block-post-content h1 {
+    font-size:      var(--md-sys-typescale-headline-medium-size);
+    line-height:    var(--md-sys-typescale-headline-medium-line-height);
+    font-weight:    var(--md-sys-typescale-headline-medium-weight);
+    letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+  }
+
+  .wp-block-post-content h2 {
+    font-size:      var(--md-sys-typescale-headline-small-size);
+    line-height:    var(--md-sys-typescale-headline-small-line-height);
+    font-weight:    var(--md-sys-typescale-headline-small-weight);
+    letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+  }
+}
+
 /* Heading content margins — asymmetric vertical rhythm.
  * Scoped to raw headings; core heading blocks get spacing from blockGap. */
 .wp-block-post-content > :is(h1, h2) {

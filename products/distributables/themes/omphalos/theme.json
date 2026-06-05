@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schemas.wp.org/wp/6.8/theme.json",
+  "$schema": "https://raw.githubusercontent.com/WordPress/gutenberg/wp/7.0/schemas/json/theme.json",
   "version": 3,
   "customTemplates": [
     {

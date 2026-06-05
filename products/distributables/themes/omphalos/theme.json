@@ -215,9 +215,11 @@
       "text": "var(--md-sys-color-on-background)"
     },
     "typography": {
-      "fontFamily": "var(--wp--preset--font-family--roboto-flex)",
+      "fontFamily": "var(--md-sys-typescale-body-large-font)",
       "fontSize": "var(--md-sys-typescale-body-large-size)",
-      "lineHeight": "var(--md-sys-typescale-body-large-line-height)"
+      "lineHeight": "var(--md-sys-typescale-body-large-line-height)",
+      "fontWeight": "var(--md-sys-typescale-body-large-weight)",
+      "letterSpacing": "var(--md-sys-typescale-body-large-tracking)"
     },
     "elements": {
       "button": {

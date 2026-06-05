@@ -801,6 +801,7 @@ the Navigation lesson: don't over-componentise a core layout primitive.
 ```txt
 post-template     prose indent reset (padding-inline-start:0, list-style:none)
 post-title        title-large / on-surface           (overrides prose h2 28/36)
+featured-image    global media corner binding        (img radius 12; core owns aspect/object-fit)
 post-excerpt      body-large / on-surface
 meta cluster      body-small / on-surface-variant     (date·terms·time-to-read·comments·total·byline)
 author-biography  body-medium / on-surface-variant

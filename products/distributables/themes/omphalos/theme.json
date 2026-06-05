@@ -14,6 +14,10 @@
       "enabled": true,
       "allowEditing": true
     },
+    "layout": {
+      "contentSize": "760px",
+      "wideSize": "1200px"
+    },
     "blocks": {
       "core/image": {
         "lightbox": {

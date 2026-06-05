@@ -59,11 +59,14 @@ full-page caching the cached HTML carries the first visitor's mode. So:
   A brief button-only active flash is acceptable; the page colours never flash.
 
 **Editor parity (implemented).** The block/site editor canvas does not execute
-`wp_head`, so the front-end head script cannot run inside the iframe. A small
-`enqueue_block_editor_assets` script copies the same `omphalos_theme` cookie onto
-the editor canvas document's `<html data-theme>`. No second persistence channel
-is introduced: front and editor both consume the same cookie contract, and
-`auto` still follows `prefers-color-scheme`.
+`wp_head`, so the front-end head script cannot run inside preview documents. A
+small `enqueue_block_editor_assets` script copies the same `omphalos_theme`
+cookie onto editor-owned preview `<html data-theme>` roots. The normal editor
+canvas is a same-origin iframe and can be patched directly; the Style Book uses a
+`blob:` iframe, so the bridge rewrites that preview blob with the current
+`data-theme`. No second persistence channel is introduced: front, editor canvas,
+and Style Book all consume the same cookie contract, and `auto` still follows
+`prefers-color-scheme`.
 
 ### 3.2 No build toolchain
 Ship vanilla JS — no JSX/webpack:
@@ -120,7 +123,7 @@ blocks/theme-switcher/
   view.js        (Interactivity store: setScheme → set data-theme + cookie)
   style.css      (segmented control behaviour; track defaults in theme.json)
 assets/scripts/editor-theme-scheme.js
-                (copy cookie scheme into the editor canvas iframe)
+                (copy cookie scheme into editor canvas + Style Book previews)
 inc/theme-switcher.php
                 (register_block_type + global inline head script + editor bridge)
 ```

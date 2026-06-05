@@ -65,6 +65,17 @@
         { "slug": "accent-6", "name": "Accent 6", "color": "var(--md-sys-color-surface-variant)" }
       ]
     },
+    "shadow": {
+      "defaultPresets": false,
+      "presets": [
+        { "slug": "elevation-0", "name": "Elevation 0", "shadow": "var(--md-sys-elevation-shadow-level0)" },
+        { "slug": "elevation-1", "name": "Elevation 1", "shadow": "var(--md-sys-elevation-shadow-level1)" },
+        { "slug": "elevation-2", "name": "Elevation 2", "shadow": "var(--md-sys-elevation-shadow-level2)" },
+        { "slug": "elevation-3", "name": "Elevation 3", "shadow": "var(--md-sys-elevation-shadow-level3)" },
+        { "slug": "elevation-4", "name": "Elevation 4", "shadow": "var(--md-sys-elevation-shadow-level4)" },
+        { "slug": "elevation-5", "name": "Elevation 5", "shadow": "var(--md-sys-elevation-shadow-level5)" }
+      ]
+    },
     "typography": {
       "fluid": true,
       "fontSizes": [

@@ -20,7 +20,6 @@
 		'assets/styles/tokens.ref.css',
 		'assets/styles/tokens.sys.light.css',
 		'assets/styles/tokens.sys.core.css',
-		'assets/styles/tokens.comp.css',
 		'assets/styles/tokens.sys.dark.css',
 	];
 	var styleBookStyles = [

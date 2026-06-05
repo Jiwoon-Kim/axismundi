@@ -239,11 +239,12 @@
       }
     },
     "typography": {
-      "fontFamily": "var(--md-sys-typescale-body-large-font)",
-      "fontSize": "var(--md-sys-typescale-body-large-size)",
-      "lineHeight": "var(--md-sys-typescale-body-large-line-height)",
-      "fontWeight": "var(--md-sys-typescale-body-large-weight)",
-      "letterSpacing": "var(--md-sys-typescale-body-large-tracking)"
+      "fontFamily": "var:preset|font-family|roboto-flex",
+      "fontSize": "var:preset|font-size|body-large",
+      "fontStyle": "normal",
+      "fontWeight": "400",
+      "letterSpacing": "0.5px",
+      "lineHeight": "1.5"
     },
     "elements": {
       "link": {
@@ -335,11 +336,12 @@
           "text": "var(--md-sys-color-on-surface-variant)"
         },
         "typography": {
-          "fontFamily": "var(--md-sys-typescale-body-small-font)",
-          "fontSize": "var(--md-sys-typescale-body-small-size)",
-          "lineHeight": "var(--md-sys-typescale-body-small-line-height)",
-          "fontWeight": "var(--md-sys-typescale-body-small-weight)",
-          "letterSpacing": "var(--md-sys-typescale-body-small-tracking)"
+          "fontFamily": "var:preset|font-family|roboto-flex",
+          "fontSize": "var:preset|font-size|body-small",
+          "fontStyle": "normal",
+          "fontWeight": "400",
+          "letterSpacing": "0.4px",
+          "lineHeight": "1.333"
         }
       },
       "button": {
@@ -359,11 +361,12 @@
           }
         },
         "typography": {
-          "fontFamily": "var(--md-sys-typescale-label-large-font)",
-          "fontSize": "var(--md-sys-typescale-label-large-size)",
-          "lineHeight": "var(--md-sys-typescale-label-large-line-height)",
-          "fontWeight": "var(--md-sys-typescale-label-large-weight)",
-          "letterSpacing": "var(--md-sys-typescale-label-large-tracking)"
+          "fontFamily": "var:preset|font-family|roboto-flex",
+          "fontSize": "var:preset|font-size|label-large",
+          "fontStyle": "normal",
+          "fontWeight": "500",
+          "letterSpacing": "0.1px",
+          "lineHeight": "1.429"
         }
       }
     },

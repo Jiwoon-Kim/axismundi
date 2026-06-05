@@ -41,6 +41,30 @@
 	color: var(--md-sys-color-on-secondary-container);
 }
 
+/* The segment buttons carry `.wp-element-button`, so the global Button contract
+ * supplies sizing/focus but its Filled hover colour would be wrong here. Seat the
+ * state layer on the segmented colours instead: unselected segments veil
+ * on-surface-variant over the transparent segment; the selected segment veils
+ * on-secondary-container over secondary-container. */
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button:not([aria-pressed="true"]):hover {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button:not([aria-pressed="true"]):focus-visible {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button:not([aria-pressed="true"]):active {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button[aria-pressed="true"]:hover {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button[aria-pressed="true"]:focus-visible {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button[aria-pressed="true"]:active {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+
 .omphalos-theme-switcher__button .material-symbols-outlined {
 	font-size: 20px;
 	--md-icon-opsz: 20;

@@ -1132,13 +1132,29 @@ The Style Book Typography → Headings and Blocks → Heading panels now read fr
 line-height would incorrectly shrink/grow heading, navigation, and metadata links. Link colour
 belongs to a separate Global Styles colour lane, not this typography pass. `styles.elements.caption`
 binds WordPress captions (`.wp-element-caption` + media/table figcaptions) to M3 `body-small`.
-The muted caption colour (`on-surface-variant`) is present for the caption element because WP groups
-caption colour and typography under the same element control, but should still be audited again in
-the colour lane.
+The muted caption colour (`on-surface-variant`) is also owned by the colour lane below because WP
+groups caption colour and typography under the same element control.
 
 **Buttons (DONE).** `styles.elements.button` binds the FSE Buttons element to M3 label-large
 typography, primary/on-primary colour, full-radius shape, and horizontal padding. Richer button
 variants (elevated/outlined/tonal/text/icon) remain a Component Phase 2 lane.
+
+**Colour Elements (DONE, first pass).** Site Editor → Styles → Colours exposes the stable global
+element roles in `theme.json`:
+
+```txt
+text       = on-background
+background = background
+heading    = on-surface
+link       = primary
+caption    = on-surface-variant
+button     = primary / on-primary
+```
+
+This is intentionally separate from the typography lane: `styles.elements.link` contains colour
+only, not font-size/line-height/weight/tracking. Component/context links that are not normal prose
+links (navigation, meta, comments, pagination) still keep their scoped de-prose role-colour
+bindings and may override the global link colour by class.
 
 **Theme Switcher (DONE).** `styles.blocks.omphalos/theme-switcher` exposes track background,
 padding, and radius in Global Styles. The custom block declares an example + editorStyle so its

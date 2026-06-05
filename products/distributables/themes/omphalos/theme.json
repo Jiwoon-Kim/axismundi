@@ -222,6 +222,11 @@
       "letterSpacing": "var(--md-sys-typescale-body-large-tracking)"
     },
     "elements": {
+      "link": {
+        "color": {
+          "text": "var(--md-sys-color-primary)"
+        }
+      },
       "heading": {
         "color": {
           "text": "var(--md-sys-color-on-surface)"

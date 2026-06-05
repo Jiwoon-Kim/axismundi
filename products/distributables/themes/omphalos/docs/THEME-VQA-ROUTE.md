@@ -860,6 +860,10 @@ small pass can test 32/24 without changing the row ontology.
 Final small gaps closed: `query-pagination` current page = secondary-container pill + 32dp
 corner-full number affordance (hover state layer); `query-no-results` empty state =
 body-medium / on-surface-variant (observable via the §3b forced-empty `offset` specimen).
+Pagination-lite was later promoted from `.wp-block-post-content` scope to **global**
+`.wp-block-query-pagination` because Blog Home / archive template pagination renders outside
+post-content. This is still a token/affordance binding only (32px pills, current state,
+label-large); the full button module remains deferred.
 
 **Strategic close (Omphalos = TT5 child).** The DURABLE Query-Loop work is the per-block
 **component binding** in §18b — each core post block (title/excerpt/date/terms/read-more/

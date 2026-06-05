@@ -1719,6 +1719,43 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
   }
 }
 
+/* --------------------------------------------------------------------------
+ * §19d core/navigation — OVERLAY close control
+ *
+ * WordPress renders the responsive overlay close as a raw inline SVG button
+ * (`.wp-block-navigation__responsive-container-close`). The Site Editor exposes
+ * it as `core/navigation-overlay-close`; visually it belongs to the same icon
+ * affordance lane as the overlay toggle. Replace the raw SVG with the Material
+ * Symbols `menu_open` glyph at the core 24px icon size. The sheet/drawer
+ * surface itself remains deferred (A3); this is only the icon face.
+ * -------------------------------------------------------------------------- */
+.wp-block-navigation__responsive-container-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  line-height: 1;
+}
+.wp-block-navigation__responsive-container-close > svg {
+  display: none;
+}
+.wp-block-navigation__responsive-container-close::before {
+  content: "menu_open";
+  font-family: "Material Symbols Outlined", sans-serif;
+  font-size: 24px;
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  color: currentColor;
+  font-variation-settings:
+    "FILL" var(--md-icon-fill, 0),
+    "wght" var(--md-icon-wght, 400),
+    "GRAD" var(--md-icon-grad, 0),
+    "opsz" 24;
+}
+
 /* ============================================================================
  * §20 core/navigation — VERTICAL nav-rail skin: TOP-LEVEL capsule + open-always TREE
  * [A2c rolled back; submenu popover moved to §19b]

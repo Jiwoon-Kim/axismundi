@@ -259,7 +259,7 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontStyle": "normal",
-          "fontWeight": "400",
+          "fontWeight": "normal",
           "lineHeight": "normal",
           "letterSpacing": "0",
           "textTransform": "none"
@@ -271,7 +271,7 @@
           "fontSize": "var:preset|font-size|headline-large",
           "lineHeight": "1.25",
           "fontStyle": "normal",
-          "fontWeight": "400",
+          "fontWeight": "normal",
           "letterSpacing": "0px",
           "textTransform": "none"
         }
@@ -282,7 +282,7 @@
           "fontSize": "var:preset|font-size|headline-medium",
           "lineHeight": "1.286",
           "fontStyle": "normal",
-          "fontWeight": "400",
+          "fontWeight": "normal",
           "letterSpacing": "0px",
           "textTransform": "none"
         }
@@ -293,7 +293,7 @@
           "fontSize": "var:preset|font-size|headline-small",
           "lineHeight": "1.333",
           "fontStyle": "normal",
-          "fontWeight": "400",
+          "fontWeight": "normal",
           "letterSpacing": "0px",
           "textTransform": "none"
         }
@@ -304,7 +304,7 @@
           "fontSize": "var:preset|font-size|title-large",
           "lineHeight": "1.273",
           "fontStyle": "normal",
-          "fontWeight": "400",
+          "fontWeight": "normal",
           "letterSpacing": "0px",
           "textTransform": "none"
         }

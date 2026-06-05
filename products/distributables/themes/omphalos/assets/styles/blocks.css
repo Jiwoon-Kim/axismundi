@@ -1097,12 +1097,11 @@
   color: var(--md-sys-color-on-surface);
 }
 
-/* 2b) post featured image = article/list media. Layout (aspect ratio, width, link target,
- * object-fit) stays core/template-owned; theme binds the media corner globally because
- * Blog Home / archive templates render outside `.wp-block-post-content`. */
+/* 2b) post featured image = article/list media. Layout, object-fit, and border radius
+ * stay core/global-styles-owned. The default radius lives in theme.json so the Site
+ * Editor's core/post-featured-image Radius control can override it. */
 .wp-block-post-featured-image img {
   display: block;
-  border-radius: var(--md-sys-shape-corner-medium);
 }
 
 /* 3) excerpt = body copy → body-large, on-surface. */

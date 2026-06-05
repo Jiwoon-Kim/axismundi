@@ -44,62 +44,15 @@
 }
 
 /* ============================================================
- * §1 Headings — M3 typescale (raw tags + core heading block)
+ * §1 Headings — long-form rhythm around global M3 heading tokens
  *
- * The Twenty Twenty-Five parent sets styles.elements.h6 to
- * text-transform: uppercase + letter-spacing: 1.4px + weight 700, which
- * applies to raw <h6> inside post content. That is a parent decision,
- * not an Axismundi token — normalise it so h6 follows the M3 title-small
- * role like every other heading. (Authors who want a label look can use
- * the label-* font-size presets explicitly.)
+ * The level scale itself is owned by theme.json `styles.elements.h1`…`h6`, so
+ * it appears in Global Styles / Style Book. This prose layer only adds the
+ * long-form surface behaviours around those global tokens.
  * ============================================================ */
 .wp-block-post-content :is(h1, h2, h3, h4, h5, h6) {
   color: inherit;
   text-wrap: balance;
-  text-transform: none;
-}
-
-.wp-block-post-content h1 {
-  font-family:    var(--md-sys-typescale-headline-large-font);
-  font-size:      var(--md-sys-typescale-headline-large-size);
-  line-height:    var(--md-sys-typescale-headline-large-line-height);
-  font-weight:    var(--md-sys-typescale-headline-large-weight);
-  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
-}
-.wp-block-post-content h2 {
-  font-family:    var(--md-sys-typescale-headline-medium-font);
-  font-size:      var(--md-sys-typescale-headline-medium-size);
-  line-height:    var(--md-sys-typescale-headline-medium-line-height);
-  font-weight:    var(--md-sys-typescale-headline-medium-weight);
-  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
-}
-.wp-block-post-content h3 {
-  font-family:    var(--md-sys-typescale-headline-small-font);
-  font-size:      var(--md-sys-typescale-headline-small-size);
-  line-height:    var(--md-sys-typescale-headline-small-line-height);
-  font-weight:    var(--md-sys-typescale-headline-small-weight);
-  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
-}
-.wp-block-post-content h4 {
-  font-family:    var(--md-sys-typescale-title-large-font);
-  font-size:      var(--md-sys-typescale-title-large-size);
-  line-height:    var(--md-sys-typescale-title-large-line-height);
-  font-weight:    var(--md-sys-typescale-title-large-weight);
-  letter-spacing: var(--md-sys-typescale-title-large-tracking);
-}
-.wp-block-post-content h5 {
-  font-family:    var(--md-sys-typescale-title-medium-font);
-  font-size:      var(--md-sys-typescale-title-medium-size);
-  line-height:    var(--md-sys-typescale-title-medium-line-height);
-  font-weight:    var(--md-sys-typescale-title-medium-weight);
-  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
-}
-.wp-block-post-content h6 {
-  font-family:    var(--md-sys-typescale-title-small-font);
-  font-size:      var(--md-sys-typescale-title-small-size);
-  line-height:    var(--md-sys-typescale-title-small-line-height);
-  font-weight:    var(--md-sys-typescale-title-small-weight);
-  letter-spacing: var(--md-sys-typescale-title-small-tracking);
 }
 
 /* Heading content margins — asymmetric vertical rhythm.

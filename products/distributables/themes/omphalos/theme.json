@@ -222,6 +222,78 @@
       "letterSpacing": "var(--md-sys-typescale-body-large-tracking)"
     },
     "elements": {
+      "heading": {
+        "color": {
+          "text": "var(--md-sys-color-on-surface)"
+        },
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-headline-large-font)",
+          "fontWeight": "var(--md-sys-typescale-headline-large-weight)",
+          "lineHeight": "normal",
+          "letterSpacing": "0",
+          "textTransform": "none"
+        }
+      },
+      "h1": {
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-headline-large-font)",
+          "fontSize": "var(--md-sys-typescale-headline-large-size)",
+          "lineHeight": "var(--md-sys-typescale-headline-large-line-height)",
+          "fontWeight": "var(--md-sys-typescale-headline-large-weight)",
+          "letterSpacing": "var(--md-sys-typescale-headline-large-tracking)",
+          "textTransform": "none"
+        }
+      },
+      "h2": {
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-headline-medium-font)",
+          "fontSize": "var(--md-sys-typescale-headline-medium-size)",
+          "lineHeight": "var(--md-sys-typescale-headline-medium-line-height)",
+          "fontWeight": "var(--md-sys-typescale-headline-medium-weight)",
+          "letterSpacing": "var(--md-sys-typescale-headline-medium-tracking)",
+          "textTransform": "none"
+        }
+      },
+      "h3": {
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-headline-small-font)",
+          "fontSize": "var(--md-sys-typescale-headline-small-size)",
+          "lineHeight": "var(--md-sys-typescale-headline-small-line-height)",
+          "fontWeight": "var(--md-sys-typescale-headline-small-weight)",
+          "letterSpacing": "var(--md-sys-typescale-headline-small-tracking)",
+          "textTransform": "none"
+        }
+      },
+      "h4": {
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-title-large-font)",
+          "fontSize": "var(--md-sys-typescale-title-large-size)",
+          "lineHeight": "var(--md-sys-typescale-title-large-line-height)",
+          "fontWeight": "var(--md-sys-typescale-title-large-weight)",
+          "letterSpacing": "var(--md-sys-typescale-title-large-tracking)",
+          "textTransform": "none"
+        }
+      },
+      "h5": {
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-title-medium-font)",
+          "fontSize": "var(--md-sys-typescale-title-medium-size)",
+          "lineHeight": "var(--md-sys-typescale-title-medium-line-height)",
+          "fontWeight": "var(--md-sys-typescale-title-medium-weight)",
+          "letterSpacing": "var(--md-sys-typescale-title-medium-tracking)",
+          "textTransform": "none"
+        }
+      },
+      "h6": {
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-title-small-font)",
+          "fontSize": "var(--md-sys-typescale-title-small-size)",
+          "lineHeight": "var(--md-sys-typescale-title-small-line-height)",
+          "fontWeight": "var(--md-sys-typescale-title-small-weight)",
+          "letterSpacing": "var(--md-sys-typescale-title-small-tracking)",
+          "textTransform": "none"
+        }
+      },
       "button": {
         "color": {
           "background": "var(--md-sys-color-primary)",

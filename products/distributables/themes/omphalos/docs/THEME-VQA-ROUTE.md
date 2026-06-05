@@ -1101,3 +1101,40 @@ blocks, and the parked widgets — is CLOSED.
 
 - Archive/search template design (`archive.html`, `search.html`, `home.html`) — template lane.
 - Term list/card/chip surface variants — opt-in style/pattern lane after real use cases.
+
+## §13 — Global Styles promotion (IN PROGRESS)
+
+After the Theme VQA token-binding pass, selected stable defaults are promoted from scoped CSS into
+`theme.json` so the Site Editor / Style Book exposes them as native Global Styles controls.
+
+**Text (DONE).** Global body text lives in `styles.typography` and binds to the M3 body-large
+tokens. This is the source for the Site Editor Typography → Text panel; prose.css still scopes
+long-form surface rhythm and rich-text details to `.wp-block-post-content`.
+
+**Headings (DONE).** `styles.elements.heading` clears the TT5 aggregate heading defaults
+(especially uppercase/letter-spacing/line-height residue), while `styles.elements.h1`…`h6` bind
+the actual level scale:
+
+```txt
+h1 = headline-large   32/40/400
+h2 = headline-medium  28/36/400
+h3 = headline-small   24/32/400
+h4 = title-large      22/28/400
+h5 = title-medium     16/24/500
+h6 = title-small      14/20/500
+```
+
+The Style Book Typography → Headings and Blocks → Heading panels now read from `theme.json`.
+`prose.css` keeps only the long-form margin/rhythm layer around those headings.
+
+**Theme Switcher (DONE).** `styles.blocks.omphalos/theme-switcher` exposes track background,
+padding, and radius in Global Styles. The custom block declares an example + editorStyle so its
+Style Book preview renders the segmented control instead of raw fallback text. Because Style Book
+uses editor-owned `blob:` iframes, `assets/scripts/editor-theme-scheme.js` rewrites those preview
+blobs with the current `data-theme`, Omphalos style cascade, Material Symbols font-face, and the
+current `aria-pressed` active state.
+
+**Next candidates.** Paragraph-specific controls are mostly unnecessary because Text owns the body
+baseline. Continue promotion block-by-block only where a stable global control exists (e.g. image
+rounding, featured image radius, group card variations); keep layout/template-specific decisions in
+the template or opt-in style lanes.

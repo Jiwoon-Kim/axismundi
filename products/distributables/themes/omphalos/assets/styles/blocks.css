@@ -1723,14 +1723,15 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
  * §19d core/navigation — OVERLAY icon controls
  *
  * "Show icon button" on core/navigation configures the overlay OPEN/toggle
- * affordance (`.wp-block-navigation__responsive-container-open`). WordPress
- * renders both open + close as raw inline SVGs. Replace their icon faces with
- * Material Symbols: `menu_open` for the overlay toggle and `close` for the
- * overlay close block/control. The sheet/drawer surface itself remains deferred
- * (A3); this is only the icon face.
+ * affordance (`.wp-block-navigation__responsive-container-open`). When it is
+ * enabled, WordPress renders raw inline SVGs; when disabled, it renders text
+ * ("Menu" / "Close"). Replace only the SVG icon mode with Material Symbols:
+ * `menu` for open, `menu_open` for close. Text mode stays core.
+ * The sheet/drawer surface itself remains deferred (A3); this is only the icon
+ * face.
  * -------------------------------------------------------------------------- */
-.wp-block-navigation__responsive-container-open,
-.wp-block-navigation__responsive-container-close {
+.wp-block-navigation__responsive-container-open:has(> svg),
+.wp-block-navigation__responsive-container-close:has(> svg) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1738,12 +1739,12 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
   block-size: 24px;
   line-height: 1;
 }
-.wp-block-navigation__responsive-container-open > svg,
-.wp-block-navigation__responsive-container-close > svg {
+.wp-block-navigation__responsive-container-open:has(> svg) > svg,
+.wp-block-navigation__responsive-container-close:has(> svg) > svg {
   display: none;
 }
-.wp-block-navigation__responsive-container-open::before,
-.wp-block-navigation__responsive-container-close::before {
+.wp-block-navigation__responsive-container-open:has(> svg)::before,
+.wp-block-navigation__responsive-container-close:has(> svg)::before {
   font-family: "Material Symbols Outlined", sans-serif;
   font-size: 24px;
   font-weight: normal;
@@ -1757,11 +1758,11 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
     "GRAD" var(--md-icon-grad, 0),
     "opsz" 24;
 }
-.wp-block-navigation__responsive-container-open::before {
-  content: "menu_open";
+.wp-block-navigation__responsive-container-open:has(> svg)::before {
+  content: "menu";
 }
-.wp-block-navigation__responsive-container-close::before {
-  content: "close";
+.wp-block-navigation__responsive-container-close:has(> svg)::before {
+  content: "menu_open";
 }
 
 /* ============================================================================

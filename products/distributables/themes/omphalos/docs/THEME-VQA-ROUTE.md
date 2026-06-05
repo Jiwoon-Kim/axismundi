@@ -1,4 +1,4 @@
-# Omphalos — Core Theme blocks VQA route (diagnostic baseline, pre-implementation)
+# Omphalos — Core Theme blocks VQA route (token-binding phase closed)
 
 > **Purpose**: cut the route for the WordPress **Theme** block category (site
 > identity, navigation, Query Loop + post-context blocks, post navigation, comments,
@@ -10,8 +10,58 @@
 > [Theme blocks category](https://wordpress.org/documentation/category/theme-blocks/))
 > are SECONDARY: the category index is incomplete and uses pre-7.0 names, and the
 > blocks-list is broader than what is actually registered.
-> **Status**: route + registry reconciliation. No seed / pattern / CSS yet.
-> **Date**: 2026-06-03 · WP 7.0 · M3 Expressive.
+> **Status**: CLOSED for the Theme-block **token-binding** lane. VQA harnesses,
+> seeds, route docs, and class-based M3 token bindings are implemented for
+> `/vqa-theme/`, `/vqa-theme-comments/`, and `/vqa-theme-archive/`. Remaining work is
+> intentionally deferred into component/template/plugin lanes, not this baseline
+> binding lane.
+> **Date**: 2026-06-05 · WP 7.0 · M3 Expressive.
+
+---
+
+## §0 — Final State (2026-06-05)
+
+The Theme block category baseline is complete at the **token-binding** layer:
+
+```txt
+Phase 1 /vqa-theme/          site identity · navigation · breadcrumbs · Query Loop/post
+                             · post-meta · pagination · parked infra
+Phase 2 /vqa-theme-comments/ comments family · comment-template bubble thread
+                             · comments form text-field/checkbox lite
+Phase 3 /vqa-theme-archive/  query-title archive/search · terms-query/term blocks
+                             · archives/categories/page-list widgets
+```
+
+Implementation principle:
+
+```txt
+Core/TT5 owns context, layout primitives, and template composition.
+Omphalos owns token binding, de-prose chrome fixes, and small opt-in surfaces.
+```
+
+**Done families.**
+
+```txt
+Site identity                 §18
+Navigation + submenu contexts §19–§21
+Breadcrumbs                   §18e2
+Query Loop / post-context     §18b + §18c opt-in cards
+Comments + form controls      §21 + §22 + comments pattern/template
+Archive / terms / query-title §18d
+Parked widgets                §18e
+```
+
+**Deferred lanes (not Theme-token baseline):**
+
+```txt
+Template design       archive.html / search.html / home.html / single.html
+Component Phase 2     full buttons, chips, full text-field/checkbox, nav overlay sheet
+Pattern/style opt-ins cards media, term chips/cards, expanded rail/sidebar contexts
+Plugin/form lane      inline reply composer, richer comment form markup
+AP/object lane        microblog NOTE renderer / custom post type templates
+```
+
+Everything below remains as the diagnostic history and implementation record.
 
 ---
 
@@ -133,16 +183,17 @@ Excluded entirely: post-types-label, posts-list.
 
 ---
 
-## §6 — Write scope & validation plan
+## §6 — Write scope & validation plan (closed)
 
-- **This step**: route only. Next: `seed-vqa-theme.php` (demo posts/pages/cats/tags/
-  comments + featured/no-featured + prev/next), `patterns/vqa-theme.php` (Phase 1
-  set), `seed.ps1` wiring. CSS-0 — observe registration / render / context / validity
-  only, no theme CSS yet.
-- **Validation**: `serialize_blocks(parse_blocks($body)) === $body` round-trip for the
-  pattern; front-end render of every specimen (no PHP/console errors); editor opens
-  the page with NO block-invalid warnings (esp. navigation). Computed CSS is a LATER
-  step.
+- **Closed scope**: route + seed + VQA pages + token binding. Theme VQA is split into
+  three live pattern-reference pages wired through `seed.ps1`: `/vqa-theme/`,
+  `/vqa-theme-comments/`, and `/vqa-theme-archive/`.
+- **Validation used**: runtime registry reconciliation; seeded dynamic context
+  (posts/terms/comments/navigation); front-end computed CSS checks in light/dark;
+  editor/static-save traps documented for navigation and terms-query; PHP lint and
+  `git diff --check` before commits.
+- **Current boundary**: do not continue broadening this lane with template redesign or
+  rich component behaviour. Those are deferred lanes listed in §0.
 
 ---
 

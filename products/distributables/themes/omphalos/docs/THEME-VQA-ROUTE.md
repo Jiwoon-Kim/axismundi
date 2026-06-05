@@ -1127,14 +1127,14 @@ h6 = title-small      14/20/500
 The Style Book Typography → Headings and Blocks → Heading panels now read from `theme.json`.
 `prose.css` keeps only the long-form margin/rhythm layer around those headings.
 
-**Links + captions (DONE).** `styles.elements.link` binds the FSE Links element colour to
-`primary` only. It deliberately does **not** set a typography scale: Material links inherit the
-surrounding text style, and a global `a` font-size would incorrectly shrink/grow heading,
-navigation, and metadata links. `styles.elements.caption` binds WordPress captions
-(`.wp-element-caption` + media/table figcaptions) to M3 `body-small` and
-`on-surface-variant`. Verified via `wp_get_global_stylesheet()`: WordPress emits
-`a:where(:not(.wp-element-button)){ color: var(--md-sys-color-primary); }` and the caption
-selector group with the body-small token fields.
+**Links + captions (DONE for typography).** Links deliberately get **no typography binding** in
+`theme.json`: Material links inherit the surrounding text style, and a global `a` font-size or
+line-height would incorrectly shrink/grow heading, navigation, and metadata links. Link colour
+belongs to a separate Global Styles colour lane, not this typography pass. `styles.elements.caption`
+binds WordPress captions (`.wp-element-caption` + media/table figcaptions) to M3 `body-small`.
+The muted caption colour (`on-surface-variant`) is present for the caption element because WP groups
+caption colour and typography under the same element control, but should still be audited again in
+the colour lane.
 
 **Buttons (DONE).** `styles.elements.button` binds the FSE Buttons element to M3 label-large
 typography, primary/on-primary colour, full-radius shape, and horizontal padding. Richer button
@@ -1147,7 +1147,7 @@ uses editor-owned `blob:` iframes, `assets/scripts/editor-theme-scheme.js` rewri
 blobs with the current `data-theme`, Omphalos style cascade, Material Symbols font-face, and the
 current `aria-pressed` active state.
 
-**Current FSE Typography Elements coverage.** Text, Links, Headings, Captions, and Buttons are now
-mapped in `theme.json`. Continue promotion block-by-block only where a stable global control exists
-(e.g. image rounding, featured image radius, group card variations); keep layout/template-specific
-decisions in the template or opt-in style lanes.
+**Current FSE Typography Elements coverage.** Text, Headings, Captions, and Buttons are mapped in
+`theme.json`; Links intentionally inherit typography. Continue promotion block-by-block only where a
+stable global control exists (e.g. image rounding, featured image radius, group card variations);
+keep layout/template-specific decisions in the template or opt-in style lanes.

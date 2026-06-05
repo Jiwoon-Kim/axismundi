@@ -117,11 +117,15 @@
 		var links = styleBookStyles.map( function ( path ) {
 			return '<link rel="stylesheet" href="' + themeRootUrl + path + '" data-omphalos-stylebook-assets="true">';
 		} ).join( '' );
+		/* The Style Book typography specimen uses one long mixed-script sample
+		 * without spaces. TT5's defaults fit by chance; M3 type can overflow the
+		 * blob iframe unless the lab's mixed-script break policy is present. */
 		var materialSymbolsFont =
 			'<style data-omphalos-stylebook-assets="true">' +
 			'@font-face{font-family:"Material Symbols Outlined";font-style:normal;font-weight:400;font-display:block;src:url("' +
 			themeRootUrl +
 			'assets/icons/material-symbols-outlined/material-symbols-outlined.woff2") format("woff2");}' +
+			'.editor-styles-wrapper,.block-editor-block-preview__content,body{word-break:keep-all;overflow-wrap:anywhere;}' +
 			'</style>';
 		var assets = materialSymbolsFont + links;
 

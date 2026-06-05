@@ -448,6 +448,40 @@
   background-color: color-mix(in srgb, var(--md-sys-color-primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 }
 
+/* core/buttons as a visual M3 Button group approximation. WordPress owns the
+ * row layout and each child `core/button` remains an individual button/link;
+ * this opt-in variation only connects the geometry (2px gap, pill outer edges,
+ * small inner corners). It does NOT create radio / aria-pressed semantics. */
+.wp-block-buttons.is-style-connected {
+  gap: 2px;
+  flex-wrap: nowrap;
+}
+.wp-block-buttons.is-style-connected > .wp-block-button {
+  margin: 0;
+}
+.wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link {
+  border-radius: var(--md-sys-shape-corner-small);
+}
+.wp-block-buttons.is-style-connected > .wp-block-button:first-child > .wp-block-button__link {
+  border-start-start-radius: var(--comp-button-radius);
+  border-end-start-radius: var(--comp-button-radius);
+}
+.wp-block-buttons.is-style-connected > .wp-block-button:last-child > .wp-block-button__link {
+  border-start-end-radius: var(--comp-button-radius);
+  border-end-end-radius: var(--comp-button-radius);
+}
+.wp-block-buttons.is-style-connected > .wp-block-button > .wp-block-button__link:active {
+  border-radius: var(--md-sys-shape-corner-extra-small);
+}
+.wp-block-buttons.is-style-connected > .wp-block-button:first-child > .wp-block-button__link:active {
+  border-start-start-radius: var(--comp-button-radius);
+  border-end-start-radius: var(--comp-button-radius);
+}
+.wp-block-buttons.is-style-connected > .wp-block-button:last-child > .wp-block-button__link:active {
+  border-start-end-radius: var(--comp-button-radius);
+  border-end-end-radius: var(--comp-button-radius);
+}
+
 /* ============================================================
  * §10 core/file — download row (consumes the §9 button base)
  *

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/WordPress/gutenberg/wp/7.0/schemas/json/theme.json",
+  "version": 3,
+  "title": "Tonal",
+  "slug": "tonal",
+  "blockTypes": [ "core/button" ],
+  "styles": {
+    "color": {
+      "background": "var(--md-sys-color-secondary-container)",
+      "text": "var(--md-sys-color-on-secondary-container)"
+    },
+    "border": {
+      "color": "transparent",
+      "radius": "var(--comp-button-radius)",
+      "style": "solid",
+      "width": "0px"
+    },
+    "shadow": "none"
+  }
+}

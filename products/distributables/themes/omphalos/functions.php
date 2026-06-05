@@ -222,6 +222,16 @@ function omphalos_register_block_styles() : void {
 			)
 		);
 	}
+	// core/buttons as a visual Button group approximation. This owns connected
+	// geometry for a row of core/button children only; selected/toggle semantics
+	// stay plugin/custom-markup territory.
+	register_block_style(
+		'core/buttons',
+		array(
+			'name'  => 'connected',
+			'label' => __( 'Connected', 'omphalos' ),
+		)
+	);
 	// core/separator — M3 inset dividers. Core ships default / wide / dots; the
 	// theme adds the two inset variants. CSS in blocks.css §11.
 	foreach (

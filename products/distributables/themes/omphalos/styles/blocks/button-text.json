@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/WordPress/gutenberg/wp/7.0/schemas/json/theme.json",
+  "version": 3,
+  "title": "Text",
+  "slug": "text",
+  "blockTypes": [ "core/button" ],
+  "styles": {
+    "color": {
+      "background": "transparent",
+      "text": "var(--md-sys-color-primary)"
+    },
+    "border": {
+      "color": "transparent",
+      "radius": "var(--comp-button-radius)",
+      "style": "solid",
+      "width": "0px"
+    },
+    "shadow": "none",
+    "spacing": {
+      "padding": {
+        "left": "var(--space-md)",
+        "right": "var(--space-md)"
+      }
+    }
+  }
+}

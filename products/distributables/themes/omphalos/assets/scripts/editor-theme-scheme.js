@@ -14,6 +14,20 @@
 	var VALID = [ 'auto', 'light', 'dark' ];
 	var COOKIE = 'omphalos_theme';
 	var currentScheme = null;
+	var scriptSrc = ( document.currentScript && document.currentScript.src ) || '';
+	var themeRootUrl = scriptSrc.replace( /assets\/scripts\/editor-theme-scheme\.js(?:\?.*)?$/, '' );
+	var styleBookStyles = [
+		'assets/styles/tokens.ref.css',
+		'assets/styles/tokens.sys.light.css',
+		'assets/styles/tokens.sys.core.css',
+		'assets/styles/tokens.comp.css',
+		'assets/styles/tokens.sys.dark.css',
+		'assets/styles/foundation.css',
+		'assets/styles/prose.css',
+		'assets/styles/blocks.css',
+		'assets/styles/icons.css',
+		'blocks/theme-switcher/style.css',
+	];
 
 	function normalize( value ) {
 		return VALID.indexOf( value ) === -1 ? 'auto' : value;
@@ -34,11 +48,35 @@
 	function setHtmlThemeAttribute( html, scheme ) {
 		if ( /<html\b/i.test( html ) ) {
 			if ( /\sdata-theme=(["'])(auto|light|dark)\1/i.test( html ) ) {
-				return html.replace( /\sdata-theme=(["'])(auto|light|dark)\1/i, ' data-theme="' + scheme + '"' );
+				return injectStyleBookAssets(
+					html.replace( /\sdata-theme=(["'])(auto|light|dark)\1/i, ' data-theme="' + scheme + '"' )
+				);
 			}
-			return html.replace( /<html\b/i, '<html data-theme="' + scheme + '"' );
+			return injectStyleBookAssets( html.replace( /<html\b/i, '<html data-theme="' + scheme + '"' ) );
 		}
 		return html;
+	}
+
+	function injectStyleBookAssets( html ) {
+		if ( ! themeRootUrl || html.indexOf( 'omphalos-stylebook-assets' ) !== -1 ) {
+			return html;
+		}
+
+		var links = styleBookStyles.map( function ( path ) {
+			return '<link rel="stylesheet" href="' + themeRootUrl + path + '" data-omphalos-stylebook-assets="true">';
+		} ).join( '' );
+		var materialSymbolsFont =
+			'<style data-omphalos-stylebook-assets="true">' +
+			'@font-face{font-family:"Material Symbols Outlined";font-style:normal;font-weight:400;font-display:block;src:url("' +
+			themeRootUrl +
+			'assets/icons/material-symbols-outlined/material-symbols-outlined.woff2") format("woff2");}' +
+			'</style>';
+		var assets = materialSymbolsFont + links;
+
+		if ( /<\/head>/i.test( html ) ) {
+			return html.replace( /<\/head>/i, assets + '</head>' );
+		}
+		return assets + html;
 	}
 
 	function isPreviewDocument( doc ) {
@@ -71,7 +109,7 @@
 		var scheme = currentScheme || readScheme();
 		if (
 			! iframe ||
-			! iframe.classList.contains( 'editor-style-book__iframe' ) ||
+			! isEditorBlobPreviewIframe( iframe ) ||
 			! iframe.src ||
 			iframe.src.indexOf( 'blob:' ) !== 0 ||
 			iframe.dataset.omphalosThemeSchemeBlob === scheme ||
@@ -110,6 +148,18 @@
 			.finally( function () {
 				delete iframe.dataset.omphalosThemeSchemeRewriting;
 			} );
+	}
+
+	function isEditorBlobPreviewIframe( iframe ) {
+		return !! (
+			iframe &&
+			iframe.src &&
+			iframe.src.indexOf( 'blob:' ) === 0 &&
+			(
+				iframe.classList.contains( 'editor-style-book__iframe' ) ||
+				iframe.getAttribute( 'title' ) === 'Editor canvas'
+			)
+		);
 	}
 
 	function getCanvasIframes() {

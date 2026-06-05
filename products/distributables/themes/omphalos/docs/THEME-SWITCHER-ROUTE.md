@@ -63,9 +63,11 @@ full-page caching the cached HTML carries the first visitor's mode. So:
 small `enqueue_block_editor_assets` script copies the same `omphalos_theme`
 cookie onto editor-owned preview `<html data-theme>` roots. The normal editor
 canvas is a same-origin iframe and can be patched directly; the Style Book uses a
-`blob:` iframe, so the bridge rewrites that preview blob with the current
-`data-theme`. No second persistence channel is introduced: front, editor canvas,
-and Style Book all consume the same cookie contract, and `auto` still follows
+`blob:` iframe, so the bridge rewrites editor-owned preview blobs with the
+current `data-theme` and injects the Omphalos editor style cascade needed by the
+custom block preview (tokens → block chrome → icons → theme-switcher style).
+No second persistence channel is introduced: front, editor canvas, and Style Book
+all consume the same cookie contract, and `auto` still follows
 `prefers-color-scheme`.
 
 ### 3.2 No build toolchain
@@ -116,10 +118,10 @@ label text alongside (or visually-hidden for icon-only).
 ```
 blocks/theme-switcher/
   block.json     (apiVersion 3; render: file:./render.php; editorScript;
-                  viewScriptModule: file:./view.js; style: file:./style.css;
-                  category: design)
+                  editorStyle + style; example for Style Book / inserter;
+                  viewScriptModule: file:./view.js; category: design)
   render.php     (SSR control + best-effort active from cookie)
-  edit.js        (static editor preview)
+  edit.js        (editor preview + cookie-writing controls)
   view.js        (Interactivity store: setScheme → set data-theme + cookie)
   style.css      (segmented control behaviour; track defaults in theme.json)
 assets/scripts/editor-theme-scheme.js

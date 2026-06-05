@@ -9,6 +9,9 @@
 	"description": "Switches between Auto, Light, and Dark theme modes.",
 	"keywords": [ "theme", "dark mode", "color scheme", "appearance", "light", "dark" ],
 	"textdomain": "omphalos",
+	"example": {
+		"attributes": {}
+	},
 	"supports": {
 		"html": false,
 		"align": false,
@@ -25,6 +28,7 @@
 		}
 	},
 	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./style.css",
 	"style": "file:./style.css",
 	"render": "file:./render.php",
 	"viewScriptModule": "file:./view.js"

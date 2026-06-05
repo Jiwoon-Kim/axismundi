@@ -1156,6 +1156,17 @@ only, not font-size/line-height/weight/tracking. Component/context links that ar
 links (navigation, meta, comments, pagination) still keep their scoped de-prose role-colour
 bindings and may override the global link colour by class.
 
+**Palette UI token bridge (DONE).** `settings.color.palette` uses `var(--md-sys-color-*)` entries so
+the palette tracks the same light/dark system tokens as the front end. WordPress renders those
+palette swatches in the **editor parent document**, not inside the stylebook/canvas iframe. Therefore
+`add_editor_style()` is not enough: without token CSS in the parent document, swatches exist in the
+DOM but compute to transparent. `assets/scripts/editor-theme-scheme.js` now injects only the token
+stylesheets (`tokens.ref`, `tokens.sys.light`, `tokens.sys.core`, `tokens.comp`,
+`tokens.sys.dark`) into the parent editor document, leaving layout/prose/block CSS out so admin UI
+chrome is not polluted. The script is versioned with `filemtime()` so palette fixes are not hidden
+behind the fixed theme version. Verified on Styles → Colours → Palette: `Primary` computes to
+`rgb(103, 80, 164)` in light mode instead of transparent.
+
 **Theme Switcher (DONE).** `styles.blocks.omphalos/theme-switcher` exposes track background,
 padding, and radius in Global Styles. The custom block declares an example + editorStyle so its
 Style Book preview renders the segmented control instead of raw fallback text. Because Style Book

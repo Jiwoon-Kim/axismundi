@@ -53,11 +53,14 @@ function omphalos_theme_scheme_editor_assets() : void {
 		return;
 	}
 
+	$path    = get_stylesheet_directory() . '/assets/scripts/editor-theme-scheme.js';
+	$version = file_exists( $path ) ? (string) filemtime( $path ) : OMPHALOS_VERSION;
+
 	wp_enqueue_script(
 		'omphalos-editor-theme-scheme',
 		$uri,
 		array(),
-		OMPHALOS_VERSION,
+		$version,
 		true
 	);
 }

@@ -16,6 +16,13 @@
 	var currentScheme = null;
 	var scriptSrc = ( document.currentScript && document.currentScript.src ) || '';
 	var themeRootUrl = scriptSrc.replace( /assets\/scripts\/editor-theme-scheme\.js(?:\?.*)?$/, '' );
+	var editorTokenStyles = [
+		'assets/styles/tokens.ref.css',
+		'assets/styles/tokens.sys.light.css',
+		'assets/styles/tokens.sys.core.css',
+		'assets/styles/tokens.comp.css',
+		'assets/styles/tokens.sys.dark.css',
+	];
 	var styleBookStyles = [
 		'assets/styles/tokens.ref.css',
 		'assets/styles/tokens.sys.light.css',
@@ -42,8 +49,25 @@
 		if ( ! doc || ! doc.documentElement ) {
 			return;
 		}
+		if ( doc === document ) {
+			injectEditorTokenAssets( doc );
+		}
 		doc.documentElement.dataset.theme = currentScheme || readScheme();
 		syncThemeSwitcherButtons( doc, currentScheme || readScheme() );
+	}
+
+	function injectEditorTokenAssets( doc ) {
+		if ( ! themeRootUrl || ! doc.head || doc.querySelector( '[data-omphalos-editor-token-assets]' ) ) {
+			return;
+		}
+
+		editorTokenStyles.forEach( function ( path ) {
+			var link = doc.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.href = themeRootUrl + path;
+			link.dataset.omphalosEditorTokenAssets = 'true';
+			doc.head.appendChild( link );
+		} );
 	}
 
 	function syncThemeSwitcherButtons( doc, scheme ) {

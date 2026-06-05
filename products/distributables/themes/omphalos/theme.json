@@ -222,6 +222,11 @@
       "letterSpacing": "var(--md-sys-typescale-body-large-tracking)"
     },
     "elements": {
+      "link": {
+        "color": {
+          "text": "var(--md-sys-color-primary)"
+        }
+      },
       "heading": {
         "color": {
           "text": "var(--md-sys-color-on-surface)"
@@ -292,6 +297,18 @@
           "fontWeight": "var(--md-sys-typescale-title-small-weight)",
           "letterSpacing": "var(--md-sys-typescale-title-small-tracking)",
           "textTransform": "none"
+        }
+      },
+      "caption": {
+        "color": {
+          "text": "var(--md-sys-color-on-surface-variant)"
+        },
+        "typography": {
+          "fontFamily": "var(--md-sys-typescale-body-small-font)",
+          "fontSize": "var(--md-sys-typescale-body-small-size)",
+          "lineHeight": "var(--md-sys-typescale-body-small-line-height)",
+          "fontWeight": "var(--md-sys-typescale-body-small-weight)",
+          "letterSpacing": "var(--md-sys-typescale-body-small-tracking)"
         }
       },
       "button": {

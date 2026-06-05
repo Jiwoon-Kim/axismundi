@@ -1127,6 +1127,19 @@ h6 = title-small      14/20/500
 The Style Book Typography → Headings and Blocks → Heading panels now read from `theme.json`.
 `prose.css` keeps only the long-form margin/rhythm layer around those headings.
 
+**Links + captions (DONE).** `styles.elements.link` binds the FSE Links element colour to
+`primary` only. It deliberately does **not** set a typography scale: Material links inherit the
+surrounding text style, and a global `a` font-size would incorrectly shrink/grow heading,
+navigation, and metadata links. `styles.elements.caption` binds WordPress captions
+(`.wp-element-caption` + media/table figcaptions) to M3 `body-small` and
+`on-surface-variant`. Verified via `wp_get_global_stylesheet()`: WordPress emits
+`a:where(:not(.wp-element-button)){ color: var(--md-sys-color-primary); }` and the caption
+selector group with the body-small token fields.
+
+**Buttons (DONE).** `styles.elements.button` binds the FSE Buttons element to M3 label-large
+typography, primary/on-primary colour, full-radius shape, and horizontal padding. Richer button
+variants (elevated/outlined/tonal/text/icon) remain a Component Phase 2 lane.
+
 **Theme Switcher (DONE).** `styles.blocks.omphalos/theme-switcher` exposes track background,
 padding, and radius in Global Styles. The custom block declares an example + editorStyle so its
 Style Book preview renders the segmented control instead of raw fallback text. Because Style Book
@@ -1134,7 +1147,7 @@ uses editor-owned `blob:` iframes, `assets/scripts/editor-theme-scheme.js` rewri
 blobs with the current `data-theme`, Omphalos style cascade, Material Symbols font-face, and the
 current `aria-pressed` active state.
 
-**Next candidates.** Paragraph-specific controls are mostly unnecessary because Text owns the body
-baseline. Continue promotion block-by-block only where a stable global control exists (e.g. image
-rounding, featured image radius, group card variations); keep layout/template-specific decisions in
-the template or opt-in style lanes.
+**Current FSE Typography Elements coverage.** Text, Links, Headings, Captions, and Buttons are now
+mapped in `theme.json`. Continue promotion block-by-block only where a stable global control exists
+(e.g. image rounding, featured image radius, group card variations); keep layout/template-specific
+decisions in the template or opt-in style lanes.

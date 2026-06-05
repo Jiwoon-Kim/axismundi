@@ -268,7 +268,7 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|headline-large",
-          "lineHeight": "40px",
+          "lineHeight": "1.25",
           "fontStyle": "normal",
           "fontWeight": "400",
           "letterSpacing": "0px",
@@ -279,7 +279,7 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|headline-medium",
-          "lineHeight": "36px",
+          "lineHeight": "1.286",
           "fontStyle": "normal",
           "fontWeight": "400",
           "letterSpacing": "0px",
@@ -290,7 +290,7 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|headline-small",
-          "lineHeight": "32px",
+          "lineHeight": "1.333",
           "fontStyle": "normal",
           "fontWeight": "400",
           "letterSpacing": "0px",
@@ -301,7 +301,7 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|title-large",
-          "lineHeight": "28px",
+          "lineHeight": "1.273",
           "fontStyle": "normal",
           "fontWeight": "400",
           "letterSpacing": "0px",
@@ -312,7 +312,7 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|title-medium",
-          "lineHeight": "24px",
+          "lineHeight": "1.5",
           "fontStyle": "normal",
           "fontWeight": "500",
           "letterSpacing": "0.15px",
@@ -323,7 +323,7 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|title-small",
-          "lineHeight": "20px",
+          "lineHeight": "1.429",
           "fontStyle": "normal",
           "fontWeight": "500",
           "letterSpacing": "0.1px",

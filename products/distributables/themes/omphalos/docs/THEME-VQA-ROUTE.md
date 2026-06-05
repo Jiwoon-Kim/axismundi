@@ -1168,8 +1168,8 @@ swatch resolution. The script is versioned with `filemtime()` so palette fixes a
 the fixed theme version. Verified on Styles → Colours → Palette: `Primary` computes to
 `rgb(103, 80, 164)` in light mode instead of transparent.
 
-**Shadows (DONE, first pass).** Site Editor → Styles → Shadows exposes M3 elevation shadow presets
-as theme presets:
+**Shadows (DONE, first pass).** Site Editor → Styles → Shadows keeps WordPress' default creative
+shadow presets available and adds M3 elevation shadows as theme presets:
 
 ```txt
 Elevation 0 = --md-sys-elevation-shadow-level0
@@ -1183,8 +1183,10 @@ Elevation 5 = --md-sys-elevation-shadow-level5
 The preset values intentionally point at system tokens rather than hard-coded shadow strings. The
 token layer owns the light/dark policy: light mode resolves to real elevation shadows, while
 `tokens.sys.dark.css` suppresses levels 1–5 to `none` so dark mode stays tonal rather than shadowed.
-Verified: `wp_get_global_stylesheet()` emits `--wp--preset--shadow--elevation-*`, and the Style
-Editor Shadows panel lists THEME presets `Elevation 0`…`Elevation 5`.
+Core presets (Natural/Deep/Sharp/etc.) are not hidden: shadows are a user-facing style tool, and the
+M3 elevation set is an additional semantic ladder rather than the only allowed vocabulary. Verified:
+`wp_get_global_stylesheet()` emits `--wp--preset--shadow--elevation-*`, and the Style Editor Shadows
+panel lists THEME presets `Elevation 0`…`Elevation 5`.
 
 **Theme Switcher (DONE).** `styles.blocks.omphalos/theme-switcher` exposes track background,
 padding, and radius in Global Styles. The custom block declares an example + editorStyle so its

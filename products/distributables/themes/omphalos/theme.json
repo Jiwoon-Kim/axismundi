@@ -66,7 +66,7 @@
       ]
     },
     "shadow": {
-      "defaultPresets": false,
+      "defaultPresets": true,
       "presets": [
         { "slug": "elevation-0", "name": "Elevation 0", "shadow": "var(--md-sys-elevation-shadow-level0)" },
         { "slug": "elevation-1", "name": "Elevation 1", "shadow": "var(--md-sys-elevation-shadow-level1)" },

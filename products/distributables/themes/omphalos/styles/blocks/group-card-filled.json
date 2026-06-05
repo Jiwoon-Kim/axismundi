@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.wp.org/wp/6.8/theme.json",
+  "version": 3,
+  "title": "Card (filled)",
+  "slug": "card-filled",
+  "blockTypes": [ "core/group" ],
+  "styles": {
+    "color": {
+      "background": "var(--md-sys-color-surface-container-highest)",
+      "text": "var(--md-sys-color-on-surface)"
+    },
+    "border": {
+      "radius": "var(--comp-card-radius)"
+    },
+    "spacing": {
+      "padding": "var(--comp-card-padding)"
+    }
+  }
+}

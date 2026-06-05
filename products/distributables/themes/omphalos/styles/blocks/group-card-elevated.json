@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.wp.org/wp/6.8/theme.json",
+  "version": 3,
+  "title": "Card (elevated)",
+  "slug": "card-elevated",
+  "blockTypes": [ "core/group" ],
+  "styles": {
+    "color": {
+      "background": "var(--md-sys-color-surface-container-low)",
+      "text": "var(--md-sys-color-on-surface)"
+    },
+    "border": {
+      "radius": "var(--comp-card-radius)"
+    },
+    "spacing": {
+      "padding": "var(--comp-card-padding)"
+    },
+    "shadow": "var(--md-sys-elevation-shadow-level1)"
+  }
+}

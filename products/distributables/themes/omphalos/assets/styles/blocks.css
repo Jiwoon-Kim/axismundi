@@ -275,12 +275,13 @@
  *
  * Ontology: a bare core/group is a plain LAYOUT container and gets NO chrome —
  * only these opt-in style variations (registered via register_block_style in
- * functions.php) turn a group into an M3 Card surface. Keeping the card chrome
+ * functions.php and theme.json partials) turn a group into an M3 Card surface.
+ * Keeping the card chrome
  * on the variation, never on `.wp-block-group` itself, is what stops every
  * layout group in a pattern from accidentally reading as a card.
  *
  * The three variants map to the M3 Card types (ported from the lab Group bridge,
- * re-contracted for the FSE post-content surface):
+ * re-contracted for FSE block chrome and the Site Editor style-variation preview):
  *   is-style-card-filled    -> Filled card   — surface-container-highest
  *   is-style-card-elevated  -> Elevated card — surface-container-low + level-1 shadow
  *   is-style-card-outlined  -> Outlined card — surface + outline-variant hairline
@@ -289,23 +290,23 @@
  * not clipped). These are CONTENT cards; a whole-card action/navigation is a
  * markup + semantic decision (button/anchor), not this visual variation.
  * ============================================================ */
-.wp-block-post-content .wp-block-group.is-style-card-filled,
-.wp-block-post-content .wp-block-group.is-style-card-elevated,
-.wp-block-post-content .wp-block-group.is-style-card-outlined {
+.wp-block-group.is-style-card-filled,
+.wp-block-group.is-style-card-elevated,
+.wp-block-group.is-style-card-outlined {
   padding: var(--comp-card-padding);
   border-radius: var(--comp-card-radius);
   overflow: clip;
 }
-.wp-block-post-content .wp-block-group.is-style-card-filled {
+.wp-block-group.is-style-card-filled {
   background-color: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
 }
-.wp-block-post-content .wp-block-group.is-style-card-elevated {
+.wp-block-group.is-style-card-elevated {
   background-color: var(--md-sys-color-surface-container-low);
   color: var(--md-sys-color-on-surface);
   box-shadow: var(--md-sys-elevation-shadow-level1);
 }
-.wp-block-post-content .wp-block-group.is-style-card-outlined {
+.wp-block-group.is-style-card-outlined {
   background-color: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
   outline: 1px solid var(--md-sys-color-outline-variant);

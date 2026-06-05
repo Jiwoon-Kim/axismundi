@@ -268,10 +268,10 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|headline-large",
-          "lineHeight": "var(--md-sys-typescale-headline-large-line-height)",
+          "lineHeight": "40px",
           "fontStyle": "normal",
           "fontWeight": "400",
-          "letterSpacing": "var(--md-sys-typescale-headline-large-tracking)",
+          "letterSpacing": "0px",
           "textTransform": "none"
         }
       },
@@ -279,10 +279,10 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|headline-medium",
-          "lineHeight": "var(--md-sys-typescale-headline-medium-line-height)",
+          "lineHeight": "36px",
           "fontStyle": "normal",
           "fontWeight": "400",
-          "letterSpacing": "var(--md-sys-typescale-headline-medium-tracking)",
+          "letterSpacing": "0px",
           "textTransform": "none"
         }
       },
@@ -290,10 +290,10 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|headline-small",
-          "lineHeight": "var(--md-sys-typescale-headline-small-line-height)",
+          "lineHeight": "32px",
           "fontStyle": "normal",
           "fontWeight": "400",
-          "letterSpacing": "var(--md-sys-typescale-headline-small-tracking)",
+          "letterSpacing": "0px",
           "textTransform": "none"
         }
       },
@@ -301,10 +301,10 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|title-large",
-          "lineHeight": "var(--md-sys-typescale-title-large-line-height)",
+          "lineHeight": "28px",
           "fontStyle": "normal",
           "fontWeight": "400",
-          "letterSpacing": "var(--md-sys-typescale-title-large-tracking)",
+          "letterSpacing": "0px",
           "textTransform": "none"
         }
       },
@@ -312,10 +312,10 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|title-medium",
-          "lineHeight": "var(--md-sys-typescale-title-medium-line-height)",
+          "lineHeight": "24px",
           "fontStyle": "normal",
           "fontWeight": "500",
-          "letterSpacing": "var(--md-sys-typescale-title-medium-tracking)",
+          "letterSpacing": "0.15px",
           "textTransform": "none"
         }
       },
@@ -323,10 +323,10 @@
         "typography": {
           "fontFamily": "var:preset|font-family|roboto-flex",
           "fontSize": "var:preset|font-size|title-small",
-          "lineHeight": "var(--md-sys-typescale-title-small-line-height)",
+          "lineHeight": "20px",
           "fontStyle": "normal",
           "fontWeight": "500",
-          "letterSpacing": "var(--md-sys-typescale-title-small-tracking)",
+          "letterSpacing": "0.1px",
           "textTransform": "none"
         }
       },

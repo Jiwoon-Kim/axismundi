@@ -66,6 +66,9 @@ canvas is a same-origin iframe and can be patched directly; the Style Book uses 
 `blob:` iframe, so the bridge rewrites editor-owned preview blobs with the
 current `data-theme` and injects the Omphalos editor style cascade needed by the
 custom block preview (tokens → block chrome → icons → theme-switcher style).
+The same pass also rewrites the preview block's `aria-pressed` state, so a
+scheme change made from a front-end theme switcher updates both Style Book colour
+tokens and the active segment.
 No second persistence channel is introduced: front, editor canvas, and Style Book
 all consume the same cookie contract, and `auto` still follows
 `prefers-color-scheme`.

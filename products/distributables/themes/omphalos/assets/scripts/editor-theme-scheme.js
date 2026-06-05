@@ -43,9 +43,20 @@
 			return;
 		}
 		doc.documentElement.dataset.theme = currentScheme || readScheme();
+		syncThemeSwitcherButtons( doc, currentScheme || readScheme() );
+	}
+
+	function syncThemeSwitcherButtons( doc, scheme ) {
+		if ( ! doc || ! doc.querySelectorAll ) {
+			return;
+		}
+		doc.querySelectorAll( '.wp-block-omphalos-theme-switcher [data-theme-mode]' ).forEach( function ( button ) {
+			button.setAttribute( 'aria-pressed', button.getAttribute( 'data-theme-mode' ) === scheme ? 'true' : 'false' );
+		} );
 	}
 
 	function setHtmlThemeAttribute( html, scheme ) {
+		html = setThemeSwitcherActiveState( html, scheme );
 		if ( /<html\b/i.test( html ) ) {
 			if ( /\sdata-theme=(["'])(auto|light|dark)\1/i.test( html ) ) {
 				return injectStyleBookAssets(
@@ -55,6 +66,24 @@
 			return injectStyleBookAssets( html.replace( /<html\b/i, '<html data-theme="' + scheme + '"' ) );
 		}
 		return html;
+	}
+
+	function setThemeSwitcherActiveState( html, scheme ) {
+		return html.replace( /<button\b[^>]*>/gi, function ( tag ) {
+			var modeMatch = tag.match( /\bdata-theme-mode=(["'])(auto|light|dark)\1/i );
+			var mode = modeMatch && modeMatch[ 2 ];
+			var pressed = mode === scheme ? 'true' : 'false';
+
+			if ( ! mode ) {
+				return tag;
+			}
+
+			if ( /\saria-pressed=(["'])(true|false)\1/i.test( tag ) ) {
+				return tag.replace( /\saria-pressed=(["'])(true|false)\1/i, ' aria-pressed="' + pressed + '"' );
+			}
+
+			return tag.replace( />$/, ' aria-pressed="' + pressed + '">' );
+		} );
 	}
 
 	function injectStyleBookAssets( html ) {

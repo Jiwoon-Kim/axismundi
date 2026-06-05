@@ -38,6 +38,32 @@ function omphalos_theme_scheme_head_script() : void {
 add_action( 'wp_head', 'omphalos_theme_scheme_head_script', 0 );
 
 /**
+ * Enqueue the editor canvas colour-scheme bridge.
+ *
+ * The editor iframe does not execute wp_head, so the front-end head script never
+ * runs inside the canvas. The bridge copies the same omphalos_theme cookie onto
+ * the iframe document's <html data-theme>, keeping front/editor previews aligned
+ * without introducing a second persistence mechanism.
+ *
+ * @return void
+ */
+function omphalos_theme_scheme_editor_assets() : void {
+	$uri = omphalos_asset_uri( 'assets/scripts/editor-theme-scheme.js' );
+	if ( null === $uri ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'omphalos-editor-theme-scheme',
+		$uri,
+		array(),
+		OMPHALOS_VERSION,
+		true
+	);
+}
+add_action( 'enqueue_block_editor_assets', 'omphalos_theme_scheme_editor_assets' );
+
+/**
  * Register the omphalos/theme-switcher block.
  *
  * Phase 2: shell only — server render (render.php) + static editor preview

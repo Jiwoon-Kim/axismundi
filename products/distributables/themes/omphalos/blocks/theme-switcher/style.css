@@ -17,9 +17,8 @@
 	inline-size: fit-content;
 	max-inline-size: 100%;
 	gap: 2px;
-	padding: 2px;
-	background-color: var(--md-sys-color-surface-container);
-	border-radius: var(--md-sys-shape-corner-full);
+	/* Track colour, padding, and radius are registered as Global Styles block
+	 * defaults in theme.json, so the Site Editor can inspect/override them. */
 }
 
 /* Per-segment re-skin (scoped so it beats the §9 .wp-element-button base). The

@@ -12,7 +12,17 @@
 	"supports": {
 		"html": false,
 		"align": false,
-		"interactivity": true
+		"interactivity": true,
+		"color": {
+			"text": true,
+			"background": true
+		},
+		"spacing": {
+			"padding": true
+		},
+		"__experimentalBorder": {
+			"radius": true
+		}
 	},
 	"editorScript": "file:./edit.js",
 	"style": "file:./style.css",

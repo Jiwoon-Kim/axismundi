@@ -17,7 +17,7 @@
 | Modes | **auto / light / dark** (3-state) |
 | Persistence | **cookie only** for now (logged-in user-meta deferred) |
 | Apply | set `<html data-theme="auto|light|dark">` — nothing else |
-| Editor | **static preview** (no real toggling of the admin/canvas) |
+| Editor | canvas reads the same cookie and sets iframe `<html data-theme>` |
 | Front JS | **Interactivity API** |
 
 `data-theme="auto"` is implemented here — note it was a deliberately deferred /
@@ -58,6 +58,13 @@ full-page caching the cached HTML carries the first visitor's mode. So:
   corrected by the Interactivity hydration (which reads the live `data-theme`).
   A brief button-only active flash is acceptable; the page colours never flash.
 
+**Editor parity (implemented).** The block/site editor canvas does not execute
+`wp_head`, so the front-end head script cannot run inside the iframe. A small
+`enqueue_block_editor_assets` script copies the same `omphalos_theme` cookie onto
+the editor canvas document's `<html data-theme>`. No second persistence channel
+is introduced: front and editor both consume the same cookie contract, and
+`auto` still follows `prefers-color-scheme`.
+
 ### 3.2 No build toolchain
 Ship vanilla JS — no JSX/webpack:
 - editor: `edit.js` registers the block with `wp.blocks.registerBlockType` +
@@ -73,10 +80,13 @@ with arrow-key roving is the more precise single-select semantic — noted as an
 alternative if we want it.
 
 ### 3.4 CSS location → block-scoped
-`.wp-block-omphalos-theme-switcher` styling lives in
+`.wp-block-omphalos-theme-switcher` component styling lives in
 `blocks/theme-switcher/style.css`, enqueued via block.json `style` (loads only
-when the block is present) — not the global cascade. `color-scheme` stays in
-foundation.css; icons.css already provides `.material-symbols-outlined`.
+when the block is present). The track's inspectable defaults (background,
+padding, radius) live in `theme.json styles.blocks.omphalos/theme-switcher`, so
+the custom block is visible/editable from the Site Editor's Global Styles block
+surface. `color-scheme` stays in foundation.css; icons.css already provides
+`.material-symbols-outlined`.
 
 ---
 
@@ -108,8 +118,11 @@ blocks/theme-switcher/
   render.php     (SSR control + best-effort active from cookie)
   edit.js        (static editor preview)
   view.js        (Interactivity store: setScheme → set data-theme + cookie)
-  style.css      (.wp-block-omphalos-theme-switcher segmented control)
-inc/theme-switcher.php   (register_block_type + the global inline head script)
+  style.css      (segmented control behaviour; track defaults in theme.json)
+assets/scripts/editor-theme-scheme.js
+                (copy cookie scheme into the editor canvas iframe)
+inc/theme-switcher.php
+                (register_block_type + global inline head script + editor bridge)
 ```
 
 Persistence: cookie `omphalos_theme` = `auto|light|dark`, root path, ~1yr,

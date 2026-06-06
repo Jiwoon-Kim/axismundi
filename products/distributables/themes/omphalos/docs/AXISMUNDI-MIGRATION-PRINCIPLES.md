@@ -148,6 +148,45 @@ theme.json inline copy; never delete the partial thinking it is redundant.
 
 ---
 
+## §5b — token var() vs UI-editable concrete value
+
+A second empirically-verified UI constraint (Site Editor, 2026-06-06). Global
+Styles **dimension-class controls** (border radius, spacing, size) parse their
+value with `parseQuantityAndUnitFromRawValue()` — number + unit. A `var(--token)`
+fails to parse, so the control renders **empty / 0** even though the style applies
+on the front end. Color controls differ (they accept `var()` and show a custom
+swatch), so the constraint is dimension-specific.
+
+```txt
+core/image border.radius = var(--md-sys-shape-corner-medium)
+    → front end: 12px rounding applied
+    → Global Styles Radius slider: shows 0, NOT editable (var() unparseable)
+
+core/image border.radius = 12px
+    → front end: identical
+    → Global Styles Radius slider: shows 12, editable ✓
+```
+
+**Normative rule / 규칙:**
+
+```txt
+A theme.json style VALUE that is meant to be surfaced/edited in a Global Styles
+dimension control MUST be concrete (px), not a var() token.
+Reserve var() tokens for FIXED theme decisions where front-end application is
+enough and editor visibility/editability is not required.
+```
+
+- Global Styles dimension 컨트롤(radius/spacing/size)에 **노출·편집되어야 하는** theme.json
+  style 값은 concrete(px)여야 한다. var() 토큰은 적용은 되나 그 컨트롤에 안 보인다.
+- var()는 front 적용만으로 충분하고 editor 편집이 불필요한 **고정 테마 결정**에만 쓴다.
+
+This is the same shape as §5: Omphalos discovers which layer the WordPress UI can
+actually read, and Axismundi encodes the readable form. (`core/image` radius fixed
+to a concrete `12px` so its Radius slider is editable; the M3 medium corner is the
+spec constant 12px, so no token drift in practice.)
+
+---
+
 ## §6 — Axismundi clean-build encoding
 
 ```txt

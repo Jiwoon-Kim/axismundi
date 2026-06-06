@@ -414,7 +414,7 @@
       },
       "core/image": {
         "border": {
-          "radius": "var(--md-sys-shape-corner-medium)"
+          "radius": "12px"
         }
       },
       "core/post-featured-image": {

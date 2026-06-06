@@ -1209,6 +1209,15 @@ Dimensions → Padding can own the card inset. `blocks.css §8` no longer forces
 interior rhythm. Verified on `/vqa-design/`: card element padding = 0, nested content group padding
 = spacing preset 50, radius/clip/surface/elevation/outline remain intact in light/dark.
 
+**Separator variations (DONE).** `core/separator` already had Omphalos-registered inset variants
+(`divider-inset`, `divider-middle-inset`) plus the core styles Default / Wide / Dots. Added
+`styles/blocks/separator-divider-*.json` partials so the inset variants participate in the Global
+Styles / Stylebook variation lane, while `blocks.css §11` owns the actual M3 divider geometry and
+colour globally (`.wp-block-separator`, not raw `<hr>`): 1px `outline-variant`, default short
+centered line, wide = 100%, inset = content width minus 32px, middle-inset = content width minus
+64px, dots recoloured only. The earlier Stylebook horizontal-scroll issue is currently not
+reproducing, so no layout workaround is applied.
+
 **Stylebook blob iframe caveat (DONE).** The blob rewrite must not replace WordPress core block
 styles. `core/image` proved the failure mode: core normally provides `.wp-block-image img {
 max-width:100%; height:auto; }`; when the rewritten Stylebook blob lacked that stylesheet, the image

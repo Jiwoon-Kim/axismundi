@@ -506,10 +506,12 @@
  *
  * core/separator emits <hr class="wp-block-separator …">. Core ships the
  * default / wide / dots styles (client block.json); the theme registers
- * divider-inset / divider-middle-inset (functions.php). Ported from the lab
- * separator contract, re-contracted for the FSE post-content surface. The M3
- * divider is a 1px outline-variant line; dots read in on-surface-variant.
+ * divider-inset / divider-middle-inset (functions.php + styles/blocks partials
+ * so they are discoverable in Global Styles). Ported from the lab separator
+ * contract, re-contracted for FSE block chrome. The M3 divider is a 1px
+ * outline-variant line; dots read in on-surface-variant.
  * ============================================================ */
+.wp-block-separator,
 .wp-block-post-content .wp-block-separator {
   inline-size: 25%;          /* core's short centered default, M3-recoloured */
   margin-inline: auto;
@@ -517,9 +519,11 @@
   border: 0;
   background-color: var(--md-sys-color-outline-variant);
 }
+.wp-block-separator.is-style-wide,
 .wp-block-post-content .wp-block-separator.is-style-wide {
   inline-size: 100%;
 }
+.wp-block-separator.is-style-dots,
 .wp-block-post-content .wp-block-separator.is-style-dots {
   inline-size: auto;
   background: none;          /* no line — just the dot row */
@@ -537,9 +541,11 @@
  * post-content width) gets clamped back and the two insets collapse to the same
  * width. Inset off the CONTENT size instead so each variant is genuinely narrower
  * (base rule centers them via margin-inline: auto). */
+.wp-block-separator.is-style-divider-inset,
 .wp-block-post-content .wp-block-separator.is-style-divider-inset {
   inline-size: calc(var(--wp--style--global--content-size) - 2 * var(--space-md));
 }
+.wp-block-separator.is-style-divider-middle-inset,
 .wp-block-post-content .wp-block-separator.is-style-divider-middle-inset {
   inline-size: calc(var(--wp--style--global--content-size) - 2 * var(--space-xl));
 }

@@ -2,7 +2,18 @@
   "core": "WordPress/WordPress#7.0",
   "testsEnvironment": false,
   "themes": [
-    "./products/reference-implementations/axismundi-pilot"
+    "./products/distributables/themes/omphalos",
+    "./products/distributables/themes/axismundi",
+    "C:/Users/thaum/dev/twentytwentyfive.1.5/twentytwentyfive"
   ],
-  "plugins": []
+  "plugins": [
+    "https://downloads.wordpress.org/plugin/theme-check.zip",
+    "https://downloads.wordpress.org/plugin/create-block-theme.zip"
+  ],
+  "port": 8884,
+  "config": {
+    "WP_DEBUG": true,
+    "WP_DEBUG_LOG": true,
+    "SCRIPT_DEBUG": true
+  }
 }

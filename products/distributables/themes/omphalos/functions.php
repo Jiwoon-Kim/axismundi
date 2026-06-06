@@ -207,6 +207,23 @@ function omphalos_register_block_styles() : void {
 	// three missing M3 variants are registered here. The cross-surface button
 	// base (.wp-element-button) lives in theme.json styles.elements.button +
 	// blocks.css §9; these are the per-variant color treatments for core/button.
+	//
+	// Variation contract (three NON-redundant layers; same shape as core/group
+	// card-* and core/image no-rounding):
+	//   1. register_block_style() here    → the selectable name + label, and the
+	//      `is-style-<slug>` class the front end keys on. Required for toolbar
+	//      selection + blocks.css rendering.
+	//   2. styles/blocks/<block>-<slug>.json partial → the Global Styles / Stylebook
+	//      DISCOVERABILITY layer. Verified empirically: register_block_style() alone
+	//      does NOT surface a variation in the Global Styles "Style variations"
+	//      panel; removing the partial makes Tonal/Elevated/Connected vanish from
+	//      the editor UI (front end still renders via blocks.css). So the partial is
+	//      not a duplicate — it is what makes the variation editable/visible in FSE.
+	//   3. blocks.css §9 → the actual visual treatment + hover/focus/active state
+	//      layers (color-mix) + connected geometry. The partials carry base colour
+	//      only; the state layers live here exclusively.
+	// theme.json styles.blocks.*.variations inline is intentionally NOT used — it
+	// merely duplicated the partials' base colour and was removed during cleanup.
 	foreach (
 		array(
 			'tonal'    => __( 'Tonal', 'omphalos' ),

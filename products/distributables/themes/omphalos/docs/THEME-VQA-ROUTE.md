@@ -1032,12 +1032,10 @@ raised and highlighted (primary stroke), without moving the root composer. Click
 again cancels the state.
 
 Editor preview note: the connector is measured JS, so CSS alone cannot show it in the Site Editor
-canvas. `assets/scripts/editor-theme-scheme.js` already rewrites editor-owned `blob:` preview
-iframes to inject the Omphalos style cascade; that same rewrite now adds
-`assets/scripts/comment-thread-connectors.js` so any editor/site-editor iframe that actually renders
-`.wp-block-comment-template` draws the same avatar-bottom → reply-avatar-start connectors. Some
-Global Styles previews for `core/comments` render no comment sample (blank/placeholder); that is a
-core preview-context limitation, not the connector contract.
+canvas. Do **not** inject the connector runtime into Global Styles / Stylebook preview blobs in
+Omphalos: `core/comments` previews may render as placeholder/blank contexts and script injection can
+break those previews. Editor connector parity is deferred to the Axismundi clean-build pass after
+the site-editor block preview surfaces are contracted globally.
 
 History: an earlier pass built the microblog NOTE layout (flat meta row + body + action row +
 per-level rail) and was reshaped into the bubble model once Facebook was used as the reference.

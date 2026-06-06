@@ -37,9 +37,6 @@
 	var styleBookCoreStyles = [
 		'wp-includes/blocks/image/style.min.css',
 	];
-	var styleBookScripts = [
-		'assets/scripts/comment-thread-connectors.js',
-	];
 
 	function normalize( value ) {
 		return VALID.indexOf( value ) === -1 ? 'auto' : value;
@@ -170,10 +167,7 @@
 			'assets/icons/material-symbols-outlined/material-symbols-outlined.woff2") format("woff2");}' +
 			'.editor-styles-wrapper,.block-editor-block-preview__content,body{word-break:keep-all;overflow-wrap:anywhere;}' +
 			'</style>';
-		var scripts = styleBookScripts.map( function ( path ) {
-			return '<script src="' + makeSiteAssetUrl( path ) + '" defer data-omphalos-stylebook-assets="true"></script>';
-		} ).join( '' );
-		var assets = materialSymbolsFont + links + scripts;
+		var assets = materialSymbolsFont + links;
 
 		if ( /<\/head>/i.test( html ) ) {
 			return html.replace( /<\/head>/i, assets + '</head>' );

@@ -26,5 +26,8 @@
 /patterns/vqa-theme-comments.php
 /patterns/vqa-widgets.php
 
+# --- Specimen / placeholder media (seed/VQA only; excluded from wp.org ZIP) ---
+/assets/media
+
 # --- Build artifacts ---
 *.zip

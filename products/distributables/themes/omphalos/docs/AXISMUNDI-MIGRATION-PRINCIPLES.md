@@ -185,6 +185,31 @@ actually read, and Axismundi encodes the readable form. (`core/image` radius fix
 to a concrete `12px` so its Radius slider is editable; the M3 medium corner is the
 spec constant 12px, so no token drift in practice.)
 
+### Shape tokens and WordPress presets
+
+M3 exposes a full shape/corner scale (`md.sys.shape.corner.*` and
+`md.sys.shape.corner-value.*`). Omphalos keeps that scale in CSS system tokens.
+WordPress theme.json, however, does **not** expose a border-radius preset axis
+equivalent to `color.palette`, `typography.fontSizes`, `spacing.spacingSizes`, or
+`shadow.presets`.
+
+```txt
+settings.border.radius  = boolean control enablement only
+styles.border.radius    = concrete string/object value
+settings.border.presets = not a WordPress theme.json schema feature
+```
+
+Therefore:
+
+```txt
+M3 shape scale → CSS system tokens
+Global Styles radius UI → concrete per-block/per-element style values
+```
+
+Do not invent a fake `theme.json` radius preset layer. If WordPress later adds a
+first-class radius preset axis, Axismundi can map the CSS system tokens into that
+axis during the clean build.
+
 ---
 
 ## §6 — Axismundi clean-build encoding

@@ -256,10 +256,12 @@
 /* ============================================================
  * §4 Shape scale (prompt-v2 §3.2 — M3 Expressive full scale)
  *
- * 10 tiers + 3 directional modifiers. Component-specific
+ * M3 shape corner tokens + directional modifiers. Component-specific
  * sub-xs literals (e.g. checkbox 2px) stay at component layer.
  * Directional modifiers are full border-radius shorthand
  * values (TL TR BR BL) — apply via `border-radius: var(...)`.
+ * `corner-value.*` aliases are single-value scalars for controls
+ * and calculations that cannot accept shorthand values.
  * ============================================================ */
 :root {
   --md-sys-shape-corner-none:                  0;
@@ -277,7 +279,20 @@
   /* --- Directional modifiers (full shorthand: TL TR BR BL) --- */
   --md-sys-shape-corner-extra-large-top: 28px 28px 0 0;   /* bottom sheet, filled text field */
   --md-sys-shape-corner-extra-small-top: 4px 4px 0 0;     /* filled text field active */
+  --md-sys-shape-corner-large-top:       16px 16px 0 0;
   --md-sys-shape-corner-large-start:     16px 0 0 16px;   /* modal side sheet (LTR) */
+  --md-sys-shape-corner-large-end:       0 16px 16px 0;   /* modal side sheet (LTR) */
+
+  /* --- Scalar corner values (single radius) --- */
+  --md-sys-shape-corner-value-none:                  0;
+  --md-sys-shape-corner-value-extra-small:           4px;
+  --md-sys-shape-corner-value-small:                 8px;
+  --md-sys-shape-corner-value-medium:                12px;
+  --md-sys-shape-corner-value-large:                 16px;
+  --md-sys-shape-corner-value-large-increased:       20px;
+  --md-sys-shape-corner-value-extra-large:           28px;
+  --md-sys-shape-corner-value-extra-large-increased: 32px;
+  --md-sys-shape-corner-value-extra-extra-large:     48px;
 }
 
 /* ============================================================

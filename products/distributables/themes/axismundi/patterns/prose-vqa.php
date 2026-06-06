@@ -94,9 +94,43 @@
 <h2 id="figure">이미지 — Image &amp; figure</h2>
 
 <figure>
-	<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='240'%3E%3Crect%20width='600'%20height='240'%20fill='%23d9d9d9'/%3E%3Ctext%20x='300'%20y='128'%20font-family='sans-serif'%20font-size='20'%20text-anchor='middle'%20fill='%23555'%3Eplaceholder%20600%C3%97240%3C/text%3E%3C/svg%3E" alt="Placeholder image" width="600" height="240">
-	<figcaption>Figure 1. 외부 요청 없는 SVG data-URI placeholder + figcaption.</figcaption>
+	<img src="https://picsum.photos/id/1015/600/240" alt="Picsum placeholder photo" width="600" height="240">
+	<figcaption>Figure 1. picsum.photos 외부 이미지 + figcaption.</figcaption>
 </figure>
+
+<h2 id="picture">반응형 이미지 — Picture</h2>
+
+<figure>
+	<picture>
+		<source media="(min-width: 800px)" srcset="https://picsum.photos/id/1016/800/300">
+		<img src="https://picsum.photos/id/1016/480/240" alt="Responsive picsum placeholder" width="480" height="240">
+	</picture>
+	<figcaption>Figure 2. &lt;picture&gt; + &lt;source&gt; 반응형 이미지 (picsum.photos).</figcaption>
+</figure>
+
+<h2 id="inline-extra">기타 인라인 — More inline semantics</h2>
+
+<p>화학식 H<sub>2</sub>O 와 제곱 x<sup>2</sup>는 <code>sub</code>/<code>sup</code>, 변수 <var>n</var>과 프로그램 출력 <samp>Segmentation fault</samp>는 <code>var</code>/<code>samp</code>, 짧은 인라인 인용은 <q>quote inside text</q>(<code>q</code>), 정의 대상은 <dfn>정의어 (dfn)</dfn>로 표시됩니다. 작성 시각 <time datetime="2026-06-07">2026-06-07</time>(<code>time</code>), 그리고 <small>작은 글씨 — 저작권·법적 고지 (small)</small>. 추가로 <b>b</b> / <i>i</i> / <u>u</u> 가 <strong>strong</strong> / <em>em</em> / <ins>ins</ins> 와 시각적으로 구분되는지 확인합니다.</p>
+
+<h2 id="details">접기/펼치기 — Details &amp; summary</h2>
+
+<details>
+	<summary>자세한 내용 보기 (summary 클릭 시 펼쳐짐)</summary>
+	<p>details 내부 본문. 마크다운의 접기 문법이나 federated 콘텐츠의 disclosure가 변환될 때 여백·typography가 어떻게 잡히는지 확인합니다.</p>
+</details>
+
+<h2 id="media">미디어 — Audio / Video / Iframe</h2>
+
+<p>federated 원격 HTML에는 미디어 임베드도 섞일 수 있습니다 (prose typography는 아니지만 raw-HTML 표면의 일부):</p>
+
+<p><audio controls src="https://www.w3schools.com/html/horse.ogg">audio fallback text</audio></p>
+
+<video controls width="480" poster="https://picsum.photos/id/1018/480/270">
+	<source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+	video fallback text
+</video>
+
+<iframe title="srcdoc iframe" width="480" height="120" srcdoc="&lt;p style='font-family:sans-serif;padding:8px'&gt;iframe srcdoc — 외부 요청 없는 자체 문서&lt;/p&gt;"></iframe>
 
 <h2 id="headings">헤딩 깊이 — Heading depth</h2>
 <h3 id="h3">h3 heading</h3>

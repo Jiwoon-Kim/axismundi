@@ -4,14 +4,6 @@
   "version": "0.1.0",
   "description": "Axismundi — a standalone Material Design 3 block theme for WordPress.",
   "scripts": {
-    "wp-env": "wp-env",
-    "start": "wp-env start",
-    "stop": "wp-env stop",
-    "destroy": "wp-env destroy",
-    "cli": "wp-env run cli wp",
     "build:zip": "pwsh -NoProfile -File scripts/build-zip.ps1"
-  },
-  "devDependencies": {
-    "@wordpress/env": "^10.0.0"
   }
 }

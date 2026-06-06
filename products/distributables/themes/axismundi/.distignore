@@ -1,0 +1,18 @@
+# .distignore — files/dirs excluded from the distributable theme ZIP.
+# Consumed by scripts/build-zip.ps1 (and compatible with `wp dist-archive`).
+# Keep in sync with the runtime contract: anything required to render the theme on
+# the front end or in the editor MUST NOT be listed here.
+
+# --- Dev tooling / local environment ---
+/node_modules
+/package.json
+/package-lock.json
+/.wp-env.json
+/.distignore
+
+# --- Dev docs + scripts (added as the build grows; excluded from the package) ---
+/docs
+/scripts
+
+# --- Build artifacts ---
+*.zip

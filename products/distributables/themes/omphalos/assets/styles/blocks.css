@@ -37,7 +37,18 @@
  * Both target the <img>, not the figure, so the caption is unaffected. Lives in
  * blocks.css which is enqueued for the editor canvas too, so the variations
  * preview correctly in the editor (front + editor parity).
+ *
+ * Width constraint: the image fit-to-container rule (max-width:100%) used to come
+ * from a GLOBAL base.css. Phase 6.5 (dd44f01) dropped the global layer and scoped
+ * the prose image rule to `.wp-block-post-content`, so core/image in TEMPLATE
+ * contexts (Stylebook block preview, templates, federated chrome) lost its cap and
+ * rendered at intrinsic size — overflowing/cropping its frame. As block chrome the
+ * image owns its own cap here, not via post-content prose (migration principle §3).
  * ============================================================ */
+.wp-block-image img {
+  max-width: 100%;
+  height: auto;
+}
 .wp-block-image.is-style-rounded img {
   border-radius: var(--md-sys-shape-corner-full);
 }

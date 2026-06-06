@@ -1200,6 +1200,13 @@ uses editor-owned `blob:` iframes, `assets/scripts/editor-theme-scheme.js` rewri
 blobs with the current `data-theme`, Omphalos style cascade, Material Symbols font-face, and the
 current `aria-pressed` active state.
 
+**Stylebook blob iframe caveat (DONE).** The blob rewrite must not replace WordPress core block
+styles. `core/image` proved the failure mode: core normally provides `.wp-block-image img {
+max-width:100%; height:auto; }`; when the rewritten Stylebook blob lacked that stylesheet, the image
+preview rendered at intrinsic size and cropped. Do **not** duplicate core sizing in blocks.css.
+Instead, the editor bridge injects the core image block stylesheet into rewritten Stylebook blobs
+alongside Omphalos assets, preserving TT5/core preview behaviour.
+
 **Current FSE Typography Elements coverage.** Text, Headings, Captions, and Buttons are mapped in
 `theme.json`; Links intentionally inherit typography. Continue promotion block-by-block only where a
 stable global control exists (e.g. image rounding, featured image radius, group card variations);

@@ -34,6 +34,9 @@
 		'assets/styles/icons.css',
 		'blocks/theme-switcher/style.css',
 	];
+	var styleBookCoreStyles = [
+		'wp-includes/blocks/image/style.min.css',
+	];
 
 	function normalize( value ) {
 		return VALID.indexOf( value ) === -1 ? 'auto' : value;
@@ -67,6 +70,43 @@
 			link.dataset.omphalosEditorTokenAssets = 'true';
 			doc.head.appendChild( link );
 		} );
+	}
+
+	function injectStyleBookAssetsIntoDocument( doc ) {
+		if ( ! themeRootUrl || ! doc.head || doc.querySelector( '[data-omphalos-stylebook-assets]' ) ) {
+			return;
+		}
+
+		var fontStyle = doc.createElement( 'style' );
+		fontStyle.dataset.omphalosStylebookAssets = 'true';
+		fontStyle.textContent =
+			'@font-face{font-family:"Material Symbols Outlined";font-style:normal;font-weight:400;font-display:block;src:url("' +
+			themeRootUrl +
+			'assets/icons/material-symbols-outlined/material-symbols-outlined.woff2") format("woff2");}' +
+			'.editor-styles-wrapper,.block-editor-block-preview__content,body{word-break:keep-all;overflow-wrap:anywhere;}';
+		doc.head.appendChild( fontStyle );
+
+		styleBookCoreStyles.concat( styleBookStyles ).forEach( function ( path ) {
+			var link = doc.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.href = makeSiteAssetUrl( path );
+			link.dataset.omphalosStylebookAssets = 'true';
+			doc.head.appendChild( link );
+		} );
+	}
+
+	function makeSiteAssetUrl( path ) {
+		if ( path.indexOf( 'wp-includes/' ) === 0 ) {
+			return getSiteRootUrl() + path;
+		}
+		return themeRootUrl + path;
+	}
+
+	function getSiteRootUrl() {
+		if ( typeof window.ajaxurl === 'string' && window.ajaxurl ) {
+			return window.ajaxurl.replace( /wp-admin\/admin-ajax\.php(?:\?.*)?$/, '' );
+		}
+		return window.location.origin + '/';
 	}
 
 	function syncThemeSwitcherButtons( doc, scheme ) {
@@ -114,8 +154,8 @@
 			return html;
 		}
 
-		var links = styleBookStyles.map( function ( path ) {
-			return '<link rel="stylesheet" href="' + themeRootUrl + path + '" data-omphalos-stylebook-assets="true">';
+		var links = styleBookCoreStyles.concat( styleBookStyles ).map( function ( path ) {
+			return '<link rel="stylesheet" href="' + makeSiteAssetUrl( path ) + '" data-omphalos-stylebook-assets="true">';
 		} ).join( '' );
 		/* The Style Book typography specimen uses one long mixed-script sample
 		 * without spaces. TT5's defaults fit by chance; M3 type can overflow the
@@ -151,12 +191,20 @@
 	}
 
 	function applyToIframe( iframe ) {
+		var didApplyToLiveDocument = false;
 		try {
 			if ( isPreviewDocument( iframe.contentDocument ) ) {
 				applyToDocument( iframe.contentDocument );
+				if ( isEditorBlobPreviewIframe( iframe ) ) {
+					injectStyleBookAssetsIntoDocument( iframe.contentDocument );
+				}
+				didApplyToLiveDocument = true;
 			}
 		} catch ( error ) {
 			// Ignore transient or cross-origin frames. Editor preview frames are same-origin.
+		}
+		if ( didApplyToLiveDocument ) {
+			return;
 		}
 		rewriteStyleBookBlobIframe( iframe );
 	}

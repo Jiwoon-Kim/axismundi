@@ -18,10 +18,11 @@ Consumes (pilot from `axismundi-pilot`):
 - bundled Roboto / Noto fonts + Material Symbols icon font (Font Library)
 - dynamic attachment media object templates
 - 3-state (light / dark / auto) theme switcher (Interactivity API)
+- an experimental `omphalos/theme-switcher` custom block used to validate the
+  switcher contract before it is split into a companion plugin.
 
 Does **not** implement:
 
-- custom blocks
 - the full Axismundi component system
 - editor toolkit / HCT runtime / ActivityPub UI
 

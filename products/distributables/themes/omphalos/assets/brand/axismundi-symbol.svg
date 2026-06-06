@@ -8,7 +8,7 @@
         <dc:title>Axismundi Symbol</dc:title>
         <dc:creator>Jiwoon Kim</dc:creator>
         <dc:description>Canonical draft project symbol for Axismundi.</dc:description>
-        <dc:rights>Copyright Jiwoon Kim. Licensed for use with the Axismundi project; see assets/LICENSES.md.</dc:rights>
+        <dc:rights>Copyright Jiwoon Kim. Distributed with Omphalos under GPL-3.0-or-later; see assets/LICENSES.md.</dc:rights>
       </cc:Work>
     </rdf:RDF>
   </metadata>

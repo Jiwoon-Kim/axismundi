@@ -4,7 +4,7 @@
  *
  * Twenty Twenty-Five child theme that grounds the Axismundi design language on
  * WordPress. Behaviour is ported from the axismundi-pilot proof theme with an
- * `omphalos_` prefix; it registers no custom blocks.
+ * `omphalos_` prefix.
  *
  * @package Omphalos
  */

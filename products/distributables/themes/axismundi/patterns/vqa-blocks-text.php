@@ -1,11 +1,13 @@
 <?php
 /**
- * Title: VQA — Prose primitives
- * Slug: axismundi/vqa-prose
+ * Title: VQA — Core text blocks
+ * Slug: axismundi/vqa-blocks-text
  * Inserter: false
- * Description: Phase 1 baseline harness. Every core text/prose primitive block,
- *   unstyled, so the blank/core render can be snapshotted before any M3 binding.
- *   Dev-only specimen — excluded from the distributable ZIP via .distignore.
+ * Description: Core-block text VQA — every core text BLOCK (wp:*, with
+ *   .wp-block-* wrappers), unstyled, for the blank/core block render snapshot
+ *   before M3 binding. This is the block-rooted surface where M3 Global Styles +
+ *   block bindings get verified; the prose/element layer (raw HTML in a Custom
+ *   HTML block) is a separate specimen. Dev-only — excluded via .distignore.
  *
  * @package Axismundi
  */

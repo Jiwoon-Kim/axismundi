@@ -118,15 +118,19 @@
 		} );
 	}
 
-	function setHtmlThemeAttribute( html, scheme ) {
+	function setHtmlThemeAttribute( html, scheme, resetScroll ) {
 		html = setThemeSwitcherActiveState( html, scheme );
 		if ( /<html\b/i.test( html ) ) {
 			if ( /\sdata-theme=(["'])(auto|light|dark)\1/i.test( html ) ) {
 				return injectStyleBookAssets(
-					html.replace( /\sdata-theme=(["'])(auto|light|dark)\1/i, ' data-theme="' + scheme + '"' )
+					html.replace( /\sdata-theme=(["'])(auto|light|dark)\1/i, ' data-theme="' + scheme + '"' ),
+					resetScroll
 				);
 			}
-			return injectStyleBookAssets( html.replace( /<html\b/i, '<html data-theme="' + scheme + '"' ) );
+			return injectStyleBookAssets(
+				html.replace( /<html\b/i, '<html data-theme="' + scheme + '"' ),
+				resetScroll
+			);
 		}
 		return html;
 	}
@@ -149,7 +153,7 @@
 		} );
 	}
 
-	function injectStyleBookAssets( html ) {
+	function injectStyleBookAssets( html, resetScroll ) {
 		if ( ! themeRootUrl || html.indexOf( 'omphalos-stylebook-assets' ) !== -1 ) {
 			return html;
 		}
@@ -167,7 +171,12 @@
 			'assets/icons/material-symbols-outlined/material-symbols-outlined.woff2") format("woff2");}' +
 			'.editor-styles-wrapper,.block-editor-block-preview__content,body{word-break:keep-all;overflow-wrap:anywhere;}' +
 			'</style>';
-		var assets = materialSymbolsFont + links;
+		// New generated blob previews may not paint until the frame is activated.
+		// Nudge focus/scroll inside the blob itself; parent access is unreliable.
+		var scrollResetScript = resetScroll
+			? '<script data-omphalos-stylebook-assets="true">(function(){var started=Date.now();function reset(){try{document.documentElement.dataset.omphalosStylebookScrollReset="true";window.focus();window.scrollTo(0,0);document.documentElement.scrollTop=0;if(document.body){document.body.scrollTop=0;}Array.prototype.forEach.call(document.querySelectorAll("*"),function(element){if(element.scrollTop){element.scrollTop=0;}});}catch(error){}if(Date.now()-started<4000){requestAnimationFrame(reset);}}reset();}());</script>'
+			: '';
+		var assets = materialSymbolsFont + links + scrollResetScript;
 
 		if ( /<\/head>/i.test( html ) ) {
 			return html.replace( /<\/head>/i, assets + '</head>' );
@@ -211,12 +220,13 @@
 
 	function rewriteStyleBookBlobIframe( iframe ) {
 		var scheme = currentScheme || readScheme();
+		var sourceSrc = iframe && iframe.src;
+		var generatedSrc = iframe && iframe.dataset.omphalosThemeSchemeBlobGeneratedSrc;
 		if (
 			! iframe ||
 			! isEditorBlobPreviewIframe( iframe ) ||
-			! iframe.src ||
-			iframe.src.indexOf( 'blob:' ) !== 0 ||
-			iframe.dataset.omphalosThemeSchemeBlob === scheme ||
+			! sourceSrc ||
+			sourceSrc.indexOf( 'blob:' ) !== 0 ||
 			iframe.dataset.omphalosThemeSchemeRewriting ||
 			typeof window.fetch !== 'function' ||
 			typeof window.Blob === 'undefined' ||
@@ -225,9 +235,20 @@
 		) {
 			return;
 		}
+		if (
+			iframe.dataset.omphalosThemeSchemeBlob === scheme &&
+			(
+				sourceSrc === generatedSrc ||
+				iframe.dataset.omphalosThemeSchemeBlobSourceSrc === sourceSrc
+			)
+		) {
+			return;
+		}
 
+		// Style Book SPA routes replace the source blob without changing the
+		// scheme. Track source/generated blobs separately so variations refresh.
 		iframe.dataset.omphalosThemeSchemeRewriting = 'true';
-		window.fetch( iframe.src )
+		window.fetch( sourceSrc )
 			.then( function ( response ) {
 				return response.text();
 			} )
@@ -235,14 +256,35 @@
 				if ( ! /<html\b/i.test( html ) ) {
 					return;
 				}
-				var previousGeneratedSrc = iframe.dataset.omphalosThemeSchemeBlobSrc;
-				var nextHtml = setHtmlThemeAttribute( html, scheme );
-				iframe.src = window.URL.createObjectURL(
+				var previousGeneratedSrc = iframe.dataset.omphalosThemeSchemeBlobGeneratedSrc;
+				var shouldResetScroll = iframe.dataset.omphalosThemeSchemeBlobSourceSrc !== sourceSrc;
+				var nextHtml = setHtmlThemeAttribute( html, scheme, shouldResetScroll );
+				var nextGeneratedSrc = window.URL.createObjectURL(
 					new window.Blob( [ nextHtml ], { type: 'text/html' } )
 				);
+				if ( shouldResetScroll ) {
+					iframe.addEventListener(
+						'load',
+						function () {
+							resetStyleBookIframeScroll( iframe );
+							window.setTimeout( function () {
+								resetStyleBookIframeScroll( iframe );
+							}, 50 );
+							window.setTimeout( function () {
+								resetStyleBookIframeScroll( iframe );
+							}, 250 );
+							window.setTimeout( function () {
+								resetStyleBookIframeScroll( iframe );
+							}, 750 );
+						},
+						{ once: true }
+					);
+				}
+				iframe.src = nextGeneratedSrc;
 				iframe.dataset.omphalosThemeSchemeBlob = scheme;
-				iframe.dataset.omphalosThemeSchemeBlobSrc = iframe.src;
-				if ( previousGeneratedSrc ) {
+				iframe.dataset.omphalosThemeSchemeBlobSourceSrc = sourceSrc;
+				iframe.dataset.omphalosThemeSchemeBlobGeneratedSrc = nextGeneratedSrc;
+				if ( previousGeneratedSrc && previousGeneratedSrc !== nextGeneratedSrc ) {
 					window.setTimeout( function () {
 						window.URL.revokeObjectURL( previousGeneratedSrc );
 					}, 1000 );
@@ -254,15 +296,28 @@
 			} );
 	}
 
+	function resetStyleBookIframeScroll( iframe ) {
+		try {
+			iframe.focus();
+			if ( iframe.contentWindow ) {
+				iframe.contentWindow.focus();
+				iframe.contentWindow.scrollTo( 0, 0 );
+			}
+			if ( iframe.contentDocument && iframe.contentDocument.documentElement ) {
+				iframe.contentDocument.documentElement.scrollTop = 0;
+			}
+			if ( iframe.contentDocument && iframe.contentDocument.body ) {
+				iframe.contentDocument.body.scrollTop = 0;
+			}
+		} catch ( error ) {}
+	}
+
 	function isEditorBlobPreviewIframe( iframe ) {
 		return !! (
 			iframe &&
 			iframe.src &&
 			iframe.src.indexOf( 'blob:' ) === 0 &&
-			(
-				iframe.classList.contains( 'editor-style-book__iframe' ) ||
-				iframe.getAttribute( 'title' ) === 'Editor canvas'
-			)
+			iframe.classList.contains( 'editor-style-book__iframe' )
 		);
 	}
 

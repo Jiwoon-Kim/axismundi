@@ -1,7 +1,7 @@
 {
   "name": "omphalos",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Omphalos — a Twenty Twenty-Five child theme grounding the Axismundi design language on WordPress.",
   "scripts": {
     "wp-env": "wp-env",

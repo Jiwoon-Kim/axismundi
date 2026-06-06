@@ -29,8 +29,8 @@
 	},
 	"styles": [
 		{
-			"name": "filter-chips",
-			"label": "Filter chips"
+			"name": "theme-cycle",
+			"label": "Theme cycle"
 		}
 	],
 	"editorScript": "file:./edit.js",

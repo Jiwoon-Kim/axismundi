@@ -114,17 +114,17 @@ wrapper with three `<button data-wp-on--click="actions.setScheme">`, each
 "state.isActive"`. Icon = `<span class="material-symbols-outlined" aria-hidden>`,
 label text alongside (or visually-hidden for icon-only).
 
-### 4.1 Style variation — filter chips
+### 4.1 Style variation — theme cycle icon button
 
-Omphalos also exposes `is-style-filter-chips` on `omphalos/theme-switcher`.
-This maps the same three-state control to the lab styleguide's theme switcher
-surface: three M3 filter chips (`Light`, `Dark`, `Auto`) with 32px height,
-corner-small shape, outlined rest state, and secondary-container selected state.
-The behaviour and persistence remain identical; only the chrome changes.
+Omphalos also exposes `is-style-theme-cycle` on `omphalos/theme-switcher`.
+This maps the same three-state persistence channel to a single standard icon
+button (`ax-icon-button is-standard has-state-layer t-theme-cycle`) that cycles
+`auto → light → dark` on each activation. It is intentionally **not** a chip set:
+the reference chrome is an icon-button affordance for compact header/footer
+areas where the full segmented control is too heavy.
 
-This variation is intentionally close to plain HTML button markup so the wp.org
-submission fallback can reuse the same visual contract after the custom block is
-split into a companion plugin.
+The block still owns the cookie + `<html data-theme>` write. Only the visible
+control changes from three explicit choices to one cycle button.
 
 ---
 

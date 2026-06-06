@@ -17,13 +17,25 @@
  */
 import { getContext, store } from '@wordpress/interactivity';
 
-const VALID = [ 'auto', 'light', 'dark' ];
+const MODES = {
+	auto: { icon: 'contrast', label: 'Auto' },
+	light: { icon: 'light_mode', label: 'Light' },
+	dark: { icon: 'dark_mode', label: 'Dark' },
+};
+const VALID = Object.keys( MODES );
 const COOKIE = 'omphalos_theme';
 
 const normalize = ( value ) => ( VALID.includes( value ) ? value : 'auto' );
 
 const writeCookie = ( mode ) => {
 	document.cookie = `${ COOKIE }=${ mode }; path=/; max-age=31536000; SameSite=Lax`;
+};
+
+const applyScheme = ( mode ) => {
+	const next = normalize( mode );
+	document.documentElement.dataset.theme = next;
+	state.currentScheme = next;
+	writeCookie( next );
 };
 
 const { state } = store( 'omphalos/theme-switcher', {
@@ -33,13 +45,23 @@ const { state } = store( 'omphalos/theme-switcher', {
 			const { mode } = getContext();
 			return normalize( mode ) === state.currentScheme;
 		},
+		get currentIcon() {
+			return MODES[ state.currentScheme ].icon;
+		},
+		get currentLabel() {
+			return MODES[ state.currentScheme ].label;
+		},
+		get cycleAriaLabel() {
+			return `Color scheme: ${ state.currentLabel }. Activate to cycle.`;
+		},
 	},
 	actions: {
 		setScheme() {
-			const next = normalize( getContext().mode );
-			document.documentElement.dataset.theme = next;
-			state.currentScheme = next;
-			writeCookie( next );
+			applyScheme( getContext().mode );
+		},
+		cycleScheme() {
+			const index = VALID.indexOf( state.currentScheme );
+			applyScheme( VALID[ ( index + 1 ) % VALID.length ] );
 		},
 	},
 } );

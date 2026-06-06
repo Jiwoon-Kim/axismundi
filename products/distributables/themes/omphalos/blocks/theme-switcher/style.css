@@ -79,58 +79,56 @@
 	--md-icon-fill: 1;
 }
 
-/* Filter chips variation — mirrors the lab styleguide theme switcher that uses
- * three filter chips (Light / Dark / Auto) instead of one segmented track. This
- * is still a theme-mode single-select control; only the surface changes. */
-.wp-block-omphalos-theme-switcher.is-style-filter-chips {
+/* Theme cycle variation — one standard icon button that cycles auto → light →
+ * dark. Mirrors the lab contract: `ax-icon-button is-standard has-state-layer
+ * t-theme-cycle`. This is an icon-button, not a chip set or segmented control. */
+.wp-block-omphalos-theme-switcher.is-style-theme-cycle {
 	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--space-sm);
+	inline-size: fit-content;
+	max-inline-size: 100%;
+	gap: 0;
 	padding: 0;
 	background-color: transparent;
 	border-radius: 0;
 }
 
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button {
-	min-block-size: 32px;
-	padding-inline: var(--space-md);
-	gap: var(--space-sm);
-	border: 1px solid var(--md-sys-color-outline-variant);
-	border-radius: var(--md-sys-shape-corner-small);
+.wp-block-omphalos-theme-switcher.is-style-theme-cycle .omphalos-theme-switcher__cycle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 48px;
+	block-size: 48px;
+	min-inline-size: 48px;
+	min-block-size: 48px;
+	padding: 0;
+	gap: 0;
+	border: 0;
+	border-radius: var(--md-sys-shape-corner-full);
 	background-color: transparent;
 	color: var(--md-sys-color-on-surface-variant);
 	box-shadow: none;
+	transition:
+		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+		color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
 }
 
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"] {
-	border-color: transparent;
-	background-color: var(--md-sys-color-secondary-container);
-	color: var(--md-sys-color-on-secondary-container);
-}
-
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button:not([aria-pressed="true"]):hover {
+.wp-block-omphalos-theme-switcher.is-style-theme-cycle .omphalos-theme-switcher__cycle:hover {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 }
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button:not([aria-pressed="true"]):focus-visible {
+
+.wp-block-omphalos-theme-switcher.is-style-theme-cycle .omphalos-theme-switcher__cycle:focus-visible {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
-}
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button:not([aria-pressed="true"]):active {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
-}
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"]:hover {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
-}
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"]:focus-visible {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
-}
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"]:active {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+	outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
+	outline-offset: var(--md-sys-state-focus-indicator-outer-offset);
 }
 
-.wp-block-omphalos-theme-switcher.is-style-filter-chips .material-symbols-outlined {
-	font-size: 18px;
-	--md-icon-opsz: 20;
+.wp-block-omphalos-theme-switcher.is-style-theme-cycle .omphalos-theme-switcher__cycle:active {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}
+
+.wp-block-omphalos-theme-switcher.is-style-theme-cycle .material-symbols-outlined {
+	font-size: 24px;
+	--md-icon-opsz: 24;
 }
 
 @media (prefers-reduced-motion: reduce) {

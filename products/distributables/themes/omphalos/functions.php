@@ -173,16 +173,6 @@ function omphalos_register_block_styles() : void {
 			'label' => __( 'Segmented list', 'omphalos' ),
 		)
 	);
-	// core/image ships Default + Rounded itself. Add a "No rounding" option so
-	// the M3 corner scale's `none` is selectable without killing the default
-	// medium radius. CSS for all three is in blocks.css §1.
-	register_block_style(
-		'core/image',
-		array(
-			'name'  => 'no-rounding',
-			'label' => __( 'No rounding', 'omphalos' ),
-		)
-	);
 	// core/group as M3 Card. Bare group stays a plain layout container; only these
 	// opt-in variations turn a group into a Card surface (filled / elevated /
 	// outlined), so layout groups in patterns never accidentally read as cards.
@@ -209,7 +199,7 @@ function omphalos_register_block_styles() : void {
 	// blocks.css §9; these are the per-variant color treatments for core/button.
 	//
 	// Variation contract (three NON-redundant layers; same shape as core/group
-	// card-* and core/image no-rounding):
+	// card-*):
 	//   1. register_block_style() here    → the selectable name + label, and the
 	//      `is-style-<slug>` class the front end keys on. Required for toolbar
 	//      selection + blocks.css rendering.

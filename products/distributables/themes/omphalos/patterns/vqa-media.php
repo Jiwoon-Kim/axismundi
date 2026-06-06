@@ -73,11 +73,11 @@
 
 <!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group"><!-- wp:heading -->
-<h2 class="wp-block-heading">Image — no rounding style</h2>
+<h2 class="wp-block-heading">Image — Global Styles radius</h2>
 <!-- /wp:heading -->
 
-<!-- wp:image {"id":__IMAGE_ID__,"sizeSlug":"large","linkDestination":"none","className":"is-style-no-rounding"} -->
-<figure class="wp-block-image size-large is-style-no-rounding"><img src="__IMAGE_URL__" alt="Mogu placeholder no rounding" class="wp-image-__IMAGE_ID__"/></figure>
+<!-- wp:image {"id":__IMAGE_ID__,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="__IMAGE_URL__" alt="Mogu placeholder default radius" class="wp-image-__IMAGE_ID__"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:group --></div>
 <!-- /wp:group -->

@@ -12,7 +12,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'OMPHALOS_VERSION' ) ) {
-	define( 'OMPHALOS_VERSION', '0.1.0' );
+	define( 'OMPHALOS_VERSION', '0.1.1' );
 }
 
 /**
@@ -39,6 +39,25 @@ function omphalos_setup() : void {
 	add_theme_support( 'post-thumbnails' );
 	add_theme_support( 'responsive-embeds' );
 	add_theme_support( 'editor-styles' );
+	// Block themes get most of these implicitly (and the TT5 parent declares them
+	// at runtime), but the WordPress.org upload scanner inspects the theme ZIP
+	// WITHOUT the parent, so declare them explicitly here so a standalone scan sees
+	// them. (wp-block-styles is intentionally NOT enabled — the theme owns its core
+	// block appearance via the M3 contract in blocks.css.)
+	add_theme_support( 'title-tag' );
+	add_theme_support( 'automatic-feed-links' );
+	add_theme_support( 'align-wide' );
+	add_theme_support(
+		'html5',
+		array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption', 'style', 'script', 'navigation-widgets' )
+	);
+	add_theme_support(
+		'custom-logo',
+		array(
+			'flex-height' => true,
+			'flex-width'  => true,
+		)
+	);
 
 	load_theme_textdomain( 'omphalos', get_stylesheet_directory() . '/languages' );
 

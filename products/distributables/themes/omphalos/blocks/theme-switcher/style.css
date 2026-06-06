@@ -79,6 +79,60 @@
 	--md-icon-fill: 1;
 }
 
+/* Filter chips variation — mirrors the lab styleguide theme switcher that uses
+ * three filter chips (Light / Dark / Auto) instead of one segmented track. This
+ * is still a theme-mode single-select control; only the surface changes. */
+.wp-block-omphalos-theme-switcher.is-style-filter-chips {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: 0;
+	background-color: transparent;
+	border-radius: 0;
+}
+
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button {
+	min-block-size: 32px;
+	padding-inline: var(--space-md);
+	gap: var(--space-sm);
+	border: 1px solid var(--md-sys-color-outline-variant);
+	border-radius: var(--md-sys-shape-corner-small);
+	background-color: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	box-shadow: none;
+}
+
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"] {
+	border-color: transparent;
+	background-color: var(--md-sys-color-secondary-container);
+	color: var(--md-sys-color-on-secondary-container);
+}
+
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button:not([aria-pressed="true"]):hover {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button:not([aria-pressed="true"]):focus-visible {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button:not([aria-pressed="true"]):active {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"]:hover {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"]:focus-visible {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .omphalos-theme-switcher__button[aria-pressed="true"]:active {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--md-sys-color-secondary-container));
+}
+
+.wp-block-omphalos-theme-switcher.is-style-filter-chips .material-symbols-outlined {
+	font-size: 18px;
+	--md-icon-opsz: 20;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.wp-block-omphalos-theme-switcher .omphalos-theme-switcher__button,
 	.omphalos-theme-switcher__button .material-symbols-outlined {

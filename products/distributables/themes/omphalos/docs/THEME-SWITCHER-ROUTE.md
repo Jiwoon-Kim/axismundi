@@ -100,7 +100,7 @@ surface. `color-scheme` stays in foundation.css; icons.css already provides
 
 ## §4 — UI
 
-3-state segmented control, Material Symbols icons:
+Default form: 3-state segmented control, Material Symbols icons:
 
 | mode | icon (ligature) | label |
 |---|---|---|
@@ -113,6 +113,18 @@ wrapper with three `<button data-wp-on--click="actions.setScheme">`, each
 `data-wp-context='{"mode":"…"}'` and `data-wp-bind--aria-pressed=
 "state.isActive"`. Icon = `<span class="material-symbols-outlined" aria-hidden>`,
 label text alongside (or visually-hidden for icon-only).
+
+### 4.1 Style variation — filter chips
+
+Omphalos also exposes `is-style-filter-chips` on `omphalos/theme-switcher`.
+This maps the same three-state control to the lab styleguide's theme switcher
+surface: three M3 filter chips (`Light`, `Dark`, `Auto`) with 32px height,
+corner-small shape, outlined rest state, and secondary-container selected state.
+The behaviour and persistence remain identical; only the chrome changes.
+
+This variation is intentionally close to plain HTML button markup so the wp.org
+submission fallback can reuse the same visual contract after the custom block is
+split into a companion plugin.
 
 ---
 

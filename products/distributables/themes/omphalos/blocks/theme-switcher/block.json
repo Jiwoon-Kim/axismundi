@@ -27,6 +27,12 @@
 			"radius": true
 		}
 	},
+	"styles": [
+		{
+			"name": "filter-chips",
+			"label": "Filter chips"
+		}
+	],
 	"editorScript": "file:./edit.js",
 	"editorStyle": "file:./style.css",
 	"style": "file:./style.css",

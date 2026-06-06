@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/WordPress/gutenberg/wp/7.0/schemas/json/theme.json",
+  "version": 3,
+  "title": "Filter chips",
+  "slug": "filter-chips",
+  "blockTypes": [ "omphalos/theme-switcher" ],
+  "styles": {
+    "color": {
+      "background": "transparent",
+      "text": "var(--md-sys-color-on-surface)"
+    },
+    "border": {
+      "radius": "0px"
+    },
+    "spacing": {
+      "padding": "0px"
+    }
+  }
+}

@@ -301,6 +301,12 @@
 
 <!-- wp:omphalos/theme-switcher /-->
 
+<!-- wp:paragraph {"fontSize":"label-small"} -->
+<p class="has-label-small-font-size">Filter-chip variation — lab styleguide mapping, useful for chrome areas where the segmented track feels too heavy.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:omphalos/theme-switcher {"className":"is-style-filter-chips"} /-->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">Card usage — pattern / template compositions</h2>
 <!-- /wp:heading -->

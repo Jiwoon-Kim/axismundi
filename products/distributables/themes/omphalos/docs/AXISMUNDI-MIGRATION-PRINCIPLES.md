@@ -230,6 +230,22 @@ Do not mechanically replace `--space-xs/sm/md/lg/xl` while porting tokens. Those
 aliases are current Omphalos authoring shorthands and should be migrated only in
 a focused spacing sweep.
 
+### Motion tokens
+
+M3 motion has three useful layers:
+
+```txt
+spring physics              → damping/stiffness tokens for native runtimes
+easing + duration           → canonical CSS transition/animation tokens
+converted spring curves     → web-friendly cubic-bezier + duration pairs
+```
+
+WordPress theme.json does not expose a first-class motion preset axis. Omphalos
+therefore keeps motion as CSS system tokens only. Existing
+`--md-sys-motion-curve-*` variables are stable Omphalos aliases used by current
+CSS; explicit `--md-sys-motion-expressive-*` and `--md-sys-motion-standard-*`
+tokens can be introduced alongside them without retargeting existing components.
+
 ---
 
 ## §6 — Axismundi clean-build encoding

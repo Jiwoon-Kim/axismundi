@@ -26,8 +26,5 @@
 /patterns/vqa-theme-comments.php
 /patterns/vqa-widgets.php
 
-# --- Specimen / placeholder media (incl. non-GPL Pixabay video); seed-time only ---
-/assets/media
-
 # --- Build artifacts ---
 *.zip

@@ -16,7 +16,7 @@ specific notice applies.
 |---|---|---|---|
 | `media/image/image-placeholder-mogu-1024.webp` | Jiwoon Kim | GPL-3.0-or-later as bundled with Omphalos | Project-author supplied placeholder image for block and template specimens. |
 | `media/audio/audio-placeholder-jazzy-lofi.ogg` | Jiwoon Kim | GPL-3.0-or-later as bundled with Omphalos | Project-author supplied demo audio placeholder for media block specimens. |
-| `media/video/video-placeholder-gwangan-720p.webm` | Pixabay / Evgeniy__Mironov | Pixabay Content License | Placeholder video for media block specimens; see https://pixabay.com/service/license-summary/. |
+| `media/video/video-placeholder-gwangan-720p.webm` | Pixabay / Evgeniy__Mironov | Pixabay Content License | Placeholder video for media block specimens. Pixabay's summary permits free use, modification/adaptation, and no-attribution use, subject to prohibited uses such as standalone redistribution. See https://pixabay.com/service/license-summary/. |
 | `media/video/video-placeholder-gwangan-720p.ko.vtt` | Jiwoon Kim | GPL-3.0-or-later as bundled with Omphalos | Korean caption fixture for the placeholder video. |
 | `media/video/video-placeholder-gwangan-720p.en.vtt` | Jiwoon Kim | GPL-3.0-or-later as bundled with Omphalos | English caption fixture for the placeholder video. |
 

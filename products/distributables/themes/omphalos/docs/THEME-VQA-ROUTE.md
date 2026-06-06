@@ -39,6 +39,11 @@ Core/TT5 owns context, layout primitives, and template composition.
 Omphalos owns token binding, de-prose chrome fixes, and small opt-in surfaces.
 ```
 
+The block-rooted-vs-prose-fallback classification this route keeps surfacing (e.g.
+"is `table` prose or block?") is fixed as a standing rule in
+[`AXISMUNDI-MIGRATION-PRINCIPLES.md`](./AXISMUNDI-MIGRATION-PRINCIPLES.md) — the
+Omphalos → Axismundi clean-build hand-off.
+
 **Done families.**
 
 ```txt

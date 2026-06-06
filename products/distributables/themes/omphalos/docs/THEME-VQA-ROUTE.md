@@ -1207,6 +1207,29 @@ preview rendered at intrinsic size and cropped. Do **not** duplicate core sizing
 Instead, the editor bridge injects the core image block stylesheet into rewritten Stylebook blobs
 alongside Omphalos assets, preserving TT5/core preview behaviour.
 
+**List style-variation boundary (DOCUMENTED).** `core/list` has three practical styles in Omphalos:
+Default, upstream `checkmark-list`, and theme-owned `list-segmented`. They do **not** all belong in
+the Global Styles Style Variations lane:
+
+```txt
+Default list       = text/content primitive. Global Styles may adjust core/list or core/list-item
+                     typography/colour/spacing, but prose rhythm still owns long-form list context.
+Checkmark list     = upstream marker/list style (core/TT5). It behaves like an unordered-list marker
+                     vocabulary, not a container component; Omphalos does not add a discoverability
+                     partial for it.
+Segmented list     = Omphalos component-like style. It is registered for block toolbar use and styled
+                     in blocks.css §6, but it intentionally has NO styles/blocks/*.json partial.
+                     The visual treatment is owned by child list items (`> li`: background, radius,
+                     padding, gap), while the selected style class sits on the parent core/list.
+                     Surfacing it as a Global Styles variation would suggest the parent list itself
+                     owns the surface, which is the wrong abstraction.
+```
+
+`core/list-item` Global Styles controls are useful and well-behaved for normal list-item editing
+(background, radius, etc.). That confirms the WP block design is sound: item surface belongs to
+`core/list-item`. The segmented-list style stays a scoped component demonstration, not a global
+editable preset.
+
 **Current FSE Typography Elements coverage.** Text, Headings, Captions, and Buttons are mapped in
 `theme.json`; Links intentionally inherit typography. Continue promotion block-by-block only where a
 stable global control exists (e.g. image rounding, featured image radius, group card variations);

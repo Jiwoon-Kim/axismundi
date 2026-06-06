@@ -1230,6 +1230,24 @@ Segmented list     = Omphalos component-like style. It is registered for block t
 `core/list-item`. The segmented-list style stays a scoped component demonstration, not a global
 editable preset.
 
+**Quote (DONE).** `core/quote` is promoted to Global Styles because it is block chrome, not merely
+prose. The default quote now binds globally to the existing Omphalos quote contract:
+
+```txt
+typography = body-large 16/24/400
+text       = on-surface
+bar        = 4px primary border-inline-start
+padding    = 8px block / 24px inline-start
+```
+
+`core/quote`'s upstream `plain` style remains a style variation, but the reliable visual contract is
+global CSS: `.wp-block-quote.is-style-plain { border-inline-start: 0; }`. The optional
+`styles/blocks/quote-plain.json` partial exists only as the Global Styles / Stylebook
+discoverability layer. Verified on `/vqa-text/` (`?page_id=13`): default quote = primary 4px bar;
+plain quote = no bar; both retain body-large/400 and cite remains muted body-small. The right-side
+Stylebook variation preview is known to be weak for Quote even in TT5, so front-end/block computed
+values are the contract source.
+
 **Current FSE Typography Elements coverage.** Text, Headings, Captions, and Buttons are mapped in
 `theme.json`; Links intentionally inherit typography. Continue promotion block-by-block only where a
 stable global control exists (e.g. image rounding, featured image radius, group card variations);

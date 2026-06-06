@@ -417,6 +417,34 @@
           "radius": "12px"
         }
       },
+      "core/quote": {
+        "color": {
+          "text": "var(--md-sys-color-on-surface)"
+        },
+        "typography": {
+          "fontFamily": "var:preset|font-family|roboto-flex",
+          "fontSize": "var:preset|font-size|body-large",
+          "lineHeight": "1.5",
+          "fontStyle": "normal",
+          "fontWeight": "400",
+          "letterSpacing": "0.5px",
+          "textTransform": "none"
+        },
+        "border": {
+          "left": {
+            "color": "var(--md-sys-color-primary)",
+            "style": "solid",
+            "width": "4px"
+          }
+        },
+        "spacing": {
+          "padding": {
+            "top": "8px",
+            "bottom": "8px",
+            "left": "24px"
+          }
+        }
+      },
       "core/post-featured-image": {
         "border": {
           "radius": "var(--md-sys-shape-corner-medium)"

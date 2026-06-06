@@ -257,11 +257,10 @@
  * §7 core/quote — Plain (is-style-plain)
  *
  * Core ships the "Plain" quote variation. It drops only the emphasis BAR that
- * prose.css §4 gives every blockquote — the left padding stays so the quote
- * keeps its indent and surface typography, just without the primary rule.
- * (core/quote registers is-style-plain itself; no theme registration needed —
- * this is the visual contract only.)
+ * Global Styles gives core/quote — the left padding stays so the quote keeps
+ * its indent and surface typography, just without the primary rule.
  * ============================================================ */
+.wp-block-quote.is-style-plain,
 .wp-block-post-content .wp-block-quote.is-style-plain {
   border-inline-start: 0;
 }

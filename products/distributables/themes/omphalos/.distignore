@@ -1,0 +1,33 @@
+# .distignore — files/dirs excluded from the distributable theme ZIP.
+# Consumed by scripts/build-zip.ps1 (and compatible with `wp dist-archive`).
+# Keep this list in sync with the runtime contract: anything required to render
+# the theme on the front end or in the editor MUST NOT be listed here.
+
+# --- Dev tooling / local environment ---
+/node_modules
+/package.json
+/package-lock.json
+/.wp-env.json
+/.distignore
+/README.md
+
+# --- Dev documentation + seed/dev scripts (not needed at runtime) ---
+/docs
+/scripts
+
+# --- VQA / specimen patterns (inserter:false dev specimens; no template refs) ---
+/patterns/prose-vqa.php
+/patterns/vqa-design.php
+/patterns/vqa-embeds.php
+/patterns/vqa-media.php
+/patterns/vqa-text.php
+/patterns/vqa-theme.php
+/patterns/vqa-theme-archive.php
+/patterns/vqa-theme-comments.php
+/patterns/vqa-widgets.php
+
+# --- Specimen / placeholder media (incl. non-GPL Pixabay video); seed-time only ---
+/assets/media
+
+# --- Build artifacts ---
+*.zip

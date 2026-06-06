@@ -4,6 +4,9 @@ playwright-report/
 .playwright/
 tmp/
 
+# Distributable theme/plugin build output (transient ZIP artifacts)
+products/distributables/_dist/
+
 docs/**/*-qa.png
 docs/**/qa-*.png
 

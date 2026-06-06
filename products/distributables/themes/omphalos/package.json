@@ -9,7 +9,8 @@
     "start": "wp-env start",
     "stop": "wp-env stop",
     "destroy": "wp-env destroy",
-    "cli": "wp-env run cli wp"
+    "cli": "wp-env run cli wp",
+    "build:zip": "pwsh -NoProfile -File scripts/build-zip.ps1"
   },
   "devDependencies": {
     "@wordpress/env": "^10.0.0"

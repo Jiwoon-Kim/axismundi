@@ -321,6 +321,10 @@ add_action( 'init', 'omphalos_register_block_styles' );
  * @return string
  */
 function omphalos_theme_name_credit( $translation, $text ) {
+	if ( is_admin() ) {
+		return $translation;
+	}
+
 	if ( 'Twenty Twenty-Five' === $text ) {
 		return wp_get_theme()->get( 'Name' );
 	}

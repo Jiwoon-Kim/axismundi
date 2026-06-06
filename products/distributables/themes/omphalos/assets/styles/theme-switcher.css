@@ -1,0 +1,69 @@
+/* ============================================================
+ * Omphalos — theme-cycle switcher (custom-HTML header control)
+ *
+ * A theme-owned, plugin-independent light/dark/auto control: one standard M3
+ * icon button that cycles auto → light → dark. The companion
+ * Omphalos Theme Switcher plugin ships the same control as a block
+ * (is-style-theme-cycle, Interactivity API); this is the theme's own fallback so
+ * the header switcher works with the theme alone. Behaviour: theme-cycle.js
+ * (writes the omphalos_theme cookie + data-theme); application before paint:
+ * inc/theme-switcher.php. Mirrors the lab contract `ax-icon-button is-standard
+ * has-state-layer t-theme-cycle`.
+ * ============================================================ */
+.omphalos-theme-switcher--custom {
+	display: inline-flex;
+	inline-size: fit-content;
+	max-inline-size: 100%;
+}
+.omphalos-theme-switcher__cycle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 48px;
+	block-size: 48px;
+	min-inline-size: 48px;
+	min-block-size: 48px;
+	padding: 0;
+	gap: 0;
+	border: 0;
+	border-radius: var(--md-sys-shape-corner-full);
+	background-color: transparent;
+	color: var(--md-sys-color-on-surface-variant);
+	box-shadow: none;
+	cursor: pointer;
+	transition:
+		background-color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects),
+		color var(--md-sys-motion-curve-fast-effects-duration) var(--md-sys-motion-curve-fast-effects);
+}
+.omphalos-theme-switcher__cycle:hover {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.omphalos-theme-switcher__cycle:focus-visible {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+	outline: var(--md-sys-state-focus-indicator-thickness) solid var(--md-sys-color-secondary);
+	outline-offset: var(--md-sys-state-focus-indicator-outer-offset);
+}
+.omphalos-theme-switcher__cycle:active {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}
+.omphalos-theme-switcher__cycle .material-symbols-outlined {
+	font-size: 24px;
+	--md-icon-opsz: 24;
+}
+/* Visually-hidden label (independent of parent .screen-reader-text definition). */
+.omphalos-theme-switcher__cycle .screen-reader-text {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.omphalos-theme-switcher__cycle {
+		transition: none;
+	}
+}

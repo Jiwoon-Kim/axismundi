@@ -92,6 +92,9 @@ function omphalos_enqueue_assets() : void {
 		// Global Material Symbols utility — front + editor (added to add_editor_style
 		// in omphalos_setup too) so theme-control icons render the same in both.
 		'omphalos-icons'            => array( 'assets/styles/icons.css', array( 'omphalos-blocks' ) ),
+		// Theme-cycle switcher (custom-HTML header control). Last so it can read
+		// the token + icon layers.
+		'omphalos-theme-switcher'   => array( 'assets/styles/theme-switcher.css', array( 'omphalos-icons' ) ),
 	);
 
 	$previous = array();
@@ -102,6 +105,16 @@ function omphalos_enqueue_assets() : void {
 		}
 		wp_enqueue_style( $handle, $uri, $style[1], OMPHALOS_VERSION );
 		$previous[] = $handle;
+	}
+
+	// Theme-cycle switcher behaviour for the custom-HTML header control. The block
+	// version (Interactivity API) lives in the companion plugin; this drives the
+	// theme's own [data-theme-cycle] button so the header switcher works plugin-free.
+	$cycle_uri = omphalos_asset_uri( 'assets/scripts/theme-cycle.js' );
+	if ( null !== $cycle_uri ) {
+		$cycle_path    = get_stylesheet_directory() . '/assets/scripts/theme-cycle.js';
+		$cycle_version = file_exists( $cycle_path ) ? (string) filemtime( $cycle_path ) : OMPHALOS_VERSION;
+		wp_enqueue_script( 'omphalos-theme-cycle', $cycle_uri, array(), $cycle_version, true );
 	}
 }
 add_action( 'wp_enqueue_scripts', 'omphalos_enqueue_assets' );

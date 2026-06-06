@@ -1200,6 +1200,15 @@ uses editor-owned `blob:` iframes, `assets/scripts/editor-theme-scheme.js` rewri
 blobs with the current `data-theme`, Omphalos style cascade, Material Symbols font-face, and the
 current `aria-pressed` active state.
 
+**Group Card padding boundary (DONE).** `core/group` card variations are promoted as card
+**surface** styles, not as fixed-content-spacing components. Filled / elevated / outlined cards keep
+their surface colour, radius, outline/shadow, and `overflow: clip`, but their default padding is now
+`0px` in the `styles/blocks/group-card-*.json` partials so Site Editor → Blocks → Group →
+Dimensions → Padding can own the card inset. `blocks.css §8` no longer forces
+`--comp-card-padding`; authoring patterns should put text/media inside nested groups when they need
+interior rhythm. Verified on `/vqa-design/`: card element padding = 0, nested content group padding
+= spacing preset 50, radius/clip/surface/elevation/outline remain intact in light/dark.
+
 **Stylebook blob iframe caveat (DONE).** The blob rewrite must not replace WordPress core block
 styles. `core/image` proved the failure mode: core normally provides `.wp-block-image img {
 max-width:100%; height:auto; }`; when the rewritten Stylebook blob lacked that stylesheet, the image

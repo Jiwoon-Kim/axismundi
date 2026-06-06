@@ -16,7 +16,7 @@
       "width": "1px"
     },
     "spacing": {
-      "padding": "var(--comp-card-padding)"
+      "padding": "0px"
     }
   }
 }

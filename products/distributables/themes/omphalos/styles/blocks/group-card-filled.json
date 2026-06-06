@@ -13,7 +13,7 @@
       "radius": "var(--comp-card-radius)"
     },
     "spacing": {
-      "padding": "var(--comp-card-padding)"
+      "padding": "0px"
     }
   }
 }

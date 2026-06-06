@@ -280,15 +280,16 @@
  *   is-style-card-filled    -> Filled card   — surface-container-highest
  *   is-style-card-elevated  -> Elevated card — surface-container-low + level-1 shadow
  *   is-style-card-outlined  -> Outlined card — surface + outline-variant hairline
- * Common: comp card padding + radius, and `overflow: clip` so nested media honors
+ * Common: radius and `overflow: clip` so nested media honors
  * the rounded corners (the box-shadow on the elevated card is on the element box,
- * not clipped). These are CONTENT cards; a whole-card action/navigation is a
- * markup + semantic decision (button/anchor), not this visual variation.
+ * not clipped). Card padding is deliberately owned by Global Styles Dimensions
+ * (default 0px in the style partials) or by nested content groups, not by this CSS
+ * rule. These are CONTENT cards; a whole-card action/navigation is a markup +
+ * semantic decision (button/anchor), not this visual variation.
  * ============================================================ */
 .wp-block-group.is-style-card-filled,
 .wp-block-group.is-style-card-elevated,
 .wp-block-group.is-style-card-outlined {
-  padding: var(--comp-card-padding);
   border-radius: var(--comp-card-radius);
   overflow: clip;
 }

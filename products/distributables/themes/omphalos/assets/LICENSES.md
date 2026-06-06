@@ -4,12 +4,6 @@ This file records per-file licensing for non-code assets bundled with Omphalos.
 Theme code and templates are licensed under GPL-3.0-or-later unless a more
 specific notice applies.
 
-## Brand
-
-| File | Author | License / Terms | Notes |
-|---|---|---|---|
-| `brand/axismundi-symbol.svg` | Jiwoon Kim | GPL-3.0-or-later as bundled with Omphalos | Project identity artwork. Copyright licensing is GPL-compatible for the theme package; trademark/project naming rights are not granted beyond ordinary nominative use. |
-
 ## Fonts
 
 Bundled font files under `fonts/` are distributed under the SIL Open Font

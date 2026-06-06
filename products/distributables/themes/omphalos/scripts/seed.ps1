@@ -11,8 +11,7 @@
 
   Site Logo is NOT set by default. site_logo / custom_logo are SITE-OWNER data
   (the installation's identity), not a theme fixture — a distributable theme must
-  not silently overwrite them on activate/seed. The brand mark lives in the theme
-  as an asset (assets/brand/axismundi-symbol.svg). A distributable theme does
+  not silently overwrite them on activate/seed. A distributable theme does
   not bundle a raster Site Logo; if a demo really needs a Site Logo slot, pass
   -SetDemoLogo to opt in explicitly (dev/VQA only).
 

@@ -12,6 +12,11 @@
  */
 ( function () {
 	var VALID = [ 'auto', 'light', 'dark' ];
+	var MODE_META = {
+		auto: { icon: 'contrast', label: 'Auto' },
+		light: { icon: 'light_mode', label: 'Light' },
+		dark: { icon: 'dark_mode', label: 'Dark' },
+	};
 	var COOKIE = 'omphalos_theme';
 	var currentScheme = null;
 	var scriptSrc = ( document.currentScript && document.currentScript.src ) || '';
@@ -32,7 +37,6 @@
 		'assets/styles/prose.css',
 		'assets/styles/blocks.css',
 		'assets/styles/icons.css',
-		'blocks/theme-switcher/style.css',
 	];
 	var styleBookCoreStyles = [
 		'wp-includes/blocks/image/style.min.css',
@@ -115,6 +119,18 @@
 		}
 		doc.querySelectorAll( '.wp-block-omphalos-theme-switcher [data-theme-mode]' ).forEach( function ( button ) {
 			button.setAttribute( 'aria-pressed', button.getAttribute( 'data-theme-mode' ) === scheme ? 'true' : 'false' );
+		} );
+		doc.querySelectorAll( '.wp-block-omphalos-theme-switcher [data-theme-cycle]' ).forEach( function ( button ) {
+			var meta = MODE_META[ normalize( scheme ) ] || MODE_META.auto;
+			var icon = button.querySelector( '.material-symbols-outlined' );
+			var label = button.querySelector( '.screen-reader-text' );
+			button.setAttribute( 'aria-label', 'Color scheme: ' + meta.label + '. Activate to cycle.' );
+			if ( icon ) {
+				icon.textContent = meta.icon;
+			}
+			if ( label ) {
+				label.textContent = meta.label;
+			}
 		} );
 	}
 

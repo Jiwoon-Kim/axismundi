@@ -18,9 +18,9 @@ and block-style bindings onto Twenty Twenty-Five. It is a compatibility pilot
 for proving how WordPress core blocks can be bound to a Material-token design
 language while staying close to native block theme behavior.
 
-This package currently includes an experimental theme switcher block used to
-validate the light / dark / auto contract. For a WordPress.org submission this
-behavior is expected to move to a companion plugin or to a non-block fallback.
+The light / dark / auto scheme application layer is included in the theme. The
+inserter block UI for switching modes lives in the companion
+Omphalos Theme Switcher plugin.
 
 == Installation ==
 

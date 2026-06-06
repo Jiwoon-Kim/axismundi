@@ -14,9 +14,9 @@
 defined( 'ABSPATH' ) || exit;
 
 $omphalos_modes = array(
-	'auto'  => array( 'icon' => 'contrast', 'label' => __( 'Auto', 'omphalos' ) ),
-	'light' => array( 'icon' => 'light_mode', 'label' => __( 'Light', 'omphalos' ) ),
-	'dark'  => array( 'icon' => 'dark_mode', 'label' => __( 'Dark', 'omphalos' ) ),
+	'auto'  => array( 'icon' => 'contrast', 'label' => __( 'Auto', 'omphalos-theme-switcher' ) ),
+	'light' => array( 'icon' => 'light_mode', 'label' => __( 'Light', 'omphalos-theme-switcher' ) ),
+	'dark'  => array( 'icon' => 'dark_mode', 'label' => __( 'Dark', 'omphalos-theme-switcher' ) ),
 );
 
 // Whitelisted cookie → initial active mode (default auto).
@@ -47,7 +47,7 @@ $omphalos_wrapper = get_block_wrapper_attributes(
 			data-theme-cycle="true"
 			data-wp-on--click="actions.cycleScheme"
 			data-wp-bind--aria-label="state.cycleAriaLabel"
-			aria-label="<?php echo esc_attr( sprintf( /* translators: %s: current colour scheme. */ __( 'Color scheme: %s. Activate to cycle.', 'omphalos' ), $omphalos_modes[ $omphalos_current ]['label'] ) ); ?>"
+			aria-label="<?php echo esc_attr( sprintf( /* translators: %s: current colour scheme. */ __( 'Color scheme: %s. Activate to cycle.', 'omphalos-theme-switcher' ), $omphalos_modes[ $omphalos_current ]['label'] ) ); ?>"
 		>
 			<span class="material-symbols-outlined" aria-hidden="true" data-wp-text="state.currentIcon"><?php echo esc_html( $omphalos_modes[ $omphalos_current ]['icon'] ); ?></span>
 			<span class="screen-reader-text" data-wp-text="state.currentLabel"><?php echo esc_html( $omphalos_modes[ $omphalos_current ]['label'] ); ?></span>

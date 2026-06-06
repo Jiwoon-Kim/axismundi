@@ -1,9 +1,10 @@
 # Omphalos — Theme switcher architecture (design, pre-implementation)
 
-> **Purpose**: settle the theme-switcher architecture before code, since it
-> spans SSR `data-theme`, persistence, caching, editor preview, the Interactivity
-> API, and native `color-scheme`. Design only — no block, JS, or render yet.
-> **Status**: route/decisions. Implementation is phased (see §6), after review.
+> **Purpose**: settle the theme-switcher architecture since it spans SSR
+> `data-theme`, persistence, caching, editor preview, the Interactivity API, and
+> native `color-scheme`.
+> **Status**: implemented as a split surface. The Omphalos theme owns scheme
+> application; the companion plugin owns the inserter block UI.
 > **Date**: 2026-05-31 · WP 7.0.
 
 ---
@@ -12,7 +13,7 @@
 
 | Axis | Decision |
 |---|---|
-| Form | **Custom dynamic block** `omphalos/theme-switcher` (not a pattern — needs active state, Interactivity, inserter placement) |
+| Form | Companion plugin custom dynamic block `omphalos/theme-switcher`; theme fallback can be plain HTML that writes the same cookie |
 | Category | **Design** (UI/appearance control, not site content or template structure) |
 | Modes | **auto / light / dark** (3-state) |
 | Persistence | **cookie only** for now (logged-in user-meta deferred) |
@@ -60,13 +61,14 @@ full-page caching the cached HTML carries the first visitor's mode. So:
 
 **Editor parity (implemented).** The block/site editor canvas does not execute
 `wp_head`, so the front-end head script cannot run inside preview documents. A
-small `enqueue_block_editor_assets` script copies the same `omphalos_theme`
+small theme-owned `enqueue_block_editor_assets` script copies the same `omphalos_theme`
 cookie onto editor-owned preview `<html data-theme>` roots. The normal editor
 canvas is a same-origin iframe and can be patched directly; the Style Book uses a
 `blob:` iframe, so the bridge rewrites editor-owned preview blobs with the
 current `data-theme` and injects the Omphalos editor style cascade needed by the
-custom block preview (tokens → block chrome → icons → theme-switcher style).
-The same pass also rewrites the preview block's `aria-pressed` state, so a
+custom block preview (tokens → block chrome → icons). The same pass also
+rewrites the preview block's `aria-pressed` state when the companion block is
+present, so a
 scheme change made from a front-end theme switcher updates both Style Book colour
 tokens and the active segment.
 No second persistence channel is introduced: front, editor canvas, and Style Book
@@ -87,14 +89,13 @@ Three modes, pick one → recommend `role="group"` + three `<button>` with
 with arrow-key roving is the more precise single-select semantic — noted as an
 alternative if we want it.
 
-### 3.4 CSS location → block-scoped
-`.wp-block-omphalos-theme-switcher` component styling lives in
-`blocks/theme-switcher/style.css`, enqueued via block.json `style` (loads only
-when the block is present). The track's inspectable defaults (background,
-padding, radius) live in `theme.json styles.blocks.omphalos/theme-switcher`, so
-the custom block is visible/editable from the Site Editor's Global Styles block
-surface. `color-scheme` stays in foundation.css; icons.css already provides
-`.material-symbols-outlined`.
+### 3.4 CSS location → plugin block-scoped
+`.wp-block-omphalos-theme-switcher` component styling lives in the companion
+plugin's `blocks/theme-switcher/style.css`, enqueued via block.json `style`
+(loads only when the block is present). The theme no longer registers or ships
+the custom block, satisfying the WordPress.org plugin-territory boundary. The
+theme still owns `color-scheme`, token CSS, Material Symbols font loading, and
+the early cookie application script.
 
 ---
 
@@ -123,26 +124,30 @@ button (`ax-icon-button is-standard has-state-layer t-theme-cycle`) that cycles
 the reference chrome is an icon-button affordance for compact header/footer
 areas where the full segmented control is too heavy.
 
-The block still owns the cookie + `<html data-theme>` write. Only the visible
-control changes from three explicit choices to one cycle button.
+The plugin block writes the cookie + live `<html data-theme>` value. The theme's
+early head script reads the same cookie on the next page load.
 
 ---
 
 ## §5 — File layout
 
 ```
-blocks/theme-switcher/
-  block.json     (apiVersion 3; render: file:./render.php; editorScript;
+products/distributables/plugins/omphalos-theme-switcher/
+  omphalos-theme-switcher.php
+  blocks/theme-switcher/
+    block.json   (apiVersion 3; render: file:./render.php; editorScript;
                   editorStyle + style; example for Style Book / inserter;
                   viewScriptModule: file:./view.js; category: design)
-  render.php     (SSR control + best-effort active from cookie)
-  edit.js        (editor preview + cookie-writing controls)
-  view.js        (Interactivity store: setScheme → set data-theme + cookie)
-  style.css      (segmented control behaviour; track defaults in theme.json)
-assets/scripts/editor-theme-scheme.js
+    render.php   (SSR control + best-effort active from cookie)
+    edit.js      (editor preview + cookie-writing controls)
+    view.js      (Interactivity store: setScheme → set data-theme + cookie)
+    style.css    (segmented control + theme-cycle icon button)
+
+products/distributables/themes/omphalos/
+  inc/theme-switcher.php
+                (global inline head script + editor bridge only)
+  assets/scripts/editor-theme-scheme.js
                 (copy cookie scheme into editor canvas + Style Book previews)
-inc/theme-switcher.php
-                (register_block_type + global inline head script + editor bridge)
 ```
 
 Persistence: cookie `omphalos_theme` = `auto|light|dark`, root path, ~1yr,

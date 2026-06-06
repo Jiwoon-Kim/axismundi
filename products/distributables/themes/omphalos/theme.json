@@ -400,18 +400,6 @@
       }
     },
     "blocks": {
-      "omphalos/theme-switcher": {
-        "color": {
-          "background": "var(--md-sys-color-surface-container)",
-          "text": "var(--md-sys-color-on-surface)"
-        },
-        "border": {
-          "radius": "var(--md-sys-shape-corner-full)"
-        },
-        "spacing": {
-          "padding": "2px"
-        }
-      },
       "core/image": {
         "border": {
           "radius": "12px"

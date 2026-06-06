@@ -18,8 +18,8 @@ Consumes (pilot from `axismundi-pilot`):
 - bundled Roboto / Noto fonts + Material Symbols icon font (Font Library)
 - dynamic attachment media object templates
 - 3-state (light / dark / auto) theme switcher (Interactivity API)
-- an experimental `omphalos/theme-switcher` custom block used to validate the
-  switcher contract before it is split into a companion plugin.
+- a light / dark / auto scheme application layer. The inserter block lives in
+  the companion `omphalos-theme-switcher` plugin.
 
 Does **not** implement:
 

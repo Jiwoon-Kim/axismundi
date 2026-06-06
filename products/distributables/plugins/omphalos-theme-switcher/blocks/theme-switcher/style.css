@@ -1,7 +1,7 @@
 /* ============================================================
  * omphalos/theme-switcher — M3 segmented control (front + editor)
  *
- * Block-scoped (block.json "style"). The segments CONSUME the global M3 button
+ * Block-scoped (block.json "style"). The segments CONSUME the Omphalos/M3 button
  * contract: each button carries `.wp-element-button`, so blocks.css §9 +
  * theme.json own the state layer (hover/focus/pressed), focus ring, 40px sizing,
  * label-large type, and pill radius. This file only adds the segmented track and
@@ -17,8 +17,10 @@
 	inline-size: fit-content;
 	max-inline-size: 100%;
 	gap: 2px;
-	/* Track colour, padding, and radius are registered as Global Styles block
-	 * defaults in theme.json, so the Site Editor can inspect/override them. */
+	padding: 2px;
+	border-radius: var(--md-sys-shape-corner-full);
+	background-color: var(--md-sys-color-surface-container);
+	color: var(--md-sys-color-on-surface);
 }
 
 /* Per-segment re-skin (scoped so it beats the §9 .wp-element-button base). The

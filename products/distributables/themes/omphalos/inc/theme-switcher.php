@@ -3,8 +3,8 @@
  * Omphalos — theme switcher infrastructure.
  *
  * Phase 1: the authoritative, cache-safe application of the persisted colour
- * scheme. The omphalos/theme-switcher block (Phase 2+) is the control that writes
- * the cookie; this file makes the choice take effect on every page before paint.
+ * scheme. A companion plugin or custom HTML control writes the cookie; this
+ * file makes the choice take effect on every page before paint.
  *
  * @package Omphalos
  */
@@ -65,20 +65,3 @@ function omphalos_theme_scheme_editor_assets() : void {
 	);
 }
 add_action( 'enqueue_block_editor_assets', 'omphalos_theme_scheme_editor_assets' );
-
-/**
- * Register the omphalos/theme-switcher block.
- *
- * Phase 2: shell only — server render (render.php) + static editor preview
- * (edit.js) + block-scoped style. No view module yet, so the front-end buttons
- * have no behaviour; the Interactivity toggle lands in Phase 3.
- *
- * @return void
- */
-function omphalos_register_theme_switcher_block() : void {
-	$dir = get_stylesheet_directory() . '/blocks/theme-switcher';
-	if ( file_exists( $dir . '/block.json' ) ) {
-		register_block_type( $dir );
-	}
-}
-add_action( 'init', 'omphalos_register_theme_switcher_block' );

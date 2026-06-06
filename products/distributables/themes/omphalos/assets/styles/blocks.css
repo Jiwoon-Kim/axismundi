@@ -29,18 +29,15 @@
  * §0 core/image — corner radius variations
  *
  * prose.css §8 still covers generic prose images. core/image is block chrome, so
- * its default radius and style variations are global — the Site Editor's block
- * Style Variations preview is not wrapped in `.wp-block-post-content`:
- *   - Default             -> corner-medium
+ * its style variations are global — the Site Editor's block Style Variations
+ * preview is not wrapped in `.wp-block-post-content`:
+ *   - Default             -> theme.json styles.blocks.core/image.border.radius
  *   - is-style-rounded   (core-provided)  -> corner-full
  *   - is-style-no-rounding (theme-owned)  -> corner-none (M3 corner scale `none`)
  * Both target the <img>, not the figure, so the caption is unaffected. Lives in
  * blocks.css which is enqueued for the editor canvas too, so the variations
  * preview correctly in the editor (front + editor parity).
  * ============================================================ */
-.wp-block-image img {
-  border-radius: var(--md-sys-shape-corner-medium);
-}
 .wp-block-image.is-style-rounded img {
   border-radius: var(--md-sys-shape-corner-full);
 }

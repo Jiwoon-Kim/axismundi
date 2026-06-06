@@ -210,6 +210,26 @@ Do not invent a fake `theme.json` radius preset layer. If WordPress later adds a
 first-class radius preset axis, Axismundi can map the CSS system tokens into that
 axis during the clean build.
 
+### Spacing tokens and WordPress spacing presets
+
+M3's official spacing scale is `md.sys.measurement.space*` (0, 2, 4, 6, 8, 10,
+12, 14, 16, 20, 24, 32, 36, 40, 48, 56, 64, 72). Omphalos keeps that family in
+CSS system tokens as `--md-sys-measurement-space*`.
+
+WordPress also has a first-class `settings.spacing.spacingSizes` preset axis, but
+that axis is an editor/UI preset surface, not the canonical M3 token namespace.
+During migration:
+
+```txt
+M3 measurement scale               → CSS system tokens
+WordPress spacingSizes             → editor-friendly preset subset / aliases
+Existing Omphalos --space-* aliases → keep stable until a deliberate sweep
+```
+
+Do not mechanically replace `--space-xs/sm/md/lg/xl` while porting tokens. Those
+aliases are current Omphalos authoring shorthands and should be migrated only in
+a focused spacing sweep.
+
 ---
 
 ## §6 — Axismundi clean-build encoding

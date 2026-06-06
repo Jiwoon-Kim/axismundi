@@ -296,9 +296,35 @@
 }
 
 /* ============================================================
- * §5 Spacing (prompt-v2 §3.1)
+ * §5 Spacing
+ *
+ * M3's official spacing scale is the measurement token family
+ * (`md.sys.measurement.space*`). The legacy `--space-*` aliases
+ * below remain as authoring shorthands for existing Omphalos CSS;
+ * do not retarget them in this pass.
  * ============================================================ */
 :root {
+  /* --- M3 measurement space tokens --- */
+  --md-sys-measurement-space0:   0;
+  --md-sys-measurement-space25:  2px;
+  --md-sys-measurement-space50:  4px;
+  --md-sys-measurement-space75:  6px;
+  --md-sys-measurement-space100: 8px;
+  --md-sys-measurement-space125: 10px;
+  --md-sys-measurement-space150: 12px;
+  --md-sys-measurement-space175: 14px;
+  --md-sys-measurement-space200: 16px;
+  --md-sys-measurement-space250: 20px;
+  --md-sys-measurement-space300: 24px;
+  --md-sys-measurement-space400: 32px;
+  --md-sys-measurement-space450: 36px;
+  --md-sys-measurement-space500: 40px;
+  --md-sys-measurement-space600: 48px;
+  --md-sys-measurement-space700: 56px;
+  --md-sys-measurement-space800: 64px;
+  --md-sys-measurement-space900: 72px;
+
+  /* --- Omphalos authoring shorthands (kept stable) --- */
   --space-xs: 0.25rem; /* 4px at the default 16px root */
   --space-sm: 0.5rem;  /* 8px */
   --space-md: 1rem;    /* 16px */

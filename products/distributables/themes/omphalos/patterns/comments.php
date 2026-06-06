@@ -20,7 +20,7 @@
 <!-- wp:comments-title /-->
 
 <!-- wp:comment-template -->
-<!-- wp:group {"className":"omph-comment-item","layout":{"type":"flex","flexWrap":"nowrap"}} -->
+<!-- wp:group {"className":"omph-comment-item","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"top"}} -->
 <div class="wp-block-group omph-comment-item">
 <!-- wp:avatar {"size":40} /-->
 

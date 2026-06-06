@@ -1019,7 +1019,9 @@ of `twentytwentyfive/comments`. Nested replies keep the core thread chain; conne
 drawn by `assets/scripts/comment-thread-connectors.js` from measured avatar positions (parent avatar
 bottom → reply avatar inline-start) instead of fixed CSS offsets. The PATTERN owns structure;
 blocks.css §22 = bubble surface + strip + SVG line styling (no CSS stack reorder — the Navigation
-trap). The §21 token binding (avatar 40 List-leading, role colours, de-prose) is unchanged.
+trap). The comment item row is saved with `layout.verticalAlignment:"top"` so the leading avatar is
+top-aligned in the editor as well as on the front end. The §21 token binding (avatar 40
+List-leading, role colours, de-prose) is unchanged.
 Verified light/dark on page 86: author/content in the bubble (surface-container · r16 ·
 fit-content), date/reply in the strip below (mt 4; date = body-small 400/0.4; reply/edit =
 label-medium 500/0.5), bold name, dynamic connector paths, depth 1→5 plus depth 2/3 sibling
@@ -1028,6 +1030,14 @@ does not highlight the tree; clicking Reply toggles a persistent reply-target st
 active, the Reply action turns primary and the full ancestor connector chain to that target is
 raised and highlighted (primary stroke), without moving the root composer. Clicking the same Reply
 again cancels the state.
+
+Editor preview note: the connector is measured JS, so CSS alone cannot show it in the Site Editor
+canvas. `assets/scripts/editor-theme-scheme.js` already rewrites editor-owned `blob:` preview
+iframes to inject the Omphalos style cascade; that same rewrite now adds
+`assets/scripts/comment-thread-connectors.js` so any editor/site-editor iframe that actually renders
+`.wp-block-comment-template` draws the same avatar-bottom → reply-avatar-start connectors. Some
+Global Styles previews for `core/comments` render no comment sample (blank/placeholder); that is a
+core preview-context limitation, not the connector contract.
 
 History: an earlier pass built the microblog NOTE layout (flat meta row + body + action row +
 per-level rail) and was reshaped into the bubble model once Facebook was used as the reference.

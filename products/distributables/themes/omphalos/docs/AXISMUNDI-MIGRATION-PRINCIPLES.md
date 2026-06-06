@@ -260,3 +260,160 @@ plugin / custom block                            = behavior + social-object sche
 This is the structure Omphalos's experiments are converging toward. Each Omphalos
 route doc (THEME-VQA, BUTTON, LIST-GRID, EMBEDS, …) is a source of classification
 data; this file is the standing summary of the rules they have settled.
+
+---
+
+## §7 — WordPress.org submission lessons for Axismundi
+
+Omphalos's first WordPress.org upload produced a second kind of migration data:
+not visual/component classification, but **distribution constraints**. Axismundi
+must treat these as build-time requirements from the start, not as a late release
+cleanup pass.
+
+```txt
+source tree       = lab / documentation / VQA / seed scripts may exist
+distributable ZIP = only runtime theme files + GPL-compatible assets + wp.org
+                   submission metadata
+```
+
+### 7.1 Build a distributable, do not submit the source tree
+
+Omphalos started around 580 MB because the source theme contained `node_modules`,
+VQA media, seed scripts, docs, and development files. The submitted ZIP became
+~10 MB only after a `.distignore` + build script produced a clean package.
+
+Axismundi rule:
+
+```txt
+Never upload the working directory.
+Always upload a built ZIP produced by a repeatable build script.
+```
+
+Minimum dist exclusions:
+
+- `node_modules/`, package lockfiles, local environment files.
+- docs, seed scripts, VQA-only patterns/pages, screenshots used only for testing.
+- source-only media that is not needed at runtime.
+- any non-GPL-compatible asset, even if it is free-to-use elsewhere.
+
+The release artifact, not the repository checkout, is the review surface.
+
+### 7.2 Asset licensing: "free to use" is not enough
+
+The upload scanner rejected Omphalos when a Pixabay reference was present.
+Pixabay allows broad usage, but its standalone redistribution restrictions are
+not GPL-compatible for WordPress.org theme packages.
+
+Axismundi rule:
+
+```txt
+Every file inside the ZIP must be GPL-compatible.
+Free-to-use / no-cost / commercial-use-allowed is NOT sufficient.
+```
+
+Keep per-file asset provenance in a manifest (`assets/LICENSES.md` style), but
+also make sure the manifest itself does not describe non-GPL bundled assets in
+the distributable. If a demo asset is not GPL-compatible, keep it in source/VQA
+only and exclude it from the ZIP.
+
+### 7.3 Custom blocks are plugin territory for wp.org themes
+
+Omphalos's theme-bundled `register_block_type()` produced a REQUIRED failure.
+The theme switcher had to move to a companion plugin; the theme kept only a
+custom-HTML fallback with plain CSS/JS.
+
+Axismundi rule:
+
+```txt
+Theme can ship:
+  block styles, style variations, patterns, templates, CSS, vanilla runtime glue.
+
+Plugin should ship:
+  custom block registration, custom schemas, dynamic block behavior, editor block
+  UI, ActivityPub object actions, async/form/social behavior.
+```
+
+If a feature is essential to the site shell, provide a theme fallback that uses
+core blocks or custom HTML. Put the richer block UI in a companion plugin.
+
+### 7.4 Submission metadata is part of the theme, not paperwork
+
+Omphalos needed these files/fields before upload:
+
+- `readme.txt` with a real WordPress.org contributor username.
+- `LICENSE` with the full license text.
+- `NOTICE.md` for bundled third-party notices (Apache/OFL/etc.).
+- `assets/LICENSES.md` for per-file asset provenance.
+- `screenshot.jpg`/`screenshot.png` at the root.
+- `style.css` headers aligned with the actual project license.
+- Theme URI that points to the specific theme, not only the monorepo root.
+
+Axismundi rule:
+
+```txt
+Submission metadata lives next to the theme from the beginning.
+Do not wait until release week to add license/readme/screenshot files.
+```
+
+### 7.5 Size limit is decimal 10 MB
+
+The WordPress.org upload page reports a maximum file size of 10 MB. Omphalos's
+first GitHub release ZIP was about 10.23 MB and therefore over the decimal limit,
+even though it looked close in MiB terms. Converting the root screenshot from PNG
+to JPEG brought the package below the threshold.
+
+Axismundi rule:
+
+```txt
+Check bytes, not the friendly "MB" label.
+Target < 10,000,000 bytes for wp.org uploads.
+```
+
+Large icon fonts (for example a full Material Symbols font) should be subset
+before release if they threaten the limit.
+
+### 7.6 Block themes still hit classic automated checks
+
+The WordPress.org upload scanner reported classic-theme REQUIRED items for a
+TT5 child block theme: `index.php`, `wp_head()`, `wp_footer()`,
+`language_attributes()`, `body_class()`, `wp_body_open()`, `wp_link_pages()`,
+and theme supports such as `title-tag` and `automatic-feed-links`.
+
+Some of this is scanner noise for block themes and child themes, but Axismundi
+should avoid unnecessary reviewer friction:
+
+```txt
+For a clean block theme:
+  include a minimal index.php where required by the scanner;
+  declare standard add_theme_support() flags when harmless;
+  rely on block templates for rendering, but satisfy legacy scanner expectations
+  where doing so does not distort the theme architecture.
+```
+
+Do not blindly add classic template rendering just to satisfy a scanner. Add only
+compatibility shims that are inert for the block-template path.
+
+### 7.7 Test the installed distributable, not only the source theme
+
+Omphalos used two different validation surfaces:
+
+```txt
+source theme check      = useful during development, but can see source-only files
+installed dist ZIP check = the actual submission artifact
+```
+
+The latter is authoritative. Always install the built ZIP into a temporary theme
+directory and run Theme Check there. This catches missing runtime files and avoids
+false failures from source-only docs/media/scripts.
+
+### 7.8 Child-theme lessons do not all carry forward
+
+Omphalos is a TT5 child theme, so some warnings are parent/child artifacts:
+
+- parent text-domain references can appear in scans;
+- inherited templates may satisfy runtime behavior but not static source scans;
+- Site Editor database customizations can hide file-template changes during VQA.
+
+Axismundi should be a clean theme, so these artifacts should disappear. The clean
+build should own its templates and parts directly, then validate with a fresh
+database before release.

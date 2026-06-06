@@ -13,5 +13,8 @@
 /docs
 /scripts
 
+# --- VQA / specimen patterns (inserter:false dev harnesses) ---
+/patterns/vqa-prose.php
+
 # --- Build artifacts ---
 *.zip

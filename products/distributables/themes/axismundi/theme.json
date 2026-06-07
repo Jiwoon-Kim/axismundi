@@ -413,6 +413,10 @@
 		}
 	},
 	"styles": {
+		"color": {
+			"background": "var:preset|color|background",
+			"text": "var:preset|color|on-background"
+		},
 		"typography": {
 			"fontFamily": "var:preset|font-family|roboto-flex",
 			"fontSize": "var:preset|font-size|body-large",
@@ -470,10 +474,18 @@
 				}
 			},
 			"caption": {
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				},
 				"typography": {
 					"fontSize": "var:preset|font-size|body-small",
 					"letterSpacing": "0.4px",
 					"lineHeight": "1.333"
+				}
+			},
+			"link": {
+				"color": {
+					"text": "var:preset|color|primary"
 				}
 			}
 		}

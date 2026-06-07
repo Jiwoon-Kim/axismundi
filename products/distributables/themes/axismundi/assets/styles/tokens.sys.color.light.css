@@ -1,11 +1,13 @@
 /* ============================================================
  * Axismundi — tokens.sys.color.light.css (M3 light color roles)
  *
- * The light scheme is the :root default. Each role maps a --md-sys-color-* token
- * to a --md-ref-palette-* tone (CLAUDE.md #12: sys color -> ref palette var).
- * shadow / scrim are scheme-neutral and live in tokens.sys.elevation.css.
+ * Light scheme = :root default. Roles in M3 static baseline order
+ * (https://m3.material.io/styles/color/static/baseline). Each --md-sys-color-*
+ * maps to a --md-ref-palette-* tone (CLAUDE.md #12). Fixed-accent roles are
+ * intentionally omitted; shadow/scrim live in tokens.sys.elevation.css.
  * ============================================================ */
 :root {
+	/* Brand & error roles */
 	--md-sys-color-primary: var(--md-ref-palette-primary-40);
 	--md-sys-color-on-primary: var(--md-ref-palette-primary-100);
 	--md-sys-color-primary-container: var(--md-ref-palette-primary-90);
@@ -22,22 +24,30 @@
 	--md-sys-color-on-error: var(--md-ref-palette-error-100);
 	--md-sys-color-error-container: var(--md-ref-palette-error-90);
 	--md-sys-color-on-error-container: var(--md-ref-palette-error-30);
-	--md-sys-color-background: var(--md-ref-palette-neutral-98);
-	--md-sys-color-on-background: var(--md-ref-palette-neutral-10);
+
+	/* Surface roles (container levels highest -> lowest, per M3 baseline) */
 	--md-sys-color-surface: var(--md-ref-palette-neutral-98);
 	--md-sys-color-on-surface: var(--md-ref-palette-neutral-10);
 	--md-sys-color-surface-variant: var(--md-ref-palette-neutral-variant-90);
 	--md-sys-color-on-surface-variant: var(--md-ref-palette-neutral-variant-30);
-	--md-sys-color-surface-bright: var(--md-ref-palette-neutral-98);
-	--md-sys-color-surface-dim: var(--md-ref-palette-neutral-87);
-	--md-sys-color-surface-container-lowest: var(--md-ref-palette-neutral-100);
-	--md-sys-color-surface-container-low: var(--md-ref-palette-neutral-96);
-	--md-sys-color-surface-container: var(--md-ref-palette-neutral-94);
-	--md-sys-color-surface-container-high: var(--md-ref-palette-neutral-92);
 	--md-sys-color-surface-container-highest: var(--md-ref-palette-neutral-90);
+	--md-sys-color-surface-container-high: var(--md-ref-palette-neutral-92);
+	--md-sys-color-surface-container: var(--md-ref-palette-neutral-94);
+	--md-sys-color-surface-container-low: var(--md-ref-palette-neutral-96);
+	--md-sys-color-surface-container-lowest: var(--md-ref-palette-neutral-100);
+
+	/* Inverse */
 	--md-sys-color-inverse-surface: var(--md-ref-palette-neutral-20);
 	--md-sys-color-inverse-on-surface: var(--md-ref-palette-neutral-95);
 	--md-sys-color-inverse-primary: var(--md-ref-palette-primary-80);
+
+	/* Outline */
 	--md-sys-color-outline: var(--md-ref-palette-neutral-variant-50);
 	--md-sys-color-outline-variant: var(--md-ref-palette-neutral-variant-80);
+
+	/* Add-ons (background, surface bright/dim) */
+	--md-sys-color-background: var(--md-ref-palette-neutral-98);
+	--md-sys-color-on-background: var(--md-ref-palette-neutral-10);
+	--md-sys-color-surface-bright: var(--md-ref-palette-neutral-98);
+	--md-sys-color-surface-dim: var(--md-ref-palette-neutral-87);
 }

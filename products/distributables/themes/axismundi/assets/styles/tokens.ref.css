@@ -1,0 +1,12 @@
+/* ============================================================
+ * Axismundi — tokens.ref.css (M3 reference palette)
+ *
+ * The reference layer: literal source palette values. Downstream layers
+ * (tokens.sys.*) reference these via var(--md-ref-palette-*); literals belong
+ * here only. This file starts minimal (the neutrals the elevation layer needs)
+ * and is filled out with the full tonal palette in the color-palette step.
+ * ============================================================ */
+:root {
+	--md-ref-palette-neutral-0: #000000;
+	--md-ref-palette-neutral-100: #ffffff;
+}

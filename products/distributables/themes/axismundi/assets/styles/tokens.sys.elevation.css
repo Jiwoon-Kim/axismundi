@@ -1,0 +1,58 @@
+/* ============================================================
+ * Axismundi — tokens.sys.elevation.css (M3 elevation)
+ *
+ * Web translation of M3 elevation: the spec's elevation is a z-axis DISTANCE
+ * between surfaces (dp), which has no direct CSS equivalent. We implement it as
+ * box-shadow (light-mode depth perception) + dark-mode suppression (M3 uses tonal
+ * elevation in dark, so physical shadows are removed). The dp "height" tokens
+ * (md.sys.elevation.level*) are intentionally NOT defined — they map ambiguously
+ * to translateY / z-index / blur and are unused here. A stacking (z-index) scale
+ * is a separate lane if needed later.
+ *
+ * shadow / scrim are scheme-NEUTRAL (identical in light and dark), so they live
+ * here rather than in the color light/dark layers. The shadow formulas + dark
+ * suppression are elevation BEHAVIOUR, so they live together here.
+ * ============================================================ */
+:root {
+	/* Scheme-neutral colors used by elevation. */
+	--md-sys-color-shadow: var(--md-ref-palette-neutral-0);
+	--md-sys-color-scrim: var(--md-ref-palette-neutral-0);
+
+	/* Light / default elevation shadow formulas (M3 levels 0–5). */
+	--md-sys-elevation-shadow-level0: none;
+	--md-sys-elevation-shadow-level1:
+		0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%),
+		0 1px 3px 1px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%);
+	--md-sys-elevation-shadow-level2:
+		0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%),
+		0 2px 6px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%);
+	--md-sys-elevation-shadow-level3:
+		0 4px 8px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+		0 1px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+	--md-sys-elevation-shadow-level4:
+		0 6px 10px 4px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+		0 2px 3px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+	--md-sys-elevation-shadow-level5:
+		0 8px 12px 6px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%),
+		0 4px 4px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%);
+}
+
+/* Dark mode: M3 uses tonal elevation; physical shadows are suppressed.
+ * Explicit data-theme="dark" first, then the auto/no-preference fallback. */
+:root[data-theme="dark"] {
+	--md-sys-elevation-shadow-level1: none;
+	--md-sys-elevation-shadow-level2: none;
+	--md-sys-elevation-shadow-level3: none;
+	--md-sys-elevation-shadow-level4: none;
+	--md-sys-elevation-shadow-level5: none;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme]),
+	:root[data-theme="auto"] {
+		--md-sys-elevation-shadow-level1: none;
+		--md-sys-elevation-shadow-level2: none;
+		--md-sys-elevation-shadow-level3: none;
+		--md-sys-elevation-shadow-level4: none;
+		--md-sys-elevation-shadow-level5: none;
+	}
+}

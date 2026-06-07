@@ -245,7 +245,42 @@
 			],
 			"fluid": true
 		},
-		"useRootPaddingAwareAlignments": true
+		"useRootPaddingAwareAlignments": true,
+		"shadow": {
+			"defaultPresets": false,
+			"presets": [
+				{
+					"name": "Elevation 0",
+					"slug": "elevation-0",
+					"shadow": "var(--md-sys-elevation-shadow-level0)"
+				},
+				{
+					"name": "Elevation 1",
+					"slug": "elevation-1",
+					"shadow": "var(--md-sys-elevation-shadow-level1)"
+				},
+				{
+					"name": "Elevation 2",
+					"slug": "elevation-2",
+					"shadow": "var(--md-sys-elevation-shadow-level2)"
+				},
+				{
+					"name": "Elevation 3",
+					"slug": "elevation-3",
+					"shadow": "var(--md-sys-elevation-shadow-level3)"
+				},
+				{
+					"name": "Elevation 4",
+					"slug": "elevation-4",
+					"shadow": "var(--md-sys-elevation-shadow-level4)"
+				},
+				{
+					"name": "Elevation 5",
+					"slug": "elevation-5",
+					"shadow": "var(--md-sys-elevation-shadow-level5)"
+				}
+			]
+		}
 	},
 	"styles": {
 		"typography": {

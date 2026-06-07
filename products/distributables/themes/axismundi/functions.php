@@ -60,6 +60,21 @@ function axismundi_setup() : void {
 	);
 
 	load_theme_textdomain( 'axismundi', get_template_directory() . '/languages' );
+
+	// Mirror the runtime token + utility CSS into the editor canvas so Global Styles
+	// previews (e.g. the Shadows section) resolve the same --md-sys-* custom
+	// properties as the front end. Fonts auto-load from theme.json in both contexts.
+	add_editor_style(
+		array_values(
+			array_filter(
+				array(
+					file_exists( get_template_directory() . '/assets/styles/tokens.ref.css' ) ? 'assets/styles/tokens.ref.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/tokens.sys.elevation.css' ) ? 'assets/styles/tokens.sys.elevation.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
+				)
+			)
+		)
+	);
 }
 add_action( 'after_setup_theme', 'axismundi_setup' );
 
@@ -72,10 +87,13 @@ add_action( 'after_setup_theme', 'axismundi_setup' );
  */
 function axismundi_enqueue_assets() : void {
 	$styles = array(
-		// Material Symbols icon utility. Fonts themselves (Roboto/Noto families +
-		// the icon font) auto-load from theme.json fontFamilies; this only contracts
-		// the .material-symbols-outlined rendering. Token + style cascade: later phase.
-		'axismundi-icons' => array( 'assets/styles/icons.css', array() ),
+		// M3 token layers (literals in ref; downstream var() in sys), then utilities.
+		// Loaded in dependency order so the cascade stays explicit. Color light/dark
+		// + the rest of the sys layers land in the color-palette phase.
+		'axismundi-tokens-ref'       => array( 'assets/styles/tokens.ref.css', array() ),
+		'axismundi-tokens-elevation' => array( 'assets/styles/tokens.sys.elevation.css', array( 'axismundi-tokens-ref' ) ),
+		// Material Symbols icon utility (the font auto-loads from theme.json).
+		'axismundi-icons'            => array( 'assets/styles/icons.css', array( 'axismundi-tokens-elevation' ) ),
 	);
 
 	foreach ( $styles as $handle => $style ) {

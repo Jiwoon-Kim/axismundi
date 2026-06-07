@@ -6,3 +6,4 @@ Planned plugin lineup (v3.1+):
 - `typography-inspector/` — M3 typescale role hierarchy panel
 - `dynamic-palette/` — seed-based palette generation (M3 Material You algorithm)
 - `omphalos-theme-switcher/` — companion light/dark/auto switcher block for Omphalos
+- `axismundi-theme-switcher/` — light/dark/auto switcher block and scheme bridge for Axismundi

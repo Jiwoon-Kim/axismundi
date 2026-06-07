@@ -1,0 +1,40 @@
+/* axismundi/theme-switcher
+ *
+ * Functional shell only. Axismundi has not implemented its Button component yet,
+ * so the plugin deliberately avoids component styling. The theme/component layer
+ * will later decide the visual treatment for .wp-element-button, icon buttons,
+ * segmented controls, and state layers.
+ */
+
+.wp-block-axismundi-theme-switcher {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.wp-block-axismundi-theme-switcher .axismundi-theme-switcher__button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button {
+	inline-size: 2.75rem;
+	block-size: 2.75rem;
+	justify-content: center;
+	padding: 0;
+}
+
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__label,
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .screen-reader-text {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}

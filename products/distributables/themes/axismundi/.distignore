@@ -17,6 +17,7 @@
 /patterns/prose-vqa.php
 /patterns/vqa-text.php
 /patterns/vqa-design.php
+/patterns/vqa-media.php
 
 # --- Build artifacts ---
 /tmp

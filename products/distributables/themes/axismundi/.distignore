@@ -18,6 +18,7 @@
 /patterns/vqa-text.php
 /patterns/vqa-design.php
 /patterns/vqa-media.php
+/patterns/vqa-widgets.php
 
 # --- Build artifacts ---
 /tmp

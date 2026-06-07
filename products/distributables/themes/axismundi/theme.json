@@ -254,6 +254,56 @@
 			"fontWeight": "400",
 			"letterSpacing": "0.5px",
 			"lineHeight": "1.5"
+		},
+		"elements": {
+			"heading": {
+				"typography": {
+					"fontFamily": "var:preset|font-family|roboto-flex",
+					"fontWeight": "400",
+					"letterSpacing": "0px",
+					"textTransform": "none"
+				}
+			},
+			"h1": {
+				"typography": {
+					"fontSize": "var:preset|font-size|headline-large",
+					"lineHeight": "1.25"
+				}
+			},
+			"h2": {
+				"typography": {
+					"fontSize": "var:preset|font-size|headline-medium",
+					"lineHeight": "1.286"
+				}
+			},
+			"h3": {
+				"typography": {
+					"fontSize": "var:preset|font-size|headline-small",
+					"lineHeight": "1.333"
+				}
+			},
+			"h4": {
+				"typography": {
+					"fontSize": "var:preset|font-size|title-large",
+					"lineHeight": "1.273"
+				}
+			},
+			"h5": {
+				"typography": {
+					"fontSize": "var:preset|font-size|title-medium",
+					"fontWeight": "500",
+					"letterSpacing": "0.15px",
+					"lineHeight": "1.5"
+				}
+			},
+			"h6": {
+				"typography": {
+					"fontSize": "var:preset|font-size|title-small",
+					"fontWeight": "500",
+					"letterSpacing": "0.1px",
+					"lineHeight": "1.429"
+				}
+			}
 		}
 	},
 	"templateParts": [

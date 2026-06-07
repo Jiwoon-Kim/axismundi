@@ -1,0 +1,246 @@
+<?php
+/**
+ * Title: VQA Text Blocks
+ * Slug: axismundi/vqa-text
+ * Categories: axismundi
+ * Inserter: false
+ * Description: WordPress core text blocks for Axismundi baseline VQA. This is
+ *              block-rooted (`wp:*` / `.wp-block-*`) and intentionally separate
+ *              from prose-vqa.php, which covers raw HTML elements.
+ *
+ *              core/footnotes is a dynamic block: it renders from the post's
+ *              `footnotes` meta keyed by the inline <sup data-fn="UUID"> refs
+ *              below. The seed command must pair this pattern with matching meta.
+ *
+ * @package Axismundi
+ */
+?>
+<!-- wp:heading {"level":1} -->
+<h1 class="wp-block-heading">Core Text VQA</h1>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>이 페이지는 <strong>core text blocks</strong>만 배치한 baseline입니다. 현재 Axismundi는 아직 M3 token foundation이나 Global Styles binding이 적용되지 않은 상태입니다. 따라서 이 화면은 WordPress core block 렌더링이 blank theme에서 어떻게 출발하는지 확인하기 위한 기준점입니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Mixed Korean and English text should wrap naturally. Long identifiers like <code>--md-sys-typescale-body-large-line-height</code> must not force the page wider than the viewport, while regular Korean phrases keep readable word boundaries.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Headings</h2>
+<!-- /wp:heading -->
+
+<!-- wp:group {"layout":{"type":"constrained"}} -->
+<div class="wp-block-group"><!-- wp:heading {"level":1} -->
+<h1 class="wp-block-heading">h1 — headline-large candidate</h1>
+<!-- /wp:heading -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">h2 — headline-medium candidate</h2>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">h3 — headline-small candidate</h3>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">h4 — title-large candidate</h4>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":5} -->
+<h5 class="wp-block-heading">h5 — title-medium candidate</h5>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":6} -->
+<h6 class="wp-block-heading">h6 — title-small candidate, not uppercase</h6>
+<!-- /wp:heading --></div>
+<!-- /wp:group -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Paragraph, inline elements, and links</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Paragraph text includes <a href="#core-text-vqa-link">a regular link</a>, <strong>strong emphasis</strong>, <em>emphasis</em>, <code>inline code</code>, <mark>mark</mark>, <del>deleted text</del>, <ins>inserted text</ins>, and an <abbr title="Application Programming Interface">API</abbr> abbreviation.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph {"dropCap":true} -->
+<p class="has-drop-cap">처음 글자가 큰 드롭캡으로 표시됩니다. 본문은 자연스럽게 흘러갑니다. WordPress block editor에서 paragraph block의 "Drop cap" 옵션을 켜면 자동으로 <code>has-drop-cap</code> 클래스가 추가됩니다. 한글 첫 글자도 드롭캡 처리됩니다.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Bold</strong>, <em>Italic</em>, <mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color has-primary-color">Highlight</mark>, <code>inline code</code>, <kbd>Keyboard Input</kbd>, <bdo lang="ko-KR" dir="ltr">언어</bdo>, <math data-latex="x^2"><semantics><msup><mi>x</mi><mn>2</mn></msup><annotation encoding="application/x-tex">x^2</annotation></semantics></math>, <s>Strikethrough</s>, Subscript<sub>sub</sub>, Superscript<sup>Sup</sup></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Text alignment</h3>
+<!-- /wp:heading -->
+
+<!-- wp:group {"layout":{"type":"constrained"}} -->
+<div class="wp-block-group"><!-- wp:paragraph -->
+<p>왼쪽 정렬 (기본).</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph {"style":{"typography":{"textAlign":"center"}}} -->
+<p class="has-text-align-center">중앙 정렬.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph {"style":{"typography":{"textAlign":"right"}}} -->
+<p class="has-text-align-right">오른쪽 정렬.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Lists</h2>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li>첫 번째 항목 — 짧은 한 줄.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>두 번째 항목 — 본문이 길어져 두 줄 이상이 될 때 marker와 텍스트 들여쓰기가 안정적으로 유지되어야 합니다.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>세 번째 항목 — 중첩<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li>중첩 항목 a</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>중첩 항목 b<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li>3단계 중첩</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list --></li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list --></li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:list {"ordered":true} -->
+<ol class="wp-block-list"><!-- wp:list-item -->
+<li>준비 단계</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>실행 단계<!-- wp:list {"ordered":true} -->
+<ol class="wp-block-list"><!-- wp:list-item -->
+<li>세부 작업 1</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>세부 작업 2</li>
+<!-- /wp:list-item --></ol>
+<!-- /wp:list --></li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>마무리</li>
+<!-- /wp:list-item --></ol>
+<!-- /wp:list -->
+
+<!-- wp:list {"className":"wp-block-list is-style-list-segmented"} -->
+<ul class="wp-block-list is-style-list-segmented"><!-- wp:list-item -->
+<li><input type="checkbox" checked=""> Completed segmented item</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li><input type="checkbox"> Pending segmented item</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>Plain segmented item</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Quote and Pullquote</h2>
+<!-- /wp:heading -->
+
+<!-- wp:quote -->
+<blockquote class="wp-block-quote"><!-- wp:paragraph -->
+<p>좋은 디자인은 가능한 적은 디자인을 한다.</p>
+<!-- /wp:paragraph --><cite>Dieter Rams</cite></blockquote>
+<!-- /wp:quote -->
+
+<!-- wp:quote {"className":"is-style-plain"} -->
+<blockquote class="wp-block-quote is-style-plain"><!-- wp:paragraph -->
+<p>Plain quote style specimen.</p>
+<!-- /wp:paragraph --><cite>Plain Quote</cite></blockquote>
+<!-- /wp:quote -->
+
+<!-- wp:pullquote -->
+<figure class="wp-block-pullquote"><blockquote><p>중심석 — 첫 착지점.</p><cite>Axismundi VQA</cite></blockquote></figure>
+<!-- /wp:pullquote -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Code, Preformatted, and Verse</h2>
+<!-- /wp:heading -->
+
+<!-- wp:code -->
+<pre class="wp-block-code"><code>const veryLongTokenName = "--md-sys-typescale-body-large-line-height --md-sys-color-surface-container-high --md-sys-shape-corner-medium";</code></pre>
+<!-- /wp:code -->
+
+<!-- wp:preformatted -->
+<pre class="wp-block-preformatted">Preformatted text keeps spaces
+  and line breaks exactly as typed.</pre>
+<!-- /wp:preformatted -->
+
+<!-- wp:verse -->
+<pre class="wp-block-verse">Verse block keeps poetic line breaks
+without becoming a code specimen.</pre>
+<!-- /wp:verse -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Table</h2>
+<!-- /wp:heading -->
+
+<!-- wp:table -->
+<figure class="wp-block-table"><table class="has-fixed-layout"><thead><tr><th>토큰</th><th>값</th><th>설명</th></tr></thead><tbody><tr><td><code>--space-xs</code></td><td>4px</td><td>작은 inline gap.</td></tr><tr><td><code>--space-md</code></td><td>16px</td><td>본문 rhythm 기본 단위.</td></tr><tr><td><code>--space-xl</code></td><td>48px</td><td>섹션 간격.</td></tr></tbody><tfoot><tr><td>요약</td><td colspan="2">spacing token 후보 일부.</td></tr></tfoot></table><figcaption class="wp-element-caption">Table 1. Core table block with thead, tbody, tfoot, and figcaption. No custom wrapper.</figcaption></figure>
+<!-- /wp:table -->
+
+<!-- wp:table {"hasFixedLayout":false,"className":"is-style-stripes"} -->
+<figure class="wp-block-table is-style-stripes"><table><thead><tr><th>Plan</th><th>Seats</th><th>Status</th></tr></thead><tbody><tr><td>Starter</td><td>3</td><td>Active</td></tr><tr><td>Studio</td><td>12</td><td>Active</td></tr><tr><td>Enterprise</td><td>48</td><td>Pending</td></tr></tbody><tfoot><tr><td>Total plans</td><td colspan="2">3</td></tr></tfoot></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Details</h2>
+<!-- /wp:heading -->
+
+<!-- wp:details {"showContent":true} -->
+<details class="wp-block-details" open><summary>접근성 지침 요약</summary><!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li>모든 이미지에 대체 텍스트를 제공합니다.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>색상만으로 상태를 전달하지 않습니다.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>키보드로 모든 인터랙션에 접근할 수 있어야 합니다.</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list --></details>
+<!-- /wp:details -->
+
+<!-- wp:separator -->
+<hr class="wp-block-separator has-alpha-channel-opacity"/>
+<!-- /wp:separator -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Footnotes</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>fn1<sup data-fn="1e3b8bdd-8cf2-475b-b015-54c86f93e1b1" class="fn"><a href="#1e3b8bdd-8cf2-475b-b015-54c86f93e1b1" id="1e3b8bdd-8cf2-475b-b015-54c86f93e1b1-link">1</a></sup></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>fn2<sup data-fn="7873f5ac-f713-4c02-84fa-0356553a6d1a" class="fn"><a href="#7873f5ac-f713-4c02-84fa-0356553a6d1a" id="7873f5ac-f713-4c02-84fa-0356553a6d1a-link">2</a></sup></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:footnotes /-->

@@ -69,6 +69,8 @@ function axismundi_setup() : void {
 			array_filter(
 				array(
 					file_exists( get_template_directory() . '/assets/styles/tokens.ref.css' ) ? 'assets/styles/tokens.ref.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.light.css' ) ? 'assets/styles/tokens.sys.color.light.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.dark.css' ) ? 'assets/styles/tokens.sys.color.dark.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.elevation.css' ) ? 'assets/styles/tokens.sys.elevation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
 				)
@@ -87,13 +89,15 @@ add_action( 'after_setup_theme', 'axismundi_setup' );
  */
 function axismundi_enqueue_assets() : void {
 	$styles = array(
-		// M3 token layers (literals in ref; downstream var() in sys), then utilities.
-		// Loaded in dependency order so the cascade stays explicit. Color light/dark
-		// + the rest of the sys layers land in the color-palette phase.
-		'axismundi-tokens-ref'       => array( 'assets/styles/tokens.ref.css', array() ),
-		'axismundi-tokens-elevation' => array( 'assets/styles/tokens.sys.elevation.css', array( 'axismundi-tokens-ref' ) ),
+		// M3 token layers (literals in ref; downstream var() in sys), in dependency
+		// order so the cascade stays explicit: ref palette -> color roles
+		// (light, then dark override) -> elevation -> utilities.
+		'axismundi-tokens-ref'         => array( 'assets/styles/tokens.ref.css', array() ),
+		'axismundi-tokens-color-light' => array( 'assets/styles/tokens.sys.color.light.css', array( 'axismundi-tokens-ref' ) ),
+		'axismundi-tokens-color-dark'  => array( 'assets/styles/tokens.sys.color.dark.css', array( 'axismundi-tokens-color-light' ) ),
+		'axismundi-tokens-elevation'   => array( 'assets/styles/tokens.sys.elevation.css', array( 'axismundi-tokens-color-dark' ) ),
 		// Material Symbols icon utility (the font auto-loads from theme.json).
-		'axismundi-icons'            => array( 'assets/styles/icons.css', array( 'axismundi-tokens-elevation' ) ),
+		'axismundi-icons'              => array( 'assets/styles/icons.css', array( 'axismundi-tokens-elevation' ) ),
 	);
 
 	foreach ( $styles as $handle => $style ) {
@@ -105,3 +109,30 @@ function axismundi_enqueue_assets() : void {
 	}
 }
 add_action( 'wp_enqueue_scripts', 'axismundi_enqueue_assets' );
+
+/**
+ * Load the color/elevation token vars into the block-editor UI document.
+ *
+ * add_editor_style() reaches the editor CANVAS iframe, but the Global Styles
+ * sidebar (e.g. the colour-palette swatches) renders in the main editor document,
+ * which would otherwise have no --md-sys-color-* custom properties — so the
+ * var()-based palette swatches would resolve to nothing. Enqueue the token layers
+ * here so the swatches and other UI previews render the real M3 colours.
+ */
+function axismundi_enqueue_editor_ui_assets() : void {
+	$prev = '';
+	foreach ( array(
+		'axismundi-editor-tokens-ref'         => 'assets/styles/tokens.ref.css',
+		'axismundi-editor-tokens-color-light' => 'assets/styles/tokens.sys.color.light.css',
+		'axismundi-editor-tokens-color-dark'  => 'assets/styles/tokens.sys.color.dark.css',
+		'axismundi-editor-tokens-elevation'   => 'assets/styles/tokens.sys.elevation.css',
+	) as $handle => $rel ) {
+		$uri = axismundi_asset_uri( $rel );
+		if ( null === $uri ) {
+			continue;
+		}
+		wp_enqueue_style( $handle, $uri, '' === $prev ? array() : array( $prev ), AXISMUNDI_VERSION );
+		$prev = $handle;
+	}
+}
+add_action( 'enqueue_block_editor_assets', 'axismundi_enqueue_editor_ui_assets' );

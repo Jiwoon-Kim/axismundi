@@ -48,7 +48,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:cover {"url":"https://picsum.photos/id/1018/1200/400","dimRatio":50,"minHeight":320} -->
-<div class="wp-block-cover" style="min-height:320px"><span aria-hidden="true" class="wp-block-cover__background has-background-dim-50 has-background-dim"></span><img class="wp-block-cover__image-background" src="https://picsum.photos/id/1018/1200/400" alt=""/><div class="wp-block-cover__inner-container"><!-- wp:heading {"textAlign":"center","textColor":"white"} -->
+<div class="wp-block-cover" style="min-height:320px"><img class="wp-block-cover__image-background" alt="" src="https://picsum.photos/id/1018/1200/400" data-object-fit="cover"/><span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span><div class="wp-block-cover__inner-container"><!-- wp:heading {"style":{"typography":{"textAlign":"center"}},"textColor":"white"} -->
 <h2 class="wp-block-heading has-text-align-center has-white-color has-text-color">Cover overlay heading</h2>
 <!-- /wp:heading --></div></div>
 <!-- /wp:cover -->

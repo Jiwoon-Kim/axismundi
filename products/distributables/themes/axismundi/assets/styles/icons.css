@@ -1,0 +1,36 @@
+/* ============================================================
+ * Axismundi — icons.css (Material Symbols utility)
+ *
+ * The explicit icon utility for theme chrome / control blocks. Opt-in: only an
+ * element carrying the `.material-symbols-outlined` class becomes an icon —
+ * ordinary text never does. The @font-face itself is registered in theme.json
+ * (Material Symbols Outlined); this file only contracts the rendering.
+ *
+ * Usage: <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+ * The ligature text ("settings") is also the graceful-degradation fallback when
+ * the CSS/font is stripped (federation / reader views).
+ *
+ * FILL / wght / GRAD / opsz are themeable via --md-icon-* custom properties
+ * (defaults match the M3 baseline 24 / 400 / 0 / 0).
+ * ============================================================ */
+.material-symbols-outlined {
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	font-size: var(--md-icon-size, 24px);
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-block;
+	white-space: nowrap;
+	word-wrap: normal;
+	direction: ltr;
+	-webkit-font-feature-settings: "liga";
+	font-feature-settings: "liga"; /* ligatures: "settings" -> glyph */
+	-webkit-font-smoothing: antialiased;
+	font-variation-settings:
+		"FILL" var(--md-icon-fill, 0),
+		"wght" var(--md-icon-wght, 400),
+		"GRAD" var(--md-icon-grad, 0),
+		"opsz" var(--md-icon-opsz, 24);
+}

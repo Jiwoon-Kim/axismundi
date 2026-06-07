@@ -72,8 +72,10 @@ add_action( 'after_setup_theme', 'axismundi_setup' );
  */
 function axismundi_enqueue_assets() : void {
 	$styles = array(
-		// 'axismundi-tokens-ref' => array( 'assets/styles/tokens.ref.css', array() ),
-		// ... Phase 2.
+		// Material Symbols icon utility. Fonts themselves (Roboto/Noto families +
+		// the icon font) auto-load from theme.json fontFamilies; this only contracts
+		// the .material-symbols-outlined rendering. Token + style cascade: later phase.
+		'axismundi-icons' => array( 'assets/styles/icons.css', array() ),
 	);
 
 	foreach ( $styles as $handle => $style ) {

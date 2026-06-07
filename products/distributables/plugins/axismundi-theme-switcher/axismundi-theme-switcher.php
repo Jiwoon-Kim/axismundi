@@ -45,6 +45,68 @@ function axismundi_theme_switcher_register_block() : void {
 add_action( 'init', 'axismundi_theme_switcher_register_block' );
 
 /**
+ * Hook the switcher after the header Navigation block.
+ *
+ * This keeps the Axismundi theme distributable standalone: the theme contains no
+ * plugin block markup, and the switcher appears only when the companion plugin
+ * is active.
+ *
+ * @param array<int,string>       $hooked_block_types Hooked block names.
+ * @param string                  $relative_position  before|after|first_child|last_child.
+ * @param string|null             $anchor_block_type  Anchor block name, or null for template-level passes.
+ * @param WP_Block_Template|mixed $context            Template, part, pattern, or navigation context.
+ * @return array<int,string>
+ */
+function axismundi_theme_switcher_hook_after_header_navigation( array $hooked_block_types, string $relative_position, ?string $anchor_block_type, $context ) : array {
+	if ( 'after' !== $relative_position || 'core/navigation' !== $anchor_block_type ) {
+		return $hooked_block_types;
+	}
+
+	$is_header_context = false;
+	if ( $context instanceof WP_Block_Template ) {
+		$is_header_context = ( property_exists( $context, 'area' ) && 'header' === $context->area )
+			|| ( property_exists( $context, 'slug' ) && 'header' === $context->slug );
+	} elseif ( is_array( $context ) && isset( $context['blockTypes'] ) && is_array( $context['blockTypes'] ) ) {
+		$is_header_context = in_array( 'core/template-part/header', $context['blockTypes'], true );
+	}
+
+	if ( $is_header_context ) {
+		$hooked_block_types[] = 'axismundi/theme-switcher';
+	}
+
+	return $hooked_block_types;
+}
+add_filter( 'hooked_block_types', 'axismundi_theme_switcher_hook_after_header_navigation', 10, 4 );
+
+/**
+ * Make automatically hooked switchers use the cycle style variation.
+ *
+ * Manually inserted switcher blocks keep their own attributes; only the hooked
+ * header instance receives the compact cycle variation.
+ *
+ * @param array<string,mixed>|null $parsed_hooked_block Hooked block array.
+ * @param string                   $hooked_block_type   Hooked block name.
+ * @param string                   $relative_position   Relative hook position.
+ * @param array<string,mixed>      $parsed_anchor_block Anchor block array.
+ * @return array<string,mixed>|null
+ */
+function axismundi_theme_switcher_cycle_hooked_block( ?array $parsed_hooked_block, string $hooked_block_type, string $relative_position, array $parsed_anchor_block ) : ?array {
+	if (
+		null === $parsed_hooked_block
+		|| 'axismundi/theme-switcher' !== $hooked_block_type
+		|| 'after' !== $relative_position
+		|| 'core/navigation' !== ( $parsed_anchor_block['blockName'] ?? '' )
+	) {
+		return $parsed_hooked_block;
+	}
+
+	$parsed_hooked_block['attrs']['className'] = trim( ( $parsed_hooked_block['attrs']['className'] ?? '' ) . ' is-style-theme-cycle' );
+
+	return $parsed_hooked_block;
+}
+add_filter( 'hooked_block_axismundi/theme-switcher', 'axismundi_theme_switcher_cycle_hooked_block', 10, 4 );
+
+/**
  * Print the blocking inline script that applies the persisted scheme early.
  *
  * The script is intentionally client-side instead of PHP-rendering data-theme:

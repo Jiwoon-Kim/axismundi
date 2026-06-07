@@ -32,7 +32,8 @@
 							"fontDisplay": "swap",
 							"src": [
 								"file:./assets/fonts/roboto-flex/axismundi-roboto-flex.woff2"
-							]
+							],
+							"fontVariationSettings": "\"GRAD\" 0, \"XOPQ\" 96, \"XTRA\" 468, \"YOPQ\" 79, \"YTAS\" 750, \"YTDE\" -203, \"YTFI\" 738, \"YTLC\" 514, \"YTUC\" 712"
 						}
 					]
 				},
@@ -132,6 +133,99 @@
 					"slug": "system-font",
 					"name": "System Font",
 					"fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif"
+				}
+			],
+			"defaultFontSizes": false,
+			"fontSizes": [
+				{
+					"name": "Display Large",
+					"slug": "display-large",
+					"size": "57px",
+					"fluid": false
+				},
+				{
+					"name": "Display Medium",
+					"slug": "display-medium",
+					"size": "45px",
+					"fluid": false
+				},
+				{
+					"name": "Display Small",
+					"slug": "display-small",
+					"size": "36px",
+					"fluid": false
+				},
+				{
+					"name": "Headline Large",
+					"slug": "headline-large",
+					"size": "32px",
+					"fluid": false
+				},
+				{
+					"name": "Headline Medium",
+					"slug": "headline-medium",
+					"size": "28px",
+					"fluid": false
+				},
+				{
+					"name": "Headline Small",
+					"slug": "headline-small",
+					"size": "24px",
+					"fluid": false
+				},
+				{
+					"name": "Title Large",
+					"slug": "title-large",
+					"size": "22px",
+					"fluid": false
+				},
+				{
+					"name": "Title Medium",
+					"slug": "title-medium",
+					"size": "16px",
+					"fluid": false
+				},
+				{
+					"name": "Title Small",
+					"slug": "title-small",
+					"size": "14px",
+					"fluid": false
+				},
+				{
+					"name": "Body Large",
+					"slug": "body-large",
+					"size": "16px",
+					"fluid": false
+				},
+				{
+					"name": "Body Medium",
+					"slug": "body-medium",
+					"size": "14px",
+					"fluid": false
+				},
+				{
+					"name": "Body Small",
+					"slug": "body-small",
+					"size": "12px",
+					"fluid": false
+				},
+				{
+					"name": "Label Large",
+					"slug": "label-large",
+					"size": "14px",
+					"fluid": false
+				},
+				{
+					"name": "Label Medium",
+					"slug": "label-medium",
+					"size": "12px",
+					"fluid": false
+				},
+				{
+					"name": "Label Small",
+					"slug": "label-small",
+					"size": "11px",
+					"fluid": false
 				}
 			]
 		},

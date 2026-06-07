@@ -303,6 +303,13 @@
 					"letterSpacing": "0.1px",
 					"lineHeight": "1.429"
 				}
+			},
+			"caption": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small",
+					"letterSpacing": "0.4px",
+					"lineHeight": "1.333"
+				}
 			}
 		}
 	},

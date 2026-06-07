@@ -247,6 +247,16 @@
 		},
 		"useRootPaddingAwareAlignments": true
 	},
+	"styles": {
+		"typography": {
+			"fontFamily": "var:preset|font-family|roboto-flex",
+			"fontSize": "var:preset|font-size|body-large",
+			"fontStyle": "normal",
+			"fontWeight": "400",
+			"letterSpacing": "0.5px",
+			"lineHeight": "1.5"
+		}
+	},
 	"templateParts": [
 		{
 			"area": "header",

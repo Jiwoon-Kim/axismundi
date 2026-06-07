@@ -16,6 +16,7 @@
 # --- VQA / specimen patterns (inserter:false dev harnesses) ---
 /patterns/prose-vqa.php
 /patterns/vqa-text.php
+/patterns/vqa-design.php
 
 # --- Build artifacts ---
 /tmp

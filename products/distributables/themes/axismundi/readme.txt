@@ -8,16 +8,15 @@ License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
 
-Axismundi is a standalone Material Design 3 block theme that binds native
-WordPress core blocks to a Material-token design language.
+Axismundi is a Material Design 3 block theme that binds native WordPress core
+blocks to a Material-token design language.
 
 == Description ==
 
-Axismundi is a standalone block theme (no parent) that maps WordPress core blocks
-onto a Material Design 3 token system — color, typography, shape, motion, and
-elevation — built first-class through theme.json / Global Styles. It is the clean
-build that succeeds the Omphalos compatibility pilot, and is developed toward an
-ActivityPub-based social CMS.
+Axismundi maps WordPress core blocks onto a Material Design 3 token system —
+color, typography, shape, motion, and elevation — built first-class through
+theme.json / Global Styles. It is developed toward an ActivityPub-based social
+CMS.
 
 == Installation ==
 
@@ -31,7 +30,7 @@ ActivityPub-based social CMS.
 
 == Copyright ==
 
-Axismundi WordPress Theme, Copyright 2026 Jiwoon Kim.
+Axismundi WordPress Theme, Copyright 2026 KIM JIWOON.
 Axismundi is distributed under the terms of the GNU General Public License,
 version 3 or later.
 

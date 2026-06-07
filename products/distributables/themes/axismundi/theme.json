@@ -141,13 +141,19 @@
 					"name": "Display Large",
 					"slug": "display-large",
 					"size": "57px",
-					"fluid": false
+					"fluid": {
+						"min": "45px",
+						"max": "57px"
+					}
 				},
 				{
 					"name": "Display Medium",
 					"slug": "display-medium",
 					"size": "45px",
-					"fluid": false
+					"fluid": {
+						"min": "36px",
+						"max": "45px"
+					}
 				},
 				{
 					"name": "Display Small",
@@ -159,13 +165,19 @@
 					"name": "Headline Large",
 					"slug": "headline-large",
 					"size": "32px",
-					"fluid": false
+					"fluid": {
+						"min": "28px",
+						"max": "32px"
+					}
 				},
 				{
 					"name": "Headline Medium",
 					"slug": "headline-medium",
 					"size": "28px",
-					"fluid": false
+					"fluid": {
+						"min": "24px",
+						"max": "28px"
+					}
 				},
 				{
 					"name": "Headline Small",
@@ -195,7 +207,10 @@
 					"name": "Body Large",
 					"slug": "body-large",
 					"size": "16px",
-					"fluid": false
+					"fluid": {
+						"min": "14px",
+						"max": "16px"
+					}
 				},
 				{
 					"name": "Body Medium",
@@ -227,7 +242,8 @@
 					"size": "11px",
 					"fluid": false
 				}
-			]
+			],
+			"fluid": true
 		},
 		"useRootPaddingAwareAlignments": true
 	},

@@ -23,6 +23,6 @@ under OFL 1.1; reserved font names are unchanged.
 
 ## Icons
 
-Material Symbols Outlined under `icons/material-symbols-outlined/` is licensed under
+Material Symbols Outlined under `fonts/material-symbols-outlined/` is licensed under
 the Apache License 2.0. The license text is preserved at
-`icons/material-symbols-outlined/LICENSE.txt`. Apache 2.0 is GPL-3.0-compatible.
+`fonts/material-symbols-outlined/LICENSE.txt`. Apache 2.0 is GPL-3.0-compatible.

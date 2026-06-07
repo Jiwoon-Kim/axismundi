@@ -124,7 +124,7 @@
 							"fontWeight": "100 700",
 							"fontDisplay": "block",
 							"src": [
-								"file:./assets/icons/material-symbols-outlined/material-symbols-outlined.woff2"
+								"file:./assets/fonts/material-symbols-outlined/material-symbols-outlined.woff2"
 							]
 						}
 					]

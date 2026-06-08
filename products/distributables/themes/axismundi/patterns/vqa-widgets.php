@@ -24,6 +24,10 @@
 
 <!-- wp:search {"label":"Search","buttonText":"Search"} /-->
 
+<!-- wp:search {"label":"Search (icon, outside)","buttonText":"Search","buttonUseIcon":true} /-->
+
+<!-- wp:search {"label":"Search (icon, inside)","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true} /-->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">2. Latest Posts</h2>
 <!-- /wp:heading -->

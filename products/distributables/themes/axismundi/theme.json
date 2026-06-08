@@ -524,6 +524,7 @@
 				}
 			},
 			"button": {
+				"css": "display:inline-flex;align-items:center;justify-content:center;",
 				"color": {
 					"background": "var:preset|color|primary",
 					"text": "var:preset|color|on-primary"

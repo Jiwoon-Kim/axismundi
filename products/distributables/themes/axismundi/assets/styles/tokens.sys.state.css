@@ -1,0 +1,13 @@
+/**
+ * Axismundi — Material Design 3 state tokens.
+ *
+ * State layer opacity tokens are shared by buttons, icon buttons, navigation,
+ * menus, lists, chips, and other interactive surfaces.
+ */
+
+:root {
+	--md-sys-state-hover-state-layer-opacity: 0.08;
+	--md-sys-state-focus-state-layer-opacity: 0.10;
+	--md-sys-state-pressed-state-layer-opacity: 0.10;
+	--md-sys-state-dragged-state-layer-opacity: 0.16;
+}

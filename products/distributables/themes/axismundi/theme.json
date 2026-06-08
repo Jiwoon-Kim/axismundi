@@ -548,20 +548,17 @@
 				},
 				":hover": {
 					"color": {
-						"background": "color-mix(in srgb, var(--wp--preset--color--on-primary) 8%, var(--wp--preset--color--primary))",
-						"text": "var:preset|color|on-primary"
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--primary))"
 					}
 				},
 				":focus": {
 					"color": {
-						"background": "color-mix(in srgb, var(--wp--preset--color--on-primary) 10%, var(--wp--preset--color--primary))",
-						"text": "var:preset|color|on-primary"
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--primary))"
 					}
 				},
 				":active": {
 					"color": {
-						"background": "color-mix(in srgb, var(--wp--preset--color--on-primary) 10%, var(--wp--preset--color--primary))",
-						"text": "var:preset|color|on-primary"
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--primary))"
 					}
 				}
 			}
@@ -571,7 +568,6 @@
 				"variations": {
 					"outline": {
 						"color": {
-							"background": "transparent",
 							"text": "var:preset|color|on-surface-variant"
 						},
 						"border": {
@@ -580,6 +576,7 @@
 							"width": "1px",
 							"radius": "9999px"
 						},
+						"css": ".wp-block-button__link:not(.has-background){background-color:initial;background-image:none;}",
 						"spacing": {
 							"padding": {
 								"top": "9px",
@@ -590,20 +587,17 @@
 						},
 						":hover": {
 							"color": {
-								"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) 8%, transparent)",
-								"text": "var:preset|color|on-surface-variant"
+								"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent)"
 							}
 						},
 						":focus": {
 							"color": {
-								"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) 10%, transparent)",
-								"text": "var:preset|color|on-surface-variant"
+								"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent)"
 							}
 						},
 						":active": {
 							"color": {
-								"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) 10%, transparent)",
-								"text": "var:preset|color|on-surface-variant"
+								"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent)"
 							}
 						}
 					}

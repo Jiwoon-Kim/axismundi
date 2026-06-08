@@ -65,13 +65,63 @@
 <!-- wp:rss {"feedURL":"https://wordpress.org/news/feed/","itemsToShow":3,"displayDate":true,"displayExcerpt":true} /-->
 
 <!-- wp:heading -->
-<h2 class="wp-block-heading">8. Social Links</h2>
+<h2 class="wp-block-heading">8. Social Links — sizes / logos-only / pill</h2>
 <!-- /wp:heading -->
 
-<!-- wp:social-links -->
-<ul class="wp-block-social-links"><!-- wp:social-link {"url":"https://wordpress.org","service":"wordpress"} /-->
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(--md-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(--md-sys-color-secondary-container)","size":"has-small-icon-size","className":"is-style-default"} -->
+<ul class="wp-block-social-links has-small-icon-size has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
 
-<!-- wp:social-link {"url":"https://github.com/Jiwoon-Kim/axismundi","service":"github"} /--></ul>
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(--md-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(--md-sys-color-secondary-container)","className":"is-style-default"} -->
+<ul class="wp-block-social-links has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(--md-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(--md-sys-color-secondary-container)","size":"has-large-icon-size","className":"is-style-default"} -->
+<ul class="wp-block-social-links has-large-icon-size has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"iconColor":"on-secondary-container","iconColorValue":"var(--md-sys-color-on-secondary-container)","iconBackgroundColor":"secondary-container","iconBackgroundColorValue":"var(--md-sys-color-secondary-container)","size":"has-huge-icon-size","className":"is-style-default"} -->
+<ul class="wp-block-social-links has-huge-icon-size has-icon-color has-icon-background-color is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"showLabels":true,"className":"is-style-default"} -->
+<ul class="wp-block-social-links has-visible-labels is-style-default"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"className":"is-style-logos-only"} -->
+<ul class="wp-block-social-links is-style-logos-only"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /--></ul>
+<!-- /wp:social-links -->
+
+<!-- wp:social-links {"className":"is-style-pill-shape"} -->
+<ul class="wp-block-social-links is-style-pill-shape"><!-- wp:social-link {"url":"#","service":"wordpress"} /-->
+
+<!-- wp:social-link {"url":"#","service":"github"} /-->
+
+<!-- wp:social-link {"url":"#","service":"mastodon"} /--></ul>
 <!-- /wp:social-links -->
 
 <!-- wp:heading -->

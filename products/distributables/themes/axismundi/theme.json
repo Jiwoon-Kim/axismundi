@@ -610,6 +610,12 @@
 						}
 					}
 				}
+			},
+			"core/social-links": {
+				"spacing": {
+					"blockGap": "8px"
+				},
+				"css": "& .wp-social-link{--ax-ib:40px;font-size:24px;}&.has-small-icon-size .wp-social-link{--ax-ib:32px;font-size:20px;}&.has-large-icon-size .wp-social-link{--ax-ib:56px;font-size:24px;}&.has-huge-icon-size .wp-social-link{--ax-ib:96px;font-size:32px;}&:not(.is-style-logos-only):not(.is-style-pill-shape) .wp-block-social-link-anchor{min-inline-size:var(--ax-ib);min-block-size:var(--ax-ib);display:flex;align-items:center;justify-content:center;box-sizing:border-box;}"
 			}
 		}
 	},

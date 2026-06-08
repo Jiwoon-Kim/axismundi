@@ -566,6 +566,9 @@
 				":active": {
 					"color": {
 						"background": "color-mix(in srgb, var(--wp--preset--color--on-primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--primary))"
+					},
+					"border": {
+						"radius": "8px"
 					}
 				}
 			}

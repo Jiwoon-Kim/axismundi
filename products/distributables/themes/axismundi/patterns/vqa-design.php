@@ -22,16 +22,16 @@
 <!-- /wp:heading -->
 
 <!-- wp:buttons -->
-<div class="wp-block-buttons"><!-- wp:button -->
-<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Filled button</a></div>
+<div class="wp-block-buttons"><!-- wp:button {"url":"#"} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Filled button</a></div>
 <!-- /wp:button -->
 
-<!-- wp:button {"className":"is-style-outline"} -->
-<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button">Outline button</a></div>
+<!-- wp:button {"url":"#","className":"is-style-outline"} -->
+<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#">Outline button</a></div>
 <!-- /wp:button -->
 
-<!-- wp:button {"width":50} -->
-<div class="wp-block-button has-custom-width wp-block-button__width-50"><a class="wp-block-button__link wp-element-button">50% width</a></div>
+<!-- wp:button {"url":"#","width":50} -->
+<div class="wp-block-button has-custom-width wp-block-button__width-50"><a class="wp-block-button__link wp-element-button" href="#">50% width</a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons -->
 

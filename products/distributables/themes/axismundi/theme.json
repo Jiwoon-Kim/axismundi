@@ -533,8 +533,6 @@
 				},
 				"spacing": {
 					"padding": {
-						"top": "10px",
-						"bottom": "10px",
 						"left": "16px",
 						"right": "16px"
 					}
@@ -579,12 +577,6 @@
 							"width": "1px"
 						},
 						"css": ".wp-block-button__link:not(.has-background){background-color:initial;background-image:none;}",
-						"spacing": {
-							"padding": {
-								"left": "16px",
-								"right": "16px"
-							}
-						},
 						":hover": {
 							"color": {
 								"background": "color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent)"

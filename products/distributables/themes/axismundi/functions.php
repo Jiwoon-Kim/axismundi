@@ -73,7 +73,9 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.dark.css' ) ? 'assets/styles/tokens.sys.color.dark.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.elevation.css' ) ? 'assets/styles/tokens.sys.elevation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.state.css' ) ? 'assets/styles/tokens.sys.state.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/tokens.sys.motion.css' ) ? 'assets/styles/tokens.sys.motion.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/components.button.css' ) ? 'assets/styles/components.button.css' : null,
 				)
 			)
 		)
@@ -98,8 +100,11 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-tokens-color-dark'  => array( 'assets/styles/tokens.sys.color.dark.css', array( 'axismundi-tokens-color-light' ) ),
 		'axismundi-tokens-elevation'   => array( 'assets/styles/tokens.sys.elevation.css', array( 'axismundi-tokens-color-dark' ) ),
 		'axismundi-tokens-state'       => array( 'assets/styles/tokens.sys.state.css', array( 'axismundi-tokens-elevation' ) ),
+		'axismundi-tokens-motion'      => array( 'assets/styles/tokens.sys.motion.css', array( 'axismundi-tokens-state' ) ),
 		// Material Symbols icon utility (the font auto-loads from theme.json).
-		'axismundi-icons'              => array( 'assets/styles/icons.css', array( 'axismundi-tokens-state' ) ),
+		'axismundi-icons'              => array( 'assets/styles/icons.css', array( 'axismundi-tokens-motion' ) ),
+		// Component layer — only what theme.json cannot express (e.g. motion).
+		'axismundi-button'             => array( 'assets/styles/components.button.css', array( 'axismundi-tokens-motion', 'axismundi-icons' ) ),
 	);
 
 	foreach ( $styles as $handle => $style ) {
@@ -129,6 +134,7 @@ function axismundi_enqueue_editor_ui_assets() : void {
 		'axismundi-editor-tokens-color-dark'  => 'assets/styles/tokens.sys.color.dark.css',
 		'axismundi-editor-tokens-elevation'   => 'assets/styles/tokens.sys.elevation.css',
 		'axismundi-editor-tokens-state'       => 'assets/styles/tokens.sys.state.css',
+		'axismundi-editor-tokens-motion'      => 'assets/styles/tokens.sys.motion.css',
 	) as $handle => $rel ) {
 		$uri = axismundi_asset_uri( $rel );
 		if ( null === $uri ) {

@@ -1,0 +1,13 @@
+/**
+ * Axismundi — Material Design 3 motion tokens.
+ *
+ * Duration + easing primitives shared by transitions and animations across
+ * interactive surfaces (button shape morph, state layers, future components).
+ * Only the values currently in use are defined; the full M3 motion scale is
+ * added on demand.
+ */
+
+:root {
+	--md-sys-motion-duration-short3: 150ms;
+	--md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}

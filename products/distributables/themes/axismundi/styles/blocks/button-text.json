@@ -5,28 +5,9 @@
 	"slug": "text",
 	"blockTypes": [ "core/button" ],
 	"styles": {
-		"elements": {
-			"button": {
-				"color": {
-					"background": "transparent",
-					"text": "var:preset|color|primary"
-				},
-				":hover": {
-					"color": {
-						"background": "color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent)"
-					}
-				},
-				":focus": {
-					"color": {
-						"background": "color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent)"
-					}
-				},
-				":active": {
-					"color": {
-						"background": "color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent)"
-					}
-				}
-			}
+		"color": {
+			"background": "transparent",
+			"text": "var:preset|color|primary"
 		}
 	}
 }

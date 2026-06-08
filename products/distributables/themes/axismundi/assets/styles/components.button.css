@@ -33,6 +33,63 @@
 }
 
 /**
+ * core/button M3 colour variants — tonal / elevated / text.
+ *
+ * Registration + Global Styles discoverability live in the auto-registered
+ * partials (styles/blocks/button-*.json). The actual surface is enforced here
+ * because a partial's styles.elements.button emits a broken DESCENDANT selector
+ * in the editor canvas / Stylebook preview — `.is-style-X .wp-block-button__link
+ * .wp-element-button` — treating the link's two classes as nested elements, so
+ * it never matches the single <a class="wp-block-button__link wp-element-button">
+ * and the variant falls back to Filled in the editor. These public-class rules
+ * match in both the editor and the front end. Base + state layer (the "on" role
+ * mixed over the container at the shared --md-sys-state-* opacities); the focus
+ * ring, keyboard-only suppression, and pressed shape morph are inherited.
+ */
+.wp-block-button.is-style-tonal .wp-block-button__link {
+	background-color: var(--wp--preset--color--secondary-container);
+	color: var(--wp--preset--color--on-secondary-container);
+}
+.wp-block-button.is-style-tonal .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
+}
+.wp-block-button.is-style-tonal .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
+}
+.wp-block-button.is-style-tonal .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
+}
+
+.wp-block-button.is-style-elevated .wp-block-button__link {
+	background-color: var(--wp--preset--color--surface-container-low);
+	color: var(--wp--preset--color--primary);
+	box-shadow: var(--wp--preset--shadow--elevation-1);
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low));
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low));
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low));
+}
+
+.wp-block-button.is-style-text .wp-block-button__link {
+	background-color: transparent;
+	color: var(--wp--preset--color--primary);
+}
+.wp-block-button.is-style-text .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-text .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-text .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}
+
+/**
  * core/buttons "Connected" group — M3 connected-button-group geometry.
  *
  * The variation registers + sets the 2px gap via styles/blocks/

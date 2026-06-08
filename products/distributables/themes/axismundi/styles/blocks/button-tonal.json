@@ -5,9 +5,28 @@
 	"slug": "tonal",
 	"blockTypes": [ "core/button" ],
 	"styles": {
-		"color": {
-			"background": "var:preset|color|secondary-container",
-			"text": "var:preset|color|on-secondary-container"
+		"elements": {
+			"button": {
+				"color": {
+					"background": "var:preset|color|secondary-container",
+					"text": "var:preset|color|on-secondary-container"
+				},
+				":hover": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container))"
+					}
+				},
+				":focus": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container))"
+					}
+				},
+				":active": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container))"
+					}
+				}
+			}
 		}
 	}
 }

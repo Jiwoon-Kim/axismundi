@@ -5,10 +5,29 @@
 	"slug": "elevated",
 	"blockTypes": [ "core/button" ],
 	"styles": {
-		"color": {
-			"background": "var:preset|color|surface-container-low",
-			"text": "var:preset|color|primary"
-		},
-		"shadow": "var:preset|shadow|elevation-1"
+		"shadow": "var:preset|shadow|elevation-1",
+		"elements": {
+			"button": {
+				"color": {
+					"background": "var:preset|color|surface-container-low",
+					"text": "var:preset|color|primary"
+				},
+				":hover": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low))"
+					}
+				},
+				":focus": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low))"
+					}
+				},
+				":active": {
+					"color": {
+						"background": "color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low))"
+					}
+				}
+			}
+		}
 	}
 }

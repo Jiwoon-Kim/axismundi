@@ -529,7 +529,7 @@
 					"text": "var:preset|color|on-primary"
 				},
 				"border": {
-					"radius": "9999px"
+					"radius": "20px"
 				},
 				"spacing": {
 					"padding": {

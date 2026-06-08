@@ -45,9 +45,7 @@
 	--md-sys-color-outline: var(--md-ref-palette-neutral-variant-60);
 	--md-sys-color-outline-variant: var(--md-ref-palette-neutral-variant-30);
 
-	/* Add-ons (background, surface bright/dim) */
-	--md-sys-color-background: var(--md-ref-palette-neutral-6);
-	--md-sys-color-on-background: var(--md-ref-palette-neutral-90);
+	/* Add-ons (surface bright/dim) */
 	--md-sys-color-surface-bright: var(--md-ref-palette-neutral-24);
 	--md-sys-color-surface-dim: var(--md-ref-palette-neutral-6);
 }
@@ -93,9 +91,7 @@
 		--md-sys-color-outline: var(--md-ref-palette-neutral-variant-60);
 		--md-sys-color-outline-variant: var(--md-ref-palette-neutral-variant-30);
 
-		/* Add-ons (background, surface bright/dim) */
-		--md-sys-color-background: var(--md-ref-palette-neutral-6);
-		--md-sys-color-on-background: var(--md-ref-palette-neutral-90);
+		/* Add-ons (surface bright/dim) */
 		--md-sys-color-surface-bright: var(--md-ref-palette-neutral-24);
 		--md-sys-color-surface-dim: var(--md-ref-palette-neutral-6);
 	}

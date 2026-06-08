@@ -31,3 +31,46 @@
 .wp-element-button:focus:not(:focus-visible) {
 	outline: none;
 }
+
+/**
+ * core/button M3 colour-variant state layers.
+ *
+ * The rest surface of tonal / elevated / text lives in the auto-registered
+ * block-style-variation partials (styles/blocks/button-*.json). Those partials
+ * carry base colour only — pseudo-state styles are not emitted from a partial —
+ * and a variation's base selector also out-specifies the low-specificity
+ * styles.elements.button :hover/:focus/:active layer, so each variant needs its
+ * own state-layer overlay here. The overlay colour is the variant's "on" role
+ * mixed over its container at the shared --md-sys-state-* opacities. The focus
+ * ring + keyboard-only suppression + pressed shape morph are inherited from the
+ * element-button rules and theme.json, so only background-color is set here.
+ */
+.wp-block-button.is-style-tonal .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
+}
+.wp-block-button.is-style-tonal .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
+}
+.wp-block-button.is-style-tonal .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
+}
+
+.wp-block-button.is-style-elevated .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low));
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low));
+}
+.wp-block-button.is-style-elevated .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--surface-container-low));
+}
+
+.wp-block-button.is-style-text .wp-block-button__link:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-text .wp-block-button__link:focus {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+.wp-block-button.is-style-text .wp-block-button__link:active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--primary) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}

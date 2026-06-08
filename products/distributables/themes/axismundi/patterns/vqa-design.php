@@ -35,6 +35,20 @@
 <!-- /wp:button --></div>
 <!-- /wp:buttons -->
 
+<!-- wp:buttons -->
+<div class="wp-block-buttons"><!-- wp:button {"url":"#","className":"is-style-tonal"} -->
+<div class="wp-block-button is-style-tonal"><a class="wp-block-button__link wp-element-button" href="#">Tonal button</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"url":"#","className":"is-style-elevated"} -->
+<div class="wp-block-button is-style-elevated"><a class="wp-block-button__link wp-element-button" href="#">Elevated button</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"url":"#","className":"is-style-text"} -->
+<div class="wp-block-button is-style-text"><a class="wp-block-button__link wp-element-button" href="#">Text button</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons -->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">2. Columns</h2>
 <!-- /wp:heading -->

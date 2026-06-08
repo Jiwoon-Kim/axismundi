@@ -522,6 +522,56 @@
 				"color": {
 					"text": "var:preset|color|primary"
 				}
+			},
+			"button": {
+				"color": {
+					"background": "var:preset|color|primary",
+					"text": "var:preset|color|on-primary"
+				},
+				"border": {
+					"radius": "9999px"
+				},
+				"spacing": {
+					"padding": {
+						"top": "10px",
+						"bottom": "10px",
+						"left": "16px",
+						"right": "16px"
+					}
+				},
+				"typography": {
+					"fontFamily": "var:preset|font-family|roboto-flex",
+					"fontSize": "var:preset|font-size|label-large",
+					"fontWeight": "500",
+					"lineHeight": "1.429",
+					"letterSpacing": "0.1px"
+				}
+			}
+		},
+		"blocks": {
+			"core/button": {
+				"variations": {
+					"outline": {
+						"color": {
+							"background": "transparent",
+							"text": "var:preset|color|on-surface-variant"
+						},
+						"border": {
+							"color": "var:preset|color|outline-variant",
+							"style": "solid",
+							"width": "1px",
+							"radius": "9999px"
+						},
+						"spacing": {
+							"padding": {
+								"top": "9px",
+								"bottom": "9px",
+								"left": "16px",
+								"right": "16px"
+							}
+						}
+					}
+				}
 			}
 		}
 	},

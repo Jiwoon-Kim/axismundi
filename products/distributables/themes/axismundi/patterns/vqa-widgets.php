@@ -24,15 +24,19 @@
 
 <!-- wp:search {"label":"Search","buttonText":"Search"} /-->
 
-<!-- wp:search {"label":"Search (icon, outside)","buttonText":"Search","buttonUseIcon":true} /-->
+<!-- wp:search {"label":"Search","buttonText":"Search","buttonPosition":"button-inside"} /-->
 
-<!-- wp:search {"label":"Search (icon, inside)","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true} /-->
+<!-- wp:search {"label":"Search","buttonPosition":"no-button"} /-->
 
-<!-- wp:search {"label":"Search (text, inside)","buttonText":"Search","buttonPosition":"button-inside"} /-->
+<!-- wp:search {"label":"Search","showLabel":false,"buttonText":"Search","buttonPosition":"button-only","isSearchFieldHidden":true} /-->
 
-<!-- wp:search {"label":"Search (no button)","buttonText":"Search","buttonPosition":"no-button"} /-->
+<!-- wp:search {"label":"Search","buttonText":"Search","buttonUseIcon":true} /-->
 
-<!-- wp:search {"label":"Search (hidden field)","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"isSearchFieldHidden":true} /-->
+<!-- wp:search {"label":"Search","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true} /-->
+
+<!-- wp:search {"label":"Search","buttonPosition":"no-button","buttonUseIcon":true} /-->
+
+<!-- wp:search {"label":"Search","showLabel":false,"buttonText":"Search","buttonPosition":"button-only","buttonUseIcon":true,"isSearchFieldHidden":true} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">2. Latest Posts</h2>

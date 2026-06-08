@@ -22,3 +22,12 @@
 		transition: none;
 	}
 }
+
+/**
+ * Keyboard-only focus ring. theme.json can only emit plain :focus, which also
+ * fires on pointer/click focus. Suppress the M3 ring (theme.json :focus.outline)
+ * when focus is NOT keyboard-driven; the focus state-layer colour still applies.
+ */
+.wp-element-button:focus:not(:focus-visible) {
+	outline: none;
+}

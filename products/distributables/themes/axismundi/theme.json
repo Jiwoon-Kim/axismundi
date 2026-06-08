@@ -87,16 +87,6 @@
 					"color": "var(--md-sys-color-on-error-container)"
 				},
 				{
-					"slug": "background",
-					"name": "Background",
-					"color": "var(--md-sys-color-background)"
-				},
-				{
-					"slug": "on-background",
-					"name": "On Background",
-					"color": "var(--md-sys-color-on-background)"
-				},
-				{
 					"slug": "surface",
 					"name": "Surface",
 					"color": "var(--md-sys-color-surface)"
@@ -117,9 +107,44 @@
 					"color": "var(--md-sys-color-on-surface-variant)"
 				},
 				{
+					"slug": "surface-container-highest",
+					"name": "Surface Container Highest",
+					"color": "var(--md-sys-color-surface-container-highest)"
+				},
+				{
+					"slug": "surface-container-high",
+					"name": "Surface Container High",
+					"color": "var(--md-sys-color-surface-container-high)"
+				},
+				{
 					"slug": "surface-container",
 					"name": "Surface Container",
 					"color": "var(--md-sys-color-surface-container)"
+				},
+				{
+					"slug": "surface-container-low",
+					"name": "Surface Container Low",
+					"color": "var(--md-sys-color-surface-container-low)"
+				},
+				{
+					"slug": "surface-container-lowest",
+					"name": "Surface Container Lowest",
+					"color": "var(--md-sys-color-surface-container-lowest)"
+				},
+				{
+					"slug": "inverse-surface",
+					"name": "Inverse Surface",
+					"color": "var(--md-sys-color-inverse-surface)"
+				},
+				{
+					"slug": "inverse-on-surface",
+					"name": "Inverse On Surface",
+					"color": "var(--md-sys-color-inverse-on-surface)"
+				},
+				{
+					"slug": "inverse-primary",
+					"name": "Inverse Primary",
+					"color": "var(--md-sys-color-inverse-primary)"
 				},
 				{
 					"slug": "outline",
@@ -130,6 +155,26 @@
 					"slug": "outline-variant",
 					"name": "Outline Variant",
 					"color": "var(--md-sys-color-outline-variant)"
+				},
+				{
+					"slug": "background",
+					"name": "Background",
+					"color": "var(--md-sys-color-background)"
+				},
+				{
+					"slug": "on-background",
+					"name": "On Background",
+					"color": "var(--md-sys-color-on-background)"
+				},
+				{
+					"slug": "surface-bright",
+					"name": "Surface Bright",
+					"color": "var(--md-sys-color-surface-bright)"
+				},
+				{
+					"slug": "surface-dim",
+					"name": "Surface Dim",
+					"color": "var(--md-sys-color-surface-dim)"
 				}
 			]
 		},

@@ -45,6 +45,11 @@
  * match in both the editor and the front end. Base + state layer (the "on" role
  * mixed over the container at the shared --md-sys-state-* opacities); the focus
  * ring, keyboard-only suppression, and pressed shape morph are inherited.
+ *
+ * WORKAROUND — REMOVE WHEN Trac #65436 LANDS. This block duplicates the partials
+ * (styles/blocks/button-*.json) on purpose: the partials are the correct standard
+ * source of truth, this is only the editor-parity shim. Once core emits the right
+ * variation selector, delete this whole section; the partials render everywhere.
  */
 .wp-block-button.is-style-tonal .wp-block-button__link {
 	background-color: var(--wp--preset--color--secondary-container);

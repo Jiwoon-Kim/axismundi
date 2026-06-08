@@ -49,6 +49,48 @@
 <!-- /wp:button --></div>
 <!-- /wp:buttons -->
 
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">1a. Connected button group</h3>
+<!-- /wp:heading -->
+
+<!-- wp:buttons {"className":"is-style-connected"} -->
+<div class="wp-block-buttons is-style-connected"><!-- wp:button {"url":"#"} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">One</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"url":"#"} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Two</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons -->
+
+<!-- wp:buttons {"className":"is-style-connected"} -->
+<div class="wp-block-buttons is-style-connected"><!-- wp:button {"url":"#"} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Left</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"url":"#"} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Center</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"url":"#"} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Right</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons -->
+
+<!-- wp:buttons {"className":"is-style-connected"} -->
+<div class="wp-block-buttons is-style-connected"><!-- wp:button {"url":"#"} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#">Filled</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"url":"#","className":"is-style-tonal"} -->
+<div class="wp-block-button is-style-tonal"><a class="wp-block-button__link wp-element-button" href="#">Tonal</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"url":"#","className":"is-style-outline"} -->
+<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#">Outline</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons -->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">2. Columns</h2>
 <!-- /wp:heading -->

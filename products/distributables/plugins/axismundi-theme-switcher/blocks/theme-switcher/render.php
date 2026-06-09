@@ -46,7 +46,7 @@ $axismundi_wrapper = get_block_wrapper_attributes(
 			data-wp-bind--aria-label="state.cycleAriaLabel"
 			aria-label="<?php echo esc_attr( sprintf( /* translators: %s: current colour scheme. */ __( 'Color scheme: %s. Activate to cycle.', 'axismundi-theme-switcher' ), $axismundi_modes[ $axismundi_current ]['label'] ) ); ?>"
 		>
-			<span class="material-symbols-outlined" aria-hidden="true" data-wp-text="state.currentIcon"><?php echo esc_html( $axismundi_modes[ $axismundi_current ]['icon'] ); ?></span>
+			<span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false" data-wp-text="state.currentIcon"><?php echo esc_html( $axismundi_modes[ $axismundi_current ]['icon'] ); ?></span>
 			<span class="screen-reader-text" data-wp-text="state.currentLabel"><?php echo esc_html( $axismundi_modes[ $axismundi_current ]['label'] ); ?></span>
 		</button>
 	<?php else : ?>
@@ -60,7 +60,7 @@ $axismundi_wrapper = get_block_wrapper_attributes(
 				data-wp-bind--aria-pressed="state.isActive"
 				aria-pressed="<?php echo $axismundi_mode === $axismundi_current ? 'true' : 'false'; ?>"
 			>
-				<span class="material-symbols-outlined" aria-hidden="true"><?php echo esc_html( $axismundi_m['icon'] ); ?></span>
+				<span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true" draggable="false"><?php echo esc_html( $axismundi_m['icon'] ); ?></span>
 				<span class="axismundi-theme-switcher__label"><?php echo esc_html( $axismundi_m['label'] ); ?></span>
 			</button>
 		<?php endforeach; ?>

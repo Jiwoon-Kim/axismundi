@@ -21,6 +21,26 @@
 	gap: 0.25rem;
 }
 
+/* Pin the Material Symbols glyph to a 1em box. The icon is an author-controlled
+ * ligature span (`contrast` / `light_mode` / `dark_mode`) — kept as a graceful
+ * text fallback — but the ligature/text advance width must not drive the button
+ * layout (an unligated "contrast" measured ~85px and overflowed the header).
+ * A fixed 1em inline-flex box with overflow clip contains it; the glyph itself
+ * is sized by font-size on the per-style rules below. notranslate / translate=no
+ * (markup) keep machine translation from rewriting the ligature text. */
+.wp-block-axismundi-theme-switcher .material-symbols-outlined {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	inline-size: 1em;
+	block-size: 1em;
+	line-height: 1;
+	overflow: hidden;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
 /* ----------------------------------------------------------------------------
  * Cycle button = M3 standard icon button (40x40, transparent, on-surface-variant).
  * State layer (hover/focus/pressed), keyboard-only focus ring, and the pressed

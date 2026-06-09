@@ -63,6 +63,25 @@ abbr[title] {
 	cursor: help;
 }
 
+/* <figcaption> / <caption> — standard caption semantics for raw figures and
+ * tables. WordPress' `elements.caption` styles `.wp-element-caption`, but raw
+ * HTML captions from Custom HTML / markdown need the same baseline here. */
+figcaption,
+caption {
+	color: var(--wp--preset--color--on-surface-variant);
+	font-size: var(--wp--preset--font-size--body-small);
+	line-height: 1.333;
+	letter-spacing: 0.4px;
+}
+figcaption {
+	margin-block-start: 8px;
+}
+caption {
+	caption-side: bottom;
+	margin-block-start: 8px;
+	text-align: start;
+}
+
 /* Raw <blockquote> — match core/quote's emphasis bar for Custom HTML,
  * markdown, and federated content without touching pullquote's nested quote. */
 .wp-block-post-content > blockquote:not([class*="wp-block"]) {

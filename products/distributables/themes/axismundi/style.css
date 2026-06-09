@@ -73,6 +73,7 @@ abbr[title] {
 	color: var(--wp--preset--color--on-surface);
 }
 .wp-block-post-content > blockquote:not([class*="wp-block"]) > p {
+	margin-block: 0;
 	color: inherit;
 }
 .wp-block-post-content > blockquote:not([class*="wp-block"]) cite {

@@ -563,13 +563,6 @@
 						"left": "24px"
 					}
 				},
-				"typography": {
-					"fontFamily": "var:preset|font-family|roboto-flex",
-					"fontSize": "var:preset|font-size|body-large",
-					"fontWeight": "400",
-					"lineHeight": "1.5",
-					"letterSpacing": "0.5px"
-				},
 				"elements": {
 					"cite": {
 						"color": {

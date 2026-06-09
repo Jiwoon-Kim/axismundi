@@ -4,7 +4,7 @@ Tags: dark-mode, block, appearance, editor, color-scheme
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -38,6 +38,13 @@ color-scheme change depends on a theme or stylesheet that consumes
 `html[data-theme]` selectors.
 
 == Changelog ==
+
+= 0.1.2 =
+
+* Animate the Material Symbols FILL axis on interaction: the cycle icon fills
+  on hover / focus / press, and the selected segment stays filled. The axis
+  interpolates continuously (the Axismundi theme registers `--md-icon-fill` via
+  `@property`); reduced-motion users get the instant state.
 
 = 0.1.1 =
 

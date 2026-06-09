@@ -26,6 +26,13 @@ Tags:              block-patterns, custom-colors, custom-logo, editor-style
  * title editor) are a separate RichText plugin concern.
  * ============================================================ */
 
+/* Mixed-script wrapping: Korean stays word-grouped while long Latin tokens,
+ * URLs, and handles can still break safely on narrow viewports. */
+body {
+	word-break: keep-all;
+	overflow-wrap: anywhere;
+}
+
 /* <mark> — highlight. M3 tertiary-container by default; :not([style]) so the
  * WordPress Highlight format's user-chosen inline colour is never overridden. */
 mark:not([style]) {

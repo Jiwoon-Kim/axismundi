@@ -76,6 +76,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.motion.css' ) ? 'assets/styles/tokens.sys.motion.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/components.button.css' ) ? 'assets/styles/components.button.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/blocks.text.css' ) ? 'assets/styles/blocks.text.css' : null,
 				)
 			)
 		)
@@ -105,6 +106,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-icons'              => array( 'assets/styles/icons.css', array( 'axismundi-tokens-motion' ) ),
 		// Component layer — only what theme.json cannot express (e.g. motion).
 		'axismundi-button'             => array( 'assets/styles/components.button.css', array( 'axismundi-tokens-motion', 'axismundi-icons' ) ),
+		// Core text block refinements that need pseudo-elements / specificity.
+		'axismundi-blocks-text'        => array( 'assets/styles/blocks.text.css', array( 'axismundi-tokens-motion' ) ),
 	);
 
 	foreach ( $styles as $handle => $style ) {

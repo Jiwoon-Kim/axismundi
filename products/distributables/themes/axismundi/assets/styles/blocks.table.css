@@ -33,6 +33,10 @@
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
 }
 
+.wp-block-table.is-style-stripes table :is(th, td) {
+	background-clip: border-box;
+}
+
 .wp-block-table table tr > :is(th, td):last-child {
 	border-inline-end: 0;
 }

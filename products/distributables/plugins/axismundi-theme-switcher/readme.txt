@@ -4,7 +4,7 @@ Tags: dark-mode, block, appearance, editor, color-scheme
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -38,6 +38,15 @@ color-scheme change depends on a theme or stylesheet that consumes
 `html[data-theme]` selectors.
 
 == Changelog ==
+
+= 0.1.1 =
+
+* Harden the cycle / segmented icons: notranslate, translate="no", and
+  draggable="false" on the Material Symbols spans so machine translation
+  cannot rewrite the ligature text and the glyph cannot be dragged out.
+* The icon-box contract (1em box, overflow clip) is now inherited from the
+  Axismundi theme's icons.css — fixes a header overflow while the icon font
+  was still loading.
 
 = 0.1.0 =
 

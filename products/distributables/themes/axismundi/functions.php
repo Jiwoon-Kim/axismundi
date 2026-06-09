@@ -68,6 +68,7 @@ function axismundi_setup() : void {
 		array_values(
 			array_filter(
 				array(
+					'style.css',
 					file_exists( get_template_directory() . '/assets/styles/tokens.ref.css' ) ? 'assets/styles/tokens.ref.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.light.css' ) ? 'assets/styles/tokens.sys.color.light.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.color.dark.css' ) ? 'assets/styles/tokens.sys.color.dark.css' : null,
@@ -92,6 +93,11 @@ add_action( 'after_setup_theme', 'axismundi_setup' );
  * dependency order so the cascade stays explicit.
  */
 function axismundi_enqueue_assets() : void {
+	// Global HTML semantic glue (mark / abbr, etc.) — the theme's root style.css,
+	// enqueued explicitly (TT5-style) so standard inline elements have a baseline
+	// regardless of source. Block-scoped fixes stay in assets/styles/*.css below.
+	wp_enqueue_style( 'axismundi-style', get_stylesheet_uri(), array(), AXISMUNDI_VERSION );
+
 	$styles = array(
 		// M3 token layers (literals in ref; downstream var() in sys), in dependency
 		// order so the cascade stays explicit: ref palette -> color roles

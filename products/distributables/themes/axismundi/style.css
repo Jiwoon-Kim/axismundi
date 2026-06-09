@@ -36,13 +36,13 @@ body {
 /* Content lists — front-end query templates render posts inside
  * `ul.wp-block-post-template > li`, which makes browser UA rules treat the
  * first content list as a nested `ul`. Reset marker depth at post-content root. */
-.wp-block-post-content > ul.wp-block-list:not([class*="is-style-"]) {
+ul.wp-block-list:not([class*="is-style-"]) {
 	list-style-type: disc;
 }
-.wp-block-post-content > ul.wp-block-list:not([class*="is-style-"]) ul {
+ul.wp-block-list:not([class*="is-style-"]) ul {
 	list-style-type: circle;
 }
-.wp-block-post-content > ul.wp-block-list:not([class*="is-style-"]) ul ul {
+ul.wp-block-list:not([class*="is-style-"]) ul ul {
 	list-style-type: square;
 }
 
@@ -86,7 +86,7 @@ caption {
  * its editable source in theme.json and gets WordPress-specific resets in
  * blocks.table.css; this global semantic baseline is for ordinary HTML tables
  * that arrive without a block wrapper. */
-.wp-block-post-content table {
+table {
 	box-sizing: border-box;
 	inline-size: 100%;
 	border-collapse: separate;
@@ -98,7 +98,7 @@ caption {
 	line-height: 1.429;
 	letter-spacing: 0.25px;
 }
-.wp-block-post-content :where(th, td) {
+:where(th, td) {
 	box-sizing: border-box;
 	background-clip: padding-box;
 	text-align: start;
@@ -109,46 +109,46 @@ caption {
 	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
 }
-.wp-block-post-content th {
+th {
 	background-color: var(--wp--preset--color--surface-container-high);
 	font-weight: 500;
 }
-.wp-block-post-content tr > :where(th, td):last-child {
+tr > :where(th, td):last-child {
 	border-inline-end: 0;
 }
-.wp-block-post-content tbody tr:last-child > :where(th, td) {
+tbody tr:last-child > :where(th, td) {
 	border-block-end: 0;
 }
-.wp-block-post-content thead :where(th, td) {
+thead :where(th, td) {
 	border-block-end: 1px solid var(--wp--preset--color--outline);
 }
-.wp-block-post-content thead tr:first-child > :where(th, td):first-child {
+thead tr:first-child > :where(th, td):first-child {
 	border-start-start-radius: 7px;
 }
-.wp-block-post-content thead tr:first-child > :where(th, td):last-child {
+thead tr:first-child > :where(th, td):last-child {
 	border-start-end-radius: 7px;
 }
-.wp-block-post-content tfoot tr:first-child > :where(th, td) {
+tfoot tr:first-child > :where(th, td) {
 	border-block-start: 1px solid var(--wp--preset--color--outline);
 }
-.wp-block-post-content tfoot tr:last-child > :where(th, td) {
+tfoot tr:last-child > :where(th, td) {
 	border-block-end: 0;
 }
 
 /* Raw <blockquote> — match core/quote's emphasis bar for Custom HTML,
  * markdown, and federated content without touching pullquote's nested quote. */
-.wp-block-post-content > blockquote:not([class*="wp-block"]) {
+blockquote:not([class*="wp-block"]) {
 	margin-inline: 0;
 	padding-block: 8px;
 	padding-inline-start: 24px;
 	border-inline-start: 4px solid var(--wp--preset--color--primary);
 	color: var(--wp--preset--color--on-surface);
 }
-.wp-block-post-content > blockquote:not([class*="wp-block"]) > p {
+blockquote:not([class*="wp-block"]) > p {
 	margin-block: 0;
 	color: inherit;
 }
-.wp-block-post-content > blockquote:not([class*="wp-block"]) cite {
+blockquote:not([class*="wp-block"]) cite {
 	display: block;
 	margin-block-start: 8px;
 	color: var(--wp--preset--color--on-surface-variant);

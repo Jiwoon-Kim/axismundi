@@ -121,6 +121,16 @@
 <!-- /wp:list-item --></ul>
 <!-- /wp:list -->
 
+<!-- wp:list {"className":"is-style-checkmark"} -->
+<ul class="wp-block-list is-style-checkmark"><!-- wp:list-item -->
+<li>체크리스트 항목 — 완료</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li>두 번째 완료 항목, 길어지면 줄바꿈 들여쓰기가 유지되어야 합니다.</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
 <!-- wp:list {"ordered":true} -->
 <ol class="wp-block-list"><!-- wp:list-item -->
 <li>준비 단계</li>

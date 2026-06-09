@@ -21,7 +21,7 @@
  *   .wp-block-table tfoot { border-top: 3px solid; }
  * Reset those so the table element owns the frame and cells draw only the M3
  * internal grid. */
-.wp-block-post-content .wp-block-table :where(th, td) {
+.wp-block-table table :is(th, td) {
 	box-sizing: border-box;
 	background-clip: padding-box;
 	text-align: start;
@@ -33,40 +33,82 @@
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
 }
 
-.wp-block-post-content .wp-block-table tr > :where(th, td):last-child {
+.wp-block-table table tr > :is(th, td):last-child {
 	border-inline-end: 0;
 }
 
-.wp-block-post-content .wp-block-table tbody tr:last-child > :where(th, td) {
+.wp-block-table table tbody tr:last-child > :is(th, td) {
 	border-block-end: 0;
 }
 
-.wp-block-post-content .wp-block-table thead :where(th, td) {
+.wp-block-table table thead :is(th, td) {
 	border-block-end: 1px solid var(--wp--preset--color--outline);
 }
 
-.wp-block-post-content .wp-block-table thead tr:first-child > :where(th, td):first-child {
+.wp-block-table table thead tr:first-child > :is(th, td):first-child {
 	border-start-start-radius: 7px;
 }
 
-.wp-block-post-content .wp-block-table thead tr:first-child > :where(th, td):last-child {
+.wp-block-table table thead tr:first-child > :is(th, td):last-child {
 	border-start-end-radius: 7px;
 }
 
-.wp-block-post-content .wp-block-table tfoot tr:first-child > :where(th, td) {
+.wp-block-table table tfoot tr:first-child > :is(th, td) {
 	border-block-start: 1px solid var(--wp--preset--color--outline);
 }
 
-.wp-block-post-content .wp-block-table tfoot tr:last-child > :where(th, td) {
+.wp-block-table table tfoot tr:last-child > :is(th, td) {
 	border-block-end: 0;
 }
 
-.wp-block-post-content .wp-block-table thead {
+.wp-block-table thead {
 	border-block-end: 0;
 }
 
-.wp-block-post-content .wp-block-table tfoot {
+.wp-block-table tfoot {
 	border-block-start: 0;
+}
+
+/* WordPress core intentionally propagates table border controls to rows and
+ * cells via `table[style*=border-*]` selectors. Keep the user's selected table
+ * frame editable, but preserve Axismundi's 1px internal M3 grid. */
+.wp-block-table table[style*="border-width"] tr > :is(th, td),
+.wp-block-table table[style*="border-style"] tr > :is(th, td),
+.wp-block-table table[style*="border-color"] tr > :is(th, td) {
+	border-block-start: 0;
+	border-inline-start: 0;
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
+	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
+}
+
+.wp-block-table table[style*="border-width"] tr > :is(th, td):last-child,
+.wp-block-table table[style*="border-style"] tr > :is(th, td):last-child,
+.wp-block-table table[style*="border-color"] tr > :is(th, td):last-child {
+	border-inline-end: 0;
+}
+
+.wp-block-table table[style*="border-width"] tbody tr:last-child > :is(th, td),
+.wp-block-table table[style*="border-style"] tbody tr:last-child > :is(th, td),
+.wp-block-table table[style*="border-color"] tbody tr:last-child > :is(th, td) {
+	border-block-end: 0;
+}
+
+.wp-block-table table[style*="border-width"] thead :is(th, td),
+.wp-block-table table[style*="border-style"] thead :is(th, td),
+.wp-block-table table[style*="border-color"] thead :is(th, td) {
+	border-block-end: 1px solid var(--wp--preset--color--outline);
+}
+
+.wp-block-table table[style*="border-width"] tfoot tr:first-child > :is(th, td),
+.wp-block-table table[style*="border-style"] tfoot tr:first-child > :is(th, td),
+.wp-block-table table[style*="border-color"] tfoot tr:first-child > :is(th, td) {
+	border-block-start: 1px solid var(--wp--preset--color--outline);
+}
+
+.wp-block-table table[style*="border-width"] tfoot tr:last-child > :is(th, td),
+.wp-block-table table[style*="border-style"] tfoot tr:last-child > :is(th, td),
+.wp-block-table table[style*="border-color"] tfoot tr:last-child > :is(th, td) {
+	border-block-end: 0;
 }
 
 /* core/table's built-in stripes variation paints a literal #f0f0f0 bottom
@@ -74,6 +116,6 @@
  * so only this parent reset stays in CSS; the row/cell stripe styling lives in
  * `styles.blocks.core/table.variations.stripes.css`.
  */
-.wp-block-post-content .wp-block-table.is-style-stripes {
+.wp-block-table.is-style-stripes {
 	border-block-end: 0;
 }

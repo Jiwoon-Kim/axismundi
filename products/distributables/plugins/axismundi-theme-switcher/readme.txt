@@ -41,4 +41,10 @@ color-scheme change depends on a theme or stylesheet that consumes
 
 = 0.1.0 =
 
-* Initial companion block and color-scheme bridge.
+* Initial release: the `axismundi/theme-switcher` block (light / dark / auto)
+  and the early color-scheme bridge that applies the persisted cookie before
+  paint.
+* Block Hooks auto-insertion of the cycle control into the theme header.
+* Material Design 3 styling that consumes the Axismundi theme tokens (with M3
+  fallbacks): a standard icon button for the cycle style and a segmented
+  control for the default three-mode layout.

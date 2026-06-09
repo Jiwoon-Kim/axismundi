@@ -1,9 +1,11 @@
 /* axismundi/theme-switcher
  *
- * Functional shell only. Axismundi has not implemented its Button component yet,
- * so the plugin deliberately avoids component styling. The theme/component layer
- * will later decide the visual treatment for .wp-element-button, icon buttons,
- * segmented controls, and state layers.
+ * M3 visual treatment, consuming the Axismundi theme's design tokens
+ * (--md-sys-color-*, --md-sys-state-*). Each token carries an M3 baseline
+ * fallback so the control degrades gracefully under a non-Axismundi theme.
+ *
+ * - is-style-theme-cycle  -> a single M3 STANDARD icon button (the header default).
+ * - default (3 buttons)   -> an M3 segmented control (styled in a later pass).
  */
 
 .wp-block-axismundi-theme-switcher {
@@ -19,11 +21,50 @@
 	gap: 0.25rem;
 }
 
+/* ----------------------------------------------------------------------------
+ * Cycle button = M3 standard icon button (40x40, transparent, on-surface-variant).
+ * State layer (hover/focus/pressed), keyboard-only focus ring, and the pressed
+ * shape morph mirror the theme's .wp-element-button contract.
+ * -------------------------------------------------------------------------- */
 .wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button {
-	inline-size: 2.75rem;
-	block-size: 2.75rem;
+	box-sizing: border-box;
+	inline-size: 40px;
+	block-size: 40px;
 	justify-content: center;
 	padding: 0;
+	border: 0;
+	border-radius: 9999px;
+	background-color: transparent;
+	color: var(--md-sys-color-on-surface-variant, #49454f);
+	cursor: pointer;
+	transition:
+		border-radius var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1)),
+		background-color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button .material-symbols-outlined {
+	font-size: 24px;
+}
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:hover {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+}
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), transparent);
+}
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:active {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), transparent);
+	border-radius: 8px;
+}
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus-visible {
+	outline: 3px solid var(--md-sys-color-secondary, #625b71);
+	outline-offset: 2px;
+}
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus:not(:focus-visible) {
+	outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+	.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button {
+		transition: none;
+	}
 }
 
 .wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__label,

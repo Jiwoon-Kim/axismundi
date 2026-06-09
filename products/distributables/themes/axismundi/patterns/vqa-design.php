@@ -91,6 +91,14 @@
 <!-- /wp:button --></div>
 <!-- /wp:buttons -->
 
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">1b. Theme switcher (plugin) — segmented / cycle</h3>
+<!-- /wp:heading -->
+
+<!-- wp:axismundi/theme-switcher /-->
+
+<!-- wp:axismundi/theme-switcher {"className":"is-style-theme-cycle"} /-->
+
 <!-- wp:heading -->
 <h2 class="wp-block-heading">2. Columns</h2>
 <!-- /wp:heading -->

@@ -92,7 +92,6 @@ caption {
 	border-collapse: separate;
 	border-spacing: 0;
 	border: 1px solid var(--wp--preset--color--outline-variant);
-	border-style: solid;
 	border-radius: 8px;
 	color: var(--wp--preset--color--on-surface);
 	font-size: var(--wp--preset--font-size--body-medium);
@@ -107,7 +106,6 @@ caption {
 	padding-block: 12px;
 	padding-inline: 16px;
 	border: 0;
-	border-style: solid;
 	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
 }

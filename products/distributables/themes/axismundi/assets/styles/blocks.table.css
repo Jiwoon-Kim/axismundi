@@ -29,7 +29,6 @@
 	padding-block: 12px;
 	padding-inline: 16px;
 	border: 0;
-	border-style: solid;
 	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
 }

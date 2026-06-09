@@ -541,6 +541,48 @@
 			}
 		},
 		"blocks": {
+			"core/code": {
+				"color": {
+					"background": "var(--wp--preset--color--surface-container, #F3EDF7)",
+					"text": "var(--wp--preset--color--on-surface, #1D1B20)"
+				},
+				"border": {
+					"radius": "8px"
+				},
+				"spacing": {
+					"padding": {
+						"top": "24px",
+						"right": "24px",
+						"bottom": "24px",
+						"left": "24px"
+					}
+				},
+				"typography": {
+					"fontFamily": "var:preset|font-family|roboto-mono"
+				},
+				"css": "&{display:block;overflow-x:auto;tab-size:2;scrollbar-width:thin;scrollbar-color:var(--wp--preset--color--outline-variant) transparent;}& code{padding:0;border-radius:0;background-color:transparent;color:inherit;font-family:inherit;}&::-webkit-scrollbar{inline-size:8px;block-size:8px;}&::-webkit-scrollbar-track{background:transparent;}&::-webkit-scrollbar-thumb{background-color:var(--wp--preset--color--outline-variant);border-radius:9999px;}&::-webkit-scrollbar-thumb:hover{background-color:var(--wp--preset--color--outline);}"
+			},
+			"core/preformatted": {
+				"color": {
+					"background": "var(--wp--preset--color--surface-container, #F3EDF7)",
+					"text": "var(--wp--preset--color--on-surface, #1D1B20)"
+				},
+				"border": {
+					"radius": "8px"
+				},
+				"spacing": {
+					"padding": {
+						"top": "24px",
+						"right": "24px",
+						"bottom": "24px",
+						"left": "24px"
+					}
+				},
+				"typography": {
+					"fontFamily": "var:preset|font-family|roboto-mono"
+				},
+				"css": "&{display:block;overflow-x:auto;tab-size:2;scrollbar-width:thin;scrollbar-color:var(--wp--preset--color--outline-variant) transparent;}&::-webkit-scrollbar{inline-size:8px;block-size:8px;}&::-webkit-scrollbar-track{background:transparent;}&::-webkit-scrollbar-thumb{background-color:var(--wp--preset--color--outline-variant);border-radius:9999px;}&::-webkit-scrollbar-thumb:hover{background-color:var(--wp--preset--color--outline);}"
+			},
 			"core/quote": {
 				"color": {
 					"text": "var:preset|color|on-surface"

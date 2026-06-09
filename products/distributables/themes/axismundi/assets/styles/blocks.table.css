@@ -13,6 +13,18 @@
 	table-layout: fixed;
 }
 
+/* Force border-collapse: separate so the table's structured border-radius
+ * actually rounds the frame. Core ships `.wp-block-table table { border-collapse:
+ * collapse }` at class specificity (0,2,0), which the theme.json css :where()
+ * slot (0,1,0) cannot beat — and a collapsed-border table ignores border-radius
+ * entirely (the frame paints square and even escapes an ancestor's rounded clip).
+ * With separate + border-spacing 0 the cells stay flush (single-sided cell
+ * borders already avoid doubling) and the table border rounds. */
+.wp-block-table table {
+	border-collapse: separate;
+	border-spacing: 0;
+}
+
 /* Core/table reset.
  *
  * Core ships:
@@ -55,6 +67,18 @@
 
 .wp-block-table table thead tr:first-child > :is(th, td):last-child {
 	border-start-end-radius: 7px;
+}
+
+/* Round the bottom corners of the last visual row (tfoot if present, else the
+ * last tbody row) to match the frame's 8px radius — so a coloured last row
+ * (e.g. stripes) fills cleanly into the rounded corner instead of poking a
+ * square edge past it. */
+.wp-block-table table > :last-child tr:last-child > :is(th, td):first-child {
+	border-end-start-radius: 7px;
+}
+
+.wp-block-table table > :last-child tr:last-child > :is(th, td):last-child {
+	border-end-end-radius: 7px;
 }
 
 .wp-block-table table tfoot tr:first-child > :is(th, td) {

@@ -121,33 +121,11 @@
 	border-block-start: 0;
 }
 
-/* Stripes use row backgrounds, not per-cell paint. The first body row stays on
- * the base surface; the second row repeats the header tone so the rhythm starts
- * visually from the header band. */
+/* core/table's built-in stripes variation paints a literal #f0f0f0 bottom
+ * border on the FIGURE. theme.json's core/table root maps to the inner table,
+ * so only this parent reset stays in CSS; the row/cell stripe styling lives in
+ * `styles.blocks.core/table.variations.stripes.css`.
+ */
 .wp-block-post-content .wp-block-table.is-style-stripes {
 	border-block-end: 0;
-}
-
-.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(odd) {
-	background-color: var(--wp--preset--color--surface);
-}
-
-.wp-block-post-content .wp-block-table.is-style-stripes tbody tr:nth-child(even) {
-	background-color: var(--wp--preset--color--surface-container-high);
-}
-
-.wp-block-post-content .wp-block-table.is-style-stripes :where(tbody, tfoot) :where(th, td) {
-	background-color: transparent;
-	border-block-end: 0;
-	border-inline-end: 0;
-}
-
-.wp-block-post-content .wp-block-table.is-style-stripes thead :where(th, td) {
-	background-color: var(--wp--preset--color--surface-container-high);
-	border-inline-end: 0;
-	border-block-end: 1px solid var(--wp--preset--color--outline);
-}
-
-.wp-block-post-content .wp-block-table.is-style-stripes tfoot tr:first-child > :where(th, td) {
-	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
 }

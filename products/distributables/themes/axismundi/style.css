@@ -33,6 +33,19 @@ body {
 	overflow-wrap: anywhere;
 }
 
+/* Content lists — front-end query templates render posts inside
+ * `ul.wp-block-post-template > li`, which makes browser UA rules treat the
+ * first content list as a nested `ul`. Reset marker depth at post-content root. */
+.wp-block-post-content > ul {
+	list-style-type: disc;
+}
+.wp-block-post-content > ul ul {
+	list-style-type: circle;
+}
+.wp-block-post-content > ul ul ul {
+	list-style-type: square;
+}
+
 /* <mark> — highlight. M3 tertiary-container by default; :not([style]) so the
  * WordPress Highlight format's user-chosen inline colour is never overridden. */
 mark:not([style]) {

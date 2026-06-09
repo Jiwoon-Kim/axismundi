@@ -19,6 +19,12 @@
  * drive the host layout. Consumers (theme chrome, the theme-switcher plugin)
  * inherit this — they only choose the icon name and the font-size.
  * ============================================================ */
+@property --md-icon-fill {
+	syntax: "<number>";
+	inherits: true;
+	initial-value: 0;
+}
+
 .material-symbols-outlined {
 	font-family: "Material Symbols Outlined", sans-serif;
 	font-weight: normal;
@@ -47,4 +53,11 @@
 		"wght" var(--md-icon-wght, 400),
 		"GRAD" var(--md-icon-grad, 0),
 		"opsz" var(--md-icon-opsz, 24);
+	transition: --md-icon-fill var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.material-symbols-outlined {
+		transition: none;
+	}
 }

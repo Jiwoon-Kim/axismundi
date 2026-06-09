@@ -50,6 +50,11 @@
 .wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button .material-symbols-outlined {
 	font-size: 24px;
 }
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:hover .material-symbols-outlined,
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:focus-visible .material-symbols-outlined,
+.wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:active .material-symbols-outlined {
+	--md-icon-fill: 1;
+}
 .wp-block-axismundi-theme-switcher.is-style-theme-cycle .axismundi-theme-switcher__button:hover {
 	background-color: color-mix(in srgb, var(--md-sys-color-on-surface-variant, #49454f) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
 }
@@ -121,6 +126,9 @@
 }
 .wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button .material-symbols-outlined {
 	font-size: 18px;
+}
+.wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button[aria-pressed="true"] .material-symbols-outlined {
+	--md-icon-fill: 1;
 }
 .wp-block-axismundi-theme-switcher:not(.is-style-theme-cycle) .axismundi-theme-switcher__button + .axismundi-theme-switcher__button {
 	border-inline-start: 1px solid var(--md-sys-color-outline, #79747e);

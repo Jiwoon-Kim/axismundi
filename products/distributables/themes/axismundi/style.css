@@ -82,6 +82,56 @@ caption {
 	text-align: start;
 }
 
+/* Raw <table> — Custom HTML / markdown / federated content. Core/table exposes
+ * its editable source in theme.json and gets WordPress-specific resets in
+ * blocks.table.css; this global semantic baseline is for ordinary HTML tables
+ * that arrive without a block wrapper. */
+.wp-block-post-content table {
+	inline-size: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	border: 1px solid var(--wp--preset--color--outline-variant);
+	border-radius: 8px;
+	color: var(--wp--preset--color--on-surface);
+	font-size: var(--wp--preset--font-size--body-medium);
+	line-height: 1.429;
+	letter-spacing: 0.25px;
+}
+.wp-block-post-content :where(th, td) {
+	text-align: start;
+	vertical-align: top;
+	padding-block: 12px;
+	padding-inline: 16px;
+	border: 0;
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
+	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
+}
+.wp-block-post-content th {
+	background-color: var(--wp--preset--color--surface-container-high);
+	font-weight: 500;
+}
+.wp-block-post-content tr > :where(th, td):last-child {
+	border-inline-end: 0;
+}
+.wp-block-post-content tbody tr:last-child > :where(th, td) {
+	border-block-end: 0;
+}
+.wp-block-post-content thead :where(th, td) {
+	border-block-end: 1px solid var(--wp--preset--color--outline);
+}
+.wp-block-post-content thead tr:first-child > :where(th, td):first-child {
+	border-start-start-radius: 7px;
+}
+.wp-block-post-content thead tr:first-child > :where(th, td):last-child {
+	border-start-end-radius: 7px;
+}
+.wp-block-post-content tfoot tr:first-child > :where(th, td) {
+	border-block-start: 1px solid var(--wp--preset--color--outline);
+}
+.wp-block-post-content tfoot tr:last-child > :where(th, td) {
+	border-block-end: 0;
+}
+
 /* Raw <blockquote> — match core/quote's emphasis bar for Custom HTML,
  * markdown, and federated content without touching pullquote's nested quote. */
 .wp-block-post-content > blockquote:not([class*="wp-block"]) {

@@ -22,11 +22,14 @@
  * Reset those so the table element owns the frame and cells draw only the M3
  * internal grid. */
 .wp-block-post-content .wp-block-table :where(th, td) {
+	box-sizing: border-box;
+	background-clip: padding-box;
 	text-align: start;
 	vertical-align: top;
 	padding-block: 12px;
 	padding-inline: 16px;
 	border: 0;
+	border-style: solid;
 	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
 }

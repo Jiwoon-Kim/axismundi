@@ -43,3 +43,35 @@ abbr[title] {
 	cursor: help;
 }
 
+/* <code> — Roboto Mono everywhere; inline code (NOT inside <pre>) gets a small
+ * surface-container pill. The core/code + core/preformatted blocks own their own
+ * block layout, so `pre code` resets the inline pill back to flat. */
+code {
+	font-family: var(--wp--preset--font-family--roboto-mono);
+}
+:not(pre) > code {
+	padding-inline: 0.3em;
+	padding-block: 0.15em;
+	border-radius: 4px;
+	background-color: var(--wp--preset--color--surface-container);
+	color: var(--wp--preset--color--on-surface);
+}
+pre code {
+	padding: 0;
+	border-radius: 0;
+	background-color: transparent;
+	color: inherit;
+}
+
+/* <kbd> — key cap. Roboto Mono on a slightly higher surface with an inset
+ * bottom hairline for the pressed-key affordance. */
+kbd {
+	font-family: var(--wp--preset--font-family--roboto-mono);
+	padding-inline: 0.35em;
+	padding-block: 0.15em;
+	border-radius: 4px;
+	background-color: var(--wp--preset--color--surface-container-high);
+	color: var(--wp--preset--color--on-surface);
+	box-shadow: inset 0 -1px 0 var(--wp--preset--color--outline-variant);
+}
+

@@ -36,13 +36,13 @@ body {
 /* Content lists — front-end query templates render posts inside
  * `ul.wp-block-post-template > li`, which makes browser UA rules treat the
  * first content list as a nested `ul`. Reset marker depth at post-content root. */
-.wp-block-post-content > ul {
+.wp-block-post-content > ul.wp-block-list:not([class*="is-style-"]) {
 	list-style-type: disc;
 }
-.wp-block-post-content > ul ul {
+.wp-block-post-content > ul.wp-block-list:not([class*="is-style-"]) ul {
 	list-style-type: circle;
 }
-.wp-block-post-content > ul ul ul {
+.wp-block-post-content > ul.wp-block-list:not([class*="is-style-"]) ul ul {
 	list-style-type: square;
 }
 

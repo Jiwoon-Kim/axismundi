@@ -28,3 +28,11 @@ p.has-drop-cap:not(:focus)::first-letter {
 	text-transform: none;
 	color: var(--wp--preset--color--primary);
 }
+
+/* core/verse — poetry preserves line breaks but remains a text surface, not a
+ * horizontally scrolling code/pre surface. Core sets overflow-x:auto, which
+ * theme.json's low-specificity css cannot reliably override. */
+pre.wp-block-verse {
+	overflow: visible;
+	white-space: pre-wrap;
+}

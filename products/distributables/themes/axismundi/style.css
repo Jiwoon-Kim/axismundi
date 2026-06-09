@@ -113,6 +113,35 @@ pre code {
 	color: inherit;
 }
 
+/* <pre> — raw HTML, core/code, and core/preformatted share the same mono card.
+ * core/verse is poetry, not code, so it is explicitly excluded. */
+pre:not(.wp-block-verse) {
+	display: block;
+	overflow-x: auto;
+	padding: 24px;
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container);
+	color: var(--wp--preset--color--on-surface);
+	font-family: var(--wp--preset--font-family--roboto-mono);
+	tab-size: 2;
+	scrollbar-width: thin;
+	scrollbar-color: var(--wp--preset--color--outline-variant) transparent;
+}
+pre:not(.wp-block-verse)::-webkit-scrollbar {
+	inline-size: 8px;
+	block-size: 8px;
+}
+pre:not(.wp-block-verse)::-webkit-scrollbar-track {
+	background: transparent;
+}
+pre:not(.wp-block-verse)::-webkit-scrollbar-thumb {
+	background-color: var(--wp--preset--color--outline-variant);
+	border-radius: 9999px;
+}
+pre:not(.wp-block-verse)::-webkit-scrollbar-thumb:hover {
+	background-color: var(--wp--preset--color--outline);
+}
+
 /* <kbd> — key cap. Roboto Mono on a slightly higher surface with an inset
  * bottom hairline for the pressed-key affordance. */
 kbd {

@@ -541,6 +541,106 @@
 			}
 		},
 		"blocks": {
+			"core/quote": {
+				"color": {
+					"text": "var:preset|color|on-surface"
+				},
+				"border": {
+					"left": {
+						"color": "var:preset|color|primary",
+						"style": "solid",
+						"width": "4px"
+					}
+				},
+				"spacing": {
+					"margin": {
+						"left": "0",
+						"right": "0"
+					},
+					"padding": {
+						"top": "8px",
+						"bottom": "8px",
+						"left": "24px"
+					}
+				},
+				"typography": {
+					"fontFamily": "var:preset|font-family|roboto-flex",
+					"fontSize": "var:preset|font-size|body-large",
+					"fontWeight": "400",
+					"lineHeight": "1.5",
+					"letterSpacing": "0.5px"
+				},
+				"elements": {
+					"cite": {
+						"color": {
+							"text": "var:preset|color|on-surface-variant"
+						},
+						"typography": {
+							"fontSize": "var:preset|font-size|body-small",
+							"fontStyle": "normal",
+							"fontWeight": "400",
+							"lineHeight": "1.333",
+							"letterSpacing": "0.4px"
+						}
+					}
+				},
+				"css": "& cite{display:block;margin-block-start:8px;}",
+				"variations": {
+					"plain": {
+						"border": {
+							"left": {
+								"width": "0"
+							}
+						}
+					}
+				}
+			},
+			"core/pullquote": {
+				"color": {
+					"text": "var:preset|color|on-surface"
+				},
+				"border": {
+					"top": {
+						"color": "var:preset|color|outline-variant",
+						"style": "solid",
+						"width": "1px"
+					},
+					"bottom": {
+						"color": "var:preset|color|outline-variant",
+						"style": "solid",
+						"width": "1px"
+					}
+				},
+				"spacing": {
+					"padding": {
+						"top": "32px",
+						"bottom": "32px"
+					}
+				},
+				"typography": {
+					"fontFamily": "var:preset|font-family|roboto-serif",
+					"fontSize": "var:preset|font-size|headline-medium",
+					"fontStyle": "italic",
+					"fontWeight": "400",
+					"lineHeight": "1.286"
+				},
+				"elements": {
+					"cite": {
+						"color": {
+							"text": "var:preset|color|on-surface-variant"
+						},
+						"typography": {
+							"fontFamily": "var:preset|font-family|roboto-flex",
+							"fontSize": "var:preset|font-size|body-small",
+							"fontStyle": "normal",
+							"fontWeight": "400",
+							"lineHeight": "1.333",
+							"letterSpacing": "0.4px"
+						}
+					}
+				},
+				"css": "& blockquote{margin:0;padding:0;border:0;}& :is(p,blockquote p){margin:0;font-family:var(--wp--preset--font-family--roboto-serif);font-size:var(--wp--preset--font-size--headline-medium);font-style:italic;font-weight:400;line-height:1.286;}& cite{display:block;margin-block-start:16px;}"
+			},
 			"core/button": {
 				"variations": {
 					"outline": {

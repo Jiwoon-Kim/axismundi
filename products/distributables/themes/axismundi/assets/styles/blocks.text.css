@@ -1,9 +1,13 @@
 /* ============================================================
- * Axismundi — core text block refinements.
+ * Axismundi — core text block refinements + raw inline-element baselines.
  *
  * Keep this layer small: use theme.json first, and reserve this file for core
  * block details that need pseudo-elements or higher specificity than the
- * WordPress block default styles expose.
+ * WordPress block default styles expose, plus the render baseline for raw HTML
+ * semantic inline elements (mark / abbr) that arrive via the Custom HTML block,
+ * markdown, or federated content. Rendering is theme-owned; authoring tools
+ * (e.g. a toolbar format for <mark> / an <abbr> title editor) are a separate
+ * RichText plugin concern.
  * ============================================================ */
 
 /* core/paragraph — drop cap
@@ -26,4 +30,21 @@ p.has-drop-cap:not(:focus)::first-letter {
 	margin-inline-end: 8px;
 	text-transform: none;
 	color: var(--wp--preset--color--primary);
+}
+
+/* <mark> — highlight. M3 tertiary-container by default; :not([style]) so the
+ * WordPress Highlight format's user-chosen inline colour is never overridden. */
+mark:not([style]) {
+	background-color: var(--wp--preset--color--tertiary-container);
+	color: var(--wp--preset--color--on-tertiary-container);
+	padding-inline: 0.2em;
+	border-radius: 4px;
+}
+
+/* <abbr title> — dotted underline + help cursor (the title is the affordance). */
+abbr[title] {
+	text-decoration: underline dotted;
+	text-decoration-skip-ink: auto;
+	text-underline-offset: 2px;
+	cursor: help;
 }

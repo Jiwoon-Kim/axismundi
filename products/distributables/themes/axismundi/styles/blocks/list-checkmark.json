@@ -7,6 +7,6 @@
 		"core/list"
 	],
 	"styles": {
-		"css": "&{list-style-type:\"✓\";}& > li::marker{color:var(--wp--preset--color--primary);}"
+		"css": "&{list-style-type:\"✓ \";}& > li::marker{color:var(--wp--preset--color--primary);}"
 	}
 }

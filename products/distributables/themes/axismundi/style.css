@@ -100,6 +100,7 @@ code {
 	font-family: var(--wp--preset--font-family--roboto-mono);
 }
 :not(pre) > code {
+	font-size: var(--wp--preset--font-size--body-medium);
 	padding-inline: 0.3em;
 	padding-block: 0.15em;
 	border-radius: 4px;
@@ -111,6 +112,7 @@ pre code {
 	border-radius: 0;
 	background-color: transparent;
 	color: inherit;
+	font-size: inherit;
 }
 
 /* Raw <pre> — Custom HTML / markdown code blocks get the same mono card as
@@ -124,6 +126,7 @@ pre:not([class*="wp-block"]) {
 	background-color: var(--wp--preset--color--surface-container);
 	color: var(--wp--preset--color--on-surface);
 	font-family: var(--wp--preset--font-family--roboto-mono);
+	font-size: var(--wp--preset--font-size--body-medium);
 	tab-size: 2;
 	scrollbar-width: thin;
 	scrollbar-color: var(--wp--preset--color--outline-variant) transparent;
@@ -147,6 +150,7 @@ pre:not([class*="wp-block"])::-webkit-scrollbar-thumb:hover {
  * bottom hairline for the pressed-key affordance. */
 kbd {
 	font-family: var(--wp--preset--font-family--roboto-mono);
+	font-size: var(--wp--preset--font-size--body-medium);
 	padding-inline: 0.35em;
 	padding-block: 0.15em;
 	border-radius: 4px;

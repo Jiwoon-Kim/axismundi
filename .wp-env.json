@@ -9,7 +9,8 @@
   "plugins": [
     "https://downloads.wordpress.org/plugin/theme-check.zip",
     "https://downloads.wordpress.org/plugin/create-block-theme.zip",
-    "./products/distributables/plugins/axismundi-theme-switcher"
+    "./products/distributables/plugins/axismundi-theme-switcher",
+    "./products/distributables/plugins/axismundi-fonts-noto-cjk-kr"
   ],
   "port": 8884,
   "config": {

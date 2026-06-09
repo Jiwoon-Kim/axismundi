@@ -1,0 +1,17 @@
+# NOTICE — Axismundi Fonts: Noto CJK Korean
+
+This plugin bundles open-source fonts. The plugin code is GPL-3.0-or-later; the
+bundled fonts retain their own SIL Open Font License 1.1.
+
+## Fonts
+
+| Family | Path | License |
+| --- | --- | --- |
+| Noto Sans KR | `assets/fonts/noto-sans-kr/` | OFL 1.1 |
+| Noto Serif KR | `assets/fonts/noto-serif-kr/` | OFL 1.1 |
+
+- Upstream project: https://github.com/notofonts/noto-cjk
+- Each font directory preserves its `OFL.txt` (license) and `source.txt`
+  (origin / build provenance).
+- WOFF2 conversion and unicode-range subsetting are permitted modifications
+  under OFL 1.1; the reserved font names are unchanged.

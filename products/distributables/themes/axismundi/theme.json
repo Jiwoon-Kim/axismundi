@@ -245,40 +245,6 @@
 					]
 				},
 				{
-					"slug": "noto-sans-kr",
-					"name": "Noto Sans KR",
-					"fontFamily": "\"Noto Sans KR\", sans-serif",
-					"fontFace": [
-						{
-							"fontFamily": "Noto Sans KR",
-							"fontStyle": "normal",
-							"fontWeight": "100 900",
-							"unicodeRange": "U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF",
-							"fontDisplay": "swap",
-							"src": [
-								"file:./assets/fonts/noto-sans-kr/axismundi-noto-sans-kr.woff2"
-							]
-						}
-					]
-				},
-				{
-					"slug": "noto-serif-kr",
-					"name": "Noto Serif KR",
-					"fontFamily": "\"Noto Serif KR\", serif",
-					"fontFace": [
-						{
-							"fontFamily": "Noto Serif KR",
-							"fontStyle": "normal",
-							"fontWeight": "100 900",
-							"unicodeRange": "U+AC00-D7A3, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF",
-							"fontDisplay": "swap",
-							"src": [
-								"file:./assets/fonts/noto-serif-kr/axismundi-noto-serif-kr.woff2"
-							]
-						}
-					]
-				},
-				{
 					"slug": "material-symbols-outlined",
 					"name": "Material Symbols Outlined",
 					"fontFamily": "\"Material Symbols Outlined\", sans-serif",

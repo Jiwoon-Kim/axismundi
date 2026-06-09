@@ -15,11 +15,14 @@ with source and processing notes.
 | Roboto Flex | `fonts/roboto-flex/` | OFL 1.1 |
 | Roboto Serif | `fonts/roboto-serif/` | OFL 1.1 |
 | Roboto Mono | `fonts/roboto-mono/` | OFL 1.1 |
-| Noto Sans KR | `fonts/noto-sans-kr/` | OFL 1.1 |
-| Noto Serif KR | `fonts/noto-serif-kr/` | OFL 1.1 |
 
 Format conversion (WOFF2) and unicode-range subsetting are permitted modifications
 under OFL 1.1; reserved font names are unchanged.
+
+The Korean families referenced in the theme's font stacks (`Noto Sans KR`,
+`Noto Serif KR`) are no longer bundled here; they are supplied by the optional
+"Axismundi Fonts: Noto CJK Korean" plugin. Without it, those stack entries fall
+back to the operating system's Korean font.
 
 ## Icons
 

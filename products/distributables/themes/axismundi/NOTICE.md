@@ -23,8 +23,10 @@ Each font directory preserves its `OFL.txt` and `source.txt`.
 - Roboto Flex
 - Roboto Serif
 - Roboto Mono
-- Noto Sans KR
-- Noto Serif KR
+
+The Korean `Noto Sans KR` / `Noto Serif KR` families referenced in the font
+stacks are supplied by the optional "Axismundi Fonts: Noto CJK Korean" plugin,
+not bundled in the theme.
 
 ## Per-file licensing
 

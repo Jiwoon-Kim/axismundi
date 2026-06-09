@@ -43,6 +43,12 @@ abbr[title] {
 	cursor: help;
 }
 
+/* Text selection — global document affordance. */
+::selection {
+	background-color: var(--wp--preset--color--secondary-container);
+	color: var(--wp--preset--color--on-secondary-container);
+}
+
 /* <code> — Roboto Mono everywhere; inline code (NOT inside <pre>) gets a small
  * surface-container pill. The core/code + core/preformatted blocks own their own
  * block layout, so `pre code` resets the inline pill back to flat. */
@@ -74,4 +80,3 @@ kbd {
 	color: var(--wp--preset--color--on-surface);
 	box-shadow: inset 0 -1px 0 var(--wp--preset--color--outline-variant);
 }
-

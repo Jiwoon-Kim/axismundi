@@ -82,9 +82,9 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 			) : '';
 			$caption    = axismundi_audio_metadata_caption( $post_id );
 			$media = sprintf(
-				'%1$s<audio controls preload="metadata" src="%2$s"></audio>%3$s',
+				'%1$s%2$s%3$s',
 				$cover_html,
-				esc_url( $url ),
+				axismundi_attachment_audio_block_html( $post_id, $url ),
 				$caption
 			);
 			break;
@@ -93,21 +93,8 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 			// Caption tracks via a non-standard, theme-specific filename
 			// convention (see axismundi_attachment_caption_tracks); WordPress
 			// has no native video-attachment -> caption association.
-			$tracks = '';
-			foreach ( axismundi_attachment_caption_tracks( $post_id ) as $track ) {
-				$tracks .= sprintf(
-					'<track kind="captions" src="%s" srclang="%s" label="%s"%s>',
-					esc_url( $track['src'] ),
-					esc_attr( $track['srclang'] ),
-					esc_attr( $track['label'] ),
-					$track['default'] ? ' default' : ''
-				);
-			}
-			$media = sprintf(
-				'<video controls playsinline preload="metadata" src="%s">%s</video>',
-				esc_url( $url ),
-				$tracks
-			);
+			$tracks = axismundi_attachment_caption_tracks( $post_id );
+			$media = axismundi_attachment_video_block_html( $post_id, $url, $tracks );
 			break;
 
 		default:
@@ -183,6 +170,82 @@ function axismundi_attachment_image_block_html( int $attachment_id, string $size
 			wp_json_encode( $block_attrs ),
 			esc_attr( $figure_class ),
 			$image
+		)
+	);
+}
+
+/**
+ * Render an attachment audio file through core/audio so block settings apply.
+ *
+ * @param int    $attachment_id Attachment ID.
+ * @param string $url           Attachment URL.
+ * @return string Rendered core/audio block HTML.
+ */
+function axismundi_attachment_audio_block_html( int $attachment_id, string $url ) : string {
+	if ( '' === $url ) {
+		return '';
+	}
+
+	$block_attrs = array(
+		'id'  => (int) $attachment_id,
+		'src' => esc_url_raw( $url ),
+	);
+
+	return do_blocks(
+		sprintf(
+			'<!-- wp:audio %1$s --><figure class="wp-block-audio"><audio controls preload="metadata" src="%2$s"></audio></figure><!-- /wp:audio -->',
+			wp_json_encode( $block_attrs ),
+			esc_url( $url )
+		)
+	);
+}
+
+/**
+ * Render an attachment video file through core/video so block settings apply.
+ *
+ * @param int                                                             $attachment_id Attachment ID.
+ * @param string                                                          $url           Attachment URL.
+ * @param array<int,array{src:string,srclang:string,label:string,default:bool}> $tracks Caption tracks.
+ * @return string Rendered core/video block HTML.
+ */
+function axismundi_attachment_video_block_html( int $attachment_id, string $url, array $tracks = array() ) : string {
+	if ( '' === $url ) {
+		return '';
+	}
+
+	$block_tracks = array();
+	$track_html   = '';
+	foreach ( $tracks as $track ) {
+		$block_tracks[] = array(
+			'src'     => $track['src'],
+			'label'   => $track['label'],
+			'srcLang' => $track['srclang'],
+			'kind'    => 'subtitles',
+			'default' => (bool) $track['default'],
+		);
+		$track_html .= sprintf(
+			'<track kind="subtitles" src="%s" srclang="%s" label="%s"%s>',
+			esc_url( $track['src'] ),
+			esc_attr( $track['srclang'] ),
+			esc_attr( $track['label'] ),
+			$track['default'] ? ' default' : ''
+		);
+	}
+
+	$block_attrs = array(
+		'id'  => (int) $attachment_id,
+		'src' => esc_url_raw( $url ),
+	);
+	if ( $block_tracks ) {
+		$block_attrs['tracks'] = $block_tracks;
+	}
+
+	return do_blocks(
+		sprintf(
+			'<!-- wp:video %1$s --><figure class="wp-block-video"><video controls playsinline preload="metadata" src="%2$s">%3$s</video></figure><!-- /wp:video -->',
+			wp_json_encode( $block_attrs ),
+			esc_url( $url ),
+			$track_html
 		)
 	);
 }

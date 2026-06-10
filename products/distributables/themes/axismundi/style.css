@@ -72,6 +72,7 @@ caption {
 	font-size: var(--wp--preset--font-size--body-small);
 	line-height: 1.333;
 	letter-spacing: 0.4px;
+	text-align: center;
 }
 figcaption {
 	margin-block-start: 8px;
@@ -79,7 +80,6 @@ figcaption {
 caption {
 	caption-side: bottom;
 	margin-block-start: 8px;
-	text-align: start;
 }
 
 /* Raw <table> — Custom HTML / markdown / federated content. Core/table exposes

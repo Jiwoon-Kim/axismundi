@@ -481,7 +481,8 @@
 				"typography": {
 					"fontSize": "var:preset|font-size|body-small",
 					"letterSpacing": "0.4px",
-					"lineHeight": "1.333"
+					"lineHeight": "1.333",
+					"textAlign": "center"
 				}
 			},
 			"link": {

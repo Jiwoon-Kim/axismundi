@@ -809,6 +809,9 @@
 				"border": {
 					"radius": "8px"
 				}
+			},
+			"core/gallery": {
+				"css": "& figure.wp-block-image:has(figcaption){border-radius:8px;overflow:clip;}"
 			}
 		}
 	},

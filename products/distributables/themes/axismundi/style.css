@@ -128,6 +128,18 @@ caption {
 	margin-block-start: 8px;
 }
 
+/* <hr> / core/separator — M3 divider: a 1dp full-width line in outline-variant
+ * (m3.material.io/components/divider/specs). One baseline drives both the raw
+ * <hr> and core/separator, which renders <hr class="wp-block-separator"> — so
+ * the separator no longer needs its own theme.json css. Core forces
+ * border-top:2px on the block class, so the class is matched here to override
+ * it; is-style-dots is excluded to keep its decorative core styling. */
+hr,
+.wp-block-separator:not(.is-style-dots) {
+	border: 0;
+	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
+}
+
 /* Media — keep raw img / picture / video / audio / iframe / embeds within the
  * content column on narrow viewports. Core media blocks are already responsive,
  * but Custom HTML / markdown / federated media arrive without those wrappers and

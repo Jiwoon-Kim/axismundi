@@ -1,0 +1,84 @@
+/* ============================================================
+ * Attachment object pages.
+ *
+ * Attachment media is injected by inc/attachment-media.php rather than a core
+ * block. Keep this layer page-scoped and token-only: it constrains raw media
+ * and formats the attachment metadata/debug panels.
+ * ============================================================ */
+
+.axismundi-attachment-media {
+	margin-block: 0;
+}
+
+.axismundi-attachment-media :is(img, video) {
+	display: block;
+	block-size: auto;
+	max-inline-size: 100%;
+}
+
+.axismundi-attachment-media audio {
+	inline-size: 100%;
+}
+
+.axismundi-attachment-media img {
+	border-radius: 8px;
+}
+
+.axismundi-attachment-meta {
+	margin-block-start: 24px;
+	color: var(--wp--preset--color--on-surface);
+	font-size: var(--wp--preset--font-size--body-medium);
+	line-height: 1.429;
+	letter-spacing: 0.25px;
+}
+
+.axismundi-attachment-meta__summary {
+	display: grid;
+	grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+	gap: 8px 16px;
+	margin-block: 0;
+	padding: 16px;
+	border: 1px solid var(--wp--preset--color--outline-variant);
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container);
+}
+
+.axismundi-attachment-meta__summary dt {
+	color: var(--wp--preset--color--on-surface-variant);
+	font-weight: 500;
+}
+
+.axismundi-attachment-meta__summary dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.axismundi-attachment-meta__raw {
+	margin-block-start: 8px;
+	border: 1px solid var(--wp--preset--color--outline-variant);
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container-low);
+}
+
+.axismundi-attachment-meta__raw > summary {
+	cursor: pointer;
+	padding: 12px 16px;
+	color: var(--wp--preset--color--on-surface-variant);
+	font-weight: 500;
+}
+
+.axismundi-attachment-meta__raw > pre {
+	margin: 0;
+	padding: 16px;
+	border-start-start-radius: 0;
+	border-start-end-radius: 0;
+	border-end-start-radius: 8px;
+	border-end-end-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container-high);
+}
+
+@media (max-width: 600px) {
+	.axismundi-attachment-meta__summary {
+		grid-template-columns: 1fr;
+	}
+}

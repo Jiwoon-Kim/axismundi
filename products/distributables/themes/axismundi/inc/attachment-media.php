@@ -128,7 +128,182 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 		return '';
 	}
 
-	return sprintf( '<figure class="axismundi-attachment-media">%s</figure>', $media );
+	return sprintf(
+		'<figure class="axismundi-attachment-media">%1$s</figure>%2$s',
+		$media,
+		axismundi_attachment_metadata_html( $post_id )
+	);
+}
+
+/**
+ * Build a compact attachment metadata summary plus raw WordPress metadata.
+ *
+ * The summary is meant for humans; the raw details are deliberately collapsed
+ * and mirror WordPress' own attachment metadata/custom-field storage for VQA
+ * and media-object debugging.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return string Attachment metadata HTML, or '' when there is nothing to show.
+ */
+function axismundi_attachment_metadata_html( int $attachment_id ) : string {
+	$metadata = wp_get_attachment_metadata( $attachment_id );
+	$metadata = is_array( $metadata ) ? $metadata : array();
+	$file     = get_attached_file( $attachment_id );
+	$mime     = get_post_mime_type( $attachment_id );
+
+	$items = array(
+		__( 'Attachment ID', 'axismundi' ) => $attachment_id,
+		__( 'MIME type', 'axismundi' )     => $mime,
+		__( 'File name', 'axismundi' )     => $file ? wp_basename( $file ) : '',
+		__( 'File size', 'axismundi' )     => ( $file && file_exists( $file ) ) ? size_format( filesize( $file ) ) : '',
+	);
+
+	if ( ! empty( $metadata['width'] ) && ! empty( $metadata['height'] ) ) {
+		$items[ __( 'Dimensions', 'axismundi' ) ] = sprintf(
+			/* translators: 1: width in pixels, 2: height in pixels. */
+			__( '%1$d x %2$d px', 'axismundi' ),
+			(int) $metadata['width'],
+			(int) $metadata['height']
+		);
+	}
+
+	if ( ! empty( $metadata['length_formatted'] ) ) {
+		$items[ __( 'Length', 'axismundi' ) ] = $metadata['length_formatted'];
+	}
+
+	foreach ( array(
+		'dataformat'        => __( 'Format', 'axismundi' ),
+		'fileformat'        => __( 'File format', 'axismundi' ),
+		'channelmode'       => __( 'Channel mode', 'axismundi' ),
+		'channels'          => __( 'Channels', 'axismundi' ),
+		'bitrate_mode'      => __( 'Bitrate mode', 'axismundi' ),
+		'encoder'           => __( 'Encoder', 'axismundi' ),
+		'encoder_settings'  => __( 'Encoder settings', 'axismundi' ),
+		'title'             => __( 'Title', 'axismundi' ),
+		'artist'            => __( 'Artist', 'axismundi' ),
+		'album'             => __( 'Album', 'axismundi' ),
+		'genre'             => __( 'Genre', 'axismundi' ),
+		'year'              => __( 'Year', 'axismundi' ),
+		'description'       => __( 'Description', 'axismundi' ),
+		'compression_ratio' => __( 'Compression ratio', 'axismundi' ),
+	) as $key => $label ) {
+		if ( isset( $metadata[ $key ] ) && '' !== $metadata[ $key ] && array() !== $metadata[ $key ] ) {
+			$items[ $label ] = $metadata[ $key ];
+		}
+	}
+
+	if ( ! empty( $metadata['sample_rate'] ) ) {
+		$items[ __( 'Sample rate', 'axismundi' ) ] = number_format_i18n( (int) $metadata['sample_rate'] ) . ' Hz';
+	}
+
+	if ( ! empty( $metadata['sample_rate_input'] ) ) {
+		$items[ __( 'Input sample rate', 'axismundi' ) ] = number_format_i18n( (int) $metadata['sample_rate_input'] ) . ' Hz';
+	}
+
+	if ( ! empty( $metadata['bitrate'] ) ) {
+		$items[ __( 'Bitrate', 'axismundi' ) ] = size_format( (int) ( (float) $metadata['bitrate'] / 8 ) ) . '/s';
+	}
+
+	if ( ! empty( $metadata['lossless'] ) || ( isset( $metadata['lossless'] ) && false === $metadata['lossless'] ) ) {
+		$items[ __( 'Lossless', 'axismundi' ) ] = (bool) $metadata['lossless'];
+	}
+
+	if ( ! empty( $metadata['image_meta'] ) && is_array( $metadata['image_meta'] ) ) {
+		$image_meta = $metadata['image_meta'];
+		$image_items = array(
+			'camera'        => __( 'Camera', 'axismundi' ),
+			'copyright'     => __( 'Copyright', 'axismundi' ),
+			'iso'           => __( 'ISO', 'axismundi' ),
+			'shutter_speed' => __( 'Shutter speed', 'axismundi' ),
+		);
+
+		foreach ( $image_items as $key => $label ) {
+			if ( ! empty( $image_meta[ $key ] ) ) {
+				$items[ $label ] = $image_meta[ $key ];
+			}
+		}
+
+		if ( ! empty( $image_meta['aperture'] ) ) {
+			$items[ __( 'Aperture', 'axismundi' ) ] = 'f/' . $image_meta['aperture'];
+		}
+
+		if ( ! empty( $image_meta['focal_length'] ) ) {
+			$items[ __( 'Focal length', 'axismundi' ) ] = $image_meta['focal_length'] . ' mm';
+		}
+
+		if ( ! empty( $image_meta['created_timestamp'] ) ) {
+			$items[ __( 'Created', 'axismundi' ) ] = wp_date( get_option( 'date_format' ), (int) $image_meta['created_timestamp'] );
+		}
+	}
+
+	$raw = array(
+		__( 'WP attachment metadata', 'axismundi' )    => $metadata,
+		__( 'Attachment custom fields', 'axismundi' ) => get_post_meta( $attachment_id ),
+	);
+
+	return axismundi_render_attachment_metadata( $items, $raw );
+}
+
+/**
+ * Render attachment metadata as a definition list plus collapsed raw JSON.
+ *
+ * @param array<string,mixed> $items Metadata label/value pairs.
+ * @param array<string,mixed> $raw   Raw metadata groups.
+ * @return string Metadata HTML.
+ */
+function axismundi_render_attachment_metadata( array $items, array $raw ) : string {
+	$items = array_filter(
+		$items,
+		static fn( $value ) : bool => ! ( null === $value || '' === $value || '0' === $value || array() === $value )
+	);
+	$raw   = array_filter(
+		$raw,
+		static fn( $value ) : bool => ! ( null === $value || '' === $value || array() === $value )
+	);
+
+	if ( ! $items && ! $raw ) {
+		return '';
+	}
+
+	$html = '<section class="axismundi-attachment-meta" aria-label="' . esc_attr__( 'Attachment metadata', 'axismundi' ) . '">';
+
+	if ( $items ) {
+		$html .= '<dl class="axismundi-attachment-meta__summary">';
+		foreach ( $items as $label => $value ) {
+			$html .= '<dt>' . esc_html( (string) $label ) . '</dt>';
+			$html .= '<dd>' . esc_html( axismundi_format_attachment_metadata_value( $value ) ) . '</dd>';
+		}
+		$html .= '</dl>';
+	}
+
+	foreach ( $raw as $label => $value ) {
+		$html .= '<details class="axismundi-attachment-meta__raw">';
+		$html .= '<summary>' . esc_html( (string) $label ) . '</summary>';
+		$html .= '<pre><code>' . esc_html( wp_json_encode( $value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</code></pre>';
+		$html .= '</details>';
+	}
+
+	$html .= '</section>';
+
+	return $html;
+}
+
+/**
+ * Format metadata values for summary display.
+ *
+ * @param mixed $value Metadata value.
+ * @return string Formatted value.
+ */
+function axismundi_format_attachment_metadata_value( $value ) : string {
+	if ( is_bool( $value ) ) {
+		return $value ? __( 'true', 'axismundi' ) : __( 'false', 'axismundi' );
+	}
+
+	if ( is_array( $value ) ) {
+		return implode( ', ', array_map( 'strval', array_filter( $value ) ) );
+	}
+
+	return (string) $value;
 }
 
 /**

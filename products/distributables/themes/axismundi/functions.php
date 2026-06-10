@@ -148,6 +148,10 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-table'       => array( 'assets/styles/blocks.table.css', array( 'axismundi-blocks-text' ) ),
 	);
 
+	if ( is_attachment() ) {
+		$styles['axismundi-attachment'] = array( 'assets/styles/attachment.css', array( 'axismundi-blocks-table' ) );
+	}
+
 	foreach ( $styles as $handle => $style ) {
 		$uri = axismundi_asset_uri( $style[0] );
 		if ( null === $uri ) {

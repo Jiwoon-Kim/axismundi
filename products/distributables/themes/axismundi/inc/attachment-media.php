@@ -91,12 +91,9 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 			break;
 
 		default:
-			// PDFs, plain text, WebVTT, archives, etc. — offer the file itself.
-			$media = sprintf(
-				'<a href="%s" download>%s</a>',
-				esc_url( $url ),
-				esc_html( wp_basename( (string) get_attached_file( $post_id ) ) )
-			);
+			// PDFs, plain text, WebVTT, archives, etc. — render through core/file
+			// so the WP file block styling and Download button contract apply.
+			$media = axismundi_attachment_file_block_html( $post_id, $url );
 	}
 
 	if ( '' === $media ) {
@@ -239,6 +236,43 @@ function axismundi_attachment_video_block_html( int $attachment_id, string $url,
 			wp_json_encode( $block_attrs ),
 			esc_url( $url ),
 			$track_html
+		)
+	);
+}
+
+/**
+ * Render a non-previewable attachment through core/file so the WP file block
+ * styling and Download button contract apply (PDF, WebVTT, plain text, archives,
+ * and any other MIME without a media player).
+ *
+ * @param int    $attachment_id Attachment ID.
+ * @param string $url           Attachment URL.
+ * @return string Rendered core/file block HTML.
+ */
+function axismundi_attachment_file_block_html( int $attachment_id, string $url ) : string {
+	if ( '' === $url ) {
+		return '';
+	}
+
+	$label = get_the_title( $attachment_id );
+	if ( '' === trim( (string) $label ) ) {
+		$label = wp_basename( (string) get_attached_file( $attachment_id ) );
+	}
+
+	$block_attrs = array(
+		'id'             => (int) $attachment_id,
+		'href'           => esc_url_raw( $url ),
+		'displayPreview' => false,
+	);
+
+	return do_blocks(
+		sprintf(
+			'<!-- wp:file %1$s --><div class="wp-block-file"><a id="wp-block-file--media-%2$d" href="%3$s">%4$s</a><a href="%3$s" class="wp-block-file__button wp-element-button" download aria-describedby="wp-block-file--media-%2$d">%5$s</a></div><!-- /wp:file -->',
+			wp_json_encode( $block_attrs ),
+			(int) $attachment_id,
+			esc_url( $url ),
+			esc_html( $label ),
+			esc_html__( 'Download', 'axismundi' )
 		)
 	);
 }

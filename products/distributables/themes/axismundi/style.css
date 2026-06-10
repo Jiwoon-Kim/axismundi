@@ -187,16 +187,19 @@ video {
 	padding: 8px !important;
 }
 .wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):hover {
-	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+	/* !important: core sets `.wp-lightbox-overlay .wp-lightbox-…-button:hover
+	 * { background: none }` at (0,3,0), which our :where() rule (0,2,0) cannot
+	 * beat — so the state layer needs !important, like the scrim above. */
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent) !important;
 }
 .wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):focus {
-	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent) !important;
 	outline: 3px solid currentColor;
 	outline-offset: 2px;
 }
 .wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):active {
 	border-radius: 8px;
-	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent) !important;
 }
 .wp-lightbox-overlay .wp-lightbox-close-icon,
 .wp-lightbox-overlay .wp-lightbox-navigation-icon {

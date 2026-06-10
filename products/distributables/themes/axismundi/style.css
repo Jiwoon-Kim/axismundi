@@ -245,7 +245,7 @@ video {
 }
 .wp-lightbox-overlay .wp-lightbox-close-icon svg,
 .wp-lightbox-overlay .wp-lightbox-navigation-icon svg {
-	display: none;
+	display: none !important;
 }
 .wp-lightbox-overlay .wp-lightbox-close-icon::before,
 .wp-lightbox-overlay .wp-lightbox-navigation-icon::before {

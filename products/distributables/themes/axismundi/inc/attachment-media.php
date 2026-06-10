@@ -8,7 +8,8 @@
  * renders only the description — so an attachment page would otherwise show
  * metadata with no media. This block switches on the attachment's MIME type and
  * emits a native, responsive media element: an image, an audio player, a video
- * player (with sibling WebVTT caption tracks), or a download link as a fallback.
+ * player (with caption tracks paired by a non-standard, theme-specific filename
+ * convention — see axismundi_attachment_caption_tracks), or a download link.
  *
  * It carries no presentational CSS — the elements inherit the theme's global
  * responsive media baseline in style.css (max-width:100%). The block is
@@ -80,6 +81,9 @@ function axismundi_render_attachment_media( $attributes = array(), $content = ''
 			break;
 
 		case 'video':
+			// Caption tracks via a non-standard, theme-specific filename
+			// convention (see axismundi_attachment_caption_tracks); WordPress
+			// has no native video-attachment -> caption association.
 			$tracks = '';
 			foreach ( axismundi_attachment_caption_tracks( $post_id ) as $track ) {
 				$tracks .= sprintf(
@@ -120,10 +124,16 @@ function axismundi_render_attachment_media( $attributes = array(), $content = ''
 /**
  * Find sibling WebVTT caption tracks for a video attachment.
  *
- * Uses a filename convention: a video stored as "<base>.<ext>" pairs with any
- * caption uploaded as "<base>.<lang>.vtt" in the same uploads directory (e.g.
- * gwangan-720p.webm <- gwangan-720p.en.vtt / gwangan-720p.ko.vtt). The first
- * track discovered is marked default.
+ * NON-STANDARD, Axismundi-specific convention. WordPress has no native
+ * association between a raw video attachment and caption files — captions
+ * normally live on the core/video block (its track UI stores them in post
+ * content), and nothing in the standard upload flow attaches a track to an
+ * attachment *page*. This is a theme convenience for attachment pages only: a
+ * video stored as "<base>.<ext>" is paired with any caption uploaded as
+ * "<base>.<lang>.vtt" in the same uploads directory (e.g. gwangan-720p.webm <-
+ * gwangan-720p.en.vtt / gwangan-720p.ko.vtt). The track matching the site
+ * locale (else the first found) is marked default. Because the pairing is by
+ * filename, an unrelated VTT that happens to share the base name will match.
  *
  * @param int $video_id Video attachment ID.
  * @return array<int,array{src:string,srclang:string,label:string,default:bool}>

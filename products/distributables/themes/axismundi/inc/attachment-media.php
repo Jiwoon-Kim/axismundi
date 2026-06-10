@@ -414,6 +414,56 @@ function axismundi_audio_metadata_caption( int $attachment_id ) : string {
 }
 
 /**
+ * Supplement WebP attachment metadata with EXIF values from the RIFF EXIF chunk.
+ *
+ * WordPress core's normal EXIF path is JPEG/TIFF-oriented; PHP's exif_read_data()
+ * does not expose the EXIF chunk in these WebP fixtures. Parse the embedded TIFF
+ * payload directly so the attachment page can surface camera metadata.
+ *
+ * @param array<string,mixed> $metadata      Generated attachment metadata.
+ * @param int                 $attachment_id Attachment ID.
+ * @return array<string,mixed>
+ */
+function axismundi_filter_webp_attachment_metadata( array $metadata, int $attachment_id ) : array {
+	if ( 'image/webp' !== get_post_mime_type( $attachment_id ) ) {
+		return $metadata;
+	}
+
+	$file = get_attached_file( $attachment_id );
+	if ( ! $file || ! is_readable( $file ) ) {
+		return $metadata;
+	}
+
+	$exif = axismundi_read_webp_exif( $file );
+	if ( ! $exif ) {
+		return $metadata;
+	}
+
+	$metadata['image_meta'] = array_merge(
+		isset( $metadata['image_meta'] ) && is_array( $metadata['image_meta'] ) ? $metadata['image_meta'] : array(),
+		array_filter(
+			array(
+				'aperture'          => $exif['FNumber'] ?? null,
+				'camera'            => $exif['Model'] ?? null,
+				'created_timestamp' => ! empty( $exif['DateTimeDigitized'] ) ? wp_exif_date2ts( $exif['DateTimeDigitized'] ) : null,
+				'focal_length'      => $exif['FocalLength'] ?? null,
+				'iso'               => $exif['ISOSpeedRatings'] ?? null,
+				'shutter_speed'     => $exif['ExposureTime'] ?? null,
+				'title'             => $exif['ImageDescription'] ?? null,
+				'copyright'         => $exif['Copyright'] ?? null,
+				'orientation'       => $exif['Orientation'] ?? null,
+			),
+			static fn( $value ) : bool => ! ( null === $value || '' === $value || 0 === $value || '0' === $value )
+		)
+	);
+
+	$metadata['axismundi_webp_exif'] = $exif;
+
+	return $metadata;
+}
+add_filter( 'wp_generate_attachment_metadata', 'axismundi_filter_webp_attachment_metadata', 10, 2 );
+
+/**
  * Supplement Opus-in-Ogg metadata with Vorbis comments.
  *
  * Some Opus fixtures expose `artist` and `album` inside the OpusTags packet,
@@ -538,6 +588,252 @@ function axismundi_le_uint32( string $data, int $offset ) : int {
 	}
 
 	return unpack( 'V', $bytes )[1];
+}
+
+/**
+ * Read selected EXIF tags from a WebP RIFF EXIF chunk.
+ *
+ * @param string $file WebP file path.
+ * @return array<string,mixed>
+ */
+function axismundi_read_webp_exif( string $file ) : array {
+	$data = file_get_contents( $file );
+	if ( false === $data || 12 > strlen( $data ) || 'RIFF' !== substr( $data, 0, 4 ) || 'WEBP' !== substr( $data, 8, 4 ) ) {
+		return array();
+	}
+
+	$offset = 12;
+	$length = strlen( $data );
+	while ( $offset + 8 <= $length ) {
+		$chunk_type = substr( $data, $offset, 4 );
+		$chunk_size = unpack( 'V', substr( $data, $offset + 4, 4 ) )[1];
+		$chunk_data = substr( $data, $offset + 8, $chunk_size );
+
+		if ( 'EXIF' === $chunk_type ) {
+			return axismundi_parse_tiff_exif( $chunk_data );
+		}
+
+		$offset += 8 + $chunk_size + ( $chunk_size % 2 );
+	}
+
+	return array();
+}
+
+/**
+ * Parse the TIFF payload contained in a WebP EXIF chunk.
+ *
+ * @param string $data TIFF bytes.
+ * @return array<string,mixed>
+ */
+function axismundi_parse_tiff_exif( string $data ) : array {
+	if ( 8 > strlen( $data ) ) {
+		return array();
+	}
+
+	$byte_order = substr( $data, 0, 2 );
+	if ( 'II' === $byte_order ) {
+		$endian = 'little';
+	} elseif ( 'MM' === $byte_order ) {
+		$endian = 'big';
+	} else {
+		return array();
+	}
+
+	$magic = axismundi_tiff_uint16( $data, 2, $endian );
+	if ( 42 !== $magic ) {
+		return array();
+	}
+
+	$ifd_offset = axismundi_tiff_uint32( $data, 4, $endian );
+	$ifd0       = axismundi_parse_tiff_ifd( $data, $ifd_offset, $endian );
+	$exif_ifd   = array();
+	if ( ! empty( $ifd0['ExifIFDPointer'] ) ) {
+		$exif_ifd = axismundi_parse_tiff_ifd( $data, (int) $ifd0['ExifIFDPointer'], $endian );
+	}
+
+	$flat = array_merge( $ifd0, $exif_ifd );
+	unset( $flat['ExifIFDPointer'] );
+
+	if ( ! empty( $flat['FNumber'] ) ) {
+		$flat['FNumber'] = round( (float) $flat['FNumber'], 2 );
+	}
+	if ( ! empty( $flat['ExposureTime'] ) ) {
+		$flat['ExposureTime'] = (string) $flat['ExposureTime'];
+	}
+	if ( ! empty( $flat['FocalLength'] ) ) {
+		$flat['FocalLength'] = (string) $flat['FocalLength'];
+	}
+
+	return $flat;
+}
+
+/**
+ * Parse a TIFF Image File Directory.
+ *
+ * @param string $data   TIFF bytes.
+ * @param int    $offset IFD offset.
+ * @param string $endian Byte order.
+ * @return array<string,mixed>
+ */
+function axismundi_parse_tiff_ifd( string $data, int $offset, string $endian ) : array {
+	$tag_names = array(
+		0x010f => 'Make',
+		0x0110 => 'Model',
+		0x0112 => 'Orientation',
+		0x0131 => 'Software',
+		0x0132 => 'DateTime',
+		0x829a => 'ExposureTime',
+		0x829d => 'FNumber',
+		0x8769 => 'ExifIFDPointer',
+		0x8827 => 'ISOSpeedRatings',
+		0x9003 => 'DateTimeOriginal',
+		0x9004 => 'DateTimeDigitized',
+		0x9201 => 'ShutterSpeedValue',
+		0x9202 => 'ApertureValue',
+		0x9204 => 'ExposureBiasValue',
+		0x9205 => 'MaxApertureValue',
+		0x920a => 'FocalLength',
+		0xa002 => 'ExifImageWidth',
+		0xa003 => 'ExifImageHeight',
+		0xa405 => 'FocalLengthIn35mmFilm',
+	);
+
+	if ( 0 > $offset || $offset + 2 > strlen( $data ) ) {
+		return array();
+	}
+
+	$count = axismundi_tiff_uint16( $data, $offset, $endian );
+	$out   = array();
+	for ( $i = 0; $i < $count; $i++ ) {
+		$entry_offset = $offset + 2 + ( 12 * $i );
+		if ( $entry_offset + 12 > strlen( $data ) ) {
+			break;
+		}
+
+		$tag = axismundi_tiff_uint16( $data, $entry_offset, $endian );
+		if ( ! isset( $tag_names[ $tag ] ) ) {
+			continue;
+		}
+
+		$type  = axismundi_tiff_uint16( $data, $entry_offset + 2, $endian );
+		$num   = axismundi_tiff_uint32( $data, $entry_offset + 4, $endian );
+		$value = axismundi_tiff_value( $data, $type, $num, substr( $data, $entry_offset + 8, 4 ), $endian );
+		if ( null !== $value && '' !== $value ) {
+			$out[ $tag_names[ $tag ] ] = $value;
+		}
+	}
+
+	return $out;
+}
+
+/**
+ * Read a TIFF entry value.
+ *
+ * @param string $data        TIFF bytes.
+ * @param int    $type        TIFF field type.
+ * @param int    $count       Value count.
+ * @param string $value_bytes Inline value or value offset bytes.
+ * @param string $endian      Byte order.
+ * @return mixed
+ */
+function axismundi_tiff_value( string $data, int $type, int $count, string $value_bytes, string $endian ) {
+	$type_sizes = array(
+		1  => 1,
+		2  => 1,
+		3  => 2,
+		4  => 4,
+		5  => 8,
+		7  => 1,
+		9  => 4,
+		10 => 8,
+	);
+	if ( ! isset( $type_sizes[ $type ] ) ) {
+		return null;
+	}
+
+	$size = $type_sizes[ $type ] * $count;
+	if ( 4 >= $size ) {
+		$raw = substr( $value_bytes, 0, $size );
+	} else {
+		$offset = axismundi_tiff_uint32( $value_bytes, 0, $endian );
+		if ( 0 > $offset || $offset + $size > strlen( $data ) ) {
+			return null;
+		}
+		$raw = substr( $data, $offset, $size );
+	}
+
+	if ( 2 === $type ) {
+		return trim( rtrim( $raw, "\0" ) );
+	}
+
+	$values = array();
+	for ( $i = 0; $i < $count; $i++ ) {
+		$chunk = substr( $raw, $i * $type_sizes[ $type ], $type_sizes[ $type ] );
+		switch ( $type ) {
+			case 3:
+				$values[] = axismundi_tiff_uint16( $chunk, 0, $endian );
+				break;
+			case 4:
+				$values[] = axismundi_tiff_uint32( $chunk, 0, $endian );
+				break;
+			case 5:
+				$values[] = axismundi_tiff_rational( $chunk, $endian, false );
+				break;
+			case 9:
+				$values[] = axismundi_tiff_int32( $chunk, 0, $endian );
+				break;
+			case 10:
+				$values[] = axismundi_tiff_rational( $chunk, $endian, true );
+				break;
+			default:
+				$values[] = bin2hex( $chunk );
+		}
+	}
+
+	return 1 === count( $values ) ? $values[0] : $values;
+}
+
+/**
+ * Convert TIFF rational bytes to a decimal string.
+ *
+ * @param string $chunk  8-byte numerator/denominator pair.
+ * @param string $endian Byte order.
+ * @param bool   $signed Whether the rational is signed.
+ * @return string
+ */
+function axismundi_tiff_rational( string $chunk, string $endian, bool $signed ) : string {
+	$numerator   = $signed ? axismundi_tiff_int32( $chunk, 0, $endian ) : axismundi_tiff_uint32( $chunk, 0, $endian );
+	$denominator = $signed ? axismundi_tiff_int32( $chunk, 4, $endian ) : axismundi_tiff_uint32( $chunk, 4, $endian );
+
+	if ( 0 === $denominator ) {
+		return (string) $numerator;
+	}
+
+	return rtrim( rtrim( sprintf( '%.12F', $numerator / $denominator ), '0' ), '.' );
+}
+
+function axismundi_tiff_uint16( string $data, int $offset, string $endian ) : int {
+	$bytes = substr( $data, $offset, 2 );
+	if ( 2 > strlen( $bytes ) ) {
+		return 0;
+	}
+
+	return unpack( 'little' === $endian ? 'v' : 'n', $bytes )[1];
+}
+
+function axismundi_tiff_uint32( string $data, int $offset, string $endian ) : int {
+	$bytes = substr( $data, $offset, 4 );
+	if ( 4 > strlen( $bytes ) ) {
+		return 0;
+	}
+
+	return unpack( 'little' === $endian ? 'V' : 'N', $bytes )[1];
+}
+
+function axismundi_tiff_int32( string $data, int $offset, string $endian ) : int {
+	$value = axismundi_tiff_uint32( $data, $offset, $endian );
+
+	return $value > 0x7fffffff ? $value - 0x100000000 : $value;
 }
 
 /**

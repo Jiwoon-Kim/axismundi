@@ -6,11 +6,12 @@
  * core/post-content renders only the description — so an attachment page would
  * otherwise show metadata with no media. This module prepends the attachment
  * file to the Post Content block on attachment pages, switching on the
- * attachment's MIME type to emit a native, responsive element: an image, an
- * audio player, a video player (with caption tracks paired by a non-standard,
+ * attachment's MIME type to emit a responsive media object: raster images use
+ * the real core/image block path so theme.json lightbox/radius settings apply,
+ * audio/video use native players (with caption tracks paired by a non-standard,
  * theme-specific filename convention — see axismundi_attachment_caption_tracks),
- * or a download link as a fallback. It renders only the file itself and invents
- * no associations beyond that caption pairing.
+ * and other files fall back to a download link. It renders only the file itself
+ * and invents no associations beyond that caption pairing.
  *
  * Wiring note: this filters render_block_core/post-content rather than
  * registering a block. register_block_type() is plugin territory and is
@@ -64,26 +65,20 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 
 	switch ( $type ) {
 		case 'image':
-			$media = wp_get_attachment_image(
+			$media = axismundi_attachment_image_block_html(
 				$post_id,
 				'full',
-				false,
-				array(
-					'decoding' => 'async',
-					'loading'  => 'eager',
-				)
+				'axismundi-attachment-media__image',
+				array( 'loading' => 'eager' )
 			);
 			break;
 
 		case 'audio':
 			$cover_id   = axismundi_audio_cover_attachment_id( $post_id );
-			$cover_html = $cover_id ? wp_get_attachment_image(
+			$cover_html = $cover_id ? axismundi_attachment_image_block_html(
 				$cover_id,
 				'large',
-				false,
-				array(
-					'class' => 'axismundi-attachment-audio-cover',
-				)
+				'axismundi-attachment-audio-cover'
 			) : '';
 			$caption    = axismundi_audio_metadata_caption( $post_id );
 			$media = sprintf(
@@ -129,9 +124,66 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 	}
 
 	return sprintf(
-		'<figure class="axismundi-attachment-media">%1$s</figure>%2$s',
+		'<div class="axismundi-attachment-media axismundi-attachment-media--%3$s">%1$s</div>%2$s',
 		$media,
-		axismundi_attachment_metadata_html( $post_id )
+		axismundi_attachment_metadata_html( $post_id ),
+		esc_attr( $type ?: 'file' )
+	);
+}
+
+/**
+ * Render an attachment image through core/image so block settings apply.
+ *
+ * @param int                 $attachment_id Attachment ID.
+ * @param string              $size          Image size slug.
+ * @param string              $figure_class  Extra class on the core/image figure.
+ * @param array<string,mixed> $attr          Extra image attributes.
+ * @return string Rendered core/image block HTML, or raw SVG fallback.
+ */
+function axismundi_attachment_image_block_html( int $attachment_id, string $size = 'large', string $figure_class = '', array $attr = array() ) : string {
+	$url = wp_get_attachment_url( $attachment_id );
+	if ( ! $url ) {
+		return '';
+	}
+
+	$mime_type = get_post_mime_type( $attachment_id );
+	if ( 'image/svg+xml' === $mime_type ) {
+		return sprintf(
+			'<figure class="wp-block-image size-%1$s %2$s"><img src="%3$s" alt="%4$s" loading="lazy" decoding="async" /></figure>',
+			esc_attr( $size ),
+			esc_attr( $figure_class ),
+			esc_url( $url ),
+			esc_attr( (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) )
+		);
+	}
+
+	$image_attr = array_merge(
+		array(
+			'class'    => 'wp-image-' . (int) $attachment_id,
+			'decoding' => 'async',
+			'loading'  => 'lazy',
+		),
+		$attr
+	);
+	$image      = wp_get_attachment_image( $attachment_id, $size, false, $image_attr );
+	if ( ! $image ) {
+		return '';
+	}
+
+	$figure_class = trim( 'wp-block-image size-' . $size . ' ' . $figure_class );
+	$block_attrs  = array(
+		'id'              => (int) $attachment_id,
+		'sizeSlug'        => $size,
+		'linkDestination' => 'none',
+	);
+
+	return do_blocks(
+		sprintf(
+			'<!-- wp:image %1$s --><figure class="%2$s">%3$s</figure><!-- /wp:image -->',
+			wp_json_encode( $block_attrs ),
+			esc_attr( $figure_class ),
+			$image
+		)
 	);
 }
 

@@ -197,6 +197,21 @@ video {
 	block-size: 48px;
 	padding: 8px !important;
 }
+.wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):has(
+		:where(.wp-lightbox-close-text, .wp-lightbox-navigation-text):not([hidden])
+	) {
+	min-inline-size: 40px;
+	inline-size: max-content;
+	gap: 8px;
+	padding-inline: 16px !important;
+	font-size: var(--wp--preset--font-size--label-large);
+	font-weight: 500;
+	line-height: 1.429;
+	letter-spacing: 0.1px;
+}
+.wp-lightbox-overlay .wp-lightbox-navigation-button:has(.wp-lightbox-navigation-text:not([hidden])) {
+	min-inline-size: 48px;
+}
 .wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):hover {
 	/* !important: core sets `.wp-lightbox-overlay .wp-lightbox-…-button:hover
 	 * { background: none }` at (0,3,0), which our :where() rule (0,2,0) cannot

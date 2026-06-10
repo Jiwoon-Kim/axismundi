@@ -137,18 +137,18 @@ tfoot tr:last-child > :where(th, td) {
 
 /* Raw <blockquote> — match core/quote's emphasis bar for Custom HTML,
  * markdown, and federated content without touching pullquote's nested quote. */
-blockquote:not([class*="wp-block"]) {
+blockquote:not([class*="wp-block"]):not(.wp-block-pullquote blockquote) {
 	margin-inline: 0;
 	padding-block: 8px;
 	padding-inline-start: 24px;
 	border-inline-start: 4px solid var(--wp--preset--color--primary);
 	color: var(--wp--preset--color--on-surface);
 }
-blockquote:not([class*="wp-block"]) > p {
+blockquote:not([class*="wp-block"]):not(.wp-block-pullquote blockquote) > p {
 	margin-block: 0;
 	color: inherit;
 }
-blockquote:not([class*="wp-block"]) cite {
+blockquote:not([class*="wp-block"]):not(.wp-block-pullquote blockquote) cite {
 	display: block;
 	margin-block-start: 8px;
 	color: var(--wp--preset--color--on-surface-variant);

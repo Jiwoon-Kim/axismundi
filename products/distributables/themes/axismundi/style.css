@@ -150,10 +150,16 @@ img,
 video {
 	height: auto;
 }
+/* Native <audio>/<video> controls render inside a UA shadow DOM that page CSS
+ * cannot reach, so color-scheme is the only real lever: it makes the browser
+ * paint the controls in its dark or light skin to match the active theme.
+ * accent-color is deliberately NOT set — it tints form controls (range,
+ * checkbox, progress) but is ignored by media controls in current browsers, so
+ * setting it here would be a misleading no-op. A fully M3-styled player would
+ * need a custom JS player, which is out of scope for the theme. */
 audio,
 video {
 	color-scheme: inherit;
-	accent-color: var(--wp--preset--color--primary);
 }
 
 /* WordPress image lightbox — core paints the backdrop as the global surface at

@@ -74,19 +74,12 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 			break;
 
 		case 'audio':
-			$cover_id   = axismundi_audio_cover_attachment_id( $post_id );
-			$cover_html = $cover_id ? axismundi_attachment_image_block_html(
-				$cover_id,
-				'large',
-				'axismundi-attachment-audio-cover'
-			) : '';
-			$caption    = axismundi_audio_metadata_caption( $post_id );
-			$media = sprintf(
-				'%1$s%2$s%3$s',
-				$cover_html,
-				axismundi_attachment_audio_block_html( $post_id, $url ),
-				$caption
-			);
+			// Cover art, when present, is the attachment's featured image
+			// (_thumbnail_id) and is rendered by the post-featured-image block in
+			// templates/attachment.html. So the audio branch owns only the player
+			// plus any artist/album caption — one MIME, one responsibility.
+			$media = axismundi_attachment_audio_block_html( $post_id, $url )
+				. axismundi_audio_metadata_caption( $post_id );
 			break;
 
 		case 'video':
@@ -435,67 +428,6 @@ function axismundi_format_attachment_metadata_value( $value ) : string {
 	}
 
 	return (string) $value;
-}
-
-/**
- * Find cover art associated with an audio attachment.
- *
- * WordPress extracts embedded audio artwork as an attachment and often links it
- * via `_thumbnail_id`. When that explicit link is absent, try the attachment
- * metadata image id and finally the sibling filename pattern used for extracted
- * cover art.
- *
- * @param int $attachment_id Audio attachment ID.
- * @return int Cover attachment ID, or 0 when none is available.
- */
-function axismundi_audio_cover_attachment_id( int $attachment_id ) : int {
-	$thumbnail_id = (int) get_post_meta( $attachment_id, '_thumbnail_id', true );
-	if ( $thumbnail_id && 'attachment' === get_post_type( $thumbnail_id ) ) {
-		return $thumbnail_id;
-	}
-
-	$metadata = wp_get_attachment_metadata( $attachment_id );
-	if ( ! empty( $metadata['image'] ) && is_array( $metadata['image'] ) ) {
-		foreach ( array( 'attachment_id', 'id' ) as $key ) {
-			if ( ! empty( $metadata['image'][ $key ] ) ) {
-				$image_id = (int) $metadata['image'][ $key ];
-				if ( $image_id && 'attachment' === get_post_type( $image_id ) ) {
-					return $image_id;
-				}
-			}
-		}
-	}
-
-	if ( empty( $metadata['image'] ) || ! is_array( $metadata['image'] ) ) {
-		return 0;
-	}
-
-	$attached_file = (string) get_post_meta( $attachment_id, '_wp_attached_file', true );
-	if ( '' === $attached_file ) {
-		return 0;
-	}
-
-	$directory = trailingslashit( dirname( $attached_file ) );
-	$basename  = pathinfo( $attached_file, PATHINFO_FILENAME );
-	$extension = pathinfo( $attached_file, PATHINFO_EXTENSION );
-
-	$cover_posts = get_posts(
-		array(
-			'fields'         => 'ids',
-			'meta_key'       => '_wp_attached_file',
-			'meta_value'     => array(
-				$directory . $basename . '-' . $extension . '-image.jpg',
-				$directory . $basename . '-image.jpg',
-			),
-			'meta_compare'   => 'IN',
-			'post_mime_type' => 'image/jpeg',
-			'post_status'    => 'inherit',
-			'post_type'      => 'attachment',
-			'posts_per_page' => 1,
-		)
-	);
-
-	return $cover_posts ? (int) $cover_posts[0] : 0;
 }
 
 /**

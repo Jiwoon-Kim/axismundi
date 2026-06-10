@@ -804,6 +804,11 @@
 			},
 			"core/video": {
 				"css": "& video{border-radius:8px;}"
+			},
+			"core/post-featured-image": {
+				"border": {
+					"radius": "8px"
+				}
 			}
 		}
 	},

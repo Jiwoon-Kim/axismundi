@@ -15,8 +15,9 @@ if ( ! defined( 'AXISMUNDI_VERSION' ) ) {
 	define( 'AXISMUNDI_VERSION', '0.1.0' );
 }
 
-// Theme-internal dynamic block that renders the attachment file on the
-// attachment template (image / audio / video + captions / download fallback).
+// Theme-internal attachment page renderer. WordPress core/post-content only
+// outputs the attachment description, so this filter prepends the actual file
+// on attachment templates (image / audio / video + captions / download fallback).
 require_once get_template_directory() . '/inc/attachment-media.php';
 
 /**

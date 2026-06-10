@@ -82,6 +82,29 @@ caption {
 	margin-block-start: 8px;
 }
 
+/* Media — keep raw img / picture / video / audio / iframe / embeds within the
+ * content column on narrow viewports. Core media blocks are already responsive,
+ * but Custom HTML / markdown / federated media arrive without those wrappers and
+ * otherwise overflow horizontally. max-width:100% only constrains oversized
+ * media, so small icons/images are untouched; height:auto keeps the aspect ratio
+ * of images and video as they scale down. */
+img,
+picture,
+video,
+audio,
+iframe,
+embed,
+object,
+svg,
+canvas {
+	max-width: 100%;
+	box-sizing: border-box;
+}
+img,
+video {
+	height: auto;
+}
+
 /* Raw <table> — Custom HTML / markdown / federated content. Core/table exposes
  * its editable source in theme.json and gets WordPress-specific resets in
  * blocks.table.css; this global semantic baseline is for ordinary HTML tables

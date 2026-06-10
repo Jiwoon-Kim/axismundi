@@ -150,6 +150,11 @@ img,
 video {
 	height: auto;
 }
+audio,
+video {
+	color-scheme: inherit;
+	accent-color: var(--wp--preset--color--primary);
+}
 
 /* WordPress image lightbox — core paints the backdrop as the global surface at
  * high opacity, which is a near-white canvas in light mode. Use the M3

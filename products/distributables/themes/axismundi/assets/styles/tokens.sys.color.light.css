@@ -7,6 +7,8 @@
  * intentionally omitted; shadow/scrim live in tokens.sys.elevation.css.
  * ============================================================ */
 :root {
+	color-scheme: light;
+
 	/* Brand & error roles */
 	--md-sys-color-primary: var(--md-ref-palette-primary-40);
 	--md-sys-color-on-primary: var(--md-ref-palette-primary-100);

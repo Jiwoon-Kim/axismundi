@@ -7,6 +7,8 @@
  * tokens.sys.elevation.css.
  * ============================================================ */
 :root[data-theme="dark"] {
+	color-scheme: dark;
+
 	/* Brand & error roles */
 	--md-sys-color-primary: var(--md-ref-palette-primary-80);
 	--md-sys-color-on-primary: var(--md-ref-palette-primary-20);
@@ -53,6 +55,8 @@
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme]),
 	:root[data-theme="auto"] {
+		color-scheme: dark;
+
 		/* Brand & error roles */
 		--md-sys-color-primary: var(--md-ref-palette-primary-80);
 		--md-sys-color-on-primary: var(--md-ref-palette-primary-20);

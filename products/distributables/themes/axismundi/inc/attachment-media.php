@@ -1,57 +1,59 @@
 <?php
 /**
- * Axismundi — attachment media block.
+ * Axismundi — attachment media rendering.
  *
- * A theme-internal dynamic block, `axismundi/attachment-media`, used in
- * templates/attachment.html to render the attachment file itself. WordPress
- * core has no block that outputs "the current attachment" — core/post-content
- * renders only the description — so an attachment page would otherwise show
- * metadata with no media. This block switches on the attachment's MIME type and
- * emits a native, responsive media element: an image, an audio player, a video
- * player (with caption tracks paired by a non-standard, theme-specific filename
- * convention — see axismundi_attachment_caption_tracks), or a download link.
+ * WordPress core has no block that outputs "the current attachment" —
+ * core/post-content renders only the description — so an attachment page would
+ * otherwise show metadata with no media. This module prepends the attachment
+ * file to the Post Content block on attachment pages, switching on the
+ * attachment's MIME type to emit a native, responsive element: an image, an
+ * audio player, a video player (with caption tracks paired by a non-standard,
+ * theme-specific filename convention — see axismundi_attachment_caption_tracks),
+ * or a download link as a fallback. It renders only the file itself and invents
+ * no associations beyond that caption pairing.
  *
- * It carries no presentational CSS — the elements inherit the theme's global
- * responsive media baseline in style.css (max-width:100%). The block is
- * registered server-side only and is deliberately absent from the inserter: it
- * is a template primitive, not an authoring block.
+ * Wiring note: this filters render_block_core/post-content rather than
+ * registering a block. register_block_type() is plugin territory and is
+ * disallowed in themes by the WordPress.org Theme Check, so a server-side
+ * filter is the theme-legal way to inject the media. The elements carry no
+ * presentational CSS — they ride the theme's global responsive media baseline
+ * in style.css (max-width:100%).
  *
  * @package Axismundi
  */
 
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Register the attachment-media block.
- */
-function axismundi_register_attachment_media_block() : void {
-	register_block_type(
-		'axismundi/attachment-media',
-		array(
-			'render_callback' => 'axismundi_render_attachment_media',
-			'uses_context'    => array( 'postId' ),
-		)
-	);
-}
-add_action( 'init', 'axismundi_register_attachment_media_block' );
+// Axismundi renders attachment media itself; drop core's the_content prepend so
+// the file is never injected twice on an attachment page.
+remove_filter( 'the_content', 'prepend_attachment' );
 
 /**
- * Render the attachment file for the current attachment.
+ * Prepend the attachment file to the Post Content block on attachment pages.
  *
- * @param array         $attributes Block attributes (unused).
- * @param string        $content    Inner content (unused).
- * @param WP_Block|null $block      Block instance, carrying post context.
- * @return string Media HTML, or '' when there is nothing to render.
+ * @param string   $block_content Rendered Post Content block markup.
+ * @param array    $block         Parsed block.
+ * @param WP_Block $instance      Block instance, carrying post context.
+ * @return string Filtered block markup.
  */
-function axismundi_render_attachment_media( $attributes = array(), $content = '', $block = null ) : string {
-	$post_id = ( $block && ! empty( $block->context['postId'] ) )
-		? (int) $block->context['postId']
-		: (int) get_the_ID();
+function axismundi_prepend_attachment_media( $block_content, $block, $instance ) {
+	$post_id = isset( $instance->context['postId'] ) ? (int) $instance->context['postId'] : 0;
 
-	if ( ! $post_id || 'attachment' !== get_post_type( $post_id ) ) {
-		return '';
+	if ( ! $post_id || ! is_attachment( $post_id ) ) {
+		return $block_content;
 	}
 
+	return axismundi_attachment_media_html( $post_id ) . $block_content;
+}
+add_filter( 'render_block_core/post-content', 'axismundi_prepend_attachment_media', 10, 3 );
+
+/**
+ * Build the media element for an attachment, by MIME type.
+ *
+ * @param int $post_id Attachment ID.
+ * @return string Media HTML, or '' when there is nothing to render.
+ */
+function axismundi_attachment_media_html( int $post_id ) : string {
 	$url = wp_get_attachment_url( $post_id );
 	if ( ! $url ) {
 		return '';
@@ -114,11 +116,7 @@ function axismundi_render_attachment_media( $attributes = array(), $content = ''
 		return '';
 	}
 
-	return sprintf(
-		'<div %s>%s</div>',
-		get_block_wrapper_attributes(),
-		$media
-	);
+	return sprintf( '<figure class="axismundi-attachment-media">%s</figure>', $media );
 }
 
 /**

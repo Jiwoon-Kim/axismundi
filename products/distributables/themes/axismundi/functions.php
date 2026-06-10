@@ -87,6 +87,30 @@ function axismundi_setup() : void {
 add_action( 'after_setup_theme', 'axismundi_setup' );
 
 /**
+ * Enable attachment pages.
+ *
+ * WordPress 6.4+ ships attachment pages disabled by default
+ * (`wp_attachment_pages_enabled` = 0), so `redirect_canonical()` 301-redirects
+ * every attachment URL straight to the raw file. Axismundi treats the
+ * attachment page as a first-class media surface (templates/attachment.html),
+ * so force the flag on while the theme is active.
+ *
+ * This filters the option at read time rather than writing it to the database:
+ * the behavior is theme-scoped and reverts the moment the theme is switched
+ * away, without mutating the site's stored setting. Both the stored-value
+ * (`option_*`) and missing-value (`default_option_*`) reads are covered, and
+ * the string '1' satisfies core's strict `'1' === ` comparisons (admin "View
+ * attachment page" labels) as well as the boolean redirect guard.
+ *
+ * @return string Always '1'.
+ */
+function axismundi_enable_attachment_pages() : string {
+	return '1';
+}
+add_filter( 'option_wp_attachment_pages_enabled', 'axismundi_enable_attachment_pages' );
+add_filter( 'default_option_wp_attachment_pages_enabled', 'axismundi_enable_attachment_pages' );
+
+/**
  * Enqueue Axismundi runtime styles, ordered, only when the files exist.
  *
  * Skeleton only in Phase 0 — the M3 token + style cascade (tokens.*, foundation,

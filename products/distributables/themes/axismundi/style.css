@@ -166,11 +166,41 @@ video {
 	background-color: color-mix(in srgb, var(--md-sys-color-scrim) 72%, transparent) !important;
 }
 .wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button) {
+	box-sizing: border-box;
+	padding: 0;
+	border-radius: 9999px;
+	background-color: transparent;
 	color: #fff !important;
-	fill: #fff !important;
+	fill: currentColor !important;
+	transition:
+		border-radius var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+		background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+.wp-lightbox-overlay .wp-lightbox-close-button {
+	inline-size: 40px;
+	block-size: 40px;
+	padding: 8px !important;
+}
+.wp-lightbox-overlay .wp-lightbox-navigation-button {
+	inline-size: 48px;
+	block-size: 48px;
+	padding: 8px !important;
+}
+.wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):hover {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+.wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):focus {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+	outline: 3px solid currentColor;
+	outline-offset: 2px;
+}
+.wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):active {
+	border-radius: 8px;
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 }
 .wp-lightbox-overlay .wp-lightbox-close-icon,
 .wp-lightbox-overlay .wp-lightbox-navigation-icon {
+	--md-icon-fill: 0;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -179,6 +209,10 @@ video {
 	overflow: hidden;
 	color: #fff;
 	font-size: var(--md-icon-size, 24px);
+}
+.wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button):is(:hover, :focus, :active)
+	:where(.wp-lightbox-close-icon, .wp-lightbox-navigation-icon) {
+	--md-icon-fill: 1;
 }
 .wp-lightbox-overlay .wp-lightbox-close-icon svg,
 .wp-lightbox-overlay .wp-lightbox-navigation-icon svg {
@@ -209,6 +243,7 @@ video {
 		"wght" var(--md-icon-wght, 400),
 		"GRAD" var(--md-icon-grad, 0),
 		"opsz" var(--md-icon-opsz, 24);
+	transition: --md-icon-fill var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 .wp-lightbox-overlay .wp-lightbox-close-icon {
 	--md-icon-size: 24px;

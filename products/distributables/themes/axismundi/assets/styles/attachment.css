@@ -1,13 +1,26 @@
 /* ============================================================
  * Attachment object pages.
  *
- * Attachment media is injected by inc/attachment-media.php rather than a core
- * block. Keep this layer page-scoped and token-only: it constrains raw media
- * and formats the attachment metadata/debug panels.
+ * Attachment media is injected by inc/attachment-media.php and rendered through
+ * core media blocks where possible. Keep this layer page-scoped and token-only:
+ * it constrains attachment artwork/media and formats the metadata/debug panels.
  * ============================================================ */
 
 .axismundi-attachment-media {
 	margin-block: 0;
+}
+
+.attachment .wp-block-post-featured-image {
+	inline-size: fit-content;
+	max-inline-size: 100%;
+	margin-inline: auto;
+}
+
+.attachment .wp-block-post-featured-image img {
+	display: block;
+	inline-size: auto;
+	max-inline-size: 100%;
+	block-size: auto;
 }
 
 .axismundi-attachment-media :is(img, video) {

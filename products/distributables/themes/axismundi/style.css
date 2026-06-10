@@ -153,17 +153,77 @@ video {
 
 /* WordPress image lightbox — core paints the backdrop as the global surface at
  * high opacity, which is a near-white canvas in light mode. Use the M3
- * scheme-neutral scrim (neutral-0) instead, dimmed to the M3 32% scrim opacity.
+ * scheme-neutral scrim (neutral-0) instead, with a stronger viewer dim.
  *
  * Two core behaviours force the exact form here:
  *  - The color is written as an inline style on .scrim, so background-color
  *    needs !important to win.
  *  - The `.scrim` opacity is driven by core's turn-on-visibility animation
  *    (forwards), which lands on opacity:1 and overrides any opacity declaration.
- * So the 32% dim is baked into the color's alpha via color-mix rather than set
+ * So the dim is baked into the color's alpha via color-mix rather than set
  * with `opacity`; the fade-in animation still plays. */
 .wp-lightbox-overlay .scrim {
-	background-color: color-mix( in srgb, var(--md-sys-color-scrim) 32%, transparent ) !important;
+	background-color: color-mix(in srgb, var(--md-sys-color-scrim) 72%, transparent) !important;
+}
+.wp-lightbox-overlay :where(.wp-lightbox-close-button, .wp-lightbox-navigation-button) {
+	color: #fff !important;
+	fill: #fff !important;
+}
+.wp-lightbox-overlay .wp-lightbox-close-icon,
+.wp-lightbox-overlay .wp-lightbox-navigation-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 1em;
+	block-size: 1em;
+	overflow: hidden;
+	color: #fff;
+	font-size: var(--md-icon-size, 24px);
+}
+.wp-lightbox-overlay .wp-lightbox-close-icon svg,
+.wp-lightbox-overlay .wp-lightbox-navigation-icon svg {
+	display: none;
+}
+.wp-lightbox-overlay .wp-lightbox-close-icon::before,
+.wp-lightbox-overlay .wp-lightbox-navigation-icon::before {
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	font-size: 1em;
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 1em;
+	block-size: 1em;
+	overflow: hidden;
+	white-space: nowrap;
+	direction: ltr;
+	-webkit-font-feature-settings: "liga";
+	font-feature-settings: "liga";
+	-webkit-font-smoothing: antialiased;
+	font-variation-settings:
+		"FILL" var(--md-icon-fill, 0),
+		"wght" var(--md-icon-wght, 400),
+		"GRAD" var(--md-icon-grad, 0),
+		"opsz" var(--md-icon-opsz, 24);
+}
+.wp-lightbox-overlay .wp-lightbox-close-icon {
+	--md-icon-size: 24px;
+}
+.wp-lightbox-overlay .wp-lightbox-close-icon::before {
+	content: "\e5cd"; /* Material Symbols: close */
+}
+.wp-lightbox-overlay .wp-lightbox-navigation-icon {
+	--md-icon-size: 32px;
+}
+.wp-lightbox-overlay .wp-lightbox-navigation-button-prev .wp-lightbox-navigation-icon::before {
+	content: "\e5cb"; /* Material Symbols: chevron_left */
+}
+.wp-lightbox-overlay .wp-lightbox-navigation-button-next .wp-lightbox-navigation-icon::before {
+	content: "\e5cc"; /* Material Symbols: chevron_right */
 }
 
 /* Raw <table> — Custom HTML / markdown / federated content. Core/table exposes

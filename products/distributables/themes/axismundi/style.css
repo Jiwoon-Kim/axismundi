@@ -131,13 +131,33 @@ caption {
 /* <hr> / core/separator — M3 divider: a 1dp full-width line in outline-variant
  * (m3.material.io/components/divider/specs). One baseline drives both the raw
  * <hr> and core/separator, which renders <hr class="wp-block-separator"> — so
- * the separator no longer needs its own theme.json css. Core forces
- * border-top:2px on the block class, so the class is matched here to override
- * it; is-style-dots is excluded to keep its decorative core styling. */
+ * the separator no longer needs its own theme.json css. Drawn with
+ * height+background (the canonical <hr> recipe) rather than a border; core
+ * forces border-top:2px on the block class, so border:0 + the class match here
+ * override it. is-style-dots keeps its decorative core styling. */
 hr,
 .wp-block-separator:not(.is-style-dots) {
 	border: 0;
-	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
+	height: 1px;
+	background-color: var(--wp--preset--color--outline-variant);
+}
+
+/* Editor only — a 1px line is almost impossible to click, so give the separator
+ * a taller transparent hit area in the editor while keeping the visible line at
+ * 1px, centred via a background gradient. .editor-styles-wrapper scopes this to
+ * the editor; the front stays a plain 1px line. */
+.editor-styles-wrapper .wp-block-separator:not(.is-style-dots) {
+	height: auto;
+	min-height: 1px;
+	padding-block: 8px;
+	background-color: transparent;
+	background-image: linear-gradient(
+		var(--wp--preset--color--outline-variant),
+		var(--wp--preset--color--outline-variant)
+	);
+	background-size: 100% 1px;
+	background-position: center;
+	background-repeat: no-repeat;
 }
 
 /* Media — keep raw img / picture / video / audio / iframe / embeds within the

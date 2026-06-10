@@ -51,26 +51,6 @@
 
 .axismundi-attachment-meta__raw {
 	margin-block-start: 8px;
-	border: 1px solid var(--wp--preset--color--outline-variant);
-	border-radius: 8px;
-	background-color: var(--wp--preset--color--surface-container-low);
-}
-
-.axismundi-attachment-meta__raw > summary {
-	cursor: pointer;
-	padding: 12px 16px;
-	color: var(--wp--preset--color--on-surface-variant);
-	font-weight: 500;
-}
-
-.axismundi-attachment-meta__raw > pre {
-	margin: 0;
-	padding: 16px;
-	border-start-start-radius: 0;
-	border-start-end-radius: 0;
-	border-end-start-radius: 8px;
-	border-end-end-radius: 8px;
-	background-color: var(--wp--preset--color--surface-container-high);
 }
 
 @media (max-width: 600px) {

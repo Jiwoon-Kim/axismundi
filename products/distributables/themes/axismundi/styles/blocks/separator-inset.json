@@ -1,0 +1,10 @@
+{
+	"$schema": "https://schemas.wp.org/wp/7.0/theme.json",
+	"version": 3,
+	"title": "Inset",
+	"slug": "inset",
+	"blockTypes": [ "core/separator" ],
+	"styles": {
+		"css": "&{margin-inline-start:16px;width:calc(100% - 16px);}"
+	}
+}

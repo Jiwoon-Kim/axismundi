@@ -173,12 +173,40 @@
 <h2 class="wp-block-heading">6. Separator &amp; Spacer</h2>
 <!-- /wp:heading -->
 
+<!-- wp:paragraph -->
+<p>Default (full-width divider):</p>
+<!-- /wp:paragraph -->
+
 <!-- wp:separator -->
 <hr class="wp-block-separator has-alpha-channel-opacity"/>
 <!-- /wp:separator -->
 
 <!-- wp:paragraph -->
-<p>Above: separator. Below: a 40px spacer, then a paragraph.</p>
+<p>Inset (16dp leading edge):</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:separator {"className":"is-style-inset"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-inset"/>
+<!-- /wp:separator -->
+
+<!-- wp:paragraph -->
+<p>Middle inset (16dp both edges):</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:separator {"className":"is-style-middle-inset"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-middle-inset"/>
+<!-- /wp:separator -->
+
+<!-- wp:paragraph -->
+<p>Dots (core decorative variation):</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:separator {"className":"is-style-dots"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-dots"/>
+<!-- /wp:separator -->
+
+<!-- wp:paragraph -->
+<p>Above: separator variations. Below: a 40px spacer, then a paragraph.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:spacer {"height":"40px"} -->

@@ -76,9 +76,21 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 			break;
 
 		case 'audio':
+			$cover_id   = axismundi_audio_cover_attachment_id( $post_id );
+			$cover_html = $cover_id ? wp_get_attachment_image(
+				$cover_id,
+				'large',
+				false,
+				array(
+					'class' => 'axismundi-attachment-audio-cover',
+				)
+			) : '';
+			$caption    = axismundi_audio_metadata_caption( $post_id );
 			$media = sprintf(
-				'<audio controls preload="metadata" src="%s"></audio>',
-				esc_url( $url )
+				'%1$s<audio controls preload="metadata" src="%2$s"></audio>%3$s',
+				$cover_html,
+				esc_url( $url ),
+				$caption
 			);
 			break;
 
@@ -117,6 +129,224 @@ function axismundi_attachment_media_html( int $post_id ) : string {
 	}
 
 	return sprintf( '<figure class="axismundi-attachment-media">%s</figure>', $media );
+}
+
+/**
+ * Find cover art associated with an audio attachment.
+ *
+ * WordPress extracts embedded audio artwork as an attachment and often links it
+ * via `_thumbnail_id`. When that explicit link is absent, try the attachment
+ * metadata image id and finally the sibling filename pattern used for extracted
+ * cover art.
+ *
+ * @param int $attachment_id Audio attachment ID.
+ * @return int Cover attachment ID, or 0 when none is available.
+ */
+function axismundi_audio_cover_attachment_id( int $attachment_id ) : int {
+	$thumbnail_id = (int) get_post_meta( $attachment_id, '_thumbnail_id', true );
+	if ( $thumbnail_id && 'attachment' === get_post_type( $thumbnail_id ) ) {
+		return $thumbnail_id;
+	}
+
+	$metadata = wp_get_attachment_metadata( $attachment_id );
+	if ( ! empty( $metadata['image'] ) && is_array( $metadata['image'] ) ) {
+		foreach ( array( 'attachment_id', 'id' ) as $key ) {
+			if ( ! empty( $metadata['image'][ $key ] ) ) {
+				$image_id = (int) $metadata['image'][ $key ];
+				if ( $image_id && 'attachment' === get_post_type( $image_id ) ) {
+					return $image_id;
+				}
+			}
+		}
+	}
+
+	if ( empty( $metadata['image'] ) || ! is_array( $metadata['image'] ) ) {
+		return 0;
+	}
+
+	$attached_file = (string) get_post_meta( $attachment_id, '_wp_attached_file', true );
+	if ( '' === $attached_file ) {
+		return 0;
+	}
+
+	$directory = trailingslashit( dirname( $attached_file ) );
+	$basename  = pathinfo( $attached_file, PATHINFO_FILENAME );
+	$extension = pathinfo( $attached_file, PATHINFO_EXTENSION );
+
+	$cover_posts = get_posts(
+		array(
+			'fields'         => 'ids',
+			'meta_key'       => '_wp_attached_file',
+			'meta_value'     => array(
+				$directory . $basename . '-' . $extension . '-image.jpg',
+				$directory . $basename . '-image.jpg',
+			),
+			'meta_compare'   => 'IN',
+			'post_mime_type' => 'image/jpeg',
+			'post_status'    => 'inherit',
+			'post_type'      => 'attachment',
+			'posts_per_page' => 1,
+		)
+	);
+
+	return $cover_posts ? (int) $cover_posts[0] : 0;
+}
+
+/**
+ * Build a compact visible caption from audio metadata.
+ *
+ * @param int $attachment_id Audio attachment ID.
+ * @return string Figcaption HTML, or '' when no artist/album is known.
+ */
+function axismundi_audio_metadata_caption( int $attachment_id ) : string {
+	$metadata = wp_get_attachment_metadata( $attachment_id );
+	if ( ! is_array( $metadata ) ) {
+		return '';
+	}
+
+	$items = array_filter(
+		array(
+			$metadata['artist'] ?? '',
+			$metadata['album'] ?? '',
+		),
+		static fn( $item ) : bool => '' !== trim( (string) $item )
+	);
+
+	if ( ! $items ) {
+		return '';
+	}
+
+	return sprintf(
+		'<figcaption class="wp-element-caption">%s</figcaption>',
+		esc_html( implode( ' · ', $items ) )
+	);
+}
+
+/**
+ * Supplement Opus-in-Ogg metadata with Vorbis comments.
+ *
+ * Some Opus fixtures expose `artist` and `album` inside the OpusTags packet,
+ * while WordPress' normal metadata import leaves those fields empty. Read the
+ * packet directly so attachment pages can surface the original media tags.
+ *
+ * @param array<string,mixed> $metadata      Generated attachment metadata.
+ * @param int                 $attachment_id Attachment ID.
+ * @return array<string,mixed>
+ */
+function axismundi_filter_opus_attachment_metadata( array $metadata, int $attachment_id ) : array {
+	$mime_type = get_post_mime_type( $attachment_id );
+	if ( 'audio/ogg' !== $mime_type && 'opus' !== ( $metadata['dataformat'] ?? '' ) ) {
+		return $metadata;
+	}
+
+	$file = get_attached_file( $attachment_id );
+	if ( ! $file || ! is_readable( $file ) ) {
+		return $metadata;
+	}
+
+	$comments = axismundi_read_opus_tags( $file );
+	if ( ! $comments ) {
+		return $metadata;
+	}
+
+	$map = array(
+		'album'       => 'album',
+		'artist'      => 'artist',
+		'title'       => 'title',
+		'genre'       => 'genre',
+		'date'        => 'year',
+		'description' => 'description',
+	);
+
+	foreach ( $map as $comment_key => $metadata_key ) {
+		if ( ! empty( $comments[ $comment_key ] ) ) {
+			$metadata[ $metadata_key ] = $comments[ $comment_key ];
+		}
+	}
+
+	$metadata['axismundi_opus_tags'] = $comments;
+
+	return $metadata;
+}
+add_filter( 'wp_generate_attachment_metadata', 'axismundi_filter_opus_attachment_metadata', 11, 2 );
+
+/**
+ * Read Vorbis comments from the first OpusTags packet in an Ogg file.
+ *
+ * @param string $file OPUS/Ogg file path.
+ * @return array<string,string>
+ */
+function axismundi_read_opus_tags( string $file ) : array {
+	$data = file_get_contents( $file );
+	if ( false === $data ) {
+		return array();
+	}
+
+	$offset = strpos( $data, 'OpusTags' );
+	if ( false === $offset ) {
+		return array();
+	}
+
+	$cursor = $offset + 8;
+	$length = strlen( $data );
+	if ( $cursor + 8 > $length ) {
+		return array();
+	}
+
+	$vendor_length = axismundi_le_uint32( $data, $cursor );
+	$cursor       += 4 + $vendor_length;
+	if ( $cursor + 4 > $length ) {
+		return array();
+	}
+
+	$comment_count = axismundi_le_uint32( $data, $cursor );
+	$cursor       += 4;
+	$comments      = array();
+
+	for ( $i = 0; $i < $comment_count; $i++ ) {
+		if ( $cursor + 4 > $length ) {
+			break;
+		}
+
+		$comment_length = axismundi_le_uint32( $data, $cursor );
+		$cursor        += 4;
+		if ( $cursor + $comment_length > $length ) {
+			break;
+		}
+
+		$comment = substr( $data, $cursor, $comment_length );
+		$cursor += $comment_length;
+
+		$separator = strpos( $comment, '=' );
+		if ( false === $separator ) {
+			continue;
+		}
+
+		$key = strtolower( substr( $comment, 0, $separator ) );
+		if ( 'metadata_block_picture' === $key ) {
+			continue;
+		}
+
+		$comments[ $key ] = substr( $comment, $separator + 1 );
+	}
+
+	return $comments;
+}
+
+/**
+ * Read a little-endian unsigned 32-bit integer.
+ *
+ * @param string $data Binary data.
+ * @param int    $offset Byte offset.
+ * @return int Parsed value.
+ */
+function axismundi_le_uint32( string $data, int $offset ) : int {
+	$bytes = substr( $data, $offset, 4 );
+	if ( 4 > strlen( $bytes ) ) {
+		return 0;
+	}
+
+	return unpack( 'V', $bytes )[1];
 }
 
 /**

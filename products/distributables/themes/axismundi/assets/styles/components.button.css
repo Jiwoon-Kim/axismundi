@@ -5,13 +5,15 @@
  * full M3 Small button surface: filled/outlined colour, 40dp geometry, 16dp
  * leading/trailing, label-large type, hover/focus/active state layers, the M3
  * focus ring, and the pressed shape value (20px -> 8px). This file holds only
- * what theme.json cannot express — motion. The transition animates the pressed
- * shape morph and the state-layer colour change continuously instead of jumping.
- * True M3 spring physics (damping/stiffness, interruptible) would need JS/Web
- * Animations; a CSS transition is the right weight here.
+ * what theme.json cannot express or what core block styles can leak around:
+ * the shared border-box button model plus motion. The transition animates the
+ * pressed shape morph and the state-layer colour change continuously instead
+ * of jumping. True M3 spring physics (damping/stiffness, interruptible) would
+ * need JS/Web Animations; a CSS transition is the right weight here.
  */
 
 .wp-element-button {
+	box-sizing: border-box;
 	transition:
 		border-radius var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
 		background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);

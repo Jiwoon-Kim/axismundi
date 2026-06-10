@@ -411,6 +411,18 @@
 					"shadow": "var(--md-sys-elevation-shadow-level5)"
 				}
 			]
+		},
+		"lightbox": {
+			"enabled": true,
+			"allowEditing": true
+		},
+		"blocks": {
+			"core/image": {
+				"lightbox": {
+					"enabled": true,
+					"allowEditing": true
+				}
+			}
 		}
 	},
 	"styles": {
@@ -772,12 +784,20 @@
 			"core/image": {
 				"border": {
 					"radius": "8px"
+				},
+				"variations": {
+					"rounded": {
+						"border": {
+							"radius": "16px"
+						}
+					}
 				}
 			},
 			"core/cover": {
 				"border": {
 					"radius": "8px"
-				}
+				},
+				"css": "&{overflow:clip;}"
 			},
 			"core/media-text": {
 				"css": "& .wp-block-media-text__media img{border-radius:8px;}"

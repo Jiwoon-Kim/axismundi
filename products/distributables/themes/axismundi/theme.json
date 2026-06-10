@@ -802,6 +802,9 @@
 			"core/media-text": {
 				"css": "& .wp-block-media-text__media img{border-radius:8px;}"
 			},
+			"core/separator": {
+				"css": "&{border:0;border-block-start:1px solid var(--wp--preset--color--outline-variant);color:var(--wp--preset--color--outline-variant);opacity:1;}"
+			},
 			"core/video": {
 				"css": "& video{border-radius:8px;}"
 			},

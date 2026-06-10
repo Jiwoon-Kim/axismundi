@@ -132,12 +132,23 @@ caption {
  * (m3.material.io/components/divider/specs). One baseline drives both the raw
  * <hr> and core/separator, which renders <hr class="wp-block-separator"> — so
  * the separator no longer needs its own theme.json css. Core forces
- * border-top:2px on the block class, so the class is matched here to override
- * it; is-style-dots is excluded to keep its decorative core styling. */
+ * border-top:2px on the block class, so border:0 + the class match here override
+ * it; is-style-dots keeps its decorative core styling.
+ *
+ * The line is a content-box-clipped background, not a border, so the inset /
+ * middle-inset variations can shrink the visible line with padding while the
+ * element box stays full-width. That matters because the block editor centres
+ * each block (max-width + margin:auto); margin/width-based insets get swallowed
+ * by that centring (line stays full-width in the canvas), but padding on a
+ * full-width box insets the painted line identically on the front and in the
+ * editor. */
 hr,
 .wp-block-separator:not(.is-style-dots) {
+	box-sizing: border-box;
 	border: 0;
-	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
+	block-size: 1px;
+	background-color: var(--wp--preset--color--outline-variant);
+	background-clip: content-box;
 }
 
 /* Media — keep raw img / picture / video / audio / iframe / embeds within the

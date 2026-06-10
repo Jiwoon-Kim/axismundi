@@ -5,6 +5,6 @@
 	"slug": "middle-inset",
 	"blockTypes": [ "core/separator" ],
 	"styles": {
-		"css": "&{margin-inline:16px;width:calc(100% - 32px);}"
+		"css": "&{padding-inline:16px;}"
 	}
 }

@@ -95,6 +95,9 @@ details > summary + *,
 details > :last-child {
 	margin-block-end: 0;
 }
+details > pre,
+details > pre.wp-block-code,
+details > pre.wp-block-preformatted,
 details > pre:not([class*="wp-block"]) {
 	margin: 0;
 	margin-inline: 0;

@@ -15,6 +15,10 @@ if ( ! defined( 'AXISMUNDI_VERSION' ) ) {
 	define( 'AXISMUNDI_VERSION', '0.1.0' );
 }
 
+// Theme-internal dynamic block that renders the attachment file on the
+// attachment template (image / audio / video + captions / download fallback).
+require_once get_template_directory() . '/inc/attachment-media.php';
+
 /**
  * Resolve a theme-relative asset path only when the file is present.
  *

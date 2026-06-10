@@ -797,7 +797,7 @@
 				"border": {
 					"radius": "8px"
 				},
-				"css": "&{overflow:clip;}"
+				"css": "&{overflow:clip;}& .wp-block-cover__inner-container > .has-large-font-size{font-size:var(--wp--preset--font-size--display-small);line-height:1.222;letter-spacing:0;}"
 			},
 			"core/media-text": {
 				"css": "& .wp-block-media-text__media img{border-radius:8px;}"

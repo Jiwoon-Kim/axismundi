@@ -167,6 +167,13 @@ function axismundi_attachment_metadata_html( int $attachment_id ) : string {
 		);
 	}
 
+	if ( wp_attachment_is( 'image', $attachment_id ) ) {
+		$alt_text = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+		if ( '' !== trim( (string) $alt_text ) ) {
+			$items[ __( 'Alternative text', 'axismundi' ) ] = $alt_text;
+		}
+	}
+
 	if ( ! empty( $metadata['length_formatted'] ) ) {
 		$items[ __( 'Length', 'axismundi' ) ] = $metadata['length_formatted'];
 	}
@@ -210,6 +217,7 @@ function axismundi_attachment_metadata_html( int $attachment_id ) : string {
 
 	if ( ! empty( $metadata['image_meta'] ) && is_array( $metadata['image_meta'] ) ) {
 		$image_meta = $metadata['image_meta'];
+		$has_visible_image_meta = false;
 		$image_items = array(
 			'camera'        => __( 'Camera', 'axismundi' ),
 			'copyright'     => __( 'Copyright', 'axismundi' ),
@@ -220,19 +228,27 @@ function axismundi_attachment_metadata_html( int $attachment_id ) : string {
 		foreach ( $image_items as $key => $label ) {
 			if ( ! empty( $image_meta[ $key ] ) ) {
 				$items[ $label ] = $image_meta[ $key ];
+				$has_visible_image_meta = true;
 			}
 		}
 
 		if ( ! empty( $image_meta['aperture'] ) ) {
 			$items[ __( 'Aperture', 'axismundi' ) ] = 'f/' . $image_meta['aperture'];
+			$has_visible_image_meta = true;
 		}
 
 		if ( ! empty( $image_meta['focal_length'] ) ) {
 			$items[ __( 'Focal length', 'axismundi' ) ] = $image_meta['focal_length'] . ' mm';
+			$has_visible_image_meta = true;
 		}
 
 		if ( ! empty( $image_meta['created_timestamp'] ) ) {
 			$items[ __( 'Created', 'axismundi' ) ] = wp_date( get_option( 'date_format' ), (int) $image_meta['created_timestamp'] );
+			$has_visible_image_meta = true;
+		}
+
+		if ( ! $has_visible_image_meta ) {
+			$items[ __( 'Image metadata', 'axismundi' ) ] = __( 'Present; no camera/EXIF values', 'axismundi' );
 		}
 	}
 

@@ -185,6 +185,17 @@ video {
 	color-scheme: inherit;
 }
 
+/* iframe canvas — color-scheme on :root (set above for the native controls)
+ * makes an iframe paint an OPAQUE Canvas background, which shows as a white box
+ * behind transparent embeds and srcdoc content (a regression once the root
+ * color-scheme landed; before it, iframe canvases were transparent). Opt iframes
+ * back out with color-scheme:normal so the canvas is transparent again and the
+ * embed shows on the page background. The embedded document keeps its own
+ * scheme; only the iframe's backdrop is affected. */
+iframe {
+	color-scheme: normal;
+}
+
 /* WordPress image lightbox — core paints the backdrop as the global surface at
  * high opacity, which is a near-white canvas in light mode. Use the M3
  * scheme-neutral scrim (neutral-0) instead, with a stronger viewer dim.

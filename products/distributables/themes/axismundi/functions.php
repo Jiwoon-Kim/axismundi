@@ -12,7 +12,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_VERSION' ) ) {
-	define( 'AXISMUNDI_VERSION', '0.1.12' );
+	define( 'AXISMUNDI_VERSION', '0.1.13' );
 }
 
 // Theme-internal attachment page renderer. WordPress core/post-content only

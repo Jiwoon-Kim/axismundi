@@ -151,6 +151,21 @@ video {
 	height: auto;
 }
 
+/* WordPress image lightbox — core paints the backdrop as the global surface at
+ * high opacity, which is a near-white canvas in light mode. Use the M3
+ * scheme-neutral scrim (neutral-0) instead, dimmed to the M3 32% scrim opacity.
+ *
+ * Two core behaviours force the exact form here:
+ *  - The color is written as an inline style on .scrim, so background-color
+ *    needs !important to win.
+ *  - The `.scrim` opacity is driven by core's turn-on-visibility animation
+ *    (forwards), which lands on opacity:1 and overrides any opacity declaration.
+ * So the 32% dim is baked into the color's alpha via color-mix rather than set
+ * with `opacity`; the fade-in animation still plays. */
+.wp-lightbox-overlay .scrim {
+	background-color: color-mix( in srgb, var(--md-sys-color-scrim) 32%, transparent ) !important;
+}
+
 /* Raw <table> — Custom HTML / markdown / federated content. Core/table exposes
  * its editable source in theme.json and gets WordPress-specific resets in
  * blocks.table.css; this global semantic baseline is for ordinary HTML tables

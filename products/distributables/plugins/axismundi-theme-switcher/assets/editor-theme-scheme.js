@@ -80,7 +80,7 @@
 
 	function apply() {
 		current = readScheme();
-		applyToDocument( document, current );
+		syncButtons( document, current );
 		document.querySelectorAll( 'iframe' ).forEach( function ( iframe ) {
 			applyToIframe( iframe, current );
 			if ( ! iframe.dataset.axismundiThemeSchemeBound ) {

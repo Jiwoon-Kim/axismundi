@@ -122,7 +122,6 @@ function axismundi_theme_switcher_head_script() : void {
 	<?php
 }
 add_action( 'wp_head', 'axismundi_theme_switcher_head_script', 0 );
-add_action( 'admin_head', 'axismundi_theme_switcher_head_script', 0 );
 
 /**
  * Enqueue the editor color-scheme bridge.

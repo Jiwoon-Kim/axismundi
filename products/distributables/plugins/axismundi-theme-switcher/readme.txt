@@ -4,7 +4,7 @@ Tags: dark-mode, block, appearance, editor, color-scheme
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -38,6 +38,12 @@ color-scheme change depends on a theme or stylesheet that consumes
 `html[data-theme]` selectors.
 
 == Changelog ==
+
+= 0.1.3 =
+
+* Stop applying the persisted theme scheme to the top-level WordPress admin
+  document. Editor preview and Style Book scheme synchronization now stays
+  scoped to preview documents, avoiding admin chrome color-scheme leakage.
 
 = 0.1.2 =
 

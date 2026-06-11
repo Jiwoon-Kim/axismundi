@@ -169,8 +169,8 @@
 			]
 		},
 		"layout": {
-			"contentSize": "620px",
-			"wideSize": "1000px"
+			"contentSize": "760px",
+			"wideSize": "1280px"
 		},
 		"spacing": {
 			"units": [
@@ -180,6 +180,101 @@
 				"rem",
 				"vh",
 				"vw"
+			],
+			"spacingScale": {
+				"steps": 0
+			},
+			"spacingSizes": [
+				{
+					"slug": "0",
+					"size": "0px",
+					"name": "Space 0"
+				},
+				{
+					"slug": "25",
+					"size": "2px",
+					"name": "Space 25"
+				},
+				{
+					"slug": "50",
+					"size": "4px",
+					"name": "Space 50"
+				},
+				{
+					"slug": "75",
+					"size": "6px",
+					"name": "Space 75"
+				},
+				{
+					"slug": "100",
+					"size": "8px",
+					"name": "Space 100"
+				},
+				{
+					"slug": "125",
+					"size": "10px",
+					"name": "Space 125"
+				},
+				{
+					"slug": "150",
+					"size": "12px",
+					"name": "Space 150"
+				},
+				{
+					"slug": "175",
+					"size": "14px",
+					"name": "Space 175"
+				},
+				{
+					"slug": "200",
+					"size": "16px",
+					"name": "Space 200"
+				},
+				{
+					"slug": "250",
+					"size": "20px",
+					"name": "Space 250"
+				},
+				{
+					"slug": "300",
+					"size": "24px",
+					"name": "Space 300"
+				},
+				{
+					"slug": "400",
+					"size": "32px",
+					"name": "Space 400"
+				},
+				{
+					"slug": "450",
+					"size": "36px",
+					"name": "Space 450"
+				},
+				{
+					"slug": "500",
+					"size": "40px",
+					"name": "Space 500"
+				},
+				{
+					"slug": "600",
+					"size": "48px",
+					"name": "Space 600"
+				},
+				{
+					"slug": "700",
+					"size": "56px",
+					"name": "Space 700"
+				},
+				{
+					"slug": "800",
+					"size": "64px",
+					"name": "Space 800"
+				},
+				{
+					"slug": "900",
+					"size": "72px",
+					"name": "Space 900"
+				}
 			]
 		},
 		"typography": {

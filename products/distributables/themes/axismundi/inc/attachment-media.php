@@ -587,26 +587,27 @@ function axismundi_filter_opus_attachment_metadata( array $metadata, int $attach
 	}
 
 	$metadata['axismundi_opus_tags'] = $comments;
-	axismundi_normalize_embedded_cover_attachment( $attachment_id, $comments );
+	axismundi_normalize_embedded_cover_attachment( $attachment_id );
 
 	return $metadata;
 }
 add_filter( 'wp_generate_attachment_metadata', 'axismundi_filter_opus_attachment_metadata', 11, 2 );
 
 /**
- * Fill the title/slug/alt text on WordPress core's generated audio cover art.
+ * Restore the filename-derived title/slug on core's generated audio cover art.
  *
  * Core extracts embedded Ogg/Opus cover art into a real image attachment and
- * links it via _thumbnail_id, but currently leaves the generated image's title
- * empty and the slug as the numeric ID. That makes Media Library grids show the
- * temporary "uploading..." label even after the upload has completed. This is a
- * small theme-side shim until the behavior is fixed upstream in core.
+ * links it via _thumbnail_id, but leaves the generated image's title empty and
+ * the slug as the numeric ID — unlike a normal upload, which gets a
+ * filename-derived title/slug. The Media Library then shows the temporary
+ * "uploading…" label even though the upload finished. Give the cover the same
+ * filename-based title/slug core would have. A small theme-side shim until the
+ * behaviour is fixed upstream in core.
  *
- * @param int                  $audio_attachment_id Audio attachment ID.
- * @param array<string,string> $comments            Parsed Opus comments.
+ * @param int $audio_attachment_id Audio attachment ID.
  * @return void
  */
-function axismundi_normalize_embedded_cover_attachment( int $audio_attachment_id, array $comments = array() ) : void {
+function axismundi_normalize_embedded_cover_attachment( int $audio_attachment_id ) : void {
 	$cover_id = (int) get_post_meta( $audio_attachment_id, '_thumbnail_id', true );
 	if ( ! $cover_id || ! wp_attachment_is( 'image', $cover_id ) ) {
 		return;
@@ -617,50 +618,39 @@ function axismundi_normalize_embedded_cover_attachment( int $audio_attachment_id
 		return;
 	}
 
-	$audio_title = isset( $comments['title'] ) ? trim( (string) $comments['title'] ) : '';
-	if ( '' === $audio_title ) {
-		$audio_title = trim( get_the_title( $audio_attachment_id ) );
-	}
-	if ( '' === $audio_title ) {
-		$audio_title = preg_replace( '/\.[^.]+$/', '', wp_basename( (string) get_attached_file( $audio_attachment_id ) ) );
-	}
-	if ( '' === trim( (string) $audio_title ) ) {
+	$cover_post = get_post( $cover_id );
+	if ( ! $cover_post ) {
 		return;
 	}
 
-	$cover_title = sprintf(
-		/* translators: %s: audio attachment title. */
-		__( '%s cover art', 'axismundi' ),
-		$audio_title
-	);
-	$cover_post  = get_post( $cover_id );
-
-	$needs_update = ! $cover_post
-		|| '' === trim( (string) $cover_post->post_title )
+	// Only touch what core leaves wrong: an empty title, or the numeric-ID slug
+	// (the Media Library shows "uploading…" while the title is empty).
+	$needs_title = '' === trim( (string) $cover_post->post_title )
 		|| (string) $cover_id === (string) $cover_post->post_name
 		|| 'uploading' === strtolower( trim( (string) $cover_post->post_title, ". \t\n\r\0\x0B" ) );
 
-	if ( $needs_update ) {
-		wp_update_post(
-			array(
-				'ID'         => $cover_id,
-				'post_title' => $cover_title,
-				'post_name'  => sanitize_title( $cover_title ),
-			)
-		);
+	if ( ! $needs_title ) {
+		return;
 	}
 
-	if ( '' === trim( (string) get_post_meta( $cover_id, '_wp_attachment_image_alt', true ) ) ) {
-		update_post_meta(
-			$cover_id,
-			'_wp_attachment_image_alt',
-			sprintf(
-				/* translators: %s: audio attachment title. */
-				__( 'Album artwork for %s', 'axismundi' ),
-				$audio_title
-			)
-		);
+	// Title/slug from the cover's OWN filename — exactly what WordPress derives
+	// for every normally uploaded attachment (e.g. "clip-ogg-image"). The shim
+	// stands in for the upstream core fix, so it must not editorialise (no
+	// "<song> cover art" title from tags). Alt text is likewise NOT set: core
+	// never auto-fills alt on any attachment, so an empty alt is the correct,
+	// normal state — not part of this bug.
+	$title = preg_replace( '/\.[^.]+$/', '', wp_basename( $cover_file ) );
+	if ( '' === trim( (string) $title ) ) {
+		return;
 	}
+
+	wp_update_post(
+		array(
+			'ID'         => $cover_id,
+			'post_title' => $title,
+			'post_name'  => sanitize_title( $title ),
+		)
+	);
 }
 
 /**

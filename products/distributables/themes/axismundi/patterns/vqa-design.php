@@ -138,6 +138,56 @@
 <!-- /wp:group -->
 
 <!-- wp:heading -->
+<h2 class="wp-block-heading">3a. Group / Column — M3 Card variations</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Card styles are opt-in surfaces for Group and Column only. Bare groups/columns remain layout primitives; padding is owned by the content composition.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:group {"className":"is-style-card-filled","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-filled" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Filled group card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>surface-container-highest · no elevation · 12px shape. Padding is local specimen spacing.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column {"className":"is-style-card-elevated","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
+<div class="wp-block-column is-style-card-elevated" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Elevated column card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>surface-container-low · elevation level 1 · 12px shape.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"className":"is-style-card-filled","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
+<div class="wp-block-column is-style-card-filled" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Filled column card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Column can be a card item; Columns remains the deck/layout primitive.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"className":"is-style-card-outlined","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
+<div class="wp-block-column is-style-card-outlined" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Outlined column card</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>surface · 1px outline-variant · no elevation · 12px shape.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:heading -->
 <h2 class="wp-block-heading">4. Row (flex, horizontal)</h2>
 <!-- /wp:heading -->
 

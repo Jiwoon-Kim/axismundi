@@ -587,10 +587,81 @@ function axismundi_filter_opus_attachment_metadata( array $metadata, int $attach
 	}
 
 	$metadata['axismundi_opus_tags'] = $comments;
+	axismundi_normalize_embedded_cover_attachment( $attachment_id, $comments );
 
 	return $metadata;
 }
 add_filter( 'wp_generate_attachment_metadata', 'axismundi_filter_opus_attachment_metadata', 11, 2 );
+
+/**
+ * Fill the title/slug/alt text on WordPress core's generated audio cover art.
+ *
+ * Core extracts embedded Ogg/Opus cover art into a real image attachment and
+ * links it via _thumbnail_id, but currently leaves the generated image's title
+ * empty and the slug as the numeric ID. That makes Media Library grids show the
+ * temporary "uploading..." label even after the upload has completed. This is a
+ * small theme-side shim until the behavior is fixed upstream in core.
+ *
+ * @param int                  $audio_attachment_id Audio attachment ID.
+ * @param array<string,string> $comments            Parsed Opus comments.
+ * @return void
+ */
+function axismundi_normalize_embedded_cover_attachment( int $audio_attachment_id, array $comments = array() ) : void {
+	$cover_id = (int) get_post_meta( $audio_attachment_id, '_thumbnail_id', true );
+	if ( ! $cover_id || ! wp_attachment_is( 'image', $cover_id ) ) {
+		return;
+	}
+
+	$cover_file = (string) get_attached_file( $cover_id );
+	if ( ! get_post_meta( $cover_id, '_cover_hash', true ) && false === strpos( wp_basename( $cover_file ), '-ogg-image' ) ) {
+		return;
+	}
+
+	$audio_title = isset( $comments['title'] ) ? trim( (string) $comments['title'] ) : '';
+	if ( '' === $audio_title ) {
+		$audio_title = trim( get_the_title( $audio_attachment_id ) );
+	}
+	if ( '' === $audio_title ) {
+		$audio_title = preg_replace( '/\.[^.]+$/', '', wp_basename( (string) get_attached_file( $audio_attachment_id ) ) );
+	}
+	if ( '' === trim( (string) $audio_title ) ) {
+		return;
+	}
+
+	$cover_title = sprintf(
+		/* translators: %s: audio attachment title. */
+		__( '%s cover art', 'axismundi' ),
+		$audio_title
+	);
+	$cover_post  = get_post( $cover_id );
+
+	$needs_update = ! $cover_post
+		|| '' === trim( (string) $cover_post->post_title )
+		|| (string) $cover_id === (string) $cover_post->post_name
+		|| 'uploading' === strtolower( trim( (string) $cover_post->post_title, ". \t\n\r\0\x0B" ) );
+
+	if ( $needs_update ) {
+		wp_update_post(
+			array(
+				'ID'         => $cover_id,
+				'post_title' => $cover_title,
+				'post_name'  => sanitize_title( $cover_title ),
+			)
+		);
+	}
+
+	if ( '' === trim( (string) get_post_meta( $cover_id, '_wp_attachment_image_alt', true ) ) ) {
+		update_post_meta(
+			$cover_id,
+			'_wp_attachment_image_alt',
+			sprintf(
+				/* translators: %s: audio attachment title. */
+				__( 'Album artwork for %s', 'axismundi' ),
+				$audio_title
+			)
+		);
+	}
+}
 
 /**
  * Read Vorbis comments from the first OpusTags packet in an Ogg file.

@@ -5,6 +5,6 @@
 	"slug": "inset",
 	"blockTypes": [ "core/separator" ],
 	"styles": {
-		"css": "&{padding-inline-start:16px;}"
+		"css": "&{padding-inline-start:var(--wp--preset--spacing--200);}"
 	}
 }

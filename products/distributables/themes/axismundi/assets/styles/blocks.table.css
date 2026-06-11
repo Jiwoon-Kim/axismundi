@@ -38,8 +38,8 @@
 	background-clip: padding-box;
 	text-align: start;
 	vertical-align: top;
-	padding-block: 12px;
-	padding-inline: 16px;
+	padding-block: var(--wp--preset--spacing--150);
+	padding-inline: var(--wp--preset--spacing--200);
 	border: 0;
 	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);

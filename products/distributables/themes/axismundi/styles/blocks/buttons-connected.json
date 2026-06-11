@@ -7,7 +7,7 @@
 	"styles": {
 		"css": "&{flex-wrap:nowrap;} & > .wp-block-button{margin:0;} & > .wp-block-button > .wp-block-button__link{border-radius:8px;} & > .wp-block-button:first-child > .wp-block-button__link{border-start-start-radius:20px;border-end-start-radius:20px;} & > .wp-block-button:last-child > .wp-block-button__link{border-start-end-radius:20px;border-end-end-radius:20px;} & > .wp-block-button > .wp-block-button__link:active{border-radius:4px;} & > .wp-block-button:first-child > .wp-block-button__link:active{border-start-start-radius:20px;border-end-start-radius:20px;} & > .wp-block-button:last-child > .wp-block-button__link:active{border-start-end-radius:20px;border-end-end-radius:20px;}",
 		"spacing": {
-			"blockGap": "2px"
+			"blockGap": "var:preset|spacing|25"
 		}
 	}
 }

@@ -34,7 +34,7 @@
 }
 
 .axismundi-attachment-meta {
-	margin-block-start: 24px;
+	margin-block-start: var(--wp--preset--spacing--300);
 	color: var(--wp--preset--color--on-surface);
 	font-size: var(--wp--preset--font-size--body-medium);
 	line-height: 1.429;
@@ -44,9 +44,9 @@
 .axismundi-attachment-meta__summary {
 	display: grid;
 	grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
-	gap: 8px 16px;
+	gap: var(--wp--preset--spacing--100) var(--wp--preset--spacing--200);
 	margin-block: 0;
-	padding: 16px;
+	padding: var(--wp--preset--spacing--200);
 	border: 1px solid var(--wp--preset--color--outline-variant);
 	border-radius: 8px;
 	background-color: var(--wp--preset--color--surface-container);
@@ -63,7 +63,7 @@
 }
 
 .axismundi-attachment-meta__raw {
-	margin-block-start: 8px;
+	margin-block-start: var(--wp--preset--spacing--100);
 }
 
 @media (max-width: 600px) {

@@ -145,8 +145,8 @@
 <p>Card styles are opt-in surfaces for Group and Column only. Bare groups/columns remain layout primitives; padding is owned by the content composition.</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:group {"className":"is-style-card-filled","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}},"layout":{"type":"constrained"}} -->
-<div class="wp-block-group is-style-card-filled" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<!-- wp:group {"className":"is-style-card-filled","style":{"spacing":{"padding":{"top":"var:preset|spacing|200","right":"var:preset|spacing|200","bottom":"var:preset|spacing|200","left":"var:preset|spacing|200"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group is-style-card-filled" style="padding-top:var(--wp--preset--spacing--200);padding-right:var(--wp--preset--spacing--200);padding-bottom:var(--wp--preset--spacing--200);padding-left:var(--wp--preset--spacing--200)"><!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Filled group card</h3>
 <!-- /wp:heading -->
 
@@ -156,8 +156,8 @@
 <!-- /wp:group -->
 
 <!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"className":"is-style-card-elevated","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
-<div class="wp-block-column is-style-card-elevated" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<div class="wp-block-columns"><!-- wp:column {"className":"is-style-card-elevated","style":{"spacing":{"padding":{"top":"var:preset|spacing|200","right":"var:preset|spacing|200","bottom":"var:preset|spacing|200","left":"var:preset|spacing|200"}}}} -->
+<div class="wp-block-column is-style-card-elevated" style="padding-top:var(--wp--preset--spacing--200);padding-right:var(--wp--preset--spacing--200);padding-bottom:var(--wp--preset--spacing--200);padding-left:var(--wp--preset--spacing--200)"><!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Elevated column card</h3>
 <!-- /wp:heading -->
 
@@ -166,8 +166,8 @@
 <!-- /wp:paragraph --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"className":"is-style-card-filled","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
-<div class="wp-block-column is-style-card-filled" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<!-- wp:column {"className":"is-style-card-filled","style":{"spacing":{"padding":{"top":"var:preset|spacing|200","right":"var:preset|spacing|200","bottom":"var:preset|spacing|200","left":"var:preset|spacing|200"}}}} -->
+<div class="wp-block-column is-style-card-filled" style="padding-top:var(--wp--preset--spacing--200);padding-right:var(--wp--preset--spacing--200);padding-bottom:var(--wp--preset--spacing--200);padding-left:var(--wp--preset--spacing--200)"><!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Filled column card</h3>
 <!-- /wp:heading -->
 
@@ -176,8 +176,8 @@
 <!-- /wp:paragraph --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"className":"is-style-card-outlined","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
-<div class="wp-block-column is-style-card-outlined" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:heading {"level":3} -->
+<!-- wp:column {"className":"is-style-card-outlined","style":{"spacing":{"padding":{"top":"var:preset|spacing|200","right":"var:preset|spacing|200","bottom":"var:preset|spacing|200","left":"var:preset|spacing|200"}}}} -->
+<div class="wp-block-column is-style-card-outlined" style="padding-top:var(--wp--preset--spacing--200);padding-right:var(--wp--preset--spacing--200);padding-bottom:var(--wp--preset--spacing--200);padding-left:var(--wp--preset--spacing--200)"><!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">Outlined column card</h3>
 <!-- /wp:heading -->
 

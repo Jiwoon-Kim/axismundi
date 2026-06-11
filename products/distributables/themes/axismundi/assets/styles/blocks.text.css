@@ -23,8 +23,8 @@ p.has-drop-cap:not(:focus)::first-letter {
 	font-style: normal;
 	font-weight: 500;
 	line-height: 0.78;
-	margin-block-start: 4px;
-	margin-inline-end: 8px;
+	margin-block-start: var(--wp--preset--spacing--50);
+	margin-inline-end: var(--wp--preset--spacing--100);
 	text-transform: none;
 	color: var(--wp--preset--color--primary);
 }

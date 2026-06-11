@@ -181,15 +181,8 @@
 				"vh",
 				"vw"
 			],
-			"spacingScale": {
-				"steps": 0
-			},
+			"defaultSpacingSizes": false,
 			"spacingSizes": [
-				{
-					"slug": "0",
-					"size": "0px",
-					"name": "Space 0"
-				},
 				{
 					"slug": "25",
 					"size": "2px",

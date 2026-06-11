@@ -20,7 +20,7 @@ if ( ! run( [ 'core', 'is-installed' ], { quiet: true } ) ) {
 	run( [
 		'core',
 		'install',
-		'--url=http://localhost:8884',
+		'--url=http://localhost:8894',
 		'--title=Omphalos',
 		'--admin_user=admin',
 		'--admin_password=password',

@@ -121,14 +121,13 @@ nav.wp-block-navigation.is-vertical {
 		gap: var(--wp--preset--spacing--100);
 	}
 
-	/* Indicator slot: 56dp high inside the 64dp row, matching M3 expanded rail's
-	 * horizontal item. The li owns state/active colour; the link / submenu button
-	 * only owns the text/icon slot. */
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-submenu__toggle) {
+	/* The li owns the 64dp row, state layer and active shape. The anchor should
+	 * shrink to its text/span label rather than stretching into a second row box. */
+	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
 		display: flex;
 		align-items: center;
-		flex-grow: 1;
-		min-block-size: 56px;
+		flex-grow: 0;
+		min-block-size: auto;
 		color: inherit;
 		gap: var(--wp--preset--spacing--100);
 	}
@@ -170,8 +169,12 @@ nav.wp-block-navigation > .wp-block-navigation__container > .wp-block-navigation
 	justify-content: center;
 	inline-size: 24px;
 	min-inline-size: 24px;
+	max-inline-size: 24px;
 	block-size: 24px;
 	min-block-size: 24px;
+	max-block-size: 24px;
+	flex: 0 0 24px;
+	align-self: center;
 	padding: 0;
 	aspect-ratio: 1;
 	color: var(--wp--preset--color--on-surface-variant);

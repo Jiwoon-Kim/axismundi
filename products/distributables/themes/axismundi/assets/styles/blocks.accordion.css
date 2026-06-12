@@ -8,56 +8,24 @@
  * multi-item component with its own button/aria/inert/interactivity contract.
  *
  * WordPress core owns the markup, the grid-template-rows expand animation, the
- * icon, its rotation, and all aria/inert state. This file only paints the M3
- * surface: separated outlined expansion panels, a 48dp touch-target toggle row
- * carrying an M3 state layer (m3.material.io/foundations/interaction/states) in
- * place of core's hover underline, and motion retimed to the M3 tokens.
+ * icon, its rotation, and all aria/inert state. Static surface, spacing, and
+ * typography live in theme.json where the block supports expose them. This file
+ * only handles the adjacent-item divider and state layer details that need
+ * selectors theme.json's low-specificity css slot cannot safely express.
  *
- * Cross-block selectors (.is-open, [aria-expanded], item dividers, the row state
- * layer) are why this is a component CSS file rather than per-block theme.json
- * css slots, matching the table/text precedent. Enqueued on the front
- * (functions.php) and mirrored into the editor canvas (add_editor_style) so the
- * computed result is identical in both.
+ * Enqueued on the front (functions.php) and mirrored into the editor canvas
+ * (add_editor_style) so the computed result is identical in both.
  */
 
-/* Wrapper — a stack of separated expansion panels. A connected list reads too
- * much like segmented buttons once several closed headings sit back-to-back. */
-.wp-block-accordion {
-	box-sizing: border-box;
-	display: flex;
-	flex-direction: column;
-	gap: var(--wp--preset--spacing--100);
-	color: var(--wp--preset--color--on-surface);
+/* Divider — theme.json mangles `&+&` in block css slots, so keep the adjacent
+ * item selector here. */
+.wp-block-accordion .wp-block-accordion-item + .wp-block-accordion-item {
+	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
 }
 
-/* Item — each expansion panel owns its own shape and outline. */
-.wp-block-accordion-item {
-	box-sizing: border-box;
-	border: 1px solid var(--wp--preset--color--outline-variant);
-	border-radius: 12px;
-	overflow: clip;
-	background-color: var(--wp--preset--color--surface);
-}
-
-/* Heading — a bare wrapper for the toggle button; the row spacing lives on the
- * toggle, so the heading carries no margin of its own. */
-.wp-block-accordion .wp-block-accordion-heading {
-	margin-block: 0;
-}
-
-/* Toggle — the interactive list row. Drop core's hover underline; give it a 48dp
- * touch target, token spacing, and an M3 state layer (on-surface mixed over the
- * surface at the shared state opacities). The button is width:100%, so the layer
- * covers the whole row. */
+/* Toggle — replace core's hover underline with an M3 state layer. The static
+ * row metrics are defined in theme.json. */
 .wp-block-accordion .wp-block-accordion-heading__toggle {
-	min-block-size: 48px;
-	padding: var(--wp--preset--spacing--150) var(--wp--preset--spacing--200);
-	color: var(--wp--preset--color--on-surface);
-	font-size: var(--wp--preset--font-size--body-large);
-	font-weight: 500;
-	line-height: 1.5;
-	letter-spacing: 0.5px;
-	text-align: start;
 	transition: background-color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 .wp-block-accordion .wp-block-accordion-heading__toggle:hover .wp-block-accordion-heading__toggle-title {
@@ -73,25 +41,10 @@
 	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 }
 
-/* Icon — core keeps the rotation (plus → ×) and its transform transition; only
- * recolour to on-surface-variant and retime the rotation to the M3 motion tokens
- * (selector mirrors core's so it overrides). */
-.wp-block-accordion .wp-block-accordion-heading__toggle-icon {
-	color: var(--wp--preset--color--on-surface-variant);
-}
+/* Icon — core keeps the plus glyph and plus → × rotation; only retime the
+ * transform to the M3 motion tokens (selector mirrors core's so it overrides). */
 @media (prefers-reduced-motion: no-preference) {
 	.wp-block-accordion-item > .wp-block-accordion-heading .wp-block-accordion-heading__toggle-icon {
 		transition: transform var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
 	}
-}
-
-/* Panel — content padding; the toggle owns the top spacing (its block-end
- * padding), so the panel starts flush and the first child carries no top margin. */
-.wp-block-accordion .wp-block-accordion-panel {
-	padding-inline: var(--wp--preset--spacing--200);
-	padding-block-start: 0;
-	padding-block-end: var(--wp--preset--spacing--200);
-}
-.wp-block-accordion .wp-block-accordion-panel > :first-child {
-	margin-block-start: 0;
 }

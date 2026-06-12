@@ -188,6 +188,36 @@
 <!-- /wp:columns -->
 
 <!-- wp:heading -->
+<h2 class="wp-block-heading">3b. Accordion</h2>
+<!-- /wp:heading -->
+
+<!-- wp:accordion -->
+<div role="group" class="wp-block-accordion"><!-- wp:accordion-item -->
+<div class="wp-block-accordion-item"><!-- wp:accordion-heading -->
+<h3 class="wp-block-accordion-heading"><button type="button" class="wp-block-accordion-heading__toggle"><span class="wp-block-accordion-heading__toggle-title">First item</span><span class="wp-block-accordion-heading__toggle-icon" aria-hidden="true">+</span></button></h3>
+<!-- /wp:accordion-heading -->
+
+<!-- wp:accordion-panel -->
+<div role="region" class="wp-block-accordion-panel"><!-- wp:paragraph -->
+<p>Panel one content for the first accordion item.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:accordion-panel --></div>
+<!-- /wp:accordion-item -->
+
+<!-- wp:accordion-item -->
+<div class="wp-block-accordion-item"><!-- wp:accordion-heading -->
+<h3 class="wp-block-accordion-heading"><button type="button" class="wp-block-accordion-heading__toggle"><span class="wp-block-accordion-heading__toggle-title">Second item</span><span class="wp-block-accordion-heading__toggle-icon" aria-hidden="true">+</span></button></h3>
+<!-- /wp:accordion-heading -->
+
+<!-- wp:accordion-panel -->
+<div role="region" class="wp-block-accordion-panel"><!-- wp:paragraph -->
+<p>Panel two content for the second accordion item.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:accordion-panel --></div>
+<!-- /wp:accordion-item --></div>
+<!-- /wp:accordion -->
+
+<!-- wp:heading -->
 <h2 class="wp-block-heading">4. Row (flex, horizontal)</h2>
 <!-- /wp:heading -->
 

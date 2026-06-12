@@ -40,23 +40,22 @@ function axismundi_asset_uri( string $relative_path ) : ?string {
 /**
  * Cache-busting version for a theme asset.
  *
- * In development (WP_DEBUG) the file mtime is used so edits to a CSS file bust the
- * browser cache immediately — without it, the front keeps serving the cached file
- * at the static AXISMUNDI_VERSION while the editor (add_editor_style) reloads it,
- * which reads as "the editor updated but the front didn't". In production the
- * theme version is used (bumped per release) for a stable, deterministic URL.
+ * The file mtime is used so any edit to a CSS file busts the browser cache
+ * immediately — without it the front keeps serving the cached file at the static
+ * AXISMUNDI_VERSION while the editor (add_editor_style) reloads it, which reads as
+ * "the editor updated but the front didn't". A WP_DEBUG/environment gate is
+ * deliberately NOT used: this wp-env reports environment_type "production" with
+ * WP_DEBUG off, so a gate never opened and the cache never busted. In a real
+ * deployment every shipped file shares the unzip mtime, so this stays a stable,
+ * per-install version that still busts on a theme update. Falls back to
+ * AXISMUNDI_VERSION if the file is unreadable.
  *
  * @param string $relative_path Theme-relative path.
  * @return string Version string for wp_enqueue_style().
  */
 function axismundi_asset_version( string $relative_path ) : string {
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		$mtime = @filemtime( get_theme_file_path( ltrim( $relative_path, '/' ) ) );
-		if ( $mtime ) {
-			return (string) $mtime;
-		}
-	}
-	return AXISMUNDI_VERSION;
+	$mtime = @filemtime( get_theme_file_path( ltrim( $relative_path, '/' ) ) );
+	return $mtime ? (string) $mtime : AXISMUNDI_VERSION;
 }
 
 /**

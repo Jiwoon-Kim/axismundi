@@ -9,11 +9,9 @@
  *
  * What core already does in WP 7.0 (verified, so NOT redone here): the item <ul>
  * is already list-style:none with no list indent, and the grid is core's own
- * responsive flex (is-grid is display:flex; columns-N widths apply at >=600px;
- * single column below). So the grid styling touches ONLY the card surface and the
- * gap — never display/width — to keep core's mobile collapse. Core spaces grid
- * items with per-item margins (latest-posts ~20px, rss ~16px); those are zeroed on
- * the card and replaced with one tokenised flex gap so both blocks match.
+ * responsive flex (is-grid is display:flex; columns-N widths and margins apply
+ * at >=600px; single column below). So the grid styling touches ONLY the card
+ * surface — never display, gap, margin, or width — to keep core's column math.
  *
  * theme.json cannot reach the per-<li> card surface (it styles the block, not its
  * items), which is why this lives in CSS. Enqueued on the front (functions.php)
@@ -21,13 +19,10 @@
  */
 
 /* Card surface — latest-posts items (list + grid) and RSS GRID items are each a
- * filled, shadow-less card. Margin is zeroed so the list/grid gap owns spacing
- * (and core's grid per-item margins don't leak); border-box keeps the padding
- * inside core's grid width calc. RSS LIST is the exception, handled below. */
+ * filled, shadow-less card. RSS LIST is the exception, handled below. */
 .wp-block-latest-posts > li,
 .wp-block-rss.is-grid > li {
 	box-sizing: border-box;
-	margin: 0;
 	padding: var(--wp--preset--spacing--200);
 	border-radius: 12px;
 	background-color: var(--wp--preset--color--surface-container);
@@ -66,37 +61,6 @@
 .wp-block-latest-posts > li > * + *,
 .wp-block-rss > li > * + * {
 	margin-block-start: var(--wp--preset--spacing--50);
-}
-
-/* Grid — unified for both blocks. Keep core's responsive flex (is-grid) and its
- * single-column collapse below 600px; only replace the per-item margins with one
- * tokenised gap and recompute the column widths as (100% - (N-1)*gap)/N so each
- * row fills exactly. */
-.wp-block-latest-posts.is-grid,
-.wp-block-rss.is-grid {
-	gap: var(--wp--preset--spacing--200);
-}
-@media (min-width: 600px) {
-	.wp-block-latest-posts.is-grid.columns-2 > li,
-	.wp-block-rss.is-grid.columns-2 > li {
-		inline-size: calc((100% - var(--wp--preset--spacing--200)) / 2);
-	}
-	.wp-block-latest-posts.is-grid.columns-3 > li,
-	.wp-block-rss.is-grid.columns-3 > li {
-		inline-size: calc((100% - 2 * var(--wp--preset--spacing--200)) / 3);
-	}
-	.wp-block-latest-posts.is-grid.columns-4 > li,
-	.wp-block-rss.is-grid.columns-4 > li {
-		inline-size: calc((100% - 3 * var(--wp--preset--spacing--200)) / 4);
-	}
-	.wp-block-latest-posts.is-grid.columns-5 > li,
-	.wp-block-rss.is-grid.columns-5 > li {
-		inline-size: calc((100% - 4 * var(--wp--preset--spacing--200)) / 5);
-	}
-	.wp-block-latest-posts.is-grid.columns-6 > li,
-	.wp-block-rss.is-grid.columns-6 > li {
-		inline-size: calc((100% - 5 * var(--wp--preset--spacing--200)) / 6);
-	}
 }
 
 /* Featured image = the card media frame. The theme owns fit / aspect / radius;

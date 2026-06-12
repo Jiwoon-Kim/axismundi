@@ -1,0 +1,5 @@
+# .distignore — files excluded from the distributable plugin ZIP.
+
+/scripts
+/.distignore
+*.zip

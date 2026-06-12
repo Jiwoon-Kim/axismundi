@@ -1,0 +1,41 @@
+/**
+ * Axismundi Navigation Icons — editor canvas preview (editor only).
+ *
+ * The target navigation blocks render via core JS in the editor, so the front-end
+ * PHP splice never runs in the canvas. This re-creates the leading glyph with a
+ * ::before fed by the --ax-nav-icon custom property (set per-block in editor.js).
+ *
+ * The box contract here intentionally mirrors the theme's .material-symbols-
+ * outlined: a ::before cannot carry that class, and this file is never enqueued
+ * on the front (where the real spliced span inherits the theme contract instead).
+ */
+
+.has-axismundi-nav-icon > .wp-block-navigation-item__content {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wp--preset--spacing--50, 0.5rem );
+}
+
+.has-axismundi-nav-icon > .wp-block-navigation-item__content::before {
+	content: var( --ax-nav-icon );
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	font-size: var( --md-icon-size, 24px );
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 1em;
+	block-size: 1em;
+	flex-shrink: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	word-wrap: normal;
+	direction: ltr;
+	-webkit-font-feature-settings: "liga";
+	font-feature-settings: "liga";
+	-webkit-font-smoothing: antialiased;
+}

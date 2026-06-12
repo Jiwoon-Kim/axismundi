@@ -1,0 +1,179 @@
+/**
+ * Axismundi Navigation Icons — rendered styles (front end + editor canvas).
+ *
+ * Additive on top of the theme's M3 navigation baseline. render_block restructures
+ * an icon-bearing item at the <li> level:
+ *
+ *   <li>
+ *     <span class="ax-nav-item-icon"><span class="…axismundi-navigation-icon">…</span></span>
+ *     <span class="ax-nav-item-body">
+ *       <a class="…__content">label</a>
+ *       <button class="…__submenu-icon">…</button>   (submenu only)
+ *     </span>
+ *   </li>
+ *
+ * This is the visual-first structure: a vertical item is "icon over (text +
+ * disclosure)". The icon is a sibling of the link (not inside it), so:
+ *   - assets/view.js forwards an icon click to the item's link, and
+ *   - the plugin owns the disclosure arrow, since moving the button out of its
+ *     direct-child position breaks the theme's arrow selector.
+ *
+ * The container's justification (justify-content, incl. space-between) is left
+ * entirely to core — never restyled here.
+ */
+
+/* Default / no style variation: keep the icon + body on a simple row. */
+.wp-block-navigation-item:has( > .ax-nav-item-icon ) {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wp--preset--spacing--100, 0.5rem ); /* 8px */
+}
+
+.ax-nav-item-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	cursor: pointer; /* forwarded to the link by view.js */
+}
+
+/* The body groups the link text and the disclosure button so they move together
+ * under the icon for item-vertical. */
+.ax-nav-item-body {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wp--preset--spacing--50, 0.25rem ); /* 4px */
+	min-inline-size: 0;
+}
+
+/* ============================================================
+ * item-horizontal — icon beside the body (row).
+ * ============================================================ */
+nav.wp-block-navigation.is-style-item-horizontal .wp-block-navigation-item:has( > .ax-nav-item-icon ) {
+	display: inline-flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var( --wp--preset--spacing--100, 0.5rem ); /* 8px */
+}
+
+/* ============================================================
+ * item-vertical — icon above the body (column), centred.
+ * ============================================================ */
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ) {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var( --wp--preset--spacing--50, 0.25rem ); /* 4px — M3 indicator<->label */
+	text-align: center;
+}
+
+/* In a vertical nav of vertical items, shrink-wrap the list and let each item
+ * stretch to the shared width. */
+nav.wp-block-navigation.is-vertical.is-style-item-vertical .wp-block-navigation__container {
+	align-items: stretch;
+	inline-size: max-content;
+	max-inline-size: 100%;
+}
+nav.wp-block-navigation.is-vertical.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ) {
+	inline-size: 100%;
+	max-inline-size: 100%;
+}
+
+/* icon slot = M3 56x32 active-indicator pill host; glyph stays 24px. */
+nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-icon {
+	inline-size: 56px;
+	block-size: 32px;
+	border-radius: 9999px;
+	transition: background-color var( --md-sys-motion-duration-short3, 150ms ) var( --md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1) ),
+		color var( --md-sys-motion-duration-short3, 150ms ) var( --md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1) );
+}
+
+/* body = text + disclosure, centred under the icon. */
+nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body {
+	justify-content: center;
+	max-inline-size: 100%;
+}
+nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body > .wp-block-navigation-item__content {
+	text-align: center;
+}
+nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body .wp-block-navigation-item__label {
+	max-inline-size: 100%;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	text-align: center;
+}
+
+/* item-vertical moves the active / state indicator from the whole item to the
+ * 56x32 icon slot. The theme baseline colours the <li> with high specificity, so
+ * neutralise it (!important, interim until the theme nav CSS is style-aware) and
+ * paint only the slot. */
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):active,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-body > a[aria-current="page"] ) {
+	background-color: transparent !important;
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):active > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-icon {
+	background-color: var( --wp--preset--color--secondary-container );
+	color: var( --wp--preset--color--on-secondary-container );
+}
+
+/* ============================================================
+ * Disclosure arrow — owned by the plugin once the button is moved into the body.
+ * Top-level submenu trigger = arrow_drop_down/up; a nested submenu trigger inside
+ * the popover = arrow_right (the higher-specificity nested rule wins).
+ * ============================================================ */
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 24px;
+	block-size: 24px;
+	margin: 0;
+	padding: 0;
+	color: currentColor;
+}
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle svg {
+	display: none;
+}
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle::before {
+	content: "arrow_drop_down";
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	font-size: 24px;
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 1em;
+	block-size: 1em;
+	overflow: hidden;
+	white-space: nowrap;
+	direction: ltr;
+	-webkit-font-feature-settings: "liga";
+	font-feature-settings: "liga";
+	-webkit-font-smoothing: antialiased;
+}
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"]::before {
+	content: "arrow_drop_up";
+}
+
+/* Nested submenu (inside the popover) = a flyout indicator, not a drop. */
+.wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle::before,
+.wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"]::before {
+	content: "arrow_right";
+}

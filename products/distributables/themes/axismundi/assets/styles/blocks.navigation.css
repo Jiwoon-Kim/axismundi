@@ -1,28 +1,41 @@
 /**
- * Axismundi — core/navigation as an M3 nav surface.
+ * Axismundi — core/navigation.
+ *
+ * core/navigation is ONE WordPress block that renders several M3-like components:
+ * an inline navigation bar, a submenu menu, a vertical tree/rail, and an overlay
+ * drawer. They are kept together in this one file — FILE boundary = WordPress
+ * block, SECTION boundary = M3 component — because the state gates and the core
+ * selectors are shared across them; splitting into components.nav-bar /
+ * components.menu / components.nav-rail would scatter the same .wp-block-navigation
+ * gates across files. Promote a section to its own component CSS only when another
+ * block or plugin reuses that contract OUTSIDE core/navigation (a standalone
+ * menu/popover block, an app nav-bar pattern, a reusable nav rail, …).
+ *
+ * Sections:
+ *   §1 Inline navigation bar — nav-bar item, state layer, current, focus
+ *   §2 Submenu menu          — M3 Menu surface (dark-safe), rows, label
+ *   §3 Disclosure            — top-level submenu trigger caret
+ *   §4 Vertical nav / rail   — DEFERRED
+ *   §5 Overlay / drawer      — DEFERRED
  *
  * Navigation is chrome, not prose, and core/navigation exposes almost no
  * color/border in theme.json, so its M3 skin lives here (not theme.json, not the
  * global style.css). Clean-built from the Omphalos navigation system, re-derived
- * on Axismundi tokens and kept to a minimal, working slice:
+ * on Axismundi tokens. Enqueued on the front (functions.php) and mirrored into the
+ * editor canvas.
  *
- *   N1 (this file) — inline horizontal nav: item state layer, M3 nav-bar item
- *                    pill, current-page indicator, focus ring.
- *   N2 (next)      — submenu = M3 Menu surface (dark-safe), disclosure icon.
- *   deferred       — vertical tree nav, the responsive overlay/drawer.
- *
- * CONTEXT GATE (load-bearing): the M3 skin applies ONLY to the inline horizontal
- * floating nav. core/navigation renders the same .wp-block-navigation class on the
- * inner container too, and reuses the submenu markup for the vertical tree and the
- * open mobile overlay — so a class-only selector would leak the dropdown skin into
- * those. The `nav` type selector + the three :not(:has()) gates exclude the
- * vertical nav (.is-vertical), the always-open tree (.open-always) and the open
- * overlay (.is-menu-open), leaving the hover/click floating dropdown. State-layer
- * opacities come from the sys.state tokens; colour is role-chosen.
- *
- * Enqueued on the front (functions.php) and mirrored into the editor canvas.
+ * CONTEXT GATE (load-bearing): the §1–§3 skin applies ONLY to the inline horizontal
+ * floating nav. core/navigation reuses the same .wp-block-navigation class on the
+ * inner container and the same submenu markup for the vertical tree and the open
+ * overlay, so a class-only selector would leak the dropdown skin into those. The
+ * `nav` type selector + the three :not(:has()) gates exclude the vertical nav
+ * (.is-vertical), the always-open tree (.open-always) and the open overlay
+ * (.is-menu-open). State-layer opacities come from the sys.state tokens.
  */
 
+/* ============================================================================
+ * §1 — INLINE NAVIGATION BAR (M3 navigation bar-ish)
+ * ============================================================================ */
 nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
 	/* Core gives the top-level submenu trigger li a stray ~4px top margin that
 	 * drops its label below the plain link siblings; zero it for one baseline. */
@@ -73,7 +86,7 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 }
 
 /* ============================================================================
- * Navigation N2 — submenu = M3 Menu surface (the dark fix).
+ * §2 — SUBMENU MENU (M3 Menu surface; the dark fix)
  *
  * Core ships the inline submenu dropdown as a hardcoded white/black popover (bg
  * #fff, text #000, faint border) that does not follow the scheme — so in dark
@@ -146,3 +159,38 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 		color: var(--wp--preset--color--on-surface-variant);
 	}
 }
+
+/* ============================================================================
+ * §3 — DISCLOSURE (top-level submenu trigger caret)
+ *
+ * The trailing caret on a top-level submenu trigger is a List/disclosure
+ * affordance. Keep core's own caret SVG — no Material Symbols swap, which carries
+ * the cost we hit replacing the search/lightbox icons — and just recolour it to
+ * on-surface-variant and flip it 180° when the submenu expands. The icon inherits
+ * currentColor, so colouring the span recolours the glyph. The open-always tree
+ * carries no caret; the overlay stays core.
+ * ============================================================================ */
+nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon {
+		color: var(--wp--preset--color--on-surface-variant);
+		transition: transform var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+	}
+	/* Expanded → flip the caret. Click submenus render the icon as a sibling span
+	 * after the toggle <button>; hover submenus make the icon itself the toggle. */
+	& .wp-block-navigation__container > .wp-block-navigation-item > button[aria-expanded="true"] ~ .wp-block-navigation__submenu-icon,
+	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon[aria-expanded="true"] {
+		transform: rotate(180deg);
+	}
+}
+
+/* ============================================================================
+ * §4 — VERTICAL NAVIGATION / RAIL — DEFERRED
+ * §5 — OVERLAY / MOBILE DRAWER   — DEFERRED
+ *
+ * The vertical tree (.is-vertical / .open-always) and the responsive overlay
+ * (.is-menu-open) are excluded by the gates above and keep core's rendering for
+ * now. They are larger surfaces — an M3 nav rail, and a drawer/sheet with a
+ * body-scroll lock and a breakpoint — and each lands in its own slice. Promotion
+ * to components.nav-rail / a shared drawer happens only if reused outside
+ * core/navigation.
+ * ============================================================================ */

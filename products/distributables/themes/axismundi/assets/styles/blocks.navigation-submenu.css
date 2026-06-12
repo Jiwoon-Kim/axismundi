@@ -5,11 +5,12 @@
  * This file owns only the popover surface and rows shown when a submenu opens.
  * That popover maps to the M3 Menu component.
  *
- * Horizontal-nav gate (shared, load-bearing — see blocks.navigation.css): the
- * closed, horizontal nav bar only. Enqueued front + editor canvas.
+ * Navigation-popover gate: closed navigation blocks only. Orientation does not
+ * matter here; a submenu popover is an M3 Menu in both horizontal nav bars and
+ * vertical expanded rails. The open responsive overlay remains deferred.
  */
 
-nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
 	/* Submenu = M3 Menu surface (the dark fix).
 	 * Core ships the dropdown as a hardcoded white/black popover that ignores the
 	 * scheme; re-skin it as an M3 standard Menu. surface-container-low + the border

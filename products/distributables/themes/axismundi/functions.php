@@ -86,6 +86,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.table.css' ) ? 'assets/styles/blocks.table.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.collections.css' ) ? 'assets/styles/blocks.collections.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 				)
 			)
 		)
@@ -187,6 +188,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-accordion'   => array( 'assets/styles/blocks.accordion.css', array( 'axismundi-blocks-table' ) ),
 		// core/latest-posts + core/rss — M3 collection cards (per-li, list/grid).
 		'axismundi-blocks-collections' => array( 'assets/styles/blocks.collections.css', array( 'axismundi-blocks-accordion' ) ),
+		// core/navigation — M3 nav surface (inline nav-bar item, submenu menu).
+		'axismundi-blocks-navigation'  => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
 	);
 
 	if ( is_attachment() ) {

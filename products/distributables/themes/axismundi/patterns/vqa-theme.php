@@ -67,9 +67,7 @@
 
 <!-- wp:post-author-name {"isLink":true} /-->
 
-<!-- wp:post-date /-->
-
-<!-- wp:post-modified-date /--></div>
+<!-- wp:post-date /--></div>
 <!-- /wp:group -->
 
 <!-- wp:post-excerpt {"moreText":"Read more"} /-->

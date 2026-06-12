@@ -944,6 +944,80 @@
 				"color": {
 					"text": "var:preset|color|on-surface"
 				}
+			},
+			"core/site-tagline": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-medium"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				},
+				"spacing": {
+					"margin": {
+						"top": "var:preset|spacing|50"
+					}
+				}
+			},
+			"core/post-date": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/post-author-name": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-medium"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/post-modified-date": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/post-time-to-read": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/post-comments-link": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/post-comments-count": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/query-total": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/site-title": {
+				"typography": {
+					"fontSize": "var:preset|font-size|title-large"
+				}
 			}
 		}
 	},

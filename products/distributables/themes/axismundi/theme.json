@@ -947,7 +947,7 @@
 			},
 			"core/site-tagline": {
 				"typography": {
-					"fontSize": "var:preset|font-size|body-medium"
+					"fontSize": "var:preset|font-size|body-small"
 				},
 				"color": {
 					"text": "var:preset|color|on-surface-variant"

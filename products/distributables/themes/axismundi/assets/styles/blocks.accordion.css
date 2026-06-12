@@ -9,8 +9,7 @@
  *
  * WordPress core owns the markup, the grid-template-rows expand animation, the
  * icon, its rotation, and all aria/inert state. This file only paints the M3
- * surface: one contained outlined group (m3.material.io/styles/elevation +
- * components/divider), dividers between items, a 48dp touch-target toggle row
+ * surface: separated outlined expansion panels, a 48dp touch-target toggle row
  * carrying an M3 state layer (m3.material.io/foundations/interaction/states) in
  * place of core's hover underline, and motion retimed to the M3 tokens.
  *
@@ -21,20 +20,23 @@
  * computed result is identical in both.
  */
 
-/* Wrapper — one contained, outlined surface; items clip to its rounded corners. */
+/* Wrapper — a stack of separated expansion panels. A connected list reads too
+ * much like segmented buttons once several closed headings sit back-to-back. */
 .wp-block-accordion {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--100);
+	color: var(--wp--preset--color--on-surface);
+}
+
+/* Item — each expansion panel owns its own shape and outline. */
+.wp-block-accordion-item {
 	box-sizing: border-box;
 	border: 1px solid var(--wp--preset--color--outline-variant);
 	border-radius: 12px;
 	overflow: clip;
 	background-color: var(--wp--preset--color--surface);
-	color: var(--wp--preset--color--on-surface);
-}
-
-/* Item divider — a 1dp outline-variant line between items (none before the first,
- * so the wrapper border is not doubled). */
-.wp-block-accordion-item + .wp-block-accordion-item {
-	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
 }
 
 /* Heading — a bare wrapper for the toggle button; the row spacing lives on the

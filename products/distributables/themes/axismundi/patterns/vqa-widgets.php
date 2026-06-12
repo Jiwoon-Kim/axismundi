@@ -42,9 +42,9 @@
 <h2 class="wp-block-heading">2. Latest Posts — list / grid</h2>
 <!-- /wp:heading -->
 
-<!-- wp:latest-posts {"postsToShow":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true} /-->
+<!-- wp:latest-posts {"postsToShow":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageAlign":"left"} /-->
 
-<!-- wp:latest-posts {"postsToShow":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"postLayout":"grid","displayFeaturedImage":true} /-->
+<!-- wp:latest-posts {"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"postLayout":"grid","displayFeaturedImage":true,"featuredImageAlign":"center"} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">3. Latest Comments</h2>

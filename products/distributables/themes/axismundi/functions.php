@@ -118,6 +118,41 @@ add_filter( 'option_wp_attachment_pages_enabled', 'axismundi_enable_attachment_p
 add_filter( 'default_option_wp_attachment_pages_enabled', 'axismundi_enable_attachment_pages' );
 
 /**
+ * Tune core block attribute defaults where Axismundi treats a core block as a
+ * first-class component.
+ *
+ * theme.json owns visual defaults, but it cannot change a block's insertion
+ * attributes. Latest Posts is more useful in this theme as a compact card/feed
+ * collection when author, date, excerpt, and thumbnails are enabled by default.
+ *
+ * @param array<string,mixed> $args Block type registration args.
+ * @param string             $name Block name.
+ * @return array<string,mixed>
+ */
+function axismundi_filter_block_type_args( array $args, string $name ) : array {
+	if ( 'core/latest-posts' !== $name || empty( $args['attributes'] ) || ! is_array( $args['attributes'] ) ) {
+		return $args;
+	}
+
+	$defaults = array(
+		'displayPostContent'   => true,
+		'displayAuthor'        => true,
+		'displayPostDate'      => true,
+		'displayFeaturedImage' => true,
+		'featuredImageAlign'   => 'left',
+	);
+
+	foreach ( $defaults as $attribute => $default ) {
+		if ( isset( $args['attributes'][ $attribute ] ) && is_array( $args['attributes'][ $attribute ] ) ) {
+			$args['attributes'][ $attribute ]['default'] = $default;
+		}
+	}
+
+	return $args;
+}
+add_filter( 'register_block_type_args', 'axismundi_filter_block_type_args', 10, 2 );
+
+/**
  * Enqueue Axismundi runtime styles, ordered, only when the files exist.
  *
  * Skeleton only in Phase 0 — the M3 token + style cascade (tokens.*, foundation,

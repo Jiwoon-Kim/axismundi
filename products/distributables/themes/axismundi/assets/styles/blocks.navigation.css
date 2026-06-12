@@ -71,3 +71,78 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 		outline-offset: 2px;
 	}
 }
+
+/* ============================================================================
+ * Navigation N2 — submenu = M3 Menu surface (the dark fix).
+ *
+ * Core ships the inline submenu dropdown as a hardcoded white/black popover (bg
+ * #fff, text #000, faint border) that does not follow the scheme — so in dark
+ * mode it stays a white box with black text. Re-skin it as an M3 standard Menu:
+ * surface-container-low, no border, elevation, rounded container, 48dp rows with
+ * single-sided state layers (the row state layer itself is the N1 rule above,
+ * which already covers submenu rows). Same inline gate as N1 — the vertical tree
+ * and the open overlay keep their own (deferred) treatment.
+ * ============================================================================ */
+nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+	/* Menu surface. The submenu carries core's has-base-background-color preset
+	 * (!important), so the tone + border reset need !important to win. No
+	 * overflow:hidden — it would clip a nested flyout. */
+	& .wp-block-navigation__submenu-container {
+		display: flex;
+		flex-direction: column;
+		gap: var(--wp--preset--spacing--25);
+		padding: var(--wp--preset--spacing--25) var(--wp--preset--spacing--50);
+		min-inline-size: 11rem;
+		background-color: var(--wp--preset--color--surface-container-low) !important;
+		border: 0 !important;
+		border-radius: 16px;
+		box-shadow: var(--wp--preset--shadow--elevation-2);
+	}
+
+	/* Menu row = the li (M3 menu item): the li owns the row box, hit area, height,
+	 * padding and shape; the anchor is the label slot. 48dp, 12dp inline padding
+	 * (effective leading/trailing = ul 4 + li 12 = 16dp), 8dp label↔icon gap, 4dp
+	 * item shape with 12dp outer corners on the first/last rows. */
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item {
+		min-block-size: 48px;
+		padding-inline: var(--wp--preset--spacing--150);
+		gap: var(--wp--preset--spacing--100);
+		border-radius: 4px;
+	}
+	& .wp-block-navigation__submenu-container > .wp-block-navigation-item:first-child {
+		border-start-start-radius: 12px;
+		border-start-end-radius: 12px;
+	}
+	& .wp-block-navigation__submenu-container > .wp-block-navigation-item:last-child {
+		border-end-start-radius: 12px;
+		border-end-end-radius: 12px;
+	}
+
+	/* Anchor = the label slot. The li owns the row box, so the anchor has no
+	 * padding/height; it grows to fill the row (full-row hit target, the menu
+	 * norm) and stacks label + optional supporting text. */
+	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		flex-grow: 1;
+		min-block-size: auto;
+		padding: 0;
+		color: var(--wp--preset--color--on-surface);
+		font-size: var(--wp--preset--font-size--label-large);
+		font-weight: 500;
+	}
+	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
+		outline: 3px solid var(--wp--preset--color--secondary);
+		outline-offset: -3px;
+	}
+
+	/* Supporting text (core/navigation-link description) — core hides it; opt in
+	 * for the inline menu as M3 supporting text. */
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item__description {
+		display: block;
+		margin-block-start: var(--wp--preset--spacing--25);
+		font-size: var(--wp--preset--font-size--body-small);
+		color: var(--wp--preset--color--on-surface-variant);
+	}
+}

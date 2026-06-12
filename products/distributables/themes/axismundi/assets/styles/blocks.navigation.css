@@ -229,7 +229,12 @@ nav.wp-block-navigation > .wp-block-navigation__container > .wp-block-navigation
 
 nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]) {
 	box-sizing: border-box;
-	display: inline-flex;
+	/* No `display` here: core controls the trigger's visibility by viewport/overlay
+	 * mode (display:none on desktop for overlayMenu:mobile, shown for :always). An
+	 * unconditional display:inline-flex (high specificity) overrode that desktop
+	 * hide, so a header nav's icon:menu hamburger leaked onto desktop alongside the
+	 * inline items. Core renders the shown trigger as flex, so align/justify still
+	 * centre the glyph. */
 	align-items: center;
 	justify-content: center;
 	inline-size: 40px;

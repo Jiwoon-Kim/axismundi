@@ -84,6 +84,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/components.button.css' ) ? 'assets/styles/components.button.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.text.css' ) ? 'assets/styles/blocks.text.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.table.css' ) ? 'assets/styles/blocks.table.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
 				)
 			)
 		)
@@ -146,6 +147,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-text'        => array( 'assets/styles/blocks.text.css', array( 'axismundi-tokens-motion' ) ),
 		// Core/raw table refinements that need cell-level selectors.
 		'axismundi-blocks-table'       => array( 'assets/styles/blocks.table.css', array( 'axismundi-blocks-text' ) ),
+		// core/accordion family — M3 contained list; cross-block state/divider CSS.
+		'axismundi-blocks-accordion'   => array( 'assets/styles/blocks.accordion.css', array( 'axismundi-blocks-table' ) ),
 	);
 
 	if ( is_attachment() ) {

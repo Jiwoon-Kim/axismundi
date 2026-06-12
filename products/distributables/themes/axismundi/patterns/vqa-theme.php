@@ -38,36 +38,38 @@
 <h2 class="wp-block-heading">2. Navigation / breadcrumbs</h2>
 <!-- /wp:heading -->
 
-<!-- wp:navigation {"overlayMenu":"never","layout":{"type":"flex","justifyContent":"left"}} -->
-<!-- wp:home-link {"label":"Home"} /-->
+<!-- wp:navigation {"ref":4} /-->
 
-<!-- wp:navigation-link {"label":"VQA Design","url":"http://localhost:8884/?page_id=13"} /-->
+<!-- wp:navigation {"ref":65,"overlayMenu":"never","layout":{"type":"flex","justifyContent":"left"}} /-->
 
-<!-- wp:navigation-submenu {"label":"VQA Sections","url":"#"} -->
-<!-- wp:navigation-link {"label":"Text","url":"http://localhost:8884/?page_id=8"} /-->
+<!-- wp:navigation {"ref":65,"overlayMenu":"never","layout":{"type":"flex","justifyContent":"right"}} /-->
 
-<!-- wp:navigation-link {"label":"Media","url":"http://localhost:8884/?page_id=14"} /-->
+<!-- wp:navigation {"ref":65,"overlayMenu":"never","layout":{"type":"flex","justifyContent":"right","orientation":"vertical"}} /-->
 
-<!-- wp:navigation-link {"label":"Widgets","url":"http://localhost:8884/?page_id=20"} /-->
-<!-- /wp:navigation-submenu -->
-<!-- /wp:navigation -->
+<!-- wp:navigation {"ref":65,"overlayMenu":"never","layout":{"type":"flex","justifyContent":"left","orientation":"vertical"}} /-->
 
 <!-- wp:breadcrumbs /-->
+
+<!-- wp:navigation {"ref":65,"overlayMenu":"always","hasIcon":false,"layout":{"type":"flex","justifyContent":"left"}} /-->
+
+<!-- wp:navigation {"ref":65,"overlayMenu":"always","layout":{"type":"flex","justifyContent":"right","orientation":"horizontal"}} /-->
+
+<!-- wp:navigation {"ref":65,"overlayMenu":"always","icon":"menu","layout":{"type":"flex","justifyContent":"left"}} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">3. Current post/page identity</h2>
 <!-- /wp:heading -->
 
-<!-- wp:post-featured-image {"isLink":false} /-->
+<!-- wp:post-featured-image /-->
 
-<!-- wp:post-title {"level":2,"isLink":false} /-->
+<!-- wp:post-title /-->
 
 <!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"}} -->
 <div class="wp-block-group"><!-- wp:avatar {"userId":1,"size":40} /-->
 
 <!-- wp:post-author-name {"isLink":true} /-->
 
-<!-- wp:post-date /--></div>
+<!-- wp:post-date {"metadata":{"bindings":{"datetime":{"source":"core/post-data","args":{"field":"date"}}}}} /--></div>
 <!-- /wp:group -->
 
 <!-- wp:post-excerpt {"moreText":"Read more"} /-->
@@ -88,15 +90,15 @@
 <h2 class="wp-block-heading">4. Query loop — post cards</h2>
 <!-- /wp:heading -->
 
-<!-- wp:query {"queryId":101,"query":{"perPage":3,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false},"displayLayout":{"type":"flex","columns":3}} -->
-<div class="wp-block-query"><!-- wp:post-template -->
+<!-- wp:query {"queryId":101,"query":{"perPage":3,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false}} -->
+<div class="wp-block-query"><!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
 <!-- wp:group {"className":"is-style-card-filled","layout":{"type":"constrained"}} -->
 <div class="wp-block-group is-style-card-filled"><!-- wp:post-featured-image {"isLink":true} /-->
 
 <!-- wp:post-title {"level":3,"isLink":true} /-->
 
 <!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"}} -->
-<div class="wp-block-group"><!-- wp:post-date /-->
+<div class="wp-block-group"><!-- wp:post-date {"metadata":{"bindings":{"datetime":{"source":"core/post-data","args":{"field":"date"}}}}} /-->
 
 <!-- wp:post-author-name {"isLink":true} /-->
 

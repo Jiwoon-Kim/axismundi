@@ -939,6 +939,11 @@
 			},
 			"core/gallery": {
 				"css": "& figure.wp-block-image:has(figcaption){border-radius:8px;overflow:clip;}"
+			},
+			"core/calendar": {
+				"color": {
+					"text": "var:preset|color|on-surface"
+				}
 			}
 		}
 	},

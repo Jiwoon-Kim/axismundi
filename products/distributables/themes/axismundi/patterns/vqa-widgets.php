@@ -39,10 +39,12 @@
 <!-- wp:search {"label":"Search","showLabel":false,"buttonText":"Search","buttonPosition":"button-only","buttonUseIcon":true,"isSearchFieldHidden":true} /-->
 
 <!-- wp:heading -->
-<h2 class="wp-block-heading">2. Latest Posts</h2>
+<h2 class="wp-block-heading">2. Latest Posts — list / grid</h2>
 <!-- /wp:heading -->
 
 <!-- wp:latest-posts {"postsToShow":3,"displayPostDate":true} /-->
+
+<!-- wp:latest-posts {"postsToShow":3,"displayPostDate":true,"displayFeaturedImage":true,"postLayout":"grid","columns":3} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">3. Latest Comments</h2>
@@ -73,10 +75,12 @@
 <!-- wp:page-list /-->
 
 <!-- wp:heading -->
-<h2 class="wp-block-heading">7. RSS</h2>
+<h2 class="wp-block-heading">7. RSS — list / grid</h2>
 <!-- /wp:heading -->
 
 <!-- wp:rss {"feedURL":"https://wordpress.org/news/feed/","itemsToShow":3,"displayDate":true,"displayExcerpt":true} /-->
+
+<!-- wp:rss {"feedURL":"https://wordpress.org/news/feed/","itemsToShow":4,"displayDate":true,"displayExcerpt":true,"blockLayout":"grid","columns":2} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">8. Social Links — sizes / logos-only / pill</h2>

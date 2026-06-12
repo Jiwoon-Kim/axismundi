@@ -147,3 +147,17 @@
 .wp-block-table.is-style-stripes {
 	border-block-end: 0;
 }
+
+/* core/calendar — recolour the inner gridlines.
+ *
+ * core/calendar is not a .wp-block-table, so the contract above never reaches it.
+ * theme.json owns its ink (styles.blocks.core/calendar.color.text -> on-surface,
+ * via core's "table, th" selector) and the generic table baseline already gives
+ * the OUTER frame an outline-variant border — but core paints a hardcoded,
+ * non-scheme-aware #ddd on every th/td side, which reads as light gridlines on a
+ * dark surface. core/calendar has no border support in theme.json, so recolour
+ * the cells here to the scheme-aware M3 outline. border-collapse:collapse merges
+ * them into a single 1px grid that matches the frame. */
+.wp-block-calendar table :is(th, td) {
+	border-color: var(--wp--preset--color--outline-variant);
+}

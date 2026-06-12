@@ -20,6 +20,7 @@
 /patterns/vqa-media.php
 /patterns/vqa-widgets.php
 /patterns/vqa-embeds.php
+/patterns/vqa-theme.php
 
 # --- Build artifacts ---
 /tmp

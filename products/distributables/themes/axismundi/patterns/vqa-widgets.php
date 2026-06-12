@@ -42,15 +42,15 @@
 <h2 class="wp-block-heading">2. Latest Posts — list / grid</h2>
 <!-- /wp:heading -->
 
-<!-- wp:latest-posts {"postsToShow":3,"displayPostDate":true} /-->
+<!-- wp:latest-posts {"postsToShow":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"displayFeaturedImage":true} /-->
 
-<!-- wp:latest-posts {"postsToShow":3,"displayPostDate":true,"displayFeaturedImage":true,"postLayout":"grid","columns":3} /-->
+<!-- wp:latest-posts {"postsToShow":3,"displayPostContent":true,"displayAuthor":true,"displayPostDate":true,"postLayout":"grid","displayFeaturedImage":true} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">3. Latest Comments</h2>
 <!-- /wp:heading -->
 
-<!-- wp:latest-comments {"displayAvatar":true,"displayDate":true,"displayExcerpt":true} /-->
+<!-- wp:latest-comments /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">4. Archives &amp; Categories</h2>
@@ -58,7 +58,7 @@
 
 <!-- wp:archives {"showPostCounts":true} /-->
 
-<!-- wp:categories {"showPostCounts":true,"showHierarchy":true} /-->
+<!-- wp:categories {"showHierarchy":true,"showPostCounts":true} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">5. Tag Cloud &amp; Calendar</h2>
@@ -78,9 +78,9 @@
 <h2 class="wp-block-heading">7. RSS — list / grid</h2>
 <!-- /wp:heading -->
 
-<!-- wp:rss {"feedURL":"https://wordpress.org/news/feed/","itemsToShow":3,"displayDate":true,"displayExcerpt":true} /-->
+<!-- wp:rss {"feedURL":"https://wordpress.org/news/feed/","itemsToShow":3,"displayExcerpt":true,"displayAuthor":true,"displayDate":true} /-->
 
-<!-- wp:rss {"feedURL":"https://wordpress.org/news/feed/","itemsToShow":4,"displayDate":true,"displayExcerpt":true,"blockLayout":"grid","columns":2} /-->
+<!-- wp:rss {"blockLayout":"grid","feedURL":"https://wordpress.org/news/feed/","itemsToShow":4,"displayExcerpt":true,"displayAuthor":true,"displayDate":true} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">8. Social Links — sizes / logos-only / pill</h2>

@@ -1,41 +1,85 @@
 /**
  * Axismundi — core/navigation (the container).
  *
- * core/navigation is the CONTAINER block: it owns orientation, the (very wide) set
- * of allowed inner blocks, and the responsive overlay. Its two main inner blocks
- * are separate core blocks with their own Stylebook entries, so they get their own
- * files:
- *   blocks.navigation-link.css     — the nav ITEM affordance (navigation-link and
- *                                    home/custom/page/post/category/tag link, plus
- *                                    the top-level submenu trigger row)
- *   blocks.navigation-submenu.css  — the submenu trigger + M3 Menu surface + caret
+ * core/navigation owns orientation, the (very wide) set of allowed inner blocks,
+ * and the shared state affordance for its top-level children:
+ * navigation-link, home/custom/page/post/category/tag links, submenu triggers,
+ * buttons, search, social icons, site identity blocks, page-list, loginout, etc.
  *
- * This file owns container/orientation and (later) the normalization of the blocks
- * core lets you drop inside a nav — site-logo, site-title, search, social-links,
- * buttons, spacer, loginout, page-list, … — which is OBSERVE-only for now: keep
- * their layout from breaking, real M3 work deferred. The three files repeat the
- * gate below by design; this header is its single source of truth.
+ * Exception: core/page-list renders navigation items as grandchildren when placed
+ * inside a navigation block. Those `.wp-block-pages-list__item` nodes are still
+ * navigation destinations, so the nav item state intentionally reaches them.
  *
- * INLINE NAV GATE (shared; load-bearing):
+ * blocks.navigation-submenu.css is deliberately narrower: it owns only the popover
+ * surface when a submenu opens, mapped to the M3 Menu component.
+ *
+ * HORIZONTAL NAV GATE (load-bearing):
  *   nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open))
- * Apply the M3 skin ONLY to the closed, horizontal navigation bar. Core reuses the
- * same .wp-block-navigation class on the inner container and the same submenu
- * markup for the vertical tree and the open overlay, so the `nav` type selector +
- * the three :not(:has()) gates keep the skin off:
- *   .is-vertical    → vertical navigation / M3 Navigation Rail (expanded)  — DEFERRED
- *   .open-always    → static always-open tree, kept with the rail          — DEFERRED
- *   .is-menu-open   → responsive overlay / drawer                          — DEFERRED
- *
- * Orientation map: horizontal = M3 Navigation Bar (label-only items); vertical =
- * M3 Navigation Rail (expanded).
+ * Apply the M3 Navigation Bar skin ONLY to the closed, horizontal navigation bar.
+ * Vertical navigation maps to M3 Navigation Rail (expanded). The open overlay /
+ * drawer remains deferred.
  *
  * Enqueued front + editor canvas.
  */
 
-/* §  Container / orientation / allowed-inner-block normalization.
+/* §1 Horizontal navigation bar -------------------------------------------------
  *
- * No rules yet. The wide set of inner blocks (site-logo, site-title, search,
- * social-links, buttons, spacer, loginout, page-list, …) currently inherits its
- * own block styles plus core's nav layout, which is acceptable for the first pass.
- * Minimal "don't break the layout" normalization lands here once each is observed
- * inside a nav; the M3 Navigation Rail (vertical) container also lands here. */
+ * M3 Navigation Bar, label-only item. Material's public component site uses a
+ * compact trailing disclosure affordance for nav items that reveal a menu; M3's
+ * formal Navigation Bar spec does not define a trailing icon slot, so the theme
+ * keeps core's submenu SVG and only normalizes its colour.
+ */
+
+nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+	/* Top-level item = M3 navigation-bar item pill. This intentionally reaches
+	 * core/page-list grandchildren when the page-list block is placed inside nav,
+	 * but excludes rows inside an opened submenu menu. */
+	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) {
+		display: flex;
+		align-items: center;
+		min-block-size: 40px;
+		padding-inline: var(--wp--preset--spacing--200);
+		border-radius: 100px;
+	}
+
+	/* Core gives the submenu trigger li a stray top margin; zero it so a trigger
+	 * aligns with plain link siblings in the horizontal bar. */
+	& .wp-block-navigation-submenu {
+		margin-block-start: 0;
+	}
+
+	/* Item row state layer — on-surface mixed over transparent at the shared M3
+	 * state opacities. */
+	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+	}
+	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+	}
+	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+	}
+
+	/* Current page = M3 navigation-bar active indicator. */
+	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
+		background-color: var(--wp--preset--color--secondary-container);
+	}
+	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
+		color: var(--wp--preset--color--secondary);
+	}
+
+	/* Keyboard focus ring — M3 focus indicator (secondary, 3px) offset off the pill. */
+	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content:focus-visible {
+		outline: 3px solid var(--wp--preset--color--secondary);
+		outline-offset: 2px;
+	}
+
+	/* Submenu disclosure affordance. Keep core's SVG and behaviour. */
+	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon {
+		color: var(--wp--preset--color--on-surface-variant);
+	}
+}
+
+/* §2 Vertical navigation -------------------------------------------------------
+ *
+ * Deferred: map .is-vertical to M3 Navigation Rail (expanded). */

@@ -87,7 +87,6 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.collections.css' ) ? 'assets/styles/blocks.collections.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-link.css' ) ? 'assets/styles/blocks.navigation-link.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
 				)
 			)
@@ -190,10 +189,9 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-accordion'   => array( 'assets/styles/blocks.accordion.css', array( 'axismundi-blocks-table' ) ),
 		// core/latest-posts + core/rss — M3 collection cards (per-li, list/grid).
 		'axismundi-blocks-collections' => array( 'assets/styles/blocks.collections.css', array( 'axismundi-blocks-accordion' ) ),
-		// core/navigation family — split by block: container, item, submenu/menu.
+		// core/navigation family — block owns its children state; submenu owns the menu popover.
 		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
-		'axismundi-blocks-navigation-link'    => array( 'assets/styles/blocks.navigation-link.css', array( 'axismundi-blocks-navigation' ) ),
-		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation-link' ) ),
+		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
 	);
 
 	if ( is_attachment() ) {

@@ -1,25 +1,16 @@
 /**
- * Axismundi — core/navigation-submenu (trigger + M3 Menu surface + disclosure).
+ * Axismundi — core/navigation-submenu (popover = M3 Menu).
  *
- * The submenu trigger row gets the nav-bar item affordance from
- * blocks.navigation-link.css (it carries .wp-block-navigation-item too). This file
- * owns the submenu SPECIFICS: the trigger's baseline, the dropdown SURFACE — which
- * is effectively an M3 Menu, the largest part — its rows and label, and the
- * disclosure caret. The container / orientation / gate contract is in
- * blocks.navigation.css.
+ * The navigation block owns the trigger row, state and disclosure affordance.
+ * This file owns only the popover surface and rows shown when a submenu opens.
+ * That popover maps to the M3 Menu component.
  *
- * Inline-nav gate (shared, load-bearing — see blocks.navigation.css): the closed,
- * horizontal nav bar only. Enqueued front + editor canvas.
+ * Horizontal-nav gate (shared, load-bearing — see blocks.navigation.css): the
+ * closed, horizontal nav bar only. Enqueued front + editor canvas.
  */
 
 nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
-	/* Baseline: core gives the trigger li a stray ~4px top margin that drops its
-	 * label below the plain link siblings; zero it for one top-row baseline. */
-	& .wp-block-navigation-submenu {
-		margin-block-start: 0;
-	}
-
-	/* ---- Submenu = M3 Menu surface (the dark fix) ------------------------------
+	/* Submenu = M3 Menu surface (the dark fix).
 	 * Core ships the dropdown as a hardcoded white/black popover that ignores the
 	 * scheme; re-skin it as an M3 standard Menu. surface-container-low + the border
 	 * reset are !important because the submenu carries core's
@@ -94,10 +85,4 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 		color: var(--wp--preset--color--on-surface-variant);
 	}
 
-	/* ---- Disclosure caret ------------------------------------------------------
-	 * Keep core's own caret SVG and behaviour. The theme only normalizes the icon
-	 * colour; it does not add rotation or replace the glyph. */
-	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon {
-		color: var(--wp--preset--color--on-surface-variant);
-	}
 }

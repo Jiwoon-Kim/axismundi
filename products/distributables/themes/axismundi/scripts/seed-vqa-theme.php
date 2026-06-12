@@ -22,6 +22,16 @@ ob_start();
 include get_theme_file_path( 'patterns/vqa-theme.php' );
 $content = ob_get_clean();
 
+// Local VQA avatar context. WordPress admin email changes normally require a
+// confirmation email; the seed owns this demo database, so update the user
+// directly to make the Avatar block deterministic.
+wp_update_user(
+	array(
+		'ID'         => 1,
+		'user_email' => 'kimjiwoon75@gmail.com',
+	)
+);
+
 $existing = get_page_by_path( 'vqa-theme', OBJECT, 'post' );
 $postarr  = array(
 	'post_type'    => 'post',

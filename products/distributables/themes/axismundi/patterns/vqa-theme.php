@@ -63,7 +63,7 @@
 <!-- wp:post-title {"level":2,"isLink":false} /-->
 
 <!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"}} -->
-<div class="wp-block-group"><!-- wp:avatar {"size":40} /-->
+<div class="wp-block-group"><!-- wp:avatar {"userId":1,"size":40} /-->
 
 <!-- wp:post-author-name {"isLink":true} /-->
 

@@ -12,7 +12,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_VERSION' ) ) {
-	define( 'AXISMUNDI_VERSION', '0.1.13' );
+	define( 'AXISMUNDI_VERSION', '0.1.14' );
 }
 
 // Theme-internal attachment page renderer. WordPress core/post-content only
@@ -35,6 +35,28 @@ function axismundi_asset_uri( string $relative_path ) : ?string {
 	}
 
 	return get_theme_file_uri( $relative_path );
+}
+
+/**
+ * Cache-busting version for a theme asset.
+ *
+ * In development (WP_DEBUG) the file mtime is used so edits to a CSS file bust the
+ * browser cache immediately — without it, the front keeps serving the cached file
+ * at the static AXISMUNDI_VERSION while the editor (add_editor_style) reloads it,
+ * which reads as "the editor updated but the front didn't". In production the
+ * theme version is used (bumped per release) for a stable, deterministic URL.
+ *
+ * @param string $relative_path Theme-relative path.
+ * @return string Version string for wp_enqueue_style().
+ */
+function axismundi_asset_version( string $relative_path ) : string {
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		$mtime = @filemtime( get_theme_file_path( ltrim( $relative_path, '/' ) ) );
+		if ( $mtime ) {
+			return (string) $mtime;
+		}
+	}
+	return AXISMUNDI_VERSION;
 }
 
 /**
@@ -165,7 +187,7 @@ function axismundi_enqueue_assets() : void {
 	// Global HTML semantic glue (mark / abbr, etc.) — the theme's root style.css,
 	// enqueued explicitly (TT5-style) so standard inline elements have a baseline
 	// regardless of source. Block-scoped fixes stay in assets/styles/*.css below.
-	wp_enqueue_style( 'axismundi-style', get_stylesheet_uri(), array(), AXISMUNDI_VERSION );
+	wp_enqueue_style( 'axismundi-style', get_stylesheet_uri(), array(), axismundi_asset_version( 'style.css' ) );
 
 	$styles = array(
 		// M3 token layers (literals in ref; downstream var() in sys), in dependency
@@ -203,7 +225,7 @@ function axismundi_enqueue_assets() : void {
 		if ( null === $uri ) {
 			continue;
 		}
-		wp_enqueue_style( $handle, $uri, $style[1], AXISMUNDI_VERSION );
+		wp_enqueue_style( $handle, $uri, $style[1], axismundi_asset_version( $style[0] ) );
 	}
 }
 add_action( 'wp_enqueue_scripts', 'axismundi_enqueue_assets' );

@@ -86,4 +86,59 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		color: var(--wp--preset--color--on-surface-variant);
 	}
 
+	/* Nested submenu affordance = M3 Menu trailing icon. The row already owns the
+	 * 8dp label-icon gap, so remove core's tiny SVG margins and replace the glyph
+	 * with Material Symbols arrow_right. */
+	& .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		inline-size: 24px;
+		min-inline-size: 24px;
+		max-inline-size: 24px;
+		block-size: 24px;
+		min-block-size: 24px;
+		max-block-size: 24px;
+		flex: 0 0 24px;
+		align-self: center;
+		margin-inline: 0;
+		padding: 0;
+		aspect-ratio: 1;
+		color: var(--wp--preset--color--on-surface-variant);
+		overflow: hidden;
+	}
+
+	& .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon svg {
+		display: none;
+	}
+
+	& .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon::before {
+		content: "arrow_right";
+		font-family: "Material Symbols Outlined", sans-serif;
+		font-weight: normal;
+		font-style: normal;
+		font-size: 24px;
+		line-height: 1;
+		letter-spacing: normal;
+		text-transform: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		inline-size: 1em;
+		block-size: 1em;
+		flex-shrink: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		word-wrap: normal;
+		direction: ltr;
+		-webkit-font-feature-settings: "liga";
+		font-feature-settings: "liga";
+		-webkit-font-smoothing: antialiased;
+		font-variation-settings:
+			"FILL" var(--md-icon-fill, 0),
+			"wght" var(--md-icon-wght, 400),
+			"GRAD" var(--md-icon-grad, 0),
+			"opsz" var(--md-icon-opsz, 24);
+	}
+
 }

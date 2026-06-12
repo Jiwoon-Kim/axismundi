@@ -821,6 +821,9 @@
 			"core/accordion": {
 				"color": {
 					"text": "var:preset|color|on-surface"
+				},
+				"spacing": {
+					"blockGap": "var:preset|spacing|50"
 				}
 			},
 			"core/accordion-item": {
@@ -841,7 +844,7 @@
 					"fontWeight": "500",
 					"lineHeight": "1.5"
 				},
-				"css": "&{margin-block:0;letter-spacing:0.15px;}& .wp-block-accordion-heading__toggle{min-block-size:48px;text-align:start;transition:background-color var(--md-sys-motion-duration-short3,150ms) var(--md-sys-motion-easing-standard,cubic-bezier(0.2,0,0,1));}& .wp-block-accordion-heading__toggle-icon{color:var(--wp--preset--color--on-surface-variant);}"
+				"css": "&{margin-block:0;letter-spacing:0.15px;}& .wp-block-accordion-heading__toggle{min-block-size:48px;padding-block:var(--wp--preset--spacing--150);padding-inline:var(--wp--preset--spacing--200);text-align:start;transition:background-color var(--md-sys-motion-duration-short3,150ms) var(--md-sys-motion-easing-standard,cubic-bezier(0.2,0,0,1));}& .wp-block-accordion-heading__toggle-icon{color:var(--wp--preset--color--on-surface-variant);}"
 			},
 			"core/accordion-panel": {
 				"css": "&>:first-child{margin-block-start:0;}"

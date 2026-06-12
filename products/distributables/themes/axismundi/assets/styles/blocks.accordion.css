@@ -22,7 +22,7 @@
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
-	gap: var(--wp--preset--spacing--100);
+	gap: var(--wp--preset--spacing--50);
 }
 
 /* Item — enforce the per-panel outline/radius/surface in both front and editor. */

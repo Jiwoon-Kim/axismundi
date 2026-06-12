@@ -218,3 +218,75 @@ nav.wp-block-navigation > .wp-block-navigation__container > .wp-block-navigation
 nav.wp-block-navigation > .wp-block-navigation__container > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon[aria-expanded="true"]::before {
 	content: "arrow_drop_up";
 }
+
+/* §4 Responsive overlay trigger -----------------------------------------------
+ *
+ * `icon:"menu"` renders a three-line core SVG but does not add a distinct class.
+ * The stable first path identifies that option. Map only that icon mode to an M3
+ * standard icon button; the default two-line "handle" and text Menu variants are
+ * left untouched for now.
+ */
+
+nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]) {
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 40px;
+	min-inline-size: 40px;
+	block-size: 40px;
+	min-block-size: 40px;
+	padding: var(--wp--preset--spacing--100);
+	border: 0;
+	border-radius: 9999px;
+	background-color: transparent;
+	color: var(--wp--preset--color--on-surface-variant);
+}
+
+nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]):hover {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+
+nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]):focus-visible {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+	outline: 3px solid var(--wp--preset--color--secondary);
+	outline-offset: 2px;
+}
+
+nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]):active {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+	border-radius: 8px;
+}
+
+nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"]) svg {
+	display: none;
+}
+
+nav.wp-block-navigation button.wp-block-navigation__responsive-container-open:has(svg path[d="M5 5v1.5h14V5H5z"])::before {
+	content: "menu";
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	font-size: 24px;
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 1em;
+	block-size: 1em;
+	flex-shrink: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	word-wrap: normal;
+	direction: ltr;
+	-webkit-font-feature-settings: "liga";
+	font-feature-settings: "liga";
+	-webkit-font-smoothing: antialiased;
+	font-variation-settings:
+		"FILL" var(--md-icon-fill, 0),
+		"wght" var(--md-icon-wght, 400),
+		"GRAD" var(--md-icon-grad, 0),
+		"opsz" var(--md-icon-opsz, 24);
+}

@@ -148,16 +148,52 @@
 	border-block-end: 0;
 }
 
-/* core/calendar — recolour the inner gridlines.
+/* core/calendar — align the generated calendar table with the M3 table frame.
  *
  * core/calendar is not a .wp-block-table, so the contract above never reaches it.
  * theme.json owns its ink (styles.blocks.core/calendar.color.text -> on-surface,
  * via core's "table, th" selector) and the generic table baseline already gives
  * the OUTER frame an outline-variant border — but core paints a hardcoded,
  * non-scheme-aware #ddd on every th/td side, which reads as light gridlines on a
- * dark surface. core/calendar has no border support in theme.json, so recolour
- * the cells here to the scheme-aware M3 outline. border-collapse:collapse merges
- * them into a single 1px grid that matches the frame. */
+ * dark surface. core/calendar has no border support in theme.json, so the radius
+ * and gridline model live here: separate borders for a real rounded frame, then
+ * single-sided cell borders to avoid doubled internal gridlines. */
+.wp-block-calendar table {
+	border-collapse: separate;
+	border-spacing: 0;
+	overflow: hidden;
+}
+
 .wp-block-calendar.wp-block-calendar :where(table) :is(th, td) {
-	border-color: var(--wp--preset--color--outline-variant);
+	border: 0;
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
+	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
+}
+
+.wp-block-calendar.wp-block-calendar :where(table) tr > :is(th, td):last-child {
+	border-inline-end: 0;
+}
+
+.wp-block-calendar.wp-block-calendar :where(table) tbody tr:last-child > :is(th, td) {
+	border-block-end: 0;
+}
+
+.wp-block-calendar.wp-block-calendar :where(table) thead :is(th, td) {
+	border-block-end: 1px solid var(--wp--preset--color--outline);
+}
+
+.wp-block-calendar.wp-block-calendar :where(table) thead tr:first-child > :is(th, td):first-child {
+	border-start-start-radius: 7px;
+}
+
+.wp-block-calendar.wp-block-calendar :where(table) thead tr:first-child > :is(th, td):last-child {
+	border-start-end-radius: 7px;
+}
+
+.wp-block-calendar.wp-block-calendar :where(table) tbody tr:last-child > :is(th, td):first-child {
+	border-end-start-radius: 7px;
+}
+
+.wp-block-calendar.wp-block-calendar :where(table) tbody tr:last-child > :is(th, td):last-child {
+	border-end-end-radius: 7px;
 }

@@ -112,6 +112,7 @@ nav.wp-block-navigation.is-vertical {
 		align-items: center;
 		min-block-size: 64px;
 		padding-inline: var(--wp--preset--spacing--200);
+		border-radius: 100px;
 		color: var(--wp--preset--color--on-surface-variant);
 		font-size: var(--wp--preset--font-size--label-large);
 		font-weight: 500;
@@ -144,7 +145,6 @@ nav.wp-block-navigation.is-vertical {
 
 	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
-		border-radius: 100px;
 	}
 	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
 		color: var(--wp--preset--color--secondary);

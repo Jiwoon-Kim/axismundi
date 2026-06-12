@@ -10,17 +10,28 @@
  * WordPress core owns the markup, the grid-template-rows expand animation, the
  * icon, its rotation, and all aria/inert state. Static surface, spacing, and
  * typography live in theme.json where the block supports expose them. This file
- * only handles the adjacent-item divider and state layer details that need
+ * keeps the separated-panel layout and the state layer details that need
  * selectors theme.json's low-specificity css slot cannot safely express.
  *
  * Enqueued on the front (functions.php) and mirrored into the editor canvas
  * (add_editor_style) so the computed result is identical in both.
  */
 
-/* Divider — theme.json mangles `&+&` in block css slots, so keep the adjacent
- * item selector here. */
-.wp-block-accordion .wp-block-accordion-item + .wp-block-accordion-item {
-	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
+/* Wrapper — a stack of separated expansion panels. */
+.wp-block-accordion {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--100);
+}
+
+/* Item — enforce the per-panel outline/radius/surface in both front and editor. */
+.wp-block-accordion .wp-block-accordion-item {
+	box-sizing: border-box;
+	border: 1px solid var(--wp--preset--color--outline-variant);
+	border-radius: 12px;
+	overflow: clip;
+	background-color: var(--wp--preset--color--surface);
 }
 
 /* Toggle — replace core's hover underline with an M3 state layer. The static

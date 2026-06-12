@@ -64,6 +64,42 @@
 	margin-block-start: var(--wp--preset--spacing--50);
 }
 
+/* Item typography — dynamic blocks render their own inner markup, so theme.json
+ * can only style the wrapper. Keep Latest Posts and RSS visually identical:
+ * title-medium for the item headline, body-small for metadata, body-medium for
+ * excerpts. Font family is inherited from the surrounding content. */
+.wp-block-latest-posts .wp-block-latest-posts__post-title,
+.wp-block-rss .wp-block-rss__item-title a {
+	color: var(--wp--preset--color--on-surface);
+	font-size: var(--wp--preset--font-size--title-medium);
+	font-weight: 500;
+	line-height: 1.5;
+	letter-spacing: 0.15px;
+	text-decoration: none;
+}
+.wp-block-latest-posts .wp-block-latest-posts__post-title:hover,
+.wp-block-latest-posts .wp-block-latest-posts__post-title:focus-visible,
+.wp-block-rss .wp-block-rss__item-title a:hover,
+.wp-block-rss .wp-block-rss__item-title a:focus-visible {
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+.wp-block-latest-posts :is(.wp-block-latest-posts__post-date, .wp-block-latest-posts__post-author),
+.wp-block-rss :is(.wp-block-rss__item-publish-date, .wp-block-rss__item-author) {
+	color: var(--wp--preset--color--on-surface-variant);
+	font-size: var(--wp--preset--font-size--body-small);
+	line-height: 1.333;
+	letter-spacing: 0.4px;
+}
+.wp-block-latest-posts .wp-block-latest-posts__post-excerpt,
+.wp-block-rss .wp-block-rss__item-excerpt {
+	color: var(--wp--preset--color--on-surface-variant);
+	font-size: var(--wp--preset--font-size--body-medium);
+	line-height: 1.429;
+	letter-spacing: 0.25px;
+	margin-block-start: var(--wp--preset--spacing--100);
+}
+
 /* Grid — keep core's flex/grid class contract, but replace its margin gutter
  * with a real gap. Resetting margin here must be scoped to .is-grid so list
  * views keep their own rhythm. */

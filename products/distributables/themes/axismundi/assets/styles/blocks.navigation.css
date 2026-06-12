@@ -97,13 +97,13 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
  */
 
 nav.wp-block-navigation.is-vertical {
-	padding-block-start: 44px;
-	background-color: var(--wp--preset--color--surface);
 	box-shadow: none;
 
 	& .wp-block-navigation__container {
 		inline-size: min(100%, 360px);
 		min-inline-size: min(100%, 220px);
+		padding-block-start: 44px;
+		background-color: var(--wp--preset--color--surface);
 		gap: var(--wp--preset--spacing--75);
 	}
 

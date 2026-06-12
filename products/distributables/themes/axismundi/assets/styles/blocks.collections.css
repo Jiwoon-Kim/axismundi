@@ -9,9 +9,10 @@
  *
  * What core already does in WP 7.0 (verified, so NOT redone here): the item <ul>
  * is already list-style:none with no list indent, and the grid is core's own
- * responsive flex (is-grid is display:flex; columns-N widths and margins apply
- * at >=600px; single column below). So the grid styling touches ONLY the card
- * surface — never display, gap, margin, or width — to keep core's column math.
+ * responsive flex (is-grid is display:flex; columns-N widths apply at >=600px;
+ * single column below). Core's margin-based gaps leave a trailing gutter,
+ * especially for RSS and mobile. Replace those margins with one tokenised flex
+ * gap and recompute widths so rows fill exactly.
  *
  * theme.json cannot reach the per-<li> card surface (it styles the block, not its
  * items), which is why this lives in CSS. Enqueued on the front (functions.php)
@@ -61,6 +62,41 @@
 .wp-block-latest-posts > li > * + *,
 .wp-block-rss > li > * + * {
 	margin-block-start: var(--wp--preset--spacing--50);
+}
+
+/* Grid — keep core's flex/grid class contract, but replace its margin gutter
+ * with a real gap. Resetting margin here must be scoped to .is-grid so list
+ * views keep their own rhythm. */
+ul.wp-block-latest-posts.is-grid,
+ul.wp-block-rss.is-grid {
+	gap: var(--wp--preset--spacing--200);
+}
+ul.wp-block-latest-posts.is-grid > li,
+ul.wp-block-rss.is-grid > li {
+	margin-inline: 0;
+	inline-size: 100%;
+}
+@media (min-width: 600px) {
+	ul.wp-block-latest-posts.is-grid.columns-2 > li,
+	ul.wp-block-rss.is-grid.columns-2 > li {
+		inline-size: calc((100% - var(--wp--preset--spacing--200)) / 2);
+	}
+	ul.wp-block-latest-posts.is-grid.columns-3 > li,
+	ul.wp-block-rss.is-grid.columns-3 > li {
+		inline-size: calc((100% - 2 * var(--wp--preset--spacing--200)) / 3);
+	}
+	ul.wp-block-latest-posts.is-grid.columns-4 > li,
+	ul.wp-block-rss.is-grid.columns-4 > li {
+		inline-size: calc((100% - 3 * var(--wp--preset--spacing--200)) / 4);
+	}
+	ul.wp-block-latest-posts.is-grid.columns-5 > li,
+	ul.wp-block-rss.is-grid.columns-5 > li {
+		inline-size: calc((100% - 4 * var(--wp--preset--spacing--200)) / 5);
+	}
+	ul.wp-block-latest-posts.is-grid.columns-6 > li,
+	ul.wp-block-rss.is-grid.columns-6 > li {
+		inline-size: calc((100% - 5 * var(--wp--preset--spacing--200)) / 6);
+	}
 }
 
 /* Featured image = the card media frame. The theme owns fit / aspect / radius;

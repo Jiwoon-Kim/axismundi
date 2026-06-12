@@ -158,6 +158,6 @@
  * dark surface. core/calendar has no border support in theme.json, so recolour
  * the cells here to the scheme-aware M3 outline. border-collapse:collapse merges
  * them into a single 1px grid that matches the frame. */
-.wp-block-calendar table :is(th, td) {
+.wp-block-calendar.wp-block-calendar :where(table) :is(th, td) {
 	border-color: var(--wp--preset--color--outline-variant);
 }

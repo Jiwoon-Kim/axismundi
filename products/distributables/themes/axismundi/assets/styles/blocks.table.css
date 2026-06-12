@@ -168,7 +168,7 @@
 	border: 0;
 	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
 	border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
-	padding-block: var(--wp--preset--spacing--100);
+	padding-block: var(--wp--preset--spacing--150);
 	padding-inline: var(--wp--preset--spacing--200);
 }
 

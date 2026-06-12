@@ -120,21 +120,31 @@ nav.wp-block-navigation.is-vertical {
 		gap: var(--wp--preset--spacing--100);
 	}
 
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
+	/* Indicator slot: 56dp high inside the 64dp row, matching M3 expanded rail's
+	 * horizontal item. This keeps the WordPress li as the row container while the
+	 * link / submenu button owns the active/state layer shape. */
+	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-submenu__toggle) {
+		display: flex;
+		align-items: center;
+		flex-grow: 1;
+		min-block-size: 56px;
+		border-radius: 100px;
+		color: inherit;
+		gap: var(--wp--preset--spacing--100);
+	}
+
+	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-submenu__toggle) {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
+	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-submenu__toggle) {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active {
+	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-submenu__toggle) {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
-		background-color: var(--wp--preset--color--secondary-container);
-		border-radius: 100px;
-	}
 	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
+		background-color: var(--wp--preset--color--secondary-container);
 		color: var(--wp--preset--color--secondary);
 	}
 

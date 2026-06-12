@@ -1,0 +1,112 @@
+/**
+ * Axismundi — core/navigation-submenu (trigger + M3 Menu surface + disclosure).
+ *
+ * The submenu trigger row gets the nav-bar item affordance from
+ * blocks.navigation-link.css (it carries .wp-block-navigation-item too). This file
+ * owns the submenu SPECIFICS: the trigger's baseline, the dropdown SURFACE — which
+ * is effectively an M3 Menu, the largest part — its rows and label, and the
+ * disclosure caret. The container / orientation / gate contract is in
+ * blocks.navigation.css.
+ *
+ * Inline-nav gate (shared, load-bearing — see blocks.navigation.css): the closed,
+ * horizontal nav bar only. Enqueued front + editor canvas.
+ */
+
+nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+	/* Baseline: core gives the trigger li a stray ~4px top margin that drops its
+	 * label below the plain link siblings; zero it for one top-row baseline. */
+	& .wp-block-navigation-submenu {
+		margin-block-start: 0;
+	}
+
+	/* ---- Submenu = M3 Menu surface (the dark fix) ------------------------------
+	 * Core ships the dropdown as a hardcoded white/black popover that ignores the
+	 * scheme; re-skin it as an M3 standard Menu. surface-container-low + the border
+	 * reset are !important because the submenu carries core's
+	 * has-base-background-color preset. No overflow:hidden — it would clip a nested
+	 * flyout. */
+	& .wp-block-navigation__submenu-container {
+		display: flex;
+		flex-direction: column;
+		gap: var(--wp--preset--spacing--25);
+		padding: var(--wp--preset--spacing--25) var(--wp--preset--spacing--50);
+		min-inline-size: 11rem;
+		background-color: var(--wp--preset--color--surface-container-low) !important;
+		border: 0 !important;
+		border-radius: 16px;
+		box-shadow: var(--wp--preset--shadow--elevation-2);
+	}
+
+	/* Menu row state layer (the li owns the row, so it owns the layer). */
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item:hover {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+	}
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item:focus-within {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+	}
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item:active {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+	}
+
+	/* Menu row = the li (M3 menu item): 48dp, 12dp inline padding (effective
+	 * leading/trailing = ul 4 + li 12 = 16dp), 8dp label↔icon gap, 4dp item shape
+	 * with 12dp outer corners on the first/last rows. */
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item {
+		min-block-size: 48px;
+		padding-inline: var(--wp--preset--spacing--150);
+		gap: var(--wp--preset--spacing--100);
+		border-radius: 4px;
+	}
+	& .wp-block-navigation__submenu-container > .wp-block-navigation-item:first-child {
+		border-start-start-radius: 12px;
+		border-start-end-radius: 12px;
+	}
+	& .wp-block-navigation__submenu-container > .wp-block-navigation-item:last-child {
+		border-end-start-radius: 12px;
+		border-end-end-radius: 12px;
+	}
+
+	/* Anchor = the label slot. The li owns the row box, so the anchor has no
+	 * padding/height; it grows to a full-row hit target and stacks label +
+	 * optional supporting text. */
+	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		flex-grow: 1;
+		min-block-size: auto;
+		padding: 0;
+		color: var(--wp--preset--color--on-surface);
+		font-size: var(--wp--preset--font-size--label-large);
+		font-weight: 500;
+	}
+	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
+		outline: 3px solid var(--wp--preset--color--secondary);
+		outline-offset: -3px;
+	}
+
+	/* Supporting text (core/navigation-link description) — core hides it; opt in
+	 * for the inline menu as M3 supporting text. */
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item__description {
+		display: block;
+		margin-block-start: var(--wp--preset--spacing--25);
+		font-size: var(--wp--preset--font-size--body-small);
+		color: var(--wp--preset--color--on-surface-variant);
+	}
+
+	/* ---- Disclosure caret ------------------------------------------------------
+	 * The top-level submenu trigger caret is a List/disclosure affordance. Keep
+	 * core's own caret SVG (no Material Symbols swap, which carried a cost on the
+	 * search/lightbox icons); recolour the icon to on-surface-variant (the glyph
+	 * inherits currentColor) and flip it 180deg on aria-expanded. */
+	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon {
+		color: var(--wp--preset--color--on-surface-variant);
+		transition: transform var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+	}
+	/* Click submenus render the icon as a sibling span after the toggle <button>;
+	 * hover submenus make the icon itself the toggle. */
+	& .wp-block-navigation__container > .wp-block-navigation-item > button[aria-expanded="true"] ~ .wp-block-navigation__submenu-icon,
+	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon[aria-expanded="true"] {
+		transform: rotate(180deg);
+	}
+}

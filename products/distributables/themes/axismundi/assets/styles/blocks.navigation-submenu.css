@@ -95,18 +95,9 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 	}
 
 	/* ---- Disclosure caret ------------------------------------------------------
-	 * The top-level submenu trigger caret is a List/disclosure affordance. Keep
-	 * core's own caret SVG (no Material Symbols swap, which carried a cost on the
-	 * search/lightbox icons); recolour the icon to on-surface-variant (the glyph
-	 * inherits currentColor) and flip it 180deg on aria-expanded. */
+	 * Keep core's own caret SVG and behaviour. The theme only normalizes the icon
+	 * colour; it does not add rotation or replace the glyph. */
 	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon {
 		color: var(--wp--preset--color--on-surface-variant);
-		transition: transform var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
-	}
-	/* Click submenus render the icon as a sibling span after the toggle <button>;
-	 * hover submenus make the icon itself the toggle. */
-	& .wp-block-navigation__container > .wp-block-navigation-item > button[aria-expanded="true"] ~ .wp-block-navigation__submenu-icon,
-	& .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-icon[aria-expanded="true"] {
-		transform: rotate(180deg);
 	}
 }

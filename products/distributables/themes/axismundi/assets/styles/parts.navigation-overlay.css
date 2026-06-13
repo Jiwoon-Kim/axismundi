@@ -10,9 +10,9 @@
  * Ownership split:
  *  - The editable template part owns content, header/body layout, spacing and
  *    typography (block markup + theme.json presets, editable in the Site Editor).
- *  - CSS owns only what the editor cannot reach: the modal *container* surface
- *    (a core-generated scaffold node outside the template part, so its color
- *    cannot be set in the editor) and the close block's icon-button states.
+ *  - CSS owns only what the editor cannot reach: the default core overlay color
+ *    literals, structural containment for the full-screen part, and the close
+ *    block's icon-button states.
  *
  * The html.has-modal-open scroll-lock / overscroll handling is a separate layer.
  *
@@ -24,7 +24,8 @@
  * those two core rules at equal specificity — this sheet loads after core, so it
  * wins on source order, no !important needed — swapping the #fff / #000 literals
  * for the M3 surface / on-surface roles. Core already scopes these to the default
- * overlay (:not(.disable-default-overlay)); the custom overlay is handled below. */
+ * overlay (:not(.disable-default-overlay)); the custom overlay surface is owned
+ * by the editable template part markup. */
 .wp-block-navigation:not(.has-background) .wp-block-navigation__responsive-container.is-menu-open:not(.disable-default-overlay) {
 	background-color: var( --wp--preset--color--surface );
 }
@@ -32,14 +33,22 @@
 	color: var( --wp--preset--color--on-surface );
 }
 
-/* Custom overlay surface. Once a navigation-overlay template part is used core adds
- * .disable-default-overlay and drops the white/black paint above, expecting the
- * overlay to own its surface. That container is core scaffold outside the editable
- * template part, so re-supply the same M3 surface here — otherwise the fixed, full-
- * screen overlay would show the page bleeding through. */
-.wp-block-navigation__responsive-container.disable-default-overlay {
-	background-color: var( --wp--preset--color--surface );
-	color: var( --wp--preset--color--on-surface );
+/* Template-part groups are editable in the Site Editor, but their padding still
+ * uses CSS's default content-box sizing. In the full-screen overlay that makes a
+ * full-width header/body become wider than the viewport once horizontal padding
+ * is added. Contain only the overlay part's structural wrappers; the actual
+ * spacing remains owned by the template part. */
+.ax-nav-overlay,
+.ax-nav-overlay__header,
+.ax-nav-overlay__body,
+.ax-nav-overlay__nav {
+	box-sizing: border-box;
+	max-inline-size: 100%;
+}
+
+.ax-nav-overlay__nav .wp-block-navigation-submenu.open-always {
+	box-sizing: border-box;
+	max-inline-size: 100%;
 }
 
 /* The overlay menu is a vertical flex column centred via align-items. The vertical

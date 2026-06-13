@@ -109,7 +109,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.collections.css' ) ? 'assets/styles/blocks.collections.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-overlay.css' ) ? 'assets/styles/blocks.navigation-overlay.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/parts.navigation-overlay.css' ) ? 'assets/styles/parts.navigation-overlay.css' : null,
 				)
 			)
 		)
@@ -215,7 +215,7 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
 		// core/navigation overlay template part — M3 Full-screen dialog surface.
-		'axismundi-blocks-navigation-overlay' => array( 'assets/styles/blocks.navigation-overlay.css', array( 'axismundi-blocks-navigation-submenu' ) ),
+		'axismundi-parts-navigation-overlay'  => array( 'assets/styles/parts.navigation-overlay.css', array( 'axismundi-blocks-navigation-submenu' ) ),
 	);
 
 	if ( is_attachment() ) {

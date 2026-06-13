@@ -243,6 +243,23 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open
 	text-align: center;
 }
 
+/* …and re-assert the icon-slot hover/focus/press/current state too: the popover
+ * slot-flat reset above would otherwise keep the open-always rows' slots blank.
+ * .open-always outranks the .…__submenu-container reset on specificity. */
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: var( --wp--preset--color--secondary-container );
+	color: var( --wp--preset--color--on-secondary-container );
+}
+
 /* Orientation vertical + default item layout: open-always submenu triggers own an
  * inline subtree. Hovering the parent <li> therefore also hovers every child item
  * in its nested <ul>. Paint state on the explicit trigger wrapper (icon + body)

@@ -69,9 +69,11 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-pagelist-icons .wp
 	border-radius: 9999px;
 }
 
-/* Submenu blocks are buttons in the editor. Keep the preview equivalent to the
- * front structure: leading icon above, then label + disclosure on one row. */
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu {
+/* Horizontal nav + item-vertical: submenu blocks are buttons in the editor. Keep
+ * the preview equivalent to the front structure: leading icon above, then label
+ * + disclosure on one row. Do not apply this grid to vertical nav rails; their
+ * open-always subtree must keep the normal centred rail stack. */
+nav.wp-block-navigation:not(.is-vertical).is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu {
 	display: inline-grid !important;
 	grid-template-columns: auto auto;
 	grid-template-rows: auto auto;
@@ -81,7 +83,7 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-
 	row-gap: var( --wp--preset--spacing--50, 0.25rem );
 	text-align: center;
 }
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu::before {
+nav.wp-block-navigation:not(.is-vertical).is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu::before {
 	content: var( --ax-nav-icon );
 	grid-column: 1 / -1;
 	justify-self: center;
@@ -106,7 +108,7 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-
 	font-feature-settings: "liga";
 	-webkit-font-smoothing: antialiased;
 }
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content {
+nav.wp-block-navigation:not(.is-vertical).is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content {
 	grid-column: 1;
 	grid-row: 2;
 	display: inline-flex !important;
@@ -116,22 +118,22 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-
 	gap: 0;
 	text-align: center;
 }
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content::before {
+nav.wp-block-navigation:not(.is-vertical).is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content::before {
 	content: none !important;
 	display: none !important;
 }
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+nav.wp-block-navigation:not(.is-vertical).is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 	grid-column: 2;
 	grid-row: 2;
 	align-self: center;
 	justify-self: center;
 }
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content.wp-block-navigation-submenu__toggle {
+nav.wp-block-navigation:not(.is-vertical).is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content.wp-block-navigation-submenu__toggle {
 	flex-direction: row !important;
 	align-items: center;
 	justify-content: center;
 }
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content.wp-block-navigation-submenu__toggle > :is(.wp-block-navigation-item__label, .wp-block-navigation-item__description, .wp-block-navigation__submenu-icon) {
+nav.wp-block-navigation:not(.is-vertical).is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content.wp-block-navigation-submenu__toggle > :is(.wp-block-navigation-item__label, .wp-block-navigation-item__description, .wp-block-navigation__submenu-icon) {
 	flex: 0 0 auto;
 }
 

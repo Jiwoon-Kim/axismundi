@@ -197,28 +197,6 @@ nav.wp-block-navigation.is-vertical {
 	}
 }
 
-/* Current-page fallback for navigation containers that core renders as a
- * non-<nav> element (notably page-list/navigation containers). The component
- * sections above remain the main bar/rail skins; this keeps the active indicator
- * and active label consistent when the DOM boundary is a div/ul.wp-block-navigation
- * rather than nav.wp-block-navigation. */
-.wp-block-navigation:not(.is-style-item-vertical) :is(.wp-block-navigation-item, .wp-block-pages-list__item):not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has( > a[aria-current="page"] ) {
-	background-color: var(--wp--preset--color--secondary-container);
-}
-.wp-block-navigation:not(.is-style-item-vertical) :is(.wp-block-navigation-item, .wp-block-pages-list__item):not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has( > a[aria-current="page"] ):hover {
-	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-}
-.wp-block-navigation:not(.is-style-item-vertical) :is(.wp-block-navigation-item, .wp-block-pages-list__item):not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has( > a[aria-current="page"] ):focus-within {
-	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-}
-.wp-block-navigation:not(.is-style-item-vertical) :is(.wp-block-navigation-item, .wp-block-pages-list__item):not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has( > a[aria-current="page"] ):active {
-	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-}
-.wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__item):not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
-	color: var(--wp--preset--color--secondary);
-	font-weight: 700;
-}
-
 /* §3 Direct submenu disclosure icon -------------------------------------------
  *
  * WordPress renders submenu disclosure as an SVG icon next to the trigger. For

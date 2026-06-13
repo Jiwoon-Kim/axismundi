@@ -72,7 +72,7 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-pagelist-icons .wp
 /* Submenu blocks are buttons in the editor. Keep the preview equivalent to the
  * front structure: leading icon above, then label + disclosure on one row. */
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu {
-	display: inline-grid;
+	display: inline-grid !important;
 	grid-template-columns: auto auto;
 	grid-template-rows: auto auto;
 	align-items: center;
@@ -109,16 +109,16 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content {
 	grid-column: 1;
 	grid-row: 2;
-	display: inline-flex;
-	flex-direction: row;
+	display: inline-flex !important;
+	flex-direction: row !important;
 	align-items: center;
 	justify-content: center;
 	gap: 0;
 	text-align: center;
 }
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content::before {
-	content: none;
-	display: none;
+	content: none !important;
+	display: none !important;
 }
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 	grid-column: 2;
@@ -127,7 +127,7 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-
 	justify-self: center;
 }
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content.wp-block-navigation-submenu__toggle {
-	flex-direction: row;
+	flex-direction: row !important;
 	align-items: center;
 	justify-content: center;
 }

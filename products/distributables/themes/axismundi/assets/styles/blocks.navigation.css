@@ -80,18 +80,8 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]):hover {
-		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-	}
-	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]):focus-within {
-		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-	}
-	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]):active {
-		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-	}
 	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
 		color: var(--wp--preset--color--secondary);
-		font-weight: 700;
 	}
 
 	/* Keyboard focus ring — M3 focus indicator (secondary, 3px) offset off the pill. */
@@ -162,18 +152,8 @@ nav.wp-block-navigation.is-vertical {
 	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]):hover {
-		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]):focus-within {
-		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]):active {
-		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-	}
 	& .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
 		color: var(--wp--preset--color--secondary);
-		font-weight: 700;
 	}
 
 	& .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content:focus-visible {

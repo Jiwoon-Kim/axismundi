@@ -5,41 +5,14 @@
  * dialog when a Navigation block's `overlay` attribute is set. Core then adds
  * `disable-default-overlay` to the responsive container and drops its own overlay
  * colors, handing the overlay surface to the theme. We map that surface to the M3
- * Full-screen dialog: a surface container at shape 0 / elevation 0, a 56dp header
- * row, and an M3 standard icon button for the close action. Supporting text uses
- * the M3 body / on-surface-variant role.
+ * Full-screen dialog. The editable template part owns the surface, header/body
+ * layout, spacing, typography and colors. CSS only supplies the close block's M3
+ * standard icon-button behavior, because the editor cannot express its states.
  *
  * The html.has-modal-open scroll-lock / overscroll handling is a separate layer.
  *
  * Ref: https://m3.material.io/components/dialogs/overview (Full-screen dialog)
  */
-
-/* Overlay root = full-screen dialog container: surface, shape 0, elevation 0.
- * (surface background + on-surface text are carried by the block color classes.) */
-.ax-nav-overlay {
-	display: flex;
-	flex-direction: column;
-	min-block-size: 100vh;
-}
-
-/* Header = M3 full-screen dialog 56dp header container; holds the close action. */
-.ax-nav-overlay__header {
-	flex: 0 0 auto;
-	display: flex;
-	align-items: center;
-	min-block-size: 56px;
-	/* 8px inset keeps the 48dp icon-button touch target off the screen edge. */
-	padding-inline: var( --wp--preset--spacing--100 );
-}
-
-/* Body = centred content region: branding + the navigation surface. */
-.ax-nav-overlay__body {
-	flex: 1 1 auto;
-	align-items: center;
-	justify-content: center;
-	padding-inline: var( --wp--preset--spacing--300 );
-	padding-block-end: var( --wp--preset--spacing--600 );
-}
 
 /* Close = M3 standard icon button: 48dp target, 24dp glyph, on-surface, round,
  * with hover / focus / pressed state layers driven by the shared state tokens. */

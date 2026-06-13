@@ -68,3 +68,13 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-pagelist-icons .wp
 	block-size: 32px;
 	border-radius: 9999px;
 }
+
+/* Vertical submenu: the editor has no restructured body to group the disclosure
+ * with the label, so the disclosure button (a sibling of the content) would sit to
+ * the right. Column the submenu block so it drops below the content, approximating
+ * the front's icon-over-(label + disclosure). The popover is absolutely positioned,
+ * so this leaves it untouched. */
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu {
+	flex-direction: column;
+	align-items: center;
+}

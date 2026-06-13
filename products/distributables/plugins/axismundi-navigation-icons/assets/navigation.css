@@ -200,3 +200,21 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-con
 .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"]::before {
 	content: "arrow_right";
 }
+
+/* ============================================================
+ * Submenu open state (click-to-pin + touch).
+ *
+ * Core reveals the popover with the general-sibling rule
+ *   .wp-block-navigation-submenu__toggle[aria-expanded="true"] ~ .…__submenu-container
+ * Moving the disclosure button into .ax-nav-item-body makes it no longer a sibling
+ * of the container, so that rule never matches: the popover then opens only on
+ * hover (it can't be pinned by a click, and never opens on touch). Re-assert core's
+ * open state from the <li> via :has when our restructured toggle is expanded.
+ * ============================================================ */
+.wp-block-navigation-submenu:has( > .ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"] ) > .wp-block-navigation__submenu-container {
+	height: auto;
+	width: auto;
+	overflow: visible;
+	visibility: visible;
+	opacity: 1;
+}

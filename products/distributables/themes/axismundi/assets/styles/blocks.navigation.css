@@ -109,7 +109,12 @@ nav.wp-block-navigation.is-vertical {
 		gap: var(--wp--preset--spacing--75);
 	}
 
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) {
+	/* Rail item baseline. The exclusion withholds it from popover M3 Menu rows
+	 * (rows inside a CLOSED submenu's container). Open-always submenus are inline,
+	 * not popovers — the M3 Menu skin (blocks.navigation-submenu.css) already skips
+	 * them via :not(:has(.open-always)) — so their inner page links should inherit
+	 * this rail item style like any other vertical nav item. */
+	& .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) {
 		display: flex;
 		align-items: center;
 		min-block-size: 64px;
@@ -125,7 +130,7 @@ nav.wp-block-navigation.is-vertical {
 
 	/* The li owns the 64dp row, state layer and active shape. The anchor should
 	 * shrink to its text/span label rather than stretching into a second row box. */
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
+	& .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
 		display: flex;
 		align-items: center;
 		flex-grow: 0;
@@ -134,24 +139,24 @@ nav.wp-block-navigation.is-vertical {
 		gap: var(--wp--preset--spacing--100);
 	}
 
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):active {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
 	}
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
+	& .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
 		color: var(--wp--preset--color--secondary);
 	}
 
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content:focus-visible {
+	& .wp-block-navigation-item:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content:focus-visible {
 		outline: 3px solid var(--wp--preset--color--secondary);
 		outline-offset: 2px;
 	}

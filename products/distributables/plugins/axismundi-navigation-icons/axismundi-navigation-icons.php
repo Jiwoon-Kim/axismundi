@@ -14,12 +14,17 @@
  *
  * @package AxismundiNavigationIcons
  *
- * Boundary: this plugin owns ONLY navigation-item icon authoring (the icon data +
- * its insertion). The Axismundi theme keeps the M3 Navigation Bar / Rail / Menu
- * spec, the Material Symbols @font-face (theme.json) and the `.material-symbols-
- * outlined` box contract (assets/styles/icons.css). The inserted glyph therefore
- * renders only when an Axismundi-family theme is active; otherwise the ligature
- * name degrades gracefully to plain text.
+ * Boundary: this plugin owns navigation-item icon authoring (the icon data + the
+ * li-level restructure that inserts it), the `item-vertical` core/navigation
+ * style variation, the front-end icon-click delegation (assets/view.js), and the
+ * submenu disclosure arrow (the restructure moves the trigger button into the item
+ * body, out of the theme's direct-child arrow selector). The Axismundi theme keeps
+ * the M3 Navigation Bar / Rail / Menu spec and the item baseline — pill, state
+ * layer and active indicator, made style-aware so it yields to the icon slot under
+ * item-vertical — plus the Material Symbols @font-face (theme.json) and the
+ * `.material-symbols-outlined` box contract (assets/styles/icons.css). The inserted
+ * glyph therefore renders only when an Axismundi-family theme is active; otherwise
+ * the ligature name degrades gracefully to plain text.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -260,7 +265,16 @@ function axismundi_navigation_icons_restructure( string $html, string $name, boo
  * @return string
  */
 function axismundi_navigation_icons_restructure_page_list( string $html ) : string {
-	if ( ! str_contains( $html, 'wp-block-pages-list__item' ) || str_contains( $html, 'ax-nav-item-icon' ) ) {
+	// Only act on a page list rendered inside a navigation block: core adds
+	// `wp-block-navigation-item` to the items only in that context, and both the
+	// icon styling (nav-scoped CSS) and the click delegation (view.js) rely on it.
+	// A standalone Page List is left untouched so its icon never renders unstyled
+	// or unclickable.
+	if (
+		! str_contains( $html, 'wp-block-pages-list__item' )
+		|| ! str_contains( $html, 'wp-block-navigation-item' )
+		|| str_contains( $html, 'ax-nav-item-icon' )
+	) {
 		return $html;
 	}
 

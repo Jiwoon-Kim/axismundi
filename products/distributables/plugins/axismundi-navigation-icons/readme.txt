@@ -26,14 +26,20 @@ Supported blocks:
 * Submenu (`core/navigation-submenu`).
 * Home Link (`core/home-link`) — a single "Show home icon" toggle, since its
   meaning is fixed.
-* Page List (`core/page-list`) — generated page-list items default to the
-  `pages` Material Symbols icon.
+* Page List (`core/page-list`) — an opt-in "Show item icons" toggle (off by
+  default) adds the `pages` icon to generated page items, when the list is placed
+  inside a Navigation block.
 
-The Axismundi theme keeps the Material Design 3 Navigation Bar / Rail / Menu
-spec, the Material Symbols font (registered in theme.json) and the
-`.material-symbols-outlined` box contract (icons.css). This plugin owns only the
-icon data and its insertion. The disclosure arrows and submenu popover styling
-remain theme-owned.
+A `core/navigation` style variation, "Vertical item", stacks the icon above the
+label (M3 Navigation Bar / Rail vertical item) and moves the active indicator
+onto a 56x32 icon slot; the unstyled default keeps the icon beside the label.
+
+The Axismundi theme keeps the Material Design 3 navigation spec and the item
+baseline (pill, state layer, active indicator), the Material Symbols font
+(registered in theme.json) and the `.material-symbols-outlined` box contract
+(icons.css). This plugin owns the icon data and its insertion, the item-layout
+style variation, the front-end icon-click delegation, and — for the items it
+restructures — the submenu disclosure arrow.
 
 == Installation ==
 
@@ -58,10 +64,17 @@ Browse fonts.google.com/icons and use the lowercase name, e.g. `shopping_cart`.
 
 = 0.1.0 =
 
-* Initial release: a "Navigation Icon" sidebar control for Navigation Link,
-  Submenu, and Home Link, with a live preview in the editor canvas and a
-  front-end `render_block` insertion of the Material Symbols span.
+* "Navigation Icon" sidebar control for Navigation Link and Submenu (type a
+  Material Symbols name), a "Show home icon" toggle for Home Link, and a "Show
+  item icons" toggle for Page List.
+* Page, category and tag links get a semantic default icon (pages / category /
+  label) when none is authored; an explicit empty value opts out, with a reset
+  to the default.
+* A "Vertical item" core/navigation style variation: icon above the label with
+  the active indicator on a 56x32 icon slot. The default layout keeps the icon
+  beside the label.
+* `render_block` restructures an icon-bearing item into an icon box + body at the
+  `<li>` level; a small front-end script forwards an icon click to the item link,
+  and the plugin renders the submenu disclosure arrow for restructured triggers.
 * The icon-box contract (1em box, overflow clip, ligature fallback) is inherited
-  from the Axismundi theme's icons.css; the plugin only adds icon-to-label
-  alignment on the front and re-creates the glyph via `::before` in the editor
-  canvas.
+  from the Axismundi theme's icons.css.

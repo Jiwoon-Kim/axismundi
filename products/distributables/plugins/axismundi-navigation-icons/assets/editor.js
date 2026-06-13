@@ -150,7 +150,7 @@
 			} else {
 				control = el( ToggleControl, {
 					label: __( 'Show item icons', 'axismundi-navigation-icons' ),
-					help: __( 'Add the pages icon to every page in this list.', 'axismundi-navigation-icons' ),
+					help: __( 'Add the pages icon to every page in this list when it is placed inside a Navigation block.', 'axismundi-navigation-icons' ),
 					checked: !! props.attributes.axismundiPageListIcons,
 					onChange: function ( value ) {
 						props.setAttributes( { axismundiPageListIcons: !! value } );

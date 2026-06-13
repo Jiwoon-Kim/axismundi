@@ -74,6 +74,7 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-pagelist-icons .wp
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu {
 	display: inline-grid;
 	grid-template-columns: auto auto;
+	grid-template-rows: auto auto;
 	align-items: center;
 	justify-content: center;
 	column-gap: var( --wp--preset--spacing--50, 0.25rem );
@@ -107,7 +108,11 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-
 }
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content {
 	grid-column: 1;
+	grid-row: 2;
+	display: inline-flex;
 	flex-direction: row;
+	align-items: center;
+	justify-content: center;
 	gap: 0;
 	text-align: center;
 }
@@ -117,6 +122,17 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-
 }
 nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 	grid-column: 2;
+	grid-row: 2;
+	align-self: center;
+	justify-self: center;
+}
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content.wp-block-navigation-submenu__toggle {
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content.wp-block-navigation-submenu__toggle > :is(.wp-block-navigation-item__label, .wp-block-navigation-item__description, .wp-block-navigation__submenu-icon) {
+	flex: 0 0 auto;
 }
 
 /* Vertical submenu: the editor has no restructured body to group the disclosure

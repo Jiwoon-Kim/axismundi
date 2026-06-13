@@ -27,6 +27,7 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		border: 0 !important;
 		border-radius: 16px;
 		box-shadow: var(--wp--preset--shadow--elevation-2);
+		text-align: start;
 	}
 
 	/* Menu row state layer (the li owns the row, so it owns the layer). */
@@ -38,6 +39,16 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 	}
 	& .wp-block-navigation__submenu-container .wp-block-navigation-item:active {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+	}
+
+	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item:hover {
+		background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+	}
+	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item:focus-within {
+		background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+	}
+	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item:active {
+		background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
 	/* Menu row = the li (M3 menu item): 48dp, 12dp inline padding (effective
@@ -64,6 +75,7 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
 		display: flex;
 		flex-direction: column;
+		align-items: flex-start;
 		justify-content: center;
 		flex-grow: 1;
 		min-block-size: auto;
@@ -71,6 +83,7 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		color: var(--wp--preset--color--on-surface);
 		font-size: var(--wp--preset--font-size--label-large);
 		font-weight: 500;
+		text-align: start;
 	}
 	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
 		outline: 3px solid var(--wp--preset--color--secondary);
@@ -84,6 +97,13 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		margin-block-start: var(--wp--preset--spacing--25);
 		font-size: var(--wp--preset--font-size--body-small);
 		color: var(--wp--preset--color--on-surface-variant);
+		text-align: start;
+	}
+
+	&.has-text-color .wp-block-navigation__submenu-container a.wp-block-navigation-item__content,
+	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item__description,
+	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+		color: inherit !important;
 	}
 
 	/* Nested submenu affordance = M3 Menu trailing icon. The row already owns the
@@ -141,4 +161,26 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 			"opsz" var(--md-icon-opsz, 24);
 	}
 
+}
+
+/* User-authored navigation submenu/overlay text color (block-editor Color >
+ * "Submenu & overlay text") is applied by core to the submenu/overlay container
+ * itself, not to the parent navigation block. Let that container color flow into
+ * menu labels, supporting text and nested submenu affordances. */
+.wp-block-navigation__submenu-container.has-text-color a.wp-block-navigation-item__content,
+.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item__description,
+.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+	color: inherit !important;
+}
+
+.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item:hover {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+
+.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item:focus-within {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+
+.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item:active {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 }

@@ -219,6 +219,26 @@ nav.wp-block-navigation > .wp-block-navigation__container > .wp-block-navigation
 	content: "arrow_drop_up";
 }
 
+/* §3b User-authored navigation text color ------------------------------------
+ *
+ * Block-editor color controls place `.has-text-color` / `color` on the
+ * navigation block itself. When present, the authored color should flow into the
+ * navigation items, direct submenu disclosure icon and responsive overlay text.
+ * Keep the M3 defaults above only for navigation blocks without an authored text
+ * color. */
+
+nav.wp-block-navigation.has-text-color .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item),
+nav.wp-block-navigation.has-text-color .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content,
+nav.wp-block-navigation.has-text-color > .wp-block-navigation__container > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+	color: inherit !important;
+}
+
+.wp-block-navigation__responsive-container.has-text-color .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item),
+.wp-block-navigation__responsive-container.has-text-color a.wp-block-navigation-item__content,
+.wp-block-navigation__responsive-container.has-text-color .wp-block-navigation__submenu-icon {
+	color: inherit !important;
+}
+
 /* §4 Responsive overlay trigger -----------------------------------------------
  *
  * `icon:"menu"` renders a three-line core SVG but does not add a distinct class.

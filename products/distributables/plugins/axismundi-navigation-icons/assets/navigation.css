@@ -183,6 +183,14 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open
 	border-radius: 9999px;
 }
 
+/* Drop core's nested-flyout hover bridge inside open-always. That ::before is an
+ * absolute 0.5em strip that keeps a hover flyout open while the pointer crosses
+ * the gap to it; an always-expanded inline submenu has no flyout, so the strip
+ * only nudges layout (it can push the nav on hover, especially on narrow widths). */
+nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container::before {
+	display: none;
+}
+
 /* ============================================================
  * Disclosure arrow — owned by the plugin once the button is moved into the body.
  * Top-level submenu trigger = arrow_drop_down/up; a nested submenu trigger inside

@@ -5,14 +5,30 @@
  * dialog when a Navigation block's `overlay` attribute is set. Core then adds
  * `disable-default-overlay` to the responsive container and drops its own overlay
  * colors, handing the overlay surface to the theme. We map that surface to the M3
- * Full-screen dialog. The editable template part owns the surface, header/body
- * layout, spacing, typography and colors. CSS only supplies the close block's M3
- * standard icon-button behavior, because the editor cannot express its states.
+ * Full-screen dialog.
+ *
+ * Ownership split:
+ *  - The editable template part owns content, header/body layout, spacing and
+ *    typography (block markup + theme.json presets, editable in the Site Editor).
+ *  - CSS owns only what the editor cannot reach: the modal *container* surface
+ *    (a core-generated scaffold node outside the template part, so its color
+ *    cannot be set in the editor) and the close block's icon-button states.
  *
  * The html.has-modal-open scroll-lock / overscroll handling is a separate layer.
  *
  * Ref: https://m3.material.io/components/dialogs/overview (Full-screen dialog)
  */
+
+/* Modal surface = M3 full-screen dialog container color. Core paints the default
+ * overlay container itself but strips that paint once a custom overlay is used
+ * (.disable-default-overlay), expecting the overlay to own its surface. That
+ * container is core scaffold, not part of the editable template part, so the
+ * template part is left as pure content and the surface is re-supplied here —
+ * otherwise the fixed, full-screen overlay would show the page bleeding through. */
+.wp-block-navigation__responsive-container.disable-default-overlay {
+	background-color: var( --wp--preset--color--surface );
+	color: var( --wp--preset--color--on-surface );
+}
 
 /* Close = M3 standard icon button: 48dp target, 24dp glyph, on-surface, round,
  * with hover / focus / pressed state layers driven by the shared state tokens. */

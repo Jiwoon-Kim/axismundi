@@ -132,6 +132,18 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( >
 	background-color: var( --wp--preset--color--secondary-container );
 	color: var( --wp--preset--color--on-secondary-container );
 }
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):hover > .ax-nav-item-trigger > .ax-nav-item-icon,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):active > .ax-nav-item-trigger > .ax-nav-item-icon,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
 
 /* Popover menu rows are M3 Menu items, not nav-bar / rail vertical items.
  * Cut off the inherited vertical-item centering and let the menu own row state. */
@@ -267,6 +279,15 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open
 	background-color: var( --wp--preset--color--secondary-container );
 	color: var( --wp--preset--color--on-secondary-container );
 }
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
 
 /* Orientation vertical + default item layout: open-always submenu triggers own an
  * inline subtree. Hovering the parent <li> therefore also hovers every child item
@@ -293,6 +314,12 @@ nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navig
 }
 nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger {
 	background-color: var( --wp--preset--color--secondary-container );
+}
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):hover > .ax-nav-item-trigger {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):focus-within > .ax-nav-item-trigger {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
 }
 nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):hover,
 nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):focus-within,
@@ -329,6 +356,12 @@ nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navig
 	border-radius: 100px;
 	background-color: var( --wp--preset--color--secondary-container );
 }
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:hover > a.wp-block-navigation-item__content[aria-current="page"] {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:focus-within > a.wp-block-navigation-item__content[aria-current="page"] {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
 
 /* Global current-page indicator for restructured (icon) items. The restructure
  * nests the item's own link under .ax-nav-item-trigger > .ax-nav-item-body, so the
@@ -341,8 +374,21 @@ nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navig
 nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu):has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) {
 	background-color: var( --wp--preset--color--secondary-container );
 }
+nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu):has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):hover {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu):has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):focus-within {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
+nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu):has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ):active {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), var( --wp--preset--color--secondary-container ) );
+}
 nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-submenu) > .ax-nav-item-trigger > .ax-nav-item-body > a.wp-block-navigation-item__content[aria-current="page"] {
 	color: var( --wp--preset--color--secondary );
+}
+
+nav.wp-block-navigation .ax-nav-item-body > a[aria-current="page"] {
+	font-weight: 700;
 }
 
 /* Core's hover/focus flyout rule gives child submenu containers min-width:200px.

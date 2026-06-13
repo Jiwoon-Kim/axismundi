@@ -222,10 +222,25 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open
 	justify-content: center;
 	text-align: center;
 }
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-trigger {
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var( --wp--preset--spacing--50, 0.25rem );
+	text-align: center;
+}
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-icon {
 	inline-size: 56px;
 	block-size: 32px;
 	border-radius: 9999px;
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body {
+	justify-content: center;
+	max-inline-size: 100%;
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body > .wp-block-navigation-item__content,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body .wp-block-navigation-item__label {
+	text-align: center;
 }
 
 /* Orientation vertical + default item layout: open-always submenu triggers own an

@@ -30,6 +30,19 @@
 	color: var( --wp--preset--color--on-surface );
 }
 
+/* The overlay menu is a vertical flex column centred via align-items. The vertical
+ * nav caps its container at the M3 rail width (inline-size: min(100%, 360px)).
+ * Inside the full-screen overlay that 360dp cap is narrower than a deeply nested
+ * open-always submenu, so the flex line grows past the cap: every item shifts off
+ * the overlay centre and the menu overflows horizontally (mobile gets a scrollbar).
+ * Release the cap so the top-level list spans the full nav width — the wide submenu
+ * then sits inside that width instead of dragging the centring axis. !important
+ * because the rail width rule outranks any overlay-scoped class selector (the nav
+ * renders as a <div>, not <nav>, when several navigation blocks share the page). */
+.ax-nav-overlay__nav > .wp-block-navigation__container {
+	inline-size: 100% !important;
+}
+
 /* Close = M3 standard icon button: 48dp target, 24dp glyph, on-surface, round,
  * with hover / focus / pressed state layers driven by the shared state tokens. */
 .ax-nav-overlay .wp-block-navigation-overlay-close {

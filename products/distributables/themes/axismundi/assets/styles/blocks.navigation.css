@@ -160,6 +160,21 @@ nav.wp-block-navigation.is-vertical {
 		outline: 3px solid var(--wp--preset--color--secondary);
 		outline-offset: 2px;
 	}
+
+	/* Open-always inline submenu = a continuation of the rail: match the rail's row
+	 * gap (not core's block-gap) and the nav's item justification. */
+	& .wp-block-navigation-submenu.open-always > .wp-block-navigation__submenu-container {
+		gap: var(--wp--preset--spacing--75);
+		align-items: var(--navigation-layout-align, flex-start);
+	}
+
+	/* Core lays an open-always submenu trigger out as a column (its inline <ul>
+	 * sits below). The rail baseline's align-items: center then centres the trigger
+	 * content; align it to the nav's justification instead. The :not() mirrors the
+	 * baseline exclusion so this wins on specificity. */
+	& .wp-block-navigation-item.wp-block-navigation-submenu.open-always:not(.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) {
+		align-items: var(--navigation-layout-align, flex-start);
+	}
 }
 
 /* §3 Direct submenu disclosure icon -------------------------------------------

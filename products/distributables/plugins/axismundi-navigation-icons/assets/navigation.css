@@ -183,6 +183,19 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open
 	border-radius: 9999px;
 }
 
+/* Core's hover/focus flyout rule gives child submenu containers min-width:200px.
+ * In open-always those children are inline, not flyouts; keep their width content-
+ * driven so hovering a long nested row (for example audio-placeholder) does not
+ * widen and shift the whole rail. */
+nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navigation-submenu.open-always > .wp-block-navigation__submenu-container,
+nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navigation-submenu.open-always:hover > .wp-block-navigation__submenu-container,
+nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navigation-submenu.open-always:focus-within > .wp-block-navigation__submenu-container {
+	min-width: 0;
+	min-inline-size: 0;
+	width: auto;
+	inline-size: auto;
+}
+
 /* Drop core's nested-flyout hover bridge inside open-always. That ::before is an
  * absolute 0.5em strip that keeps a hover flyout open while the pointer crosses
  * the gap to it; an always-expanded inline submenu has no flyout, so the strip

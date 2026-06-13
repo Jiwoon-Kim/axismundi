@@ -20,10 +20,12 @@
 	var PanelBody = wp.components.PanelBody;
 	var TextControl = wp.components.TextControl;
 	var ToggleControl = wp.components.ToggleControl;
+	var Button = wp.components.Button;
 	var __ = wp.i18n.__;
 
 	var TEXT_BLOCKS = [ 'core/navigation-link', 'core/navigation-submenu' ];
 	var HOME_BLOCK = 'core/home-link';
+	var PAGE_LIST_BLOCK = 'core/page-list';
 
 	// Kept in sync with axismundi_navigation_icons_sanitize() in the PHP plugin:
 	// spaces/hyphens -> underscore, strip the rest, collapse and trim underscores.
@@ -37,18 +39,49 @@
 			.replace( /^_+|_+$/g, '' );
 	}
 
+	function defaultIcon( name, attributes ) {
+		attributes = attributes || {};
+		if (
+			name === 'core/navigation-link' &&
+			attributes.kind === 'post-type' &&
+			attributes.type === 'page'
+		) {
+			return 'pages';
+		}
+		if (
+			name === 'core/navigation-link' &&
+			attributes.kind === 'taxonomy' &&
+			attributes.type === 'category'
+		) {
+			return 'category';
+		}
+		if (
+			name === 'core/navigation-link' &&
+			attributes.kind === 'taxonomy' &&
+			attributes.type === 'post_tag'
+		) {
+			return 'label';
+		}
+		return '';
+	}
+
 	/* 1. Attributes ------------------------------------------------------------ */
 	addFilter(
 		'blocks.registerBlockType',
 		'axismundi/navigation-icons/attributes',
 		function ( settings, name ) {
 			if ( TEXT_BLOCKS.indexOf( name ) !== -1 ) {
+				// No default: undefined = use the semantic default icon, '' = opt out.
 				settings.attributes = Object.assign( {}, settings.attributes, {
-					axismundiNavIcon: { type: 'string', default: '' },
+					axismundiNavIcon: { type: 'string' },
 				} );
 			} else if ( name === HOME_BLOCK ) {
 				settings.attributes = Object.assign( {}, settings.attributes, {
 					axismundiHomeIcon: { type: 'boolean', default: false },
+				} );
+			} else if ( name === PAGE_LIST_BLOCK ) {
+				settings.attributes = Object.assign( {}, settings.attributes, {
+					axismundiPageListIcons: { type: 'boolean', default: false },
 				} );
 			}
 			return settings;
@@ -61,32 +94,66 @@
 			var name = props.name;
 			var isText = TEXT_BLOCKS.indexOf( name ) !== -1;
 			var isHome = name === HOME_BLOCK;
+			var isPageList = name === PAGE_LIST_BLOCK;
 
-			if ( ! props.isSelected || ( ! isText && ! isHome ) ) {
+			if ( ! props.isSelected || ( ! isText && ! isHome && ! isPageList ) ) {
 				return el( BlockEdit, props );
 			}
 
 			var control;
 			if ( isText ) {
-				control = el( TextControl, {
+				var raw = props.attributes.axismundiNavIcon;
+				var def = defaultIcon( name, props.attributes );
+				var isUnset = ( raw === undefined );
+
+				var field = el( TextControl, {
 					label: __( 'Icon name', 'axismundi-navigation-icons' ),
-					help: __(
-						'Material Symbols name, e.g. home, article, category, sell, tag, folder. See fonts.google.com/icons.',
-						'axismundi-navigation-icons'
-					),
-					value: props.attributes.axismundiNavIcon || '',
+					help: def
+						? __( 'Leave empty for no icon, or reset to use the default.', 'axismundi-navigation-icons' )
+						: __( 'Material Symbols name, e.g. article, folder. See fonts.google.com/icons.', 'axismundi-navigation-icons' ),
+					value: isUnset ? '' : raw,
+					// Unset shows the semantic default as a hint; an explicit empty
+					// value (opt-out) reads as "No icon".
+					placeholder: isUnset ? def : __( 'No icon', 'axismundi-navigation-icons' ),
 					onChange: function ( value ) {
 						props.setAttributes( { axismundiNavIcon: value } );
 					},
 					__next40pxDefaultSize: true,
 					__nextHasNoMarginBottom: true,
 				} );
-			} else {
+
+				// Reset to the semantic default by clearing the attribute back to
+				// unset (only meaningful when a default exists and it was overridden).
+				var reset = ( def && ! isUnset )
+					? el(
+						Button,
+						{
+							variant: 'link',
+							onClick: function () {
+								props.setAttributes( { axismundiNavIcon: undefined } );
+							},
+						},
+						__( 'Use default icon', 'axismundi-navigation-icons' )
+					)
+					: null;
+
+				control = el( Fragment, null, field, reset );
+			} else if ( isHome ) {
 				control = el( ToggleControl, {
 					label: __( 'Show home icon', 'axismundi-navigation-icons' ),
 					checked: !! props.attributes.axismundiHomeIcon,
 					onChange: function ( value ) {
 						props.setAttributes( { axismundiHomeIcon: !! value } );
+					},
+					__nextHasNoMarginBottom: true,
+				} );
+			} else {
+				control = el( ToggleControl, {
+					label: __( 'Show item icons', 'axismundi-navigation-icons' ),
+					help: __( 'Add the pages icon to every page in this list.', 'axismundi-navigation-icons' ),
+					checked: !! props.attributes.axismundiPageListIcons,
+					onChange: function ( value ) {
+						props.setAttributes( { axismundiPageListIcons: !! value } );
 					},
 					__nextHasNoMarginBottom: true,
 				} );
@@ -120,7 +187,9 @@
 			var glyph = '';
 
 			if ( TEXT_BLOCKS.indexOf( name ) !== -1 ) {
-				glyph = sanitize( props.attributes.axismundiNavIcon );
+				var raw = props.attributes.axismundiNavIcon;
+				// undefined = semantic default; '' = explicit opt-out; value = value.
+				glyph = ( raw === undefined ) ? defaultIcon( name, props.attributes ) : sanitize( raw );
 			} else if ( name === HOME_BLOCK && props.attributes.axismundiHomeIcon ) {
 				glyph = 'home';
 			}

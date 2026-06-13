@@ -39,6 +39,45 @@ function axismundi_navigation_icons_text_blocks() : array {
 }
 
 /**
+ * Default icon for navigation items whose target semantics are known.
+ *
+ * An explicitly authored axismundiNavIcon always wins. These defaults keep the
+ * page-oriented core variants useful without forcing authors to type the same
+ * ligature repeatedly.
+ *
+ * @param string              $name  Block name.
+ * @param array<string,mixed> $attrs Block attributes.
+ * @return string Sanitised default ligature token, or empty string.
+ */
+function axismundi_navigation_icons_default_icon( string $name, array $attrs ) : string {
+	if (
+		'core/navigation-link' === $name
+		&& 'post-type' === ( $attrs['kind'] ?? '' )
+		&& 'page' === ( $attrs['type'] ?? '' )
+	) {
+		return 'pages';
+	}
+
+	if (
+		'core/navigation-link' === $name
+		&& 'taxonomy' === ( $attrs['kind'] ?? '' )
+		&& 'category' === ( $attrs['type'] ?? '' )
+	) {
+		return 'category';
+	}
+
+	if (
+		'core/navigation-link' === $name
+		&& 'taxonomy' === ( $attrs['kind'] ?? '' )
+		&& 'post_tag' === ( $attrs['type'] ?? '' )
+	) {
+		return 'label';
+	}
+
+	return '';
+}
+
+/**
  * Cache-busting version for a plugin asset (file mtime, like the theme).
  *
  * @param string $relative_path Plugin-relative path.
@@ -77,12 +116,20 @@ function axismundi_navigation_icons_register_attributes( array $args ) : array {
 	}
 
 	if ( in_array( $name, axismundi_navigation_icons_text_blocks(), true ) ) {
+		// No 'default' on purpose: an unset attribute means "use the semantic
+		// default icon", while an explicit empty string means "no icon" (opt-out).
 		$args['attributes']['axismundiNavIcon'] = array(
-			'type'    => 'string',
-			'default' => '',
+			'type' => 'string',
 		);
 	} elseif ( 'core/home-link' === $name ) {
 		$args['attributes']['axismundiHomeIcon'] = array(
+			'type'    => 'boolean',
+			'default' => false,
+		);
+	} elseif ( 'core/page-list' === $name ) {
+		// page-list is dynamic with no per-item authoring, so icons are an
+		// all-or-nothing opt-in on the block (default off).
+		$args['attributes']['axismundiPageListIcons'] = array(
 			'type'    => 'boolean',
 			'default' => false,
 		);
@@ -202,6 +249,43 @@ function axismundi_navigation_icons_restructure( string $html, string $name, boo
 }
 
 /**
+ * Add the page-list default icon to every generated page item.
+ *
+ * core/page-list is a dynamic block that expands into plain page anchors, not
+ * core/navigation-link child blocks, so it needs a small renderer pass of its
+ * own. The markup mirrors axismundi_navigation_icons_restructure(): icon slot
+ * first, then a body slot containing the page link.
+ *
+ * @param string $html Rendered core/page-list HTML.
+ * @return string
+ */
+function axismundi_navigation_icons_restructure_page_list( string $html ) : string {
+	if ( ! str_contains( $html, 'wp-block-pages-list__item' ) || str_contains( $html, 'ax-nav-item-icon' ) ) {
+		return $html;
+	}
+
+	$icon_box = axismundi_navigation_icons_icon_box( 'pages' );
+
+	$result = preg_replace_callback(
+		'/(<li\b[^>]*\bwp-block-pages-list__item\b[^>]*>\s*)(<a\b[^>]*\bwp-block-pages-list__item__link\b[^>]*>)(.*?)(<\/a>)/s',
+		static function ( array $m ) use ( $icon_box ) {
+			return $m[1]
+				. $icon_box
+				. '<span class="ax-nav-item-body">'
+				. $m[2]
+				. '<span class="wp-block-navigation-item__label ax-nav-item-label">'
+				. trim( $m[3] )
+				. '</span>'
+				. $m[4]
+				. '</span>';
+		},
+		$html
+	);
+
+	return null === $result ? $html : $result;
+}
+
+/**
  * Front-end render: restructure the authored navigation items into icon + body.
  *
  * @param string              $block_content Rendered block HTML.
@@ -213,11 +297,25 @@ function axismundi_navigation_icons_render_block( string $block_content, array $
 	$attrs = $block['attrs'] ?? array();
 
 	if ( in_array( $name, axismundi_navigation_icons_text_blocks(), true ) ) {
-		$icon = axismundi_navigation_icons_sanitize( $attrs['axismundiNavIcon'] ?? '' );
+		$raw = $attrs['axismundiNavIcon'] ?? null;
+		if ( null === $raw ) {
+			// Unset → semantic default (page / category / tag links).
+			$icon = axismundi_navigation_icons_default_icon( $name, $attrs );
+		} else {
+			// Explicit value; an empty string is an explicit "no icon" opt-out.
+			$icon = axismundi_navigation_icons_sanitize( $raw );
+		}
 		if ( '' === $icon ) {
 			return $block_content;
 		}
 		return axismundi_navigation_icons_restructure( $block_content, $icon, false );
+	}
+
+	if ( 'core/page-list' === $name ) {
+		if ( empty( $attrs['axismundiPageListIcons'] ) ) {
+			return $block_content;
+		}
+		return axismundi_navigation_icons_restructure_page_list( $block_content );
 	}
 
 	if ( 'core/home-link' === $name ) {
@@ -232,28 +330,20 @@ function axismundi_navigation_icons_render_block( string $block_content, array $
 add_filter( 'render_block', 'axismundi_navigation_icons_render_block', 10, 2 );
 
 /**
- * Register the parent-level item-layout style variations on core/navigation.
+ * Register the parent-level item-layout style variation on core/navigation.
  *
  * orientation (core) decides the navigation family — horizontal = M3 Navigation
  * Bar, vertical = M3 Navigation Rail — and the Axismundi theme owns that baseline
- * item skin (pill, state layer, active indicator). These variations add only the
- * icon/label axis the core block has no concept of:
- *   - item-horizontal: icon beside the label (row)
- *   - item-vertical:   icon above the label (column)
- * No default variation is registered: with no is-style class the block stays
- * core-compatible. Drawer is intentionally absent (M3 Expressive folds it into
- * the expanded navigation rail, which is orientation: vertical here).
+ * item skin (pill, state layer, active indicator). With no is-style class, icons
+ * use the default row layout (icon beside label). The single style variation adds
+ * only the icon/label axis the core block has no concept of:
+ *   - item-vertical: icon above the label (column)
+ * Drawer is intentionally absent (M3 Expressive folds it into the expanded
+ * navigation rail, which is orientation: vertical here).
  *
  * @return void
  */
 function axismundi_navigation_icons_register_styles() : void {
-	register_block_style(
-		'core/navigation',
-		array(
-			'name'  => 'item-horizontal',
-			'label' => __( 'Horizontal item', 'axismundi-navigation-icons' ),
-		)
-	);
 	register_block_style(
 		'core/navigation',
 		array(

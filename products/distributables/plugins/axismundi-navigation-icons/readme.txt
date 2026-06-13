@@ -20,10 +20,14 @@ Symbols ligature name (e.g. `home`, `article`, `category`, `sell`, `tag`,
 Supported blocks:
 
 * Navigation Link (`core/navigation-link`) — also covers the page / post /
-  category / tag / custom link variants, which are the same block.
+  category / tag / custom link variants, which are the same block. Page links
+  default to `pages`, category links to `category`, and tag links to `label`
+  when no custom icon is authored.
 * Submenu (`core/navigation-submenu`).
 * Home Link (`core/home-link`) — a single "Show home icon" toggle, since its
   meaning is fixed.
+* Page List (`core/page-list`) — generated page-list items default to the
+  `pages` Material Symbols icon.
 
 The Axismundi theme keeps the Material Design 3 Navigation Bar / Rail / Menu
 spec, the Material Symbols font (registered in theme.json) and the

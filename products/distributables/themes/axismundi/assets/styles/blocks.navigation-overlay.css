@@ -1,0 +1,78 @@
+/**
+ * core/navigation overlay — M3 Full-screen dialog mapping.
+ *
+ * WordPress 7.0 renders a navigation-overlay template part inside the responsive
+ * dialog when a Navigation block's `overlay` attribute is set. Core then adds
+ * `disable-default-overlay` to the responsive container and drops its own overlay
+ * colors, handing the overlay surface to the theme. We map that surface to the M3
+ * Full-screen dialog: a surface container at shape 0 / elevation 0, a 56dp header
+ * row, and an M3 standard icon button for the close action. Supporting text uses
+ * the M3 body / on-surface-variant role.
+ *
+ * The html.has-modal-open scroll-lock / overscroll handling is a separate layer.
+ *
+ * Ref: https://m3.material.io/components/dialogs/overview (Full-screen dialog)
+ */
+
+/* Overlay root = full-screen dialog container: surface, shape 0, elevation 0.
+ * (surface background + on-surface text are carried by the block color classes.) */
+.ax-nav-overlay {
+	display: flex;
+	flex-direction: column;
+	min-block-size: 100vh;
+}
+
+/* Header = M3 full-screen dialog 56dp header container; holds the close action. */
+.ax-nav-overlay__header {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	min-block-size: 56px;
+	/* 8px inset keeps the 48dp icon-button touch target off the screen edge. */
+	padding-inline: var( --wp--preset--spacing--100 );
+}
+
+/* Body = centred content region: branding + the navigation surface. */
+.ax-nav-overlay__body {
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: center;
+	padding-inline: var( --wp--preset--spacing--300 );
+	padding-block-end: var( --wp--preset--spacing--600 );
+}
+
+/* Close = M3 standard icon button: 48dp target, 24dp glyph, on-surface, round,
+ * with hover / focus / pressed state layers driven by the shared state tokens. */
+.ax-nav-overlay .wp-block-navigation-overlay-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 48px;
+	block-size: 48px;
+	padding: 0;
+	border: 0;
+	border-radius: 9999px;
+	background-color: transparent;
+	color: var( --wp--preset--color--on-surface );
+	cursor: pointer;
+	transition: background-color var( --md-sys-motion-duration-short4, 200ms ) var( --md-sys-motion-easing-standard, ease );
+}
+
+.ax-nav-overlay .wp-block-navigation-overlay-close svg {
+	inline-size: 24px;
+	block-size: 24px;
+	fill: currentColor;
+}
+
+.ax-nav-overlay .wp-block-navigation-overlay-close:hover {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+}
+
+.ax-nav-overlay .wp-block-navigation-overlay-close:focus-visible {
+	outline: none;
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
+}
+
+.ax-nav-overlay .wp-block-navigation-overlay-close:active {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
+}

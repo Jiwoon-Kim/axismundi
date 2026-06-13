@@ -1029,6 +1029,11 @@
 		{
 			"area": "footer",
 			"name": "footer"
+		},
+		{
+			"area": "navigation-overlay",
+			"name": "navigation-overlay",
+			"title": "Navigation Overlay"
 		}
 	]
 }

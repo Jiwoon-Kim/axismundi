@@ -69,10 +69,10 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		border-end-end-radius: 12px;
 	}
 
-	/* Anchor = the label slot. The li owns the row box, so the anchor has no
-	 * padding/height; it grows to a full-row hit target and stacks label +
-	 * optional supporting text. */
-	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
+	/* Content = the label slot. The li owns the row box, so anchors and submenu
+	 * toggle buttons have no padding/height; they grow to a full-row hit target
+	 * and stack label + optional supporting text. */
+	& .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle) {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
@@ -85,7 +85,7 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		font-weight: 500;
 		text-align: start;
 	}
-	& .wp-block-navigation__submenu-container a.wp-block-navigation-item__content:focus-visible {
+	& .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle):focus-visible {
 		outline: 3px solid var(--wp--preset--color--secondary);
 		outline-offset: -3px;
 	}
@@ -100,7 +100,7 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		text-align: start;
 	}
 
-	&.has-text-color .wp-block-navigation__submenu-container a.wp-block-navigation-item__content,
+	&.has-text-color .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle),
 	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item__description,
 	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 		color: inherit !important;
@@ -167,7 +167,7 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
  * "Submenu & overlay text") is applied by core to the submenu/overlay container
  * itself, not to the parent navigation block. Let that container color flow into
  * menu labels, supporting text and nested submenu affordances. */
-.wp-block-navigation__submenu-container.has-text-color a.wp-block-navigation-item__content,
+.wp-block-navigation__submenu-container.has-text-color :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle),
 .wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item__description,
 .wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 	color: inherit !important;

@@ -186,19 +186,23 @@ function axismundi_navigation_icons_icon_box( string $name ) : string {
  * Restructure a navigation item into an icon box + body box at the <li> level.
  *
  *   <li class="…">
- *     <span class="ax-nav-item-icon"><span class="…axismundi-navigation-icon">…</span></span>
- *     <span class="ax-nav-item-body">
- *       <a class="…__content">label (+ description)</a>
- *       <button class="…__submenu-icon">…</button>   (submenu only)
+ *     <span class="ax-nav-item-trigger">
+ *       <span class="ax-nav-item-icon"><span class="…axismundi-navigation-icon">…</span></span>
+ *       <span class="ax-nav-item-body">
+ *         <a class="…__content">label (+ description)</a>
+ *         <button class="…__submenu-icon">…</button>   (submenu only)
+ *       </span>
  *     </span>
  *     <ul class="…__submenu-container">…</ul>         (submenu only)
  *   </li>
  *
- * This is the visual-first structure: the icon is a sibling of the body, so a
- * vertical item lays out cleanly as "icon over (text + disclosure)". The cost is
- * that the icon is no longer inside the <a>, so a small front-end script
- * (assets/view.js) forwards an icon click to the item's link, and the plugin owns
- * the disclosure arrow (the move breaks the theme's direct-child arrow selector).
+ * This is the visual-first structure: the icon and body are grouped in a trigger
+ * wrapper, while the child submenu <ul> stays outside it. That lets open-always
+ * items paint hover/focus/current state on the trigger only, without swallowing
+ * the inline child list. The icon is still outside the <a>, so a small front-end
+ * script (assets/view.js) forwards an icon click to the item's link, and the
+ * plugin owns the disclosure arrow (the move breaks the theme's direct-child
+ * arrow selector).
  *
  * Only the first row is rewritten (the item's own row), never the nested submenu
  * popover rows inside the block content (limit 1 on each pass).
@@ -210,47 +214,60 @@ function axismundi_navigation_icons_icon_box( string $name ) : string {
  */
 function axismundi_navigation_icons_restructure( string $html, string $name, bool $is_home ) : string {
 	$icon_box = axismundi_navigation_icons_icon_box( $name );
+	$parts = preg_split( '/(<ul\b[^>]*\bwp-block-navigation__submenu-container\b[^>]*>)/', $html, 2, PREG_SPLIT_DELIM_CAPTURE );
+	$head = $parts[0] ?? $html;
+	$tail = '';
+	if ( is_array( $parts ) && count( $parts ) > 1 ) {
+		$tail = implode( '', array_slice( $parts, 1 ) );
+	}
 
 	// home-link renders a raw-text label; wrap it so it styles like the
 	// navigation-link label span.
 	if ( $is_home ) {
-		$html = preg_replace_callback(
+		$head = preg_replace_callback(
 			'/(<a\b[^>]*\bwp-block-navigation-item__content\b[^>]*>)(.*?)(<\/a>)/s',
 			static function ( array $m ) {
 				return $m[1] . '<span class="wp-block-navigation-item__label ax-nav-item-label">' . trim( $m[2] ) . '</span>' . $m[3];
 			},
-			$html,
+			$head,
 			1
-		) ?? $html;
+		) ?? $head;
 	}
 
-	// 1) Insert the icon box right after the item's own <li> open tag.
-	$count  = 0;
-	$result = preg_replace(
-		'/(<li\b[^>]*\bwp-block-navigation-item\b[^>]*>)/',
-		'$1' . $icon_box,
-		$html,
+	$wrap = static function ( string $row ) use ( $icon_box ) : string {
+		return '<span class="ax-nav-item-trigger">' . $icon_box . '<span class="ax-nav-item-body">' . $row . '</span></span>';
+	};
+
+	// Rewrite only the row before the item's own submenu <ul>. Nested submenu
+	// rows live in $tail and are handled by their own render_block pass.
+	$count = 0;
+	$head = preg_replace_callback(
+		'/(<a\b[^>]*\bwp-block-navigation-item__content\b[^>]*>.*?<\/a>)(\s*<button\b(?=[^>]*\bwp-block-navigation-submenu__toggle\b).*?<\/button>)?/s',
+		static function ( array $m ) use ( $wrap ) {
+			return $wrap( $m[1] . ( $m[2] ?? '' ) );
+		},
+		$head,
 		1,
 		$count
 	);
-	if ( ! $count || null === $result ) {
+
+	if ( null === $head ) {
 		return $html;
 	}
 
-	// 2) Wrap the content anchor (+ the optional sibling disclosure button) in the
-	// body box.
-	$count  = 0;
-	$result = preg_replace_callback(
-		'/(<a\b[^>]*\bwp-block-navigation-item__content\b[^>]*>.*?<\/a>)(\s*<button\b(?=[^>]*\bwp-block-navigation-submenu__toggle\b).*?<\/button>)?/s',
-		static function ( array $m ) {
-			return '<span class="ax-nav-item-body">' . $m[1] . ( $m[2] ?? '' ) . '</span>';
-		},
-		$result,
-		1,
-		$count
-	);
+	if ( ! $count ) {
+		$head = preg_replace_callback(
+			'/(<button\b(?=[^>]*\bwp-block-navigation-item__content\b)(?=[^>]*\bwp-block-navigation-submenu__toggle\b).*?<\/button>)(\s*<span\b(?=[^>]*\bwp-block-navigation__submenu-icon\b).*?<\/span>)?/s',
+			static function ( array $m ) use ( $wrap ) {
+				return $wrap( $m[1] . ( $m[2] ?? '' ) );
+			},
+			$head,
+			1,
+			$count
+		);
+	}
 
-	return ( $count && null !== $result ) ? $result : $html;
+	return ( $count && null !== $head ) ? $head . $tail : $html;
 }
 
 /**
@@ -284,6 +301,7 @@ function axismundi_navigation_icons_restructure_page_list( string $html ) : stri
 		'/(<li\b[^>]*\bwp-block-pages-list__item\b[^>]*>\s*)(<a\b[^>]*\bwp-block-pages-list__item__link\b[^>]*>)(.*?)(<\/a>)/s',
 		static function ( array $m ) use ( $icon_box ) {
 			return $m[1]
+				. '<span class="ax-nav-item-trigger">'
 				. $icon_box
 				. '<span class="ax-nav-item-body">'
 				. $m[2]
@@ -291,6 +309,7 @@ function axismundi_navigation_icons_restructure_page_list( string $html ) : stri
 				. trim( $m[3] )
 				. '</span>'
 				. $m[4]
+				. '</span>'
 				. '</span>';
 		},
 		$html

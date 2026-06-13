@@ -5,15 +5,19 @@
  * an icon-bearing item at the <li> level:
  *
  *   <li>
- *     <span class="ax-nav-item-icon"><span class="…axismundi-navigation-icon">…</span></span>
- *     <span class="ax-nav-item-body">
- *       <a class="…__content">label</a>
- *       <button class="…__submenu-icon">…</button>   (submenu only)
+ *     <span class="ax-nav-item-trigger">
+ *       <span class="ax-nav-item-icon"><span class="…axismundi-navigation-icon">…</span></span>
+ *       <span class="ax-nav-item-body">
+ *         <a class="…__content">label</a>
+ *         <button class="…__submenu-icon">…</button>   (submenu only)
+ *       </span>
  *     </span>
+ *     <ul class="…__submenu-container">…</ul>         (submenu only)
  *   </li>
  *
  * This is the visual-first structure: a vertical item is "icon over (text +
- * disclosure)". The icon is a sibling of the link (not inside it), so:
+ * disclosure)", with the child submenu list kept outside the trigger. The icon
+ * is still a sibling of the link (not inside it), so:
  *   - assets/view.js forwards an icon click to the item's link, and
  *   - the plugin owns the disclosure arrow, since moving the button out of its
  *     direct-child position breaks the theme's arrow selector.
@@ -23,10 +27,18 @@
  */
 
 /* Default / no style variation: keep the icon + body on a simple row. */
-nav.wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-icon ) {
+nav.wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-trigger ) {
+	display: inline-flex;
+	align-items: center;
+}
+
+.ax-nav-item-trigger {
 	display: inline-flex;
 	align-items: center;
 	gap: var( --wp--preset--spacing--100, 0.5rem ); /* 8px */
+	min-inline-size: 0;
+	border-radius: 9999px;
+	transition: background-color var( --md-sys-motion-duration-short3, 150ms ) var( --md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1) );
 }
 
 .ax-nav-item-icon {
@@ -49,8 +61,15 @@ nav.wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__ite
 /* ============================================================
  * item-vertical — icon above the body (column), centred.
  * ============================================================ */
-nav.wp-block-navigation.is-style-item-vertical :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-icon ) {
+nav.wp-block-navigation.is-style-item-vertical :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-trigger ) {
 	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+
+nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-trigger {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
@@ -87,36 +106,36 @@ nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body .wp-block-navig
  * theme's blocks.navigation.css yields the item-level background under
  * .is-style-item-vertical (gated with :not(.is-style-item-vertical)), so no
  * !important reset is needed here. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-icon ):hover > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-icon ):focus-within > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):active > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-icon ):active > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: var( --wp--preset--color--secondary-container );
 	color: var( --wp--preset--color--on-secondary-container );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: var( --wp--preset--color--secondary-container );
 	color: var( --wp--preset--color--on-secondary-container );
 }
 
 /* Popover menu rows are M3 Menu items, not nav-bar / rail vertical items.
  * Cut off the inherited vertical-item centering and let the menu own row state. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ) {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ) {
 	flex-direction: row;
 	align-items: center;
 	justify-content: flex-start;
@@ -146,9 +165,9 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-con
  * (blocks.navigation-submenu.css), which already own the row state layer and its
  * has-text-color variant — so the plugin no longer paints (and !important-fights)
  * the popover row here. It only keeps the icon slot flat in the menu: */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover > .ax-nav-item-icon,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within > .ax-nav-item-icon,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):active > .ax-nav-item-icon {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon,
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: transparent;
 }
 
@@ -163,7 +182,7 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-con
  * one row and let the inline submenu (flex-basis: 100%) wrap below. item-vertical
  * intentionally keeps the column (icon over label).
  * ============================================================ */
-nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-icon ) {
+nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ) {
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;
@@ -171,7 +190,7 @@ nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-submen
 
 /* item-vertical: the open-always rows are not popover M3 Menu rows, so re-assert
  * the vertical item layout (icon-over-label + 56x32 slot) the popover reset undid. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-icon ) {
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ) {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
@@ -181,6 +200,27 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open
 	inline-size: 56px;
 	block-size: 32px;
 	border-radius: 9999px;
+}
+
+/* Orientation vertical + default item layout: open-always submenu triggers own an
+ * inline subtree. Hovering the parent <li> therefore also hovers every child item
+ * in its nested <ul>. Paint state on the explicit trigger wrapper (icon + body)
+ * only, leaving the child list out. item-vertical keeps its existing icon-slot
+ * state model above. */
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
+}
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger {
+	background-color: var( --wp--preset--color--secondary-container );
+}
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):hover,
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):focus-within,
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):active,
+nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) {
+	background-color: transparent;
 }
 
 /* Core's hover/focus flyout rule gives child submenu containers min-width:200px.
@@ -263,7 +303,7 @@ nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navig
  * hover (it can't be pinned by a click, and never opens on touch). Re-assert core's
  * open state from the <li> via :has when our restructured toggle is expanded.
  * ============================================================ */
-.wp-block-navigation-submenu:has( > .ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"] ) > .wp-block-navigation__submenu-container {
+.wp-block-navigation-submenu:has( > .ax-nav-item-trigger > .ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"] ) > .wp-block-navigation__submenu-container {
 	height: auto;
 	width: auto;
 	overflow: visible;

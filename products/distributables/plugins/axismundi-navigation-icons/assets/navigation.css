@@ -142,20 +142,10 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-con
 	text-align: start;
 }
 
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):active {
-	background-color: color-mix( in srgb, currentColor calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent ) !important;
-}
-
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within {
-	background-color: color-mix( in srgb, currentColor calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent ) !important;
-}
-
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):active {
-	background-color: color-mix( in srgb, currentColor calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent ) !important;
-}
-
+/* Popover row hover/focus/press state is left to the theme's M3 Menu rules
+ * (blocks.navigation-submenu.css), which already own the row state layer and its
+ * has-text-color variant — so the plugin no longer paints (and !important-fights)
+ * the popover row here. It only keeps the icon slot flat in the menu: */
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover > .ax-nav-item-icon,
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within > .ax-nav-item-icon,
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-icon ):active > .ax-nav-item-icon {

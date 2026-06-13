@@ -153,6 +153,37 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-con
 }
 
 /* ============================================================
+ * Submenu Visibility = Always (open-always): an inline, always-expanded submenu,
+ * not a popover menu. Its trigger and rows should follow the nav's item layout,
+ * the same as the editor preview — not the M3 Menu reset above.
+ *
+ * Core lays the open-always <li> out with flex-direction = the nav's layout
+ * direction (column for a vertical nav). That stacks our sibling icon box above
+ * the label even for the default (horizontal) layout. Put the icon + body back on
+ * one row and let the inline submenu (flex-basis: 100%) wrap below. item-vertical
+ * intentionally keeps the column (icon over label).
+ * ============================================================ */
+nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-icon ) {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+/* item-vertical: the open-always rows are not popover M3 Menu rows, so re-assert
+ * the vertical item layout (icon-over-label + 56x32 slot) the popover reset undid. */
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-icon ) {
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-icon {
+	inline-size: 56px;
+	block-size: 32px;
+	border-radius: 9999px;
+}
+
+/* ============================================================
  * Disclosure arrow — owned by the plugin once the button is moved into the body.
  * Top-level submenu trigger = arrow_drop_down/up; a nested submenu trigger inside
  * the popover = arrow_right (the higher-specificity nested rule wins).

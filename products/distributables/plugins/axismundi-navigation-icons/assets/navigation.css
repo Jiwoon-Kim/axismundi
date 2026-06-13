@@ -159,6 +159,10 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-con
 	color: var( --wp--preset--color--on-surface-variant );
 }
 
+nav.wp-block-navigation .wp-block-navigation__submenu-container .ax-nav-item-icon {
+	color: var( --wp--preset--color--on-surface-variant );
+}
+
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .ax-nav-item-body {
 	justify-content: flex-start;
 	max-inline-size: none;

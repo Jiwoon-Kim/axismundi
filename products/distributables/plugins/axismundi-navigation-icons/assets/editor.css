@@ -1,22 +1,30 @@
 /**
  * Axismundi Navigation Icons — editor canvas preview (editor only).
  *
- * The target navigation blocks render via core JS in the editor, so the front-end
- * PHP splice never runs in the canvas. This re-creates the leading glyph with a
- * ::before fed by the --ax-nav-icon custom property (set per-block in editor.js).
+ * The navigation blocks render via core JS in the editor, so the front-end PHP
+ * restructure never runs in the canvas. This is an authoring-level preview, not a
+ * pixel copy of the front: it fakes the leading glyph with a ::before (fed by the
+ * --ax-nav-icon custom property set per block in editor.js) and mirrors the
+ * default row / item-vertical column layout + 56x32 slot. It is never enqueued on
+ * the front, where the real restructured DOM renders instead.
  *
- * The box contract here intentionally mirrors the theme's .material-symbols-
- * outlined: a ::before cannot carry that class, and this file is never enqueued
- * on the front (where the real spliced span inherits the theme contract instead).
+ * Editor block DOM (differs from the front <li>):
+ *   div.wp-block-navigation-item.has-axismundi-nav-icon > a.wp-block-navigation-item__content
+ *   ul.wp-block-page-list.has-axismundi-pagelist-icons > li > a.wp-block-pages-list__item__link
+ * In both, the ::before on the content anchor stands in for the icon slot.
  */
 
-.has-axismundi-nav-icon > .wp-block-navigation-item__content {
+/* ---- Default: glyph beside the label (icon + label row) ---- */
+.has-axismundi-nav-icon > .wp-block-navigation-item__content,
+.has-axismundi-pagelist-icons .wp-block-pages-list__item__link {
 	display: inline-flex;
 	align-items: center;
-	gap: var( --wp--preset--spacing--50, 0.5rem );
+	gap: var( --wp--preset--spacing--100, 0.5rem ); /* 8px — matches the front default row */
 }
 
-.has-axismundi-nav-icon > .wp-block-navigation-item__content::before {
+/* Shared glyph box (mirrors the theme .material-symbols-outlined contract). */
+.has-axismundi-nav-icon > .wp-block-navigation-item__content::before,
+.has-axismundi-pagelist-icons .wp-block-pages-list__item__link::before {
 	content: var( --ax-nav-icon );
 	font-family: "Material Symbols Outlined", sans-serif;
 	font-weight: normal;
@@ -38,4 +46,25 @@
 	-webkit-font-feature-settings: "liga";
 	font-feature-settings: "liga";
 	-webkit-font-smoothing: antialiased;
+}
+
+/* page-list items have no per-block custom property; their icon is the fixed
+ * `pages` default. */
+.has-axismundi-pagelist-icons .wp-block-pages-list__item__link::before {
+	content: "pages";
+}
+
+/* ---- item-vertical: icon above the label (column), 56x32 slot ---- */
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon > .wp-block-navigation-item__content,
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-pagelist-icons .wp-block-pages-list__item__link {
+	flex-direction: column;
+	justify-content: center;
+	gap: var( --wp--preset--spacing--50, 0.25rem ); /* 4px */
+	text-align: center;
+}
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon > .wp-block-navigation-item__content::before,
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-pagelist-icons .wp-block-pages-list__item__link::before {
+	inline-size: 56px;
+	block-size: 32px;
+	border-radius: 9999px;
 }

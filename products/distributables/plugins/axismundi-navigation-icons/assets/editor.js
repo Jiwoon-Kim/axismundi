@@ -184,6 +184,17 @@
 	var withPreview = createHigherOrderComponent( function ( BlockListBlock ) {
 		return function ( props ) {
 			var name = props.name;
+
+			// page-list: opt-in class only (its items share one fixed `pages` icon,
+			// styled by editor.css — no per-block custom property).
+			if ( name === PAGE_LIST_BLOCK ) {
+				if ( ! props.attributes.axismundiPageListIcons ) {
+					return el( BlockListBlock, props );
+				}
+				var plClass = ( props.className ? props.className + ' ' : '' ) + 'has-axismundi-pagelist-icons';
+				return el( BlockListBlock, Object.assign( {}, props, { className: plClass } ) );
+			}
+
 			var glyph = '';
 
 			if ( TEXT_BLOCKS.indexOf( name ) !== -1 ) {

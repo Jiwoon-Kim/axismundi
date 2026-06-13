@@ -83,20 +83,10 @@ nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body .wp-block-navig
 	text-align: center;
 }
 
-/* item-vertical moves the active / state indicator from the whole item to the
- * 56x32 icon slot. The theme baseline colours the <li> with high specificity, so
- * neutralise it (!important, interim until the theme nav CSS is style-aware) and
- * paint only the slot. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-icon ):hover,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):focus-within,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-icon ):focus-within,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):active,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-icon ):active,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-body > a[aria-current="page"] ),
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-body > a[aria-current="page"] ) {
-	background-color: transparent !important;
-}
+/* item-vertical paints the active / state indicator on the 56x32 icon slot. The
+ * theme's blocks.navigation.css yields the item-level background under
+ * .is-style-item-vertical (gated with :not(.is-style-item-vertical)), so no
+ * !important reset is needed here. */
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-icon ):hover > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }

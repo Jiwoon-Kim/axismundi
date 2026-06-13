@@ -63,19 +63,21 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.open-always)):not(:has(.wp-b
 	}
 
 	/* Item row state layer — on-secondary-container mixed over transparent at the shared M3
-	 * state opacities. */
-	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
+	 * state opacities. Gated with :not(.is-style-item-vertical): the axismundi-
+	 * navigation-icons plugin's vertical-item style moves the state/active indicator
+	 * onto its 56x32 icon slot, so the theme yields the item-level background there. */
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active {
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
 	/* Current page = M3 navigation-bar active indicator. */
-	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
 	}
 	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
@@ -132,17 +134,17 @@ nav.wp-block-navigation.is-vertical {
 		gap: var(--wp--preset--spacing--100);
 	}
 
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):hover {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):focus-within {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):active {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
-	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
 	}
 	& .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {

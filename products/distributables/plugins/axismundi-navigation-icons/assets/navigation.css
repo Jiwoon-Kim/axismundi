@@ -249,7 +249,8 @@ nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navig
  * Top-level submenu trigger = arrow_drop_down/up; a nested submenu trigger inside
  * the popover = arrow_right (the higher-specificity nested rule wins).
  * ============================================================ */
-.ax-nav-item-body > .wp-block-navigation-submenu__toggle {
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content),
+.ax-nav-item-body > .wp-block-navigation__submenu-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -259,10 +260,21 @@ nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navig
 	padding: 0;
 	color: currentColor;
 }
-.ax-nav-item-body > .wp-block-navigation-submenu__toggle svg {
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle.wp-block-navigation-item__content {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var( --wp--preset--spacing--50, 0.25rem );
+	margin: 0;
+	padding: 0;
+	color: currentColor;
+}
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content) svg,
+.ax-nav-item-body > .wp-block-navigation__submenu-icon svg {
 	display: none;
 }
-.ax-nav-item-body > .wp-block-navigation-submenu__toggle::before {
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content)::before,
+.ax-nav-item-body > .wp-block-navigation__submenu-icon::before {
 	content: "arrow_drop_down";
 	font-family: "Material Symbols Outlined", sans-serif;
 	font-weight: normal;
@@ -283,13 +295,16 @@ nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navig
 	font-feature-settings: "liga";
 	-webkit-font-smoothing: antialiased;
 }
-.ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"]::before {
+.ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content)[aria-expanded="true"]::before,
+.ax-nav-item-body:has( > .wp-block-navigation-submenu__toggle[aria-expanded="true"] ) > .wp-block-navigation__submenu-icon::before {
 	content: "arrow_drop_up";
 }
 
 /* Nested submenu (inside the popover) = a flyout indicator, not a drop. */
-.wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle::before,
-.wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle[aria-expanded="true"]::before {
+.wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content)::before,
+.wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content)[aria-expanded="true"]::before,
+.wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation__submenu-icon::before,
+.wp-block-navigation__submenu-container .ax-nav-item-body:has( > .wp-block-navigation-submenu__toggle[aria-expanded="true"] ) > .wp-block-navigation__submenu-icon::before {
 	content: "arrow_right";
 }
 

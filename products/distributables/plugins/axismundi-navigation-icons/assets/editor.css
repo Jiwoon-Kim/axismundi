@@ -69,12 +69,62 @@ nav.wp-block-navigation.is-style-item-vertical .has-axismundi-pagelist-icons .wp
 	border-radius: 9999px;
 }
 
+/* Submenu blocks are buttons in the editor. Keep the preview equivalent to the
+ * front structure: leading icon above, then label + disclosure on one row. */
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu {
+	display: inline-grid;
+	grid-template-columns: auto auto;
+	align-items: center;
+	justify-content: center;
+	column-gap: var( --wp--preset--spacing--50, 0.25rem );
+	row-gap: var( --wp--preset--spacing--50, 0.25rem );
+	text-align: center;
+}
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu::before {
+	content: var( --ax-nav-icon );
+	grid-column: 1 / -1;
+	justify-self: center;
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	font-size: var( --md-icon-size, 24px );
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 56px;
+	block-size: 32px;
+	border-radius: 9999px;
+	overflow: hidden;
+	white-space: nowrap;
+	word-wrap: normal;
+	direction: ltr;
+	-webkit-font-feature-settings: "liga";
+	font-feature-settings: "liga";
+	-webkit-font-smoothing: antialiased;
+}
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content {
+	grid-column: 1;
+	flex-direction: row;
+	gap: 0;
+	text-align: center;
+}
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation-item__content::before {
+	content: none;
+	display: none;
+}
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+	grid-column: 2;
+}
+
 /* Vertical submenu: the editor has no restructured body to group the disclosure
  * with the label, so the disclosure button (a sibling of the content) would sit to
  * the right. Column the submenu block so it drops below the content, approximating
  * the front's icon-over-(label + disclosure). The popover is absolutely positioned,
  * so this leaves it untouched. */
-nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu {
+nav.wp-block-navigation.is-style-item-vertical .has-axismundi-nav-icon.wp-block-navigation-submenu:not(:has( > .wp-block-navigation__submenu-icon )) {
 	flex-direction: column;
 	align-items: center;
 }

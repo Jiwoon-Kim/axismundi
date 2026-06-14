@@ -81,8 +81,10 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		min-block-size: auto;
 		padding: 0;
 		color: var(--wp--preset--color--on-surface);
+		/* font-size is a deliberate M3 Menu override (label-large) of the parent bar's
+		 * label-medium; font-weight (500) now inherits from the theme.json
+		 * core/navigation base, so it is not restated here. */
 		font-size: var(--wp--preset--font-size--label-large);
-		font-weight: 500;
 		text-align: start;
 	}
 	& .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle):focus-visible {

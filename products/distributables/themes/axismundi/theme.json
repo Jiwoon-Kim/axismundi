@@ -1018,6 +1018,18 @@
 				"typography": {
 					"fontSize": "var:preset|font-size|title-large"
 				}
+			},
+			"core/navigation": {
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				},
+				"typography": {
+					"fontFamily": "var:preset|font-family|roboto-flex",
+					"fontSize": "var:preset|font-size|label-large",
+					"fontWeight": "500",
+					"lineHeight": "1.429",
+					"letterSpacing": "0.1px"
+				}
 			}
 		}
 	},

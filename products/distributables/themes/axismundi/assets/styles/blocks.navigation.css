@@ -37,6 +37,22 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__respons
 	background-color: var(--wp--preset--color--surface-container);
 	box-shadow: var(--wp--preset--shadow--elevation-3);
 
+	/* M3 Navigation Bar label = label-medium. The base item typography / colour now
+	 * lives in theme.json (styles.blocks.core/navigation, label-large); override only
+	 * the horizontal-bar metrics here so they cascade to every item (incl. page-list)
+	 * while a block-level fontSize override keeps winning. theme.json targets
+	 * :where(.wp-block-navigation), a class WP also puts on the inner container (and
+	 * page-list) <ul>, so the override has to reach those nodes too — items inherit. */
+	font-size: var(--wp--preset--font-size--label-medium);
+	line-height: 1.333;
+	letter-spacing: 0.5px;
+
+	& .wp-block-navigation {
+		font-size: var(--wp--preset--font-size--label-medium);
+		line-height: 1.333;
+		letter-spacing: 0.5px;
+	}
+
 	& .wp-block-navigation__container {
 		gap: 0;
 	}
@@ -50,11 +66,6 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__respons
 		min-block-size: 40px;
 		padding-inline: var(--wp--preset--spacing--200);
 		border-radius: 100px;
-		color: var(--wp--preset--color--on-surface-variant);
-		font-size: var(--wp--preset--font-size--label-medium);
-		font-weight: 500;
-		line-height: 1.333;
-		letter-spacing: 0.5px;
 		gap: var(--wp--preset--spacing--50);
 	}
 
@@ -133,11 +144,6 @@ nav.wp-block-navigation.is-vertical,
 		min-block-size: 64px;
 		padding-inline: var(--wp--preset--spacing--200);
 		border-radius: 100px;
-		color: var(--wp--preset--color--on-surface-variant);
-		font-size: var(--wp--preset--font-size--label-large);
-		font-weight: 500;
-		line-height: 1.429;
-		letter-spacing: 0.1px;
 		gap: var(--wp--preset--spacing--100);
 	}
 

@@ -281,9 +281,11 @@ add_action( 'enqueue_block_editor_assets', 'axismundi_enqueue_editor_ui_assets' 
  * `enqueue_embed_scripts` fires only for the /embed/ template (our post rendered as
  * a card when embedded on another site, or self-embedded). Depend on core's
  * `wp-embed-template` so the card colours print AFTER its inline CSS and win on
- * equal specificity — no !important. The skin is self-contained (var + WP-core /
- * M3-baseline fallback); no token CSS or @font-face is loaded into the iframe, and
- * the markup stays core's (no embed-content.php override needed for a colour skin).
+ * equal specificity — no !important. The iframe is an isolated document (theme
+ * tokens / switcher state do not cross it), so the skin is self-contained LITERAL
+ * colour keyed only on the OS `prefers-color-scheme`; no token CSS or @font-face is
+ * loaded into the iframe, and the markup stays core's (no embed-content.php override
+ * needed for a colour skin).
  */
 function axismundi_enqueue_embed_styles() : void {
 	$uri = axismundi_asset_uri( 'assets/styles/embed.css' );

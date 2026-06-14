@@ -299,3 +299,22 @@ function axismundi_enqueue_embed_styles() : void {
 	}
 }
 add_action( 'enqueue_embed_scripts', 'axismundi_enqueue_embed_styles' );
+
+/**
+ * Widen the default oEmbed card from core's 500px fallback to 600px.
+ *
+ * Block themes don't set the legacy $content_width global, so wp_embed_defaults()
+ * falls back to 500px — which is the width WordPress bakes into a self/WP-embed
+ * iframe. Bump it to 600 (matching the editor preview). This sets the oEmbed
+ * maxwidth for every provider, but only WP-family embeds render at this fixed
+ * width: responsive providers (YouTube, Spotify) stay full-width, and others keep
+ * their own preferred width within the cap.
+ *
+ * @param array<string,int> $defaults Default embed width/height.
+ * @return array<string,int>
+ */
+function axismundi_embed_defaults( array $defaults ) : array {
+	$defaults['width'] = 600;
+	return $defaults;
+}
+add_filter( 'embed_defaults', 'axismundi_embed_defaults' );

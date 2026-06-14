@@ -55,28 +55,40 @@ function axismundi_navigation_icons_text_blocks() : array {
  * @return string Sanitised default ligature token, or empty string.
  */
 function axismundi_navigation_icons_default_icon( string $name, array $attrs ) : string {
-	if (
-		'core/navigation-link' === $name
-		&& 'post-type' === ( $attrs['kind'] ?? '' )
-		&& 'page' === ( $attrs['type'] ?? '' )
-	) {
+	// A submenu groups links; default it to the page-list glyph regardless of kind.
+	if ( 'core/navigation-submenu' === $name ) {
 		return 'pages';
 	}
 
-	if (
-		'core/navigation-link' === $name
-		&& 'taxonomy' === ( $attrs['kind'] ?? '' )
-		&& 'category' === ( $attrs['type'] ?? '' )
-	) {
-		return 'category';
+	if ( 'core/navigation-link' !== $name ) {
+		return '';
 	}
 
-	if (
-		'core/navigation-link' === $name
-		&& 'taxonomy' === ( $attrs['kind'] ?? '' )
-		&& 'post_tag' === ( $attrs['type'] ?? '' )
-	) {
-		return 'label';
+	$kind = $attrs['kind'] ?? '';
+	$type = $attrs['type'] ?? '';
+
+	if ( 'post-type' === $kind ) {
+		if ( 'page' === $type ) {
+			return 'pages';
+		}
+		if ( 'post' === $type ) {
+			return 'article';
+		}
+	}
+
+	if ( 'taxonomy' === $kind ) {
+		if ( 'category' === $type ) {
+			return 'category';
+		}
+		if ( 'post_tag' === $type ) {
+			return 'label';
+		}
+	}
+
+	// Custom URL link. `link_2` (underscore) is the Material Symbols ligature; the
+	// hyphenated form some authors type does not resolve.
+	if ( 'custom' === $kind ) {
+		return 'link_2';
 	}
 
 	return '';

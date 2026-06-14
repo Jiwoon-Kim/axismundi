@@ -39,28 +39,29 @@
 			.replace( /^_+|_+$/g, '' );
 	}
 
+	// Kept in sync with axismundi_navigation_icons_default_icon() in the PHP plugin.
 	function defaultIcon( name, attributes ) {
 		attributes = attributes || {};
-		if (
-			name === 'core/navigation-link' &&
-			attributes.kind === 'post-type' &&
-			attributes.type === 'page'
-		) {
+		// A submenu groups links; default it to the page-list glyph regardless of kind.
+		if ( name === 'core/navigation-submenu' ) {
 			return 'pages';
 		}
-		if (
-			name === 'core/navigation-link' &&
-			attributes.kind === 'taxonomy' &&
-			attributes.type === 'category'
-		) {
-			return 'category';
+		if ( name !== 'core/navigation-link' ) {
+			return '';
 		}
-		if (
-			name === 'core/navigation-link' &&
-			attributes.kind === 'taxonomy' &&
-			attributes.type === 'post_tag'
-		) {
-			return 'label';
+		var kind = attributes.kind;
+		var type = attributes.type;
+		if ( kind === 'post-type' ) {
+			if ( type === 'page' ) { return 'pages'; }
+			if ( type === 'post' ) { return 'article'; }
+		}
+		if ( kind === 'taxonomy' ) {
+			if ( type === 'category' ) { return 'category'; }
+			if ( type === 'post_tag' ) { return 'label'; }
+		}
+		// Custom URL link. `link_2` (underscore) is the Material Symbols ligature.
+		if ( kind === 'custom' ) {
+			return 'link_2';
 		}
 		return '';
 	}

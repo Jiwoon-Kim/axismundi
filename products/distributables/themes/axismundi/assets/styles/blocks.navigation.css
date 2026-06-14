@@ -104,7 +104,8 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__respons
 	}
 	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
 		color: var(--wp--preset--color--secondary);
-		font-weight: 700;
+		font-weight: 500;
+		font-variation-settings: "GRAD" 125;
 	}
 
 	/* Keyboard focus ring — M3 focus indicator (secondary, 3px) offset off the pill. */
@@ -182,7 +183,8 @@ nav.wp-block-navigation.is-vertical,
 	}
 	& .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
 		color: var(--wp--preset--color--secondary);
-		font-weight: 700;
+		font-weight: 500;
+		font-variation-settings: "GRAD" 125;
 	}
 
 	& .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content:focus-visible {
@@ -276,7 +278,8 @@ nav.wp-block-navigation.is-vertical,
 
 :where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu.open-always):not(:has(> .ax-nav-item-trigger)) > a[aria-current="page"] {
 	color: var(--wp--preset--color--secondary);
-	font-weight: 700;
+	font-weight: 500;
+	font-variation-settings: "GRAD" 125;
 }
 
 /* §3 Direct submenu disclosure icon -------------------------------------------
@@ -352,7 +355,8 @@ nav.wp-block-navigation > .wp-block-navigation__container > .wp-block-navigation
 
 nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu) > .ax-nav-item-trigger > .ax-nav-item-body > a.wp-block-navigation-item__content[aria-current="page"] {
 	color: var(--wp--preset--color--secondary);
-	font-weight: 700;
+	font-weight: 500;
+	font-variation-settings: "GRAD" 125;
 }
 
 /* §3c User-authored navigation text color ------------------------------------

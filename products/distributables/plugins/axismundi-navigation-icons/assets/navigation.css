@@ -378,7 +378,6 @@ nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navig
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: var( --wp--preset--spacing--50, 0.25rem );
 	margin: 0;
 	padding: 0;
 	color: currentColor;

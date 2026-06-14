@@ -90,16 +90,16 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__respons
 	}
 
 	/* Current page = M3 navigation-bar active indicator. */
-	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]) {
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]):hover {
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):hover {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]):focus-within {
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):focus-within {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"]):active {
+	&:not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):active {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
 	}
 	& .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
@@ -168,16 +168,16 @@ nav.wp-block-navigation.is-vertical,
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]) {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]) {
 		background-color: var(--wp--preset--color--secondary-container);
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]):hover {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):hover {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]):focus-within {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):focus-within {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
 	}
-	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"]):active {
+	&:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):active {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
 	}
 	& .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a[aria-current="page"] {
@@ -343,37 +343,12 @@ nav.wp-block-navigation > .wp-block-navigation__container > .wp-block-navigation
 	content: "arrow_drop_up";
 }
 
-/* §3b Current page bridge for icon navigation items ---------------------------
+/* §3b Current page text bridge for icon navigation items ----------------------
  *
  * The axismundi-navigation-icons plugin restructures icon items as
- * `.ax-nav-item-trigger > .ax-nav-item-body > a`, so the theme's native
- * `:has(> a[aria-current])` selector cannot see their current link. Keep the
- * current/hover indicator in the theme cascade because this file loads after the
- * plugin CSS and owns the baseline navigation state layers. */
-
-nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open)):not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]),
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]),
-.ax-nav-overlay__nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]) {
-	background-color: var(--wp--preset--color--secondary-container);
-}
-
-nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open)):not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):hover,
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):hover,
-.ax-nav-overlay__nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):hover {
-	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-}
-
-nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open)):not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):focus-within,
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):focus-within,
-.ax-nav-overlay__nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):focus-within {
-	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-}
-
-nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open)):not(.is-style-item-vertical) .wp-block-navigation__container .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):active,
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):active,
-.ax-nav-overlay__nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu):has(> .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):active {
-	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
-}
+ * `.ax-nav-item-trigger > .ax-nav-item-body > a`. Current item backgrounds are
+ * folded into the native §1/§2 :has() rules; this bridge only styles the nested
+ * anchor text itself. */
 
 nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu) > .ax-nav-item-trigger > .ax-nav-item-body > a.wp-block-navigation-item__content[aria-current="page"] {
 	color: var(--wp--preset--color--secondary);

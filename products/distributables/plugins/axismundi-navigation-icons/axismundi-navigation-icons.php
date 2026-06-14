@@ -129,14 +129,16 @@ function axismundi_navigation_icons_register_attributes( array $args ) : array {
 	} elseif ( 'core/home-link' === $name ) {
 		$args['attributes']['axismundiHomeIcon'] = array(
 			'type'    => 'boolean',
-			'default' => false,
+			'default' => true,
 		);
 	} elseif ( 'core/page-list' === $name ) {
 		// page-list is dynamic with no per-item authoring, so icons are an
-		// all-or-nothing opt-in on the block (default off).
+		// all-or-nothing control on the block. It defaults on so a ref-less
+		// Navigation block (home-link + page-list) has icons after a header reset;
+		// authors can still turn it off explicitly.
 		$args['attributes']['axismundiPageListIcons'] = array(
 			'type'    => 'boolean',
-			'default' => false,
+			'default' => true,
 		);
 	}
 
@@ -345,14 +347,14 @@ function axismundi_navigation_icons_render_block( string $block_content, array $
 	}
 
 	if ( 'core/page-list' === $name ) {
-		if ( empty( $attrs['axismundiPageListIcons'] ) ) {
+		if ( array_key_exists( 'axismundiPageListIcons', $attrs ) && false === $attrs['axismundiPageListIcons'] ) {
 			return $block_content;
 		}
 		return axismundi_navigation_icons_restructure_page_list( $block_content );
 	}
 
 	if ( 'core/home-link' === $name ) {
-		if ( empty( $attrs['axismundiHomeIcon'] ) ) {
+		if ( array_key_exists( 'axismundiHomeIcon', $attrs ) && false === $attrs['axismundiHomeIcon'] ) {
 			return $block_content;
 		}
 		return axismundi_navigation_icons_restructure( $block_content, 'home', true );

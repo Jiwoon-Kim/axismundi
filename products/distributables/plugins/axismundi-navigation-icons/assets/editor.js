@@ -77,11 +77,11 @@
 				} );
 			} else if ( name === HOME_BLOCK ) {
 				settings.attributes = Object.assign( {}, settings.attributes, {
-					axismundiHomeIcon: { type: 'boolean', default: false },
+					axismundiHomeIcon: { type: 'boolean', default: true },
 				} );
 			} else if ( name === PAGE_LIST_BLOCK ) {
 				settings.attributes = Object.assign( {}, settings.attributes, {
-					axismundiPageListIcons: { type: 'boolean', default: false },
+					axismundiPageListIcons: { type: 'boolean', default: true },
 				} );
 			}
 			return settings;
@@ -141,7 +141,7 @@
 			} else if ( isHome ) {
 				control = el( ToggleControl, {
 					label: __( 'Show home icon', 'axismundi-navigation-icons' ),
-					checked: !! props.attributes.axismundiHomeIcon,
+					checked: props.attributes.axismundiHomeIcon !== false,
 					onChange: function ( value ) {
 						props.setAttributes( { axismundiHomeIcon: !! value } );
 					},
@@ -151,7 +151,7 @@
 				control = el( ToggleControl, {
 					label: __( 'Show item icons', 'axismundi-navigation-icons' ),
 					help: __( 'Add the pages icon to every page in this list when it is placed inside a Navigation block.', 'axismundi-navigation-icons' ),
-					checked: !! props.attributes.axismundiPageListIcons,
+					checked: props.attributes.axismundiPageListIcons !== false,
 					onChange: function ( value ) {
 						props.setAttributes( { axismundiPageListIcons: !! value } );
 					},
@@ -188,7 +188,7 @@
 			// page-list: opt-in class only (its items share one fixed `pages` icon,
 			// styled by editor.css — no per-block custom property).
 			if ( name === PAGE_LIST_BLOCK ) {
-				if ( ! props.attributes.axismundiPageListIcons ) {
+				if ( props.attributes.axismundiPageListIcons === false ) {
 					return el( BlockListBlock, props );
 				}
 				var plClass = ( props.className ? props.className + ' ' : '' ) + 'has-axismundi-pagelist-icons';
@@ -201,7 +201,7 @@
 				var raw = props.attributes.axismundiNavIcon;
 				// undefined = semantic default; '' = explicit opt-out; value = value.
 				glyph = ( raw === undefined ) ? defaultIcon( name, props.attributes ) : sanitize( raw );
-			} else if ( name === HOME_BLOCK && props.attributes.axismundiHomeIcon ) {
+			} else if ( name === HOME_BLOCK && props.attributes.axismundiHomeIcon !== false ) {
 				glyph = 'home';
 			}
 

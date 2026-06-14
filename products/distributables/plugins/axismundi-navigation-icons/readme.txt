@@ -24,11 +24,11 @@ Supported blocks:
   default to `pages`, category links to `category`, and tag links to `label`
   when no custom icon is authored.
 * Submenu (`core/navigation-submenu`).
-* Home Link (`core/home-link`) — a single "Show home icon" toggle, since its
-  meaning is fixed.
-* Page List (`core/page-list`) — an opt-in "Show item icons" toggle (off by
-  default) adds the `pages` icon to generated page items, when the list is placed
-  inside a Navigation block.
+* Home Link (`core/home-link`) — shows the `home` icon by default, with a
+  "Show home icon" toggle to opt out.
+* Page List (`core/page-list`) — shows the `pages` icon by default for generated
+  page items when the list is placed inside a Navigation block, with a "Show item
+  icons" toggle to opt out.
 
 A `core/navigation` style variation, "Vertical item", stacks the icon above the
 label (M3 Navigation Bar / Rail vertical item) and moves the active indicator
@@ -65,8 +65,8 @@ Browse fonts.google.com/icons and use the lowercase name, e.g. `shopping_cart`.
 = 0.1.0 =
 
 * "Navigation Icon" sidebar control for Navigation Link and Submenu (type a
-  Material Symbols name), a "Show home icon" toggle for Home Link, and a "Show
-  item icons" toggle for Page List.
+  Material Symbols name), default-on Home Link and Page List icons, and toggles
+  to opt out of those fixed defaults.
 * Page, category and tag links get a semantic default icon (pages / category /
   label) when none is authored; an explicit empty value opts out, with a reset
   to the default.

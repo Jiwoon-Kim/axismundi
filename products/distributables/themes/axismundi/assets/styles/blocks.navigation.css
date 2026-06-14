@@ -206,6 +206,51 @@ nav.wp-block-navigation.is-vertical,
 	}
 }
 
+/* §2b Vertical justification and no-plugin item-vertical fallback -------------
+ *
+ * The axismundi-navigation-icons plugin registers `.is-style-item-vertical` and,
+ * when active, moves hover/current state to an icon slot. If the plugin is off
+ * (or an individual item has no icon), no `.ax-nav-item-trigger` exists, so the
+ * theme must paint the normal item state again. Also keep multiline vertical nav
+ * labels aligned with the block's "change items justification" control. */
+
+:where(nav, div).wp-block-navigation.is-vertical.items-justified-center .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content,
+:where(nav, div).wp-block-navigation.is-vertical .wp-block-navigation__container.items-justified-center .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
+	justify-content: center;
+	text-align: center;
+}
+
+:where(nav, div).wp-block-navigation.is-vertical.items-justified-right .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content,
+:where(nav, div).wp-block-navigation.is-vertical .wp-block-navigation__container.items-justified-right .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
+	justify-content: flex-end;
+	text-align: right;
+}
+
+:where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(:has(> .ax-nav-item-trigger)):hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
+}
+
+:where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(:has(> .ax-nav-item-trigger)):focus-within {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
+}
+
+:where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(:has(> .ax-nav-item-trigger)):active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
+}
+
+:where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(:has(> .ax-nav-item-trigger)):has(> a[aria-current="page"]) {
+	background-color: var(--wp--preset--color--secondary-container);
+}
+
+:where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(:has(> .ax-nav-item-trigger)):has(> a[aria-current="page"]):hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));
+}
+
+:where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(:has(> .ax-nav-item-trigger)) > a[aria-current="page"] {
+	color: var(--wp--preset--color--secondary);
+	font-weight: 700;
+}
+
 /* §3 Direct submenu disclosure icon -------------------------------------------
  *
  * WordPress renders submenu disclosure as an SVG icon next to the trigger. For

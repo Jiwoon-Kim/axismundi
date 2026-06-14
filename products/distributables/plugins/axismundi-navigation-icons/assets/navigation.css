@@ -106,29 +106,19 @@ nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body .wp-block-navig
  * theme's blocks.navigation.css yields the item-level background under
  * .is-style-item-vertical (gated with :not(.is-style-item-vertical)), so no
  * !important reset is needed here. */
+/* These also cover core/page-list items: WP gives each .wp-block-pages-list__item
+ * the .wp-block-navigation-item class as well, so the navigation-item selectors
+ * already match those rows — no separate .wp-block-pages-list__item rules needed. */
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
-}
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
-}
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
-}
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
-	background-color: var( --wp--preset--color--secondary-container );
-	color: var( --wp--preset--color--on-secondary-container );
-}
-nav.wp-block-navigation.is-style-item-vertical .wp-block-pages-list__item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: var( --wp--preset--color--secondary-container );
 	color: var( --wp--preset--color--on-secondary-container );
 }

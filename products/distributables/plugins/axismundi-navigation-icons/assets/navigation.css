@@ -185,6 +185,25 @@ nav.wp-block-navigation .wp-block-navigation__submenu-container .ax-nav-item-bod
 	text-align: start;
 }
 
+/* Rebuilt submenu rows move the disclosure button into .ax-nav-item-body, so it
+ * no longer inherits the theme's direct-child popover color rules. Re-bridge the
+ * M3 Menu tokens here: body/labels use on-surface, trailing affordances use
+ * on-surface-variant, and authored submenu text colors can still inherit. */
+nav.wp-block-navigation .wp-block-navigation__submenu-container .ax-nav-item-body {
+	color: var( --wp--preset--color--on-surface );
+}
+
+nav.wp-block-navigation .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content),
+nav.wp-block-navigation .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation__submenu-icon {
+	color: var( --wp--preset--color--on-surface-variant );
+}
+
+nav.wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body,
+nav.wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content),
+nav.wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body > .wp-block-navigation__submenu-icon {
+	color: inherit;
+}
+
 /* Popover row hover/focus/press state is left to the theme's M3 Menu rules
  * (blocks.navigation-submenu.css), which already own the row state layer and its
  * has-text-color variant — so the plugin no longer paints (and !important-fights)

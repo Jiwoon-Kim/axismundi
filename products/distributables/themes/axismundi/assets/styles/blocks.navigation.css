@@ -359,6 +359,16 @@ nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-item:n
 	font-variation-settings: "GRAD" 125;
 }
 
+/* item-vertical restructured (icon) items carry the M3 active indicator on the icon
+ * slot (plugin), but the label still takes the same current colour + grade as every
+ * other current nav label. The §3b rule above excludes item-vertical; its no-icon
+ * fallback label is handled in §2b. */
+:where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu) > .ax-nav-item-trigger > .ax-nav-item-body > a.wp-block-navigation-item__content[aria-current="page"] {
+	color: var(--wp--preset--color--secondary);
+	font-weight: 500;
+	font-variation-settings: "GRAD" 125;
+}
+
 /* §3c User-authored navigation text color ------------------------------------
  *
  * Block-editor color controls place `.has-text-color` / `color` on the

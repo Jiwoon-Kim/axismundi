@@ -191,11 +191,13 @@ nav.wp-block-navigation.is-vertical,
 	}
 
 	/* Open-always inline submenu = a continuation of the rail: match the rail's row
-	 * gap (not core's block-gap) and the nav's item justification. Depth padding is
-	 * left to core by default; the centre-justified flat exception is in §2b. */
+	 * gap (not core's block-gap) and the nav's item justification. Keep core's
+	 * nested structure, but tune its inline inset to the shallow step measured on
+	 * the Material site rather than accumulating core's wider submenu padding. */
 	& .wp-block-navigation-submenu.open-always > .wp-block-navigation__submenu-container {
 		gap: var(--wp--preset--spacing--75);
 		align-items: var(--navigation-layout-align, flex-start);
+		padding-inline: var(--wp--preset--spacing--125);
 	}
 
 	/* Core lays an open-always submenu trigger out as a column (its inline <ul>
@@ -225,20 +227,6 @@ nav.wp-block-navigation.is-vertical,
 :where(nav, div).wp-block-navigation.is-vertical .wp-block-navigation__container.items-justified-right .wp-block-navigation-item:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
 	justify-content: flex-end;
 	text-align: right;
-}
-
-/* Centre-justified flat depth (this justification only). An open-always subtree is
- * an inline tree inside the single 220–360dp rail. With core's nested submenu
- * padding, each depth narrows the centring box, so a deep label like
- * "audio-placeholder-image" gets squeezed and wraps to several lines. Where items
- * are centred — depth padding reads as "width shrinking", not hierarchy — zero the
- * container's inline padding and pull it back out of the parent item's 16dp padding
- * so every depth shares the rail's centre axis. Other justifications keep core's
- * nested padding (depth indent there can read as a tree). */
-:where(nav, div).wp-block-navigation.is-vertical.items-justified-center .wp-block-navigation-submenu.open-always > .wp-block-navigation__submenu-container,
-:where(nav, div).wp-block-navigation.is-vertical .wp-block-navigation__container.items-justified-center .wp-block-navigation-submenu.open-always > .wp-block-navigation__submenu-container {
-	padding-inline: 0;
-	margin-inline: calc(-1 * var(--wp--preset--spacing--200));
 }
 
 :where(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:not(.wp-block-navigation__submenu-container .wp-block-navigation-item):not(.wp-block-navigation-submenu.open-always):not(:has(> .ax-nav-item-trigger)):hover {

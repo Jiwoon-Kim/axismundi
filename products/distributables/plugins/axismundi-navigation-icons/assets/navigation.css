@@ -141,6 +141,11 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-con
 	text-align: start;
 }
 
+nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ) > .ax-nav-item-trigger {
+	flex: 1 1 auto;
+	inline-size: 100%;
+}
+
 nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation__submenu-container .ax-nav-item-icon {
 	inline-size: 24px;
 	block-size: 24px;

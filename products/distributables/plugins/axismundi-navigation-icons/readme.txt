@@ -64,17 +64,20 @@ Browse fonts.google.com/icons and use the lowercase name, e.g. `shopping_cart`.
 
 = 0.1.0 =
 
-* "Navigation Icon" sidebar control for Navigation Link and Submenu (type a
-  Material Symbols name), default-on Home Link and Page List icons, and toggles
-  to opt out of those fixed defaults.
-* Page, category and tag links get a semantic default icon (pages / category /
-  label) when none is authored; an explicit empty value opts out, with a reset
-  to the default.
+* "Navigation Icon" sidebar control for Navigation Link, Submenu and Home Link
+  blocks (type a Material Symbols name, or toggle the fixed Home icon).
+* Page, post, category, tag, custom-link and submenu blocks get semantic default
+  icons (pages / article / category / label / link_2 / pages) when none is
+  authored; an explicit empty value opts out, with a reset to the default.
+* Page List icons are opt-in with a block-level toggle so standalone page lists
+  stay untouched by default.
 * A "Vertical item" core/navigation style variation: icon above the label with
   the active indicator on a 56x32 icon slot. The default layout keeps the icon
   beside the label.
 * `render_block` restructures an icon-bearing item into an icon box + body at the
   `<li>` level; a small front-end script forwards an icon click to the item link,
   and the plugin renders the submenu disclosure arrow for restructured triggers.
+* Editor canvas previews show authored icons, vertical-item layout and Page List
+  icon previews without duplicating the full front-end render transform.
 * The icon-box contract (1em box, overflow clip, ligature fallback) is inherited
   from the Axismundi theme's icons.css.

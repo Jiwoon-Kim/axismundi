@@ -274,3 +274,26 @@ function axismundi_enqueue_editor_ui_assets() : void {
 	}
 }
 add_action( 'enqueue_block_editor_assets', 'axismundi_enqueue_editor_ui_assets' );
+
+/**
+ * Enqueue the /embed/ compatibility skin inside WordPress's embed iframe.
+ *
+ * `enqueue_embed_scripts` fires only for the /embed/ template (our post rendered as
+ * a card when embedded on another site, or self-embedded). Depend on core's
+ * `wp-embed-template` so the card colours print AFTER its inline CSS and win on
+ * equal specificity — no !important. The skin is self-contained (var + WP-core /
+ * M3-baseline fallback); no token CSS or @font-face is loaded into the iframe, and
+ * the markup stays core's (no embed-content.php override needed for a colour skin).
+ */
+function axismundi_enqueue_embed_styles() : void {
+	$uri = axismundi_asset_uri( 'assets/styles/embed.css' );
+	if ( null !== $uri ) {
+		wp_enqueue_style(
+			'axismundi-embed',
+			$uri,
+			array( 'wp-embed-template' ),
+			axismundi_asset_version( 'assets/styles/embed.css' )
+		);
+	}
+}
+add_action( 'enqueue_embed_scripts', 'axismundi_enqueue_embed_styles' );

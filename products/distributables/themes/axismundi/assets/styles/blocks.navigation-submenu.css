@@ -87,6 +87,9 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		font-size: var(--wp--preset--font-size--label-large);
 		text-align: start;
 	}
+	& .wp-block-navigation__submenu-container .wp-block-navigation-item__label {
+		white-space: nowrap;
+	}
 	& .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle):focus-visible {
 		outline: 3px solid var(--wp--preset--color--secondary);
 		outline-offset: -3px;

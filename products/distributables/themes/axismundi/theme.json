@@ -1030,6 +1030,9 @@
 					"lineHeight": "1.429",
 					"letterSpacing": "0.1px"
 				}
+			},
+			"core/embed": {
+				"css": "& .wp-block-embed__wrapper{text-align:center;}"
 			}
 		}
 	},

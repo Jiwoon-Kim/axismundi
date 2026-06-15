@@ -110,6 +110,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/parts.navigation-overlay.css' ) ? 'assets/styles/parts.navigation-overlay.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/parts.vertical-header.css' ) ? 'assets/styles/parts.vertical-header.css' : null,
 				)
 			)
 		)
@@ -216,6 +217,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
 		// core/navigation overlay template part — M3 Full-screen dialog surface.
 		'axismundi-parts-navigation-overlay'  => array( 'assets/styles/parts.navigation-overlay.css', array( 'axismundi-blocks-navigation-submenu' ) ),
+		// Single-post vertical header template part — experimental rail/stack shell.
+		'axismundi-parts-vertical-header'     => array( 'assets/styles/parts.vertical-header.css', array( 'axismundi-parts-navigation-overlay' ) ),
 	);
 
 	if ( is_attachment() ) {

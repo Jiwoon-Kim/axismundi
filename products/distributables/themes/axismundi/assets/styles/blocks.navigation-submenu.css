@@ -5,12 +5,15 @@
  * This file owns only the popover surface and rows shown when a submenu opens.
  * That popover maps to the M3 Menu component.
  *
- * Navigation-popover gate: closed navigation blocks only. Orientation does not
- * matter here; a submenu popover is an M3 Menu in both horizontal nav bars and
- * vertical expanded rails. The open responsive overlay remains deferred.
+ * Navigation-popover gate: anything except the open responsive overlay. A submenu
+ * popover is an M3 Menu in both horizontal nav bars and vertical expanded rails.
+ * Do NOT gate the whole nav on :has(.open-always): a nav can MIX an open-always
+ * Page List (inline rail rows) with click/hover submenus (real popovers), and the
+ * popovers still need the Menu skin. open-always containers opt back out of the
+ * popover box below, per-submenu, so only true popovers read as M3 Menus.
  */
 
-nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
 	/* Submenu = M3 Menu surface (the dark fix).
 	 * Core ships the dropdown as a hardcoded white/black popover that ignores the
 	 * scheme; re-skin it as an M3 standard Menu. surface-container-low + the border
@@ -28,6 +31,18 @@ nav.wp-block-navigation:not(:has(.open-always)):not(:has(.wp-block-navigation__r
 		border-radius: 16px;
 		box-shadow: var(--wp--preset--shadow--elevation-2);
 		text-align: start;
+	}
+
+	/* open-always submenus are inline rail rows, not floating Menus: opt out of
+	 * the popover box (navigation.css tunes their inset/gap/align). Only this box
+	 * is undone — the row states below still apply so open-always rows keep M3
+	 * hover/focus/press. */
+	& .wp-block-navigation-submenu.open-always > .wp-block-navigation__submenu-container {
+		min-inline-size: 0;
+		padding-block: 0;
+		background-color: transparent !important;
+		border-radius: 0;
+		box-shadow: none;
 	}
 
 	/* Menu row state layer (the li owns the row, so it owns the layer). */

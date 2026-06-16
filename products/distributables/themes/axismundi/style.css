@@ -173,6 +173,14 @@ img,
 video {
 	height: auto;
 }
+/* Avatars carry explicit width/height attributes and are a fixed size; opt them
+ * out of the blanket shrink-to-fit above so a wide flex sibling (a long comment
+ * body, a byline row) cannot squeeze the avatar below its size. TT5 ships no
+ * blanket img rule so its avatars never hit this; ours does (for unwrapped
+ * federated/markdown media), hence this targeted exception. */
+.wp-block-avatar {
+	flex-shrink: 0;
+}
 /* Native <audio>/<video> controls render inside a UA shadow DOM that page CSS
  * cannot reach, so color-scheme is the only real lever: it makes the browser
  * paint the controls in its dark or light skin to match the active theme.

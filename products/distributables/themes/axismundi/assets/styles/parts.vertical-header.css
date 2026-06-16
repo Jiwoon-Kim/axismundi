@@ -75,6 +75,19 @@
 		margin-inline: auto;
 	}
 
+	/* The part markup is a default-layout Group, so core gives the second child
+	 * (the Navigation block) the global block gap as margin-block-start. In the
+	 * tablet/mobile row header that vertical stack gap pushes the menu button
+	 * below the site title line; row spacing is owned by flex gap above instead. */
+	.ax-vertical-header > .ax-vertical-header__nav {
+		margin-block-start: 0;
+	}
+
+	.ax-vertical-header__nav {
+		align-items: center;
+		display: flex;
+	}
+
 	/* Collapse the rail nav to its overlay (hamburger) from tablet down. Core
 	 * gates the hamburger off and the inline container on at @media (min-width:
 	 * 600px); re-assert the collapsed state up to 1199 with a higher-specificity
@@ -91,14 +104,6 @@
 
 	/* Tablet hides the toc aside (content width is the priority). */
 	.ax-single-toc {
-		display: none;
-	}
-}
-
-/* ============================================================= mobile ≤767 */
-@media (max-width: 767px) {
-	/* Compact header: keep logo + site title, hide the tagline. */
-	.ax-vertical-header .wp-block-site-tagline {
 		display: none;
 	}
 }

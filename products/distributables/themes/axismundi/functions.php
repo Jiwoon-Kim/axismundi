@@ -217,7 +217,7 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
 		// core/navigation overlay template part — M3 Full-screen dialog surface.
 		'axismundi-parts-navigation-overlay'  => array( 'assets/styles/parts.navigation-overlay.css', array( 'axismundi-blocks-navigation-submenu' ) ),
-		// Single-post vertical header template part — experimental rail/stack shell.
+		// Single-post shell — CSS Grid layout + reverse-responsive contract (editor can't express it).
 		'axismundi-parts-vertical-header'     => array( 'assets/styles/parts.vertical-header.css', array( 'axismundi-parts-navigation-overlay' ) ),
 	);
 

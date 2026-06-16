@@ -1,119 +1,104 @@
 /**
- * Vertical header template part.
+ * Single-post shell — Axismundi Vertical Header Contract v0.1.
  *
- * Experimental single-post rail: desktop uses a bounded left rail, while tablet
- * and mobile place the same site identity/navigation above the article as a row.
+ * Single header, transformed by viewport (reverse-responsive):
+ *   ≥1200px  vertical rail | content | toc aside   (CSS grid)
+ *   768–1199 top row header | content              (toc hidden)
+ *   ≤767px   compact row header | content          (tagline hidden, toc -> details)
+ *
+ * The block editor's default responsive only does desktop<->mobile stacking and
+ * can't express this 3-breakpoint reverse layout, so the shell layout is owned
+ * here as a CSS contract; the template markup only carries semantic structure
+ * (Group shell + Group content-shell + main + aside, NOT a Columns block).
+ *
+ * Rail width is a grid track (a clean fixed value), which is why this avoids the
+ * flex-basis/selfStretch/content-size fights of a flex/Columns shell. Sticky just
+ * works: grid items stretch to the row height, so the rail/toc are tall enough
+ * for their sticky inner to travel.
  */
 
 .ax-single-shell {
-	box-sizing: border-box;
-	display: grid;
-	grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-	column-gap: var(--wp--preset--spacing--400);
-	inline-size: min(100%, 1440px);
-	margin-inline: auto;
+	--ax-rail-width: 320px;
+	--ax-toc-width: 280px;
+	--ax-shell-gap: var(--wp--preset--spacing--600);
 }
 
-.ax-single-shell__content {
-	min-inline-size: 0;
-}
-
+/* Rail presentation lives in CSS now (the rail used to be a column with padding;
+ * it is a grid track here). Sticky position is declared in the part markup. */
 .ax-vertical-header {
 	box-sizing: border-box;
-	inline-size: 100%;
-	max-inline-size: 280px;
-	padding-block: var(--wp--preset--spacing--300);
-	padding-inline: var(--wp--preset--spacing--300);
+	padding: var(--wp--preset--spacing--250);
 }
 
-.ax-vertical-header__inner {
-	box-sizing: border-box;
-	display: flex;
-	flex-direction: column;
-	gap: var(--wp--preset--spacing--400);
-	min-block-size: calc(100vh - (var(--wp--preset--spacing--300) * 2));
-}
+/* TODO(contract #8): long rail nav -> cap height + internal scroll. Deferred:
+ * a naive max-block-size on the vertical nav makes its flex column wrap into
+ * multiple columns, so it needs a non-wrapping scroll wrapper, handled later. */
 
-.ax-vertical-header__identity {
-	gap: var(--wp--preset--spacing--150);
-}
+/* ============================================================ desktop ≥1200 */
+@media (min-width: 1200px) {
+	.ax-single-shell {
+		display: grid;
+		grid-template-columns: var(--ax-rail-width) minmax(0, 1fr);
+	}
 
-.ax-vertical-header__copy {
-	min-inline-size: 0;
-}
+	.ax-single-shell__content {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--ax-toc-width);
+		column-gap: var(--ax-shell-gap);
+	}
 
-.ax-vertical-header__copy :where(.wp-block-site-title, .wp-block-site-tagline) {
-	margin-block: 0;
-}
-
-.ax-vertical-header__nav {
-	max-inline-size: 100%;
-}
-
-@media (min-width: 961px) {
-	.ax-vertical-header {
+	.ax-single-toc__inner {
 		position: sticky;
 		inset-block-start: 0;
-		align-self: start;
-		border-inline-end: 1px solid var(--wp--preset--color--outline-variant);
-	}
-
-	.ax-vertical-header__nav.wp-block-navigation.is-vertical {
-		inline-size: 100%;
 	}
 }
 
-@media (max-width: 960px) {
-	.ax-single-shell {
+/* ===================================================== tablet 768–1199 (row) */
+@media (max-width: 1199px) {
+	/* Shell + content collapse to a single column (reverse of normal responsive:
+	 * the rail becomes a top row header). */
+	.ax-single-shell,
+	.ax-single-shell__content {
 		display: block;
-		inline-size: 100%;
 	}
 
+	/* Rail -> top row header: identity + nav on one line. Drop the sticky so the
+	 * header scrolls away like a normal app bar. */
 	.ax-vertical-header {
-		max-inline-size: var(--wp--style--global--wide-size);
-		margin-inline: auto;
-		border-block-end: 1px solid var(--wp--preset--color--outline-variant);
-	}
-
-	.ax-vertical-header__inner {
-		min-block-size: auto;
+		position: static;
+		display: flex;
 		flex-direction: row;
-		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: var(--wp--preset--spacing--200);
+		gap: var(--wp--preset--spacing--300);
+		max-inline-size: var(--wp--style--global--wide-size);
+		margin-inline: auto;
 	}
 
-	.ax-vertical-header__nav.wp-block-navigation.is-vertical {
-		inline-size: auto;
+	/* Collapse the rail nav to its overlay (hamburger) from tablet down. Core
+	 * gates the hamburger off and the inline container on at @media (min-width:
+	 * 600px); re-assert the collapsed state up to 1199 with a higher-specificity
+	 * selector so the hamburger stays shown and the inline nav stays hidden
+	 * between 600 and 1199. The button still opens navigation-overlay via core's
+	 * JS at any width, so overlayMenu stays "mobile" (items remain inline for the
+	 * desktop rail) — we only move WHERE it collapses. */
+	.ax-vertical-header__nav .wp-block-navigation__responsive-container-open:not(.always-shown) {
+		display: flex;
+	}
+	.ax-vertical-header__nav .wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open) {
+		display: none;
 	}
 
-	.ax-vertical-header__nav.wp-block-navigation.is-vertical .wp-block-navigation__responsive-container-content,
-	.ax-vertical-header__nav.wp-block-navigation__container,
-	.ax-vertical-header__nav.wp-block-navigation.is-vertical > .wp-block-navigation__container,
-	.ax-vertical-header__nav.wp-block-navigation.is-vertical .wp-block-page-list {
-		flex-direction: row;
-		flex-wrap: wrap;
-		align-items: center;
-	}
-
-	.ax-vertical-header__nav.wp-block-navigation.is-vertical .wp-block-navigation__responsive-container-content > .wp-block-navigation__container.ax-vertical-header__nav > .wp-block-navigation-item,
-	.ax-vertical-header__nav.wp-block-navigation.is-vertical .wp-block-navigation__responsive-container-content > .wp-block-navigation__container.ax-vertical-header__nav > .wp-block-page-list > .wp-block-navigation-item {
-		min-block-size: 40px !important;
-		padding-block: 0 !important;
+	/* Tablet hides the toc aside (content width is the priority). */
+	.ax-single-toc {
+		display: none;
 	}
 }
 
-@media (max-width: 640px) {
-	.ax-vertical-header {
-		padding-inline: var(--wp--preset--spacing--200);
-	}
-
-	.ax-vertical-header__inner {
-		align-items: flex-start;
-	}
-
-	.ax-vertical-header__nav.wp-block-navigation {
-		inline-size: 100%;
+/* ============================================================= mobile ≤767 */
+@media (max-width: 767px) {
+	/* Compact header: keep logo + site title, hide the tagline. */
+	.ax-vertical-header .wp-block-site-tagline {
+		display: none;
 	}
 }

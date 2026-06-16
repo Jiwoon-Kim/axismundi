@@ -2,12 +2,10 @@
 <div class="wp-block-group alignfull ax-single-shell"><!-- wp:template-part {"slug":"vertical-header","theme":"axismundi","tagName":"header"} /-->
 
 <!-- wp:group {"className":"ax-single-shell__content","layout":{"type":"default"}} -->
-<div class="wp-block-group ax-single-shell__content"><!-- wp:group {"tagName":"main","style":{"spacing":{"margin":{"top":"var:preset|spacing|600"}}},"layout":{"type":"constrained"}} -->
-<main class="wp-block-group" style="margin-top:var(--wp--preset--spacing--600)"><!-- wp:breadcrumbs {"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|200","bottom":"var:preset|spacing|200","left":"var:preset|spacing|300","right":"var:preset|spacing|300"},"margin":{"top":"var:preset|spacing|0","bottom":"var:preset|spacing|0"}}},"fontSize":"body-small"} /-->
+<div class="wp-block-group ax-single-shell__content"><!-- wp:group {"tagName":"main","className":"ax-single-main","style":{"spacing":{"margin":{"top":"var:preset|spacing|600"}}},"layout":{"type":"constrained"}} -->
+<main class="wp-block-group ax-single-main" style="margin-top:var(--wp--preset--spacing--600)"><!-- wp:breadcrumbs {"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|200","bottom":"var:preset|spacing|200","left":"var:preset|spacing|300","right":"var:preset|spacing|300"},"margin":{"top":"var:preset|spacing|0","bottom":"var:preset|spacing|0"}}},"fontSize":"body-small"} /-->
 
-<!-- wp:columns {"verticalAlignment":null,"align":"full","style":{"spacing":{"blockGap":{"left":"var:preset|spacing|300"}}}} -->
-<div class="wp-block-columns alignfull"><!-- wp:column {"verticalAlignment":"top","layout":{"type":"constrained","justifyContent":"center"}} -->
-<div class="wp-block-column is-vertically-aligned-top"><!-- wp:post-featured-image {"aspectRatio":"16/9","style":{"border":{"radius":"12px"}}} /-->
+<!-- wp:post-featured-image {"aspectRatio":"16/9","style":{"border":{"radius":"12px"}}} /-->
 
 <!-- wp:post-terms {"term":"category"} /-->
 
@@ -18,7 +16,7 @@
 
 <!-- wp:post-author-name {"isLink":true} /-->
 
-<!-- wp:post-date {"isLink":true,"metadata":{"bindings":{"datetime":{"source":"core/post-data","args":{"field":"date"}}}}} /--></div>
+<!-- wp:post-date {"isLink":true} /--></div>
 <!-- /wp:group -->
 
 <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
@@ -29,25 +27,23 @@
 
 <!-- wp:pattern {"slug":"axismundi/post-navigation"} /-->
 
-<!-- wp:pattern {"slug":"axismundi/comments"} /--></div>
-<!-- /wp:column -->
+<!-- wp:pattern {"slug":"axismundi/comments"} /-->
 
-<!-- wp:column {"verticalAlignment":"stretch","width":"240px","className":"ax-single-sidebar","layout":{"type":"default"}} -->
-<div class="wp-block-column is-vertically-aligned-stretch ax-single-sidebar" style="flex-basis:240px"><!-- wp:group {"metadata":{"name":"Sidebar"},"className":"ax-single-sidebar__inner","style":{"position":{"type":"sticky","top":"0px"}},"layout":{"type":"constrained","justifyContent":"center"}} -->
-<div class="wp-block-group ax-single-sidebar__inner"><!-- wp:heading {"level":2,"textColor":"on-surface-variant","fontSize":"label-large"} -->
+<!-- wp:pattern {"slug":"axismundi/more-posts"} /--></main>
+<!-- /wp:group -->
+
+<!-- wp:group {"tagName":"aside","metadata":{"name":"Table of contents"},"className":"ax-single-toc","style":{"spacing":{"margin":{"top":"var:preset|spacing|600"}}},"layout":{"type":"default"}} -->
+<aside class="wp-block-group ax-single-toc" style="margin-top:var(--wp--preset--spacing--600)"><!-- wp:group {"className":"ax-single-toc__inner","style":{"position":{"type":"sticky","top":"0px"}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group ax-single-toc__inner"><!-- wp:heading {"textColor":"on-surface-variant","fontSize":"label-large"} -->
 <h2 class="wp-block-heading has-on-surface-variant-color has-text-color has-label-large-font-size">On this page</h2>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"textColor":"on-surface-variant","fontSize":"body-small"} -->
 <p class="has-on-surface-variant-color has-text-color has-body-small-font-size">Table of contents will appear here.</p>
 <!-- /wp:paragraph --></div>
+<!-- /wp:group --></aside>
 <!-- /wp:group --></div>
-<!-- /wp:column --></div>
-<!-- /wp:columns -->
-
-<!-- wp:pattern {"slug":"axismundi/more-posts"} /--></main>
-<!-- /wp:group -->
-
-<!-- wp:template-part {"slug":"footer","theme":"axismundi","tagName":"footer"} /--></div>
 <!-- /wp:group --></div>
 <!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","theme":"axismundi","tagName":"footer"} /-->

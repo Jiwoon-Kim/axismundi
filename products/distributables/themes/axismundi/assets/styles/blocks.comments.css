@@ -1,0 +1,154 @@
+/**
+ * core/comments — Comments (bubble thread).
+ *
+ * Block-level spacing (avatar size, avatar<->card gap, card padding, meta gap) is
+ * owned by the pattern (patterns/comments.php); per-block typography/colour by
+ * theme.json. This file owns what those can't express: the nested-list indent, the
+ * sibling rhythm, and the thread connector overlay. The connector PATH is drawn by
+ * assets/scripts/comment-thread-connectors.js from measured avatar positions —
+ * CSS-only offsets drift the moment a bubble wraps — so here we only own the SVG
+ * box, the 32px gutter it draws into, and the stacking. Scoped to .ax-comments-thread.
+ */
+
+.ax-comments-thread .wp-block-comment-template {
+	position: relative;
+}
+
+/* Nested replies: reset the list and indent one column per level (the connector is
+ * drawn into this gutter). */
+.ax-comments-thread .wp-block-comment-template ol {
+	position: relative;
+	list-style: none;
+	margin-inline-start: 0;
+	padding-inline-start: var(--wp--preset--spacing--400);
+}
+.ax-comments-thread .wp-block-comment-template ol > li {
+	position: relative;
+}
+
+/* Sibling rhythm: a gap between comments at every level, plus a smaller parent ->
+ * first-reply step so a thread does not read too tight. */
+.ax-comments-thread .wp-block-comment-template li + li {
+	margin-block-start: var(--wp--preset--spacing--200);
+}
+.ax-comments-thread .wp-block-comment-template ol > li:first-child {
+	margin-block-start: var(--wp--preset--spacing--100);
+}
+
+/* SVG overlay: fills the comment-template box, behind the comment rows. */
+.ax-comment-connectors {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	inline-size: 100%;
+	block-size: 100%;
+	overflow: visible;
+	pointer-events: none;
+}
+.ax-comment-connector {
+	fill: none;
+	stroke: var(--wp--preset--color--outline-variant);
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	transition: stroke 120ms ease, stroke-width 120ms ease;
+}
+
+/* The connector chain from the root down to the active reply target. */
+.ax-comment-connector.is-reply-active {
+	stroke: var(--wp--preset--color--primary);
+	stroke-width: 3;
+}
+
+/* Lift the comment rows above the connector layer. */
+.has-ax-comment-connectors .ax-comment-item {
+	position: relative;
+	z-index: 1;
+}
+
+/* Bubble thread geometry: keep the avatar fixed, let short comments shrink like a
+ * chat bubble, and let long comments wrap inside the available column. */
+.ax-comments-thread .ax-comment-item {
+	--ax-comment-avatar-gap: var(--wp--preset--spacing--200);
+	align-items: flex-start;
+}
+.ax-comments-thread .ax-comment-item > .wp-block-column:first-child {
+	flex: 0 0 32px;
+	min-inline-size: 32px;
+}
+.ax-comments-thread .ax-comment-item__body {
+	flex: 0 1 auto;
+	min-inline-size: 0;
+	max-inline-size: calc(100% - 32px - var(--ax-comment-avatar-gap));
+}
+.ax-comments-thread .ax-comment-card,
+.ax-comments-thread .ax-comment-meta {
+	inline-size: fit-content;
+	min-inline-size: min(200px, 100%);
+	max-inline-size: 100%;
+}
+.ax-comments-thread .ax-comment-card {
+	overflow-wrap: break-word;
+}
+.ax-comments-thread .ax-comment-card :where(.wp-block-comment-content, .wp-block-comment-content p) {
+	max-inline-size: 100%;
+	overflow-wrap: break-word;
+}
+
+/* Author/meta links read as plain text; underline only on hover or keyboard focus. */
+.ax-comments-thread :is(
+	.wp-block-comment-author-name,
+	.wp-block-comment-date,
+	.wp-block-comment-edit-link,
+	.wp-block-comment-reply-link
+) a {
+	text-decoration: none;
+}
+.ax-comments-thread :is(
+	.wp-block-comment-author-name,
+	.wp-block-comment-date,
+	.wp-block-comment-edit-link,
+	.wp-block-comment-reply-link
+) a:hover,
+.ax-comments-thread :is(
+	.wp-block-comment-author-name,
+	.wp-block-comment-date,
+	.wp-block-comment-edit-link,
+	.wp-block-comment-reply-link
+) a:focus-visible {
+	text-decoration: underline;
+}
+
+/* Reply link of the active reply target: M3 primary + the GRAD emphasis used for
+ * the current navigation item (Roboto Flex grade axis, not heavy bold). */
+.ax-comments-thread .ax-comment-item.is-reply-target .wp-block-comment-reply-link a {
+	color: var(--wp--preset--color--primary);
+	font-weight: 500;
+	font-variation-settings: "GRAD" 125;
+	text-decoration: none;
+}
+
+/* Facebook-style reply title. While a reply is in progress, comment-thread-
+ * connectors.js adds .ax-replying to #respond and reformats core's #reply-title
+ * into "Replying to <name> · Cancel", reusing core's own cancel link. */
+#respond.ax-replying .comment-reply-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.25ch;
+	font-size: var(--wp--preset--font-size--body-small);
+	font-weight: 400;
+	color: var(--wp--preset--color--on-surface-variant);
+}
+#respond.ax-replying .comment-reply-title .ax-reply-title__name {
+	font-weight: 700;
+	color: var(--wp--preset--color--on-surface);
+}
+#respond.ax-replying #cancel-comment-reply-link {
+	color: var(--wp--preset--color--primary);
+	text-decoration: none;
+}
+#respond.ax-replying #cancel-comment-reply-link:hover,
+#respond.ax-replying #cancel-comment-reply-link:focus-visible {
+	text-decoration: underline;
+}

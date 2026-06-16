@@ -107,6 +107,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.table.css' ) ? 'assets/styles/blocks.table.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.collections.css' ) ? 'assets/styles/blocks.collections.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/blocks.comments.css' ) ? 'assets/styles/blocks.comments.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/parts.navigation-overlay.css' ) ? 'assets/styles/parts.navigation-overlay.css' : null,
@@ -212,6 +213,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-accordion'   => array( 'assets/styles/blocks.accordion.css', array( 'axismundi-blocks-table' ) ),
 		// core/latest-posts + core/rss — M3 collection cards (per-li, list/grid).
 		'axismundi-blocks-collections' => array( 'assets/styles/blocks.collections.css', array( 'axismundi-blocks-accordion' ) ),
+		// core/comments — bubble thread: nested-list indent, sibling rhythm, connector overlay.
+		'axismundi-blocks-comments'    => array( 'assets/styles/blocks.comments.css', array( 'axismundi-blocks-collections' ) ),
 		// core/navigation family — block owns its children state; submenu owns the menu popover.
 		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
@@ -231,6 +234,21 @@ function axismundi_enqueue_assets() : void {
 			continue;
 		}
 		wp_enqueue_style( $handle, $uri, $style[1], axismundi_asset_version( $style[0] ) );
+	}
+
+	// Bubble-thread comment connectors: only where comments render (the script
+	// itself no-ops when the .ax-comments-thread pattern is absent).
+	if ( is_singular() ) {
+		$connectors = axismundi_asset_uri( 'assets/scripts/comment-thread-connectors.js' );
+		if ( null !== $connectors ) {
+			wp_enqueue_script(
+				'axismundi-comment-thread-connectors',
+				$connectors,
+				array(),
+				axismundi_asset_version( 'assets/scripts/comment-thread-connectors.js' ),
+				true
+			);
+		}
 	}
 }
 add_action( 'wp_enqueue_scripts', 'axismundi_enqueue_assets' );

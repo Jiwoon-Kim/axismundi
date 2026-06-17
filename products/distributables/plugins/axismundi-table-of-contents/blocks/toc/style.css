@@ -1,0 +1,87 @@
+/* axismundi/toc — front-end skin.
+ *
+ * Consumes the Axismundi theme's design tokens (--md-sys-color-*, --md-sys-*),
+ * each with an M3 baseline fallback so the rail degrades gracefully under a
+ * non-Axismundi theme. Emits the lab TOC vocabulary (.toc-list / .toc-h{2,3,4} /
+ * .is-current) so a theme that ships its own M3 TOC skin can override these with
+ * a plain selector. Scoped to .ax-toc.
+ */
+
+.ax-toc {
+	font-family: inherit;
+}
+
+.ax-toc__title {
+	margin-block-end: 0.5rem;
+	color: var(--md-sys-color-on-surface-variant, #49454f);
+	font-size: var(--md-sys-typescale-label-small-size, 11px);
+	line-height: var(--md-sys-typescale-label-small-line-height, 16px);
+	font-weight: var(--md-ref-typeface-weight-medium, 500);
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+}
+
+.ax-toc__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.ax-toc__item {
+	margin: 0;
+}
+
+/* Level indents — h2 flush, h3/h4 nested under their parent. */
+.ax-toc .toc-h3 {
+	padding-inline-start: 0.75rem;
+}
+.ax-toc .toc-h4 {
+	padding-inline-start: 1.5rem;
+}
+
+.ax-toc__link {
+	display: block;
+	padding: 0.25rem 0.5rem;
+	border-radius: 8px;
+	color: var(--md-sys-color-on-surface-variant, #49454f);
+	font-size: var(--md-sys-typescale-body-small-size, 12px);
+	line-height: var(--md-sys-typescale-body-small-line-height, 16px);
+	text-decoration: none;
+	transition: background-color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1)),
+		color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.ax-toc__link:hover {
+	color: var(--md-sys-color-on-surface, #1d1b20);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface, #1d1b20) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+}
+
+.ax-toc__link:focus-visible {
+	outline: 3px solid var(--md-sys-color-secondary, #625b71);
+	outline-offset: 2px;
+}
+
+/* Scroll-spy active state (set by view.js). */
+.ax-toc__link.is-current {
+	color: var(--md-sys-color-primary, #6750a4);
+	background-color: color-mix(in srgb, var(--md-sys-color-primary, #6750a4) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+	font-weight: var(--md-ref-typeface-weight-medium, 500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ax-toc__link {
+		transition: none;
+	}
+}
+
+/* The rail variant becomes sticky inside its column on wide viewports. The host
+ * theme owns the column/aside geometry; this only pins the inner list. */
+@media (min-width: 1024px) {
+	.ax-toc--rail {
+		position: sticky;
+		inset-block-start: 1rem;
+	}
+}

@@ -1,0 +1,17 @@
+/* axismundi/toc — editor-only canvas styling.
+ *
+ * The block renders dynamically on the front end, so the canvas shows a title +
+ * placeholder note instead of live headings. Keep it visually quiet so authors
+ * read it as a structural placeholder, not real content.
+ */
+
+.ax-toc__placeholder {
+	margin: 0;
+	padding: 0.5rem;
+	border: 1px dashed var(--md-sys-color-outline-variant, #cac4d0);
+	border-radius: 8px;
+	color: var(--md-sys-color-on-surface-variant, #49454f);
+	font-size: 12px;
+	line-height: 16px;
+	font-style: italic;
+}

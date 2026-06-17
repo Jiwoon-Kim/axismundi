@@ -11,7 +11,8 @@
     "https://downloads.wordpress.org/plugin/create-block-theme.zip",
     "./products/distributables/plugins/axismundi-theme-switcher",
     "./products/distributables/plugins/axismundi-fonts-noto-cjk-kr",
-    "./products/distributables/plugins/axismundi-navigation-icons"
+    "./products/distributables/plugins/axismundi-navigation-icons",
+    "./products/distributables/plugins/axismundi-table-of-contents"
   ],
   "port": 8884,
   "config": {

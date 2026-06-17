@@ -1,0 +1,87 @@
+/**
+ * core/post-navigation-link — Material 3 "Up Next" card-set.
+ *
+ * Structure is owned by patterns/post-navigation.php (two columns, each a
+ * post-navigation-link with linkLabel + showTitle so core emits __label / __title
+ * spans). Here the link's <a> becomes the medium card surface (the whole card is the
+ * target), the label is an overline with the M3 direction symbol, and the title is
+ * the headline below it. Scoped to .ax-post-nav.
+ */
+
+.ax-post-nav__set {
+	align-items: stretch; /* equal-height cards */
+}
+
+/* The link is the card. */
+.ax-post-nav .ax-post-nav__card a {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--100);
+	block-size: 100%;
+	box-sizing: border-box;
+	padding: var(--wp--preset--spacing--250) var(--wp--preset--spacing--300);
+	border-radius: 24px;
+	background-color: var(--wp--preset--color--surface-container);
+	color: var(--wp--preset--color--on-surface);
+	text-decoration: none;
+	transition: background-color 120ms ease;
+}
+.ax-post-nav .ax-post-nav__card a:hover {
+	background-color: color-mix(
+		in srgb,
+		var(--wp--preset--color--on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%),
+		var(--wp--preset--color--surface-container)
+	);
+}
+.ax-post-nav .ax-post-nav__card a:focus-visible {
+	outline: 3px solid var(--wp--preset--color--secondary);
+	outline-offset: 2px;
+}
+
+/* Core ships text arrows as siblings of the <a>; the M3 symbol lives in the
+ * overline instead, so hide them. */
+.ax-post-nav .wp-block-post-navigation-link__arrow-previous,
+.ax-post-nav .wp-block-post-navigation-link__arrow-next {
+	display: none;
+}
+
+/* Overline = direction symbol + label. */
+.ax-post-nav .ax-post-nav__card .post-navigation-link__label {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--50);
+	font-size: 1rem; /* 16 / 24, M3 title-medium */
+	line-height: 1.5;
+	font-weight: 500;
+	color: var(--wp--preset--color--on-surface-variant);
+}
+.ax-post-nav .ax-post-nav__card .post-navigation-link__label::before,
+.ax-post-nav .ax-post-nav__card .post-navigation-link__label::after {
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-size: 1.25rem;
+	font-weight: normal;
+	line-height: 1;
+	font-feature-settings: "liga";
+	-webkit-font-feature-settings: "liga";
+}
+.ax-post-nav .ax-post-nav__card.post-navigation-link-previous .post-navigation-link__label::before {
+	content: "arrow_left_alt";
+}
+.ax-post-nav .ax-post-nav__card.post-navigation-link-next .post-navigation-link__label::after {
+	content: "arrow_right_alt";
+}
+/* Next reads "Up next ->" so its label hugs the trailing edge. */
+.ax-post-nav .ax-post-nav__card.post-navigation-link-next .post-navigation-link__label {
+	justify-content: flex-end;
+}
+
+/* Title = the linked post title. */
+.ax-post-nav .ax-post-nav__card .post-navigation-link__title {
+	font-size: 1.5rem; /* 24 / 32, M3 headline-small */
+	line-height: 1.333;
+	font-weight: 475;
+	color: var(--wp--preset--color--on-surface);
+}
+.ax-post-nav .ax-post-nav__card.post-navigation-link-next .post-navigation-link__title {
+	text-align: end;
+}

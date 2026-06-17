@@ -108,6 +108,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.collections.css' ) ? 'assets/styles/blocks.collections.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.comments.css' ) ? 'assets/styles/blocks.comments.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/patterns.post-navigation.css' ) ? 'assets/styles/patterns.post-navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/parts.navigation-overlay.css' ) ? 'assets/styles/parts.navigation-overlay.css' : null,
@@ -215,6 +216,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-collections' => array( 'assets/styles/blocks.collections.css', array( 'axismundi-blocks-accordion' ) ),
 		// core/comments — bubble thread: nested-list indent, sibling rhythm, connector overlay.
 		'axismundi-blocks-comments'    => array( 'assets/styles/blocks.comments.css', array( 'axismundi-blocks-collections' ) ),
+		// core/post-navigation-link — M3 "Up Next" card-set (overline + title).
+		'axismundi-patterns-post-navigation' => array( 'assets/styles/patterns.post-navigation.css', array( 'axismundi-blocks-comments' ) ),
 		// core/navigation family — block owns its children state; submenu owns the menu popover.
 		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),

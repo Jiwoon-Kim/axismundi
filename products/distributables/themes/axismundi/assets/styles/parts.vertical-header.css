@@ -1,20 +1,27 @@
 /**
- * Single-post shell — Axismundi Vertical Header Contract v0.1.
+ * Vertical header shell — Axismundi Vertical Header Contract v0.1.
+ *
+ * Kept as an opt-in ASSET: single.html currently uses the standard header + a
+ * Columns layout, so this shell is not wired in.
  *
  * Single header, transformed by viewport (reverse-responsive):
- *   ≥1200px  vertical rail | content | toc aside   (CSS grid)
- *   768–1199 top row header | content              (toc hidden)
- *   ≤767px   compact row header | content          (tagline hidden, toc -> details)
+ *   ≥1200px  vertical rail | content | aside   (CSS grid)
+ *   768–1199 top row header | content
+ *   ≤767px   compact row header | content
  *
  * The block editor's default responsive only does desktop<->mobile stacking and
  * can't express this 3-breakpoint reverse layout, so the shell layout is owned
  * here as a CSS contract; the template markup only carries semantic structure
  * (Group shell + Group content-shell + main + aside, NOT a Columns block).
  *
+ * The aside (table of contents) sticky position and per-viewport visibility are
+ * NOT decided here: they belong to the template markup (position) and the editor /
+ * single.html block-visibility meta, so this file does not style that aside.
+ *
  * Rail width is a grid track (a clean fixed value), which is why this avoids the
  * flex-basis/selfStretch/content-size fights of a flex/Columns shell. Sticky just
- * works: grid items stretch to the row height, so the rail/toc are tall enough
- * for their sticky inner to travel.
+ * works: grid items stretch to the row height, so the rail is tall enough for its
+ * sticky inner to travel.
  */
 
 .ax-single-shell {
@@ -45,11 +52,6 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) var(--ax-toc-width);
 		column-gap: var(--ax-shell-gap);
-	}
-
-	.ax-single-toc__inner {
-		position: sticky;
-		inset-block-start: 0;
 	}
 }
 
@@ -99,11 +101,6 @@
 		display: flex;
 	}
 	.ax-vertical-header__nav .wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open) {
-		display: none;
-	}
-
-	/* Tablet hides the toc aside (content width is the priority). */
-	.ax-single-toc {
 		display: none;
 	}
 }

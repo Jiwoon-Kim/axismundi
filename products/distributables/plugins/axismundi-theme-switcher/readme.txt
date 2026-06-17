@@ -4,7 +4,7 @@ Tags: dark-mode, block, appearance, editor, color-scheme
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -38,6 +38,13 @@ color-scheme change depends on a theme or stylesheet that consumes
 `html[data-theme]` selectors.
 
 == Changelog ==
+
+= 0.1.4 =
+
+* The front-end switcher now dispatches the `axismundi-theme-scheme-change` event
+  (matching the editor preview), so JS consumers that cache theme colours (canvas,
+  charts, themed visuals) can re-read tokens on a light / dark / auto change.
+  `data-theme` plus this event are the public client-side contract.
 
 = 0.1.3 =
 

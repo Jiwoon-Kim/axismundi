@@ -35,6 +35,13 @@ const applyScheme = ( mode ) => {
 	document.documentElement.dataset.theme = next;
 	state.currentScheme = next;
 	writeCookie( next );
+	// Announce the change to front-end JS consumers (canvas, charts, any visual that
+	// caches theme colours) so they can re-read tokens — symmetry with the editor
+	// edit.js, which already dispatches this. `data-theme` + this event are the public
+	// contract; the switcher owns "change + announce", not any palette cache.
+	window.dispatchEvent(
+		new CustomEvent( 'axismundi-theme-scheme-change', { detail: { mode: next } } )
+	);
 };
 
 const { state } = store( 'axismundi/theme-switcher', {

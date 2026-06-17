@@ -26,6 +26,19 @@ Tags:              block-patterns, custom-colors, custom-logo, editor-style
  * title editor) are a separate RichText plugin concern.
  * ============================================================ */
 
+/* Smooth in-page anchor scrolling — TOC links, hash navigation, "back to top".
+ * This is document-wide UX owned by the theme, not any single block, so a TOC
+ * plugin must not preventDefault + scroll to own it. Disabled under reduced motion.
+ * scroll-behavior applies to the scroll container, which for the page is :root. */
+:root {
+	scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		scroll-behavior: auto;
+	}
+}
+
 /* Mixed-script wrapping: Korean stays word-grouped while long Latin tokens,
  * URLs, and handles can still break safely on narrow viewports. */
 body {

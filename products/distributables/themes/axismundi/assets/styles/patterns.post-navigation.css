@@ -1,87 +1,108 @@
 /**
  * core/post-navigation-link — Material 3 "Up Next" card-set.
  *
- * Structure is owned by patterns/post-navigation.php (two columns, each a
- * post-navigation-link with linkLabel + showTitle so core emits __label / __title
- * spans). Here the link's <a> becomes the medium card surface (the whole card is the
- * target), the label is an overline with the M3 direction symbol, and the title is
- * the headline below it. Scoped to .ax-post-nav.
+ * The CARD is the Column (.ax-post-nav__card). The editor owns its background,
+ * text/link colour, padding, radius, and the link's text alignment. The pattern
+ * sets the M3 defaults (surface-container-low background, next card right-aligned).
+ * This file owns only:
+ *   - the arrow + overline-label + headline-title layout inside the link,
+ *   - the hover (secondary-container) and focus state, since a pattern cannot
+ *     express :hover / :focus.
+ * The decorative arrow is core-owned (the editor's none / arrow / chevron setting).
+ * Scoped to .ax-post-nav.
  */
 
 .ax-post-nav__set {
 	align-items: stretch; /* equal-height cards */
 }
 
-/* The link is the card. */
-.ax-post-nav .ax-post-nav__card a {
-	display: flex;
-	flex-direction: column;
-	gap: var(--wp--preset--spacing--100);
-	block-size: 100%;
-	box-sizing: border-box;
-	padding: var(--wp--preset--spacing--250) var(--wp--preset--spacing--300);
-	border-radius: 24px;
-	background-color: var(--wp--preset--color--surface-container);
-	color: var(--wp--preset--color--on-surface);
-	text-decoration: none;
-	transition: background-color 120ms ease;
-}
-.ax-post-nav .ax-post-nav__card a:hover {
-	background-color: color-mix(
-		in srgb,
-		var(--wp--preset--color--on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%),
-		var(--wp--preset--color--surface-container)
-	);
-}
-.ax-post-nav .ax-post-nav__card a:focus-visible {
-	outline: 3px solid var(--wp--preset--color--secondary);
-	outline-offset: 2px;
-}
-
-/* Core ships text arrows as siblings of the <a>; the M3 symbol lives in the
- * overline instead, so hide them. */
-.ax-post-nav .wp-block-post-navigation-link__arrow-previous,
-.ax-post-nav .wp-block-post-navigation-link__arrow-next {
+/* First / last post: the post-navigation-link renders empty (no adjacent post), so
+ * the Column would otherwise show as an empty card. Hide a card with no link. */
+.ax-post-nav__card:not(:has(a)) {
 	display: none;
 }
 
-/* Overline = direction symbol + label. */
-.ax-post-nav .ax-post-nav__card .post-navigation-link__label {
+/* The post-navigation-link wrapper holds the core arrow span (a sibling of the
+ * <a>: leading for previous, trailing for next) plus the <a>. Row layout makes the
+ * arrow a leading/trailing icon beside the stacked label + title. Arrow glyph and
+ * its none/arrow/chevron type stay core-owned; this only places it. */
+/* Dissolve the <a> so the arrow (its sibling), the overline label, and the headline
+ * title all become flex items of one wrapper: the arrow + label share the first row,
+ * and the title takes its own full-width row (aligned to the card edge, not indented
+ * under the label). */
+.ax-post-nav__card .wp-block-post-navigation-link {
 	display: flex;
-	align-items: center;
-	gap: var(--wp--preset--spacing--50);
-	font-size: 1rem; /* 16 / 24, M3 title-medium */
+	flex-wrap: wrap;
+	align-items: baseline;
+	column-gap: var(--wp--preset--spacing--50);
+	row-gap: var(--wp--preset--spacing--50);
+}
+.ax-post-nav__card a {
+	display: contents;
+	color: inherit;
+}
+.ax-post-nav__card .post-navigation-link__label,
+.ax-post-nav__card .post-navigation-link__title {
+	text-decoration: none;
+}
+.ax-post-nav__card .post-navigation-link__title {
+	order: 1; /* always after the arrow + label row */
+	flex-basis: 100%; /* its own full-width row */
+}
+.ax-post-nav__card .wp-block-post-navigation-link__arrow-previous,
+.ax-post-nav__card .wp-block-post-navigation-link__arrow-next {
+	flex-shrink: 0;
+	font-size: 1rem; /* match the label overline */
+	line-height: 1.5;
+	color: var(--wp--preset--color--on-surface-variant);
+}
+
+/* Alignment follows the link's editor text-align (the pattern defaults the next
+ * card to the right; an author can re-align either card). */
+.ax-post-nav__card .has-text-align-right {
+	justify-content: flex-end;
+}
+.ax-post-nav__card .has-text-align-center {
+	justify-content: center;
+}
+
+/* Overline = label (the muted M3 title-medium line). */
+.ax-post-nav__card .post-navigation-link__label {
+	font-size: 1rem; /* 16 / 24 */
 	line-height: 1.5;
 	font-weight: 500;
 	color: var(--wp--preset--color--on-surface-variant);
 }
-.ax-post-nav .ax-post-nav__card .post-navigation-link__label::before,
-.ax-post-nav .ax-post-nav__card .post-navigation-link__label::after {
-	font-family: "Material Symbols Outlined", sans-serif;
-	font-size: 1.25rem;
-	font-weight: normal;
-	line-height: 1;
-	font-feature-settings: "liga";
-	-webkit-font-feature-settings: "liga";
-}
-.ax-post-nav .ax-post-nav__card.post-navigation-link-previous .post-navigation-link__label::before {
-	content: "arrow_left_alt";
-}
-.ax-post-nav .ax-post-nav__card.post-navigation-link-next .post-navigation-link__label::after {
-	content: "arrow_right_alt";
-}
-/* Next reads "Up next ->" so its label hugs the trailing edge. */
-.ax-post-nav .ax-post-nav__card.post-navigation-link-next .post-navigation-link__label {
-	justify-content: flex-end;
-}
 
-/* Title = the linked post title. */
-.ax-post-nav .ax-post-nav__card .post-navigation-link__title {
+/* Headline = the linked post title. Colour is inherited from the Column (editor
+ * text colour), so only the type scale is set here. */
+.ax-post-nav__card .post-navigation-link__title {
 	font-size: 1.5rem; /* 24 / 32, M3 headline-small */
 	line-height: 1.333;
 	font-weight: 475;
-	color: var(--wp--preset--color--on-surface);
 }
-.ax-post-nav .ax-post-nav__card.post-navigation-link-next .post-navigation-link__title {
-	text-align: end;
+
+/* ---------------------------------------------------------------------------
+ * State — owned here because a pattern cannot express :hover / :focus. Per the
+ * click model the state only lights when the LINK is hovered/focused (:has(a:…)),
+ * not the card padding, so the affordance matches the real click target. Hover
+ * swaps the background to secondary-container; the focus ring is for keyboard use.
+ * ------------------------------------------------------------------------- */
+.ax-post-nav__card {
+	transition: background-color var(--md-sys-motion-duration-short3, 120ms) var(--md-sys-motion-easing-standard, ease);
+}
+.ax-post-nav__card:has(a:hover) {
+	/* !important to beat WordPress's preset background utility class, which core
+	 * itself prints with !important (the editor-chosen Column background). */
+	background-color: var(--wp--preset--color--secondary-container) !important;
+}
+.ax-post-nav__card:has(a:focus-visible) {
+	outline: 3px solid var(--wp--preset--color--secondary);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ax-post-nav__card {
+		transition: none;
+	}
 }

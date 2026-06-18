@@ -40,10 +40,10 @@ Tags:              block-patterns, custom-colors, custom-logo, editor-style
 }
 
 /* Anchor landing offset for in-content headings. A clicked TOC link (or any hash
- * jump) lands the heading 15% down the viewport, which MUST match the TOC
- * scroll-spy active line (axismundi/toc view.js, innerHeight * 0.15) so the heading
- * it lands on is exactly the one is-current marks. :where() keeps specificity at 0
- * so a block-level scroll-margin override still wins. */
+ * jump) lands the heading 15% down the viewport — intentionally a touch above the
+ * TOC scroll-spy active line (axismundi/toc view.js, innerHeight * 0.2), so a
+ * clicked heading settles just above the line, which reads better. :where() keeps
+ * specificity at 0 so a block-level scroll-margin override still wins. */
 :where(.wp-block-post-content) :is(h2, h3, h4, h5, h6) {
 	scroll-margin-top: 15vh;
 }

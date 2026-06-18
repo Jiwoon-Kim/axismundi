@@ -86,10 +86,10 @@
 		}
 
 		function updateActive() {
-			// The active line sits 15% down the viewport. It MUST match the theme's
-			// in-content heading scroll-margin-top (style.css, 15vh) so a clicked TOC
-			// link lands the heading exactly where is-current is decided.
-			const line = window.innerHeight * 0.15;
+			// The active line sits 20% down the viewport. The theme lands anchored
+			// headings a little higher (scroll-margin-top: 15vh) so a clicked heading
+			// settles just above this line — an intentional ~5% gap that reads better.
+			const line = window.innerHeight * 0.2;
 
 			// Above the content: the first heading has not reached the line yet.
 			if ( targets[ 0 ].getBoundingClientRect().top > line ) {

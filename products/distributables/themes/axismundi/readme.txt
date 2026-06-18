@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -24,6 +24,12 @@ CMS.
 2. Open Appearance > Editor to customize templates and global styles.
 
 == Changelog ==
+
+= 0.1.1 =
+* Document the source URL, copyright, license, and license URL for every bundled
+  font and icon asset.
+* Document the source and license for screenshot.png.
+* Synchronize the public theme and runtime asset versions.
 
 = 0.1.0 =
 * Initial release of the Material Design 3 block theme and token system.
@@ -46,3 +52,46 @@ version.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+This theme bundles the following third-party resources:
+
+== Fonts ==
+
+The original font files were converted to WOFF2 for web delivery.
+
+Roboto Flex
+Copyright 2017 The Roboto Flex Project Authors.
+License: SIL Open Font License, 1.1
+License URI: https://openfontlicense.org/open-font-license-official-text/
+Source: https://github.com/google/fonts/tree/main/ofl/robotoflex
+
+Roboto Serif
+Copyright 2020 The Roboto Serif Project Authors.
+License: SIL Open Font License, 1.1
+License URI: https://openfontlicense.org/open-font-license-official-text/
+Source: https://github.com/google/fonts/tree/main/ofl/robotoserif
+
+Roboto Mono
+Copyright 2015 The Roboto Mono Project Authors.
+License: SIL Open Font License, 1.1
+License URI: https://openfontlicense.org/open-font-license-official-text/
+Source: https://github.com/google/fonts/tree/main/ofl/robotomono
+
+== Icons ==
+
+Material Symbols Outlined
+Copyright Google LLC.
+License: Apache License 2.0
+License URI: https://www.apache.org/licenses/LICENSE-2.0
+Source: https://github.com/google/material-design-icons/tree/master/variablefont
+
+== Screenshot ==
+
+Axismundi theme demonstration screenshot
+Copyright 2026 Jiwoon Kim.
+License: GNU General Public License v3 or later
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
+Source: https://github.com/Jiwoon-Kim/axismundi/blob/main/products/distributables/themes/axismundi/screenshot.png
+
+The screenshot is an original capture of the theme rendering and does not use
+third-party photography.

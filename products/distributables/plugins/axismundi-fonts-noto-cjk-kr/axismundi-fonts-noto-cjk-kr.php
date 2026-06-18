@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Fonts: Noto CJK Korean
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-fonts-noto-cjk-kr
  * Description:       Optional Korean web-font provider for the Axismundi theme — supplies Noto Sans KR and Noto Serif KR under the family names the theme's stacks reference, and registers them as a Font Library collection.
- * Version:           0.1.1
+ * Version:           0.1.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -18,7 +18,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_FONTS_NOTO_CJK_KR_VERSION' ) ) {
-	define( 'AXISMUNDI_FONTS_NOTO_CJK_KR_VERSION', '0.1.1' );
+	define( 'AXISMUNDI_FONTS_NOTO_CJK_KR_VERSION', '0.1.2' );
 }
 
 /**

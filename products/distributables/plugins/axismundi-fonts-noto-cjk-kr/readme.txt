@@ -4,7 +4,7 @@ Tags: fonts, korean, noto, typography, font-library
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -54,6 +54,11 @@ numerals continue to use the theme's primary family.
 
 == Changelog ==
 
+= 0.1.2 =
+
+* Document the source URL, copyright, license, and license URL for each bundled
+  Noto font family directly in readme.txt.
+
 = 0.1.1 =
 
 * Prepare the package for WordPress.org Plugin Check by removing the hidden
@@ -70,6 +75,24 @@ Axismundi Fonts: Noto CJK Korean, Copyright 2026 KIM JIWOON.
 Plugin code is distributed under the GNU General Public License, version 3 or
 later.
 
-Bundled fonts (Noto Sans KR, Noto Serif KR) are Copyright The Noto Project
-Authors, licensed under the SIL Open Font License 1.1. The license text and
-sources are preserved under `assets/fonts/*/`. See NOTICE.txt.
+This plugin bundles the following third-party resources:
+
+== Fonts ==
+
+The original font files were converted and subset to WOFF2 for Korean web-font
+delivery.
+
+Noto Sans KR
+Copyright 2014-2021 Adobe, with Reserved Font Name "Source".
+License: SIL Open Font License, 1.1
+License URI: https://openfontlicense.org/open-font-license-official-text/
+Source: https://github.com/google/fonts/tree/main/ofl/notosanskr
+
+Noto Serif KR
+Copyright 2012 Google Inc.
+License: SIL Open Font License, 1.1
+License URI: https://openfontlicense.org/open-font-license-official-text/
+Source: https://github.com/google/fonts/tree/main/ofl/notoserifkr
+
+The verbatim license text and conversion provenance are preserved under each
+family directory in `assets/fonts/`. See NOTICE.txt.

@@ -12,7 +12,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'OMPHALOS_VERSION' ) ) {
-	define( 'OMPHALOS_VERSION', '0.1.2' );
+	define( 'OMPHALOS_VERSION', '0.1.3' );
 }
 
 /**

@@ -22,6 +22,10 @@ heading ids — regardless of render order or where you place the block (a templ
 aside or inside the content). Author-provided HTML anchors are respected, and
 duplicate headings are de-duplicated (`-2`, `-3`).
 
+* Two placements: a sidebar **rail**, or a collapsible **disclosure** above the
+  content (a sticky native `<details>` whose summary can echo the current
+  section). A "Table of contents (above content)" pattern ships the disclosure
+  ready to drop before the post content.
 * Builds from `h2`–`h4` by default (configurable per block).
 * Unordered list by default; switch to a numbered (ordered) list per block.
 * Emits the shared `toc-list` / `toc-h2…h4` / `is-current` class vocabulary so a
@@ -67,3 +71,6 @@ matches them literally.
   one rule; the active state clears when the reading position leaves the content.
 * Material Design 3 token skin (with fallbacks) over the shared `toc-list` /
   `is-current` vocabulary; smooth in-page scrolling is owned by the theme.
+* Rail and disclosure placements. The disclosure is a sticky native `<details>`
+  (open-by-default and summary mode are per-block); its summary can track the
+  current section. Ships a "Table of contents (above content)" pattern.

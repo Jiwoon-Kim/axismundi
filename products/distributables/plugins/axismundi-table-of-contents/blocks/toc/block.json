@@ -15,7 +15,9 @@
 		"ordered": { "type": "boolean", "default": false },
 		"minLevel": { "type": "number", "default": 2 },
 		"maxLevel": { "type": "number", "default": 4 },
-		"variant": { "type": "string", "default": "rail" }
+		"variant": { "type": "string", "default": "rail" },
+		"openByDefault": { "type": "boolean", "default": false },
+		"summaryMode": { "type": "string", "default": "current" }
 	},
 	"supports": {
 		"html": false,

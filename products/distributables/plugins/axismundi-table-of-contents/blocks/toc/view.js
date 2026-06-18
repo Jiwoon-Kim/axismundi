@@ -54,6 +54,9 @@
 		// post-content with .wp-block-post-content; fall back to .entry-content,
 		// else skip that edge (the above-content clear still applies).
 		const contentEl = targets[ 0 ].closest( '.wp-block-post-content, .entry-content' );
+		// Disclosure variant: the <summary> can echo the current section. No aria-live
+		// — narrating every section while scrolling would be noise.
+		const summaryCurrent = nav.querySelector( '.ax-toc__summary-current' );
 
 		let currentId = '';
 		// id === '' clears every link.
@@ -71,6 +74,15 @@
 					link.removeAttribute( 'aria-current' );
 				}
 			} );
+			if ( summaryCurrent ) {
+				if ( id && byId[ id ] ) {
+					summaryCurrent.textContent = byId[ id ].textContent;
+					nav.classList.add( 'is-tracking' );
+				} else {
+					summaryCurrent.textContent = '';
+					nav.classList.remove( 'is-tracking' );
+				}
+			}
 		}
 
 		function updateActive() {

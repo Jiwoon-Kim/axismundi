@@ -41,6 +41,31 @@ function axismundi_toc_register_block() : void {
 add_action( 'init', 'axismundi_toc_register_block' );
 
 /**
+ * Register the "above content" disclosure placement as a block pattern.
+ *
+ * The default theme single template keeps the rail aside; this pattern lets a user
+ * drop the collapsible disclosure variant just before core/post-content. Patterns
+ * are not auto-loaded for plugins (that is theme-only), so register it explicitly.
+ *
+ * @return void
+ */
+function axismundi_toc_register_patterns() : void {
+	if ( ! function_exists( 'register_block_pattern' ) ) {
+		return;
+	}
+	register_block_pattern(
+		'axismundi/toc-before-content',
+		array(
+			'title'       => __( 'Table of contents (above content)', 'axismundi-table-of-contents' ),
+			'description' => __( 'A collapsible table of contents to place above the post content.', 'axismundi-table-of-contents' ),
+			'categories'  => array( 'text' ),
+			'content'     => '<!-- wp:axismundi/toc {"variant":"disclosure","openByDefault":false,"summaryMode":"current"} /-->',
+		)
+	);
+}
+add_action( 'init', 'axismundi_toc_register_patterns' );
+
+/**
  * Walk h2-h6 in an HTML fragment, returning the heading list AND a copy of the
  * fragment with deterministic ids injected into id-less headings.
  *

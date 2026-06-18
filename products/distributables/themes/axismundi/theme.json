@@ -514,6 +514,14 @@
 		}
 	},
 	"styles": {
+		"spacing": {
+			"padding": {
+				"top": "0",
+				"bottom": "0",
+				"left": "var:preset|spacing|200",
+				"right": "var:preset|spacing|200"
+			}
+		},
 		"color": {
 			"background": "var:preset|color|surface",
 			"text": "var:preset|color|on-surface"
@@ -642,6 +650,19 @@
 			}
 		},
 		"blocks": {
+			"core/breadcrumbs": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-small"
+				},
+				"spacing": {
+					"padding": {
+						"top": "var:preset|spacing|200",
+						"bottom": "var:preset|spacing|200",
+						"left": "var:preset|spacing|200",
+						"right": "var:preset|spacing|200"
+					}
+				}
+			},
 			"core/table": {
 				"typography": {
 					"fontSize": "var:preset|font-size|body-medium",

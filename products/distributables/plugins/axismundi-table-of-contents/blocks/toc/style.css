@@ -88,10 +88,7 @@
  * ------------------------------------------------------------------------- */
 .ax-toc--disclosure {
 	position: sticky;
-	/* Sit below the WordPress admin bar when present. It is position:fixed, so a
-	 * sticky top:0 would slide under it; the var resolves to 0 for logged-out
-	 * visitors. The rail aside clears the bar via its own 5vh padding instead. */
-	inset-block-start: calc(var(--wp-admin--admin-bar--height, 0px) + 1rem);
+	inset-block-start: 1rem;
 	z-index: 5;
 	box-sizing: border-box;
 	border-radius: 16px;
@@ -107,6 +104,16 @@
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
 	.ax-toc--disclosure {
 		background-color: var(--md-sys-color-surface-container, #f3edf7);
+	}
+}
+
+/* The desktop admin bar is position:fixed, so push the sticky shell below it. On
+ * mobile (<= 782px) the bar is position:absolute and scrolls away, so no offset is
+ * needed there; and when the admin bar is disabled the var is unset (fallback 0).
+ * The rail aside clears the bar via its own 5vh padding instead. */
+@media screen and (min-width: 783px) {
+	.ax-toc--disclosure {
+		inset-block-start: calc(var(--wp-admin--admin-bar--height, 0px) + 1rem);
 	}
 }
 

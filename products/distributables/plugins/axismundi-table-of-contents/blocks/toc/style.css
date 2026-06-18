@@ -88,13 +88,26 @@
  * ------------------------------------------------------------------------- */
 .ax-toc--disclosure {
 	position: sticky;
-	inset-block-start: 1rem;
+	/* Sit below the WordPress admin bar when present. It is position:fixed, so a
+	 * sticky top:0 would slide under it; the var resolves to 0 for logged-out
+	 * visitors. The rail aside clears the bar via its own 5vh padding instead. */
+	inset-block-start: calc(var(--wp-admin--admin-bar--height, 0px) + 1rem);
 	z-index: 5;
 	box-sizing: border-box;
 	border-radius: 16px;
-	background-color: var(--md-sys-color-surface-container, #f3edf7);
+	/* Frosted surface: a translucent surface-container over a blur of whatever is
+	 * scrolling behind the sticky shell. Solid-token fallback where backdrop-filter
+	 * is unsupported, so the panel never turns unreadable. */
+	background-color: color-mix(in srgb, var(--md-sys-color-surface-container, #f3edf7) 82%, transparent);
+	-webkit-backdrop-filter: blur(12px);
+	backdrop-filter: blur(12px);
 	color: var(--md-sys-color-on-surface, #1d1b20);
 	overflow: clip;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.ax-toc--disclosure {
+		background-color: var(--md-sys-color-surface-container, #f3edf7);
+	}
 }
 
 .ax-toc__summary {
@@ -102,6 +115,8 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
+	box-sizing: border-box;
+	block-size: 56px;
 	min-block-size: 56px;
 	padding-inline: 1rem;
 	cursor: pointer;
@@ -159,7 +174,8 @@
 .ax-toc__panel {
 	max-block-size: min(60vh, 480px);
 	overflow-y: auto;
-	padding: 0 1rem 1rem;
+	padding: 1rem;
+	border-block-start: 1px solid var(--md-sys-color-outline-variant, #cac4d0);
 }
 
 @media (prefers-reduced-motion: reduce) {

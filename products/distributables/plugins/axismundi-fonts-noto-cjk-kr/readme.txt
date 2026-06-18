@@ -4,7 +4,7 @@ Tags: fonts, korean, noto, typography, font-library
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -54,6 +54,11 @@ numerals continue to use the theme's primary family.
 
 == Changelog ==
 
+= 0.1.1 =
+
+* Prepare the package for WordPress.org Plugin Check by removing the hidden
+  distribution manifest and publishing the bundled-font notice as `NOTICE.txt`.
+
 = 0.1.0 =
 
 * Initial release: `@font-face` provider (front + editor) for Noto Sans KR and
@@ -67,4 +72,4 @@ later.
 
 Bundled fonts (Noto Sans KR, Noto Serif KR) are Copyright The Noto Project
 Authors, licensed under the SIL Open Font License 1.1. The license text and
-sources are preserved under `assets/fonts/*/`. See NOTICE.md.
+sources are preserved under `assets/fonts/*/`. See NOTICE.txt.

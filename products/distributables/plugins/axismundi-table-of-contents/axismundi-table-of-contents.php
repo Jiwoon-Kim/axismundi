@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Table of Contents
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-table-of-contents
  * Description:       On-page table of contents block that builds from a post's headings and keeps the heading ids in sync.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -16,16 +16,6 @@
  */
 
 defined( 'ABSPATH' ) || exit;
-
-/**
- * Load plugin translations when present.
- *
- * @return void
- */
-function axismundi_toc_load_textdomain() : void {
-	load_plugin_textdomain( 'axismundi-table-of-contents', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-}
-add_action( 'plugins_loaded', 'axismundi_toc_load_textdomain' );
 
 /**
  * Register the axismundi/toc block from its block.json.

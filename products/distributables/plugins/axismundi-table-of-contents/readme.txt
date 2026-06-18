@@ -4,7 +4,7 @@ Tags: table of contents, toc, headings, navigation, block
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -61,6 +61,11 @@ value on both the heading id and the table-of-contents link, and the scroll-spy
 matches them literally.
 
 == Changelog ==
+
+= 0.1.1 =
+
+* Prepare the package for WordPress.org Plugin Check by removing the hidden
+  distribution manifest and relying on WordPress.org translation loading.
 
 = 0.1.0 =
 

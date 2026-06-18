@@ -26,7 +26,11 @@ CMS.
 == Changelog ==
 
 = 0.1.0 =
-* Initial scaffold: submission-safe skeleton (license, metadata, build pipeline).
+* Initial release of the Material Design 3 block theme and token system.
+* Global Styles, block styles, patterns, responsive navigation, navigation
+  overlay, single-post layouts, comments, post navigation, and local font assets.
+* Light, dark, and automatic color-scheme support when used with a compatible
+  switcher.
 
 == Copyright ==
 

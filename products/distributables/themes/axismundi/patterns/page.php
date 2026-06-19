@@ -10,8 +10,12 @@
  */
 
 ?>
-<!-- wp:group {"tagName":"main","metadata":{"patternName":"axismundi/page","name":"Page","description":"Standard page layout with a title and content.","categories":["pages"]},"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|600","right":"var:preset|spacing|200","bottom":"var:preset|spacing|800","left":"var:preset|spacing|200"}}},"layout":{"type":"constrained"}} -->
-<main class="wp-block-group alignwide" style="padding-top:var(--wp--preset--spacing--600);padding-right:var(--wp--preset--spacing--200);padding-bottom:var(--wp--preset--spacing--800);padding-left:var(--wp--preset--spacing--200)"><!-- wp:post-title {"level":1,"fontSize":"display-small"} /-->
+<!-- wp:group {"tagName":"main","metadata":{"patternName":"axismundi/page","name":"Page","description":"Standard page layout with a title and content.","categories":["pages"]},"align":"full","layout":{"type":"default"}} -->
+<main class="wp-block-group alignfull"><!-- wp:group {"metadata":{"name":"Page cover"},"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|900","right":"var:preset|spacing|200","bottom":"var:preset|spacing|800","left":"var:preset|spacing|200"}}},"layout":{"type":"constrained","contentSize":"760px","justifyContent":"center"}} -->
+<div class="wp-block-group alignwide" style="padding-top:var(--wp--preset--spacing--900);padding-right:var(--wp--preset--spacing--200);padding-bottom:var(--wp--preset--spacing--800);padding-left:var(--wp--preset--spacing--200)"><!-- wp:post-title {"level":1,"fontSize":"display-medium"} /--></div>
+<!-- /wp:group -->
 
-<!-- wp:post-content {"align":"full","style":{"spacing":{"margin":{"top":"var:preset|spacing|500"},"padding":{"right":"var:preset|spacing|200","left":"var:preset|spacing|200"}}},"layout":{"type":"constrained"}} /--></main>
+<!-- wp:group {"metadata":{"name":"Page content"},"align":"wide","style":{"spacing":{"padding":{"right":"var:preset|spacing|200","bottom":"var:preset|spacing|900","left":"var:preset|spacing|200"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group alignwide" style="padding-right:var(--wp--preset--spacing--200);padding-bottom:var(--wp--preset--spacing--900);padding-left:var(--wp--preset--spacing--200)"><!-- wp:post-content {"layout":{"type":"constrained"}} /--></div>
+<!-- /wp:group --></main>
 <!-- /wp:group -->

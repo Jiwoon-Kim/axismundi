@@ -158,6 +158,17 @@ Plugin territory:
   v3.5.15.
 - The WordPress.org submission package is not yet assembled.
 
+## Sponsor
+
+Axismundi is an open-source WordPress project focused on Material Design 3,
+Korean and CJK typography, reusable block-theme architecture, and ActivityPub-
+ready publishing experiences.
+
+Sponsorship helps fund ongoing development, testing, documentation,
+localization, WordPress.org releases, and open social web research.
+
+[Sponsor Axismundi development through GitHub Sponsors](https://github.com/sponsors/Jiwoon-Kim).
+
 ## License
 
 Axismundi is multi-licensed by surface:

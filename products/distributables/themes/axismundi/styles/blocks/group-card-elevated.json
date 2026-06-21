@@ -5,7 +5,8 @@
 	"slug": "card-elevated",
 	"blockTypes": [
 		"core/group",
-		"core/column"
+		"core/column",
+		"core/columns"
 	],
 	"styles": {
 		"color": {

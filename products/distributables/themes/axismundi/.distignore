@@ -21,6 +21,7 @@
 /patterns/vqa-widgets.php
 /patterns/vqa-embeds.php
 /patterns/vqa-theme.php
+/patterns/vqa-cards.php
 
 # --- Build artifacts ---
 /tmp

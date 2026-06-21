@@ -144,6 +144,9 @@
 	font-weight: 700;
 	color: var(--wp--preset--color--on-surface);
 }
+#respond.ax-replying .comment-reply-title .ax-reply-title__separator {
+	margin-inline: 0.5ch;
+}
 #respond.ax-replying #cancel-comment-reply-link {
 	color: var(--wp--preset--color--primary);
 	text-decoration: none;

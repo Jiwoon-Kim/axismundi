@@ -183,7 +183,11 @@
 		const name = document.createElement('strong');
 		name.className = 'ax-reply-title__name';
 		name.textContent = authorName;
-		title.append(name, document.createTextNode(' · '), cancel); // re-attach core's cancel link
+		const separator = document.createElement('span');
+		separator.className = 'ax-reply-title__separator';
+		separator.setAttribute('aria-hidden', 'true');
+		separator.textContent = '·';
+		title.append(name, separator, cancel); // re-attach core's cancel link
 	};
 
 	const restoreReplyTitle = () => {

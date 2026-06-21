@@ -1,0 +1,100 @@
+/**
+ * Pagination — Material 3 pill skin for the page numbers and prev/next controls of
+ * core/query-pagination, core/comments-pagination, and the Page Break links
+ * (wp_link_pages output: .post-nav-links / .post-page-numbers, which has no Global
+ * Styles block of its own).
+ *
+ * Layout + item justification stay the block's OWN editor controls (native flex) —
+ * this file only skins the controls, it does not impose a layout. Selectors are
+ * scoped to the pagination wrappers so unrelated global .page-numbers archive links
+ * elsewhere are untouched. Arrow visibility is the block's "Arrow" setting
+ * (paginationArrow), not CSS.
+ */
+
+/* Page-number pills — circular. Shared .page-numbers (query + comments); Page Break
+ * renders the parallel .post-page-numbers. */
+:where(.wp-block-query-pagination, .wp-block-comments-pagination) .page-numbers,
+.post-nav-links .post-page-numbers {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-inline-size: 40px;
+	block-size: 40px;
+	padding: 0;
+	border-radius: 9999px;
+	text-decoration: none;
+	color: var(--wp--preset--color--on-surface-variant);
+}
+:where(.wp-block-query-pagination, .wp-block-comments-pagination) .page-numbers.current,
+.post-nav-links .post-page-numbers.current {
+	background-color: var(--wp--preset--color--secondary-container);
+	color: var(--wp--preset--color--on-secondary-container);
+}
+:where(.wp-block-query-pagination, .wp-block-comments-pagination) .page-numbers.dots {
+	min-inline-size: auto;
+}
+:where(.wp-block-query-pagination, .wp-block-comments-pagination) a.page-numbers:hover,
+.post-nav-links a.post-page-numbers:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) 8%, transparent);
+}
+
+/* Previous / next — tonal pill (background comes from theme.json); keeps label + arrow. */
+.wp-block-query-pagination-previous,
+.wp-block-query-pagination-next,
+.wp-block-comments-pagination-previous,
+.wp-block-comments-pagination-next {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--wp--preset--spacing--50);
+	box-sizing: border-box;
+	min-inline-size: 40px;
+	block-size: 40px;
+	padding-inline: var(--wp--preset--spacing--200);
+	border-radius: 9999px;
+	text-decoration: none;
+}
+/* Core gives the arrow a 1ch label-gap margin at (0,2,0); match the chain at (0,3,0)
+ * so the reset wins and an icon-only control centres in the circle. */
+.wp-block-query-pagination .wp-block-query-pagination-previous .wp-block-query-pagination-previous-arrow,
+.wp-block-query-pagination .wp-block-query-pagination-next .wp-block-query-pagination-next-arrow,
+.wp-block-comments-pagination .wp-block-comments-pagination-previous .wp-block-comments-pagination-previous-arrow,
+.wp-block-comments-pagination .wp-block-comments-pagination-next .wp-block-comments-pagination-next-arrow {
+	margin: 0;
+}
+/* Icon-only — Show label off makes core drop the visible text and add an aria-label
+ * for the accessible name. Only then collapse the inline padding so the
+ * min-inline-size:40px square stays a perfect circle. A visible label (or arrow:none)
+ * has no aria-label and keeps the pill padding above. */
+.wp-block-query-pagination-previous[aria-label],
+.wp-block-query-pagination-next[aria-label],
+.wp-block-comments-pagination-previous[aria-label],
+.wp-block-comments-pagination-next[aria-label] {
+	padding-inline: 0;
+}
+.wp-block-query-pagination-previous:hover,
+.wp-block-query-pagination-next:hover,
+.wp-block-comments-pagination-previous:hover,
+.wp-block-comments-pagination-next:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) 8%, var(--wp--preset--color--surface-container-high));
+}
+
+/* Page Break wrapper (wp_link_pages) — a simple centred row, no grid. */
+.post-nav-links {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--wp--preset--spacing--50);
+}
+
+/* Keyboard focus */
+:where(.wp-block-query-pagination, .wp-block-comments-pagination) a.page-numbers:focus-visible,
+.post-nav-links a.post-page-numbers:focus-visible,
+.wp-block-query-pagination-previous:focus-visible,
+.wp-block-query-pagination-next:focus-visible,
+.wp-block-comments-pagination-previous:focus-visible,
+.wp-block-comments-pagination-next:focus-visible {
+	outline: 2px solid var(--wp--preset--color--secondary);
+	outline-offset: 2px;
+}

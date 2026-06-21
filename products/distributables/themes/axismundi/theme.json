@@ -504,6 +504,20 @@
 			"enabled": true,
 			"allowEditing": true
 		},
+		"dimensions": {
+			"aspectRatios": [
+				{
+					"name": "5:3",
+					"slug": "5-3",
+					"ratio": "5/3"
+				},
+				{
+					"name": "2:1",
+					"slug": "2-1",
+					"ratio": "2/1"
+				}
+			]
+		},
 		"blocks": {
 			"core/image": {
 				"lightbox": {
@@ -650,6 +664,82 @@
 			}
 		},
 		"blocks": {
+			"core/post-navigation-link": {
+				"color": {
+					"background": "var:preset|color|surface-container-low",
+					"text": "var:preset|color|on-surface"
+				},
+				"border": {
+					"radius": "12px"
+				},
+				"spacing": {
+					"padding": {
+						"top": "var:preset|spacing|250",
+						"right": "var:preset|spacing|300",
+						"bottom": "var:preset|spacing|250",
+						"left": "var:preset|spacing|300"
+					}
+				},
+					"css": "& { position: relative; display: block; box-sizing: border-box; block-size: 100%; transition: background-color var(--md-sys-motion-duration-short3, 120ms) var(--md-sys-motion-easing-standard, ease); }&:not(:has(a)) { display: none; }& a { display: block; color: inherit; text-decoration: none; }& a::before { content: \"\"; position: absolute; inset: 0; border-radius: inherit; }& .post-navigation-link__label { display: block; font-size: 1rem; line-height: 1.5; font-weight: 500; color: var(--wp--preset--color--on-surface-variant); }& .post-navigation-link__title { display: block; font-size: 1.5rem; line-height: 1.333; font-weight: 475; margin-block-start: var(--wp--preset--spacing--50); }& .wp-block-post-navigation-link__arrow-previous { position: absolute; top: var(--wp--preset--spacing--250); inset-inline-start: var(--wp--preset--spacing--300); margin: 0; font-size: 1rem; line-height: 1.5; color: var(--wp--preset--color--on-surface-variant); }& .wp-block-post-navigation-link__arrow-next { position: absolute; top: var(--wp--preset--spacing--250); inset-inline-end: var(--wp--preset--spacing--300); margin: 0; font-size: 1rem; line-height: 1.5; color: var(--wp--preset--color--on-surface-variant); }&.post-navigation-link-previous .post-navigation-link__label { padding-inline-start: 1.5em; }&.post-navigation-link-next { margin-inline-start: auto; }&.post-navigation-link-next .post-navigation-link__label { padding-inline-end: 1.5em; }&:has(a:hover) { background-color: var(--wp--preset--color--secondary-container); }&:has(a:focus-visible) { outline: 3px solid var(--wp--preset--color--secondary); outline-offset: 2px; }@media (prefers-reduced-motion: reduce) { & { transition: none; } }"
+			},
+			"core/query-pagination": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/query-pagination-previous": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				},
+				"color": {
+					"background": "var:preset|color|surface-container-high"
+				}
+			},
+			"core/query-pagination-next": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				},
+				"color": {
+					"background": "var:preset|color|surface-container-high"
+				}
+			},
+			"core/query-pagination-numbers": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				}
+			},
+			"core/comments-pagination": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/comments-pagination-previous": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				},
+				"color": {
+					"background": "var:preset|color|surface-container-high"
+				}
+			},
+			"core/comments-pagination-next": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				},
+				"color": {
+					"background": "var:preset|color|surface-container-high"
+				}
+			},
+			"core/comments-pagination-numbers": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				}
+			},
 			"core/breadcrumbs": {
 				"typography": {
 					"fontSize": "var:preset|font-size|body-small"

@@ -195,6 +195,21 @@ img,
 video {
 	height: auto;
 }
+/* Block-level replaced media — <video>/<audio>/<iframe>/<embed>/<object> are
+ * inline replaced elements by default, so the constrained layout's
+ * margin-inline:auto can't centre them: bare (Custom HTML / markdown / federated)
+ * media left-aligns in a wide content column while block siblings (<figure>,
+ * <p>) centre correctly. Promote them to block so they sit in the content column
+ * like everything else. <img>/<picture>/<svg> are deliberately left inline so
+ * inline images in prose stay inline; block images arrive wrapped in <figure>. */
+video,
+audio,
+iframe,
+embed,
+object {
+	display: block;
+	margin-inline: auto;
+}
 /* Avatars carry explicit width/height attributes and are a fixed size; opt them
  * out of the blanket shrink-to-fit above so a wide flex sibling (a long comment
  * body, a byline row) cannot squeeze the avatar below its size. TT5 ships no

@@ -740,6 +740,81 @@
 					"fontSize": "var:preset|font-size|label-large"
 				}
 			},
+			"core/post-terms": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-medium"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				},
+				"elements": {
+					"link": {
+						"color": {
+							"text": "var:preset|color|on-surface-variant"
+						}
+					}
+				}
+			},
+			"core/term-name": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-large"
+				}
+			},
+			"core/term-count": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-small"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/term-description": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-medium"
+				},
+				"color": {
+					"text": "var:preset|color|on-surface-variant"
+				}
+			},
+			"core/query-title": {
+				"typography": {
+					"fontSize": "var:preset|font-size|headline-medium"
+				}
+			},
+			"core/categories": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-medium"
+				},
+				"elements": {
+					"link": {
+						"color": {
+							"text": "var:preset|color|on-surface-variant"
+						}
+					}
+				}
+			},
+			"core/archives": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-medium"
+				},
+				"elements": {
+					"link": {
+						"color": {
+							"text": "var:preset|color|on-surface-variant"
+						}
+					}
+				}
+			},
+			"core/page-list": {
+				"typography": {
+					"fontSize": "var:preset|font-size|body-medium"
+				}
+			},
+			"core/tag-cloud": {
+				"typography": {
+					"fontSize": "var:preset|font-size|label-large"
+				}
+			},
 			"core/breadcrumbs": {
 				"typography": {
 					"fontSize": "var:preset|font-size|body-small"

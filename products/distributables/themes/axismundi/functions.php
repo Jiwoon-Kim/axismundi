@@ -109,6 +109,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.collections.css' ) ? 'assets/styles/blocks.collections.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.comments.css' ) ? 'assets/styles/blocks.comments.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.pagination.css' ) ? 'assets/styles/blocks.pagination.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/blocks.taxonomy.css' ) ? 'assets/styles/blocks.taxonomy.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/parts.navigation-overlay.css' ) ? 'assets/styles/parts.navigation-overlay.css' : null,
@@ -218,6 +219,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-blocks-comments'    => array( 'assets/styles/blocks.comments.css', array( 'axismundi-blocks-collections' ) ),
 		// core/query-pagination + core/comments-pagination + Page Break — M3 pill + 3-col grid.
 		'axismundi-blocks-pagination'  => array( 'assets/styles/blocks.pagination.css', array( 'axismundi-blocks-comments' ) ),
+		// core/post-terms + core/tag-cloud + core/term-template — M3 taxonomy variations.
+		'axismundi-blocks-taxonomy'    => array( 'assets/styles/blocks.taxonomy.css', array( 'axismundi-blocks-pagination' ) ),
 		// core/navigation family — block owns its children state; submenu owns the menu popover.
 		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
@@ -342,3 +345,19 @@ function axismundi_embed_defaults( array $defaults ) : array {
 	return $defaults;
 }
 add_filter( 'embed_defaults', 'axismundi_embed_defaults' );
+
+/**
+ * Opt-in Material 3 taxonomy block style variations. Each registers only the name and
+ * label; the geometry lives in assets/styles/blocks.taxonomy.css keyed on .is-style-*,
+ * so the nested per-<a> / repeat selectors stay in plain CSS. These are chip-SHAPED
+ * navigation links, not M3 filter chips.
+ */
+function axismundi_register_taxonomy_block_styles() : void {
+	register_block_style( 'core/post-terms', array( 'name' => 'inline', 'label' => __( 'Inline', 'axismundi' ), 'is_default' => true ) );
+	register_block_style( 'core/post-terms', array( 'name' => 'tags', 'label' => __( 'Tags', 'axismundi' ) ) );
+	register_block_style( 'core/post-terms', array( 'name' => 'badge', 'label' => __( 'Badge', 'axismundi' ) ) );
+	register_block_style( 'core/tag-cloud', array( 'name' => 'tags', 'label' => __( 'Tags', 'axismundi' ) ) );
+	register_block_style( 'core/term-template', array( 'name' => 'row', 'label' => __( 'List row', 'axismundi' ) ) );
+	register_block_style( 'core/term-template', array( 'name' => 'card', 'label' => __( 'Card', 'axismundi' ) ) );
+}
+add_action( 'init', 'axismundi_register_taxonomy_block_styles' );

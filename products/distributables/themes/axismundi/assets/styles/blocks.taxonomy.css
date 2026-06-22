@@ -1,0 +1,130 @@
+/**
+ * Taxonomy blocks — Material 3 opt-in variations for taxonomy LINKS (core/post-terms,
+ * core/tag-cloud) and the Terms Query item (core/term-template).
+ *
+ * These are chip-SHAPED navigation links, NOT M3 filter chips: no selection state, no
+ * aria-pressed, no toggle. A real filter chip (selected state / aria-pressed) is a
+ * separate component for when a query-filter feature exists, and is not applied here.
+ *
+ * The neutral inline base (quiet typography + link colour) lives in theme.json; this
+ * file owns only the opt-in geometry + state, scoped to .is-style-* so default
+ * taxonomy links stay quiet inline text. The tag/badge geometry matches the Axismundi
+ * template `.t-tag`: 28px tall, 8px radius, surface-container, 8px inline padding.
+ */
+
+/* =========================================================================
+ * core/post-terms
+ * is-style-inline (default): quiet comma-separated links — theme.json base only.
+ * ========================================================================= */
+
+/* is-style-tags — every term becomes a compact tag link (28px, 8px radius). */
+.wp-block-post-terms.is-style-tags {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--wp--preset--spacing--50);
+}
+.wp-block-post-terms.is-style-tags > a {
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 28px;
+	padding-inline: var(--wp--preset--spacing--100);
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container);
+	color: var(--wp--preset--color--on-surface-variant);
+	text-decoration: none;
+}
+.wp-block-post-terms.is-style-tags > a:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) 8%, var(--wp--preset--color--surface-container));
+}
+.wp-block-post-terms.is-style-tags > a:focus-visible {
+	outline: 2px solid var(--wp--preset--color--secondary);
+	outline-offset: 2px;
+}
+.wp-block-post-terms.is-style-tags .wp-block-post-terms__separator {
+	display: none;
+}
+
+/* is-style-badge — a single leading category as a tonal badge (media overlay / eyebrow). */
+.wp-block-post-terms.is-style-badge {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--wp--preset--spacing--50);
+}
+.wp-block-post-terms.is-style-badge > a {
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 28px;
+	padding-inline: var(--wp--preset--spacing--100);
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--secondary-container);
+	color: var(--wp--preset--color--on-secondary-container);
+	font-size: var(--wp--preset--font-size--label-large);
+	text-decoration: none;
+}
+.wp-block-post-terms.is-style-badge > a:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container) 8%, var(--wp--preset--color--secondary-container));
+}
+.wp-block-post-terms.is-style-badge .wp-block-post-terms__separator {
+	display: none;
+}
+
+/* =========================================================================
+ * core/tag-cloud
+ * is-style-tags — uniform tag links. Overrides the inline popularity font-size
+ * (the variable size is a separate signal; tags are opt-in and drop it).
+ * ========================================================================= */
+.wp-block-tag-cloud.is-style-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--50);
+}
+.wp-block-tag-cloud.is-style-tags .tag-cloud-link {
+	box-sizing: border-box;
+	margin: 0; /* reset core's .wp-block-tag-cloud a { margin-right:5px } so only the flex gap applies */
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 28px;
+	padding-inline: var(--wp--preset--spacing--100);
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container);
+	color: var(--wp--preset--color--on-surface-variant);
+	text-decoration: none;
+	font-size: var(--wp--preset--font-size--label-medium) !important;
+}
+.wp-block-tag-cloud.is-style-tags .tag-cloud-link:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) 8%, var(--wp--preset--color--surface-container));
+}
+.wp-block-tag-cloud.is-style-tags .tag-link-count {
+	margin-inline-start: var(--wp--preset--spacing--50);
+	color: var(--wp--preset--color--on-surface-variant);
+}
+
+/* =========================================================================
+ * core/term-template (inside core/terms-query)
+ * Variations skin the repeated item; the item content stays pattern-owned.
+ * ========================================================================= */
+
+/* is-style-row — sidebar list rows: divider rhythm + trailing count. */
+.wp-block-term-template.is-style-row > * {
+	box-sizing: border-box;
+	min-block-size: 48px;
+	align-items: center;
+	padding-block: var(--wp--preset--spacing--100);
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
+}
+.wp-block-term-template.is-style-row .wp-block-term-count {
+	margin-inline-start: auto;
+	color: var(--wp--preset--color--on-surface-variant);
+}
+
+/* is-style-card — category-discovery cards. */
+.wp-block-term-template.is-style-card > * {
+	box-sizing: border-box;
+	padding: var(--wp--preset--spacing--300);
+	border-radius: 12px;
+	background-color: var(--wp--preset--color--surface-container-low);
+}

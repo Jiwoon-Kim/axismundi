@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-  Build the distributable Omphalos theme ZIP for WordPress.org submission.
+  Build the distributable Axismundi theme ZIP for WordPress.org submission.
 
 .DESCRIPTION
-  Stages the theme into products/distributables/_dist/omphalos/ excluding every
+  Stages the theme into products/distributables/_dist/axismundi/ excluding every
   pattern listed in .distignore, then compresses it to
-  products/distributables/_dist/omphalos.zip with the theme folder at the ZIP
+  products/distributables/_dist/axismundi.zip with the theme folder at the ZIP
   root (the form WordPress.org expects).
 
   Dir patterns in .distignore (existing directories) -> robocopy /XD.

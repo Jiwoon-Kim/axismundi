@@ -12,7 +12,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_VERSION' ) ) {
-	define( 'AXISMUNDI_VERSION', '0.1.1' );
+	define( 'AXISMUNDI_VERSION', '0.1.2' );
 }
 
 // Theme-internal attachment page renderer. WordPress core/post-content only
@@ -103,6 +103,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/tokens.sys.motion.css' ) ? 'assets/styles/tokens.sys.motion.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/components.button.css' ) ? 'assets/styles/components.button.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/components.select.css' ) ? 'assets/styles/components.select.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.text.css' ) ? 'assets/styles/blocks.text.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.table.css' ) ? 'assets/styles/blocks.table.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
@@ -207,6 +208,8 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-icons'              => array( 'assets/styles/icons.css', array( 'axismundi-tokens-motion' ) ),
 		// Component layer — only what theme.json cannot express (e.g. motion).
 		'axismundi-button'             => array( 'assets/styles/components.button.css', array( 'axismundi-tokens-motion', 'axismundi-icons' ) ),
+		// core/categories + core/archives dropdown — native <select> as an M3 field.
+		'axismundi-select'             => array( 'assets/styles/components.select.css', array( 'axismundi-button' ) ),
 		// Core text block refinements that need pseudo-elements / specificity.
 		'axismundi-blocks-text'        => array( 'assets/styles/blocks.text.css', array( 'axismundi-tokens-motion' ) ),
 		// Core/raw table refinements that need cell-level selectors.

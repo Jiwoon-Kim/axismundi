@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -24,6 +24,14 @@ CMS.
 2. Open Appearance > Editor to customize templates and global styles.
 
 == Changelog ==
+
+= 0.1.2 =
+* Add Search, Archive, Page, and 404 block templates and refine the footer.
+* Add Material 3 styling for post navigation, pagination, taxonomy blocks, and
+  taxonomy/archive dropdown selects.
+* Add progressive enhancement for customizable select pickers while preserving
+  native mobile and unsupported-browser behavior.
+* Refine card patterns, raw media alignment, and comment thread connectors.
 
 = 0.1.1 =
 * Document the source URL, copyright, license, and license URL for every bundled

@@ -1,0 +1,193 @@
+/**
+ * Axismundi — native <select> component layer (M3 Outlined-style field).
+ *
+ * core/categories (Categories List / Terms List) and core/archives render a
+ * dynamic <label> + native <select> when "Display as dropdown" is on. theme.json
+ * cannot reach a native form control (no block style hook for the <select>, and
+ * the control is painted by the UA), so the M3 field lives here as a component —
+ * the same reason components.button.css exists. Scope is the two dropdown
+ * wrappers only, so the LIST display mode (<ul>) is never touched.
+ *
+ * Two tiers:
+ *   v1 — the CLOSED field, styled in every browser: 48px, 8px radius,
+ *        surface-container-high, body-large, appearance:none, a wrapper ::after
+ *        arrow_drop_down (Material Symbols, inherited from icons.css / theme.json),
+ *        and the keyboard focus ring. The OPEN option list stays UA-native here,
+ *        which is also the better mobile UX (OS picker).
+ *   v2 — progressive enhancement via CSS Customizable Select. Gated on
+ *        @supports (appearance: base-select) AND @media (pointer: fine): on a
+ *        fine pointer (desktop) the OPEN ::picker(select) + <option>s also get the
+ *        M3 menu (elevation, radius, 48px rows, selected state). The inconsistent
+ *        browser-owned ::picker-icon is hidden while the same wrapper arrow from
+ *        v1 remains visible. No <button>/<selectedcontent> authoring and no JS —
+ *        the existing <select><option> markup is enough. Coarse-pointer /
+ *        unsupported browsers fall back to the v1 field + native picker
+ *        (Chromium 134+; not yet Baseline).
+ *
+ * The icon glyph reuses the Material Symbols contract; when the theme/font is
+ * absent the ::after simply renders nothing (decorative), and the field still
+ * works. Selectors stay on the two wrappers so unrelated selects are untouched.
+ */
+
+/* =========================================================================
+ * v1 — closed field (all browsers)
+ * ========================================================================= */
+
+/* External label above the field. */
+.wp-block-categories-dropdown .wp-block-categories__label,
+.wp-block-archives-dropdown .wp-block-archives__label {
+	display: block;
+	margin-block-end: var(--wp--preset--spacing--50);
+	color: var(--wp--preset--color--on-surface-variant);
+	font-size: var(--wp--preset--font-size--label-medium);
+}
+
+/* Positioning context for the trailing arrow. */
+.wp-block-categories-dropdown,
+.wp-block-archives-dropdown {
+	position: relative;
+}
+
+/* The field itself. padding-inline-end clears the arrow zone. */
+.wp-block-categories-dropdown select,
+.wp-block-archives-dropdown select {
+	box-sizing: border-box;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	min-block-size: 48px;
+	align-items: center;
+	margin: 0;
+	padding-block: 0;
+	padding-inline: var(--wp--preset--spacing--200) var(--wp--preset--spacing--600);
+	border: none;
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container-high);
+	color: var(--wp--preset--color--on-surface);
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--body-large);
+	line-height: 1.5;
+	appearance: none;
+	-webkit-appearance: none;
+	cursor: pointer;
+}
+
+.wp-block-categories-dropdown select:hover,
+.wp-block-archives-dropdown select:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--wp--preset--color--surface-container-high));
+}
+
+.wp-block-categories-dropdown select:focus-visible,
+.wp-block-archives-dropdown select:focus-visible {
+	outline: 2px solid var(--wp--preset--color--secondary);
+	outline-offset: 2px;
+}
+
+/* Trailing arrow_drop_down, anchored to the select's 48px band (not the wrapper
+ * centre, so the external label above the field doesn't shift it). Decorative and
+ * click-through; the glyph comes from the Material Symbols font (icons.css /
+ * theme.json) and degrades to nothing when that font is absent. */
+.wp-block-categories-dropdown::after,
+.wp-block-archives-dropdown::after {
+	content: "arrow_drop_down";
+	position: absolute;
+	inset-inline-end: var(--wp--preset--spacing--200);
+	inset-block-end: 0;
+	block-size: 48px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-feature-settings: "liga";
+	font-size: 24px;
+	line-height: 1;
+	color: var(--wp--preset--color--on-surface-variant);
+	pointer-events: none;
+	transition: rotate var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* =========================================================================
+ * v2 — progressive enhancement: M3 open menu via CSS Customizable Select.
+ * Desktop / fine-pointer only; coarse pointers keep the native OS picker.
+ * ========================================================================= */
+@supports (appearance: base-select) {
+	@media (pointer: fine) {
+		.wp-block-categories-dropdown select,
+		.wp-block-archives-dropdown select {
+			appearance: base-select;
+		}
+
+		/* Keep the wrapper-owned Material Symbol used by the fallback tier. Browser
+		 * implementations do not consistently accept a text glyph in
+		 * ::picker-icon; hide that internal marker to avoid a native triangle plus
+		 * an incorrectly sized generated-content box. */
+		.wp-block-categories-dropdown select::picker-icon,
+		.wp-block-archives-dropdown select::picker-icon {
+			display: none;
+		}
+		.wp-block-categories-dropdown:has(select:open)::after,
+		.wp-block-archives-dropdown:has(select:open)::after {
+			rotate: 180deg;
+		}
+
+		/* The open popover — M3 menu surface: elevation, radius, 8px inset. */
+		.wp-block-categories-dropdown select::picker(select),
+		.wp-block-archives-dropdown select::picker(select) {
+			appearance: base-select;
+			box-sizing: border-box;
+			/* Drop BELOW the trigger, flip up only when it genuinely won't fit.
+			 * base-select's UA default position-try-order is `most-block-size`,
+			 * which opens whichever side has more room — so a trigger near the
+			 * viewport's vertical centre flips UP even with ample space below.
+			 * Reset the order to `normal` so the declared block-end base position
+			 * is honoured and flip-block is a last resort. */
+			position-area: block-end span-inline-end;
+			position-try-order: normal;
+			position-try-fallbacks: flip-block;
+			margin-block-start: var(--wp--preset--spacing--50);
+			min-block-size: 112px;
+			overflow-y: auto;
+			scrollbar-width: thin;
+			scrollbar-color: var(--wp--preset--color--outline-variant) transparent;
+			padding-block: var(--wp--preset--spacing--100);
+			border: none;
+			border-radius: 8px;
+			background-color: var(--wp--preset--color--surface-container);
+			/* Menus float above their trigger even in dark mode. The global M3
+			 * elevation aliases intentionally suppress physical shadows in dark,
+			 * so preserve the level-2 formula locally for this popover. */
+			box-shadow:
+				0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 70%),
+				0 2px 6px 2px color-mix(in srgb, var(--md-sys-color-shadow), transparent 85%);
+		}
+
+		/* Option rows — 48px, 16px inline padding, body-large. */
+		.wp-block-categories-dropdown option,
+		.wp-block-archives-dropdown option {
+			box-sizing: border-box;
+			min-block-size: 48px;
+			padding-block: 0;
+			padding-inline: var(--wp--preset--spacing--200);
+			display: flex;
+			align-items: center;
+			color: var(--wp--preset--color--on-surface);
+			font-size: var(--wp--preset--font-size--body-large);
+		}
+		.wp-block-categories-dropdown option:hover,
+		.wp-block-archives-dropdown option:hover {
+			background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+		}
+		.wp-block-categories-dropdown option:checked,
+		.wp-block-archives-dropdown option:checked {
+			background-color: var(--wp--preset--color--secondary-container);
+			color: var(--wp--preset--color--on-secondary-container);
+		}
+
+		/* Core renders a leading ::checkmark for the selected option; the row's
+		 * own selected colour carries the state, so hide the tick to keep M3's
+		 * clean row. */
+		.wp-block-categories-dropdown option::checkmark,
+		.wp-block-archives-dropdown option::checkmark {
+			display: none;
+		}
+	}
+}

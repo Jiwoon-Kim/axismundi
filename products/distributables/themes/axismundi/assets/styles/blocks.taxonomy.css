@@ -147,7 +147,12 @@
  * style there is a harmless no-op.
  * ========================================================================= */
 .wp-block-categories.is-style-row,
-.wp-block-archives.is-style-row,
+.wp-block-archives.is-style-row {
+	list-style: none;
+	margin-inline: 0;
+	margin-block-end: 0;
+	padding: 0;
+}
 .wp-block-categories.is-style-row .children {
 	list-style: none;
 	margin: 0;

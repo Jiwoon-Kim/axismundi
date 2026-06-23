@@ -362,5 +362,10 @@ function axismundi_register_taxonomy_block_styles() : void {
 	register_block_style( 'core/tag-cloud', array( 'name' => 'tags', 'label' => __( 'Tags', 'axismundi' ) ) );
 	register_block_style( 'core/term-template', array( 'name' => 'row', 'label' => __( 'List row', 'axismundi' ) ) );
 	register_block_style( 'core/term-template', array( 'name' => 'card', 'label' => __( 'Card', 'axismundi' ) ) );
+	// Divided list rows — the same "row" contract for the finished list widgets
+	// (core/categories = Categories / Terms List, core/archives = date archive).
+	// Geometry in blocks.taxonomy.css; visual only affects the list (not dropdown) mode.
+	register_block_style( 'core/categories', array( 'name' => 'row', 'label' => __( 'List row', 'axismundi' ) ) );
+	register_block_style( 'core/archives', array( 'name' => 'row', 'label' => __( 'List row', 'axismundi' ) ) );
 }
 add_action( 'init', 'axismundi_register_taxonomy_block_styles' );

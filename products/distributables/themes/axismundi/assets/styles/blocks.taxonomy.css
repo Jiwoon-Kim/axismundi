@@ -128,3 +128,68 @@
 	border-radius: 12px;
 	background-color: var(--wp--preset--color--surface-container-low);
 }
+
+/* =========================================================================
+ * core/categories (Categories / Terms List) + core/archives — is-style-row
+ * The finished list widgets as the M3 divided list from the reference
+ * `.t-aside__list`: transparent (no surface / radius — a wrapping pattern owns
+ * those), hairline dividers between rows, name left + count right, count muted,
+ * hover -> primary.
+ *
+ * Core renders the count as a BARE TEXT NODE after the <a> (categories: ` (3)`,
+ * archives: `&nbsp;(1)`), not a wrapped element. display:grid turns that text
+ * run into an anonymous grid item, so the count right-aligns and inherits the
+ * row's on-surface-variant colour while the <a> keeps on-surface — no PHP
+ * filter / DOM rewrite needed. Whole-row click is intentionally NOT added: the
+ * link text is the accessible target and the count stays inert.
+ *
+ * Scoped to the list mode — the dropdown wrapper has no <li>, so applying the
+ * style there is a harmless no-op.
+ * ========================================================================= */
+.wp-block-categories.is-style-row,
+.wp-block-archives.is-style-row,
+.wp-block-categories.is-style-row .children {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.wp-block-categories.is-style-row li,
+.wp-block-archives.is-style-row li {
+	box-sizing: border-box;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	column-gap: var(--wp--preset--spacing--150);
+	color: var(--wp--preset--color--on-surface-variant); /* the bare count text node */
+}
+.wp-block-categories.is-style-row li:not(:last-child),
+.wp-block-archives.is-style-row li:not(:last-child) {
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
+}
+.wp-block-categories.is-style-row li > a,
+.wp-block-archives.is-style-row li > a {
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	padding-block: var(--wp--preset--spacing--100);
+	color: var(--wp--preset--color--on-surface);
+	text-decoration: none;
+}
+.wp-block-categories.is-style-row li > a:hover,
+.wp-block-archives.is-style-row li > a:hover {
+	color: var(--wp--preset--color--primary);
+}
+.wp-block-categories.is-style-row li > a:focus-visible,
+.wp-block-archives.is-style-row li > a:focus-visible {
+	outline: 2px solid var(--wp--preset--color--secondary);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+/* Hierarchy — the nested <ul class="children"> spans the full row width below
+ * its parent's name/count and insets; its rows reuse the grid + divider above. */
+.wp-block-categories.is-style-row .children {
+	box-sizing: border-box;
+	grid-column: 1 / -1;
+	padding-inline-start: var(--wp--preset--spacing--200);
+	border-block-start: 1px solid var(--wp--preset--color--outline-variant);
+}

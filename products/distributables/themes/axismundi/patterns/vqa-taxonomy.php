@@ -28,7 +28,7 @@
 <h2 class="wp-block-heading has-label-large-font-size">1 · Categories — list (hierarchy + counts)</h2>
 <!-- /wp:heading -->
 
-<!-- wp:categories {"showHierarchy":true,"showPostCounts":true,"showEmpty":true} /-->
+<!-- wp:categories {"showHierarchy":true,"showPostCounts":true,"showEmpty":true,"className":"is-style-row"} /-->
 
 <!-- wp:heading {"fontSize":"label-large"} -->
 <h2 class="wp-block-heading has-label-large-font-size">2 · Categories — dropdown</h2>
@@ -40,7 +40,7 @@
 <h2 class="wp-block-heading has-label-large-font-size">3 · Tags (categories taxonomy:post_tag) — list + dropdown</h2>
 <!-- /wp:heading -->
 
-<!-- wp:categories {"taxonomy":"post_tag","showPostCounts":true,"showEmpty":true} /-->
+<!-- wp:categories {"taxonomy":"post_tag","showPostCounts":true,"showEmpty":true,"className":"is-style-row"} /-->
 
 <!-- wp:categories {"taxonomy":"post_tag","displayAsDropdown":true,"showPostCounts":true,"showEmpty":true} /-->
 
@@ -48,7 +48,7 @@
 <h2 class="wp-block-heading has-label-large-font-size">4 · Archives — list</h2>
 <!-- /wp:heading -->
 
-<!-- wp:archives {"showPostCounts":true,"type":"daily"} /-->
+<!-- wp:archives {"showPostCounts":true,"type":"daily","className":"is-style-row"} /-->
 
 <!-- wp:heading {"fontSize":"label-large"} -->
 <h2 class="wp-block-heading has-label-large-font-size">5 · Archives — dropdown</h2>

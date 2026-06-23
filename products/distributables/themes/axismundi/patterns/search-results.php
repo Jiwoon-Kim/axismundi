@@ -17,7 +17,7 @@
 <!-- wp:search {"label":"<?php echo esc_html_x( 'Search', 'Search form label.', 'axismundi' ); ?>","showLabel":false,"placeholder":"<?php echo esc_attr_x( 'Search this site', 'Search input field placeholder text.', 'axismundi' ); ?>","buttonText":"<?php echo esc_attr_x( 'Search', 'Button text. Verb.', 'axismundi' ); ?>","buttonPosition":"button-inside","buttonUseIcon":true,"style":{"spacing":{"margin":{"top":"var:preset|spacing|300"}}}} /-->
 
 <!-- wp:group {"style":{"spacing":{"margin":{"top":"var:preset|spacing|500"}}},"layout":{"type":"default"}} -->
-<div class="wp-block-group" style="margin-top:var(--wp--preset--spacing--500)"><!-- wp:query {"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true,"taxQuery":null,"parents":[]},"align":"full","layout":{"type":"default"}} -->
+<div class="wp-block-group" style="margin-top:var(--wp--preset--spacing--500)"><!-- wp:query {"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true,"taxQuery":null,"parents":[]},"enhancedPagination":true,"align":"full","layout":{"type":"default"}} -->
 <div class="wp-block-query alignfull"><!-- wp:query-total {"displayType":"total-results"} /-->
 
 <!-- wp:query-no-results -->

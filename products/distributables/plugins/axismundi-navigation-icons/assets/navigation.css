@@ -32,6 +32,16 @@ nav.wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__ite
 	align-items: center;
 }
 
+/* Standalone Page List (outside <nav>, widget context): the nav-scoped row rule
+ * above doesn't reach it and core leaves each <li> a bulleted list-item. Drop the
+ * marker so the restructured leading icon + label read as a clean widget row. The
+ * <li> stays a block list-item (not flex) so hierarchical child <ul>s keep
+ * stacking and indenting normally. Specificity stays below the nav rule, so
+ * navigation items keep their inline-flex row. */
+.wp-block-pages-list__item:has( > .ax-nav-item-trigger ) {
+	list-style: none;
+}
+
 .ax-nav-item-trigger {
 	display: inline-flex;
 	align-items: center;

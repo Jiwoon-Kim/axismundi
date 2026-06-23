@@ -286,14 +286,14 @@ function axismundi_navigation_icons_restructure( string $html, string $name, boo
  * @return string
  */
 function axismundi_navigation_icons_restructure_page_list( string $html ) : string {
-	// Only act on a page list rendered inside a navigation block: core adds
-	// `wp-block-navigation-item` to the items only in that context, and both the
-	// icon styling (nav-scoped CSS) and the click delegation (view.js) rely on it.
-	// A standalone Page List is left untouched so its icon never renders unstyled
-	// or unclickable.
+	// Act on any page list whose items carry `wp-block-pages-list__item`, whether
+	// inside a navigation block or standalone (widget context). The icon box base
+	// layout (.ax-nav-item-trigger/-icon) is nav-agnostic, and navigation.css adds
+	// a standalone row + list reset for items outside a <nav>. View.js click
+	// delegation is nav-only, but a page-list icon is decorative anyway (the link
+	// label is the click target both in nav and standalone), so nothing regresses.
 	if (
 		! str_contains( $html, 'wp-block-pages-list__item' )
-		|| ! str_contains( $html, 'wp-block-navigation-item' )
 		|| str_contains( $html, 'ax-nav-item-icon' )
 	) {
 		return $html;

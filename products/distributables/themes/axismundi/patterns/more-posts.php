@@ -4,7 +4,6 @@
  * Slug: axismundi/more-posts
  * Description: Displays a list of recent posts with title and date.
  * Categories: query
- * Block Types: core/query
  *
  * @package Axismundi
  */

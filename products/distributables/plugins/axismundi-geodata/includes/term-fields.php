@@ -44,16 +44,11 @@ function axismundi_geodata_term_fields() : array {
 			'type'  => 'text',
 			'help'  => __( 'e.g. beach, station, venue, district, city.', 'axismundi-geodata' ),
 		),
-		'ax_geo_place_id'   => array(
-			'label' => __( 'Place ID', 'axismundi-geodata' ),
-			'type'  => 'text',
-			'help'  => __( 'External place identifier (provider-specific).', 'axismundi-geodata' ),
-		),
-		'ax_geo_address'    => array(
-			'label' => __( 'Address', 'axismundi-geodata' ),
-			'type'  => 'text',
-			'help'  => __( 'Human-readable address (display / cache).', 'axismundi-geodata' ),
-		),
+		// ax_geo_address and ax_geo_place_id are intentionally NOT manual fields.
+		// The geo_area hierarchy (name / slug / parent) already structures the
+		// address, and both are provider caches a future geocoding adapter fills
+		// (formatted address, external place id) — not something a user types.
+		// The meta keys stay registered so the adapter can write them migration-free.
 	);
 }
 

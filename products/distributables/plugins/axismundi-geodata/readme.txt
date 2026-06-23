@@ -41,6 +41,11 @@ Attachments carry coordinate meta only — they are never auto-tagged with place
 terms. A future ax_note post type can opt into the geo taxonomies through the
 `axismundi_geodata_object_types` filter.
 
+A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, with the
+광안리해수욕장 geotag) ships with the plugin but is created only on request — it
+is never seeded automatically. Run `wp axismundi-geodata seed-demo` to add it and
+`wp axismundi-geodata seed-demo --remove` to drop it.
+
 == Installation ==
 
 1. Install and activate the Axismundi theme (for the dormant geo presentation

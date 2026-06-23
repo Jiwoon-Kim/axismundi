@@ -58,3 +58,26 @@ require_once __DIR__ . '/includes/meta.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/term-fields.php';
 }
+
+/**
+ * Register the taxonomies once on activation, then flush rewrite rules so the
+ * public /geo-area/ and /geotag/ archives resolve immediately on pretty-permalink
+ * installs instead of 404ing until Settings > Permalinks is re-saved.
+ *
+ * @return void
+ */
+function axismundi_geodata_activate() : void {
+	axismundi_geodata_register_taxonomies();
+	flush_rewrite_rules();
+}
+register_activation_hook( __FILE__, 'axismundi_geodata_activate' );
+
+/**
+ * Drop the taxonomy rewrite rules on deactivation.
+ *
+ * @return void
+ */
+function axismundi_geodata_deactivate() : void {
+	flush_rewrite_rules();
+}
+register_deactivation_hook( __FILE__, 'axismundi_geodata_deactivate' );

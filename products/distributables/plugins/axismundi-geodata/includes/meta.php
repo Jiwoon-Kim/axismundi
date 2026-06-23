@@ -116,6 +116,7 @@ function axismundi_geodata_register_meta() : void {
 		'ax_geo_bounds'     => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_place_id'   => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_place_type' => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
+		'ax_geo_plus_code'  => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_source'     => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
 		'ax_geo_address'    => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 	);

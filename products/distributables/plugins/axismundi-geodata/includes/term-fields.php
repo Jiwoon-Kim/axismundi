@@ -44,11 +44,22 @@ function axismundi_geodata_term_fields() : array {
 			'type'  => 'text',
 			'help'  => __( 'e.g. beach, station, venue, district, city.', 'axismundi-geodata' ),
 		),
-		// ax_geo_address and ax_geo_place_id are intentionally NOT manual fields.
-		// The geo_area hierarchy (name / slug / parent) already structures the
-		// address, and both are provider caches a future geocoding adapter fills
-		// (formatted address, external place id) — not something a user types.
-		// The meta keys stay registered so the adapter can write them migration-free.
+		// Provider caches — rendered read-only (disabled). The geo_area hierarchy is
+		// the canonical address and a geocoding adapter fills these, so they are
+		// shown for transparency but never hand-typed. Disabled inputs aren't
+		// posted, so the save loop also skips them and existing values survive.
+		'ax_geo_place_id'   => array(
+			'label'    => __( 'Place ID', 'axismundi-geodata' ),
+			'type'     => 'text',
+			'help'     => __( 'External provider id, set automatically — e.g. Google ChIJ…, OSM node/123456, Wikidata Q12345, GeoNames 1838524.', 'axismundi-geodata' ),
+			'disabled' => true,
+		),
+		'ax_geo_address'    => array(
+			'label'    => __( 'Address', 'axismundi-geodata' ),
+			'type'     => 'text',
+			'help'     => __( 'Formatted address cache from the geocoding provider; the Geo Area hierarchy is the canonical structure.', 'axismundi-geodata' ),
+			'disabled' => true,
+		),
 	);
 }
 
@@ -102,13 +113,13 @@ function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
 	axismundi_geodata_render_area_select( $taxonomy, 0, 'add' );
 	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
-		$step = 'number' === $field['type'] ? ' step="any"' : '';
+		$attrs = ( 'number' === $field['type'] ? ' step="any"' : '' ) . ( empty( $field['disabled'] ) ? '' : ' disabled' );
 		printf(
 			'<div class="form-field"><label for="%1$s">%2$s</label><input type="%3$s"%4$s name="%1$s" id="%1$s" value="" /><p>%5$s</p></div>',
 			esc_attr( $key ),
 			esc_html( $field['label'] ),
 			esc_attr( $field['type'] ),
-			$step, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static literal.
+			$attrs, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static literal.
 			esc_html( $field['help'] )
 		);
 	}
@@ -126,13 +137,13 @@ function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '
 	axismundi_geodata_render_area_select( $taxonomy, axismundi_geodata_get_geotag_area_id( $term->term_id ), 'edit' );
 	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
 		$value = get_term_meta( $term->term_id, $key, true );
-		$step  = 'number' === $field['type'] ? ' step="any"' : '';
+		$attrs = ( 'number' === $field['type'] ? ' step="any"' : '' ) . ( empty( $field['disabled'] ) ? '' : ' disabled' );
 		printf(
 			'<tr class="form-field"><th scope="row"><label for="%1$s">%2$s</label></th><td><input type="%3$s"%4$s name="%1$s" id="%1$s" value="%5$s" /><p class="description">%6$s</p></td></tr>',
 			esc_attr( $key ),
 			esc_html( $field['label'] ),
 			esc_attr( $field['type'] ),
-			$step, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static literal.
+			$attrs, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static literal.
 			esc_attr( $value ),
 			esc_html( $field['help'] )
 		);
@@ -155,7 +166,10 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 	}
 
 	$values = array();
-	foreach ( array_keys( axismundi_geodata_term_fields() ) as $key ) {
+	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
+		if ( ! empty( $field['disabled'] ) ) {
+			continue; // provider cache: read-only, not posted, left untouched.
+		}
 		$values[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
 	}
 

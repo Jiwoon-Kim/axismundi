@@ -2,9 +2,16 @@
 /**
  * Title: Archive results
  * Slug: axismundi/archive-results
- * Description: Displays the archive title, optional term description, and inherited query-loop pattern.
+ * Description: Archive title + optional term description, then a two-column body — the inherited query-loop feed beside a sticky sidebar.
  * Categories: query
  * Block Types: core/query
+ *
+ * Hero (query-title + term-description) sits above a wide two-column body: the
+ * feed (axismundi/archive-query-loop) in the main column, a 280px aside holding
+ * axismundi/archive-sidebar. Core Columns stacks the aside under the feed on
+ * narrow viewports; the aside's inner group is sticky so the cards follow the
+ * scroll on desktop. The aside is a standalone pattern so specialised archive
+ * templates (category/tag/date) can reorder or replace it.
  *
  * @package Axismundi
  */
@@ -17,7 +24,15 @@
 <!-- wp:term-description {"className":"has-on-surface-variant-color has-text-color","style":{"spacing":{"margin":{"top":"var:preset|spacing|200"}}},"textColor":"on-surface-variant","fontSize":"body-large"} /--></div>
 <!-- /wp:group -->
 
-<!-- wp:group {"style":{"spacing":{"margin":{"top":"var:preset|spacing|500"}}},"layout":{"type":"default"}} -->
-<div class="wp-block-group" style="margin-top:var(--wp--preset--spacing--500)"><!-- wp:pattern {"slug":"axismundi/archive-query-loop"} /--></div>
-<!-- /wp:group --></main>
+<!-- wp:columns {"align":"wide","style":{"spacing":{"blockGap":{"left":"var:preset|spacing|600"},"margin":{"top":"var:preset|spacing|500"}}}} -->
+<div class="wp-block-columns alignwide" style="margin-top:var(--wp--preset--spacing--500)"><!-- wp:column -->
+<div class="wp-block-column"><!-- wp:pattern {"slug":"axismundi/archive-query-loop"} /--></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"width":"280px"} -->
+<div class="wp-block-column" style="flex-basis:280px"><!-- wp:group {"style":{"position":{"type":"sticky","top":"32px"}},"layout":{"type":"default"}} -->
+<div class="wp-block-group is-position-sticky" style="top:32px"><!-- wp:pattern {"slug":"axismundi/archive-sidebar"} /--></div>
+<!-- /wp:group --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns --></main>
 <!-- /wp:group -->

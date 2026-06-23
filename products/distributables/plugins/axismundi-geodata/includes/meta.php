@@ -138,5 +138,22 @@ function axismundi_geodata_register_meta() : void {
 			);
 		}
 	}
+
+	// geotag -> geo_area relationship: a single leaf geo_area term id. The full
+	// containment chain (수영구 > 부산광역시 > ...) is derived from the geo_area
+	// hierarchy, never stored, so re-parenting an area can't leave stale chains.
+	register_term_meta(
+		'geotag',
+		'ax_geo_area',
+		array(
+			'type'              => 'integer',
+			'single'            => true,
+			'sanitize_callback' => 'absint',
+			'auth_callback'     => function () {
+				return current_user_can( 'manage_categories' );
+			},
+			'show_in_rest'      => array( 'schema' => array( 'type' => 'integer' ) ),
+		)
+	);
 }
 add_action( 'init', 'axismundi_geodata_register_meta' );

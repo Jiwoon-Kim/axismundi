@@ -58,12 +58,54 @@ function axismundi_geodata_term_fields() : array {
 }
 
 /**
- * Render the fields on the "Add New" term screen (stacked div layout).
+ * Render the geotag -> geo_area select (geotag screens only). A geotag points at
+ * a single leaf area; its ancestors come from the geo_area hierarchy.
  *
+ * @param string $taxonomy Taxonomy being edited.
+ * @param int    $selected Currently selected geo_area term id.
+ * @param string $context  'add' (div layout) or 'edit' (table row).
  * @return void
  */
-function axismundi_geodata_term_add_fields() : void {
+function axismundi_geodata_render_area_select( string $taxonomy, int $selected, string $context ) : void {
+	if ( 'geotag' !== $taxonomy ) {
+		return;
+	}
+
+	$dropdown = wp_dropdown_categories(
+		array(
+			'taxonomy'          => 'geo_area',
+			'name'              => 'ax_geo_area',
+			'id'                => 'ax_geo_area',
+			'hierarchical'      => true,
+			'hide_empty'        => false,
+			'show_option_none'  => __( '— None —', 'axismundi-geodata' ),
+			'option_none_value' => '0',
+			'selected'          => $selected,
+			'orderby'           => 'name',
+			'echo'              => false,
+		)
+	);
+
+	$label = esc_html__( 'Geo Area', 'axismundi-geodata' );
+	$help  = esc_html__( 'The administrative area this place sits in; its parents are derived from the area hierarchy.', 'axismundi-geodata' );
+
+	// wp_dropdown_categories() returns escaped markup.
+	if ( 'edit' === $context ) {
+		echo '<tr class="form-field"><th scope="row"><label for="ax_geo_area">' . $label . '</label></th><td>' . $dropdown . '<p class="description">' . $help . '</p></td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	} else {
+		echo '<div class="form-field"><label for="ax_geo_area">' . $label . '</label>' . $dropdown . '<p>' . $help . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+}
+
+/**
+ * Render the fields on the "Add New" term screen (stacked div layout).
+ *
+ * @param string $taxonomy Taxonomy being added to.
+ * @return void
+ */
+function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
+	axismundi_geodata_render_area_select( $taxonomy, 0, 'add' );
 	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
 		$step = 'number' === $field['type'] ? ' step="any"' : '';
 		printf(
@@ -80,11 +122,13 @@ function axismundi_geodata_term_add_fields() : void {
 /**
  * Render the fields on the "Edit" term screen (table-row layout).
  *
- * @param WP_Term $term The term being edited.
+ * @param WP_Term $term     The term being edited.
+ * @param string  $taxonomy Taxonomy being edited.
  * @return void
  */
-function axismundi_geodata_term_edit_fields( WP_Term $term ) : void {
+function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
+	axismundi_geodata_render_area_select( $taxonomy, axismundi_geodata_get_geotag_area_id( $term->term_id ), 'edit' );
 	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
 		$value = get_term_meta( $term->term_id, $key, true );
 		$step  = 'number' === $field['type'] ? ' step="any"' : '';
@@ -140,6 +184,18 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 			update_term_meta( $term_id, $key, $value );
 		}
 	}
+
+	// geotag -> geo_area pointer; only the geotag screen posts this field. Store
+	// only a real geo_area term id, else clear it.
+	if ( isset( $_POST['ax_geo_area'] ) ) {
+		$area      = absint( wp_unslash( $_POST['ax_geo_area'] ) );
+		$area_term = $area ? get_term( $area ) : null;
+		if ( $area_term instanceof WP_Term && 'geo_area' === $area_term->taxonomy ) {
+			update_term_meta( $term_id, 'ax_geo_area', $area );
+		} else {
+			delete_term_meta( $term_id, 'ax_geo_area' );
+		}
+	}
 }
 
 /**
@@ -150,7 +206,7 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 function axismundi_geodata_term_fields_init() : void {
 	foreach ( array( 'geo_area', 'geotag' ) as $taxonomy ) {
 		add_action( "{$taxonomy}_add_form_fields", 'axismundi_geodata_term_add_fields' );
-		add_action( "{$taxonomy}_edit_form_fields", 'axismundi_geodata_term_edit_fields' );
+		add_action( "{$taxonomy}_edit_form_fields", 'axismundi_geodata_term_edit_fields', 10, 2 );
 		add_action( "created_{$taxonomy}", 'axismundi_geodata_term_save' );
 		add_action( "edited_{$taxonomy}", 'axismundi_geodata_term_save' );
 	}

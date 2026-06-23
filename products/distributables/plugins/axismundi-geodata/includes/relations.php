@@ -57,7 +57,9 @@ function axismundi_geodata_get_geotags_in_area( int $area_id, bool $with_descend
 		array(
 			'taxonomy'   => 'geotag',
 			'hide_empty' => false,
-			'meta_query' => array(
+			// Querying the small geotag term set by its single area pointer; not a
+			// hot path over post rows.
+			'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				array(
 					'key'     => 'ax_geo_area',
 					'value'   => array_map( 'intval', $area_ids ),

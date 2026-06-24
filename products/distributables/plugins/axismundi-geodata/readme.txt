@@ -54,6 +54,11 @@ is never seeded automatically. Run `wp axismundi-geodata seed-demo` to add it an
 3. Posts, pages, and attachments gain geo coordinate fields; posts and pages gain
    the Geo Area and Geotag taxonomies. All are available over the REST API.
 
+== Third-party libraries ==
+
+Leaflet 1.9.4 (https://leafletjs.com/, BSD-2-Clause) is bundled under
+assets/vendor/leaflet/ and loaded only when a raster tile provider is configured.
+
 == Changelog ==
 
 = 0.1.0 =

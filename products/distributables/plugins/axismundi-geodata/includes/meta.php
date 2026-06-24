@@ -7,8 +7,10 @@
  * radius, bounds, external id). All single-value, REST-exposed with a schema,
  * sanitised, and edit-gated.
  *
- * WordPress-convention keys (geo_latitude, geo_longitude, geo_public) are kept
- * for interop; Axismundi extensions use the ax_geo_* namespace. The RAW exact
+ * WordPress / W3C Geolocation convention keys (geo_latitude, geo_longitude,
+ * geo_public, geo_address, geo_altitude, geo_accuracy) stay unprefixed for
+ * interop; Axismundi-specific facts (precision, source, plus code, place id, area
+ * link, radius, bounds, place type) use the ax_geo_* namespace. The RAW exact
  * coordinate is stored here; public exposure goes through privacy.php, never by
  * reading these keys directly.
  *
@@ -76,9 +78,9 @@ function axismundi_geodata_register_meta() : void {
 		'geo_latitude'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
 		'geo_longitude'           => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
 		'geo_public'              => array( 'type' => 'boolean', 'sanitize' => 'rest_sanitize_boolean', 'schema' => $boolean, 'default' => false ),
-		'ax_geo_altitude'         => array( 'type' => 'number', 'sanitize' => 'floatval', 'schema' => $number ),
-		'ax_geo_accuracy_meters'  => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_nonneg', 'schema' => $number ),
-		'ax_geo_address'          => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
+		'geo_altitude'            => array( 'type' => 'number', 'sanitize' => 'floatval', 'schema' => $number ),
+		'geo_accuracy'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_nonneg', 'schema' => $number ),
+		'geo_address'             => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_source'           => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
 		'ax_geo_public_precision' => array(
 			'type'     => 'string',
@@ -110,15 +112,15 @@ function axismundi_geodata_register_meta() : void {
 
 	// Term place-fact meta: the named place's own coordinates and identity.
 	$term_meta = array(
-		'ax_geo_latitude'   => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
-		'ax_geo_longitude'  => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
+		'geo_latitude'      => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
+		'geo_longitude'     => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
+		'geo_address'       => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_radius'     => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_nonneg', 'schema' => $number ),
 		'ax_geo_bounds'     => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_place_id'   => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_place_type' => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
 		'ax_geo_plus_code'  => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_source'     => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
-		'ax_geo_address'    => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 	);
 
 	foreach ( array( 'geo_area', 'geotag' ) as $taxonomy ) {

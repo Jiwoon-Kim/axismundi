@@ -24,12 +24,12 @@ function axismundi_geodata_term_fields() : array {
 			'type'  => 'text',
 			'help'  => __( 'A full Open Location Code (e.g. 8Q7XMQVC+9G). Fills latitude / longitude on save when those are empty. Short codes with a place name need geocoding (coming later).', 'axismundi-geodata' ),
 		),
-		'ax_geo_latitude'   => array(
+		'geo_latitude'   => array(
 			'label' => __( 'Latitude', 'axismundi-geodata' ),
 			'type'  => 'number',
 			'help'  => __( 'Centre latitude, -90 to 90.', 'axismundi-geodata' ),
 		),
-		'ax_geo_longitude'  => array(
+		'geo_longitude'  => array(
 			'label' => __( 'Longitude', 'axismundi-geodata' ),
 			'type'  => 'number',
 			'help'  => __( 'Centre longitude, -180 to 180.', 'axismundi-geodata' ),
@@ -54,7 +54,7 @@ function axismundi_geodata_term_fields() : array {
 			'help'     => __( 'External provider id, set automatically — e.g. Google ChIJ…, OSM node/123456, Wikidata Q12345, GeoNames 1838524.', 'axismundi-geodata' ),
 			'disabled' => true,
 		),
-		'ax_geo_address'    => array(
+		'geo_address'    => array(
 			'label'    => __( 'Address', 'axismundi-geodata' ),
 			'type'     => 'text',
 			'help'     => __( 'Formatted address cache from the geocoding provider; the Geo Area hierarchy is the canonical structure.', 'axismundi-geodata' ),
@@ -174,11 +174,11 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 	}
 
 	// Plus Code convenience: a full code fills empty coordinates.
-	if ( '' !== $values['ax_geo_plus_code'] && ( '' === $values['ax_geo_latitude'] || '' === $values['ax_geo_longitude'] ) ) {
+	if ( '' !== $values['ax_geo_plus_code'] && ( '' === $values['geo_latitude'] || '' === $values['geo_longitude'] ) ) {
 		$decoded = axismundi_geodata_decode_plus_code( $values['ax_geo_plus_code'] );
 		if ( null !== $decoded ) {
-			$values['ax_geo_latitude']  = (string) $decoded['latitude'];
-			$values['ax_geo_longitude'] = (string) $decoded['longitude'];
+			$values['geo_latitude']  = (string) $decoded['latitude'];
+			$values['geo_longitude'] = (string) $decoded['longitude'];
 			if ( '' === get_term_meta( $term_id, 'ax_geo_source', true ) ) {
 				update_term_meta( $term_id, 'ax_geo_source', 'pluscode' );
 			}

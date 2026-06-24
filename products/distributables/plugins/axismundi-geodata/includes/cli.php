@@ -129,11 +129,11 @@ class Axismundi_Geodata_CLI {
 	 * @return void
 	 */
 	private function set_place_meta( int $term_id, array $place ) : void {
-		update_term_meta( $term_id, 'ax_geo_latitude', $place['lat'] );
-		update_term_meta( $term_id, 'ax_geo_longitude', $place['lng'] );
+		update_term_meta( $term_id, 'geo_latitude', $place['lat'] );
+		update_term_meta( $term_id, 'geo_longitude', $place['lng'] );
 		update_term_meta( $term_id, 'ax_geo_radius', $place['radius'] );
 		update_term_meta( $term_id, 'ax_geo_place_type', $place['type'] );
-		update_term_meta( $term_id, 'ax_geo_address', $place['address'] );
+		update_term_meta( $term_id, 'geo_address', $place['address'] );
 		update_term_meta( $term_id, 'ax_geo_source', 'demo' );
 	}
 }

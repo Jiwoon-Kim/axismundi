@@ -18,8 +18,8 @@ defined( 'ABSPATH' ) || exit;
  * @return array<string,string>
  */
 function axismundi_geodata_term_columns( array $columns ) : array {
-	$columns['ax_geo_latitude']  = __( 'Latitude', 'axismundi-geodata' );
-	$columns['ax_geo_longitude'] = __( 'Longitude', 'axismundi-geodata' );
+	$columns['geo_latitude']  = __( 'Latitude', 'axismundi-geodata' );
+	$columns['geo_longitude'] = __( 'Longitude', 'axismundi-geodata' );
 
 	return $columns;
 }
@@ -33,7 +33,7 @@ function axismundi_geodata_term_columns( array $columns ) : array {
  * @return string
  */
 function axismundi_geodata_term_column_content( string $content, string $column, int $term_id ) : string {
-	if ( 'ax_geo_latitude' !== $column && 'ax_geo_longitude' !== $column ) {
+	if ( 'geo_latitude' !== $column && 'geo_longitude' !== $column ) {
 		return $content;
 	}
 

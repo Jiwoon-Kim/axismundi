@@ -51,6 +51,19 @@ function axismundi_geodata_sanitize_nonneg( $value ) : float {
 }
 
 /**
+ * Cast to float, tolerant of the extra args register_meta passes a sanitize
+ * callback. A bare built-in like floatval() throws ArgumentCountError on PHP 8
+ * when handed ($value, $meta_key, $object_type, $subtype), which aborts the REST
+ * meta save mid-loop — so altitude needs this wrapper, not floatval.
+ *
+ * @param mixed $value Raw value.
+ * @return float
+ */
+function axismundi_geodata_sanitize_float( $value ) : float {
+	return (float) $value;
+}
+
+/**
  * The edit capability gate shared by every geo post meta key.
  *
  * @param bool   $allowed   Default permission.
@@ -78,7 +91,7 @@ function axismundi_geodata_register_meta() : void {
 		'geo_latitude'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
 		'geo_longitude'           => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
 		'geo_public'              => array( 'type' => 'boolean', 'sanitize' => 'rest_sanitize_boolean', 'schema' => $boolean, 'default' => false ),
-		'geo_altitude'            => array( 'type' => 'number', 'sanitize' => 'floatval', 'schema' => $number ),
+		'geo_altitude'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_float', 'schema' => $number ),
 		'geo_accuracy'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_nonneg', 'schema' => $number ),
 		'geo_address'             => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_source'           => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),

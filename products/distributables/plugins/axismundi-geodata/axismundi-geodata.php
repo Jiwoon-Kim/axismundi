@@ -18,6 +18,7 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'AXISMUNDI_GEODATA_VERSION', '0.1.0' );
+define( 'AXISMUNDI_GEODATA_FILE', __FILE__ );
 
 /**
  * Object types that can carry geo TERMS (geo_area / geotag).
@@ -60,6 +61,7 @@ require_once __DIR__ . '/includes/cli.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/term-fields.php';
 	require_once __DIR__ . '/includes/admin-columns.php';
+	require_once __DIR__ . '/includes/editor.php';
 }
 
 /**

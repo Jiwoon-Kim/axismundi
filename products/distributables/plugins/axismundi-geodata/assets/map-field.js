@@ -27,6 +27,10 @@
 		}
 
 		var L = window.L;
+		// Bundled marker icons: drop Leaflet's imagePath-prepending getter so the
+		// full URLs below are used verbatim — otherwise it doubles the path and the
+		// marker image 404s.
+		delete L.Icon.Default.prototype._getIconUrl;
 		L.Icon.Default.mergeOptions( {
 			iconRetinaUrl: cfg.imagePath + 'marker-icon-2x.png',
 			iconUrl: cfg.imagePath + 'marker-icon.png',
@@ -96,6 +100,12 @@
 			setLatLng: function ( la, ln ) {
 				place( la, ln, true );
 				map.setView( [ la, ln ], 14 );
+			},
+			clear: function () {
+				if ( marker ) {
+					map.removeLayer( marker );
+					marker = null;
+				}
 			}
 		};
 	}

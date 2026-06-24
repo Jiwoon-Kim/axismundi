@@ -67,6 +67,9 @@
 				if ( alt ) {
 					alt.value = '';
 				}
+				if ( controller ) {
+					controller.clear();
+				}
 			} );
 		}
 	} );

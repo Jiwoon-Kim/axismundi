@@ -32,14 +32,18 @@ site, and `ax_geo_public_precision` (hidden / city / coarse / neighborhood /
 exact) decides how precise the exposed value is. Callers ask the plugin for the
 public coordinate rather than reading the raw meta.
 
-This release is the data foundation only. Editor UI, current-location capture,
-EXIF import, geocoding, map blocks, the `taxonomy-geotag.html` / `geolocation-chip`
-theme presentation, and the ActivityStreams `Place` / GeoRSS serializers build on
-top of it in later versions.
+Attachments get a **Location (GPS)** editor on the Edit Media screen: latitude,
+longitude, altitude, and a public toggle, plus an on-demand **Import from EXIF**
+button that reads the original file's GPS, and a Leaflet mini map with a draggable
+marker (configure a tile provider under Settings → Geodata). Nothing is
+auto-imported or auto-published — the public toggle defaults off.
 
-Attachments carry coordinate meta only — they are never auto-tagged with place
-terms. A future ax_note post type can opt into the geo taxonomies through the
-`axismundi_geodata_object_types` filter.
+Posts and pages express location through the geo_area / geotag taxonomies. A Map
+block, geocoding, the `taxonomy-geotag.html` / `geolocation-chip` theme
+presentation, and the ActivityStreams `Place` / GeoRSS serializers build on this
+model in later versions. Attachments carry coordinate meta only — they are never
+auto-tagged with place terms. A future ax_note post type can opt into the geo
+taxonomies through the `axismundi_geodata_object_types` filter.
 
 A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, with the
 광안리해수욕장 geotag) ships with the plugin but is created only on request — it
@@ -64,3 +68,6 @@ assets/vendor/leaflet/ and loaded only when a raster tile provider is configured
 = 0.1.0 =
 * Initial foundation: geo_area + geotag taxonomies, post/attachment coordinate
   meta, term place-fact meta, public-precision privacy model, REST exposure.
+* Attachment Location (GPS) editor: lat/lng/altitude/public fields, on-demand
+  EXIF GPS import, and a Leaflet mini map with a draggable marker.
+* Map provider settings (Settings → Geodata): none or custom raster (XYZ) tiles.

@@ -129,7 +129,7 @@ function axismundi_geodata_render_attachment_box( WP_Post $post ) : void {
 	$alt      = get_post_meta( $post->ID, 'geo_altitude', true );
 	$public   = (bool) get_post_meta( $post->ID, 'geo_public', true );
 	$has_exif = null !== axismundi_geodata_attachment_exif_gps( $post->ID );
-	$cfg      = axismundi_geodata_get_settings();
+	$tiles    = axismundi_geodata_resolve_tiles( 'admin' );
 
 	echo '<p>';
 	printf(
@@ -169,7 +169,7 @@ function axismundi_geodata_render_attachment_box( WP_Post $post ) : void {
 		printf( '<p class="description">%s</p>', esc_html__( 'No GPS found in this file’s EXIF.', 'axismundi-geodata' ) );
 	}
 
-	if ( 'custom_raster' === $cfg['provider'] && '' !== $cfg['tile_url'] ) {
+	if ( $tiles['enabled'] ) {
 		echo '<div id="axgeo-map" style="height:260px;max-width:520px;margin-top:8px;border-radius:4px;overflow:hidden;"></div>';
 	} else {
 		printf( '<p class="description">%s</p>', esc_html__( 'Configure a map provider in Settings → Geodata to enable the map.', 'axismundi-geodata' ) );
@@ -243,8 +243,8 @@ function axismundi_geodata_attachment_enqueue( string $hook ) : void {
 		return;
 	}
 
-	$cfg         = axismundi_geodata_get_settings();
-	$map_enabled = 'custom_raster' === $cfg['provider'] && '' !== $cfg['tile_url'];
+	$tiles       = axismundi_geodata_resolve_tiles( 'admin' );
+	$map_enabled = $tiles['enabled'];
 	$deps        = array( 'wp-i18n' );
 
 	if ( $map_enabled ) {
@@ -267,10 +267,10 @@ function axismundi_geodata_attachment_enqueue( string $hook ) : void {
 		'window.axismundiGeodataMap = ' . wp_json_encode(
 			array(
 				'mapEnabled'  => $map_enabled,
-				'tileUrl'     => $cfg['tile_url'],
-				'attribution' => $cfg['attribution'],
-				'minZoom'     => (int) $cfg['min_zoom'],
-				'maxZoom'     => (int) $cfg['max_zoom'],
+				'tileUrl'     => $tiles['tile_url'],
+				'attribution' => $tiles['attribution'],
+				'minZoom'     => $tiles['min_zoom'],
+				'maxZoom'     => $tiles['max_zoom'],
 				'imagePath'   => plugins_url( 'assets/vendor/leaflet/images/', AXISMUNDI_GEODATA_FILE ),
 			)
 		) . '; window.axismundiGeodataAjax = ' . wp_json_encode(

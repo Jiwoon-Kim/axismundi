@@ -2,11 +2,16 @@
 /**
  * Map provider settings (Settings > Geodata).
  *
- * v0.3 ships two providers: `none` (default — no external map requests) and
- * `custom_raster` (a user-supplied XYZ raster tile URL, e.g. their own or an
- * allowed third-party tile server). Google / Naver / MapLibre / PMTiles are
- * later providers that need their own adapters. The public OSM tile server is
- * intentionally not a built-in default — its tile policy forbids that use.
+ * Providers: `none` (default — no external map requests), `osm` (OpenStreetMap
+ * public tiles, **admin preview only** — an explicit opt-in convenience, never
+ * used for front-end visitor traffic since OSM's tile policy forbids that), and
+ * `custom_raster` (a user-supplied XYZ raster tile URL — their own or an allowed
+ * third-party server). Google / Naver / MapLibre / PMTiles are later providers
+ * that need their own adapters; front-end map rendering and geocoding are
+ * deliberately separated from admin preview because the key/abuse risk differs.
+ *
+ * Tile resolution goes through axismundi_geodata_resolve_tiles() so the
+ * admin-only OSM rule lives in one place.
  *
  * @package AxismundiGeodata
  */
@@ -33,6 +38,41 @@ function axismundi_geodata_get_settings() : array {
 }
 
 /**
+ * Resolve the effective tile layer for a context.
+ *
+ * The `osm` provider resolves to OpenStreetMap's public tiles only in the
+ * `admin` context — it is a low-volume preview convenience and must never tile a
+ * front-end map (OSM's tile usage policy forbids it). Front-end callers pass
+ * `front`, which falls through to `custom_raster` (or a keyed provider later) and
+ * never to OSM.
+ *
+ * @param string     $context 'admin' or 'front'.
+ * @param array|null $cfg     Settings (defaults to the saved settings).
+ * @return array{enabled:bool,tile_url:string,attribution:string,min_zoom:int,max_zoom:int}
+ */
+function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg = null ) : array {
+	$cfg         = $cfg ?? axismundi_geodata_get_settings();
+	$tile_url    = '';
+	$attribution = '';
+
+	if ( 'osm' === $cfg['provider'] && 'admin' === $context ) {
+		$tile_url    = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+		$attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+	} elseif ( 'custom_raster' === $cfg['provider'] && '' !== $cfg['tile_url'] ) {
+		$tile_url    = $cfg['tile_url'];
+		$attribution = $cfg['attribution'];
+	}
+
+	return array(
+		'enabled'     => '' !== $tile_url,
+		'tile_url'    => $tile_url,
+		'attribution' => $attribution,
+		'min_zoom'    => (int) $cfg['min_zoom'],
+		'max_zoom'    => (int) $cfg['max_zoom'],
+	);
+}
+
+/**
  * Sanitize the settings form.
  *
  * @param mixed $input Raw form input.
@@ -42,7 +82,7 @@ function axismundi_geodata_sanitize_settings( $input ) : array {
 	$input = is_array( $input ) ? $input : array();
 	$out   = axismundi_geodata_get_settings();
 
-	$out['provider'] = in_array( $input['provider'] ?? '', array( 'none', 'custom_raster' ), true )
+	$out['provider'] = in_array( $input['provider'] ?? '', array( 'none', 'osm', 'custom_raster' ), true )
 		? $input['provider']
 		: 'none';
 
@@ -129,11 +169,13 @@ function axismundi_geodata_render_field( array $args ) : void {
 			printf( '<select id="%s" name="%s">', esc_attr( $id ), esc_attr( $name ) );
 			foreach ( array(
 				'none'          => __( 'None (no map)', 'axismundi-geodata' ),
+				'osm'           => __( 'OpenStreetMap (admin preview only)', 'axismundi-geodata' ),
 				'custom_raster' => __( 'Custom raster tiles (XYZ)', 'axismundi-geodata' ),
 			) as $opt => $opt_label ) {
 				printf( '<option value="%s"%s>%s</option>', esc_attr( $opt ), selected( $value, $opt, false ), esc_html( $opt_label ) );
 			}
 			echo '</select>';
+			echo '<p class="description">' . esc_html__( 'OpenStreetMap uses its public tiles for admin map previews only (a low-volume convenience) and is never used to render front-end maps. For the front end, host your own tiles or use a permitted provider via “Custom raster tiles”.', 'axismundi-geodata' ) . '</p>';
 			break;
 
 		case 'tile_url':

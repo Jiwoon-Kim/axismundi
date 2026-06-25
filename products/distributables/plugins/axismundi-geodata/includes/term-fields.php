@@ -15,21 +15,28 @@ defined( 'ABSPATH' ) || exit;
 /**
  * The term meta keys surfaced as editor fields, with labels and help text.
  *
+ * geo_area carries administrative-division facts (admin role + country / external
+ * codes); geotag carries facility place facts. The shared coordinate / place-type
+ * fields differ only in the Place type label and help.
+ *
+ * @param string $taxonomy Taxonomy being edited.
  * @return array<string,array{label:string,type:string,help:string}>
  */
-function axismundi_geodata_term_fields() : array {
-	return array(
+function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
+	$is_area = 'geo_area' === $taxonomy;
+
+	$fields = array(
 		'ax_geo_plus_code'  => array(
 			'label' => __( 'Plus Code', 'axismundi-geodata' ),
 			'type'  => 'text',
 			'help'  => __( 'A full Open Location Code (e.g. 8Q7XMQVC+9G). Fills latitude / longitude on save when those are empty. Short codes with a place name need geocoding (coming later).', 'axismundi-geodata' ),
 		),
-		'geo_latitude'   => array(
+		'geo_latitude'      => array(
 			'label' => __( 'Latitude', 'axismundi-geodata' ),
 			'type'  => 'number',
 			'help'  => __( 'Centre latitude, -90 to 90.', 'axismundi-geodata' ),
 		),
-		'geo_longitude'  => array(
+		'geo_longitude'     => array(
 			'label' => __( 'Longitude', 'axismundi-geodata' ),
 			'type'  => 'number',
 			'help'  => __( 'Centre longitude, -180 to 180.', 'axismundi-geodata' ),
@@ -40,27 +47,54 @@ function axismundi_geodata_term_fields() : array {
 			'help'  => __( 'Approximate area radius in metres.', 'axismundi-geodata' ),
 		),
 		'ax_geo_place_type' => array(
-			'label' => __( 'Place type', 'axismundi-geodata' ),
-			'type'  => 'text',
-			'help'  => __( 'e.g. beach, station, venue, district, city.', 'axismundi-geodata' ),
-		),
-		// Provider caches — rendered read-only (disabled). The geo_area hierarchy is
-		// the canonical address and a geocoding adapter fills these, so they are
-		// shown for transparency but never hand-typed. Disabled inputs aren't
-		// posted, so the save loop also skips them and existing values survive.
-		'ax_geo_place_id'   => array(
-			'label'    => __( 'Place ID', 'axismundi-geodata' ),
-			'type'     => 'text',
-			'help'     => __( 'External provider id, set automatically — e.g. Google ChIJ…, OSM node/123456, Wikidata Q12345, GeoNames 1838524.', 'axismundi-geodata' ),
-			'disabled' => true,
-		),
-		'geo_address'    => array(
-			'label'    => __( 'Address', 'axismundi-geodata' ),
-			'type'     => 'text',
-			'help'     => __( 'Formatted address cache from the geocoding provider; the Geo Area hierarchy is the canonical structure.', 'axismundi-geodata' ),
-			'disabled' => true,
+			'label' => $is_area ? __( 'Administrative type', 'axismundi-geodata' ) : __( 'Place type', 'axismundi-geodata' ),
+			'type'  => 'select',
+			'help'  => $is_area
+				? __( 'Which kind of administrative division this is (country, province, city, district, …).', 'axismundi-geodata' )
+				: __( 'What kind of place this is, grouped by category.', 'axismundi-geodata' ),
 		),
 	);
+
+	if ( $is_area ) {
+		$fields['ax_geo_country_code']  = array(
+			'label' => __( 'Country code', 'axismundi-geodata' ),
+			'type'  => 'text',
+			'help'  => __( 'ISO 3166-1 alpha-2, e.g. KR.', 'axismundi-geodata' ),
+		);
+		$fields['ax_geo_national_code'] = array(
+			'label' => __( 'National code', 'axismundi-geodata' ),
+			'type'  => 'text',
+			'help'  => __( 'National administrative code, e.g. 26 / 26500 / 2650010400. Pair it with Code scheme.', 'axismundi-geodata' ),
+		);
+		$fields['ax_geo_iso_3166_2']    = array(
+			'label' => __( 'ISO 3166-2', 'axismundi-geodata' ),
+			'type'  => 'text',
+			'help'  => __( 'e.g. KR-26 — first-level divisions only; leave blank otherwise.', 'axismundi-geodata' ),
+		);
+		$fields['ax_geo_code_scheme']   = array(
+			'label' => __( 'Code scheme', 'axismundi-geodata' ),
+			'type'  => 'text',
+			'help'  => __( 'What National code means — e.g. KR_LEGAL_DONG, KR_ADMIN_DONG, ISO_3166-2, MOIS.', 'axismundi-geodata' ),
+		);
+	}
+
+	// Provider caches — rendered read-only (disabled). A geocoding adapter fills
+	// these, so they are shown for transparency but never hand-typed. Disabled
+	// inputs aren't posted, so the save loop also skips them and values survive.
+	$fields['ax_geo_place_id'] = array(
+		'label'    => __( 'Place ID', 'axismundi-geodata' ),
+		'type'     => 'text',
+		'help'     => __( 'External provider id, set automatically — e.g. Google ChIJ…, OSM node/123456, Wikidata Q12345, GeoNames 1838524.', 'axismundi-geodata' ),
+		'disabled' => true,
+	);
+	$fields['geo_address']     = array(
+		'label'    => __( 'Address', 'axismundi-geodata' ),
+		'type'     => 'text',
+		'help'     => __( 'Formatted address cache from the geocoding provider; the Geo Area hierarchy is the canonical structure.', 'axismundi-geodata' ),
+		'disabled' => true,
+	);
+
+	return $fields;
 }
 
 /**
@@ -104,6 +138,31 @@ function axismundi_geodata_render_area_select( string $taxonomy, int $selected, 
 }
 
 /**
+ * Build the form control (input or grouped select) for one term field.
+ *
+ * @param string $key      Meta key / field name.
+ * @param array  $field    Field config from axismundi_geodata_term_fields().
+ * @param string $value    Current value.
+ * @param string $taxonomy Taxonomy being edited.
+ * @return string Escaped control markup.
+ */
+function axismundi_geodata_term_control( string $key, array $field, string $value, string $taxonomy ) : string {
+	if ( 'select' === $field['type'] ) {
+		return axismundi_geodata_place_type_select( $taxonomy, $key, $value );
+	}
+
+	$attrs = ( 'number' === $field['type'] ? ' step="any"' : '' ) . ( empty( $field['disabled'] ) ? '' : ' disabled' );
+
+	return sprintf(
+		'<input type="%2$s"%3$s name="%1$s" id="%1$s" value="%4$s" />',
+		esc_attr( $key ),
+		esc_attr( $field['type'] ),
+		$attrs, // $attrs is built from static literals above.
+		esc_attr( $value )
+	);
+}
+
+/**
  * Render the Leaflet map field, bound to the latitude / longitude inputs by
  * term-map.js. Only output when an admin tile provider is configured.
  *
@@ -136,14 +195,12 @@ function axismundi_geodata_render_term_map( string $context ) : void {
 function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
 	axismundi_geodata_render_area_select( $taxonomy, 0, 'add' );
-	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
-		$attrs = ( 'number' === $field['type'] ? ' step="any"' : '' ) . ( empty( $field['disabled'] ) ? '' : ' disabled' );
+	foreach ( axismundi_geodata_term_fields( $taxonomy ) as $key => $field ) {
 		printf(
-			'<div class="form-field"><label for="%1$s">%2$s</label><input type="%3$s"%4$s name="%1$s" id="%1$s" value="" /><p>%5$s</p></div>',
+			'<div class="form-field"><label for="%1$s">%2$s</label>%3$s<p>%4$s</p></div>',
 			esc_attr( $key ),
 			esc_html( $field['label'] ),
-			esc_attr( $field['type'] ),
-			$attrs, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static literal.
+			axismundi_geodata_term_control( $key, $field, '', $taxonomy ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in builder.
 			esc_html( $field['help'] )
 		);
 	}
@@ -160,16 +217,13 @@ function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
 	axismundi_geodata_render_area_select( $taxonomy, axismundi_geodata_get_geotag_area_id( $term->term_id ), 'edit' );
-	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
-		$value = get_term_meta( $term->term_id, $key, true );
-		$attrs = ( 'number' === $field['type'] ? ' step="any"' : '' ) . ( empty( $field['disabled'] ) ? '' : ' disabled' );
+	foreach ( axismundi_geodata_term_fields( $taxonomy ) as $key => $field ) {
+		$value = (string) get_term_meta( $term->term_id, $key, true );
 		printf(
-			'<tr class="form-field"><th scope="row"><label for="%1$s">%2$s</label></th><td><input type="%3$s"%4$s name="%1$s" id="%1$s" value="%5$s" /><p class="description">%6$s</p></td></tr>',
+			'<tr class="form-field"><th scope="row"><label for="%1$s">%2$s</label></th><td>%3$s<p class="description">%4$s</p></td></tr>',
 			esc_attr( $key ),
 			esc_html( $field['label'] ),
-			esc_attr( $field['type'] ),
-			$attrs, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static literal.
-			esc_attr( $value ),
+			axismundi_geodata_term_control( $key, $field, $value, $taxonomy ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in builder.
 			esc_html( $field['help'] )
 		);
 	}
@@ -191,8 +245,11 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 		return;
 	}
 
+	$term     = get_term( $term_id );
+	$taxonomy = $term instanceof WP_Term ? $term->taxonomy : '';
+
 	$values = array();
-	foreach ( axismundi_geodata_term_fields() as $key => $field ) {
+	foreach ( axismundi_geodata_term_fields( $taxonomy ) as $key => $field ) {
 		if ( ! empty( $field['disabled'] ) ) {
 			continue; // provider cache: read-only, not posted, left untouched.
 		}

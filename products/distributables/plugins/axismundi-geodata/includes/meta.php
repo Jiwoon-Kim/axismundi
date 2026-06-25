@@ -64,6 +64,16 @@ function axismundi_geodata_sanitize_float( $value ) : float {
 }
 
 /**
+ * Normalise an ISO 3166-1 alpha-2 country code (e.g. "kr" -> "KR").
+ *
+ * @param mixed $value Raw value.
+ * @return string
+ */
+function axismundi_geodata_sanitize_country_code( $value ) : string {
+	return substr( strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $value ) ), 0, 2 );
+}
+
+/**
  * The edit capability gate shared by every geo post meta key.
  *
  * @param bool   $allowed   Default permission.
@@ -152,6 +162,34 @@ function axismundi_geodata_register_meta() : void {
 				)
 			);
 		}
+	}
+
+	// geo_area administrative-division facts (geo_area only). ax_geo_place_type is
+	// the named administrative type (country, province, city, district…); these
+	// carry the country plus external codes used to map onto Google address
+	// components, Schema.org, and national address APIs. admin_level and a separate
+	// admin_role are NOT stored — level is derived from the hierarchy, and the role
+	// would just restate the administrative type.
+	$geo_area_meta = array(
+		'ax_geo_country_code'  => 'axismundi_geodata_sanitize_country_code',
+		'ax_geo_national_code' => 'sanitize_text_field',
+		'ax_geo_iso_3166_2'    => 'sanitize_text_field',
+		'ax_geo_code_scheme'   => 'sanitize_text_field',
+	);
+	foreach ( $geo_area_meta as $key => $sanitize ) {
+		register_term_meta(
+			'geo_area',
+			$key,
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'sanitize_callback' => $sanitize,
+				'auth_callback'     => function () {
+					return current_user_can( 'manage_categories' );
+				},
+				'show_in_rest'      => array( 'schema' => $string ),
+			)
+		);
 	}
 
 	// geotag -> geo_area relationship: a single leaf geo_area term id. The full

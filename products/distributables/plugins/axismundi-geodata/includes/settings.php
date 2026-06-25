@@ -91,9 +91,14 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 			}
 		}
 
+		// Only the Protomaps schema has a built-in style today; other schemas need an
+		// uploaded style before the preview can render them.
+		$schema = ! empty( $pack['schema'] ) ? (string) $pack['schema'] : '';
+
 		return array(
-			'enabled'     => '' !== $url,
+			'enabled'     => '' !== $url && 'protomaps' === $schema,
 			'kind'        => 'pmtiles',
+			'schema'      => $schema,
 			'tile_url'    => '',
 			'pack_url'    => $url,
 			'bounds'      => $bounds,
@@ -115,6 +120,7 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 	return array(
 		'enabled'     => '' !== $tile_url,
 		'kind'        => 'raster',
+		'schema'      => '',
 		'tile_url'    => $tile_url,
 		'pack_url'    => '',
 		'bounds'      => array(),

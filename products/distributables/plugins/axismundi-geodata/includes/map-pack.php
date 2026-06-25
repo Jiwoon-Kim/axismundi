@@ -143,6 +143,72 @@ function axismundi_geodata_pmtiles_read_metadata( string $path, array $header ) 
 }
 
 /**
+ * The tile schemas a map pack can carry. The schema decides which style renders:
+ * only `protomaps` has a built-in style (Protomaps light); others need an uploaded
+ * style later, and `raster` would use a raster source.
+ *
+ * @return array<string,string>
+ */
+function axismundi_geodata_map_pack_schemas() : array {
+	return array(
+		'protomaps'    => __( 'Protomaps', 'axismundi-geodata' ),
+		'openmaptiles' => __( 'OpenMapTiles', 'axismundi-geodata' ),
+		'custom'       => __( 'Custom vector', 'axismundi-geodata' ),
+		'raster'       => __( 'Raster', 'axismundi-geodata' ),
+	);
+}
+
+/**
+ * Detect the tile schema from the header tile type and metadata. Done once at
+ * save time, not on every render.
+ *
+ * @param array $header   Parsed PMTiles header.
+ * @param array $metadata Parsed PMTiles metadata JSON.
+ * @return string Schema slug.
+ */
+function axismundi_geodata_pmtiles_detect_schema( array $header, array $metadata ) : string {
+	if ( in_array( $header['tile_type'], array( 'png', 'jpeg', 'webp', 'avif' ), true ) ) {
+		return 'raster';
+	}
+
+	if ( false !== stripos( (string) ( $metadata['name'] ?? '' ), 'protomaps' ) ) {
+		return 'protomaps';
+	}
+
+	$layer_ids = array();
+	foreach ( (array) ( $metadata['vector_layers'] ?? array() ) as $layer ) {
+		if ( is_array( $layer ) && isset( $layer['id'] ) ) {
+			$layer_ids[] = (string) $layer['id'];
+		}
+	}
+	if ( array_intersect( array( 'earth', 'pois', 'physical_line' ), $layer_ids ) ) {
+		return 'protomaps';
+	}
+	if ( in_array( 'transportation', $layer_ids, true ) && in_array( 'water_name', $layer_ids, true ) ) {
+		return 'openmaptiles';
+	}
+
+	return 'custom';
+}
+
+/**
+ * The default style slug for a schema. Only protomaps has a built-in style today.
+ *
+ * @param string $schema Schema slug.
+ * @return string
+ */
+function axismundi_geodata_pmtiles_default_style( string $schema ) : string {
+	switch ( $schema ) {
+		case 'protomaps':
+			return 'protomaps_light';
+		case 'raster':
+			return 'raster';
+		default:
+			return '';
+	}
+}
+
+/**
  * The stored (or freshly parsed) Map Pack record for an attachment.
  *
  * @param int $attachment_id Attachment id.
@@ -153,6 +219,8 @@ function axismundi_geodata_map_pack( int $attachment_id ) : array {
 	if ( '' !== $bounds ) {
 		return array(
 			'format'      => (string) get_post_meta( $attachment_id, 'ax_map_format', true ),
+			'schema'      => (string) get_post_meta( $attachment_id, 'ax_map_schema', true ),
+			'style'       => (string) get_post_meta( $attachment_id, 'ax_map_style', true ),
 			'bounds'      => $bounds,
 			'min_zoom'    => (int) get_post_meta( $attachment_id, 'ax_map_min_zoom', true ),
 			'max_zoom'    => (int) get_post_meta( $attachment_id, 'ax_map_max_zoom', true ),
@@ -166,6 +234,8 @@ function axismundi_geodata_map_pack( int $attachment_id ) : array {
 	if ( ! $header ) {
 		return array(
 			'format'      => '',
+			'schema'      => '',
+			'style'       => '',
 			'bounds'      => '',
 			'min_zoom'    => 0,
 			'max_zoom'    => 0,
@@ -173,10 +243,13 @@ function axismundi_geodata_map_pack( int $attachment_id ) : array {
 		);
 	}
 
-	$meta = axismundi_geodata_pmtiles_read_metadata( $file, $header );
+	$meta   = axismundi_geodata_pmtiles_read_metadata( $file, $header );
+	$schema = axismundi_geodata_pmtiles_detect_schema( $header, $meta );
 
 	return array(
 		'format'      => $header['tile_type'],
+		'schema'      => $schema,
+		'style'       => axismundi_geodata_pmtiles_default_style( $schema ),
 		'bounds'      => implode( ',', array_map( static function ( $n ) {
 			return rtrim( rtrim( number_format( $n, 6, '.', '' ), '0' ), '.' );
 		}, $header['bounds'] ) ),
@@ -210,12 +283,22 @@ function axismundi_geodata_render_map_pack_box( WP_Post $post ) : void {
 	wp_nonce_field( 'axismundi_geodata_map_pack', 'axismundi_geodata_map_pack_nonce' );
 	$pack = axismundi_geodata_map_pack( $post->ID );
 
-	echo '<p class="description">' . esc_html__( 'Self-hosted tile pack. Bounds and zoom are read from the file; edit the attribution or correct values as needed.', 'axismundi-geodata' ) . '</p>';
+	echo '<p class="description">' . esc_html__( 'Self-hosted tile pack. Format, schema, bounds, and zoom are read from the file; correct them or set the attribution as needed. The admin preview currently renders the Protomaps schema only.', 'axismundi-geodata' ) . '</p>';
 
 	printf(
 		'<p><label>%s</label> <input type="text" value="%s" class="small-text" readonly /></p>',
 		esc_html__( 'Tile format', 'axismundi-geodata' ),
 		esc_attr( '' !== $pack['format'] ? $pack['format'] : '—' )
+	);
+	printf( '<p><label for="ax_map_schema">%s</label> <select id="ax_map_schema" name="ax_map_schema">', esc_html__( 'Schema', 'axismundi-geodata' ) );
+	foreach ( axismundi_geodata_map_pack_schemas() as $slug => $label ) {
+		printf( '<option value="%s"%s>%s</option>', esc_attr( $slug ), selected( $pack['schema'], $slug, false ), esc_html( $label ) );
+	}
+	echo '</select></p>';
+	printf(
+		'<p><label for="ax_map_style">%s</label> <input type="text" id="ax_map_style" name="ax_map_style" value="%s" class="regular-text" placeholder="protomaps_light" /></p>',
+		esc_html__( 'Style', 'axismundi-geodata' ),
+		esc_attr( $pack['style'] )
 	);
 	printf(
 		'<p><label for="ax_map_bounds">%s</label> <input type="text" id="ax_map_bounds" name="ax_map_bounds" value="%s" class="regular-text" placeholder="west,south,east,north" /></p>',
@@ -257,6 +340,16 @@ function axismundi_geodata_save_map_pack( int $post_id ) : void {
 	$format = axismundi_geodata_map_pack( $post_id )['format'];
 	if ( '' !== $format ) {
 		update_post_meta( $post_id, 'ax_map_format', sanitize_key( $format ) );
+	}
+
+	if ( isset( $_POST['ax_map_schema'] ) ) {
+		$schema = sanitize_key( wp_unslash( $_POST['ax_map_schema'] ) );
+		if ( array_key_exists( $schema, axismundi_geodata_map_pack_schemas() ) ) {
+			update_post_meta( $post_id, 'ax_map_schema', $schema );
+		}
+	}
+	if ( isset( $_POST['ax_map_style'] ) ) {
+		update_post_meta( $post_id, 'ax_map_style', sanitize_text_field( wp_unslash( $_POST['ax_map_style'] ) ) );
 	}
 
 	if ( isset( $_POST['ax_map_bounds'] ) ) {

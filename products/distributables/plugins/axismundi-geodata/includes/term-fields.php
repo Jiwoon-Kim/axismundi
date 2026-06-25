@@ -195,6 +195,35 @@ function axismundi_geodata_render_term_map( string $context ) : void {
 }
 
 /**
+ * Render Google lookup controls for an existing geo term.
+ *
+ * The API key stays server-side; this UI only calls admin-ajax and receives
+ * already-normalised candidates.
+ *
+ * @param WP_Term $term Term being edited.
+ * @return void
+ */
+function axismundi_geodata_render_google_lookup( WP_Term $term ) : void {
+	if ( ! in_array( $term->taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+		return;
+	}
+
+	$has_key = '' !== axismundi_geodata_google_api_key();
+	$label   = esc_html__( 'Google lookup', 'axismundi-geodata' );
+	$button  = sprintf(
+		'<button type="button" class="button" id="axgeo-google-lookup" %1$s>%2$s</button>',
+		disabled( $has_key, false, false ),
+		esc_html__( 'Lookup with Google', 'axismundi-geodata' )
+	);
+	$status  = $has_key
+		? esc_html__( 'Search Google Places for this term, then bind the selected candidate.', 'axismundi-geodata' )
+		: esc_html__( 'Add a Google server API key in Settings > Geodata to enable lookup.', 'axismundi-geodata' );
+	$html    = $button . '<p class="description" id="axgeo-google-status">' . $status . '</p><div id="axgeo-google-results" class="axgeo-google-results" aria-live="polite"></div>';
+
+	echo '<tr class="form-field"><th scope="row">' . $label . '</th><td>' . $html . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- all dynamic pieces escaped above.
+}
+
+/**
  * Render the fields on the "Add New" term screen (stacked div layout).
  *
  * @param string $taxonomy Taxonomy being added to.
@@ -235,6 +264,7 @@ function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '
 			esc_html( $field['help'] )
 		);
 	}
+	axismundi_geodata_render_google_lookup( $term );
 	axismundi_geodata_render_term_map( 'edit' );
 }
 
@@ -328,17 +358,57 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 	}
 
 	$tiles = axismundi_geodata_enqueue_map_field();
-	if ( ! $tiles['enabled'] ) {
+	if ( $tiles['enabled'] ) {
+		wp_enqueue_script(
+			'axismundi-geodata-term-map',
+			plugins_url( 'assets/term-map.js', AXISMUNDI_GEODATA_FILE ),
+			array( 'axismundi-geodata-map-field' ),
+			AXISMUNDI_GEODATA_VERSION,
+			true
+		);
+		wp_add_inline_script( 'axismundi-geodata-term-map', axismundi_geodata_map_inline_js( $tiles ), 'before' );
+	}
+
+	if ( 'term.php' !== $hook ) {
+		return;
+	}
+
+	// Read-only screen context for enqueue/localization; no state is changed here.
+	$term_id = isset( $_GET['tag_ID'] ) ? absint( wp_unslash( $_GET['tag_ID'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( ! $term_id ) {
 		return;
 	}
 
 	wp_enqueue_script(
-		'axismundi-geodata-term-map',
-		plugins_url( 'assets/term-map.js', AXISMUNDI_GEODATA_FILE ),
-		array( 'axismundi-geodata-map-field' ),
+		'axismundi-geodata-google-lookup',
+		plugins_url( 'assets/google-lookup.js', AXISMUNDI_GEODATA_FILE ),
+		array(),
 		AXISMUNDI_GEODATA_VERSION,
 		true
 	);
-	wp_add_inline_script( 'axismundi-geodata-term-map', axismundi_geodata_map_inline_js( $tiles ), 'before' );
+	wp_add_inline_script(
+		'axismundi-geodata-google-lookup',
+		'window.axismundiGeodataGoogleLookup = ' . wp_json_encode(
+			array(
+				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'axismundi_geodata_google_lookup' ),
+				'termId'   => $term_id,
+				'hasKey'   => '' !== axismundi_geodata_google_api_key(),
+				'i18n'     => array(
+					'searching' => __( 'Searching Google Places…', 'axismundi-geodata' ),
+					'noResults' => __( 'No candidates found.', 'axismundi-geodata' ),
+					'binding'   => __( 'Binding selected place…', 'axismundi-geodata' ),
+					'bound'     => __( 'Google place bound.', 'axismundi-geodata' ),
+					'bind'      => __( 'Bind', 'axismundi-geodata' ),
+					'error'     => __( 'Google lookup failed.', 'axismundi-geodata' ),
+				),
+			)
+		) . ';',
+		'before'
+	);
+	wp_add_inline_style(
+		'common',
+		'.axgeo-google-results{margin-top:8px;display:grid;gap:8px;max-width:640px}.axgeo-google-candidate{border:1px solid #c3c4c7;border-radius:4px;padding:10px;background:#fff}.axgeo-google-candidate strong{display:block}.axgeo-google-candidate small{display:block;color:#646970;margin-top:2px}.axgeo-google-candidate .button{margin-top:8px}'
+	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_geodata_term_enqueue' );

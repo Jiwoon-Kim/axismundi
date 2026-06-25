@@ -3,9 +3,9 @@
  * Google provider boundary.
  *
  * The thin layer that maps between Axismundi place types and Google Places types,
- * and (later) calls the Places API. Kept separate so OSM / other providers can sit
- * alongside it without leaking Google specifics into the core model. This file is
- * pure mapping — no network calls; the lookup AJAX is added on top.
+ * and calls the Places API from admin-only server-side actions. Kept separate so
+ * OSM / other providers can sit alongside it without leaking Google specifics
+ * into the core model.
  *
  * @package AxismundiGeodata
  */
@@ -92,3 +92,267 @@ function axismundi_geodata_from_google_type( string $google_type ) : string {
 
 	return $reverse[ $google_type ] ?? $google_type;
 }
+
+/**
+ * A compact Text Search field mask for candidate selection.
+ *
+ * Google Places API (New) requires an explicit field mask. Keep this narrow so a
+ * lookup returns only the facts we can bind to a term.
+ */
+const AXISMUNDI_GEODATA_GOOGLE_TEXT_SEARCH_FIELDS = 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types';
+
+/**
+ * Locale -> Google language code.
+ *
+ * @return string
+ */
+function axismundi_geodata_google_language_code() : string {
+	$locale = determine_locale();
+	$lang   = strtolower( substr( $locale, 0, 2 ) );
+
+	return preg_match( '/^[a-z]{2}$/', $lang ) ? $lang : 'en';
+}
+
+/**
+ * Build area context for a term: its own/assigned geo_area plus ancestors.
+ *
+ * @param WP_Term $term Term being looked up.
+ * @return WP_Term[] Area terms, leaf first.
+ */
+function axismundi_geodata_google_area_context( WP_Term $term ) : array {
+	$ids = array();
+
+	if ( 'geotag' === $term->taxonomy ) {
+		$ids = axismundi_geodata_get_geotag_area_chain( $term->term_id );
+	} elseif ( 'geo_area' === $term->taxonomy ) {
+		$ids = array_merge( array( $term->term_id ), get_ancestors( $term->term_id, 'geo_area', 'taxonomy' ) );
+	}
+
+	$areas = array();
+	foreach ( $ids as $id ) {
+		$area = get_term( (int) $id, 'geo_area' );
+		if ( $area instanceof WP_Term ) {
+			$areas[] = $area;
+		}
+	}
+
+	return $areas;
+}
+
+/**
+ * Best available country code from a term's area context.
+ *
+ * @param WP_Term $term Term being looked up.
+ * @return string ISO 3166-1 alpha-2, or ''.
+ */
+function axismundi_geodata_google_country_code( WP_Term $term ) : string {
+	foreach ( axismundi_geodata_google_area_context( $term ) as $area ) {
+		$code = (string) get_term_meta( $area->term_id, 'ax_geo_country_code', true );
+		if ( '' !== $code ) {
+			return strtoupper( $code );
+		}
+	}
+
+	return '';
+}
+
+/**
+ * Build the free-text query from the term name plus containing area names.
+ *
+ * @param WP_Term $term Term being looked up.
+ * @return string
+ */
+function axismundi_geodata_google_term_query( WP_Term $term ) : string {
+	$parts = array( $term->name );
+
+	foreach ( axismundi_geodata_google_area_context( $term ) as $area ) {
+		if ( $area->name !== $term->name ) {
+			$parts[] = $area->name;
+		}
+	}
+
+	return implode( ' ', array_values( array_unique( array_filter( $parts ) ) ) );
+}
+
+/**
+ * Normalise a Google Places result into a term-bindable candidate.
+ *
+ * @param array $place Raw place object.
+ * @return array<string,mixed>|null
+ */
+function axismundi_geodata_google_normalize_place( array $place ) : ?array {
+	$id = isset( $place['id'] ) ? sanitize_text_field( (string) $place['id'] ) : '';
+	if ( '' === $id ) {
+		return null;
+	}
+
+	$name = '';
+	if ( isset( $place['displayName']['text'] ) ) {
+		$name = sanitize_text_field( (string) $place['displayName']['text'] );
+	}
+
+	$address      = isset( $place['formattedAddress'] ) ? sanitize_text_field( (string) $place['formattedAddress'] ) : '';
+	$google_type  = isset( $place['primaryType'] ) ? sanitize_key( (string) $place['primaryType'] ) : '';
+	$local_type   = axismundi_geodata_from_google_type( $google_type );
+	$latitude     = isset( $place['location']['latitude'] ) ? axismundi_geodata_sanitize_latitude( $place['location']['latitude'] ) : null;
+	$longitude    = isset( $place['location']['longitude'] ) ? axismundi_geodata_sanitize_longitude( $place['location']['longitude'] ) : null;
+
+	return array(
+		'place_id'    => $id,
+		'name'        => $name,
+		'address'     => $address,
+		'latitude'    => $latitude,
+		'longitude'   => $longitude,
+		'google_type' => $google_type,
+		'place_type'  => $local_type,
+	);
+}
+
+/**
+ * Search Google Places Text Search (New) for term candidates.
+ *
+ * @param int $term_id Term id.
+ * @return array<int,array<string,mixed>>|WP_Error
+ */
+function axismundi_geodata_google_lookup_term( int $term_id ) {
+	$key = axismundi_geodata_google_api_key();
+	if ( '' === $key ) {
+		return new WP_Error( 'axismundi_google_key_missing', __( 'Google API key is not configured.', 'axismundi-geodata' ) );
+	}
+
+	$term = get_term( $term_id );
+	if ( ! $term instanceof WP_Term || ! in_array( $term->taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+		return new WP_Error( 'axismundi_google_bad_term', __( 'Invalid geo term.', 'axismundi-geodata' ) );
+	}
+
+	$body = array(
+		'textQuery'    => axismundi_geodata_google_term_query( $term ),
+		'languageCode' => axismundi_geodata_google_language_code(),
+	);
+
+	$region = axismundi_geodata_google_country_code( $term );
+	if ( '' !== $region ) {
+		$body['regionCode'] = $region;
+	}
+
+	$lat = get_term_meta( $term_id, 'geo_latitude', true );
+	$lng = get_term_meta( $term_id, 'geo_longitude', true );
+	if ( '' !== $lat && '' !== $lng ) {
+		$radius = (float) get_term_meta( $term_id, 'ax_geo_radius', true );
+		$radius = $radius > 0 ? $radius : 5000;
+		$body['locationBias'] = array(
+			'circle' => array(
+				'center' => array(
+					'latitude'  => axismundi_geodata_sanitize_latitude( $lat ),
+					'longitude' => axismundi_geodata_sanitize_longitude( $lng ),
+				),
+				'radius' => max( 100, min( 50000, $radius ) ),
+			),
+		);
+	}
+
+	$response = wp_remote_post(
+		'https://places.googleapis.com/v1/places:searchText',
+		array(
+			'timeout' => 15,
+			'headers' => array(
+				'Content-Type'      => 'application/json',
+				'X-Goog-Api-Key'    => $key,
+				'X-Goog-FieldMask'  => AXISMUNDI_GEODATA_GOOGLE_TEXT_SEARCH_FIELDS,
+			),
+			'body'    => wp_json_encode( $body ),
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( $code < 200 || $code >= 300 ) {
+		$message = isset( $data['error']['message'] ) ? (string) $data['error']['message'] : __( 'Google Places lookup failed.', 'axismundi-geodata' );
+		return new WP_Error( 'axismundi_google_lookup_failed', $message, array( 'status' => $code ) );
+	}
+
+	$candidates = array();
+	foreach ( (array) ( $data['places'] ?? array() ) as $place ) {
+		if ( is_array( $place ) ) {
+			$candidate = axismundi_geodata_google_normalize_place( $place );
+			if ( null !== $candidate ) {
+				$candidates[] = $candidate;
+			}
+		}
+	}
+
+	return array_slice( $candidates, 0, 8 );
+}
+
+/**
+ * AJAX: return Google candidates for a geo term.
+ *
+ * @return void
+ */
+function axismundi_geodata_ajax_google_lookup() : void {
+	check_ajax_referer( 'axismundi_geodata_google_lookup', 'nonce' );
+
+	if ( ! current_user_can( 'manage_categories' ) ) {
+		wp_send_json_error( array( 'message' => __( 'You are not allowed to manage geo terms.', 'axismundi-geodata' ) ), 403 );
+	}
+
+	$term_id = isset( $_POST['term_id'] ) ? absint( wp_unslash( $_POST['term_id'] ) ) : 0;
+	$result  = axismundi_geodata_google_lookup_term( $term_id );
+
+	if ( is_wp_error( $result ) ) {
+		$data   = $result->get_error_data();
+		$status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 400;
+		wp_send_json_error( array( 'message' => $result->get_error_message() ), $status );
+	}
+
+	wp_send_json_success( array( 'candidates' => $result ) );
+}
+add_action( 'wp_ajax_axismundi_geodata_google_lookup', 'axismundi_geodata_ajax_google_lookup' );
+
+/**
+ * AJAX: bind a selected Google candidate to a term.
+ *
+ * @return void
+ */
+function axismundi_geodata_ajax_google_bind() : void {
+	check_ajax_referer( 'axismundi_geodata_google_lookup', 'nonce' );
+
+	if ( ! current_user_can( 'manage_categories' ) ) {
+		wp_send_json_error( array( 'message' => __( 'You are not allowed to manage geo terms.', 'axismundi-geodata' ) ), 403 );
+	}
+
+	$term_id   = isset( $_POST['term_id'] ) ? absint( wp_unslash( $_POST['term_id'] ) ) : 0;
+	$place_id  = isset( $_POST['place_id'] ) ? sanitize_text_field( wp_unslash( $_POST['place_id'] ) ) : '';
+	$term      = get_term( $term_id );
+	if ( ! $term instanceof WP_Term || ! in_array( $term->taxonomy, array( 'geo_area', 'geotag' ), true ) || '' === $place_id ) {
+		wp_send_json_error( array( 'message' => __( 'Invalid place binding.', 'axismundi-geodata' ) ), 400 );
+	}
+
+	$google_type = isset( $_POST['google_type'] ) ? sanitize_key( wp_unslash( $_POST['google_type'] ) ) : '';
+	$place_type  = isset( $_POST['place_type'] ) ? sanitize_key( wp_unslash( $_POST['place_type'] ) ) : axismundi_geodata_from_google_type( $google_type );
+	$facts       = array(
+		'geo_latitude'      => isset( $_POST['latitude'] ) ? axismundi_geodata_sanitize_latitude( sanitize_text_field( wp_unslash( $_POST['latitude'] ) ) ) : null,
+		'geo_longitude'     => isset( $_POST['longitude'] ) ? axismundi_geodata_sanitize_longitude( sanitize_text_field( wp_unslash( $_POST['longitude'] ) ) ) : null,
+		'geo_address'       => isset( $_POST['address'] ) ? sanitize_text_field( wp_unslash( $_POST['address'] ) ) : '',
+		'ax_geo_place_type' => $place_type,
+	);
+
+	$canonical = axismundi_geodata_bind_place_identity( $term_id, 'google', $place_id, $facts );
+	if ( '' === $canonical ) {
+		wp_send_json_error( array( 'message' => __( 'Could not bind the Google place.', 'axismundi-geodata' ) ), 400 );
+	}
+
+	wp_send_json_success(
+		array(
+			'canonical' => $canonical,
+			'source'    => 'google',
+			'place_id'  => $place_id,
+			'facts'     => $facts,
+		)
+	);
+}
+add_action( 'wp_ajax_axismundi_geodata_google_bind', 'axismundi_geodata_ajax_google_bind' );

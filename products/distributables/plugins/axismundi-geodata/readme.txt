@@ -50,13 +50,19 @@ A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, 
 is never seeded automatically. Run `wp axismundi-geodata seed-demo` to add it and
 `wp axismundi-geodata seed-demo --remove` to drop it.
 
+Term editors can optionally look up Google Places candidates when a server-side
+Google Places API key is configured under Settings → Geodata. The key is used
+only from admin AJAX and is never sent to the browser. Selecting a candidate
+binds the term to `google:<place_id>` and stores the returned coordinates,
+formatted address, and place type.
+
 == Installation ==
 
 1. Install and activate the Axismundi theme (for the dormant geo presentation
    templates and styles, when those ship).
 2. Upload and activate this plugin.
-3. Posts, pages, and attachments gain geo coordinate fields; posts and pages gain
-   the Geo Area and Geotag taxonomies. All are available over the REST API.
+3. Posts and pages gain the Geo Area and Geotag taxonomies; attachments gain GPS
+   coordinate fields. All are available over the REST API.
 
 == Third-party libraries ==
 
@@ -70,4 +76,7 @@ assets/vendor/leaflet/ and loaded only when a raster tile provider is configured
   meta, term place-fact meta, public-precision privacy model, REST exposure.
 * Attachment Location (GPS) editor: lat/lng/altitude/public fields, on-demand
   EXIF GPS import, and a Leaflet mini map with a draggable marker.
-* Map provider settings (Settings → Geodata): none or custom raster (XYZ) tiles.
+* Map provider settings (Settings → Geodata): none, admin-only OpenStreetMap
+  preview, or custom raster (XYZ) tiles.
+* Optional Google Places lookup for geo_area / geotag terms, with server-side key
+  storage and explicit candidate binding.

@@ -25,16 +25,29 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_geodata_get_settings() : array {
 	$defaults = array(
-		'provider'    => 'none',
-		'tile_url'    => '',
-		'attribution' => '',
-		'min_zoom'    => 1,
-		'max_zoom'    => 19,
+		'provider'              => 'none',
+		'tile_url'              => '',
+		'attribution'           => '',
+		'min_zoom'              => 1,
+		'max_zoom'              => 19,
+		'google_server_api_key' => '',
 	);
 
 	$saved = get_option( 'axismundi_geodata_settings', array() );
 
 	return wp_parse_args( is_array( $saved ) ? $saved : array(), $defaults );
+}
+
+/**
+ * The Google server-side API key for place lookup / geocoding, or '' if unset.
+ *
+ * Server-side only — used from admin AJAX, never enqueued to the browser. A
+ * separate browser key would be needed for any front-end Google map.
+ *
+ * @return string
+ */
+function axismundi_geodata_google_api_key() : string {
+	return (string) axismundi_geodata_get_settings()['google_server_api_key'];
 }
 
 /**
@@ -141,6 +154,10 @@ function axismundi_geodata_sanitize_settings( $input ) : array {
 	$out['min_zoom'] = max( 0, min( 22, absint( $input['min_zoom'] ?? 1 ) ) );
 	$out['max_zoom'] = max( $out['min_zoom'], min( 22, absint( $input['max_zoom'] ?? 19 ) ) );
 
+	$out['google_server_api_key'] = isset( $input['google_server_api_key'] )
+		? trim( sanitize_text_field( (string) $input['google_server_api_key'] ) )
+		: '';
+
 	return $out;
 }
 
@@ -187,6 +204,23 @@ function axismundi_geodata_register_settings() : void {
 			array( 'key' => $key, 'label_for' => "axismundi_geodata_{$key}" )
 		);
 	}
+
+	add_settings_section(
+		'axismundi_geodata_lookup',
+		__( 'Place lookup', 'axismundi-geodata' ),
+		static function () {
+			echo '<p>' . esc_html__( 'Optional. A Google server API key lets the term editor look up a place’s coordinates and id. It is used server-side only and is never sent to the browser.', 'axismundi-geodata' ) . '</p>';
+		},
+		'axismundi_geodata'
+	);
+	add_settings_field(
+		'axismundi_geodata_google_server_api_key',
+		__( 'Google API key', 'axismundi-geodata' ),
+		'axismundi_geodata_render_field',
+		'axismundi_geodata',
+		'axismundi_geodata_lookup',
+		array( 'key' => 'google_server_api_key', 'label_for' => 'axismundi_geodata_google_server_api_key' )
+	);
 }
 add_action( 'admin_init', 'axismundi_geodata_register_settings' );
 
@@ -245,6 +279,16 @@ function axismundi_geodata_render_field( array $args ) : void {
 				esc_attr( $name ),
 				(int) $value
 			);
+			break;
+
+		case 'google_server_api_key':
+			printf(
+				'<input type="password" id="%s" name="%s" value="%s" class="regular-text" autocomplete="off" />',
+				esc_attr( $id ),
+				esc_attr( $name ),
+				esc_attr( $value )
+			);
+			echo '<p class="description">' . esc_html__( 'A Google Maps Platform server key with the Places API enabled. Restrict it to your server IP and to the Places API in the Google Cloud console.', 'axismundi-geodata' ) . '</p>';
 			break;
 	}
 }

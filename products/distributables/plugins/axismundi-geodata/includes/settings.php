@@ -73,6 +73,45 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 }
 
 /**
+ * Enqueue Leaflet + the reusable map field when admin tiles are configured.
+ *
+ * Shared by the attachment editor and the term screens. The caller enqueues its
+ * own behaviour script, depends it on 'axismundi-geodata-map-field' when enabled,
+ * and localizes the payload from axismundi_geodata_map_inline_js().
+ *
+ * @return array Resolved tiles (see axismundi_geodata_resolve_tiles()).
+ */
+function axismundi_geodata_enqueue_map_field() : array {
+	$tiles = axismundi_geodata_resolve_tiles( 'admin' );
+	if ( $tiles['enabled'] ) {
+		wp_enqueue_style( 'axismundi-leaflet', plugins_url( 'assets/vendor/leaflet/leaflet.css', AXISMUNDI_GEODATA_FILE ), array(), '1.9.4' );
+		wp_enqueue_script( 'axismundi-leaflet', plugins_url( 'assets/vendor/leaflet/leaflet.js', AXISMUNDI_GEODATA_FILE ), array(), '1.9.4', true );
+		wp_enqueue_script( 'axismundi-geodata-map-field', plugins_url( 'assets/map-field.js', AXISMUNDI_GEODATA_FILE ), array( 'axismundi-leaflet' ), AXISMUNDI_GEODATA_VERSION, true );
+	}
+
+	return $tiles;
+}
+
+/**
+ * The window.axismundiGeodataMap assignment that configures the map field.
+ *
+ * @param array $tiles Resolved tiles.
+ * @return string JS statement.
+ */
+function axismundi_geodata_map_inline_js( array $tiles ) : string {
+	return 'window.axismundiGeodataMap = ' . wp_json_encode(
+		array(
+			'mapEnabled'  => $tiles['enabled'],
+			'tileUrl'     => $tiles['tile_url'],
+			'attribution' => $tiles['attribution'],
+			'minZoom'     => $tiles['min_zoom'],
+			'maxZoom'     => $tiles['max_zoom'],
+			'imagePath'   => plugins_url( 'assets/vendor/leaflet/images/', AXISMUNDI_GEODATA_FILE ),
+		)
+	) . ';';
+}
+
+/**
  * Sanitize the settings form.
  *
  * @param mixed $input Raw form input.

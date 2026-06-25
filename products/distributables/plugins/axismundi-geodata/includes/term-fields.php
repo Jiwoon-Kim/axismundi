@@ -104,6 +104,30 @@ function axismundi_geodata_render_area_select( string $taxonomy, int $selected, 
 }
 
 /**
+ * Render the Leaflet map field, bound to the latitude / longitude inputs by
+ * term-map.js. Only output when an admin tile provider is configured.
+ *
+ * @param string $context 'add' (div layout) or 'edit' (table row).
+ * @return void
+ */
+function axismundi_geodata_render_term_map( string $context ) : void {
+	if ( ! axismundi_geodata_resolve_tiles( 'admin' )['enabled'] ) {
+		return;
+	}
+
+	$label = esc_html__( 'Map', 'axismundi-geodata' );
+	$help  = esc_html__( 'Click the map or drag the marker to set the centre coordinates.', 'axismundi-geodata' );
+	$map   = '<div id="axgeo-term-map" style="height:260px;max-width:520px;border-radius:4px;overflow:hidden;"></div>';
+
+	// $map is a static literal; $label / $help are escaped above.
+	if ( 'edit' === $context ) {
+		echo '<tr class="form-field"><th scope="row">' . $label . '</th><td>' . $map . '<p class="description">' . $help . '</p></td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	} else {
+		echo '<div class="form-field"><label>' . $label . '</label>' . $map . '<p>' . $help . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+}
+
+/**
  * Render the fields on the "Add New" term screen (stacked div layout).
  *
  * @param string $taxonomy Taxonomy being added to.
@@ -123,6 +147,7 @@ function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 			esc_html( $field['help'] )
 		);
 	}
+	axismundi_geodata_render_term_map( 'add' );
 }
 
 /**
@@ -148,6 +173,7 @@ function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '
 			esc_html( $field['help'] )
 		);
 	}
+	axismundi_geodata_render_term_map( 'edit' );
 }
 
 /**
@@ -221,3 +247,34 @@ function axismundi_geodata_term_fields_init() : void {
 	}
 }
 add_action( 'admin_init', 'axismundi_geodata_term_fields_init' );
+
+/**
+ * Enqueue the Leaflet map field on the geo taxonomy term screens.
+ *
+ * @param string $hook Current admin page.
+ * @return void
+ */
+function axismundi_geodata_term_enqueue( string $hook ) : void {
+	if ( 'edit-tags.php' !== $hook && 'term.php' !== $hook ) {
+		return;
+	}
+	$screen = get_current_screen();
+	if ( ! $screen || ! in_array( $screen->taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+		return;
+	}
+
+	$tiles = axismundi_geodata_enqueue_map_field();
+	if ( ! $tiles['enabled'] ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'axismundi-geodata-term-map',
+		plugins_url( 'assets/term-map.js', AXISMUNDI_GEODATA_FILE ),
+		array( 'axismundi-geodata-map-field' ),
+		AXISMUNDI_GEODATA_VERSION,
+		true
+	);
+	wp_add_inline_script( 'axismundi-geodata-term-map', axismundi_geodata_map_inline_js( $tiles ), 'before' );
+}
+add_action( 'admin_enqueue_scripts', 'axismundi_geodata_term_enqueue' );

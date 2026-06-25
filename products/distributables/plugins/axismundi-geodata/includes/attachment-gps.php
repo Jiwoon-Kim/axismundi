@@ -243,14 +243,9 @@ function axismundi_geodata_attachment_enqueue( string $hook ) : void {
 		return;
 	}
 
-	$tiles       = axismundi_geodata_resolve_tiles( 'admin' );
-	$map_enabled = $tiles['enabled'];
-	$deps        = array( 'wp-i18n' );
-
-	if ( $map_enabled ) {
-		wp_enqueue_style( 'axismundi-leaflet', plugins_url( 'assets/vendor/leaflet/leaflet.css', AXISMUNDI_GEODATA_FILE ), array(), '1.9.4' );
-		wp_enqueue_script( 'axismundi-leaflet', plugins_url( 'assets/vendor/leaflet/leaflet.js', AXISMUNDI_GEODATA_FILE ), array(), '1.9.4', true );
-		wp_enqueue_script( 'axismundi-geodata-map-field', plugins_url( 'assets/map-field.js', AXISMUNDI_GEODATA_FILE ), array( 'axismundi-leaflet' ), AXISMUNDI_GEODATA_VERSION, true );
+	$tiles = axismundi_geodata_enqueue_map_field();
+	$deps  = array( 'wp-i18n' );
+	if ( $tiles['enabled'] ) {
 		$deps[] = 'axismundi-geodata-map-field';
 	}
 
@@ -264,16 +259,7 @@ function axismundi_geodata_attachment_enqueue( string $hook ) : void {
 
 	wp_add_inline_script(
 		'axismundi-geodata-attachment',
-		'window.axismundiGeodataMap = ' . wp_json_encode(
-			array(
-				'mapEnabled'  => $map_enabled,
-				'tileUrl'     => $tiles['tile_url'],
-				'attribution' => $tiles['attribution'],
-				'minZoom'     => $tiles['min_zoom'],
-				'maxZoom'     => $tiles['max_zoom'],
-				'imagePath'   => plugins_url( 'assets/vendor/leaflet/images/', AXISMUNDI_GEODATA_FILE ),
-			)
-		) . '; window.axismundiGeodataAjax = ' . wp_json_encode(
+		axismundi_geodata_map_inline_js( $tiles ) . ' window.axismundiGeodataAjax = ' . wp_json_encode(
 			array(
 				'url'   => admin_url( 'admin-ajax.php' ),
 				'nonce' => wp_create_nonce( 'axismundi_geodata_exif' ),

@@ -60,6 +60,7 @@ require_once __DIR__ . '/includes/place-id.php';
 require_once __DIR__ . '/includes/lookup.php';
 require_once __DIR__ . '/includes/google.php';
 require_once __DIR__ . '/includes/osm.php';
+require_once __DIR__ . '/includes/map-pack.php';
 require_once __DIR__ . '/includes/relations.php';
 require_once __DIR__ . '/includes/settings.php';
 require_once __DIR__ . '/includes/cli.php';

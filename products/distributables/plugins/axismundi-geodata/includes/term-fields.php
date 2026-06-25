@@ -80,19 +80,11 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 
 	// Provider caches — rendered read-only (disabled). A place lookup / geocoding
 	// adapter fills these, so they are shown for transparency but never hand-typed.
-	// Disabled inputs aren't posted, so the save loop also skips them and values
-	// survive. Source + Place ID together form the canonical identity (see
-	// axismundi_geodata_canonical_place_id()).
-	$fields['ax_geo_source']   = array(
-		'label'    => __( 'Source', 'axismundi-geodata' ),
-		'type'     => 'text',
-		'help'     => __( 'Which provider this place identity comes from: manual, google, osm, wikidata, or geonames. Set automatically when a lookup links the place.', 'axismundi-geodata' ),
-		'disabled' => true,
-	);
+	// Disabled inputs aren't posted, so the save loop skips them and values survive.
 	$fields['ax_geo_place_id'] = array(
 		'label'    => __( 'Place ID', 'axismundi-geodata' ),
 		'type'     => 'text',
-		'help'     => __( 'The provider’s raw id — e.g. Google ChIJ…, OSM node/123456, Wikidata Q12345, GeoNames 1838524. With Source it forms a canonical id like google:ChIJ…. Set automatically by a place lookup.', 'axismundi-geodata' ),
+		'help'     => __( 'Canonical provider id — e.g. google:ChIJ…, osm:node/123456, wikidata:Q12345, geonames:1838524. Set automatically by a place lookup.', 'axismundi-geodata' ),
 		'disabled' => true,
 	);
 	$fields['geo_address']     = array(
@@ -255,7 +247,9 @@ function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
 	axismundi_geodata_render_area_select( $taxonomy, axismundi_geodata_get_geotag_area_id( $term->term_id ), 'edit' );
 	foreach ( axismundi_geodata_term_fields( $taxonomy ) as $key => $field ) {
-		$value = (string) get_term_meta( $term->term_id, $key, true );
+		$value = 'ax_geo_place_id' === $key
+			? axismundi_geodata_canonical_place_id( $term->term_id )
+			: (string) get_term_meta( $term->term_id, $key, true );
 		printf(
 			'<tr class="form-field"><th scope="row"><label for="%1$s">%2$s</label></th><td>%3$s<p class="description">%4$s</p></td></tr>',
 			esc_attr( $key ),
@@ -295,8 +289,8 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 	}
 
 	// Plus Code convenience: a full code fills empty coordinates. This only sets the
-	// coordinate, not ax_geo_source — source describes the place-identity provider
-	// (see place-id.php), which hand-entered coordinates don't establish.
+	// coordinate, not the place identity (see place-id.php), which hand-entered
+	// coordinates don't establish.
 	if ( '' !== $values['ax_geo_plus_code'] && ( '' === $values['geo_latitude'] || '' === $values['geo_longitude'] ) ) {
 		$decoded = axismundi_geodata_decode_plus_code( $values['ax_geo_plus_code'] );
 		if ( null !== $decoded ) {

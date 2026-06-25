@@ -2,16 +2,14 @@
 /**
  * Place identity model — binding a term to an external place.
  *
- * A geo_area / geotag term stores its provider binding in two term meta keys:
- *   ax_geo_source   — which provider the identity comes from (manual / google /
- *                     osm / wikidata / geonames)
- *   ax_geo_place_id — that provider's RAW id (ChIJ… / node/123456 / Q12345 /
- *                     1838524 / a manual slug)
+ * A geo_area / geotag term stores its provider binding in one term meta key:
+ *   ax_geo_place_id — a canonical namespaced id, e.g. google:ChIJ…,
+ *                     osm:node/123456, wikidata:Q12345, geonames:1838524,
+ *                     manual:gwangalli-beach.
  *
- * They are stored separately so the source can be queried / filtered, and the
- * canonical "source:id" form (google:ChIJ…) is composed on demand by
- * axismundi_geodata_canonical_place_id(). A future Google / OSM lookup fills both;
- * for now the term editor shows them read-only.
+ * Source is parsed from that string when needed. This keeps the durable model
+ * aligned with external-id practice and prevents every provider adapter from
+ * having to maintain split source/id columns.
  *
  * @package AxismundiGeodata
  */
@@ -46,22 +44,50 @@ function axismundi_geodata_place_source_label( string $source ) : string {
 }
 
 /**
- * The canonical "source:id" place identifier for a term, or '' when either part
- * is missing. Raw provider ids never contain a leading "provider:" prefix, so the
- * first colon always separates source from id.
+ * Normalise a source + raw id into a canonical namespaced place id.
+ *
+ * @param string $source   Provider source.
+ * @param string $place_id Provider raw id, or already-canonical id.
+ * @return string Canonical id, or '' when invalid.
+ */
+function axismundi_geodata_normalize_place_id( string $source, string $place_id ) : string {
+	$source   = sanitize_key( $source );
+	$place_id = trim( sanitize_text_field( $place_id ) );
+
+	if ( '' === $source || '' === $place_id || ! axismundi_geodata_is_place_source( $source ) ) {
+		return '';
+	}
+
+	$parsed = axismundi_geodata_parse_place_id( $place_id );
+	if ( '' !== $parsed['source'] ) {
+		return $parsed['source'] === $source && axismundi_geodata_is_place_source( $parsed['source'] ) && '' !== $parsed['id']
+			? $parsed['source'] . ':' . $parsed['id']
+			: '';
+	}
+
+	return $source . ':' . $parsed['id'];
+}
+
+/**
+ * The canonical namespaced place identifier for a term, or '' when missing.
+ *
+ * Legacy split storage (`ax_geo_source` + raw `ax_geo_place_id`) is read as a
+ * fallback so local/dev terms from early iterations don't break. New writes store
+ * only canonical `ax_geo_place_id`.
  *
  * @param int $term_id Term id.
  * @return string e.g. "google:ChIJ…", or '' if unbound.
  */
 function axismundi_geodata_canonical_place_id( int $term_id ) : string {
-	$source = (string) get_term_meta( $term_id, 'ax_geo_source', true );
-	$id     = (string) get_term_meta( $term_id, 'ax_geo_place_id', true );
+	$id     = trim( (string) get_term_meta( $term_id, 'ax_geo_place_id', true ) );
+	$parsed = axismundi_geodata_parse_place_id( $id );
 
-	if ( '' === $source || '' === $id ) {
-		return '';
+	if ( '' !== $parsed['source'] && axismundi_geodata_is_place_source( $parsed['source'] ) && '' !== $parsed['id'] ) {
+		return $parsed['source'] . ':' . $parsed['id'];
 	}
 
-	return $source . ':' . $id;
+	$legacy_source = (string) get_term_meta( $term_id, 'ax_geo_source', true );
+	return axismundi_geodata_normalize_place_id( $legacy_source, $id );
 }
 
 /**
@@ -72,6 +98,7 @@ function axismundi_geodata_canonical_place_id( int $term_id ) : string {
  * @return array{source:string,id:string}
  */
 function axismundi_geodata_parse_place_id( string $canonical ) : array {
+	$canonical = trim( sanitize_text_field( $canonical ) );
 	$pos = strpos( $canonical, ':' );
 	if ( false === $pos ) {
 		return array(
@@ -81,7 +108,7 @@ function axismundi_geodata_parse_place_id( string $canonical ) : array {
 	}
 
 	return array(
-		'source' => substr( $canonical, 0, $pos ),
+		'source' => sanitize_key( substr( $canonical, 0, $pos ) ),
 		'id'     => substr( $canonical, $pos + 1 ),
 	);
 }
@@ -104,18 +131,19 @@ function axismundi_geodata_is_place_source( string $source ) : bool {
  *
  * @param int    $term_id  Term id.
  * @param string $source   Provider slug (must be an allowed source).
- * @param string $place_id Provider raw id.
+ * @param string $place_id Provider raw id, or already-canonical id.
  * @param array  $facts    Optional facts: geo_latitude, geo_longitude, geo_address,
  *                         ax_geo_place_type, ax_geo_radius.
  * @return string Canonical "source:id", or '' when the source is invalid or the id empty.
  */
 function axismundi_geodata_bind_place_identity( int $term_id, string $source, string $place_id, array $facts = array() ) : string {
-	if ( ! axismundi_geodata_is_place_source( $source ) || '' === $place_id ) {
+	$canonical = axismundi_geodata_normalize_place_id( $source, $place_id );
+	if ( '' === $canonical ) {
 		return '';
 	}
 
-	update_term_meta( $term_id, 'ax_geo_source', $source );
-	update_term_meta( $term_id, 'ax_geo_place_id', $place_id );
+	update_term_meta( $term_id, 'ax_geo_place_id', $canonical );
+	delete_term_meta( $term_id, 'ax_geo_source' ); // Legacy split key.
 
 	foreach ( array( 'geo_latitude', 'geo_longitude', 'geo_address', 'ax_geo_place_type', 'ax_geo_radius' ) as $key ) {
 		if ( array_key_exists( $key, $facts ) && '' !== $facts[ $key ] && null !== $facts[ $key ] ) {
@@ -123,5 +151,5 @@ function axismundi_geodata_bind_place_identity( int $term_id, string $source, st
 		}
 	}
 
-	return axismundi_geodata_canonical_place_id( $term_id );
+	return $canonical;
 }

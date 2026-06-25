@@ -101,8 +101,7 @@
 				throw new Error( result?.data?.message || cfg.i18n?.error || 'Google lookup failed.' );
 			}
 
-			setInputValue( 'ax_geo_source', result.data.source || 'google' );
-			setInputValue( 'ax_geo_place_id', result.data.place_id || candidate.place_id || '' );
+			setInputValue( 'ax_geo_place_id', result.data.canonical || result.data.place_id || candidate.place_id || '' );
 			setInputValue( 'geo_address', result.data.facts?.geo_address || candidate.address || '' );
 			setInputValue( 'geo_latitude', result.data.facts?.geo_latitude ?? candidate.latitude ?? '' );
 			setInputValue( 'geo_longitude', result.data.facts?.geo_longitude ?? candidate.longitude ?? '' );

@@ -349,8 +349,8 @@ function axismundi_geodata_ajax_google_bind() : void {
 	wp_send_json_success(
 		array(
 			'canonical' => $canonical,
-			'source'    => 'google',
-			'place_id'  => $place_id,
+			'place_id'  => $canonical,
+			'raw_id'    => $place_id,
 			'facts'     => $facts,
 		)
 	);

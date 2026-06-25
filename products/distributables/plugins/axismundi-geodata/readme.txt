@@ -78,6 +78,14 @@ provider is active:
   5.7.2 (https://github.com/protomaps/basemaps, BSD-3-Clause) — PMTiles map-pack
   previews. Label fonts load from the public Protomaps assets host.
 
+== Map strategy ==
+
+Uploaded PMTiles map packs self-host the tile data, but the current Protomaps
+preview may load small glyph/sprite rendering assets from Protomaps' public asset
+host. A front-end Map block is intentionally not locked yet: single-post maps,
+track/route maps, and archive/search query maps have different data contracts.
+See docs/map-strategy.md for the current boundary.
+
 == Changelog ==
 
 = 0.1.0 =

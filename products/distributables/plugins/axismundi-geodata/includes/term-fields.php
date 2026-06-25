@@ -78,13 +78,21 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 		);
 	}
 
-	// Provider caches — rendered read-only (disabled). A geocoding adapter fills
-	// these, so they are shown for transparency but never hand-typed. Disabled
-	// inputs aren't posted, so the save loop also skips them and values survive.
+	// Provider caches — rendered read-only (disabled). A place lookup / geocoding
+	// adapter fills these, so they are shown for transparency but never hand-typed.
+	// Disabled inputs aren't posted, so the save loop also skips them and values
+	// survive. Source + Place ID together form the canonical identity (see
+	// axismundi_geodata_canonical_place_id()).
+	$fields['ax_geo_source']   = array(
+		'label'    => __( 'Source', 'axismundi-geodata' ),
+		'type'     => 'text',
+		'help'     => __( 'Which provider this place identity comes from: manual, google, osm, wikidata, or geonames. Set automatically when a lookup links the place.', 'axismundi-geodata' ),
+		'disabled' => true,
+	);
 	$fields['ax_geo_place_id'] = array(
 		'label'    => __( 'Place ID', 'axismundi-geodata' ),
 		'type'     => 'text',
-		'help'     => __( 'External provider id, set automatically — e.g. Google ChIJ…, OSM node/123456, Wikidata Q12345, GeoNames 1838524.', 'axismundi-geodata' ),
+		'help'     => __( 'The provider’s raw id — e.g. Google ChIJ…, OSM node/123456, Wikidata Q12345, GeoNames 1838524. With Source it forms a canonical id like google:ChIJ…. Set automatically by a place lookup.', 'axismundi-geodata' ),
 		'disabled' => true,
 	);
 	$fields['geo_address']     = array(
@@ -256,15 +264,14 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 		$values[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
 	}
 
-	// Plus Code convenience: a full code fills empty coordinates.
+	// Plus Code convenience: a full code fills empty coordinates. This only sets the
+	// coordinate, not ax_geo_source — source describes the place-identity provider
+	// (see place-id.php), which hand-entered coordinates don't establish.
 	if ( '' !== $values['ax_geo_plus_code'] && ( '' === $values['geo_latitude'] || '' === $values['geo_longitude'] ) ) {
 		$decoded = axismundi_geodata_decode_plus_code( $values['ax_geo_plus_code'] );
 		if ( null !== $decoded ) {
 			$values['geo_latitude']  = (string) $decoded['latitude'];
 			$values['geo_longitude'] = (string) $decoded['longitude'];
-			if ( '' === get_term_meta( $term_id, 'ax_geo_source', true ) ) {
-				update_term_meta( $term_id, 'ax_geo_source', 'pluscode' );
-			}
 		}
 	}
 

@@ -96,7 +96,12 @@ function axismundi_geodata_register_meta() : void {
 	$string  = array( 'type' => 'string' );
 	$boolean = array( 'type' => 'boolean' );
 
-	// Object coordinate meta: observation / capture point.
+	// Object coordinate meta: observation / capture point. No source key here:
+	// ax_geo_source means the term's place-identity provider (google / osm /
+	// wikidata — see place-id.php), a different axis from "where did this coordinate
+	// come from" (gps / exif / manual). That object coordinate-source is deferred;
+	// if needed it gets its own ax_geo_coordinate_source rather than overloading
+	// ax_geo_source.
 	$post_meta = array(
 		'geo_latitude'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
 		'geo_longitude'           => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
@@ -104,7 +109,6 @@ function axismundi_geodata_register_meta() : void {
 		'geo_altitude'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_float', 'schema' => $number ),
 		'geo_accuracy'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_nonneg', 'schema' => $number ),
 		'geo_address'             => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
-		'ax_geo_source'           => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
 		'ax_geo_public_precision' => array(
 			'type'     => 'string',
 			'sanitize' => 'axismundi_geodata_sanitize_precision',

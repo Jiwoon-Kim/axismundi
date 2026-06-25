@@ -49,11 +49,11 @@ class Axismundi_Geodata_CLI {
 	public function seed_demo( $args, $assoc_args ) : void {
 		$areas = array(
 			array( 'name' => '대한민국', 'parent' => '', 'lat' => 36.0, 'lng' => 127.8, 'radius' => 300000, 'type' => 'country', 'address' => '대한민국' ),
-			array( 'name' => '부산광역시', 'parent' => '대한민국', 'lat' => 35.1796, 'lng' => 129.0756, 'radius' => 20000, 'type' => 'city', 'address' => '대한민국 부산광역시' ),
+			array( 'name' => '부산광역시', 'parent' => '대한민국', 'lat' => 35.1796, 'lng' => 129.0756, 'radius' => 20000, 'type' => 'metropolitan_city', 'address' => '대한민국 부산광역시' ),
 			array( 'name' => '수영구', 'parent' => '부산광역시', 'lat' => 35.1455, 'lng' => 129.1132, 'radius' => 2500, 'type' => 'district', 'address' => '부산광역시 수영구' ),
 			array( 'name' => '광안동', 'parent' => '수영구', 'lat' => 35.1530, 'lng' => 129.1130, 'radius' => 900, 'type' => 'neighborhood', 'address' => '부산광역시 수영구 광안동' ),
 		);
-		$geotag = array( 'name' => '광안리해수욕장', 'area' => '광안동', 'lat' => 35.1532, 'lng' => 129.1186, 'radius' => 300, 'type' => 'beach', 'address' => '부산광역시 수영구 광안해변로 219' );
+		$geotag = array( 'name' => '광안리해수욕장', 'area' => '광안동', 'lat' => 35.1532, 'lng' => 129.1186, 'radius' => 300, 'type' => 'beach', 'address' => '부산광역시 수영구 광안해변로 219', 'source' => 'manual', 'place_id' => 'gwangalli-beach' );
 
 		if ( ! empty( $assoc_args['remove'] ) ) {
 			$gt = get_term_by( 'name', $geotag['name'], 'geotag' );
@@ -134,7 +134,15 @@ class Axismundi_Geodata_CLI {
 		update_term_meta( $term_id, 'ax_geo_radius', $place['radius'] );
 		update_term_meta( $term_id, 'ax_geo_place_type', $place['type'] );
 		update_term_meta( $term_id, 'geo_address', $place['address'] );
-		update_term_meta( $term_id, 'ax_geo_source', 'demo' );
+
+		// Place identity (source + raw id) only when the row binds one — source
+		// describes the provider, so it isn't set for an unbound area.
+		if ( ! empty( $place['source'] ) ) {
+			update_term_meta( $term_id, 'ax_geo_source', $place['source'] );
+		}
+		if ( ! empty( $place['place_id'] ) ) {
+			update_term_meta( $term_id, 'ax_geo_place_id', $place['place_id'] );
+		}
 	}
 }
 

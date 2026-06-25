@@ -336,7 +336,7 @@ function axismundi_geodata_render_field( array $args ) : void {
 				printf( '<option value="%s"%s>%s</option>', esc_attr( $opt ), selected( $value, $opt, false ), esc_html( $opt_label ) );
 			}
 			echo '</select>';
-			echo '<p class="description">' . esc_html__( 'OpenStreetMap public tiles are admin-preview only. “Uploaded PMTiles map pack” renders a self-hosted vector basemap you uploaded (Media > a .pmtiles file) with MapLibre — no external tile server.', 'axismundi-geodata' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'OpenStreetMap public tiles are admin-preview only. “Uploaded PMTiles map pack” renders a self-hosted vector basemap (Media > a .pmtiles file) with MapLibre: map tiles are served from the uploaded file, while label glyphs and sprites may load from the public Protomaps assets host.', 'axismundi-geodata' ) . '</p>';
 			break;
 
 		case 'map_pack_id':

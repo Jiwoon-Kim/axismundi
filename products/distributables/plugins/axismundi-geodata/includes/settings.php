@@ -30,6 +30,7 @@ function axismundi_geodata_get_settings() : array {
 		'attribution'           => '',
 		'min_zoom'              => 1,
 		'max_zoom'              => 19,
+		'map_pack_id'           => 0,
 		'google_server_api_key' => '',
 		'nominatim_mode'        => 'none',
 		'nominatim_endpoint'    => '',
@@ -71,6 +72,38 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 	$tile_url    = '';
 	$attribution = '';
 
+	// PMTiles map pack: a self-hosted vector basemap rendered with MapLibre. A whole
+	// different stack from raster tiles, flagged with kind = 'pmtiles'.
+	if ( 'pmtiles' === $cfg['provider'] ) {
+		$pack_id = (int) $cfg['map_pack_id'];
+		$pack    = $pack_id && function_exists( 'axismundi_geodata_is_pmtiles_attachment' ) && axismundi_geodata_is_pmtiles_attachment( $pack_id )
+			? axismundi_geodata_map_pack( $pack_id )
+			: array();
+		$url     = ! empty( $pack ) ? (string) wp_get_attachment_url( $pack_id ) : '';
+
+		$bounds = array();
+		$center = array();
+		if ( '' !== $url && ! empty( $pack['bounds'] ) ) {
+			$parts = array_map( 'floatval', explode( ',', $pack['bounds'] ) );
+			if ( 4 === count( $parts ) ) {
+				$bounds = $parts; // W, S, E, N.
+				$center = array( ( $parts[0] + $parts[2] ) / 2, ( $parts[1] + $parts[3] ) / 2 );
+			}
+		}
+
+		return array(
+			'enabled'     => '' !== $url,
+			'kind'        => 'pmtiles',
+			'tile_url'    => '',
+			'pack_url'    => $url,
+			'bounds'      => $bounds,
+			'center'      => $center,
+			'attribution' => ! empty( $pack['attribution'] ) ? (string) $pack['attribution'] : '',
+			'min_zoom'    => ! empty( $pack['min_zoom'] ) ? (int) $pack['min_zoom'] : 0,
+			'max_zoom'    => ! empty( $pack['max_zoom'] ) ? (int) $pack['max_zoom'] : 18,
+		);
+	}
+
 	if ( 'osm' === $cfg['provider'] && 'admin' === $context ) {
 		$tile_url    = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 		$attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -81,7 +114,11 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 
 	return array(
 		'enabled'     => '' !== $tile_url,
+		'kind'        => 'raster',
 		'tile_url'    => $tile_url,
+		'pack_url'    => '',
+		'bounds'      => array(),
+		'center'      => array(),
 		'attribution' => $attribution,
 		'min_zoom'    => (int) $cfg['min_zoom'],
 		'max_zoom'    => (int) $cfg['max_zoom'],
@@ -99,7 +136,20 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
  */
 function axismundi_geodata_enqueue_map_field() : array {
 	$tiles = axismundi_geodata_resolve_tiles( 'admin' );
-	if ( $tiles['enabled'] ) {
+	if ( ! $tiles['enabled'] ) {
+		return $tiles;
+	}
+
+	// Both renderers register the same 'axismundi-geodata-map-field' handle and the
+	// same window.axismundiGeodataInitMapField contract, so consumers (term / media
+	// editors) don't care which one is active.
+	if ( 'pmtiles' === $tiles['kind'] ) {
+		wp_enqueue_style( 'axismundi-maplibre', plugins_url( 'assets/vendor/maplibre/maplibre-gl.css', AXISMUNDI_GEODATA_FILE ), array(), '5.24.0' );
+		wp_enqueue_script( 'axismundi-maplibre', plugins_url( 'assets/vendor/maplibre/maplibre-gl.js', AXISMUNDI_GEODATA_FILE ), array(), '5.24.0', true );
+		wp_enqueue_script( 'axismundi-pmtiles', plugins_url( 'assets/vendor/pmtiles/pmtiles.js', AXISMUNDI_GEODATA_FILE ), array(), '4.4.1', true );
+		wp_enqueue_script( 'axismundi-protomaps-basemaps', plugins_url( 'assets/vendor/protomaps/basemaps.js', AXISMUNDI_GEODATA_FILE ), array(), '5.7.2', true );
+		wp_enqueue_script( 'axismundi-geodata-map-field', plugins_url( 'assets/map-field-maplibre.js', AXISMUNDI_GEODATA_FILE ), array( 'axismundi-maplibre', 'axismundi-pmtiles', 'axismundi-protomaps-basemaps' ), AXISMUNDI_GEODATA_VERSION, true );
+	} else {
 		wp_enqueue_style( 'axismundi-leaflet', plugins_url( 'assets/vendor/leaflet/leaflet.css', AXISMUNDI_GEODATA_FILE ), array(), '1.9.4' );
 		wp_enqueue_script( 'axismundi-leaflet', plugins_url( 'assets/vendor/leaflet/leaflet.js', AXISMUNDI_GEODATA_FILE ), array(), '1.9.4', true );
 		wp_enqueue_script( 'axismundi-geodata-map-field', plugins_url( 'assets/map-field.js', AXISMUNDI_GEODATA_FILE ), array( 'axismundi-leaflet' ), AXISMUNDI_GEODATA_VERSION, true );
@@ -118,11 +168,18 @@ function axismundi_geodata_map_inline_js( array $tiles ) : string {
 	return 'window.axismundiGeodataMap = ' . wp_json_encode(
 		array(
 			'mapEnabled'  => $tiles['enabled'],
+			'kind'        => $tiles['kind'] ?? 'raster',
 			'tileUrl'     => $tiles['tile_url'],
 			'attribution' => $tiles['attribution'],
 			'minZoom'     => $tiles['min_zoom'],
 			'maxZoom'     => $tiles['max_zoom'],
 			'imagePath'   => plugins_url( 'assets/vendor/leaflet/images/', AXISMUNDI_GEODATA_FILE ),
+			'packUrl'     => $tiles['pack_url'] ?? '',
+			'center'      => $tiles['center'] ?? array(),
+			'bounds'      => $tiles['bounds'] ?? array(),
+			'glyphs'      => 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+			'sprite'      => 'https://protomaps.github.io/basemaps-assets/sprites/v4/light',
+			'lang'        => axismundi_geodata_lookup_language_code(),
 		)
 	) . ';';
 }
@@ -137,9 +194,11 @@ function axismundi_geodata_sanitize_settings( $input ) : array {
 	$input = is_array( $input ) ? $input : array();
 	$out   = axismundi_geodata_get_settings();
 
-	$out['provider'] = in_array( $input['provider'] ?? '', array( 'none', 'osm', 'custom_raster' ), true )
+	$out['provider'] = in_array( $input['provider'] ?? '', array( 'none', 'osm', 'custom_raster', 'pmtiles' ), true )
 		? $input['provider']
 		: 'none';
+
+	$out['map_pack_id'] = absint( $input['map_pack_id'] ?? 0 );
 
 	$url             = isset( $input['tile_url'] ) ? trim( wp_strip_all_tags( (string) $input['tile_url'] ) ) : '';
 	$out['tile_url'] = preg_match( '#^https?://#i', $url ) ? $url : '';
@@ -202,6 +261,7 @@ function axismundi_geodata_register_settings() : void {
 
 	$fields = array(
 		'provider'    => __( 'Provider', 'axismundi-geodata' ),
+		'map_pack_id' => __( 'Map pack', 'axismundi-geodata' ),
 		'tile_url'    => __( 'Tile URL', 'axismundi-geodata' ),
 		'attribution' => __( 'Attribution', 'axismundi-geodata' ),
 		'min_zoom'    => __( 'Min zoom', 'axismundi-geodata' ),
@@ -265,11 +325,32 @@ function axismundi_geodata_render_field( array $args ) : void {
 				'none'          => __( 'None (no map)', 'axismundi-geodata' ),
 				'osm'           => __( 'OpenStreetMap (admin preview only)', 'axismundi-geodata' ),
 				'custom_raster' => __( 'Custom raster tiles (XYZ)', 'axismundi-geodata' ),
+				'pmtiles'       => __( 'Uploaded PMTiles map pack', 'axismundi-geodata' ),
 			) as $opt => $opt_label ) {
 				printf( '<option value="%s"%s>%s</option>', esc_attr( $opt ), selected( $value, $opt, false ), esc_html( $opt_label ) );
 			}
 			echo '</select>';
-			echo '<p class="description">' . esc_html__( 'OpenStreetMap uses its public tiles for admin map previews only (a low-volume convenience) and is never used to render front-end maps. For the front end, host your own tiles or use a permitted provider via “Custom raster tiles”.', 'axismundi-geodata' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'OpenStreetMap public tiles are admin-preview only. “Uploaded PMTiles map pack” renders a self-hosted vector basemap you uploaded (Media > a .pmtiles file) with MapLibre — no external tile server.', 'axismundi-geodata' ) . '</p>';
+			break;
+
+		case 'map_pack_id':
+			$packs = get_posts(
+				array(
+					'post_type'      => 'attachment',
+					'post_mime_type' => AXISMUNDI_GEODATA_PMTILES_MIME,
+					'post_status'    => 'inherit',
+					'numberposts'    => 100,
+					'orderby'        => 'title',
+					'order'          => 'ASC',
+				)
+			);
+			printf( '<select id="%s" name="%s">', esc_attr( $id ), esc_attr( $name ) );
+			printf( '<option value="0">%s</option>', esc_html__( '— Select a map pack —', 'axismundi-geodata' ) );
+			foreach ( $packs as $pack ) {
+				printf( '<option value="%d"%s>%s</option>', (int) $pack->ID, selected( (int) $value, (int) $pack->ID, false ), esc_html( get_the_title( $pack ) ) );
+			}
+			echo '</select>';
+			echo '<p class="description">' . esc_html__( 'Used when Provider is “Uploaded PMTiles map pack”. Upload a .pmtiles file under Media, then choose it here. Label fonts load from the public Protomaps assets host.', 'axismundi-geodata' ) . '</p>';
 			break;
 
 		case 'tile_url':

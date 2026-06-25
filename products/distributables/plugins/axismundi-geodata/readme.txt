@@ -69,8 +69,14 @@ coordinates, address, and place type.
 
 == Third-party libraries ==
 
-Leaflet 1.9.4 (https://leafletjs.com/, BSD-2-Clause) is bundled under
-assets/vendor/leaflet/ and loaded only when a raster tile provider is configured.
+Bundled under assets/vendor/, each loaded only when the matching admin preview
+provider is active:
+
+* Leaflet 1.9.4 (https://leafletjs.com/, BSD-2-Clause) — raster tile previews.
+* MapLibre GL JS 5.24.0 (https://maplibre.org/, BSD-3-Clause), PMTiles 4.4.1
+  (https://github.com/protomaps/PMTiles, BSD-3-Clause), and @protomaps/basemaps
+  5.7.2 (https://github.com/protomaps/basemaps, BSD-3-Clause) — PMTiles map-pack
+  previews. Label fonts load from the public Protomaps assets host.
 
 == Changelog ==
 
@@ -79,8 +85,9 @@ assets/vendor/leaflet/ and loaded only when a raster tile provider is configured
   meta, term place-fact meta, public-precision privacy model, REST exposure.
 * Attachment Location (GPS) editor: lat/lng/altitude/public fields, on-demand
   EXIF GPS import, and a Leaflet mini map with a draggable marker.
-* Map provider settings (Settings → Geodata): none, admin-only OpenStreetMap
-  preview, or custom raster (XYZ) tiles.
+* Admin preview map settings (Settings → Geodata): none, admin-only OpenStreetMap
+  preview, custom raster (XYZ) tiles, or a self-hosted uploaded PMTiles map pack
+  rendered with MapLibre + the Protomaps light theme.
 * Optional place lookup for geo_area / geotag terms through a provider registry —
   Google Places (server-side key) and OpenStreetMap / Nominatim (public opt-in or
   custom endpoint) — with explicit candidate binding to a namespaced identity.

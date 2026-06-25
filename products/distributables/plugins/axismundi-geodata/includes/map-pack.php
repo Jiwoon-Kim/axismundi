@@ -209,6 +209,35 @@ function axismundi_geodata_pmtiles_default_style( string $schema ) : string {
 }
 
 /**
+ * Parse a Map Pack attachment directly from its PMTiles file.
+ *
+ * @param int $attachment_id Attachment id.
+ * @return array<string,mixed>|null
+ */
+function axismundi_geodata_parse_map_pack_file( int $attachment_id ) : ?array {
+	$file   = get_attached_file( $attachment_id );
+	$header = $file ? axismundi_geodata_pmtiles_read_header( $file ) : null;
+	if ( ! $header ) {
+		return null;
+	}
+
+	$meta   = axismundi_geodata_pmtiles_read_metadata( $file, $header );
+	$schema = axismundi_geodata_pmtiles_detect_schema( $header, $meta );
+
+	return array(
+		'format'      => $header['tile_type'],
+		'schema'      => $schema,
+		'style'       => axismundi_geodata_pmtiles_default_style( $schema ),
+		'bounds'      => implode( ',', array_map( static function ( $n ) {
+			return rtrim( rtrim( number_format( $n, 6, '.', '' ), '0' ), '.' );
+		}, $header['bounds'] ) ),
+		'min_zoom'    => (int) $header['min_zoom'],
+		'max_zoom'    => (int) $header['max_zoom'],
+		'attribution' => isset( $meta['attribution'] ) ? wp_strip_all_tags( (string) $meta['attribution'] ) : '',
+	);
+}
+
+/**
  * The stored (or freshly parsed) Map Pack record for an attachment.
  *
  * @param int $attachment_id Attachment id.
@@ -229,9 +258,8 @@ function axismundi_geodata_map_pack( int $attachment_id ) : array {
 	}
 
 	// Not saved yet: derive defaults from the file header / metadata.
-	$file   = get_attached_file( $attachment_id );
-	$header = $file ? axismundi_geodata_pmtiles_read_header( $file ) : null;
-	if ( ! $header ) {
+	$parsed = axismundi_geodata_parse_map_pack_file( $attachment_id );
+	if ( ! $parsed ) {
 		return array(
 			'format'      => '',
 			'schema'      => '',
@@ -243,21 +271,73 @@ function axismundi_geodata_map_pack( int $attachment_id ) : array {
 		);
 	}
 
-	$meta   = axismundi_geodata_pmtiles_read_metadata( $file, $header );
-	$schema = axismundi_geodata_pmtiles_detect_schema( $header, $meta );
-
-	return array(
-		'format'      => $header['tile_type'],
-		'schema'      => $schema,
-		'style'       => axismundi_geodata_pmtiles_default_style( $schema ),
-		'bounds'      => implode( ',', array_map( static function ( $n ) {
-			return rtrim( rtrim( number_format( $n, 6, '.', '' ), '0' ), '.' );
-		}, $header['bounds'] ) ),
-		'min_zoom'    => (int) $header['min_zoom'],
-		'max_zoom'    => (int) $header['max_zoom'],
-		'attribution' => isset( $meta['attribution'] ) ? wp_strip_all_tags( (string) $meta['attribution'] ) : '',
-	);
+	return $parsed;
 }
+
+/**
+ * Persist parsed Map Pack facts as attachment custom fields.
+ *
+ * The attachment page intentionally reads WordPress metadata/custom fields rather
+ * than reparsing arbitrary media files on every request, so PMTiles facts need to
+ * be promoted to postmeta once after upload.
+ *
+ * @param int  $attachment_id Attachment id.
+ * @param bool $overwrite     Whether to replace existing editable values.
+ * @return bool
+ */
+function axismundi_geodata_persist_map_pack_meta( int $attachment_id, bool $overwrite = false ) : bool {
+	if ( ! axismundi_geodata_is_pmtiles_attachment( $attachment_id ) ) {
+		return false;
+	}
+
+	$parsed = axismundi_geodata_parse_map_pack_file( $attachment_id );
+	if ( ! $parsed ) {
+		return false;
+	}
+
+	$fields = array(
+		'ax_map_format'      => sanitize_key( (string) $parsed['format'] ),
+		'ax_map_schema'      => array_key_exists( (string) $parsed['schema'], axismundi_geodata_map_pack_schemas() ) ? (string) $parsed['schema'] : 'custom',
+		'ax_map_style'       => sanitize_text_field( (string) $parsed['style'] ),
+		'ax_map_bounds'      => preg_replace( '/[^0-9.,\- ]/', '', sanitize_text_field( (string) $parsed['bounds'] ) ),
+		'ax_map_min_zoom'    => max( 0, min( 24, absint( $parsed['min_zoom'] ) ) ),
+		'ax_map_max_zoom'    => max( 0, min( 24, absint( $parsed['max_zoom'] ) ) ),
+		'ax_map_attribution' => sanitize_text_field( (string) $parsed['attribution'] ),
+	);
+
+	foreach ( $fields as $key => $value ) {
+		if ( $overwrite || '' === (string) get_post_meta( $attachment_id, $key, true ) ) {
+			update_post_meta( $attachment_id, $key, $value );
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Persist Map Pack metadata when a PMTiles attachment is created.
+ *
+ * @param int $attachment_id Attachment id.
+ * @return void
+ */
+function axismundi_geodata_persist_map_pack_on_add( int $attachment_id ) : void {
+	axismundi_geodata_persist_map_pack_meta( $attachment_id );
+}
+add_action( 'add_attachment', 'axismundi_geodata_persist_map_pack_on_add' );
+
+/**
+ * Persist Map Pack metadata during the normal attachment metadata generation path.
+ *
+ * @param array $metadata      Attachment metadata.
+ * @param int   $attachment_id Attachment id.
+ * @return array
+ */
+function axismundi_geodata_persist_map_pack_on_metadata( array $metadata, int $attachment_id ) : array {
+	axismundi_geodata_persist_map_pack_meta( $attachment_id );
+
+	return $metadata;
+}
+add_filter( 'wp_generate_attachment_metadata', 'axismundi_geodata_persist_map_pack_on_metadata', 20, 2 );
 
 /**
  * Register the Map Pack meta box on .pmtiles attachments.

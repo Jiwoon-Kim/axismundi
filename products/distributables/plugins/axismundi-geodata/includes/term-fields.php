@@ -78,20 +78,18 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 		);
 	}
 
-	// Provider caches — rendered read-only (disabled). A place lookup / geocoding
-	// adapter fills these, so they are shown for transparency but never hand-typed.
-	// Disabled inputs aren't posted, so the save loop skips them and values survive.
+	// Place identity + address. A lookup fills these (Bind saves them immediately),
+	// but they are also editable — paste a namespaced id or correct the address by
+	// hand and Update. The Place ID is validated to a known source on save.
 	$fields['ax_geo_place_id'] = array(
-		'label'    => __( 'Place ID', 'axismundi-geodata' ),
-		'type'     => 'text',
-		'help'     => __( 'Canonical provider id — e.g. google:ChIJ…, osm:node/123456, wikidata:Q12345, geonames:1838524. Set automatically by a place lookup.', 'axismundi-geodata' ),
-		'disabled' => true,
+		'label' => __( 'Place ID', 'axismundi-geodata' ),
+		'type'  => 'text',
+		'help'  => __( 'A namespaced place id — e.g. google:ChIJ…, osm:way/123456, wikidata:Q12345, geonames:1838524, or manual:my-place. Filled by a lookup, or enter one yourself.', 'axismundi-geodata' ),
 	);
 	$fields['geo_address']     = array(
-		'label'    => __( 'Address', 'axismundi-geodata' ),
-		'type'     => 'text',
-		'help'     => __( 'Formatted address cache from the geocoding provider; the Geo Area hierarchy is the canonical structure.', 'axismundi-geodata' ),
-		'disabled' => true,
+		'label' => __( 'Address', 'axismundi-geodata' ),
+		'type'  => 'text',
+		'help'  => __( 'Formatted address — filled by a lookup or entered by hand. The Geo Area hierarchy is the canonical structure.', 'axismundi-geodata' ),
 	);
 
 	return $fields;
@@ -216,6 +214,10 @@ function axismundi_geodata_render_place_lookup( WP_Term $term ) : void {
 			esc_html( sprintf( __( 'Lookup with %s', 'axismundi-geodata' ), $provider['label'] ) )
 		);
 	}
+	$buttons .= sprintf(
+		'<button type="button" class="button-link axgeo-unbind-btn" id="axgeo-unbind-btn">%s</button>',
+		esc_html__( 'Unbind', 'axismundi-geodata' )
+	);
 
 	$status = esc_html__( 'Search a provider for this term, then bind the selected candidate.', 'axismundi-geodata' );
 	$html   = $buttons . '<p class="description" id="axgeo-lookup-status">' . $status . '</p><div id="axgeo-lookup-results" class="axgeo-lookup-results" aria-live="polite"></div>';
@@ -304,6 +306,17 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 		if ( null !== $decoded ) {
 			$values['geo_latitude']  = (string) $decoded['latitude'];
 			$values['geo_longitude'] = (string) $decoded['longitude'];
+		}
+	}
+
+	// A hand-entered Place ID must be a known namespaced identity (source:id); an
+	// invalid one is dropped so it can't overwrite an existing binding.
+	if ( isset( $values['ax_geo_place_id'] ) && '' !== $values['ax_geo_place_id'] ) {
+		$parsed = axismundi_geodata_parse_place_id( $values['ax_geo_place_id'] );
+		if ( '' !== $parsed['source'] && '' !== $parsed['id'] && axismundi_geodata_is_place_source( $parsed['source'] ) ) {
+			$values['ax_geo_place_id'] = $parsed['source'] . ':' . $parsed['id'];
+		} else {
+			unset( $values['ax_geo_place_id'] );
 		}
 	}
 
@@ -402,9 +415,11 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 				'i18n'    => array(
 					'searching' => __( 'Searching…', 'axismundi-geodata' ),
 					'noResults' => __( 'No candidates found.', 'axismundi-geodata' ),
-					'binding'   => __( 'Binding selected place…', 'axismundi-geodata' ),
-					'bound'     => __( 'Place bound.', 'axismundi-geodata' ),
-					'bind'      => __( 'Bind', 'axismundi-geodata' ),
+					'binding'   => __( 'Saving selected place…', 'axismundi-geodata' ),
+					'bound'     => __( 'Place bound and saved.', 'axismundi-geodata' ),
+					'bind'      => __( 'Bind and save', 'axismundi-geodata' ),
+					'unbinding' => __( 'Removing binding…', 'axismundi-geodata' ),
+					'unbound'   => __( 'Binding removed.', 'axismundi-geodata' ),
 					'error'     => __( 'Lookup failed.', 'axismundi-geodata' ),
 				),
 			)

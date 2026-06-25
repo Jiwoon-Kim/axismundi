@@ -193,9 +193,9 @@ function axismundi_geodata_register_settings() : void {
 
 	add_settings_section(
 		'axismundi_geodata_map',
-		__( 'Map provider', 'axismundi-geodata' ),
+		__( 'Admin preview maps', 'axismundi-geodata' ),
 		static function () {
-			echo '<p>' . esc_html__( 'Choose how map previews are tiled. With "None" no external map requests are made.', 'axismundi-geodata' ) . '</p>';
+			echo '<p>' . esc_html__( 'Tiles for the coordinate-picker maps in the term and attachment editors (admin only). With "None" no external map requests are made. A front-end map block, when it ships, will have its own provider — this setting does not affect visitors.', 'axismundi-geodata' ) . '</p>';
 		},
 		'axismundi_geodata'
 	);
@@ -309,7 +309,7 @@ function axismundi_geodata_render_field( array $args ) : void {
 				esc_attr( $name ),
 				esc_attr( $value )
 			);
-			echo '<p class="description">' . esc_html__( 'A Google Maps Platform server key with the Places API enabled. Restrict it to your server IP and to the Places API in the Google Cloud console.', 'axismundi-geodata' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'A Google Maps Platform server key with the Places API enabled, for place lookup only. Restrict it to your server IP and to the Places API. A front-end Google map would need a separate browser key (HTTP-referrer restricted) — this one is never sent to the browser.', 'axismundi-geodata' ) . '</p>';
 			break;
 
 		case 'nominatim_mode':

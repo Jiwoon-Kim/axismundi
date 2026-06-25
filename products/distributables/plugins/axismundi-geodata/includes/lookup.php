@@ -228,3 +228,28 @@ function axismundi_geodata_ajax_bind() : void {
 	);
 }
 add_action( 'wp_ajax_axismundi_geodata_bind', 'axismundi_geodata_ajax_bind' );
+
+/**
+ * AJAX: remove a term's place binding (the immediate counterpart to Bind).
+ *
+ * @return void
+ */
+function axismundi_geodata_ajax_unbind() : void {
+	check_ajax_referer( 'axismundi_geodata_lookup', 'nonce' );
+
+	if ( ! current_user_can( 'manage_categories' ) ) {
+		wp_send_json_error( array( 'message' => __( 'You are not allowed to manage geo terms.', 'axismundi-geodata' ) ), 403 );
+	}
+
+	$term_id = isset( $_POST['term_id'] ) ? absint( wp_unslash( $_POST['term_id'] ) ) : 0;
+	$term    = axismundi_geodata_lookup_get_term( $term_id );
+	if ( is_wp_error( $term ) ) {
+		wp_send_json_error( array( 'message' => $term->get_error_message() ), 400 );
+	}
+
+	delete_term_meta( $term_id, 'ax_geo_place_id' );
+	delete_term_meta( $term_id, 'ax_geo_source' ); // Legacy split key.
+
+	wp_send_json_success();
+}
+add_action( 'wp_ajax_axismundi_geodata_unbind', 'axismundi_geodata_ajax_unbind' );

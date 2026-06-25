@@ -113,7 +113,7 @@
 			const bind = document.createElement( 'button' );
 			bind.type = 'button';
 			bind.className = 'button button-secondary';
-			bind.textContent = cfg.i18n?.bind || 'Bind';
+			bind.textContent = cfg.i18n?.bind || 'Bind and save';
 			bind.addEventListener( 'click', () => bindCandidate( provider, candidate, bind ) );
 			card.appendChild( bind );
 
@@ -122,6 +122,28 @@
 	}
 
 	function init() {
+		const unbind = document.getElementById( 'axgeo-unbind-btn' );
+		if ( unbind ) {
+			unbind.addEventListener( 'click', () => {
+				unbind.disabled = true;
+				setStatus( cfg.i18n?.unbinding || 'Removing binding…' );
+				post( 'axismundi_geodata_unbind', '', {} ).then( ( result ) => {
+					if ( ! result || ! result.success ) {
+						throw new Error( result?.data?.message || cfg.i18n?.error || 'Lookup failed.' );
+					}
+					const placeId = document.getElementById( 'ax_geo_place_id' );
+					if ( placeId ) {
+						placeId.value = '';
+					}
+					setStatus( cfg.i18n?.unbound || 'Binding removed.' );
+				} ).catch( ( error ) => {
+					setStatus( error.message );
+				} ).finally( () => {
+					unbind.disabled = false;
+				} );
+			} );
+		}
+
 		const buttons = document.querySelectorAll( '.axgeo-lookup-btn' );
 		if ( ! buttons.length ) {
 			return;

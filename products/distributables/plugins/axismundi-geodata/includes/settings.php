@@ -31,6 +31,9 @@ function axismundi_geodata_get_settings() : array {
 		'min_zoom'              => 1,
 		'max_zoom'              => 19,
 		'google_server_api_key' => '',
+		'nominatim_mode'        => 'none',
+		'nominatim_endpoint'    => '',
+		'nominatim_contact'     => '',
 	);
 
 	$saved = get_option( 'axismundi_geodata_settings', array() );
@@ -158,6 +161,17 @@ function axismundi_geodata_sanitize_settings( $input ) : array {
 		? trim( sanitize_text_field( (string) $input['google_server_api_key'] ) )
 		: '';
 
+	$out['nominatim_mode'] = in_array( $input['nominatim_mode'] ?? '', array( 'none', 'public', 'custom' ), true )
+		? $input['nominatim_mode']
+		: 'none';
+
+	$nurl                      = isset( $input['nominatim_endpoint'] ) ? trim( wp_strip_all_tags( (string) $input['nominatim_endpoint'] ) ) : '';
+	$out['nominatim_endpoint'] = preg_match( '#^https?://#i', $nurl ) ? $nurl : '';
+
+	$out['nominatim_contact'] = isset( $input['nominatim_contact'] )
+		? trim( sanitize_text_field( (string) $input['nominatim_contact'] ) )
+		: '';
+
 	return $out;
 }
 
@@ -213,14 +227,21 @@ function axismundi_geodata_register_settings() : void {
 		},
 		'axismundi_geodata'
 	);
-	add_settings_field(
-		'axismundi_geodata_google_server_api_key',
-		__( 'Google API key', 'axismundi-geodata' ),
-		'axismundi_geodata_render_field',
-		'axismundi_geodata',
-		'axismundi_geodata_lookup',
-		array( 'key' => 'google_server_api_key', 'label_for' => 'axismundi_geodata_google_server_api_key' )
-	);
+	foreach ( array(
+		'google_server_api_key' => __( 'Google API key', 'axismundi-geodata' ),
+		'nominatim_mode'        => __( 'OpenStreetMap lookup', 'axismundi-geodata' ),
+		'nominatim_endpoint'    => __( 'Nominatim endpoint', 'axismundi-geodata' ),
+		'nominatim_contact'     => __( 'Nominatim contact', 'axismundi-geodata' ),
+	) as $key => $label ) {
+		add_settings_field(
+			"axismundi_geodata_{$key}",
+			$label,
+			'axismundi_geodata_render_field',
+			'axismundi_geodata',
+			'axismundi_geodata_lookup',
+			array( 'key' => $key, 'label_for' => "axismundi_geodata_{$key}" )
+		);
+	}
 }
 add_action( 'admin_init', 'axismundi_geodata_register_settings' );
 
@@ -289,6 +310,39 @@ function axismundi_geodata_render_field( array $args ) : void {
 				esc_attr( $value )
 			);
 			echo '<p class="description">' . esc_html__( 'A Google Maps Platform server key with the Places API enabled. Restrict it to your server IP and to the Places API in the Google Cloud console.', 'axismundi-geodata' ) . '</p>';
+			break;
+
+		case 'nominatim_mode':
+			printf( '<select id="%s" name="%s">', esc_attr( $id ), esc_attr( $name ) );
+			foreach ( array(
+				'none'   => __( 'Disabled', 'axismundi-geodata' ),
+				'public' => __( 'Public Nominatim (admin manual lookup only)', 'axismundi-geodata' ),
+				'custom' => __( 'Custom Nominatim endpoint', 'axismundi-geodata' ),
+			) as $opt => $opt_label ) {
+				printf( '<option value="%s"%s>%s</option>', esc_attr( $opt ), selected( $value, $opt, false ), esc_html( $opt_label ) );
+			}
+			echo '</select>';
+			echo '<p class="description">' . esc_html__( 'Disabled by default. “Public Nominatim” uses nominatim.openstreetmap.org for low-volume manual admin lookup only — never for autocomplete, bulk import, or front-end use. For anything more, run your own instance and choose “Custom”.', 'axismundi-geodata' ) . '</p>';
+			break;
+
+		case 'nominatim_endpoint':
+			printf(
+				'<input type="text" id="%s" name="%s" value="%s" class="large-text" placeholder="https://nominatim.example.com" />',
+				esc_attr( $id ),
+				esc_attr( $name ),
+				esc_attr( $value )
+			);
+			echo '<p class="description">' . esc_html__( 'Base URL of your Nominatim instance (used when OpenStreetMap lookup is set to Custom).', 'axismundi-geodata' ) . '</p>';
+			break;
+
+		case 'nominatim_contact':
+			printf(
+				'<input type="text" id="%s" name="%s" value="%s" class="regular-text" placeholder="you@example.com" />',
+				esc_attr( $id ),
+				esc_attr( $name ),
+				esc_attr( $value )
+			);
+			echo '<p class="description">' . esc_html__( 'A contact email or URL added to the Nominatim User-Agent, as its usage policy requests.', 'axismundi-geodata' ) . '</p>';
 			break;
 	}
 }

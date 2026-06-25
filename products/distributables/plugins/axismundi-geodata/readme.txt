@@ -50,11 +50,14 @@ A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, 
 is never seeded automatically. Run `wp axismundi-geodata seed-demo` to add it and
 `wp axismundi-geodata seed-demo --remove` to drop it.
 
-Term editors can optionally look up Google Places candidates when a server-side
-Google Places API key is configured under Settings → Geodata. The key is used
-only from admin AJAX and is never sent to the browser. Selecting a candidate
-binds the term to `google:<place_id>` and stores the returned coordinates,
-formatted address, and place type.
+Term editors can optionally look up a place from an external provider and bind it.
+Providers are configured under Settings → Geodata and are off by default: Google
+Places needs a server-side API key, and OpenStreetMap (Nominatim) is enabled by
+choosing the public service (low-volume admin lookup only) or a custom endpoint.
+Keys and endpoints are used only from admin AJAX and are never sent to the
+browser. Selecting a candidate binds the term to a namespaced id —
+`google:<place_id>` or `osm:node/<id>` / `osm:way/<id>` — and stores the returned
+coordinates, address, and place type.
 
 == Installation ==
 
@@ -78,5 +81,6 @@ assets/vendor/leaflet/ and loaded only when a raster tile provider is configured
   EXIF GPS import, and a Leaflet mini map with a draggable marker.
 * Map provider settings (Settings → Geodata): none, admin-only OpenStreetMap
   preview, or custom raster (XYZ) tiles.
-* Optional Google Places lookup for geo_area / geotag terms, with server-side key
-  storage and explicit candidate binding.
+* Optional place lookup for geo_area / geotag terms through a provider registry —
+  Google Places (server-side key) and OpenStreetMap / Nominatim (public opt-in or
+  custom endpoint) — with explicit candidate binding to a namespaced identity.

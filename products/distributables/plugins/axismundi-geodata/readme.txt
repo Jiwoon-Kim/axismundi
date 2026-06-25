@@ -38,10 +38,11 @@ button that reads the original file's GPS, and a Leaflet mini map with a draggab
 marker (configure a tile provider under Settings → Geodata). Nothing is
 auto-imported or auto-published — the public toggle defaults off.
 
-Posts and pages express location through the geo_area / geotag taxonomies. A Map
-block, geocoding, the `taxonomy-geotag.html` / `geolocation-chip` theme
+Posts and pages express location through the geo_area / geotag taxonomies. A
+front-end Map block, the `taxonomy-geotag.html` / `geolocation-chip` theme
 presentation, and the ActivityStreams `Place` / GeoRSS serializers build on this
-model in later versions. Attachments carry coordinate meta only — they are never
+model in later versions — the front-end map UI is intentionally not locked yet
+(see Map strategy below). Attachments carry coordinate meta only — they are never
 auto-tagged with place terms. A future ax_note post type can opt into the geo
 taxonomies through the `axismundi_geodata_object_types` filter.
 
@@ -58,6 +59,11 @@ Keys and endpoints are used only from admin AJAX and are never sent to the
 browser. Selecting a candidate binds the term to a namespaced id —
 `google:<place_id>` or `osm:node/<id>` / `osm:way/<id>` — and stores the returned
 coordinates, address, and place type.
+
+For self-hosted maps, upload a `.pmtiles` map pack under Media. The plugin reads
+its tile format, schema, bounds, zoom, and attribution into editable attachment
+fields, and a Protomaps map pack can be chosen as the admin preview basemap under
+Settings → Geodata. The plugin never bundles or generates tile data.
 
 == Installation ==
 

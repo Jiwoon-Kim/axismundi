@@ -133,6 +133,12 @@
 							label: __( 'Show popups', 'axismundi-map' ),
 							checked: a.showPopups,
 							onChange: function ( v ) { set( { showPopups: v } ); }
+						} ),
+						el( ToggleControl, {
+							label: __( 'Show visitor location control', 'axismundi-map' ),
+							help: __( 'Visitors can opt in from the map control; location is not requested on page load.', 'axismundi-map' ),
+							checked: a.showVisitorLocation,
+							onChange: function ( v ) { set( { showVisitorLocation: v } ); }
 						} )
 					)
 				),

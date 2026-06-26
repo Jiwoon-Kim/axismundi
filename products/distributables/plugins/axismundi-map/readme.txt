@@ -26,10 +26,13 @@ The block:
   box), selected media attachments (public GPS photos plus GPX/KML tracks), or a
   single GPS track attachment — fetched from Geo Data's REST endpoints;
 * shows a marker / line per feature, with optional click popups. Public GPS photo
-  popups can include the attachment thumbnail.
+  popups can include the attachment thumbnail;
+* can show an opt-in visitor location control on the front end. The browser
+  location prompt is only triggered when the visitor presses the map control.
 
 Block attributes: source (none / geotags / selected media / track), area id,
-bbox, media ids, track id, height, zoom (0 = auto-fit), and show popups.
+bbox, media ids, track id, height, zoom (0 = auto-fit), show popups, and show
+visitor location control.
 
 This is v0.1: a thin "draw a GeoJSON URL on a map" block. Query-loop integration,
 Google / Naver renderers, clustering, and elevation charts are later work.

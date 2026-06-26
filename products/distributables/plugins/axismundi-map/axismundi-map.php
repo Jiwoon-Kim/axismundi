@@ -60,6 +60,7 @@ function axismundi_map_render_block( array $attributes ) : void {
 	$source      = isset( $attributes['source'] ) ? (string) $attributes['source'] : 'none';
 	$zoom        = isset( $attributes['zoom'] ) ? (int) $attributes['zoom'] : 0;
 	$show_popups = ! empty( $attributes['showPopups'] );
+	$show_visitor_location = ! empty( $attributes['showVisitorLocation'] );
 
 	if ( ! axismundi_map_geodata_active() ) {
 		printf( '<div %s><p>%s</p></div>', wp_kses_post( get_block_wrapper_attributes() ), esc_html__( 'Axismundi Geo Data plugin is required for this map.', 'axismundi-map' ) );
@@ -106,20 +107,21 @@ function axismundi_map_render_block( array $attributes ) : void {
 	}
 
 	$config = array(
-		'kind'        => $tiles['kind'],
-		'tileUrl'     => $tiles['tile_url'],
-		'packUrl'     => $tiles['pack_url'] ?? '',
-		'attribution' => $tiles['attribution'],
-		'minZoom'     => (int) $tiles['min_zoom'],
-		'maxZoom'     => (int) $tiles['max_zoom'],
-		'center'      => $tiles['center'] ?? array(),
-		'bounds'      => $tiles['bounds'] ?? array(),
-		'glyphs'      => 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
-		'sprite'      => 'https://protomaps.github.io/basemaps-assets/sprites/v4/light',
-		'lang'        => $lang,
-		'geojson'     => $geojson,
-		'zoom'        => $zoom,
-		'showPopups'  => $show_popups,
+		'kind'                => $tiles['kind'],
+		'tileUrl'             => $tiles['tile_url'],
+		'packUrl'             => $tiles['pack_url'] ?? '',
+		'attribution'         => $tiles['attribution'],
+		'minZoom'             => (int) $tiles['min_zoom'],
+		'maxZoom'             => (int) $tiles['max_zoom'],
+		'center'              => $tiles['center'] ?? array(),
+		'bounds'              => $tiles['bounds'] ?? array(),
+		'glyphs'              => 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+		'sprite'              => 'https://protomaps.github.io/basemaps-assets/sprites/v4/light',
+		'lang'                => $lang,
+		'geojson'             => $geojson,
+		'zoom'                => $zoom,
+		'showPopups'          => $show_popups,
+		'showVisitorLocation' => $show_visitor_location,
 	);
 
 	printf(

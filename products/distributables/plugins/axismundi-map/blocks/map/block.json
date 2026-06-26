@@ -17,7 +17,8 @@
 		"mediaIds": { "type": "array", "default": [] },
 		"height": { "type": "number", "default": 360 },
 		"zoom": { "type": "number", "default": 0 },
-		"showPopups": { "type": "boolean", "default": true }
+		"showPopups": { "type": "boolean", "default": true },
+		"showVisitorLocation": { "type": "boolean", "default": false }
 	},
 	"supports": {
 		"align": [ "wide", "full" ],

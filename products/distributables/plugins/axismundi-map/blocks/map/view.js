@@ -100,6 +100,58 @@
 	}
 
 	/* ---- Leaflet (raster tiles) ---- */
+	function enableLeafletVisitorLocation( map, L ) {
+		var marker = null;
+		var circle = null;
+		var LocateControl = L.Control.extend( {
+			options: { position: 'topright' },
+			onAdd: function () {
+				var wrap = L.DomUtil.create( 'div', 'leaflet-bar leaflet-control axismundi-map__locate-control' );
+				var button = L.DomUtil.create( 'button', 'axismundi-map__locate', wrap );
+				button.type = 'button';
+				button.title = 'Show your location';
+				button.setAttribute( 'aria-label', 'Show your location' );
+				button.textContent = '◎';
+				L.DomEvent.disableClickPropagation( wrap );
+				L.DomEvent.on( button, 'click', function ( event ) {
+					L.DomEvent.preventDefault( event );
+					map.locate( { setView: true, maxZoom: 15, enableHighAccuracy: true } );
+				} );
+				return wrap;
+			}
+		} );
+		map.addControl( new LocateControl() );
+		map.on( 'locationfound', function ( e ) {
+			if ( marker ) {
+				marker.setLatLng( e.latlng );
+			} else {
+				marker = L.circleMarker( e.latlng, {
+					radius: 7,
+					color: '#1565c0',
+					weight: 2,
+					fillColor: '#42a5f5',
+					fillOpacity: 0.9
+				} ).addTo( map );
+			}
+			if ( circle ) {
+				circle.setLatLng( e.latlng ).setRadius( e.accuracy || 0 );
+			} else {
+				circle = L.circle( e.latlng, {
+					radius: e.accuracy || 0,
+					color: '#1565c0',
+					weight: 1,
+					fillColor: '#42a5f5',
+					fillOpacity: 0.12
+				} ).addTo( map );
+			}
+		} );
+		map.on( 'locationerror', function ( e ) {
+			if ( window.console && window.console.warn ) {
+				window.console.warn( e.message );
+			}
+		} );
+	}
+
 	function initLeaflet( canvas, cfg ) {
 		if ( ! window.L ) {
 			return;
@@ -112,6 +164,9 @@
 			minZoom: cfg.minZoom || 0,
 			maxZoom: cfg.maxZoom || 19
 		} ).addTo( map );
+		if ( cfg.showVisitorLocation ) {
+			enableLeafletVisitorLocation( map, L );
+		}
 
 		if ( ! cfg.geojson ) {
 			return;
@@ -208,6 +263,14 @@
 			maxZoom: cfg.maxZoom || 18
 		} );
 		map.addControl( new maplibregl.NavigationControl( { showCompass: false } ), 'top-right' );
+		if ( cfg.showVisitorLocation && maplibregl.GeolocateControl ) {
+			map.addControl( new maplibregl.GeolocateControl( {
+				positionOptions: { enableHighAccuracy: true },
+				trackUserLocation: true,
+				showUserHeading: true,
+				showAccuracyCircle: true
+			} ), 'top-right' );
+		}
 
 		var cachedGj = null;
 		var bound    = false;

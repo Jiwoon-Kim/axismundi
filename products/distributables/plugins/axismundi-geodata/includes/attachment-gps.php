@@ -153,7 +153,7 @@ function axismundi_geodata_render_attachment_box( WP_Post $post ) : void {
 	printf(
 		'<label><input type="checkbox" name="geo_public" value="1"%s /> %s</label>',
 		checked( $public, true, false ),
-		esc_html__( 'Public — may be shown on the site / map / REST', 'axismundi-geodata' )
+		esc_html__( 'Public — allow this coordinate in public map / export features', 'axismundi-geodata' )
 	);
 	echo '</p>';
 

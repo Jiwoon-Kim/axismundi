@@ -96,22 +96,18 @@ function axismundi_geodata_register_meta() : void {
 	$string  = array( 'type' => 'string' );
 	$boolean = array( 'type' => 'boolean' );
 
-	// Object coordinate meta: observation / capture point. No source key here:
-	// coordinate-source (gps / exif / manual) is deferred; if needed it gets its
-	// own ax_geo_coordinate_source rather than overloading place identity.
+	// Object coordinate meta: observation / capture point. Just the raw coordinate
+	// and a public flag — no address (that's a term place-fact) and no
+	// public-precision yet (the single-post Location model was dropped, and the
+	// attachment editor exposes only geo_public; precision returns with a real
+	// public coordinate exit). coordinate-source (gps / exif / manual) is likewise
+	// deferred to a future ax_geo_coordinate_source rather than overloading identity.
 	$post_meta = array(
-		'geo_latitude'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
-		'geo_longitude'           => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
-		'geo_public'              => array( 'type' => 'boolean', 'sanitize' => 'rest_sanitize_boolean', 'schema' => $boolean, 'default' => false ),
-		'geo_altitude'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_float', 'schema' => $number ),
-		'geo_accuracy'            => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_nonneg', 'schema' => $number ),
-		'geo_address'             => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
-		'ax_geo_public_precision' => array(
-			'type'     => 'string',
-			'sanitize' => 'axismundi_geodata_sanitize_precision',
-			'default'  => axismundi_geodata_default_precision(),
-			'schema'   => array( 'type' => 'string', 'enum' => array_keys( axismundi_geodata_precision_levels() ) ),
-		),
+		'geo_latitude'  => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
+		'geo_longitude' => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
+		'geo_public'    => array( 'type' => 'boolean', 'sanitize' => 'rest_sanitize_boolean', 'schema' => $boolean, 'default' => false ),
+		'geo_altitude'  => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_float', 'schema' => $number ),
+		'geo_accuracy'  => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_nonneg', 'schema' => $number ),
 	);
 
 	foreach ( axismundi_geodata_coordinate_object_types() as $object_type ) {

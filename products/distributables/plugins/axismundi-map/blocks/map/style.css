@@ -9,3 +9,83 @@
 	width: 100%;
 	height: 100%;
 }
+
+/*
+ * Map controls are owned by Leaflet / MapLibre, not by the active theme's button
+ * system. Keep them scoped here so M3 button/icon rules cannot stretch the
+ * attribution toggle or zoom controls inside the map canvas.
+ */
+.axismundi-map .maplibregl-ctrl button {
+	box-sizing: border-box;
+	width: 29px;
+	height: 29px;
+	min-width: 0;
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background-color: transparent;
+	color: inherit;
+	font: inherit;
+	line-height: 1;
+	box-shadow: none;
+}
+
+.axismundi-map .maplibregl-ctrl button:hover,
+.axismundi-map .maplibregl-ctrl button:focus,
+.axismundi-map .maplibregl-ctrl button:active {
+	background-color: rgb(0 0 0 / 5%);
+	border-radius: 0;
+	box-shadow: none;
+}
+
+.axismundi-map .maplibregl-ctrl-attrib {
+	border: 0;
+	box-shadow: none;
+}
+
+.axismundi-map .maplibregl-ctrl-attrib-button {
+	box-sizing: border-box;
+	display: block;
+	width: 24px;
+	height: 24px;
+	min-width: 0;
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 12px;
+	background-color: transparent;
+	box-shadow: none;
+	list-style: none;
+}
+
+.axismundi-map .maplibregl-ctrl-attrib-button::-webkit-details-marker {
+	display: none;
+}
+
+.axismundi-map .maplibregl-ctrl-attrib-button:hover,
+.axismundi-map .maplibregl-ctrl-attrib-button:focus,
+.axismundi-map .maplibregl-ctrl-attrib-button:active {
+	background-color: rgb(0 0 0 / 5%);
+	border-radius: 12px;
+	box-shadow: none;
+}
+
+.axismundi-map__popup-thumb {
+	display: block;
+	width: 160px;
+	max-width: 100%;
+	aspect-ratio: 4 / 3;
+	object-fit: cover;
+	margin-block-end: 8px;
+	border-radius: 6px;
+}
+
+.axismundi-map__popup-title {
+	display: block;
+	max-width: 180px;
+	font-size: 14px;
+	line-height: 1.35;
+}

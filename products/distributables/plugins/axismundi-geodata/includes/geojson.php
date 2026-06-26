@@ -10,6 +10,7 @@
  * query for archive/search map views come later.
  *
  *   GET /wp-json/axismundi-geodata/v1/geotags?area={id}&bbox=w,s,e,n
+ *   GET /wp-json/axismundi-geodata/v1/media?ids=1,2,3
  *   GET /wp-json/axismundi-geodata/v1/track/{attachment_id}
  *
  * @package AxismundiGeodata
@@ -45,6 +46,19 @@ function axismundi_geodata_register_geojson_routes() : void {
 			'callback'            => 'axismundi_geodata_rest_track_geojson',
 			'permission_callback' => '__return_true',
 			'args'                => array( 'id' => array( 'type' => 'integer' ) ),
+		)
+	);
+
+	register_rest_route(
+		'axismundi-geodata/v1',
+		'/media',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_geodata_rest_media_geojson',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'ids' => array( 'type' => 'string', 'required' => true ),
+			),
 		)
 	);
 }
@@ -187,6 +201,111 @@ function axismundi_geodata_rest_track_geojson( WP_REST_Request $request ) {
 		array(
 			'type'     => 'FeatureCollection',
 			'features' => array( $feature ),
+		)
+	);
+}
+
+/**
+ * A public GPS attachment as a GeoJSON Point Feature, or null when private/unset.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return array<string,mixed>|null
+ */
+function axismundi_geodata_attachment_point_feature( int $attachment_id ) : ?array {
+	if ( 'attachment' !== get_post_type( $attachment_id ) || ! axismundi_geodata_is_public( $attachment_id ) ) {
+		return null;
+	}
+
+	$lat = get_post_meta( $attachment_id, 'geo_latitude', true );
+	$lon = get_post_meta( $attachment_id, 'geo_longitude', true );
+	if ( '' === (string) $lat || '' === (string) $lon ) {
+		return null;
+	}
+
+	$thumb = wp_get_attachment_image_src( $attachment_id, 'thumbnail' );
+	$full  = wp_get_attachment_url( $attachment_id );
+
+	return array(
+		'type'       => 'Feature',
+		'geometry'   => array(
+			'type'        => 'Point',
+			'coordinates' => array( (float) $lon, (float) $lat ),
+		),
+		'properties' => array(
+			'id'        => $attachment_id,
+			'type'      => 'attachment',
+			'title'     => get_the_title( $attachment_id ),
+			'url'       => get_attachment_link( $attachment_id ),
+			'media_url' => $full ? $full : '',
+			'thumbnail' => is_array( $thumb ) ? (string) $thumb[0] : '',
+		),
+	);
+}
+
+/**
+ * A track attachment as a GeoJSON Feature, or null when unavailable.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return array<string,mixed>|null
+ */
+function axismundi_geodata_track_feature( int $attachment_id ) : ?array {
+	if ( ! axismundi_geodata_is_track_attachment( $attachment_id ) || ! in_array( get_post_status( $attachment_id ), array( 'inherit', 'publish' ), true ) ) {
+		return null;
+	}
+
+	$segments = axismundi_geodata_track_segments( $attachment_id );
+	if ( empty( $segments ) ) {
+		return null;
+	}
+
+	$geometry = 1 === count( $segments )
+		? array( 'type' => 'LineString', 'coordinates' => $segments[0] )
+		: array( 'type' => 'MultiLineString', 'coordinates' => $segments );
+
+	return array(
+		'type'       => 'Feature',
+		'geometry'   => $geometry,
+		'properties' => array(
+			'id'         => $attachment_id,
+			'type'       => 'track',
+			'name'       => (string) get_post_meta( $attachment_id, 'ax_track_name', true ),
+			'title'      => get_the_title( $attachment_id ),
+			'format'     => (string) get_post_meta( $attachment_id, 'ax_track_format', true ),
+			'distance_m' => (int) get_post_meta( $attachment_id, 'ax_track_distance_m', true ),
+			'url'        => get_attachment_link( $attachment_id ),
+		),
+	);
+}
+
+/**
+ * GET selected media attachments (public GPS points + GPX/KML tracks) as GeoJSON.
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response
+ */
+function axismundi_geodata_rest_media_geojson( WP_REST_Request $request ) : WP_REST_Response {
+	$ids = array_filter( array_map( 'absint', explode( ',', (string) $request->get_param( 'ids' ) ) ) );
+	$ids = array_slice( array_values( array_unique( $ids ) ), 0, 100 );
+
+	$features = array();
+	foreach ( $ids as $id ) {
+		if ( 'attachment' !== get_post_type( $id ) ) {
+			continue;
+		}
+
+		$feature = axismundi_geodata_track_feature( $id );
+		if ( null === $feature ) {
+			$feature = axismundi_geodata_attachment_point_feature( $id );
+		}
+		if ( null !== $feature ) {
+			$features[] = $feature;
+		}
+	}
+
+	return rest_ensure_response(
+		array(
+			'type'     => 'FeatureCollection',
+			'features' => $features,
 		)
 	);
 }

@@ -8,7 +8,11 @@
 	var __                = i18n.__;
 	var useBlockProps     = blockEditor.useBlockProps;
 	var InspectorControls = blockEditor.InspectorControls;
+	var MediaUpload       = blockEditor.MediaUpload;
+	var MediaUploadCheck  = blockEditor.MediaUploadCheck;
 	var PanelBody         = components.PanelBody;
+	var BaseControl       = components.BaseControl;
+	var Button            = components.Button;
 	var SelectControl     = components.SelectControl;
 	var RangeControl      = components.RangeControl;
 	var ToggleControl     = components.ToggleControl;
@@ -24,8 +28,16 @@
 			if ( 'track' === a.source && a.trackId ) {
 				summary += ' #' + a.trackId;
 			}
+			if ( 'media' === a.source && a.mediaIds && a.mediaIds.length ) {
+				summary += ' (' + a.mediaIds.length + ' media)';
+			}
 			if ( 'geotags' === a.source && a.areaId ) {
 				summary += ' (area ' + a.areaId + ')';
+			}
+
+			function setMedia( media ) {
+				var items = Array.isArray( media ) ? media : [ media ];
+				set( { mediaIds: items.map( function ( item ) { return item && item.id ? parseInt( item.id, 10 ) : 0; } ).filter( Boolean ) } );
 			}
 
 			return el(
@@ -43,6 +55,7 @@
 							options: [
 								{ label: __( 'None (basemap only)', 'axismundi-map' ), value: 'none' },
 								{ label: __( 'Geotags', 'axismundi-map' ), value: 'geotags' },
+								{ label: __( 'Selected media', 'axismundi-map' ), value: 'media' },
 								{ label: __( 'Track', 'axismundi-map' ), value: 'track' }
 							],
 							onChange: function ( v ) { set( { source: v } ); }
@@ -58,6 +71,40 @@
 							value: a.bbox,
 							onChange: function ( v ) { set( { bbox: v } ); }
 						} ),
+						'media' === a.source && el(
+							BaseControl,
+							{
+								label: __( 'Media attachments', 'axismundi-map' ),
+								help: __( 'Choose public GPS photos and GPX/KML tracks from the Media Library.', 'axismundi-map' )
+							},
+							el(
+								'div',
+								{},
+								el( 'p', {}, a.mediaIds && a.mediaIds.length ? a.mediaIds.join( ', ' ) : __( 'No media selected.', 'axismundi-map' ) ),
+								el(
+									MediaUploadCheck,
+									{},
+									el( MediaUpload, {
+										multiple: true,
+										gallery: false,
+										value: a.mediaIds || [],
+										onSelect: setMedia,
+										render: function ( obj ) {
+											return el(
+												Button,
+												{ variant: 'secondary', onClick: obj.open },
+												a.mediaIds && a.mediaIds.length ? __( 'Edit selected media', 'axismundi-map' ) : __( 'Select media', 'axismundi-map' )
+											);
+										}
+									} )
+								),
+								a.mediaIds && a.mediaIds.length ? el(
+									Button,
+									{ variant: 'link', isDestructive: true, onClick: function () { set( { mediaIds: [] } ); } },
+									__( 'Clear selection', 'axismundi-map' )
+								) : null
+							)
+						),
 						'track' === a.source && el( TextControl, {
 							label: __( 'Track attachment ID', 'axismundi-map' ),
 							type: 'number',

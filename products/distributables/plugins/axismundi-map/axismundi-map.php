@@ -84,6 +84,11 @@ function axismundi_map_render_block( array $attributes ) : void {
 		$geojson = add_query_arg( $args, rest_url( 'axismundi-geodata/v1/geotags' ) );
 	} elseif ( 'track' === $source && ! empty( $attributes['trackId'] ) ) {
 		$geojson = rest_url( 'axismundi-geodata/v1/track/' . (int) $attributes['trackId'] );
+	} elseif ( 'media' === $source && ! empty( $attributes['mediaIds'] ) && is_array( $attributes['mediaIds'] ) ) {
+		$ids = array_filter( array_map( 'absint', $attributes['mediaIds'] ) );
+		if ( ! empty( $ids ) ) {
+			$geojson = add_query_arg( 'ids', implode( ',', $ids ), rest_url( 'axismundi-geodata/v1/media' ) );
+		}
 	}
 
 	if ( 'pmtiles' === $tiles['kind'] ) {

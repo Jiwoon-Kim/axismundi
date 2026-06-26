@@ -23,11 +23,13 @@ The block:
   raster tiles, MapLibre + the Protomaps theme for an uploaded PMTiles map pack
   (the public OpenStreetMap tile server is never used on the front end);
 * overlays a GeoJSON source — geotags (optionally within a geo area or bounding
-  box) or a GPS track attachment — fetched from Geo Data's REST endpoints;
-* shows a marker / line per feature, with optional click popups.
+  box), selected media attachments (public GPS photos plus GPX/KML tracks), or a
+  single GPS track attachment — fetched from Geo Data's REST endpoints;
+* shows a marker / line per feature, with optional click popups. Public GPS photo
+  popups can include the attachment thumbnail.
 
-Block attributes: source (none / geotags / track), area id, bbox, track id,
-height, zoom (0 = auto-fit), and show popups.
+Block attributes: source (none / geotags / selected media / track), area id,
+bbox, media ids, track id, height, zoom (0 = auto-fit), and show popups.
 
 This is v0.1: a thin "draw a GeoJSON URL on a map" block. Query-loop integration,
 Google / Naver renderers, clustering, and elevation charts are later work.
@@ -43,5 +45,5 @@ Google / Naver renderers, clustering, and elevation charts are later work.
 
 = 0.1.0 =
 * Initial release: the axismundi/map block — basemap (Leaflet raster / MapLibre
-  PMTiles) plus geotags / track GeoJSON overlay, reusing Axismundi Geo Data's
-  map assets and REST export.
+  PMTiles) plus geotags / selected media / track GeoJSON overlay, reusing
+  Axismundi Geo Data's map assets and REST export.

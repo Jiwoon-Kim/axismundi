@@ -39,7 +39,64 @@
 
 	function popupTitle( props ) {
 		props = props || {};
+		if ( 'track' === props.type && props.name ) {
+			return props.name;
+		}
 		return props.title || props.name || '';
+	}
+
+	function escapeHtml( value ) {
+		return String( value || '' ).replace( /[&<>"']/g, function ( ch ) {
+			return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ ch ];
+		} );
+	}
+
+	function popupHtml( props ) {
+		props = props || {};
+		var title = popupTitle( props );
+		var html  = '';
+		if ( props.thumbnail ) {
+			html += '<img class="axismundi-map__popup-thumb" src="' + escapeHtml( props.thumbnail ) + '" alt="" loading="lazy" />';
+		}
+		if ( title ) {
+			html += '<strong class="axismundi-map__popup-title">' + escapeHtml( title ) + '</strong>';
+		}
+		return html;
+	}
+
+	function trackEndpointFeatures( geojson ) {
+		var features = [];
+		( geojson.features || [] ).forEach( function ( feature ) {
+			if ( ! feature.geometry || ! feature.geometry.coordinates ) {
+				return;
+			}
+			var lines = [];
+			if ( 'LineString' === feature.geometry.type ) {
+				lines = [ feature.geometry.coordinates ];
+			} else if ( 'MultiLineString' === feature.geometry.type ) {
+				lines = feature.geometry.coordinates;
+			}
+			if ( ! lines.length ) {
+				return;
+			}
+			var firstLine = lines.find( function ( line ) { return line && line.length; } );
+			var lastLine  = lines.slice().reverse().find( function ( line ) { return line && line.length; } );
+			if ( ! firstLine || ! lastLine ) {
+				return;
+			}
+			var base = feature.properties || {};
+			features.push( {
+				type: 'Feature',
+				geometry: { type: 'Point', coordinates: firstLine[ 0 ] },
+				properties: Object.assign( {}, base, { endpoint: 'start', title: base.name || base.title || '' } )
+			} );
+			features.push( {
+				type: 'Feature',
+				geometry: { type: 'Point', coordinates: lastLine[ lastLine.length - 1 ] },
+				properties: Object.assign( {}, base, { endpoint: 'end', title: base.name || base.title || '' } )
+			} );
+		} );
+		return { type: 'FeatureCollection', features: features };
 	}
 
 	/* ---- Leaflet (raster tiles) ---- */
@@ -68,9 +125,9 @@
 					return { color: '#d32f2f', weight: 3 };
 				},
 				onEachFeature: function ( feature, lyr ) {
-					var title = popupTitle( feature.properties );
-					if ( cfg.showPopups && title ) {
-						lyr.bindPopup( title );
+					var html = popupHtml( feature.properties );
+					if ( cfg.showPopups && html ) {
+						lyr.bindPopup( html );
 					}
 				}
 			} ).addTo( map );
@@ -127,12 +184,41 @@
 					paint: { 'line-color': '#d32f2f', 'line-width': 3 }
 				} );
 				map.addLayer( {
+					id: 'axgeo-lines-hit',
+					type: 'line',
+					source: 'axgeo',
+					filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ],
+					paint: { 'line-color': '#d32f2f', 'line-width': 16, 'line-opacity': 0 }
+				} );
+				map.addLayer( {
 					id: 'axgeo-points',
 					type: 'circle',
 					source: 'axgeo',
 					filter: [ '==', [ 'geometry-type' ], 'Point' ],
 					paint: { 'circle-radius': 6, 'circle-color': '#d32f2f', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 }
 				} );
+
+				var endpoints = trackEndpointFeatures( gj );
+				if ( endpoints.features.length ) {
+					map.addSource( 'axgeo-track-endpoints', { type: 'geojson', data: endpoints } );
+					map.addLayer( {
+						id: 'axgeo-track-endpoints',
+						type: 'symbol',
+						source: 'axgeo-track-endpoints',
+						layout: {
+							'text-field': [ 'case', [ '==', [ 'get', 'endpoint' ], 'start' ], '▶', '■' ],
+							'text-size': 18,
+							'text-anchor': 'center',
+							'text-allow-overlap': true,
+							'text-ignore-placement': true
+						},
+						paint: {
+							'text-color': [ 'case', [ '==', [ 'get', 'endpoint' ], 'start' ], '#2e7d32', '#d32f2f' ],
+							'text-halo-color': '#ffffff',
+							'text-halo-width': 2
+						}
+					} );
+				}
 
 				var b = geojsonBounds( gj );
 				if ( b ) {
@@ -142,13 +228,31 @@
 				if ( cfg.showPopups ) {
 					map.on( 'click', 'axgeo-points', function ( e ) {
 						var feature = e.features[ 0 ];
-						var title   = popupTitle( feature.properties );
-						if ( title ) {
-							new maplibregl.Popup().setLngLat( feature.geometry.coordinates ).setText( title ).addTo( map );
+						var html    = popupHtml( feature.properties );
+						if ( html ) {
+							new maplibregl.Popup().setLngLat( feature.geometry.coordinates ).setHTML( html ).addTo( map );
+						}
+					} );
+					map.on( 'click', 'axgeo-lines-hit', function ( e ) {
+						var feature = e.features[ 0 ];
+						var html    = popupHtml( feature.properties );
+						if ( html ) {
+							new maplibregl.Popup().setLngLat( e.lngLat ).setHTML( html ).addTo( map );
+						}
+					} );
+					map.on( 'click', 'axgeo-track-endpoints', function ( e ) {
+						var feature = e.features[ 0 ];
+						var html    = popupHtml( feature.properties );
+						if ( html ) {
+							new maplibregl.Popup().setLngLat( feature.geometry.coordinates ).setHTML( html ).addTo( map );
 						}
 					} );
 					map.on( 'mouseenter', 'axgeo-points', function () { map.getCanvas().style.cursor = 'pointer'; } );
 					map.on( 'mouseleave', 'axgeo-points', function () { map.getCanvas().style.cursor = ''; } );
+					map.on( 'mouseenter', 'axgeo-lines-hit', function () { map.getCanvas().style.cursor = 'pointer'; } );
+					map.on( 'mouseleave', 'axgeo-lines-hit', function () { map.getCanvas().style.cursor = ''; } );
+					map.on( 'mouseenter', 'axgeo-track-endpoints', function () { map.getCanvas().style.cursor = 'pointer'; } );
+					map.on( 'mouseleave', 'axgeo-track-endpoints', function () { map.getCanvas().style.cursor = ''; } );
 				}
 			} ).catch( function () {} );
 		} );

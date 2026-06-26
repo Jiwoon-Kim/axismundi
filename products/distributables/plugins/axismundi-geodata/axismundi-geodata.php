@@ -65,6 +65,7 @@ require_once __DIR__ . '/includes/track.php';
 require_once __DIR__ . '/includes/geojson.php';
 require_once __DIR__ . '/includes/relations.php';
 require_once __DIR__ . '/includes/settings.php';
+require_once __DIR__ . '/includes/map-assets.php';
 require_once __DIR__ . '/includes/cli.php';
 
 if ( is_admin() ) {

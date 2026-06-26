@@ -300,6 +300,66 @@ function axismundi_geodata_parse_track_file( int $attachment_id ) : ?array {
 }
 
 /**
+ * The track geometry as segments of [lon, lat, ele?] coordinates (GeoJSON order),
+ * for export. Parsed on demand — used by the GeoJSON endpoint, not every request.
+ *
+ * @param int $attachment_id Attachment id.
+ * @return array<int,array<int,array<int,float>>> Segments of coordinate arrays.
+ */
+function axismundi_geodata_track_segments( int $attachment_id ) : array {
+	$format = axismundi_geodata_track_format( $attachment_id );
+	$file   = get_attached_file( $attachment_id );
+	if ( '' === $format || ! $file ) {
+		return array();
+	}
+	$xml = axismundi_geodata_track_load_xml( $file );
+	if ( ! $xml ) {
+		return array();
+	}
+
+	$segments = array();
+
+	if ( 'kml' === $format ) {
+		$xml->registerXPathNamespace( 'k', 'http://www.opengis.net/kml/2.2' );
+		foreach ( (array) $xml->xpath( '//k:LineString/k:coordinates' ) as $coords ) {
+			$line = array();
+			foreach ( preg_split( '/\s+/', trim( (string) $coords ) ) as $tuple ) {
+				if ( '' === $tuple ) {
+					continue;
+				}
+				$p = explode( ',', $tuple );
+				if ( count( $p ) >= 2 ) {
+					$line[] = isset( $p[2] ) && '' !== $p[2]
+						? array( (float) $p[0], (float) $p[1], (float) $p[2] )
+						: array( (float) $p[0], (float) $p[1] );
+				}
+			}
+			if ( $line ) {
+				$segments[] = $line;
+			}
+		}
+
+		return $segments;
+	}
+
+	foreach ( $xml->trk as $trk ) {
+		foreach ( $trk->trkseg as $seg ) {
+			$line = array();
+			foreach ( $seg->trkpt as $pt ) {
+				$line[] = isset( $pt->ele ) && '' !== (string) $pt->ele
+					? array( (float) $pt['lon'], (float) $pt['lat'], (float) $pt->ele )
+					: array( (float) $pt['lon'], (float) $pt['lat'] );
+			}
+			if ( $line ) {
+				$segments[] = $line;
+			}
+		}
+	}
+
+	return $segments;
+}
+
+/**
  * The stored (or freshly parsed) track record for an attachment.
  *
  * @param int $attachment_id Attachment id.

@@ -89,3 +89,29 @@
 	font-size: 14px;
 	line-height: 1.35;
 }
+
+/*
+ * Popups follow the theme's surface tokens so they match light / dark mode (the
+ * PMTiles basemap itself switches Protomaps light/dark in view.js).
+ */
+.axismundi-map .maplibregl-popup-content,
+.axismundi-map .leaflet-popup-content-wrapper,
+.axismundi-map .leaflet-popup-tip {
+	background: var(--wp--preset--color--surface-container, #fff);
+	color: var(--wp--preset--color--on-surface, #1d1b20);
+}
+.axismundi-map .maplibregl-popup-anchor-top .maplibregl-popup-tip {
+	border-bottom-color: var(--wp--preset--color--surface-container, #fff);
+}
+.axismundi-map .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+	border-top-color: var(--wp--preset--color--surface-container, #fff);
+}
+.axismundi-map .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+	border-right-color: var(--wp--preset--color--surface-container, #fff);
+}
+.axismundi-map .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+	border-left-color: var(--wp--preset--color--surface-container, #fff);
+}
+.axismundi-map .maplibregl-popup-close-button {
+	color: var(--wp--preset--color--on-surface-variant, #49454f);
+}

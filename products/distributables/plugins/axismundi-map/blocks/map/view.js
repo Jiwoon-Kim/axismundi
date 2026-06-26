@@ -140,6 +140,52 @@
 		} ).catch( function () {} );
 	}
 
+	/* ---- Theme light / dark ---- */
+	function isDark() {
+		var dt = document.documentElement.getAttribute( 'data-theme' );
+		if ( 'dark' === dt ) {
+			return true;
+		}
+		if ( 'light' === dt ) {
+			return false;
+		}
+		return !! ( window.matchMedia && window.matchMedia( '(prefers-color-scheme: dark)' ).matches );
+	}
+
+	function buildStyle( cfg, dark ) {
+		return {
+			version: 8,
+			glyphs: cfg.glyphs,
+			sprite: dark && cfg.sprite ? cfg.sprite.replace( /\/light$/, '/dark' ) : cfg.sprite,
+			sources: { protomaps: { type: 'vector', url: 'pmtiles://' + cfg.packUrl, attribution: cfg.attribution || '' } },
+			layers: window.basemaps.layers( 'protomaps', window.basemaps.namedFlavor( dark ? 'dark' : 'light' ), { lang: cfg.lang || 'en' } )
+		};
+	}
+
+	// Call apply(dark) when the theme's light/dark mode changes (data-theme toggle
+	// or, when no explicit mode is set, the OS preference).
+	function watchTheme( apply ) {
+		var current = isDark();
+		function update() {
+			var dark = isDark();
+			if ( dark !== current ) {
+				current = dark;
+				apply( dark );
+			}
+		}
+		if ( window.MutationObserver ) {
+			new window.MutationObserver( update ).observe( document.documentElement, { attributes: true, attributeFilter: [ 'data-theme' ] } );
+		}
+		if ( window.matchMedia ) {
+			var mq = window.matchMedia( '(prefers-color-scheme: dark)' );
+			if ( mq.addEventListener ) {
+				mq.addEventListener( 'change', update );
+			} else if ( mq.addListener ) {
+				mq.addListener( update );
+			}
+		}
+	}
+
 	/* ---- MapLibre (PMTiles vector) ---- */
 	function initMaplibre( canvas, cfg ) {
 		if ( ! window.maplibregl || ! window.pmtiles || ! window.basemaps || ! cfg.packUrl ) {
@@ -152,17 +198,10 @@
 			window.axismundiMapPmtilesProtocol = protocol;
 		}
 
-		var cz    = centerZoom( cfg );
-		var style = {
-			version: 8,
-			glyphs: cfg.glyphs,
-			sprite: cfg.sprite,
-			sources: { protomaps: { type: 'vector', url: 'pmtiles://' + cfg.packUrl, attribution: cfg.attribution || '' } },
-			layers: window.basemaps.layers( 'protomaps', window.basemaps.namedFlavor( 'light' ), { lang: cfg.lang || 'en' } )
-		};
+		var cz  = centerZoom( cfg );
 		var map = new maplibregl.Map( {
 			container: canvas,
-			style: style,
+			style: buildStyle( cfg, isDark() ),
 			center: cz.center,
 			zoom: cz.zoom,
 			minZoom: cfg.minZoom || 0,
@@ -170,89 +209,83 @@
 		} );
 		map.addControl( new maplibregl.NavigationControl( { showCompass: false } ), 'top-right' );
 
+		var cachedGj = null;
+		var bound    = false;
+
+		function addLayers() {
+			if ( ! cachedGj || ! map.isStyleLoaded() || map.getSource( 'axgeo' ) ) {
+				return;
+			}
+			map.addSource( 'axgeo', { type: 'geojson', data: cachedGj } );
+			map.addLayer( { id: 'axgeo-lines', type: 'line', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ], paint: { 'line-color': '#d32f2f', 'line-width': 3 } } );
+			map.addLayer( { id: 'axgeo-lines-hit', type: 'line', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ], paint: { 'line-color': '#d32f2f', 'line-width': 16, 'line-opacity': 0 } } );
+			map.addLayer( { id: 'axgeo-points', type: 'circle', source: 'axgeo', filter: [ '==', [ 'geometry-type' ], 'Point' ], paint: { 'circle-radius': 6, 'circle-color': '#d32f2f', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } } );
+
+			var endpoints = trackEndpointFeatures( cachedGj );
+			if ( endpoints.features.length ) {
+				map.addSource( 'axgeo-track-endpoints', { type: 'geojson', data: endpoints } );
+				map.addLayer( {
+					id: 'axgeo-track-endpoints',
+					type: 'symbol',
+					source: 'axgeo-track-endpoints',
+					layout: {
+						'text-field': [ 'case', [ '==', [ 'get', 'endpoint' ], 'start' ], '▶', '■' ],
+						'text-size': 18,
+						'text-anchor': 'center',
+						'text-allow-overlap': true,
+						'text-ignore-placement': true
+					},
+					paint: {
+						'text-color': [ 'case', [ '==', [ 'get', 'endpoint' ], 'start' ], '#2e7d32', '#d32f2f' ],
+						'text-halo-color': '#ffffff',
+						'text-halo-width': 2
+					}
+				} );
+			}
+		}
+
+		function popupAt( lngLat, props ) {
+			var html = popupHtml( props );
+			if ( html ) {
+				new maplibregl.Popup().setLngLat( lngLat ).setHTML( html ).addTo( map );
+			}
+		}
+
+		function bindOnce() {
+			if ( bound ) {
+				return;
+			}
+			bound = true;
+			if ( ! cfg.showPopups ) {
+				return;
+			}
+			map.on( 'click', 'axgeo-points', function ( e ) { popupAt( e.features[ 0 ].geometry.coordinates, e.features[ 0 ].properties ); } );
+			map.on( 'click', 'axgeo-track-endpoints', function ( e ) { popupAt( e.features[ 0 ].geometry.coordinates, e.features[ 0 ].properties ); } );
+			map.on( 'click', 'axgeo-lines-hit', function ( e ) { popupAt( e.lngLat, e.features[ 0 ].properties ); } );
+			[ 'axgeo-points', 'axgeo-track-endpoints', 'axgeo-lines-hit' ].forEach( function ( id ) {
+				map.on( 'mouseenter', id, function () { map.getCanvas().style.cursor = 'pointer'; } );
+				map.on( 'mouseleave', id, function () { map.getCanvas().style.cursor = ''; } );
+			} );
+		}
+
+		// Re-tint the basemap when the theme mode flips; the overlay layers are
+		// re-added once the new style finishes loading.
+		watchTheme( function ( dark ) {
+			map.setStyle( buildStyle( cfg, dark ) );
+			map.once( 'style.load', addLayers );
+		} );
+
 		if ( ! cfg.geojson ) {
 			return;
 		}
 		map.on( 'load', function () {
 			fetchGeojson( cfg.geojson ).then( function ( gj ) {
-				map.addSource( 'axgeo', { type: 'geojson', data: gj } );
-				map.addLayer( {
-					id: 'axgeo-lines',
-					type: 'line',
-					source: 'axgeo',
-					filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ],
-					paint: { 'line-color': '#d32f2f', 'line-width': 3 }
-				} );
-				map.addLayer( {
-					id: 'axgeo-lines-hit',
-					type: 'line',
-					source: 'axgeo',
-					filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ],
-					paint: { 'line-color': '#d32f2f', 'line-width': 16, 'line-opacity': 0 }
-				} );
-				map.addLayer( {
-					id: 'axgeo-points',
-					type: 'circle',
-					source: 'axgeo',
-					filter: [ '==', [ 'geometry-type' ], 'Point' ],
-					paint: { 'circle-radius': 6, 'circle-color': '#d32f2f', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 }
-				} );
-
-				var endpoints = trackEndpointFeatures( gj );
-				if ( endpoints.features.length ) {
-					map.addSource( 'axgeo-track-endpoints', { type: 'geojson', data: endpoints } );
-					map.addLayer( {
-						id: 'axgeo-track-endpoints',
-						type: 'symbol',
-						source: 'axgeo-track-endpoints',
-						layout: {
-							'text-field': [ 'case', [ '==', [ 'get', 'endpoint' ], 'start' ], '▶', '■' ],
-							'text-size': 18,
-							'text-anchor': 'center',
-							'text-allow-overlap': true,
-							'text-ignore-placement': true
-						},
-						paint: {
-							'text-color': [ 'case', [ '==', [ 'get', 'endpoint' ], 'start' ], '#2e7d32', '#d32f2f' ],
-							'text-halo-color': '#ffffff',
-							'text-halo-width': 2
-						}
-					} );
-				}
-
+				cachedGj = gj;
+				bindOnce();
+				addLayers();
 				var b = geojsonBounds( gj );
 				if ( b ) {
 					map.fitBounds( b, { padding: 24, maxZoom: 15, duration: 0 } );
-				}
-
-				if ( cfg.showPopups ) {
-					map.on( 'click', 'axgeo-points', function ( e ) {
-						var feature = e.features[ 0 ];
-						var html    = popupHtml( feature.properties );
-						if ( html ) {
-							new maplibregl.Popup().setLngLat( feature.geometry.coordinates ).setHTML( html ).addTo( map );
-						}
-					} );
-					map.on( 'click', 'axgeo-lines-hit', function ( e ) {
-						var feature = e.features[ 0 ];
-						var html    = popupHtml( feature.properties );
-						if ( html ) {
-							new maplibregl.Popup().setLngLat( e.lngLat ).setHTML( html ).addTo( map );
-						}
-					} );
-					map.on( 'click', 'axgeo-track-endpoints', function ( e ) {
-						var feature = e.features[ 0 ];
-						var html    = popupHtml( feature.properties );
-						if ( html ) {
-							new maplibregl.Popup().setLngLat( feature.geometry.coordinates ).setHTML( html ).addTo( map );
-						}
-					} );
-					map.on( 'mouseenter', 'axgeo-points', function () { map.getCanvas().style.cursor = 'pointer'; } );
-					map.on( 'mouseleave', 'axgeo-points', function () { map.getCanvas().style.cursor = ''; } );
-					map.on( 'mouseenter', 'axgeo-lines-hit', function () { map.getCanvas().style.cursor = 'pointer'; } );
-					map.on( 'mouseleave', 'axgeo-lines-hit', function () { map.getCanvas().style.cursor = ''; } );
-					map.on( 'mouseenter', 'axgeo-track-endpoints', function () { map.getCanvas().style.cursor = 'pointer'; } );
-					map.on( 'mouseleave', 'axgeo-track-endpoints', function () { map.getCanvas().style.cursor = ''; } );
 				}
 			} ).catch( function () {} );
 		} );

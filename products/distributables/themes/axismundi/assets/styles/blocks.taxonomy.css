@@ -51,22 +51,6 @@
 .wp-block-post-terms.is-style-tags .wp-block-post-terms__separator {
 	display: none;
 }
-.wp-block-post-terms.is-style-tags:not(:has(> a)) {
-	box-sizing: border-box;
-	inline-size: fit-content;
-	max-inline-size: 100%;
-	min-block-size: 28px;
-	padding-inline: var(--wp--preset--spacing--100);
-	border-radius: 8px;
-	background-color: var(--wp--preset--color--surface-container);
-	color: var(--wp--preset--color--on-surface-variant);
-}
-.wp-block-post-terms.is-style-tags.has-text-align-center:not(:has(> a)) {
-	margin-inline: auto;
-}
-.wp-block-post-terms.is-style-tags.has-text-align-right:not(:has(> a)) {
-	margin-inline-start: auto;
-}
 
 /* is-style-badge — a single leading category as a tonal badge (media overlay / eyebrow). */
 .wp-block-post-terms.is-style-badge {
@@ -98,23 +82,6 @@
 }
 .wp-block-post-terms.is-style-badge .wp-block-post-terms__separator {
 	display: none;
-}
-.wp-block-post-terms.is-style-badge:not(:has(> a)) {
-	box-sizing: border-box;
-	inline-size: fit-content;
-	max-inline-size: 100%;
-	min-block-size: 28px;
-	padding-inline: var(--wp--preset--spacing--100);
-	border-radius: 8px;
-	background-color: var(--wp--preset--color--secondary-container);
-	color: var(--wp--preset--color--on-secondary-container);
-	font-size: var(--wp--preset--font-size--label-large);
-}
-.wp-block-post-terms.is-style-badge.has-text-align-center:not(:has(> a)) {
-	margin-inline: auto;
-}
-.wp-block-post-terms.is-style-badge.has-text-align-right:not(:has(> a)) {
-	margin-inline-start: auto;
 }
 
 /* =========================================================================

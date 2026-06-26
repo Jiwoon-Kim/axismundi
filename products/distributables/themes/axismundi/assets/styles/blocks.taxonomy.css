@@ -24,6 +24,12 @@
 	align-items: center;
 	gap: var(--wp--preset--spacing--50);
 }
+.wp-block-post-terms.is-style-tags.has-text-align-center {
+	justify-content: center;
+}
+.wp-block-post-terms.is-style-tags.has-text-align-right {
+	justify-content: flex-end;
+}
 .wp-block-post-terms.is-style-tags > a {
 	box-sizing: border-box;
 	display: inline-flex;
@@ -48,10 +54,16 @@
 
 /* is-style-badge — a single leading category as a tonal badge (media overlay / eyebrow). */
 .wp-block-post-terms.is-style-badge {
-	display: inline-flex;
+	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--wp--preset--spacing--50);
+}
+.wp-block-post-terms.is-style-badge.has-text-align-center {
+	justify-content: center;
+}
+.wp-block-post-terms.is-style-badge.has-text-align-right {
+	justify-content: flex-end;
 }
 .wp-block-post-terms.is-style-badge > a {
 	box-sizing: border-box;

@@ -47,6 +47,19 @@ function axismundi_geodata_get_settings() : array {
 }
 
 /**
+ * Whether the companion Axismundi Map plugin is active.
+ *
+ * Front-end map block provider settings are only meaningful when the map block
+ * plugin is installed and active. Keep the saved values in this plugin, but do
+ * disable that UI when there is no consumer.
+ *
+ * @return bool
+ */
+function axismundi_geodata_has_map_plugin() : bool {
+	return defined( 'AXISMUNDI_MAP_VERSION' );
+}
+
+/**
  * The Google server-side API key for place lookup / geocoding, or '' if unset.
  *
  * Server-side only — used from admin AJAX, never enqueued to the browser. A
@@ -297,7 +310,11 @@ function axismundi_geodata_register_settings() : void {
 		'axismundi_geodata_map',
 		__( 'Admin preview maps', 'axismundi-geodata' ),
 		static function () {
-			echo '<p>' . esc_html__( 'Tiles for the coordinate-picker maps in the term and attachment editors (admin only). With "None" no external map requests are made. The front-end map block has its own provider in “Front-end map blocks” below — this admin setting does not affect visitors.', 'axismundi-geodata' ) . '</p>';
+			if ( axismundi_geodata_has_map_plugin() ) {
+				echo '<p>' . esc_html__( 'Tiles for the coordinate-picker maps in the term and attachment editors (admin only). With "None" no external map requests are made. The front-end map block has its own provider in “Front-end map blocks” below — this admin setting does not affect visitors.', 'axismundi-geodata' ) . '</p>';
+			} else {
+				echo '<p>' . esc_html__( 'Tiles for the coordinate-picker maps in the term and attachment editors (admin only). With "None" no external map requests are made. Front-end map block settings appear when the Axismundi Map plugin is active.', 'axismundi-geodata' ) . '</p>';
+			}
 		},
 		'axismundi_geodata'
 	);
@@ -326,7 +343,11 @@ function axismundi_geodata_register_settings() : void {
 		'axismundi_geodata_front',
 		__( 'Front-end map blocks', 'axismundi-geodata' ),
 		static function () {
-			echo '<p>' . esc_html__( 'The provider for the Axismundi Map block shown to visitors — separate from the admin preview. Self-host the tiles: a custom raster tile URL (rendered with Leaflet) or an uploaded PMTiles map pack (MapLibre). The public OpenStreetMap tile server is not offered here.', 'axismundi-geodata' ) . '</p>';
+			if ( axismundi_geodata_has_map_plugin() ) {
+				echo '<p>' . esc_html__( 'The provider for the Axismundi Map block shown to visitors — separate from the admin preview. Self-host the tiles: a custom raster tile URL (rendered with Leaflet) or an uploaded PMTiles map pack (MapLibre). The public OpenStreetMap tile server is not offered here.', 'axismundi-geodata' ) . '</p>';
+			} else {
+				echo '<p>' . esc_html__( 'Install and activate the Axismundi Map plugin to use these front-end map block settings. The saved values are kept here and will become editable once the map block plugin is active.', 'axismundi-geodata' ) . '</p>';
+			}
 		},
 		'axismundi_geodata'
 	);
@@ -384,6 +405,8 @@ function axismundi_geodata_render_field( array $args ) : void {
 	$id       = "axismundi_geodata_{$key}";
 	$name     = "axismundi_geodata_settings[{$key}]";
 	$value    = $settings[ $key ];
+	$is_front = str_starts_with( (string) $key, 'front_' );
+	$disabled = $is_front && ! axismundi_geodata_has_map_plugin();
 
 	switch ( $key ) {
 		case 'provider':
@@ -401,7 +424,7 @@ function axismundi_geodata_render_field( array $args ) : void {
 			break;
 
 		case 'front_provider':
-			printf( '<select id="%s" name="%s">', esc_attr( $id ), esc_attr( $name ) );
+			printf( '<select id="%s" name="%s"%s>', esc_attr( $id ), esc_attr( $name ), disabled( $disabled, true, false ) );
 			foreach ( array(
 				'none'          => __( 'None (no map)', 'axismundi-geodata' ),
 				'custom_raster' => __( 'Custom raster tiles (XYZ)', 'axismundi-geodata' ),
@@ -411,6 +434,9 @@ function axismundi_geodata_render_field( array $args ) : void {
 			}
 			echo '</select>';
 			echo '<p class="description">' . esc_html__( 'The basemap visitors see in the Axismundi Map block. Self-hosted only — a custom raster tile URL (Leaflet) or an uploaded PMTiles map pack (MapLibre).', 'axismundi-geodata' ) . '</p>';
+			if ( $disabled ) {
+				echo '<p class="description">' . esc_html__( 'Disabled until the Axismundi Map plugin is active.', 'axismundi-geodata' ) . '</p>';
+			}
 			break;
 
 		case 'map_pack_id':
@@ -425,7 +451,7 @@ function axismundi_geodata_render_field( array $args ) : void {
 					'order'          => 'ASC',
 				)
 			);
-			printf( '<select id="%s" name="%s">', esc_attr( $id ), esc_attr( $name ) );
+			printf( '<select id="%s" name="%s"%s>', esc_attr( $id ), esc_attr( $name ), disabled( $disabled, true, false ) );
 			printf( '<option value="0">%s</option>', esc_html__( '— Select a map pack —', 'axismundi-geodata' ) );
 			foreach ( $packs as $pack ) {
 				printf( '<option value="%d"%s>%s</option>', (int) $pack->ID, selected( (int) $value, (int) $pack->ID, false ), esc_html( get_the_title( $pack ) ) );
@@ -437,25 +463,33 @@ function axismundi_geodata_render_field( array $args ) : void {
 		case 'tile_url':
 		case 'front_tile_url':
 			printf(
-				'<input type="text" id="%s" name="%s" value="%s" class="large-text" placeholder="https://tiles.example.com/{z}/{x}/{y}.png" />',
+				'<input type="text" id="%s" name="%s" value="%s" class="large-text" placeholder="https://tiles.example.com/{z}/{x}/{y}.png"%s />',
 				esc_attr( $id ),
 				esc_attr( $name ),
-				esc_attr( $value )
+				esc_attr( $value ),
+				disabled( $disabled, true, false )
 			);
 			echo '<p class="description">' . esc_html__( 'An XYZ raster tile template with {z}/{x}/{y} (and optional {s}). The public https://tile.openstreetmap.org/{z}/{x}/{y}.png server is not allowed for production use — host your own or use a provider that permits it.', 'axismundi-geodata' ) . '</p>';
 			if ( 'front_tile_url' === $key ) {
-				echo '<p class="description">' . esc_html__( 'Examples you can paste:', 'axismundi-geodata' ) . '</p>';
+				echo '<p class="description"><strong>' . esc_html__( 'Do not paste a server secret here. A front-end tile URL is visible to every visitor — use only a browser/public key that you have restricted by domain (HTTP referrer) and to map tiles. Never reuse your Google Places server key from the Place lookup section.', 'axismundi-geodata' ) . '</strong></p>';
+				echo '<p class="description">' . esc_html__( 'Examples you can paste — each with the attribution to put in the Attribution field below:', 'axismundi-geodata' ) . '</p>';
 				echo '<ul class="description">';
 				foreach ( array(
-					'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-					'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-					'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-					'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-					'https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=YOUR_MAPTILER_API_KEY',
-					'https://api.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=YOUR_THUNDERFOREST_API_KEY',
-					'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png?api_key=YOUR_STADIA_API_KEY',
+					array( 'CARTO Positron (light)', 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', '© OpenStreetMap contributors © CARTO' ),
+					array( 'CARTO Dark Matter (dark)', 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', '© OpenStreetMap contributors © CARTO' ),
+					array( 'CARTO Voyager', 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', '© OpenStreetMap contributors © CARTO' ),
+					array( 'OpenStreetMap (testing only)', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', '© OpenStreetMap contributors' ),
+					array( 'MapTiler (browser key)', 'https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=YOUR_MAPTILER_API_KEY', '© MapTiler © OpenStreetMap contributors' ),
+					array( 'Thunderforest (API key)', 'https://api.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=YOUR_THUNDERFOREST_API_KEY', 'Maps © Thunderforest, Data © OpenStreetMap contributors' ),
+					array( 'Stadia Maps (API key)', 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png?api_key=YOUR_STADIA_API_KEY', '© Stadia Maps © OpenMapTiles © OpenStreetMap contributors' ),
 				) as $example ) {
-					printf( '<li><code>%s</code></li>', esc_html( $example ) );
+					printf(
+						'<li><strong>%s</strong><br /><code>%s</code><br /><span>%s <code>%s</code></span></li>',
+						esc_html( $example[0] ),
+						esc_html( $example[1] ),
+						esc_html__( 'Attribution:', 'axismundi-geodata' ),
+						esc_html( $example[2] )
+					);
 				}
 				echo '</ul>';
 			}
@@ -464,10 +498,11 @@ function axismundi_geodata_render_field( array $args ) : void {
 		case 'attribution':
 		case 'front_attribution':
 			printf(
-				'<input type="text" id="%s" name="%s" value="%s" class="large-text" />',
+				'<input type="text" id="%s" name="%s" value="%s" class="large-text"%s />',
 				esc_attr( $id ),
 				esc_attr( $name ),
-				esc_attr( $value )
+				esc_attr( $value ),
+				disabled( $disabled, true, false )
 			);
 			echo '<p class="description">' . esc_html__( 'Required tile attribution (HTML links allowed).', 'axismundi-geodata' ) . '</p>';
 			break;

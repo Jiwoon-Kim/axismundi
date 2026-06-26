@@ -4,8 +4,7 @@
  *
  * Adds coordinate / place inputs to the Add New and Edit screens of both geo
  * taxonomies so a term (a named Place) can carry its centroid, radius, type, and
- * identity. A Plus Code field is a convenience: a full Open Location Code entered
- * there is decoded to fill latitude/longitude on save when those are left blank.
+ * identity.
  *
  * @package AxismundiGeodata
  */
@@ -26,11 +25,6 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 	$is_area = 'geo_area' === $taxonomy;
 
 	$fields = array(
-		'ax_geo_plus_code'  => array(
-			'label' => __( 'Plus Code', 'axismundi-geodata' ),
-			'type'  => 'text',
-			'help'  => __( 'A full Open Location Code (e.g. 8Q7XMQVC+9G). Fills latitude / longitude on save when those are empty. Short codes with a place name need geocoding (coming later).', 'axismundi-geodata' ),
-		),
 		'geo_latitude'      => array(
 			'label' => __( 'Latitude', 'axismundi-geodata' ),
 			'type'  => 'number',
@@ -273,7 +267,7 @@ function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '
 }
 
 /**
- * Persist the term fields, decoding a Plus Code into coordinates when needed.
+ * Persist the term fields.
  *
  * @param int $term_id The term being saved.
  * @return void
@@ -296,17 +290,6 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 			continue; // provider cache: read-only, not posted, left untouched.
 		}
 		$values[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
-	}
-
-	// Plus Code convenience: a full code fills empty coordinates. This only sets the
-	// coordinate, not the place identity (see place-id.php), which hand-entered
-	// coordinates don't establish.
-	if ( '' !== $values['ax_geo_plus_code'] && ( '' === $values['geo_latitude'] || '' === $values['geo_longitude'] ) ) {
-		$decoded = axismundi_geodata_decode_plus_code( $values['ax_geo_plus_code'] );
-		if ( null !== $decoded ) {
-			$values['geo_latitude']  = (string) $decoded['latitude'];
-			$values['geo_longitude'] = (string) $decoded['longitude'];
-		}
 	}
 
 	// A hand-entered Place ID must be a known namespaced identity (source:id); an

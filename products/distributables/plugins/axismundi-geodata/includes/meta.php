@@ -9,8 +9,8 @@
  *
  * WordPress / W3C Geolocation convention keys (geo_latitude, geo_longitude,
  * geo_public, geo_address, geo_altitude, geo_accuracy) stay unprefixed for
- * interop; Axismundi-specific facts (precision, plus code, place id, area link,
- * radius, bounds, place type) use the ax_geo_* namespace. The RAW exact
+ * interop; Axismundi-specific facts (precision, place id, area link, radius,
+ * bounds, place type) use the ax_geo_* namespace. The RAW exact
  * coordinate is stored here; public exposure goes through privacy.php, never by
  * reading these keys directly.
  *
@@ -139,7 +139,6 @@ function axismundi_geodata_register_meta() : void {
 		'ax_geo_bounds'     => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_place_id'   => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_place_type' => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
-		'ax_geo_plus_code'  => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 	);
 
 	foreach ( array( 'geo_area', 'geotag' ) as $taxonomy ) {

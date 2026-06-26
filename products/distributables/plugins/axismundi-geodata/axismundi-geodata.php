@@ -52,7 +52,6 @@ function axismundi_geodata_coordinate_object_types() : array {
 }
 
 require_once __DIR__ . '/includes/privacy.php';
-require_once __DIR__ . '/includes/pluscode.php';
 require_once __DIR__ . '/includes/taxonomy.php';
 require_once __DIR__ . '/includes/meta.php';
 require_once __DIR__ . '/includes/place-types.php';

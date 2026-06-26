@@ -189,7 +189,11 @@
 			try {
 				var b = layer.getBounds();
 				if ( b.isValid() ) {
-					map.fitBounds( b, { padding: [ 24, 24 ], maxZoom: 15 } );
+					if ( b.getNorthEast().equals( b.getSouthWest() ) ) {
+						map.setView( b.getCenter(), cfg.zoom > 0 ? cfg.zoom : 14 );
+					} else {
+						map.fitBounds( b, { padding: [ 24, 24 ], maxZoom: 15 } );
+					}
 				}
 			} catch ( e ) {}
 		} ).catch( function () {} );
@@ -363,7 +367,13 @@
 				addLayers();
 				var b = geojsonBounds( gj );
 				if ( b ) {
-					map.fitBounds( b, { padding: 24, maxZoom: 15, duration: 0 } );
+					if ( b[ 0 ][ 0 ] === b[ 1 ][ 0 ] && b[ 0 ][ 1 ] === b[ 1 ][ 1 ] ) {
+						// A single point (e.g. one geotag archive) — fitBounds can't pick a
+						// zoom from a zero-size box, so place it directly.
+						map.jumpTo( { center: b[ 0 ], zoom: cfg.zoom > 0 ? cfg.zoom : 14 } );
+					} else {
+						map.fitBounds( b, { padding: 24, maxZoom: 15, duration: 0 } );
+					}
 				}
 			} ).catch( function () {} );
 		} );

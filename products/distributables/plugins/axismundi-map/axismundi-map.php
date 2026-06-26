@@ -90,6 +90,17 @@ function axismundi_map_render_block( array $attributes ) : void {
 		if ( ! empty( $ids ) ) {
 			$geojson = add_query_arg( 'ids', implode( ',', $ids ), rest_url( 'axismundi-geodata/v1/media' ) );
 		}
+	} elseif ( 'current' === $source ) {
+		// Query Map View: follow the queried geo term on a taxonomy archive — a geo
+		// area shows its geotags, a single geotag shows itself. No-op elsewhere.
+		$queried = get_queried_object();
+		if ( $queried instanceof WP_Term ) {
+			if ( 'geo_area' === $queried->taxonomy ) {
+				$geojson = add_query_arg( 'area', (int) $queried->term_id, rest_url( 'axismundi-geodata/v1/geotags' ) );
+			} elseif ( 'geotag' === $queried->taxonomy ) {
+				$geojson = add_query_arg( 'geotag', (int) $queried->term_id, rest_url( 'axismundi-geodata/v1/geotags' ) );
+			}
+		}
 	}
 
 	if ( 'pmtiles' === $tiles['kind'] ) {

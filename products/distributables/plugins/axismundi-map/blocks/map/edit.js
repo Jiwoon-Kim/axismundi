@@ -54,6 +54,7 @@
 							value: a.source,
 							options: [
 								{ label: __( 'None (basemap only)', 'axismundi-map' ), value: 'none' },
+								{ label: __( 'Current archive (geo term)', 'axismundi-map' ), value: 'current' },
 								{ label: __( 'Geotags', 'axismundi-map' ), value: 'geotags' },
 								{ label: __( 'Selected media', 'axismundi-map' ), value: 'media' },
 								{ label: __( 'Track', 'axismundi-map' ), value: 'track' }

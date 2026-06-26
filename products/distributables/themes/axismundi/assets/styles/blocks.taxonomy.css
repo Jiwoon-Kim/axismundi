@@ -85,6 +85,40 @@
 }
 
 /* =========================================================================
+ * Geo taxonomies — geotag ("is at" a place) and geo_area ("is in" an area) get a
+ * leading Material Symbols glyph on their is-style-tags links: location_on (pin)
+ * vs location_city. The icon is the only marker; core's prefix / suffix /
+ * separator stay user-controlled, and no "at" / "in" text is injected. The glyph
+ * is decorative (a CSS pseudo can't carry aria-hidden) — the place / area link
+ * text carries the meaning. Reuses the Material Symbols font contract from
+ * icons.css; only the leading-glyph properties are restated here.
+ * ========================================================================= */
+.wp-block-post-terms.taxonomy-geotag.is-style-tags > a::before,
+.wp-block-post-terms.taxonomy-geo_area.is-style-tags > a::before {
+	font-family: "Material Symbols Outlined", sans-serif;
+	font-weight: normal;
+	font-size: 1.125em;
+	line-height: 1;
+	margin-inline-end: var(--wp--preset--spacing--50);
+	letter-spacing: normal;
+	text-transform: none;
+	white-space: nowrap;
+	-webkit-font-feature-settings: "liga";
+	font-feature-settings: "liga";
+	font-variation-settings:
+		"FILL" var(--md-icon-fill, 0),
+		"wght" var(--md-icon-wght, 400),
+		"GRAD" var(--md-icon-grad, 0),
+		"opsz" var(--md-icon-opsz, 20);
+}
+.wp-block-post-terms.taxonomy-geotag.is-style-tags > a::before {
+	content: "location_on";
+}
+.wp-block-post-terms.taxonomy-geo_area.is-style-tags > a::before {
+	content: "location_city";
+}
+
+/* =========================================================================
  * core/tag-cloud
  * is-style-tags — uniform tag links. Overrides the inline popularity font-size
  * (the variable size is a separate signal; tags are opt-in and drop it).

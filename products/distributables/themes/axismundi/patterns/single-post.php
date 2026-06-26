@@ -31,6 +31,12 @@
 <div class="wp-block-group" style="margin-top:var(--wp--preset--spacing--400)"><!-- wp:post-terms {"term":"post_tag","className":"is-style-tags"} /--></div>
 <!-- /wp:group -->
 
+<!-- wp:group {"style":{"spacing":{"margin":{"top":"var:preset|spacing|200"},"blockGap":"var:preset|spacing|200"}},"layout":{"type":"flex","flexWrap":"wrap"}} -->
+<div class="wp-block-group" style="margin-top:var(--wp--preset--spacing--200)"><!-- wp:post-terms {"term":"geotag","className":"is-style-tags"} /-->
+
+<!-- wp:post-terms {"term":"geo_area","className":"is-style-tags"} /--></div>
+<!-- /wp:group -->
+
 <!-- wp:pattern {"slug":"axismundi/post-navigation"} /-->
 
 <!-- wp:pattern {"slug":"axismundi/comments"} /--></main>

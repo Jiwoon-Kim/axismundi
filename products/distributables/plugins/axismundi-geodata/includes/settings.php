@@ -443,6 +443,22 @@ function axismundi_geodata_render_field( array $args ) : void {
 				esc_attr( $value )
 			);
 			echo '<p class="description">' . esc_html__( 'An XYZ raster tile template with {z}/{x}/{y} (and optional {s}). The public https://tile.openstreetmap.org/{z}/{x}/{y}.png server is not allowed for production use — host your own or use a provider that permits it.', 'axismundi-geodata' ) . '</p>';
+			if ( 'front_tile_url' === $key ) {
+				echo '<p class="description">' . esc_html__( 'Examples you can paste:', 'axismundi-geodata' ) . '</p>';
+				echo '<ul class="description">';
+				foreach ( array(
+					'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+					'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+					'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+					'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+					'https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=YOUR_MAPTILER_API_KEY',
+					'https://api.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=YOUR_THUNDERFOREST_API_KEY',
+					'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png?api_key=YOUR_STADIA_API_KEY',
+				) as $example ) {
+					printf( '<li><code>%s</code></li>', esc_html( $example ) );
+				}
+				echo '</ul>';
+			}
 			break;
 
 		case 'attribution':

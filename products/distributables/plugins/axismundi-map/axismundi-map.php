@@ -122,6 +122,8 @@ function axismundi_map_render_block( array $attributes ) : void {
 		'tileUrl'             => $tiles['tile_url'],
 		'packUrl'             => $tiles['pack_url'] ?? '',
 		'attribution'         => $tiles['attribution'],
+		'rasterTileUrl'       => $tiles['raster_tile_url'] ?? '',
+		'rasterAttribution'   => $tiles['raster_attribution'] ?? '',
 		'minZoom'             => (int) $tiles['min_zoom'],
 		'maxZoom'             => (int) $tiles['max_zoom'],
 		'center'              => $tiles['center'] ?? array(),

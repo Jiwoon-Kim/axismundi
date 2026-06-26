@@ -6,9 +6,8 @@
  * public tiles, **admin preview only** — an explicit opt-in convenience, never
  * used for front-end visitor traffic since OSM's tile policy forbids that), and
  * `custom_raster` (a user-supplied XYZ raster tile URL — their own or an allowed
- * third-party server). Google / Naver / MapLibre / PMTiles are later providers
- * that need their own adapters; front-end map rendering and geocoding are
- * deliberately separated from admin preview because the key/abuse risk differs.
+ * third-party server). Front-end PMTiles can also be paired with a custom raster
+ * fallback so sparse/global maps are still readable outside self-hosted coverage.
  *
  * Tile resolution goes through axismundi_geodata_resolve_tiles() so the
  * admin-only OSM rule lives in one place.
@@ -105,8 +104,9 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 	$attribution = '';
 
 	// PMTiles map pack: a self-hosted vector basemap rendered with MapLibre. A whole
-	// different stack from raster tiles, flagged with kind = 'pmtiles'.
-	if ( 'pmtiles' === $provider ) {
+	// different stack from raster tiles, flagged with kind = 'pmtiles'. The hybrid
+	// front-end provider keeps the same renderer and adds a raster fallback source.
+	if ( in_array( $provider, array( 'pmtiles', 'pmtiles_raster' ), true ) ) {
 		$pack = $pack_id && function_exists( 'axismundi_geodata_is_pmtiles_attachment' ) && axismundi_geodata_is_pmtiles_attachment( $pack_id )
 			? axismundi_geodata_map_pack( $pack_id )
 			: array();
@@ -127,16 +127,18 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 		$schema = ! empty( $pack['schema'] ) ? (string) $pack['schema'] : '';
 
 		return array(
-			'enabled'     => '' !== $url && 'protomaps' === $schema,
-			'kind'        => 'pmtiles',
-			'schema'      => $schema,
-			'tile_url'    => '',
-			'pack_url'    => $url,
-			'bounds'      => $bounds,
-			'center'      => $center,
-			'attribution' => ! empty( $pack['attribution'] ) ? (string) $pack['attribution'] : '',
-			'min_zoom'    => ! empty( $pack['min_zoom'] ) ? (int) $pack['min_zoom'] : 0,
-			'max_zoom'    => ! empty( $pack['max_zoom'] ) ? (int) $pack['max_zoom'] : 18,
+			'enabled'            => '' !== $url && 'protomaps' === $schema,
+			'kind'               => 'pmtiles',
+			'schema'             => $schema,
+			'tile_url'           => '',
+			'pack_url'           => $url,
+			'bounds'             => $bounds,
+			'center'             => $center,
+			'attribution'        => ! empty( $pack['attribution'] ) ? (string) $pack['attribution'] : '',
+			'raster_tile_url'    => ( 'pmtiles_raster' === $provider && '' !== $raster_url ) ? $raster_url : '',
+			'raster_attribution' => ( 'pmtiles_raster' === $provider ) ? $raster_attr : '',
+			'min_zoom'           => ! empty( $pack['min_zoom'] ) ? (int) $pack['min_zoom'] : 0,
+			'max_zoom'           => ! empty( $pack['max_zoom'] ) ? (int) $pack['max_zoom'] : 18,
 		);
 	}
 
@@ -149,16 +151,18 @@ function axismundi_geodata_resolve_tiles( string $context = 'admin', ?array $cfg
 	}
 
 	return array(
-		'enabled'     => '' !== $tile_url,
-		'kind'        => 'raster',
-		'schema'      => '',
-		'tile_url'    => $tile_url,
-		'pack_url'    => '',
-		'bounds'      => array(),
-		'center'      => array(),
-		'attribution' => $attribution,
-		'min_zoom'    => (int) $cfg['min_zoom'],
-		'max_zoom'    => (int) $cfg['max_zoom'],
+		'enabled'            => '' !== $tile_url,
+		'kind'               => 'raster',
+		'schema'             => '',
+		'tile_url'           => $tile_url,
+		'pack_url'           => '',
+		'bounds'             => array(),
+		'center'             => array(),
+		'attribution'        => $attribution,
+		'raster_tile_url'    => '',
+		'raster_attribution' => '',
+		'min_zoom'           => (int) $cfg['min_zoom'],
+		'max_zoom'           => (int) $cfg['max_zoom'],
 	);
 }
 
@@ -237,7 +241,7 @@ function axismundi_geodata_sanitize_settings( $input ) : array {
 
 	$out['map_pack_id'] = absint( $input['map_pack_id'] ?? 0 );
 
-	$out['front_provider'] = in_array( $input['front_provider'] ?? '', array( 'none', 'custom_raster', 'pmtiles' ), true )
+	$out['front_provider'] = in_array( $input['front_provider'] ?? '', array( 'none', 'custom_raster', 'pmtiles', 'pmtiles_raster' ), true )
 		? $input['front_provider']
 		: 'none';
 
@@ -429,11 +433,12 @@ function axismundi_geodata_render_field( array $args ) : void {
 				'none'          => __( 'None (no map)', 'axismundi-geodata' ),
 				'custom_raster' => __( 'Custom raster tiles (XYZ)', 'axismundi-geodata' ),
 				'pmtiles'       => __( 'Uploaded PMTiles map pack', 'axismundi-geodata' ),
+				'pmtiles_raster' => __( 'PMTiles map pack + custom raster fallback', 'axismundi-geodata' ),
 			) as $opt => $opt_label ) {
 				printf( '<option value="%s"%s>%s</option>', esc_attr( $opt ), selected( $value, $opt, false ), esc_html( $opt_label ) );
 			}
 			echo '</select>';
-			echo '<p class="description">' . esc_html__( 'The basemap visitors see in the Axismundi Map block. Self-hosted only — a custom raster tile URL (Leaflet) or an uploaded PMTiles map pack (MapLibre).', 'axismundi-geodata' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'The basemap visitors see in the Axismundi Map block. Use custom raster tiles, an uploaded PMTiles map pack, or both together so raster tiles cover areas outside the self-hosted map pack.', 'axismundi-geodata' ) . '</p>';
 			if ( $disabled ) {
 				echo '<p class="description">' . esc_html__( 'Disabled until the Axismundi Map plugin is active.', 'axismundi-geodata' ) . '</p>';
 			}
@@ -457,7 +462,7 @@ function axismundi_geodata_render_field( array $args ) : void {
 				printf( '<option value="%d"%s>%s</option>', (int) $pack->ID, selected( (int) $value, (int) $pack->ID, false ), esc_html( get_the_title( $pack ) ) );
 			}
 			echo '</select>';
-			echo '<p class="description">' . esc_html__( 'Used when Provider is “Uploaded PMTiles map pack”. Upload a .pmtiles file under Media, then choose it here. Label fonts load from the public Protomaps assets host.', 'axismundi-geodata' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'Used when Provider is “Uploaded PMTiles map pack” or “PMTiles map pack + custom raster fallback”. Upload a .pmtiles file under Media, then choose it here. Label fonts load from the public Protomaps assets host.', 'axismundi-geodata' ) . '</p>';
 			break;
 
 		case 'tile_url':

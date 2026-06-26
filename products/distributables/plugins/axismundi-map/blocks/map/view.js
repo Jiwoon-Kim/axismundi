@@ -212,13 +212,100 @@
 	}
 
 	function buildStyle( cfg, dark ) {
+		var sources = {
+			protomaps: { type: 'vector', url: 'pmtiles://' + cfg.packUrl, attribution: cfg.attribution || '' }
+		};
+		var layers = window.basemaps.layers( 'protomaps', window.basemaps.namedFlavor( dark ? 'dark' : 'light' ), { lang: cfg.lang || 'en' } );
 		return {
 			version: 8,
 			glyphs: cfg.glyphs,
 			sprite: dark && cfg.sprite ? cfg.sprite.replace( /\/light$/, '/dark' ) : cfg.sprite,
-			sources: { protomaps: { type: 'vector', url: 'pmtiles://' + cfg.packUrl, attribution: cfg.attribution || '' } },
-			layers: window.basemaps.layers( 'protomaps', window.basemaps.namedFlavor( dark ? 'dark' : 'light' ), { lang: cfg.lang || 'en' } )
+			sources: sources,
+			layers: layers
 		};
+	}
+
+	function transparentPng() {
+		if ( window.axismundiMapTransparentPng ) {
+			return window.axismundiMapTransparentPng;
+		}
+		var binary = window.atob( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=' );
+		var bytes = new Uint8Array( binary.length );
+		for ( var i = 0; i < binary.length; i++ ) {
+			bytes[ i ] = binary.charCodeAt( i );
+		}
+		window.axismundiMapTransparentPng = bytes.buffer;
+		return window.axismundiMapTransparentPng;
+	}
+
+	function tileBounds( z, x, y ) {
+		var n = Math.pow( 2, z );
+		function lon( tileX ) {
+			return tileX / n * 360 - 180;
+		}
+		function lat( tileY ) {
+			var rad = Math.atan( Math.sinh( Math.PI * ( 1 - 2 * tileY / n ) ) );
+			return rad * 180 / Math.PI;
+		}
+		return [ lon( x ), lat( y + 1 ), lon( x + 1 ), lat( y ) ]; // W, S, E, N.
+	}
+
+	function containsBounds( outer, inner ) {
+		return outer && 4 === outer.length &&
+			inner[ 0 ] >= outer[ 0 ] && inner[ 2 ] <= outer[ 2 ] &&
+			inner[ 1 ] >= outer[ 1 ] && inner[ 3 ] <= outer[ 3 ];
+	}
+
+	function boundsArray( bounds ) {
+		return bounds ? [ bounds[ 0 ][ 0 ], bounds[ 0 ][ 1 ], bounds[ 1 ][ 0 ], bounds[ 1 ][ 1 ] ] : null;
+	}
+
+	function mapBoundsArray( map ) {
+		var b = map.getBounds();
+		return [ b.getWest(), b.getSouth(), b.getEast(), b.getNorth() ];
+	}
+
+	function tileUrl( template, z, x, y ) {
+		var subs = [ 'a', 'b', 'c', 'd' ];
+		return template
+			.replace( /\{s\}/g, subs[ Math.abs( x + y ) % subs.length ] )
+			.replace( /\{z\}/g, z )
+			.replace( /\{x\}/g, x )
+			.replace( /\{y\}/g, y );
+	}
+
+	function registerRasterFallbackProtocol( maplibregl ) {
+		if ( window.axismundiMapRasterFallbackProtocol ) {
+			return;
+		}
+		window.axismundiMapRasterFallbacks = window.axismundiMapRasterFallbacks || {};
+		maplibregl.addProtocol( 'axrasterfallback', function ( params ) {
+			var match = String( params.url || '' ).match( /^axrasterfallback:\/\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/ );
+			if ( ! match ) {
+				return Promise.resolve( { data: transparentPng() } );
+			}
+			var cfg = window.axismundiMapRasterFallbacks[ match[ 1 ] ];
+			var z = parseInt( match[ 2 ], 10 );
+			var x = parseInt( match[ 3 ], 10 );
+			var y = parseInt( match[ 4 ], 10 );
+			if ( ! cfg || ! cfg.tileUrl ) {
+				return Promise.resolve( { data: transparentPng() } );
+			}
+			if ( containsBounds( cfg.bounds, tileBounds( z, x, y ) ) ) {
+				return Promise.resolve( { data: transparentPng() } );
+			}
+			return window.fetch( tileUrl( cfg.tileUrl, z, x, y ) )
+				.then( function ( response ) {
+					if ( ! response.ok ) {
+						return transparentPng();
+					}
+					return response.arrayBuffer();
+				} )
+				.then( function ( data ) {
+					return { data: data };
+				} );
+		} );
+		window.axismundiMapRasterFallbackProtocol = true;
 	}
 
 	// Call apply(dark) when the theme's light/dark mode changes (data-theme toggle
@@ -256,6 +343,15 @@
 			maplibregl.addProtocol( 'pmtiles', protocol.tile );
 			window.axismundiMapPmtilesProtocol = protocol;
 		}
+		if ( cfg.rasterTileUrl ) {
+			registerRasterFallbackProtocol( maplibregl );
+			window.axismundiMapRasterFallbackSeq = ( window.axismundiMapRasterFallbackSeq || 0 ) + 1;
+			cfg.rasterFallbackId = 'm' + window.axismundiMapRasterFallbackSeq;
+			window.axismundiMapRasterFallbacks[ cfg.rasterFallbackId ] = {
+				tileUrl: cfg.rasterTileUrl,
+				bounds: cfg.bounds || []
+			};
+		}
 
 		var cz  = centerZoom( cfg );
 		var map = new maplibregl.Map( {
@@ -278,6 +374,43 @@
 
 		var cachedGj = null;
 		var bound    = false;
+
+		function addRasterFallback() {
+			if ( ! cfg.rasterFallbackActive || ! cfg.rasterTileUrl || ! map.isStyleLoaded() ) {
+				return;
+			}
+			if ( ! map.getSource( 'fallback-raster' ) ) {
+				map.addSource( 'fallback-raster', {
+					type: 'raster',
+					tiles: [ cfg.rasterFallbackId ? 'axrasterfallback://' + cfg.rasterFallbackId + '/{z}/{x}/{y}' : cfg.rasterTileUrl ],
+					tileSize: 256,
+					attribution: cfg.rasterAttribution || ''
+				} );
+			}
+			if ( map.getLayer( 'fallback-raster' ) ) {
+				return;
+			}
+			var firstNonBackground = ( map.getStyle().layers || [] ).find( function ( layer ) {
+				return 'background' !== layer.type;
+			} );
+			map.addLayer( {
+				id: 'fallback-raster',
+				type: 'raster',
+				source: 'fallback-raster',
+				minzoom: cfg.minZoom || 0,
+				maxzoom: cfg.maxZoom || 22
+			}, firstNonBackground ? firstNonBackground.id : undefined );
+		}
+
+		function updateRasterFallbackForViewport() {
+			if ( ! cfg.rasterTileUrl || ! map.isStyleLoaded() ) {
+				return;
+			}
+			if ( ! containsBounds( cfg.bounds, mapBoundsArray( map ) ) ) {
+				cfg.rasterFallbackActive = true;
+				addRasterFallback();
+			}
+		}
 
 		function addLayers() {
 			if ( ! cachedGj || ! map.isStyleLoaded() ) {
@@ -354,7 +487,11 @@
 			map.setStyle( buildStyle( cfg, dark ) );
 			// 'style.load' isn't reliably re-emitted by setStyle in MapLibre 5; 'idle'
 			// fires once the new basemap has settled, when re-adding is safe.
-			map.once( 'idle', addLayers );
+			map.once( 'idle', function () {
+				updateRasterFallbackForViewport();
+				addRasterFallback();
+				addLayers();
+			} );
 		} );
 
 		if ( ! cfg.geojson ) {
@@ -364,7 +501,6 @@
 			fetchGeojson( cfg.geojson ).then( function ( gj ) {
 				cachedGj = gj;
 				bindOnce();
-				addLayers();
 				var b = geojsonBounds( gj );
 				if ( b ) {
 					if ( b[ 0 ][ 0 ] === b[ 1 ][ 0 ] && b[ 0 ][ 1 ] === b[ 1 ][ 1 ] ) {
@@ -375,8 +511,13 @@
 						map.fitBounds( b, { padding: 24, maxZoom: 15, duration: 0 } );
 					}
 				}
+				cfg.rasterFallbackActive = !! ( cfg.rasterTileUrl && ( ! containsBounds( cfg.bounds, boundsArray( b ) ) || ! containsBounds( cfg.bounds, mapBoundsArray( map ) ) ) );
+				updateRasterFallbackForViewport();
+				addLayers();
 			} ).catch( function () {} );
 		} );
+		map.on( 'moveend', updateRasterFallbackForViewport );
+		map.on( 'zoomend', updateRasterFallbackForViewport );
 	}
 
 	function initOne( canvas ) {

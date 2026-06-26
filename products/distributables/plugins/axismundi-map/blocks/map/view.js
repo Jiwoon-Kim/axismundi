@@ -213,9 +213,22 @@
 		var bound    = false;
 
 		function addLayers() {
-			if ( ! cachedGj || ! map.isStyleLoaded() || map.getSource( 'axgeo' ) ) {
+			if ( ! cachedGj || ! map.isStyleLoaded() ) {
 				return;
 			}
+			// Idempotent: setStyle (theme switch) drops these, and the initial add
+			// must not collide — remove any leftovers (layers before their sources).
+			[ 'axgeo-points', 'axgeo-lines-hit', 'axgeo-lines', 'axgeo-track-endpoints' ].forEach( function ( id ) {
+				if ( map.getLayer( id ) ) {
+					map.removeLayer( id );
+				}
+			} );
+			[ 'axgeo', 'axgeo-track-endpoints' ].forEach( function ( id ) {
+				if ( map.getSource( id ) ) {
+					map.removeSource( id );
+				}
+			} );
+
 			map.addSource( 'axgeo', { type: 'geojson', data: cachedGj } );
 			map.addLayer( { id: 'axgeo-lines', type: 'line', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ], paint: { 'line-color': '#d32f2f', 'line-width': 3 } } );
 			map.addLayer( { id: 'axgeo-lines-hit', type: 'line', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ], paint: { 'line-color': '#d32f2f', 'line-width': 16, 'line-opacity': 0 } } );
@@ -272,7 +285,9 @@
 		// re-added once the new style finishes loading.
 		watchTheme( function ( dark ) {
 			map.setStyle( buildStyle( cfg, dark ) );
-			map.once( 'style.load', addLayers );
+			// 'style.load' isn't reliably re-emitted by setStyle in MapLibre 5; 'idle'
+			// fires once the new basemap has settled, when re-adding is safe.
+			map.once( 'idle', addLayers );
 		} );
 
 		if ( ! cfg.geojson ) {

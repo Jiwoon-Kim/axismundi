@@ -69,3 +69,32 @@ Build the front-end UI only after the data shape is clear:
 2. Optional GPX/GeoJSON/track attachment recognition.
 3. Query-to-bbox REST/search endpoint for archive/search map views.
 4. A dedicated single-post map/track block or archive Query Map View, as needed.
+
+## Plugin Boundary
+
+Axismundi Geo Data stays the **data + admin layer**, and also acts as the shared
+**map asset provider**. Front-end rendering and AR are separate plugins that
+depend on it, so they don't re-bundle libraries or duplicate the data model:
+
+- **axismundi-geodata** (this plugin) — geo_area / geotag, coordinate + place
+  meta, place identity + lookup providers, attachment metadata for PMTiles / GPX /
+  KML, admin preview maps, REST. It owns the vendored map libraries and exposes
+  them as stable script handles and helpers.
+- **axismundi-map** (future) — front-end Map block, Query Map View, single-post
+  place/track map, GPX/KML route rendering, marker clustering. Depends on
+  axismundi-geodata and reuses its map assets rather than bundling its own.
+- **axismundi-ar** (future) — camera / orientation / WebXR, POI overlay, nearby /
+  route AR. Depends on axismundi-geodata (and optionally axismundi-map).
+
+### Map asset provider contract
+
+A dependent plugin reuses these instead of re-bundling:
+
+- Script handles: `axismundi-leaflet`, `axismundi-maplibre`, `axismundi-pmtiles`,
+  `axismundi-protomaps-basemaps`, `axismundi-geodata-map-field`.
+- Helpers: `axismundi_geodata_enqueue_map_field()`, `axismundi_geodata_resolve_tiles()`,
+  `axismundi_geodata_map_pack()`.
+
+Geo Data owns the vendor assets and admin map utilities; the Map plugin owns
+front-end rendering semantics. The actual plugin split happens when the front-end
+map is built — the admin preview can stay in Geo Data.

@@ -439,6 +439,7 @@ function axismundi_geodata_render_field( array $args ) : void {
 			}
 			echo '</select>';
 			echo '<p class="description">' . esc_html__( 'The basemap visitors see in the Axismundi Map block. Use custom raster tiles, an uploaded PMTiles map pack, or both together so raster tiles cover areas outside the self-hosted map pack.', 'axismundi-geodata' ) . '</p>';
+			echo '<p class="description">' . esc_html__( '“PMTiles map pack + custom raster fallback”: outside the map pack’s coverage the fallback tiles are fetched in the browser, so that tile server must send CORS headers (Access-Control-Allow-Origin). CARTO, MapTiler, and Stadia do; a self-hosted tile server may need CORS enabled.', 'axismundi-geodata' ) . '</p>';
 			if ( $disabled ) {
 				echo '<p class="description">' . esc_html__( 'Disabled until the Axismundi Map plugin is active.', 'axismundi-geodata' ) . '</p>';
 			}

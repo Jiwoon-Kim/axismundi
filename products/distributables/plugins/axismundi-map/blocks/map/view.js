@@ -303,6 +303,11 @@
 				} )
 				.then( function ( data ) {
 					return { data: data };
+				} )
+				.catch( function () {
+					// A network failure (offline, DNS, CORS) must not reject the tile —
+					// fall back to a transparent tile so MapLibre doesn't log an error.
+					return { data: transparentPng() };
 				} );
 		} );
 		window.axismundiMapRasterFallbackProtocol = true;

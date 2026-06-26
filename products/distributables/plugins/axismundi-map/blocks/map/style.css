@@ -1,0 +1,11 @@
+.axismundi-map .axismundi-map__canvas {
+	width: 100%;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.axismundi-map .leaflet-container,
+.axismundi-map .maplibregl-map {
+	width: 100%;
+	height: 100%;
+}

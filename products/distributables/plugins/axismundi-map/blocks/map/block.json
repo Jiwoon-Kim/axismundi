@@ -1,0 +1,29 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/map",
+	"version": "0.1.0",
+	"title": "Axismundi Map",
+	"category": "media",
+	"icon": "location-alt",
+	"description": "A self-hosted map that draws geotags or a GPS track from Axismundi Geo Data.",
+	"textdomain": "axismundi-map",
+	"keywords": [ "map", "geo", "geotag", "track", "pmtiles" ],
+	"attributes": {
+		"source": { "type": "string", "default": "none" },
+		"areaId": { "type": "integer", "default": 0 },
+		"bbox": { "type": "string", "default": "" },
+		"trackId": { "type": "integer", "default": 0 },
+		"height": { "type": "number", "default": 360 },
+		"zoom": { "type": "number", "default": 0 },
+		"showPopups": { "type": "boolean", "default": true }
+	},
+	"supports": {
+		"align": [ "wide", "full" ],
+		"html": false,
+		"spacing": { "margin": true }
+	},
+	"editorScript": "axismundi-map-edit",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

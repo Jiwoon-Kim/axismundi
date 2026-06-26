@@ -13,7 +13,8 @@
     "./products/distributables/plugins/axismundi-fonts-noto-cjk-kr",
     "./products/distributables/plugins/axismundi-navigation-icons",
     "./products/distributables/plugins/axismundi-table-of-contents",
-    "./products/distributables/plugins/axismundi-geodata"
+    "./products/distributables/plugins/axismundi-geodata",
+    "./products/distributables/plugins/axismundi-map"
   ],
   "port": 8884,
   "config": {

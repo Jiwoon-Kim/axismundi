@@ -101,13 +101,17 @@ map is built — the admin preview can stay in Geo Data.
 
 ## Geo Area Boundary Model
 
-A geo_area has three distinct spatial facts that must not be conflated:
+A geo_area has two distinct spatial facts that must not be conflated:
 
 - `geo_latitude` / `geo_longitude` are its representative centre point.
-- `ax_geo_radius` is an optional approximate circle for search bias, uncertainty,
-  or nearby queries. It is not an administrative or national boundary.
 - The authoritative outline is GeoJSON geometry referenced through a WordPress
   attachment. Large polygon data must not be stored directly in term meta.
+
+(A generic `ax_geo_radius` circle was removed — it had no consumer and conflated a
+search/uncertainty radius with an administrative boundary. A purpose-built radius
+can return if a real "nearby" feature needs one.) Boundary upload is itself
+deferred: the basemap already conveys boundaries, so it earns its place only with a
+layout that needs the outline (e.g. a clickable district-map archive).
 
 Manual GeoJSON upload is the baseline workflow. OpenStreetMap/Nominatim may later
 offer an explicit "Import boundary" action after an OSM place is bound. That action

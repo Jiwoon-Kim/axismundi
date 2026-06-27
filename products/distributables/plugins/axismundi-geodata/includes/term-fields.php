@@ -35,11 +35,6 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 			'type'  => 'number',
 			'help'  => __( 'Centre longitude, -180 to 180.', 'axismundi-geodata' ),
 		),
-		'ax_geo_radius'     => array(
-			'label' => __( 'Radius (m)', 'axismundi-geodata' ),
-			'type'  => 'number',
-			'help'  => __( 'Approximate area radius in metres.', 'axismundi-geodata' ),
-		),
 		'ax_geo_place_type' => array(
 			'label' => $is_area ? __( 'Administrative type', 'axismundi-geodata' ) : __( 'Place type', 'axismundi-geodata' ),
 			'type'  => 'select',
@@ -278,7 +273,7 @@ function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 	axismundi_geodata_render_term_controls( array( 'ax_geo_place_type' ), $fields, $taxonomy, 'add' );
 	axismundi_geodata_render_place_lookup( null, $taxonomy, 'add' );
 	axismundi_geodata_render_term_map( 'add' );
-	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude', 'ax_geo_radius' ), $fields, $taxonomy, 'add' );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude' ), $fields, $taxonomy, 'add' );
 	axismundi_geodata_render_term_controls( array( 'ax_geo_country_code', 'ax_geo_iso_3166_2' ), $fields, $taxonomy, 'add' );
 }
 
@@ -296,7 +291,7 @@ function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '
 	axismundi_geodata_render_term_controls( array( 'ax_geo_place_type' ), $fields, $taxonomy, 'edit', $term );
 	axismundi_geodata_render_place_lookup( $term, $taxonomy, 'edit' );
 	axismundi_geodata_render_term_map( 'edit' );
-	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude', 'ax_geo_radius' ), $fields, $taxonomy, 'edit', $term );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude' ), $fields, $taxonomy, 'edit', $term );
 	axismundi_geodata_render_term_controls( array( 'ax_geo_country_code', 'ax_geo_iso_3166_2' ), $fields, $taxonomy, 'edit', $term );
 }
 

@@ -313,8 +313,7 @@ function axismundi_geodata_google_lookup_term( int $term_id ) {
 		axismundi_geodata_lookup_term_query( $term ),
 		axismundi_geodata_lookup_country_code( $term ),
 		'' !== $lat ? $lat : null,
-		'' !== $lng ? $lng : null,
-		(float) get_term_meta( $term_id, 'ax_geo_radius', true )
+		'' !== $lng ? $lng : null
 	);
 }
 

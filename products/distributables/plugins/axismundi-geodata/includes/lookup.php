@@ -63,9 +63,7 @@ function axismundi_geodata_lookup_language_code() : string {
 function axismundi_geodata_lookup_area_context( WP_Term $term ) : array {
 	$ids = array();
 
-	if ( 'geotag' === $term->taxonomy ) {
-		$ids = axismundi_geodata_get_geotag_area_chain( $term->term_id );
-	} elseif ( 'geo_area' === $term->taxonomy ) {
+	if ( 'geo_area' === $term->taxonomy ) {
 		$ids = array_merge( array( $term->term_id ), get_ancestors( $term->term_id, 'geo_area', 'taxonomy' ) );
 	}
 

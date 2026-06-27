@@ -4,13 +4,13 @@
  *
  * Object (post/page/attachment) coordinate meta = the observation / capture
  * point. Term (geo_area/geotag) meta = the named place's facts (centroid,
- * radius, bounds, external id). All single-value, REST-exposed with a schema,
+ * bounds, external id). All single-value, REST-exposed with a schema,
  * sanitised, and edit-gated.
  *
  * WordPress / W3C Geolocation convention keys (geo_latitude, geo_longitude,
  * geo_public, geo_address, geo_altitude, geo_accuracy) stay unprefixed for
- * interop; Axismundi-specific facts (precision, place id, area link, radius,
- * bounds, place type) use the ax_geo_* namespace. The RAW exact
+ * interop; Axismundi-specific facts (precision, place id, bounds, place type)
+ * use the ax_geo_* namespace. The RAW exact
  * coordinate is stored here; public exposure goes through privacy.php, never by
  * reading these keys directly.
  *
@@ -40,8 +40,8 @@ function axismundi_geodata_sanitize_longitude( $value ) : float {
 }
 
 /**
- * Clamp a value to a non-negative float (altitude offsets aside, radius /
- * accuracy are non-negative metres).
+ * Clamp a value to a non-negative float (altitude offsets aside, accuracy is
+ * measured as non-negative metres).
  *
  * @param mixed $value Raw value.
  * @return float
@@ -71,6 +71,39 @@ function axismundi_geodata_sanitize_float( $value ) : float {
  */
 function axismundi_geodata_sanitize_country_code( $value ) : string {
 	return substr( strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $value ) ), 0, 2 );
+}
+
+/**
+ * Normalise a W,S,E,N viewport string.
+ *
+ * @param mixed $value Raw bounds.
+ * @return string
+ */
+function axismundi_geodata_sanitize_bounds( $value ) : string {
+	$parts = array_map( 'trim', explode( ',', (string) $value ) );
+	if ( 4 !== count( $parts ) || count( array_filter( $parts, 'is_numeric' ) ) !== 4 ) {
+		return '';
+	}
+
+	$west  = axismundi_geodata_sanitize_longitude( $parts[0] );
+	$south = axismundi_geodata_sanitize_latitude( $parts[1] );
+	$east  = axismundi_geodata_sanitize_longitude( $parts[2] );
+	$north = axismundi_geodata_sanitize_latitude( $parts[3] );
+	if ( $south > $north ) {
+		return '';
+	}
+
+	return implode( ',', array( $west, $south, $east, $north ) );
+}
+
+/**
+ * Clamp an optional map zoom to MapLibre / Leaflet's useful range.
+ *
+ * @param mixed $value Raw zoom.
+ * @return float
+ */
+function axismundi_geodata_sanitize_map_zoom( $value ) : float {
+	return max( 0.0, min( 22.0, (float) $value ) );
 }
 
 /**
@@ -135,7 +168,7 @@ function axismundi_geodata_register_meta() : void {
 		'geo_latitude'      => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_latitude', 'schema' => $number ),
 		'geo_longitude'     => array( 'type' => 'number', 'sanitize' => 'axismundi_geodata_sanitize_longitude', 'schema' => $number ),
 		'geo_address'       => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
-		'ax_geo_bounds'     => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
+		'ax_geo_bounds'     => array( 'type' => 'string', 'sanitize' => 'axismundi_geodata_sanitize_bounds', 'schema' => $string ),
 		'ax_geo_place_id'   => array( 'type' => 'string', 'sanitize' => 'sanitize_text_field', 'schema' => $string ),
 		'ax_geo_place_type' => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
 	);
@@ -168,38 +201,23 @@ function axismundi_geodata_register_meta() : void {
 	$geo_area_meta = array(
 		'ax_geo_country_code' => 'axismundi_geodata_sanitize_country_code',
 		'ax_geo_iso_3166_2'   => 'sanitize_text_field',
+		'ax_geo_zoom'         => 'axismundi_geodata_sanitize_map_zoom',
 	);
 	foreach ( $geo_area_meta as $key => $sanitize ) {
+		$is_zoom = 'ax_geo_zoom' === $key;
 		register_term_meta(
 			'geo_area',
 			$key,
 			array(
-				'type'              => 'string',
+				'type'              => $is_zoom ? 'number' : 'string',
 				'single'            => true,
 				'sanitize_callback' => $sanitize,
 				'auth_callback'     => function () {
 					return current_user_can( 'manage_categories' );
 				},
-				'show_in_rest'      => array( 'schema' => $string ),
+				'show_in_rest'      => array( 'schema' => $is_zoom ? $number : $string ),
 			)
 		);
 	}
-
-	// geotag -> geo_area relationship: a single leaf geo_area term id. The full
-	// containment chain (수영구 > 부산광역시 > ...) is derived from the geo_area
-	// hierarchy, never stored, so re-parenting an area can't leave stale chains.
-	register_term_meta(
-		'geotag',
-		'ax_geo_area',
-		array(
-			'type'              => 'integer',
-			'single'            => true,
-			'sanitize_callback' => 'absint',
-			'auth_callback'     => function () {
-				return current_user_can( 'manage_categories' );
-			},
-			'show_in_rest'      => array( 'schema' => array( 'type' => 'integer' ) ),
-		)
-	);
 }
 add_action( 'init', 'axismundi_geodata_register_meta' );

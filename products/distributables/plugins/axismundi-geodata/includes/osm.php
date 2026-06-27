@@ -159,6 +159,21 @@ function axismundi_geodata_osm_normalize_place( array $place ) : ?array {
 
 	$lat = isset( $place['lat'] ) ? axismundi_geodata_sanitize_latitude( $place['lat'] ) : null;
 	$lon = isset( $place['lon'] ) ? axismundi_geodata_sanitize_longitude( $place['lon'] ) : null;
+	$bounds = '';
+	if ( isset( $place['boundingbox'] ) && is_array( $place['boundingbox'] ) && 4 === count( $place['boundingbox'] ) ) {
+		// Nominatim returns south,north,west,east; the durable term value is W,S,E,N.
+		$bounds = axismundi_geodata_sanitize_bounds(
+			implode(
+				',',
+				array(
+					$place['boundingbox'][2],
+					$place['boundingbox'][0],
+					$place['boundingbox'][3],
+					$place['boundingbox'][1],
+				)
+			)
+		);
+	}
 
 	return array(
 		'place_id'      => $osm_type . '/' . $osm_id,
@@ -166,6 +181,7 @@ function axismundi_geodata_osm_normalize_place( array $place ) : ?array {
 		'address'       => $address,
 		'latitude'      => $lat,
 		'longitude'     => $lon,
+		'bounds'        => $bounds,
 		'place_type'    => axismundi_geodata_osm_type_to_place_type( $class, $type ),
 		'provider_type' => trim( $class . ':' . $type, ':' ),
 	);

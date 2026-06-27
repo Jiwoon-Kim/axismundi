@@ -23,7 +23,7 @@ back through one shared model. It registers:
 * **Coordinate meta** on posts, pages, and attachments — the observation /
   capture point, using the WordPress-convention `geo_latitude`, `geo_longitude`,
   `geo_public` keys plus `ax_geo_*` extensions.
-* **Place-fact term meta** — centroid, radius, bounds, and external place id on
+* **Place-fact term meta** — centroid, display bounds / zoom, and external place id on
   each geo_area / geotag term.
 
 Privacy is built into the model. The raw exact coordinate is stored, but

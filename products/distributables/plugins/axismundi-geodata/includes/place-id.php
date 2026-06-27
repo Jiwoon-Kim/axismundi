@@ -133,7 +133,7 @@ function axismundi_geodata_is_place_source( string $source ) : bool {
  * @param string $source   Provider slug (must be an allowed source).
  * @param string $place_id Provider raw id, or already-canonical id.
  * @param array  $facts    Optional facts: geo_latitude, geo_longitude, geo_address,
- *                         ax_geo_place_type.
+ *                         ax_geo_bounds, ax_geo_place_type.
  * @return string Canonical "source:id", or '' when the source is invalid or the id empty.
  */
 function axismundi_geodata_bind_place_identity( int $term_id, string $source, string $place_id, array $facts = array() ) : string {
@@ -145,7 +145,7 @@ function axismundi_geodata_bind_place_identity( int $term_id, string $source, st
 	update_term_meta( $term_id, 'ax_geo_place_id', $canonical );
 	delete_term_meta( $term_id, 'ax_geo_source' ); // Legacy split key.
 
-	foreach ( array( 'geo_latitude', 'geo_longitude', 'geo_address', 'ax_geo_place_type' ) as $key ) {
+	foreach ( array( 'geo_latitude', 'geo_longitude', 'geo_address', 'ax_geo_bounds', 'ax_geo_place_type' ) as $key ) {
 		if ( array_key_exists( $key, $facts ) && '' !== $facts[ $key ] && null !== $facts[ $key ] ) {
 			update_term_meta( $term_id, $key, $facts[ $key ] );
 		}

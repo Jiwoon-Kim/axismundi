@@ -8,8 +8,10 @@
  *
  * Mirrors axismundi/archive-results, inserting an Axismundi Map block between the
  * hero and the two-column body. The map uses source "current": on a geo_area
- * archive it draws the geotags within the area, on a geotag archive it draws that
- * single place — so one pattern serves both taxonomy-geo_area and taxonomy-geotag.
+ * archive it follows the geotags attached to posts on the current query page; on
+ * a geotag archive it draws that single place. Enhanced pagination updates the
+ * overlay without remounting the map, then refits the viewport to the new page's
+ * marker bounds.
  * The map needs the Axismundi Map plugin and a front-end map provider (Settings >
  * Geodata); without them it degrades to a short notice and the feed still renders.
  *

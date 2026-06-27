@@ -92,6 +92,49 @@
 		opts.latInput.addEventListener( 'change', syncFromInputs );
 		opts.lngInput.addEventListener( 'change', syncFromInputs );
 
+		// Optional integer zoom <-> field sync (geo_area editor only). Framing the
+		// map captures the archive zoom; typing a value reframes the map.
+		if ( opts.zoomInput ) {
+			var initZoom = parseInt( opts.zoomInput.value, 10 );
+			if ( isFinite( initZoom ) && initZoom > 0 ) {
+				map.setZoom( initZoom );
+			}
+			map.on( 'zoomend', function () {
+				opts.zoomInput.value = Math.round( map.getZoom() );
+			} );
+			opts.zoomInput.addEventListener( 'change', function () {
+				var z = parseInt( opts.zoomInput.value, 10 );
+				if ( isFinite( z ) ) {
+					map.setZoom( z );
+				}
+			} );
+		}
+
+		// Optional read-only bounds preview rectangle (geo_area editor only): shows
+		// the stored W,S,E,N. The "use current view" button fills the field; we only
+		// draw it here.
+		var boundsRect = null;
+		function drawBounds() {
+			if ( boundsRect ) {
+				map.removeLayer( boundsRect );
+				boundsRect = null;
+			}
+			if ( ! opts.boundsInput ) {
+				return;
+			}
+			var p = ( opts.boundsInput.value || '' ).split( ',' ).map( num );
+			if ( 4 === p.length && -1 === p.indexOf( null ) ) {
+				// W,S,E,N -> Leaflet [ [ S, W ], [ N, E ] ].
+				boundsRect = L.rectangle( [ [ p[ 1 ], p[ 0 ] ], [ p[ 3 ], p[ 2 ] ] ], {
+					color: '#1565c0', weight: 1, fill: false, dashArray: '4 3', interactive: false
+				} ).addTo( map );
+			}
+		}
+		if ( opts.boundsInput ) {
+			drawBounds();
+			opts.boundsInput.addEventListener( 'change', drawBounds );
+		}
+
 		window.setTimeout( function () {
 			map.invalidateSize();
 		}, 60 );
@@ -119,6 +162,11 @@
 				}
 			},
 			clearCandidates: clearCandidates,
+			// Current map viewport as a "W,S,E,N" string — for the bounds capture button.
+			getViewBounds: function () {
+				var b = map.getBounds();
+				return [ round7( b.getWest() ), round7( b.getSouth() ), round7( b.getEast() ), round7( b.getNorth() ) ].join( ',' );
+			},
 			// Zoom / recentre on a chosen candidate without re-writing inputs
 			// (applyFacts already set them); just frame the corrected point.
 			focus: function ( la, ln, zoom ) {

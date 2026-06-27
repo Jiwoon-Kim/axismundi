@@ -118,3 +118,19 @@ offer an explicit "Import boundary" action after an OSM place is bound. That act
 must persist the returned geometry as an attachment and reuse it thereafter; it
 must not fetch topology on every editor or front-end render. Google Places
 viewports are display hints and must not be treated as physical boundaries.
+
+### Geo-area archive viewport policy
+
+The front-end Query Map View does not infer scale from an administrative type or
+from a generic radius. Its viewport priority is:
+
+1. When the current query page has geotag markers, fit all marker coordinates.
+   Enhanced pagination refits the persistent map instance to the replacement
+   marker set.
+2. With no markers, use the geo_area centre plus an explicit `ax_geo_zoom` when
+   an editor supplied one.
+3. Otherwise fit `ax_geo_bounds`, a W,S,E,N display viewport supplied by a lookup
+   or entered manually.
+4. If none exists, use the centre with the renderer's conservative default zoom.
+
+`ax_geo_bounds` is a camera hint, not authoritative administrative geometry.

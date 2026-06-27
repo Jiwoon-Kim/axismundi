@@ -31,10 +31,6 @@
 			if ( 'media' === a.source && a.mediaIds && a.mediaIds.length ) {
 				summary += ' (' + a.mediaIds.length + ' media)';
 			}
-			if ( 'geotags' === a.source && a.areaId ) {
-				summary += ' (area ' + a.areaId + ')';
-			}
-
 			function setMedia( media ) {
 				var items = Array.isArray( media ) ? media : [ media ];
 				set( { mediaIds: items.map( function ( item ) { return item && item.id ? parseInt( item.id, 10 ) : 0; } ).filter( Boolean ) } );
@@ -60,12 +56,6 @@
 								{ label: __( 'Track', 'axismundi-map' ), value: 'track' }
 							],
 							onChange: function ( v ) { set( { source: v } ); }
-						} ),
-						'geotags' === a.source && el( TextControl, {
-							label: __( 'Geo area ID (optional)', 'axismundi-map' ),
-							type: 'number',
-							value: a.areaId || 0,
-							onChange: function ( v ) { set( { areaId: parseInt( v, 10 ) || 0 } ); }
 						} ),
 						'geotags' === a.source && el( TextControl, {
 							label: __( 'BBox — w,s,e,n (optional)', 'axismundi-map' ),

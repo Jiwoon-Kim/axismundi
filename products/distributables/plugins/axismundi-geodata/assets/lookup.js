@@ -62,6 +62,7 @@
 		setInputValue( 'geo_address', data.facts?.geo_address || candidate.address || '' );
 		setInputValue( 'geo_latitude', data.facts?.geo_latitude ?? candidate.latitude ?? '' );
 		setInputValue( 'geo_longitude', data.facts?.geo_longitude ?? candidate.longitude ?? '' );
+		setInputValue( 'ax_geo_bounds', data.facts?.ax_geo_bounds || candidate.bounds || '' );
 
 		const type = data.facts?.ax_geo_place_type || candidate.place_type || '';
 		const select = document.getElementById( 'ax_geo_place_type' );
@@ -80,6 +81,7 @@
 				geo_address: candidate.address || '',
 				geo_latitude: candidate.latitude ?? '',
 				geo_longitude: candidate.longitude ?? '',
+				ax_geo_bounds: candidate.bounds || '',
 				ax_geo_place_type: candidate.place_type || '',
 			},
 		}, candidate );

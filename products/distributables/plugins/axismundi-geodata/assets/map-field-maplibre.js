@@ -108,6 +108,52 @@
 		opts.latInput.addEventListener( 'change', syncFromInputs );
 		opts.lngInput.addEventListener( 'change', syncFromInputs );
 
+		// Optional integer zoom <-> field sync (geo_area editor only). Framing the
+		// map captures the archive zoom; typing a value reframes the map.
+		if ( opts.zoomInput ) {
+			var initZoom = parseInt( opts.zoomInput.value, 10 );
+			if ( isFinite( initZoom ) && initZoom > 0 ) {
+				map.setZoom( initZoom );
+			}
+			map.on( 'zoomend', function () {
+				opts.zoomInput.value = Math.round( map.getZoom() );
+			} );
+			opts.zoomInput.addEventListener( 'change', function () {
+				var z = parseInt( opts.zoomInput.value, 10 );
+				if ( isFinite( z ) ) {
+					map.setZoom( z );
+				}
+			} );
+		}
+
+		// Optional read-only bounds preview rectangle (geo_area editor only): the
+		// stored W,S,E,N drawn as an outline; the capture button fills the field.
+		function drawBounds() {
+			if ( ! opts.boundsInput ) {
+				return;
+			}
+			var p    = ( opts.boundsInput.value || '' ).split( ',' ).map( num );
+			var data = { type: 'FeatureCollection', features: [] };
+			if ( 4 === p.length && -1 === p.indexOf( null ) ) {
+				data = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [ [ [ p[ 0 ], p[ 1 ] ], [ p[ 2 ], p[ 1 ] ], [ p[ 2 ], p[ 3 ] ], [ p[ 0 ], p[ 3 ] ], [ p[ 0 ], p[ 1 ] ] ] ] } };
+			}
+			var src = map.getSource( 'axgeo-bounds' );
+			if ( src ) {
+				src.setData( data );
+			} else if ( map.isStyleLoaded() ) {
+				map.addSource( 'axgeo-bounds', { type: 'geojson', data: data } );
+				map.addLayer( { id: 'axgeo-bounds', type: 'line', source: 'axgeo-bounds', paint: { 'line-color': '#1565c0', 'line-width': 1, 'line-dasharray': [ 4, 3 ] } } );
+			}
+		}
+		if ( opts.boundsInput ) {
+			if ( map.isStyleLoaded() ) {
+				drawBounds();
+			} else {
+				map.on( 'load', drawBounds );
+			}
+			opts.boundsInput.addEventListener( 'change', drawBounds );
+		}
+
 		// Lookup candidate pins: a set of clickable result markers the place-lookup UI
 		// drops, distinct from the single draggable term marker.
 		var candidateMarkers = [];
@@ -131,6 +177,10 @@
 				}
 			},
 			clearCandidates: clearCandidates,
+			getViewBounds: function () {
+				var b = map.getBounds();
+				return [ round7( b.getWest() ), round7( b.getSouth() ), round7( b.getEast() ), round7( b.getNorth() ) ].join( ',' );
+			},
 			focus: function ( la, ln, zoom ) {
 				if ( null !== num( la ) && null !== num( ln ) ) {
 					map.flyTo( { center: [ num( ln ), num( la ) ], zoom: zoom || 15 } );

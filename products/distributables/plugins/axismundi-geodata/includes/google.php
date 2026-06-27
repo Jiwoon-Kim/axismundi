@@ -188,7 +188,7 @@ function axismundi_geodata_google_reverse( float $lat, float $lng, string $taxon
  * Google Places API (New) requires an explicit field mask. Keep this narrow so a
  * lookup returns only the facts we can bind to a term.
  */
-const AXISMUNDI_GEODATA_GOOGLE_TEXT_SEARCH_FIELDS = 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types';
+const AXISMUNDI_GEODATA_GOOGLE_TEXT_SEARCH_FIELDS = 'places.id,places.displayName,places.formattedAddress,places.location,places.viewport,places.primaryType,places.types';
 
 /**
  * Normalise a Google Places result into a term-bindable candidate.
@@ -211,6 +211,22 @@ function axismundi_geodata_google_normalize_place( array $place ) : ?array {
 	$google_type = isset( $place['primaryType'] ) ? sanitize_key( (string) $place['primaryType'] ) : '';
 	$latitude    = isset( $place['location']['latitude'] ) ? axismundi_geodata_sanitize_latitude( $place['location']['latitude'] ) : null;
 	$longitude   = isset( $place['location']['longitude'] ) ? axismundi_geodata_sanitize_longitude( $place['location']['longitude'] ) : null;
+	$bounds      = '';
+	if ( isset( $place['viewport']['low'], $place['viewport']['high'] ) ) {
+		$low    = (array) $place['viewport']['low'];
+		$high   = (array) $place['viewport']['high'];
+		$bounds = axismundi_geodata_sanitize_bounds(
+			implode(
+				',',
+				array(
+					$low['longitude'] ?? '',
+					$low['latitude'] ?? '',
+					$high['longitude'] ?? '',
+					$high['latitude'] ?? '',
+				)
+			)
+		);
+	}
 
 	return array(
 		'place_id'      => $id,
@@ -218,6 +234,7 @@ function axismundi_geodata_google_normalize_place( array $place ) : ?array {
 		'address'       => $address,
 		'latitude'      => $latitude,
 		'longitude'     => $longitude,
+		'bounds'        => $bounds,
 		'place_type'    => axismundi_geodata_from_google_type( $google_type ),
 		'provider_type' => $google_type,
 	);

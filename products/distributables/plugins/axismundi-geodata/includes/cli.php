@@ -53,7 +53,7 @@ class Axismundi_Geodata_CLI {
 			array( 'name' => '수영구', 'parent' => '부산광역시', 'lat' => 35.1455, 'lng' => 129.1132, 'type' => 'district', 'address' => '부산광역시 수영구' ),
 			array( 'name' => '광안동', 'parent' => '수영구', 'lat' => 35.1530, 'lng' => 129.1130, 'type' => 'neighborhood', 'address' => '부산광역시 수영구 광안동' ),
 		);
-		$geotag = array( 'name' => '광안리해수욕장', 'area' => '광안동', 'lat' => 35.1532, 'lng' => 129.1186, 'type' => 'beach', 'address' => '부산광역시 수영구 광안해변로 219', 'place_id' => 'manual:gwangalli-beach' );
+		$geotag = array( 'name' => '광안리해수욕장', 'lat' => 35.1532, 'lng' => 129.1186, 'type' => 'beach', 'address' => '부산광역시 수영구 광안해변로 219', 'place_id' => 'manual:gwangalli-beach' );
 
 		if ( ! empty( $assoc_args['remove'] ) ) {
 			$gt = get_term_by( 'name', $geotag['name'], 'geotag' );
@@ -84,9 +84,6 @@ class Axismundi_Geodata_CLI {
 		$gt_id = $this->upsert_term( $geotag['name'], 'geotag', 0 );
 		if ( $gt_id ) {
 			$this->set_place_meta( $gt_id, $geotag );
-			if ( ! empty( $ids[ $geotag['area'] ] ) ) {
-				update_term_meta( $gt_id, 'ax_geo_area', $ids[ $geotag['area'] ] );
-			}
 		}
 
 		WP_CLI::success( 'Seeded Axismundi Geodata demo: 4 geo areas + 1 geotag (Gwangalli Beach).' );

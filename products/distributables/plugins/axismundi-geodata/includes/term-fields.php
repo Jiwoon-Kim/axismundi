@@ -3,7 +3,7 @@
  * Term editor fields for the place-fact meta.
  *
  * Adds coordinate / place inputs to the Add New and Edit screens of both geo
- * taxonomies so a term (a named Place) can carry its centroid, radius, type, and
+ * taxonomies so a term (a named Place) can carry its centroid, viewport, type, and
  * identity.
  *
  * @package AxismundiGeodata
@@ -45,6 +45,16 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 	);
 
 	if ( $is_area ) {
+		$fields['ax_geo_bounds']       = array(
+			'label' => __( 'Map bounds', 'axismundi-geodata' ),
+			'type'  => 'text',
+			'help'  => __( 'Optional display viewport as west,south,east,north. A lookup may fill it; it is used only when the archive has no geotag markers.', 'axismundi-geodata' ),
+		);
+		$fields['ax_geo_zoom']         = array(
+			'label' => __( 'Map zoom', 'axismundi-geodata' ),
+			'type'  => 'number',
+			'help'  => __( 'Optional fallback zoom from 0 to 22. Used with the centre coordinate when the archive has no geotag markers and no map bounds.', 'axismundi-geodata' ),
+		);
 		$fields['ax_geo_country_code'] = array(
 			'label' => __( 'Country code', 'axismundi-geodata' ),
 			'type'  => 'text',
@@ -75,46 +85,6 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 }
 
 /**
- * Render the geotag -> geo_area select (geotag screens only). A geotag points at
- * a single leaf area; its ancestors come from the geo_area hierarchy.
- *
- * @param string $taxonomy Taxonomy being edited.
- * @param int    $selected Currently selected geo_area term id.
- * @param string $context  'add' (div layout) or 'edit' (table row).
- * @return void
- */
-function axismundi_geodata_render_area_select( string $taxonomy, int $selected, string $context ) : void {
-	if ( 'geotag' !== $taxonomy ) {
-		return;
-	}
-
-	$dropdown = wp_dropdown_categories(
-		array(
-			'taxonomy'          => 'geo_area',
-			'name'              => 'ax_geo_area',
-			'id'                => 'ax_geo_area',
-			'hierarchical'      => true,
-			'hide_empty'        => false,
-			'show_option_none'  => __( '— None —', 'axismundi-geodata' ),
-			'option_none_value' => '0',
-			'selected'          => $selected,
-			'orderby'           => 'name',
-			'echo'              => false,
-		)
-	);
-
-	$label = esc_html__( 'Geo Area', 'axismundi-geodata' );
-	$help  = esc_html__( 'The administrative area this place sits in; its parents are derived from the area hierarchy.', 'axismundi-geodata' );
-
-	// wp_dropdown_categories() returns escaped markup.
-	if ( 'edit' === $context ) {
-		echo '<tr class="form-field"><th scope="row"><label for="ax_geo_area">' . $label . '</label></th><td>' . $dropdown . '<p class="description">' . $help . '</p></td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-	} else {
-		echo '<div class="form-field"><label for="ax_geo_area">' . $label . '</label>' . $dropdown . '<p>' . $help . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-	}
-}
-
-/**
  * Build the form control (input or grouped select) for one term field.
  *
  * @param string $key      Meta key / field name.
@@ -128,7 +98,11 @@ function axismundi_geodata_term_control( string $key, array $field, string $valu
 		return axismundi_geodata_place_type_select( $taxonomy, $key, $value );
 	}
 
-	$attrs = ( 'number' === $field['type'] ? ' step="any"' : '' ) . ( empty( $field['disabled'] ) ? '' : ' disabled' );
+	$attrs = 'number' === $field['type'] ? ' step="any"' : '';
+	if ( 'ax_geo_zoom' === $key ) {
+		$attrs = ' min="0" max="22" step="1"';
+	}
+	$attrs .= empty( $field['disabled'] ) ? '' : ' disabled';
 
 	return sprintf(
 		'<input type="%2$s"%3$s name="%1$s" id="%1$s" value="%4$s" />',
@@ -146,20 +120,26 @@ function axismundi_geodata_term_control( string $key, array $field, string $valu
  * @param string $context 'add' (div layout) or 'edit' (table row).
  * @return void
  */
-function axismundi_geodata_render_term_map( string $context ) : void {
+function axismundi_geodata_render_term_map( string $context, string $taxonomy = '' ) : void {
 	if ( ! axismundi_geodata_resolve_tiles( 'admin' )['enabled'] ) {
 		return;
 	}
 
-	$label = esc_html__( 'Map', 'axismundi-geodata' );
-	$help  = esc_html__( 'Click the map or drag the marker to set the centre coordinates.', 'axismundi-geodata' );
-	$map   = '<div id="axgeo-term-map" style="height:260px;max-width:520px;border-radius:4px;overflow:hidden;"></div>';
+	$is_area = 'geo_area' === $taxonomy;
+	$label   = esc_html__( 'Map', 'axismundi-geodata' );
+	$help    = $is_area
+		? esc_html__( 'Click or drag the marker to set the centre. Zooming the map syncs Map zoom; the button captures Map bounds from the current view.', 'axismundi-geodata' )
+		: esc_html__( 'Click the map or drag the marker to set the centre coordinates.', 'axismundi-geodata' );
+	$map     = '<div id="axgeo-term-map" style="height:260px;max-width:520px;border-radius:4px;overflow:hidden;"></div>';
+	$capture = $is_area
+		? '<p><button type="button" id="axgeo-capture-bounds" class="button">' . esc_html__( 'Use current map view as Map bounds', 'axismundi-geodata' ) . '</button></p>'
+		: '';
 
-	// $map is a static literal; $label / $help are escaped above.
+	// $map / $capture are static literals; $label / $help / button text escaped above.
 	if ( 'edit' === $context ) {
-		echo '<tr class="form-field"><th scope="row">' . $label . '</th><td>' . $map . '<p class="description">' . $help . '</p></td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<tr class="form-field"><th scope="row">' . $label . '</th><td>' . $map . $capture . '<p class="description">' . $help . '</p></td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	} else {
-		echo '<div class="form-field"><label>' . $label . '</label>' . $map . '<p>' . $help . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<div class="form-field"><label>' . $label . '</label>' . $map . $capture . '<p>' . $help . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 }
 
@@ -269,11 +249,10 @@ function axismundi_geodata_render_term_controls( array $keys, array $fields, str
 function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
 	$fields = axismundi_geodata_term_fields( $taxonomy );
-	axismundi_geodata_render_area_select( $taxonomy, 0, 'add' );
 	axismundi_geodata_render_term_controls( array( 'ax_geo_place_type' ), $fields, $taxonomy, 'add' );
 	axismundi_geodata_render_place_lookup( null, $taxonomy, 'add' );
-	axismundi_geodata_render_term_map( 'add' );
-	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude' ), $fields, $taxonomy, 'add' );
+	axismundi_geodata_render_term_map( 'add', $taxonomy );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude', 'ax_geo_bounds', 'ax_geo_zoom' ), $fields, $taxonomy, 'add' );
 	axismundi_geodata_render_term_controls( array( 'ax_geo_country_code', 'ax_geo_iso_3166_2' ), $fields, $taxonomy, 'add' );
 }
 
@@ -287,11 +266,10 @@ function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
 	$fields = axismundi_geodata_term_fields( $taxonomy );
-	axismundi_geodata_render_area_select( $taxonomy, axismundi_geodata_get_geotag_area_id( $term->term_id ), 'edit' );
 	axismundi_geodata_render_term_controls( array( 'ax_geo_place_type' ), $fields, $taxonomy, 'edit', $term );
 	axismundi_geodata_render_place_lookup( $term, $taxonomy, 'edit' );
-	axismundi_geodata_render_term_map( 'edit' );
-	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude' ), $fields, $taxonomy, 'edit', $term );
+	axismundi_geodata_render_term_map( 'edit', $taxonomy );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude', 'ax_geo_bounds', 'ax_geo_zoom' ), $fields, $taxonomy, 'edit', $term );
 	axismundi_geodata_render_term_controls( array( 'ax_geo_country_code', 'ax_geo_iso_3166_2' ), $fields, $taxonomy, 'edit', $term );
 }
 
@@ -338,18 +316,6 @@ function axismundi_geodata_term_save( int $term_id ) : void {
 		} else {
 			// register_term_meta sanitises per its callback on update.
 			update_term_meta( $term_id, $key, $value );
-		}
-	}
-
-	// geotag -> geo_area pointer; only the geotag screen posts this field. Store
-	// only a real geo_area term id, else clear it.
-	if ( isset( $_POST['ax_geo_area'] ) ) {
-		$area      = absint( wp_unslash( $_POST['ax_geo_area'] ) );
-		$area_term = $area ? get_term( $area ) : null;
-		if ( $area_term instanceof WP_Term && 'geo_area' === $area_term->taxonomy ) {
-			update_term_meta( $term_id, 'ax_geo_area', $area );
-		} else {
-			delete_term_meta( $term_id, 'ax_geo_area' );
 		}
 	}
 }

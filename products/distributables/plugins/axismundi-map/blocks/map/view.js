@@ -37,6 +37,13 @@
 		} );
 	}
 
+	function loadGeojson( cfg ) {
+		if ( cfg.geojsonData ) {
+			return Promise.resolve( cfg.geojsonData );
+		}
+		return cfg.geojson ? fetchGeojson( cfg.geojson ) : null;
+	}
+
 	function popupTitle( props ) {
 		props = props || {};
 		if ( 'track' === props.type && props.name ) {
@@ -168,11 +175,7 @@
 			enableLeafletVisitorLocation( map, L );
 		}
 
-		if ( ! cfg.geojson ) {
-			return;
-		}
-		fetchGeojson( cfg.geojson ).then( function ( gj ) {
-			var layer = L.geoJSON( gj, {
+		var layer = L.geoJSON( null, {
 				pointToLayer: function ( feature, latlng ) {
 					return L.circleMarker( latlng, { radius: 6, color: '#d32f2f', weight: 2, fillColor: '#d32f2f', fillOpacity: 0.7 } );
 				},
@@ -186,17 +189,44 @@
 					}
 				}
 			} ).addTo( map );
+
+		function setGeojson( gj, fitView ) {
+			layer.clearLayers();
+			layer.addData( gj );
+			if ( ! fitView ) {
+				return;
+			}
 			try {
 				var b = layer.getBounds();
 				if ( b.isValid() ) {
 					if ( b.getNorthEast().equals( b.getSouthWest() ) ) {
-						map.setView( b.getCenter(), cfg.zoom > 0 ? cfg.zoom : 14 );
+						map.setView( b.getCenter(), cfg.singlePointZoom > 0 ? cfg.singlePointZoom : ( cfg.zoom > 0 ? cfg.zoom : 14 ) );
 					} else {
 						map.fitBounds( b, { padding: [ 24, 24 ], maxZoom: 15 } );
 					}
+				} else if ( cfg.fallbackBounds && 4 === cfg.fallbackBounds.length ) {
+					map.fitBounds(
+						[ [ cfg.fallbackBounds[ 1 ], cfg.fallbackBounds[ 0 ] ], [ cfg.fallbackBounds[ 3 ], cfg.fallbackBounds[ 2 ] ] ],
+						{ padding: [ 24, 24 ], maxZoom: 15 }
+					);
+				} else {
+					map.setView( [ cz.center[ 1 ], cz.center[ 0 ] ], cz.zoom );
 				}
 			} catch ( e ) {}
-		} ).catch( function () {} );
+		}
+
+		canvas.axismundiMapController = {
+			setGeojson: function ( gj ) {
+				setGeojson( gj, !! cfg.fitGeojson );
+			}
+		};
+
+		var geojson = loadGeojson( cfg );
+		if ( geojson ) {
+			geojson.then( function ( gj ) {
+				setGeojson( gj, true );
+			} ).catch( function () {} );
+		}
 	}
 
 	/* ---- Theme light / dark ---- */
@@ -486,6 +516,59 @@
 			} );
 		}
 
+		function fitGeojsonView( gj ) {
+			var b = geojsonBounds( gj );
+			if ( b ) {
+				if ( b[ 0 ][ 0 ] === b[ 1 ][ 0 ] && b[ 0 ][ 1 ] === b[ 1 ][ 1 ] ) {
+					map.jumpTo( { center: b[ 0 ], zoom: cfg.singlePointZoom > 0 ? cfg.singlePointZoom : ( cfg.zoom > 0 ? cfg.zoom : 14 ) } );
+				} else {
+					map.fitBounds( b, { padding: 24, maxZoom: 15, duration: 0 } );
+				}
+			} else if ( cfg.fallbackBounds && 4 === cfg.fallbackBounds.length ) {
+				map.fitBounds(
+					[ [ cfg.fallbackBounds[ 0 ], cfg.fallbackBounds[ 1 ] ], [ cfg.fallbackBounds[ 2 ], cfg.fallbackBounds[ 3 ] ] ],
+					{ padding: 24, maxZoom: 15, duration: 0 }
+				);
+			} else {
+				map.jumpTo( { center: cz.center, zoom: cz.zoom } );
+			}
+		}
+
+		function setGeojson( gj, fitView ) {
+			cachedGj = gj;
+			if ( ! map.isStyleLoaded() ) {
+				return;
+			}
+
+			var source = map.getSource( 'axgeo' );
+			if ( ! source ) {
+				addLayers();
+				bindOnce();
+				if ( fitView ) {
+					fitGeojsonView( gj );
+				}
+				return;
+			}
+
+			source.setData( gj );
+			var endpoints       = trackEndpointFeatures( gj );
+			var endpointSource  = map.getSource( 'axgeo-track-endpoints' );
+			if ( endpointSource ) {
+				endpointSource.setData( endpoints );
+			} else if ( endpoints.features.length ) {
+				addLayers();
+			}
+			if ( fitView ) {
+				fitGeojsonView( gj );
+			}
+		}
+
+		canvas.axismundiMapController = {
+			setGeojson: function ( gj ) {
+				setGeojson( gj, !! cfg.fitGeojson );
+			}
+		};
+
 		// Re-tint the basemap when the theme mode flips; the overlay layers are
 		// re-added once the new style finishes loading.
 		watchTheme( function ( dark ) {
@@ -493,32 +576,30 @@
 			// 'style.load' isn't reliably re-emitted by setStyle in MapLibre 5; 'idle'
 			// fires once the new basemap has settled, when re-adding is safe.
 			map.once( 'idle', function () {
+				// Overlay first — see the load handler: addRasterFallback() unloads the
+				// style momentarily and would make a later addLayers() bail.
+				addLayers();
 				updateRasterFallbackForViewport();
 				addRasterFallback();
-				addLayers();
 			} );
 		} );
 
-		if ( ! cfg.geojson ) {
+		var geojson = loadGeojson( cfg );
+		if ( ! geojson ) {
 			return;
 		}
 		map.on( 'load', function () {
-			fetchGeojson( cfg.geojson ).then( function ( gj ) {
+			geojson.then( function ( gj ) {
 				cachedGj = gj;
 				bindOnce();
 				var b = geojsonBounds( gj );
-				if ( b ) {
-					if ( b[ 0 ][ 0 ] === b[ 1 ][ 0 ] && b[ 0 ][ 1 ] === b[ 1 ][ 1 ] ) {
-						// A single point (e.g. one geotag archive) — fitBounds can't pick a
-						// zoom from a zero-size box, so place it directly.
-						map.jumpTo( { center: b[ 0 ], zoom: cfg.zoom > 0 ? cfg.zoom : 14 } );
-					} else {
-						map.fitBounds( b, { padding: 24, maxZoom: 15, duration: 0 } );
-					}
-				}
+				fitGeojsonView( gj );
+				// Add the overlay BEFORE the raster fallback: adding the fallback raster
+				// source flips map.isStyleLoaded() to false, which would make addLayers()
+				// bail and leave a geo-area archive with no markers.
+				addLayers();
 				cfg.rasterFallbackActive = !! ( cfg.rasterTileUrl && ( ! containsBounds( cfg.bounds, boundsArray( b ) ) || ! containsBounds( cfg.bounds, mapBoundsArray( map ) ) ) );
 				updateRasterFallbackForViewport();
-				addLayers();
 			} ).catch( function () {} );
 		} );
 		map.on( 'moveend', updateRasterFallbackForViewport );

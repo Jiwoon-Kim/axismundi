@@ -9,7 +9,7 @@
  * public named-place facts; post exact coordinates (privacy-rounded) and a bbox
  * query for archive/search map views come later.
  *
- *   GET /wp-json/axismundi-geodata/v1/geotags?area={id}&geotag={id}&bbox=w,s,e,n
+ *   GET /wp-json/axismundi-geodata/v1/geotags?geotag={id}&bbox=w,s,e,n
  *   GET /wp-json/axismundi-geodata/v1/media?ids=1,2,3
  *   GET /wp-json/axismundi-geodata/v1/track/{attachment_id}
  *
@@ -32,9 +32,8 @@ function axismundi_geodata_register_geojson_routes() : void {
 			'callback'            => 'axismundi_geodata_rest_geotags_geojson',
 			'permission_callback' => '__return_true',
 			'args'                => array(
-				'area' => array( 'type' => 'integer', 'required' => false ),
 				'geotag' => array( 'type' => 'integer', 'required' => false ),
-				'bbox' => array( 'type' => 'string', 'required' => false ),
+				'bbox'   => array( 'type' => 'string', 'required' => false ),
 			),
 		)
 	);
@@ -133,12 +132,9 @@ function axismundi_geodata_geotag_feature( WP_Term $term ) : ?array {
  */
 function axismundi_geodata_rest_geotags_geojson( WP_REST_Request $request ) : WP_REST_Response {
 	$single = (int) $request->get_param( 'geotag' );
-	$area   = (int) $request->get_param( 'area' );
 	if ( $single > 0 ) {
 		$term  = get_term( $single, 'geotag' );
 		$terms = $term instanceof WP_Term ? array( $term ) : array();
-	} elseif ( $area > 0 ) {
-		$terms = axismundi_geodata_get_geotags_in_area( $area );
 	} else {
 		$terms = get_terms( array( 'taxonomy' => 'geotag', 'hide_empty' => false ) );
 		if ( is_wp_error( $terms ) ) {

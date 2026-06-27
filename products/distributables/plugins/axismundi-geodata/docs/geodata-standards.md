@@ -110,14 +110,20 @@ mixing it up is the classic "Busan ends up in the sea" bug:
 | Geo URI | **lat, lon** | `geo:35.1547,129.1199;u=30` | RFC 5870 (`u` = uncertainty, metres) |
 | ISO 6709 | **lat, lon** | `+35.1547+129.1199+30.000/` | ISO 6709 (sign-prefixed; trailing `/`) |
 
-Our fields map 1:1, so these are pure formatters to add (planned):
+Our fields map 1:1, so these are pure formatters (`includes/coordinates.php`):
 
 - `geo_latitude`, `geo_longitude` → required pair
 - `geo_altitude` → 3rd coordinate (metres)
 - `geo_accuracy` → Geo URI `u=` uncertainty (metres)
 
-Name the helpers unambiguously: `…_to_geo_uri()` (lat,lng), `…_to_iso6709()`
-(lat,lng), `…_to_geojson_position()` (lng,lat).
+The helpers are named unambiguously to keep the order straight:
+`axismundi_geodata_coords_to_geo_uri()` (lat,lng), `…_to_iso6709()` (lat,lng),
+`…_to_geojson_position()` (lng,lat). The GeoJSON REST export now carries a `geo_uri`
+property on each point feature (attachment points include altitude + `u=` accuracy);
+the GeoJSON geometry is built through `…_to_geojson_position()` so the lon/lat order
+is set in exactly one place. The Geo URI omits `crs` (RFC 5870's default is already
+WGS 84) and the GeoJSON stays free of a `crs` member (RFC 7946 mandates WGS 84 and
+removed alternate-CRS support).
 
 ## Standards summary
 
@@ -125,10 +131,11 @@ Name the helpers unambiguously: `…_to_geo_uri()` (lat,lng), `…_to_iso6709()`
 - ISO 3166-1 alpha-2 — `ax_geo_country_code` (→ schema.org addressCountry)
 - ISO 3166-2 — `ax_geo_iso_3166_2` (subdivision code, any level → schema.org addressRegion)
 - GeoJSON / RFC 7946 — REST export ([lon,lat], WGS84)
+- RFC 5870 Geo URI, ISO 6709 — coordinate formatters (`includes/coordinates.php`);
+  `geo_uri` on GeoJSON point features
 - ISO 8601 — timestamps (WordPress default; GPX/KML track times)
 
 **Planned**
-- RFC 5870 Geo URI, ISO 6709 — coordinate formatters
 - ISO 19107 geometry (GeoJSON Polygon/MultiPolygon) — geo_area boundary upload
 - ISO 19115 (lightweight) — map-pack / export dataset metadata (source, license,
   extent, CRS)

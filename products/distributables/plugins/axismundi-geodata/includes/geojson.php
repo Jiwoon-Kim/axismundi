@@ -111,7 +111,7 @@ function axismundi_geodata_geotag_feature( WP_Term $term ) : ?array {
 		'type'       => 'Feature',
 		'geometry'   => array(
 			'type'        => 'Point',
-			'coordinates' => array( (float) $lon, (float) $lat ),
+			'coordinates' => axismundi_geodata_coords_to_geojson_position( $lat, $lon ),
 		),
 		'properties' => array(
 			'id'         => $term->term_id,
@@ -119,6 +119,7 @@ function axismundi_geodata_geotag_feature( WP_Term $term ) : ?array {
 			'title'      => $term->name,
 			'place_type' => (string) get_term_meta( $term->term_id, 'ax_geo_place_type', true ),
 			'place_id'   => axismundi_geodata_canonical_place_id( $term->term_id ),
+			'geo_uri'    => axismundi_geodata_coords_to_geo_uri( $lat, $lon ),
 			'url'        => is_wp_error( $link ) ? '' : $link,
 		),
 	);
@@ -229,17 +230,20 @@ function axismundi_geodata_attachment_point_feature( int $attachment_id ) : ?arr
 
 	$thumb = wp_get_attachment_image_src( $attachment_id, 'thumbnail' );
 	$full  = wp_get_attachment_url( $attachment_id );
+	$alt   = get_post_meta( $attachment_id, 'geo_altitude', true );
+	$acc   = get_post_meta( $attachment_id, 'geo_accuracy', true );
 
 	return array(
 		'type'       => 'Feature',
 		'geometry'   => array(
 			'type'        => 'Point',
-			'coordinates' => array( (float) $lon, (float) $lat ),
+			'coordinates' => axismundi_geodata_coords_to_geojson_position( $lat, $lon, '' !== (string) $alt ? $alt : null ),
 		),
 		'properties' => array(
 			'id'        => $attachment_id,
 			'type'      => 'attachment',
 			'title'     => get_the_title( $attachment_id ),
+			'geo_uri'   => axismundi_geodata_coords_to_geo_uri( $lat, $lon, '' !== (string) $alt ? $alt : null, '' !== (string) $acc ? $acc : null ),
 			'url'       => get_attachment_link( $attachment_id ),
 			'media_url' => $full ? $full : '',
 			'thumbnail' => is_array( $thumb ) ? (string) $thumb[0] : '',

@@ -50,25 +50,15 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 	);
 
 	if ( $is_area ) {
-		$fields['ax_geo_country_code']  = array(
+		$fields['ax_geo_country_code'] = array(
 			'label' => __( 'Country code', 'axismundi-geodata' ),
 			'type'  => 'text',
-			'help'  => __( 'ISO 3166-1 alpha-2, e.g. KR.', 'axismundi-geodata' ),
+			'help'  => __( 'ISO 3166-1 alpha-2, e.g. KR (schema.org addressCountry). Set it on the Country term; descendants inherit it through the hierarchy.', 'axismundi-geodata' ),
 		);
-		$fields['ax_geo_national_code'] = array(
-			'label' => __( 'National code', 'axismundi-geodata' ),
-			'type'  => 'text',
-			'help'  => __( 'National administrative code, e.g. 26 / 26500 / 2650010400. Pair it with Code scheme.', 'axismundi-geodata' ),
-		);
-		$fields['ax_geo_iso_3166_2']    = array(
+		$fields['ax_geo_iso_3166_2']   = array(
 			'label' => __( 'ISO 3166-2', 'axismundi-geodata' ),
 			'type'  => 'text',
-			'help'  => __( 'e.g. KR-26 — first-level divisions only; leave blank otherwise.', 'axismundi-geodata' ),
-		);
-		$fields['ax_geo_code_scheme']   = array(
-			'label' => __( 'Code scheme', 'axismundi-geodata' ),
-			'type'  => 'text',
-			'help'  => __( 'What National code means — e.g. KR_LEGAL_DONG, KR_ADMIN_DONG, ISO_3166-2, MOIS.', 'axismundi-geodata' ),
+			'help'  => __( 'The ISO 3166-2 subdivision code where one exists, e.g. KR-26, US-CA, US-DC (schema.org addressRegion). Not limited to first-order divisions.', 'axismundi-geodata' ),
 		);
 	}
 
@@ -186,8 +176,8 @@ function axismundi_geodata_render_term_map( string $context ) : void {
  * @param WP_Term $term Term being edited.
  * @return void
  */
-function axismundi_geodata_render_place_lookup( WP_Term $term ) : void {
-	if ( ! in_array( $term->taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+function axismundi_geodata_render_place_lookup( ?WP_Term $term, string $taxonomy, string $context ) : void {
+	if ( ! in_array( $taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
 		return;
 	}
 
@@ -195,11 +185,25 @@ function axismundi_geodata_render_place_lookup( WP_Term $term ) : void {
 	$providers = axismundi_geodata_lookup_enabled_providers();
 
 	if ( empty( $providers ) ) {
-		echo '<tr class="form-field"><th scope="row">' . $label . '</th><td><p class="description">' . esc_html__( 'Configure a lookup provider (Google or OpenStreetMap) in Settings > Geodata to find this place.', 'axismundi-geodata' ) . '</p></td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+		$message = esc_html__( 'Configure a lookup provider (Google or OpenStreetMap) in Settings > Geodata to find this place.', 'axismundi-geodata' );
+		if ( 'edit' === $context ) {
+			echo '<tr class="form-field"><th scope="row">' . $label . '</th><td><p class="description">' . $message . '</p></td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+		} else {
+			echo '<div class="form-field"><label>' . $label . '</label><p>' . $message . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+		}
 		return;
 	}
 
 	$buttons = '';
+	$query  = $term instanceof WP_Term ? axismundi_geodata_lookup_term_query( $term ) : '';
+	$modes  = '<fieldset class="axgeo-lookup-modes"><legend class="screen-reader-text">' . esc_html__( 'Lookup method', 'axismundi-geodata' ) . '</legend>'
+		. '<label><input type="radio" name="axgeo_lookup_mode" value="text" checked /> ' . esc_html__( 'By keyword', 'axismundi-geodata' ) . '</label> '
+		. '<label><input type="radio" name="axgeo_lookup_mode" value="map" /> ' . esc_html__( 'From map point', 'axismundi-geodata' ) . '</label></fieldset>';
+	$search = sprintf(
+		'<input type="search" id="axgeo-lookup-query" class="regular-text" value="%1$s" placeholder="%2$s" /> ',
+		esc_attr( $query ),
+		esc_attr__( 'Keyword, place name, or address', 'axismundi-geodata' )
+	);
 	foreach ( $providers as $slug => $provider ) {
 		$buttons .= sprintf(
 			'<button type="button" class="button axgeo-lookup-btn" data-provider="%s">%s</button> ',
@@ -208,15 +212,57 @@ function axismundi_geodata_render_place_lookup( WP_Term $term ) : void {
 			esc_html( sprintf( __( 'Lookup with %s', 'axismundi-geodata' ), $provider['label'] ) )
 		);
 	}
-	$buttons .= sprintf(
-		'<button type="button" class="button-link axgeo-unbind-btn" id="axgeo-unbind-btn">%s</button>',
-		esc_html__( 'Unbind', 'axismundi-geodata' )
-	);
+	if ( $term instanceof WP_Term ) {
+		$buttons .= sprintf(
+			'<button type="button" class="button-link axgeo-unbind-btn" id="axgeo-unbind-btn">%s</button>',
+			esc_html__( 'Unbind', 'axismundi-geodata' )
+		);
+	}
 
-	$status = esc_html__( 'Search a provider for this term, then bind the selected candidate.', 'axismundi-geodata' );
-	$html   = $buttons . '<p class="description" id="axgeo-lookup-status">' . $status . '</p><div id="axgeo-lookup-results" class="axgeo-lookup-results" aria-live="polite"></div>';
+	$status = $term instanceof WP_Term
+		? esc_html__( 'Search a provider, then choose a candidate to fill the fields below. Click Update to save.', 'axismundi-geodata' )
+		: esc_html__( 'Enter the new term name or an address above, then search. Choose a candidate to fill the fields; it is saved when you add the term.', 'axismundi-geodata' );
+	$html   = $modes . $search . $buttons . '<p class="description" id="axgeo-lookup-status">' . $status . '</p><div id="axgeo-lookup-results" class="axgeo-lookup-results" aria-live="polite"></div>';
 
-	echo '<tr class="form-field"><th scope="row">' . $label . '</th><td>' . $html . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- all dynamic pieces escaped above.
+	if ( 'edit' === $context ) {
+		echo '<tr class="form-field"><th scope="row">' . $label . '</th><td>' . $html . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- all dynamic pieces escaped above.
+	} else {
+		echo '<div class="form-field"><label>' . $label . '</label>' . $html . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- all dynamic pieces escaped above.
+	}
+}
+
+/**
+ * Render selected term-meta controls in a stable editorial order.
+ *
+ * @param array       $keys     Meta keys to render.
+ * @param array       $fields   Field definitions.
+ * @param string      $taxonomy Current taxonomy.
+ * @param string      $context  add or edit.
+ * @param WP_Term|null $term    Existing term on edit screens.
+ * @return void
+ */
+function axismundi_geodata_render_term_controls( array $keys, array $fields, string $taxonomy, string $context, ?WP_Term $term = null ) : void {
+	foreach ( $keys as $key ) {
+		if ( ! isset( $fields[ $key ] ) ) {
+			continue;
+		}
+		$field = $fields[ $key ];
+		$value = $term instanceof WP_Term
+			? ( 'ax_geo_place_id' === $key ? axismundi_geodata_canonical_place_id( $term->term_id ) : (string) get_term_meta( $term->term_id, $key, true ) )
+			: '';
+		$control = axismundi_geodata_term_control( $key, $field, $value, $taxonomy );
+		if ( 'edit' === $context ) {
+			printf(
+				'<tr class="form-field"><th scope="row"><label for="%1$s">%2$s</label></th><td>%3$s<p class="description">%4$s</p></td></tr>',
+				esc_attr( $key ), esc_html( $field['label'] ), $control, esc_html( $field['help'] ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- control escaped in builder.
+			);
+		} else {
+			printf(
+				'<div class="form-field"><label for="%1$s">%2$s</label>%3$s<p>%4$s</p></div>',
+				esc_attr( $key ), esc_html( $field['label'] ), $control, esc_html( $field['help'] ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- control escaped in builder.
+			);
+		}
+	}
 }
 
 /**
@@ -227,17 +273,13 @@ function axismundi_geodata_render_place_lookup( WP_Term $term ) : void {
  */
 function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
+	$fields = axismundi_geodata_term_fields( $taxonomy );
 	axismundi_geodata_render_area_select( $taxonomy, 0, 'add' );
-	foreach ( axismundi_geodata_term_fields( $taxonomy ) as $key => $field ) {
-		printf(
-			'<div class="form-field"><label for="%1$s">%2$s</label>%3$s<p>%4$s</p></div>',
-			esc_attr( $key ),
-			esc_html( $field['label'] ),
-			axismundi_geodata_term_control( $key, $field, '', $taxonomy ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in builder.
-			esc_html( $field['help'] )
-		);
-	}
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_type' ), $fields, $taxonomy, 'add' );
+	axismundi_geodata_render_place_lookup( null, $taxonomy, 'add' );
 	axismundi_geodata_render_term_map( 'add' );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude', 'ax_geo_radius' ), $fields, $taxonomy, 'add' );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_country_code', 'ax_geo_iso_3166_2' ), $fields, $taxonomy, 'add' );
 }
 
 /**
@@ -249,21 +291,13 @@ function axismundi_geodata_term_add_fields( string $taxonomy = '' ) : void {
  */
 function axismundi_geodata_term_edit_fields( WP_Term $term, string $taxonomy = '' ) : void {
 	wp_nonce_field( 'axismundi_geodata_term', 'axismundi_geodata_term_nonce' );
+	$fields = axismundi_geodata_term_fields( $taxonomy );
 	axismundi_geodata_render_area_select( $taxonomy, axismundi_geodata_get_geotag_area_id( $term->term_id ), 'edit' );
-	foreach ( axismundi_geodata_term_fields( $taxonomy ) as $key => $field ) {
-		$value = 'ax_geo_place_id' === $key
-			? axismundi_geodata_canonical_place_id( $term->term_id )
-			: (string) get_term_meta( $term->term_id, $key, true );
-		printf(
-			'<tr class="form-field"><th scope="row"><label for="%1$s">%2$s</label></th><td>%3$s<p class="description">%4$s</p></td></tr>',
-			esc_attr( $key ),
-			esc_html( $field['label'] ),
-			axismundi_geodata_term_control( $key, $field, $value, $taxonomy ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in builder.
-			esc_html( $field['help'] )
-		);
-	}
-	axismundi_geodata_render_place_lookup( $term );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_type' ), $fields, $taxonomy, 'edit', $term );
+	axismundi_geodata_render_place_lookup( $term, $taxonomy, 'edit' );
 	axismundi_geodata_render_term_map( 'edit' );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_place_id', 'geo_address', 'geo_latitude', 'geo_longitude', 'ax_geo_radius' ), $fields, $taxonomy, 'edit', $term );
+	axismundi_geodata_render_term_controls( array( 'ax_geo_country_code', 'ax_geo_iso_3166_2' ), $fields, $taxonomy, 'edit', $term );
 }
 
 /**
@@ -355,6 +389,15 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 		return;
 	}
 
+	// Country code is only meaningful on a Country term (descendants inherit it via
+	// the hierarchy), so show that row only while Administrative type = Country.
+	if ( 'geo_area' === $screen->taxonomy ) {
+		wp_add_inline_script(
+			'common',
+			'(function(){function s(){var t=document.getElementById("ax_geo_place_type"),c=document.getElementById("ax_geo_country_code");if(!t||!c)return;var r=c.closest(".form-field");if(r){r.style.display=("country"===t.value)?"":"none";}}document.addEventListener("DOMContentLoaded",function(){var t=document.getElementById("ax_geo_place_type");if(t){t.addEventListener("change",s);s();}});})();'
+		);
+	}
+
 	$tiles = axismundi_geodata_enqueue_map_field();
 	if ( $tiles['enabled'] ) {
 		wp_enqueue_script(
@@ -367,16 +410,8 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 		wp_add_inline_script( 'axismundi-geodata-term-map', axismundi_geodata_map_inline_js( $tiles ), 'before' );
 	}
 
-	if ( 'term.php' !== $hook ) {
-		return;
-	}
-
 	// Read-only screen context for enqueue/localization; no state is changed here.
 	$term_id = isset( $_GET['tag_ID'] ) ? absint( wp_unslash( $_GET['tag_ID'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	if ( ! $term_id ) {
-		return;
-	}
-
 	if ( empty( axismundi_geodata_lookup_enabled_providers() ) ) {
 		return;
 	}
@@ -385,7 +420,7 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 		'axismundi-geodata-lookup',
 		plugins_url( 'assets/lookup.js', AXISMUNDI_GEODATA_FILE ),
 		array(),
-		AXISMUNDI_GEODATA_VERSION,
+		(string) filemtime( dirname( AXISMUNDI_GEODATA_FILE ) . '/assets/lookup.js' ),
 		true
 	);
 	wp_add_inline_script(
@@ -395,15 +430,19 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'axismundi_geodata_lookup' ),
 				'termId'  => $term_id,
+				'taxonomy' => $screen->taxonomy,
 				'i18n'    => array(
-					'searching' => __( 'Searching…', 'axismundi-geodata' ),
-					'noResults' => __( 'No candidates found.', 'axismundi-geodata' ),
-					'binding'   => __( 'Saving selected place…', 'axismundi-geodata' ),
-					'bound'     => __( 'Place bound and saved.', 'axismundi-geodata' ),
-					'bind'      => __( 'Bind and save', 'axismundi-geodata' ),
-					'unbinding' => __( 'Removing binding…', 'axismundi-geodata' ),
-					'unbound'   => __( 'Binding removed.', 'axismundi-geodata' ),
-					'error'     => __( 'Lookup failed.', 'axismundi-geodata' ),
+					'searching'  => __( 'Searching…', 'axismundi-geodata' ),
+					'noResults'  => __( 'No candidates found.', 'axismundi-geodata' ),
+					'choose'     => __( 'Choose a candidate from the list or the map.', 'axismundi-geodata' ),
+					'use'        => __( 'Use this place', 'axismundi-geodata' ),
+					'selected'   => __( 'Candidate selected. Save the term to keep it.', 'axismundi-geodata' ),
+					'enterQuery' => __( 'Enter a keyword, name, or address before searching.', 'axismundi-geodata' ),
+					'textMode'   => __( 'Search by keyword, place name, or address.', 'axismundi-geodata' ),
+					'mapMode'    => __( 'Click the map to set a point, then choose a lookup provider.', 'axismundi-geodata' ),
+					'enterPoint' => __( 'Click the map to set a valid point before searching.', 'axismundi-geodata' ),
+					'unbound'    => __( 'Place id cleared. Save the term to apply.', 'axismundi-geodata' ),
+					'error'      => __( 'Lookup failed.', 'axismundi-geodata' ),
 				),
 			)
 		) . ';',
@@ -411,7 +450,7 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 	);
 	wp_add_inline_style(
 		'common',
-		'.axgeo-lookup-results{margin-top:8px;display:grid;gap:8px;max-width:640px}.axgeo-lookup-candidate{border:1px solid #c3c4c7;border-radius:4px;padding:10px;background:#fff}.axgeo-lookup-candidate strong{display:block}.axgeo-lookup-candidate small{display:block;color:#646970;margin-top:2px}.axgeo-lookup-candidate .button{margin-top:8px}.axgeo-lookup-btn{margin-right:6px}'
+		'.axgeo-lookup-modes{display:flex;gap:16px;margin:0 0 8px}.axgeo-lookup-results{margin-top:8px;display:grid;gap:8px;max-width:640px}.axgeo-lookup-candidate{border:1px solid #c3c4c7;border-radius:4px;padding:10px;background:#fff}.axgeo-lookup-candidate strong{display:block}.axgeo-lookup-candidate small{display:block;color:#646970;margin-top:2px}.axgeo-lookup-candidate .button{margin-top:8px}.axgeo-lookup-btn{margin:6px 6px 0 0}#axgeo-lookup-query{display:block;max-width:640px}'
 	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_geodata_term_enqueue' );

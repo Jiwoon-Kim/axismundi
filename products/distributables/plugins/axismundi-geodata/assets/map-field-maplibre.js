@@ -108,6 +108,17 @@
 		opts.latInput.addEventListener( 'change', syncFromInputs );
 		opts.lngInput.addEventListener( 'change', syncFromInputs );
 
+		// Lookup candidate pins: a set of clickable result markers the place-lookup UI
+		// drops, distinct from the single draggable term marker.
+		var candidateMarkers = [];
+
+		function clearCandidates() {
+			candidateMarkers.forEach( function ( m ) {
+				m.remove();
+			} );
+			candidateMarkers = [];
+		}
+
 		return {
 			setLatLng: function ( la, ln ) {
 				place( la, ln, true );
@@ -117,6 +128,38 @@
 				if ( marker ) {
 					marker.remove();
 					marker = null;
+				}
+			},
+			clearCandidates: clearCandidates,
+			focus: function ( la, ln, zoom ) {
+				if ( null !== num( la ) && null !== num( ln ) ) {
+					map.flyTo( { center: [ num( ln ), num( la ) ], zoom: zoom || 15 } );
+				}
+			},
+			showCandidates: function ( list, onPick ) {
+				clearCandidates();
+				var bounds = null;
+				( list || [] ).forEach( function ( c ) {
+					var la = num( c.latitude );
+					var ln = num( c.longitude );
+					if ( null === la || null === ln ) {
+						return;
+					}
+					var pin = window.document.createElement( 'div' );
+					pin.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#f9ab00;border:2px solid #b3541e;cursor:pointer;box-shadow:0 0 0 1px rgba(0,0,0,.25);';
+					pin.title = c.name || c.address || c.place_id || '';
+					var m = new maplibregl.Marker( { element: pin } ).setLngLat( [ ln, la ] ).addTo( map );
+					pin.addEventListener( 'click', function ( ev ) {
+						ev.stopPropagation();
+						if ( onPick ) {
+							onPick( c );
+						}
+					} );
+					candidateMarkers.push( m );
+					bounds = bounds ? bounds.extend( [ ln, la ] ) : new maplibregl.LngLatBounds( [ ln, la ], [ ln, la ] );
+				} );
+				if ( bounds ) {
+					map.fitBounds( bounds, { padding: 40, maxZoom: 15, duration: 0 } );
 				}
 			}
 		};

@@ -13,7 +13,9 @@
 			return;
 		}
 
-		window.axismundiGeodataInitMapField( {
+		// Expose the handle so the place-lookup UI (lookup.js) can drop candidate
+		// markers and focus / zoom the map when a candidate is chosen.
+		window.axismundiGeodataTermMap = window.axismundiGeodataInitMapField( {
 			container: container,
 			latInput: lat,
 			lngInput: lng

@@ -161,15 +161,14 @@ function axismundi_geodata_register_meta() : void {
 
 	// geo_area administrative-division facts (geo_area only). ax_geo_place_type is
 	// the named administrative type (country, province, city, district…); these
-	// carry the country plus external codes used to map onto Google address
-	// components, Schema.org, and national address APIs. admin_level and a separate
-	// admin_role are NOT stored — level is derived from the hierarchy, and the role
-	// would just restate the administrative type.
+	// carry the country (ISO 3166-1 alpha-2 -> schema.org addressCountry) and the
+	// ISO 3166-2 subdivision code (-> schema.org addressRegion). admin_level and a
+	// separate admin_role are NOT stored — level is derived from the hierarchy, and
+	// the role would just restate the administrative type. A generic national_code /
+	// code_scheme pair was dropped: it overlapped ISO 3166-2 and leaned Korea-only.
 	$geo_area_meta = array(
-		'ax_geo_country_code'  => 'axismundi_geodata_sanitize_country_code',
-		'ax_geo_national_code' => 'sanitize_text_field',
-		'ax_geo_iso_3166_2'    => 'sanitize_text_field',
-		'ax_geo_code_scheme'   => 'sanitize_text_field',
+		'ax_geo_country_code' => 'axismundi_geodata_sanitize_country_code',
+		'ax_geo_iso_3166_2'   => 'sanitize_text_field',
 	);
 	foreach ( $geo_area_meta as $key => $sanitize ) {
 		register_term_meta(

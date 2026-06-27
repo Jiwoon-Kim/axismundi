@@ -96,6 +96,17 @@
 			map.invalidateSize();
 		}, 60 );
 
+		// Lookup candidate markers: a separate layer the place-lookup UI fills with
+		// clickable result pins, distinct from the single draggable term marker.
+		var candidateLayer = null;
+
+		function clearCandidates() {
+			if ( candidateLayer ) {
+				map.removeLayer( candidateLayer );
+				candidateLayer = null;
+			}
+		}
+
 		return {
 			setLatLng: function ( la, ln ) {
 				place( la, ln, true );
@@ -105,6 +116,49 @@
 				if ( marker ) {
 					map.removeLayer( marker );
 					marker = null;
+				}
+			},
+			clearCandidates: clearCandidates,
+			// Zoom / recentre on a chosen candidate without re-writing inputs
+			// (applyFacts already set them); just frame the corrected point.
+			focus: function ( la, ln, zoom ) {
+				if ( null !== num( la ) && null !== num( ln ) ) {
+					map.setView( [ num( la ), num( ln ) ], zoom || 15 );
+				}
+			},
+			showCandidates: function ( list, onPick ) {
+				clearCandidates();
+				candidateLayer = L.layerGroup().addTo( map );
+				var points = [];
+				( list || [] ).forEach( function ( c ) {
+					var la = num( c.latitude );
+					var ln = num( c.longitude );
+					if ( null === la || null === ln ) {
+						return;
+					}
+					var label = c.name || c.address || c.place_id || '';
+					var cm = L.circleMarker( [ la, ln ], {
+						radius: 7,
+						color: '#b3541e',
+						weight: 2,
+						fillColor: '#f9ab00',
+						fillOpacity: 0.9
+					} );
+					if ( label ) {
+						cm.bindTooltip( String( label ) );
+					}
+					cm.on( 'click', function () {
+						if ( onPick ) {
+							onPick( c );
+						}
+					} );
+					cm.addTo( candidateLayer );
+					points.push( [ la, ln ] );
+				} );
+				if ( points.length === 1 ) {
+					map.setView( points[ 0 ], 14 );
+				} else if ( points.length > 1 ) {
+					map.fitBounds( points, { padding: [ 24, 24 ], maxZoom: 15 } );
 				}
 			}
 		};

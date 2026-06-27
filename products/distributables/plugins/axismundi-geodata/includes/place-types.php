@@ -26,39 +26,31 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_geodata_place_types( string $taxonomy ) : array {
 	if ( 'geo_area' === $taxonomy ) {
-		// Named international administrative types, grouped by tier — not numbered
-		// admin_area_N levels (which read flat and meaningless). English labels;
-		// a Korean translation ships via .po/.mo. Country-specific kinds (법정동 vs
-		// 행정동, etc.) stay out of the default vocabulary and are carried by
-		// ax_geo_national_code + ax_geo_code_scheme or a future country adapter.
+		// Abstract, slimmed international roles grouped by tier — deliberately wide so
+		// many countries map on (광역시/都/直辖市 → province, etc.). The exact national
+		// class is carried by the term name + ax_geo_country_code / ax_geo_iso_3166_2,
+		// NOT by a slug. Tier comes from the geo_area parent hierarchy.
+		// See docs/geodata-standards.md. Perceptual / statistical / transport areas
+		// and road-name addresses are deliberately out of this vocabulary.
 		return array(
 			__( 'National', 'axismundi-geodata' ) => array(
 				'country' => __( 'Country', 'axismundi-geodata' ),
 			),
-			__( 'Province / State', 'axismundi-geodata' ) => array(
-				'province'          => __( 'Province', 'axismundi-geodata' ),
-				'state'             => __( 'State', 'axismundi-geodata' ),
-				'region'            => __( 'Region', 'axismundi-geodata' ),
-				'metropolitan_city' => __( 'Metropolitan city', 'axismundi-geodata' ),
+			__( 'First-order area', 'axismundi-geodata' ) => array(
+				'province' => __( 'Province / first-order area', 'axismundi-geodata' ),
+				'state'    => __( 'State', 'axismundi-geodata' ),
 			),
-			__( 'City / County', 'axismundi-geodata' ) => array(
-				'city'         => __( 'City', 'axismundi-geodata' ),
-				'county'       => __( 'County', 'axismundi-geodata' ),
-				'district'     => __( 'District', 'axismundi-geodata' ),
-				'municipality' => __( 'Municipality', 'axismundi-geodata' ),
+			__( 'Second-order area', 'axismundi-geodata' ) => array(
+				'city'     => __( 'City', 'axismundi-geodata' ),
+				'county'   => __( 'County', 'axismundi-geodata' ),
+				'district' => __( 'District', 'axismundi-geodata' ),
 			),
-			__( 'Town / Village', 'axismundi-geodata' ) => array(
-				'town'     => __( 'Town', 'axismundi-geodata' ),
-				'township' => __( 'Township', 'axismundi-geodata' ),
-				'village'  => __( 'Village', 'axismundi-geodata' ),
-				'borough'  => __( 'Borough', 'axismundi-geodata' ),
-				'ward'     => __( 'Ward', 'axismundi-geodata' ),
-			),
-			__( 'Sublocality', 'axismundi-geodata' ) => array(
-				'locality'            => __( 'Locality', 'axismundi-geodata' ),
-				'sublocality'         => __( 'Sublocality', 'axismundi-geodata' ),
-				'neighborhood'        => __( 'Neighborhood', 'axismundi-geodata' ),
-				'administrative_area' => __( 'Administrative area', 'axismundi-geodata' ),
+			__( 'Local area', 'axismundi-geodata' ) => array(
+				'town'         => __( 'Town', 'axismundi-geodata' ),
+				'township'     => __( 'Township', 'axismundi-geodata' ),
+				'village'      => __( 'Village', 'axismundi-geodata' ),
+				'sublocality'  => __( 'Sublocality', 'axismundi-geodata' ),
+				'neighborhood' => __( 'Neighborhood', 'axismundi-geodata' ),
 			),
 		);
 	}

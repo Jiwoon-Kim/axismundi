@@ -98,3 +98,19 @@ A dependent plugin reuses these instead of re-bundling:
 Geo Data owns the vendor assets and admin map utilities; the Map plugin owns
 front-end rendering semantics. The actual plugin split happens when the front-end
 map is built — the admin preview can stay in Geo Data.
+
+## Geo Area Boundary Model
+
+A geo_area has three distinct spatial facts that must not be conflated:
+
+- `geo_latitude` / `geo_longitude` are its representative centre point.
+- `ax_geo_radius` is an optional approximate circle for search bias, uncertainty,
+  or nearby queries. It is not an administrative or national boundary.
+- The authoritative outline is GeoJSON geometry referenced through a WordPress
+  attachment. Large polygon data must not be stored directly in term meta.
+
+Manual GeoJSON upload is the baseline workflow. OpenStreetMap/Nominatim may later
+offer an explicit "Import boundary" action after an OSM place is bound. That action
+must persist the returned geometry as an attachment and reuse it thereafter; it
+must not fetch topology on every editor or front-end render. Google Places
+viewports are display hints and must not be treated as physical boundaries.

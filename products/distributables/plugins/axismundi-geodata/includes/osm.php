@@ -121,14 +121,14 @@ function axismundi_geodata_osm_type_to_place_type( string $class, string $type )
 		'country'          => 'country',
 		'state'            => 'province',
 		'province'         => 'province',
-		'region'           => 'region',
+		'region'           => 'province',
 		'county'           => 'county',
 		'city'             => 'city',
 		'town'             => 'town',
 		'village'          => 'village',
 		'suburb'           => 'sublocality',
 		'neighbourhood'    => 'neighborhood',
-		'administrative'   => 'administrative_area',
+		'administrative'   => '',
 	);
 
 	return $map[ $type ] ?? '';
@@ -177,27 +177,21 @@ function axismundi_geodata_osm_normalize_place( array $place ) : ?array {
  * @param int $term_id Term id.
  * @return array<int,array<string,mixed>>|WP_Error
  */
-function axismundi_geodata_osm_lookup_term( int $term_id ) {
+function axismundi_geodata_osm_search_query( string $query, string $country_code = '' ) {
 	$endpoint = axismundi_geodata_osm_endpoint();
 	if ( '' === $endpoint ) {
 		return new WP_Error( 'axismundi_osm_disabled', __( 'OpenStreetMap lookup is not configured.', 'axismundi-geodata' ) );
 	}
 
-	$term = axismundi_geodata_lookup_get_term( $term_id );
-	if ( is_wp_error( $term ) ) {
-		return $term;
-	}
-
 	$args = array(
-		'q'               => axismundi_geodata_lookup_term_query( $term ),
+		'q'               => $query,
 		'format'          => 'jsonv2',
 		'addressdetails'  => 1,
 		'limit'           => 8,
 		'accept-language' => axismundi_geodata_lookup_language_code(),
 	);
-	$cc = axismundi_geodata_lookup_country_code( $term );
-	if ( '' !== $cc ) {
-		$args['countrycodes'] = strtolower( $cc );
+	if ( '' !== $country_code ) {
+		$args['countrycodes'] = strtolower( $country_code );
 	}
 
 	$response = wp_remote_get(
@@ -235,6 +229,102 @@ function axismundi_geodata_osm_lookup_term( int $term_id ) {
 }
 
 /**
+ * Search Nominatim for an existing term and its area context.
+ *
+ * @param int $term_id Term id.
+ * @return array<int,array<string,mixed>>|WP_Error
+ */
+function axismundi_geodata_osm_lookup_term( int $term_id ) {
+	$term = axismundi_geodata_lookup_get_term( $term_id );
+	if ( is_wp_error( $term ) ) {
+		return $term;
+	}
+
+	return axismundi_geodata_osm_search_query(
+		axismundi_geodata_lookup_term_query( $term ),
+		axismundi_geodata_lookup_country_code( $term )
+	);
+}
+
+/**
+ * Nominatim detail zoom for an Axismundi administrative type.
+ *
+ * @param string $place_type Selected place type.
+ * @return int
+ */
+function axismundi_geodata_osm_reverse_zoom( string $place_type ) : int {
+	$zoom = array(
+		'country'      => 3,
+		'province'     => 5,
+		'state'        => 5,
+		'county'       => 8,
+		'district'     => 8,
+		'city'         => 10,
+		'town'         => 12,
+		'township'     => 12,
+		'village'      => 14,
+		'sublocality'  => 16,
+		'neighborhood' => 16,
+	);
+
+	return $zoom[ $place_type ] ?? 18;
+}
+
+/**
+ * Reverse geocode a clicked map point through Nominatim.
+ *
+ * @param float  $lat        Clicked latitude.
+ * @param float  $lng        Clicked longitude.
+ * @param string $taxonomy   geo_area or geotag.
+ * @param string $place_type Selected Axismundi place type.
+ * @return array<int,array<string,mixed>>|WP_Error
+ */
+function axismundi_geodata_osm_reverse( float $lat, float $lng, string $taxonomy = '', string $place_type = '' ) {
+	$endpoint = axismundi_geodata_osm_endpoint();
+	if ( '' === $endpoint ) {
+		return new WP_Error( 'axismundi_osm_disabled', __( 'OpenStreetMap lookup is not configured.', 'axismundi-geodata' ) );
+	}
+
+	$response = wp_remote_get(
+		$endpoint . '/reverse?' . http_build_query(
+			array(
+				'format'          => 'jsonv2',
+				'lat'             => $lat,
+				'lon'             => $lng,
+				'zoom'            => 'geo_area' === $taxonomy ? axismundi_geodata_osm_reverse_zoom( $place_type ) : 18,
+				'addressdetails'  => 1,
+				'accept-language' => axismundi_geodata_lookup_language_code(),
+			)
+		),
+		array(
+			'timeout' => 15,
+			'headers' => array(
+				'User-Agent' => axismundi_geodata_osm_user_agent(),
+				'Accept'     => 'application/json',
+			),
+		)
+	);
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( $code < 200 || $code >= 300 || ! is_array( $data ) ) {
+		return new WP_Error( 'axismundi_osm_reverse_failed', __( 'OpenStreetMap reverse lookup failed.', 'axismundi-geodata' ), array( 'status' => (int) $code ) );
+	}
+
+	$candidate = axismundi_geodata_osm_normalize_place( $data );
+	if ( null === $candidate ) {
+		return array();
+	}
+	// Keep the resolved place coordinates from normalize_place so picking the
+	// candidate corrects the marker, rather than pinning it to the clicked point.
+
+	return array( $candidate );
+}
+
+/**
  * Register OSM as a lookup provider.
  *
  * @param array $providers Provider registry.
@@ -242,9 +332,11 @@ function axismundi_geodata_osm_lookup_term( int $term_id ) {
  */
 function axismundi_geodata_register_osm_provider( array $providers ) : array {
 	$providers['osm'] = array(
-		'label'   => __( 'OpenStreetMap', 'axismundi-geodata' ),
-		'enabled' => 'axismundi_geodata_osm_enabled',
-		'search'  => 'axismundi_geodata_osm_lookup_term',
+		'label'        => __( 'OpenStreetMap', 'axismundi-geodata' ),
+		'enabled'      => 'axismundi_geodata_osm_enabled',
+		'search'       => 'axismundi_geodata_osm_lookup_term',
+		'search_query' => 'axismundi_geodata_osm_search_query',
+		'reverse'      => 'axismundi_geodata_osm_reverse',
 	);
 
 	return $providers;

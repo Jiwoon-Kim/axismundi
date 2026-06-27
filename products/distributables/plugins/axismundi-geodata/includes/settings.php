@@ -530,7 +530,7 @@ function axismundi_geodata_render_field( array $args ) : void {
 				esc_attr( $name ),
 				esc_attr( $value )
 			);
-			echo '<p class="description">' . esc_html__( 'A Google Maps Platform server key with the Places API enabled, for place lookup only. Restrict it to your server IP and to the Places API. A front-end Google map would need a separate browser key (HTTP-referrer restricted) — this one is never sent to the browser.', 'axismundi-geodata' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'A Google Maps Platform server key with the Places API and Geocoding API enabled. Restrict it to your server IP and those two APIs. A front-end Google map would need a separate browser key (HTTP-referrer restricted) — this one is never sent to the browser.', 'axismundi-geodata' ) . '</p>';
 			break;
 
 		case 'nominatim_mode':

@@ -3,10 +3,10 @@
  * Place-lookup provider registry and shared term context.
  *
  * Each provider (Google, OSM/Nominatim, …) registers a search callback through
- * the axismundi_geodata_lookup_providers filter; the generic AJAX endpoints
- * dispatch to it and bind the chosen candidate through bind_place_identity(), so a
- * provider only implements "term -> candidates". The geo-context helpers (query,
- * country, language) are shared so every provider phrases the same search.
+ * the axismundi_geodata_lookup_providers filter; the generic AJAX endpoint only
+ * returns normalized candidates. Choosing one fills the term form, and WordPress
+ * saves it only through the normal Add New / Update submission. The geo-context
+ * helpers (query, country, language) are shared across providers.
  *
  * Candidate shape (all providers normalise to this):
  *   place_id      raw provider id (node/123, ChIJ…, Q123) — no source prefix
@@ -160,19 +160,58 @@ function axismundi_geodata_lookup_ajax_context() : array {
  */
 function axismundi_geodata_ajax_lookup() : void {
 	list( $provider, $config, $term_id ) = axismundi_geodata_lookup_ajax_context();
+	$mode         = isset( $_POST['mode'] ) && 'map' === sanitize_key( wp_unslash( $_POST['mode'] ) ) ? 'map' : 'text'; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
+	$taxonomy     = isset( $_POST['taxonomy'] ) ? sanitize_key( wp_unslash( $_POST['taxonomy'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
+	$place_type   = isset( $_POST['place_type'] ) ? sanitize_key( wp_unslash( $_POST['place_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
+	$posted_query = isset( $_POST['query'] ) ? sanitize_text_field( wp_unslash( $_POST['query'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
 
-	$term = axismundi_geodata_lookup_get_term( $term_id );
-	if ( is_wp_error( $term ) ) {
-		wp_send_json_error( array( 'message' => $term->get_error_message() ), 400 );
+	if ( ! in_array( $taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+		wp_send_json_error( array( 'message' => __( 'Invalid geo taxonomy.', 'axismundi-geodata' ) ), 400 );
 	}
 
-	$cache_key = 'axgeo_lk_' . $provider . '_' . md5( axismundi_geodata_lookup_term_query( $term ) . '|' . axismundi_geodata_lookup_language_code() );
+	if ( 'map' === $mode ) {
+		$lat_raw = isset( $_POST['latitude'] ) ? sanitize_text_field( wp_unslash( $_POST['latitude'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
+		$lng_raw = isset( $_POST['longitude'] ) ? sanitize_text_field( wp_unslash( $_POST['longitude'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
+		if ( ! is_numeric( $lat_raw ) || ! is_numeric( $lng_raw ) || (float) $lat_raw < -90 || (float) $lat_raw > 90 || (float) $lng_raw < -180 || (float) $lng_raw > 180 ) {
+			wp_send_json_error( array( 'message' => __( 'Click the map to set a valid point before searching.', 'axismundi-geodata' ) ), 400 );
+		}
+		if ( empty( $config['reverse'] ) ) {
+			wp_send_json_error( array( 'message' => __( 'This provider does not support lookup from a map point.', 'axismundi-geodata' ) ), 400 );
+		}
+		$lat     = (float) $lat_raw;
+		$lng     = (float) $lng_raw;
+		$query   = sprintf( 'reverse:%.7F,%.7F|%s|%s', $lat, $lng, $taxonomy, $place_type );
+		$country = '';
+		$search  = static function () use ( $config, $lat, $lng, $taxonomy, $place_type ) {
+			return call_user_func( $config['reverse'], $lat, $lng, $taxonomy, $place_type );
+		};
+	} else {
+		// Text mode is a pure keyword / address search over the dedicated input — it
+		// never falls back to the term name, so any keyword (e.g. a café name) works.
+		$query   = $posted_query;
+		$country = '';
+		if ( $term_id ) {
+			$term = axismundi_geodata_lookup_get_term( $term_id );
+			if ( is_wp_error( $term ) ) {
+				wp_send_json_error( array( 'message' => $term->get_error_message() ), 400 );
+			}
+			$country = axismundi_geodata_lookup_country_code( $term );
+		}
+		if ( '' === $query || empty( $config['search_query'] ) ) {
+			wp_send_json_error( array( 'message' => __( 'Enter a keyword, name, or address before searching.', 'axismundi-geodata' ) ), 400 );
+		}
+		$search = static function () use ( $config, $query, $country ) {
+			return call_user_func( $config['search_query'], $query, $country );
+		};
+	}
+
+	$cache_key = 'axgeo_lk_v3_' . $provider . '_' . md5( $query . '|' . $country . '|' . axismundi_geodata_lookup_language_code() );
 	$cached    = get_transient( $cache_key );
 	if ( is_array( $cached ) ) {
 		wp_send_json_success( array( 'candidates' => $cached ) );
 	}
 
-	$result = call_user_func( $config['search'], $term_id );
+	$result = $search();
 	if ( is_wp_error( $result ) ) {
 		$data   = $result->get_error_data();
 		$status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 400;
@@ -183,73 +222,3 @@ function axismundi_geodata_ajax_lookup() : void {
 	wp_send_json_success( array( 'candidates' => $result ) );
 }
 add_action( 'wp_ajax_axismundi_geodata_lookup', 'axismundi_geodata_ajax_lookup' );
-
-/**
- * AJAX: bind a selected candidate to the term through the shared identity path.
- *
- * @return void
- */
-function axismundi_geodata_ajax_bind() : void {
-	list( $provider, $config, $term_id ) = axismundi_geodata_lookup_ajax_context();
-
-	$term = axismundi_geodata_lookup_get_term( $term_id );
-	if ( is_wp_error( $term ) ) {
-		wp_send_json_error( array( 'message' => $term->get_error_message() ), 400 );
-	}
-
-	// Nonce + capability are verified in axismundi_geodata_lookup_ajax_context() above.
-	// phpcs:disable WordPress.Security.NonceVerification.Missing
-	$place_id = isset( $_POST['place_id'] ) ? sanitize_text_field( wp_unslash( $_POST['place_id'] ) ) : '';
-	$lat      = isset( $_POST['latitude'] ) ? sanitize_text_field( wp_unslash( $_POST['latitude'] ) ) : '';
-	$lng      = isset( $_POST['longitude'] ) ? sanitize_text_field( wp_unslash( $_POST['longitude'] ) ) : '';
-	$facts    = array(
-		'geo_latitude'      => '' !== $lat ? axismundi_geodata_sanitize_latitude( $lat ) : null,
-		'geo_longitude'     => '' !== $lng ? axismundi_geodata_sanitize_longitude( $lng ) : null,
-		'geo_address'       => isset( $_POST['address'] ) ? sanitize_text_field( wp_unslash( $_POST['address'] ) ) : '',
-		'ax_geo_place_type' => isset( $_POST['place_type'] ) ? sanitize_key( wp_unslash( $_POST['place_type'] ) ) : '',
-	);
-	// phpcs:enable WordPress.Security.NonceVerification.Missing
-
-	if ( '' === $place_id ) {
-		wp_send_json_error( array( 'message' => __( 'Invalid place binding.', 'axismundi-geodata' ) ), 400 );
-	}
-
-	$canonical = axismundi_geodata_bind_place_identity( $term_id, $provider, $place_id, $facts );
-	if ( '' === $canonical ) {
-		wp_send_json_error( array( 'message' => __( 'Could not bind the selected place.', 'axismundi-geodata' ) ), 400 );
-	}
-
-	wp_send_json_success(
-		array(
-			'canonical' => $canonical,
-			'place_id'  => $canonical,
-			'facts'     => $facts,
-		)
-	);
-}
-add_action( 'wp_ajax_axismundi_geodata_bind', 'axismundi_geodata_ajax_bind' );
-
-/**
- * AJAX: remove a term's place binding (the immediate counterpart to Bind).
- *
- * @return void
- */
-function axismundi_geodata_ajax_unbind() : void {
-	check_ajax_referer( 'axismundi_geodata_lookup', 'nonce' );
-
-	if ( ! current_user_can( 'manage_categories' ) ) {
-		wp_send_json_error( array( 'message' => __( 'You are not allowed to manage geo terms.', 'axismundi-geodata' ) ), 403 );
-	}
-
-	$term_id = isset( $_POST['term_id'] ) ? absint( wp_unslash( $_POST['term_id'] ) ) : 0;
-	$term    = axismundi_geodata_lookup_get_term( $term_id );
-	if ( is_wp_error( $term ) ) {
-		wp_send_json_error( array( 'message' => $term->get_error_message() ), 400 );
-	}
-
-	delete_term_meta( $term_id, 'ax_geo_place_id' );
-	delete_term_meta( $term_id, 'ax_geo_source' ); // Legacy split key.
-
-	wp_send_json_success();
-}
-add_action( 'wp_ajax_axismundi_geodata_unbind', 'axismundi_geodata_ajax_unbind' );

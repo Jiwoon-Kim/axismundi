@@ -1,0 +1,32 @@
+/**
+ * Axismundi Fonts: Noto CJK Traditional Chinese — @font-face provider.
+ *
+ * Supplies the "Noto Sans TC" web font and fills the theme's sans-serif CJK
+ * fallback slot for Traditional Chinese. Each regional font plugin sets that
+ * variable for its own `:lang()` and they
+ * coexist (KR + JP + TC + …). Without any such plugin the slot falls back to the
+ * system font. This subset bundles the shared CJK ideographs (including
+ * Extension A and Bopomofo), so Han renders in Traditional glyph forms; Latin
+ * stays Roboto because the theme lists it ahead of this slot.
+ */
+
+/* The document language, not the logged-in user's admin language, chooses the
+ * regional glyph forms. The script subtag `zh-Hant` is matched first; the legacy
+ * region tags `zh-TW` / `zh-HK` / `zh-MO` are matched too, since real-world
+ * content still uses them for Traditional Chinese. Element-level `:lang()` (not
+ * `:root:lang`) also covers inline subtrees inside an otherwise-tagged page. */
+:lang(zh-Hant),
+:lang(zh-TW),
+:lang(zh-HK),
+:lang(zh-MO) {
+	--axismundi-cjk-sans: "Noto Sans TC";
+}
+
+@font-face {
+	font-family: "Noto Sans TC";
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+3100-312F, U+31A0-31BF, U+3200-32FF, U+3300-33FF, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+	src: url("../fonts/noto-sans-tc/axismundi-noto-sans-tc.woff2") format("woff2");
+}

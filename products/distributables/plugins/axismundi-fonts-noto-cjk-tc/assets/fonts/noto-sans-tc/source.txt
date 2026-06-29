@@ -1,0 +1,5 @@
+Source: https://github.com/google/fonts/tree/main/ofl/notosanstc
+Original file: NotoSansTC-VariableFont_wght.ttf
+Processing: pyftsubset (fontTools) → WOFF2 with Traditional Chinese subset (Bopomofo + CJK punctuation/compatibility + CJK Unified Ideographs incl. Extension A and Compatibility Ideographs; wght axis preserved)
+Conversion date: 2026-06-29
+License: SIL Open Font License 1.1

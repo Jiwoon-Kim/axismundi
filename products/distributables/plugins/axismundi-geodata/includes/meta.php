@@ -97,6 +97,29 @@ function axismundi_geodata_sanitize_bounds( $value ) : string {
 }
 
 /**
+ * Parse canonical W,S,E,N bounds into named coordinates.
+ *
+ * Storage and public map contracts remain comma-separated W,S,E,N. PHP callers
+ * use names so format-specific serializers cannot silently swap axes.
+ *
+ * @param string $raw Comma-separated W,S,E,N bounds.
+ * @return array{west:float,south:float,east:float,north:float}|null
+ */
+function axismundi_geodata_parse_bounds( string $raw ) : ?array {
+	$parts = array_map( 'trim', explode( ',', $raw ) );
+	if ( 4 !== count( $parts ) || count( array_filter( $parts, 'is_numeric' ) ) !== 4 ) {
+		return null;
+	}
+
+	return array(
+		'west'  => (float) $parts[0],
+		'south' => (float) $parts[1],
+		'east'  => (float) $parts[2],
+		'north' => (float) $parts[3],
+	);
+}
+
+/**
  * Clamp an optional map zoom to MapLibre / Leaflet's useful range.
  *
  * @param mixed $value Raw zoom.

@@ -199,9 +199,9 @@ function axismundi_map_render_block( array $attributes ) : void {
 		// A manually selected zoom wins. Otherwise a provider viewport is the empty-
 		// archive fallback; marker-bearing pages always fit their marker coordinates.
 		if ( $zoom <= 0 && $term_zoom <= 0 ) {
-			$bounds = array_map( 'trim', explode( ',', (string) get_term_meta( $queried->term_id, 'ax_geo_bounds', true ) ) );
-			if ( 4 === count( $bounds ) && count( array_filter( $bounds, 'is_numeric' ) ) === 4 ) {
-				$config['fallbackBounds'] = array_map( 'floatval', $bounds );
+			$bounds = axismundi_geodata_parse_bounds( (string) get_term_meta( $queried->term_id, 'ax_geo_bounds', true ) );
+			if ( null !== $bounds ) {
+				$config['fallbackBounds'] = array( $bounds['west'], $bounds['south'], $bounds['east'], $bounds['north'] );
 			}
 		}
 

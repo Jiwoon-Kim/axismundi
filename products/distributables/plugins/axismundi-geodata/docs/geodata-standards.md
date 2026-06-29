@@ -1,19 +1,21 @@
 # Axismundi Geo Data — standards & classification
 
 How the plugin's geography model relates to external standards, and the rules for
-the administrative-type vocabulary. Companion to `map-strategy.md`.
+the administrative and place-type vocabularies. Companion to `map-strategy.md`.
 
 ## Guiding principles
 
-1. **Provider types are a crosswalk, never canonical.** Google Places types
-   (place-types table C), OSM `class`/`type`, VWorld, GeoNames, and Wikidata terms
-   are imported and stored as `ax_geo_place_id` (`source:id`) + `provider_type` on
-   the candidate — they are *mapped into* our model, not adopted as the model.
+1. **Administrative and place vocabularies have different baselines.** `geo_area`
+   remains provider-neutral because Google, OSM, VWorld, GeoNames, and Wikidata do
+   not share one administrative ontology. `geotag` uses Google Places tokens as
+   its broad baseline and adds reviewed local extensions with explicit Google
+   fallbacks. Provider identity still lives separately in `ax_geo_place_id`.
    Google Address Validation is an address-normalisation service, not an
    administrative-division ontology.
-2. **`ax_geo_place_type` is an abstract, human-readable type.** It says *what kind*
-   of place/area this is in broad, cross-country terms — not the exact national
-   class. Keep it deliberately wide and dull so it survives many countries.
+2. **`ax_geo_place_type` is a controlled leaf slug.** For `geo_area`, it stays a
+   broad cross-country administrative role. For `geotag`, the leaf belongs to one
+   of Nature, Facilities, or Business and is grouped for editor navigation; the
+   group itself is not stored.
 3. **Official codes carry the precision.** The exact subdivision is encoded by the
    term **name** plus `ax_geo_country_code` (ISO 3166-1 alpha-2 → schema.org
    `addressCountry`) and `ax_geo_iso_3166_2` (the ISO 3166-2 subdivision code where
@@ -99,6 +101,26 @@ Not distinguished — both are `sublocality`. The legal-dong / admin-dong codes
 (법정동코드 / 행정동코드) are not stored; the hierarchy + term name are enough for a
 publishing / travel context.
 
+## Place-type vocabulary (`geotag`)
+
+The controlled vocabulary has **508 leaf slugs** grouped into three editorial
+divisions: Nature, Facilities, and Business. The group path is shown as a prefixed
+native `<optgroup>` label but only the leaf slug is stored. Of those leaves, 448
+use Google Places tokens directly and 60 are local extensions. Each extension has
+an explicit best-effort Google fallback; the editor marks these options as Custom.
+
+The reviewed source is `data/geotag-place-types.tsv`. Regenerate the runtime file
+after editing it:
+
+```powershell
+powershell -File tools/generate-place-types.ps1
+```
+
+The generator rejects duplicate or malformed slugs, missing custom fallbacks, and
+any total other than 508. Existing stored values outside the vocabulary remain
+visible and selected in the term editor so a vocabulary update cannot erase an
+imported or legacy value merely by saving the term.
+
 ## Coordinate interoperability
 
 Canonical CRS is **WGS 84 (EPSG:4326)** everywhere. Watch the coordinate **order** —
@@ -144,7 +166,9 @@ removed alternate-CRS support).
 - ISO 19135 register governance — concept only; pre-release allows breaking
   changes, deprecate/alias after release
 - ISO 19160 addressing — our hierarchy already provides structured addressing
-- Google Places / Address Validation — provider crosswalk, never canonical
+- Google Places — geotag token baseline + explicit local-extension crosswalk;
+  provider-neutral for geo_area
+- Google Address Validation — address normalisation only
 
 **Out of scope**
 - ISO 19152 (LADM, land rights / cadastre) — not a publishing concern

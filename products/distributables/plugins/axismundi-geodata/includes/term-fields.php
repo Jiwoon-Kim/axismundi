@@ -40,7 +40,7 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 			'type'  => 'select',
 			'help'  => $is_area
 				? __( 'Which kind of administrative division this is (country, province, city, district, …).', 'axismundi-geodata' )
-				: __( 'What kind of place this is, grouped by category.', 'axismundi-geodata' ),
+				: __( 'What kind of place this is. Google Places types are unmarked; local extensions are marked Custom.', 'axismundi-geodata' ),
 		),
 	);
 
@@ -67,7 +67,7 @@ function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
 		);
 	}
 
-	// Place identity + address. A lookup fills these (Bind saves them immediately),
+	// Place identity + address. A lookup can fill these before the term is saved,
 	// but they are also editable — paste a namespaced id or correct the address by
 	// hand and Update. The Place ID is validated to a known source on save.
 	$fields['ax_geo_place_id'] = array(

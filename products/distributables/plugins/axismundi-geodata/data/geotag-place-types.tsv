@@ -1,0 +1,509 @@
+division	group	slug	label_en	label_ko	source	google_fallback
+nature	Nature · Natural features	scenic_spot	Scenic spot	경관명소	google	scenic_spot
+nature	Nature · Natural features	beach	Beach	해변	google	beach
+nature	Nature · Natural features	island	Island	섬	google	island
+nature	Nature · Natural features	lake	Lake	호수	google	lake
+nature	Nature · Natural features	river	River	강	google	river
+nature	Nature · Natural features	woods	Woods	숲	google	woods
+nature	Nature · Natural features	forest	Forest	산림	custom	woods
+nature	Nature · Natural features	mountain	Mountain	산	custom	mountain_peak
+nature	Nature · Natural features	mountain_peak	Mountain peak	산봉우리	google	mountain_peak
+nature	Nature · Natural features	valley	Valley	계곡	custom	scenic_spot
+nature	Nature · Natural features	canyon	Canyon	협곡	custom	scenic_spot
+nature	Nature · Natural features	cliff	Cliff	절벽	custom	scenic_spot
+nature	Nature · Natural features	waterfall	Waterfall	폭포	custom	scenic_spot
+nature	Nature · Natural features	cave	Cave	동굴	custom	scenic_spot
+nature	Nature · Natural features	wetland	Wetland	습지	custom	nature_preserve
+nature	Nature · Natural features	tidal_flat	Tidal flat	갯벌	custom	scenic_spot
+nature	Nature · Natural features	marsh	Marsh	소택지	custom	nature_preserve
+nature	Nature · Natural features	reed_field	Reed field	갈대밭	custom	scenic_spot
+nature	Nature · Natural features	estuary	Estuary	하구	custom	scenic_spot
+nature	Nature · Natural features	desert	Desert	사막	custom	scenic_spot
+nature	Nature · Natural features	volcano	Volcano	화산	custom	scenic_spot
+nature	Nature · Natural features	glacier	Glacier	빙하	custom	scenic_spot
+nature	Nature · Natural features	hot_spring	Hot spring	온천	custom	spa
+nature	Nature · Natural parks & ecology	park	Park	공원	google	park
+nature	Nature · Natural parks & ecology	hiking_area	Hiking area	등산로	google	hiking_area
+nature	Nature · Natural parks & ecology	national_park	National park	국립공원	google	national_park
+nature	Nature · Natural parks & ecology	state_park	State park	도립공원	google	state_park
+nature	Nature · Natural parks & ecology	municipal_park	Municipal park	시립공원	custom	city_park
+nature	Nature · Natural parks & ecology	nature_preserve	Nature preserve	자연보호구역	google	nature_preserve
+nature	Nature · Natural parks & ecology	wildlife_refuge	Wildlife refuge	야생동물보호구역	google	wildlife_refuge
+nature	Nature · Natural parks & ecology	ecological_park	Ecological park	생태공원	custom	park
+nature	Nature · Natural parks & ecology	geopark	Geopark	지질공원	custom	nature_preserve
+facility	Facilities · Parks · Urban & community parks	city_park	City park	도시공원	google	city_park
+facility	Facilities · Parks · Urban & community parks	dog_park	Dog park	반려견공원	google	dog_park
+facility	Facilities · Parks · Urban & community parks	cycling_park	Cycling park	자전거공원	google	cycling_park
+facility	Facilities · Parks · Urban & community parks	historic_park	Historic park	역사공원	custom	city_park
+facility	Facilities · Parks · Urban & community parks	cultural_park	Cultural park	문화공원	custom	city_park
+facility	Facilities · Parks · Urban & community parks	waterfront_park	Waterfront park	수변공원	custom	city_park
+facility	Facilities · Parks · Urban & community parks	cemetery_park	Cemetery park	묘지공원	custom	park
+facility	Facilities · Parks · Urban & community parks	urban_farm	Urban farm	도시농업공원	custom	city_park
+facility	Facilities · Parks · Urban & community parks	mini_park	Mini park	소공원	custom	city_park
+facility	Facilities · Parks · Urban & community parks	children_park	Children park	어린이공원	custom	playground
+facility	Facilities · Parks · Urban & community parks	neighborhood_park	Neighborhood park	근린공원	custom	city_park
+facility	Facilities · Gardens & wildlife	garden	Garden	정원	google	garden
+facility	Facilities · Gardens & wildlife	botanical_garden	Botanical garden	식물원	google	botanical_garden
+facility	Facilities · Gardens & wildlife	zoo	Zoo	동물원	google	zoo
+facility	Facilities · Gardens & wildlife	wildlife_park	Wildlife park	야생동물공원	google	wildlife_park
+facility	Facilities · Gardens & wildlife	aquarium	Aquarium	아쿠아리움	google	aquarium
+facility	Facilities · Culture & heritage · Museums & art	museum	Museum	박물관	google	museum
+facility	Facilities · Culture & heritage · Museums & art	history_museum	History museum	역사박물관	google	history_museum
+facility	Facilities · Culture & heritage · Museums & art	art_museum	Art museum	미술관	google	art_museum
+facility	Facilities · Culture & heritage · Museums & art	art_gallery	Art gallery	갤러리	google	art_gallery
+facility	Facilities · Culture & heritage · Museums & art	art_studio	Art studio	미술공방	google	art_studio
+facility	Facilities · Culture & heritage · Museums & art	science_museum	Science museum	과학관	custom	museum
+facility	Facilities · Culture & heritage · Landmarks & historic sites	cultural_landmark	Cultural landmark	문화유산	google	cultural_landmark
+facility	Facilities · Culture & heritage · Landmarks & historic sites	historical_landmark	Historical landmark	역사명소	google	historical_landmark
+facility	Facilities · Culture & heritage · Landmarks & historic sites	historical_place	Historical place	역사유적	google	historical_place
+facility	Facilities · Culture & heritage · Landmarks & historic sites	castle	Castle	성	google	castle
+facility	Facilities · Culture & heritage · Landmarks & historic sites	monument	Monument	기념물	google	monument
+facility	Facilities · Culture & heritage · Landmarks & historic sites	fountain	Fountain	분수	google	fountain
+facility	Facilities · Culture & heritage · Landmarks & historic sites	sculpture	Sculpture	조각상	google	sculpture
+facility	Facilities · Culture & heritage · Places of worship	buddhist_temple	Buddhist temple	사찰	google	buddhist_temple
+facility	Facilities · Culture & heritage · Places of worship	church	Church	교회	google	church
+facility	Facilities · Culture & heritage · Places of worship	hindu_temple	Hindu temple	힌두교 사원	google	hindu_temple
+facility	Facilities · Culture & heritage · Places of worship	mosque	Mosque	모스크	google	mosque
+facility	Facilities · Culture & heritage · Places of worship	shinto_shrine	Shinto shrine	신사	google	shinto_shrine
+facility	Facilities · Culture & heritage · Places of worship	synagogue	Synagogue	유대교 회당	google	synagogue
+facility	Facilities · Events & assembly	event_venue	Event venue	행사장	google	event_venue
+facility	Facilities · Events & assembly	wedding_venue	Wedding venue	웨딩홀	google	wedding_venue
+facility	Facilities · Events & assembly	banquet_hall	Banquet hall	연회장	google	banquet_hall
+facility	Facilities · Events & assembly	convention_center	Convention center	컨벤션센터	google	convention_center
+facility	Facilities · Events & assembly	cultural_center	Cultural center	문화센터	google	cultural_center
+facility	Facilities · Events & assembly	community_center	Community center	커뮤니티센터	google	community_center
+facility	Facilities · Public amenities	public_bathroom	Public bathroom	공중화장실	google	public_bathroom
+facility	Facilities · Public amenities	information_desk	Information desk	안내데스크	custom	tourist_information_center
+facility	Facilities · Public amenities	locker	Locker	물품보관함	custom	storage
+facility	Facilities · Public amenities	rest_area	Rest area	휴게공간	custom	rest_stop
+facility	Facilities · Public amenities	nursing_room	Nursing room	수유실	custom	service
+facility	Facilities · Public amenities	smoking_area	Smoking area	흡연구역	custom	service
+facility	Facilities · Public amenities	ticket_office	Ticket office	매표소	custom	service
+facility	Facilities · Attractions & public spaces	tourist_attraction	Tourist attraction	관광명소	google	tourist_attraction
+facility	Facilities · Attractions & public spaces	observation_deck	Observation deck	전망대	google	observation_deck
+facility	Facilities · Attractions & public spaces	visitor_center	Visitor center	방문자센터	google	visitor_center
+facility	Facilities · Attractions & public spaces	plaza	Plaza	광장	google	plaza
+facility	Facilities · Attractions & public spaces	planetarium	Planetarium	천문관	google	planetarium
+facility	Facilities · Attractions & public spaces	complex_cultural_space	Complex cultural space	복합문화공간	custom	cultural_center
+facility	Facilities · Attractions & public spaces	specialized_street	Specialized street	지역특화거리	custom	tourist_attraction
+facility	Facilities · Attractions & public spaces	experience_village	Experience village	체험마을	custom	tourist_attraction
+facility	Facilities · Performance & screen	auditorium	Auditorium	강당	google	auditorium
+facility	Facilities · Performance & screen	performing_arts_theater	Performing arts theater	공연장	google	performing_arts_theater
+facility	Facilities · Performance & screen	concert_hall	Concert hall	콘서트홀	google	concert_hall
+facility	Facilities · Performance & screen	opera_house	Opera house	오페라극장	google	opera_house
+facility	Facilities · Performance & screen	live_music_venue	Live music venue	라이브공연장	google	live_music_venue
+facility	Facilities · Performance & screen	philharmonic_hall	Philharmonic hall	음악당	google	philharmonic_hall
+facility	Facilities · Performance & screen	amphitheatre	Amphitheatre	원형극장	google	amphitheatre
+facility	Facilities · Performance & screen	comedy_club	Comedy club	코미디클럽	google	comedy_club
+facility	Facilities · Performance & screen	dance_hall	Dance hall	무도장	google	dance_hall
+facility	Facilities · Entertainment · Indoor	internet_cafe	Internet cafe	PC방	google	internet_cafe
+facility	Facilities · Entertainment · Indoor	karaoke	Karaoke	노래방	google	karaoke
+facility	Facilities · Entertainment · Indoor	video_arcade	Video arcade	오락실	google	video_arcade
+facility	Facilities · Entertainment · Indoor	movie_theater	Movie theater	영화관	google	movie_theater
+facility	Facilities · Entertainment · Indoor	movie_rental	Movie rental	비디오대여점	google	movie_rental
+facility	Facilities · Entertainment · Indoor	billiard_hall	Billiard hall	당구장	custom	sports_activity_location
+facility	Facilities · Entertainment · Indoor	casino	Casino	카지노	google	casino
+facility	Facilities · Entertainment · Indoor	night_club	Night club	나이트클럽	google	night_club
+facility	Facilities · Entertainment · Theme parks & rides	amusement_park	Amusement park	놀이공원	google	amusement_park
+facility	Facilities · Entertainment · Theme parks & rides	water_park	Water park	워터파크	google	water_park
+facility	Facilities · Entertainment · Theme parks & rides	amusement_center	Amusement center	복합오락시설	google	amusement_center
+facility	Facilities · Entertainment · Theme parks & rides	indoor_playground	Indoor playground	실내놀이터	google	indoor_playground
+facility	Facilities · Sports & recreation · General	arena	Arena	아레나	google	arena
+facility	Facilities · Sports & recreation · General	stadium	Stadium	경기장	google	stadium
+facility	Facilities · Sports & recreation · General	athletic_field	Athletic field	운동장	google	athletic_field
+facility	Facilities · Sports & recreation · General	sports_complex	Sports complex	종합운동시설	google	sports_complex
+facility	Facilities · Sports & recreation · General	sports_activity_location	Sports activity location	스포츠활동장소	google	sports_activity_location
+facility	Facilities · Sports & recreation · General	sports_club	Sports club	스포츠클럽	google	sports_club
+facility	Facilities · Sports & recreation · General	swimming_pool	Swimming pool	수영장	google	swimming_pool
+facility	Facilities · Sports & recreation · General	tennis_court	Tennis court	테니스장	google	tennis_court
+facility	Facilities · Sports & recreation · General	fitness_center	Fitness center	피트니스센터	google	fitness_center
+facility	Facilities · Sports & recreation · General	gym	Gym	헬스장	google	gym
+facility	Facilities · Sports & recreation · General	race_course	Race course	경주장	google	race_course
+facility	Facilities · Sports & recreation · General	playground	Playground	놀이터	google	playground
+facility	Facilities · Sports & recreation · General	sports_school	Sports school	스포츠학교	google	sports_school
+facility	Facilities · Sports & recreation · General	sports_coaching	Sports coaching	스포츠강습	google	sports_coaching
+facility	Facilities · Sports & recreation · Sport venues	golf_course	Golf course	골프장	google	golf_course
+facility	Facilities · Sports & recreation · Sport venues	indoor_golf_course	Indoor golf course	실내골프장	google	indoor_golf_course
+facility	Facilities · Sports & recreation · Sport venues	ski_resort	Ski resort	스키장	google	ski_resort
+facility	Facilities · Sports & recreation · Sport venues	ice_skating_rink	Ice skating rink	아이스링크	google	ice_skating_rink
+facility	Facilities · Sports & recreation · Sport venues	bowling_alley	Bowling alley	볼링장	google	bowling_alley
+facility	Facilities · Sports & recreation · Sport venues	miniature_golf_course	Miniature golf course	미니골프장	google	miniature_golf_course
+facility	Facilities · Sports & recreation · Sport venues	go_karting_venue	Go karting venue	카트경기장	google	go_karting_venue
+facility	Facilities · Sports & recreation · Sport venues	stable	Stable	승마시설	google	stable
+facility	Facilities · Sports & recreation · Sport venues	shooting_range	Shooting range	사격장	custom	sports_activity_location
+facility	Facilities · Sports & recreation · Outdoor adventure	off_roading_area	Off roading area	오프로드체험장	google	off_roading_area
+facility	Facilities · Sports & recreation · Outdoor adventure	paintball_center	Paintball center	서바이벌게임장	google	paintball_center
+facility	Facilities · Sports & recreation · Outdoor adventure	skateboard_park	Skateboard park	스케이트파크	google	skateboard_park
+facility	Facilities · Sports & recreation · Outdoor adventure	adventure_sports_center	Adventure sports center	레포츠센터	google	adventure_sports_center
+facility	Facilities · Sports & recreation · Outdoor adventure	sports_park	Sports park	체육공원	custom	sports_complex
+facility	Facilities · Sports & recreation · Fishing & marine	marina	Marina	마리나	google	marina
+facility	Facilities · Sports & recreation · Fishing & marine	fishing_pier	Fishing pier	낚시부두	google	fishing_pier
+facility	Facilities · Sports & recreation · Fishing & marine	fishing_pond	Fishing pond	낚시터	google	fishing_pond
+facility	Facilities · Sports & recreation · Fishing & marine	fishing_charter	Fishing charter	선상낚시	google	fishing_charter
+facility	Facilities · Sports & recreation · Fishing & marine	yacht_tour	Yacht tour	요트투어	custom	tour_agency
+facility	Facilities · Sports & recreation · Fishing & marine	yacht_rental	Yacht rental	요트대여	custom	service
+facility	Facilities · Sports & recreation · Fishing & marine	scuba_diving_center	Scuba diving center	스쿠버다이빙센터	custom	adventure_sports_center
+facility	Facilities · Outdoor recreation	picnic_ground	Picnic ground	피크닉장	google	picnic_ground
+facility	Facilities · Outdoor recreation	barbecue_area	Barbecue area	바비큐장	google	barbecue_area
+facility	Facilities · Outdoor recreation	childrens_camp	Childrens camp	어린이캠프	google	childrens_camp
+business	Business · Accommodation	lodging	Lodging	숙박시설	google	lodging
+business	Business · Accommodation	hotel	Hotel	호텔	google	hotel
+business	Business · Accommodation	resort_hotel	Resort hotel	리조트	google	resort_hotel
+business	Business · Accommodation	extended_stay_hotel	Extended stay hotel	장기숙박호텔	google	extended_stay_hotel
+business	Business · Accommodation	serviced_residence	Serviced residence	서비스드레지던스	custom	extended_stay_hotel
+business	Business · Accommodation	condominium	Condominium	콘도미니엄	custom	lodging
+business	Business · Accommodation	motel	Motel	모텔	google	motel
+business	Business · Accommodation	inn	Inn	여관	google	inn
+business	Business · Accommodation	hostel	Hostel	호스텔	google	hostel
+business	Business · Accommodation	guest_house	Guest house	게스트하우스	google	guest_house
+business	Business · Accommodation	private_guest_room	Private guest room	민박	google	private_guest_room
+business	Business · Accommodation	bed_and_breakfast	Bed and breakfast	B&B 민박	google	bed_and_breakfast
+business	Business · Accommodation	homestay	Homestay	홈스테이	custom	private_guest_room
+business	Business · Accommodation	farmstay	Farmstay	농촌민박	google	farmstay
+business	Business · Accommodation	templestay	Templestay	템플스테이	custom	private_guest_room
+business	Business · Accommodation	pension	Pension	펜션	custom	bed_and_breakfast
+business	Business · Accommodation	cottage	Cottage	코티지	google	cottage
+business	Business · Accommodation	rental_cottage	Rental cottage	독채숙소 / 대여형 코티지	custom	cottage
+business	Business · Accommodation	mountain_cabin	Mountain cabin	산장	custom	cottage
+business	Business · Accommodation	bungalow	Bungalow	방갈로	custom	cottage
+business	Business · Accommodation	campground	Campground	캠핑장	google	campground
+business	Business · Accommodation	camping_cabin	Camping cabin	캠핑 캐빈	google	camping_cabin
+business	Business · Accommodation	mobile_home_park	Mobile home park	캠핑트레일러 단지	google	mobile_home_park
+business	Business · Accommodation	rv_park	RV park	캠핑카 야영장	google	rv_park
+business	Business · Accommodation	japanese_inn	Japanese inn	료칸	google	japanese_inn
+business	Business · Accommodation	budget_japanese_inn	Budget japanese inn	저가 료칸	google	budget_japanese_inn
+business	Business · Shopping · General	store	Store	상점	google	store
+business	Business · Shopping · Large retail	department_store	Department store	백화점	google	department_store
+business	Business · Shopping · Large retail	shopping_mall	Shopping mall	쇼핑몰	google	shopping_mall
+business	Business · Shopping · Large retail	outlet_mall	Outlet mall	아울렛	custom	shopping_mall
+business	Business · Shopping · Large retail	hypermarket	Hypermarket	대형마트	google	hypermarket
+business	Business · Shopping · Large retail	warehouse_store	Warehouse store	창고형매장	google	warehouse_store
+business	Business · Shopping · Large retail	discount_store	Discount store	할인매장	google	discount_store
+business	Business · Shopping · Large retail	discount_supermarket	Discount supermarket	할인슈퍼마켓	google	discount_supermarket
+business	Business · Shopping · Everyday retail	supermarket	Supermarket	슈퍼마켓	google	supermarket
+business	Business · Shopping · Everyday retail	convenience_store	Convenience store	편의점	google	convenience_store
+business	Business · Shopping · Everyday retail	grocery_store	Grocery store	식료품점	google	grocery_store
+business	Business · Shopping · Everyday retail	general_store	General store	잡화점	google	general_store
+business	Business · Shopping · Everyday retail	home_goods_store	Home goods store	생활용품점	google	home_goods_store
+business	Business · Shopping · Everyday retail	thrift_store	Thrift store	중고매장	google	thrift_store
+business	Business · Shopping · Markets	market	Market	시장	google	market
+business	Business · Shopping · Markets	flea_market	Flea market	벼룩시장	google	flea_market
+business	Business · Shopping · Markets	farmers_market	Farmers market	농산물시장	google	farmers_market
+business	Business · Shopping · Fashion & beauty	clothing_store	Clothing store	의류매장	google	clothing_store
+business	Business · Shopping · Fashion & beauty	womens_clothing_store	Womens clothing store	여성의류매장	google	womens_clothing_store
+business	Business · Shopping · Fashion & beauty	shoe_store	Shoe store	신발가게	google	shoe_store
+business	Business · Shopping · Fashion & beauty	cosmetics_store	Cosmetics store	화장품매장	google	cosmetics_store
+business	Business · Shopping · Fashion & beauty	jewelry_store	Jewelry store	보석상	google	jewelry_store
+business	Business · Shopping · Culture & gifts	book_store	Book store	서점	google	book_store
+business	Business · Shopping · Culture & gifts	toy_store	Toy store	장난감가게	google	toy_store
+business	Business · Shopping · Culture & gifts	gift_shop	Gift shop	선물가게	google	gift_shop
+business	Business · Shopping · Culture & gifts	stationery_store	Stationery store	문구점	custom	store
+business	Business · Shopping · Culture & gifts	fancy_goods_store	Fancy goods store	굿즈샵	custom	gift_shop
+business	Business · Shopping · Culture & gifts	select_shop	Select shop	편집샵	custom	store
+business	Business · Shopping · Culture & gifts	flagship_store	Flagship store	플래그십스토어	custom	store
+business	Business · Shopping · Sports	sporting_goods_store	Sporting goods store	스포츠용품점	google	sporting_goods_store
+business	Business · Shopping · Sports	sportswear_store	Sportswear store	스포츠의류매장	google	sportswear_store
+business	Business · Shopping · Sports	bicycle_store	Bicycle store	자전거가게	google	bicycle_store
+business	Business · Shopping · Food	food_store	Food store	식품점	google	food_store
+business	Business · Shopping · Food	butcher_shop	Butcher shop	정육점	google	butcher_shop
+business	Business · Shopping · Food	tea_store	Tea store	차전문점	google	tea_store
+business	Business · Shopping · Food	liquor_store	Liquor store	주류판매점	google	liquor_store
+business	Business · Shopping · Food	health_food_store	Health food store	건강식품점	google	health_food_store
+business	Business · Shopping · Food	asian_grocery_store	Asian grocery store	아시아식료품점	google	asian_grocery_store
+business	Business · Shopping · Home & interiors	furniture_store	Furniture store	가구점	google	furniture_store
+business	Business · Shopping · Home & interiors	interior_accessories_store	Interior accessories store	인테리어소품점	custom	home_goods_store
+business	Business · Shopping · Electronics & pets	cell_phone_store	Cell phone store	휴대폰매장	google	cell_phone_store
+business	Business · Shopping · Electronics & pets	electronics_store	Electronics store	전자제품매장	google	electronics_store
+business	Business · Shopping · Electronics & pets	pet_store	Pet store	반려동물용품점	google	pet_store
+business	Business · Shopping · Trade & home improvement	garden_center	Garden center	원예·조경용품	google	garden_center
+business	Business · Shopping · Trade & home improvement	hardware_store	Hardware store	철물점	google	hardware_store
+business	Business · Shopping · Trade & home improvement	building_materials_store	Building materials store	건축자재상	google	building_materials_store
+business	Business · Shopping · Trade & home improvement	home_improvement_store	Home improvement store	주택개량용품점	google	home_improvement_store
+business	Business · Shopping · Trade & home improvement	auto_parts_store	Auto parts store	자동차부품점	google	auto_parts_store
+business	Business · Shopping · Trade & home improvement	wholesaler	Wholesaler	도매상	google	wholesaler
+business	Business · Food & drink · Cafes & drinks	cafe	Cafe	카페	google	cafe
+business	Business · Food & drink · Cafes & drinks	coffee_shop	Coffee shop	커피전문점	google	coffee_shop
+business	Business · Food & drink · Cafes & drinks	coffee_roastery	Coffee roastery	로스터리카페	google	coffee_roastery
+business	Business · Food & drink · Cafes & drinks	coffee_stand	Coffee stand	테이크아웃커피	google	coffee_stand
+business	Business · Food & drink · Cafes & drinks	tea_house	Tea house	찻집	google	tea_house
+business	Business · Food & drink · Cafes & drinks	juice_shop	Juice shop	주스전문점	google	juice_shop
+business	Business · Food & drink · Cafes & drinks	cat_cafe	Cat cafe	고양이카페	google	cat_cafe
+business	Business · Food & drink · Cafes & drinks	dog_cafe	Dog cafe	반려견카페	google	dog_cafe
+business	Business · Food & drink · Restaurants	restaurant	Restaurant	음식점	google	restaurant
+business	Business · Food & drink · Restaurants	family_restaurant	Family restaurant	패밀리레스토랑	google	family_restaurant
+business	Business · Food & drink · Restaurants	fine_dining_restaurant	Fine dining restaurant	파인다이닝	google	fine_dining_restaurant
+business	Business · Food & drink · Restaurants	buffet_restaurant	Buffet restaurant	뷔페	google	buffet_restaurant
+business	Business · Food & drink · Restaurants	breakfast_restaurant	Breakfast restaurant	조식전문점	google	breakfast_restaurant
+business	Business · Food & drink · Restaurants	brunch_restaurant	Brunch restaurant	브런치전문점	google	brunch_restaurant
+business	Business · Food & drink · Restaurants	fast_food_restaurant	Fast food restaurant	패스트푸드	google	fast_food_restaurant
+business	Business · Food & drink · Restaurants	cafeteria	Cafeteria	구내식당	google	cafeteria
+business	Business · Food & drink · Restaurants	food_court	Food court	푸드코트	google	food_court
+business	Business · Food & drink · Restaurants	meal_takeaway	Meal takeaway	포장전문	google	meal_takeaway
+business	Business · Food & drink · Restaurants	meal_delivery	Meal delivery	음식배달	google	meal_delivery
+business	Business · Food & drink · Restaurants	western_restaurant	Western restaurant	양식당	google	western_restaurant
+business	Business · Food & drink · Restaurants	fusion_restaurant	Fusion restaurant	퓨전음식점	google	fusion_restaurant
+business	Business · Food & drink · Restaurants	bistro	Bistro	비스트로	google	bistro
+business	Business · Food & drink · Restaurants	vegan_restaurant	Vegan restaurant	비건음식점	google	vegan_restaurant
+business	Business · Food & drink · Restaurants	vegetarian_restaurant	Vegetarian restaurant	채식전문점	google	vegetarian_restaurant
+business	Business · Food & drink · Bars & pubs	bar	Bar	바	google	bar
+business	Business · Food & drink · Bars & pubs	pub	Pub	펍	google	pub
+business	Business · Food & drink · Bars & pubs	irish_pub	Irish pub	아이리시펍	google	irish_pub
+business	Business · Food & drink · Bars & pubs	sports_bar	Sports bar	스포츠바	google	sports_bar
+business	Business · Food & drink · Bars & pubs	wine_bar	Wine bar	와인바	google	wine_bar
+business	Business · Food & drink · Bars & pubs	cocktail_bar	Cocktail bar	칵테일바	google	cocktail_bar
+business	Business · Food & drink · Bars & pubs	lounge_bar	Lounge bar	라운지바	google	lounge_bar
+business	Business · Food & drink · Bars & pubs	gastropub	Gastropub	가스트로펍	google	gastropub
+business	Business · Food & drink · Bars & pubs	brewpub	Brewpub	브루펍	google	brewpub
+business	Business · Food & drink · Bars & pubs	beer_garden	Beer garden	비어가든	google	beer_garden
+business	Business · Food & drink · Bars & pubs	hookah_bar	Hookah bar	후카바	google	hookah_bar
+business	Business · Food & drink · Bars & pubs	oyster_bar_restaurant	Oyster bar restaurant	오이스터바	google	oyster_bar_restaurant
+business	Business · Food & drink · Bars & pubs	brewery	Brewery	브루어리	google	brewery
+business	Business · Food & drink · Bars & pubs	winery	Winery	와이너리	google	winery
+business	Business · Food & drink · Bars & pubs	folk_pub	Folk pub	토속주점	custom	pub
+business	Business · Food & drink · Desserts & bakery	bakery	Bakery	베이커리	google	bakery
+business	Business · Food & drink · Desserts & bakery	cake_shop	Cake shop	케이크전문점	google	cake_shop
+business	Business · Food & drink · Desserts & bakery	pastry_shop	Pastry shop	페이스트리전문점	google	pastry_shop
+business	Business · Food & drink · Desserts & bakery	dessert_shop	Dessert shop	디저트전문점	google	dessert_shop
+business	Business · Food & drink · Desserts & bakery	dessert_restaurant	Dessert restaurant	디저트카페	google	dessert_restaurant
+business	Business · Food & drink · Desserts & bakery	confectionery	Confectionery	제과점	google	confectionery
+business	Business · Food & drink · Desserts & bakery	candy_store	Candy store	사탕전문점	google	candy_store
+business	Business · Food & drink · Desserts & bakery	chocolate_shop	Chocolate shop	초콜릿전문점	google	chocolate_shop
+business	Business · Food & drink · Desserts & bakery	chocolate_factory	Chocolate factory	초콜릿공장	google	chocolate_factory
+business	Business · Food & drink · Desserts & bakery	ice_cream_shop	Ice cream shop	아이스크림전문점	google	ice_cream_shop
+business	Business · Food & drink · Desserts & bakery	donut_shop	Donut shop	도넛전문점	google	donut_shop
+business	Business · Food & drink · Fast food & snacks	hamburger_restaurant	Hamburger restaurant	햄버거전문점	google	hamburger_restaurant
+business	Business · Food & drink · Fast food & snacks	pizza_restaurant	Pizza restaurant	피자전문점	google	pizza_restaurant
+business	Business · Food & drink · Fast food & snacks	pizza_delivery	Pizza delivery	피자배달	google	pizza_delivery
+business	Business · Food & drink · Fast food & snacks	hot_dog_restaurant	Hot dog restaurant	핫도그전문점	google	hot_dog_restaurant
+business	Business · Food & drink · Fast food & snacks	hot_dog_stand	Hot dog stand	핫도그노점	google	hot_dog_stand
+business	Business · Food & drink · Fast food & snacks	sandwich_shop	Sandwich shop	샌드위치전문점	google	sandwich_shop
+business	Business · Food & drink · Fast food & snacks	bagel_shop	Bagel shop	베이글전문점	google	bagel_shop
+business	Business · Food & drink · Fast food & snacks	chicken_restaurant	Chicken restaurant	치킨전문점	google	chicken_restaurant
+business	Business · Food & drink · Fast food & snacks	chicken_wings_restaurant	Chicken wings restaurant	치킨윙전문점	google	chicken_wings_restaurant
+business	Business · Food & drink · Fast food & snacks	snack_bar	Snack bar	스낵바	google	snack_bar
+business	Business · Food & drink · Fast food & snacks	deli	Deli	델리	google	deli
+business	Business · Food & drink · Specialty dishes	dumpling_restaurant	Dumpling restaurant	만두전문점	google	dumpling_restaurant
+business	Business · Food & drink · Specialty dishes	noodle_shop	Noodle shop	국수전문점	google	noodle_shop
+business	Business · Food & drink · Specialty dishes	barbecue_restaurant	Barbecue restaurant	바비큐전문점	google	barbecue_restaurant
+business	Business · Food & drink · Specialty dishes	steak_house	Steak house	스테이크전문점	google	steak_house
+business	Business · Food & drink · Specialty dishes	bar_and_grill	Bar and grill	바앤그릴	google	bar_and_grill
+business	Business · Food & drink · Specialty dishes	seafood_restaurant	Seafood restaurant	해산물전문점	google	seafood_restaurant
+business	Business · Food & drink · Specialty dishes	salad_shop	Salad shop	샐러드전문점	google	salad_shop
+business	Business · Food & drink · Specialty dishes	soup_restaurant	Soup restaurant	수프전문점	google	soup_restaurant
+business	Business · Food & drink · Specialty dishes	fondue_restaurant	Fondue restaurant	퐁뒤전문점	google	fondue_restaurant
+business	Business · Food & drink · Specialty dishes	falafel_restaurant	Falafel restaurant	팔라펠전문점	google	falafel_restaurant
+business	Business · Food & drink · Specialty dishes	gyro_restaurant	Gyro restaurant	자이로전문점	google	gyro_restaurant
+business	Business · Food & drink · Specialty dishes	kebab_shop	Kebab shop	케밥전문점	google	kebab_shop
+business	Business · Food & drink · Specialty dishes	shawarma_restaurant	Shawarma restaurant	샤와르마전문점	google	shawarma_restaurant
+business	Business · Food & drink · Specialty dishes	taco_restaurant	Taco restaurant	타코전문점	google	taco_restaurant
+business	Business · Food & drink · Specialty dishes	burrito_restaurant	Burrito restaurant	부리토전문점	google	burrito_restaurant
+business	Business · Food & drink · Specialty dishes	acai_shop	Acai shop	아사이전문점	google	acai_shop
+business	Business · Food & drink · Korean	korean_restaurant	Korean restaurant	한식당	google	korean_restaurant
+business	Business · Food & drink · Korean	korean_barbecue_restaurant	Korean barbecue restaurant	한식고기구이전문점	google	korean_barbecue_restaurant
+business	Business · Food & drink · Japanese	japanese_restaurant	Japanese restaurant	일식당	google	japanese_restaurant
+business	Business · Food & drink · Japanese	japanese_curry_restaurant	Japanese curry restaurant	일본카레전문점	google	japanese_curry_restaurant
+business	Business · Food & drink · Japanese	japanese_izakaya_restaurant	Japanese izakaya restaurant	이자카야	google	japanese_izakaya_restaurant
+business	Business · Food & drink · Japanese	yakiniku_restaurant	Yakiniku restaurant	야키니쿠전문점	google	yakiniku_restaurant
+business	Business · Food & drink · Japanese	yakitori_restaurant	Yakitori restaurant	야키토리전문점	google	yakitori_restaurant
+business	Business · Food & drink · Japanese	ramen_restaurant	Ramen restaurant	라멘전문점	google	ramen_restaurant
+business	Business · Food & drink · Japanese	sushi_restaurant	Sushi restaurant	스시전문점	google	sushi_restaurant
+business	Business · Food & drink · Japanese	tonkatsu_restaurant	Tonkatsu restaurant	돈카츠전문점	google	tonkatsu_restaurant
+business	Business · Food & drink · Chinese	chinese_restaurant	Chinese restaurant	중식당	google	chinese_restaurant
+business	Business · Food & drink · Chinese	chinese_noodle_restaurant	Chinese noodle restaurant	중국면요리전문점	google	chinese_noodle_restaurant
+business	Business · Food & drink · Chinese	dim_sum_restaurant	Dim sum restaurant	딤섬전문점	google	dim_sum_restaurant
+business	Business · Food & drink · Chinese	hot_pot_restaurant	Hot pot restaurant	훠궈전문점	google	hot_pot_restaurant
+business	Business · Food & drink · Chinese	cantonese_restaurant	Cantonese restaurant	광둥요리전문점	google	cantonese_restaurant
+business	Business · Food & drink · Chinese	taiwanese_restaurant	Taiwanese restaurant	대만음식점	google	taiwanese_restaurant
+business	Business · Food & drink · Other Asian	asian_fusion_restaurant	Asian fusion restaurant	아시아퓨전음식점	google	asian_fusion_restaurant
+business	Business · Food & drink · Other Asian	asian_restaurant	Asian restaurant	아시아음식점	google	asian_restaurant
+business	Business · Food & drink · Other Asian	mongolian_barbecue_restaurant	Mongolian barbecue restaurant	몽골식바비큐전문점	google	mongolian_barbecue_restaurant
+business	Business · Food & drink · Other Asian	tibetan_restaurant	Tibetan restaurant	티베트음식점	google	tibetan_restaurant
+business	Business · Food & drink · Southeast Asian	thai_restaurant	Thai restaurant	태국음식점	google	thai_restaurant
+business	Business · Food & drink · Southeast Asian	vietnamese_restaurant	Vietnamese restaurant	베트남음식점	google	vietnamese_restaurant
+business	Business · Food & drink · Southeast Asian	malaysian_restaurant	Malaysian restaurant	말레이시아음식점	google	malaysian_restaurant
+business	Business · Food & drink · Southeast Asian	indonesian_restaurant	Indonesian restaurant	인도네시아음식점	google	indonesian_restaurant
+business	Business · Food & drink · Southeast Asian	filipino_restaurant	Filipino restaurant	필리핀음식점	google	filipino_restaurant
+business	Business · Food & drink · Southeast Asian	cambodian_restaurant	Cambodian restaurant	캄보디아음식점	google	cambodian_restaurant
+business	Business · Food & drink · Southeast Asian	burmese_restaurant	Burmese restaurant	미얀마음식점	google	burmese_restaurant
+business	Business · Food & drink · South Asian	indian_restaurant	Indian restaurant	인도음식점	google	indian_restaurant
+business	Business · Food & drink · South Asian	north_indian_restaurant	North indian restaurant	북인도음식점	google	north_indian_restaurant
+business	Business · Food & drink · South Asian	south_indian_restaurant	South indian restaurant	남인도음식점	google	south_indian_restaurant
+business	Business · Food & drink · South Asian	pakistani_restaurant	Pakistani restaurant	파키스탄음식점	google	pakistani_restaurant
+business	Business · Food & drink · South Asian	bangladeshi_restaurant	Bangladeshi restaurant	방글라데시음식점	google	bangladeshi_restaurant
+business	Business · Food & drink · South Asian	sri_lankan_restaurant	Sri lankan restaurant	스리랑카음식점	google	sri_lankan_restaurant
+business	Business · Food & drink · Middle Eastern & West Asian	middle_eastern_restaurant	Middle eastern restaurant	중동음식점	google	middle_eastern_restaurant
+business	Business · Food & drink · Middle Eastern & West Asian	halal_restaurant	Halal restaurant	할랄음식점	google	halal_restaurant
+business	Business · Food & drink · Middle Eastern & West Asian	turkish_restaurant	Turkish restaurant	튀르키예음식점	google	turkish_restaurant
+business	Business · Food & drink · Middle Eastern & West Asian	persian_restaurant	Persian restaurant	페르시아음식점	google	persian_restaurant
+business	Business · Food & drink · Middle Eastern & West Asian	lebanese_restaurant	Lebanese restaurant	레바논음식점	google	lebanese_restaurant
+business	Business · Food & drink · Middle Eastern & West Asian	israeli_restaurant	Israeli restaurant	이스라엘음식점	google	israeli_restaurant
+business	Business · Food & drink · Middle Eastern & West Asian	afghani_restaurant	Afghani restaurant	아프가니스탄음식점	google	afghani_restaurant
+business	Business · Food & drink · European	european_restaurant	European restaurant	유럽음식점	google	european_restaurant
+business	Business · Food & drink · Western European	french_restaurant	French restaurant	프랑스음식점	google	french_restaurant
+business	Business · Food & drink · Western European	italian_restaurant	Italian restaurant	이탈리아음식점	google	italian_restaurant
+business	Business · Food & drink · Western European	spanish_restaurant	Spanish restaurant	스페인음식점	google	spanish_restaurant
+business	Business · Food & drink · Western European	portuguese_restaurant	Portuguese restaurant	포르투갈음식점	google	portuguese_restaurant
+business	Business · Food & drink · Western European	british_restaurant	British restaurant	영국음식점	google	british_restaurant
+business	Business · Food & drink · Western European	irish_restaurant	Irish restaurant	아일랜드음식점	google	irish_restaurant
+business	Business · Food & drink · Western European	belgian_restaurant	Belgian restaurant	벨기에음식점	google	belgian_restaurant
+business	Business · Food & drink · Western European	dutch_restaurant	Dutch restaurant	네덜란드음식점	google	dutch_restaurant
+business	Business · Food & drink · Western European	fish_and_chips_restaurant	Fish and chips restaurant	피시앤칩스전문점	google	fish_and_chips_restaurant
+business	Business · Food & drink · Central European	bavarian_restaurant	Bavarian restaurant	바이에른음식점	google	bavarian_restaurant
+business	Business · Food & drink · Central European	german_restaurant	German restaurant	독일음식점	google	german_restaurant
+business	Business · Food & drink · Central European	austrian_restaurant	Austrian restaurant	오스트리아음식점	google	austrian_restaurant
+business	Business · Food & drink · Central European	swiss_restaurant	Swiss restaurant	스위스음식점	google	swiss_restaurant
+business	Business · Food & drink · Eastern European	polish_restaurant	Polish restaurant	폴란드음식점	google	polish_restaurant
+business	Business · Food & drink · Eastern European	czech_restaurant	Czech restaurant	체코음식점	google	czech_restaurant
+business	Business · Food & drink · Eastern European	hungarian_restaurant	Hungarian restaurant	헝가리음식점	google	hungarian_restaurant
+business	Business · Food & drink · Eastern European	romanian_restaurant	Romanian restaurant	루마니아음식점	google	romanian_restaurant
+business	Business · Food & drink · Eastern European	croatian_restaurant	Croatian restaurant	크로아티아음식점	google	croatian_restaurant
+business	Business · Food & drink · Eastern European	ukrainian_restaurant	Ukrainian restaurant	우크라이나음식점	google	ukrainian_restaurant
+business	Business · Food & drink · Eastern European	russian_restaurant	Russian restaurant	러시아음식점	google	russian_restaurant
+business	Business · Food & drink · Eastern European	eastern_european_restaurant	Eastern european restaurant	동유럽음식점	google	eastern_european_restaurant
+business	Business · Food & drink · Northern European	danish_restaurant	Danish restaurant	덴마크음식점	google	danish_restaurant
+business	Business · Food & drink · Northern European	scandinavian_restaurant	Scandinavian restaurant	북유럽음식점	google	scandinavian_restaurant
+business	Business · Food & drink · Mediterranean	mediterranean_restaurant	Mediterranean restaurant	지중해음식점	google	mediterranean_restaurant
+business	Business · Food & drink · Mediterranean	greek_restaurant	Greek restaurant	그리스음식점	google	greek_restaurant
+business	Business · Food & drink · Mediterranean	basque_restaurant	Basque restaurant	바스크음식점	google	basque_restaurant
+business	Business · Food & drink · Mediterranean	tapas_restaurant	Tapas restaurant	타파스전문점	google	tapas_restaurant
+business	Business · Food & drink · United States	american_restaurant	American restaurant	미국음식점	google	american_restaurant
+business	Business · Food & drink · United States	californian_restaurant	Californian restaurant	캘리포니아음식점	google	californian_restaurant
+business	Business · Food & drink · United States	cajun_restaurant	Cajun restaurant	케이준음식점	google	cajun_restaurant
+business	Business · Food & drink · United States	southwestern_us_restaurant	Southwestern US restaurant	미국남서부음식점	google	southwestern_us_restaurant
+business	Business · Food & drink · United States	diner	Diner	다이너	google	diner
+business	Business · Food & drink · United States	soul_food_restaurant	Soul food restaurant	소울푸드전문점	google	soul_food_restaurant
+business	Business · Food & drink · Mexican	mexican_restaurant	Mexican restaurant	멕시코음식점	google	mexican_restaurant
+business	Business · Food & drink · Mexican	tex_mex_restaurant	Tex mex restaurant	텍스멕스전문점	google	tex_mex_restaurant
+business	Business · Food & drink · Latin American	caribbean_restaurant	Caribbean restaurant	카리브음식점	google	caribbean_restaurant
+business	Business · Food & drink · Latin American	argentinian_restaurant	Argentinian restaurant	아르헨티나음식점	google	argentinian_restaurant
+business	Business · Food & drink · Latin American	brazilian_restaurant	Brazilian restaurant	브라질음식점	google	brazilian_restaurant
+business	Business · Food & drink · Latin American	peruvian_restaurant	Peruvian restaurant	페루음식점	google	peruvian_restaurant
+business	Business · Food & drink · Latin American	colombian_restaurant	Colombian restaurant	콜롬비아음식점	google	colombian_restaurant
+business	Business · Food & drink · Latin American	cuban_restaurant	Cuban restaurant	쿠바음식점	google	cuban_restaurant
+business	Business · Food & drink · Latin American	chilean_restaurant	Chilean restaurant	칠레음식점	google	chilean_restaurant
+business	Business · Food & drink · Latin American	latin_american_restaurant	Latin american restaurant	라틴아메리카음식점	google	latin_american_restaurant
+business	Business · Food & drink · Latin American	south_american_restaurant	South american restaurant	남미음식점	google	south_american_restaurant
+business	Business · Food & drink · African	african_restaurant	African restaurant	아프리카음식점	google	african_restaurant
+business	Business · Food & drink · African	ethiopian_restaurant	Ethiopian restaurant	에티오피아음식점	google	ethiopian_restaurant
+business	Business · Food & drink · African	moroccan_restaurant	Moroccan restaurant	모로코음식점	google	moroccan_restaurant
+business	Business · Food & drink · Oceanian	australian_restaurant	Australian restaurant	호주음식점	google	australian_restaurant
+business	Business · Food & drink · Oceanian	hawaiian_restaurant	Hawaiian restaurant	하와이음식점	google	hawaiian_restaurant
+business	Business · Beauty & wellness · Bath & spa	sauna	Sauna	사우나	google	sauna
+business	Business · Beauty & wellness · Bath & spa	spa	Spa	스파	google	spa
+business	Business · Beauty & wellness · Bath & spa	massage	Massage	마사지	google	massage
+business	Business · Beauty & wellness · Bath & spa	massage_spa	Massage spa	마사지스파	google	massage_spa
+business	Business · Beauty & wellness · Bath & spa	public_bath	Public bath	목욕탕	google	public_bath
+business	Business · Beauty & wellness · Bath & spa	jjimjilbang	Jjimjilbang	찜질방	custom	public_bath
+business	Business · Beauty & wellness · Skin & body	skin_care_clinic	Skin care clinic	피부관리클리닉	google	skin_care_clinic
+business	Business · Beauty & wellness · Skin & body	tanning_studio	Tanning studio	태닝샵	google	tanning_studio
+business	Business · Beauty & wellness · Skin & body	wellness_center	Wellness center	웰니스센터	google	wellness_center
+business	Business · Beauty & wellness · Skin & body	yoga_studio	Yoga studio	요가원	google	yoga_studio
+business	Business · Beauty & wellness · Skin & body	foot_care	Foot care	풋케어	google	foot_care
+business	Business · Beauty & wellness · Personal care	hair_care	Hair care	헤어케어	google	hair_care
+business	Business · Beauty & wellness · Personal care	hair_salon	Hair salon	헤어살롱	google	hair_salon
+business	Business · Beauty & wellness · Personal care	barber_shop	Barber shop	이발소	google	barber_shop
+business	Business · Beauty & wellness · Personal care	beautician	Beautician	미용사	google	beautician
+business	Business · Beauty & wellness · Personal care	beauty_salon	Beauty salon	미용실	google	beauty_salon
+business	Business · Beauty & wellness · Personal care	nail_salon	Nail salon	네일샵	google	nail_salon
+business	Business · Beauty & wellness · Personal care	makeup_artist	Makeup artist	메이크업아티스트	google	makeup_artist
+business	Business · Beauty & wellness · Personal care	body_art_service	Body art service	바디아트서비스	google	body_art_service
+business	Business · Beauty & wellness · Retail	drugstore	Drugstore	드러그스토어	google	drugstore
+business	Business · Health & medical	pharmacy	Pharmacy	약국	google	pharmacy
+business	Business · Health & medical	hospital	Hospital	병원	google	hospital
+business	Business · Health & medical	general_hospital	General hospital	종합병원	google	general_hospital
+business	Business · Health & medical	medical_center	Medical center	의료센터	google	medical_center
+business	Business · Health & medical	doctor	Doctor	병·의원 / 진료소	google	doctor
+business	Business · Health & medical	medical_clinic	Medical clinic	의원	google	medical_clinic
+business	Business · Health & medical	dentist	Dentist	치과	google	dentist
+business	Business · Health & medical	dental_clinic	Dental clinic	치과의원	google	dental_clinic
+business	Business · Health & medical	medical_lab	Medical lab	의료검사기관	google	medical_lab
+business	Business · Health & medical	physiotherapist	Physiotherapist	물리치료	google	physiotherapist
+business	Business · Health & medical	chiropractor	Chiropractor	카이로프랙틱	google	chiropractor
+business	Business · Services · Organizations	service	Service	서비스	google	service
+business	Business · Services · Organizations	association_or_organization	Association or organization	협회·단체	google	association_or_organization
+business	Business · Services · Organizations	non_profit_organization	Non profit organization	비영리단체	google	non_profit_organization
+business	Business · Services · Pet care	veterinary_care	Veterinary care	동물병원	google	veterinary_care
+business	Business · Services · Pet care	pet_care	Pet care	반려동물케어서비스	google	pet_care
+business	Business · Services · Pet care	pet_boarding_service	Pet boarding service	반려동물위탁서비스	google	pet_boarding_service
+business	Business · Services · Travel	tourist_information_center	Tourist information center	관광안내소	google	tourist_information_center
+business	Business · Services · Travel	tour_agency	Tour agency	투어업체	google	tour_agency
+business	Business · Services · Travel	travel_agency	Travel agency	여행사	google	travel_agency
+business	Business · Services · Travel	chauffeur_service	Chauffeur service	운전기사서비스	google	chauffeur_service
+business	Business · Services · Travel	aircraft_rental_service	Aircraft rental service	항공기대여서비스	google	aircraft_rental_service
+business	Business · Services · Everyday	laundry	Laundry	세탁소	google	laundry
+business	Business · Services · Everyday	tailor	Tailor	양복점	google	tailor
+business	Business · Services · Everyday	locksmith	Locksmith	열쇠수리	google	locksmith
+business	Business · Services · Everyday	storage	Storage	보관창고	google	storage
+business	Business · Services · Everyday	moving_company	Moving company	이사업체	google	moving_company
+business	Business · Services · Everyday	florist	Florist	꽃집	google	florist
+business	Business · Services · Everyday	food_delivery	Food delivery	음식배달	google	food_delivery
+business	Business · Services · Everyday	photo_studio	Photo studio	사진관	custom	service
+business	Business · Services · Professional	lawyer	Lawyer	법률사무소	google	lawyer
+business	Business · Services · Professional	insurance_agency	Insurance agency	보험대리점	google	insurance_agency
+business	Business · Services · Professional	real_estate_agency	Real estate agency	부동산중개업소	google	real_estate_agency
+business	Business · Services · Professional	accounting	Accounting	회계사무소	google	accounting
+business	Business · Services · Contractors	electrician	Electrician	전기공사업체	google	electrician
+business	Business · Services · Contractors	plumber	Plumber	배관업체	google	plumber
+business	Business · Services · Contractors	roofing_contractor	Roofing contractor	지붕공사업체	google	roofing_contractor
+business	Business · Services · Contractors	painter	Painter	도장업체	google	painter
+business	Business · Services · Delivery & communications	catering_service	Catering service	케이터링서비스	google	catering_service
+business	Business · Services · Delivery & communications	courier_service	Courier service	택배서비스	google	courier_service
+business	Business · Services · Delivery & communications	shipping_service	Shipping service	배송서비스	google	shipping_service
+business	Business · Services · Delivery & communications	telecommunications_service_provider	Telecommunications service provider	통신서비스제공업체	google	telecommunications_service_provider
+business	Business · Services · Funeral & spiritual	funeral_home	Funeral home	장례식장	google	funeral_home
+business	Business · Services · Funeral & spiritual	cemetery	Cemetery	묘지	google	cemetery
+business	Business · Services · Funeral & spiritual	psychic	Psychic	점술 타로 무당	google	psychic
+business	Business · Finance	atm	ATM	ATM	google	atm
+business	Business · Finance	bank	Bank	은행	google	bank
+business	Business · Offices & industry	business_center	Business center	비즈니스센터	google	business_center
+business	Business · Offices & industry	corporate_office	Corporate office	기업사무실	google	corporate_office
+business	Business · Offices & industry	coworking_space	Coworking space	공유오피스	google	coworking_space
+business	Business · Offices & industry	manufacturer	Manufacturer	제조업체	google	manufacturer
+business	Business · Offices & industry	supplier	Supplier	공급업체	google	supplier
+business	Business · Offices & industry	television_studio	Television studio	방송스튜디오	google	television_studio
+business	Business · Agriculture & production	farm	Farm	농장	google	farm
+business	Business · Agriculture & production	ranch	Ranch	목장	google	ranch
+business	Business · Agriculture & production	vineyard	Vineyard	포도농장	google	vineyard
+business	Business · Government	city_hall	City hall	시청	google	city_hall
+business	Business · Government	courthouse	Courthouse	법원	google	courthouse
+business	Business · Government	embassy	Embassy	대사관	google	embassy
+business	Business · Government	fire_station	Fire station	소방서	google	fire_station
+business	Business · Government	government_office	Government office	정부기관	google	government_office
+business	Business · Government	local_government_office	Local government office	지방자치단체	google	local_government_office
+business	Business · Government	police	Police	경찰서	google	police
+business	Business · Government	neighborhood_police_station	Neighborhood police station	파출소 / 치안센터 / 지구대	google	neighborhood_police_station
+business	Business · Government	post_office	Post office	우체국	google	post_office
+business	Business · Education	library	Library	도서관	google	library
+business	Business · Education	preschool	Preschool	유치원	google	preschool
+business	Business · Education	school	School	학교	google	school
+business	Business · Education	primary_school	Primary school	초등학교	google	primary_school
+business	Business · Education	secondary_school	Secondary school	중고등학교	google	secondary_school
+business	Business · Education	university	University	대학교	google	university
+business	Business · Education	academic_department	Academic department	학과	google	academic_department
+business	Business · Education	research_institute	Research institute	연구소	google	research_institute
+business	Business · Transportation	bridge	Bridge	다리	google	bridge
+business	Business · Transportation	airport	Airport	공항	google	airport
+business	Business · Transportation	international_airport	International airport	국제공항	google	international_airport
+business	Business · Transportation	subway_station	Subway station	지하철역	google	subway_station
+business	Business · Transportation	train_station	Train station	기차역	google	train_station
+business	Business · Transportation	bus_station	Bus station	버스터미널	google	bus_station
+business	Business · Transportation	bus_stop	Bus stop	버스정류장	google	bus_stop
+business	Business · Transportation	light_rail_station	Light rail station	경전철역	google	light_rail_station
+business	Business · Transportation	tram_stop	Tram stop	트램정류장	google	tram_stop
+business	Business · Transportation	ferry_terminal	Ferry terminal	여객선터미널	google	ferry_terminal
+business	Business · Transportation	taxi_stand	Taxi stand	택시승강장	google	taxi_stand
+business	Business · Transportation	bike_sharing_station	Bike sharing station	공공자전거대여소	google	bike_sharing_station
+business	Business · Transportation	park_and_ride	Park and ride	환승주차장	google	park_and_ride
+business	Business · Automotive	parking	Parking	주차장	google	parking
+business	Business · Automotive	parking_lot	Parking lot	노외주차장	google	parking_lot
+business	Business · Automotive	parking_garage	Parking garage	실내주차장	google	parking_garage
+business	Business · Automotive	gas_station	Gas station	주유소	google	gas_station
+business	Business · Automotive	electric_vehicle_charging_station	Electric vehicle charging station	전기차충전소	google	electric_vehicle_charging_station
+business	Business · Automotive	ebike_charging_station	E-bike charging station	전기자전거충전소	google	ebike_charging_station
+business	Business · Automotive	car_wash	Car wash	세차장	google	car_wash
+business	Business · Automotive	car_repair	Car repair	자동차정비	google	car_repair
+business	Business · Automotive	car_rental	Car rental	렌터카	google	car_rental
+business	Business · Automotive	rest_stop	Rest stop	휴게소	google	rest_stop
+business	Business · Automotive	tire_shop	Tire shop	타이어전문점	google	tire_shop
+business	Business · Automotive	car_dealer	Car dealer	자동차판매점	google	car_dealer
+business	Business · Automotive	truck_dealer	Truck dealer	화물차판매점	google	truck_dealer

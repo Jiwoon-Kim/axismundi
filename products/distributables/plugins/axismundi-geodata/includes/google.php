@@ -13,15 +13,14 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * ax_geo_place_type => Google Places type, only where they differ from a
- * 1:1-aligned identity. geo_area administrative types map to Google address
- * component types; the ambiguous geotag types pick a Google primary type. Every
- * other geotag slug was already aligned to its Google token, so it passes through.
+ * ax_geo_place_type => Google Places type where the tokens differ. geo_area
+ * administrative types map to address-component types; generated custom geotag
+ * extensions map to their reviewed Google fallback.
  *
  * @return array<string,string>
  */
 function axismundi_geodata_google_type_map() : array {
-	return array(
+	$map = array(
 		// geo_area administrative types -> Google address component types.
 		'country'             => 'country',
 		'province'            => 'administrative_area_level_1',
@@ -34,19 +33,21 @@ function axismundi_geodata_google_type_map() : array {
 		'village'             => 'locality',
 		'sublocality'         => 'sublocality',
 		'neighborhood'        => 'neighborhood',
-		// geotag types we kept local because Google splits them differently.
-		'station'             => 'transit_station',
-		'temple'              => 'place_of_worship',
-		'performance_venue'   => 'performing_arts_theater',
-		'local_pub'           => 'pub',
-		'pension'             => 'bed_and_breakfast',
 	);
+
+	foreach ( axismundi_geodata_geotag_place_type_records() as $record ) {
+		if ( 'custom' === $record['source'] ) {
+			$map[ $record['slug'] ] = $record['google_fallback'];
+		}
+	}
+
+	return $map;
 }
 
 /**
  * Map an Axismundi place type to a Google type (e.g. for a search includedType).
- * Aligned slugs pass through unchanged; Korea-specific types with no Google
- * equivalent also pass through and should be treated as a best-effort hint.
+ * Google-aligned slugs pass through; local extensions use their reviewed
+ * best-effort fallback.
  *
  * @param string $ax_type Axismundi place-type slug.
  * @return string Google type, or '' for an empty input.
@@ -63,9 +64,8 @@ function axismundi_geodata_to_google_type( string $ax_type ) : string {
 /**
  * Map a Google Places type back to an Axismundi place type, for suggesting the
  * place type from a lookup result. The geo_area forward map is many-to-one
- * (several admin types share one Google type), so it is not auto-reversed; only
- * the unambiguous geotag splits are reversed, and any other token (mostly aligned
- * identities) passes through.
+ * (several admin types share one Google type), so it is not auto-reversed. Google
+ * geotag tokens already match the controlled vocabulary and pass through.
  *
  * @param string $google_type Google Places type.
  * @return string Axismundi place-type slug, or '' for an empty input.
@@ -86,12 +86,6 @@ function axismundi_geodata_from_google_type( string $google_type ) : string {
 		'sublocality_level_4'     => 'sublocality',
 		'sublocality_level_5'     => 'sublocality',
 		'neighborhood'            => 'neighborhood',
-		'transit_station'         => 'station',
-		'train_station'           => 'station',
-		'place_of_worship'        => 'temple',
-		'performing_arts_theater' => 'performance_venue',
-		'pub'                     => 'local_pub',
-		'bed_and_breakfast'       => 'pension',
 	);
 
 	return $reverse[ $google_type ] ?? $google_type;

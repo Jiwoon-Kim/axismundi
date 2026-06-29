@@ -63,6 +63,7 @@ require_once __DIR__ . '/includes/osm.php';
 require_once __DIR__ . '/includes/map-pack.php';
 require_once __DIR__ . '/includes/track.php';
 require_once __DIR__ . '/includes/geojson.php';
+require_once __DIR__ . '/includes/georss.php';
 require_once __DIR__ . '/includes/settings.php';
 require_once __DIR__ . '/includes/map-assets.php';
 require_once __DIR__ . '/includes/cli.php';

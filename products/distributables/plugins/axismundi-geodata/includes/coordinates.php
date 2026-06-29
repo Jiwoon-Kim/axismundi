@@ -10,6 +10,7 @@
  *   axismundi_geodata_coords_to_geo_uri()          geo:LAT,LNG       (RFC 5870)
  *   axismundi_geodata_coords_to_iso6709()          +LAT+LNG/         (ISO 6709)
  *   axismundi_geodata_coords_to_geojson_position()  [LNG, LAT]        (RFC 7946)
+ *   axismundi_geodata_coords_to_georss_point()      "LAT LNG"         (GeoRSS)
  *
  * @package AxismundiGeodata
  */
@@ -117,4 +118,42 @@ function axismundi_geodata_coords_to_geojson_position( $lat, $lng, $alt = null )
 	}
 
 	return $position;
+}
+
+/**
+ * A WGS 84 point as GeoRSS Simple text: "LAT LNG".
+ *
+ * @param mixed $lat Latitude.
+ * @param mixed $lng Longitude.
+ * @return string GeoRSS point text, or '' when the coordinate is missing.
+ */
+function axismundi_geodata_coords_to_georss_point( $lat, $lng ) : string {
+	if ( ! is_numeric( $lat ) || ! is_numeric( $lng ) ) {
+		return '';
+	}
+
+	return axismundi_geodata_fmt_decimal( $lat ) . ' ' . axismundi_geodata_fmt_decimal( $lng );
+}
+
+/**
+ * W,S,E,N bounds as GeoRSS Simple box text: "S W N E".
+ *
+ * @param mixed $west  Western longitude.
+ * @param mixed $south Southern latitude.
+ * @param mixed $east  Eastern longitude.
+ * @param mixed $north Northern latitude.
+ * @return string GeoRSS box text, or '' when the bounds are incomplete.
+ */
+function axismundi_geodata_bounds_to_georss_box( $west, $south, $east, $north ) : string {
+	if ( ! is_numeric( $west ) || ! is_numeric( $south ) || ! is_numeric( $east ) || ! is_numeric( $north ) ) {
+		return '';
+	}
+
+	return implode(
+		' ',
+		array_map(
+			'axismundi_geodata_fmt_decimal',
+			array( $south, $west, $north, $east )
+		)
+	);
 }

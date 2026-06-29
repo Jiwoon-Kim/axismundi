@@ -69,6 +69,13 @@ the REST API. Geotags and public GPS media are also available as GeoJSON for map
 clients. The controlled geotag place-type vocabulary uses Google Places tokens as
 its baseline plus reviewed local extensions with explicit Google fallbacks.
 
+WordPress RSS 2.0 feeds are extended with GeoRSS Simple when location data is
+available. A post with one coordinate-bearing geotag emits a point; multiple
+geotags emit their bounding box; posts without geotags remain ordinary RSS
+items. Geo taxonomy feeds also describe the current term at channel level. The
+serializer uses public geotag facts only and never exposes post or attachment GPS
+meta.
+
 == Installation ==
 
 1. Install and activate the Axismundi theme (for the dormant geo presentation
@@ -113,3 +120,5 @@ docs/map-strategy.md for the boundary.
   combining Google Places tokens with reviewed local extensions and fallbacks.
 * PMTiles map-pack metadata and preview support, GPX/KML track recognition, and
   GeoJSON REST exports for geotags, public GPS media, and tracks.
+* Conditional GeoRSS Simple output for WordPress RSS 2.0 feeds, including
+  geo_area / geotag channel geometry and post geotag point or box geometry.

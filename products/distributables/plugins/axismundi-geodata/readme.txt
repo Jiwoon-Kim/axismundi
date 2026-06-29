@@ -38,13 +38,11 @@ button that reads the original file's GPS, and a Leaflet mini map with a draggab
 marker (configure a tile provider under Settings → Geodata). Nothing is
 auto-imported or auto-published — the public toggle defaults off.
 
-Posts and pages express location through the geo_area / geotag taxonomies. A
-front-end Map block, the `taxonomy-geotag.html` / `geolocation-chip` theme
-presentation, and the ActivityStreams `Place` / GeoRSS serializers build on this
-model in later versions — the front-end map UI is intentionally not locked yet
-(see Map strategy below). Attachments carry coordinate meta only — they are never
-auto-tagged with place terms. A future ax_note post type can opt into the geo
-taxonomies through the `axismundi_geodata_object_types` filter.
+Posts and pages express location through the geo_area / geotag taxonomies. The
+separate Axismundi Map plugin consumes this data for front-end place, media,
+track, and geo-archive maps. Attachments carry coordinate meta only — they are
+never auto-tagged with place terms. A future ax_note post type can opt into the
+geo taxonomies through the `axismundi_geodata_object_types` filter.
 
 A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, with the
 광안리해수욕장 geotag) ships with the plugin but is created only on request — it
@@ -63,7 +61,13 @@ coordinates, address, and place type.
 For self-hosted maps, upload a `.pmtiles` map pack under Media. The plugin reads
 its tile format, schema, bounds, zoom, and attribution into editable attachment
 fields, and a Protomaps map pack can be chosen as the admin preview basemap under
-Settings → Geodata. The plugin never bundles or generates tile data.
+Settings → Geodata. Front-end provider settings are enabled when Axismundi Map is
+active. The plugin never bundles or generates tile data.
+
+GPX and KML uploads are recognised as GPS tracks and exposed as GeoJSON through
+the REST API. Geotags and public GPS media are also available as GeoJSON for map
+clients. The controlled geotag place-type vocabulary uses Google Places tokens as
+its baseline plus reviewed local extensions with explicit Google fallbacks.
 
 == Installation ==
 
@@ -86,11 +90,11 @@ provider is active:
 
 == Map strategy ==
 
-Uploaded PMTiles map packs self-host the tile data, but the current Protomaps
-preview may load small glyph/sprite rendering assets from Protomaps' public asset
-host. A front-end Map block is intentionally not locked yet: single-post maps,
-track/route maps, and archive/search query maps have different data contracts.
-See docs/map-strategy.md for the current boundary.
+Uploaded PMTiles map packs self-host the tile data, but the Protomaps renderer may
+load small glyph/sprite assets from Protomaps' public host. Axismundi Map is a
+separate dependent plugin: Geo Data owns the facts, REST exports, providers, and
+shared renderer assets; Map owns the public block and Query Map View. See
+docs/map-strategy.md for the boundary.
 
 == Changelog ==
 
@@ -105,3 +109,7 @@ See docs/map-strategy.md for the current boundary.
 * Optional place lookup for geo_area / geotag terms through a provider registry —
   Google Places (server-side key) and OpenStreetMap / Nominatim (public opt-in or
   custom endpoint) — with explicit candidate binding to a namespaced identity.
+* Controlled 508-type geotag vocabulary: Nature, Facilities, and Business,
+  combining Google Places tokens with reviewed local extensions and fallbacks.
+* PMTiles map-pack metadata and preview support, GPX/KML track recognition, and
+  GeoJSON REST exports for geotags, public GPS media, and tracks.

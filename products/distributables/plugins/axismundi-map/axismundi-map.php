@@ -6,6 +6,7 @@
  * Version:           0.1.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
+ * Requires Plugins:  axismundi-geodata
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later

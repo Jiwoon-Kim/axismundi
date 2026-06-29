@@ -4,7 +4,7 @@ Tags: fonts, korean, noto, typography, font-library
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -13,23 +13,23 @@ Optional Korean web-font provider for the Axismundi theme: Noto Sans KR and Noto
 == Description ==
 
 Axismundi Fonts: Noto CJK Korean supplies the `Noto Sans KR` and `Noto Serif KR`
-web fonts under the exact family names the Axismundi theme already references in
-its font stacks (for example `"Roboto Flex", "Noto Sans KR", system-ui`).
+web fonts and fills the Axismundi theme's regional CJK fallback slot when the
+current document root has a Korean language tag (`ko` or `ko-*`).
 
 Two roles:
 
 * **Provider.** On activation the plugin enqueues `@font-face` rules (front end
-  and block editor) for the two families. The Korean fallback in the theme's
-  stacks then resolves to Noto. The fonts are scoped to the Korean unicode range,
-  so Latin text keeps rendering in Roboto Flex / Roboto Serif.
+  and block editor) for the two families. On a Korean document it sets the
+  theme's `--axismundi-cjk-sans` / `--axismundi-cjk-serif` slots. The fonts are
+  scoped to Hangul, so Latin keeps rendering in Roboto Flex / Roboto Serif.
 * **Font Library collection.** The families are registered as the
   "Axismundi Fonts: Noto CJK Korean" collection, so they can be browsed,
   installed, and selected from Site Editor > Styles > Typography.
 
-Without the plugin the Axismundi theme falls back to the operating system's
-Korean font; the theme keeps working. With the plugin active, Korean renders in
-Noto. The same pattern extends to other languages (Japanese / Chinese) as
-separate companion plugins.
+Without the plugin the Axismundi theme falls back to the operating system's CJK
+font. Separate regional plugins can fill the same slot for Japanese or Chinese
+documents without competing in a fixed font-family list. The current Korean
+WOFF2 files are Hangul subsets; Korean Hanja continues to use the system fallback.
 
 This plugin bundles no tracking and contacts no external service.
 
@@ -44,15 +44,36 @@ This plugin bundles no tracking and contacts no external service.
 
 = Does it require the Axismundi theme? =
 
-It is built for Axismundi, but it works with any theme whose font stacks
-reference the `Noto Sans KR` or `Noto Serif KR` family names.
+Automatic fallback-slot integration requires Axismundi 0.1.3 or later. Other
+themes can still select the registered Noto families explicitly from the Font
+Library or reference their family names in CSS.
 
 = Does it change Latin text? =
 
 No. The `@font-face` rules are scoped to the Korean unicode range, so Latin and
 numerals continue to use the theme's primary family.
 
+= Which WordPress language setting selects the Korean fallback? =
+
+The public document language (`<html lang>`), normally derived from Site
+Language, selects it. A multilingual plugin may set that language per request.
+The logged-in user's profile language translates wp-admin and does not select the
+font used for published content.
+
+= Does this package include Korean Hanja? =
+
+No. The bundled WOFF2 files are deliberately limited to Hangul and Jamo. Shared
+CJK ideographs fall through to the operating system font until a separate
+regional Hanja subset is provided.
+
 == Changelog ==
+
+= 0.1.3 =
+
+* Fill Axismundi's locale-aware CJK fallback slot only for Korean documents, so
+  other regional Noto plugins can coexist without a fixed family-order conflict.
+* Clarify that user-profile language controls admin UI translation, not the
+  published document's regional glyph forms.
 
 = 0.1.2 =
 

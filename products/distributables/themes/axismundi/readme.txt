@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -24,6 +24,10 @@ CMS.
 2. Open Appearance > Editor to customize templates and global styles.
 
 == Changelog ==
+
+= 0.1.3 =
+* Replace the hard-coded Korean font fallback with locale-aware CJK sans/serif
+  slots that independent regional font plugins can fill.
 
 = 0.1.2 =
 * Add Search, Archive, Page, and 404 block templates and refine the footer.

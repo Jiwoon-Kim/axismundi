@@ -1,0 +1,39 @@
+/**
+ * Axismundi Fonts: Noto CJK Japanese — @font-face provider.
+ *
+ * Supplies the "Noto Sans JP" / "Noto Serif JP" web fonts and fills the theme's
+ * CJK fallback slot for Japanese. The theme stacks read
+ * `var(--axismundi-cjk-sans, system-ui)` / `var(--axismundi-cjk-serif, Georgia)`,
+ * so each regional font plugin sets that variable for its own `:lang()` and they
+ * coexist (KR + JP + …). Without any such plugin the slot falls back to the
+ * system font. Unlike the Korean package this subset bundles the shared CJK
+ * ideographs, so Japanese Kanji renders in Japanese glyph forms; Latin stays
+ * Roboto because the theme lists it ahead of this slot.
+ */
+
+/* The document language, not the logged-in user's admin language, chooses the
+ * regional glyph forms. Element-level `:lang(ja)` (not `:root:lang`) also covers
+ * inline `lang="ja"` subtrees inside a page whose root is another language, so a
+ * mixed-language page resolves each run to its own regional font. */
+:lang(ja) {
+	--axismundi-cjk-sans: "Noto Sans JP";
+	--axismundi-cjk-serif: "Noto Serif JP";
+}
+
+@font-face {
+	font-family: "Noto Sans JP";
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+3040-309F, U+30A0-30FF, U+3190-319F, U+31F0-31FF, U+3200-32FF, U+3300-33FF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+	src: url("../fonts/noto-sans-jp/axismundi-noto-sans-jp.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Noto Serif JP";
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	unicode-range: U+3000-303F, U+3040-309F, U+30A0-30FF, U+3190-319F, U+31F0-31FF, U+3200-32FF, U+3300-33FF, U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF;
+	src: url("../fonts/noto-serif-jp/axismundi-noto-serif-jp.woff2") format("woff2");
+}

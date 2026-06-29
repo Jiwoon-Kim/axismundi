@@ -24,9 +24,9 @@ Each font directory preserves its `OFL.txt` and `source.txt`.
 - Roboto Serif
 - Roboto Mono
 
-The Korean `Noto Sans KR` / `Noto Serif KR` families referenced in the font
-stacks are supplied by the optional "Axismundi Fonts: Noto CJK Korean" plugin,
-not bundled in the theme.
+The theme exposes locale-aware CJK sans/serif fallback slots. Optional regional
+font plugins, such as "Axismundi Fonts: Noto CJK Korean", fill those slots; the
+regional fonts are not bundled in the theme.
 
 ## Per-file licensing
 

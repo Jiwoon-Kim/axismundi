@@ -1,12 +1,23 @@
 /**
  * Axismundi Fonts: Noto CJK Korean — @font-face provider.
  *
- * Supplies the "Noto Sans KR" / "Noto Serif KR" web fonts under the exact
- * family names the Axismundi theme references in its font stacks
- * ("Roboto Flex", "Noto Sans KR", system-ui, ...). With this plugin active the
- * Korean fallback in those stacks resolves to Noto; without it the theme falls
- * back to the system CJK font. Korean unicode-range only, so Latin stays Roboto.
+ * Supplies the "Noto Sans KR" / "Noto Serif KR" web fonts and fills the theme's
+ * CJK fallback slot for Korean. The theme stacks read
+ * `var(--axismundi-cjk-sans, system-ui)` / `var(--axismundi-cjk-serif, Georgia)`,
+ * so each regional font plugin sets that variable for its own `:lang()` and they
+ * coexist (KR + JP + …). Without any such plugin the slot falls back to the
+ * system font. The bundled subset covers Hangul, not shared CJK ideographs;
+ * Latin stays Roboto and Korean Hanja falls through to the system font.
  */
+
+/* The document language, not the logged-in user's admin language, chooses the
+ * regional glyph forms. Element-level `:lang(ko)` (not `:root:lang`) also covers
+ * inline `lang="ko"` subtrees inside a page whose root is another language, so a
+ * mixed-language page resolves each run to its own regional font. */
+:lang(ko) {
+	--axismundi-cjk-sans: "Noto Sans KR";
+	--axismundi-cjk-serif: "Noto Serif KR";
+}
 
 @font-face {
 	font-family: "Noto Sans KR";

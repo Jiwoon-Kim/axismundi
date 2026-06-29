@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Axismundi Fonts: Noto CJK Korean
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-fonts-noto-cjk-kr
- * Description:       Optional Korean web-font provider for the Axismundi theme — supplies Noto Sans KR and Noto Serif KR under the family names the theme's stacks reference, and registers them as a Font Library collection.
- * Version:           0.1.2
+ * Description:       Optional Korean web-font provider for the Axismundi theme — supplies Noto Sans KR and Noto Serif KR, fills the theme's CJK fallback slot for Korean documents, and registers them as a Font Library collection.
+ * Version:           0.1.3
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -18,15 +18,16 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_FONTS_NOTO_CJK_KR_VERSION' ) ) {
-	define( 'AXISMUNDI_FONTS_NOTO_CJK_KR_VERSION', '0.1.2' );
+	define( 'AXISMUNDI_FONTS_NOTO_CJK_KR_VERSION', '0.1.3' );
 }
 
 /**
  * Enqueue the @font-face provider on the front end and in the block editor.
  *
  * enqueue_block_assets fires for both the front end and the editor (including
- * the editor canvas), so the Korean fallback in the theme's font stacks renders
- * the same way in both contexts the moment the plugin is active.
+ * the editor canvas). CSS activates the provider only when the document root is
+ * Korean; the logged-in user's admin-interface language is not a content-font
+ * signal.
  */
 function axismundi_fonts_noto_cjk_kr_enqueue() : void {
 	wp_enqueue_style(

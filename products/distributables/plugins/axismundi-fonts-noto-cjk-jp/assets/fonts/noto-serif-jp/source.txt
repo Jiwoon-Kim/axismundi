@@ -1,0 +1,5 @@
+Source: https://github.com/google/fonts/tree/main/ofl/notoserifjp
+Original file: NotoSerifJP-VariableFont_wght.ttf
+Processing: pyftsubset (fontTools) → WOFF2 with Japanese subset (Kana + CJK punctuation/compatibility + CJK Unified Ideographs and Compatibility Ideographs; wght axis preserved)
+Conversion date: 2026-06-29
+License: SIL Open Font License 1.1

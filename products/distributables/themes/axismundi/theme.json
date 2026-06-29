@@ -275,7 +275,7 @@
 				{
 					"slug": "roboto-flex",
 					"name": "Roboto Flex",
-					"fontFamily": "\"Roboto Flex\", \"Noto Sans KR\", system-ui, sans-serif",
+					"fontFamily": "\"Roboto Flex\", var(--axismundi-cjk-sans, system-ui), sans-serif",
 					"fontFace": [
 						{
 							"fontFamily": "Roboto Flex",
@@ -293,7 +293,7 @@
 				{
 					"slug": "roboto-serif",
 					"name": "Roboto Serif",
-					"fontFamily": "\"Roboto Serif\", \"Noto Serif KR\", Georgia, serif",
+					"fontFamily": "\"Roboto Serif\", var(--axismundi-cjk-serif, Georgia), serif",
 					"fontFace": [
 						{
 							"fontFamily": "Roboto Serif",

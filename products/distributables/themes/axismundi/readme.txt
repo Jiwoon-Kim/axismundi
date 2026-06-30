@@ -28,6 +28,10 @@ CMS.
 = 0.1.3 =
 * Replace the hard-coded Korean font fallback with locale-aware CJK sans/serif
   slots that independent regional font plugins can fill.
+* Add dedicated geo_area and geotag archive templates with Query Map View
+  integration when the companion Geodata and Map plugins are active.
+* Add location-marked taxonomy chips and refine archive/query patterns with
+  enhanced pagination and clearer result layouts.
 * Add an opt-in Feed header style for the core RSS block, showing the feed icon,
   linked title, and description above the existing Material collection cards.
 

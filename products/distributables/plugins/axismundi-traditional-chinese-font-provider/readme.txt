@@ -1,6 +1,6 @@
-=== Axismundi Fonts: Noto CJK Traditional Chinese ===
+=== Axismundi Traditional Chinese Font Provider ===
 Contributors: kimjiwoon
-Tags: fonts, chinese, noto, typography, font-library
+Tags: fonts, chinese, typography, font-library
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
@@ -12,7 +12,7 @@ Optional Traditional Chinese web-font provider for the Axismundi theme: Noto San
 
 == Description ==
 
-Axismundi Fonts: Noto CJK Traditional Chinese supplies the `Noto Sans TC` web
+Axismundi Traditional Chinese Font Provider supplies the `Noto Sans TC` web
 font and fills the Axismundi theme's sans-serif regional CJK fallback slot for
 Traditional Chinese content. It matches the script subtag `zh-Hant`
 first, and also the legacy region tags `zh-TW`, `zh-HK`, and `zh-MO`, on the
@@ -26,7 +26,7 @@ Two roles:
   rendering in Roboto Flex / Roboto Serif because the theme lists Roboto ahead of
   the slot.
 * **Font Library collection.** The family is registered as the
-  "Axismundi Fonts: Noto CJK Traditional Chinese" collection, so they can be
+  "Axismundi Traditional Chinese Font Provider" collection, so they can be
   browsed, installed, and selected from Site Editor > Styles > Typography.
 
 Because the slot is keyed on the Traditional Chinese language tags, this plugin
@@ -83,7 +83,7 @@ Traditional glyph forms. The files are correspondingly large.
 
 == Copyright ==
 
-Axismundi Fonts: Noto CJK Traditional Chinese, Copyright 2026 KIM JIWOON.
+Axismundi Traditional Chinese Font Provider, Copyright 2026 KIM JIWOON.
 Plugin code is distributed under the GNU General Public License, version 3 or
 later.
 

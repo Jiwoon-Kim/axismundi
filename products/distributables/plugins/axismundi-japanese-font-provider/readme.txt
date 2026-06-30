@@ -1,6 +1,6 @@
-=== Axismundi Fonts: Noto CJK Japanese ===
+=== Axismundi Japanese Font Provider ===
 Contributors: kimjiwoon
-Tags: fonts, japanese, noto, typography, font-library
+Tags: fonts, japanese, typography, font-library
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
@@ -12,7 +12,7 @@ Optional Japanese web-font provider for the Axismundi theme: Noto Sans JP and No
 
 == Description ==
 
-Axismundi Fonts: Noto CJK Japanese supplies the `Noto Sans JP` and `Noto Serif
+Axismundi Japanese Font Provider supplies the `Noto Sans JP` and `Noto Serif
 JP` web fonts and fills the Axismundi theme's regional CJK fallback slot for
 Japanese-language content (`lang="ja"`, on the document root or an inline
 subtree).
@@ -25,7 +25,7 @@ Two roles:
   rendering in Roboto Flex / Roboto Serif because the theme lists Roboto ahead of
   the slot.
 * **Font Library collection.** The families are registered as the
-  "Axismundi Fonts: Noto CJK Japanese" collection, so they can be browsed,
+  "Axismundi Japanese Font Provider" collection, so they can be browsed,
   installed, and selected from Site Editor > Styles > Typography.
 
 Because the slot is keyed on `:lang(ja)`, this plugin coexists with the Korean
@@ -81,7 +81,7 @@ forms. The files are correspondingly larger than a Kana-only subset.
 
 == Copyright ==
 
-Axismundi Fonts: Noto CJK Japanese, Copyright 2026 KIM JIWOON.
+Axismundi Japanese Font Provider, Copyright 2026 KIM JIWOON.
 Plugin code is distributed under the GNU General Public License, version 3 or
 later.
 

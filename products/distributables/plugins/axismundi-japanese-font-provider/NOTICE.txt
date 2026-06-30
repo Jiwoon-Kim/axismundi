@@ -1,4 +1,4 @@
-# NOTICE — Axismundi Fonts: Noto CJK Traditional Chinese
+# NOTICE — Axismundi Japanese Font Provider
 
 This plugin bundles open-source fonts. The plugin code is GPL-3.0-or-later; the
 bundled fonts retain their own SIL Open Font License 1.1.
@@ -7,7 +7,8 @@ bundled fonts retain their own SIL Open Font License 1.1.
 
 | Family | Path | License |
 | --- | --- | --- |
-| Noto Sans TC | `assets/fonts/noto-sans-tc/` | OFL 1.1 |
+| Noto Sans JP | `assets/fonts/noto-sans-jp/` | OFL 1.1 |
+| Noto Serif JP | `assets/fonts/noto-serif-jp/` | OFL 1.1 |
 
 - Upstream project: https://github.com/notofonts/noto-cjk
 - Each font directory preserves its `OFL.txt` (license) and `source.txt`

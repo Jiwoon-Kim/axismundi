@@ -25,7 +25,7 @@ Each font directory preserves its `OFL.txt` and `source.txt`.
 - Roboto Mono
 
 The theme exposes locale-aware CJK sans/serif fallback slots. Optional regional
-font plugins, such as "Axismundi Fonts: Noto CJK Korean", fill those slots; the
+font plugins, such as "Axismundi Korean Font Provider", fill those slots; the
 regional fonts are not bundled in the theme.
 
 ## Per-file licensing

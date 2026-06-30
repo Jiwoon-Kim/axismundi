@@ -1,6 +1,6 @@
-=== Axismundi Fonts: Noto CJK Korean ===
+=== Axismundi Korean Font Provider ===
 Contributors: kimjiwoon
-Tags: fonts, korean, noto, typography, font-library
+Tags: fonts, korean, typography, font-library
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
@@ -12,7 +12,7 @@ Optional Korean web-font provider for the Axismundi theme: Noto Sans KR and Noto
 
 == Description ==
 
-Axismundi Fonts: Noto CJK Korean supplies the `Noto Sans KR` and `Noto Serif KR`
+Axismundi Korean Font Provider supplies the `Noto Sans KR` and `Noto Serif KR`
 web fonts and fills the Axismundi theme's regional CJK fallback slot when the
 current document root has a Korean language tag (`ko` or `ko-*`).
 
@@ -23,7 +23,7 @@ Two roles:
   theme's `--axismundi-cjk-sans` / `--axismundi-cjk-serif` slots. The fonts are
   scoped to Hangul, so Latin keeps rendering in Roboto Flex / Roboto Serif.
 * **Font Library collection.** The families are registered as the
-  "Axismundi Fonts: Noto CJK Korean" collection, so they can be browsed,
+  "Axismundi Korean Font Provider" collection, so they can be browsed,
   installed, and selected from Site Editor > Styles > Typography.
 
 Without the plugin the Axismundi theme falls back to the operating system's CJK
@@ -71,7 +71,7 @@ regional Hanja subset is provided.
 = 0.1.3 =
 
 * Fill Axismundi's locale-aware CJK fallback slot only for Korean documents, so
-  other regional Noto plugins can coexist without a fixed family-order conflict.
+  other regional font plugins can coexist without a fixed family-order conflict.
 * Clarify that user-profile language controls admin UI translation, not the
   published document's regional glyph forms.
 
@@ -92,7 +92,7 @@ regional Hanja subset is provided.
 
 == Copyright ==
 
-Axismundi Fonts: Noto CJK Korean, Copyright 2026 KIM JIWOON.
+Axismundi Korean Font Provider, Copyright 2026 KIM JIWOON.
 Plugin code is distributed under the GNU General Public License, version 3 or
 later.
 

@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       Axismundi Fonts: Noto CJK Traditional Chinese
- * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-fonts-noto-cjk-tc
+ * Plugin Name:       Axismundi Traditional Chinese Font Provider
+ * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-traditional-chinese-font-provider
  * Description:       Optional Traditional Chinese web-font provider for the Axismundi theme — supplies Noto Sans TC, fills the theme's sans-serif CJK fallback slot for Traditional Chinese documents, and registers it as a Font Library collection.
  * Version:           0.1.0
  * Requires at least: 6.7
@@ -10,15 +10,15 @@
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
- * Text Domain:       axismundi-fonts-noto-cjk-tc
+ * Text Domain:       axismundi-traditional-chinese-font-provider
  *
- * @package AxismundiFontsNotoCjkTc
+ * @package AxismundiTraditionalChineseFontProvider
  */
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! defined( 'AXISMUNDI_FONTS_NOTO_CJK_TC_VERSION' ) ) {
-	define( 'AXISMUNDI_FONTS_NOTO_CJK_TC_VERSION', '0.1.0' );
+if ( ! defined( 'AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_VERSION' ) ) {
+	define( 'AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_VERSION', '0.1.0' );
 }
 
 /**
@@ -29,15 +29,15 @@ if ( ! defined( 'AXISMUNDI_FONTS_NOTO_CJK_TC_VERSION' ) ) {
  * Traditional Chinese; the logged-in user's admin-interface language is not a
  * content-font signal.
  */
-function axismundi_fonts_noto_cjk_tc_enqueue() : void {
+function axismundi_traditional_chinese_font_provider_enqueue() : void {
 	wp_enqueue_style(
-		'axismundi-fonts-noto-cjk-tc',
+		'axismundi-traditional-chinese-font-provider',
 		plugins_url( 'assets/styles/fonts.css', __FILE__ ),
 		array(),
-		AXISMUNDI_FONTS_NOTO_CJK_TC_VERSION
+		AXISMUNDI_TRADITIONAL_CHINESE_FONT_PROVIDER_VERSION
 	);
 }
-add_action( 'enqueue_block_assets', 'axismundi_fonts_noto_cjk_tc_enqueue' );
+add_action( 'enqueue_block_assets', 'axismundi_traditional_chinese_font_provider_enqueue' );
 
 /**
  * Register the Noto CJK Traditional Chinese family as a Font Library collection.
@@ -47,20 +47,20 @@ add_action( 'enqueue_block_assets', 'axismundi_fonts_noto_cjk_tc_enqueue' );
  * stacks; this collection lets users browse and explicitly install/select the
  * families. Available since WordPress 6.5.
  */
-function axismundi_fonts_noto_cjk_tc_collection() : void {
+function axismundi_traditional_chinese_font_provider_collection() : void {
 	if ( ! function_exists( 'wp_register_font_collection' ) ) {
 		return;
 	}
 
 	$sans_src = plugins_url( 'assets/fonts/noto-sans-tc/axismundi-noto-sans-tc.woff2', __FILE__ );
 	wp_register_font_collection(
-		'axismundi-fonts-noto-cjk-tc',
+		'axismundi-traditional-chinese-font-provider',
 		array(
-			'name'          => __( 'Axismundi Fonts: Noto CJK Traditional Chinese', 'axismundi-fonts-noto-cjk-tc' ),
-			'description'   => __( 'Noto Sans TC for the Axismundi theme.', 'axismundi-fonts-noto-cjk-tc' ),
+			'name'          => __( 'Axismundi Traditional Chinese Font Provider', 'axismundi-traditional-chinese-font-provider' ),
+			'description'   => __( 'Noto Sans TC for the Axismundi theme.', 'axismundi-traditional-chinese-font-provider' ),
 			'categories'    => array(
 				array(
-					'name' => __( 'Traditional Chinese', 'axismundi-fonts-noto-cjk-tc' ),
+					'name' => __( 'Traditional Chinese', 'axismundi-traditional-chinese-font-provider' ),
 					'slug' => 'traditional-chinese',
 				),
 			),
@@ -86,4 +86,4 @@ function axismundi_fonts_noto_cjk_tc_collection() : void {
 		)
 	);
 }
-add_action( 'init', 'axismundi_fonts_noto_cjk_tc_collection' );
+add_action( 'init', 'axismundi_traditional_chinese_font_provider_collection' );

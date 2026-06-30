@@ -90,14 +90,7 @@
 			html += '<strong class="axismundi-map__popup-title">' + titleInner + '</strong>';
 		}
 		if ( cfg.displayAuthor ) {
-			if ( props.byline_html ) {
-				// Server-sanitised (wp_kses allowlist); only re-target links here.
-				var byline = props.byline_html;
-				if ( cfg.openInNewTab ) {
-					byline = byline.replace( /<a\s/gi, '<a target="_blank" rel="noopener noreferrer" ' );
-				}
-				html += '<div class="axismundi-map__popup-byline">' + byline + '</div>';
-			} else if ( props.author_name ) {
+			if ( props.author_name ) {
 				var author = escapeHtml( props.author_name );
 				if ( props.author_url ) {
 					author = popupLinkOpen( props.author_url, cfg ) + author + '</a>';

@@ -60,10 +60,9 @@ later work.
   fetched, cached, and converted to GeoJSON server-side by Axismundi Geo Data.
 * Render polygon and box geometries (fill + outline on MapLibre, native on
   Leaflet) in addition to points and lines.
-* Rich GeoRSS marker popups: representative image, title link, author byline
-  (the feed's sanitized lead paragraph, e.g. "user posted a photo:"), date, and
-  excerpt — with per-block toggles (number of items, author, date, excerpt,
-  excerpt length, open links in new tab) mirroring the core RSS block.
+* Rich GeoRSS marker popups: representative image, title link, structured author,
+  date, and excerpt — with per-block toggles (number of items, author, date,
+  excerpt, excerpt length, open links in new tab) mirroring the core RSS block.
 
 = 0.1.2 =
 * Fit geo-area archive maps to all geotag markers on the current query page;

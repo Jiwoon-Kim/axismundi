@@ -28,6 +28,8 @@ CMS.
 = 0.1.3 =
 * Replace the hard-coded Korean font fallback with locale-aware CJK sans/serif
   slots that independent regional font plugins can fill.
+* Add an opt-in Feed header style for the core RSS block, showing the feed icon,
+  linked title, and description above the existing Material collection cards.
 
 = 0.1.2 =
 * Add Search, Archive, Page, and 404 block templates and refine the footer.

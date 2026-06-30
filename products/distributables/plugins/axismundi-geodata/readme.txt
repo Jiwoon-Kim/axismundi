@@ -4,7 +4,7 @@ Tags: geo, geotag, location, taxonomy, rest-api
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -26,11 +26,9 @@ back through one shared model. It registers:
 * **Place-fact term meta** — centroid, display bounds / zoom, and external place id on
   each geo_area / geotag term.
 
-Privacy is built into the model. The raw exact coordinate is stored, but
-exposure is gated twice: `geo_public` decides whether any coordinate leaves the
-site, and `ax_geo_public_precision` (hidden / city / coarse / neighborhood /
-exact) decides how precise the exposed value is. Callers ask the plugin for the
-public coordinate rather than reading the raw meta.
+Privacy is built into the model. The raw exact coordinate is stored, while
+`geo_public` decides whether an attachment coordinate may leave the site.
+Callers ask the plugin for the public coordinate rather than reading raw meta.
 
 Attachments get a **Location (GPS)** editor on the Edit Media screen: latitude,
 longitude, altitude, and a public toggle, plus an on-demand **Import from EXIF**
@@ -69,12 +67,13 @@ the REST API. Geotags and public GPS media are also available as GeoJSON for map
 clients. The controlled geotag place-type vocabulary uses Google Places tokens as
 its baseline plus reviewed local extensions with explicit Google fallbacks.
 
-WordPress RSS 2.0 feeds are extended with GeoRSS Simple when location data is
-available. A post with one coordinate-bearing geotag emits a point; multiple
-geotags emit their bounding box; posts without geotags remain ordinary RSS
-items. Geo taxonomy feeds also describe the current term at channel level. The
+WordPress RSS 2.0 and Atom feeds are extended with GeoRSS Simple when location
+data is available. A post with one coordinate-bearing geotag emits a point;
+multiple geotags emit their bounding box; posts without geotags remain ordinary
+feed items. Geo taxonomy feeds also describe the current term at feed level. The
 serializer uses public geotag facts only and never exposes post or attachment GPS
-meta.
+meta. A server-side adapter uses WordPress `fetch_feed()` / SimplePie to convert
+external GeoRSS and W3C Geo feeds into GeoJSON for map clients.
 
 == Installation ==
 
@@ -105,9 +104,17 @@ docs/map-strategy.md for the boundary.
 
 == Changelog ==
 
+= 0.2.0 =
+* Extend both RSS 2.0 and Atom feeds with conditional GeoRSS Simple geometry for
+  geo taxonomy feeds and posts carrying public geotag terms.
+* Add a `fetch_feed()` / SimplePie adapter that normalizes external GeoRSS and
+  W3C Geo feeds into bounded GeoJSON FeatureCollections for map clients.
+* Preserve structured feed properties for map popups, including title, image,
+  author, date, and excerpt, while sanitizing the only retained HTML fragment.
+
 = 0.1.0 =
 * Initial foundation: geo_area + geotag taxonomies, post/attachment coordinate
-  meta, term place-fact meta, public-precision privacy model, REST exposure.
+  meta, term place-fact meta, public-coordinate gating, and REST exposure.
 * Attachment Location (GPS) editor: lat/lng/altitude/public fields, on-demand
   EXIF GPS import, and a Leaflet mini map with a draggable marker.
 * Admin preview map settings (Settings → Geodata): none, admin-only OpenStreetMap
@@ -120,5 +127,3 @@ docs/map-strategy.md for the boundary.
   combining Google Places tokens with reviewed local extensions and fallbacks.
 * PMTiles map-pack metadata and preview support, GPX/KML track recognition, and
   GeoJSON REST exports for geotags, public GPS media, and tracks.
-* Conditional GeoRSS Simple output for WordPress RSS 2.0 feeds, including
-  geo_area / geotag channel geometry and post geotag point or box geometry.

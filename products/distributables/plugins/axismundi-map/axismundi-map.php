@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Map
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-map
  * Description:       Front-end map block that draws Axismundi Geo Data (geotags, GPS tracks) over a self-hosted basemap, reusing the Geo Data plugin's map assets.
- * Version:           0.1.3
+ * Version:           0.2.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  axismundi-geodata
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'AXISMUNDI_MAP_VERSION', '0.1.3' );
+define( 'AXISMUNDI_MAP_VERSION', '0.2.0' );
 define( 'AXISMUNDI_MAP_FILE', __FILE__ );
 
 /**

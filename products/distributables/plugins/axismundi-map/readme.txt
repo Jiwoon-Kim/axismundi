@@ -5,7 +5,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-geodata
-Stable tag: 0.1.3
+Stable tag: 0.2.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -42,9 +42,9 @@ Block attributes: source (none / current archive / geotags / selected media /
 track / GeoRSS feed), bbox, feed url, media ids, track id, height, zoom (0 =
 auto-fit), show popups, and show visitor location control.
 
-This is v0.1: a thin GeoJSON map block plus a native Query Map View for geo
-archives. Google / Naver renderers, clustering, and elevation charts are later
-work.
+This is v0.2: a GeoJSON and GeoRSS map block plus a native Query Map View for
+geo archives. Google / Naver renderers, clustering, and elevation charts are
+later work.
 
 == Installation ==
 
@@ -55,7 +55,7 @@ work.
 
 == Changelog ==
 
-= 0.1.3 =
+= 0.2.0 =
 * Add a GeoRSS feed source: overlay an external GeoRSS Simple / W3C Geo feed,
   fetched, cached, and converted to GeoJSON server-side by Axismundi Geo Data.
 * Render polygon and box geometries (fill + outline on MapLibre, native on

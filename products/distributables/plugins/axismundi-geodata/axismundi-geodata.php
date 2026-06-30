@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Geodata
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-geodata
  * Description:       Canonical geo store for Axismundi — geo_area / geotag taxonomies and privacy-aware coordinate metadata for posts and attachments, exposed over REST for the editor, map blocks, and federation serializers.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'AXISMUNDI_GEODATA_VERSION', '0.1.0' );
+define( 'AXISMUNDI_GEODATA_VERSION', '0.2.0' );
 define( 'AXISMUNDI_GEODATA_FILE', __FILE__ );
 
 /**

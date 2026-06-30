@@ -58,15 +58,58 @@
 		} );
 	}
 
-	function popupHtml( props ) {
+	function popupLinkOpen( href, cfg ) {
+		var attrs = ' href="' + escapeHtml( href ) + '"';
+		if ( cfg && cfg.openInNewTab ) {
+			attrs += ' target="_blank" rel="noopener noreferrer"';
+		}
+		return '<a' + attrs + '>';
+	}
+
+	function trimWords( text, max ) {
+		var words = String( text || '' ).trim().split( /\s+/ );
+		if ( words.length <= max ) {
+			return words.join( ' ' );
+		}
+		return words.slice( 0, max ).join( ' ' ) + '…';
+	}
+
+	function popupHtml( props, cfg ) {
 		props = props || {};
+		cfg = cfg || {};
 		var title = popupTitle( props );
 		var html  = '';
 		if ( props.thumbnail ) {
 			html += '<img class="axismundi-map__popup-thumb" src="' + escapeHtml( props.thumbnail ) + '" alt="" loading="lazy" />';
 		}
 		if ( title ) {
-			html += '<strong class="axismundi-map__popup-title">' + escapeHtml( title ) + '</strong>';
+			var titleInner = escapeHtml( title );
+			if ( props.url ) {
+				titleInner = popupLinkOpen( props.url, cfg ) + titleInner + '</a>';
+			}
+			html += '<strong class="axismundi-map__popup-title">' + titleInner + '</strong>';
+		}
+		if ( cfg.displayAuthor ) {
+			if ( props.byline_html ) {
+				// Server-sanitised (wp_kses allowlist); only re-target links here.
+				var byline = props.byline_html;
+				if ( cfg.openInNewTab ) {
+					byline = byline.replace( /<a\s/gi, '<a target="_blank" rel="noopener noreferrer" ' );
+				}
+				html += '<div class="axismundi-map__popup-byline">' + byline + '</div>';
+			} else if ( props.author_name ) {
+				var author = escapeHtml( props.author_name );
+				if ( props.author_url ) {
+					author = popupLinkOpen( props.author_url, cfg ) + author + '</a>';
+				}
+				html += '<div class="axismundi-map__popup-byline">' + author + '</div>';
+			}
+		}
+		if ( cfg.displayDate && props.published ) {
+			html += '<div class="axismundi-map__popup-date">' + escapeHtml( props.published ) + '</div>';
+		}
+		if ( cfg.displayExcerpt && props.excerpt ) {
+			html += '<p class="axismundi-map__popup-excerpt">' + escapeHtml( trimWords( props.excerpt, cfg.excerptLength || 55 ) ) + '</p>';
 		}
 		return html;
 	}
@@ -183,7 +226,7 @@
 					return { color: '#d32f2f', weight: 3 };
 				},
 				onEachFeature: function ( feature, lyr ) {
-					var html = popupHtml( feature.properties );
+					var html = popupHtml( feature.properties, cfg );
 					if ( cfg.showPopups && html ) {
 						lyr.bindPopup( html );
 					}
@@ -505,7 +548,7 @@
 		}
 
 		function popupAt( lngLat, props ) {
-			var html = popupHtml( props );
+			var html = popupHtml( props, cfg );
 			if ( html ) {
 				new maplibregl.Popup().setLngLat( lngLat ).setHTML( html ).addTo( map );
 			}

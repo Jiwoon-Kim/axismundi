@@ -148,7 +148,12 @@ function axismundi_map_render_block( array $attributes ) : void {
 		// External GeoRSS feed: Geodata fetches/caches and converts server-side,
 		// inlined here so there is no public URL-proxy endpoint to abuse.
 		$geojson_data = axismundi_geodata_georss_geojson( esc_url_raw( (string) $attributes['feedUrl'] ) );
-		$fit_inline   = ! empty( $geojson_data['features'] );
+
+		$items_to_show = isset( $attributes['itemsToShow'] ) ? (int) $attributes['itemsToShow'] : 0;
+		if ( $items_to_show > 0 && ! empty( $geojson_data['features'] ) ) {
+			$geojson_data['features'] = array_slice( $geojson_data['features'], 0, $items_to_show );
+		}
+		$fit_inline = ! empty( $geojson_data['features'] );
 	}
 
 	if ( 'pmtiles' === $tiles['kind'] ) {
@@ -187,6 +192,11 @@ function axismundi_map_render_block( array $attributes ) : void {
 		'zoom'                => $zoom,
 		'showPopups'          => $show_popups,
 		'showVisitorLocation' => $show_visitor_location,
+		'displayAuthor'       => ! isset( $attributes['displayAuthor'] ) || ! empty( $attributes['displayAuthor'] ),
+		'displayDate'         => ! empty( $attributes['displayDate'] ),
+		'displayExcerpt'      => ! isset( $attributes['displayExcerpt'] ) || ! empty( $attributes['displayExcerpt'] ),
+		'excerptLength'       => isset( $attributes['excerptLength'] ) ? max( 1, (int) $attributes['excerptLength'] ) : 55,
+		'openInNewTab'        => ! empty( $attributes['openInNewTab'] ),
 	);
 
 	if ( '' !== $sync_key && isset( $queried ) && $queried instanceof WP_Term ) {

@@ -112,6 +112,44 @@
 							onChange: function ( v ) { set( { trackId: parseInt( v, 10 ) || 0 } ); }
 						} )
 					),
+					'georss' === a.source && el(
+						PanelBody,
+						{ title: __( 'GeoRSS feed display', 'axismundi-map' ) },
+						el( RangeControl, {
+							label: __( 'Number of items (0 = all)', 'axismundi-map' ),
+							value: a.itemsToShow || 0,
+							min: 0,
+							max: 100,
+							onChange: function ( v ) { set( { itemsToShow: v } ); }
+						} ),
+						el( ToggleControl, {
+							label: __( 'Display author', 'axismundi-map' ),
+							checked: a.displayAuthor,
+							onChange: function ( v ) { set( { displayAuthor: v } ); }
+						} ),
+						el( ToggleControl, {
+							label: __( 'Display date', 'axismundi-map' ),
+							checked: a.displayDate,
+							onChange: function ( v ) { set( { displayDate: v } ); }
+						} ),
+						el( ToggleControl, {
+							label: __( 'Display excerpt', 'axismundi-map' ),
+							checked: a.displayExcerpt,
+							onChange: function ( v ) { set( { displayExcerpt: v } ); }
+						} ),
+						a.displayExcerpt && el( RangeControl, {
+							label: __( 'Max number of words in excerpt', 'axismundi-map' ),
+							value: a.excerptLength || 55,
+							min: 10,
+							max: 100,
+							onChange: function ( v ) { set( { excerptLength: v } ); }
+						} ),
+						el( ToggleControl, {
+							label: __( 'Open links in new tab', 'axismundi-map' ),
+							checked: a.openInNewTab,
+							onChange: function ( v ) { set( { openInNewTab: v } ); }
+						} )
+					),
 					el(
 						PanelBody,
 						{ title: __( 'Display', 'axismundi-map' ) },

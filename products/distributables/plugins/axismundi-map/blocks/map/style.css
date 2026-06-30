@@ -117,6 +117,26 @@
 	line-height: 1.35;
 }
 
+.axismundi-map__popup-byline {
+	max-width: 220px;
+	margin-block-start: 4px;
+	font-size: 12px;
+	opacity: 0.85;
+}
+
+.axismundi-map__popup-date {
+	margin-block-start: 2px;
+	font-size: 11px;
+	opacity: 0.7;
+}
+
+.axismundi-map__popup-excerpt {
+	max-width: 220px;
+	margin-block: 6px 0;
+	font-size: 12px;
+	line-height: 1.4;
+}
+
 /*
  * Popups follow the theme's surface tokens so they match light / dark mode (the
  * PMTiles basemap itself switches Protomaps light/dark in view.js).

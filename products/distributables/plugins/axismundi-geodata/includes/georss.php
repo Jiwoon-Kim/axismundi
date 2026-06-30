@@ -1,11 +1,13 @@
 <?php
 /**
- * GeoRSS Simple extensions for WordPress RSS 2.0 feeds.
+ * GeoRSS Simple extensions for WordPress RSS 2.0 and Atom feeds.
  *
  * Existing WordPress feed queries remain authoritative. This file only adds
  * WGS 84 geometry: taxonomy feeds describe their channel, while each post item
- * is located from its public geotag terms. Post and attachment coordinate meta
- * are intentionally excluded from this serializer.
+ * is located from its public geotag terms. The georss: elements are namespace
+ * qualified, so the same serializer feeds both RSS 2.0 (rss2_*) and Atom
+ * (atom_*) hooks. Post and attachment coordinate meta are intentionally
+ * excluded from this serializer.
  *
  * @package AxismundiGeodata
  */
@@ -13,7 +15,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Add the GeoRSS namespace to non-comment RSS 2.0 feeds.
+ * Add the GeoRSS namespace to non-comment RSS 2.0 and Atom feeds.
  *
  * @return void
  */
@@ -25,6 +27,7 @@ function axismundi_geodata_georss_namespace() : void {
 	echo ' xmlns:georss="http://www.georss.org/georss"';
 }
 add_action( 'rss2_ns', 'axismundi_geodata_georss_namespace' );
+add_action( 'atom_ns', 'axismundi_geodata_georss_namespace' );
 
 /**
  * Coordinate pairs carried by a post's geotag terms.
@@ -107,6 +110,7 @@ function axismundi_geodata_georss_item() : void {
 	);
 }
 add_action( 'rss2_item', 'axismundi_geodata_georss_item' );
+add_action( 'atom_entry', 'axismundi_geodata_georss_item' );
 
 /**
  * Describe geo taxonomy RSS channels with their term geometry.
@@ -142,3 +146,4 @@ function axismundi_geodata_georss_channel() : void {
 	axismundi_geodata_print_georss_geometry( 'point', axismundi_geodata_coords_to_georss_point( $lat, $lng ) );
 }
 add_action( 'rss2_head', 'axismundi_geodata_georss_channel' );
+add_action( 'atom_head', 'axismundi_geodata_georss_channel' );

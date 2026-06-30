@@ -144,3 +144,69 @@ ul.wp-block-rss.is-grid > li {
 	object-fit: cover;
 	border-radius: 8px;
 }
+
+/*
+ * Opt-in "Feed header" (is-style-feed-header): a quiet feed-identity band the
+ * theme injects above the RSS items via render_block_core/rss. It is a sibling
+ * before the list <ul>; against the LIST card it shares the surface and butts
+ * flush (header = top corners + divider, list = bottom corners) so the two read
+ * as one grouped feed. Markup/values match the RSS item card above.
+ */
+.axismundi-rss-header {
+	display: flex;
+	gap: var(--wp--preset--spacing--100);
+	align-items: center;
+	box-sizing: border-box;
+	padding: var(--wp--preset--spacing--200);
+	background-color: var(--wp--preset--color--surface-container);
+	border-radius: 12px;
+}
+.axismundi-rss-header__icon {
+	flex: none;
+	inline-size: 32px;
+	block-size: 32px;
+	border-radius: 8px;
+	object-fit: cover;
+}
+.axismundi-rss-header__text {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--50);
+	min-inline-size: 0;
+}
+.axismundi-rss-header__title {
+	color: var(--wp--preset--color--on-surface);
+	font-size: var(--wp--preset--font-size--title-medium);
+	font-weight: 500;
+	line-height: 1.4;
+}
+.axismundi-rss-header__title a {
+	color: inherit;
+	text-decoration: none;
+}
+.axismundi-rss-header__title a:hover,
+.axismundi-rss-header__title a:focus-visible {
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+.axismundi-rss-header__desc {
+	overflow: hidden;
+	color: var(--wp--preset--color--on-surface-variant);
+	font-size: var(--wp--preset--font-size--body-small);
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+/* Merge the header into the top of the LIST card: flush, with one divider. */
+.axismundi-rss-header:has(+ .wp-block-rss:not(.is-grid)) {
+	border-end-start-radius: 0;
+	border-end-end-radius: 0;
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant);
+}
+.axismundi-rss-header + .wp-block-rss:not(.is-grid) {
+	margin-block-start: 0;
+	border-start-start-radius: 0;
+	border-start-end-radius: 0;
+}

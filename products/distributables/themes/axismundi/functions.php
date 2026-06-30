@@ -369,3 +369,74 @@ function axismundi_register_taxonomy_block_styles() : void {
 	register_block_style( 'core/archives', array( 'name' => 'row', 'label' => __( 'List row', 'axismundi' ) ) );
 }
 add_action( 'init', 'axismundi_register_taxonomy_block_styles' );
+
+/**
+ * Opt-in "Feed header" style for core/rss: a quiet feed-identity band (icon,
+ * title link, subtitle) above the item list, giving context for external feeds.
+ *
+ * core/rss has no header markup, so it is injected via render_block_core/rss
+ * when the style is selected. The feed is read with core's fetch_feed(), which
+ * reuses the same SimplePie transient cache core/rss already populated for this
+ * URL, so the header adds no extra network request. Geometry lives in
+ * blocks.collections.css keyed on .axismundi-rss-header; default core/rss output
+ * is untouched.
+ */
+function axismundi_register_rss_feed_header_style() : void {
+	register_block_style( 'core/rss', array( 'name' => 'feed-header', 'label' => __( 'Feed header', 'axismundi' ) ) );
+}
+add_action( 'init', 'axismundi_register_rss_feed_header_style' );
+
+/**
+ * Prepend the feed-identity header to a core/rss block using the Feed header style.
+ *
+ * @param string $block_content Rendered block HTML.
+ * @param array  $block         Parsed block.
+ * @return string
+ */
+function axismundi_rss_feed_header( string $block_content, array $block ) : string {
+	$class_name = isset( $block['attrs']['className'] ) ? (string) $block['attrs']['className'] : '';
+	if ( false === strpos( $class_name, 'is-style-feed-header' ) ) {
+		return $block_content;
+	}
+
+	$url = isset( $block['attrs']['feedURL'] ) ? esc_url_raw( (string) $block['attrs']['feedURL'] ) : '';
+	if ( '' === $url ) {
+		return $block_content;
+	}
+
+	if ( ! function_exists( 'fetch_feed' ) ) {
+		require_once ABSPATH . WPINC . '/feed.php';
+	}
+	$feed = fetch_feed( $url );
+	if ( is_wp_error( $feed ) ) {
+		return $block_content;
+	}
+
+	$title = trim( (string) $feed->get_title() );
+	$icon  = esc_url( (string) $feed->get_image_url() );
+	if ( '' === $title && '' === $icon ) {
+		return $block_content;
+	}
+
+	$link        = esc_url( (string) $feed->get_link() );
+	$description  = trim( (string) wp_strip_all_tags( (string) $feed->get_description() ) );
+	$title_text  = '' !== $title ? $title : (string) wp_parse_url( $url, PHP_URL_HOST );
+	$title_inner = esc_html( $title_text );
+	if ( '' !== $link ) {
+		$title_inner = sprintf( '<a href="%s">%s</a>', $link, $title_inner );
+	}
+
+	$header  = '<div class="axismundi-rss-header">';
+	if ( '' !== $icon ) {
+		$header .= sprintf( '<img class="axismundi-rss-header__icon" src="%s" alt="" width="32" height="32" loading="lazy" />', $icon );
+	}
+	$header .= '<span class="axismundi-rss-header__text">';
+	$header .= '<strong class="axismundi-rss-header__title">' . $title_inner . '</strong>';
+	if ( '' !== $description ) {
+		$header .= '<span class="axismundi-rss-header__desc">' . esc_html( $description ) . '</span>';
+	}
+	$header .= '</span></div>';
+
+	return $header . $block_content;
+}
+add_filter( 'render_block_core/rss', 'axismundi_rss_feed_header', 10, 2 );

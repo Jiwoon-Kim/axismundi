@@ -153,11 +153,7 @@ function axismundi_geodata_georss_to_geojson( string $xml ) : array {
 		$collection['features'][] = array(
 			'type'       => 'Feature',
 			'geometry'   => $geometry,
-			'properties' => array(
-				'type'  => 'georss',
-				'title' => axismundi_geodata_georss_entry_title( $entry ),
-				'url'   => axismundi_geodata_georss_entry_link( $entry ),
-			),
+			'properties' => axismundi_geodata_georss_entry_properties( $entry ),
 		);
 	}
 
@@ -279,6 +275,38 @@ function axismundi_geodata_close_ring( array $ring ) : array {
 	return $ring;
 }
 
+const AXISMUNDI_GEODATA_MRSS_NS   = 'http://search.yahoo.com/mrss/';
+const AXISMUNDI_GEODATA_DC_NS     = 'http://purl.org/dc/elements/1.1/';
+const AXISMUNDI_GEODATA_RSSCNT_NS = 'http://purl.org/rss/1.0/modules/content/';
+
+/**
+ * Normalise one feed entry into the popup property set the Map block consumes.
+ *
+ * Everything is plain text or a validated URL except byline_html, which is the
+ * feed's lead paragraph passed through a strict wp_kses allowlist so the source
+ * "X posted a photo:" line keeps its author link without becoming an XSS vector.
+ *
+ * @param SimpleXMLElement $entry Feed item/entry.
+ * @return array<string,mixed>
+ */
+function axismundi_geodata_georss_entry_properties( SimpleXMLElement $entry ) : array {
+	$content = axismundi_geodata_georss_entry_content( $entry );
+	$split   = axismundi_geodata_georss_split_content( $content );
+	$author  = axismundi_geodata_georss_entry_author( $entry );
+
+	return array(
+		'type'        => 'georss',
+		'title'       => axismundi_geodata_georss_entry_title( $entry ),
+		'url'         => axismundi_geodata_georss_entry_link( $entry ),
+		'thumbnail'   => axismundi_geodata_georss_entry_image( $entry, $content ),
+		'author_name' => $author['name'],
+		'author_url'  => $author['url'],
+		'byline_html' => $split['byline'],
+		'published'   => axismundi_geodata_georss_entry_date( $entry ),
+		'excerpt'     => $split['excerpt'],
+	);
+}
+
 /**
  * Best-effort title for a feed entry (RSS or Atom).
  *
@@ -290,7 +318,7 @@ function axismundi_geodata_georss_entry_title( SimpleXMLElement $entry ) : strin
 }
 
 /**
- * Best-effort permalink for a feed entry (RSS <link>text or Atom <link href>).
+ * Best-effort permalink: RSS <link>text, else Atom rel="alternate" / first link.
  *
  * @param SimpleXMLElement $entry Feed item/entry.
  * @return string
@@ -300,12 +328,203 @@ function axismundi_geodata_georss_entry_link( SimpleXMLElement $entry ) : string
 		return '';
 	}
 
-	// RSS carries the URL as element text; Atom carries it in an href attribute.
+	// RSS carries the URL as element text.
 	$text = trim( (string) $entry->link );
 	if ( '' !== $text ) {
 		return esc_url_raw( $text );
 	}
 
-	$href = (string) $entry->link['href'];
-	return '' !== $href ? esc_url_raw( $href ) : '';
+	// Atom: prefer rel="alternate" (or no rel); never the enclosure.
+	$fallback = '';
+	foreach ( $entry->link as $link ) {
+		$href = (string) $link['href'];
+		if ( '' === $href ) {
+			continue;
+		}
+		$rel = (string) $link['rel'];
+		if ( 'alternate' === $rel || '' === $rel ) {
+			return esc_url_raw( $href );
+		}
+		if ( '' === $fallback && 'enclosure' !== $rel ) {
+			$fallback = $href;
+		}
+	}
+
+	return '' !== $fallback ? esc_url_raw( $fallback ) : '';
+}
+
+/**
+ * The entry's content markup: Atom content/summary, RSS content:encoded /
+ * description.
+ *
+ * @param SimpleXMLElement $entry Feed item/entry.
+ * @return string
+ */
+function axismundi_geodata_georss_entry_content( SimpleXMLElement $entry ) : string {
+	if ( isset( $entry->content ) && '' !== trim( (string) $entry->content ) ) {
+		return (string) $entry->content;
+	}
+	$encoded = $entry->children( AXISMUNDI_GEODATA_RSSCNT_NS );
+	if ( isset( $encoded->encoded ) && '' !== trim( (string) $encoded->encoded ) ) {
+		return (string) $encoded->encoded;
+	}
+	if ( isset( $entry->summary ) && '' !== trim( (string) $entry->summary ) ) {
+		return (string) $entry->summary;
+	}
+	if ( isset( $entry->description ) ) {
+		return (string) $entry->description;
+	}
+	return '';
+}
+
+/**
+ * Split content into a sanitised lead-paragraph byline and a plain-text excerpt.
+ *
+ * A lead paragraph that carries a link but no image is treated as a byline
+ * (e.g. Flickr's "<a>user</a> posted a photo:") and dropped from the excerpt.
+ *
+ * @param string $html Content markup.
+ * @return array{byline:string,excerpt:string}
+ */
+function axismundi_geodata_georss_split_content( string $html ) : array {
+	$byline = '';
+	$rest   = $html;
+
+	if ( preg_match( '#<p\b[^>]*>(.*?)</p>#is', $html, $m ) ) {
+		$first = $m[1];
+		if ( false !== stripos( $first, '<a' ) && false === stripos( $first, '<img' ) ) {
+			$byline = axismundi_geodata_georss_sanitize_byline( $first );
+			$rest   = preg_replace( '#<p\b[^>]*>.*?</p>#is', '', $html, 1 );
+		}
+	}
+
+	$excerpt = trim( preg_replace( '/\s+/', ' ', (string) wp_strip_all_tags( (string) $rest ) ) );
+
+	return array(
+		'byline'  => $byline,
+		'excerpt' => $excerpt,
+	);
+}
+
+/**
+ * Sanitise a byline fragment to a strict inline allowlist (links + emphasis).
+ *
+ * @param string $html Byline markup.
+ * @return string
+ */
+function axismundi_geodata_georss_sanitize_byline( string $html ) : string {
+	$allowed = array(
+		'a'      => array(
+			'href'  => true,
+			'title' => true,
+		),
+		'strong' => array(),
+		'em'     => array(),
+		'b'      => array(),
+		'i'      => array(),
+		'span'   => array(),
+	);
+
+	return trim( wp_kses( $html, $allowed ) );
+}
+
+/**
+ * Author name and profile URL: Atom author/name + uri, else RSS dc:creator.
+ *
+ * @param SimpleXMLElement $entry Feed item/entry.
+ * @return array{name:string,url:string}
+ */
+function axismundi_geodata_georss_entry_author( SimpleXMLElement $entry ) : array {
+	$name = '';
+	$url  = '';
+
+	if ( isset( $entry->author ) ) {
+		if ( isset( $entry->author->name ) ) {
+			$name = trim( (string) $entry->author->name );
+		}
+		if ( isset( $entry->author->uri ) ) {
+			$url = esc_url_raw( trim( (string) $entry->author->uri ) );
+		}
+	}
+
+	if ( '' === $name ) {
+		$dc = $entry->children( AXISMUNDI_GEODATA_DC_NS );
+		if ( isset( $dc->creator ) ) {
+			$name = trim( (string) $dc->creator );
+		}
+	}
+
+	return array(
+		'name' => $name,
+		'url'  => $url,
+	);
+}
+
+/**
+ * Representative image URL: Media RSS, then an image enclosure, then the first
+ * inline <img> in the content.
+ *
+ * @param SimpleXMLElement $entry   Feed item/entry.
+ * @param string           $content Content markup.
+ * @return string
+ */
+function axismundi_geodata_georss_entry_image( SimpleXMLElement $entry, string $content ) : string {
+	$media = $entry->children( AXISMUNDI_GEODATA_MRSS_NS );
+	foreach ( array( 'content', 'thumbnail' ) as $tag ) {
+		if ( isset( $media->$tag ) ) {
+			foreach ( $media->$tag as $node ) {
+				$url = esc_url_raw( (string) $node['url'] );
+				if ( '' !== $url ) {
+					return $url;
+				}
+			}
+		}
+	}
+
+	foreach ( $entry->link as $link ) {
+		if ( 'enclosure' === (string) $link['rel'] && 0 === stripos( (string) $link['type'], 'image/' ) ) {
+			$url = esc_url_raw( (string) $link['href'] );
+			if ( '' !== $url ) {
+				return $url;
+			}
+		}
+	}
+
+	if ( isset( $entry->enclosure ) && 0 === stripos( (string) $entry->enclosure['type'], 'image/' ) ) {
+		$url = esc_url_raw( (string) $entry->enclosure['url'] );
+		if ( '' !== $url ) {
+			return $url;
+		}
+	}
+
+	if ( preg_match( '#<img[^>]+src=["\']([^"\']+)["\']#i', $content, $m ) ) {
+		return esc_url_raw( $m[1] );
+	}
+
+	return '';
+}
+
+/**
+ * Localised published date string: Atom published/updated, RSS pubDate/dc:date.
+ *
+ * @param SimpleXMLElement $entry Feed item/entry.
+ * @return string
+ */
+function axismundi_geodata_georss_entry_date( SimpleXMLElement $entry ) : string {
+	$raw = '';
+	foreach ( array( 'published', 'updated', 'pubDate' ) as $tag ) {
+		if ( isset( $entry->$tag ) && '' !== trim( (string) $entry->$tag ) ) {
+			$raw = (string) $entry->$tag;
+			break;
+		}
+	}
+	if ( '' === $raw ) {
+		$dc = $entry->children( AXISMUNDI_GEODATA_DC_NS );
+		if ( isset( $dc->date ) ) {
+			$raw = (string) $dc->date;
+		}
+	}
+
+	$timestamp = $raw ? strtotime( $raw ) : false;
+	return false !== $timestamp ? date_i18n( (string) get_option( 'date_format' ), $timestamp ) : '';
 }

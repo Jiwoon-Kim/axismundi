@@ -5,7 +5,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-geodata
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -26,8 +26,11 @@ The block:
 * overlays a GeoJSON source — geotags (optionally within a bounding box),
   selected media attachments (public GPS photos plus GPX/KML tracks), or a
   single GPS track attachment — fetched from Geo Data's REST endpoints;
-* shows a marker / line per feature, with optional click popups. Public GPS photo
-  popups can include the attachment thumbnail;
+* can overlay an external GeoRSS Simple / W3C Geo feed (including federated
+  feeds): Geo Data fetches and caches it server-side and converts it to GeoJSON,
+  so no public URL proxy is exposed. Points, lines, and polygons / boxes render;
+* shows a marker / line / polygon per feature, with optional click popups. Public
+  GPS photo popups can include the attachment thumbnail;
 * can show an opt-in visitor location control on the front end. The browser
   location prompt is only triggered when the visitor presses the map control;
 * supports geo taxonomy archives: a geotag archive focuses on that place, while
@@ -36,8 +39,8 @@ The block:
   refits the persistent map instance so every marker remains visible.
 
 Block attributes: source (none / current archive / geotags / selected media /
-track), bbox, media ids, track id, height, zoom (0 = auto-fit), show popups, and show
-visitor location control.
+track / GeoRSS feed), bbox, feed url, media ids, track id, height, zoom (0 =
+auto-fit), show popups, and show visitor location control.
 
 This is v0.1: a thin GeoJSON map block plus a native Query Map View for geo
 archives. Google / Naver renderers, clustering, and elevation charts are later
@@ -51,6 +54,12 @@ work.
 3. Add the Axismundi Map block to a post or page and choose a source.
 
 == Changelog ==
+
+= 0.1.3 =
+* Add a GeoRSS feed source: overlay an external GeoRSS Simple / W3C Geo feed,
+  fetched, cached, and converted to GeoJSON server-side by Axismundi Geo Data.
+* Render polygon and box geometries (fill + outline on MapLibre, native on
+  Leaflet) in addition to points and lines.
 
 = 0.1.2 =
 * Fit geo-area archive maps to all geotag markers on the current query page;

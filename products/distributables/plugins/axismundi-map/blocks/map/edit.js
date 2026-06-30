@@ -53,7 +53,8 @@
 								{ label: __( 'Current archive (geo term)', 'axismundi-map' ), value: 'current' },
 								{ label: __( 'Geotags', 'axismundi-map' ), value: 'geotags' },
 								{ label: __( 'Selected media', 'axismundi-map' ), value: 'media' },
-								{ label: __( 'Track', 'axismundi-map' ), value: 'track' }
+								{ label: __( 'Track', 'axismundi-map' ), value: 'track' },
+								{ label: __( 'GeoRSS feed', 'axismundi-map' ), value: 'georss' }
 							],
 							onChange: function ( v ) { set( { source: v } ); }
 						} ),
@@ -61,6 +62,14 @@
 							label: __( 'BBox — w,s,e,n (optional)', 'axismundi-map' ),
 							value: a.bbox,
 							onChange: function ( v ) { set( { bbox: v } ); }
+						} ),
+						'georss' === a.source && el( TextControl, {
+							label: __( 'GeoRSS feed URL', 'axismundi-map' ),
+							type: 'url',
+							placeholder: 'https://example.com/geo-area/busan/feed/',
+							help: __( 'A GeoRSS Simple or W3C Geo feed. Fetched and cached on the server.', 'axismundi-map' ),
+							value: a.feedUrl || '',
+							onChange: function ( v ) { set( { feedUrl: v } ); }
 						} ),
 						'media' === a.source && el(
 							BaseControl,

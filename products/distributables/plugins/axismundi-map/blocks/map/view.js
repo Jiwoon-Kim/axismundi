@@ -281,7 +281,7 @@
 	}
 
 	function containsBounds( outer, inner ) {
-		return outer && 4 === outer.length &&
+		return outer && 4 === outer.length && inner && 4 === inner.length &&
 			inner[ 0 ] >= outer[ 0 ] && inner[ 2 ] <= outer[ 2 ] &&
 			inner[ 1 ] >= outer[ 1 ] && inner[ 3 ] <= outer[ 3 ];
 	}
@@ -409,6 +409,15 @@
 
 		var cachedGj = null;
 		var bound    = false;
+		var viewportFallbackArmed = false;
+		function armViewportFallback() {
+			viewportFallbackArmed = true;
+		}
+		// Auto-fit padding can extend a local-data viewport just beyond the pack.
+		// Only treat viewport escape as user intent after an actual map gesture.
+		map.getContainer().addEventListener( 'pointerdown', armViewportFallback, { passive: true } );
+		map.getContainer().addEventListener( 'wheel', armViewportFallback, { passive: true } );
+		map.getContainer().addEventListener( 'keydown', armViewportFallback );
 
 		function addRasterFallback() {
 			if ( ! cfg.rasterFallbackActive || ! cfg.rasterTileUrl || ! map.isStyleLoaded() ) {
@@ -441,7 +450,7 @@
 			if ( ! cfg.rasterTileUrl || ! map.isStyleLoaded() ) {
 				return;
 			}
-			if ( ! containsBounds( cfg.bounds, mapBoundsArray( map ) ) ) {
+			if ( cfg.rasterFallbackActive || ( viewportFallbackArmed && ! containsBounds( cfg.bounds, mapBoundsArray( map ) ) ) ) {
 				cfg.rasterFallbackActive = true;
 				addRasterFallback();
 			}
@@ -453,7 +462,7 @@
 			}
 			// Idempotent: setStyle (theme switch) drops these, and the initial add
 			// must not collide — remove any leftovers (layers before their sources).
-			[ 'axgeo-points', 'axgeo-lines-hit', 'axgeo-lines', 'axgeo-track-endpoints' ].forEach( function ( id ) {
+			[ 'axgeo-points', 'axgeo-lines-hit', 'axgeo-lines', 'axgeo-outline', 'axgeo-fill', 'axgeo-track-endpoints' ].forEach( function ( id ) {
 				if ( map.getLayer( id ) ) {
 					map.removeLayer( id );
 				}
@@ -465,6 +474,9 @@
 			} );
 
 			map.addSource( 'axgeo', { type: 'geojson', data: cachedGj } );
+			// Polygons (GeoRSS box / polygon) render under the lines and points.
+			map.addLayer( { id: 'axgeo-fill', type: 'fill', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'Polygon', 'MultiPolygon' ] ] ], paint: { 'fill-color': '#d32f2f', 'fill-opacity': 0.15 } } );
+			map.addLayer( { id: 'axgeo-outline', type: 'line', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'Polygon', 'MultiPolygon' ] ] ], paint: { 'line-color': '#d32f2f', 'line-width': 2 } } );
 			map.addLayer( { id: 'axgeo-lines', type: 'line', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ], paint: { 'line-color': '#d32f2f', 'line-width': 3 } } );
 			map.addLayer( { id: 'axgeo-lines-hit', type: 'line', source: 'axgeo', filter: [ 'in', [ 'geometry-type' ], [ 'literal', [ 'LineString', 'MultiLineString' ] ] ], paint: { 'line-color': '#d32f2f', 'line-width': 16, 'line-opacity': 0 } } );
 			map.addLayer( { id: 'axgeo-points', type: 'circle', source: 'axgeo', filter: [ '==', [ 'geometry-type' ], 'Point' ], paint: { 'circle-radius': 6, 'circle-color': '#d32f2f', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } } );
@@ -593,17 +605,25 @@
 				cachedGj = gj;
 				bindOnce();
 				var b = geojsonBounds( gj );
-				fitGeojsonView( gj );
-				// Add the overlay BEFORE the raster fallback: adding the fallback raster
-				// source flips map.isStyleLoaded() to false, which would make addLayers()
-				// bail and leave a geo-area archive with no markers.
+				// Add the overlay before moving the camera or adding the raster fallback.
+				// A distant fitBounds() starts loading a new viewport and temporarily makes
+				// isStyleLoaded() false; adding the overlay afterwards would then bail and
+				// leave wide GeoRSS feeds (for example, North America) with no markers.
 				addLayers();
-				cfg.rasterFallbackActive = !! ( cfg.rasterTileUrl && ( ! containsBounds( cfg.bounds, boundsArray( b ) ) || ! containsBounds( cfg.bounds, mapBoundsArray( map ) ) ) );
+				fitGeojsonView( gj );
+				// Data outside the pack needs an immediate fallback. A viewport that only
+				// exceeds the pack because of automatic fit padding stays self-hosted until
+				// the visitor deliberately pans or zooms the map.
+				cfg.rasterFallbackActive = !! ( cfg.rasterTileUrl && ! containsBounds( cfg.bounds, boundsArray( b ) ) );
 				updateRasterFallbackForViewport();
 			} ).catch( function () {} );
 		} );
 		map.on( 'moveend', updateRasterFallbackForViewport );
 		map.on( 'zoomend', updateRasterFallbackForViewport );
+		// A long fit can fire moveend while the new viewport is still loading, when
+		// the style-loaded guard intentionally defers source changes. Retry at idle;
+		// addRasterFallback() is idempotent once the source and layer exist.
+		map.on( 'idle', updateRasterFallbackForViewport );
 	}
 
 	function initOne( canvas ) {

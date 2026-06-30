@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Map
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-map
  * Description:       Front-end map block that draws Axismundi Geo Data (geotags, GPS tracks) over a self-hosted basemap, reusing the Geo Data plugin's map assets.
- * Version:           0.1.2
+ * Version:           0.1.3
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  axismundi-geodata
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'AXISMUNDI_MAP_VERSION', '0.1.2' );
+define( 'AXISMUNDI_MAP_VERSION', '0.1.3' );
 define( 'AXISMUNDI_MAP_FILE', __FILE__ );
 
 /**
@@ -118,6 +118,7 @@ function axismundi_map_render_block( array $attributes ) : void {
 	$geojson      = '';
 	$geojson_data = null;
 	$sync_key     = '';
+	$fit_inline   = false;
 	if ( 'geotags' === $source ) {
 		$args = array();
 		if ( ! empty( $attributes['bbox'] ) ) {
@@ -143,6 +144,11 @@ function axismundi_map_render_block( array $attributes ) : void {
 				$geojson = add_query_arg( 'geotag', (int) $queried->term_id, rest_url( 'axismundi-geodata/v1/geotags' ) );
 			}
 		}
+	} elseif ( 'georss' === $source && ! empty( $attributes['feedUrl'] ) && function_exists( 'axismundi_geodata_georss_geojson' ) ) {
+		// External GeoRSS feed: Geodata fetches/caches and converts server-side,
+		// inlined here so there is no public URL-proxy endpoint to abuse.
+		$geojson_data = axismundi_geodata_georss_geojson( esc_url_raw( (string) $attributes['feedUrl'] ) );
+		$fit_inline   = ! empty( $geojson_data['features'] );
 	}
 
 	if ( 'pmtiles' === $tiles['kind'] ) {
@@ -175,7 +181,7 @@ function axismundi_map_render_block( array $attributes ) : void {
 		'lang'                => $lang,
 		'geojson'             => $geojson,
 		'geojsonData'         => $geojson_data,
-		'fitGeojson'          => '' !== $sync_key,
+		'fitGeojson'          => '' !== $sync_key || $fit_inline,
 		'fallbackBounds'      => array(),
 		'singlePointZoom'     => 0,
 		'zoom'                => $zoom,

@@ -821,8 +821,6 @@
 				},
 				"spacing": {
 					"padding": {
-						"top": "var:preset|spacing|200",
-						"bottom": "var:preset|spacing|200",
 						"left": "var:preset|spacing|200",
 						"right": "var:preset|spacing|200"
 					}
@@ -1222,6 +1220,13 @@
 			}
 		}
 	},
+	"customTemplates": [
+		{
+			"name": "post-with-sidebar",
+			"title": "Post with sidebar",
+			"postTypes": [ "post" ]
+		}
+	],
 	"templateParts": [
 		{
 			"area": "header",

@@ -27,7 +27,7 @@
  */
 
 /* Default / no style variation: keep the icon + body on a simple row. */
-nav.wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-trigger ) {
+:is(nav, div).wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-trigger ) {
 	display: inline-flex;
 	align-items: center;
 }
@@ -51,7 +51,7 @@ nav.wp-block-navigation :is(.wp-block-navigation-item, .wp-block-pages-list__ite
 	transition: background-color var( --md-sys-motion-duration-short3, 150ms ) var( --md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1) );
 }
 
-nav.wp-block-navigation:not(.is-vertical) .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation:not(.is-vertical) .ax-nav-item-trigger {
 	gap: var( --wp--preset--spacing--50, 0.25rem ); /* 4px */
 }
 
@@ -75,7 +75,7 @@ nav.wp-block-navigation:not(.is-vertical) .ax-nav-item-trigger {
 /* ============================================================
  * item-vertical — icon above the body (column), centred.
  * ============================================================ */
-nav.wp-block-navigation.is-style-item-vertical :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-trigger ) {
+:is(nav, div).wp-block-navigation.is-style-item-vertical :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-trigger ) {
 	display: inline-flex;
 	flex-direction: column;
 	align-items: center;
@@ -83,7 +83,7 @@ nav.wp-block-navigation.is-style-item-vertical :is(.wp-block-navigation-item, .w
 	text-align: center;
 }
 
-nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .ax-nav-item-trigger {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
@@ -92,7 +92,7 @@ nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-trigger {
 }
 
 /* icon slot = M3 56x32 active-indicator pill host; glyph stays 24px. */
-nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .ax-nav-item-icon {
 	inline-size: 56px;
 	block-size: 32px;
 	border-radius: 9999px;
@@ -101,14 +101,14 @@ nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-icon {
 }
 
 /* body = text + disclosure, centred under the icon. */
-nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .ax-nav-item-body {
 	justify-content: center;
 	max-inline-size: 100%;
 }
-nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body > .wp-block-navigation-item__content {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .ax-nav-item-body > .wp-block-navigation-item__content {
 	text-align: center;
 }
-nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body .wp-block-navigation-item__label {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .ax-nav-item-body .wp-block-navigation-item__label {
 	max-inline-size: 100%;
 	overflow: hidden;
 	white-space: nowrap;
@@ -116,30 +116,35 @@ nav.wp-block-navigation.is-style-item-vertical .ax-nav-item-body .wp-block-navig
 	text-align: center;
 }
 
-/* item-vertical paints the active / state indicator on the 56x32 icon slot. The
- * theme's blocks.navigation.css yields the item-level background under
- * .is-style-item-vertical (gated with :not(.is-style-item-vertical)), so no
- * !important reset is needed here. */
+/* item-vertical paints the active / state indicator on the 56x32 icon slot.
+ * Keep its direct rows transparent even when this Navigation is nested inside
+ * another Navigation's responsive overlay: the outer block's descendant state
+ * selectors must not become the inner component's row state. Popover rows are
+ * deeper than this direct-child boundary and retain their M3 Menu state. */
+:is(nav, div).wp-block-navigation.is-style-item-vertical > .wp-block-navigation__container > :is(.wp-block-navigation-item, .wp-block-pages-list__item):has( > .ax-nav-item-trigger ) {
+	background-color: transparent !important;
+}
+
 /* These also cover core/page-list items: WP gives each .wp-block-pages-list__item
  * the .wp-block-navigation-item class as well, so the navigation-item selectors
  * already match those rows — no separate .wp-block-pages-list__item rules needed. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: var( --wp--preset--color--secondary-container );
 	color: var( --wp--preset--color--on-secondary-container );
 }
 
 /* Popover menu rows are M3 Menu items, not nav-bar / rail vertical items.
  * Cut off the inherited vertical-item centering and let the menu own row state. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ) {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ) {
 	flex-direction: row;
 	align-items: center;
 	justify-content: flex-start;
@@ -147,7 +152,7 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(
 	text-align: start;
 }
 
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-trigger {
 	flex-direction: row;
 	align-items: center;
 	justify-content: flex-start;
@@ -155,54 +160,54 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(
 	text-align: start;
 }
 
-nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ) > .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ) > .ax-nav-item-trigger {
 	flex: 1 1 auto;
 	inline-size: 100%;
 	gap: var( --wp--preset--spacing--150, 0.75rem );
 }
 
-nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body {
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body {
 	flex: 1 1 auto;
 	justify-content: flex-start;
 	gap: var( --wp--preset--spacing--150, 0.75rem );
 	max-inline-size: none;
 }
 
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-icon {
 	inline-size: 20px;
 	block-size: 20px;
 	border-radius: 0;
-	background-color: transparent;
+	background-color: transparent !important;
 	color: var( --wp--preset--color--on-surface-variant );
 }
 
-nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-icon {
 	flex: 0 0 20px;
 	inline-size: 20px;
 	block-size: 20px;
 	color: var( --wp--preset--color--on-surface-variant );
 }
 
-nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-icon > * {
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-icon > * {
 	font-size: 20px;
 }
 
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body {
 	justify-content: flex-start;
 	max-inline-size: none;
 	flex: 1 1 auto;
 }
 
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-item__content,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body .wp-block-navigation-item__label {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-item__content,
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body .wp-block-navigation-item__label {
 	text-align: start;
 }
 
-nav.wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-icon {
 	color: inherit;
 }
 
-nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle) {
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle) {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
@@ -221,7 +226,7 @@ nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-blo
  * and its authored content. Re-assert the theme's supporting-text contract for
  * both Navigation Link and Navigation Submenu content at every popover depth.
  * open-always remains an inline rail and intentionally keeps descriptions hidden. */
-nav.wp-block-navigation .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > .ax-nav-item-trigger > .ax-nav-item-body .wp-block-navigation-item__description {
+:is(nav, div).wp-block-navigation .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > .ax-nav-item-trigger > .ax-nav-item-body .wp-block-navigation-item__description {
 	display: block;
 	margin-block-start: var( --wp--preset--spacing--25 );
 	font-size: var( --wp--preset--font-size--body-small );
@@ -232,7 +237,7 @@ nav.wp-block-navigation .wp-block-navigation-item.has-child:not(.open-always) > 
 	text-align: start;
 }
 
-nav.wp-block-navigation .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-item > .ax-nav-item-trigger > .ax-nav-item-body .wp-block-navigation-item__description {
+:is(nav, div).wp-block-navigation .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-item > .ax-nav-item-trigger > .ax-nav-item-body .wp-block-navigation-item__description {
 	color: inherit;
 }
 
@@ -240,39 +245,34 @@ nav.wp-block-navigation .wp-block-navigation-item.has-child:not(.open-always) > 
  * no longer inherits the theme's direct-child popover color rules. Re-bridge the
  * M3 Menu tokens here: body/labels use on-surface, trailing affordances use
  * on-surface-variant, and authored submenu text colors can still inherit. */
-nav.wp-block-navigation .wp-block-navigation__submenu-container .ax-nav-item-body {
+:is(nav, div).wp-block-navigation .wp-block-navigation__submenu-container .ax-nav-item-body {
 	color: var( --wp--preset--color--on-surface );
 }
 
-nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content),
-nav.wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation__submenu-icon {
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content),
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .ax-nav-item-body > .wp-block-navigation__submenu-icon {
 	flex: 0 0 20px;
+	inline-size: 20px;
 	min-inline-size: 20px;
 	max-inline-size: 20px;
 	block-size: 20px;
+	min-block-size: 20px;
+	max-block-size: 20px;
 	margin-inline: 0;
 	color: var( --wp--preset--color--on-surface-variant );
 }
 
-nav.wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body,
-nav.wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content),
-nav.wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body > .wp-block-navigation__submenu-icon {
+:is(nav, div).wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body,
+:is(nav, div).wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body > .wp-block-navigation-submenu__toggle:not(.wp-block-navigation-item__content),
+:is(nav, div).wp-block-navigation .wp-block-navigation__submenu-container.has-text-color .ax-nav-item-body > .wp-block-navigation__submenu-icon {
 	color: inherit;
 }
 
-/* A horizontal Navigation using item-vertical still opens an M3 Menu popover, so
- * its li owns the row state and the icon stays flat. In a vertical Navigation,
- * however, item-vertical keeps its rail model inside the popover: the li remains
- * transparent and state belongs only to the 56x32 icon slot. */
-nav.wp-block-navigation.is-style-item-vertical:not(.is-vertical) .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon,
-nav.wp-block-navigation.is-style-item-vertical:not(.is-vertical) .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon,
-nav.wp-block-navigation.is-style-item-vertical:not(.is-vertical) .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
-	background-color: transparent;
-}
-
-nav.wp-block-navigation.is-vertical.is-style-item-vertical .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:hover,
-nav.wp-block-navigation.is-vertical.is-style-item-vertical .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:focus-within,
-nav.wp-block-navigation.is-vertical.is-style-item-vertical .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:active {
+/* Every true popover is an M3 Menu, regardless of the parent Navigation's
+ * orientation. Its li owns row state and its leading icon remains flat. */
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon,
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon,
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu:not(.open-always) > .wp-block-navigation__submenu-container .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: transparent;
 }
 
@@ -287,7 +287,7 @@ nav.wp-block-navigation.is-vertical.is-style-item-vertical .wp-block-navigation-
  * one row and let the inline submenu (flex-basis: 100%) wrap below. item-vertical
  * intentionally keeps the column (icon over label).
  * ============================================================ */
-nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ) {
+:is(nav, div).wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ) {
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;
@@ -295,46 +295,46 @@ nav.wp-block-navigation:not(.is-style-item-vertical) .wp-block-navigation-submen
 
 /* item-vertical: the open-always rows are not popover M3 Menu rows, so re-assert
  * the vertical item layout (icon-over-label + 56x32 slot) the popover reset undid. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ) {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ) {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	text-align: center;
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-trigger {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	gap: var( --wp--preset--spacing--50, 0.25rem );
 	text-align: center;
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-icon {
 	inline-size: 56px;
 	block-size: 32px;
 	border-radius: 9999px;
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body {
 	justify-content: center;
 	max-inline-size: 100%;
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body > .wp-block-navigation-item__content,
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body .wp-block-navigation-item__label {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body > .wp-block-navigation-item__content,
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .ax-nav-item-body .wp-block-navigation-item__label {
 	text-align: center;
 }
 
 /* …and re-assert the icon-slot hover/focus/press/current state too: the popover
  * slot-flat reset above would otherwise keep the open-always rows' slots blank.
  * .open-always outranks the .…__submenu-container reset on specificity. */
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger ):active > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
+:is(nav, div).wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open-always .wp-block-navigation-item:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger > .ax-nav-item-icon {
 	background-color: var( --wp--preset--color--secondary-container );
 	color: var( --wp--preset--color--on-secondary-container );
 }
@@ -344,31 +344,31 @@ nav.wp-block-navigation.is-style-item-vertical .wp-block-navigation-submenu.open
  * in its nested <ul>. Paint state on the explicit trigger wrapper (icon + body)
  * only, leaving the child list out. item-vertical keeps its existing icon-slot
  * state model above. */
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item.wp-block-navigation-submenu.open-always:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):has( > .ax-nav-item-trigger ) {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item.wp-block-navigation-submenu.open-always:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):has( > .ax-nav-item-trigger ) {
 	padding-inline: 0;
 	min-block-size: auto;
 	border-radius: 0;
 	background-color: transparent;
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ) > .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ) > .ax-nav-item-trigger {
 	box-sizing: border-box;
 	min-block-size: 64px;
 	padding-inline: var( --wp--preset--spacing--200 );
 	border-radius: 100px;
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):hover > .ax-nav-item-trigger {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):focus-within > .ax-nav-item-trigger {
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) > .ax-nav-item-trigger {
 	background-color: var( --wp--preset--color--secondary-container );
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):hover,
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):focus-within,
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):active,
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):hover,
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):focus-within,
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger ):active,
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-navigation__container > .wp-block-navigation-item.wp-block-navigation-submenu.open-always:has( > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"] ) {
 	background-color: transparent;
 }
 
@@ -376,27 +376,27 @@ nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) > .wp-block-nav
  * its content link is a direct child of the <li>. Paint that link row instead, so
  * a no-icon submenu (e.g. a nested one) gets the same trigger-only state, never its
  * inline <ul>. */
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item.wp-block-navigation-submenu.open-always:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):has( > a.wp-block-navigation-item__content ) {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item.wp-block-navigation-submenu.open-always:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item):has( > a.wp-block-navigation-item__content ) {
 	padding-inline: 0;
 	min-block-size: auto;
 	border-radius: 0;
 	background-color: transparent;
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item.wp-block-navigation-submenu.open-always:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-item.wp-block-navigation-submenu.open-always:not(.wp-block-navigation-item.wp-block-navigation-submenu:not(.open-always) .wp-block-navigation__submenu-container .wp-block-navigation-item) > a.wp-block-navigation-item__content {
 	box-sizing: border-box;
 	min-block-size: 64px;
 	padding-inline: var( --wp--preset--spacing--200 );
 	border-radius: 100px;
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:hover > a.wp-block-navigation-item__content {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:hover > a.wp-block-navigation-item__content {
 	border-radius: 100px;
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:focus-within > a.wp-block-navigation-item__content {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always:focus-within > a.wp-block-navigation-item__content {
 	border-radius: 100px;
 	background-color: color-mix( in srgb, var( --wp--preset--color--on-secondary-container ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
 }
-nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always > a.wp-block-navigation-item__content[aria-current="page"] {
+:is(nav, div).wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navigation-submenu.open-always > a.wp-block-navigation-item__content[aria-current="page"] {
 	border-radius: 100px;
 	background-color: var( --wp--preset--color--secondary-container );
 }
@@ -405,7 +405,7 @@ nav.wp-block-navigation.is-vertical:not(.is-style-item-vertical) .wp-block-navig
  * absolute 0.5em strip that keeps a hover flyout open while the pointer crosses
  * the gap to it; an always-expanded inline submenu has no flyout, so the strip
  * only nudges layout (it can push the nav on hover, especially on narrow widths). */
-nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container::before {
+:is(nav, div).wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container::before {
 	display: none;
 }
 
@@ -419,10 +419,17 @@ nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navig
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	inline-size: 24px;
-	block-size: 24px;
+	inline-size: 16px;
+	min-inline-size: 16px;
+	max-inline-size: 16px;
+	block-size: 16px;
+	min-block-size: 16px;
+	max-block-size: 16px;
 	margin: 0;
 	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background-color: transparent;
 	color: currentColor;
 }
 .ax-nav-item-body > .wp-block-navigation-submenu__toggle.wp-block-navigation-item__content {
@@ -439,7 +446,7 @@ nav.wp-block-navigation .wp-block-navigation-submenu.open-always .wp-block-navig
 	font-family: "Material Symbols Outlined", sans-serif;
 	font-weight: normal;
 	font-style: normal;
-	font-size: 24px;
+	font-size: 20px;
 	line-height: 1;
 	letter-spacing: normal;
 	text-transform: none;

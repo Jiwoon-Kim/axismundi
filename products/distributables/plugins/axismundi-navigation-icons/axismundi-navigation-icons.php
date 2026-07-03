@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Navigation Icons
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-navigation-icons
  * Description:       Authoring plugin: add a Material Symbols leading icon to navigation items (link, submenu, home) for Axismundi.
- * Version:           0.1.2
+ * Version:           0.1.3
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON

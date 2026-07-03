@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -24,6 +24,13 @@ CMS.
 2. Open Appearance > Editor to customize templates and global styles.
 
 == Changelog ==
+
+= 0.1.5 =
+* Redesign the navigation overlay and header: a full-screen drawer whose layout, surface, and close control are owned by core and block markup.
+* Remove the dedicated overlay stylesheet now that the drawer is delegated to core.
+* Render the Navigation bar/rail/menu skin in the block-editor canvas, where core outputs the block as a div rather than a nav.
+* Stop the vertical rail state layer from leaking into a nested overlay navigation, and drop the redundant rail container background that clipped neighbouring block shadows.
+* Mark an exact same-site custom Navigation Link as the current page.
 
 = 0.1.4 =
 * Keep responsive navigation controls visible while long menus scroll.

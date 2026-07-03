@@ -12,7 +12,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'AXISMUNDI_VERSION' ) ) {
-	define( 'AXISMUNDI_VERSION', '0.1.4' );
+	define( 'AXISMUNDI_VERSION', '0.1.5' );
 }
 
 // Theme-internal attachment page renderer. WordPress core/post-content only
@@ -113,7 +113,6 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/blocks.taxonomy.css' ) ? 'assets/styles/blocks.taxonomy.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation.css' ) ? 'assets/styles/blocks.navigation.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.navigation-submenu.css' ) ? 'assets/styles/blocks.navigation-submenu.css' : null,
-					file_exists( get_template_directory() . '/assets/styles/parts.navigation-overlay.css' ) ? 'assets/styles/parts.navigation-overlay.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/parts.vertical-header.css' ) ? 'assets/styles/parts.vertical-header.css' : null,
 				)
 			)
@@ -145,6 +144,72 @@ function axismundi_enable_attachment_pages() : string {
 }
 add_filter( 'option_wp_attachment_pages_enabled', 'axismundi_enable_attachment_pages' );
 add_filter( 'default_option_wp_attachment_pages_enabled', 'axismundi_enable_attachment_pages' );
+
+/**
+ * Mark an exact same-site Navigation Link as the current page when it lacks ID.
+ *
+ * Core derives current state only from an authored object ID. Custom and
+ * partially authored links can still target the queried URL exactly, so complete
+ * the native current-menu-item/aria-current output at render time without
+ * changing the saved navigation entity.
+ *
+ * @param string              $block_content Rendered Navigation Link markup.
+ * @param array<string,mixed> $block         Parsed block data.
+ * @return string
+ */
+function axismundi_mark_current_navigation_link( string $block_content, array $block ) : string {
+	if (
+		is_admin()
+		|| str_contains( $block_content, 'aria-current=' )
+		|| empty( $block['attrs']['url'] )
+		|| empty( $_SERVER['REQUEST_URI'] )
+		|| ! get_queried_object_id()
+	) {
+		return $block_content;
+	}
+
+	$normalize_url = static function ( string $url ) : string {
+		$parts = wp_parse_url( $url );
+		if ( false === $parts ) {
+			return '';
+		}
+
+		$host = strtolower( (string) ( $parts['host'] ?? wp_parse_url( home_url(), PHP_URL_HOST ) ) );
+		$port = isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '';
+		$path = untrailingslashit( (string) ( $parts['path'] ?? '/' ) );
+		$path = '' === $path ? '/' : $path;
+		$query = array();
+		if ( ! empty( $parts['query'] ) ) {
+			parse_str( $parts['query'], $query );
+			ksort( $query );
+		}
+
+		return $host . $port . $path . ( $query ? '?' . http_build_query( $query ) : '' );
+	};
+
+	$link_url    = (string) $block['attrs']['url'];
+	$current_url = home_url( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+	$home_host   = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+	$link_host   = strtolower( (string) wp_parse_url( $link_url, PHP_URL_HOST ) );
+	if (
+		( $link_host && $home_host !== $link_host )
+		|| $normalize_url( $link_url ) !== $normalize_url( $current_url )
+	) {
+		return $block_content;
+	}
+
+	$tags = new WP_HTML_Tag_Processor( $block_content );
+	if ( ! $tags->next_tag( 'LI' ) ) {
+		return $block_content;
+	}
+	$tags->add_class( 'current-menu-item' );
+	if ( $tags->next_tag( 'A' ) ) {
+		$tags->set_attribute( 'aria-current', 'page' );
+	}
+
+	return $tags->get_updated_html();
+}
+add_filter( 'render_block_core/navigation-link', 'axismundi_mark_current_navigation_link', 20, 2 );
 
 /**
  * Tune core block attribute defaults where Axismundi treats a core block as a
@@ -227,10 +292,8 @@ function axismundi_enqueue_assets() : void {
 		// core/navigation family — block owns its children state; submenu owns the menu popover.
 		'axismundi-blocks-navigation'         => array( 'assets/styles/blocks.navigation.css', array( 'axismundi-blocks-collections' ) ),
 		'axismundi-blocks-navigation-submenu' => array( 'assets/styles/blocks.navigation-submenu.css', array( 'axismundi-blocks-navigation' ) ),
-		// core/navigation overlay template part — M3 Full-screen dialog surface.
-		'axismundi-parts-navigation-overlay'  => array( 'assets/styles/parts.navigation-overlay.css', array( 'axismundi-blocks-navigation-submenu' ) ),
 		// Single-post shell — CSS Grid layout + reverse-responsive contract (editor can't express it).
-		'axismundi-parts-vertical-header'     => array( 'assets/styles/parts.vertical-header.css', array( 'axismundi-parts-navigation-overlay' ) ),
+		'axismundi-parts-vertical-header'     => array( 'assets/styles/parts.vertical-header.css', array( 'axismundi-blocks-navigation-submenu' ) ),
 	);
 
 	if ( is_attachment() ) {

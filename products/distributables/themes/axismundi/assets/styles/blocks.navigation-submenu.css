@@ -13,7 +13,7 @@
  * popover box below, per-submenu, so only true popovers read as M3 Menus.
  */
 
-nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+:is(nav, div).wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
 	/* Submenu = M3 Menu surface (the dark fix).
 	 * Core ships the dropdown as a hardcoded white/black popover that ignores the
 	 * scheme; re-skin it as an M3 standard Menu. surface-container-low + the border
@@ -196,6 +196,25 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
 			"wght" var(--md-icon-wght, 400),
 			"GRAD" var(--md-icon-grad, 0),
 			"opsz" var(--md-icon-opsz, 24);
+	}
+
+	/* Current submenu destination = M3 selected Menu item. Cover both core's
+	 * direct anchor and the Navigation Icons plugin's restructured row. */
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]) {
+		background-color: var(--wp--preset--color--tertiary-container);
+		color: var(--wp--preset--color--on-tertiary-container);
+	}
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):hover {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--tertiary-container));
+	}
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):focus-within {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--tertiary-container));
+	}
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]):active {
+		background-color: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--tertiary-container));
+	}
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:has(> a[aria-current="page"], > .ax-nav-item-trigger > .ax-nav-item-body > a[aria-current="page"]) :is(.wp-block-navigation-item__content, .wp-block-navigation-item__description, .ax-nav-item-icon, .wp-block-navigation__submenu-icon) {
+		color: var(--wp--preset--color--on-tertiary-container) !important;
 	}
 
 }

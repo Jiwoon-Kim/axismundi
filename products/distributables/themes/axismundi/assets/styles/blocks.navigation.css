@@ -14,8 +14,11 @@
  * surface when a submenu opens, mapped to the M3 Menu component.
  *
  * INLINE NAV GATE (load-bearing):
- *   nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open))
+ *   .wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open))
  * Apply the M3 Navigation Bar skin ONLY to the closed, horizontal navigation bar.
+ * Limit the gate to the block root tags: <nav> on the front end and <div> in the
+ * editor. Core also puts .wp-block-navigation on the responsive overlay's <ul>;
+ * treating that list as another block root leaks bar/rail geometry into it.
  * Vertical navigation maps to M3 Navigation Rail (expanded). The open overlay /
  * drawer remains deferred. Do not gate on `.open-always`: a ref-less Navigation
  * block can contain a Page List whose child pages are marked open-always, and the
@@ -32,7 +35,7 @@
  * maps WordPress' submenu affordance to Material Symbols arrow_drop_down/up.
  */
 
-nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
+:is(nav, div).wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
 	min-block-size: 64px;
 	background-color: var(--wp--preset--color--surface-container);
 	box-shadow: var(--wp--preset--shadow--elevation-3);
@@ -120,7 +123,7 @@ nav.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__respons
  * (0,0,1): it beats theme.json's :where() label-large default but yields to a user
  * block-level fontSize (.has-*-font-size, 0,1,0), which then cascades to page-list
  * and every item. Keep in sync with the horizontal-bar gate above. */
-nav:where(.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open))) {
+:is(nav, div):where(.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__responsive-container.is-menu-open))) {
 	font-size: var(--wp--preset--font-size--label-medium);
 }
 
@@ -130,8 +133,14 @@ nav:where(.wp-block-navigation:not(.is-vertical):not(:has(.wp-block-navigation__
  * rows, 56dp active indicator, 16dp edge padding, 8dp icon-label gap.
  */
 
-nav.wp-block-navigation.is-vertical,
-.ax-nav-overlay__nav.wp-block-navigation.is-vertical {
+:is(nav, div)/* :not(:has(...is-menu-open)) mirrors §1: when a vertical nav has an OPEN overlay
+ * (e.g. an overlayMenu:"always" header nav rendered as a collapsed hamburger), the
+ * drawer content — including a NESTED navigation — lives inside this nav's
+ * responsive container. Without this gate the outer nav's rail rules reach through
+ * the descendant combinator into the overlay's inner nav items and double-paint the
+ * state layer that the overlay's own (item-vertical) nav already owns. The inner
+ * overlay nav has no responsive container of its own, so it keeps its rules. */
+:is(nav, div).wp-block-navigation.is-vertical:not(:has(.wp-block-navigation__responsive-container.is-menu-open)) {
 	box-shadow: none;
 
 	&:not(.is-style-item-vertical) {
@@ -143,7 +152,10 @@ nav.wp-block-navigation.is-vertical,
 	& .wp-block-navigation__container {
 		inline-size: min(100%, 360px);
 		min-inline-size: min(100%, 220px);
-		background-color: var(--wp--preset--color--surface);
+		/* No background-color: the M3 rail sits on `surface`, which equals the page
+		 * background, so an opaque fill only erases neighboring blocks' shadows (the
+		 * overlay search bar showed a 360px notch). The overlay provides its own
+		 * surface via .ax-nav-overlay; a rail on the page inherits the page surface. */
 		gap: var(--wp--preset--spacing--75);
 	}
 
@@ -265,9 +277,9 @@ nav.wp-block-navigation.is-vertical,
 }
 
 /* Orientation vertical maps directly to the expanded M3 Navigation Rail.
- * Keep its 44dp top space inside the component contract. The overlay renderer
- * uses a <div>, so the nav element gate keeps drawer content unaffected. */
-nav.wp-block-navigation.is-vertical .wp-block-navigation__container {
+ * Keep its 44dp top space inside the component contract. Match only the actual
+ * block root (<nav> front end / <div> editor), never core's internal <ul>. */
+:is(nav, div).wp-block-navigation.is-vertical .wp-block-navigation__container {
 	padding-block-start: 44px;
 }
 

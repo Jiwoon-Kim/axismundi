@@ -805,11 +805,6 @@
 					}
 				}
 			},
-			"core/page-list": {
-				"typography": {
-					"fontSize": "var:preset|font-size|body-medium"
-				}
-			},
 			"core/tag-cloud": {
 				"typography": {
 					"fontSize": "var:preset|font-size|label-large"
@@ -1209,10 +1204,10 @@
 				},
 				"typography": {
 					"fontFamily": "var:preset|font-family|roboto-flex",
-					"fontSize": "var:preset|font-size|label-large",
+					"fontSize": "var:preset|font-size|label-medium",
 					"fontWeight": "500",
-					"lineHeight": "1.429",
-					"letterSpacing": "0.1px"
+					"lineHeight": "1.333",
+					"letterSpacing": "0.5px"
 				}
 			},
 			"core/embed": {

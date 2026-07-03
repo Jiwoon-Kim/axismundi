@@ -20,25 +20,29 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
 	 * reset are !important because the submenu carries core's
 	 * has-base-background-color preset. No overflow:hidden — it would clip a nested
 	 * flyout. */
-	& .wp-block-navigation__submenu-container {
+	& .wp-block-navigation__submenu-container,
+	& .wp-block-navigation-item.has-child:not(.open-always):not(.open-on-click):hover > .wp-block-navigation__submenu-container {
 		display: flex;
 		flex-direction: column;
 		gap: var(--wp--preset--spacing--25);
-		padding: var(--wp--preset--spacing--25) var(--wp--preset--spacing--50);
-		min-inline-size: 11rem;
+		padding: var(--wp--preset--spacing--25);
+		inline-size: max-content;
+		min-inline-size: 112px;
+		max-inline-size: min(280px, calc(100vw - var(--wp--preset--spacing--200) - var(--wp--preset--spacing--200)));
 		background-color: var(--wp--preset--color--surface-container-low) !important;
 		border: 0 !important;
 		border-radius: 16px;
-		box-shadow: var(--wp--preset--shadow--elevation-2);
+		box-shadow: var(--wp--preset--shadow--elevation-3);
 		text-align: start;
 	}
 
 	/* open-always submenus are inline rail rows, not floating Menus: opt out of
-	 * the popover box (navigation.css tunes their inset/gap/align). Only this box
-	 * is undone — the row states below still apply so open-always rows keep M3
-	 * hover/focus/press. */
-	& .wp-block-navigation-submenu.open-always > .wp-block-navigation__submenu-container {
+	 * the popover box. navigation.css owns their inline row geometry and state;
+	 * every Menu-row rule below is gated to a non-open-always parent. */
+	& .wp-block-navigation-item.has-child.open-always > .wp-block-navigation__submenu-container {
+		inline-size: auto;
 		min-inline-size: 0;
+		max-inline-size: none;
 		padding-block: 0;
 		background-color: transparent !important;
 		border-radius: 0;
@@ -46,40 +50,41 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
 	}
 
 	/* Menu row state layer (the li owns the row, so it owns the layer). */
-	& .wp-block-navigation__submenu-container .wp-block-navigation-item:hover {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:hover {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation__submenu-container .wp-block-navigation-item:focus-within {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:focus-within {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
 	}
-	& .wp-block-navigation__submenu-container .wp-block-navigation-item:active {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:active {
 		background-color: color-mix(in srgb, var(--wp--preset--color--on-surface) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
-	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item:hover {
+	&.has-text-color .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:hover {
 		background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 	}
-	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item:focus-within {
+	&.has-text-color .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:focus-within {
 		background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
 	}
-	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item:active {
+	&.has-text-color .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:active {
 		background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 	}
 
-	/* Menu row = the li (M3 menu item): 48dp, 12dp inline padding (effective
-	 * leading/trailing = ul 4 + li 12 = 16dp), 8dp label↔icon gap, 4dp item shape
-	 * with 12dp outer corners on the first/last rows. */
-	& .wp-block-navigation__submenu-container .wp-block-navigation-item {
-		min-block-size: 48px;
-		padding-inline: var(--wp--preset--spacing--150);
-		gap: var(--wp--preset--spacing--100);
+	/* Menu row = the li (M3 menu item): 44dp minimum, 8dp block padding,
+	 * 16dp inline padding, 12dp between slots, 4dp item shape with 12dp outer
+	 * corners on the first/last rows. Supporting text may grow the row. */
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item {
+		box-sizing: border-box;
+		min-block-size: 44px;
+		padding: var(--wp--preset--spacing--100) var(--wp--preset--spacing--200);
+		gap: var(--wp--preset--spacing--150);
 		border-radius: 4px;
 	}
-	& .wp-block-navigation__submenu-container > .wp-block-navigation-item:first-child {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:first-child {
 		border-start-start-radius: 12px;
 		border-start-end-radius: 12px;
 	}
-	& .wp-block-navigation__submenu-container > .wp-block-navigation-item:last-child {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item:last-child {
 		border-end-start-radius: 12px;
 		border-end-end-radius: 12px;
 	}
@@ -87,7 +92,7 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
 	/* Content = the label slot. The li owns the row box, so anchors and submenu
 	 * toggle buttons have no padding/height; they grow to a full-row hit target
 	 * and stack label + optional supporting text. */
-	& .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle) {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle) {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
@@ -96,40 +101,52 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
 		min-block-size: auto;
 		padding: 0;
 		color: var(--wp--preset--color--on-surface);
-		/* font-size is a deliberate M3 Menu override (label-large) of the parent bar's
-		 * label-medium; font-weight (500) now inherits from the theme.json
-		 * core/navigation base, so it is not restated here. */
-		font-size: var(--wp--preset--font-size--label-large);
 		text-align: start;
 	}
-	& .wp-block-navigation__submenu-container .wp-block-navigation-item__label {
+	/* font-size is a deliberate M3 Menu override (label-large) of the parent bar's
+	 * label-medium; font-weight (500) inherits from the theme.json core/navigation
+	 * base. Scoped to true popovers only: an open-always submenu is an inline rail,
+	 * so its rows inherit the (possibly user-set) nav fontSize instead. */
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle) {
+		font-size: var(--wp--preset--font-size--label-large);
+		font-weight: 500;
+		line-height: 1.429;
+		letter-spacing: 0.1px;
+	}
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > .wp-block-navigation-item__content .wp-block-navigation-item__label {
 		white-space: nowrap;
 	}
-	& .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle):focus-visible {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle):focus-visible {
 		outline: 3px solid var(--wp--preset--color--secondary);
 		outline-offset: -3px;
 	}
 
-	/* Supporting text (core/navigation-link description) — core hides it; opt in
-	 * for the inline menu as M3 supporting text. */
-	& .wp-block-navigation__submenu-container .wp-block-navigation-item__description {
+	/* Supporting text (core/navigation-link description) — core hides it; opt in as
+	 * M3 supporting text for true popover Menus only. An open-always submenu is an
+	 * inline Rail sub-group (M3 Rail rows are label-only), so it stays hidden there
+	 * — otherwise the description leaks onto the always-open vertical submenu while
+	 * the top-level rail items show none. Same popover gate as the label-large size. */
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > .wp-block-navigation-item__content .wp-block-navigation-item__description {
 		display: block;
 		margin-block-start: var(--wp--preset--spacing--25);
 		font-size: var(--wp--preset--font-size--body-small);
+		font-weight: 400;
+		line-height: 1.333;
+		letter-spacing: 0.4px;
 		color: var(--wp--preset--color--on-surface-variant);
 		text-align: start;
 	}
 
-	&.has-text-color .wp-block-navigation__submenu-container :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle),
-	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-item__description,
-	&.has-text-color .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+	&.has-text-color .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle),
+	&.has-text-color .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-item .wp-block-navigation-item__description,
+	&.has-text-color .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 		color: inherit !important;
 	}
 
 	/* Nested submenu affordance = M3 Menu trailing icon. The row already owns the
 	 * 8dp label-icon gap, so remove core's tiny SVG margins and replace the glyph
 	 * with Material Symbols arrow_right. */
-	& .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -148,11 +165,11 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
 		overflow: hidden;
 	}
 
-	& .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon svg {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon svg {
 		display: none;
 	}
 
-	& .wp-block-navigation__submenu-container .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon::before {
+	& .wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon::before {
 		content: "arrow_right";
 		font-family: "Material Symbols Outlined", sans-serif;
 		font-weight: normal;
@@ -187,20 +204,20 @@ nav.wp-block-navigation:not(:has(.wp-block-navigation__responsive-container.is-m
  * "Submenu & overlay text") is applied by core to the submenu/overlay container
  * itself, not to the parent navigation block. Let that container color flow into
  * menu labels, supporting text and nested submenu affordances. */
-.wp-block-navigation__submenu-container.has-text-color :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle),
-.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item__description,
-.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
+.wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-item > :is(a.wp-block-navigation-item__content, button.wp-block-navigation-item__content.wp-block-navigation-submenu__toggle),
+.wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-item .wp-block-navigation-item__description,
+.wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-submenu > .wp-block-navigation__submenu-icon {
 	color: inherit !important;
 }
 
-.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item:hover {
+.wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-item:hover {
 	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);
 }
 
-.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item:focus-within {
+.wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-item:focus-within {
 	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);
 }
 
-.wp-block-navigation__submenu-container.has-text-color .wp-block-navigation-item:active {
+.wp-block-navigation-item.has-child:not(.open-always) > .wp-block-navigation__submenu-container.has-text-color > .wp-block-navigation-item:active {
 	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);
 }

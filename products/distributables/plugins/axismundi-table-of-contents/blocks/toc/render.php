@@ -10,7 +10,7 @@
  *
  * Two placements share that list:
  *   - rail: a <nav> aside (the host wrapper owns sticky).
- *   - disclosure: a sticky native <details> for above-the-content placement; its
+ *   - disclosure: a native <details> for above-the-content placement; its
  *     <summary> can reflect the current section (view.js + summaryMode).
  *
  * @package AxismundiTableOfContents

@@ -23,7 +23,7 @@ aside or inside the content). Author-provided HTML anchors are respected, and
 duplicate headings are de-duplicated (`-2`, `-3`).
 
 * Two placements: a sidebar **rail**, or a collapsible **disclosure** above the
-  content (a sticky native `<details>` whose summary can echo the current
+  content (a native `<details>` whose summary can echo the current
   section). A "Table of contents (above content)" pattern ships the disclosure
   ready to drop before the post content.
 * Builds from `h2`–`h4` by default (configurable per block).
@@ -76,6 +76,7 @@ matches them literally.
   one rule; the active state clears when the reading position leaves the content.
 * Material Design 3 token skin (with fallbacks) over the shared `toc-list` /
   `is-current` vocabulary; smooth in-page scrolling is owned by the theme.
-* Rail and disclosure placements. The disclosure is a sticky native `<details>`
-  (open-by-default and summary mode are per-block); its summary can track the
+* Rail and disclosure placements. The disclosure is a native `<details>`;
+  placement and sticky behavior are controlled by the host theme or template.
+  Open-by-default and summary mode are per-block, and its summary can track the
   current section. Ships a "Table of contents (above content)" pattern.

@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Table of Contents
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-table-of-contents
  * Description:       On-page table of contents block that builds from a post's headings and keeps the heading ids in sync.
- * Version:           0.1.1
+ * Version:           0.1.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON

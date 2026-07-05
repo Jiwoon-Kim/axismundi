@@ -1,0 +1,10 @@
+{
+	"$schema": "https://schemas.wp.org/wp/7.0/theme.json",
+	"version": 3,
+	"title": "Outline",
+	"slug": "outline",
+	"blockTypes": [ "axismundi/sheet", "axismundi/dialog" ],
+	"styles": {
+		"css": "& .ax-dialog__open-button{background-color:transparent;border:1px solid var(--wp--preset--color--outline-variant);color:var(--wp--preset--color--on-surface-variant);}& .ax-dialog__open-button:hover{background-color:color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), transparent);}& .ax-dialog__open-button:focus{background-color:color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), transparent);}& .ax-dialog__open-button:active{background-color:color-mix(in srgb, var(--wp--preset--color--on-surface-variant) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), transparent);}"
+	}
+}

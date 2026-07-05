@@ -1,0 +1,162 @@
+/**
+ * Axismundi Dialogs — shared dialog runtime surface.
+ *
+ * Enqueued for both axismundi/sheet and axismundi/dialog (wp_enqueue_block_style).
+ * Owns the open button, the native <dialog> box, the ::backdrop scrim, the
+ * template-part contract (section > header / body / footer), scroll lock,
+ * standard (non-modal) fixing, and the shared motion. Sheet- and dialog-specific
+ * geometry lives in each block's own style.css.
+ *
+ * Style contract (override via CSS custom properties or WordPress presets):
+ *   --ax-dialog-container-color    surface of the panel
+ *   --ax-dialog-on-container-color foreground on the panel
+ *   --ax-dialog-scrim-color        modal scrim
+ *   --ax-dialog-shape              corner radius
+ *   --ax-dialog-elevation          box-shadow
+ */
+
+/* fit-content block so core's alignleft / aligncenter / alignright work on the
+ * open button (a shrink-wrapped block honours float and margin:auto). */
+.ax-dialog-host {
+	display: inline-flex;
+	inline-size: fit-content;
+	max-inline-size: 100%;
+}
+
+/* Open button — icon-first compound button. Filled is the default treatment;
+ * theme block-style variations (dialog-button-*) override this at block scope. */
+.ax-dialog__open-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-block-size: 48px;
+	padding: 0 16px 0 12px;
+	border: 0;
+	border-radius: 100px;
+	background-color: var( --wp--preset--color--primary, #6750a4 );
+	color: var( --wp--preset--color--on-primary, #fff );
+	cursor: pointer;
+}
+
+:where( .ax-dialog__open-button ):hover {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-primary, #fff ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ), var( --wp--preset--color--primary, #6750a4 ) );
+}
+:where( .ax-dialog__open-button ):focus-visible {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-primary, #fff ) calc( var( --md-sys-state-focus-state-layer-opacity, 0.1 ) * 100% ), var( --wp--preset--color--primary, #6750a4 ) );
+}
+:where( .ax-dialog__open-button ):active {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-primary, #fff ) calc( var( --md-sys-state-pressed-state-layer-opacity, 0.1 ) * 100% ), var( --wp--preset--color--primary, #6750a4 ) );
+}
+.ax-dialog__open-button-label {
+	font: inherit;
+}
+.ax-dialog__open-button .material-symbols-outlined {
+	font-size: 24px;
+	line-height: 1;
+}
+
+/* Scroll lock while a modal dialog / sheet is open. */
+html.ax-dialog-scroll-locked {
+	overflow: hidden;
+}
+
+/* ---- Dialog host / surface ------------------------------------------------ */
+
+/* Base at :where() (zero specificity) so per-variant geometry — which shares the
+ * same class-count specificity — always wins regardless of stylesheet load order
+ * (the base and variant rules now live in different files). */
+:where( dialog.ax-dialog ) {
+	--ax-dialog-container-color: var( --wp--preset--color--surface-container, #f3edf7 );
+	--ax-dialog-on-container-color: var( --wp--preset--color--on-surface, #1d1b20 );
+	--ax-dialog-scrim-color: color-mix( in srgb, var( --wp--preset--color--scrim, #000 ) 32%, transparent );
+	--ax-dialog-shape: 16px;
+	--ax-dialog-elevation: var( --wp--preset--shadow--elevation-1, 0 8px 24px rgba( 0, 0, 0, 0.2 ) );
+
+	margin: 0;
+	padding: 0;
+	border: 0;
+	max-inline-size: 100%;
+	max-block-size: 100dvh;
+	color: var( --ax-dialog-on-container-color );
+	background: transparent;
+	overflow: visible;
+}
+
+dialog.ax-dialog:not( [open] ) {
+	display: none;
+}
+
+dialog.ax-dialog::backdrop {
+	background: var( --ax-dialog-scrim-color );
+}
+
+.ax-dialog__surface {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	block-size: 100%;
+	overflow: hidden;
+	background: var( --ax-dialog-container-color );
+	box-shadow: var( --ax-dialog-elevation );
+}
+
+/* Template-part contract — semantic elements, no classes required:
+ *   <section>  part root: a 3-row grid that fills the surface
+ *   <header>   fixed header row
+ *   <div>      the single scrolling body (the only non-header/footer child)
+ *   <footer>   optional fixed actions row
+ * header/footer are auto-sized fixed rows; only the middle child scrolls. */
+.ax-dialog__surface > section {
+	flex: 1 1 auto;
+	min-block-size: 0;
+	inline-size: 100%;
+	display: grid;
+	grid-template-rows: auto minmax( 0, 1fr ) auto;
+}
+.ax-dialog__surface > section > :not( header, footer ) {
+	min-block-size: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+	scrollbar-color: var( --wp--preset--color--outline-variant, currentColor ) transparent;
+}
+
+/* ---- Standard (non-modal) presentation ------------------------------------ */
+dialog.ax-dialog.is-standard {
+	position: fixed;
+	/* WordPress admin bar uses 99999; standard surfaces are not in the top layer. */
+	z-index: 100000;
+}
+
+/* ---- Scroll mode: whole surface scrolls ----------------------------------- */
+dialog.ax-dialog.is-scroll-sheet .ax-dialog__surface {
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var( --wp--preset--color--outline-variant, currentColor ) transparent;
+}
+dialog.ax-dialog.is-scroll-sheet .ax-dialog__surface > section {
+	display: block;
+}
+dialog.ax-dialog.is-scroll-sheet .ax-dialog__surface > section > :not( header, footer ) {
+	overflow-y: visible;
+}
+
+/* ---- Shared motion -------------------------------------------------------- */
+@media ( prefers-reduced-motion: no-preference ) {
+	dialog.ax-dialog {
+		transition: opacity 200ms ease, translate 250ms cubic-bezier( 0.2, 0, 0, 1 ), scale 200ms cubic-bezier( 0.2, 0, 0, 1 ), overlay 250ms allow-discrete, display 250ms allow-discrete;
+		opacity: 1;
+		translate: 0 0;
+		scale: 1;
+	}
+	dialog.ax-dialog::backdrop {
+		transition: opacity 200ms ease, overlay 200ms allow-discrete, display 200ms allow-discrete;
+		opacity: 1;
+	}
+	@starting-style {
+		dialog.ax-dialog[open]::backdrop {
+			opacity: 0;
+		}
+	}
+}

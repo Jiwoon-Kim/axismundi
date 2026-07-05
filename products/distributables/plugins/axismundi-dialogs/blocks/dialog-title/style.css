@@ -1,0 +1,13 @@
+/**
+ * axismundi/dialog-title — minimal reset; the theme part styles the header row.
+ */
+.ax-dialog-title {
+	margin: 0;
+}
+
+/* Keep long headings shrinkable inside the header row. Width/grow is owned by
+ * WordPress layout child support (`style.layout.selfStretch`) so the editor's
+ * Dimensions control and the rendered result stay in sync. */
+.wp-block-axismundi-dialog-title {
+	min-inline-size: 0;
+}

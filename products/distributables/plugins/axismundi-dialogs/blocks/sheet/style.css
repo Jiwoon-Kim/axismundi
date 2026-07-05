@@ -1,0 +1,100 @@
+/**
+ * axismundi/sheet — side + bottom sheet geometry.
+ *
+ * The shared open button, surface, template-part contract, scrim, scroll lock,
+ * standard fixing, and scroll mode live in assets/shared.css (enqueued for both
+ * Sheet and Dialog). This file only positions the side / bottom variants and
+ * their enter motion. Positioning is logical (inset-inline / inset-block) so
+ * edge:start|end and RTL are handled by the same rules.
+ */
+
+/* ---- Side sheet ----------------------------------------------------------- */
+
+dialog.ax-dialog--sheet-side {
+	--ax-dialog-side-width: 320px;
+	--ax-dialog-container-color: var( --wp--preset--color--surface-container-low, #f7f2fa );
+	--ax-dialog-elevation: var( --wp--preset--shadow--elevation-1, 0 1px 2px rgb( 0 0 0 / 30% ) );
+	--ax-dialog-shape: 16px;
+	inset-block: 0;
+	block-size: 100dvh;
+	inline-size: var( --ax-dialog-side-width );
+	max-inline-size: min( 100%, 400px );
+}
+dialog.ax-dialog--sheet-side.is-width-narrow  { --ax-dialog-side-width: 256px; }
+dialog.ax-dialog--sheet-side.is-width-medium  { --ax-dialog-side-width: 320px; }
+dialog.ax-dialog--sheet-side.is-width-wide    { --ax-dialog-side-width: 400px; }
+
+/* Standard sheets are docked surfaces: no modal elevation or rounded edge. */
+dialog.ax-dialog--sheet-side.is-standard {
+	--ax-dialog-container-color: var( --wp--preset--color--surface, #fef7ff );
+	--ax-dialog-elevation: none;
+	--ax-dialog-shape: 0px;
+}
+
+dialog.ax-dialog--sheet-side.ax-dialog--edge-end {
+	inset-inline-end: 0;
+	inset-inline-start: auto;
+}
+dialog.ax-dialog--sheet-side.ax-dialog--edge-start {
+	inset-inline-start: 0;
+	inset-inline-end: auto;
+}
+dialog.ax-dialog--sheet-side .ax-dialog__surface {
+	min-block-size: 100%;
+}
+dialog.ax-dialog--sheet-side.ax-dialog--edge-end .ax-dialog__surface {
+	border-start-start-radius: var( --ax-dialog-shape );
+	border-end-start-radius: var( --ax-dialog-shape );
+}
+dialog.ax-dialog--sheet-side.ax-dialog--edge-start .ax-dialog__surface {
+	border-start-end-radius: var( --ax-dialog-shape );
+	border-end-end-radius: var( --ax-dialog-shape );
+}
+
+/* ---- Bottom sheet --------------------------------------------------------- */
+
+dialog.ax-dialog--sheet-bottom {
+	--ax-dialog-bottom-max-height: calc( 100dvh - 72px );
+	--ax-dialog-container-color: var( --wp--preset--color--surface-container-low, #f7f2fa );
+	--ax-dialog-elevation: var( --wp--preset--shadow--elevation-1, 0 1px 2px rgb( 0 0 0 / 30% ) );
+	--ax-dialog-shape: 28px;
+	inset-inline: 0;
+	inset-block-end: 0;
+	inset-block-start: auto;
+	inline-size: 100%;
+	max-inline-size: 640px;
+	margin-inline: auto;
+	max-block-size: var( --ax-dialog-bottom-max-height );
+}
+dialog.ax-dialog--sheet-bottom .ax-dialog__surface {
+	max-block-size: var( --ax-dialog-bottom-max-height );
+	border-start-start-radius: var( --ax-dialog-shape );
+	border-start-end-radius: var( --ax-dialog-shape );
+}
+
+@media ( min-width: 641px ) {
+	dialog.ax-dialog--sheet-bottom {
+		--ax-dialog-bottom-max-height: calc( 100dvh - 56px );
+		inline-size: min( 640px, calc( 100% - 112px ) );
+	}
+}
+
+.ax-dialog__drag-handle {
+	flex: 0 0 auto;
+	inline-size: 32px;
+	block-size: 4px;
+	margin: 22px auto;
+	border-radius: 100px;
+	background: var( --wp--preset--color--on-surface-variant, #49454f );
+}
+
+/* ---- Side / bottom enter motion ------------------------------------------- */
+@media ( prefers-reduced-motion: no-preference ) {
+	dialog.ax-dialog--sheet-side.ax-dialog--edge-end { --ax-dialog-enter-x: 100%; }
+	dialog.ax-dialog--sheet-side.ax-dialog--edge-start { --ax-dialog-enter-x: -100%; }
+
+	@starting-style {
+		dialog.ax-dialog--sheet-side[open] { translate: var( --ax-dialog-enter-x, 100% ) 0; opacity: 0; }
+		dialog.ax-dialog--sheet-bottom[open] { translate: 0 100%; opacity: 0; }
+	}
+}

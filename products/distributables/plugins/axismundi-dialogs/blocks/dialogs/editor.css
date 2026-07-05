@@ -1,0 +1,17 @@
+/**
+ * axismundi/dialogs — editor affordances only.
+ */
+.wp-block-axismundi-dialogs.ax-dialogs > .wp-block {
+	margin: 0;
+}
+
+/* Match the core Buttons collection and native block appender footprint. */
+.wp-block-axismundi-dialogs.ax-dialogs > .block-list-appender {
+	display: inline-flex;
+	align-self: center;
+	align-items: center;
+}
+
+.wp-block-axismundi-dialogs.ax-dialogs.is-vertical > .block-list-appender .block-list-appender__toggle {
+	justify-content: flex-start;
+}

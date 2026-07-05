@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/dialogs",
+	"version": "0.1.0",
+	"title": "Sheets",
+	"category": "theme",
+	"icon": "screenoptions",
+	"description": "Arrange one or more Sheet triggers.",
+	"keywords": [ "sheets", "buttons", "dialog", "drawer", "panel" ],
+	"textdomain": "axismundi-dialogs",
+	"allowedBlocks": [ "axismundi/sheet", "axismundi/dialog" ],
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ],
+		"anchor": true,
+		"__experimentalExposeControlsToChildren": true,
+		"layout": {
+			"allowSwitching": true,
+			"allowOrientation": true,
+			"default": {
+				"type": "flex"
+			}
+		},
+		"spacing": {
+			"blockGap": [ "horizontal", "vertical" ],
+			"margin": true,
+			"padding": true
+		},
+		"listView": true,
+		"contentRole": true
+	},
+	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./editor.css",
+	"style": "file:./style.css"
+}

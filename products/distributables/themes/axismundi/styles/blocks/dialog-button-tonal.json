@@ -1,0 +1,10 @@
+{
+	"$schema": "https://schemas.wp.org/wp/7.0/theme.json",
+	"version": 3,
+	"title": "Tonal",
+	"slug": "tonal",
+	"blockTypes": [ "axismundi/sheet", "axismundi/dialog" ],
+	"styles": {
+		"css": "& .ax-dialog__open-button{background-color:var(--wp--preset--color--secondary-container);color:var(--wp--preset--color--on-secondary-container);}& .ax-dialog__open-button:hover{background-color:color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-hover-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));}& .ax-dialog__open-button:focus{background-color:color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-focus-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));}& .ax-dialog__open-button:active{background-color:color-mix(in srgb, var(--wp--preset--color--on-secondary-container) calc(var(--md-sys-state-pressed-state-layer-opacity) * 100%), var(--wp--preset--color--secondary-container));}"
+	}
+}

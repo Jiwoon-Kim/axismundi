@@ -1,0 +1,14 @@
+/**
+ * axismundi/dialogs — collection.
+ *
+ * WordPress layout support owns display, orientation, justification, wrapping,
+ * and block gap via the generated .is-layout-* classes. Do NOT hard-code
+ * display/flex here: a fixed `display: flex` at class specificity overrides the
+ * chosen Grid / Constrained / Flow layout (it silently kept the container flex
+ * even after grid-template-columns was generated). The only addition is a
+ * default cross-axis centring for the flex case, at :where() (zero) specificity
+ * so every layout — and any explicit block setting — still wins.
+ */
+:where( .wp-block-axismundi-dialogs.ax-dialogs ) {
+	align-items: center;
+}

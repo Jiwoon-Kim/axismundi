@@ -1,0 +1,22 @@
+/**
+ * axismundi/dialog-close — dismiss button. Minimal icon-button styling; inherits
+ * the theme's .ax-icon-button treatment when present.
+ */
+.ax-dialog-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 40px;
+	block-size: 40px;
+	padding: 0;
+	border: 0;
+	border-radius: 100px;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+}
+
+.ax-dialog-close .material-symbols-outlined {
+	font-size: 24px;
+	line-height: 1;
+}

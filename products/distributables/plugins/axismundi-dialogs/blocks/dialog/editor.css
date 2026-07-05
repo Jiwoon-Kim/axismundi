@@ -1,0 +1,13 @@
+/**
+ * axismundi/sheet — editor canvas preview. The real dialog never opens here;
+ * the child occupies exactly the same single trigger row as core/button.
+ */
+.ax-dialog-host-edit {
+	display: inline-flex;
+	align-items: center;
+	max-inline-size: 100%;
+}
+
+.ax-dialog-host-edit .ax-dialog__open-button-label {
+	min-inline-size: 3ch;
+}

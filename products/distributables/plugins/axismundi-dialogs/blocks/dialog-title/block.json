@@ -1,0 +1,51 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/dialog-title",
+	"version": "0.1.0",
+	"title": "Sheet Title",
+	"category": "theme",
+	"icon": "heading",
+	"description": "Shows the current sheet's title. Placed in a Sheet template part header; the title is supplied by the Sheet block.",
+	"keywords": [ "sheet", "title", "heading", "drawer" ],
+	"textdomain": "axismundi-dialogs",
+	"usesContext": [ "axismundi/dialogTitle" ],
+	"attributes": {
+		"content": { "type": "string", "default": "" },
+		"level": { "type": "number", "default": 2 },
+		"textAlign": { "type": "string" },
+		"style": {
+			"type": "object",
+			"default": {
+				"layout": {
+					"selfStretch": "fill"
+				}
+			}
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": {
+			"text": true,
+			"background": false
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontWeight": true,
+			"__experimentalLetterSpacing": true
+		}
+	},
+	"example": {
+		"attributes": {}
+	},
+	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./style.css",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

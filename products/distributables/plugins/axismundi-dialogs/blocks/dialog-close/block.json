@@ -1,0 +1,30 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/dialog-close",
+	"version": "0.1.0",
+	"title": "Sheet Close Button",
+	"category": "theme",
+	"icon": "no-alt",
+	"description": "A close button for use inside a Sheet template part. Dismisses the sheet it is placed in.",
+	"keywords": [ "sheet", "close", "dismiss", "drawer" ],
+	"textdomain": "axismundi-dialogs",
+	"attributes": {
+		"label": { "type": "string", "default": "Close" },
+		"icon": { "type": "string", "default": "close" }
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"spacing": {
+			"margin": true
+		}
+	},
+	"example": {
+		"attributes": {}
+	},
+	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./style.css",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

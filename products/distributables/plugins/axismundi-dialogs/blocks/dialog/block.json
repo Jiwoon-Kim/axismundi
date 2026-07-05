@@ -1,0 +1,39 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/dialog",
+	"version": "0.1.2",
+	"title": "Dialog",
+	"category": "theme",
+	"icon": "admin-page",
+	"description": "An open button that opens a Material Design 3 basic or full-screen dialog. The content is a Dialog template part.",
+	"keywords": [ "dialog", "modal", "popup", "basic", "full-screen" ],
+	"textdomain": "axismundi-dialogs",
+	"parent": [ "axismundi/dialogs" ],
+	"attributes": {
+		"templatePart": { "type": "string", "default": "" },
+		"title": { "type": "string", "default": "" },
+		"variant": { "type": "string", "default": "basic" },
+		"width": { "type": "string", "default": "medium" },
+		"triggerIcon": { "type": "string", "default": "open_in_new" },
+		"triggerLabel": { "type": "string", "default": "", "role": "content" },
+		"label": { "type": "string", "default": "" },
+		"closeOnBackdrop": { "type": "boolean", "default": true }
+	},
+	"supports": {
+		"html": false,
+		"interactivity": true,
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
+	},
+	"example": {
+		"attributes": {}
+	},
+	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./editor.css",
+	"style": "file:./style.css",
+	"render": "file:./render.php",
+	"viewScriptModule": "file:./view.js"
+}

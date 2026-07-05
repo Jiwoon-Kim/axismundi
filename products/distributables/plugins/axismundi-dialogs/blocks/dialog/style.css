@@ -1,0 +1,65 @@
+/**
+ * axismundi/dialog — basic + full-screen dialog geometry.
+ *
+ * Shared open button, surface, template-part contract, scrim, scroll lock, and
+ * base motion come from assets/shared.css. This file only sizes the two dialog
+ * variants and their enter motion. Dialogs are always modal (top layer).
+ */
+
+/* ---- Basic dialog --------------------------------------------------------- *
+ * M3: 280–560px wide, 28dp radius, centred, body scrolls when it overflows. */
+dialog.ax-dialog--basic {
+	--ax-dialog-basic-width: 400px;
+	--ax-dialog-container-color: var( --wp--preset--color--surface-container-high, #ece6f0 );
+	--ax-dialog-shape: 28px;
+	--ax-dialog-elevation: var( --wp--preset--shadow--elevation-3, 0 8px 24px rgba( 0, 0, 0, 0.24 ) );
+
+	inset: 0;
+	margin: auto;
+	inline-size: min( calc( 100vw - 2 * var( --wp--preset--spacing--300, 24px ) ), var( --ax-dialog-basic-width ) );
+	min-inline-size: min( 280px, calc( 100vw - 2 * var( --wp--preset--spacing--300, 24px ) ) );
+	max-inline-size: 560px;
+	max-block-size: calc( 100dvh - 2 * var( --wp--preset--spacing--300, 24px ) );
+}
+dialog.ax-dialog--basic.is-width-narrow { --ax-dialog-basic-width: 280px; }
+dialog.ax-dialog--basic.is-width-medium { --ax-dialog-basic-width: 400px; }
+dialog.ax-dialog--basic.is-width-wide   { --ax-dialog-basic-width: 560px; }
+dialog.ax-dialog--basic .ax-dialog__surface {
+	border-radius: var( --ax-dialog-shape );
+}
+
+/* ---- Full-screen dialog --------------------------------------------------- *
+ * Fills the viewport; no radius or elevation. The part's header is a fixed row
+ * (M3 header ~56dp; the part sets its own min-height). */
+dialog.ax-dialog--full-screen {
+	--ax-dialog-container-color: var( --wp--preset--color--surface, #fef7ff );
+	--ax-dialog-elevation: none;
+	--ax-dialog-shape: 0;
+
+	inset: 0;
+	margin: 0;
+	inline-size: 100%;
+	block-size: 100dvh;
+	max-inline-size: 100%;
+	max-block-size: 100dvh;
+}
+dialog.ax-dialog--full-screen .ax-dialog__surface {
+	box-shadow: none;
+}
+dialog.ax-dialog--full-screen .ax-dialog__surface > section > header {
+	background: var( --wp--preset--color--surface, #fef7ff );
+	box-shadow: none;
+	transition: background-color 200ms ease, box-shadow 200ms ease;
+}
+dialog.ax-dialog--full-screen.is-scrolled .ax-dialog__surface > section > header {
+	background: var( --wp--preset--color--surface-container, #f3edf7 );
+	box-shadow: var( --wp--preset--shadow--elevation-3, 0 4px 8px rgb( 0 0 0 / 24% ) );
+}
+
+/* ---- Enter motion --------------------------------------------------------- */
+@media ( prefers-reduced-motion: no-preference ) {
+	@starting-style {
+		dialog.ax-dialog--basic[open] { scale: 0.9; opacity: 0; }
+		dialog.ax-dialog--full-screen[open] { opacity: 0; }
+	}
+}

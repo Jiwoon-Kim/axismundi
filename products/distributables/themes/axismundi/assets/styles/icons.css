@@ -3,8 +3,9 @@
  *
  * The explicit icon utility for theme chrome / control blocks. Opt-in: only an
  * element carrying the `.material-symbols-outlined` class becomes an icon —
- * ordinary text never does. The @font-face itself is registered in theme.json
- * (Material Symbols Outlined); this file only contracts the rendering.
+ * ordinary text never does. Keep the @font-face here as well as its theme.json
+ * metadata: WordPress may omit an unused font-family preset from generated
+ * global styles even though this utility consumes it directly.
  *
  * Usage: <span class="material-symbols-outlined" aria-hidden="true">settings</span>
  * The ligature text ("settings") is also the graceful-degradation fallback when
@@ -19,6 +20,14 @@
  * drive the host layout. Consumers (theme chrome, the theme-switcher plugin)
  * inherit this — they only choose the icon name and the font-size.
  * ============================================================ */
+@font-face {
+	font-family: "Material Symbols Outlined";
+	font-style: normal;
+	font-weight: 100 700;
+	font-display: block;
+	src: url( "../fonts/material-symbols-outlined/material-symbols-outlined.woff2" ) format( "woff2" );
+}
+
 @property --md-icon-fill {
 	syntax: "<number>";
 	inherits: true;

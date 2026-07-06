@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -24,6 +24,11 @@ CMS.
 2. Open Appearance > Editor to customize templates and global styles.
 
 == Changelog ==
+
+= 0.1.6 =
+* Add editable Sheet and Dialog template parts for the Axismundi Dialogs companion plugin.
+* Provide Material 3 layouts for side sheets, bottom sheets, basic dialogs, list dialogs, and full-screen dialogs.
+* Hide disclosure icons in always-expanded Side Sheet navigation.
 
 = 0.1.5 =
 * Redesign the navigation overlay and header: a full-screen drawer whose layout, surface, and close control are owned by core and block markup.

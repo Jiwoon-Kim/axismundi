@@ -1,11 +1,23 @@
 <!-- wp:group {"tagName":"section","style":{"spacing":{"blockGap":"0"}},"layout":{"type":"default"}} -->
-<section class="wp-block-group"><!-- wp:group {"tagName":"header","style":{"spacing":{"blockGap":"var:preset|spacing|150","padding":{"top":"var:preset|spacing|150","right":"var:preset|spacing|300","bottom":"var:preset|spacing|150","left":"var:preset|spacing|300"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"center"}} -->
-<header class="wp-block-group" style="padding-top:var(--wp--preset--spacing--150);padding-right:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--150);padding-left:var(--wp--preset--spacing--300)"><!-- wp:axismundi/dialog-title {"level":2,"textColor":"on-surface-variant","style":{"typography":{"fontWeight":"400","lineHeight":"28px","letterSpacing":"0px"}},"fontSize":"title-large"} /-->
+<section class="wp-block-group"><!-- wp:group {"tagName":"header","style":{"spacing":{"blockGap":"var:preset|spacing|150","padding":{"top":"var:preset|spacing|300","right":"var:preset|spacing|300","bottom":"var:preset|spacing|300","left":"var:preset|spacing|300"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"center"}} -->
+<header class="wp-block-group" style="padding-top:var(--wp--preset--spacing--300);padding-right:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--300);padding-left:var(--wp--preset--spacing--300)"><!-- wp:axismundi/dialog-title {"style":{"typography":{"fontWeight":"400","lineHeight":"28px","letterSpacing":"0px"},"layout":{"selfStretch":"fill","flexSize":null}},"textColor":"on-surface-variant","fontSize":"title-large"} /-->
 
 <!-- wp:axismundi/dialog-close /--></header>
 <!-- /wp:group -->
 
-<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|150","right":"var:preset|spacing|300","bottom":"var:preset|spacing|300","left":"var:preset|spacing|300"}}},"layout":{"type":"default"}} -->
-<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--150);padding-right:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--300);padding-left:var(--wp--preset--spacing--300)"><!-- wp:navigation {"ref":4,"submenuVisibility":"always","overlayMenu":"never","layout":{"type":"flex","orientation":"vertical","justifyContent":"left"}} /--></div>
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|0","right":"var:preset|spacing|300","bottom":"var:preset|spacing|300","left":"var:preset|spacing|300"},"blockGap":"var:preset|spacing|150"}},"layout":{"type":"default"}} -->
+<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--0);padding-right:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--300);padding-left:var(--wp--preset--spacing--300)"><!-- wp:navigation {"ref":4,"showSubmenuIcon":false,"submenuVisibility":"always","overlayMenu":"never","layout":{"type":"flex","orientation":"vertical","justifyContent":"left"}} /--></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"tagName":"footer","metadata":{"name":"Actions"},"style":{"dimensions":{"minHeight":"72px"},"border":{"top":{"color":"var:preset|color|outline","width":"1px"},"right":{},"bottom":{},"left":{}}},"layout":{"type":"default"}} -->
+<footer class="wp-block-group" style="border-top-color:var(--wp--preset--color--outline);border-top-width:1px;min-height:72px"><!-- wp:buttons {"style":{"spacing":{"padding":{"top":"var:preset|spacing|200","right":"var:preset|spacing|300","bottom":"var:preset|spacing|300","left":"var:preset|spacing|300"},"blockGap":{"left":"var:preset|spacing|100"}}},"layout":{"type":"flex","justifyContent":"left"}} -->
+<div class="wp-block-buttons" style="padding-top:var(--wp--preset--spacing--200);padding-right:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--300);padding-left:var(--wp--preset--spacing--300)"><!-- wp:button {"metadata":{"name":"Primary button"}} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Save</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"metadata":{"name":"Secondary button"},"className":"is-style-outline"} -->
+<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button">Cancel</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></footer>
 <!-- /wp:group --></section>
 <!-- /wp:group -->

@@ -39,6 +39,20 @@ dialog.ax-dialog--sheet-side.ax-dialog--edge-start {
 	inset-inline-start: 0;
 	inset-inline-end: auto;
 }
+
+/* Detached modal Side Sheet: same side anchoring, inset from every viewport
+ * edge with a fully rounded floating surface. */
+dialog.ax-dialog--sheet-side.is-detached {
+	inset-block: 16px;
+	block-size: calc( 100dvh - 32px );
+	max-block-size: calc( 100dvh - 32px );
+}
+dialog.ax-dialog--sheet-side.is-detached.ax-dialog--edge-end {
+	inset-inline-end: 16px;
+}
+dialog.ax-dialog--sheet-side.is-detached.ax-dialog--edge-start {
+	inset-inline-start: 16px;
+}
 dialog.ax-dialog--sheet-side .ax-dialog__surface {
 	min-block-size: 100%;
 }
@@ -49,6 +63,16 @@ dialog.ax-dialog--sheet-side.ax-dialog--edge-end .ax-dialog__surface {
 dialog.ax-dialog--sheet-side.ax-dialog--edge-start .ax-dialog__surface {
 	border-start-end-radius: var( --ax-dialog-shape );
 	border-end-end-radius: var( --ax-dialog-shape );
+}
+dialog.ax-dialog--sheet-side.is-detached .ax-dialog__surface {
+	border-radius: var( --ax-dialog-shape );
+}
+
+/* A saved Standard sheet falls back to a modal overlay on compact screens. */
+dialog.ax-dialog--sheet-side.is-standard.is-compact-modal {
+	--ax-dialog-container-color: var( --wp--preset--color--surface-container-low, #f7f2fa );
+	--ax-dialog-elevation: var( --wp--preset--shadow--elevation-1, 0 1px 2px rgb( 0 0 0 / 30% ) );
+	--ax-dialog-shape: 16px;
 }
 
 /* ---- Bottom sheet --------------------------------------------------------- */
@@ -92,6 +116,18 @@ dialog.ax-dialog--sheet-bottom .ax-dialog__surface {
 @media ( prefers-reduced-motion: no-preference ) {
 	dialog.ax-dialog--sheet-side.ax-dialog--edge-end { --ax-dialog-enter-x: 100%; }
 	dialog.ax-dialog--sheet-side.ax-dialog--edge-start { --ax-dialog-enter-x: -100%; }
+	dialog.ax-dialog--sheet-side:not( [open] ) {
+		translate: var( --ax-dialog-enter-x, 100% ) 0;
+	}
+	dialog.ax-dialog--sheet-side.is-closing {
+		translate: var( --ax-dialog-enter-x, 100% ) 0;
+	}
+	dialog.ax-dialog--sheet-bottom:not( [open] ) {
+		translate: 0 100%;
+	}
+	dialog.ax-dialog--sheet-bottom.is-closing {
+		translate: 0 100%;
+	}
 
 	@starting-style {
 		dialog.ax-dialog--sheet-side[open] { translate: var( --ax-dialog-enter-x, 100% ) 0; opacity: 0; }

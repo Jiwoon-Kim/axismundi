@@ -129,6 +129,26 @@ dialog.ax-dialog.is-standard {
 	z-index: 100000;
 }
 
+/* Wide Standard Side Sheets reserve their measured width in the core site root.
+ * Logical padding keeps start/end behavior correct in both LTR and RTL. */
+@media ( min-width: 840px ) {
+	/* Keep the transition present before opening and after the pushed class is
+	 * removed, so both directions animate instead of snapping on close. */
+	html:has( dialog.ax-dialog[data-ax-push="true"] ) .wp-site-blocks {
+		box-sizing: border-box;
+		min-inline-size: 0;
+		transition:
+			padding-inline-start 250ms cubic-bezier( 0.2, 0, 0, 1 ),
+			padding-inline-end 250ms cubic-bezier( 0.2, 0, 0, 1 );
+	}
+	html.ax-dialog-pushed-start .wp-site-blocks {
+		padding-inline-start: var( --ax-dialog-push-size, 0px );
+	}
+	html.ax-dialog-pushed-end .wp-site-blocks {
+		padding-inline-end: var( --ax-dialog-push-size, 0px );
+	}
+}
+
 /* ---- Scroll mode: whole surface scrolls ----------------------------------- */
 dialog.ax-dialog.is-scroll-sheet .ax-dialog__surface {
 	overflow-y: auto;
@@ -150,9 +170,22 @@ dialog.ax-dialog.is-scroll-sheet .ax-dialog__surface > section > :not( header, f
 		translate: 0 0;
 		scale: 1;
 	}
+	dialog.ax-dialog:not( [open] ) {
+		opacity: 0;
+	}
+	dialog.ax-dialog.is-closing {
+		opacity: 0;
+		pointer-events: none;
+	}
 	dialog.ax-dialog::backdrop {
 		transition: opacity 200ms ease, overlay 200ms allow-discrete, display 200ms allow-discrete;
 		opacity: 1;
+	}
+	dialog.ax-dialog:not( [open] )::backdrop {
+		opacity: 0;
+	}
+	dialog.ax-dialog.is-closing::backdrop {
+		opacity: 0;
 	}
 	@starting-style {
 		dialog.ax-dialog[open]::backdrop {

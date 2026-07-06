@@ -16,6 +16,9 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 
 const html = document.documentElement;
+const compactSheet = window.matchMedia( '(max-width: 839px)' );
+const reducedMotion = window.matchMedia( '(prefers-reduced-motion: reduce)' );
+const closeTimers = new WeakMap();
 
 const dialogFromTrigger = ( ref ) => {
 	const id = ref.getAttribute( 'aria-controls' );
@@ -26,6 +29,54 @@ const closeOthers = ( keep ) =>
 	document
 		.querySelectorAll( 'dialog.ax-dialog[open]' )
 		.forEach( ( d ) => d !== keep && d.close() );
+
+const closeDialog = ( dialog ) => {
+	if ( ! dialog?.open || dialog.classList.contains( 'is-closing' ) ) {
+		return;
+	}
+	if ( reducedMotion.matches ) {
+		dialog.close();
+		return;
+	}
+	dialog.classList.add( 'is-closing' );
+	closeTimers.set( dialog, window.setTimeout( () => {
+		closeTimers.delete( dialog );
+		if ( dialog.open ) {
+			dialog.close();
+		}
+	}, 250 ) );
+};
+
+const clearPush = () => {
+	html.classList.remove( 'ax-dialog-pushed-start', 'ax-dialog-pushed-end' );
+	html.style.removeProperty( '--ax-dialog-push-size' );
+};
+
+const applyPush = ( dialog ) => {
+	clearPush();
+	if ( dialog.getAttribute( 'data-ax-push' ) !== 'true' ) {
+		return;
+	}
+	const edge = dialog.getAttribute( 'data-ax-edge' ) === 'start' ? 'start' : 'end';
+	html.style.setProperty( '--ax-dialog-push-size', `${ dialog.getBoundingClientRect().width }px` );
+	html.classList.add( `ax-dialog-pushed-${ edge }` );
+};
+
+const usesModalPresentation = ( dialog ) =>
+	dialog.getAttribute( 'data-ax-modal' ) !== 'false' ||
+	( dialog.getAttribute( 'data-ax-push' ) === 'true' && compactSheet.matches );
+
+const bindResponsiveClose = ( dialog ) => {
+	if ( dialog.dataset.axDialogResponsiveBound ) {
+		return;
+	}
+	dialog.dataset.axDialogResponsiveBound = 'true';
+	compactSheet.addEventListener( 'change', () => {
+		if ( dialog.open && dialog.getAttribute( 'data-ax-push' ) === 'true' ) {
+			dialog.close();
+		}
+	} );
+};
 
 const bindScrollState = ( dialog ) => {
 	const region = dialog.querySelector(
@@ -46,7 +97,7 @@ const bindScrollState = ( dialog ) => {
 const syncScrollLock = () =>
 	html.classList.toggle(
 		'ax-dialog-scroll-locked',
-		!! document.querySelector( 'dialog.ax-dialog[open]:not( [data-ax-modal="false"] )' )
+		!! document.querySelector( 'dialog.ax-dialog[open]:not( [data-ax-modal="false"] ), dialog.ax-dialog[open].is-compact-modal' )
 	);
 
 store( 'axismundi/dialog', {
@@ -56,21 +107,31 @@ store( 'axismundi/dialog', {
 			if ( ! dialog || dialog.open ) {
 				return;
 			}
+			clearPush();
 			closeOthers( dialog );
+			const modalPresentation = usesModalPresentation( dialog );
+			dialog.classList.toggle( 'is-compact-modal', modalPresentation && dialog.getAttribute( 'data-ax-modal' ) === 'false' );
 			// Modal: top layer, ::backdrop scrim, focus containment, Escape close.
 			// Standard: no scrim, background stays interactive and scrollable.
-			if ( 'false' === dialog.getAttribute( 'data-ax-modal' ) ) {
-				dialog.show();
-			} else {
+			if ( modalPresentation ) {
 				dialog.showModal();
+			} else {
+				dialog.show();
+				applyPush( dialog );
 			}
 			getContext().isOpen = true;
 			bindScrollState( dialog );
+			bindResponsiveClose( dialog );
 			syncScrollLock();
 		},
 
 		close() {
-			getElement().ref.closest( 'dialog.ax-dialog' )?.close();
+			closeDialog( getElement().ref.closest( 'dialog.ax-dialog' ) );
+		},
+
+		onCancel( event ) {
+			event.preventDefault();
+			closeDialog( getElement().ref );
 		},
 
 		onBackdropClick( event ) {
@@ -83,11 +144,18 @@ store( 'axismundi/dialog', {
 			if ( dialog.getAttribute( 'data-ax-close-on-backdrop' ) !== 'true' ) {
 				return;
 			}
-			dialog.close();
+			closeDialog( dialog );
 		},
 
 		onDialogClose() {
-			getElement().ref.classList.remove( 'is-scrolled' );
+			const dialog = getElement().ref;
+			const timer = closeTimers.get( dialog );
+			if ( timer ) {
+				window.clearTimeout( timer );
+				closeTimers.delete( dialog );
+			}
+			dialog.classList.remove( 'is-scrolled', 'is-compact-modal', 'is-closing' );
+			clearPush();
 			getContext().isOpen = false;
 			syncScrollLock();
 		},

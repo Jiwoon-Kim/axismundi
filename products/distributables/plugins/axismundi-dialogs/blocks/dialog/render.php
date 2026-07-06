@@ -105,6 +105,7 @@ $axismundi_dialogs_wrapper = get_block_wrapper_attributes(
 		data-ax-modal="true"
 		data-ax-close-on-backdrop="<?php echo $axismundi_dialogs_backdrop ? 'true' : 'false'; ?>"
 		data-wp-on--click="actions.onBackdropClick"
+		data-wp-on--cancel="actions.onCancel"
 		data-wp-on--close="actions.onDialogClose"
 	>
 		<div class="ax-dialog__surface">

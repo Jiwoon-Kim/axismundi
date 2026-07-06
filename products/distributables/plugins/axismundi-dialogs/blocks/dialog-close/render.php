@@ -19,7 +19,7 @@ $axismundi_dialogs_close_icon  = '' !== $axismundi_dialogs_close_icon ? $axismun
 
 $axismundi_dialogs_close_wrapper = get_block_wrapper_attributes(
 	array(
-		'class'             => 'ax-dialog-close ax-icon-button is-standard has-state-layer',
+		'class'             => 'ax-dialog-close',
 		'type'              => 'button',
 		'aria-label'        => $axismundi_dialogs_close_label,
 		'data-wp-on--click' => 'actions.close',

@@ -58,6 +58,12 @@ dialog.ax-dialog--full-screen.is-scrolled .ax-dialog__surface > section > header
 
 /* ---- Enter motion --------------------------------------------------------- */
 @media ( prefers-reduced-motion: no-preference ) {
+	dialog.ax-dialog--basic:not( [open] ) {
+		scale: 0.9;
+	}
+	dialog.ax-dialog--basic.is-closing {
+		scale: 0.9;
+	}
 	@starting-style {
 		dialog.ax-dialog--basic[open] { scale: 0.9; opacity: 0; }
 		dialog.ax-dialog--full-screen[open] { opacity: 0; }

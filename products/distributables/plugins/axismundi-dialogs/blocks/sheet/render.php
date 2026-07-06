@@ -18,6 +18,7 @@ defined( 'ABSPATH' ) || exit;
 
 $axismundi_dialogs_id       = wp_unique_id( 'ax-dialog-' );
 $axismundi_dialogs_variant  = in_array( ( $attributes['variant'] ?? 'side' ), array( 'side', 'bottom' ), true ) ? $attributes['variant'] : 'side';
+$axismundi_dialogs_attachment = in_array( ( $attributes['attachment'] ?? 'docked' ), array( 'docked', 'detached' ), true ) ? $attributes['attachment'] : 'docked';
 $axismundi_dialogs_edge     = in_array( ( $attributes['edge'] ?? 'end' ), array( 'start', 'end' ), true ) ? $attributes['edge'] : 'end';
 $axismundi_dialogs_width    = in_array( ( $attributes['width'] ?? 'medium' ), array( 'narrow', 'medium', 'wide' ), true ) ? $attributes['width'] : 'medium';
 $axismundi_dialogs_icon     = preg_replace( '/[^a-z0-9_]/', '', strtolower( (string) ( $attributes['triggerIcon'] ?? 'menu' ) ) );
@@ -31,6 +32,13 @@ $axismundi_dialogs_backdrop = ! isset( $attributes['closeOnBackdrop'] ) || (bool
 $axismundi_dialogs_handle   = 'bottom' === $axismundi_dialogs_variant && ! empty( $attributes['showDragHandle'] );
 $axismundi_dialogs_modal    = ! isset( $attributes['modal'] ) || (bool) $attributes['modal'];
 $axismundi_dialogs_scroll   = 'sheet' === ( $attributes['scrollMode'] ?? 'body' ) ? 'sheet' : 'body';
+
+// Detached is a modal Side Sheet geometry. Standard and Bottom Sheets remain
+// docked so presentation and geometry cannot form unsupported combinations.
+if ( 'side' !== $axismundi_dialogs_variant || ! $axismundi_dialogs_modal ) {
+	$axismundi_dialogs_attachment = 'docked';
+}
+$axismundi_dialogs_push = 'side' === $axismundi_dialogs_variant && ! $axismundi_dialogs_modal && 'docked' === $axismundi_dialogs_attachment;
 // A standard (non-modal) sheet only closes on a backdrop click while it still has
 // a scrim, i.e. when modal; otherwise there is no ::backdrop to click.
 $axismundi_dialogs_backdrop = $axismundi_dialogs_modal && $axismundi_dialogs_backdrop;
@@ -108,11 +116,15 @@ $axismundi_dialogs_wrapper = get_block_wrapper_attributes(
 
 	<dialog
 		id="<?php echo esc_attr( $axismundi_dialogs_id ); ?>"
-		class="ax-dialog ax-dialog--sheet-<?php echo esc_attr( $axismundi_dialogs_variant ); ?> ax-dialog--edge-<?php echo esc_attr( $axismundi_dialogs_edge ); ?> is-width-<?php echo esc_attr( $axismundi_dialogs_width ); ?><?php echo 'sheet' === $axismundi_dialogs_scroll ? ' is-scroll-sheet' : ''; ?><?php echo $axismundi_dialogs_modal ? '' : ' is-standard'; ?>"
+		class="ax-dialog ax-dialog--sheet-<?php echo esc_attr( $axismundi_dialogs_variant ); ?> ax-dialog--edge-<?php echo esc_attr( $axismundi_dialogs_edge ); ?> is-<?php echo esc_attr( $axismundi_dialogs_attachment ); ?> is-width-<?php echo esc_attr( $axismundi_dialogs_width ); ?><?php echo 'sheet' === $axismundi_dialogs_scroll ? ' is-scroll-sheet' : ''; ?><?php echo $axismundi_dialogs_modal ? '' : ' is-standard'; ?>"
 		aria-label="<?php echo esc_attr( $axismundi_dialogs_label ); ?>"
 		data-ax-modal="<?php echo $axismundi_dialogs_modal ? 'true' : 'false'; ?>"
+		data-ax-attachment="<?php echo esc_attr( $axismundi_dialogs_attachment ); ?>"
+		data-ax-edge="<?php echo esc_attr( $axismundi_dialogs_edge ); ?>"
+		data-ax-push="<?php echo $axismundi_dialogs_push ? 'true' : 'false'; ?>"
 		data-ax-close-on-backdrop="<?php echo $axismundi_dialogs_backdrop ? 'true' : 'false'; ?>"
 		data-wp-on--click="actions.onBackdropClick"
+		data-wp-on--cancel="actions.onCancel"
 		data-wp-on--close="actions.onDialogClose"
 	>
 		<div class="ax-dialog__surface">

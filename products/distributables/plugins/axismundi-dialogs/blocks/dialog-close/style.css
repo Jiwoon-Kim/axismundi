@@ -1,22 +1,55 @@
 /**
- * axismundi/dialog-close — dismiss button. Minimal icon-button styling; inherits
- * the theme's .ax-icon-button treatment when present.
+ * axismundi/dialog-close — M3 close affordance icon button.
+ *
+ * The button footprint is the 24dp icon (per spec measurement); the 40dp state
+ * layer is an overflowing ::before so the resting size stays icon-sized while
+ * hover / focus / press still show a full-size Material state layer.
  */
 .ax-dialog-close {
+	position: relative;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	inline-size: 40px;
-	block-size: 40px;
+	inline-size: 24px;
+	block-size: 24px;
 	padding: 0;
 	border: 0;
-	border-radius: 100px;
 	background: transparent;
 	color: inherit;
 	cursor: pointer;
+	line-height: 0;
 }
 
 .ax-dialog-close .material-symbols-outlined {
+	position: relative;
+	z-index: 1;
 	font-size: 24px;
 	line-height: 1;
+}
+
+/* 40dp state layer, centred on the 24dp icon (inset -8 => 24 + 16). */
+.ax-dialog-close::before {
+	content: "";
+	position: absolute;
+	inset: -8px;
+	z-index: 0;
+	border-radius: 50%;
+	background: transparent;
+	transition: background-color 150ms var( --md-sys-motion-easing-standard, cubic-bezier( 0.2, 0, 0, 1 ) );
+}
+
+.ax-dialog-close:hover::before {
+	background: color-mix( in srgb, var( --wp--preset--color--on-surface-variant, currentColor ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ), transparent );
+}
+.ax-dialog-close:focus-visible::before {
+	background: color-mix( in srgb, var( --wp--preset--color--on-surface-variant, currentColor ) calc( var( --md-sys-state-focus-state-layer-opacity, 0.1 ) * 100% ), transparent );
+}
+.ax-dialog-close:active::before {
+	background: color-mix( in srgb, var( --wp--preset--color--on-surface-variant, currentColor ) calc( var( --md-sys-state-pressed-state-layer-opacity, 0.1 ) * 100% ), transparent );
+}
+
+.ax-dialog-close:focus-visible {
+	outline: 2px solid var( --wp--preset--color--secondary, currentColor );
+	outline-offset: 8px;
+	border-radius: 50%;
 }

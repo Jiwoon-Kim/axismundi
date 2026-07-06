@@ -73,6 +73,19 @@
 				} ),
 			];
 			if ( a.variant === 'side' ) {
+				if ( a.modal !== false ) {
+					controls.push( el( SelectControl, {
+						key: 'attachment',
+						label: __( 'Attachment', 'axismundi-dialogs' ),
+						value: a.attachment || 'docked',
+						options: [
+							{ label: __( 'Docked', 'axismundi-dialogs' ), value: 'docked' },
+							{ label: __( 'Detached', 'axismundi-dialogs' ), value: 'detached' },
+						],
+						onChange: function ( v ) { set( { attachment: v } ); },
+						help: __( 'Detached modal sheets float 16px from the viewport edges.', 'axismundi-dialogs' ),
+					} ) );
+				}
 				controls.push( el( SelectControl, {
 					key: 'edge',
 					label: __( 'Edge', 'axismundi-dialogs' ),
@@ -108,8 +121,8 @@
 				key: 'modal',
 				label: __( 'Modal', 'axismundi-dialogs' ),
 				checked: a.modal !== false,
-				onChange: function ( v ) { set( { modal: v } ); },
-				help: __( 'Modal dims and locks the page; standard leaves it interactive and scrollable.', 'axismundi-dialogs' ),
+				onChange: function ( v ) { set( v ? { modal: true } : { modal: false, attachment: 'docked' } ); },
+				help: __( 'Modal overlays the page; standard docks beside and resizes the site on larger screens.', 'axismundi-dialogs' ),
 			} ) );
 			controls.push( el( SelectControl, {
 				key: 'scroll',

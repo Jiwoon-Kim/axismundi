@@ -224,7 +224,7 @@ function axismundi_dialogs_render_quick_view( WP_Post $quick_view_post ) : strin
 			if ( $axismundi_dialogs_pw ) {
 				echo '<p>' . esc_html__( 'This post is password protected. Open the full post to read it.', 'axismundi-dialogs' ) . '</p>';
 			} else {
-				echo apply_filters( 'the_content', $post->post_content ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core the_content filter, same as the front end.
+				echo apply_filters( 'the_content', $post->post_content ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Applies (not invents) the core the_content filter to render the post body exactly as the front end does.
 			}
 			?>
 		</div>
@@ -303,34 +303,38 @@ function axismundi_dialogs_render_comments( int $post_id ) : string {
 
 	$axismundi_dialogs_render_one = static function ( $comment, $depth ) use ( &$axismundi_dialogs_render_one, $axismundi_dialogs_by_parent, $axismundi_dialogs_max_depth ) : string {
 		$id           = (int) $comment->comment_ID;
+		$author       = get_comment_author( $comment );
 		$children     = $axismundi_dialogs_by_parent[ $id ] ?? array();
 		$show_replies = ! empty( $children ) && $depth < $axismundi_dialogs_max_depth;
 		$deeper_only  = ! empty( $children ) && $depth >= $axismundi_dialogs_max_depth;
 
 		ob_start();
 		?>
-		<li class="ax-comment<?php echo $show_replies ? ' has-replies is-collapsed' : ''; ?>" data-ax-comment>
+		<li class="ax-comment<?php echo $show_replies ? ' has-replies is-collapsed' : ''; ?>" data-ax-comment data-comment-id="<?php echo esc_attr( (string) $id ); ?>">
 			<div class="ax-comment__body">
 				<div class="ax-comment__head">
 					<?php echo get_avatar( $comment, 32, '', '', array( 'class' => 'ax-comment__avatar' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core avatar markup. ?>
-					<span class="ax-comment__author"><?php echo esc_html( get_comment_author( $comment ) ); ?></span>
+					<span class="ax-comment__author"><?php echo esc_html( $author ); ?></span>
 					<span class="ax-comment__date"><?php echo esc_html( get_comment_date( '', $comment ) ); ?></span>
 				</div>
 				<div class="ax-comment__content"><?php echo wp_kses_post( get_comment_text( $comment ) ); ?></div>
-				<?php if ( $show_replies ) : ?>
-					<button type="button" class="ax-comment__toggle" aria-expanded="false">
-						<span class="ax-comment__toggle-sign" aria-hidden="true"></span>
-						<span><?php
-							printf(
-								/* translators: %s: number of replies. */
-								esc_html( _n( '%s reply', '%s replies', count( $children ), 'axismundi-dialogs' ) ),
-								esc_html( number_format_i18n( count( $children ) ) )
-							);
-						?></span>
-					</button>
-				<?php elseif ( $deeper_only ) : ?>
-					<a class="ax-comment__more" href="<?php echo esc_url( get_comment_link( $comment ) ); ?>"><?php esc_html_e( 'Continue thread', 'axismundi-dialogs' ); ?></a>
-				<?php endif; ?>
+				<div class="ax-comment__actions">
+					<button type="button" class="ax-comment__reply" data-comment-id="<?php echo esc_attr( (string) $id ); ?>" data-comment-author="<?php echo esc_attr( $author ); ?>"><?php esc_html_e( 'Reply', 'axismundi-dialogs' ); ?></button>
+					<?php if ( $show_replies ) : ?>
+						<button type="button" class="ax-comment__toggle" aria-expanded="false">
+							<span class="ax-comment__toggle-sign" aria-hidden="true"></span>
+							<span><?php
+								printf(
+									/* translators: %s: number of replies. */
+									esc_html( _n( '%s reply', '%s replies', count( $children ), 'axismundi-dialogs' ) ),
+									esc_html( number_format_i18n( count( $children ) ) )
+								);
+							?></span>
+						</button>
+					<?php elseif ( $deeper_only ) : ?>
+						<a class="ax-comment__more" href="<?php echo esc_url( get_comment_link( $comment ) ); ?>"><?php esc_html_e( 'Continue thread', 'axismundi-dialogs' ); ?></a>
+					<?php endif; ?>
+				</div>
 			</div>
 			<?php if ( $show_replies ) : ?>
 				<ol class="ax-comment__children">

@@ -64,6 +64,15 @@ $axismundi_dialogs_pqv_wrapper = get_block_wrapper_attributes(
 				data-ax-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
 				data-wp-on--submit="actions.submitComment"
 			>
+				<div class="ax-composer__reply-chip" data-wp-bind--hidden="!state.replyParent">
+					<span class="ax-composer__reply-to">
+						<?php esc_html_e( 'Replying to', 'axismundi-dialogs' ); ?>
+						<span class="ax-composer__reply-author" data-wp-text="state.replyAuthor"></span>
+					</span>
+					<button type="button" class="ax-composer__reply-cancel" data-wp-on--click="actions.cancelReply" aria-label="<?php esc_attr_e( 'Cancel reply', 'axismundi-dialogs' ); ?>">
+						<span class="material-symbols-outlined notranslate" translate="no" aria-hidden="true">close</span>
+					</button>
+				</div>
 				<p class="ax-composer__notice" role="status" data-wp-bind--hidden="!state.composerHeld">
 					<?php esc_html_e( 'Your comment is awaiting moderation.', 'axismundi-dialogs' ); ?>
 				</p>

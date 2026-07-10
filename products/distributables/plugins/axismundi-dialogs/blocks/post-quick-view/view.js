@@ -49,6 +49,8 @@ const finalizeClose = ( dialog ) => {
 	state.composerBusy = false;
 	state.composerError = false;
 	state.composerHeld = false;
+	state.replyParent = 0;
+	state.replyAuthor = '';
 	syncScrollLock();
 };
 
@@ -83,6 +85,25 @@ const fetchFragment = async ( url ) => {
 	return data && data.html ? data.html : '';
 };
 
+// After a reply refetch, expand the replied-to comment and its ancestors so the
+// new reply is visible (a fresh fragment renders threads collapsed).
+const expandThread = ( body, parentId ) => {
+	if ( ! parentId ) {
+		return;
+	}
+	let node = body.querySelector( '.ax-comment[data-comment-id="' + parentId + '"]' );
+	while ( node ) {
+		if ( node.classList.contains( 'has-replies' ) ) {
+			node.classList.remove( 'is-collapsed' );
+			const toggle = node.querySelector( '.ax-comment__toggle' );
+			if ( toggle ) {
+				toggle.setAttribute( 'aria-expanded', 'true' );
+			}
+		}
+		node = node.parentElement ? node.parentElement.closest( '.ax-comment' ) : null;
+	}
+};
+
 // The fetched fragment is injected straight into the body element. WordPress'
 // Interactivity API has no raw-HTML binding directive (only data-wp-text, which
 // escapes), so state drives the loading/error chrome via data-wp-bind while the
@@ -98,6 +119,8 @@ const { state } = store( 'axismundi/dialog', {
 		composerBusy: false,
 		composerError: false,
 		composerHeld: false,
+		replyParent: 0,
+		replyAuthor: '',
 	},
 	actions: {
 		*openPostQuickView( event ) {
@@ -132,6 +155,8 @@ const { state } = store( 'axismundi/dialog', {
 			state.composerBusy = false;
 			state.composerError = false;
 			state.composerHeld = false;
+			state.replyParent = 0;
+			state.replyAuthor = '';
 			if ( body ) {
 				body.innerHTML = '';
 			}
@@ -173,6 +198,7 @@ const { state } = store( 'axismundi/dialog', {
 			state.composerError = false;
 			state.composerHeld = false;
 			state.composerBusy = true;
+			const parentId = state.replyParent || 0;
 
 			try {
 				const response = yield fetch( form.getAttribute( 'data-ax-comments-url' ), {
@@ -184,6 +210,7 @@ const { state } = store( 'axismundi/dialog', {
 					body: JSON.stringify( {
 						post: state.quickViewPostId,
 						content,
+						parent: parentId,
 					} ),
 				} );
 				const data = yield response.json();
@@ -191,16 +218,24 @@ const { state } = store( 'axismundi/dialog', {
 					throw new Error( ( data && data.message ) || 'error' );
 				}
 				input.value = '';
+				state.replyParent = 0;
+				state.replyAuthor = '';
 				state.composerHeld = !! ( data && data.status && data.status !== 'approved' );
 				const html = yield fetchFragment( state.quickViewFetchUrl );
 				if ( body ) {
 					body.innerHTML = html;
+					expandThread( body, parentId );
 				}
 				state.composerBusy = false;
 			} catch ( error ) {
 				state.composerBusy = false;
 				state.composerError = true;
 			}
+		},
+
+		cancelReply() {
+			state.replyParent = 0;
+			state.replyAuthor = '';
 		},
 
 		close() {
@@ -245,13 +280,32 @@ document.addEventListener( 'click', ( event ) => {
 	const toggle = event.target.closest(
 		'.ax-post-quick-view__body .ax-comment__toggle'
 	);
-	if ( ! toggle ) {
+	if ( toggle ) {
+		const comment = toggle.closest( '.ax-comment' );
+		if ( comment ) {
+			const nowCollapsed = comment.classList.toggle( 'is-collapsed' );
+			toggle.setAttribute( 'aria-expanded', nowCollapsed ? 'false' : 'true' );
+		}
 		return;
 	}
-	const comment = toggle.closest( '.ax-comment' );
-	if ( ! comment ) {
+
+	// Reply affordance (Phase 3b-2): put the footer composer into reply mode.
+	// Ignored when there is no composer (logged-out), where CSS also hides it.
+	const reply = event.target.closest(
+		'.ax-post-quick-view__body .ax-comment__reply'
+	);
+	if ( ! reply ) {
 		return;
 	}
-	const nowCollapsed = comment.classList.toggle( 'is-collapsed' );
-	toggle.setAttribute( 'aria-expanded', nowCollapsed ? 'false' : 'true' );
+	const host = reply.closest( '.ax-post-quick-view-host' );
+	const form = host && host.querySelector( 'form.ax-composer' );
+	if ( ! form ) {
+		return;
+	}
+	state.replyParent = parseInt( reply.getAttribute( 'data-comment-id' ), 10 ) || 0;
+	state.replyAuthor = reply.getAttribute( 'data-comment-author' ) || '';
+	const input = form.querySelector( '.ax-composer__input' );
+	if ( input ) {
+		input.focus();
+	}
 } );

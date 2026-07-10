@@ -67,9 +67,10 @@ Yes. The sheet renders with its own token fallbacks, but it needs at least one
 * Add a singleton Post Quick View block: one per-page dialog that lazy-loads the
   clicked post over the REST API — title, meta, featured image, content, and a
   read-only comment thread with Reddit-style reply folding.
-* Let logged-in readers post a top-level comment from a fixed composer without
-  leaving the feed; the thread refetches on success and honours moderation.
-  Anonymous and reply composing remain a link out to the full post.
+* Let logged-in readers post comments and threaded replies from a fixed
+  composer without leaving the feed: a per-comment Reply puts the composer in
+  "replying to" mode, the thread refetches and expands on success, and
+  moderation is honoured. Anonymous commenting links out to the full post.
 
 = 0.1.0 =
 

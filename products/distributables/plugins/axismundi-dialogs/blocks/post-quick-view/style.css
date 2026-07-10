@@ -334,6 +334,78 @@ dialog.ax-post-quick-view .ax-dialog__surface {
 	content: "\2212"; /* minus sign */
 }
 
+.ax-comment__actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-block-start: 2px;
+}
+
+.ax-comment__reply {
+	padding: 2px 4px;
+	border: 0;
+	background: transparent;
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.ax-comment__reply:hover {
+	color: var( --wp--preset--color--primary, inherit );
+}
+
+.ax-comment__reply:focus-visible {
+	outline: 2px solid var( --wp--preset--color--secondary, currentColor );
+	outline-offset: 2px;
+}
+
+/* Logged-out readers have no composer, so hide the reply affordance. */
+.ax-post-quick-view-host:has( .ax-composer--guest ) .ax-comment__reply {
+	display: none;
+}
+
+/* Reply-mode chip in the composer. */
+.ax-composer__reply-chip {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-block-end: 8px;
+	padding-block: 4px;
+	padding-inline: 12px 4px;
+	border-radius: 8px;
+	background-color: var( --wp--preset--color--secondary-container, var( --wp--preset--color--surface, transparent ) );
+	color: var( --wp--preset--color--on-secondary-container, inherit );
+	font-size: var( --wp--preset--font-size--body-small, 0.8125rem );
+}
+
+.ax-composer__reply-author {
+	font-weight: 600;
+}
+
+.ax-composer__reply-cancel {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 28px;
+	block-size: 28px;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+}
+
+.ax-composer__reply-cancel:hover {
+	background-color: color-mix( in srgb, currentColor 12%, transparent );
+}
+
+.ax-composer__reply-cancel .material-symbols-outlined {
+	font-size: 18px;
+}
+
 .ax-comment__more {
 	align-self: flex-start;
 	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );

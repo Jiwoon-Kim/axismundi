@@ -23,6 +23,17 @@ CMS.
 1. Upload and activate Axismundi from Appearance > Themes.
 2. Open Appearance > Editor to customize templates and global styles.
 
+== Recommended setup ==
+
+Axismundi does not hard-code a front page. For a curated homepage, create a
+Page, insert the "Front page — magazine" block pattern (a Featured grid over a
+Latest feed), and set it under Settings > Reading > "Your homepage displays" >
+A static page, choosing that page as the Homepage and any page as the Posts
+page. home.html then renders the posts index (the reader feed) on the Posts
+page. With "Your latest posts" selected instead, home.html serves the front.
+Category, tag, and date archives share the axismundi/query-feed feed body via
+archive.html.
+
 == Changelog ==
 
 = 0.1.7 =

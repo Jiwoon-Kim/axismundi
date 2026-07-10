@@ -1,0 +1,40 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/post-quick-view-trigger",
+	"version": "0.1.0",
+	"title": "Post Quick View Trigger",
+	"category": "theme",
+	"icon": "admin-comments",
+	"description": "A microblog-style comments action for a post — a Material Symbols icon plus the comment count. In v0.1 it links to the post's comments; a later phase will open a shared quick-view dialog. Place it inside a Post Template.",
+	"keywords": [ "comments", "quick view", "feed", "action" ],
+	"textdomain": "axismundi-dialogs",
+	"usesContext": [ "postId", "postType" ],
+	"attributes": {
+		"displayMode": { "type": "string", "default": "count" },
+		"closedBehavior": { "type": "string", "default": "disabled" }
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": {
+			"text": true,
+			"background": false
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
+	},
+	"example": {
+		"attributes": {}
+	},
+	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./style.css",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

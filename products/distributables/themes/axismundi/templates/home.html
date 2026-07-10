@@ -1,0 +1,69 @@
+<!-- wp:template-part {"slug":"header","theme":"axismundi","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","align":"full","style":{"spacing":{"padding":{"bottom":"var:preset|spacing|800"}}},"layout":{"type":"default"}} -->
+<main class="wp-block-group alignfull" style="padding-bottom:var(--wp--preset--spacing--800)"><!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|700","bottom":"var:preset|spacing|400"},"blockGap":"var:preset|spacing|100"},"border":{"bottom":{"color":"var:preset|color|outline-variant","width":"1px"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group" style="border-bottom-color:var(--wp--preset--color--outline-variant);border-bottom-width:1px;padding-top:var(--wp--preset--spacing--700);padding-bottom:var(--wp--preset--spacing--400)"><!-- wp:heading {"level":1,"fontSize":"display-small"} -->
+<h1 class="wp-block-heading has-display-small-font-size">Journal</h1>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph {"className":"has-on-surface-variant-color has-text-color","textColor":"on-surface-variant","fontSize":"body-large"} -->
+<p class="has-on-surface-variant-color has-text-color has-body-large-font-size">Latest posts, newest first.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:query {"queryId":56,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true,"taxQuery":null,"parents":[],"format":[]},"layout":{"type":"constrained"}} -->
+<div class="wp-block-query"><!-- wp:post-template {"style":{"spacing":{"blockGap":"var:preset|spacing|100"}},"layout":{"type":"grid","columnCount":1}} -->
+<!-- wp:group {"className":"is-style-card-outlined","style":{"spacing":{"padding":{"top":"var:preset|spacing|200","bottom":"var:preset|spacing|200","left":"var:preset|spacing|300","right":"var:preset|spacing|300"}}},"layout":{"type":"default"}} -->
+<div class="wp-block-group is-style-card-outlined" style="padding-top:var(--wp--preset--spacing--200);padding-right:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--200);padding-left:var(--wp--preset--spacing--300)"><!-- wp:columns {"verticalAlignment":null,"className":"is-style-default"} -->
+<div class="wp-block-columns is-style-default"><!-- wp:column {"width":"66.66%"} -->
+<div class="wp-block-column" style="flex-basis:66.66%"><!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|0"}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group"><!-- wp:post-title {"fontSize":"title-large"} /-->
+
+<!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+<div class="wp-block-group"><!-- wp:post-date {"metadata":{"bindings":{"datetime":{"source":"core/post-data","args":{"field":"date"}}}}} /-->
+
+<!-- wp:post-terms {"term":"category","className":"is-style-inline"} /--></div>
+<!-- /wp:group --></div>
+<!-- /wp:group -->
+
+<!-- wp:post-excerpt {"moreText":"Read Article","showMoreOnNewLine":false,"excerptLength":22} /-->
+
+<!-- wp:post-terms {"term":"geotag","className":"is-style-tags","style":{"typography":{"textAlign":"right"}}} /--></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"verticalAlignment":"bottom","width":"33.33%"} -->
+<div class="wp-block-column is-vertically-aligned-bottom" style="flex-basis:33.33%"><!-- wp:post-featured-image {"aspectRatio":"auto","width":"100%","height":"140px","sizeSlug":"full"} /--></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:group {"style":{"border":{"top":{"color":"var:preset|color|outline","width":"1px"}},"spacing":{"padding":{"top":"var:preset|spacing|100"}}},"layout":{"type":"flex","flexWrap":"nowrap"}} -->
+<div class="wp-block-group" style="border-top-color:var(--wp--preset--color--outline);border-top-width:1px;padding-top:var(--wp--preset--spacing--100)"><!-- wp:axismundi/post-quick-view-trigger {"style":{"layout":{"selfStretch":"fit","flexSize":null}}} /--></div>
+<!-- /wp:group --></div>
+<!-- /wp:group -->
+<!-- /wp:post-template -->
+
+<!-- wp:group {"style":{"spacing":{"margin":{"top":"var:preset|spacing|500"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group" style="margin-top:var(--wp--preset--spacing--500)"><!-- wp:query-pagination {"paginationArrow":"arrow","layout":{"type":"flex","justifyContent":"space-between"}} -->
+<!-- wp:query-pagination-previous {"label":""} /-->
+
+<!-- wp:query-pagination-numbers /-->
+
+<!-- wp:query-pagination-next {"label":""} /-->
+<!-- /wp:query-pagination --></div>
+<!-- /wp:group -->
+
+<!-- wp:query-no-results -->
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|600","bottom":"var:preset|spacing|600"}}},"layout":{"type":"constrained","contentSize":"480px"}} -->
+<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--600);padding-bottom:var(--wp--preset--spacing--600)"><!-- wp:heading {"style":{"typography":{"textAlign":"center"}},"fontSize":"headline-medium"} -->
+<h2 class="wp-block-heading has-text-align-center has-headline-medium-font-size">Nothing here yet</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph {"className":"has-on-surface-variant-color has-text-color","style":{"typography":{"textAlign":"center"}},"textColor":"on-surface-variant","fontSize":"body-large"} -->
+<p class="has-text-align-center has-on-surface-variant-color has-text-color has-body-large-font-size">There are no posts in this archive yet. Try another category or return home.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+<!-- /wp:query-no-results --></div>
+<!-- /wp:query -->
+
+<!-- wp:axismundi/post-quick-view /--></main>
+<!-- /wp:group -->

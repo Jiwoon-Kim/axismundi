@@ -4,7 +4,7 @@ Tags: sheet, drawer, dialog, offcanvas, block
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -58,6 +58,18 @@ Yes. The sheet renders with its own token fallbacks, but it needs at least one
 `sheet` area template part to show as content.
 
 == Changelog ==
+
+= 0.2.0 =
+
+* Add a Post Quick View Trigger block: a microblog-style comments action (icon
+  plus count) for a Post Template that opens the shared quick view, falling back
+  to the post's comments anchor when the hub or scripting is unavailable.
+* Add a singleton Post Quick View block: one per-page dialog that lazy-loads the
+  clicked post over the REST API — title, meta, featured image, content, and a
+  read-only comment thread with Reddit-style reply folding.
+* Let logged-in readers post a top-level comment from a fixed composer without
+  leaving the feed; the thread refetches on success and honours moderation.
+  Anonymous and reply composing remain a link out to the full post.
 
 = 0.1.0 =
 

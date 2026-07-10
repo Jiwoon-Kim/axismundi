@@ -1,0 +1,371 @@
+/**
+ * axismundi/post-quick-view — singleton hub dialog (M3 basic-dialog geometry).
+ *
+ * shared.css supplies the base :where(dialog.ax-dialog) reset, scrim, and motion;
+ * this file adds the basic-dialog surface geometry (self-contained so the hub
+ * works on a feed page without the axismundi/dialog block present) and the
+ * quick-view fragment typography.
+ */
+
+/* The empty host div carries no layout. */
+.ax-post-quick-view-host {
+	display: contents;
+}
+
+dialog.ax-post-quick-view {
+	inline-size: min( calc( 100vw - 48px ), 720px );
+	max-block-size: min( calc( 100dvh - 48px ), 900px );
+	inset: 0;
+	margin: auto;
+	padding: 0;
+	background-color: var( --wp--preset--color--surface-container-high, #fff );
+	color: var( --wp--preset--color--on-surface, #1a1a1a );
+	border: 0;
+	border-radius: 28px;
+	box-shadow: var( --md-sys-elevation-shadow-level3, 0 8px 24px rgba( 0, 0, 0, 0.2 ) );
+	overflow: hidden;
+}
+
+dialog.ax-post-quick-view .ax-dialog__surface {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	max-block-size: min( calc( 100dvh - 48px ), 900px );
+	overflow: hidden;
+}
+
+/* Close affordance: 24dp icon in a 40dp state layer, top-inline-end. */
+.ax-post-quick-view__close {
+	position: absolute;
+	inset-block-start: 12px;
+	inset-inline-end: 12px;
+	z-index: 2;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 40px;
+	block-size: 40px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var( --wp--preset--color--on-surface-variant, currentColor );
+	cursor: pointer;
+	transition: background-color 150ms ease;
+}
+
+.ax-post-quick-view__close:hover {
+	background-color: color-mix( in srgb, currentColor 8%, transparent );
+}
+
+.ax-post-quick-view__close:focus-visible {
+	outline: 2px solid var( --wp--preset--color--secondary, currentColor );
+	outline-offset: 2px;
+}
+
+.ax-post-quick-view__close .material-symbols-outlined {
+	font-size: 24px;
+	line-height: 1;
+}
+
+.ax-post-quick-view__status,
+.ax-post-quick-view__error {
+	margin: 0;
+	padding: 20px 24px;
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+}
+
+.ax-post-quick-view__error-link {
+	color: var( --wp--preset--color--primary, inherit );
+}
+
+/* Fetched fragment: the only scrolling region; grows so the composer stays
+   pinned to the bottom of the surface. Thin, tokenised scrollbar matching the
+   theme's code-block treatment. */
+.ax-post-quick-view__body {
+	flex: 1 1 auto;
+	min-block-size: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+	scrollbar-color: var( --wp--preset--color--outline-variant, currentColor ) transparent;
+}
+
+.ax-post-quick-view__body::-webkit-scrollbar {
+	inline-size: 8px;
+	block-size: 8px;
+}
+
+.ax-post-quick-view__body::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.ax-post-quick-view__body::-webkit-scrollbar-thumb {
+	background-color: var( --wp--preset--color--outline-variant, currentColor );
+	border-radius: 9999px;
+}
+
+.ax-post-quick-view__body::-webkit-scrollbar-thumb:hover {
+	background-color: var( --wp--preset--color--outline, currentColor );
+}
+
+/* Fixed composer footer (Phase 3b-1): part of the hub chrome, not the injected
+   fragment, so it survives a thread refetch. */
+.ax-composer {
+	flex: 0 0 auto;
+	margin: 0;
+	padding: var( --wp--preset--spacing--150, 12px ) var( --wp--preset--spacing--200, 16px );
+	border-block-start: 1px solid var( --wp--preset--color--outline-variant, currentColor );
+	background-color: var( --wp--preset--color--surface-container-high, inherit );
+}
+
+.ax-composer__row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.ax-composer__input {
+	flex: 1 1 auto;
+	min-block-size: 40px;
+	padding: 0 var( --wp--preset--spacing--200, 16px );
+	border: 1px solid var( --wp--preset--color--outline-variant, currentColor );
+	border-radius: 9999px;
+	background: var( --wp--preset--color--surface, transparent );
+	color: var( --wp--preset--color--on-surface, inherit );
+	font-size: var( --wp--preset--font-size--body-medium, 0.875rem );
+}
+
+.ax-composer__input:focus {
+	outline: 2px solid var( --wp--preset--color--primary, currentColor );
+	outline-offset: -1px;
+	border-color: transparent;
+}
+
+.ax-composer__send {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 40px;
+	block-size: 40px;
+	border: 0;
+	border-radius: 50%;
+	background: var( --wp--preset--color--primary, currentColor );
+	color: var( --wp--preset--color--on-primary, #fff );
+	cursor: pointer;
+}
+
+.ax-composer__send:disabled,
+.ax-composer__input:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.ax-composer__send .material-symbols-outlined {
+	font-size: 20px;
+}
+
+.ax-composer__notice {
+	margin: 0 0 8px;
+	font-size: var( --wp--preset--font-size--body-small, 0.8125rem );
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+}
+
+.ax-composer__notice--error {
+	color: var( --wp--preset--color--error, #b3261e );
+}
+
+.ax-composer--guest {
+	display: flex;
+	gap: 16px;
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+}
+
+.ax-composer--guest a {
+	color: var( --wp--preset--color--primary, inherit );
+}
+
+.ax-post-quick-view__article {
+	display: flex;
+	flex-direction: column;
+	gap: var( --wp--preset--spacing--150, 12px );
+	padding: 24px 24px 28px;
+}
+
+.ax-post-quick-view__head {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-inline-end: 40px; /* clear the close button */
+}
+
+.ax-post-quick-view__title {
+	margin: 0;
+	font-size: var( --wp--preset--font-size--headline-small, 1.5rem );
+	line-height: 1.3;
+}
+
+.ax-post-quick-view__meta {
+	margin: 0;
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+	font-size: var( --wp--preset--font-size--body-small, 0.8125rem );
+}
+
+.ax-post-quick-view__media {
+	margin: 0;
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+.ax-post-quick-view__media img {
+	display: block;
+	inline-size: 100%;
+	height: auto;
+}
+
+/* Read-only discussion (Phase 3a). */
+.ax-post-quick-view__comments {
+	display: flex;
+	flex-direction: column;
+	gap: var( --wp--preset--spacing--150, 12px );
+	margin-block-start: var( --wp--preset--spacing--200, 16px );
+	padding-block-start: var( --wp--preset--spacing--200, 16px );
+	border-block-start: 1px solid var( --wp--preset--color--outline-variant, currentColor );
+}
+
+.ax-post-quick-view__comments-head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+}
+
+.ax-post-quick-view__comments-head .material-symbols-outlined {
+	font-size: 20px;
+}
+
+.ax-post-quick-view__comments-count {
+	margin: 0;
+	font-size: var( --wp--preset--font-size--title-medium, 1rem );
+	line-height: 1.4;
+}
+
+.ax-post-quick-view__comments-list,
+.ax-comment__children {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var( --wp--preset--spacing--150, 12px );
+}
+
+.ax-comment__children {
+	margin-block-start: var( --wp--preset--spacing--150, 12px );
+	padding-inline-start: var( --wp--preset--spacing--200, 16px );
+	border-inline-start: 1px solid var( --wp--preset--color--outline-variant, currentColor );
+}
+
+/* Reddit-style fold: hide replies while collapsed. */
+.ax-comment.is-collapsed > .ax-comment__children {
+	display: none;
+}
+
+.ax-comment__body {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.ax-comment__head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.ax-comment__avatar {
+	border-radius: 50%;
+}
+
+.ax-comment__author {
+	font-weight: 600;
+}
+
+.ax-comment__date {
+	font-size: var( --wp--preset--font-size--body-small, 0.8125rem );
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+}
+
+.ax-comment__content {
+	font-size: var( --wp--preset--font-size--body-medium, 0.875rem );
+}
+
+.ax-comment__toggle {
+	align-self: flex-start;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-block-start: 2px;
+	padding: 2px 10px;
+	border: 1px solid var( --wp--preset--color--outline-variant, currentColor );
+	border-radius: 9999px;
+	background: transparent;
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+	cursor: pointer;
+}
+
+.ax-comment__toggle:hover {
+	background-color: color-mix( in srgb, currentColor 8%, transparent );
+}
+
+.ax-comment__toggle:focus-visible {
+	outline: 2px solid var( --wp--preset--color--secondary, currentColor );
+	outline-offset: 2px;
+}
+
+.ax-comment__toggle-sign::before {
+	content: "+";
+	font-weight: 600;
+}
+
+.ax-comment__toggle[aria-expanded="true"] .ax-comment__toggle-sign::before {
+	content: "\2212"; /* minus sign */
+}
+
+.ax-comment__more {
+	align-self: flex-start;
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+	color: var( --wp--preset--color--primary, inherit );
+}
+
+.ax-post-quick-view__more-comments {
+	align-self: flex-start;
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+	color: var( --wp--preset--color--primary, inherit );
+}
+
+.ax-post-quick-view__discussion {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin: 0;
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+}
+
+.ax-post-quick-view__discussion a {
+	color: var( --wp--preset--color--primary, inherit );
+}
+
+/* Editor placeholder. */
+.ax-post-quick-view-placeholder {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 16px;
+	border: 1px dashed var( --wp--preset--color--outline-variant, currentColor );
+	border-radius: 8px;
+	color: var( --wp--preset--color--on-surface-variant, inherit );
+	font-size: 0.875rem;
+}

@@ -1,0 +1,45 @@
+/**
+ * axismundi/post-quick-view-trigger — microblog comments action (M3 text button).
+ *
+ * The glyph comes from the theme's .material-symbols-outlined contract
+ * (icons.css); without an Axismundi-family theme the ligature name degrades to
+ * plain text. Colours use theme presets with a currentColor fallback so the
+ * action stays legible under any palette.
+ */
+.ax-comment-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 8px;
+	border-radius: 9999px;
+	color: var( --wp--preset--color--on-surface-variant, currentColor );
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+	line-height: 1;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 150ms ease, color 150ms ease;
+}
+
+a.ax-comment-action:hover {
+	background-color: color-mix( in srgb, currentColor 8%, transparent );
+	color: var( --wp--preset--color--on-surface, currentColor );
+}
+
+a.ax-comment-action:focus-visible {
+	outline: 2px solid var( --wp--preset--color--secondary, currentColor );
+	outline-offset: 2px;
+}
+
+.ax-comment-action.is-disabled {
+	cursor: default;
+	opacity: 0.7;
+}
+
+.ax-comment-action__icon.material-symbols-outlined {
+	font-size: 18px;
+	line-height: 1;
+}
+
+.ax-comment-action__count {
+	font-variant-numeric: tabular-nums;
+}

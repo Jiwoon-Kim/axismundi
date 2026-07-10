@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.7
+Stable tag: 0.1.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -35,6 +35,10 @@ Category, tag, and date archives share the axismundi/query-feed feed body via
 archive.html.
 
 == Changelog ==
+
+= 0.1.8 =
+* Add the posts-index home template with Post Quick View actions and restore its footer template part.
+* Add reusable reader-feed and static front-page magazine patterns.
 
 = 0.1.7 =
 * Load the bundled Material Symbols font explicitly when WordPress omits its unused font-family preset from generated global styles.

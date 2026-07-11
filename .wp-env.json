@@ -17,7 +17,8 @@
     "./products/distributables/plugins/axismundi-table-of-contents",
     "./products/distributables/plugins/axismundi-geodata",
     "./products/distributables/plugins/axismundi-map",
-    "./products/distributables/plugins/axismundi-dialogs"
+    "./products/distributables/plugins/axismundi-dialogs",
+    "./products/distributables/plugins/axismundi-media-library"
   ],
   "port": 8884,
   "config": {

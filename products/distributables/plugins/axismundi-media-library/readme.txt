@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.1
+Stable tag: 0.0.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -29,6 +29,14 @@ ROUTING, COMPATIBILITY, DATA-MODEL, PHASES). First public MVP = Phase 0 + Phase 
 2. Open Settings > Media Library (Axismundi). Activation changes no media.
 
 == Changelog ==
+
+= 0.0.2 =
+* Phase 1a: Independent-mode media visibility (public / unlisted / private) with
+  legacy-public fallback, and per-surface access guards — HTML single, REST
+  single (404), REST collection, and the media modal. New uploads become
+  independent (post_parent 0, owner, defaults). Canonical single page
+  /?attachment_id={id}. Attachment edit fields for visibility/listed/searchable.
+  Media archives (/media/) arrive in Phase 1b.
 
 = 0.0.1 =
 * Phase 0 scaffold: non-destructive activation, a Core / Independent

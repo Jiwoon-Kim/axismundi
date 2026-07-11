@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Axismundi Media Library
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-media-library
- * Description:       Promote WordPress attachments to independent media objects. Phase 0 scaffold: a non-destructive Core / Independent relationship-mode boundary and a read-only parent-relationship scan. No media behaviour changes yet.
- * Version:           0.0.1
+ * Description:       Promote WordPress attachments to independent media objects. Independent mode gives new uploads their own owner and visibility (public / unlisted / private) with per-surface access guards; Core mode leaves WordPress untouched.
+ * Version:           0.0.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -27,6 +27,9 @@ const AXISMUNDI_MEDIA_MODE_OPTION  = 'ax_media_relationship_mode';
 const AXISMUNDI_MEDIA_MODE_DEFAULT = 'core';
 
 require_once __DIR__ . '/includes/settings.php';
+require_once __DIR__ . '/includes/mode.php';
+require_once __DIR__ . '/includes/visibility.php';
+require_once __DIR__ . '/includes/edit-fields.php';
 
 /**
  * Activation is non-destructive (docs/SPEC.md §4, docs/COMPATIBILITY.md §1): it
@@ -42,7 +45,16 @@ function axismundi_media_activate() : void {
 }
 register_activation_hook( __FILE__, 'axismundi_media_activate' );
 
-/*
- * Deactivation intentionally registers no hook: Phase 0 changes no data, so there
- * is nothing to revert (docs/COMPATIBILITY.md §5). The mode option is retained.
+/**
+ * Deactivation releases the attachment-pages option we own (restoring the prior
+ * value only if it is still ours) and flushes rewrites. No media data, parent,
+ * status, or visibility meta is changed — those are retained (docs/COMPATIBILITY.md
+ * §5-§6).
+ *
+ * @return void
  */
+function axismundi_media_deactivate() : void {
+	axismundi_media_release_attachment_pages();
+	flush_rewrite_rules( false );
+}
+register_deactivation_hook( __FILE__, 'axismundi_media_deactivate' );

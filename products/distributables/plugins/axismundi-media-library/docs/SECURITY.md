@@ -22,10 +22,20 @@ When the plugin is **deactivated**, its visibility/archive/permalink behavior
 stops and WordPress core Attachment behavior returns. Stored meta is retained but
 not interpreted. We do **not** guarantee `private` semantics after deactivation —
 and we don't need to, because core has no such feature and the file URL was
-public regardless. The deactivation screen and docs must carry:
+public regardless.
 
-> *Deactivating the plugin disables its media visibility and access controls.
-> Original file URLs are not protected by these controls.*
+Boundary text delivery (a deactivated plugin's code does not run, so **no admin
+notice can fire after deactivation** — do not assume one):
+
+- **Always** in the settings screen and readme.
+- On the **"disable Independent mode"** screen, with the current count of
+  `private`/`protected` Attachments that will stop being guarded.
+- Optionally a **pre-deactivation confirm** on the Plugins-screen Deactivate link
+  (`plugin_action_links` / JS confirm) — while the plugin is still active.
+
+> *Disabling these controls (deactivating the plugin or turning off Independent
+> mode) disables Axismundi media visibility and access controls. Original file
+> URLs are not protected by these controls.*
 
 State model stays uniform: **`post_status = inherit` for all Attachments**; no
 `post_status=private` hybrid. Visibility is a plugin concern via `_ax_media_visibility`.
@@ -34,13 +44,44 @@ State model stays uniform: **`post_status = inherit` for all Attachments**; no
 
 | Level | Meaning |
 |---|---|
-| `public` | listed, searchable, page + REST single, feed/sitemap-eligible |
-| `unlisted` | page + REST single reachable by direct id; excluded from lists/search/feed/sitemap |
+| `public` | page + REST single; **eligible** for lists/search/feed (gated by `listed`/`searchable`, see predicates) |
+| `unlisted` | page + REST single reachable by direct id; excluded from lists/search/feed/sitemap **regardless of `listed`/`searchable`** |
 | `protected` | password/permission challenge before the page; excluded from public lists & oEmbed (**Phase 3**) |
 | `private` | owner + `edit_others_posts` only; excluded from every public surface |
 
 Owner always sees their own media at every level. `edit_others_posts` holders
 (editors/admins) see everything.
+
+### 2.1 Predicates (fix `public` vs `listed`/`searchable`)
+
+`public` is **necessary but not sufficient** to be listed:
+
+```
+single_access = visibility permits (public | unlisted | owner/editor)
+archive       = visibility == public AND listed == true
+REST list     = visibility == public AND listed == true
+search        = visibility == public AND searchable == true
+feed          = visibility == public AND listed == true
+unlisted      = excluded from every list regardless of listed/searchable
+```
+
+### 2.2 Legacy Attachments (no `_ax_media_*` meta)
+
+Existing/pre-plugin Attachments have no visibility meta. The resolver and every
+`Visibility_Query` MUST treat missing meta as legacy defaults, or existing media
+vanishes from lists / fails owner checks the moment a `meta_query` is added:
+
+```
+owner       → post_author               (0.1.0 has no separate owner meta at all)
+visibility  → public   (legacy-public)  when _ax_media_visibility is absent
+listed      → true                      when absent
+searchable  → true                      when absent
+```
+
+Query implication: list `meta_query` for visibility MUST be
+`( key NOT EXISTS ) OR ( key == public )` — never a bare `== public`, which drops
+legacy rows. Independent mode governs **new uploads**; it does not silently
+re-classify existing media (migration is explicit).
 
 ## 3. Access matrix (acceptance contract)
 
@@ -118,11 +159,15 @@ non-owner, non-editor:
       collection, plugin archives, plugin search, and the media modal.
 - [ ] `unlisted`: HTML single **200**, REST single **200**, **absent** from REST
       collection, archives, search, feed, sitemap.
-- [ ] `public`: present on all public surfaces.
+- [ ] `public`: present on public surfaces; `public` + `listed=false` is **absent**
+      from archives/REST list; `public` + `searchable=false` is absent from search.
+- [ ] **Legacy Attachment** (no `_ax_media_*` meta): resolves owner=`post_author`,
+      visibility=legacy-public, and appears in lists (not dropped by `meta_query`).
 - [ ] Owner sees own media at every level on every surface.
 - [ ] `edit_others_posts` holder sees everything.
-- [ ] Deactivation: no data mutation; controls cease; boundary notice shown; count
-      of `private`/`protected` Attachments reported to admin.
+- [ ] Deactivation: no data mutation; controls cease. Boundary text + count shown
+      **on the disable/settings screen while active** (no post-deactivation notice
+      is possible).
 - [ ] No global `pre_get_posts`; admin/other-plugin attachment queries unaffected.
 
 `protected` rows are validated when Phase 3 lands.

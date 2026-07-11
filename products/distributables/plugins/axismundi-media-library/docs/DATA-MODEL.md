@@ -16,13 +16,17 @@
 
 ## 2. Created in 0.1.0 (Phase 0 + 1)
 
+**Owner = `post_author`** (source of truth). 0.1.0 stores **no** separate owner
+meta — there is no ownership-transfer feature, so a second store would only drift.
+`_ax_media_owner_id` is **reserved** as an explicit override for a future
+ownership-transfer feature; until then, ownership resolves from `post_author`.
+
 ### 2.1 Attachment post meta — **written & enforced** in 0.1.0
 
 ```
-_ax_media_owner_id            int      uploader (authoritative for permission)
 _ax_media_visibility          enum     public | unlisted | private   (protected = Phase 3)
-_ax_media_listed              bool     appears in archives
-_ax_media_searchable          bool     appears in media search
+_ax_media_listed              bool     eligible for archives (gated with public)
+_ax_media_searchable          bool     eligible for search (gated with public)
 _ax_media_captured_at         datetime EXIF DateTimeOriginal if present
 _ax_media_uploaded_at         datetime actual upload time
 _ax_media_first_published_at  datetime first made public
@@ -31,6 +35,22 @@ _ax_media_date_source         enum     exif | manual | storage-context | upload-
 
 `post_status` stays **`inherit`** for all Attachments (SECURITY.md §1). Visibility
 is enforced by the plugin, not by post status.
+
+### 2.1.1 Legacy fallback (existing media has no `_ax_media_*` meta)
+
+The resolver and every list `meta_query` MUST assume defaults when meta is absent,
+or existing Attachments vanish/misresolve the instant a filter is added:
+
+```
+owner       → post_author
+visibility  → public (legacy-public)   when _ax_media_visibility absent
+listed      → true                     when absent
+searchable  → true                     when absent
+```
+
+List `meta_query` for visibility MUST be `( NOT EXISTS ) OR ( == public )` —
+never a bare `== public` (which drops legacy rows). Independent mode governs new
+uploads only; it does not re-classify existing media.
 
 ### 2.2 Attachment post meta — **stored only** in 0.1.0 (enforced Phase 4)
 
@@ -73,9 +93,13 @@ _ax_media_folder_default_sensitive  _ax_media_folder_feed_enabled
 Attachment↔folder relation on the Attachment (Phase 2):
 
 ```
-_ax_media_folder_id        term_id or 0 (root = no term)
-_ax_media_folder_added_at  datetime (drives folder-feed pubDate)
+_ax_media_folder_added_at  datetime (drives folder-feed pubDate; the term
+                           relation itself carries no timestamp)
 ```
+
+The **current folder is the `ax_media_folder` term relation** (single, enforced
+below) — the sole source of truth. No `_ax_media_folder_id` mirror in Phase 2;
+add one only if profiling proves the term join is a bottleneck.
 
 **Single-relation enforcement** (taxonomy is many-to-many; the service layer
 forces one):
@@ -90,8 +114,7 @@ wp_set_object_terms(
 ```
 
 Taxonomy is the source of truth; do **not** duplicate the relation into a second
-store beyond the `_ax_media_folder_id` convenience mirror (kept only if a hard
-single-relation guarantee needs it — decide at Phase 2).
+store. `_ax_media_folder_added_at` is a timestamp, not a copy of the relation.
 
 ## 4. Used-in relations — **Phase 3, PROVISIONAL schema (not created in 0.1.0)**
 
@@ -131,16 +154,18 @@ where it calls this, per SECURITY.md §4):
 
 ```
 resolve( attachment_id, current_user ) →
-  input:  _ax_media_owner_id, _ax_media_visibility,
+  input:  owner = post_author,
+          visibility = _ax_media_visibility ?? public (legacy default),
           current_user caps (owner? edit_others_posts?),
           (Phase 3) protected-challenge session
   output: allow | not_found(404) | challenge     (+ listed/searchable for list surfaces)
 ```
 
-Rules: owner → allow (any level); `edit_others_posts` → allow; else per
-SECURITY.md §3 matrix. `private` → `not_found` (existence hidden). No global
-query filter; surfaces inject the resolver's `meta_query` via the shared
-`Visibility_Query` service.
+Rules: owner (`post_author`) → allow (any level); `edit_others_posts` → allow;
+else per SECURITY.md §3 matrix + §2.1 predicates. `private` → `not_found`
+(existence hidden). Absent meta → legacy defaults (§2.1.1). No global query
+filter; surfaces inject the resolver's `meta_query` (with the
+`NOT EXISTS OR == value` legacy form) via the shared `Visibility_Query` service.
 
 ## 7. Identity fields (reserved formats)
 

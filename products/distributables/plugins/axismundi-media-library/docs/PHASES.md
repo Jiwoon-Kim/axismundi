@@ -35,7 +35,10 @@
 
 ## Phase 2 — Single virtual folder
 
-**Entry:** Phase 1 stable.
+**Entry:** Phase 1 stable. **Prereq:** resolve per-user top-level folder slug
+collision (two users' sibling folders can share a slug) — via a hidden per-user
+root term **or** an owner-namespaced internal slug, with the clean `/media/{owner}/
+folder/{path}/` shown in the URL. Decide before building the taxonomy.
 **Build:** `ax_media_folder` taxonomy + term meta; single-relation enforcement
 (root = no term); move/rename/delete; folder `public|unlisted|protected|private`;
 `/media/{owner}/folder/{path}/` (admin "Folder", front "Board"); default
@@ -65,7 +68,7 @@ UI (blur/warn); **GPS enforcement = actual EXIF strip** of delivered files
 (derivatives + original re-save) — only now may "GPS hidden" be *claimed*; download
 policy (original/derivative-only/disabled); folder default inheritance.
 **Acceptance:** `geo_visibility=hidden` yields no GPS in any delivered file;
-reuse/save flags gate the (Phase 6) Save button; sensitive media is blurred +
+reuse/save flags gate the (Phase 5) Save button; sensitive media is blurred +
 excluded from OG preview.
 **Non-goals:** federation rights re-check (Phase 7).
 

@@ -27,7 +27,11 @@ Later layers (documented as deferred): **Saved Reference**, **Shared folders**,
 
 ## 2. Invariants (do not break across phases)
 
-1. The direct **file URL never changes** after upload.
+1. **Axismundi never changes the file URL.** Folder moves, meta edits, and
+   visibility changes leave the file path and URL untouched. External changes
+   (core image edit, media offload, optimizers rewriting `_wp_attached_file` or
+   the delivery URL) are **detected and reconciled** (Phase 6), not prevented —
+   this is a plugin-behavior guarantee, not a global one.
 2. Moving an Attachment between virtual folders changes **neither** the file URL
    **nor** the Attachment page URL.
 3. An Attachment has exactly **one owner** and **zero-or-one current virtual
@@ -80,11 +84,20 @@ Binary resource             file URL                       (immutable)
 
 **Phase 1 — independent Attachment publishing:**
 - Independent mode: **new** uploads get `post_parent = 0` (regardless of upload
-  path); insertions are recorded as used-in relations (index lands in Phase 3).
+  path). Used-in tracking does **not** run in Phase 1 — the relation store and
+  its initial scan are Phase 3.
+- Existing (pre-plugin) Attachments are **legacy**: read via fallback
+  (owner = `post_author`, visibility = legacy-public, listed/searchable = true)
+  and left untouched until an explicit migration. Independent mode governs **new
+  uploads**, not existing media.
 - Canonical single page `/?attachment_id={id}` with the visibility guard.
 - Archives via rewrite: `/media/`, `/media/{owner}/`.
 - Visibility: `public | unlisted | private` (`protected` lands in Phase 3).
-- `listed` / `searchable` toggles.
+- `listed` / `searchable` toggles — a `public` item still requires
+  `listed` / `searchable` to appear in archives / search (predicate in
+  SECURITY.md §2).
+- Ownership source of truth is **`post_author`** (no separate owner meta in
+  0.1.0; an override is reserved for a future ownership-transfer feature).
 - Rights + sensitivity + GPS fields **stored** (enforcement of GPS/sensitivity is
   Phase 4; see Invariant 8).
 - File URL immutable; old attachment permalink → canonical redirect.

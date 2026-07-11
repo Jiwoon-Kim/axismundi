@@ -34,10 +34,25 @@ Old/previous attachment permalinks → **301 to the canonical** `/?attachment_id
 Modern core can route attachment requests to the **file URL** when attachment
 pages are disabled. Independent mode requires attachment pages **on**.
 
-Policy (**A**): when Independent mode is enabled, the plugin enables attachment
-pages, **stores the prior option value**, and **restores it** when Independent
-mode is turned off or the plugin is deactivated. The activation UI states this
-explicitly; the plugin never silently overrides a site/plugin policy.
+Policy (**A**) — owned change with a restore guard. When Independent mode is
+enabled, store three things:
+
+```
+ax_media_attach_pages_prev   the value before we changed it
+ax_media_attach_pages_set    the value we wrote (so we can detect our own value)
+ax_media_attach_pages_owned  true while we hold the option
+```
+
+- **Restore only if we still own it**: on Independent-mode-off / deactivation,
+  restore `prev` **only when the current option value equals `set`**. If another
+  admin/plugin changed it in the meantime (current ≠ set), leave it and drop
+  ownership — never clobber their change.
+- **Re-acquire on reactivation**: reactivating with Independent mode still on
+  re-reads the current value into `prev`, re-enables pages, and re-takes
+  ownership (deactivation may have restored it to off).
+
+The activation UI states this explicitly; the plugin never silently overrides a
+site/plugin policy.
 
 ## 2. `object_uri` endpoint (reserved, not Phase 1)
 

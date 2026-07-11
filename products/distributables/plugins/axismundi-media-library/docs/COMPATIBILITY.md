@@ -27,8 +27,15 @@ _ax_media_visibility   = public   (see SPEC.md §4 defaults)
 
 Rationale: path-dependent behavior (parent kept in the editor, dropped in the
 library) would make the *same file* behave differently by where it was uploaded.
-Uniform `post_parent = 0` + a **used-in relation** record (index lands Phase 3)
-keeps "where is this used" stronger than core, without the single-parent model.
+So: uniform `post_parent = 0`. **Used-in tracking (the relation index) is Phase 3,
+not Phase 1** — Phase 1 only stops binding new uploads to a parent; it records no
+usage relations yet.
+
+**Legacy Attachments** (uploaded before the plugin, or any without `_ax_media_*`
+meta) are read via fallback and left untouched: owner = `post_author`,
+visibility = legacy-public, `listed`/`searchable` = true (SECURITY.md §2.2).
+Independent mode does **not** re-classify or alter existing media's pages or
+visibility — that only happens through the explicit migration below.
 
 ## 3. Existing media — migration (NOT in 0.1.0)
 
@@ -48,10 +55,11 @@ a later release — never an activation or mode-toggle side effect. `legacy_pare
 
 ## 4. `wp_attachment_pages_enabled`
 
-Independent mode requires attachment pages enabled (ROUTING.md §1.2). The plugin
-**stores the prior option value** on enabling and **restores it** when
-Independent mode is disabled or the plugin deactivates. Stated in the activation
-UI; never a silent override.
+Independent mode requires attachment pages enabled. Ownership uses the
+`prev` + `set` + `owned` guard in **ROUTING.md §1.2**: restore the prior value
+**only if the current value is still the one we wrote** (never clobber a change
+another admin/plugin made), and **re-acquire ownership on reactivation**. Stated
+in the activation UI; never a silent override.
 
 ## 5. Deactivation contract
 
@@ -59,9 +67,12 @@ UI; never a silent override.
 - Data: NOT mutated. No parent restore, no status change, no meta deletion.
 - Features: visibility guards, archives, custom permalinks, feeds → cease.
 - Behavior: reverts to core WordPress Attachment handling.
-- wp_attachment_pages_enabled: restored to the stored prior value.
-- Notice: boundary warning shown; count of private/protected Attachments
-  reported so the admin understands what stops being guarded.
+- wp_attachment_pages_enabled: restored to `prev` ONLY if we still own it
+  (current == our `set`); otherwise left as-is (§4 / ROUTING.md §1.2).
+- Notice: NO post-deactivation admin notice is possible (plugin code no longer
+  runs). Boundary text + private/protected count are shown WHILE ACTIVE — on the
+  settings / disable-Independent-mode screen, and optionally as a pre-deactivation
+  confirm on the Plugins-screen Deactivate link (SECURITY.md §1).
 ```
 
 Re-activation restores the previous policy interpretation from the retained meta.

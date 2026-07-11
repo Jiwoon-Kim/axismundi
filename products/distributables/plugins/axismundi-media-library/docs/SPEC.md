@@ -1,6 +1,6 @@
 # Axismundi Media Library — Specification
 
-> Status: **Design draft (pre-code).** No implementation exists yet.
+> Status: **Living specification. Phase 0 and Phase 1a are implemented.**
 > Plugin brand: **Axismundi Media Library** · Admin app: **Media Drive**
 > This document defines the product, its invariants, the 0.1.0 release scope, and
 > the non-goals. Security, routing, compatibility, data model, and phases live in
@@ -96,12 +96,10 @@ Binary resource             file URL                       (immutable)
 - `listed` / `searchable` toggles — a `public` item still requires
   `listed` / `searchable` to appear in archives / search (predicate in
   SECURITY.md §2).
-- **Subjects are distinct** (DATA-MODEL.md §2.0): library owner
-  (`_ax_media_owner_id`, transferable, **permission center**) ≠ creator ≠
-  copyright holder ≠ `post_author` (the uploader/WP author). No separate uploader
-  field — `post_author` is the uploader. Permission keys on **owner**;
-  `post_author` is compat + legacy fallback
-  (`effective_owner_id = _ax_media_owner_id ?? post_author`).
+- **Ownership = `post_author`** (single source of truth; DATA-MODEL.md §2.0). No
+  separate owner meta: ownership transfer = change `post_author`, permission =
+  core `edit_post` / `edit_others_posts`. Creator and copyright-holder are rights
+  metadata, not capabilities. `post_author = 0` = unowned (uid 0 ≠ author 0).
 - Rights + sensitivity + GPS fields **stored** (enforcement of GPS/sensitivity is
   Phase 4; see Invariant 8).
 - File URL immutable; old attachment permalink → canonical redirect.

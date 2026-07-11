@@ -1,6 +1,6 @@
 # Axismundi Media Library — Phases
 
-> Status: **Design draft (pre-code).** Entry condition · acceptance · non-goals
+> Status: **Living implementation plan. Phase 0 and Phase 1a are complete.** Entry condition · acceptance · non-goals
 > per phase. **First release = Phase 0 + Phase 1.** Cross-refs: SPEC.md (scope),
 > SECURITY.md (matrix), ROUTING.md, COMPATIBILITY.md, DATA-MODEL.md.
 

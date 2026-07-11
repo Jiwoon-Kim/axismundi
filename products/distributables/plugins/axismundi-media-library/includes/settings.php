@@ -95,7 +95,7 @@ function axismundi_media_render_settings_page() : void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Axismundi Media Library', 'axismundi-media-library' ); ?></h1>
-		<p><?php esc_html_e( 'Phase 0 — compatibility boundary. Activating this plugin changes no media. The relationship mode below is recorded but does not alter attachment behaviour until Phase 1.', 'axismundi-media-library' ); ?></p>
+		<p><?php esc_html_e( 'Activating this plugin changes no existing media. Core mode leaves WordPress attachments untouched. Independent mode detaches new uploads and enforces their visibility (public / unlisted / private) across the attachment page, REST API, and the media picker.', 'axismundi-media-library' ); ?></p>
 
 		<form action="options.php" method="post">
 			<?php settings_fields( 'axismundi_media' ); ?>
@@ -109,7 +109,7 @@ function axismundi_media_render_settings_page() : void {
 				<label>
 					<input type="radio" name="<?php echo esc_attr( AXISMUNDI_MEDIA_MODE_OPTION ); ?>" value="independent" <?php checked( $axismundi_media_mode, 'independent' ); ?> />
 					<strong><?php esc_html_e( 'Independent media', 'axismundi-media-library' ); ?></strong>
-					&mdash; <?php esc_html_e( 'New uploads become independent media objects. Behaviour ships in Phase 1.', 'axismundi-media-library' ); ?>
+					&mdash; <?php esc_html_e( 'New uploads become independent media objects (detached, visibility-controlled). Enables attachment pages and enforces visibility.', 'axismundi-media-library' ); ?>
 				</label>
 			</fieldset>
 			<?php submit_button(); ?>
@@ -133,7 +133,7 @@ function axismundi_media_render_settings_page() : void {
 			<?php
 			printf(
 				/* translators: %s: number of attachments that have a parent post. */
-				esc_html__( 'Enabling Independent mode would eventually detach %s attachment(s) from their parent — but no bulk change ships in 0.0.1 (scan / preview only).', 'axismundi-media-library' ),
+				esc_html__( 'Enabling Independent mode would eventually detach %s existing attachment(s) from their parent — but no bulk migration ships in 0.1.0 (scan / preview only).', 'axismundi-media-library' ),
 				esc_html( number_format_i18n( $axismundi_media_scan['with_parent'] ) )
 			);
 			?>

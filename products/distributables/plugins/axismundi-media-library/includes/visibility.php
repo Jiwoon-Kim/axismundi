@@ -4,27 +4,12 @@
  *
  * All enforcement is gated to Independent mode; in Core mode the plugin is inert.
  * Legacy Attachments (no _ax_media_* meta) resolve to legacy-public so they are
- * never dropped. Permission keys on effective_owner_id (owner meta ?? post_author).
+ * never dropped. Ownership and permission reuse post_author and core edit_post.
  *
  * @package AxismundiMediaLibrary
  */
 
 defined( 'ABSPATH' ) || exit;
-
-/**
- * Library owner (effective): _ax_media_owner_id, else post_author.
- *
- * @param int $post_id Attachment ID.
- * @return int
- */
-function axismundi_media_effective_owner_id( int $post_id ) : int {
-	$owner = (int) get_post_meta( $post_id, '_ax_media_owner_id', true );
-	if ( $owner > 0 ) {
-		return $owner;
-	}
-	$post = get_post( $post_id );
-	return $post ? (int) $post->post_author : 0;
-}
 
 /**
  * Effective visibility with legacy-public default.
@@ -41,13 +26,17 @@ function axismundi_media_effective_visibility( int $post_id ) : string {
  * May the given user open the Attachment single page / REST single?
  * (protected challenge is Phase 3.)
  *
+ * Ownership is `post_author`; permission reuses core `edit_post`, which maps to
+ * the author or an `edit_others_posts` holder. `user_can( 0, … )` is false, so a
+ * logged-out user never matches an author-0 (unowned) attachment.
+ *
  * @param int      $post_id Attachment ID.
  * @param int|null $user_id User (defaults to current).
  * @return bool
  */
 function axismundi_media_can_view_single( int $post_id, ?int $user_id = null ) : bool {
 	$user_id = $user_id ?? get_current_user_id();
-	if ( $user_id > 0 && ( $user_id === axismundi_media_effective_owner_id( $post_id ) || user_can( $user_id, 'edit_others_posts' ) ) ) {
+	if ( $user_id > 0 && user_can( $user_id, 'edit_post', $post_id ) ) {
 		return true;
 	}
 	// public + unlisted are reachable by direct id; private is not.
@@ -158,37 +147,24 @@ add_filter(
 );
 
 /* ------------------------------------------------------------------ *
- * 6. New-upload defaults (COMPATIBILITY.md §2) — Independent mode only.
+ * 6. New uploads are unbound (COMPATIBILITY.md §2) — Independent mode only.
+ *    post_parent = 0 is set BEFORE the INSERT (atomic) via wp_insert_attachment_data,
+ *    so no earlier add_attachment callback ever observes a stale parent. Owner is
+ *    post_author (core-set); visibility defaults to legacy-public via the fallback,
+ *    so no meta is stamped at upload — the editor sets it explicitly.
  * ------------------------------------------------------------------ */
-add_action(
-	'add_attachment',
-	static function ( int $post_id ) : void {
-		if ( ! axismundi_media_is_independent() ) {
-			return;
+add_filter(
+	'wp_insert_attachment_data',
+	static function ( $data, $postarr, $unsanitized_postarr, $update ) {
+		if ( $update ) {
+			return $data; // An update, not a new attachment.
 		}
-		$post = get_post( $post_id );
-		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return;
+		if ( 'attachment' !== ( $data['post_type'] ?? '' ) || ! axismundi_media_is_independent() ) {
+			return $data;
 		}
-		if ( (int) $post->post_parent > 0 ) {
-			wp_update_post(
-				array(
-					'ID'          => $post_id,
-					'post_parent' => 0,
-				)
-			);
-		}
-		$current = (int) get_current_user_id();
-		if ( '' === get_post_meta( $post_id, '_ax_media_owner_id', true ) ) {
-			update_post_meta( $post_id, '_ax_media_owner_id', $current > 0 ? $current : (int) $post->post_author );
-		}
-		if ( '' === get_post_meta( $post_id, '_ax_media_visibility', true ) ) {
-			update_post_meta( $post_id, '_ax_media_visibility', 'public' );
-			update_post_meta( $post_id, '_ax_media_listed', '1' );
-			update_post_meta( $post_id, '_ax_media_searchable', '1' );
-		}
-		if ( '' === get_post_meta( $post_id, '_ax_media_uploaded_at', true ) ) {
-			update_post_meta( $post_id, '_ax_media_uploaded_at', current_time( 'mysql' ) );
-		}
-	}
+		$data['post_parent'] = 0;
+		return $data;
+	},
+	10,
+	4
 );

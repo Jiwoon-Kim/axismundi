@@ -1,6 +1,6 @@
 # Axismundi Media Library — Compatibility & Lifecycle
 
-> Status: **Design draft (pre-code).** Governs how the plugin coexists with core
+> Status: **Living specification. Phase 0 and Phase 1a are implemented.** Governs how the plugin coexists with core
 > Attachment behavior and other plugins, and what activation / deactivation /
 > uninstall may and may not do. See SPEC.md Invariant 5 and SECURITY.md §1.
 
@@ -20,15 +20,14 @@ is inert-by-default with respect to existing media.
 When Independent mode is ON, **new** Attachments get:
 
 ```
-post_parent          = 0             (regardless of upload path — modal OR editor)
-post_author          = current user  (= uploader; core record)
-_ax_media_owner_id   = current user  (transferable; permission center)
-_ax_media_visibility = public        (see SPEC.md §4 defaults)
+post_parent  = 0             (set BEFORE the INSERT via wp_insert_attachment_data)
+post_author  = core-selected author  (= current owner; no owner meta)
+visibility   = public        (via legacy fallback; not stamped at upload)
 ```
 
-Owner and uploader/author are distinct (DATA-MODEL.md §2.0); a later ownership
-transfer changes `_ax_media_owner_id` only, leaving `post_author` as the uploader
-record.
+Ownership is `post_author` (DATA-MODEL.md §2.0); a later ownership transfer changes
+`post_author`. `post_parent = 0` is set atomically before the insert so no earlier
+`add_attachment` callback observes a stale parent.
 
 Rationale: path-dependent behavior (parent kept in the editor, dropped in the
 library) would make the *same file* behave differently by where it was uploaded.
@@ -37,11 +36,11 @@ not Phase 1** — Phase 1 only stops binding new uploads to a parent; it records
 usage relations yet.
 
 **Legacy Attachments** (uploaded before the plugin, or any without `_ax_media_*`
-meta) are read via fallback and left untouched: owner = `effective_owner_id`
-(`_ax_media_owner_id ?? post_author`), visibility = legacy-public,
-`listed`/`searchable` = true (SECURITY.md §2.2).
-Independent mode does **not** re-classify or alter existing media's pages or
-visibility — that only happens through the explicit migration below.
+meta) are read via fallback and left untouched: owner = `post_author`, visibility
+= legacy-public, `listed`/`searchable` = true (SECURITY.md §2.2). Independent mode
+does not mutate their parent or policy meta, but it does apply the common query
+canonical and legacy-public access guards while active. Parent removal and
+explicit policy migration remain separate operations below.
 
 ## 3. Existing media — migration (NOT in 0.1.0)
 

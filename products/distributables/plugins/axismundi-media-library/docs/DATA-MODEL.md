@@ -1,6 +1,6 @@
 # Axismundi Media Library — Data Model
 
-> Status: **Design draft (pre-code).**
+> Status: **Living specification. Phase 0 and Phase 1a are implemented.**
 > **Read this distinction first:** §2 is data the plugin actually creates in
 > 0.1.0. §3–§5 are **reserved schema** for later phases — documented so the model
 > is stable, but **not** table-creation or storage contracts yet. Do not create
@@ -16,45 +16,39 @@
 
 ## 2. Created in 0.1.0 (Phase 0 + 1)
 
-### 2.0 Subjects (owner / uploader / creator / copyright are distinct)
+### 2.0 Subjects (owner vs rights metadata)
 
-These are **not** interchangeable; keep each separate with its own mutability and
-permission effect. Conflating them (e.g. "owner = post_author") breaks ownership
-transfer and org-account/creator scenarios.
+Ownership is the WordPress author, **`post_author`** — the single source of truth.
+There is **no separate owner meta**: this reuses core capabilities and author
+queries, removes owner/author drift, and needs no legacy owner fallback.
 
-In standard WordPress uploads the **uploader is `post_author`**, so no separate
-uploader field is needed. Only two subjects are *accounts*; the rest are rights
-metadata (which may name an external person/org, not a site user).
+- **Ownership transfer** = change `post_author` (`wp_update_post`).
+- **Permission** = core `edit_post` (author *or* an `edit_others_posts` holder).
+- Admin UI may label `post_author` as "Owner".
 
-| Concept | Field | Mutable | Permission effect |
-|---|---|---|---|
-| Uploader / WP author | `post_author` | core record (kept on transfer) | compat + **legacy fallback** |
-| Library owner | `_ax_media_owner_id` | **transferable** | **permission center** (visibility/folder/meta) |
-| Creator | `_ax_media_creator_*` | editable | rights/display; **not** a WP capability |
-| Copyright holder | `_ax_media_copyright_holder_*` | editable | rights/display; person, org, or outsider |
-| Source | `_ax_media_source_url` | editable | display/provenance |
+The other subjects are rights metadata that may name an external person/org, not
+a site user:
 
-> `post_author` records the uploading WordPress user. `_ax_media_owner_id` records
-> the current Media Drive owner and may change independently. Creator and
-> copyright-holder fields describe authorship and legal rights; they do not grant
-> WordPress capabilities.
+| Concept | Field | Permission effect |
+|---|---|---|
+| Current owner / WP author | `post_author` | **owner**; core `edit_post` / `edit_others_posts` |
+| Creator | `_ax_media_creator_*` | rights/display; **not** a WP capability |
+| Copyright holder | `_ax_media_copyright_holder_*` | rights/display; person, org, or outsider |
+| Source | `_ax_media_source_url` | display/provenance |
 
-Effective owner (legacy media has no owner meta):
+> `post_author` is the current media owner and initially identifies the uploader.
+> Ownership transfer changes `post_author`, so it is not an immutable uploader
+> audit field. Creator and copyright-holder fields describe
+> authorship and legal rights; they do not grant WordPress capabilities.
 
-```
-effective_owner_id = _ax_media_owner_id ?? post_author
-```
-
-Independent-mode **new** upload sets `post_author` **and** `_ax_media_owner_id`
-= current user. **Ownership transfer changes `_ax_media_owner_id` only** (and
-`post_author` stays); whether to also sync `post_author` is a separate compat
-option, default **do not change** it.
+`post_author = 0` (legacy/import) means **unowned**, not "owned by user 0" — a
+logged-out uid of 0 must never be treated as the owner. If an immutable uploader
+record is ever needed, add `_ax_media_original_author_id` at the first transfer —
+reserved, not built now. Ownership transfer itself is a later phase (PHASES.md).
 
 ### 2.1 Attachment post meta — **written & enforced** in 0.1.0
 
 ```
-_ax_media_owner_id            int      library owner (permission center; transferable)
-                                       (uploader = post_author; no separate field)
 _ax_media_visibility          enum     public | unlisted | private   (protected = Phase 3)
 _ax_media_listed              bool     eligible for archives (gated with public)
 _ax_media_searchable          bool     eligible for search (gated with public)
@@ -73,16 +67,15 @@ The resolver and every list `meta_query` MUST assume defaults when meta is absen
 or existing Attachments vanish/misresolve the instant a filter is added:
 
 ```
-owner       → _ax_media_owner_id ?? post_author   (effective_owner_id)
-uploader    → post_author                          (always; no separate field)
+owner       → post_author               (permission via core edit_post; uid 0 != author 0)
 visibility  → public (legacy-public)   when _ax_media_visibility absent
 listed      → true                     when absent
 searchable  → true                     when absent
 ```
 
 List `meta_query` for visibility MUST be `( NOT EXISTS ) OR ( == public )` —
-never a bare `== public` (which drops legacy rows). Independent mode governs new
-uploads only; it does not re-classify existing media.
+never a bare `== public` (which drops legacy rows). Independent mode creates
+policy meta only when explicitly edited; legacy rows remain legacy-public.
 
 ### 2.2 Attachment post meta — **stored only** in 0.1.0 (enforced Phase 4)
 
@@ -189,20 +182,21 @@ Pure function; inputs → decision. Same result on every surface (each surface o
 where it calls this, per SECURITY.md §4):
 
 ```
-resolve( attachment_id, current_user ) →
-  input:  owner = effective_owner_id (_ax_media_owner_id ?? post_author),
+resolve( attachment_id, user_id ) →
+  input:  owner = post_author,
           visibility = _ax_media_visibility ?? public (legacy default),
-          current_user caps (is effective_owner? edit_others_posts?),
           (Phase 3) protected-challenge session
   output: allow | not_found(404) | challenge     (+ listed/searchable for list surfaces)
 ```
 
-Rules: `current_user == effective_owner_id` → allow (any level);
-`edit_others_posts` → allow; else per SECURITY.md §3 matrix + §2.1 predicates.
-Permission keys on **owner**, not uploader/creator/copyright. `private` → `not_found`
-(existence hidden). Absent meta → legacy defaults (§2.1.1). No global query
-filter; surfaces inject the resolver's `meta_query` (with the
-`NOT EXISTS OR == value` legacy form) via the shared `Visibility_Query` service.
+Rules: `user_id > 0 && user_can( user_id, 'edit_post', id )` → allow (owner or
+`edit_others_posts`, via core cap mapping); else per SECURITY.md §3 matrix + §2.1
+predicates. Permission keys on **post_author**, not creator/copyright. `private` →
+`not_found` (existence hidden). `user_can( 0, … )` is false, so uid 0 never matches
+author 0. Absent meta → legacy defaults (§2.1.1). No global query filter; list
+surfaces inject the `meta_query` (with the `NOT EXISTS OR == value` legacy form)
+via the shared `Visibility_Query` service, and "mine" is `post_author = uid`
+(uid > 0).
 
 ## 7. Identity fields (reserved formats)
 

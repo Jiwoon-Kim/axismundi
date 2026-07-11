@@ -36,6 +36,9 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		$select .= '<option value="' . esc_attr( $value ) . '"' . selected( $visibility, $value, false ) . '>' . esc_html( $label ) . '</option>';
 	}
 	$select .= '</select>';
+	// Sentinel: proves our field set was submitted, so an absent checkbox on a
+	// PARTIAL save payload is not misread as "unchecked".
+	$select .= '<input type="hidden" name="attachments[' . (int) $post->ID . '][ax_media_fields]" value="1" />';
 
 	$form_fields['ax_media_visibility'] = array(
 		'label' => __( 'Visibility', 'axismundi-media-library' ),
@@ -67,6 +70,11 @@ add_filter( 'attachment_fields_to_edit', 'axismundi_media_attachment_fields', 10
  */
 function axismundi_media_attachment_save( array $post, array $attachment ) : array {
 	if ( ! axismundi_media_is_independent() ) {
+		return $post;
+	}
+	// Only act when our field set was actually submitted; other save surfaces
+	// pass partial attachment payloads that must not reset listed/searchable.
+	if ( empty( $attachment['ax_media_fields'] ) ) {
 		return $post;
 	}
 	$post_id = (int) $post['ID'];

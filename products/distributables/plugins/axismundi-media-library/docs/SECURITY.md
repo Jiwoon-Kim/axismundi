@@ -1,6 +1,6 @@
 # Axismundi Media Library — Security & Access Contract
 
-> Status: **Design draft (pre-code).**
+> Status: **Living specification. Phase 1a guards are implemented.**
 > This is an **acceptance contract**, not a hook checklist. The matrix in §3 is
 > the source of truth; every enforcement point in §4 exists to satisfy a matrix
 > cell, and §7 restates the cells as testable criteria.
@@ -72,7 +72,7 @@ Existing/pre-plugin Attachments have no visibility meta. The resolver and every
 vanishes from lists / fails owner checks the moment a `meta_query` is added:
 
 ```
-owner       → _ax_media_owner_id ?? post_author   (effective_owner_id; DATA-MODEL §2.0)
+owner       → post_author               (permission via core edit_post; uid 0 != author 0)
 visibility  → public   (legacy-public)  when _ax_media_visibility is absent
 listed      → true                      when absent
 searchable  → true                      when absent
@@ -96,7 +96,7 @@ means a direct `/?attachment_id={id}` or `/wp/v2/media/{id}` request.
 | Plugin archive `/media/`, `/media/{owner}/`, folder | listed | omitted | omitted | omitted |
 | Plugin media search | listed | omitted | omitted | omitted |
 | Feed (Phase 2) | included | omitted | omitted | omitted |
-| Admin media modal (other user) | shown | shown | **omitted** | **omitted** |
+| Admin media modal (other user) | shown | **omitted** | **omitted** | **omitted** |
 | Sitemap | included¹ | omitted | omitted | omitted |
 | oEmbed | allowed | omitted² | omitted | omitted |
 
@@ -132,15 +132,15 @@ is never the gate.
 `ajax_query_attachments_args` result:
 
 ```
-requester is the owner              → see all of their own, any visibility
-requester has edit_others_posts     → see everything
-other upload_files users            → see only public/unlisted owned by others
-                                    → private/protected of others: OMITTED
+requester is the owner (post_author) → see all of their own, any visibility
+requester has edit_others_posts      → see everything
+other upload_files users             → see only OTHERS' public (+ listed) media
+                                     → others' unlisted / private / protected: OMITTED
 ```
 
-Minimum non-negotiable: **another author never sees someone else's `private`
-(or `protected`) media in the picker.** Finer product tuning (e.g. hide others'
-`unlisted` too) may be decided later, but the private exclusion is a 0.1.0 gate.
+The media picker is a discovery surface, so **unlisted is excluded there** (its
+whole point is non-discoverability) — not just private/protected. This is the
+deliberate "strong privacy" choice; the matrix modal row reflects it.
 
 ## 6. What is / isn't guaranteed
 
@@ -161,9 +161,8 @@ non-owner, non-editor:
       collection, archives, search, feed, sitemap.
 - [ ] `public`: present on public surfaces; `public` + `listed=false` is **absent**
       from archives/REST list; `public` + `searchable=false` is absent from search.
-- [ ] **Legacy Attachment** (no `_ax_media_*` meta): resolves owner via
-      `effective_owner_id` (falls back to `post_author`), visibility=legacy-public,
-      and appears in lists (not dropped by `meta_query`).
+- [ ] **Legacy Attachment** (no `_ax_media_*` meta): owner = `post_author`,
+      visibility = legacy-public, and appears in lists (not dropped by `meta_query`).
 - [ ] Owner sees own media at every level on every surface.
 - [ ] `edit_others_posts` holder sees everything.
 - [ ] Deactivation: no data mutation; controls cease. Boundary text + count shown

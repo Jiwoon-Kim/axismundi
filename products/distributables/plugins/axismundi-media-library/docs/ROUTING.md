@@ -1,6 +1,6 @@
 # Axismundi Media Library — Routing & Templates
 
-> Status: **Design draft (pre-code).** See SPEC.md §3 (identity) and SECURITY.md
+> Status: **Living specification. Attachment single routing is implemented; archives remain Phase 1b.** See SPEC.md §3 (identity) and SECURITY.md
 > §4.1 (the HTML `template_redirect` guard) — this doc defines how requests reach
 > that guard and which template renders.
 

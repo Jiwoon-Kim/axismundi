@@ -72,7 +72,7 @@ Existing/pre-plugin Attachments have no visibility meta. The resolver and every
 vanishes from lists / fails owner checks the moment a `meta_query` is added:
 
 ```
-owner       → post_author               (0.1.0 has no separate owner meta at all)
+owner       → _ax_media_owner_id ?? post_author   (effective_owner_id; DATA-MODEL §2.0)
 visibility  → public   (legacy-public)  when _ax_media_visibility is absent
 listed      → true                      when absent
 searchable  → true                      when absent
@@ -161,8 +161,9 @@ non-owner, non-editor:
       collection, archives, search, feed, sitemap.
 - [ ] `public`: present on public surfaces; `public` + `listed=false` is **absent**
       from archives/REST list; `public` + `searchable=false` is absent from search.
-- [ ] **Legacy Attachment** (no `_ax_media_*` meta): resolves owner=`post_author`,
-      visibility=legacy-public, and appears in lists (not dropped by `meta_query`).
+- [ ] **Legacy Attachment** (no `_ax_media_*` meta): resolves owner via
+      `effective_owner_id` (falls back to `post_author`), visibility=legacy-public,
+      and appears in lists (not dropped by `meta_query`).
 - [ ] Owner sees own media at every level on every surface.
 - [ ] `edit_others_posts` holder sees everything.
 - [ ] Deactivation: no data mutation; controls cease. Boundary text + count shown

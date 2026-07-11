@@ -20,10 +20,14 @@ is inert-by-default with respect to existing media.
 When Independent mode is ON, **new** Attachments get:
 
 ```
-post_parent = 0        (regardless of upload path — media modal OR block editor)
-_ax_media_owner_id     = uploader
-_ax_media_visibility   = public   (see SPEC.md §4 defaults)
+post_parent           = 0             (regardless of upload path — modal OR editor)
+_ax_media_uploaded_by = current user  (immutable audit)
+_ax_media_owner_id    = current user  (transferable; permission center)
+_ax_media_visibility  = public        (see SPEC.md §4 defaults)
 ```
+
+These three subjects are distinct (DATA-MODEL.md §2.0); a later ownership
+transfer changes `_ax_media_owner_id` only (not uploader, not `post_author`).
 
 Rationale: path-dependent behavior (parent kept in the editor, dropped in the
 library) would make the *same file* behave differently by where it was uploaded.
@@ -32,8 +36,9 @@ not Phase 1** — Phase 1 only stops binding new uploads to a parent; it records
 usage relations yet.
 
 **Legacy Attachments** (uploaded before the plugin, or any without `_ax_media_*`
-meta) are read via fallback and left untouched: owner = `post_author`,
-visibility = legacy-public, `listed`/`searchable` = true (SECURITY.md §2.2).
+meta) are read via fallback and left untouched: owner = `effective_owner_id`
+(`_ax_media_owner_id ?? post_author`), visibility = legacy-public,
+`listed`/`searchable` = true (SECURITY.md §2.2).
 Independent mode does **not** re-classify or alter existing media's pages or
 visibility — that only happens through the explicit migration below.
 

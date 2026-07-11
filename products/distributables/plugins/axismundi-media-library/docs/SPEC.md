@@ -96,8 +96,11 @@ Binary resource             file URL                       (immutable)
 - `listed` / `searchable` toggles — a `public` item still requires
   `listed` / `searchable` to appear in archives / search (predicate in
   SECURITY.md §2).
-- Ownership source of truth is **`post_author`** (no separate owner meta in
-  0.1.0; an override is reserved for a future ownership-transfer feature).
+- **Subjects are distinct** (DATA-MODEL.md §2.0): library owner
+  (`_ax_media_owner_id`, transferable, **permission center**) ≠ uploader
+  (`_ax_media_uploaded_by`, immutable audit) ≠ creator ≠ copyright holder ≠
+  `post_author`. Permission keys on **owner**; `post_author` is only compat +
+  legacy fallback (`effective_owner_id = _ax_media_owner_id ?? post_author`).
 - Rights + sensitivity + GPS fields **stored** (enforcement of GPS/sensitivity is
   Phase 4; see Invariant 8).
 - File URL immutable; old attachment permalink → canonical redirect.

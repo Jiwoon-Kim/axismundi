@@ -22,32 +22,39 @@ These are **not** interchangeable; keep each separate with its own mutability an
 permission effect. Conflating them (e.g. "owner = post_author") breaks ownership
 transfer and org-account/creator scenarios.
 
-| Concept | Field | Meaning | Mutable | Permission effect |
-|---|---|---|---|---|
-| WordPress author | `post_author` | core Attachment author | (core) | compat + **legacy fallback** only |
-| Uploader | `_ax_media_uploaded_by` | who registered the file | **immutable** after first write | audit only; **no** standing management right |
-| Library owner | `_ax_media_owner_id` | who owns/manages it in Media Drive | **transferable** | **permission center** (visibility/folder/meta) |
-| Creator | `_ax_media_creator_*` | photographer/author | editable | rights/display; **not** a WP capability |
-| Copyright holder | `_ax_media_copyright_holder_*` | legal rights holder | editable | rights/display; may be a person, org, or outsider |
-| Source | `_ax_media_source_url` | external origin/provider | editable | display/provenance |
+In standard WordPress uploads the **uploader is `post_author`**, so no separate
+uploader field is needed. Only two subjects are *accounts*; the rest are rights
+metadata (which may name an external person/org, not a site user).
 
-Effective values (legacy media has no owner/uploader meta):
+| Concept | Field | Mutable | Permission effect |
+|---|---|---|---|
+| Uploader / WP author | `post_author` | core record (kept on transfer) | compat + **legacy fallback** |
+| Library owner | `_ax_media_owner_id` | **transferable** | **permission center** (visibility/folder/meta) |
+| Creator | `_ax_media_creator_*` | editable | rights/display; **not** a WP capability |
+| Copyright holder | `_ax_media_copyright_holder_*` | editable | rights/display; person, org, or outsider |
+| Source | `_ax_media_source_url` | editable | display/provenance |
+
+> `post_author` records the uploading WordPress user. `_ax_media_owner_id` records
+> the current Media Drive owner and may change independently. Creator and
+> copyright-holder fields describe authorship and legal rights; they do not grant
+> WordPress capabilities.
+
+Effective owner (legacy media has no owner meta):
 
 ```
-effective_owner_id    = _ax_media_owner_id    ?? post_author
-effective_uploader_id = _ax_media_uploaded_by ?? post_author
+effective_owner_id = _ax_media_owner_id ?? post_author
 ```
 
-Independent-mode **new** upload sets all three: `post_author`,
-`_ax_media_uploaded_by`, `_ax_media_owner_id` = current user. **Ownership transfer
-changes `_ax_media_owner_id` only**; whether to also sync `post_author` is a
-separate compat option, default **do not change** `post_author`.
+Independent-mode **new** upload sets `post_author` **and** `_ax_media_owner_id`
+= current user. **Ownership transfer changes `_ax_media_owner_id` only** (and
+`post_author` stays); whether to also sync `post_author` is a separate compat
+option, default **do not change** it.
 
 ### 2.1 Attachment post meta — **written & enforced** in 0.1.0
 
 ```
 _ax_media_owner_id            int      library owner (permission center; transferable)
-_ax_media_uploaded_by         int      uploader (immutable after first write)
+                                       (uploader = post_author; no separate field)
 _ax_media_visibility          enum     public | unlisted | private   (protected = Phase 3)
 _ax_media_listed              bool     eligible for archives (gated with public)
 _ax_media_searchable          bool     eligible for search (gated with public)
@@ -67,7 +74,7 @@ or existing Attachments vanish/misresolve the instant a filter is added:
 
 ```
 owner       → _ax_media_owner_id ?? post_author   (effective_owner_id)
-uploader    → _ax_media_uploaded_by ?? post_author (effective_uploader_id)
+uploader    → post_author                          (always; no separate field)
 visibility  → public (legacy-public)   when _ax_media_visibility absent
 listed      → true                     when absent
 searchable  → true                     when absent

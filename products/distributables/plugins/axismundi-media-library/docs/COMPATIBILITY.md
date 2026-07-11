@@ -20,14 +20,15 @@ is inert-by-default with respect to existing media.
 When Independent mode is ON, **new** Attachments get:
 
 ```
-post_parent           = 0             (regardless of upload path — modal OR editor)
-_ax_media_uploaded_by = current user  (immutable audit)
-_ax_media_owner_id    = current user  (transferable; permission center)
-_ax_media_visibility  = public        (see SPEC.md §4 defaults)
+post_parent          = 0             (regardless of upload path — modal OR editor)
+post_author          = current user  (= uploader; core record)
+_ax_media_owner_id   = current user  (transferable; permission center)
+_ax_media_visibility = public        (see SPEC.md §4 defaults)
 ```
 
-These three subjects are distinct (DATA-MODEL.md §2.0); a later ownership
-transfer changes `_ax_media_owner_id` only (not uploader, not `post_author`).
+Owner and uploader/author are distinct (DATA-MODEL.md §2.0); a later ownership
+transfer changes `_ax_media_owner_id` only, leaving `post_author` as the uploader
+record.
 
 Rationale: path-dependent behavior (parent kept in the editor, dropped in the
 library) would make the *same file* behave differently by where it was uploaded.

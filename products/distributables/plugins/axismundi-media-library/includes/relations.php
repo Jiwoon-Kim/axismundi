@@ -70,10 +70,20 @@ function axismundi_media_relations_install() : void {
 		KEY reverse_local (relation_kind,status,object_attachment_id),
 		KEY reverse_uri (relation_kind,status,object_uri_hash),
 		KEY subject_post (subject_post_id)
-	) {$collate};";
+	) ENGINE=InnoDB {$collate};";
 
 	dbDelta( $sql );
-	update_option( AXISMUNDI_MEDIA_RELATIONS_DB_OPTION, AXISMUNDI_MEDIA_RELATIONS_DB_VERSION );
+
+	// Only advance the schema version once the table AND its dedup UNIQUE index really
+	// exist — otherwise a failed create would permanently skip re-install.
+	$table_ok = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$index_ok = false;
+	if ( $table_ok ) {
+		$index_ok = (bool) $wpdb->get_var( "SHOW INDEX FROM {$table} WHERE Key_name = 'relation_identity'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+	}
+	if ( $table_ok && $index_ok ) {
+		update_option( AXISMUNDI_MEDIA_RELATIONS_DB_OPTION, AXISMUNDI_MEDIA_RELATIONS_DB_VERSION );
+	}
 }
 add_action( 'admin_init', 'axismundi_media_relations_install' );
 
@@ -122,10 +132,18 @@ function axismundi_media_relations_replace( array $subject, string $provider, ar
 	$table        = axismundi_media_relations_table();
 	$subject_post = isset( $subject['post_id'] ) ? (int) $subject['post_id'] : 0;
 	$subject_uri  = isset( $subject['uri'] ) ? (string) $subject['uri'] : '';
-	$subject_type = isset( $subject['type'] ) ? (string) $subject['type'] : ( $subject_post > 0 ? 'post' : 'remote_object' );
+	// Validate/normalize BEFORE any mutation, so a bad provider result never deletes
+	// the existing rows and then fails to re-insert.
+	$subject_type = in_array( (string) ( $subject['type'] ?? '' ), array( 'post', 'remote_object' ), true )
+		? (string) $subject['type']
+		: ( $subject_post > 0 ? 'post' : 'remote_object' );
+	$kind         = in_array( $kind, array( 'usage', 'legacy_parent' ), true ) ? $kind : 'usage';
 	$subject_key  = axismundi_media_relation_key( 'post', $subject_post, '' !== $subject_uri ? $subject_uri : null );
-	if ( '' === $subject_key || '' === $provider ) {
+	if ( '' === $subject_key ) {
 		return new WP_Error( 'ax_media_relation_subject', __( 'Invalid relation subject.', 'axismundi-media-library' ) );
+	}
+	if ( '' === $provider || strlen( $provider ) > 40 ) {
+		return new WP_Error( 'ax_media_relation_provider', __( 'Invalid relation provider.', 'axismundi-media-library' ) );
 	}
 
 	// Dedup + aggregate by (object_key, predicate, role).
@@ -138,8 +156,14 @@ function axismundi_media_relations_replace( array $subject, string $provider, ar
 			continue;
 		}
 		$predicate = isset( $rel['predicate'] ) ? (string) $rel['predicate'] : 'as:attachment';
-		$role      = isset( $rel['role'] ) ? (string) $rel['role'] : 'content';
-		$dedup     = $key . '|' . $predicate . '|' . $role;
+		if ( ! in_array( $predicate, array( 'as:attachment', 'as:image', 'as:icon', 'schema:associatedMedia' ), true ) ) {
+			$predicate = 'as:attachment';
+		}
+		$role = isset( $rel['role'] ) ? (string) $rel['role'] : 'content';
+		if ( ! in_array( $role, array( 'featured', 'content', 'gallery', 'cover', 'media_text', 'file', 'audio', 'video', 'poster', 'decorative' ), true ) ) {
+			$role = 'content';
+		}
+		$dedup = $key . '|' . $predicate . '|' . $role;
 		if ( isset( $rows[ $dedup ] ) ) {
 			++$rows[ $dedup ]['occurrence_count'];
 			continue;
@@ -268,7 +292,9 @@ function axismundi_media_relation_can_read_subject( int $post_id, int $viewer_id
 	if ( ! $post ) {
 		return false;
 	}
-	if ( 'publish' === $post->post_status ) {
+	// Publicly viewable = a viewable status AND a public post type — not merely
+	// `publish`, since a non-publicly_queryable internal CPT can be published too.
+	if ( is_post_publicly_viewable( $post ) ) {
 		return true;
 	}
 	return $viewer_id > 0 && ( user_can( $viewer_id, 'read_post', $post_id ) || user_can( $viewer_id, 'edit_post', $post_id ) );
@@ -283,4 +309,16 @@ function axismundi_media_relation_can_read_subject( int $post_id, int $viewer_id
 function axismundi_media_relations_delete_subject( int $post_id ) : void {
 	global $wpdb;
 	$wpdb->delete( axismundi_media_relations_table(), array( 'subject_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+}
+
+/**
+ * Remove every relation whose OBJECT is this attachment (Phase 3b hooks this on an
+ * attachment delete, alongside delete_subject).
+ *
+ * @param int $attachment_id Object attachment ID.
+ * @return void
+ */
+function axismundi_media_relations_delete_object( int $attachment_id ) : void {
+	global $wpdb;
+	$wpdb->delete( axismundi_media_relations_table(), array( 'object_attachment_id' => (int) $attachment_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 }

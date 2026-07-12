@@ -5,7 +5,9 @@
  * Self-contained: creates its own posts / attachments / user, cleans up in `finally`,
  * exits 0 (all contracts hold) or 1 (regressed). Locks: dedup with nullable URIs,
  * occurrence aggregation, role distinctness, per-provider isolation, empty-replace
- * clears, idempotence, reverse lookup, and the read-access filter.
+ * clears, idempotence, reverse lookup, the read-access filter, the pre-mutation input
+ * guard, predicate/role normalization, and delete_object. (Transaction rollback is
+ * structural — the START/COMMIT/ROLLBACK wrapper — and is NOT exercised here.)
  *
  *   npx wp-env run cli wp eval-file \
  *     wp-content/plugins/axismundi-media-library/tests/audit-relations.php
@@ -92,6 +94,19 @@ try {
 
 	// Reverse lookup: att2 is used in the published post.
 	ax_rel_assert( $ax_results, 'reverse lookup finds att2 usage (admin)', 1 === count( axismundi_media_relations_used_in( $att2, 1 ) ) );
+
+	// Input guard: a bad provider must NOT mutate existing rows (validated before delete).
+	$ax_err = axismundi_media_relations_replace( array( 'post_id' => $pub ), '', array( array( 'role' => 'content', 'object_attachment_id' => $att ) ) );
+	ax_rel_assert( $ax_results, 'invalid provider rejected without mutating', is_wp_error( $ax_err ) && 1 === ax_rel_count( $pub, 'featured_image' ) );
+
+	// Unknown predicate/role normalize to defaults.
+	axismundi_media_relations_replace( array( 'post_id' => $pub ), 'integration', array( array( 'predicate' => 'bogus', 'role' => 'nonsense', 'object_attachment_id' => $att2 ) ) );
+	$ax_intg = axismundi_media_relations_for_subject( $pub, 'integration' );
+	ax_rel_assert( $ax_results, 'unknown predicate/role normalized', 1 === count( $ax_intg ) && 'content' === $ax_intg[0]['role'] && 'as:attachment' === $ax_intg[0]['predicate'] );
+
+	// delete_object removes an object's rows (3b hooks this on attachment delete).
+	axismundi_media_relations_delete_object( $att2 );
+	ax_rel_assert( $ax_results, 'delete_object removes att2 rows', 0 === count( axismundi_media_relations_used_in( $att2, 1 ) ) && 0 === count( axismundi_media_relations_for_subject( $pub, 'integration' ) ) );
 
 	// Read filter: att is now used only by the private post (owned by admin 1).
 	axismundi_media_relations_replace( array( 'post_id' => $priv ), 'block_content', array( array( 'role' => 'content', 'object_attachment_id' => $att ) ) );

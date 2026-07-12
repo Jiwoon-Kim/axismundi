@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -24,8 +24,10 @@ Ownership is the WordPress author (post_author); permission reuses core
 capabilities.
 
 The full specification lives in the plugin's docs/ directory (SPEC, SECURITY,
-ROUTING, COMPATIBILITY, DATA-MODEL, PHASES). Media archives (/media/) arrive in
-Phase 1b.
+ROUTING, COMPATIBILITY, DATA-MODEL, PHASES). Independent mode provides media
+archives at /media/ and /media/{owner}/. Attachment single pages continue to use
+the active theme's normal attachment template hierarchy; Axismundi includes a
+dedicated attachment.html template.
 
 == Installation ==
 
@@ -34,6 +36,21 @@ Phase 1b.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.4 =
+* Add public media archives with scoped visibility filtering. The base is a plain
+  query endpoint that works without pretty permalinks (?ax_media_archive=landing /
+  owner&ax_media_owner={USER_ID}); /media/ and /media/{nicename}/ are pretty
+  aliases. Owner is queried by user ID (nicename accepted on the alias).
+* Add an optional Media page (Settings > Reading) to use an editable Page as a
+  stable media-hub landing.
+* Editable plugin block templates: media-home (landing) and media-author (one
+  user's media; owner = post_author).
+* Add a dynamic media-preview block for attachment Query Loops.
+* Add stored-only creator, copyright, license, reuse, download, sensitivity,
+  content-warning, and location-visibility metadata controls.
+* Keep attachment single-page presentation in the active theme's standard
+  attachment template hierarchy instead of duplicating it in the plugin.
 
 = 0.0.3 =
 * Ownership is now the WordPress author (post_author) as the single source of

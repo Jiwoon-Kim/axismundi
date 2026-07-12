@@ -66,25 +66,41 @@ ActivityPub/JSON-LD/Tombstone endpoint (content negotiation) never collides with
 the human HTML request. Per SPEC.md §3, 0.1.0 **reserves the format but does not
 persist** `object_uri`.
 
-## 3. Archive & folder rewrites
+## 3. Media archives — plain query endpoints are the base
 
-Only archives/folders use custom rewrite; the single page does not.
+The **always-working base is a query string** (it survives when pretty permalinks
+are off, e.g. no `.htaccess`); pretty URLs and an optional Media Page are aliases
+over it. Only archives use custom rewrite; the single page does not (§1).
 
 ```
-/media/                         media landing              (Phase 1)
-/media/{owner}/                 user media archive         (Phase 1)
-/media/{owner}/folder/{path}/   virtual folder / board     (Phase 2)
-/media/search/                  media search               (Phase 2+)
-/media/explore/                 explore feed               (later)
+Base endpoints (always available in Independent mode)
+/?ax_media_archive=landing
+/?ax_media_archive=owner&ax_media_owner={USER_ID}     ← ID (robust); nicename also accepted
+
+Pretty aliases (when a permalink structure is set)
+/media/                    → landing
+/media/{nicename}/         → owner   (nicename resolves to the user)
+/media/{owner}/folder/{path}/   virtual folder / board   (Phase 2)
 ```
 
-- The literal **`folder`** segment prevents `{attachment-id}` / `{folder-slug}`
-  ambiguity under `/media/{owner}/…`.
-- Query vars: `ax_media_archive` (landing|owner|folder|search|explore),
-  `ax_media_owner`, `ax_media_folder_path`.
-- A **pretty alias** `/media/{owner}/{id}/` for the single page is **deferred**;
-  0.1.0 ships the query URL only, removing owner-slug/rewrite risk. If added
-  later, decide the canonical direction (alias→query or query→alias) then.
+- **`ax_media_owner` is a user ID** in the canonical endpoint (nicename changes /
+  collisions never break it); the pretty alias passes a nicename which the plugin
+  resolves (`ctype_digit → by id, else by slug`). Unknown owner → **404**.
+- The pretty single-page alias `/media/{owner}/{id}/` stays deferred; the single
+  canonical remains `/?attachment_id={id}` (§1).
+- Helpers: `axismundi_media_landing_url()`, `axismundi_media_author_url( $user_id )`.
+
+### 3.0 Optional Media Page (Settings > Reading)
+
+A `Media page` selector (option `ax_media_page_id`) lets the site pick an existing
+**published Page** as the media hub. When set, that Page **is** the landing: its
+`/?page_id={id}` URL and pretty permalink render the media grid (the plugin
+reshapes the page request into the landing archive and applies the `media-home`
+template). This gives an editable, stable entry point that works without pretty
+permalinks. The plugin never auto-creates the page; if it is unset, unpublished,
+or deleted, the base/pretty routes are used. Query vars use the user **ID**, not a
+slug, so nothing breaks on rename. `author.html` and normal author queries are
+never touched.
 
 ### 3.1 Reserved slugs (owner-segment collision guard)
 
@@ -100,8 +116,8 @@ plugin setup (or make the base filterable if `media` is already taken).
 
 ## 4. Template selection
 
-The plugin provides working defaults; the theme may override. Never hard-depend
-on the Axismundi theme.
+The plugin provides working defaults for its archive routes; the theme may
+override them. Never hard-depend on the Axismundi theme.
 
 **Attachment single** — extend (do not replace) the core hierarchy:
 
@@ -109,6 +125,11 @@ on the Axismundi theme.
 {mime-subtype}.php → {mime-type}.php → attachment.php →
 single-attachment.php → single.php → singular.php → index.php
 ```
+
+The plugin does not register a duplicate Attachment single template. The active
+theme owns that presentation through the normal hierarchy above. Axismundi ships
+an `attachment.html` block template and enables Attachment pages; another theme
+may provide its own template or use the core fallback.
 
 **Plugin routes (archive/owner/folder/search)** resolution order:
 
@@ -123,9 +144,15 @@ Mechanism: register the plugin's block templates so the Site Editor can edit
 them; select via `template_include` gated on the `ax_media_*` query vars. Plugin
 default templates render standalone (token fallbacks), independent of the theme.
 
-Template set (block templates, theme-overridable by slug):
+Template set (block templates, theme-overridable by slug). These are **custom
+plugin templates**, not core-hierarchy names:
 
 ```
-Media Archive · Media User Archive · Media Folder · Media Search ·
-Media Attachment · (later) Media Explore
+media-home    (landing / all public media)     ← was media-archive
+media-author  (one user's media; owner = post_author)   ← was media-user
+media-folder · media-search · (later) media-explore
 ```
+
+`media-author` deliberately mirrors `post_author` (the owner model). It is a
+*plugin* template selected only for the `ax_media_archive=owner` route — it never
+intercepts core `author.html` or a normal author query.

@@ -35,11 +35,11 @@ function axismundi_media_on_mode_change( $old, $new ) : void {
 	}
 	if ( 'independent' === $new ) {
 		axismundi_media_acquire_attachment_pages();
+		axismundi_media_register_rewrite_rules();
 	} elseif ( 'independent' === $old ) {
 		axismundi_media_release_attachment_pages();
+		axismundi_media_remove_rewrite_rules();
 	}
-	// /media/ archive rewrites arrive in Phase 1b; flush now so the canonical
-	// attachment_link behaviour settles.
 	flush_rewrite_rules( false );
 }
 add_action( 'update_option_' . AXISMUNDI_MEDIA_MODE_OPTION, 'axismundi_media_on_mode_change', 10, 2 );

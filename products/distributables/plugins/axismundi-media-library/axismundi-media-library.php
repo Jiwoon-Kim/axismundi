@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Media Library
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-media-library
  * Description:       Promote WordPress attachments to independent media objects. Independent mode unbinds new uploads and adds visibility controls (public / unlisted / private) with per-surface access guards; Core mode leaves WordPress untouched.
- * Version:           0.0.3
+ * Version:           0.0.4
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -29,6 +29,7 @@ require_once __DIR__ . '/includes/settings.php';
 require_once __DIR__ . '/includes/mode.php';
 require_once __DIR__ . '/includes/visibility.php';
 require_once __DIR__ . '/includes/edit-fields.php';
+require_once __DIR__ . '/includes/archive.php';
 
 /**
  * First activation is non-destructive (docs/SPEC.md §4, docs/COMPATIBILITY.md
@@ -46,6 +47,7 @@ function axismundi_media_activate() : void {
 	// pages option (no option-update event fires on reactivation). ROUTING.md §1.2.
 	if ( axismundi_media_is_independent() ) {
 		axismundi_media_acquire_attachment_pages();
+		axismundi_media_register_rewrite_rules();
 	}
 	flush_rewrite_rules( false );
 }
@@ -61,6 +63,7 @@ register_activation_hook( __FILE__, 'axismundi_media_activate' );
  */
 function axismundi_media_deactivate() : void {
 	axismundi_media_release_attachment_pages();
+	axismundi_media_remove_rewrite_rules();
 	flush_rewrite_rules( false );
 }
 register_deactivation_hook( __FILE__, 'axismundi_media_deactivate' );

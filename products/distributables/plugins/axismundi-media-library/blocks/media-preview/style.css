@@ -1,0 +1,14 @@
+.wp-block-axismundi-media-preview.ax-media-preview {
+	margin: 0;
+	inline-size: 100%;
+}
+
+.wp-block-axismundi-media-preview.ax-media-preview > a {
+	display: block;
+}
+
+.wp-block-axismundi-media-preview.ax-media-preview img {
+	display: block;
+	inline-size: 100%;
+	block-size: auto;
+}

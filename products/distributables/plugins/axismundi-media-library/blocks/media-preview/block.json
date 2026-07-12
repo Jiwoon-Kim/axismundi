@@ -1,0 +1,25 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-preview",
+	"version": "0.1.0",
+	"title": "Media Preview",
+	"category": "theme",
+	"icon": "format-image",
+	"description": "Displays the current Attachment inside a Query Loop.",
+	"textdomain": "axismundi-media-library",
+	"usesContext": [ "postId", "postType" ],
+	"attributes": {
+		"sizeSlug": { "type": "string", "default": "medium_large" },
+		"linkToAttachment": { "type": "boolean", "default": true }
+	},
+	"supports": {
+		"html": false,
+		"align": true,
+		"spacing": { "margin": true }
+	},
+	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./style.css",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

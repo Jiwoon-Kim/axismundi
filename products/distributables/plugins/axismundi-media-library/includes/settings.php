@@ -146,3 +146,48 @@ function axismundi_media_render_settings_page() : void {
 	</div>
 	<?php
 }
+
+/**
+ * Register an optional "Media page" selector on Settings > Reading. When set, the
+ * chosen Page becomes the media hub's stable, editable entry point (works without
+ * pretty permalinks). The plugin never auto-creates it.
+ *
+ * @return void
+ */
+function axismundi_media_register_reading_setting() : void {
+	register_setting(
+		'reading',
+		'ax_media_page_id',
+		array(
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'default'           => 0,
+			'show_in_rest'      => false,
+		)
+	);
+	add_settings_field(
+		'ax_media_page_id',
+		__( 'Media page', 'axismundi-media-library' ),
+		'axismundi_media_reading_field',
+		'reading'
+	);
+}
+add_action( 'admin_init', 'axismundi_media_register_reading_setting' );
+
+/**
+ * Render the Media page selector.
+ *
+ * @return void
+ */
+function axismundi_media_reading_field() : void {
+	wp_dropdown_pages(
+		array(
+			'name'              => 'ax_media_page_id',
+			'echo'              => 1,
+			'show_option_none'  => esc_html__( '— Built-in /media/ route —', 'axismundi-media-library' ),
+			'option_none_value' => '0',
+			'selected'          => (int) get_option( 'ax_media_page_id', 0 ),
+		)
+	);
+	echo '<p class="description">' . esc_html__( 'Optional. A Page to act as the media hub: an editable, stable entry point that works even without pretty permalinks. Only used while Independent mode is on.', 'axismundi-media-library' ) . '</p>';
+}

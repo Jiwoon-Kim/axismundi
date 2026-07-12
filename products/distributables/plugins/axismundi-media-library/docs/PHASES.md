@@ -19,11 +19,16 @@
 ## Phase 1 — Independent Attachment publishing (first public MVP)
 
 **Entry:** Phase 0.
-**Build:** Independent-mode new uploads `post_parent=0` (path-independent);
-`/?attachment_id={id}` canonical + `attachment_link` filter + old-permalink 301;
-`/media/`, `/media/{owner}/` rewrites; Attachment single + user archive templates;
-`public|unlisted|private`; `listed`/`searchable`; rights/sensitivity/GPS fields
-**stored**; GPS default hidden (flag only); file URL immutable.
+**Build:** Independent-mode new uploads `post_parent=0` (path-independent, set
+pre-INSERT); `/?attachment_id={id}` canonical + `attachment_link` filter +
+old-permalink 301; media archives via **plain query endpoints**
+(`?ax_media_archive=landing` / `owner&ax_media_owner={USER_ID}`, always work
+without pretty permalinks) with `/media/`, `/media/{nicename}/` as pretty aliases;
+optional **Media Page** (Settings > Reading) as an editable stable landing;
+`media-home` / `media-author` plugin block templates; core/theme Attachment single
+hierarchy (theme `attachment.html`, not duplicated); `public|unlisted|private`;
+`listed`/`searchable`; rights/sensitivity/GPS fields **stored**; GPS default hidden
+(flag only); file URL immutable.
 **Acceptance (= SECURITY.md §7):**
 - Visibility matrix holds for non-owner/non-editor across HTML single, REST
   single, REST collection, plugin archives, plugin search, media modal.

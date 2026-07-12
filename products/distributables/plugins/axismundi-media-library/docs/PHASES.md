@@ -40,18 +40,35 @@ hierarchy (theme `attachment.html`, not duplicated); `public|unlisted|private`;
 
 ## Phase 2 — Single virtual folder
 
-**Entry:** Phase 1 stable. **Prereq:** resolve per-user top-level folder slug
-collision (two users' sibling folders can share a slug) — via a hidden per-user
-root term **or** an owner-namespaced internal slug, with the clean `/media/{owner}/
-folder/{path}/` shown in the URL. Decide before building the taxonomy.
-**Build:** `ax_media_folder` taxonomy + term meta; single-relation enforcement
-(root = no term); move/rename/delete; folder `public|unlisted|protected|private`;
-`/media/{owner}/folder/{path}/` (admin "Folder", front "Board"); default
-license/sensitivity inheritance; Atom folder feed.
+> **UX benchmark: FileBird** (feel like FileBird, do **not** store like FileBird).
+> FileBird uses two custom tables (`wp_fbv`, `wp_fbv_attachment_folder` with a
+> composite PK) and gates every REST route on `upload_files` only. Axismundi keeps
+> the `ax_media_folder` **taxonomy** (core term relationships) and gates moves on
+> each attachment's own `edit_post`. Borrow FileBird's interaction model, not its
+> schema or permissions.
+
+**Entry:** Phase 1 stable.
+**Prereq (decided):** per-user top-level slug collisions are resolved with a
+**hidden per-user root term** (owner-namespaced internal slug); the clean
+`/media/{owner}/folder/{path}/` is shown in the URL.
+**Build:** `ax_media_folder` taxonomy + term meta (owner, visibility, cover, …);
+**single-relation** enforcement (root = no term; move = one
+`wp_set_object_terms( id, [term|none], append=false )`); create/rename/move; folder
+`public|unlisted|protected|private`; `/media/{owner}/folder/{path}/` (admin
+"Folder", front "Board"); default license/sensitivity inheritance; Atom folder feed.
+FileBird-informed interaction: sidebar tree + breadcrumb, per-folder counts
+(**direct vs recursive** distinct), search/sort/drag-and-drop, right-click
+create/rename/delete, remembered folder, upload-into-selected-folder, folder change
+on the attachment edit panel, edited images inherit the source folder; UI states
+`All media = -1`, `Unfiled = 0`.
 **Acceptance:** an Attachment is in ≤1 folder; folder visibility is independent of
 Attachment visibility (widen never); folder move changes no file/attachment URL;
-folder feed pubDate = `_ax_media_folder_added_at`.
-**Non-goals:** Save/shared; storage mirror.
+**moving an attachment requires `edit_post` on that attachment** (not just
+`upload_files` — the FileBird gap we avoid); deleting a folder **moves its media to
+the root/unfiled**, never deletes media; folder feed pubDate =
+`_ax_media_folder_added_at`.
+**Non-goals:** Save/shared; storage mirror; FileBird importer (compatibility item,
+COMPATIBILITY.md §7).
 
 ## Phase 3 — Protection & used-in index
 

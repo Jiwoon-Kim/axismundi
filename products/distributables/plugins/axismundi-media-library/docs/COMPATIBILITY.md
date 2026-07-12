@@ -107,3 +107,19 @@ Uninstall is distinct from deactivate:
   never re-registered/exposed — see SECURITY.md and the Storage contracts.
 - **Multisite**: out of scope for v0.1 (per-site uploads paths and network policy
   differ); revisit before any multisite claim.
+- **FileBird (and similar media-folder plugins)**: a separate folder system on its
+  own tables (`wp_fbv` / `wp_fbv_attachment_folder`), gated on `upload_files`. When
+  both are active the two folder systems are **independent** — Axismundi's
+  `ax_media_folder` taxonomy and FileBird's tables don't read each other. Document
+  the coexistence; don't fight over the media modal. A **FileBird → ax_media_folder
+  importer** (map `wp_fbv` rows to owner-scoped terms, respecting single-relation
+  and per-attachment `edit_post`) is a **future compatibility item**, not Phase 2.
+
+### 7.1 FileBird as UX benchmark (Phase 2)
+
+Borrow FileBird's **interaction** model (sidebar tree, breadcrumb, direct/recursive
+counts, search/sort/drag-and-drop, right-click actions, remembered folder,
+upload-into-folder, edit-panel folder change, edited-image folder inheritance,
+`All media = -1` / `Unfiled = 0`) — see PHASES.md Phase 2. Do **not** borrow its
+storage (custom tables) or its permission model (`upload_files`-only). Axismundi
+uses the taxonomy and gates moves on each attachment's `edit_post`.

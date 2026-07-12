@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.5
+Stable tag: 0.0.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,13 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.6 =
+* Add Media > Folders for creating, nesting, renaming, deleting, and setting the
+  visibility policy of the current user's virtual folders.
+* Add Media profile links to the Users screen.
+* Add parent and child navigation to folder archives, and keep valid empty media
+  profiles and folders as 200 archives instead of generic 404 pages.
 
 = 0.0.5 =
 * Phase 2a groundwork: the ax_media_folder virtual-folder taxonomy (hierarchical,

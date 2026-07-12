@@ -335,6 +335,31 @@ function axismundi_media_archive_query( WP_Query $query ) : void {
 add_action( 'pre_get_posts', 'axismundi_media_archive_query' );
 
 /**
+ * A valid media collection remains a real archive when it has zero items.
+ * WordPress otherwise treats an empty custom main query as a generic 404.
+ * Missing/private owner and folder routes retain their explicit 404 flags.
+ *
+ * @param bool     $preempt Whether core 404 handling is already preempted.
+ * @param WP_Query $query   Main query.
+ * @return bool
+ */
+function axismundi_media_allow_empty_archive( bool $preempt, WP_Query $query ) : bool {
+	$route = (string) $query->get( 'ax_media_archive' );
+	if (
+		axismundi_media_is_independent()
+		&& in_array( $route, array( 'landing', 'owner', 'folder' ), true )
+		&& ! $query->get( 'ax_media_owner_missing' )
+		&& ! $query->get( 'ax_media_folder_missing' )
+	) {
+		$query->is_404 = false;
+		status_header( 200 );
+		return true;
+	}
+	return $preempt;
+}
+add_filter( 'pre_handle_404', 'axismundi_media_allow_empty_archive', 10, 2 );
+
+/**
  * Turn an unknown owner archive into a real 404 before template selection.
  *
  * @return void
@@ -377,6 +402,7 @@ function axismundi_media_template_content( string $filename ) : string {
 function axismundi_media_register_archive_blocks_and_templates() : void {
 	register_block_type( __DIR__ . '/../blocks/media-preview' );
 	register_block_type( __DIR__ . '/../blocks/media-archive-title' );
+	register_block_type( __DIR__ . '/../blocks/media-folder-navigation' );
 
 	if ( ! axismundi_media_is_independent() || ! function_exists( 'register_block_template' ) ) {
 		return;

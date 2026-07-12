@@ -1,0 +1,18 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-folder-navigation",
+	"version": "0.1.0",
+	"title": "Media Folder Navigation",
+	"category": "theme",
+	"icon": "category",
+	"description": "Displays the parent and child folders for a media folder archive.",
+	"textdomain": "axismundi-media-library",
+	"supports": {
+		"html": false,
+		"align": true,
+		"spacing": { "margin": true, "padding": true }
+	},
+	"render": "file:./render.php",
+	"style": "file:./style.css"
+}

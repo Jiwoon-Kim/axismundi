@@ -1,0 +1,28 @@
+.wp-block-axismundi-media-folder-navigation ul {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	gap: var(--wp--preset--spacing--200, 1rem);
+	padding: 0;
+	list-style: none;
+}
+
+.wp-block-axismundi-media-folder-navigation a {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-block-size: 48px;
+	padding-inline: var(--wp--preset--spacing--200, 1rem);
+	color: inherit;
+	background: var(--wp--preset--color--surface-container-low, #f7f2fa);
+	border-radius: var(--wp--custom--shape--corner--medium, 12px);
+	text-decoration: none;
+}
+
+.wp-block-axismundi-media-folder-navigation .is-parent a {
+	background: transparent;
+	border: 1px solid var(--wp--preset--color--outline-variant, #cac4d0);
+}
+
+.wp-block-axismundi-media-folder-navigation .count {
+	color: var(--wp--preset--color--on-surface-variant, #49454f);
+}

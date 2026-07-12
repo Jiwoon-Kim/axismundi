@@ -8,6 +8,7 @@ defined( 'ABSPATH' ) || exit;
 	<!-- wp:group {"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|300","bottom":"var:preset|spacing|300"}}},"layout":{"type":"default"}} -->
 	<div class="wp-block-group alignwide" style="padding-top:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--300)">
 		<!-- wp:axismundi/media-archive-title {"fontSize":"display-small"} /-->
+		<!-- wp:axismundi/media-folder-navigation /-->
 
 		<!-- wp:query {"query":{"inherit":true},"layout":{"type":"default"}} -->
 		<div class="wp-block-query">

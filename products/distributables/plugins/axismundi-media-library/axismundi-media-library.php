@@ -37,6 +37,7 @@ require_once __DIR__ . '/includes/media-modal.php';
 require_once __DIR__ . '/includes/admin-folders.php';
 require_once __DIR__ . '/includes/feeds.php';
 require_once __DIR__ . '/includes/relations.php';
+require_once __DIR__ . '/includes/relation-providers.php';
 
 /**
  * First activation is non-destructive (docs/SPEC.md §4, docs/COMPATIBILITY.md

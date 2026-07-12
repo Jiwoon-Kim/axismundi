@@ -73,12 +73,17 @@ function axismundi_media_register_folder_routes() : void {
 		array(
 			array(
 				'methods'             => WP_REST_Server::EDITABLE,
-				'callback'            => 'axismundi_media_rest_rename_folder',
+				'callback'            => 'axismundi_media_rest_update_folder',
 				'permission_callback' => 'axismundi_media_rest_can_edit',
 				'args'                => array(
 					'name' => array(
 						'type'     => 'string',
-						'required' => true,
+						'required' => false,
+					),
+					'tier' => array(
+						'type'     => 'string',
+						'required' => false,
+						'enum'     => array( 'inherit', 'public', 'unlisted', 'private' ),
 					),
 				),
 			),
@@ -147,20 +152,38 @@ function axismundi_media_rest_create_folder( WP_REST_Request $request ) {
 }
 
 /**
- * POST /folders/{id} — rename.
+ * POST /folders/{id} — rename and/or change the folder's own visibility tier.
  *
  * @param WP_REST_Request $request Request.
  * @return WP_REST_Response|WP_Error
  */
-function axismundi_media_rest_rename_folder( WP_REST_Request $request ) {
-	$res = axismundi_media_rename_folder(
-		(int) $request['id'],
-		(string) $request->get_param( 'name' )
-	);
-	if ( is_wp_error( $res ) ) {
-		return $res;
+function axismundi_media_rest_update_folder( WP_REST_Request $request ) {
+	$term_id = (int) $request['id'];
+	$name    = $request->get_param( 'name' );
+	$tier    = $request->get_param( 'tier' );
+	if ( null === $name && null === $tier ) {
+		return new WP_Error( 'ax_media_folder_update', __( 'A name or visibility tier is required.', 'axismundi-media-library' ), array( 'status' => 400 ) );
 	}
-	return new WP_REST_Response( array( 'id' => $res ), 200 );
+	if ( null !== $name ) {
+		$res = axismundi_media_rename_folder( $term_id, (string) $name );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+	}
+	if ( null !== $tier ) {
+		$res = axismundi_media_set_folder_tier( $term_id, (string) $tier );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+	}
+	return new WP_REST_Response(
+		array(
+			'id'             => $term_id,
+			'tier'           => axismundi_media_folder_tier( $term_id ),
+			'effective_tier' => axismundi_media_visibility_from_rank( axismundi_media_folder_effective_tier_rank( $term_id ) ),
+		),
+		200
+	);
 }
 
 /**

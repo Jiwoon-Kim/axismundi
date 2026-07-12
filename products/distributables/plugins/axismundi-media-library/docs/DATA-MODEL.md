@@ -49,7 +49,7 @@ reserved, not built now. Ownership transfer itself is a later phase (PHASES.md).
 ### 2.1 Attachment post meta — **written & enforced** in 0.1.0
 
 ```
-_ax_media_visibility          enum     public | unlisted | private   (protected = Phase 3)
+_ax_media_visibility          enum     inherit | public | unlisted | private
 _ax_media_listed              bool     eligible for archives (gated with public)
 _ax_media_searchable          bool     eligible for search (gated with public)
 _ax_media_captured_at         datetime EXIF DateTimeOriginal if present
@@ -116,6 +116,7 @@ Term meta (implemented names; Phase 2a marks the structural ones):
 _ax_media_folder_owner        owner user ID                       (Phase 2a)
 _ax_media_folder_root         hidden per-user root marker = uid   (Phase 2a)
 _ax_media_folder_tier         inherit | public | unlisted | private   (Phase 2a resolver)
+_ax_media_folder_effective_tier_rank  0 | 1 | 2 (derived chain cache; Phase 2a)
 _ax_media_folder_access       open | password                         (Phase 2b gate)
 _ax_media_folder_password_hash                                        (Phase 2b)
 _ax_media_folder_cover_id     _ax_media_folder_sort_mode              (later)
@@ -150,6 +151,12 @@ item_tier = (attachment.visibility === 'inherit')
               : max( rank(attachment.visibility), folder_chain_tier )   // narrow only
 gated     = OR( folder.access === 'password' for folder in chain )
 ```
+
+`_ax_media_folder_effective_tier_rank` is a derived cache of
+`folder_chain_tier`, not an authoring field. Folder create, tier change, move, or
+reparent MUST refresh the affected subtree. Single-item PHP resolution may repair
+a missing cache lazily; collection SQL reads the cache so it never performs a
+recursive parent walk per Attachment.
 
 A folder can only **narrow** an item, never widen it (invariant ⑥). `private` beats
 any password (a password never unlocks `private`). See SECURITY.md §2.3 for the
@@ -231,10 +238,10 @@ Rules: `user_id > 0 && user_can( user_id, 'edit_post', id )` → allow (owner or
 management); else fold the folder chain (§3.1: `item_tier = max(...)`, `gated =
 OR(...)`) and apply SECURITY.md §2.3 order, then the §3 matrix + §2.1 predicates. Permission keys on **post_author**, not creator/copyright. `private` →
 `not_found` (existence hidden). `user_can( 0, … )` is false, so uid 0 never matches
-author 0. Absent meta → legacy defaults (§2.1.1). No global query filter; list
-surfaces inject the `meta_query` (with the `NOT EXISTS OR == value` legacy form)
-via the shared `Visibility_Query` service, and "mine" is `post_author = uid`
-(uid > 0).
+author 0. Absent meta → legacy defaults (§2.1.1). No global query filter; each
+owned list surface opts into the shared visibility SQL, which excludes explicit
+unlisted/private items, derived folder ranks above 0, and `listed=0` while
+preserving rows with absent legacy meta. "Mine" is `post_author = uid` (uid > 0).
 
 ## 7. Identity fields (reserved formats)
 

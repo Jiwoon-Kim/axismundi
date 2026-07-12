@@ -45,8 +45,11 @@ dedicated attachment.html template.
   to the root — never deleted), and move. Moving an attachment requires edit_post on
   THAT attachment, not just upload_files.
 * Attachment edit panel: assign the item's single folder.
-* Not yet wired: folder-aware visibility resolver, folder archives, and the media
-  modal folder filter (following increments).
+* Folder-aware visibility resolver: explicit inherit support, narrow-only tier
+  resolution across the parent chain, and derived effective-rank caches for
+  archive, REST collection, and media-modal queries.
+* Not yet wired: folder archives and the media modal folder-selection UI
+  (following increments).
 
 = 0.0.4 =
 * Add public media archives with scoped visibility filtering. The base is a plain

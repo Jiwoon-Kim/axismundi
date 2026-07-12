@@ -69,6 +69,10 @@ item_tier = attachment == inherit ? folder_chain_tier : max(rank(attachment), fo
 gated     = OR( folder.access == password ) over the chain
 ```
 
+Collection queries consume the derived term meta
+`_ax_media_folder_effective_tier_rank`; folder mutations refresh the affected
+subtree. This is a cache of the formula above, never a separately authored policy.
+
 Per-surface processing order (single surfaces):
 
 ```

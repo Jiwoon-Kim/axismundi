@@ -18,6 +18,9 @@
 defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_MEDIA_FOLDER_TAX = 'ax_media_folder';
+const AXISMUNDI_MEDIA_FOLDER_TIER_META = '_ax_media_folder_tier';
+const AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_TIER_META = '_ax_media_folder_effective_tier_rank';
+const AXISMUNDI_MEDIA_FOLDER_TIER_CACHE_VERSION = 1;
 
 /**
  * Register the folder taxonomy (a passive data container — the plugin owns the UI,
@@ -59,6 +62,173 @@ add_action( 'init', 'axismundi_media_register_folder_taxonomy', 8 );
  */
 function axismundi_media_folder_owner( int $term_id ) : int {
 	return (int) get_term_meta( $term_id, '_ax_media_folder_owner', true );
+}
+
+/**
+ * Convert a visibility tier to its narrowness rank.
+ *
+ * @param string $tier Tier name.
+ * @return int public=0, unlisted=1, private=2.
+ */
+function axismundi_media_visibility_rank( string $tier ) : int {
+	return array_search( $tier, array( 'public', 'unlisted', 'private' ), true ) ?: 0;
+}
+
+/**
+ * Convert a narrowness rank back to a visibility tier.
+ *
+ * @param int $rank Rank.
+ * @return string
+ */
+function axismundi_media_visibility_from_rank( int $rank ) : string {
+	return array( 'public', 'unlisted', 'private' )[ max( 0, min( 2, $rank ) ) ];
+}
+
+/**
+ * A folder's own tier policy. Missing/invalid values inherit from the parent.
+ *
+ * @param int $term_id Folder term ID.
+ * @return string inherit|public|unlisted|private
+ */
+function axismundi_media_folder_tier( int $term_id ) : string {
+	$tier = (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, true );
+	return in_array( $tier, array( 'inherit', 'public', 'unlisted', 'private' ), true ) ? $tier : 'inherit';
+}
+
+/**
+ * Calculate a folder's effective tier rank by walking its parent chain.
+ *
+ * This is the authoritative PHP resolver. The derived term meta written by the
+ * refresh function below makes the same result available to collection SQL.
+ *
+ * @param int $term_id Folder term ID.
+ * @return int
+ */
+function axismundi_media_calculate_folder_effective_tier_rank( int $term_id ) : int {
+	$rank    = 0;
+	$visited = array();
+	while ( $term_id > 0 && ! isset( $visited[ $term_id ] ) ) {
+		$visited[ $term_id ] = true;
+		$tier = axismundi_media_folder_tier( $term_id );
+		if ( 'inherit' !== $tier ) {
+			$rank = max( $rank, axismundi_media_visibility_rank( $tier ) );
+		}
+		$term = get_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX );
+		$term_id = $term instanceof WP_Term ? (int) $term->parent : 0;
+	}
+	return $rank;
+}
+
+/**
+ * The cached effective rank, repairing a missing/invalid cache lazily.
+ *
+ * @param int $term_id Folder term ID.
+ * @return int
+ */
+function axismundi_media_folder_effective_tier_rank( int $term_id ) : int {
+	if ( $term_id <= 0 ) {
+		return 0;
+	}
+	$cached = get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_TIER_META, true );
+	if ( in_array( (string) $cached, array( '0', '1', '2' ), true ) ) {
+		return (int) $cached;
+	}
+	$rank = axismundi_media_calculate_folder_effective_tier_rank( $term_id );
+	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_TIER_META, $rank );
+	return $rank;
+}
+
+/**
+ * Recalculate one folder and, optionally, every descendant.
+ *
+ * @param int  $term_id            Folder term ID.
+ * @param bool $include_descendants Refresh the subtree.
+ * @return void
+ */
+function axismundi_media_refresh_folder_effective_tier( int $term_id, bool $include_descendants = true ) : void {
+	if ( $term_id <= 0 || ! term_exists( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX ) ) {
+		return;
+	}
+	update_term_meta(
+		$term_id,
+		AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_TIER_META,
+		axismundi_media_calculate_folder_effective_tier_rank( $term_id )
+	);
+	if ( ! $include_descendants ) {
+		return;
+	}
+	foreach ( (array) get_term_children( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX ) as $child_id ) {
+		update_term_meta(
+			(int) $child_id,
+			AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_TIER_META,
+			axismundi_media_calculate_folder_effective_tier_rank( (int) $child_id )
+		);
+	}
+}
+
+/**
+ * Keep the derived subtree cache correct when another integration updates a
+ * folder's parent through the taxonomy API.
+ *
+ * @param int $term_id Updated term ID.
+ * @return void
+ */
+function axismundi_media_folder_term_edited( int $term_id ) : void {
+	axismundi_media_refresh_folder_effective_tier( $term_id );
+}
+add_action( 'edited_' . AXISMUNDI_MEDIA_FOLDER_TAX, 'axismundi_media_folder_term_edited', 10, 1 );
+
+/**
+ * Give folders created through the taxonomy API (rather than our service) a
+ * safe authored default and a collection-query cache immediately.
+ *
+ * @param int $term_id Created term ID.
+ * @return void
+ */
+function axismundi_media_folder_term_created( int $term_id ) : void {
+	if ( '' === (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, true ) ) {
+		update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, 'inherit' );
+	}
+	axismundi_media_refresh_folder_effective_tier( $term_id, false );
+}
+add_action( 'created_' . AXISMUNDI_MEDIA_FOLDER_TAX, 'axismundi_media_folder_term_created', 10, 1 );
+
+/**
+ * Keep the cache correct when an integration writes the authored tier meta
+ * directly instead of using axismundi_media_set_folder_tier().
+ *
+ * @param int    $meta_id Meta row ID.
+ * @param int    $term_id Term ID.
+ * @param string $meta_key Meta key.
+ * @return void
+ */
+function axismundi_media_folder_tier_meta_changed( int $meta_id, int $term_id, string $meta_key ) : void {
+	if ( AXISMUNDI_MEDIA_FOLDER_TIER_META === $meta_key ) {
+		axismundi_media_refresh_folder_effective_tier( $term_id );
+	}
+}
+add_action( 'added_term_meta', 'axismundi_media_folder_tier_meta_changed', 10, 3 );
+add_action( 'updated_term_meta', 'axismundi_media_folder_tier_meta_changed', 10, 3 );
+
+/**
+ * Set a folder's own tier and refresh its derived subtree.
+ *
+ * @param int      $term_id Folder term ID.
+ * @param string   $tier    inherit|public|unlisted|private.
+ * @param int|null $user_id Acting user.
+ * @return int|WP_Error Effective rank or error.
+ */
+function axismundi_media_set_folder_tier( int $term_id, string $tier, ?int $user_id = null ) {
+	$user_id = $user_id ?? get_current_user_id();
+	if ( axismundi_media_is_root_term( $term_id ) || ! axismundi_media_can_manage_folder( $term_id, $user_id ) ) {
+		return new WP_Error( 'ax_media_forbidden', __( 'Not allowed.', 'axismundi-media-library' ), array( 'status' => 403 ) );
+	}
+	if ( ! in_array( $tier, array( 'inherit', 'public', 'unlisted', 'private' ), true ) ) {
+		return new WP_Error( 'ax_media_folder_tier', __( 'Invalid folder visibility.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+	}
+	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, $tier );
+	axismundi_media_refresh_folder_effective_tier( $term_id );
+	return axismundi_media_folder_effective_tier_rank( $term_id );
 }
 
 /**
@@ -111,6 +281,8 @@ function axismundi_media_user_root( int $user_id, bool $create = true ) : int {
 	$term_id = (int) $res['term_id'];
 	update_term_meta( $term_id, '_ax_media_folder_root', $user_id );
 	update_term_meta( $term_id, '_ax_media_folder_owner', $user_id );
+	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, 'public' );
+	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_TIER_META, 0 );
 	return $term_id;
 }
 
@@ -147,6 +319,9 @@ function axismundi_media_create_folder( string $name, int $parent = 0, ?int $own
 			return new WP_Error( 'ax_media_folder_parent', __( 'Invalid parent folder.', 'axismundi-media-library' ), array( 'status' => 400 ) );
 		}
 		$actual_parent = $parent;
+		// A hierarchy is one owner's namespace. An editor managing another user's
+		// tree creates children for that tree, not inside the editor's namespace.
+		$owner = axismundi_media_folder_owner( $parent );
 	} else {
 		$actual_parent = axismundi_media_user_root( $owner );
 	}
@@ -156,6 +331,8 @@ function axismundi_media_create_folder( string $name, int $parent = 0, ?int $own
 	}
 	$term_id = (int) $res['term_id'];
 	update_term_meta( $term_id, '_ax_media_folder_owner', $owner );
+	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, 'inherit' );
+	axismundi_media_refresh_folder_effective_tier( $term_id, false );
 	return $term_id;
 }
 
@@ -210,6 +387,7 @@ function axismundi_media_delete_folder( int $term_id, ?int $user_id = null ) {
 	);
 	foreach ( (array) $children as $child_id ) {
 		wp_update_term( (int) $child_id, AXISMUNDI_MEDIA_FOLDER_TAX, array( 'parent' => (int) $term->parent ) );
+		axismundi_media_refresh_folder_effective_tier( (int) $child_id );
 	}
 	$deleted = wp_delete_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX );
 	return is_wp_error( $deleted ) ? $deleted : true;
@@ -335,7 +513,38 @@ function axismundi_media_user_folders( int $user_id ) : array {
 			'parent'          => ( (int) $term->parent === $root ) ? 0 : (int) $term->parent,
 			'count'           => axismundi_media_folder_direct_count( (int) $term->term_id ),
 			'recursive_count' => axismundi_media_folder_recursive_count( (int) $term->term_id ),
+			'tier'            => axismundi_media_folder_tier( (int) $term->term_id ),
+			'effective_tier'  => axismundi_media_visibility_from_rank( axismundi_media_folder_effective_tier_rank( (int) $term->term_id ) ),
 		);
 	}
 	return $out;
 }
+
+/**
+ * One-time cache backfill for folders created before derived ranks existed.
+ *
+ * @return void
+ */
+function axismundi_media_backfill_folder_tier_cache() : void {
+	if ( (int) get_option( 'ax_media_folder_tier_cache_version', 0 ) >= AXISMUNDI_MEDIA_FOLDER_TIER_CACHE_VERSION ) {
+		return;
+	}
+	$roots = get_terms(
+		array(
+			'taxonomy'   => AXISMUNDI_MEDIA_FOLDER_TAX,
+			'hide_empty' => false,
+			'parent'     => 0,
+			'fields'     => 'ids',
+		)
+	);
+	if ( ! is_wp_error( $roots ) ) {
+		foreach ( $roots as $root_id ) {
+			if ( '' === (string) get_term_meta( (int) $root_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, true ) ) {
+				update_term_meta( (int) $root_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, axismundi_media_is_root_term( (int) $root_id ) ? 'public' : 'inherit' );
+			}
+			axismundi_media_refresh_folder_effective_tier( (int) $root_id );
+		}
+	}
+	update_option( 'ax_media_folder_tier_cache_version', AXISMUNDI_MEDIA_FOLDER_TIER_CACHE_VERSION, false );
+}
+add_action( 'init', 'axismundi_media_backfill_folder_tier_cache', 12 );

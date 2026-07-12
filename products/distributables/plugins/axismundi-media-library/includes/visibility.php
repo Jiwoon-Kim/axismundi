@@ -12,14 +12,30 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Effective visibility with legacy-public default.
+ * The Attachment's explicit visibility policy with legacy-public default.
+ *
+ * @param int $post_id Attachment ID.
+ * @return string inherit | public | unlisted | private
+ */
+function axismundi_media_attachment_visibility( int $post_id ) : string {
+	$value = get_post_meta( $post_id, '_ax_media_visibility', true );
+	return in_array( $value, array( 'inherit', 'public', 'unlisted', 'private' ), true ) ? (string) $value : 'public';
+}
+
+/**
+ * Effective visibility after applying the assigned folder chain's narrowest tier.
  *
  * @param int $post_id Attachment ID.
  * @return string public | unlisted | private
  */
 function axismundi_media_effective_visibility( int $post_id ) : string {
-	$value = get_post_meta( $post_id, '_ax_media_visibility', true );
-	return in_array( $value, array( 'public', 'unlisted', 'private' ), true ) ? (string) $value : 'public';
+	$policy      = axismundi_media_attachment_visibility( $post_id );
+	$folder_id   = function_exists( 'axismundi_media_attachment_folder' ) ? axismundi_media_attachment_folder( $post_id ) : 0;
+	$folder_rank = function_exists( 'axismundi_media_folder_effective_tier_rank' )
+		? axismundi_media_folder_effective_tier_rank( $folder_id )
+		: 0;
+	$item_rank = 'inherit' === $policy ? $folder_rank : max( axismundi_media_visibility_rank( $policy ), $folder_rank );
+	return axismundi_media_visibility_from_rank( $item_rank );
 }
 
 /**
@@ -117,11 +133,20 @@ add_filter(
 		// "mine" only applies to a real logged-in user — a logged-out uid of 0
 		// must NOT match author-0 (imported) media.
 		$mine = $uid > 0 ? "{$wpdb->posts}.post_author = {$uid} OR " : '';
-		// Show: my own OR (not unlisted/private/protected AND not listed=0).
-		// Legacy rows (no meta) fall through both NOT INs → included.
+		// Show: my own OR effective public + listed. An item is non-public when
+		// either its explicit policy is unlisted/private OR its assigned folder's
+		// derived chain rank is > 0. Legacy rows and unfiled inherit rows remain
+		// public because they match neither exclusion.
 		$where .= " AND (
 			{$mine}(
-				{$wpdb->posts}.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_ax_media_visibility' AND meta_value IN ('unlisted','private','protected') )
+				{$wpdb->posts}.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_ax_media_visibility' AND meta_value IN ('unlisted','private') )
+				AND {$wpdb->posts}.ID NOT IN (
+					SELECT tr.object_id
+					FROM {$wpdb->term_relationships} AS tr
+					INNER JOIN {$wpdb->term_taxonomy} AS tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'ax_media_folder'
+					INNER JOIN {$wpdb->termmeta} AS tm ON tm.term_id = tt.term_id AND tm.meta_key = '_ax_media_folder_effective_tier_rank'
+					WHERE CAST(tm.meta_value AS UNSIGNED) > 0
+				)
 				AND {$wpdb->posts}.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_ax_media_listed' AND meta_value = '0' )
 			)
 		)"; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Only an int-cast user id and static literals; no external input.

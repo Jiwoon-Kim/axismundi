@@ -36,13 +36,14 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		return $form_fields;
 	}
 
-	$visibility = axismundi_media_effective_visibility( $post->ID );
+	$visibility = axismundi_media_attachment_visibility( $post->ID );
 	$listed     = get_post_meta( $post->ID, '_ax_media_listed', true );
 	$listed     = ( '' === $listed ) ? '1' : $listed;
 	$searchable = get_post_meta( $post->ID, '_ax_media_searchable', true );
 	$searchable = ( '' === $searchable ) ? '1' : $searchable;
 
 	$options = array(
+		'inherit'  => __( 'Use folder visibility', 'axismundi-media-library' ),
 		'public'   => __( 'Public', 'axismundi-media-library' ),
 		'unlisted' => __( 'Unlisted', 'axismundi-media-library' ),
 		'private'  => __( 'Private', 'axismundi-media-library' ),
@@ -56,7 +57,7 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		'label' => __( 'Visibility', 'axismundi-media-library' ),
 		'input' => 'html',
 		'html'  => $select,
-		'helps' => __( 'Public: listed. Unlisted: reachable by link only. Private: owner/editor only.', 'axismundi-media-library' ),
+		'helps' => __( 'Folder visibility can only narrow this setting. Existing media without a saved setting remains public.', 'axismundi-media-library' ),
 	);
 	$form_fields['ax_media_listed'] = array(
 		'label' => __( 'Listed', 'axismundi-media-library' ),
@@ -244,7 +245,7 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 	}
 
 	if ( isset( $attachment['ax_media_visibility'] ) ) {
-		$value = in_array( $attachment['ax_media_visibility'], array( 'public', 'unlisted', 'private' ), true )
+		$value = in_array( $attachment['ax_media_visibility'], array( 'inherit', 'public', 'unlisted', 'private' ), true )
 			? $attachment['ax_media_visibility']
 			: 'public';
 		update_post_meta( $post_id, '_ax_media_visibility', $value );

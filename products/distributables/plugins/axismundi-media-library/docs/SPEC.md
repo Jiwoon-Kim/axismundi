@@ -34,9 +34,12 @@ Later layers (documented as deferred): **Saved Reference**, **Shared folders**,
    this is a plugin-behavior guarantee, not a global one.
 2. Moving an Attachment between virtual folders changes **neither** the file URL
    **nor** the Attachment page URL.
-3. An Attachment has exactly **one owner** and **zero-or-one current virtual
-   folder** (OS "single location" affordance, enforced in the service layer even
-   though the taxonomy is many-to-many).
+3. An Attachment has exactly **one owner** and **one current virtual folder** (OS
+   "single location" affordance; `Unfiled` is a real system folder). This holds at
+   the **canonical owning-instance record** — shared folders are **no exception**,
+   and a federated **replica on another instance is a folder *item*, not a second
+   folder *location*** (see FEDERATED-MEDIA.md §2). Attachment owner / folder owner /
+   uploader stay distinct subjects; a shared folder never transfers ownership.
 4. Saving another user's media creates a **reference (shortcut)**, never a file
    copy and never a new Attachment.
 5. `post_parent` removal is a **user-chosen migration**, never an activation

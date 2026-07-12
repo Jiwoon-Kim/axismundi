@@ -91,11 +91,30 @@ Uninstall is distinct from deactivate:
 ```
 - Default: DO NOT delete _ax_media_* meta, term meta, or provisional tables.
   (Data preservation — a reinstall recovers the full policy state.)
-- Optional: an explicit "Delete all Axismundi Media data on uninstall" toggle
-  (default OFF) for users who want a clean removal.
-- Provide a "restore legacy parents" tool (uses legacy_parent relations) for
-  users who migrated and want to revert before/after uninstall.
+- Plugin deletion MUST NOT automatically purge managed data or uploaded files.
+- A clean-removal/reset tool is deferred until the full data model and migrations
+  are stable. Do not freeze a partial deletion list while later phases are still
+  adding term meta, relations, references, storage state, and federation records.
 ```
+
+### 6.1 Deferred reset contract (post-roadmap stabilization)
+
+The eventual reset is an explicit maintenance operation, not an uninstall side
+effect. It must provide a dry run and separately selectable scopes for settings,
+folders/term relationships, Attachment policy metadata, and future plugin-owned
+tables. Destructive execution requires `manage_options`, a nonce, an explicit
+confirmation, and a database-backup warning.
+
+Reset invariants:
+
+- Never delete Attachment posts, originals, derivatives, or unrelated taxonomy.
+- Never infer or reconstruct old `post_parent` values. A dedicated legacy-parent
+  restore may use the Phase 3 relation index only when that data exists.
+- Remove relationships before terms, then plugin metadata/options/tables in a
+  deterministic order; partial failure must be reportable and safely retryable.
+- Deactivation, plugin-file deletion, and reinstall continue to preserve data.
+- Implement the CLI/service layer first; an administrator Danger Zone UI may wrap
+  the same service only after the deletion inventory has stabilized.
 
 ## 7. Interoperability notes
 
@@ -107,6 +126,14 @@ Uninstall is distinct from deactivate:
   never re-registered/exposed — see SECURITY.md and the Storage contracts.
 - **Multisite**: out of scope for v0.1 (per-site uploads paths and network policy
   differ); revisit before any multisite claim.
+- **Federation / cross-instance (Phase 7)**: shared folders, replicas, and roles are a
+  **plugin extension protocol over ActivityPub**, not standard-AP interop. Full
+  compatibility only between instances running **this plugin at a compatible protocol
+  version** (versioned `axm:` namespace + capability discovery). A generic ActivityPub
+  server sees only standard media objects + `Collection`/`Add`/`Like` (Level 2
+  degradation); other platforms need an adapter (Level 3). Canonical object/folder/
+  actor URIs are the cross-instance identity — never a local attachment ID. See
+  FEDERATED-MEDIA.md §12.
 - **FileBird (and similar media-folder plugins)**: a separate folder system on its
   own tables (`wp_fbv` / `wp_fbv_attachment_folder`), gated on `upload_files`. When
   both are active the two folder systems are **independent** — Axismundi's

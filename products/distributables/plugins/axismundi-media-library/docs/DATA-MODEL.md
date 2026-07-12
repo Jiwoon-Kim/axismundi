@@ -95,14 +95,49 @@ _ax_media_geo_visibility     (public | approximate | hidden)  ← flag only; EXI
 _ax_media_federated          (bool; reserved for Phase 7)
 ```
 
+**Sensitive is state + authority (shape locked now, enforced Phase 4).**
+`_ax_media_sensitive` is a **derived, read-only effective/compat boolean** that
+serializers + UI read; the *authority* record decides who may change it:
+
+```
+_ax_media_sensitive_state   none | self_marked | automated_flagged | moderator_marked | confirmed
+_ax_media_sensitive_set_by  _ax_media_sensitive_set_at   (_ax_media_sensitivity_reason above)
+_ax_media_sensitive_locked  derived: moderator_marked/confirmed ⇒ locked (user cannot clear)
+```
+
+self_marked → user may clear; automated_flagged → appeal only (pending moderation),
+no self-clear; moderator_marked/confirmed → user cannot clear. Caps
+`mark_own_media_sensitive` / `moderate_media_sensitivity` / `override_media_sensitivity`.
+This keeps `_ax_media_sensitive` as a compat value so migration is incremental. See
+SECURITY.md §2.4 and FEDERATED-MEDIA.md §6.
+
+### 2.4 Relation & container schema — **URI-first, provisional (Phase 3/5/7)**
+
+Media relations and containers are keyed on **canonical URIs**, with local IDs as
+optimization pointers (mirrors §2.0 owner-vs-uploader separation). Not a 0.1.x table
+contract — see FEDERATED-MEDIA.md §3, §7.
+
+```
+media relation   subject_uri · predicate(as:attachment|as:image|as:icon|schema:associatedMedia)
+                 · object_uri · object_local_id? · relation_role · origin(local|remote)
+                 · identity_quality · status
+                 → internal index is a SUPERSET of the federated `attachment` projection
+container item   container_id · container_kind(personal_folder|shared_folder|collection)
+                 · relation(location|bookmark) · object_uri · local_attachment_id?
+                 · added_by_actor_uri · added_at · sort · license_at_save/reuse_at_save
+folder member    folder_id · principal(local_user|remote_actor) · actor_uri · role · status
+```
+
 ### 2.3 Options
 
 ```
 ax_media_relationship_mode    core | independent
 ax_media_prev_attachment_pages (stored prior wp_attachment_pages_enabled value)
 ax_media_reserved_slugs        (owner-slug collision guard; ROUTING.md §3.1)
-ax_media_delete_data_on_uninstall (bool, default false)
 ```
+
+No delete-on-uninstall option is reserved. Automatic purge is forbidden; the
+explicit post-roadmap reset contract is defined in COMPATIBILITY.md §6.1.
 
 ## 3. Virtual folders — **Phase 2** (taxonomy exists then, not 0.1.0)
 

@@ -122,6 +122,28 @@ Query implication: list `meta_query` for visibility MUST be
 legacy rows. Independent mode governs **new uploads**; it does not silently
 re-classify existing media (migration is explicit).
 
+### 2.4 Sensitive authority + folder-membership re-check (forward, Phase 4/5/7)
+
+Load-bearing contracts folded from FEDERATED-MEDIA.md (§6, §4, §12); enforced in later
+phases but binding on their design:
+
+- **Sensitive is state + authority, not a free boolean.** A user may clear only
+  `self_marked`; `automated_flagged` is appeal-only; `moderator_marked`/`confirmed`
+  cannot be self-cleared (caps `moderate_media_sensitivity` / `override_media_sensitivity`).
+  DATA-MODEL §2.3. A REST write MUST re-check the authority state, never trust the
+  submitted boolean.
+- **Every folder/media request re-checks membership + capability per request** — never
+  trust a folder/attachment ID alone (the IDOR class that has produced real
+  media-folder-plugin CVEs). Shared-folder ops verify the actor's active membership,
+  role power, and per-attachment `edit_post`.
+- **Admin cross-user access is a separate capability**, not `manage_options`:
+  `view_all_media_folders` / `manage_all_media_folders` / `moderate_media`. Viewing
+  another user's private folder shows an explicit badge and writes an audit-log entry
+  (`actor · folder/object · action · timestamp`).
+- **Federated inputs are untrusted**: a received `attachment`/replica is honored only
+  when the remote object declares it and HTTP-signature/actor/membership verify;
+  shadow attachments are gated (FEDERATED-MEDIA.md §9).
+
 ## 3. Access matrix (acceptance contract)
 
 Result for a **non-owner, non-editor** requester unless noted. "single by id"

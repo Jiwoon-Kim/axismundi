@@ -523,8 +523,9 @@ function axismundi_media_render_mrss_feed() : void {
 }
 
 /**
- * Emit one Media RSS <item>. Sensitive items get a thumbnail + player link + rating
- * but no auto-rendering enclosure / full media:content.
+ * Emit one Media RSS <item>. Sensitive items get only a player link + rating +
+ * warning description — NO enclosure, media:content, or media:thumbnail, so a reader
+ * never auto-renders the media (not even a small thumbnail).
  *
  * @param WP_Post                                   $post Attachment.
  * @param array{scope:string,owner:int,folder:int} $ctx  Scope.

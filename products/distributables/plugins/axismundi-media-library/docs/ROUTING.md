@@ -1,38 +1,81 @@
 # Axismundi Media Library — Routing & Templates
 
-> Status: **Living specification. Attachment single routing is implemented; archives remain Phase 1b.** See SPEC.md §3 (identity) and SECURITY.md
-> §4.1 (the HTML `template_redirect` guard) — this doc defines how requests reach
-> that guard and which template renders.
+> Status: **Living specification. Phase 1 single + archives implemented on the plain
+> query base; the pretty `/media/…` scheme below is the Phase 2 target.** See
+> SPEC.md §3 (identity) and SECURITY.md §4.1 (the HTML `template_redirect` guard) —
+> this doc defines how requests reach that guard and which template renders.
 
-## 1. Attachment single: use the core query URL
+## 0. Object URLs vs Collection URLs
 
-**Phase 1 canonical Attachment page = `/?attachment_id={id}`.** This is already a
-WordPress-understood single-attachment request, so Phase 1 needs **no bespoke
-rewrite** for the single page and inherits `is_attachment()`,
-`get_queried_object_id()`, and the MIME template hierarchy.
+Two namespaces under `/media/`, kept deliberately distinct so an **object** (one
+media item) can never be confused with a **collection** (a browse surface), and so
+Drive-style folders and Openverse-style objects grow in the same space without
+colliding.
 
-- Use **`attachment_id`** (numeric), never **`attachment`** (which resolves a
-  mutable, collision-prone `post_name` slug).
-- `get_attachment_link()` already returns `/?attachment_id=n` on plain-permalink
-  sites; we make it the canonical everywhere.
+```
+OBJECT (one item — identity is attachment_id)
+  /?attachment_id={id}              plain, always-canonical base
+  /media/image/{id}/                pretty, type = image
+  /media/video/{id}/                pretty, type = video
+  /media/audio/{id}/                pretty, type = audio
+  /media/file/{id}/                 pretty, type = other
 
-### 1.1 Canonical redirect handling
+COLLECTION (a browse surface)
+  /media/                                              home
+  /media/author/{nicename}/                            author media archive
+  /media/author/{nicename}/folder/{path}/              author folder / board
+```
 
-On pretty-permalink sites, `redirect_canonical()` may 301 `/?attachment_id=123`
-to `get_attachment_link(123)`. To keep the query URL canonical:
+**Reserved first segments under `/media/`:** `image`, `video`, `audio`, `file`,
+`author`, `folder`, `search`, `feed`. Because every user lives under
+`/media/author/{nicename}/`, owner nicenames no longer collide with these reserved
+words or with folder paths — the earlier owner-segment collision guard is gone.
 
-1. Filter **`attachment_link`** to always return `/?attachment_id={id}` (in
-   Independent mode).
-2. Verify `redirect_canonical` then targets that same URL (it derives its target
-   from `get_attachment_link`, so forcing the filter is sufficient — do not add a
-   competing manual redirect).
+The parallel is WordPress Photo Directory (`/photos/photo/{object}`,
+`/photos/author/{user}`, `/photos/`).
 
-Old/previous attachment permalinks → **301 to the canonical** `/?attachment_id={id}`.
+## 1. Object (single) — identity is `attachment_id`
+
+**The identity is always the numeric `attachment_id`.** `image|video|audio|file` is
+only a **display / routing hint** derived from the file's MIME family:
+
+```
+image/*  → image      video/*  → video      audio/*  → audio      (anything else) → file
+```
+
+Two forms, same object:
+
+```
+pretty permalinks ON   → /media/{type}/{id}/
+pretty permalinks OFF  → /?attachment_id={id}    (the WordPress-native single request)
+```
+
+- Use **`attachment_id`** (numeric), never **`attachment`** (a mutable, collision-
+  prone `post_name` slug).
+- `attachment_link` is filtered (Independent mode): pretty → `/media/{type}/{id}/`,
+  plain → `/?attachment_id={id}`. On plain-permalink sites the query URL stays
+  canonical; wp-env (no `.htaccess`) exercises exactly that path.
+
+### 1.1 Canonical redirects
+
+- **Wrong type in the URL** (`/media/video/192/` for an image) → **301** to the
+  correct `/media/image/192/`. The id is authoritative; the type segment is
+  corrected, never trusted.
+- **MIME family changed** (a file replaced so image→video) → the old type URL
+  **301**s to the new canonical type URL. The `attachment_id` — and therefore the
+  object's identity, owner, and folder — is unchanged; only the presentational type
+  segment moves.
+- Old/previous attachment permalinks (`?attachment=slug`, legacy pretty) → **301**
+  to the current canonical (pretty `/media/{type}/{id}/` or plain
+  `/?attachment_id={id}`).
+- On pretty sites `redirect_canonical()` derives its target from
+  `get_attachment_link()`, so forcing the `attachment_link` filter is sufficient —
+  do not add a competing manual redirect.
 
 ### 1.2 `wp_attachment_pages_enabled` ownership
 
-Modern core can route attachment requests to the **file URL** when attachment
-pages are disabled. Independent mode requires attachment pages **on**.
+Modern core can route attachment requests to the **file URL** when attachment pages
+are disabled. Independent mode requires attachment pages **on**.
 
 Policy (**A**) — owned change with a restore guard. When Independent mode is
 enabled, store three things:
@@ -45,114 +88,109 @@ ax_media_attach_pages_owned  true while we hold the option
 
 - **Restore only if we still own it**: on Independent-mode-off / deactivation,
   restore `prev` **only when the current option value equals `set`**. If another
-  admin/plugin changed it in the meantime (current ≠ set), leave it and drop
-  ownership — never clobber their change.
+  admin/plugin changed it (current ≠ set), leave it and drop ownership.
 - **Re-acquire on reactivation**: reactivating with Independent mode still on
-  re-reads the current value into `prev`, re-enables pages, and re-takes
-  ownership (deactivation may have restored it to off).
-
-The activation UI states this explicitly; the plugin never silently overrides a
-site/plugin policy.
+  re-reads the current value into `prev`, re-enables pages, and re-takes ownership.
 
 ## 2. `object_uri` endpoint (reserved, not Phase 1)
 
 ```
 object_uri (federation/identity)  /?ax_media_object={id}    ← Phase 7, reserved
-HTML canonical (human)            /?attachment_id={id}      ← Phase 1
+HTML canonical (human)            /media/{type}/{id}/  |  /?attachment_id={id}
 ```
 
 `ax_media_object` is kept **distinct** from `attachment_id` so a future
-ActivityPub/JSON-LD/Tombstone endpoint (content negotiation) never collides with
-the human HTML request. Per SPEC.md §3, 0.1.0 **reserves the format but does not
+ActivityPub/JSON-LD/Tombstone endpoint (content negotiation) never collides with the
+human HTML request. Per SPEC.md §3, 0.1.0 **reserves the format but does not
 persist** `object_uri`.
 
-## 3. Media archives — plain query endpoints are the base
+## 3. Collection archives — plain query endpoints are the base
 
 The **always-working base is a query string** (it survives when pretty permalinks
-are off, e.g. no `.htaccess`); pretty URLs and an optional Media Page are aliases
-over it. Only archives use custom rewrite; the single page does not (§1).
+are off, e.g. no `.htaccess`); the pretty `/media/…` URLs and the optional Media
+Page are aliases over it. Only collections use custom rewrite; the single object
+inherits the core attachment query (§1).
 
 ```
 Base endpoints (always available in Independent mode)
 /?ax_media_archive=landing
-/?ax_media_archive=owner&ax_media_owner={USER_ID}     ← ID (robust); nicename also accepted
+/?ax_media_archive=owner&ax_media_owner={USER_ID}
+/?ax_media_archive=folder&ax_media_owner={USER_ID}&ax_media_folder={TERM_ID}
 
 Pretty aliases (when a permalink structure is set)
-/media/                    → landing
-/media/{nicename}/         → owner   (nicename resolves to the user)
-/media/{owner}/folder/{path}/   virtual folder / board   (Phase 2)
+/media/                                      → landing
+/media/author/{nicename}/                    → owner   (nicename resolves to the user)
+/media/author/{nicename}/folder/{path}/      → folder  (path resolves within the owner's tree)
 ```
 
 - **`ax_media_owner` is a user ID** in the canonical endpoint (nicename changes /
   collisions never break it); the pretty alias passes a nicename which the plugin
   resolves (`ctype_digit → by id, else by slug`). Unknown owner → **404**.
-- The pretty single-page alias `/media/{owner}/{id}/` stays deferred; the single
-  canonical remains `/?attachment_id={id}` (§1).
-- Helpers: `axismundi_media_landing_url()`, `axismundi_media_author_url( $user_id )`.
+- **`ax_media_folder` is a folder term ID** in the canonical endpoint; the pretty
+  alias resolves the `{path}` within the owner's folder tree (by name segment, not
+  global slug — two users may both have `travel/`). Unknown folder → **404**.
+- Helpers: `axismundi_media_landing_url()`, `axismundi_media_author_url( $user_id )`,
+  `axismundi_media_folder_url( $user_id, $term_id )`.
 
 ### 3.0 Optional Media Page (Settings > Reading)
 
 A `Media page` selector (option `ax_media_page_id`) lets the site pick an existing
-**published Page** as the media hub. When set, that Page **is** the landing: its
-`/?page_id={id}` URL and pretty permalink render the media grid (the plugin
-reshapes the page request into the landing archive and applies the `media-home`
-template). This gives an editable, stable entry point that works without pretty
-permalinks. The plugin never auto-creates the page; if it is unset, unpublished,
-or deleted, the base/pretty routes are used. Query vars use the user **ID**, not a
-slug, so nothing breaks on rename. `author.html` and normal author queries are
-never touched.
+**published Page** as the media home. When set, that Page **is** the landing: its
+`/?page_id={id}` URL and pretty permalink render the media grid (the plugin reshapes
+the page request into the landing archive and applies the `media-home` template).
+This gives an editable, stable entry point that works without pretty permalinks. The
+plugin never auto-creates the page; if it is unset, unpublished, or deleted, the
+base/pretty routes are used. `author.html` and normal author queries are never
+touched.
 
-### 3.1 Reserved slugs (owner-segment collision guard)
+### 3.1 `/media/` base collision
 
-Owner nicenames MUST NOT equal a reserved segment; validate on profile
-save / block the media profile for reserved names:
-
-```
-media, explore, search, o, feed, folder, objects, ax_media_object, wp-admin
-```
-
-`/media/` base also collides with a same-named page/category/tag → reserve on
-plugin setup (or make the base filterable if `media` is already taken).
+The `/media/` base can still collide with a same-named page/category/tag → reserve
+on plugin setup (or make the base filterable if `media` is already taken). Per-user
+segments no longer need guarding — they live under `/media/author/`.
 
 ## 4. Template selection
 
-The plugin provides working defaults for its archive routes; the theme may
-override them. Never hard-depend on the Axismundi theme.
+The plugin provides working defaults for its routes; the theme may override them.
+Never hard-depend on the Axismundi theme.
 
-**Attachment single** — extend (do not replace) the core hierarchy:
+**Object (attachment single)** — extend (do not replace) the core hierarchy. The
+type segment does not need a bespoke single template; use the core MIME hierarchy
+for type-specific design:
 
 ```
 {mime-subtype}.php → {mime-type}.php → attachment.php →
 single-attachment.php → single.php → singular.php → index.php
 ```
 
-The plugin does not register a duplicate Attachment single template. The active
-theme owns that presentation through the normal hierarchy above. Axismundi ships
-an `attachment.html` block template and enables Attachment pages; another theme
-may provide its own template or use the core fallback.
+So `image.html` / `video.html` / `audio.html` cover per-type presentation while the
+identity/URL stays `attachment_id`. The plugin does not register a duplicate
+attachment single template; Axismundi ships `attachment.html` and enables attachment
+pages. A different theme may provide its own or use the core fallback.
 
-**Plugin routes (archive/owner/folder/search)** resolution order:
-
-```
-1. Site Editor DB customization (wp_template)         ← user edits win
-2. Active theme block template of the same slug        ← theme override
-3. Plugin default block template (registered)          ← ships working
-4. Core fallback (index.html / archive.html)           ← safety net
-```
-
-Mechanism: register the plugin's block templates so the Site Editor can edit
-them; select via `template_include` gated on the `ax_media_*` query vars. Plugin
-default templates render standalone (token fallbacks), independent of the theme.
-
-Template set (block templates, theme-overridable by slug). These are **custom
-plugin templates**, not core-hierarchy names:
+**Collection routes** resolution order:
 
 ```
-media-home    (landing / all public media)     ← was media-archive
-media-author  (one user's media; owner = post_author)   ← was media-user
-media-folder · media-search · (later) media-explore
+1. Site Editor DB customization (wp_template)          ← user edits win
+2. Active theme block template of the same slug         ← theme override
+3. Plugin default block template (registered)           ← ships working
+4. Core fallback (index.html / archive.html)            ← safety net
 ```
 
-`media-author` deliberately mirrors `post_author` (the owner model). It is a
-*plugin* template selected only for the `ax_media_archive=owner` route — it never
+Mechanism: register the plugin's block templates so the Site Editor can edit them;
+select via `template_include` gated on the `ax_media_*` query vars. Plugin defaults
+render standalone (token fallbacks), independent of the theme.
+
+Template set (block templates, theme-overridable by slug) — **custom plugin
+templates**, not core-hierarchy names:
+
+```
+media-home    (landing / all public media)
+media-author  (one user's media; owner = post_author)
+media-folder  (one folder / board)
+media-search · (later) media-explore
+```
+
+`media-author` deliberately mirrors `post_author` (the owner model). It is a *plugin*
+template selected only for the `ax_media_archive=owner|folder` routes — it never
 intercepts core `author.html` or a normal author query.

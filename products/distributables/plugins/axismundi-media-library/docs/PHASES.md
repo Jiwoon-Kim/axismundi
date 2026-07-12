@@ -50,31 +50,42 @@ hierarchy (theme `attachment.html`, not duplicated); `public|unlisted|private`;
 **Entry:** Phase 1 stable.
 **Prereq (decided):** per-user top-level slug collisions are resolved with a
 **hidden per-user root term** (owner-namespaced internal slug); the clean
-`/media/{owner}/folder/{path}/` is shown in the URL.
-**Build:** `ax_media_folder` taxonomy + term meta (owner, visibility, cover, …);
+`/media/author/{owner}/folder/{path}/` is shown in the URL (ROUTING.md §0).
+
+**Phase 2a — structure + tier resolver.** `ax_media_folder` taxonomy + term meta
+(`_ax_media_folder_owner`, `_ax_media_folder_root`, `_ax_media_folder_tier`);
 **single-relation** enforcement (root = no term; move = one
-`wp_set_object_terms( id, [term|none], append=false )`); create/rename/move; folder
-`public|unlisted|protected|private`; `/media/{owner}/folder/{path}/` (admin
-"Folder", front "Board"); default license/sensitivity inheritance; Atom folder feed.
-FileBird-informed interaction: sidebar tree + breadcrumb, per-folder counts
-(**direct vs recursive** distinct), search/sort/drag-and-drop, right-click
-create/rename/delete, remembered folder, upload-into-selected-folder, folder change
-on the attachment edit panel, edited images inherit the source folder; UI states
-`All media = -1`, `Unfiled = 0`.
-**Acceptance:** an Attachment is in ≤1 folder; folder visibility is independent of
-Attachment visibility (widen never); folder move changes no file/attachment URL;
-**moving an attachment requires `edit_post` on that attachment** (not just
-`upload_files` — the FileBird gap we avoid); deleting a folder **moves its media to
+`wp_set_object_terms( id, [term|none], append=false )`); create / rename / move /
+delete-to-root; direct vs recursive counts; service + REST — **moving an attachment
+requires `edit_post` on that attachment** (not just `upload_files`, the FileBird gap
+we avoid). Then the **folder-aware visibility resolver**: tier `public=0 < unlisted=1
+< private=2`, `item_tier = max(chain)` with attachment `inherit` deferring to the
+chain (SECURITY.md §2.3, DATA-MODEL §3.1) — wired into the archive / REST collection
+/ media-modal queries. `/media/author/{owner}/folder/{path}/` (admin "Folder", front
+"Board"). *(taxonomy + CRUD service + REST shipped in v0.0.5.)*
+
+**Phase 2b — password gate + UX.** Folder `access = password` (hashed
+`wp_hash_password`), challenge cookie, folder-archive + attachment-single gate
+(owner/`edit_post` bypass; `private` beats any password). FileBird-informed
+interaction: sidebar tree + breadcrumb, search/sort/drag-and-drop, right-click
+create/rename/delete, remembered folder, upload-into-selected-folder, edited images
+inherit the source folder; UI states `All media = -1`, `Unfiled = 0`; default
+license/sensitivity inheritance; Atom folder feed; the move-confirm warning when an
+`inherit` item's effective visibility changes (e.g. Public → Private).
+
+**Acceptance:** an Attachment is in ≤1 folder; folders **narrow never widen** the
+effective visibility (invariant ⑥); `private` is not unlocked by a folder password;
+folder move changes no file/attachment URL; deleting a folder **moves its media to
 the root/unfiled**, never deletes media; folder feed pubDate =
 `_ax_media_folder_added_at`.
 **Non-goals:** Save/shared; storage mirror; FileBird importer (compatibility item,
-COMPATIBILITY.md §7).
+COMPATIBILITY.md §7); per-attachment password (use a one-item password folder).
 
 ## Phase 3 — Protection & used-in index
 
 **Entry:** Phase 2.
-**Build:** `protected` visibility + folder password (hashed, `wp_hash_password`);
-per-Attachment access policy; **`wp_ax_media_relations`** (finalize provisional
+**Build:** *(folder password moved to Phase 2b.)* Per-Attachment access policy
+refinements; **`wp_ax_media_relations`** (finalize provisional
 schema) + block-content scan (featured/gallery/image/file/audio/video), incremental
 update on save, full re-index tool; legacy_parent migration executes here (with
 preview/rollback from Phase 0); "used in" panel + delete-warning.

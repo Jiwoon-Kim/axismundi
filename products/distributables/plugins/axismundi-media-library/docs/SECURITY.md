@@ -42,15 +42,49 @@ State model stays uniform: **`post_status = inherit` for all Attachments**; no
 
 ## 2. Visibility levels
 
+Attachment visibility is `inherit | public | unlisted | private`. `protected`
+(password) is **not** an attachment level — it is a folder access gate (§2.3), so a
+single item that needs a password goes in a one-item password folder. This keeps
+per-item auth/cookies/forms out of the model.
+
 | Level | Meaning |
 |---|---|
+| `inherit` | take the effective tier from the folder chain (§2.3); the default for uploads made **into** a folder |
 | `public` | page + REST single; **eligible** for lists/search/feed (gated by `listed`/`searchable`, see predicates) |
 | `unlisted` | page + REST single reachable by direct id; excluded from lists/search/feed/sitemap **regardless of `listed`/`searchable`** |
-| `protected` | password/permission challenge before the page; excluded from public lists & oEmbed (**Phase 3**) |
 | `private` | owner + `edit_others_posts` only; excluded from every public surface |
 
 Owner always sees their own media at every level. `edit_others_posts` holders
-(editors/admins) see everything.
+(editors/admins) see everything, and **bypass the password gate** (management).
+
+### 2.3 Folder visibility — tier + gate, and processing order (Phase 2)
+
+Folders narrow, never widen (invariant ⑥). Two orthogonal dimensions (DATA-MODEL
+§3.1): a linear **tier** `public=0 < unlisted=1 < private=2` and an orthogonal
+**access** gate `open | password`. Resolution walks the whole folder chain:
+
+```
+folder_chain_tier = max( rank(folder.tier), skipping inherit; empty → public )
+item_tier = attachment == inherit ? folder_chain_tier : max(rank(attachment), folder_chain_tier)
+gated     = OR( folder.access == password ) over the chain
+```
+
+Per-surface processing order (single surfaces):
+
+```
+1. owner / edit_post holder            → allow (also bypasses the password gate)
+2. item_tier == private                → not_found (404)   (private beats any password)
+3. gated                               → password challenge (Phase 2b)
+4. item_tier == unlisted               → single allowed; excluded from archive/search/feed
+5. public                              → public
+```
+
+List/archive/search/feed surfaces use `item_tier` in the same way (only tier 0 =
+public is listed, gated by `listed`/`searchable`); a gated folder's items are never
+listed publicly. **Phase split:** Phase 2a implements the tier resolver
+(public/unlisted/private, chain `max`) across the archive/REST/modal queries; Phase
+2b adds the password hash, challenge cookie, and the folder + attachment-single
+gate.
 
 ### 2.1 Predicates (fix `public` vs `listed`/`searchable`)
 
@@ -88,12 +122,15 @@ re-classify existing media (migration is explicit).
 Result for a **non-owner, non-editor** requester unless noted. "single by id"
 means a direct `/?attachment_id={id}` or `/wp/v2/media/{id}` request.
 
-| Surface | public | unlisted | protected (P3) | private |
+"gated (P2b)" = a `password` folder in the chain (an orthogonal gate on top of the
+tier, §2.3), not a fourth tier. `private` is unaffected by the gate.
+
+| Surface | public | unlisted | gated (P2b) | private |
 |---|---|---|---|---|
 | HTML single (`/?attachment_id={id}`) | 200 | 200 | challenge → 200/401 | **404** |
 | REST single (`GET /wp/v2/media/{id}`) | 200 | 200 | 401/403 | **404** |
 | REST collection (`GET /wp/v2/media`) | listed | **omitted** | omitted | **omitted** |
-| Plugin archive `/media/`, `/media/{owner}/`, folder | listed | omitted | omitted | omitted |
+| Plugin archive `/media/`, `/media/author/{owner}/`, `.../folder/{path}/` | listed | omitted | omitted | omitted |
 | Plugin media search | listed | omitted | omitted | omitted |
 | Feed (Phase 2) | included | omitted | omitted | omitted |
 | Admin media modal (other user) | shown | **omitted** | **omitted** | **omitted** |

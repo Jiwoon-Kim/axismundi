@@ -110,14 +110,50 @@ ax_media_delete_data_on_uninstall (bool, default false)
 taxonomy: ax_media_folder   hierarchical: true   object_type: attachment
 ```
 
-Term meta:
+Term meta (implemented names; Phase 2a marks the structural ones):
 
 ```
-_ax_media_folder_owner_id        _ax_media_folder_visibility     (public|unlisted|protected|private)
-_ax_media_folder_password_hash   _ax_media_folder_cover_id       _ax_media_folder_sort_mode
-_ax_media_folder_default_license _ax_media_folder_default_reuse_policy
-_ax_media_folder_default_sensitive  _ax_media_folder_feed_enabled
+_ax_media_folder_owner        owner user ID                       (Phase 2a)
+_ax_media_folder_root         hidden per-user root marker = uid   (Phase 2a)
+_ax_media_folder_tier         inherit | public | unlisted | private   (Phase 2a resolver)
+_ax_media_folder_access       open | password                         (Phase 2b gate)
+_ax_media_folder_password_hash                                        (Phase 2b)
+_ax_media_folder_cover_id     _ax_media_folder_sort_mode              (later)
+_ax_media_folder_default_license _ax_media_folder_default_reuse_policy (later)
+_ax_media_folder_default_sensitive  _ax_media_folder_feed_enabled     (later)
 ```
+
+**Per-user hidden root** — each user's top-level folders are parented to a hidden
+root term (`_ax_media_folder_root = uid`) so two users can both have a top-level
+`Travel` (WordPress term names collide only within the same parent). The root is
+never shown or assignable.
+
+### 3.1 Folder visibility — tier + gate (narrow-only)
+
+Two orthogonal dimensions (do **not** collapse into one linear scale):
+
+```
+tier   (discovery/reach, linear):   public = 0  <  unlisted = 1  <  private = 2
+access (authentication, orthogonal): open | password
+```
+
+Attachment visibility gains an explicit `inherit` value; `protected` is **folder-
+only** (an attachment that needs a password goes in a one-item password folder —
+no per-item password/cookie/form). Effective resolution walks the whole folder
+chain root→assigned:
+
+```
+folder_chain_tier = max( rank(folder.tier) for folder in chain, skipping inherit )
+                    ( empty / all-inherit chain → public/0 )
+item_tier = (attachment.visibility === 'inherit')
+              ? folder_chain_tier
+              : max( rank(attachment.visibility), folder_chain_tier )   // narrow only
+gated     = OR( folder.access === 'password' for folder in chain )
+```
+
+A folder can only **narrow** an item, never widen it (invariant ⑥). `private` beats
+any password (a password never unlocks `private`). See SECURITY.md §2.3 for the
+per-surface processing order.
 
 Attachment↔folder relation on the Attachment (Phase 2):
 
@@ -185,13 +221,15 @@ where it calls this, per SECURITY.md §4):
 resolve( attachment_id, user_id ) →
   input:  owner = post_author,
           visibility = _ax_media_visibility ?? public (legacy default),
-          (Phase 3) protected-challenge session
+          (Phase 2) folder chain → folder_chain_tier + gated  (§3.1),
+          (Phase 2b) password-challenge session
   output: allow | not_found(404) | challenge     (+ listed/searchable for list surfaces)
 ```
 
 Rules: `user_id > 0 && user_can( user_id, 'edit_post', id )` → allow (owner or
-`edit_others_posts`, via core cap mapping); else per SECURITY.md §3 matrix + §2.1
-predicates. Permission keys on **post_author**, not creator/copyright. `private` →
+`edit_others_posts`, via core cap mapping — this also bypasses the password gate for
+management); else fold the folder chain (§3.1: `item_tier = max(...)`, `gated =
+OR(...)`) and apply SECURITY.md §2.3 order, then the §3 matrix + §2.1 predicates. Permission keys on **post_author**, not creator/copyright. `private` →
 `not_found` (existence hidden). `user_can( 0, … )` is false, so uid 0 never matches
 author 0. Absent meta → legacy defaults (§2.1.1). No global query filter; list
 surfaces inject the `meta_query` (with the `NOT EXISTS OR == value` legacy form)

@@ -52,7 +52,8 @@ dedicated attachment.html template.
   `/media/author/{owner}/`, and owner-scoped folder archives; plain query
   endpoints remain the always-working base.
 * Add the editable media-folder block template and dynamic archive-title block.
-* Not yet wired: the media modal folder-selection UI (following increment).
+* Add the Media Library folder filter (All media, Unfiled, and the current
+  user's folder tree). New uploads inherit the folder selected in the picker.
 
 = 0.0.4 =
 * Add public media archives with scoped visibility filtering. The base is a plain

@@ -32,6 +32,7 @@ require_once __DIR__ . '/includes/edit-fields.php';
 require_once __DIR__ . '/includes/archive.php';
 require_once __DIR__ . '/includes/folders.php';
 require_once __DIR__ . '/includes/folder-rest.php';
+require_once __DIR__ . '/includes/media-modal.php';
 
 /**
  * First activation is non-destructive (docs/SPEC.md §4, docs/COMPATIBILITY.md

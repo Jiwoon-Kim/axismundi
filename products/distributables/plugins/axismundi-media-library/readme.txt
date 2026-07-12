@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.8
+Stable tag: 0.0.12
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,60 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.12 =
+* Add Atom feeds for three scopes: Home (/?ax_media_feed=home), Author
+  (&ax_media_owner=), and Folder (&ax_media_folder=), plus pretty /media/…/feed/atom/
+  aliases. One shared, strict-public query service backs all three.
+* Feeds emit only public + listed + ungated media; unlisted, private, and
+  password-gated items/folders never appear, and a non-public folder feed 404s.
+* Entry identity is the stable /?attachment_id={id} across scopes; folder feeds order
+  and date entries by when the item was added to the folder, Home/Author by publish
+  date. Each archive advertises its feed via a <head> discovery link.
+* Folder feeds are ON by default (like a category feed). A public folder can opt out
+  via a "Feed" checkbox on Media > Folders (_ax_media_folder_feed_enabled = 0);
+  non-public or opted-out folders 404 and drop their discovery link.
+* Add a Media RSS (media:content / media:thumbnail) sibling feed at the same scopes.
+  Feeds serve an intermediate derivative (medium_large), never the original, and add
+  the item's folder as a category (Atom <category> / media:category). Sensitive items
+  stay in the feed but are marked (Atom sensitivity category + content-warning
+  summary; media:rating + media:description) and are NOT given an auto-rendering
+  enclosure or real thumbnail — an attachment-page link carries them instead.
+
+= 0.0.11 =
+* Rebuild the Media Library folder sidebar on FileBird's proven layout: it is now a
+  flex sibling of #wpbody-content (sticky) instead of an absolutely positioned
+  element inside the attachments browser. This removes the content-overlap bug and
+  makes the sidebar work in BOTH grid and list view — list mode had no folder tree
+  before.
+* List view filters via ?ax_media_folder= links + a server-side query filter; grid
+  view drives the existing wp.media dropdown; the media modal keeps its dropdown.
+* Add a folder-path breadcrumb above the Media Library content (both views), synced
+  with the sidebar selection; grid crumbs re-query in place, list crumbs are links.
+* Show the folder tree inside the media-picker modal (Select or Upload Media) too,
+  so choosing a folder narrows the picker when inserting images/galleries in a post.
+* Cache-bust the folder stylesheet/script by filemtime so layout fixes reach
+  browsers instead of serving a stale cached copy.
+
+= 0.0.10 =
+* Add a FileBird-informed folder tree to the desktop Media Library and media
+  modal while retaining the existing folder dropdown on narrow screens.
+* Keep the tree synchronized with the core attachment query so folder selection,
+  permissions, and upload destination reuse the existing Axismundi services.
+* Use the theme's folder, folder_open, and lock icon-font glyphs in public Media
+  Collections; default desktop collections to four consistent columns.
+
+= 0.0.9 =
+* Separate child folders from the paginated media grid and move optional parent
+  navigation into the folder-region header.
+* Default folder counts and parent navigation to off, add sensitive-media
+  overlays, and share the core Query Pagination styling contract.
+* Add the core Breadcrumbs block to media home, author, and folder templates.
+* Add Query Loop-style Media Folders, Media Post Template, Media No Results, and
+  Media Pagination inner blocks. Existing self-closing collections retain the
+  same default template as a server-rendered compatibility fallback.
+* Save Attachment Details folder changes from partial media-modal payloads, and
+  keep password-protected child folders discoverable without exposing counts.
 
 = 0.0.8 =
 * Add the Media Collection block with current archive, user root, and specific

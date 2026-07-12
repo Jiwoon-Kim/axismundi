@@ -7,6 +7,7 @@ defined( 'ABSPATH' ) || exit;
 <main class="wp-block-group alignfull">
 	<!-- wp:group {"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|300","bottom":"var:preset|spacing|300"}}},"layout":{"type":"default"}} -->
 	<div class="wp-block-group alignwide" style="padding-top:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--300)">
+		<!-- wp:breadcrumbs {"align":"wide","style":{"spacing":{"padding":{"right":"var:preset|spacing|0","left":"var:preset|spacing|0","top":"var:preset|spacing|0","bottom":"var:preset|spacing|0"}}}} /-->
 		<!-- wp:heading {"level":1,"fontSize":"display-small"} -->
 		<h1 class="wp-block-heading has-display-small-font-size"><?php esc_html_e( 'Media', 'axismundi-media-library' ); ?></h1>
 		<!-- /wp:heading -->

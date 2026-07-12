@@ -1,6 +1,6 @@
 <?php
 /**
- * Phase 2a media-modal folder filter and upload target integration.
+ * Phase 2 media-library tree, modal filter, and upload target integration.
  *
  * @package AxismundiMediaLibrary
  */
@@ -22,8 +22,13 @@ function axismundi_media_modal_folder_options() : array {
 	$walk = static function ( int $parent, int $depth ) use ( &$walk, &$options, $by_parent ) : void {
 		foreach ( $by_parent[ $parent ] ?? array() as $folder ) {
 			$options[] = array(
-				'id'    => (int) $folder['id'],
-				'label' => str_repeat( '— ', $depth ) . $folder['name'],
+				'id'              => (int) $folder['id'],
+				'name'            => (string) $folder['name'],
+				'label'           => str_repeat( '— ', $depth ) . $folder['name'],
+				'parent'          => (int) $folder['parent'],
+				'count'           => (int) $folder['count'],
+				'recursive_count' => (int) $folder['recursive_count'],
+				'protected'       => ! empty( $folder['effective_gate'] ),
 			);
 			$walk( (int) $folder['id'], $depth + 1 );
 		}
@@ -33,30 +38,115 @@ function axismundi_media_modal_folder_options() : array {
 }
 
 /**
- * Add the folder toolbar filter to any admin screen that loads media-views.
+ * The upload.php view mode ('grid' or 'list'). The `mode` query arg wins; otherwise
+ * the saved per-user preference, defaulting to grid.
+ *
+ * @return string
+ */
+function axismundi_media_upload_mode() : string {
+	$requested = isset( $_GET['mode'] ) ? sanitize_key( wp_unslash( $_GET['mode'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view preference, no state change.
+	if ( 'list' === $requested ) {
+		return 'list';
+	}
+	if ( '' === $requested && 'list' === get_user_option( 'media_library_mode' ) ) {
+		return 'list';
+	}
+	return 'grid';
+}
+
+/**
+ * Enqueue the folder sidebar + toolbar filter on the Media Library screen (grid and
+ * list) and on media-picker screens (post editor). The #wpbody sidebar renders only
+ * on upload.php (JS gates on the body class); the toolbar dropdown backs the grid
+ * and modal query.
  *
  * @return void
  */
 function axismundi_media_enqueue_modal_folders() : void {
-	if ( ! axismundi_media_is_independent() || ! current_user_can( 'upload_files' ) || ! wp_script_is( 'media-views', 'registered' ) ) {
+	if ( ! axismundi_media_is_independent() || ! current_user_can( 'upload_files' ) ) {
 		return;
 	}
+	$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	$is_upload = $screen && 'upload' === $screen->id;
+	$has_media = wp_script_is( 'media-views', 'registered' );
+	if ( ! $is_upload && ! $has_media ) {
+		return;
+	}
+
+	$mode = $is_upload ? axismundi_media_upload_mode() : 'grid';
+	// List mode has no media picker, so jQuery is enough; grid/editor need
+	// media-views for the toolbar dropdown integration.
+	$deps = ( $is_upload && 'list' === $mode ) ? array( 'jquery' ) : array( 'media-views' );
+
+	$base = dirname( __DIR__ ) . '/axismundi-media-library.php';
+	$js   = dirname( __DIR__ ) . '/assets/media-folders.js';
+	$css  = dirname( __DIR__ ) . '/assets/media-folders.css';
+
+	wp_enqueue_script(
+		'axismundi-media-folders',
+		plugins_url( 'assets/media-folders.js', $base ),
+		$deps,
+		file_exists( $js ) ? (string) filemtime( $js ) : false,
+		true
+	);
 	wp_localize_script(
-		'media-views',
+		'axismundi-media-folders',
 		'axMediaFolders',
 		array(
-			'all'       => __( 'All media', 'axismundi-media-library' ),
-			'unfiled'   => __( 'Unfiled', 'axismundi-media-library' ),
-			'label'     => __( 'Filter by media folder', 'axismundi-media-library' ),
-			'folders'   => axismundi_media_modal_folder_options(),
+			'mode'        => $mode,
+			'listBaseUrl' => admin_url( 'upload.php' ),
+			'all'         => __( 'All media', 'axismundi-media-library' ),
+			'unfiled'     => __( 'Unfiled', 'axismundi-media-library' ),
+			'label'       => __( 'Filter by media folder', 'axismundi-media-library' ),
+			'treeTitle'   => __( 'Media folders', 'axismundi-media-library' ),
+			'breadcrumbLabel' => __( 'Folder path', 'axismundi-media-library' ),
+			'manage'      => __( 'Manage folders', 'axismundi-media-library' ),
+			'manageUrl'   => axismundi_media_folders_admin_url(),
+			'items'       => __( 'items', 'axismundi-media-library' ),
+			'folders'     => axismundi_media_modal_folder_options(),
 		)
 	);
-	$script = file_get_contents( __DIR__ . '/../assets/media-folders.js' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local bundled asset.
-	if ( false !== $script ) {
-		wp_add_inline_script( 'media-views', $script, 'after' );
-	}
+	wp_enqueue_style(
+		'axismundi-media-folders',
+		plugins_url( 'assets/media-folders.css', $base ),
+		array( 'dashicons' ),
+		// filemtime so every CSS edit busts the browser cache (a static string left
+		// stale styles cached across releases).
+		file_exists( $css ) ? (string) filemtime( $css ) : false
+	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_media_enqueue_modal_folders', 20 );
+
+/**
+ * Filter the list-mode Media Library table by the selected folder (grid mode uses
+ * the ajax query filter below instead). Owner/editor rights are enforced; an
+ * unauthorized or invalid folder yields an empty result rather than leaking.
+ *
+ * @param WP_Query $query Main query.
+ * @return void
+ */
+function axismundi_media_list_folder_filter( WP_Query $query ) : void {
+	if ( ! is_admin() || ! axismundi_media_is_independent() || ! $query->is_main_query() ) {
+		return;
+	}
+	if ( 'upload.php' !== ( $GLOBALS['pagenow'] ?? '' ) || 'attachment' !== $query->get( 'post_type' ) ) {
+		return;
+	}
+	if ( ! isset( $_GET['ax_media_folder'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin folder filter.
+		return;
+	}
+	$folder = (int) $_GET['ax_media_folder']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( 0 === $folder ) {
+		$query->set( 'tax_query', array( array( 'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX, 'operator' => 'NOT EXISTS' ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		return;
+	}
+	if ( $folder > 0 && ! axismundi_media_is_root_term( $folder ) && axismundi_media_can_manage_folder( $folder ) ) {
+		$query->set( 'tax_query', array( array( 'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX, 'field' => 'term_id', 'terms' => array( $folder ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+	} else {
+		$query->set( 'post__in', array( 0 ) );
+	}
+}
+add_action( 'pre_get_posts', 'axismundi_media_list_folder_filter' );
 
 /**
  * Apply the selected folder to the media modal's scoped attachment query.

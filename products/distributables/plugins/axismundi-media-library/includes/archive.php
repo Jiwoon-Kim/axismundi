@@ -415,6 +415,10 @@ function axismundi_media_register_archive_blocks_and_templates() : void {
 	register_block_type( __DIR__ . '/../blocks/media-folder-navigation' );
 	register_block_type( __DIR__ . '/../blocks/media-gate' );
 	register_block_type( __DIR__ . '/../blocks/media-collection' );
+	register_block_type( __DIR__ . '/../blocks/media-folders' );
+	register_block_type( __DIR__ . '/../blocks/media-post-template' );
+	register_block_type( __DIR__ . '/../blocks/media-no-results' );
+	register_block_type( __DIR__ . '/../blocks/media-pagination' );
 
 	if ( ! axismundi_media_is_independent() || ! function_exists( 'register_block_template' ) ) {
 		return;
@@ -454,6 +458,87 @@ function axismundi_media_register_archive_blocks_and_templates() : void {
 	);
 }
 add_action( 'init', 'axismundi_media_register_archive_blocks_and_templates', 20 );
+
+/**
+ * Extend the Core Breadcrumbs block for Axismundi media collection routes.
+ *
+ * Core owns the block markup, attributes, separator, and accessibility. The
+ * plugin only supplies collection items that Core cannot infer from custom
+ * query variables.
+ *
+ * @param array[] $items Core breadcrumb items.
+ * @return array[]
+ */
+function axismundi_media_breadcrumb_items( array $items ) : array {
+	if ( ! axismundi_media_is_independent() ) {
+		return $items;
+	}
+
+	$route = (string) get_query_var( 'ax_media_archive' );
+	if ( ! in_array( $route, array( 'landing', 'owner', 'folder' ), true ) ) {
+		return $items;
+	}
+
+	// Preserve Core's optional Home item, but replace its uninformed trail.
+	$trail = ! empty( $items ) ? array( reset( $items ) ) : array();
+	$trail[] = array(
+		'label' => __( 'Media', 'axismundi-media-library' ),
+		'url'   => 'landing' === $route ? '' : axismundi_media_landing_url(),
+	);
+
+	if ( in_array( $route, array( 'owner', 'folder' ), true ) ) {
+		if ( 'folder' === $route ) {
+			$folder_id = (int) get_query_var( 'ax_media_folder' );
+			$owner_id  = axismundi_media_folder_owner( $folder_id );
+		} else {
+			$folder_id = 0;
+			$raw_owner = (string) get_query_var( 'ax_media_owner' );
+			$user       = ctype_digit( $raw_owner ) ? get_user_by( 'id', (int) $raw_owner ) : get_user_by( 'slug', $raw_owner );
+			$owner_id   = $user ? (int) $user->ID : 0;
+		}
+
+		$owner = get_userdata( $owner_id );
+		if ( $owner ) {
+			$trail[] = array(
+				'label' => $owner->display_name,
+				'url'   => 'owner' === $route ? '' : axismundi_media_author_url( $owner_id ),
+			);
+		}
+
+		if ( $folder_id > 0 ) {
+			$ancestor_ids = array_reverse( get_ancestors( $folder_id, AXISMUNDI_MEDIA_FOLDER_TAX, 'taxonomy' ) );
+			$folder_ids   = array_merge( $ancestor_ids, array( $folder_id ) );
+			foreach ( $folder_ids as $trail_folder_id ) {
+				if ( axismundi_media_is_root_term( (int) $trail_folder_id ) ) {
+					continue;
+				}
+				$folder = get_term( (int) $trail_folder_id, AXISMUNDI_MEDIA_FOLDER_TAX );
+				if ( ! $folder instanceof WP_Term ) {
+					continue;
+				}
+				$trail[] = array(
+					'label' => $folder->name,
+					'url'   => (int) $trail_folder_id === $folder_id ? '' : axismundi_media_folder_url( $owner_id, (int) $trail_folder_id ),
+				);
+			}
+		}
+	}
+
+	$page = max( 1, (int) get_query_var( 'ax_media_page', 1 ) );
+	if ( $page > 1 ) {
+		$last = array_key_last( $trail );
+		if ( null !== $last && empty( $trail[ $last ]['url'] ) ) {
+			$trail[ $last ]['url'] = remove_query_arg( 'ax_media_page' );
+		}
+		$trail[] = array(
+			/* translators: %d: media collection page number. */
+			'label' => sprintf( __( 'Page %d', 'axismundi-media-library' ), $page ),
+		);
+	}
+
+	return $trail;
+}
+add_filter( 'block_core_breadcrumbs_items', 'axismundi_media_breadcrumb_items' );
 
 /**
  * Select the highest-priority PHP/block template for a Media Library route.

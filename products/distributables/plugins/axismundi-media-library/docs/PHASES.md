@@ -41,9 +41,17 @@ hierarchy (theme `attachment.html`, not duplicated); `public|unlisted|private`;
 ## Phase 2 — Single virtual folder
 
 **Collection UI:** `axismundi/media-collection` renders the current media archive,
-one user's root, or a specific folder as a mixed grid of parent navigation,
-visible direct child folders, and direct Attachments. Folder counts use the same
-visibility query as the viewer and never expose hidden descendants.
+one user's root, or a specific folder as separate folder and Attachment regions.
+Its Query Loop-style child contract is `media-folders`, `media-post-template`,
+`media-no-results`, and `media-pagination`; the post template repeats arbitrary
+blocks with the current Attachment context. Folder counts use the same visibility
+query as the viewer and never expose hidden descendants. Password-protected child
+folders remain discoverable as protected navigation items, but expose no count.
+
+**Admin collection UX:** the desktop Media Library and media modal expose a
+FileBird-informed nested sidebar tree backed by the same taxonomy and attachment
+query model; compact viewports retain the core-toolbar folder dropdown. Tree
+selection also sets the current upload destination through the existing service.
 
 > **UX benchmark: FileBird** (feel like FileBird, do **not** store like FileBird).
 > FileBird uses two custom tables (`wp_fbv`, `wp_fbv_attachment_folder` with a

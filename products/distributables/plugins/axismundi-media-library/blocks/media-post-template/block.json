@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-post-template",
+	"version": "0.1.0",
+	"title": "Media Post Template",
+	"category": "theme",
+	"icon": "grid-view",
+	"description": "Repeats its inner blocks for every Attachment in a Media Collection.",
+	"textdomain": "axismundi-media-library",
+	"parent": [ "axismundi/media-collection" ],
+	"supports": { "html": false },
+	"editorScript": "file:./edit.js"
+}

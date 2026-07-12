@@ -12,3 +12,23 @@
 	inline-size: 100%;
 	block-size: auto;
 }
+.wp-block-axismundi-media-preview {
+	position: relative;
+}
+
+.wp-block-axismundi-media-preview .ax-media-preview__sensitive {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-content: center;
+	gap: var(--wp--preset--spacing--100, .5rem);
+	padding: var(--wp--preset--spacing--200, 1rem);
+	color: var(--wp--preset--color--on-surface, #1d1b20);
+	background: color-mix(in srgb, var(--wp--preset--color--surface-container-high, #ece6f0) 92%, transparent);
+	text-align: center;
+}
+
+.wp-block-axismundi-media-preview .ax-media-preview__sensitive > :first-child {
+	font-size: 1.5rem;
+	font-weight: 700;
+}

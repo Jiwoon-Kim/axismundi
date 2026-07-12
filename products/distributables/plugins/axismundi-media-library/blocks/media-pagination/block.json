@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-pagination",
+	"version": "0.1.0",
+	"title": "Media Pagination",
+	"category": "theme",
+	"icon": "ellipsis",
+	"description": "Displays pagination for a Media Collection.",
+	"textdomain": "axismundi-media-library",
+	"parent": [ "axismundi/media-collection" ],
+	"attributes": {
+		"showPrevious": { "type": "boolean", "default": true },
+		"showNumbers": { "type": "boolean", "default": true },
+		"showNext": { "type": "boolean", "default": true }
+	},
+	"supports": { "html": false },
+	"editorScript": "file:./edit.js"
+}

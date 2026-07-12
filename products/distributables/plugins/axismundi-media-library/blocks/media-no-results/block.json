@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-no-results",
+	"version": "0.1.0",
+	"title": "Media No Results",
+	"category": "theme",
+	"icon": "warning",
+	"description": "Displays its inner blocks when a Media Collection has no Attachments.",
+	"textdomain": "axismundi-media-library",
+	"parent": [ "axismundi/media-collection" ],
+	"supports": { "html": false },
+	"editorScript": "file:./edit.js"
+}

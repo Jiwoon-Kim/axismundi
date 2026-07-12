@@ -1,7 +1,7 @@
 /**
  * axismundi/media-collection editor registration (no build step).
  */
-( function ( blocks, blockEditor, components, element, i18n, ServerSideRender ) {
+( function ( blocks, blockEditor, components, element, i18n ) {
 	'use strict';
 
 	var el = element.createElement;
@@ -11,7 +11,24 @@
 	var SelectControl = components.SelectControl;
 	var RangeControl = components.RangeControl;
 	var TextControl = components.TextControl;
-	var ToggleControl = components.ToggleControl;
+	var collectionTemplate = [
+		[ 'axismundi/media-folders', { showCounts: false, showUp: false } ],
+		[ 'axismundi/media-post-template', {}, [
+			[ 'axismundi/media-preview', {} ],
+			[ 'core/post-title', { level: 3, isLink: true } ],
+			[ 'core/post-date', {} ]
+		] ],
+		[ 'axismundi/media-no-results', {}, [
+			[ 'core/paragraph', { content: __( 'No media is available in this collection.', 'axismundi-media-library' ) } ]
+		] ],
+		[ 'axismundi/media-pagination', {} ]
+	];
+	var allowedBlocks = [
+		'axismundi/media-folders',
+		'axismundi/media-post-template',
+		'axismundi/media-no-results',
+		'axismundi/media-pagination'
+	];
 
 	blocks.registerBlockType( 'axismundi/media-collection', {
 		edit: function ( props ) {
@@ -54,28 +71,7 @@
 						label: __( 'Items per page', 'axismundi-media-library' ), value: attrs.perPage, min: 1, max: 48,
 						onChange: function ( value ) { props.setAttributes( { perPage: value } ); }
 					} ),
-					el( SelectControl, {
-						label: __( 'Image size', 'axismundi-media-library' ), value: attrs.imageSize,
-						options: [
-							{ label: __( 'Thumbnail', 'axismundi-media-library' ), value: 'thumbnail' },
-							{ label: __( 'Medium', 'axismundi-media-library' ), value: 'medium' },
-							{ label: __( 'Medium large', 'axismundi-media-library' ), value: 'medium_large' },
-							{ label: __( 'Large', 'axismundi-media-library' ), value: 'large' }
-						],
-						onChange: function ( value ) { props.setAttributes( { imageSize: value } ); }
-					} ),
-					el( ToggleControl, {
-						label: __( 'Show dates', 'axismundi-media-library' ), checked: attrs.showDates,
-						onChange: function ( value ) { props.setAttributes( { showDates: value } ); }
-					} ),
-					el( ToggleControl, {
-						label: __( 'Show folder counts', 'axismundi-media-library' ), checked: attrs.showCounts,
-						onChange: function ( value ) { props.setAttributes( { showCounts: value } ); }
-					} ),
-					el( ToggleControl, {
-						label: __( 'Show parent item', 'axismundi-media-library' ), checked: attrs.showUp,
-						onChange: function ( value ) { props.setAttributes( { showUp: value } ); }
-					} )
+					el( 'p', null, __( 'Edit folder, item template, empty state, and pagination blocks directly in the canvas.', 'axismundi-media-library' ) )
 				)
 			);
 
@@ -83,9 +79,13 @@
 				'div',
 				blockEditor.useBlockProps(),
 				controls,
-				el( ServerSideRender, { block: 'axismundi/media-collection', attributes: attrs } )
+				el( blockEditor.InnerBlocks, {
+					allowedBlocks: allowedBlocks,
+					template: collectionTemplate,
+					templateLock: false
+				} )
 			);
 		},
-		save: function () { return null; }
+		save: function () { return el( blockEditor.InnerBlocks.Content ); }
 	} );
-} )( window.wp.blocks, window.wp.blockEditor, window.wp.components, window.wp.element, window.wp.i18n, window.wp.serverSideRender );
+} )( window.wp.blocks, window.wp.blockEditor, window.wp.components, window.wp.element, window.wp.i18n );

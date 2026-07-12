@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-folders",
+	"version": "0.1.0",
+	"title": "Media Folders",
+	"category": "theme",
+	"icon": "portfolio",
+	"description": "Displays the child folders of a Media Collection.",
+	"textdomain": "axismundi-media-library",
+	"parent": [ "axismundi/media-collection" ],
+	"attributes": {
+		"heading": { "type": "string", "default": "Folders" },
+		"showCounts": { "type": "boolean", "default": false },
+		"showUp": { "type": "boolean", "default": false }
+	},
+	"supports": { "html": false },
+	"editorScript": "file:./edit.js"
+}

@@ -32,12 +32,17 @@ $axismundi_media_preview_wrapper = get_block_wrapper_attributes(
 	array( 'class' => 'ax-media-preview' )
 );
 $axismundi_media_preview_link = ! isset( $attributes['linkToAttachment'] ) || (bool) $attributes['linkToAttachment'];
+$axismundi_media_preview_sensitive = '1' === (string) get_post_meta( $axismundi_media_preview_id, '_ax_media_sensitive', true );
+$axismundi_media_preview_warning = trim( (string) get_post_meta( $axismundi_media_preview_id, '_ax_media_content_warning', true ) );
 ?>
 <figure <?php echo $axismundi_media_preview_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<?php if ( $axismundi_media_preview_link ) : ?>
 		<a href="<?php echo esc_url( get_attachment_link( $axismundi_media_preview_id ) ); ?>">
 	<?php endif; ?>
 	<?php echo $axismundi_media_preview_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated attachment image markup. ?>
+	<?php if ( $axismundi_media_preview_sensitive ) : ?>
+		<span class="ax-media-preview__sensitive"><span aria-hidden="true">!</span><span><?php echo esc_html( $axismundi_media_preview_warning ?: __( 'Sensitive media', 'axismundi-media-library' ) ); ?></span></span>
+	<?php endif; ?>
 	<?php if ( $axismundi_media_preview_link ) : ?>
 		</a>
 	<?php endif; ?>

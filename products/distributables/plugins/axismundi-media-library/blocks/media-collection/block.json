@@ -2,22 +2,22 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/media-collection",
-	"version": "0.1.0",
+	"version": "0.2.1",
 	"title": "Media Collection",
 	"category": "theme",
 	"icon": "images-alt2",
-	"description": "Displays navigable media folders and attachments as one collection.",
+	"description": "Displays media folders and paginated attachments in separate collection regions.",
 	"textdomain": "axismundi-media-library",
 	"attributes": {
 		"source": { "type": "string", "default": "current" },
 		"ownerId": { "type": "number", "default": 0 },
 		"folderId": { "type": "number", "default": 0 },
-		"columns": { "type": "number", "default": 3 },
+		"columns": { "type": "number", "default": 4 },
 		"perPage": { "type": "number", "default": 12 },
 		"imageSize": { "type": "string", "default": "medium_large" },
 		"showDates": { "type": "boolean", "default": true },
-		"showCounts": { "type": "boolean", "default": true },
-		"showUp": { "type": "boolean", "default": true }
+		"showCounts": { "type": "boolean", "default": false },
+		"showUp": { "type": "boolean", "default": false }
 	},
 	"supports": {
 		"html": false,

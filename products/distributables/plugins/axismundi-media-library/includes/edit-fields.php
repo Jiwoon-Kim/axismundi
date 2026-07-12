@@ -234,13 +234,23 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 	if ( ! axismundi_media_is_independent() ) {
 		return $post;
 	}
+	$post_id = (int) $post['ID'];
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return $post;
+	}
+
+	// Attachment Details sends partial payloads. Folder movement is an
+	// independent field and must not depend on the visibility-field sentinel.
+	if ( isset( $attachment['ax_media_folder'] ) ) {
+		$axismundi_media_target = absint( $attachment['ax_media_folder'] );
+		if ( 0 === $axismundi_media_target || ( ! axismundi_media_is_root_term( $axismundi_media_target ) && axismundi_media_can_manage_folder( $axismundi_media_target ) ) ) {
+			axismundi_media_set_attachment_folder( $post_id, $axismundi_media_target );
+		}
+	}
+
 	// Only act when our field set was actually submitted; other save surfaces
 	// pass partial attachment payloads that must not reset listed/searchable.
 	if ( empty( $attachment['ax_media_fields'] ) ) {
-		return $post;
-	}
-	$post_id = (int) $post['ID'];
-	if ( ! current_user_can( 'edit_post', $post_id ) ) {
 		return $post;
 	}
 
@@ -253,15 +263,6 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 	// Unchecked checkboxes are absent from $attachment → store '0'.
 	update_post_meta( $post_id, '_ax_media_listed', empty( $attachment['ax_media_listed'] ) ? '0' : '1' );
 	update_post_meta( $post_id, '_ax_media_searchable', empty( $attachment['ax_media_searchable'] ) ? '0' : '1' );
-
-	// Folder move. We are already inside the edit_post guard (per-attachment right);
-	// the target must be the root (0) or a folder the acting user may manage.
-	if ( isset( $attachment['ax_media_folder'] ) ) {
-		$axismundi_media_target = absint( $attachment['ax_media_folder'] );
-		if ( 0 === $axismundi_media_target || ( ! axismundi_media_is_root_term( $axismundi_media_target ) && axismundi_media_can_manage_folder( $axismundi_media_target ) ) ) {
-			axismundi_media_set_attachment_folder( $post_id, $axismundi_media_target );
-		}
-	}
 
 	$text_fields = array(
 		'ax_media_creator_name'          => '_ax_media_creator_name',

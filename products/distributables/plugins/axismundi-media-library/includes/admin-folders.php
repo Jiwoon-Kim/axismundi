@@ -89,6 +89,9 @@ function axismundi_media_handle_folder_admin_action() : void {
 		if ( ! is_wp_error( $result ) ) {
 			$result = axismundi_media_set_folder_access( $term_id, $access, $password );
 		}
+		if ( ! is_wp_error( $result ) ) {
+			$result = axismundi_media_set_folder_feed_enabled( $term_id, ! empty( $_POST['feed_enabled'] ) );
+		}
 	} elseif ( 'delete' === $operation ) {
 		$result = axismundi_media_delete_folder( $term_id );
 	} else {
@@ -139,6 +142,8 @@ function axismundi_media_render_folder_row( array $folder, array $children, int 
 				</select>
 				<label class="screen-reader-text" for="ax-folder-password-<?php echo esc_attr( (string) $term_id ); ?>"><?php esc_html_e( 'New password', 'axismundi-media-library' ); ?></label>
 				<input id="ax-folder-password-<?php echo esc_attr( (string) $term_id ); ?>" type="password" name="folder_password" placeholder="<?php echo esc_attr__( 'New password (leave blank to keep)', 'axismundi-media-library' ); ?>" autocomplete="new-password">
+				<?php $axismundi_feed_on = '0' !== (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_FEED_META, true ); ?>
+				<label title="<?php esc_attr_e( 'Public folders publish an Atom feed by default; uncheck to opt out.', 'axismundi-media-library' ); ?>"><input type="checkbox" name="feed_enabled" value="1" <?php checked( $axismundi_feed_on ); ?>> <?php esc_html_e( 'Feed', 'axismundi-media-library' ); ?></label>
 				<?php submit_button( __( 'Save', 'axismundi-media-library' ), 'secondary small', 'submit', false ); ?>
 			</form>
 		</td>

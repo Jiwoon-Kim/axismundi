@@ -111,17 +111,13 @@ no self-clear; moderator_marked/confirmed → user cannot clear. Caps
 This keeps `_ax_media_sensitive` as a compat value so migration is incremental. See
 SECURITY.md §2.4 and FEDERATED-MEDIA.md §6.
 
-### 2.4 Relation & container schema — **URI-first, provisional (Phase 3/5/7)**
+### 2.4 Container & membership schema — **provisional (Phase 5/7)**
 
-Media relations and containers are keyed on **canonical URIs**, with local IDs as
-optimization pointers (mirrors §2.0 owner-vs-uploader separation). Not a 0.1.x table
-contract — see FEDERATED-MEDIA.md §3, §7.
+Keyed on local IDs + canonical URIs (URIs as optimization/federation pointers, mirrors
+§2.0). Not a 0.1.x table contract — see FEDERATED-MEDIA.md §3. The **relation index**
+lives in §4 (`wp_ax_media_relations`, dual-key); it is not URI-only.
 
 ```
-media relation   subject_uri · predicate(as:attachment|as:image|as:icon|schema:associatedMedia)
-                 · object_uri · object_local_id? · relation_role · origin(local|remote)
-                 · identity_quality · status
-                 → internal index is a SUPERSET of the federated `attachment` projection
 container item   container_id · container_kind(personal_folder|shared_folder|collection)
                  · relation(location|bookmark) · object_uri · local_attachment_id?
                  · added_by_actor_uri · added_at · sort · license_at_save/reuse_at_save
@@ -229,19 +225,85 @@ wp_set_object_terms(
 Taxonomy is the source of truth; do **not** duplicate the relation into a second
 store. `_ax_media_folder_added_at` is a timestamp, not a copy of the relation.
 
-## 4. Used-in relations — **Phase 3, PROVISIONAL schema (not created in 0.1.0)**
+## 4. Used-in relations — `wp_ax_media_relations` (Phase 3, dual-key)
 
-Replaces `post_parent` with a many-to-many usage index. **Schema reserved, not a
-0.1.0 table contract; columns may change before Phase 3.**
+Reverse index of the ActivityStreams `attachment`/`image`/`icon`/`schema:associatedMedia`
+relations (FEDERATED-MEDIA.md §7) — **not** a `post_parent` replacement, **not** "file
+URL appears in HTML". **Dual key**: local IDs are the source of truth in the local
+phase; canonical URIs are stored **only when derivable**, so Phase 7 federation reads
+the same rows without minting `object_uri`s now (URI-only would over-couple to the
+not-yet-active identity endpoint — SPEC §3).
 
 ```
-wp_ax_media_relations   (provisional)
-  id · attachment_id · object_id · object_type · relation_type
-  · block_client_id · created_at · updated_at
-relation_type: legacy_parent | featured_image | block_reference | gallery_item | embed_reference
+wp_ax_media_relations                         ENGINE=InnoDB
+  id
+  relation_kind         usage | legacy_parent          (never merged in query/UI)
+  subject_type          post | remote_object
+  subject_post_id       nullable   local source of truth
+  subject_uri           nullable   federation identity
+  subject_uri_hash      BINARY(32) nullable   sha256(subject_uri) — remote reverse lookup
+  subject_key           BINARY(32) NOT NULL   sha256("post:{id}" | "uri:{uri}") — dedup identity
+  predicate             as:attachment | as:image | as:icon | schema:associatedMedia
+  object_attachment_id  nullable   local media pointer
+  object_uri            nullable   canonical identity
+  object_uri_hash       BINARY(32) nullable   sha256(object_uri) — remote reverse lookup
+  object_key            BINARY(32) NOT NULL   sha256("attachment:{id}" | "uri:{uri}") — dedup identity
+  role                  featured | content | gallery | cover | media_text | file
+                        | audio | video | poster | decorative
+  provider              featured_image | block_content | shortcode | integration
+  source_key            first occurrence's provider-stable key (block path / meta key)
+  occurrence_count      UNSIGNED NOT NULL DEFAULT 1   ("used 3× in this post")
+  origin                local | remote
+  status                active | inactive
+  created_at · updated_at
 ```
 
-`legacy_parent` (origin) and the live `used_in` set are never merged.
+**Why `*_key`, not the nullable local-id + URI-hash, for dedup:** MySQL UNIQUE treats
+`NULL` as distinct, so a unique index over nullable columns would let the *same*
+relation insert repeatedly. `subject_key`/`object_key` are **NOT NULL** normalized
+identities (local `post:`/`attachment:` **or** remote `uri:`), computed in PHP, so one
+UNIQUE index dedups local and remote uniformly. `*_uri_hash` stay only for remote
+reverse lookup.
+
+```
+UNIQUE  relation_identity (relation_kind, subject_key, object_key, predicate, role, provider)
+KEY     subject_provider  (relation_kind, subject_key, provider)
+KEY     reverse_local     (relation_kind, status, object_attachment_id)
+KEY     reverse_uri       (relation_kind, status, object_uri_hash)
+KEY     subject_post      (subject_post_id)
+```
+
+Reverse lookup ("used in") = `object_attachment_id = ? AND relation_kind='usage' AND
+status='active'` (local) or `object_uri_hash = ?` (remote). Never index the long raw
+URI.
+
+**Atomic replace** (`axismundi_media_relations_replace(subject, provider, relations[])`):
+InnoDB transaction — dedup+aggregate the input by `(object_key, predicate, role)`
+(summing `occurrence_count`), `DELETE` the existing `(subject_key, provider,
+relation_kind='usage')` rows, `INSERT` the fresh set, rollback on any error. An **empty**
+input is valid — it removes that provider's rows for the subject.
+
+**Locked contracts:**
+- `usage` and `legacy_parent` may share the table but are **never merged** in query or
+  UI (`relation_kind` separates them).
+- **No relation from a bare file URL in HTML** — only real object references (block
+  attrs, `_thumbnail_id`, shortcode ids, provider filters); URL→id scanning is
+  excluded from the default indexer (slow, false-positive-prone).
+- **Dedup per subject**: the same media reused many times in one post yields one entry
+  per `(subject, object, predicate, role, provider)`; different roles stay distinct.
+- **Atomic per `(subject, provider)` replace**: reindexing a subject deletes its
+  existing `(subject, provider)` rows and inserts the fresh set in a transaction —
+  idempotent.
+- **Read security**: Used-in filters subjects by the viewer's read access; an owner
+  never sees the title/URL of a source they cannot read (admins may).
+- Providers return a **pure normalized relation array**; the same model feeds the index
+  and the (Phase 7) JSON-LD serializer, which additionally filters by public/rights/
+  decorative policy (internal index **⊋** federated projection).
+
+Phase 3 sub-split: **3a** table + store + fixture · **3b** providers + incremental
+hooks · **3c** reindex CLI + Attachment-Details `Location`/`Used in`/`Saved in` · **3d**
+`legacy_parent` snapshot + `post_parent` removal preview/rollback (a **separate**
+execution from index build). See PHASES.md Phase 3.
 
 ## 5. Saved references — **Phase 5, PROVISIONAL schema (not created in 0.1.0)**
 

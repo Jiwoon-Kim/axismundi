@@ -119,22 +119,42 @@ clear row is recorded as a confirmed Phase 4 gap. Then proceed to Phase 3.
 ## Phase 3 — Protection & used-in index
 
 **Entry:** Phase 2.
-**Build:** *(folder password moved to Phase 2b.)* Per-Attachment access policy
-refinements; **`wp_ax_media_relations`** (finalize provisional
-schema) + block-content scan (featured/gallery/image/file/audio/video), incremental
-update on save, full re-index tool; legacy_parent migration executes here (with
-preview/rollback from Phase 0); "used in" panel + delete-warning.
-**Model (FEDERATED-MEDIA.md §7):** used-in is the **reverse index of the
-ActivityStreams `attachment`/`image`/`icon`/`schema:associatedMedia` relations** —
+**Model (FEDERATED-MEDIA.md §7, DATA-MODEL §4):** used-in is the **reverse index of
+the ActivityStreams `attachment`/`image`/`icon`/`schema:associatedMedia` relations** —
 NOT a `post_parent` replacement, NOT "file URL in HTML". The internal Media Relation
-index is a **superset** of the federated `attachment` projection (keeps local,
-decorative, non-federated uses the serializer filters out); keyed on the media
-**object URI** (local id = pointer); built from the same normalized object model that
-feeds JSON-LD (don't re-parse JSON-LD into the DB). Three distinct relation groups on
-the Attachment page: **Location** (folder) / **Used in** / **Saved in**.
-**Acceptance:** protected page requires challenge; public folder can't widen a
-private Attachment; used-in list is accurate; existing-parent removal is reversible.
-**Non-goals:** original-file protection (signed URLs) beyond page/query.
+index is a **superset** of the federated projection (keeps local, decorative,
+non-federated uses); built from the same normalized object model that feeds JSON-LD
+(don't re-parse JSON-LD into the DB). Attachment page shows three distinct groups:
+**Location** (folder) / **Used in** / **Saved in** (5).
+
+Locked before building: **(1) dual key** (local `subject_post_id`/
+`object_attachment_id` are the source of truth; `subject_uri`/`object_uri` stored only
+when derivable — not URI-only, which would over-couple to the inactive Phase 7 identity
+endpoint); **(2)** `usage` vs `legacy_parent` share one table via `relation_kind`, never
+merged in query/UI; **(3)** URL-string scanning is excluded from the default indexer;
+**(4)** the phase splits 3a→3b→3c→3d.
+
+- **3a — Relation Core**: `wp_ax_media_relations` table (dbDelta + schema-version
+  option) + store service (atomic per-`(subject, provider)` replace; dedup per
+  `(subject,object,predicate,role,provider)`; SHA-256 `*_uri_hash` indexes) + fixture
+  test.
+- **3b — Providers + incremental**: `Attachment_Relation_Provider` returning a **pure
+  normalized array** — `_thumbnail_id`, recursive block tree (image/gallery/cover/
+  media-text/file/audio/video), classic `[gallery]`/id'd audio-video shortcodes, a
+  plugin `filter`; hooks `wp_after_insert_post` / `_thumbnail_id` meta / `before_delete_post`
+  (skip autosave/revision; attachments are subjects too — cover art). No URL→id scan.
+- **3c — Reindex + UI**: WP-CLI `reindex --dry-run|--post=|--all --yes` (idempotent);
+  Attachment-Details `Location`/`Used in` (role-labelled), read-filtered so an owner
+  never sees a source they can't read (admins may); `Saved in` deferred to Phase 5.
+- **3d — Legacy parent + delete warning** *(after the index is stable, a **separate**
+  execution)*: snapshot `post_parent`→`legacy_parent`, removal preview + explicit run +
+  rollback (Phase 0 preview base); in-use delete warning.
+
+**Acceptance:** used-in list accurate + deduped + read-filtered; reindex idempotent;
+`legacy_parent` never merged with `usage`; existing-parent removal is reversible and
+**not** coupled to the index build.
+**Non-goals:** original-file protection (signed URLs) beyond page/query; URL-string
+reverse matching; folder password (shipped 2b).
 
 ## Phase 4 — Rights, sensitivity, GPS/EXIF, download
 

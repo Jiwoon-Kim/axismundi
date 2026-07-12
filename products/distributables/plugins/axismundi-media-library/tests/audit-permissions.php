@@ -32,6 +32,7 @@ $ax_results = array();
  */
 function ax_audit_assert( array &$results, string $label, bool $cond ) : void {
 	$results[] = array( 'pass' => $cond, 'gap' => false );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output, not HTML.
 	printf( "[%s] %s\n", $cond ? 'PASS' : 'FAIL', $label );
 }
 
@@ -45,6 +46,7 @@ function ax_audit_assert( array &$results, string $label, bool $cond ) : void {
  */
 function ax_audit_gap( array &$results, string $label, string $detail ) : void {
 	$results[] = array( 'pass' => true, 'gap' => true );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output, not HTML.
 	printf( "[KNOWN GAP] %s — %s\n", $label, $detail );
 }
 
@@ -139,6 +141,7 @@ foreach ( $ax_results as $ax_r ) {
 		++$ax_gaps;
 	}
 }
+// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output, not HTML.
 printf( "\n== %d checks, %d failed, %d known gap(s) ==\n", count( $ax_results ), $ax_fail, $ax_gaps );
 
 if ( class_exists( 'WP_CLI' ) ) {

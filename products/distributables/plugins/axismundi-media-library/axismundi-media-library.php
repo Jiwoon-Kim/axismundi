@@ -36,6 +36,7 @@ require_once __DIR__ . '/includes/folder-rest.php';
 require_once __DIR__ . '/includes/media-modal.php';
 require_once __DIR__ . '/includes/admin-folders.php';
 require_once __DIR__ . '/includes/feeds.php';
+require_once __DIR__ . '/includes/relations.php';
 
 /**
  * First activation is non-destructive (docs/SPEC.md §4, docs/COMPATIBILITY.md
@@ -49,6 +50,7 @@ function axismundi_media_activate() : void {
 	if ( false === get_option( AXISMUNDI_MEDIA_MODE_OPTION, false ) ) {
 		add_option( AXISMUNDI_MEDIA_MODE_OPTION, AXISMUNDI_MEDIA_MODE_DEFAULT );
 	}
+	axismundi_media_relations_install();
 	// Reactivating while Independent mode persists must re-acquire the attachment
 	// pages option (no option-update event fires on reactivation). ROUTING.md §1.2.
 	if ( axismundi_media_is_independent() ) {

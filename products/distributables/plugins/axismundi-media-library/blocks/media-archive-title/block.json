@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-archive-title",
+	"version": "0.1.0",
+	"title": "Media Archive Title",
+	"category": "theme",
+	"icon": "heading",
+	"description": "Displays the current media author or folder title.",
+	"textdomain": "axismundi-media-library",
+	"attributes": {
+		"level": { "type": "number", "default": 1 }
+	},
+	"supports": {
+		"html": false,
+		"align": true,
+		"color": { "text": true },
+		"spacing": { "margin": true, "padding": true },
+		"typography": { "fontSize": true, "lineHeight": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

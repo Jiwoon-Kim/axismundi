@@ -48,14 +48,18 @@ dedicated attachment.html template.
 * Folder-aware visibility resolver: explicit inherit support, narrow-only tier
   resolution across the parent chain, and derived effective-rank caches for
   archive, REST collection, and media-modal queries.
-* Not yet wired: folder archives and the media modal folder-selection UI
-  (following increments).
+* Object/Collection pretty routing: `/media/{type}/{id}/`,
+  `/media/author/{owner}/`, and owner-scoped folder archives; plain query
+  endpoints remain the always-working base.
+* Add the editable media-folder block template and dynamic archive-title block.
+* Not yet wired: the media modal folder-selection UI (following increment).
 
 = 0.0.4 =
 * Add public media archives with scoped visibility filtering. The base is a plain
   query endpoint that works without pretty permalinks (?ax_media_archive=landing /
   owner&ax_media_owner={USER_ID}); /media/ and /media/{nicename}/ are pretty
-  aliases. Owner is queried by user ID (nicename accepted on the alias).
+  aliases. Owner is queried by user ID (nicename accepted on the alias; the
+  Phase 2 pretty route is `/media/author/{nicename}/`).
 * Add an optional Media page (Settings > Reading) to use an editable Page as a
   stable media-hub landing.
 * Editable plugin block templates: media-home (landing) and media-author (one

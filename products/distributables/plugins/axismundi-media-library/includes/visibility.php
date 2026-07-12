@@ -128,8 +128,13 @@ add_filter(
 		if ( ! $query->get( 'ax_media_visibility_filter' ) ) {
 			return $where;
 		}
+		if ( current_user_can( 'edit_others_posts' ) ) {
+			return $where;
+		}
 		global $wpdb;
 		$uid = (int) get_current_user_id();
+		$max_rank = min( 1, max( 0, (int) $query->get( 'ax_media_visibility_max_rank' ) ) );
+		$excluded = 1 === $max_rank ? "('private')" : "('unlisted','private')";
 		// "mine" only applies to a real logged-in user — a logged-out uid of 0
 		// must NOT match author-0 (imported) media.
 		$mine = $uid > 0 ? "{$wpdb->posts}.post_author = {$uid} OR " : '';
@@ -139,13 +144,13 @@ add_filter(
 		// public because they match neither exclusion.
 		$where .= " AND (
 			{$mine}(
-				{$wpdb->posts}.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_ax_media_visibility' AND meta_value IN ('unlisted','private') )
+				{$wpdb->posts}.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_ax_media_visibility' AND meta_value IN {$excluded} )
 				AND {$wpdb->posts}.ID NOT IN (
 					SELECT tr.object_id
 					FROM {$wpdb->term_relationships} AS tr
 					INNER JOIN {$wpdb->term_taxonomy} AS tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'ax_media_folder'
 					INNER JOIN {$wpdb->termmeta} AS tm ON tm.term_id = tt.term_id AND tm.meta_key = '_ax_media_folder_effective_tier_rank'
-					WHERE CAST(tm.meta_value AS UNSIGNED) > 0
+					WHERE CAST(tm.meta_value AS UNSIGNED) > {$max_rank}
 				)
 				AND {$wpdb->posts}.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_ax_media_listed' AND meta_value = '0' )
 			)
@@ -157,22 +162,7 @@ add_filter(
 );
 
 /* ------------------------------------------------------------------ *
- * 5. Canonical single URL = /?attachment_id={id} (ROUTING.md §1)
- * ------------------------------------------------------------------ */
-add_filter(
-	'attachment_link',
-	static function ( $link, $post_id ) {
-		if ( ! axismundi_media_is_independent() ) {
-			return $link;
-		}
-		return home_url( '/?attachment_id=' . (int) $post_id );
-	},
-	10,
-	2
-);
-
-/* ------------------------------------------------------------------ *
- * 6. New uploads are unbound (COMPATIBILITY.md §2) — Independent mode only.
+ * 5. New uploads are unbound (COMPATIBILITY.md §2) — Independent mode only.
  *    post_parent = 0 is set BEFORE the INSERT (atomic) via wp_insert_attachment_data,
  *    so no earlier add_attachment callback ever observes a stale parent. Owner is
  *    post_author (core-set); visibility defaults to legacy-public via the fallback,

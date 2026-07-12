@@ -131,6 +131,8 @@ Pretty aliases (when a permalink structure is set)
   global slug — two users may both have `travel/`). Unknown folder → **404**.
 - Helpers: `axismundi_media_landing_url()`, `axismundi_media_author_url( $user_id )`,
   `axismundi_media_folder_url( $user_id, $term_id )`.
+- Folder path segments `page` and `feed` are reserved for pagination/feed
+  routing and cannot be used as folder names.
 
 ### 3.0 Optional Media Page (Settings > Reading)
 

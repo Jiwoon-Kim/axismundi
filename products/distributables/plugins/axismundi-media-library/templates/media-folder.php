@@ -29,7 +29,7 @@ defined( 'ABSPATH' ) || exit;
 
 			<!-- wp:query-no-results -->
 			<!-- wp:paragraph -->
-			<p><?php esc_html_e( 'This user has no public media.', 'axismundi-media-library' ); ?></p>
+			<p><?php esc_html_e( 'No media is available in this folder.', 'axismundi-media-library' ); ?></p>
 			<!-- /wp:paragraph -->
 			<!-- /wp:query-no-results -->
 		</div>

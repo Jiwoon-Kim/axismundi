@@ -8,6 +8,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+const AXISMUNDI_MEDIA_REWRITE_VERSION = 2;
+
 /**
  * Rewrite expressions owned by this plugin.
  *
@@ -15,10 +17,13 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_media_rewrite_rules() : array {
 	return array(
-		'^media/page/([0-9]+)/?$'             => 'index.php?ax_media_archive=landing&paged=$matches[1]',
-		'^media/([^/]+)/page/([0-9]+)/?$'     => 'index.php?ax_media_archive=owner&ax_media_owner=$matches[1]&author_name=$matches[1]&paged=$matches[2]',
-		'^media/?$'                            => 'index.php?ax_media_archive=landing',
-		'^media/([^/]+)/?$'                    => 'index.php?ax_media_archive=owner&ax_media_owner=$matches[1]&author_name=$matches[1]',
+		'^media/(image|video|audio|file)/([0-9]+)/?$'                       => 'index.php?attachment_id=$matches[2]&ax_media_type=$matches[1]',
+		'^media/author/([^/]+)/folder/(.+)/page/([0-9]+)/?$'               => 'index.php?ax_media_archive=folder&ax_media_owner=$matches[1]&ax_media_folder_path=$matches[2]&paged=$matches[3]',
+		'^media/author/([^/]+)/folder/(.+)/?$'                              => 'index.php?ax_media_archive=folder&ax_media_owner=$matches[1]&ax_media_folder_path=$matches[2]',
+		'^media/author/([^/]+)/page/([0-9]+)/?$'                            => 'index.php?ax_media_archive=owner&ax_media_owner=$matches[1]&paged=$matches[2]',
+		'^media/author/([^/]+)/?$'                                         => 'index.php?ax_media_archive=owner&ax_media_owner=$matches[1]',
+		'^media/page/([0-9]+)/?$'                                          => 'index.php?ax_media_archive=landing&paged=$matches[1]',
+		'^media/?$'                                                         => 'index.php?ax_media_archive=landing',
 	);
 }
 
@@ -36,6 +41,22 @@ function axismundi_media_register_rewrite_rules() : void {
 	}
 }
 add_action( 'init', 'axismundi_media_register_rewrite_rules', 9 );
+
+/**
+ * Flush once after an upgrade changes this plugin's rewrite contract.
+ *
+ * @return void
+ */
+function axismundi_media_maybe_upgrade_rewrite_rules() : void {
+	if ( (int) get_option( 'ax_media_rewrite_version', 0 ) >= AXISMUNDI_MEDIA_REWRITE_VERSION ) {
+		return;
+	}
+	if ( axismundi_media_is_independent() ) {
+		flush_rewrite_rules( false );
+	}
+	update_option( 'ax_media_rewrite_version', AXISMUNDI_MEDIA_REWRITE_VERSION, false );
+}
+add_action( 'init', 'axismundi_media_maybe_upgrade_rewrite_rules', 11 );
 
 /**
  * Remove this plugin's rules from the in-memory rewrite build before a mode-off
@@ -62,6 +83,9 @@ function axismundi_media_remove_rewrite_rules() : void {
 function axismundi_media_query_vars( array $vars ) : array {
 	$vars[] = 'ax_media_archive';
 	$vars[] = 'ax_media_owner';
+	$vars[] = 'ax_media_folder';
+	$vars[] = 'ax_media_folder_path';
+	$vars[] = 'ax_media_type';
 	return array_values( array_unique( $vars ) );
 }
 add_filter( 'query_vars', 'axismundi_media_query_vars' );
@@ -83,6 +107,62 @@ function axismundi_media_landing_url() : string {
 }
 
 /**
+ * Stable routing family derived from an Attachment MIME type.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return string image|video|audio|file
+ */
+function axismundi_media_object_type( int $attachment_id ) : string {
+	$family = strtok( (string) get_post_mime_type( $attachment_id ), '/' );
+	return in_array( $family, array( 'image', 'video', 'audio' ), true ) ? $family : 'file';
+}
+
+/**
+ * Canonical HTML URL for one Attachment object.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return string
+ */
+function axismundi_media_object_url( int $attachment_id ) : string {
+	if ( get_option( 'permalink_structure' ) ) {
+		return home_url( '/media/' . axismundi_media_object_type( $attachment_id ) . '/' . $attachment_id . '/' );
+	}
+	return home_url( '/?attachment_id=' . $attachment_id );
+}
+
+/**
+ * Use the Object URL contract for attachment links in Independent mode.
+ */
+add_filter(
+	'attachment_link',
+	static function ( $link, $post_id ) {
+		return axismundi_media_is_independent() ? axismundi_media_object_url( (int) $post_id ) : $link;
+	},
+	10,
+	2
+);
+
+/**
+ * Correct a stale/wrong MIME hint without changing object identity.
+ * Visibility's attachment guard runs first and turns inaccessible objects into
+ * 404s, so this redirect never discloses private IDs.
+ *
+ * @return void
+ */
+function axismundi_media_correct_object_type() : void {
+	if ( ! axismundi_media_is_independent() || ! is_attachment() || is_404() ) {
+		return;
+	}
+	$requested = (string) get_query_var( 'ax_media_type' );
+	$post_id   = (int) get_queried_object_id();
+	if ( $requested && $post_id > 0 && $requested !== axismundi_media_object_type( $post_id ) ) {
+		wp_safe_redirect( axismundi_media_object_url( $post_id ), 301, 'Axismundi Media Library' );
+		exit;
+	}
+}
+add_action( 'template_redirect', 'axismundi_media_correct_object_type', 20 );
+
+/**
  * Canonical media author URL for a user: pretty alias when permalinks are on,
  * else the plain, ID-based query endpoint (robust against nicename changes).
  *
@@ -93,14 +173,78 @@ function axismundi_media_author_url( int $user_id ) : string {
 	if ( get_option( 'permalink_structure' ) ) {
 		$user = get_userdata( $user_id );
 		if ( $user ) {
-			return home_url( '/media/' . rawurlencode( $user->user_nicename ) . '/' );
+			return home_url( '/media/author/' . rawurlencode( $user->user_nicename ) . '/' );
 		}
 	}
 	return home_url( '/?ax_media_archive=owner&ax_media_owner=' . $user_id );
 }
 
 /**
- * Shape only this plugin's two front-end archive queries. Visibility is applied
+ * Resolve a URL path beneath one owner's hidden root.
+ *
+ * Segments are generated from folder names rather than globally-unique term
+ * slugs, allowing different owners to use the same visible paths.
+ *
+ * @param int    $owner_id User ID.
+ * @param string $path     Slash-separated path.
+ * @return int Folder term ID or 0.
+ */
+function axismundi_media_folder_from_path( int $owner_id, string $path ) : int {
+	$parent   = axismundi_media_user_root( $owner_id, false );
+	$segments = array_values( array_filter( array_map( 'sanitize_title', explode( '/', trim( rawurldecode( $path ), '/' ) ) ) ) );
+	if ( $parent <= 0 || empty( $segments ) ) {
+		return 0;
+	}
+	foreach ( $segments as $segment ) {
+		$children = get_terms(
+			array(
+				'taxonomy'   => AXISMUNDI_MEDIA_FOLDER_TAX,
+				'hide_empty' => false,
+				'parent'     => $parent,
+			)
+		);
+		$match = 0;
+		if ( ! is_wp_error( $children ) ) {
+			foreach ( $children as $child ) {
+				if ( sanitize_title( $child->name ) === $segment && axismundi_media_folder_owner( (int) $child->term_id ) === $owner_id ) {
+					$match = (int) $child->term_id;
+					break;
+				}
+			}
+		}
+		if ( 0 === $match ) {
+			return 0;
+		}
+		$parent = $match;
+	}
+	return $parent;
+}
+
+/**
+ * Canonical folder archive URL.
+ *
+ * @param int $user_id User ID.
+ * @param int $term_id Folder term ID.
+ * @return string
+ */
+function axismundi_media_folder_url( int $user_id, int $term_id ) : string {
+	if ( get_option( 'permalink_structure' ) ) {
+		$user = get_userdata( $user_id );
+		$path = array();
+		$current = get_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX );
+		while ( $current instanceof WP_Term && ! axismundi_media_is_root_term( (int) $current->term_id ) ) {
+			array_unshift( $path, rawurlencode( sanitize_title( $current->name ) ) );
+			$current = $current->parent > 0 ? get_term( (int) $current->parent, AXISMUNDI_MEDIA_FOLDER_TAX ) : null;
+		}
+		if ( $user && ! empty( $path ) && axismundi_media_folder_owner( $term_id ) === $user_id ) {
+			return home_url( '/media/author/' . rawurlencode( $user->user_nicename ) . '/folder/' . implode( '/', $path ) . '/' );
+		}
+	}
+	return home_url( '/?ax_media_archive=folder&ax_media_owner=' . $user_id . '&ax_media_folder=' . $term_id );
+}
+
+/**
+ * Shape only this plugin's front-end collection queries. Visibility is applied
  * by the existing flagged posts_where policy; no global Attachment query changes.
  *
  * @param WP_Query $query Query instance.
@@ -132,7 +276,7 @@ function axismundi_media_archive_query( WP_Query $query ) : void {
 	}
 
 	$route = (string) $query->get( 'ax_media_archive' );
-	if ( ! in_array( $route, array( 'landing', 'owner' ), true ) ) {
+	if ( ! in_array( $route, array( 'landing', 'owner', 'folder' ), true ) ) {
 		return;
 	}
 
@@ -145,13 +289,43 @@ function axismundi_media_archive_query( WP_Query $query ) : void {
 	$query->is_home    = false;
 	$query->is_archive = true;
 
-	if ( 'owner' === $route ) {
+	if ( in_array( $route, array( 'owner', 'folder' ), true ) ) {
 		// Canonical plain endpoint uses a numeric user ID (robust against nicename
 		// changes/collisions); the pretty /media/{nicename}/ alias passes a slug.
 		$raw   = (string) $query->get( 'ax_media_owner' );
 		$owner = ctype_digit( $raw ) ? get_user_by( 'id', (int) $raw ) : get_user_by( 'slug', $raw );
 		if ( $owner ) {
 			$query->set( 'author', (int) $owner->ID );
+			if ( 'folder' === $route ) {
+				$raw_folder = (string) $query->get( 'ax_media_folder' );
+				$folder_id  = ctype_digit( $raw_folder )
+					? (int) $raw_folder
+					: axismundi_media_folder_from_path( (int) $owner->ID, (string) $query->get( 'ax_media_folder_path' ) );
+				$folder = get_term( $folder_id, AXISMUNDI_MEDIA_FOLDER_TAX );
+				if ( ! $folder instanceof WP_Term || axismundi_media_is_root_term( $folder_id ) || axismundi_media_folder_owner( $folder_id ) !== (int) $owner->ID ) {
+					$query->set( 'post__in', array( 0 ) );
+					$query->set( 'ax_media_folder_missing', true );
+				} else {
+					$rank = axismundi_media_folder_effective_tier_rank( $folder_id );
+					if ( 2 === $rank && ! axismundi_media_can_manage_folder( $folder_id ) ) {
+						$query->set( 'post__in', array( 0 ) );
+						$query->set( 'ax_media_folder_missing', true );
+					} else {
+						$query->set( 'ax_media_folder', $folder_id );
+						$query->set( 'ax_media_visibility_max_rank', min( 1, $rank ) );
+						$query->set(
+							'tax_query',
+							array(
+								array(
+									'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX,
+									'field'    => 'term_id',
+									'terms'    => array( $folder_id ),
+								),
+							)
+						);
+					}
+				}
+			}
 		} else {
 			$query->set( 'post__in', array( 0 ) );
 			$query->set( 'ax_media_owner_missing', true );
@@ -170,7 +344,7 @@ function axismundi_media_missing_owner_404() : void {
 	if (
 		axismundi_media_is_independent()
 		&& $wp_query instanceof WP_Query
-		&& $wp_query->get( 'ax_media_owner_missing' )
+		&& ( $wp_query->get( 'ax_media_owner_missing' ) || $wp_query->get( 'ax_media_folder_missing' ) )
 	) {
 		$wp_query->set_404();
 		status_header( 404 );
@@ -202,6 +376,7 @@ function axismundi_media_template_content( string $filename ) : string {
  */
 function axismundi_media_register_archive_blocks_and_templates() : void {
 	register_block_type( __DIR__ . '/../blocks/media-preview' );
+	register_block_type( __DIR__ . '/../blocks/media-archive-title' );
 
 	if ( ! axismundi_media_is_independent() || ! function_exists( 'register_block_template' ) ) {
 		return;
@@ -213,6 +388,14 @@ function axismundi_media_register_archive_blocks_and_templates() : void {
 			'title'       => __( 'Media Home', 'axismundi-media-library' ),
 			'description' => __( 'The media hub — public media from all owners.', 'axismundi-media-library' ),
 			'content'     => axismundi_media_template_content( 'media-home.php' ),
+		)
+	);
+	register_block_template(
+		'axismundi-media-library//media-folder',
+		array(
+			'title'       => __( 'Media Folder Archive', 'axismundi-media-library' ),
+			'description' => __( 'One virtual media folder.', 'axismundi-media-library' ),
+			'content'     => axismundi_media_template_content( 'media-folder.php' ),
 		)
 	);
 	register_block_template(
@@ -238,11 +421,11 @@ function axismundi_media_archive_template_include( string $template ) : string {
 	}
 
 	$route = (string) get_query_var( 'ax_media_archive' );
-	if ( ! in_array( $route, array( 'landing', 'owner' ), true ) ) {
+	if ( ! in_array( $route, array( 'landing', 'owner', 'folder' ), true ) ) {
 		return $template;
 	}
 
-	$slug      = 'owner' === $route ? 'media-author' : 'media-home';
+	$slug      = 'folder' === $route ? 'media-folder' : ( 'owner' === $route ? 'media-author' : 'media-home' );
 	$templates = array( $slug . '.php', 'index.php' );
 	$located   = locate_template( $templates );
 

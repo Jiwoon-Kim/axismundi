@@ -314,6 +314,9 @@ function axismundi_media_create_folder( string $name, int $parent = 0, ?int $own
 	if ( '' === $name ) {
 		return new WP_Error( 'ax_media_folder_name', __( 'A folder name is required.', 'axismundi-media-library' ), array( 'status' => 400 ) );
 	}
+	if ( in_array( sanitize_title( $name ), array( 'page', 'feed' ), true ) ) {
+		return new WP_Error( 'ax_media_folder_reserved', __( 'That folder name is reserved for routing.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+	}
 	if ( $parent > 0 ) {
 		if ( ! axismundi_media_can_manage_folder( $parent, $owner ) || axismundi_media_is_root_term( $parent ) ) {
 			return new WP_Error( 'ax_media_folder_parent', __( 'Invalid parent folder.', 'axismundi-media-library' ), array( 'status' => 400 ) );
@@ -352,6 +355,9 @@ function axismundi_media_rename_folder( int $term_id, string $name, ?int $user_i
 	$name = trim( wp_strip_all_tags( $name ) );
 	if ( '' === $name ) {
 		return new WP_Error( 'ax_media_folder_name', __( 'A folder name is required.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+	}
+	if ( in_array( sanitize_title( $name ), array( 'page', 'feed' ), true ) ) {
+		return new WP_Error( 'ax_media_folder_reserved', __( 'That folder name is reserved for routing.', 'axismundi-media-library' ), array( 'status' => 400 ) );
 	}
 	$res = wp_update_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX, array( 'name' => $name ) );
 	return is_wp_error( $res ) ? $res : $term_id;

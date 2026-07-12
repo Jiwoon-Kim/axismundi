@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.6
+Stable tag: 0.0.7
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,13 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.7 =
+* Add folder password gates with WordPress password hashes, signed HttpOnly
+  folder cookies, nested gate inheritance, and owner/editor bypass.
+* Add protected-media challenges for folder and Attachment pages; gated media is
+  excluded from public collections and REST singles require authentication.
+* Extend Media > Folders and the folder REST API with open/password access.
 
 = 0.0.6 =
 * Add Media > Folders for creating, nesting, renaming, deleting, and setting the

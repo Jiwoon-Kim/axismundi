@@ -312,17 +312,26 @@ function axismundi_media_archive_query( WP_Query $query ) : void {
 						$query->set( 'ax_media_folder_missing', true );
 					} else {
 						$query->set( 'ax_media_folder', $folder_id );
-						$query->set( 'ax_media_visibility_max_rank', min( 1, $rank ) );
-						$query->set(
-							'tax_query',
-							array(
+						$gate = function_exists( 'axismundi_media_locked_folder_gate' ) ? axismundi_media_locked_folder_gate( $folder_id ) : 0;
+						if ( $gate > 0 ) {
+							$query->set( 'post__in', array( 0 ) );
+							$query->set( 'ax_media_gate_required', $gate );
+						} else {
+							$query->set( 'ax_media_visibility_max_rank', min( 1, $rank ) );
+							if ( function_exists( 'axismundi_media_folder_effective_gate' ) && axismundi_media_folder_effective_gate( $folder_id ) ) {
+								$query->set( 'ax_media_allow_gated', true );
+							}
+							$query->set(
+								'tax_query',
 								array(
-									'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX,
-									'field'    => 'term_id',
-									'terms'    => array( $folder_id ),
-								),
-							)
-						);
+									array(
+										'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX,
+										'field'    => 'term_id',
+										'terms'    => array( $folder_id ),
+									),
+								)
+							);
+						}
 					}
 				}
 			}
@@ -403,6 +412,7 @@ function axismundi_media_register_archive_blocks_and_templates() : void {
 	register_block_type( __DIR__ . '/../blocks/media-preview' );
 	register_block_type( __DIR__ . '/../blocks/media-archive-title' );
 	register_block_type( __DIR__ . '/../blocks/media-folder-navigation' );
+	register_block_type( __DIR__ . '/../blocks/media-gate' );
 
 	if ( ! axismundi_media_is_independent() || ! function_exists( 'register_block_template' ) ) {
 		return;
@@ -414,6 +424,14 @@ function axismundi_media_register_archive_blocks_and_templates() : void {
 			'title'       => __( 'Media Home', 'axismundi-media-library' ),
 			'description' => __( 'The media hub — public media from all owners.', 'axismundi-media-library' ),
 			'content'     => axismundi_media_template_content( 'media-home.php' ),
+		)
+	);
+	register_block_template(
+		'axismundi-media-library//media-protected',
+		array(
+			'title'       => __( 'Protected Media', 'axismundi-media-library' ),
+			'description' => __( 'Password challenge for a protected media folder or object.', 'axismundi-media-library' ),
+			'content'     => axismundi_media_template_content( 'media-protected.php' ),
 		)
 	);
 	register_block_template(

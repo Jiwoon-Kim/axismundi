@@ -38,7 +38,8 @@ if ( $axismundi_media_parent instanceof WP_Term && ! axismundi_media_is_root_ter
 if ( ! is_wp_error( $axismundi_media_children ) ) {
 	foreach ( $axismundi_media_children as $axismundi_media_child ) {
 		$axismundi_media_rank = axismundi_media_folder_effective_tier_rank( (int) $axismundi_media_child->term_id );
-		if ( 2 === $axismundi_media_rank && ! axismundi_media_can_manage_folder( (int) $axismundi_media_child->term_id ) ) {
+		$axismundi_media_locked_gate = function_exists( 'axismundi_media_locked_folder_gate' ) ? axismundi_media_locked_folder_gate( (int) $axismundi_media_child->term_id ) : 0;
+		if ( ( 2 === $axismundi_media_rank && ! axismundi_media_can_manage_folder( (int) $axismundi_media_child->term_id ) ) || $axismundi_media_locked_gate > 0 ) {
 			continue;
 		}
 		$axismundi_media_links[] = sprintf(

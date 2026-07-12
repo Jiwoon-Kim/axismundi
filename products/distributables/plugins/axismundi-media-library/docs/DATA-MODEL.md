@@ -119,6 +119,7 @@ _ax_media_folder_tier         inherit | public | unlisted | private   (Phase 2a 
 _ax_media_folder_effective_tier_rank  0 | 1 | 2 (derived chain cache; Phase 2a)
 _ax_media_folder_access       open | password                         (Phase 2b gate)
 _ax_media_folder_password_hash                                        (Phase 2b)
+_ax_media_folder_effective_gated  0 | 1 (derived chain cache; Phase 2b)
 _ax_media_folder_cover_id     _ax_media_folder_sort_mode              (later)
 _ax_media_folder_default_license _ax_media_folder_default_reuse_policy (later)
 _ax_media_folder_default_sensitive  _ax_media_folder_feed_enabled     (later)
@@ -157,6 +158,11 @@ gated     = OR( folder.access === 'password' for folder in chain )
 reparent MUST refresh the affected subtree. Single-item PHP resolution may repair
 a missing cache lazily; collection SQL reads the cache so it never performs a
 recursive parent walk per Attachment.
+
+`_ax_media_folder_effective_gated` is the equivalent derived OR-cache for
+collection SQL. Unlock state is not stored in the database: each authored
+password folder has its own signed HttpOnly cookie, and nested password folders
+are unlocked in root-to-leaf order.
 
 A folder can only **narrow** an item, never widen it (invariant ⑥). `private` beats
 any password (a password never unlocks `private`). See SECURITY.md §2.3 for the

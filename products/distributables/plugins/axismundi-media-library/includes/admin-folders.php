@@ -76,9 +76,18 @@ function axismundi_media_handle_folder_admin_action() : void {
 	} elseif ( 'update' === $operation ) {
 		$name = isset( $_POST['folder_name'] ) ? sanitize_text_field( wp_unslash( $_POST['folder_name'] ) ) : '';
 		$tier = isset( $_POST['tier'] ) ? sanitize_key( wp_unslash( $_POST['tier'] ) ) : 'inherit';
-		$result = axismundi_media_rename_folder( $term_id, $name );
+		$access = isset( $_POST['access'] ) ? sanitize_key( wp_unslash( $_POST['access'] ) ) : 'open';
+		$password = isset( $_POST['folder_password'] ) ? (string) wp_unslash( $_POST['folder_password'] ) : null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Passwords must not be transformed before hashing.
+		if ( 'password' === $access && ( null === $password || '' === $password ) && '' === (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_PASSWORD_META, true ) ) {
+			$result = new WP_Error( 'ax_media_folder_password', __( 'A password is required.', 'axismundi-media-library' ) );
+		} else {
+			$result = axismundi_media_rename_folder( $term_id, $name );
+		}
 		if ( ! is_wp_error( $result ) ) {
 			$result = axismundi_media_set_folder_tier( $term_id, $tier );
+		}
+		if ( ! is_wp_error( $result ) ) {
+			$result = axismundi_media_set_folder_access( $term_id, $access, $password );
 		}
 	} elseif ( 'delete' === $operation ) {
 		$result = axismundi_media_delete_folder( $term_id );
@@ -108,7 +117,7 @@ function axismundi_media_render_folder_row( array $folder, array $children, int 
 	<tr>
 		<td><strong><?php echo esc_html( str_repeat( '— ', $depth ) . (string) $folder['name'] ); ?></strong></td>
 		<td><?php echo esc_html( (string) $folder['count'] ); ?> / <?php echo esc_html( (string) $folder['recursive_count'] ); ?></td>
-		<td><?php echo esc_html( (string) $folder['effective_tier'] ); ?></td>
+		<td><?php echo esc_html( (string) $folder['effective_tier'] . ( $folder['effective_gate'] ? ' + password' : '' ) ); ?></td>
 		<td>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ax-media-folder-row-form">
 				<input type="hidden" name="action" value="axismundi_media_folder_action">
@@ -123,6 +132,13 @@ function axismundi_media_render_folder_row( array $folder, array $children, int 
 						<option value="<?php echo esc_attr( $tier ); ?>" <?php selected( $folder['tier'], $tier ); ?>><?php echo esc_html( ucfirst( $tier ) ); ?></option>
 					<?php endforeach; ?>
 				</select>
+				<label class="screen-reader-text" for="ax-folder-access-<?php echo esc_attr( (string) $term_id ); ?>"><?php esc_html_e( 'Access', 'axismundi-media-library' ); ?></label>
+				<select id="ax-folder-access-<?php echo esc_attr( (string) $term_id ); ?>" name="access">
+					<option value="open" <?php selected( $folder['access'], 'open' ); ?>><?php esc_html_e( 'Open', 'axismundi-media-library' ); ?></option>
+					<option value="password" <?php selected( $folder['access'], 'password' ); ?>><?php esc_html_e( 'Password', 'axismundi-media-library' ); ?></option>
+				</select>
+				<label class="screen-reader-text" for="ax-folder-password-<?php echo esc_attr( (string) $term_id ); ?>"><?php esc_html_e( 'New password', 'axismundi-media-library' ); ?></label>
+				<input id="ax-folder-password-<?php echo esc_attr( (string) $term_id ); ?>" type="password" name="folder_password" placeholder="<?php echo esc_attr__( 'New password (leave blank to keep)', 'axismundi-media-library' ); ?>" autocomplete="new-password">
 				<?php submit_button( __( 'Save', 'axismundi-media-library' ), 'secondary small', 'submit', false ); ?>
 			</form>
 		</td>

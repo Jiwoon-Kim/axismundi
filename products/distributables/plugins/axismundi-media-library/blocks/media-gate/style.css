@@ -1,0 +1,15 @@
+.wp-block-axismundi-media-gate form {
+	display: grid;
+	gap: var(--wp--preset--spacing--200, 1rem);
+}
+
+.wp-block-axismundi-media-gate input[type="password"] {
+	box-sizing: border-box;
+	inline-size: 100%;
+	min-block-size: 48px;
+	padding-inline: var(--wp--preset--spacing--200, 1rem);
+}
+
+.wp-block-axismundi-media-gate .ax-media-gate-error {
+	color: var(--wp--preset--color--error, #b3261e);
+}

@@ -40,7 +40,7 @@ function axismundi_media_effective_visibility( int $post_id ) : string {
 
 /**
  * May the given user open the Attachment single page / REST single?
- * (protected challenge is Phase 3.)
+ * Password folders are allowed only after their folder cookie is unlocked.
  *
  * Ownership is `post_author`; permission reuses core `edit_post`, which maps to
  * the author or an `edit_others_posts` holder. `user_can( 0, … )` is false, so a
@@ -55,8 +55,10 @@ function axismundi_media_can_view_single( int $post_id, ?int $user_id = null ) :
 	if ( $user_id > 0 && user_can( $user_id, 'edit_post', $post_id ) ) {
 		return true;
 	}
-	// public + unlisted are reachable by direct id; private is not.
-	return in_array( axismundi_media_effective_visibility( $post_id ), array( 'public', 'unlisted' ), true );
+	// Public + unlisted are reachable by direct id; private is not. A folder
+	// password is an orthogonal gate checked after tier resolution.
+	return in_array( axismundi_media_effective_visibility( $post_id ), array( 'public', 'unlisted' ), true )
+		&& ( ! function_exists( 'axismundi_media_locked_gate_for_attachment' ) || 0 === axismundi_media_locked_gate_for_attachment( $post_id ) );
 }
 
 /* ------------------------------------------------------------------ *
@@ -69,11 +71,17 @@ add_action(
 			return;
 		}
 		$id = (int) get_queried_object_id();
-		if ( $id && ! axismundi_media_can_view_single( $id ) ) {
+		if ( $id && 'private' === axismundi_media_effective_visibility( $id ) && ! current_user_can( 'edit_post', $id ) ) {
 			global $wp_query;
 			$wp_query->set_404();
 			status_header( 404 );
 			nocache_headers();
+		} elseif ( $id && function_exists( 'axismundi_media_locked_gate_for_attachment' ) ) {
+			$gate = axismundi_media_locked_gate_for_attachment( $id );
+			if ( $gate > 0 ) {
+				global $wp_query;
+				$wp_query->set( 'ax_media_gate_required', $gate );
+			}
 		}
 	}
 );
@@ -89,8 +97,12 @@ add_filter(
 			return $result;
 		}
 		if ( preg_match( '#^/wp/v2/media/(\d+)$#', (string) $request->get_route(), $m ) ) {
-			if ( ! axismundi_media_can_view_single( (int) $m[1] ) ) {
+			$post_id = (int) $m[1];
+			if ( 'private' === axismundi_media_effective_visibility( $post_id ) && ! current_user_can( 'edit_post', $post_id ) ) {
 				return new WP_Error( 'rest_post_invalid_id', __( 'Invalid post ID.', 'axismundi-media-library' ), array( 'status' => 404 ) );
+			}
+			if ( function_exists( 'axismundi_media_locked_gate_for_attachment' ) && axismundi_media_locked_gate_for_attachment( $post_id ) > 0 ) {
+				return new WP_Error( 'ax_media_password_required', __( 'A media-folder password is required.', 'axismundi-media-library' ), array( 'status' => 401 ) );
 			}
 		}
 		return $result;
@@ -138,6 +150,14 @@ add_filter(
 		// "mine" only applies to a real logged-in user — a logged-out uid of 0
 		// must NOT match author-0 (imported) media.
 		$mine = $uid > 0 ? "{$wpdb->posts}.post_author = {$uid} OR " : '';
+		$gate_exclusion = $query->get( 'ax_media_allow_gated' ) ? '' : "
+				AND {$wpdb->posts}.ID NOT IN (
+					SELECT tr.object_id
+					FROM {$wpdb->term_relationships} AS tr
+					INNER JOIN {$wpdb->term_taxonomy} AS tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'ax_media_folder'
+					INNER JOIN {$wpdb->termmeta} AS tm ON tm.term_id = tt.term_id AND tm.meta_key = '_ax_media_folder_effective_gated'
+					WHERE CAST(tm.meta_value AS UNSIGNED) = 1
+				)";
 		// Show: my own OR effective public + listed. An item is non-public when
 		// either its explicit policy is unlisted/private OR its assigned folder's
 		// derived chain rank is > 0. Legacy rows and unfiled inherit rows remain
@@ -152,6 +172,7 @@ add_filter(
 					INNER JOIN {$wpdb->termmeta} AS tm ON tm.term_id = tt.term_id AND tm.meta_key = '_ax_media_folder_effective_tier_rank'
 					WHERE CAST(tm.meta_value AS UNSIGNED) > {$max_rank}
 				)
+				{$gate_exclusion}
 				AND {$wpdb->posts}.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_ax_media_listed' AND meta_value = '0' )
 			)
 		)"; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Only an int-cast user id and static literals; no external input.

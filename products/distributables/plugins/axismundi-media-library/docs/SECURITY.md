@@ -78,7 +78,7 @@ Per-surface processing order (single surfaces):
 ```
 1. owner / edit_post holder            → allow (also bypasses the password gate)
 2. item_tier == private                → not_found (404)   (private beats any password)
-3. gated                               → password challenge (Phase 2b)
+3. gated                               → password challenge
 4. item_tier == unlisted               → single allowed; excluded from archive/search/feed
 5. public                              → public
 ```
@@ -87,8 +87,9 @@ List/archive/search/feed surfaces use `item_tier` in the same way (only tier 0 =
 public is listed, gated by `listed`/`searchable`); a gated folder's items are never
 listed publicly. **Phase split:** Phase 2a implements the tier resolver
 (public/unlisted/private, chain `max`) across the archive/REST/modal queries; Phase
-2b adds the password hash, challenge cookie, and the folder + attachment-single
-gate.
+2b adds the password hash, signed HttpOnly challenge cookie, and the folder +
+attachment-single gate. Nested password folders require each gate in root-to-leaf
+order; changing a password invalidates its existing cookie token.
 
 ### 2.1 Predicates (fix `public` vs `listed`/`searchable`)
 

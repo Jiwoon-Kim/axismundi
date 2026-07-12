@@ -69,6 +69,24 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		'html'  => '<label><input type="checkbox" name="attachments[' . (int) $post->ID . '][ax_media_searchable]" value="1"' . checked( $searchable, '1', false ) . ' /> ' . esc_html__( 'Show in media search', 'axismundi-media-library' ) . '</label>',
 	);
 
+	// Folder: the single virtual folder this media lives in. The dropdown lists the
+	// media owner's (post_author's) folder tree; "Unfiled" is the root.
+	$folder_options = array( '0' => __( 'Unfiled', 'axismundi-media-library' ) );
+	foreach ( axismundi_media_user_folders( (int) $post->post_author ) as $axismundi_media_folder ) {
+		$folder_options[ (string) $axismundi_media_folder['id'] ] = $axismundi_media_folder['name'];
+	}
+	$form_fields['ax_media_folder'] = array(
+		'label' => __( 'Folder', 'axismundi-media-library' ),
+		'input' => 'html',
+		'html'  => axismundi_media_attachment_select(
+			$post->ID,
+			'ax_media_folder',
+			(string) axismundi_media_attachment_folder( $post->ID ),
+			$folder_options
+		),
+		'helps' => __( 'The single virtual folder this media lives in. Moving it never changes the file URL.', 'axismundi-media-library' ),
+	);
+
 	$form_fields['ax_media_creator_name'] = array(
 		'label' => __( 'Creator', 'axismundi-media-library' ),
 		'input' => 'text',
@@ -234,6 +252,15 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 	// Unchecked checkboxes are absent from $attachment → store '0'.
 	update_post_meta( $post_id, '_ax_media_listed', empty( $attachment['ax_media_listed'] ) ? '0' : '1' );
 	update_post_meta( $post_id, '_ax_media_searchable', empty( $attachment['ax_media_searchable'] ) ? '0' : '1' );
+
+	// Folder move. We are already inside the edit_post guard (per-attachment right);
+	// the target must be the root (0) or a folder the acting user may manage.
+	if ( isset( $attachment['ax_media_folder'] ) ) {
+		$axismundi_media_target = absint( $attachment['ax_media_folder'] );
+		if ( 0 === $axismundi_media_target || ( ! axismundi_media_is_root_term( $axismundi_media_target ) && axismundi_media_can_manage_folder( $axismundi_media_target ) ) ) {
+			axismundi_media_set_attachment_folder( $post_id, $axismundi_media_target );
+		}
+	}
 
 	$text_fields = array(
 		'ax_media_creator_name'          => '_ax_media_creator_name',

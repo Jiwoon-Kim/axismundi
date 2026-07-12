@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.4
+Stable tag: 0.0.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,17 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.5 =
+* Phase 2a groundwork: the ax_media_folder virtual-folder taxonomy (hierarchical,
+  per-user hidden root so two users can both have a "Travel" folder), single-folder
+  enforcement (an attachment is in 0 or 1 folder), and direct/recursive counts.
+* Folder service + REST (axismundi-media/v1): create, rename, delete (contents move
+  to the root — never deleted), and move. Moving an attachment requires edit_post on
+  THAT attachment, not just upload_files.
+* Attachment edit panel: assign the item's single folder.
+* Not yet wired: folder-aware visibility resolver, folder archives, and the media
+  modal folder filter (following increments).
 
 = 0.0.4 =
 * Add public media archives with scoped visibility filtering. The base is a plain

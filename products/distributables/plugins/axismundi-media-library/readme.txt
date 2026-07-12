@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.12
+Stable tag: 0.0.13
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,21 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.13 =
+* Add the dual-key Used-in relation index (`wp_ax_media_relations`) with local-ID
+  source keys, optional canonical URIs, deduplication, occurrence counts, atomic
+  per-provider replacement, schema upgrades, and read-filtered reverse lookup.
+* Incrementally index featured images, core media blocks, galleries, and ID-based
+  gallery/playlist shortcodes while preserving prior data when an integration
+  provider reports an error. URL-string reverse matching remains intentionally out
+  of scope.
+* Add `wp axismundi media relations reindex` for exact dry-runs, single-post
+  rebuilds, and confirmed full rebuilds.
+* Rename the Attachment Details folder field to Location and add a role-labelled,
+  read-filtered Used in list. Saved in remains reserved for Phase 5 collections.
+* Add dev-only permission, relation-store, provider, and reindex regression fixtures;
+  the distributable ZIP excludes tests and build scripts.
 
 = 0.0.12 =
 * Add Atom feeds for three scopes: Home (/?ax_media_feed=home), Author

@@ -25,6 +25,78 @@ function axismundi_media_attachment_select( int $post_id, string $name, string $
 }
 
 /**
+ * Human labels for relation roles shown in Attachment Details.
+ *
+ * @return array<string,string>
+ */
+function axismundi_media_relation_role_labels() : array {
+	return array(
+		'featured'  => __( 'Featured image', 'axismundi-media-library' ),
+		'content'   => __( 'Content', 'axismundi-media-library' ),
+		'gallery'   => __( 'Gallery', 'axismundi-media-library' ),
+		'cover'     => __( 'Cover', 'axismundi-media-library' ),
+		'media_text' => __( 'Media & Text', 'axismundi-media-library' ),
+		'file'      => __( 'File', 'axismundi-media-library' ),
+		'audio'     => __( 'Audio', 'axismundi-media-library' ),
+		'video'     => __( 'Video', 'axismundi-media-library' ),
+		'poster'    => __( 'Poster', 'axismundi-media-library' ),
+		'decorative' => __( 'Decorative', 'axismundi-media-library' ),
+	);
+}
+
+/**
+ * Read-filtered Used-in list for one Attachment. Multiple roles in one subject are
+ * grouped so the source post appears once. Remote subjects are deferred to Phase 7.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return string Safe HTML.
+ */
+function axismundi_media_attachment_used_in_html( int $attachment_id ) : string {
+	$rows = axismundi_media_relations_used_in( $attachment_id );
+	if ( empty( $rows ) ) {
+		return '<span class="ax-media-used-in-empty">' . esc_html__( 'No indexed usage.', 'axismundi-media-library' ) . '</span>';
+	}
+
+	$groups = array();
+	foreach ( $rows as $row ) {
+		$post_id = (int) $row['subject_post_id'];
+		if ( 'post' !== $row['subject_type'] || $post_id <= 0 ) {
+			continue;
+		}
+		if ( ! isset( $groups[ $post_id ] ) ) {
+			$groups[ $post_id ] = array( 'roles' => array() );
+		}
+		$role = (string) $row['role'];
+		$groups[ $post_id ]['roles'][ $role ] = ( $groups[ $post_id ]['roles'][ $role ] ?? 0 ) + (int) $row['occurrence_count'];
+	}
+	if ( empty( $groups ) ) {
+		return '<span class="ax-media-used-in-empty">' . esc_html__( 'No indexed usage.', 'axismundi-media-library' ) . '</span>';
+	}
+
+	$role_labels = axismundi_media_relation_role_labels();
+	$html        = '<ul class="ax-media-used-in">';
+	foreach ( $groups as $post_id => $group ) {
+		$post = get_post( (int) $post_id );
+		if ( ! $post ) {
+			continue;
+		}
+		$title = '' !== $post->post_title ? $post->post_title : __( '(untitled)', 'axismundi-media-library' );
+		$url   = current_user_can( 'edit_post', $post->ID ) ? get_edit_post_link( $post->ID, 'raw' ) : get_permalink( $post );
+		$item  = $url
+			? '<a href="' . esc_url( $url ) . '">' . esc_html( $title ) . '</a>'
+			: esc_html( $title );
+
+		$roles = array();
+		foreach ( $group['roles'] as $role => $count ) {
+			$label   = $role_labels[ $role ] ?? ucfirst( str_replace( '_', ' ', $role ) );
+			$roles[] = $count > 1 ? sprintf( '%1$s ×%2$d', $label, $count ) : $label;
+		}
+		$html .= '<li>' . $item . ' <span class="ax-media-used-in-roles">(' . esc_html( implode( ', ', $roles ) ) . ')</span></li>';
+	}
+	return $html . '</ul>';
+}
+
+/**
  * Add the visibility controls to the attachment edit form.
  *
  * @param array   $form_fields Existing fields.
@@ -77,7 +149,7 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		$folder_options[ (string) $axismundi_media_folder['id'] ] = $axismundi_media_folder['name'];
 	}
 	$form_fields['ax_media_folder'] = array(
-		'label' => __( 'Folder', 'axismundi-media-library' ),
+		'label' => __( 'Location', 'axismundi-media-library' ),
 		'input' => 'html',
 		'html'  => axismundi_media_attachment_select(
 			$post->ID,
@@ -86,6 +158,12 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 			$folder_options
 		),
 		'helps' => __( 'The single virtual folder this media lives in. Moving it never changes the file URL.', 'axismundi-media-library' ),
+	);
+	$form_fields['ax_media_used_in'] = array(
+		'label' => __( 'Used in', 'axismundi-media-library' ),
+		'input' => 'html',
+		'html'  => axismundi_media_attachment_used_in_html( $post->ID ),
+		'helps' => __( 'Indexed references you can read. Saved collections are shown separately in a later phase.', 'axismundi-media-library' ),
 	);
 
 	$form_fields['ax_media_creator_name'] = array(

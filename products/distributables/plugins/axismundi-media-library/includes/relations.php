@@ -116,37 +116,17 @@ function axismundi_media_relation_uri_hash( ?string $uri ) : ?string {
 }
 
 /**
- * Atomically replace a subject's relations for one provider (DATA-MODEL §4).
- * Dedups + aggregates the input by (object_key, predicate, role), deletes the
- * existing (subject, provider) rows, and inserts the fresh set in a transaction. An
- * empty input just clears that provider's rows for the subject.
+ * Validate, deduplicate, and aggregate normalized provider relations.
  *
- * @param array<string,mixed>              $subject   ['post_id'=>int, 'uri'=>string, 'type'=>string].
- * @param string                           $provider  Provider slug.
- * @param array<int,array<string,mixed>>   $relations Each: predicate, role, object_attachment_id, object_uri, source_key.
- * @param string                           $kind      relation_kind (default `usage`).
- * @return int|WP_Error Rows written, or error.
+ * This is shared by writes and Phase 3c dry-runs so the reported row count is the
+ * exact count the store would insert. Invalid predicates/roles degrade to the
+ * conservative content attachment defaults; rows without any object identity are
+ * ignored.
+ *
+ * @param array<int,array<string,mixed>> $relations Provider relations.
+ * @return array<string,array<string,mixed>> Rows keyed by object/predicate/role.
  */
-function axismundi_media_relations_replace( array $subject, string $provider, array $relations, string $kind = 'usage' ) {
-	global $wpdb;
-	$table        = axismundi_media_relations_table();
-	$subject_post = isset( $subject['post_id'] ) ? (int) $subject['post_id'] : 0;
-	$subject_uri  = isset( $subject['uri'] ) ? (string) $subject['uri'] : '';
-	// Validate/normalize BEFORE any mutation, so a bad provider result never deletes
-	// the existing rows and then fails to re-insert.
-	$subject_type = in_array( (string) ( $subject['type'] ?? '' ), array( 'post', 'remote_object' ), true )
-		? (string) $subject['type']
-		: ( $subject_post > 0 ? 'post' : 'remote_object' );
-	$kind         = in_array( $kind, array( 'usage', 'legacy_parent' ), true ) ? $kind : 'usage';
-	$subject_key  = axismundi_media_relation_key( 'post', $subject_post, '' !== $subject_uri ? $subject_uri : null );
-	if ( '' === $subject_key ) {
-		return new WP_Error( 'ax_media_relation_subject', __( 'Invalid relation subject.', 'axismundi-media-library' ) );
-	}
-	if ( '' === $provider || strlen( $provider ) > 40 ) {
-		return new WP_Error( 'ax_media_relation_provider', __( 'Invalid relation provider.', 'axismundi-media-library' ) );
-	}
-
-	// Dedup + aggregate by (object_key, predicate, role).
+function axismundi_media_relations_prepare_rows( array $relations ) : array {
 	$rows = array();
 	foreach ( $relations as $rel ) {
 		$oa  = isset( $rel['object_attachment_id'] ) ? (int) $rel['object_attachment_id'] : 0;
@@ -179,6 +159,41 @@ function axismundi_media_relations_replace( array $subject, string $provider, ar
 			'occurrence_count'     => 1,
 		);
 	}
+	return $rows;
+}
+
+/**
+ * Atomically replace a subject's relations for one provider (DATA-MODEL §4).
+ * Dedups + aggregates the input by (object_key, predicate, role), deletes the
+ * existing (subject, provider) rows, and inserts the fresh set in a transaction. An
+ * empty input just clears that provider's rows for the subject.
+ *
+ * @param array<string,mixed>              $subject   ['post_id'=>int, 'uri'=>string, 'type'=>string].
+ * @param string                           $provider  Provider slug.
+ * @param array<int,array<string,mixed>>   $relations Each: predicate, role, object_attachment_id, object_uri, source_key.
+ * @param string                           $kind      relation_kind (default `usage`).
+ * @return int|WP_Error Rows written, or error.
+ */
+function axismundi_media_relations_replace( array $subject, string $provider, array $relations, string $kind = 'usage' ) {
+	global $wpdb;
+	$table        = axismundi_media_relations_table();
+	$subject_post = isset( $subject['post_id'] ) ? (int) $subject['post_id'] : 0;
+	$subject_uri  = isset( $subject['uri'] ) ? (string) $subject['uri'] : '';
+	// Validate/normalize BEFORE any mutation, so a bad provider result never deletes
+	// the existing rows and then fails to re-insert.
+	$subject_type = in_array( (string) ( $subject['type'] ?? '' ), array( 'post', 'remote_object' ), true )
+		? (string) $subject['type']
+		: ( $subject_post > 0 ? 'post' : 'remote_object' );
+	$kind         = in_array( $kind, array( 'usage', 'legacy_parent' ), true ) ? $kind : 'usage';
+	$subject_key  = axismundi_media_relation_key( 'post', $subject_post, '' !== $subject_uri ? $subject_uri : null );
+	if ( '' === $subject_key ) {
+		return new WP_Error( 'ax_media_relation_subject', __( 'Invalid relation subject.', 'axismundi-media-library' ) );
+	}
+	if ( '' === $provider || strlen( $provider ) > 40 ) {
+		return new WP_Error( 'ax_media_relation_provider', __( 'Invalid relation provider.', 'axismundi-media-library' ) );
+	}
+
+	$rows = axismundi_media_relations_prepare_rows( $relations );
 
 	$now = current_time( 'mysql', true );
 	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

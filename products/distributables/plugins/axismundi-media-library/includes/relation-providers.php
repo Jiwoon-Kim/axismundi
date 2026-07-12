@@ -200,37 +200,78 @@ function axismundi_media_provider_shortcode( WP_Post $post ) : array {
  * ---------------------------------------------------------------- */
 
 /**
- * (Re)index one post: run every provider and atomically replace its rows. A provider
- * returning WP_Error is skipped (its rows are preserved). auto-draft/trash clears the
- * whole subject. Revisions/autosaves are ignored. Post-type public-ness is NOT a
- * condition — draft/private are indexed and protected by the Used-in read filter.
+ * Collect and optionally write every provider for one post.
+ *
+ * Dry-run uses the store's exact dedup/aggregation routine and never mutates. A
+ * provider returning WP_Error is reported and preserves its current rows. Public
+ * visibility is not an indexing condition; the reverse lookup owns read filtering.
+ *
+ * @param int  $post_id Subject post ID.
+ * @param bool $dry_run Do not write or clear rows.
+ * @return array{status:string,dry_run:bool,written:int,providers:array<string,int>,errors:array<string,string>}
+ */
+function axismundi_media_relations_reindex_post( int $post_id, bool $dry_run = false ) : array {
+	$report = array(
+		'status'    => 'indexed',
+		'dry_run'   => $dry_run,
+		'written'   => 0,
+		'providers' => array(),
+		'errors'    => array(),
+	);
+	if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+		$report['status'] = 'skipped';
+		return $report;
+	}
+	$post = get_post( $post_id );
+	if ( ! $post ) {
+		$report['status']            = 'missing';
+		$report['errors']['subject'] = __( 'The relation subject does not exist.', 'axismundi-media-library' );
+		return $report;
+	}
+	if ( in_array( $post->post_status, array( 'auto-draft', 'trash' ), true ) ) {
+		$report['status']  = 'cleared';
+		$report['written'] = count( axismundi_media_relations_for_subject( $post_id ) );
+		if ( ! $dry_run ) {
+			axismundi_media_relations_delete_subject( $post_id );
+		}
+		return $report;
+	}
+	$subject = array( 'post_id' => $post_id, 'type' => 'post' );
+	foreach ( axismundi_media_relation_providers() as $slug => $callback ) {
+		if ( ! is_callable( $callback ) ) {
+			$report['errors'][ (string) $slug ] = __( 'The relation provider is not callable.', 'axismundi-media-library' );
+			continue;
+		}
+		$result = call_user_func( $callback, $post );
+		if ( is_wp_error( $result ) ) {
+			$report['errors'][ (string) $slug ] = $result->get_error_message();
+			continue;
+		}
+		$count = count( axismundi_media_relations_prepare_rows( (array) $result ) );
+		$report['providers'][ (string) $slug ] = $count;
+		if ( $dry_run ) {
+			$report['written'] += $count;
+			continue;
+		}
+		$written = axismundi_media_relations_replace( $subject, (string) $slug, (array) $result );
+		if ( is_wp_error( $written ) ) {
+			$report['errors'][ (string) $slug ] = $written->get_error_message();
+			continue;
+		}
+		$report['written'] += (int) $written;
+	}
+	return $report;
+}
+
+/**
+ * (Re)index one post for incremental hooks. Errors preserve prior provider rows and
+ * are intentionally non-fatal here; Phase 3c CLI surfaces them to operators.
  *
  * @param int $post_id Subject post ID.
  * @return void
  */
 function axismundi_media_index_post( int $post_id ) : void {
-	if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
-		return;
-	}
-	$post = get_post( $post_id );
-	if ( ! $post ) {
-		return;
-	}
-	if ( in_array( $post->post_status, array( 'auto-draft', 'trash' ), true ) ) {
-		axismundi_media_relations_delete_subject( $post_id );
-		return;
-	}
-	$subject = array( 'post_id' => $post_id, 'type' => 'post' );
-	foreach ( axismundi_media_relation_providers() as $slug => $callback ) {
-		if ( ! is_callable( $callback ) ) {
-			continue;
-		}
-		$result = call_user_func( $callback, $post );
-		if ( is_wp_error( $result ) ) {
-			continue; // preserve this provider's existing rows.
-		}
-		axismundi_media_relations_replace( $subject, (string) $slug, (array) $result );
-	}
+	axismundi_media_relations_reindex_post( $post_id, false );
 }
 
 /**

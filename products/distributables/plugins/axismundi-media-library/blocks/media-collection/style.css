@@ -1,0 +1,83 @@
+.wp-block-axismundi-media-collection .ax-media-collection__grid {
+	display: grid;
+	grid-template-columns: repeat(var(--ax-media-collection-columns, 3), minmax(0, 1fr));
+	gap: var(--wp--preset--spacing--300, 1.5rem);
+	padding: 0;
+	list-style: none;
+}
+
+.wp-block-axismundi-media-collection .ax-media-collection__item {
+	min-inline-size: 0;
+}
+
+.wp-block-axismundi-media-collection .is-folder > a,
+.wp-block-axismundi-media-collection .is-up > a {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	min-block-size: 120px;
+	padding: var(--wp--preset--spacing--300, 1.5rem);
+	color: inherit;
+	background: var(--wp--preset--color--surface-container-low, #f7f2fa);
+	border-radius: var(--wp--custom--shape--corner--large, 16px);
+	text-decoration: none;
+}
+
+.wp-block-axismundi-media-collection .is-up > a {
+	grid-template-columns: auto 1fr;
+	gap: var(--wp--preset--spacing--200, 1rem);
+	background: transparent;
+	border: 1px solid var(--wp--preset--color--outline-variant, #cac4d0);
+}
+
+.wp-block-axismundi-media-collection .ax-media-collection__folder-art {
+	grid-column: 1 / -1;
+	inline-size: 48px;
+	block-size: 32px;
+	margin-block-end: var(--wp--preset--spacing--200, 1rem);
+	background: var(--wp--preset--color--secondary-container, #e8def8);
+	border-radius: 4px 8px 8px 8px;
+}
+
+.wp-block-axismundi-media-collection .ax-media-collection__preview {
+	display: grid;
+	place-items: center;
+	aspect-ratio: 4 / 3;
+	overflow: hidden;
+	background: var(--wp--preset--color--surface-container, #f3edf7);
+	border-radius: var(--wp--custom--shape--corner--medium, 12px);
+}
+
+.wp-block-axismundi-media-collection .ax-media-collection__preview img {
+	inline-size: 100%;
+	block-size: 100%;
+	object-fit: cover;
+}
+
+.wp-block-axismundi-media-collection h2 {
+	margin-block: var(--wp--preset--spacing--100, .5rem) 0;
+	font: inherit;
+}
+
+.wp-block-axismundi-media-collection time,
+.wp-block-axismundi-media-collection .ax-media-collection__count {
+	color: var(--wp--preset--color--on-surface-variant, #49454f);
+}
+
+.wp-block-axismundi-media-collection .ax-media-collection__pagination {
+	display: flex;
+	gap: var(--wp--preset--spacing--100, .5rem);
+	margin-block-start: var(--wp--preset--spacing--400, 2rem);
+}
+
+@media (max-width: 781px) {
+	.wp-block-axismundi-media-collection .ax-media-collection__grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 480px) {
+	.wp-block-axismundi-media-collection .ax-media-collection__grid {
+		grid-template-columns: 1fr;
+	}
+}

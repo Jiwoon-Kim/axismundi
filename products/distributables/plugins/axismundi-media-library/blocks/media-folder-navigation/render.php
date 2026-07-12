@@ -46,7 +46,7 @@ if ( ! is_wp_error( $axismundi_media_children ) ) {
 			'<li><a href="%1$s"><span>%2$s</span><span class="count">%3$d</span></a></li>',
 			esc_url( axismundi_media_folder_url( $axismundi_media_owner_id, (int) $axismundi_media_child->term_id ) ),
 			esc_html( $axismundi_media_child->name ),
-			(int) axismundi_media_folder_recursive_count( (int) $axismundi_media_child->term_id )
+			(int) axismundi_media_folder_visible_count( (int) $axismundi_media_child->term_id, min( 1, axismundi_media_folder_effective_tier_rank( $axismundi_media_folder_id ) ) )
 		);
 	}
 }

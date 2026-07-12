@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.7
+Stable tag: 0.0.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,13 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.8 =
+* Add the Media Collection block with current archive, user root, and specific
+  folder sources; responsive columns; attachment pagination; and display controls.
+* Render parent navigation, visible child folders, and direct Attachments in one
+  collection without leaking hidden descendant counts.
+* Adopt Media Collection in media home, author, and folder templates.
 
 = 0.0.7 =
 * Add folder password gates with WordPress password hashes, signed HttpOnly

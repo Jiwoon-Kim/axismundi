@@ -86,6 +86,7 @@ function axismundi_media_query_vars( array $vars ) : array {
 	$vars[] = 'ax_media_folder';
 	$vars[] = 'ax_media_folder_path';
 	$vars[] = 'ax_media_type';
+	$vars[] = 'ax_media_page';
 	return array_values( array_unique( $vars ) );
 }
 add_filter( 'query_vars', 'axismundi_media_query_vars' );
@@ -413,6 +414,7 @@ function axismundi_media_register_archive_blocks_and_templates() : void {
 	register_block_type( __DIR__ . '/../blocks/media-archive-title' );
 	register_block_type( __DIR__ . '/../blocks/media-folder-navigation' );
 	register_block_type( __DIR__ . '/../blocks/media-gate' );
+	register_block_type( __DIR__ . '/../blocks/media-collection' );
 
 	if ( ! axismundi_media_is_independent() || ! function_exists( 'register_block_template' ) ) {
 		return;

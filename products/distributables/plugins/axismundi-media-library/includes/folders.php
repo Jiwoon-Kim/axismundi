@@ -594,6 +594,39 @@ function axismundi_media_folder_recursive_count( int $term_id ) : int {
 }
 
 /**
+ * Count only Attachments visible to the current viewer in a folder subtree.
+ * Front-end folder tiles must not disclose raw private/unlisted item counts.
+ *
+ * @param int  $term_id         Folder term ID.
+ * @param int  $max_rank        Maximum public visibility rank for this route.
+ * @param bool $include_children Include descendants.
+ * @return int
+ */
+function axismundi_media_folder_visible_count( int $term_id, int $max_rank = 0, bool $include_children = true ) : int {
+	$query = new WP_Query(
+		array(
+			'post_type'                     => 'attachment',
+			'post_status'                   => 'inherit',
+			'posts_per_page'                => 1,
+			'fields'                        => 'ids',
+			'no_found_rows'                 => false,
+			'author'                        => axismundi_media_folder_owner( $term_id ),
+			'ax_media_visibility_filter'    => true,
+			'ax_media_visibility_max_rank'  => min( 1, max( 0, $max_rank ) ),
+			'tax_query'                     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- Explicit folder count scope.
+				array(
+					'taxonomy'         => AXISMUNDI_MEDIA_FOLDER_TAX,
+					'field'            => 'term_id',
+					'terms'            => array( $term_id ),
+					'include_children' => $include_children,
+				),
+			),
+		)
+	);
+	return (int) $query->found_posts;
+}
+
+/**
  * A user's folders as a flat list (excludes the hidden root), each with counts.
  *
  * @param int $user_id User ID.

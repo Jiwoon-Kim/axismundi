@@ -67,58 +67,18 @@ function axismundi_actors_register_projection( string $id, array $args ) {
 }
 
 /**
- * Built-in Posts URL.
- *
- * @param Axismundi_Actor $actor Actor.
- * @return string
- */
-function axismundi_actors_posts_projection_url( Axismundi_Actor $actor ) : string {
-	$user_id = $actor->get_local_user_id();
-	return $user_id ? get_author_posts_url( $user_id ) : '';
-}
-
-/**
- * @param Axismundi_Actor $actor Actor.
- * @param int             $viewer_id Viewer ID (unused; public post count only).
- * @return bool
- */
-function axismundi_actors_posts_projection_visible( Axismundi_Actor $actor, int $viewer_id ) : bool { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- public callback signature.
-	$user_id = $actor->get_local_user_id();
-	return $user_id && count_user_posts( $user_id, 'post', true ) > 0;
-}
-
-/**
- * @param Axismundi_Actor $actor Actor.
- * @return int|null
- */
-function axismundi_actors_posts_projection_count( Axismundi_Actor $actor ) : ?int {
-	$user_id = $actor->get_local_user_id();
-	return $user_id ? count_user_posts( $user_id, 'post', true ) : null;
-}
-
-/** @return void */
-function axismundi_actors_register_builtin_projections() : void {
-	axismundi_actors_register_projection(
-		'posts',
-		array(
-			'label'            => __( 'Posts', 'axismundi-actors' ),
-			'url_callback'     => 'axismundi_actors_posts_projection_url',
-			'visible_callback' => 'axismundi_actors_posts_projection_visible',
-			'count_callback'   => 'axismundi_actors_posts_projection_count',
-			'priority'         => 10,
-		)
-	);
-}
-
-/**
  * Rebuild the request-local registry in deterministic order.
+ *
+ * Actors ships **no built-in projection** — the actor profile's primary surface is
+ * an activity feed owned by Axismundi Activities, and Articles / Notes / Media are
+ * registered by their own domain plugins (docs/PROJECTIONS.md §4). With no plugin
+ * registered, an actor renders header-only.
  *
  * @return void
  */
 function axismundi_actors_load_projections() : void {
 	$GLOBALS['axismundi_actors_projections']       = array();
 	$GLOBALS['axismundi_actors_projection_sequence'] = 0;
-	axismundi_actors_register_builtin_projections();
 	do_action( 'axismundi_actors_register_projections' );
 }
 add_action( 'init', 'axismundi_actors_load_projections', 30 );

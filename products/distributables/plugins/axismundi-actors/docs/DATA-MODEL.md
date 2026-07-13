@@ -196,3 +196,38 @@ ax_actors_site_actor_type         Application (default) | Organization
 - **Deactivate / uninstall:** tables and rows are **retained** (no destructive
   drop). A scoped reset is a post-roadmap danger-zone action, mirroring the Media
   Library contract.
+
+## 7. Reserved: handle alias-history (future phase, not built in v0.1)
+
+The handle is a **reservable routing alias**, not the identity (the identity is the
+UUID / `actor_uri`). v0.1 keeps the handle on the actor row and immutable-once-set.
+When change/recovery is opened, it moves to a dedicated table so old handles are
+retained as reservations and can never be silently reused:
+
+```
+wp_ax_actor_handles
+- id
+- identity_id
+- handle
+- handle_key   UNIQUE      -- normalized; the routing key
+- status       primary | redirect | reserved
+- created_at
+- retired_at
+```
+
+Rules (frozen intent; schema is actor-kind-neutral so Person change can open later):
+
+- One `primary` per actor; superseded handles become `redirect`; a tombstoned
+  actor's handles become `reserved`.
+- **Only the same actor** may reclaim its own `redirect` / `reserved` handle; another
+  actor can never occupy it (anti-impersonation). Any change checks reserved/dup and
+  swaps primary↔redirect **in one transaction**; the canonical id stays `/actors/{uuid}`.
+- **Site actor:** change is appropriate (e.g. `@blog` → `@designbusan`), with the old
+  handle permanently reserved to the same site actor and a `redirect`; the site actor
+  may revert.
+- **Person actor:** immutable in v0.1, and its handle stays **reserved even after the
+  user is deleted**. A returning person is handled as **tombstone-identity recovery**
+  (admin re-links the tombstoned actor to a new `WP_User`), *not* by letting a new
+  user grab `@alice` — which would mis-attribute old posts and read as account
+  takeover to remote servers. A genuinely different person gets `alice-2`.
+- A remote actor's `preferredUsername` is **never** entered in this local table.

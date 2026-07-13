@@ -13,13 +13,16 @@ projection's query or own its content.
 
 ```
 Actor hub  /@alice/
-├─ Posts        → /author/alice/                (core; registered by Actors itself)
-├─ Media        → /media/author/alice/          (Axismundi Media Library)
-├─ Notes        → /notes/alice/                 (Axismundi Notes, later)
-├─ Collections  → …                             (later)
-├─ Folders      → …                             (later)
-└─ Activity     → /@alice/activity/             (Axismundi Activities, later)
+├─ Activity     → the profile feed             (Axismundi Activities; primary surface)
+├─ Articles     → /author/kimjiwoon96/         (core post archive; a future registrar)
+├─ Media        → /media/author/kimjiwoon96/   (Axismundi Media Library)
+├─ Notes        → /notes/kimjiwoon96/          (Axismundi Notes, later)
+├─ Collections  → …                            (later)
+└─ Folders      → …                            (later)
 ```
+
+The handle (`@alice`) and the WordPress archive slug (`kimjiwoon96`) are independent
+(ROUTING §0.1); a projection points at the domain plugin's own URL, not at `@alice`.
 
 Actors coordinates only **URL, label, visibility, and order**. The domain plugin
 owns the data, the template, and the permission logic behind the link.
@@ -89,10 +92,10 @@ add_action( 'axismundi_actors_register_projections', function () {
    plugin's tables.
 2. **`id` is unique and stable.** Re-registering the same `id` **replaces** the
    prior definition (last writer wins) and emits a `_doing_it_wrong` notice — two
-   plugins must not silently fight over `posts`. `posts` is registered by Actors
-   itself and may be overridden intentionally.
-3. **Ordering** is by `priority` then registration order; ties are stable. `posts`
-   defaults to `priority = 10`, `media` to `20`.
+   plugins must not silently fight over an id. Actors registers none itself.
+3. **Ordering** is by `priority` then registration order; ties are stable. By
+   convention `activity` sorts first (low priority), then `articles ≈ 20`,
+   `media ≈ 20`, etc.
 4. **Visibility is per actor and per viewer.** A projection with no URL
    (`url_callback` returns `''`) or `visible_callback => false` is omitted from the
    nav entirely — it is never rendered as a dead link. An `internal`/tombstoned
@@ -107,16 +110,28 @@ add_action( 'axismundi_actors_register_projections', function () {
    `axismundi_actors_projection_error`; a broken optional integration must not take
    down the actor profile hub.
 
-## 4. The built-in `posts` projection
+## 4. Actors ships **no** built-in projection
 
-Actors registers `posts` itself so the hub works with zero domain plugins:
+The actor profile's **primary surface is an activity feed**, not a post list — the
+feed is owned by **Axismundi Activities** (a separate plugin), which registers it as
+the default projection when present. Everything else is a domain-registered tab:
 
-- `label` → `Posts`
-- `url_callback` → the core author archive for the actor's `local_user_id`
-  (`get_author_posts_url()`), or `''` for actors with no user (site/remote).
-- `visible_callback` → the actor has a `local_user_id` and the author has ≥1
-  readable published post.
-- `priority` → `10`.
+```
+Actor header
+[Activity]  [Articles]  [Notes]  [Media]        ← all registered by their own plugins
+ └ primary   └ core post  └ Notes   └ Media Library
+   (Activities) archive
+```
+
+- With **no** domain plugin active, an actor renders **header-only** (an empty
+  projection nav). Actors never invents a placeholder link or queries another
+  plugin's content.
+- **Articles** (the core WordPress `post` author archive) is a future
+  domain registration — its slug is **`articles`**, not `posts`, and it is *not*
+  owned by Actors. (An earlier build shipped a built-in `posts` projection; it was
+  removed as premature — the profile is activity-first, and Actors owning a
+  post-list decision violates the identity-only boundary.)
+- Actors' only job here stays URL / label / visibility / order coordination.
 
 ## 5. What projections are **not**
 

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.5
+Stable tag: 0.0.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,19 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.6 =
+* Remove the premature built-in Posts projection. The actor profile's primary
+  surface is an activity feed (owned by Axismundi Activities); Actors ships no
+  built-in projection and renders header-only until a domain plugin registers one.
+  The core-post projection, when added, is `articles` (not `posts`) and is owned by
+  its own registrar. The registry, hook, and navigation block are unchanged.
+* Lock two design contracts ahead of admin integration: the Actor handle is
+  independent of the WordPress profile name and the author/media archive URLs
+  (handle changes never move `/author/…` or `/media/author/…`); and the handle is a
+  reservable routing alias with a future alias-history table — Person handles stay
+  reserved after a user is deleted (re-signup is tombstone recovery, not handle
+  reuse), while the site actor may change its handle with a reserved redirect.
 
 = 0.0.5 =
 * Phase 3 projection registry: request-local public registration API and hook,

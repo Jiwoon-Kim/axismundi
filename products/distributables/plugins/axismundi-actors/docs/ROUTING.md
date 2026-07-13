@@ -17,6 +17,30 @@ canonical identity; canonical links (and any future JSON-LD `id`) use `/actors/{
 never the alias. The DB `id` is **never** in a URL (`/actors/42` is forbidden) — only
 the `uuid`, which survives re-import and domain moves.
 
+## 0.1. The Actor handle is NOT the WordPress profile name
+
+The Actor handle and the WordPress author/media archive slugs are **independent** —
+different names, different URLs, connected only by `local_user_id`:
+
+```
+WP account       user_login / user_nicename
+Posts archive    /author/{user_nicename}/            (core; e.g. /author/kimjiwoon96/)
+Media archive    /media/author/{user_nicename}/…     (Media Library; owned by post_author)
+Actor hub        /@{actor_handle}/                   (e.g. /@thaumiel/)
+Actor identity   /actors/{uuid}
+```
+
+- Changing the Actor handle never changes `user_nicename` or the author/media URLs,
+  and renaming the WP user never changes an already-registered Actor handle. The
+  activation UI (Phase 4) offers to *seed* the handle from `user_nicename` or the
+  nickname, but that is a one-time copy, not a live link.
+- **Media archive URLs stay put.** Media Library runs without Actors, ownership is
+  `post_author`, and its `/media/author/…/folder/…` paths (plus the plain-id
+  fallback) must not move when an Actor handle changes. Actors *links to* the Media
+  archive as a projection; it never becomes its canonical URL.
+- A future Actor-handle-centric view (e.g. `/@thaumiel/posts/`) is only ever an
+  **alias/redirect** onto the existing archive, never a replacement.
+
 ## 1. Canonical identity — `/actors/{uuid}` (+ `/?ax_actor={uuid}` fallback)
 
 - Pretty route: `^actors/([0-9a-f-]{36})/?$` → `index.php?ax_actor={uuid}`, plus the

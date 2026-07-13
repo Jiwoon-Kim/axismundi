@@ -73,24 +73,36 @@ is rejected. Actor activation stays separate from WordPress "Anyone can register
 **Non-goals:** the activation UI (Settings/profile, Phase 4); any handle-change path
 (future admin recovery + alias/`Move`).
 
-## Phase 3 — Projection registry *(shipped in 0.0.5)*
+## Phase 3 — Projection registry *(shipped in 0.0.5; built-in projection removed in 0.0.6)*
 
 **Entry:** Phase 2.
 **Build:** `axismundi_actors_register_projection()` + the
-`axismundi_actors_register_projections` hook; the built-in `posts` projection;
-ordering / visibility / count resolution; duplicate-id replacement with a
-`_doing_it_wrong` notice.
-**Acceptance:** `posts` appears with a correct count and is hidden for actors with
-no readable posts; a second plugin can add a projection purely via the public API
-(no Actors edit); deactivating that plugin removes its projection; ordering follows
-`priority`.
-**Non-goals:** Media/Notes projections (owned by those plugins).
+`axismundi_actors_register_projections` hook; ordering / visibility / count
+resolution; duplicate-id replacement with a `_doing_it_wrong` notice; callback
+isolation; the dynamic navigation block.
+**Acceptance:** a plugin can add a projection purely via the public API (no Actors
+edit); ordering follows `priority`; a hidden / empty-URL projection is omitted; a
+throwing callback is isolated; deactivating a plugin removes its projection; an
+`internal` actor exposes none to anon (owner preview may).
+**Correction (0.0.6):** Actors ships **no** built-in projection. The profile's
+primary surface is an **activity feed** owned by Axismundi Activities; the earlier
+built-in `posts` projection was premature (activity-first, and a post-list decision
+is not Actors' to own) and was removed. Articles / Notes / Media are each registered
+by their own plugins; the core-post projection is `articles`, not `posts`.
+**Non-goals:** the activity feed itself (Axismundi Activities); Articles/Media/Notes
+projections (owned by those plugins).
 
 ## Phase 4 — Admin integration
 
-**Entry:** Phase 3.
-**Build:** a public/internal toggle + site-actor type (`Application`/`Organization`)
-on the relevant admin screens; a "Actor profile" row link on Users; view/edit
+**Entry:** Phase 3. **Design prerequisite:** lock the handle alias-history contract
+(DATA-MODEL §7 — Person immutable + reserved-after-tombstone; Site changeable with a
+reserved redirect and revert; re-signup = tombstone recovery, not handle reuse) and
+the handle ≠ profile-name separation (ROUTING §0.1) *before* building the activation
+UI, so the screens are shaped for it.
+**Build:** the actor **activation** flow (register a handle — candidates seeded from
+`user_nicename` / nickname, never `user_login`, with a normalized `@handle` preview
+and dup/reserved check — then publish); a public/internal toggle + site-actor type
+(`Application`/`Organization`); an "Actor profile" row link on Users; view/edit
 capability wiring; the `ax_actors_site_owner_user_id` setting.
 **Acceptance:** publishing is explicit and per-actor; no bulk publish of existing
 users; email never appears in any actor screen or link.

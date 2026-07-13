@@ -48,9 +48,17 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
   after creation.
 - **The local handle is immutable once registered.** `register_handle()` sets it a
   single time and stamps `handle_locked_at`; there is no public rename path. An
-  exceptional change is a future **admin recovery tool + alias/`Move`** flow, not a
-  normal-UI feature — so a compromised or careless rename cannot silently hijack a
-  `/@handle/` that others already reference.
+  exceptional change is a future **admin recovery tool + alias-history/`Move`** flow
+  (DATA-MODEL §7), not a normal-UI feature — so a compromised or careless rename
+  cannot silently hijack a `/@handle/` that others already reference.
+- **A retired handle is reserved to its actor, never recycled.** After a user is
+  deleted, `@alice` stays reserved to the tombstoned Person actor; a *new* user does
+  not get to claim it (that would mis-attribute old posts and read as account
+  takeover to remote servers). A returning person is handled as **tombstone-identity
+  recovery** — an admin re-links the tombstoned actor to a new `WP_User` — while a
+  genuinely different person receives a distinct handle (`alice-2`). The Actor handle
+  is also independent of `user_nicename` / the author archive URL (ROUTING §0.1), so
+  neither can silently reassign the other.
 - Binding federation identity to the mutable-looking `/@handle/` is forbidden — the
   identity URI (`/actors/{uuid}`, plain fallback `/?ax_actor={uuid}`) is the only
   stable id.

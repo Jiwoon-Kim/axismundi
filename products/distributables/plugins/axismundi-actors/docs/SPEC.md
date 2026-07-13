@@ -17,15 +17,21 @@ account and without owning the content it points at.
 WordPress already answers "what did user 12 write?" (`/author/`). It has no home
 for "who is this identity, across posts, media, folders, collections, and
 activity?" Axismundi Actors is that home. Each domain plugin keeps its own storage
-and screens; Actors only holds identity and wires the **projections** (Posts,
-Media, Notes, …) under one actor.
+and screens; Actors only holds identity and wires the **projections** (Activity,
+Articles, Media, Notes, …) under one actor. The profile's primary surface is an
+**activity feed** (owned by Axismundi Activities), not a post list.
 
 ```
 Actor  (identity hub)
-├─ Posts projection   → core /author/{user}/
-├─ Media projection   → Media Library /media/author/{user}/
-├─ (later) Notes, Collections, Folders, Activity
+├─ Activity feed      → owned by Axismundi Activities (primary surface)
+├─ Articles projection → core /author/{user_nicename}/   (a future registrar)
+├─ Media projection    → Media Library /media/author/{user_nicename}/
+├─ (later) Notes, Collections, Folders
 ```
+
+Actors ships **no** built-in projection; each tab is registered by its own domain
+plugin (PROJECTIONS §4). The Actor handle and the `{user_nicename}` archive slug are
+independent (ROUTING §0.1).
 
 ## 2. Invariants (do not break across phases)
 
@@ -117,8 +123,9 @@ user the same identity as the site — Person and Site actors are distinct recor
   + human `/@{username}/` hub with a block template, actor header, and projection
   navigation (the profile header ships in Phase 2; registry-driven navigation in
   Phase 3).
-- **Projection registry** (`axismundi_actors_register_projection`) with the built-in
-  `posts` projection; a public API for other plugins. See PROJECTIONS.
+- **Projection registry** (`axismundi_actors_register_projection`) — a public API for
+  domain plugins. Actors ships **no** built-in projection (the profile is
+  activity-first; header-only until a plugin registers). See PROJECTIONS.
 - Admin: a public/internal toggle on the user profile screen; a "Actor profile"
   row link on Users; view/edit capabilities.
 - Media Library registers `media` / `folders` projections; Collection and Shared

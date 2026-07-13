@@ -195,3 +195,7 @@
 }
 
 /* The admin bar is 46px tall below 782px, but the sidebar is hidden there. */
+.ax-media-location-status {
+	display: inline-block;
+	margin-inline-start: 8px;
+}

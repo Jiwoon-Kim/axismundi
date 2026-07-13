@@ -99,6 +99,7 @@ try {
 			array( 'ax_media_folder' => '0' )
 		);
 		ax_audit_assert( $ax_results, 'Attachment Details saves Location changes', $ax_att_a === (int) $saved['ID'] && 0 === axismundi_media_attachment_folder( $ax_att_a ) );
+		ax_audit_assert( $ax_results, 'Grid Location service saves the selected folder', true === axismundi_media_save_attachment_location( $ax_att_a, $ax_f_a, $ax_alice ) && $ax_f_a === axismundi_media_attachment_folder( $ax_att_a ) );
 		axismundi_media_move_attachments( array( $ax_att_a ), $ax_f_a, $ax_alice );
 
 		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_a, $ax_alice );

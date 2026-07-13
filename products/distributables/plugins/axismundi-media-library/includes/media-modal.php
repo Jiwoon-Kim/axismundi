@@ -108,6 +108,8 @@ function axismundi_media_enqueue_modal_folders() : void {
 		'axMediaFolders',
 		array(
 			'mode'        => $mode,
+			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+			'locationNonce' => wp_create_nonce( 'ax_media_attachment_location' ),
 			'listBaseUrl' => admin_url( 'upload.php' ),
 			'all'         => __( 'All media', 'axismundi-media-library' ),
 			'unfiled'     => __( 'Unfiled', 'axismundi-media-library' ),
@@ -117,6 +119,9 @@ function axismundi_media_enqueue_modal_folders() : void {
 			'manage'      => __( 'Manage folders', 'axismundi-media-library' ),
 			'manageUrl'   => axismundi_media_folders_admin_url(),
 			'items'       => __( 'items', 'axismundi-media-library' ),
+			'saving'      => __( 'Saving location…', 'axismundi-media-library' ),
+			'saved'       => __( 'Location saved.', 'axismundi-media-library' ),
+			'saveError'   => __( 'The location could not be saved.', 'axismundi-media-library' ),
 			'folders'     => axismundi_media_modal_folder_options(),
 		)
 	);
@@ -291,6 +296,50 @@ function axismundi_media_modal_folder_query( array $args ) : array {
 	return $args;
 }
 add_filter( 'ajax_query_attachments_args', 'axismundi_media_modal_folder_query', 20 );
+
+/**
+ * Save one Attachment Details location change.
+ *
+ * @param int      $attachment_id Attachment ID.
+ * @param int      $folder_id     Folder term ID or 0 for Unfiled.
+ * @param int|null $user_id       Acting user.
+ * @return true|WP_Error
+ */
+function axismundi_media_save_attachment_location( int $attachment_id, int $folder_id, ?int $user_id = null ) {
+	$user_id = $user_id ?? get_current_user_id();
+	if ( 'attachment' !== get_post_type( $attachment_id ) || ! user_can( $user_id, 'edit_post', $attachment_id ) ) {
+		return new WP_Error( 'ax_media_location_permission', __( 'You cannot edit this media item.', 'axismundi-media-library' ), array( 'status' => 403 ) );
+	}
+
+	$result = axismundi_media_move_attachments( array( $attachment_id ), $folder_id, $user_id );
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+	if ( empty( $result['moved'] ) ) {
+		return new WP_Error( 'ax_media_location_denied', __( 'That folder is not available for this media item.', 'axismundi-media-library' ), array( 'status' => 403 ) );
+	}
+
+	return true;
+}
+
+/**
+ * Persist the grid Attachment Details Location field with visible completion.
+ *
+ * @return void
+ */
+function axismundi_media_ajax_save_attachment_location() : void {
+	check_ajax_referer( 'ax_media_attachment_location', 'nonce' );
+	$attachment_id = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
+	$folder_id     = isset( $_POST['folder'] ) ? absint( $_POST['folder'] ) : 0;
+	$result        = axismundi_media_save_attachment_location( $attachment_id, $folder_id );
+	if ( is_wp_error( $result ) ) {
+		$data   = $result->get_error_data();
+		$status = is_array( $data ) ? (int) ( $data['status'] ?? 400 ) : 400;
+		wp_send_json_error( array( 'message' => $result->get_error_message() ), $status );
+	}
+	wp_send_json_success( array( 'folder' => $folder_id ) );
+}
+add_action( 'wp_ajax_axismundi_media_save_attachment_location', 'axismundi_media_ajax_save_attachment_location' );
 
 /**
  * Assign a newly uploaded Attachment to the selected folder. Uploading directly

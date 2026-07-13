@@ -222,6 +222,75 @@
 	}
 
 	/* ---------------------------------------------------------------- *
+	 * Attachment Details Location — deterministic save with status.
+	 * ---------------------------------------------------------------- */
+	function locationSelect( target ) {
+		if ( ! target || 'SELECT' !== target.tagName ) {
+			return null;
+		}
+		return /attachments\[\d+\]\[ax_media_folder\]$/.test( target.name || '' ) ? target : null;
+	}
+
+	function locationStatus( select ) {
+		var status = select.parentNode && select.parentNode.querySelector( '.ax-media-location-status' );
+		if ( ! status && select.parentNode ) {
+			status = el( 'span', 'ax-media-location-status' );
+			status.setAttribute( 'role', 'status' );
+			status.setAttribute( 'aria-live', 'polite' );
+			select.parentNode.appendChild( status );
+		}
+		return status;
+	}
+
+	async function saveLocation( select, event ) {
+		// Core's compat form also auto-saves on change, but exposes no completion
+		// state. Own this field so reload/close timing cannot silently lose it.
+		event.preventDefault();
+		event.stopImmediatePropagation();
+
+		var match = ( select.name || '' ).match( /attachments\[(\d+)\]\[ax_media_folder\]$/ );
+		if ( ! match ) {
+			return;
+		}
+		var previous = select.getAttribute( 'data-ax-previous-folder' ) || '0';
+		var status = locationStatus( select );
+		select.disabled = true;
+		if ( status ) {
+			status.textContent = config.saving;
+		}
+
+		try {
+			var body = new URLSearchParams( {
+				action: 'axismundi_media_save_attachment_location',
+				nonce: config.locationNonce,
+				attachment_id: match[ 1 ],
+				folder: select.value
+			} );
+			var response = await window.fetch( config.ajaxUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+				body: body.toString()
+			} );
+			var result = await response.json();
+			if ( ! response.ok || ! result.success ) {
+				throw new Error( result.data && result.data.message ? result.data.message : config.saveError );
+			}
+			select.setAttribute( 'data-ax-previous-folder', select.value );
+			if ( status ) {
+				status.textContent = config.saved;
+			}
+		} catch ( error ) {
+			select.value = previous;
+			if ( status ) {
+				status.textContent = error.message || config.saveError;
+			}
+		} finally {
+			select.disabled = false;
+		}
+	}
+
+	/* ---------------------------------------------------------------- *
 	 * Breadcrumb — the ancestry path of the current folder.
 	 * ---------------------------------------------------------------- */
 	function folderById( id ) {
@@ -407,6 +476,20 @@
 		event.preventDefault();
 		var id = parseInt( command.getAttribute( 'data-folder' ), 10 );
 		selectGrid( isNaN( id ) ? -1 : id );
+	}, true );
+
+	document.addEventListener( 'focusin', function ( event ) {
+		var select = locationSelect( event.target );
+		if ( select ) {
+			select.setAttribute( 'data-ax-previous-folder', select.value );
+		}
+	}, true );
+
+	document.addEventListener( 'change', function ( event ) {
+		var select = locationSelect( event.target );
+		if ( select ) {
+			saveLocation( select, event );
+		}
 	}, true );
 
 	function init() {

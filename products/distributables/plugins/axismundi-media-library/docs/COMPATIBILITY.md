@@ -138,10 +138,12 @@ Reset invariants:
 - **FileBird (and similar media-folder plugins)**: a separate folder system on its
   own tables (`wp_fbv` / `wp_fbv_attachment_folder`), gated on `upload_files`. When
   both are active the two folder systems are **independent** — Axismundi's
-  `ax_media_folder` taxonomy and FileBird's tables don't read each other. Document
-  the coexistence; don't fight over the media modal. A **FileBird → ax_media_folder
-  importer** (map `wp_fbv` rows to owner-scoped terms, respecting single-relation
-  and per-attachment `edit_post`) is a **future compatibility item**, not Phase 2.
+  `ax_media_folder` taxonomy and FileBird's tables don't read each other. Deactivate
+  FileBird before using Axismundi's media-modal UI. Since v0.0.22, **Media > Import
+  Folders** accepts a FileBird CSV export and maps its hierarchy to owner-scoped
+  terms through resumable batches. It preserves existing Axismundi assignments,
+  checks each attachment's `edit_post`, and never imports FileBird's `created_by`
+  value as a WordPress identity.
 
 ### 7.1 FileBird as UX benchmark (Phase 2)
 

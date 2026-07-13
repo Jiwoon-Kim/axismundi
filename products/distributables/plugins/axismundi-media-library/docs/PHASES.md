@@ -91,8 +91,9 @@ effective visibility (invariant ⑥); `private` is not unlocked by a folder pass
 folder move changes no file/attachment URL; deleting a folder **moves its media to
 the root/unfiled**, never deletes media; folder feed pubDate =
 `_ax_media_folder_added_at`.
-**Non-goals:** Save/shared; storage mirror; FileBird importer (compatibility item,
-COMPATIBILITY.md §7); per-attachment password (use a one-item password folder).
+**Non-goals:** Save/shared; storage mirror; per-attachment password (use a one-item
+password folder). The later FileBird CSV bridge is a compatibility tool, not part of
+the folder data model.
 
 ## Phase 2c — Multi-user permission audit (Phase 2 closing gate)
 
@@ -115,6 +116,22 @@ DB rows.
   §2.4/DATA-MODEL §2.3. Do not build the moderation state model here.)
 **Acceptance:** every isolation/IDOR row passes or is filed as a fix; the sensitive-
 clear row is recorded as a confirmed Phase 4 gap. Then proceed to Phase 3.
+
+## Phase 2d — FileBird CSV compatibility bridge *(shipped, v0.0.22)*
+
+**Entry:** Phase 2 folder services stable. This is an administrator migration aid,
+not a second folder backend.
+**Build:** Media > Import Folders; validate FileBird CSV headers and hierarchy;
+topologically recreate folders in the current user's hidden-root namespace; map
+FileBird source IDs to term meta for idempotent reruns; process assignments in
+resumable AJAX batches through the existing per-attachment permission service.
+The uploaded CSV is parsed from its temporary location and never retained.
+**Acceptance:** nested hierarchy preserved; malformed/cyclic input rejected before
+mutation; missing/denied media reported; cross-folder duplicates counted with the
+first assignment winning; existing Axismundi assignments never overwritten; rerun
+reuses imported folders.
+**Non-goals:** reading FileBird's custom tables; importing `created_by`; keeping both
+folder UIs active; general-purpose storage migration.
 
 ## Phase 3 — Protection & used-in index
 

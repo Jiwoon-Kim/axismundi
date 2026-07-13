@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.21
+Stable tag: 0.0.22
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,8 +36,22 @@ dedicated attachment.html template.
 1. Upload and activate Axismundi Media Library.
 2. Open Settings > Media Library (Axismundi). Activation changes no existing media.
 3. Choose Independent mode to enable independent-attachment visibility.
+4. Optional: deactivate FileBird, then use Media > Import Folders to analyze and
+   import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.22 =
+* Add a FileBird CSV compatibility importer at Media > Import Folders for hosts
+  without WP-CLI access. It recreates nested folders in the current user's
+  namespace and assigns media through the existing per-attachment permission
+  service.
+* Parse the CSV once without retaining the uploaded file, then process folders and
+  attachment assignments in resumable AJAX batches suitable for constrained
+  hosting. Missing or unauthorized media is reported without stopping the job.
+* Preserve existing Axismundi assignments, reject malformed/cyclic hierarchies,
+  report cross-folder duplicates, and tag imported folders by FileBird source ID
+  so rerunning the same export reuses folders instead of duplicating them.
 
 = 0.0.21 =
 * Phase 4c (output integration) — sensitive media now gets a front-end

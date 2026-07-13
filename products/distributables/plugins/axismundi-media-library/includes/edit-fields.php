@@ -170,8 +170,8 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 	// Folder: the single virtual folder this media lives in. The dropdown lists the
 	// media owner's (post_author's) folder tree; "Unfiled" is the root.
 	$folder_options = array( '0' => __( 'Unfiled', 'axismundi-media-library' ) );
-	foreach ( axismundi_media_user_folders( (int) $post->post_author ) as $axismundi_media_folder ) {
-		$folder_options[ (string) $axismundi_media_folder['id'] ] = $axismundi_media_folder['name'];
+	foreach ( axismundi_media_user_folder_options( (int) $post->post_author ) as $axismundi_media_folder ) {
+		$folder_options[ (string) $axismundi_media_folder['id'] ] = $axismundi_media_folder['label'];
 	}
 	$form_fields['ax_media_folder'] = array(
 		'label' => __( 'Location', 'axismundi-media-library' ),

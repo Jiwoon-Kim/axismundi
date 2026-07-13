@@ -13,27 +13,18 @@ defined( 'ABSPATH' ) || exit;
  * @return array<int,array{id:int,label:string}>
  */
 function axismundi_media_modal_folder_options() : array {
-	$folders = axismundi_media_user_folders( get_current_user_id() );
-	$by_parent = array();
-	foreach ( $folders as $folder ) {
-		$by_parent[ (int) $folder['parent'] ][] = $folder;
-	}
 	$options = array();
-	$walk = static function ( int $parent, int $depth ) use ( &$walk, &$options, $by_parent ) : void {
-		foreach ( $by_parent[ $parent ] ?? array() as $folder ) {
-			$options[] = array(
-				'id'              => (int) $folder['id'],
-				'name'            => (string) $folder['name'],
-				'label'           => str_repeat( '— ', $depth ) . $folder['name'],
-				'parent'          => (int) $folder['parent'],
-				'count'           => (int) $folder['count'],
-				'recursive_count' => (int) $folder['recursive_count'],
-				'protected'       => ! empty( $folder['effective_gate'] ),
-			);
-			$walk( (int) $folder['id'], $depth + 1 );
-		}
-	};
-	$walk( 0, 0 );
+	foreach ( axismundi_media_user_folder_options( get_current_user_id() ) as $folder ) {
+		$options[] = array(
+			'id'              => (int) $folder['id'],
+			'name'            => (string) $folder['name'],
+			'label'           => (string) $folder['label'],
+			'parent'          => (int) $folder['parent'],
+			'count'           => (int) $folder['count'],
+			'recursive_count' => (int) $folder['recursive_count'],
+			'protected'       => ! empty( $folder['effective_gate'] ),
+		);
+	}
 	return $options;
 }
 

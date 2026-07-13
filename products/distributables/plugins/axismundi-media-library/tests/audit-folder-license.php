@@ -51,6 +51,8 @@ try {
 	$parent = (int) $parent;
 	$child  = (int) $child;
 	$bare   = (int) $bare;
+	$folder_options = wp_list_pluck( axismundi_media_user_folder_options( $admin ), 'label', 'id' );
+	ax_folic_assert( $ax_results, 'folder options preserve hierarchy with an indented child label', 'Rights Parent' === ( $folder_options[ $parent ] ?? '' ) && '— Rights Child' === ( $folder_options[ $child ] ?? '' ) );
 
 	// Setter: valid code stores; invalid rejects; '' clears.
 	$set_ok  = axismundi_media_set_folder_default_license( $parent, 'cc-by-sa', $admin );

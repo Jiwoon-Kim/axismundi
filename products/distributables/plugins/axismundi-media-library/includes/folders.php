@@ -749,6 +749,32 @@ function axismundi_media_user_folders( int $user_id ) : array {
 }
 
 /**
+ * A user's folders in hierarchy order with indented labels.
+ *
+ * @param int $user_id User ID.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_media_user_folder_options( int $user_id ) : array {
+	$folders   = axismundi_media_user_folders( $user_id );
+	$by_parent = array();
+	foreach ( $folders as $folder ) {
+		$by_parent[ (int) $folder['parent'] ][] = $folder;
+	}
+
+	$options = array();
+	$walk    = static function ( int $parent, int $depth ) use ( &$walk, &$options, $by_parent ) : void {
+		foreach ( $by_parent[ $parent ] ?? array() as $folder ) {
+			$folder['label'] = str_repeat( '— ', $depth ) . $folder['name'];
+			$options[]       = $folder;
+			$walk( (int) $folder['id'], $depth + 1 );
+		}
+	};
+	$walk( 0, 0 );
+
+	return $options;
+}
+
+/**
  * One-time cache backfill for folders created before derived ranks existed.
  *
  * @return void

@@ -13,13 +13,21 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
 | status | `/@handle/` & identity URI (public viewer) | usable as membership key |
 |---|---|---|
 | `internal` | 404 | yes |
-| `public` | 200 | yes |
+| `public` **+ registered handle** | 200 | yes |
+| `public` **without a handle** | 404 (hidden) | yes |
 | `disabled` | 404 | no (hidden) |
 | `tombstone` | 404 (410 is reserved for the federation phase) | no |
 
+- Public exposure requires **both** `status = public` **and** a registered, locked
+  handle (`preferred_username` + `handle_locked_at` set). A handle-less `public`
+  actor is still 404 to anonymous viewers — it cannot leak before activation.
+- **Actor activation is opt-in and separate from WordPress account creation.** The
+  WordPress *"Membership: Anyone can register"* setting only governs WP accounts;
+  creating a WP account never mints a public actor. A user's actor stays handle-less
+  and `internal` until they explicitly activate it (register a handle, then publish).
 - Activation always seeds the site actor as `internal`, and the site-owner Person
   actor as `internal` **only when the activating user is a valid admin** (skipped on
-  CLI). Nothing is world-visible until an admin publishes it.
+  CLI). Nothing is world-visible until it is published.
 - Existing users are **never bulk-published**. A user's actor is created lazily and
   stays `internal` until the user (or an admin) opts in.
 - Owner and `manage_options` may **preview** their own non-public actor; everyone
@@ -37,13 +45,16 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
 ## 3. Identity integrity
 
 - `identity.uuid` and `canonical_uri` are immutable. No code path updates them
-  after creation; a username change touches only `preferred_username` /
-  `profile_url` alias.
-- Binding federation identity to the mutable `/@handle/` is forbidden — the
+  after creation.
+- **The local handle is immutable once registered.** `register_handle()` sets it a
+  single time and stamps `handle_locked_at`; there is no public rename path. An
+  exceptional change is a future **admin recovery tool + alias/`Move`** flow, not a
+  normal-UI feature — so a compromised or careless rename cannot silently hijack a
+  `/@handle/` that others already reference.
+- Binding federation identity to the mutable-looking `/@handle/` is forbidden — the
   identity URI (`/actors/{uuid}`, plain fallback `/?ax_actor={uuid}`) is the only
   stable id.
-- Reserved-handle guard prevents a username from shadowing routing or another
-  actor's handle.
+- Reserved-handle guard prevents a handle from shadowing routing or another actor.
 
 ## 4. Access control
 

@@ -109,7 +109,10 @@ user the same identity as the site — Person and Site actors are distinct recor
 
 - `wp_ax_identities` + `wp_ax_actors` schema (dbDelta) with immutable UUID / URI.
 - Actor repository: create, `get_by_uri`, `get_by_uuid`, `get_for_user`,
-  `ensure_for_user`, seed on activation, tombstone on user delete.
+  `get_by_handle`, `ensure_for_user` (handle-less), `register_handle` (one-time,
+  immutable), seed on activation, tombstone on user delete.
+- Handle lifecycle: a user's actor is handle-less until activation; the handle is
+  registered once and then immutable; public exposure requires a locked handle.
 - Canonical identity endpoint `/actors/{uuid}` (plain fallback `/?ax_actor={uuid}`)
   + human `/@{username}/` hub with a block template, actor header, and projection
   navigation (the profile header ships in Phase 2; registry-driven navigation in

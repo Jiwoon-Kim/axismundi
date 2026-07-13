@@ -87,13 +87,28 @@ function axismundi_actors_can_preview( Axismundi_Actor $actor, ?int $user_id = n
 }
 
 /**
+ * Whether an actor is exposed to the public. Being `public` is not enough: the
+ * handle must be registered and locked (docs/DATA-MODEL §6). This prevents a
+ * handle-less actor from ever being routed publicly.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return bool
+ */
+function axismundi_actors_is_public_profile( Axismundi_Actor $actor ) : bool {
+	return $actor->is_local()
+		&& 'public' === $actor->get_status()
+		&& $actor->is_handle_locked()
+		&& '' !== $actor->get_preferred_username();
+}
+
+/**
  * @param Axismundi_Actor $actor Actor.
  * @param int|null        $user_id Viewer; defaults to current user.
  * @return bool
  */
 function axismundi_actors_can_view( Axismundi_Actor $actor, ?int $user_id = null ) : bool {
-	return $actor->is_local()
-		&& ( 'public' === $actor->get_status() || axismundi_actors_can_preview( $actor, $user_id ) );
+	return axismundi_actors_is_public_profile( $actor )
+		|| ( $actor->is_local() && axismundi_actors_can_preview( $actor, $user_id ) );
 }
 
 /**

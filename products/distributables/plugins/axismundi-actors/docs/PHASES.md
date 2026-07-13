@@ -46,13 +46,32 @@ fallback) + `/@{username}/` alias (rewrite + plain fallback, reserved-handle gua
 a plugin block template; actor
 header (live-read name/avatar/bio/type badge) + projection navigation region.
 **Acceptance:** `internal`/`disabled`/`tombstone` actors 404 for public viewers
-(owner/`manage_options` preview only); `public` renders; a username change moves
-`/@handle/` while the identity URI is unchanged; works with pretty permalinks off.
+(owner/`manage_options` preview only); a `public` actor **with a registered handle**
+renders; the identity URI is unchanged across a handle registration; works with
+pretty permalinks off.
 **Non-goals:** JSON-LD; sub-routes under the handle.
 
 **Implementation note:** Phase 2 renders only the actor header. The projection
 navigation region becomes visible when Phase 3 ships its registry; Phase 2 does
 not invent placeholder projection links or query another plugin's domain.
+
+## Phase 2.1 — Handle immutability & deferred registration *(shipped in 0.0.4)*
+
+**Entry:** Phase 2. A correction Phase 2 surfaced: a handle must be **stable once
+set** (like a Mastodon acct), and it should be chosen at the user's explicit
+activation, not silently minted from `user_nicename` at creation.
+**Build:** schema v2 — `preferred_username` nullable + `handle_locked_at`;
+`ensure_for_user()` creates a **handle-less** internal actor; `register_handle()`
+(one-time, normalizes + reserved/dup checks + stamps `handle_locked_at`, refuses when
+locked) replaces the old mutable `set_handle()`; `handle_candidates()` (nicename /
+nickname, never `user_login`); the public gate additionally requires a locked handle;
+one-off upgrade backfill locks existing handled actors.
+**Acceptance:** a fresh Person is handle-less; the first `register_handle` locks it
+and a second is refused; UUID / `actor_uri` are unchanged; a `public` actor with no
+registered handle is not publicly viewable (owner/admin preview only); a taken handle
+is rejected. Actor activation stays separate from WordPress "Anyone can register".
+**Non-goals:** the activation UI (Settings/profile, Phase 4); any handle-change path
+(future admin recovery + alias/`Move`).
 
 ## Phase 3 — Projection registry
 

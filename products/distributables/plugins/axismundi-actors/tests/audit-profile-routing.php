@@ -67,6 +67,13 @@ try {
 
 	$original_uuid = $actor->get_uuid();
 	$original_uri  = $actor->get_uri();
+
+	// A user's actor is handle-less until they activate; the handle is registered once.
+	ax_profile_assert( $ax_profile_results, 'a freshly ensured Person is handle-less until activation', '' === $actor->get_preferred_username() && '' === $actor->get_profile_url() );
+	$registered = axismundi_actors_register_handle( $actor->get_identity_id(), 'alice-profile' );
+	$actor      = axismundi_actors_get_by_uuid( $original_uuid );
+	ax_profile_assert( $ax_profile_results, 'activation registers and locks the handle', true === $registered && $actor instanceof Axismundi_Actor && 'alice-profile' === $actor->get_preferred_username() && $actor->is_handle_locked() );
+
 	ax_profile_assert( $ax_profile_results, 'local handle resolves through local_handle_key', $actor->get_identity_id() === axismundi_actors_get_by_handle( $actor->get_preferred_username() )->get_identity_id() );
 	ax_profile_assert( $ax_profile_results, 'UUID route resolves the same local actor', $actor->get_identity_id() === axismundi_actors_resolve_request_actor( $original_uuid, '' )->get_identity_id() );
 	ax_profile_assert( $ax_profile_results, 'malformed UUIDs do not resolve', null === axismundi_actors_resolve_request_actor( 'not-a-uuid', '' ) );
@@ -76,18 +83,28 @@ try {
 	update_option( 'permalink_structure', '/%postname%/' );
 	ax_profile_assert( $ax_profile_results, 'pretty profile alias uses the mutable handle', home_url( '/@' . rawurlencode( $actor->get_preferred_username() ) . '/' ) === $actor->get_profile_url() );
 
+	// The handle is immutable once registered: re-registration is refused and the alias holds.
 	$old_handle = $actor->get_preferred_username();
-	$moved      = axismundi_actors_set_handle( $actor->get_identity_id(), 'alice-profile-moved' );
+	$again      = axismundi_actors_register_handle( $actor->get_identity_id(), 'alice-profile-moved' );
 	$after      = axismundi_actors_get_by_uuid( $original_uuid );
 	ax_profile_assert(
 		$ax_profile_results,
-		'handle change moves the alias while UUID and identity URI remain stable',
-		true === $moved && null === axismundi_actors_get_by_handle( $old_handle ) && $after instanceof Axismundi_Actor && $after->get_uri() === $original_uri && $after->get_identity_id() === axismundi_actors_get_by_handle( 'alice-profile-moved' )->get_identity_id()
+		'a registered handle is immutable; UUID, URI, and alias stay stable',
+		is_wp_error( $again ) && $after instanceof Axismundi_Actor && $after->get_uri() === $original_uri && $after->get_preferred_username() === $old_handle && null === axismundi_actors_get_by_handle( 'alice-profile-moved' )
 	);
 
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	$public_actor = axismundi_actors_get_by_uuid( $original_uuid );
-	ax_profile_assert( $ax_profile_results, 'a public actor is visible anonymously', $public_actor instanceof Axismundi_Actor && axismundi_actors_can_view( $public_actor, 0 ) );
+	ax_profile_assert( $ax_profile_results, 'a public actor with a registered handle is visible anonymously', $public_actor instanceof Axismundi_Actor && axismundi_actors_can_view( $public_actor, 0 ) );
+
+	// A public status without a registered handle stays hidden from the public.
+	$nohandle = axismundi_actors_ensure_for_user( $admin_id );
+	if ( $nohandle instanceof Axismundi_Actor ) {
+		$ax_profile_ids[] = $nohandle->get_identity_id();
+		axismundi_actors_set_status( $nohandle->get_identity_id(), 'public' );
+		$nohandle = axismundi_actors_get_by_uuid( $nohandle->get_uuid() );
+	}
+	ax_profile_assert( $ax_profile_results, 'public status without a registered handle is not publicly viewable', $nohandle instanceof Axismundi_Actor && ! axismundi_actors_is_public_profile( $nohandle ) && ! axismundi_actors_can_view( $nohandle, 0 ) );
 
 	$GLOBALS['axismundi_actors_current_actor'] = $public_actor;
 	$rendered = render_block( array( 'blockName' => 'axismundi/actor-profile', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ) );
@@ -98,7 +115,7 @@ try {
 	ob_start();
 	axismundi_actors_print_canonical();
 	$canonical = (string) ob_get_clean();
-	ax_profile_assert( $ax_profile_results, 'canonical link always uses the UUID identity URI', false !== strpos( $canonical, esc_url( $original_uri ) ) && false === strpos( $canonical, '@alice-profile-moved' ) );
+	ax_profile_assert( $ax_profile_results, 'canonical link always uses the UUID identity URI', false !== strpos( $canonical, esc_url( $original_uri ) ) && false === strpos( $canonical, '/@' ) );
 
 	$rules = axismundi_actors_rewrite_rules();
 	ax_profile_assert( $ax_profile_results, 'canonical and human alias rewrite rules are both registered', isset( $rules['^actors/([0-9a-fA-F-]{36})/?$'], $rules['^@([^/]+)/?$'] ) );

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '1';
+const AXISMUNDI_ACTORS_DB_VERSION = '2';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -61,8 +61,9 @@ function axismundi_actors_install() : void {
 			identity_id bigint(20) unsigned NOT NULL,
 			actor_type varchar(16) NOT NULL,
 			actor_scope varchar(8) DEFAULT NULL,
-			preferred_username varchar(191) NOT NULL,
+			preferred_username varchar(191) DEFAULT NULL,
 			local_handle_key varchar(191) DEFAULT NULL,
+			handle_locked_at datetime DEFAULT NULL,
 			local_user_id bigint(20) unsigned DEFAULT NULL,
 			display_name varchar(191) DEFAULT NULL,
 			summary text DEFAULT NULL,
@@ -79,6 +80,17 @@ function axismundi_actors_install() : void {
 			KEY scope_type (actor_scope, actor_type)
 		) {$charset};"
 	);
+
+	// dbDelta reliably ADDs columns but does NOT relax an existing NOT NULL to
+	// nullable, so do that explicitly (idempotent — a no-op on a fresh install where
+	// CREATE TABLE already made it nullable). Handle-less actors need a NULL handle.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off schema upgrade on a custom table.
+	$wpdb->query( "ALTER TABLE {$actors} MODIFY preferred_username varchar(191) DEFAULT NULL" );
+
+	// Backfill: any local actor that already carries a handle key predates the
+	// immutability contract, so lock it (a handle key means it was assigned).
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off upgrade backfill on a custom table.
+	$wpdb->query( "UPDATE {$actors} SET handle_locked_at = updated_at WHERE local_handle_key IS NOT NULL AND handle_locked_at IS NULL" );
 
 	update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 }
@@ -118,14 +130,22 @@ final class Axismundi_Actor {
 	}
 
 	public function get_preferred_username() : string {
-		return (string) $this->row['preferred_username'];
+		return (string) ( $this->row['preferred_username'] ?? '' );
+	}
+
+	public function is_handle_locked() : bool {
+		return ! empty( $this->row['handle_locked_at'] );
 	}
 
 	public function get_profile_url() : string {
 		if ( $this->is_local() ) {
+			$handle = $this->get_preferred_username();
+			if ( '' === $handle ) {
+				return ''; // A handle-less (not-yet-registered) local actor has no /@ alias.
+			}
 			return get_option( 'permalink_structure' )
-				? home_url( '/@' . rawurlencode( $this->get_preferred_username() ) . '/' )
-				: add_query_arg( 'ax_actor_handle', $this->get_preferred_username(), home_url( '/' ) );
+				? home_url( '/@' . rawurlencode( $handle ) . '/' )
+				: add_query_arg( 'ax_actor_handle', $handle, home_url( '/' ) );
 		}
 		return (string) ( $this->row['profile_url'] ?? '' );
 	}
@@ -219,15 +239,26 @@ function axismundi_actors_create_local( array $args ) {
 	$type  = (string) ( $args['actor_type'] ?? 'Person' );
 	$scope = isset( $args['actor_scope'] ) ? (string) $args['actor_scope'] : null;
 	$uid   = isset( $args['local_user_id'] ) ? (int) $args['local_user_id'] : null;
-	$handle_key = axismundi_actors_unique_local_handle( (string) ( $args['preferred_username'] ?? 'actor' ) );
-	// The stored human alias must match the unique routing key. Keeping the raw
-	// colliding handle here would mint two identical /@handle/ profile URLs.
-	$username   = $handle_key;
 
 	$uuid   = wp_generate_uuid4();
 	$uri    = home_url( '/actors/' . $uuid );
 	$hash   = hash( 'sha256', $uri );
 	$now    = current_time( 'mysql', true );
+
+	// A handle is OPTIONAL at creation. When one is given (e.g. the site actor
+	// seed) it is uniquified, stored as the alias == routing key, and locked. A
+	// user Person is created handle-less; the handle is registered once, later, at
+	// account activation and is then immutable (docs/DATA-MODEL §6, PHASES 2.1).
+	$provided = trim( (string) ( $args['preferred_username'] ?? '' ) );
+	if ( '' !== $provided ) {
+		$handle_key   = axismundi_actors_unique_local_handle( $provided );
+		$username     = $handle_key;
+		$handle_locked = $now;
+	} else {
+		$handle_key    = null;
+		$username      = null;
+		$handle_locked = null;
+	}
 
 	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
@@ -259,11 +290,12 @@ function axismundi_actors_create_local( array $args ) {
 			'actor_scope'        => $scope,
 			'preferred_username' => $username,
 			'local_handle_key'   => $handle_key,
+			'handle_locked_at'   => $handle_locked,
 			'local_user_id'      => $uid,
 			'created_at'         => $now,
 			'updated_at'         => $now,
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' )
 	);
 	if ( false === $ok ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -341,7 +373,11 @@ function axismundi_actors_get_site_actor() : ?Axismundi_Actor {
 }
 
 /**
- * Return the user's local Person actor, creating an internal one if absent.
+ * Return the user's local Person actor, creating an internal, **handle-less** one
+ * if absent. The handle is not assigned here: it is registered once, later, when
+ * the user activates their actor account (axismundi_actors_register_handle), and is
+ * immutable thereafter. A handle-less internal actor is still a valid identity /
+ * membership key.
  *
  * @param int $user_id WP user ID.
  * @return Axismundi_Actor|WP_Error
@@ -357,43 +393,72 @@ function axismundi_actors_ensure_for_user( int $user_id ) {
 	}
 	return axismundi_actors_create_local(
 		array(
-			'actor_type'         => 'Person',
-			'actor_scope'        => 'user',
-			'preferred_username' => $user->user_nicename,
-			'local_user_id'      => $user_id,
-			'status'             => 'internal',
+			'actor_type'    => 'Person',
+			'actor_scope'   => 'user',
+			'local_user_id' => $user_id,
+			'status'        => 'internal',
 		)
 	);
 }
 
 /**
- * Change a local actor's handle (alias only — never the UUID / URI). Keeps
- * local_handle_key in sync and unique.
+ * Suggested handles for the activation UI. Never `user_login` (it may be an email
+ * or a login identifier); `user_nicename` and the nickname are the safe candidates.
+ *
+ * @param int $user_id WP user ID.
+ * @return string[] Normalized, de-duplicated candidate handles.
+ */
+function axismundi_actors_handle_candidates( int $user_id ) : array {
+	$user = get_userdata( $user_id );
+	if ( ! $user ) {
+		return array();
+	}
+	$out = array();
+	foreach ( array( $user->user_nicename, get_user_meta( $user_id, 'nickname', true ) ) as $raw ) {
+		$key = axismundi_actors_normalize_handle( (string) $raw );
+		if ( '' !== $key && ! axismundi_actors_is_reserved_handle( $key ) && ! in_array( $key, $out, true ) ) {
+			$out[] = $key;
+		}
+	}
+	return $out;
+}
+
+/**
+ * Register a local actor's handle **once**, at account activation. The handle is
+ * then immutable: a second call on a locked actor is refused. This is deliberately
+ * NOT a rename API — an exceptional change is a future admin recovery + alias/Move
+ * concern (docs/DATA-MODEL §6, SECURITY §3).
  *
  * @param int    $identity_id Identity/actor key.
- * @param string $handle      New handle.
+ * @param string $handle      Desired handle.
  * @return true|WP_Error
  */
-function axismundi_actors_set_handle( int $identity_id, string $handle ) {
+function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	global $wpdb;
+	$actors = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	$locked = $wpdb->get_var( $wpdb->prepare( "SELECT handle_locked_at FROM {$actors} WHERE identity_id = %d", $identity_id ) );
+	if ( ! empty( $locked ) ) {
+		return new WP_Error( 'ax_actors_handle_locked', __( 'This handle is already set and cannot be changed.', 'axismundi-actors' ) );
+	}
 	$key = axismundi_actors_normalize_handle( $handle );
 	if ( '' === $key || axismundi_actors_is_reserved_handle( $key ) ) {
 		return new WP_Error( 'ax_actors_handle', __( 'That handle is not allowed.', 'axismundi-actors' ) );
 	}
-	$actors = axismundi_actors_actors_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
 	$taken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$actors} WHERE local_handle_key = %s AND identity_id <> %d", $key, $identity_id ) );
 	if ( $taken > 0 ) {
 		return new WP_Error( 'ax_actors_handle_taken', __( 'That handle is already in use.', 'axismundi-actors' ) );
 	}
+	$now  = current_time( 'mysql', true );
 	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$actors,
-		array( 'preferred_username' => $handle, 'local_handle_key' => $key, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'preferred_username' => $key, 'local_handle_key' => $key, 'handle_locked_at' => $now, 'updated_at' => $now ),
 		array( 'identity_id' => $identity_id ),
-		array( '%s', '%s', '%s' ),
+		array( '%s', '%s', '%s', '%s' ),
 		array( '%d' )
 	);
-	return false === $done ? new WP_Error( 'ax_actors_handle_update', __( 'Could not update the handle.', 'axismundi-actors' ) ) : true;
+	return false === $done ? new WP_Error( 'ax_actors_handle_update', __( 'Could not register the handle.', 'axismundi-actors' ) ) : true;
 }
 
 /**

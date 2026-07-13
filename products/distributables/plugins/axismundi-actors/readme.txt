@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,19 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.4 =
+* Phase 2.1 — handle immutability and deferred registration. A user's actor is now
+  created handle-less; the handle is registered once, at explicit activation, and is
+  then immutable (register_handle replaces the old mutable set_handle). Handle
+  candidates come from user_nicename / nickname, never user_login.
+* Public exposure now also requires a registered, locked handle: a public actor with
+  no handle stays 404 to anonymous viewers. Actor activation is separate from the
+  WordPress "Anyone can register" account setting.
+* Schema v2: preferred_username is nullable and a handle_locked_at column is added,
+  with a one-off upgrade that locks any pre-existing handled actor. The same remote
+  preferredUsername is still allowed across domains; verified per-domain uniqueness
+  is deferred to the WebFinger/Federation phase.
 
 = 0.0.3 =
 * Phase 2 actor profiles: canonical /actors/{uuid} and mutable /@handle/ routes,

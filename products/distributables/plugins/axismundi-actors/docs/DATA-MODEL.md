@@ -78,8 +78,9 @@ fields, not identity truth (that is the identity row) and not content.
 identity_id       BIGINT UNSIGNED  PK         -- = wp_ax_identities.id (1:1; NO separate actor id)
 actor_type        VARCHAR(16)      NOT NULL   -- Person | Organization | Application | Service | Group
 actor_scope       VARCHAR(8)       NULL       -- site | user for local; NULL for remote (origin is the truth)
-preferred_username VARCHAR(191)    NOT NULL   -- real handle (NOT unique; remote actors on different domains share handles)
-local_handle_key  VARCHAR(191)     NULL       -- normalized handle for LOCAL actors only; NULL for remote
+preferred_username VARCHAR(191)    NULL       -- real handle (NOT unique; NULL until a local actor registers one; remote actors on different domains share handles)
+local_handle_key  VARCHAR(191)     NULL       -- normalized handle for LOCAL actors only; NULL for remote and until registration
+handle_locked_at  DATETIME         NULL       -- set once when a local handle is registered; then immutable
 local_user_id     BIGINT UNSIGNED  NULL       -- set only for local Person
 display_name      VARCHAR(191)     NULL       -- remote snapshot only (local reads WP_User / bloginfo live)
 summary           TEXT             NULL       -- remote snapshot only
@@ -116,6 +117,23 @@ Notes:
   unique index, so remote duplicates are permitted while local collisions are
   blocked at the DB. `/@handle/` resolution matches on `local_handle_key`; a
   reserved-handle guard (ROUTING §2) additionally blocks routing collisions.
+  - **Per-domain remote uniqueness is a Federation concern, not a DB constraint here.**
+    In ActivityPub `preferredUsername` is only a display hint; the identity is the
+    `canonical_uri`. A Mastodon-style `alice@example.com` is unique within a domain
+    *only after WebFinger verifies the account address* — so rejecting a second
+    remote actor merely because it reuses a `preferredUsername` on the same domain
+    would break interoperability. When Federation lands, a separate verified
+    `acct_uri` + `acct_uri_hash UNIQUE` (written only after WebFinger success)
+    enforces per-domain uniqueness; the current model stays as-is.
+- **A local handle is registered once, then immutable.** `ensure_for_user()` creates
+  a **handle-less** internal actor (`preferred_username` / `local_handle_key` /
+  `handle_locked_at` all `NULL`). The handle is set exactly once, at account
+  activation, via `register_handle()`, which stamps `handle_locked_at`; a second
+  registration on a locked actor is refused. This is deliberately not a rename API —
+  an exceptional change is a future admin-recovery + alias/`Move` concern (SECURITY
+  §3). Handle **candidates** come from `user_nicename` and the nickname, never
+  `user_login` (which may be an email or login id); the final handle is normalized
+  and dup/reserved-checked before locking, with the DB `UNIQUE` as the race backstop.
 - `UNIQUE(local_user_id)` enforces one local Person per user for v0.1. When a user
   is later allowed to manage multiple actors, this unique is dropped and a
   `wp_ax_actor_managers(identity_id, user_id, role)` join table is added (reserved,
@@ -158,17 +176,21 @@ ax_actors_site_actor_type         Application (default) | Organization
   Person** actor **only if the current user is a valid administrator**; on CLI / no
   current user, skip it (activation still succeeds). Both `internal`. Never depend on
   a specific account (`user_id=1` / first admin / `admin_email`).
-- **`ensure_for_user( user_id )`:** return the user's Person actor, creating the
-  identity+actor pair (`internal`) if absent. Never publishes.
-- **Handle policy:** a local Person's `preferred_username` defaults to the user's
-  `user_nicename` and **tracks it** on change, *unless* an admin has set an explicit
-  handle override (then it is independent). The site actor's handle comes from the
-  option / site slug. For every **local** actor, `local_handle_key = strtolower(
-  preferred_username )` is written and kept in sync so the local-uniqueness index
-  holds; **remote** actors leave `local_handle_key = NULL`. A handle change moves the
-  `/@handle/` alias (and `local_handle_key`) only — `uuid` and `actor_uri` never
-  change (SPEC §2.3). Multisite network-wide actors are out of scope for v0.1
-  (per-site actors only).
+- **`ensure_for_user( user_id )`:** return the user's Person actor, creating a
+  **handle-less** internal pair if absent (no `preferred_username`). Never registers
+  a handle and never publishes — both are the user's explicit activation step.
+- **Handle policy:** a handle is **registered once and then immutable** (see the
+  actor-table notes above). `register_handle()` normalizes the chosen candidate,
+  checks reserved/duplicate, writes `preferred_username = local_handle_key = key` and
+  stamps `handle_locked_at`. The site actor's handle (`blog` / site slug) is assigned
+  and locked at seed. `uuid` and `actor_uri` never change (SPEC §2.3). Multisite
+  network-wide actors are out of scope for v0.1 (per-site actors only).
+- **Public-exposure condition.** A profile is exposed publicly only when
+  `status = public AND preferred_username IS NOT NULL AND handle_locked_at IS NOT
+  NULL`. A `public` actor with no registered handle is still hidden from anonymous
+  viewers (owner / admin preview still applies). Activation is therefore two acts —
+  register the handle, then publish — and both are required before `/@handle/` or the
+  identity URI render to the public (SECURITY §1).
 - **User deleted (`deleted_user`):** set the linked identity `status = tombstone`;
   keep both rows. Do not reassign `local_user_id`.
 - **Deactivate / uninstall:** tables and rows are **retained** (no destructive

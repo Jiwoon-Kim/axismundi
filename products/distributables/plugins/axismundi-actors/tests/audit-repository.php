@@ -60,15 +60,22 @@ try {
 	$dup = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'alice-again', 'local_user_id' => $uid ) );
 	ax_rep_assert( $ax_results, 'a second actor for the same user is rejected', is_wp_error( $dup ) );
 
-	// --- handle change keeps UUID and URI (alias only) ---
-	$moved = axismundi_actors_set_handle( $alice->get_identity_id(), 'alice-renamed' );
+	// --- a freshly ensured Person is HANDLE-LESS (handle registered later) ---
+	ax_rep_assert( $ax_results, 'a freshly ensured Person has no handle yet', '' === $alice->get_preferred_username() && ! $alice->is_handle_locked() );
+
+	// --- register_handle: first registration locks; UUID/URI stay stable ---
+	$reg   = axismundi_actors_register_handle( $alice->get_identity_id(), 'Alice Handle' );
 	$after = axismundi_actors_get_by_uuid( $uuid0 );
-	ax_rep_assert( $ax_results, 'handle change keeps UUID and actor_uri (domain/rename-safe)', true === $moved && $after instanceof Axismundi_Actor && $after->get_uuid() === $uuid0 && $after->get_uri() === $uri0 && 'alice-renamed' === $after->get_preferred_username() );
+	ax_rep_assert( $ax_results, 'register_handle sets a locked handle without touching UUID/URI', true === $reg && $after instanceof Axismundi_Actor && $after->get_uuid() === $uuid0 && $after->get_uri() === $uri0 && 'alice-handle' === $after->get_preferred_username() && $after->is_handle_locked() );
+
+	// --- the handle is immutable: a second registration is refused ---
+	$again = axismundi_actors_register_handle( $alice->get_identity_id(), 'alice-two' );
+	ax_rep_assert( $ax_results, 'a locked handle cannot be changed', is_wp_error( $again ) && 'ax_actors_handle_locked' === $again->get_error_code() && null !== axismundi_actors_get_by_handle( 'alice-handle' ) && null === axismundi_actors_get_by_handle( 'alice-two' ) );
 
 	// --- lookups round-trip ---
 	ax_rep_assert( $ax_results, 'get_by_uri and get_for_user resolve the same actor', axismundi_actors_get_by_uri( $uri0 ) instanceof Axismundi_Actor && axismundi_actors_get_for_user( $uid )->get_identity_id() === $alice->get_identity_id() );
 
-	// --- local handle collision: same base yields distinct local_handle_key ---
+	// --- create_local with a handle (seed style) auto-resolves collisions and locks ---
 	$c1 = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'dupe' ) );
 	$c2 = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'dupe' ) );
 	if ( $c1 instanceof Axismundi_Actor ) {
@@ -79,11 +86,15 @@ try {
 	}
 	$k1 = (string) $wpdb->get_var( $wpdb->prepare( "SELECT local_handle_key FROM {$actors} WHERE identity_id = %d", $c1->get_identity_id() ) ); // phpcs:ignore WordPress.DB
 	$k2 = (string) $wpdb->get_var( $wpdb->prepare( "SELECT local_handle_key FROM {$actors} WHERE identity_id = %d", $c2->get_identity_id() ) ); // phpcs:ignore WordPress.DB
-	ax_rep_assert( $ax_results, 'local handle collision is auto-resolved to distinct routable handles', '' !== $k1 && '' !== $k2 && $k1 !== $k2 && $c1->get_preferred_username() === $k1 && $c2->get_preferred_username() === $k2 && axismundi_actors_get_by_handle( $k2 )->get_identity_id() === $c2->get_identity_id() );
+	ax_rep_assert( $ax_results, 'create_local handle collision auto-resolves to distinct locked handles', '' !== $k1 && '' !== $k2 && $k1 !== $k2 && $c1->get_preferred_username() === $k1 && $c2->get_preferred_username() === $k2 && $c1->is_handle_locked() && axismundi_actors_get_by_handle( $k2 )->get_identity_id() === $c2->get_identity_id() );
 
-	// explicit collision on set_handle is blocked
-	$clash = axismundi_actors_set_handle( $c2->get_identity_id(), 'dupe' );
-	ax_rep_assert( $ax_results, 'set_handle to a taken local handle is blocked', is_wp_error( $clash ) );
+	// --- registering a taken handle on a handle-less actor is blocked ---
+	$fresh = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user' ) );
+	if ( $fresh instanceof Axismundi_Actor ) {
+		$ax_ids[] = $fresh->get_identity_id();
+	}
+	$clash = axismundi_actors_register_handle( $fresh->get_identity_id(), 'dupe' );
+	ax_rep_assert( $ax_results, 'registering a taken handle is blocked', is_wp_error( $clash ) && 'ax_actors_handle_taken' === $clash->get_error_code() );
 
 	// --- same REMOTE handle allowed multiple times (local_handle_key NULL) ---
 	$now = current_time( 'mysql', true );

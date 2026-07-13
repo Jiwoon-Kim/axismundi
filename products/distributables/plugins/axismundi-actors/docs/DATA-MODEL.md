@@ -1,8 +1,10 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Phase 1 schema implemented.**
-> Two tables: a shared **identity registry** and the **actor profile**. Local
-> person profile fields are read live from `WP_User`; only remote actors snapshot.
+> Status: **Living specification. Schema v2 implemented (§2–§6); §7–§9 are
+> provisional (documented, not created).** Two tables exist today: a shared
+> **identity registry** and the **actor profile**. Local person profile fields are
+> read live from `WP_User`; only remote actors snapshot. §8 (profile media +
+> multilingual) lands with the Phase 4 UI; §9 is Federation-phase (schema v3).
 
 ## 1. Conventions
 
@@ -231,3 +233,111 @@ Rules (frozen intent; schema is actor-kind-neutral so Person change can open lat
   user grab `@alice` — which would mis-attribute old posts and read as account
   takeover to remote servers. A genuinely different person gets `alice-2`.
 - A remote actor's `preferredUsername` is **never** entered in this local table.
+- When §9.1 `wp_ax_actor_addresses` lands it **realizes** this alias-history (adding
+  the WebFinger `acct:` address); the two are one table, not two.
+
+## 8. Profile presentation — near-term (built with the Phase 4 activation UI)
+
+Supports avatar/header and multilingual profiles. Names and bios are still read live
+from `WP_User` (§4); only these presentation extras are Actor-owned. Documented now,
+created when the Phase 4 activation/management screens ship.
+
+### 8.1 `wp_ax_actor_media` — avatar (icon) + header (image)
+
+```
+wp_ax_actor_media
+- identity_id
+- media_role          icon | header
+- local_attachment_id NULL   -- a CORE attachment id (not a Media Library object)
+- remote_uri          NULL   -- a remote actor's icon/image URL
+- remote_uri_hash     NULL
+- payload_json        NULL
+- updated_at
+UNIQUE(identity_id, media_role)
+```
+
+- Local uses a core Media picker attachment id, resolved to a URL at render; remote
+  keeps the URI (no shadow attachment). Works without the Media Library plugin.
+- Resolution extends §4: **avatar** → `actor_media(icon)` → `get_avatar_url(user)`;
+  **header** → `actor_media(header)` → none. Name / bio / website stay live from
+  `WP_User`. `icon` / `image` in the Actor JSON-LD serialize from this table.
+- Optional (default **on** for local Person): mirror the Actor avatar into WordPress
+  via the `get_avatar_data` filter so comments / admin show it. The header is
+  Actor-only. Site / Organization / Service actors use the same table.
+
+### 8.2 `wp_ax_actor_texts` + `default_language` — multilingual name/summary/content
+
+```
+wp_ax_actors  += default_language VARCHAR(35) NULL   -- BCP 47
+
+wp_ax_actor_texts
+- identity_id
+- field_name     name | summary | content
+- language_tag   BCP 47 (ko-KR, en-US, und)
+- value          LONGTEXT
+- media_type     NULL | text/html
+- updated_at
+UNIQUE(identity_id, field_name, language_tag)
+```
+
+- Maps to AS `nameMap` / `summaryMap` / `contentMap` (name = plain text; summary /
+  content = sanitized HTML; `content` is the optional long "About"). A table, not
+  three JSON columns, so languages add/edit without rewriting a blob.
+- `default_language` = the **site language** at creation; the user's own profile
+  language (`profile.php`) is offered as a **secondary** tab, never auto-applied
+  (`get_user_locale()` is a candidate, not a decision — an admin-UI locale is not a
+  public-profile language). Unlike the handle, `default_language` is mutable later.
+- Viewer resolution: request-lang exact → request-lang base → `default_language` →
+  site language → user profile language → `und` → first remaining → `WP_User`
+  display_name / description. The **serialized scalar** `name` / `summary` /
+  `content` always use `default_language`; every translation also goes in the `*Map`
+  (some peers ignore Maps). WP locales are normalized to BCP 47 (`ko_KR` → `ko-KR`).
+- Does **not** duplicate `WP_User` name/bio — a translation is stored only when the
+  user adds it; the fallback chain still ends at `WP_User`. If site and user language
+  match, only one tab shows.
+
+## 9. Federation-phase reserved (schema v3 — documented, NOT created now)
+
+Added just before Federation, in priority `addresses → endpoints → keys →
+fetch_state → identity_relations`. Real remote Actor JSON-LD (Mastodon / Misskey)
+combines many context vocabularies, so most of it **stays in `payload_json`** and is
+read via a resolver; only what needs indexing or verification is normalized.
+
+- **`wp_ax_actor_addresses`** — `address_type = acct | local_handle | former_handle`,
+  `status = primary | alias | reserved | redirect`, `address` + `address_hash UNIQUE`,
+  `verified_at`, `retired_at`. Realizes §7 and adds the WebFinger `acct:` address;
+  `verified_at` is set **only after a successful WebFinger HTTPS lookup** (RFC 7033) —
+  `preferredUsername` alone is never trusted for uniqueness.
+- **`wp_ax_actor_endpoints`** — `endpoint_type = inbox|outbox|followers|following|
+  featured|shared_inbox`, `endpoint_uri` + hash, `UNIQUE(identity_id, endpoint_type)`.
+  A table (not columns) so `featured` / `liked` / … add without churn; `inbox` /
+  `outbox` move here off `wp_ax_actors` when this lands.
+- **`wp_ax_actor_keys`** — public-key keyring for rotation / multiple keys:
+  `key_uri` + hash, `key_type`, `public_key_pem`, `fingerprint`, `status = active|
+  retired|revoked`, `valid_from` / `valid_until`. A **local private key is never
+  stored in plaintext** here — a `private_key_ref` points at separate secret storage.
+- **`wp_ax_actor_fetch_state`** — remote-only cache state: `payload_hash`, `etag`,
+  `last_modified`, `fetched_at`, `last_success_at`, `next_refresh_at`,
+  `failure_count`, `last_error_code` (conditional requests + backoff).
+- **`wp_ax_identity_relations`** — `relation_type = also_known_as | moved_to`,
+  `target_uri` + hash, `verification_state`, `verified_at`. `alsoKnownAs` is an array
+  and `movedTo` a relation, so not actor columns; **never trusted on inbound JSON
+  alone** (needs cross-reference / a Move verification flow).
+- **Small columns reserved on `wp_ax_actors`:** `published_at` (the remote actor's
+  declared creation time — distinct from `created_at` = local-row time),
+  `manually_approves_followers` (a real Follow-approval behavior), `payload_hash`
+  (change detection; migrates into fetch_state). `discoverable` / `indexable` are
+  **remote-declared observations** and must stay separate from any *local* policy
+  flag — do not conflate a remote's declaration with a local security setting.
+
+**Stays in `payload_json` (resolver-read, never columnized):** `memorial`,
+`showFeatured` / `showMedia` / `showRepliesInMedia`, `interactionPolicy`,
+`attributionDomains`, all `misskey:*` and `vcard:*`, `tag` (Emoji / Hashtag are
+polymorphic), `attachment` (Mastodon profile `PropertyValue` links — unrelated to
+Media Library attachments), and object-or-array `icon` / `image`. Follower / following
+counts are computed from relations, never stored. A remote profile's `sensitive` flag
+is its own thing, **not** the Media Library sensitive-authority.
+
+**vCard** is not a schema concern: a future `/@handle/contact.vcf` output can map
+already-public Actor fields to vCard 4.0 (birthday / address only behind an explicit
+opt-in public field added later). No `vcard_*` columns.

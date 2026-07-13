@@ -92,21 +92,48 @@ by their own plugins; the core-post projection is `articles`, not `posts`.
 **Non-goals:** the activity feed itself (Axismundi Activities); Articles/Media/Notes
 projections (owned by those plugins).
 
-## Phase 4 — Admin integration
+## Phase 4 — Actor activation & profile management
 
-**Entry:** Phase 3. **Design prerequisite:** lock the handle alias-history contract
-(DATA-MODEL §7 — Person immutable + reserved-after-tombstone; Site changeable with a
-reserved redirect and revert; re-signup = tombstone recovery, not handle reuse) and
-the handle ≠ profile-name separation (ROUTING §0.1) *before* building the activation
-UI, so the screens are shaped for it.
-**Build:** the actor **activation** flow (register a handle — candidates seeded from
-`user_nicename` / nickname, never `user_login`, with a normalized `@handle` preview
-and dup/reserved check — then publish); a public/internal toggle + site-actor type
-(`Application`/`Organization`); an "Actor profile" row link on Users; view/edit
-capability wiring; the `ax_actors_site_owner_user_id` setting.
+**Entry:** Phase 3. **Design prerequisites (now locked):** the handle alias-history
+contract (DATA-MODEL §7), the handle ≠ profile-name separation (ROUTING §0.1), and
+the profile-presentation schema (DATA-MODEL §8). Users need a surface to *make and
+manage* an actor before public rendering matters.
+
+**Phase 4a — management screens + activation wizard.**
+- `wp-admin/profile.php`: an "Actor profile" summary panel via `show_user_profile` /
+  `edit_user_profile` — inactive shows *Activate actor profile*; active shows
+  `@handle`, status, the public link, and *Manage*.
+- `wp-admin/users.php`: an **Actor** column (`Not activated / Internal / Public /
+  Tombstone`) with Manage / View; activating **another** user's actor needs a
+  capability.
+- A dedicated `add_users_page()` screen for the **activation wizard**: choose a handle
+  (candidates seeded from `user_nicename` / nickname, never `user_login`; live
+  normalize + reserved/dup check + `@handle` preview) → confirm profile → visibility
+  (`internal` / `public`) → confirm "the handle cannot be changed after activation" →
+  `register_handle()` + status. **No forced login-time landing** — activation is an
+  explicit, opt-in act from `profile.php` / `users.php`.
+- Site-actor type (`Application` / `Organization`); the `ax_actors_site_owner_user_id`
+  setting.
+
+**Phase 4b — avatar & header (`wp_ax_actor_media`).** Core Media-picker avatar (icon)
++ header (image) with a remote-URI fallback; the public profile header renders them;
+resolution per DATA-MODEL §8.1 (avatar falls back to `get_avatar_url`, header to none).
+
+**Phase 4c — Actor avatar → WordPress avatar.** Optionally mirror the Actor avatar
+into WordPress via the `get_avatar_data` filter (default on for local Person) so
+comments / admin show it; the header stays Actor-only.
+
+**Phase 4d — multilingual profile (`wp_ax_actor_texts`).** `name` / `summary` /
+`content` per language (AS `nameMap` / `summaryMap` / `contentMap`); `default_language`
+defaults to the **site language** with the user's profile language offered as a
+secondary tab (never auto-applied); resolution + BCP-47 normalization per §8.2.
+
 **Acceptance:** publishing is explicit and per-actor; no bulk publish of existing
-users; email never appears in any actor screen or link.
-**Non-goals:** managers table; bulk tools.
+users; the handle-change prohibition and `@handle` ≠ author-URL are visible in the UI;
+email never appears in any actor screen or link; avatar/header and translations are
+Actor-owned while name/bio still read live from `WP_User`.
+**Non-goals:** managers table; bulk tools; vCard export (a later small feature); any
+federation table (schema v3, DATA-MODEL §9).
 
 ## Phase 5 — Media integration (cross-plugin)
 

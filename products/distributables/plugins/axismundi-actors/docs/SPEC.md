@@ -85,14 +85,18 @@ tables directly.
 
 ## 4. Seeded actors (on activation)
 
-Two actors are seeded, both `internal` until an admin explicitly publishes them:
+Seeding is `internal` and must **never** depend on a specific admin account
+existing — WordPress has no single `site_owner` (`user_id=1`, "first admin", and the
+`admin_email` user are all unreliable). So:
 
-- **Site actor** — `actor_scope=site`, default `actor_type=Application`
-  (configurable to `Organization`), `preferred_username` = `blog` or the site
-  slug, no `local_user_id`.
-- **Site-owner Person actor** — `actor_scope=user`, `actor_type=Person`, linked to
-  the designated site-owner user (default: the activating administrator; stored in
-  the `ax_actors_site_owner_user_id` option).
+- **Site actor — always created** on activation. `actor_scope=site`, default
+  `actor_type=Application` (configurable to `Organization`),
+  `preferred_username` = `blog` or the site slug, no `local_user_id`. Activation
+  success never depends on any user existing.
+- **Site-owner Person actor — created only when the activating current user is a
+  valid administrator.** On CLI / no current user, the Person seed is **skipped**
+  (activation still succeeds). The site owner is otherwise chosen **explicitly**
+  later in Settings (`ax_actors_site_owner_user_id`).
 
 Other users are **not** bulk-seeded or bulk-published. A user's Person actor is
 created lazily via `ensure_for_user()` the first time it is needed (e.g. a Media

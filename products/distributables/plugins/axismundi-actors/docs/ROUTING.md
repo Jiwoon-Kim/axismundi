@@ -33,9 +33,10 @@ the `uuid`, which survives re-import and domain moves.
 
 - Pretty rewrite: `^@([^/]+)/?$` → `index.php?ax_actor_handle=$matches[1]`, plus a
   plain fallback `/?ax_actor_handle={username}`.
-- Resolution: `preferred_username → actor → identity`. Confirm the canonical
-  `actor_uri`, then render the hub. A username change moves the alias; the identity
-  URI is unchanged.
+- Resolution: `local_handle_key → local actor → identity` (remote actors are not
+  reachable via `/@handle/`; their handles are not locally unique). Confirm the
+  canonical `actor_uri`, then render the hub. A username change moves the alias; the
+  identity URI is unchanged.
 - Only `status = public` actors render here. `internal` / `disabled` / `tombstone`
   → 404 for non-privileged viewers (owner / `manage_options` may preview — see
   SECURITY).
@@ -43,8 +44,8 @@ the `uuid`, which survives re-import and domain moves.
 The `@` prefix avoids collision with existing top-level slugs (pages, `/author/`,
 `/media/`). A reserved-handle guard rejects usernames that would shadow routing or
 another actor (`actors`, `ap`, `author`, `media`, `notes`, `feed`, `wp-*`, etc.), and
-`preferred_username` is `UNIQUE` across local actors (DATA-MODEL §3) so a handle
-resolves to exactly one actor.
+`local_handle_key` is `UNIQUE` across local actors (DATA-MODEL §3) so a local handle
+resolves to exactly one actor, while remote actors may share a handle.
 
 ## 3. Hub content & projection sub-routes
 

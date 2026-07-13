@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.1
+Stable tag: 0.0.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -31,6 +31,18 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.2 =
+* Phase 1 — the actor repository. Creates wp_ax_identities + wp_ax_actors (dbDelta,
+  schema-versioned); the actor row is a 1:1 specialization keyed by identity_id with
+  a logical FK only (no physical FOREIGN KEY / CASCADE — the tombstone contract).
+  Immutable UUID + rebuildable /actors/{uuid} URI; create / get_by_uuid / get_by_uri
+  / get_for_user / ensure_for_user; a read-only Axismundi_Actor value object.
+* Handles: preferred_username is not globally unique (remote actors share handles);
+  a local_handle_key enforces one handle per local actor while remote duplicates are
+  allowed. Activation always seeds the site actor and, only when the activating user
+  is a valid admin, the site-owner Person (skipped on CLI). Deleting a user
+  tombstones its identity instead of deleting it.
 
 = 0.0.1 =
 * Phase 0 — docs and scaffold. Locks the identity model (a shared wp_ax_identities

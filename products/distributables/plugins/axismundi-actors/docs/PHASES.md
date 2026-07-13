@@ -23,13 +23,19 @@ object and the projection registry signature. No schema or route is implemented.
 
 **Entry:** Phase 0.
 **Build:** `wp_ax_identities` + `wp_ax_actors` via dbDelta + schema-version option;
-create / `get_by_uuid` / `get_by_uri` / `get_for_user` / `ensure_for_user`;
-immutable UUID + `canonical_uri`; activation seed of the site + site-owner actors
-(idempotent, `internal`); `deleted_user` → identity `tombstone`.
-**Acceptance:** a Person actor's UUID and `actor_uri` are unchanged after a
-username change; a second actor cannot be created for the same user (unique
-`local_user_id`); user delete tombstones (never deletes); reactivation creates no
-duplicate seed; deactivate/reactivate preserves rows.
+`identity_id` as the actor PK with a **logical** FK only (no physical `FOREIGN KEY`
+/ `CASCADE` — it would fight the tombstone contract); integrity enforced by the
+repository (identity exists + `object_kind='actor'`, wrapped in a transaction);
+create / `get_by_uuid` / `get_by_uri` / `get_for_user` / `ensure_for_user`; immutable
+UUID + rebuildable `canonical_uri`; always-seed the site actor (idempotent) +
+conditional site-owner Person seed; `deleted_user` → identity `tombstone`.
+**Acceptance:** UUID and `actor_uri` unchanged after a handle change (and unchanged
+across a simulated domain move); a second actor cannot be created for the same user
+(unique `local_user_id`); a **local** handle collision is blocked while the **same
+remote handle is allowed on multiple remote actors**; CLI activation succeeds with
+**no** Person seed (only the site actor); user delete tombstones (never deletes); an
+audit finds no actor row without its identity; reactivation creates no duplicate
+seed; deactivate/reactivate preserves rows.
 **Non-goals:** any public page; projections; admin UI.
 
 ## Phase 2 — Actor profile page

@@ -78,7 +78,8 @@ fields, not identity truth (that is the identity row) and not content.
 identity_id       BIGINT UNSIGNED  PK         -- = wp_ax_identities.id (1:1; NO separate actor id)
 actor_type        VARCHAR(16)      NOT NULL   -- Person | Organization | Application | Service | Group
 actor_scope       VARCHAR(8)       NULL       -- site | user for local; NULL for remote (origin is the truth)
-preferred_username VARCHAR(191)    NOT NULL   -- handle for /@{username}/ (mutable alias)
+preferred_username VARCHAR(191)    NOT NULL   -- real handle (NOT unique; remote actors on different domains share handles)
+local_handle_key  VARCHAR(191)     NULL       -- normalized handle for LOCAL actors only; NULL for remote
 local_user_id     BIGINT UNSIGNED  NULL       -- set only for local Person
 display_name      VARCHAR(191)     NULL       -- remote snapshot only (local reads WP_User / bloginfo live)
 summary           TEXT             NULL       -- remote snapshot only
@@ -89,8 +90,9 @@ payload_json      LONGTEXT         NULL       -- remote Actor JSON-LD snapshot o
 created_at        DATETIME         NOT NULL
 updated_at        DATETIME         NOT NULL
 
-UNIQUE KEY preferred_username (preferred_username)   -- one handle per local actor
+UNIQUE KEY local_handle_key (local_handle_key)       -- one handle per LOCAL actor (NULLs allowed → remote dupes OK)
 UNIQUE KEY local_user_id (local_user_id)             -- one local Person per user (v0.1)
+KEY preferred_username (preferred_username)          -- lookup only (non-unique)
 KEY scope_type (actor_scope, actor_type)
 ENGINE=InnoDB
 ```
@@ -106,7 +108,13 @@ Notes:
   `user`); it is `NULL` for remote actors, where `origin = remote` is the
   discriminator. (There is no `s2s` scope — federation is a delivery concern, not an
   identity scope.)
-- `UNIQUE(preferred_username)` makes `/@handle/` resolution unambiguous; a
+- **`preferred_username` is NOT globally unique** — the actor table also holds
+  remote actors, and `alice@example.com`, `alice@remote.example`,
+  `alice@another.example` legitimately share the handle `alice`. Uniqueness applies
+  only to **local** actors, via a separate `local_handle_key` (the normalized handle
+  for local site/user actors; `NULL` for remote). MySQL allows many `NULL`s in a
+  unique index, so remote duplicates are permitted while local collisions are
+  blocked at the DB. `/@handle/` resolution matches on `local_handle_key`; a
   reserved-handle guard (ROUTING §2) additionally blocks routing collisions.
 - `UNIQUE(local_user_id)` enforces one local Person per user for v0.1. When a user
   is later allowed to manage multiple actors, this unique is dropped and a
@@ -145,16 +153,22 @@ ax_actors_site_actor_type         Application (default) | Organization
 
 ## 6. Seeding & lifecycle
 
-- **Activation:** ensure the two identity+actor pairs of SPEC §4 exist (idempotent;
-  re-activation never duplicates — keyed on scope/uuid). Both `internal`.
+- **Activation:** always create the **site** actor (idempotent — keyed on
+  `actor_scope='site'`, re-activation never duplicates). Create the **site-owner
+  Person** actor **only if the current user is a valid administrator**; on CLI / no
+  current user, skip it (activation still succeeds). Both `internal`. Never depend on
+  a specific account (`user_id=1` / first admin / `admin_email`).
 - **`ensure_for_user( user_id )`:** return the user's Person actor, creating the
   identity+actor pair (`internal`) if absent. Never publishes.
 - **Handle policy:** a local Person's `preferred_username` defaults to the user's
   `user_nicename` and **tracks it** on change, *unless* an admin has set an explicit
   handle override (then it is independent). The site actor's handle comes from the
-  option / site slug. A handle change moves the `/@handle/` alias only — `uuid` and
-  `actor_uri` never change (SPEC §2.3). Multisite network-wide actors are out of
-  scope for v0.1 (per-site actors only).
+  option / site slug. For every **local** actor, `local_handle_key = strtolower(
+  preferred_username )` is written and kept in sync so the local-uniqueness index
+  holds; **remote** actors leave `local_handle_key = NULL`. A handle change moves the
+  `/@handle/` alias (and `local_handle_key`) only — `uuid` and `actor_uri` never
+  change (SPEC §2.3). Multisite network-wide actors are out of scope for v0.1
+  (per-site actors only).
 - **User deleted (`deleted_user`):** set the linked identity `status = tombstone`;
   keep both rows. Do not reassign `local_user_id`.
 - **Deactivate / uninstall:** tables and rows are **retained** (no destructive

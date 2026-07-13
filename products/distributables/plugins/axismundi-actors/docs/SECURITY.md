@@ -17,8 +17,9 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
 | `disabled` | 404 | no (hidden) |
 | `tombstone` | 410/404 | no |
 
-- Activation seeds the site and site-owner actors as `internal`. Nothing is
-  world-visible until an admin publishes it.
+- Activation always seeds the site actor as `internal`, and the site-owner Person
+  actor as `internal` **only when the activating user is a valid admin** (skipped on
+  CLI). Nothing is world-visible until an admin publishes it.
 - Existing users are **never bulk-published**. A user's actor is created lazily and
   stays `internal` until the user (or an admin) opts in.
 - Owner and `manage_options` may **preview** their own non-public actor; everyone

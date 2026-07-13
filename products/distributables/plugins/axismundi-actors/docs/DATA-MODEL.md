@@ -40,7 +40,7 @@ id                BIGINT UNSIGNED  PK AUTO_INCREMENT
 uuid              CHAR(36)         NOT NULL   -- UUIDv4 (wp_generate_uuid4), canonical hyphenated form
 canonical_uri     TEXT             NOT NULL   -- local: {home_url}/actors/{uuid}; remote: source URI
 canonical_uri_hash CHAR(64)        NOT NULL   -- sha256(canonical_uri), ascii
-object_kind       VARCHAR(20)      NOT NULL   -- actor | collection | folder | media | activity
+object_kind       VARCHAR(20)      NOT NULL   -- actor | collection | folder | media | activity | place
 origin            VARCHAR(10)      NOT NULL   -- local | remote
 status            VARCHAR(12)      NOT NULL   -- internal | public | disabled | tombstone
 created_at        DATETIME         NOT NULL
@@ -65,8 +65,12 @@ Rules:
 - **Remote** identity: the remote `canonical_uri` is the source of truth; the local
   `uuid` is an internal record id only and is never presented as the object's
   identity, nor re-served under our `/actors/{uuid}`.
-- v0.1 writes only `object_kind = 'actor'`; collection/folder/media/activity kinds
-  are reserved (SPEC §3) so the registry is not prematurely generalised.
+- v0.1 writes only `object_kind = 'actor'`; collection / folder / media / activity /
+  **place** kinds are reserved (SPEC §3) so the registry is not prematurely
+  generalised. **`Place` and `Collection` are objects, not actors** — a place or a
+  place-collection (map / geodata grouping) reuses the identity registry with
+  `attributedTo` a real actor, but has **no** actor row and no inbox/outbox. They are
+  created by their owning plugins (geodata / Media Library), not by Actors.
 - `status` transitions: `internal → public` (admin publish), `→ disabled`
   (hidden but retained), `→ tombstone` (owner user deleted / remote Delete).
   `tombstone` is terminal for exposure; the row is never hard-deleted here.
@@ -107,10 +111,15 @@ Notes:
   primary key here and the foreign key into `wp_ax_identities`. `actor_uri` is the
   identity's `canonical_uri`, never a column here.
 - `origin` (local|remote) and `status` live on the **identity** row, the single
-  source of truth. `actor_scope` only sub-classifies *local* actors (`site` vs
-  `user`); it is `NULL` for remote actors, where `origin = remote` is the
-  discriminator. (There is no `s2s` scope — federation is a delivery concern, not an
-  identity scope.)
+  source of truth. `actor_scope` sub-classifies *local* actors: v0.1 uses `site`
+  (the one site actor) and `user` (a 1:1 WP-user Person). **`managed` is reserved**
+  for admin-created actors that are neither the site nor tied to a WP user — a
+  `Group` (forum / Lemmy community / subreddit-like space) or a `Service` /
+  `Organization` publisher (e.g. a geodata service). A `managed` actor has
+  `local_user_id = NULL` and is administered through the reserved
+  `wp_ax_actor_managers` table. `actor_scope` is `NULL` for remote actors, where
+  `origin = remote` is the discriminator. (There is no `s2s` scope — federation is a
+  delivery concern, not an identity scope.)
 - **`preferred_username` is NOT globally unique** — the actor table also holds
   remote actors, and `alice@example.com`, `alice@remote.example`,
   `alice@another.example` legitimately share the handle `alice`. Uniqueness applies

@@ -111,6 +111,29 @@ projection link), and stays `internal` until published.
 Managing the site actor (via `manage_options`) does **not** make the managing
 user the same identity as the site — Person and Site actors are distinct records.
 
+### 4.1 Actor types & managed actors
+
+`actor_type` follows the ActivityStreams actor vocabulary; the right type is a
+per-actor decision, not one giant site actor:
+
+| Use | `actor_type` | provisioning |
+|---|---|---|
+| The site itself / auto-publisher | `Application` (default) | site seed (`scope=site`) |
+| A real company / org / team | `Organization` | site or managed |
+| A local person | `Person` | `scope=user` (1:1 WP user) |
+| Forum / Lemmy community / subreddit-like space | `Group` | **managed** (reserved) |
+| Automated geodata / feed publisher | `Service` (or `Application`) | **managed** (reserved) |
+
+- The **default site actor stays `Application`** (configurable to `Organization`).
+- **Forums and services are their own `managed` actors**, not tabs on the site
+  actor — they Follow, receive, post, and Announce, so they need their own identity,
+  inbox, and outbox. `managed` scope + the `wp_ax_actor_managers` table are reserved
+  (DATA-MODEL §3); v0.1 ships only `site` and `user`.
+- **A place is not an actor.** `Place` (e.g. "Busan Station") and a place/map
+  `Collection` are objects in the identity registry with `attributedTo` an actor and
+  **no** inbox/outbox — created by the geodata / Media Library plugins, never by
+  Actors (DATA-MODEL §2).
+
 ## 5. v0.1 scope
 
 - `wp_ax_identities` + `wp_ax_actors` schema (dbDelta) with immutable UUID / URI.

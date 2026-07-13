@@ -260,21 +260,6 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 			)
 		),
 	);
-	$form_fields['ax_media_download_policy'] = array(
-		'label' => __( 'Download policy', 'axismundi-media-library' ),
-		'input' => 'html',
-		'html'  => axismundi_media_attachment_select(
-			$post->ID,
-			'ax_media_download_policy',
-			(string) get_post_meta( $post->ID, '_ax_media_download_policy', true ),
-			array(
-				''                => __( 'Not specified', 'axismundi-media-library' ),
-				'original'        => __( 'Original file', 'axismundi-media-library' ),
-				'derivative-only' => __( 'Derivative only', 'axismundi-media-library' ),
-				'disabled'        => __( 'Disabled', 'axismundi-media-library' ),
-			)
-		),
-	);
 
 	// Sensitivity authority (Phase 4a): moderators pick a state; owners get a self-mark
 	// checkbox only while it is not locked; a moderator/automated lock is read-only.
@@ -403,11 +388,6 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 		'ax_media_reuse_policy' => array(
 			'meta'    => '_ax_media_reuse_policy',
 			'allowed' => array( '', 'denied', 'save', 'reuse' ),
-			'default' => '',
-		),
-		'ax_media_download_policy' => array(
-			'meta'    => '_ax_media_download_policy',
-			'allowed' => array( '', 'original', 'derivative-only', 'disabled' ),
 			'default' => '',
 		),
 		'ax_media_geo_visibility' => array(

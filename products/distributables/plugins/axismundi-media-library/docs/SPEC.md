@@ -124,7 +124,7 @@ Phase 0  Compatibility boundary        ← first release gate (with Phase 1)
 Phase 1  Independent Attachment pages  ← first public MVP
 Phase 2  Single virtual folder (ax_media_folder)
 Phase 3  Protection (protected, folder password, used-in index)
-Phase 4  Rights, sensitivity, GPS/EXIF enforcement, download policy
+Phase 4  Rights, sensitivity, GPS/EXIF enforcement
 Phase 5  Saved Reference (object_uri + local_attachment_id)
 Phase 6  Storage Browser (filesystem mirror; the four Storage contracts)
 Phase 7  Federation (ActivityStreams objects/collections)

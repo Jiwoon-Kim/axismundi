@@ -283,7 +283,7 @@ function axismundi_media_feed_scheme( string $kind ) : string {
 
 /**
  * Pick an intermediate image rendition — never the original by default (feeds serve
- * derivatives to stay light and to respect the download policy). Returns the first
+ * derivatives to stay light). Returns the first
  * available preferred size, or null for non-images / no derivative.
  *
  * @param int      $id     Attachment ID.

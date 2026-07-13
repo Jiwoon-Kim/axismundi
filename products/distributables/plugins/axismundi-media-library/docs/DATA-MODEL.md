@@ -89,7 +89,9 @@ _ax_media_creator_name           _ax_media_creator_user_id (opt)    _ax_media_cr
 _ax_media_copyright_holder_name  _ax_media_copyright_holder_user_id (opt)  _ax_media_copyright_holder_url
 _ax_media_copyright_notice
 _ax_media_license            _ax_media_license_url        _ax_media_attribution
-_ax_media_source_url         _ax_media_reuse_policy       _ax_media_download_policy
+_ax_media_source_url         _ax_media_reuse_policy
+# Download policy dropped: core does not restrict downloads and neither can we without
+# Phase 6 controlled delivery; a delivery-affordance hint is not a security control.
 _ax_media_sensitive          _ax_media_content_warning    _ax_media_sensitivity_reason
 _ax_media_geo_visibility     (public | approximate | hidden)  ← flag only; EXIF strip = Phase 4
 _ax_media_federated          (bool; reserved for Phase 7)

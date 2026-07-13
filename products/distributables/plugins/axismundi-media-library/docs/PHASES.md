@@ -170,9 +170,13 @@ Caps `moderate_media_sensitivity`/`override_media_sensitivity` (edit_others) and
 `axismundi_media_set_sensitive_state()`; Attachment-Details state UI. Feeds/collections
 keep reading the effective boolean.
 
-**Phase 4b — Rights & policy.** Enforce license/attribution/reuse/download policy
-(original / derivative-only / disabled); folder default inheritance; reuse/save flags
-gate the (Phase 5) Save button.
+**Phase 4b — Rights & reuse-policy resolver.** Normalize license/attribution/copyright/
+source + `_ax_media_reuse_policy`; **folder default inheritance**; a policy resolver
+(`axismundi_media_can_reuse()`) + API/tests for future consumers; surface rights on the
+attachment page. **Download policy is dropped** — core does not restrict downloads and
+neither can this plugin without Phase 6 controlled delivery; a delivery-affordance hint
+is not a security control, so it is not claimed. The **Save-button gate is wired in
+Phase 5a** (Collection), not here — Save does not exist until then.
 
 **Phase 4c — GPS/EXIF.** From storing only the `hidden` flag to an actual EXIF strip of
 delivered files (derivatives + original re-save); check derivatives and the delivered

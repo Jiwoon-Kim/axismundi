@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.9
+Stable tag: 0.0.10
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,14 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.10 =
+* Phase 4c — use a local Person actor's avatar as their WordPress avatar. When a
+  user's actor has an avatar image, WordPress avatars (comments, admin, author
+  blocks) show it instead of the Gravatar, via the get_avatar_data filter. Default
+  on; a site can turn it off with the axismundi_actors_use_actor_avatar filter. Only
+  Person actors are affected — the header image stays Actor-profile-only, and site /
+  remote actors are not WordPress users. No schema change.
 
 = 0.0.9 =
 * Phase 4b — actor avatar & header images. Schema v3 adds avatar_attachment_id and

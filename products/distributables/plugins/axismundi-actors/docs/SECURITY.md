@@ -39,7 +39,8 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
   after creation; a username change touches only `preferred_username` /
   `profile_url` alias.
 - Binding federation identity to the mutable `/@handle/` is forbidden — the
-  identity URI (`/?ax_actor={uuid}`) is the only stable id.
+  identity URI (`/actors/{uuid}`, plain fallback `/?ax_actor={uuid}`) is the only
+  stable id.
 - Reserved-handle guard prevents a username from shadowing routing or another
   actor's handle.
 

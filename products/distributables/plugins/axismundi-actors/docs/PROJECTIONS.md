@@ -24,6 +24,31 @@ Actor hub  /@alice/
 Actors coordinates only **URL, label, visibility, and order**. The domain plugin
 owns the data, the template, and the permission logic behind the link.
 
+## 1.5. The actor value object
+
+Every callback receives a read-only `Axismundi_Actor` — the same object the
+repository returns. Its public interface is **frozen** here so domain plugins never
+read the tables directly:
+
+```php
+interface Axismundi_Actor {
+    public function get_uuid(): string;              // immutable anchor
+    public function get_uri(): string;               // actor_uri = /actors/{uuid} (or remote canonical)
+    public function get_profile_url(): string;       // /@handle/  (mutable alias)
+    public function get_preferred_username(): string;
+    public function get_local_user_id(): ?int;       // null for site / remote
+    public function get_type(): string;              // Person | Organization | Application | Service | Group
+    public function get_scope(): ?string;            // site | user (local); null (remote)
+    public function get_status(): string;            // internal | public | disabled | tombstone
+    public function is_local(): bool;
+    public function get_display_name(): string;      // resolved live (user/bloginfo) or remote snapshot
+}
+```
+
+A projection typically uses `get_local_user_id()` (to build a WordPress archive URL)
+or `get_uri()` (federation), and `get_status()` / `is_local()` for visibility. Email
+is deliberately absent — it is never exposed (SECURITY §2).
+
 ## 2. Registration API
 
 ```php

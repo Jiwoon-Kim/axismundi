@@ -4,25 +4,30 @@
 > Two URLs per actor: an immutable identity URI and a mutable human alias. Plain
 > query endpoints work without pretty permalinks; pretty aliases are sugar.
 
-## 0. The two URLs
+## 0. The URLs
 
 ```
-identity (immutable)   {home}/?ax_actor={uuid}          → actor_uri (federation identity)
-human alias (mutable)  {home}/@{preferred_username}/     → profile hub
+canonical identity   {home}/actors/{uuid}          → actor_uri (federation id; the immutable UUID)
+  plain fallback     {home}/?ax_actor={uuid}       → same target, works without pretty permalinks
+human alias (mutable){home}/@{preferred_username}/ → profile hub
 ```
 
 The alias is a convenience over the identity. Resolving the alias always yields the
-canonical identity; canonical links (and any future JSON-LD `id`) use the identity
-URI, never the alias.
+canonical identity; canonical links (and any future JSON-LD `id`) use `/actors/{uuid}`,
+never the alias. The DB `id` is **never** in a URL (`/actors/42` is forbidden) — only
+the `uuid`, which survives re-import and domain moves.
 
-## 1. Identity endpoint — `/?ax_actor={uuid}`
+## 1. Canonical identity — `/actors/{uuid}` (+ `/?ax_actor={uuid}` fallback)
 
-- A plain query var `ax_actor` (registered via `query_vars` + `parse_request`),
-  so it works with plain permalinks and needs no rewrite flush.
-- Resolves the identity row by `uuid`; 404 when absent, `disabled`, `internal`
-  (to a non-privileged viewer), or `tombstone`.
+- Pretty route: `^actors/([0-9a-f-]{36})/?$` → `index.php?ax_actor={uuid}`, plus the
+  plain query var `ax_actor` (registered via `query_vars` + `parse_request`) so the
+  same target resolves with pretty permalinks disabled and needs no rewrite to
+  function.
+- Resolves the identity row by `uuid`; 404 when absent, `disabled`, `internal` (to a
+  non-privileged viewer), or `tombstone` (410 once federation lands).
 - This is the stable target for federation and for any link that must survive a
-  username change.
+  username change. **Remote** actors are served from their own remote
+  `canonical_uri`; they are never re-served under our `/actors/{uuid}`.
 
 ## 2. Human alias — `/@{preferred_username}/`
 
@@ -36,8 +41,10 @@ URI, never the alias.
   SECURITY).
 
 The `@` prefix avoids collision with existing top-level slugs (pages, `/author/`,
-`/media/`). A reserved-handle guard rejects usernames that would shadow routing
-(`author`, `media`, `notes`, `feed`, `wp-*`, etc.).
+`/media/`). A reserved-handle guard rejects usernames that would shadow routing or
+another actor (`actors`, `ap`, `author`, `media`, `notes`, `feed`, `wp-*`, etc.), and
+`preferred_username` is `UNIQUE` across local actors (DATA-MODEL §3) so a handle
+resolves to exactly one actor.
 
 ## 3. Hub content & projection sub-routes
 

@@ -34,13 +34,17 @@ Actor  (identity hub)
    but Site / Organization / Service / remote actors have no user at all.
 2. **One actor, many projections.** An actor is never per-screen. Author, Media,
    Notes, Activity are views *of the same actor*, registered by their own plugins.
-3. **Identity URI is immutable; the profile URL is not.** `actor_uri`
-   (`/?ax_actor={uuid}`) never changes for the life of the actor. The human alias
-   `/@{preferred_username}/` may change when the username changes. Federation
-   identity must never be bound to the mutable alias.
-4. **Four identifiers are distinct and never conflated:** `local_user_id`,
-   `actor.id` (local DB key), `identity.uuid` / `actor_uri` (federation identity),
-   and `profile_url` (human alias). See DATA-MODEL §2.
+3. **The UUID is the immutable anchor; URLs are not eternal constants.** `uuid`
+   never changes. The local `actor_uri` = `/actors/{uuid}` (plain fallback
+   `/?ax_actor={uuid}`) is *derived* from that uuid + the site URL and only changes
+   if the whole site migrates domains — an explicit, federation-visible event, not
+   a silent break. The human alias `/@{preferred_username}/` changes freely with the
+   username. Federation identity binds to the uuid / `actor_uri`, never the alias.
+4. **These identifiers are distinct and never conflated:** `local_user_id` (login
+   account), `identity.id` (local DB key, also the actor row's PK; changes on
+   re-import), `identity.uuid` (immutable anchor) → `actor_uri` (`/actors/{uuid}`;
+   federation identity), and `profile_url` (`/@handle/`; human alias). See
+   DATA-MODEL §1.
 5. **Actors owns identity only.** It does not own or store Likes, Collections,
    Activities, folder membership, or content. It coordinates **URL, visibility,
    and ordering** of projections and nothing else.
@@ -70,8 +74,14 @@ wp_ax_actors       actor_type + actor_scope + preferred_username + local_user_id
 ```
 
 `actor_uri` is **not** a column on the actor row — it *is* the linked identity's
-`canonical_uri`. This is the whole reason for the split: one identity layer, many
-object kinds. See DATA-MODEL for the full schema and constraints.
+`canonical_uri`. The actor row is a **1:1 specialization** of its identity, keyed by
+`identity_id` (there is no separate `actor.id`): one object, one DB key. This is the
+whole reason for the split: one identity layer, many object kinds. See DATA-MODEL
+for the full schema and constraints.
+
+The repository returns actors as a read-only value object (`Axismundi_Actor`) whose
+public interface is frozen in PROJECTIONS §1.5, so domain plugins never touch the
+tables directly.
 
 ## 4. Seeded actors (on activation)
 
@@ -96,8 +106,9 @@ user the same identity as the site — Person and Site actors are distinct recor
 - `wp_ax_identities` + `wp_ax_actors` schema (dbDelta) with immutable UUID / URI.
 - Actor repository: create, `get_by_uri`, `get_by_uuid`, `get_for_user`,
   `ensure_for_user`, seed on activation, tombstone on user delete.
-- Plain-query identity endpoint `/?ax_actor={uuid}` + human `/@{username}/` hub
-  with a block template, actor header, and projection navigation.
+- Canonical identity endpoint `/actors/{uuid}` (plain fallback `/?ax_actor={uuid}`)
+  + human `/@{username}/` hub with a block template, actor header, and projection
+  navigation.
 - **Projection registry** (`axismundi_actors_register_projection`) with the built-in
   `posts` projection; a public API for other plugins. See PROJECTIONS.
 - Admin: a public/internal toggle on the user profile screen; a "Actor profile"

@@ -10,9 +10,13 @@
 PHASES) locking the `actor_uri` / identity format and the projection registry
 contract; plugin scaffold (main file header, ABSPATH guard, version constant, no
 functional code yet).
-**Acceptance:** identifiers (`local_user_id` / `actor.id` / `identity.uuid` =
-`actor_uri` / `profile_url`) and the identity-registry split are frozen; the
-projection registry signature is frozen; no schema or route is implemented.
+**Acceptance:** frozen after the design-review pass — the identity-registry split;
+identifiers `local_user_id` / `identity.id` (= actor PK) / `identity.uuid`
+(immutable anchor) → `actor_uri` = **`/actors/{uuid}`** (plain fallback
+`/?ax_actor={uuid}`) / `profile_url` (`/@handle/`); the actor row as a 1:1
+specialization keyed by `identity_id` (no separate `actor.id`); `uuid` immutable
+while local `canonical_uri` is a rebuildable cache; the `Axismundi_Actor` value
+object and the projection registry signature. No schema or route is implemented.
 **Non-goals:** any table creation or routing code.
 
 ## Phase 1 — Repository
@@ -31,8 +35,9 @@ duplicate seed; deactivate/reactivate preserves rows.
 ## Phase 2 — Actor profile page
 
 **Entry:** Phase 1.
-**Build:** `/?ax_actor={uuid}` plain identity endpoint + `/@{username}/` alias
-(rewrite + plain fallback, reserved-handle guard); a plugin block template; actor
+**Build:** `/actors/{uuid}` canonical identity endpoint (+ `/?ax_actor={uuid}` plain
+fallback) + `/@{username}/` alias (rewrite + plain fallback, reserved-handle guard);
+a plugin block template; actor
 header (live-read name/avatar/bio/type badge) + projection navigation region.
 **Acceptance:** `internal`/`disabled`/`tombstone` actors 404 for public viewers
 (owner/`manage_options` preview only); `public` renders; a username change moves

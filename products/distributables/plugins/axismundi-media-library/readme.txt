@@ -13,8 +13,10 @@ Promote WordPress attachments to independent, visibility-controlled media object
 == Description ==
 
 Axismundi Media Library promotes the WordPress attachment into an independent,
-publishable media object with its own owner, visibility, and — in later phases —
-virtual folders, rights, sensitivity, saved references, and federation.
+publishable media object with its own owner and visibility, organised into virtual
+folders, with structured rights (license, attribution, copyright, source) and a
+sensitive-content workflow. Saved references (collections) and federation are
+planned for later phases.
 
 Activating the plugin changes no existing media. **Core mode** leaves WordPress
 attachments untouched. **Independent mode** detaches new uploads (post_parent 0)
@@ -25,7 +27,7 @@ capabilities.
 
 The full specification lives in the plugin's docs/ directory (SPEC, SECURITY,
 ROUTING, COMPATIBILITY, DATA-MODEL, PHASES). Independent mode provides media
-archives at /media/ and /media/{owner}/. Attachment single pages continue to use
+archives at /media/ and /media/author/{nicename}/. Attachment single pages continue to use
 the active theme's normal attachment template hierarchy; Axismundi includes a
 dedicated attachment.html template.
 

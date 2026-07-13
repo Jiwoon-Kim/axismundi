@@ -1,6 +1,6 @@
 # Axismundi Media Library — Security & Access Contract
 
-> Status: **Living specification. Phase 1a guards are implemented.**
+> Status: **Living specification. Phase 1–4 guards and authority rules are implemented through v0.0.21.**
 > This is an **acceptance contract**, not a hook checklist. The matrix in §3 is
 > the source of truth; every enforcement point in §4 exists to satisfy a matrix
 > cell, and §7 restates the cells as testable criteria.

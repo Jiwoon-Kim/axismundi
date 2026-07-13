@@ -1,10 +1,9 @@
 # Axismundi Media Library — Data Model
 
-> Status: **Living specification. Phase 0 and Phase 1a are implemented.**
-> **Read this distinction first:** §2 is data the plugin actually creates in
-> 0.1.0. §3–§5 are **reserved schema** for later phases — documented so the model
-> is stable, but **not** table-creation or storage contracts yet. Do not create
-> §4/§5 tables in 0.1.0.
+> Status: **Living specification. Phases 0–4 are implemented through v0.0.21.**
+> **Read this distinction first:** §2 attachment metadata, §3 virtual folders, and
+> §4 used-in relations are current storage contracts. §5 saved references remains
+> provisional and is not created by v0.0.21.
 
 ## 1. Conventions
 
@@ -14,7 +13,7 @@
 - All local queries key on **`attachment_id`** (SPEC.md §3). `object_uri` is
   identity for federation, not a local lookup key.
 
-## 2. Created in 0.1.0 (Phase 0 + 1)
+## 2. Attachment model (implemented)
 
 ### 2.0 Subjects (owner vs rights metadata)
 
@@ -46,7 +45,7 @@ logged-out uid of 0 must never be treated as the owner. If an immutable uploader
 record is ever needed, add `_ax_media_original_author_id` at the first transfer —
 reserved, not built now. Ownership transfer itself is a later phase (PHASES.md).
 
-### 2.1 Attachment post meta — **written & enforced** in 0.1.0
+### 2.1 Attachment post meta — **written & enforced**
 
 ```
 _ax_media_visibility          enum     inherit | public | unlisted | private
@@ -77,7 +76,7 @@ List `meta_query` for visibility MUST be `( NOT EXISTS ) OR ( == public )` —
 never a bare `== public` (which drops legacy rows). Independent mode creates
 policy meta only when explicitly edited; legacy rows remain legacy-public.
 
-### 2.2 Attachment post meta — **stored only** in 0.1.0 (enforced Phase 4)
+### 2.2 Rights, sensitivity, and location-output post meta
 
 Written by the editor UI so nothing is lost. Location visibility governs only
 plugin-rendered metadata and never claims file-level EXIF/GPS protection:
@@ -137,7 +136,7 @@ ax_media_reserved_slugs        (owner-slug collision guard; ROUTING.md §3.1)
 No delete-on-uninstall option is reserved. Automatic purge is forbidden; the
 explicit post-roadmap reset contract is defined in COMPATIBILITY.md §6.1.
 
-## 3. Virtual folders — **Phase 2** (taxonomy exists then, not 0.1.0)
+## 3. Virtual folders — **Phase 2 (implemented)**
 
 ```
 taxonomy: ax_media_folder   hierarchical: true   object_type: attachment
@@ -307,9 +306,9 @@ hooks · **3c** reindex CLI + Attachment-Details `Location`/`Used in`/`Saved in`
 `legacy_parent` snapshot + `post_parent` removal preview/rollback (a **separate**
 execution from index build). See PHASES.md Phase 3.
 
-## 5. Saved references — **Phase 5, PROVISIONAL schema (not created in 0.1.0)**
+## 5. Saved references — **Phase 5, PROVISIONAL schema (not created in v0.0.21)**
 
-Bookmark/shortcut to a local or remote object. **Schema reserved, not a 0.1.0
+Bookmark/shortcut to a local or remote object. **Schema reserved, not a v0.0.21
 table contract.**
 
 ```
@@ -351,7 +350,7 @@ preserving rows with absent legacy meta. "Mine" is `post_author = uid` (uid > 0)
 ## 7. Identity fields (reserved formats)
 
 ```
-object_uri   /?ax_media_object={id}     immutable; format reserved, NOT persisted in 0.1.0
+object_uri   /?ax_media_object={id}     immutable; format reserved, NOT persisted in v0.0.21
 attachment_id (DB primary)              always present
 file URL     wp_get_attachment_url()    immutable after upload
 permalink    /?attachment_id={id}       mutable HTML canonical (ROUTING.md)

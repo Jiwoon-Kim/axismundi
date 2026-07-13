@@ -1,6 +1,6 @@
 # Axismundi Media Library — Federated & Shared Media (design)
 
-> Status: **Forward design (Phase 5–7). Nothing here ships in 0.1.x.** This is the
+> Status: **Forward design (Phase 5–7). Nothing here ships in v0.0.21.** This is the
 > contract the shared-folder, collection, and federation work must satisfy. Existing
 > phase docs fold in only the load-bearing invariants and cross-reference here.
 > Contract-style, not prose — decisions, not narration.

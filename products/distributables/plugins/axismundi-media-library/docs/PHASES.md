@@ -1,7 +1,7 @@
 # Axismundi Media Library — Phases
 
-> Status: **Living implementation plan. Phase 0 and Phase 1a are complete.** Entry condition · acceptance · non-goals
-> per phase. **First release = Phase 0 + Phase 1.** Cross-refs: SPEC.md (scope),
+> Status: **Living implementation plan. Phases 0–4 are complete through v0.0.21.** Entry condition · acceptance · non-goals
+> per phase. **Current pre-release checkpoint = Phase 0–4.** Cross-refs: SPEC.md (scope),
 > SECURITY.md (matrix), ROUTING.md, COMPATIBILITY.md, DATA-MODEL.md.
 
 ## Phase 0 — Compatibility boundary (first release, non-destructive)

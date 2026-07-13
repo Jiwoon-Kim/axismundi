@@ -1,6 +1,6 @@
 # Axismundi Media Library — Compatibility & Lifecycle
 
-> Status: **Living specification. Phase 0 and Phase 1a are implemented.** Governs how the plugin coexists with core
+> Status: **Living specification. Phases 0–4 are implemented through v0.0.21.** Governs how the plugin coexists with core
 > Attachment behavior and other plugins, and what activation / deactivation /
 > uninstall may and may not do. See SPEC.md Invariant 5 and SECURITY.md §1.
 
@@ -42,20 +42,21 @@ does not mutate their parent or policy meta, but it does apply the common query
 canonical and legacy-public access guards while active. Parent removal and
 explicit policy migration remain separate operations below.
 
-## 3. Existing media — migration (NOT in 0.1.0)
+## 3. Existing media — explicit migration (Phase 3d)
 
 Removing `post_parent` from **existing** Attachments is the most destructive,
 least-reversible operation (themes/galleries/other plugins may rely on parent).
 
-0.1.0 ships **scan + preview only**:
+v0.0.21 provides an explicit preview/execute/rollback workflow:
 
 - Count and list the Attachments and relations that *would* change.
-- Preserve the original parent as a `legacy_parent` relation **before** any
-  future removal (Phase 3 relation index).
-- No bulk parent mutation executes in 0.1.0.
+- Preserve the original parent as an immutable `legacy_parent` relation **before**
+  removal (Phase 3 relation index).
+- Require an explicitly confirmed CLI operation; activation and mode toggles never
+  mutate existing parents.
 
-The actual removal is a separate, explicitly-confirmed, rollback-capable step in
-a later release — never an activation or mode-toggle side effect. `legacy_parent`
+Removal is a separate, explicitly-confirmed, rollback-capable step — never an
+activation or mode-toggle side effect. `legacy_parent`
 (origin post) and `used_in` (current references) are kept distinct.
 
 ## 4. `wp_attachment_pages_enabled`

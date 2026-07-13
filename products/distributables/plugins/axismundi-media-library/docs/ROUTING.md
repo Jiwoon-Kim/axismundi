@@ -1,7 +1,7 @@
 # Axismundi Media Library — Routing & Templates
 
-> Status: **Living specification. Phase 1 single + archives implemented on the plain
-> query base; the pretty `/media/…` scheme below is the Phase 2 target.** See
+> Status: **Living specification. Plain query endpoints and the pretty `/media/…`
+> object/collection routes are implemented through v0.0.21.** See
 > SPEC.md §3 (identity) and SECURITY.md §4.1 (the HTML `template_redirect` guard) —
 > this doc defines how requests reach that guard and which template renders.
 

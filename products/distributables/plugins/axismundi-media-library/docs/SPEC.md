@@ -1,8 +1,8 @@
 # Axismundi Media Library — Specification
 
-> Status: **Living specification. Phase 0 and Phase 1a are implemented.**
+> Status: **Living specification. Phases 0–4 are implemented through v0.0.21.**
 > Plugin brand: **Axismundi Media Library** · Admin app: **Media Drive**
-> This document defines the product, its invariants, the 0.1.0 release scope, and
+> This document defines the product, its invariants, the current pre-release scope, and
 > the non-goals. Security, routing, compatibility, data model, and phases live in
 > the sibling docs.
 
@@ -74,15 +74,15 @@ Binary resource             file URL                       (immutable)
 - Phase 1 canonical Attachment page uses the core query URL **`/?attachment_id={id}`**
   (never `/?attachment=`slug), avoiding a bespoke rewrite for the single page.
 
-## 4. 0.1.0 release scope (Phase 0 + trimmed Phase 1)
+## 4. Implemented baseline (Phases 0–4)
 
 **Phase 0 — compatibility boundary (non-destructive):**
 - Plugin scaffold; `Core attached-to` ⇄ `Independent media` mode toggle.
 - Activation alone changes **no** existing data, parent, status, or permalink.
 - `post_parent` scan + migration **preview** only.
 - Separate "new-upload policy" from "existing-media migration."
-- **No bulk existing-parent mutation ships in 0.1.0** (preview/scan only; the
-  destructive removal is a later, tested step).
+- Bulk existing-parent mutation remains an explicit, previewed CLI operation with
+  immutable snapshots and rollback; activation never runs it automatically.
 
 **Phase 1 — independent Attachment publishing:**
 - Independent mode: **new** uploads get `post_parent = 0` (regardless of upload
@@ -93,7 +93,8 @@ Binary resource             file URL                       (immutable)
   and left untouched until an explicit migration. Independent mode governs **new
   uploads**, not existing media.
 - Canonical single page `/?attachment_id={id}` with the visibility guard.
-- Archives via rewrite: `/media/`, `/media/{owner}/`.
+- Archives via rewrite: `/media/`, `/media/author/{nicename}/`, and owner-scoped
+  folder paths.
 - Visibility: `public | unlisted | private` (`protected` lands in Phase 3).
 - `listed` / `searchable` toggles — a `public` item still requires
   `listed` / `searchable` to appear in archives / search (predicate in
@@ -102,31 +103,37 @@ Binary resource             file URL                       (immutable)
   separate owner meta: ownership transfer = change `post_author`, permission =
   core `edit_post` / `edit_others_posts`. Creator and copyright-holder are rights
   metadata, not capabilities. `post_author = 0` = unowned (uid 0 ≠ author 0).
-- Rights + sensitivity + location-output fields **stored** (sensitivity enforcement
-  is Phase 4; location policy remains subject to Invariant 8).
+- Rights + sensitivity + location-output fields are stored; Phase 4 enforces
+  sensitivity authority and click-to-reveal output while location policy remains
+  subject to Invariant 8.
 - File URL immutable; old attachment permalink → canonical redirect.
 - Full visibility enforcement across surfaces per SECURITY.md (HTML, REST
   single + collection, plugin archives/search, media modal).
 
-## 5. Non-goals for v0.1 (explicitly deferred)
+Phases 2–4 add single-location virtual folders and password gates, the used-in
+relation index and migration CLI, Atom/Media RSS feeds, rights/license output, and
+sensitive-media authority plus click-to-reveal rendering. PHASES.md is the acceptance
+contract for each delivered increment.
+
+## 5. Deferred beyond v0.0.21
 
 Physical file move/rename · original file-URL protection · FTP/storage file
-manager · shared folders & invitations · remote ActivityPub Save · Like ·
+manager · Collections/Save · shared folders & invitations · Actors/Like ·
 file copy / hotlink proxy · advanced EXIF/color search · simultaneous RSS+Atom ·
-multisite integration · `protected` visibility (Phase 3) · destructive GPS/EXIF
-stripping (not planned).
+multisite integration · destructive GPS/EXIF stripping (not planned).
 
 ## 6. Phase gates (summary; full criteria in PHASES.md)
 
 ```
-Phase 0  Compatibility boundary        ← first release gate (with Phase 1)
-Phase 1  Independent Attachment pages  ← first public MVP
-Phase 2  Single virtual folder (ax_media_folder)
-Phase 3  Protection (protected, folder password, used-in index)
-Phase 4  Rights, sensitivity, output integration
+Phase 0  Compatibility boundary        ✓
+Phase 1  Independent Attachment pages  ✓
+Phase 2  Virtual folders + password    ✓
+Phase 3  Used-in index + migration     ✓
+Phase 4  Rights, sensitivity, output   ✓
 Phase 5  Saved Reference (object_uri + local_attachment_id)
 Phase 6  Storage Browser (filesystem mirror; the four Storage contracts)
 Phase 7  Federation (ActivityStreams objects/collections)
 ```
 
-First release = **Phase 0 + Phase 1** only.
+GitHub pre-release v0.0.21 is the **dependency-free Phase 0–4 checkpoint**. Actor-
+keyed Collections and shared folders begin after the separate Actors substrate.

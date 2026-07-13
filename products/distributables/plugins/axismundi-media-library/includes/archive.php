@@ -411,6 +411,7 @@ function axismundi_media_template_content( string $filename ) : string {
  */
 function axismundi_media_register_archive_blocks_and_templates() : void {
 	register_block_type( __DIR__ . '/../blocks/media-preview' );
+	register_block_type( __DIR__ . '/../blocks/media-rights' );
 	register_block_type( __DIR__ . '/../blocks/media-archive-title' );
 	register_block_type( __DIR__ . '/../blocks/media-folder-navigation' );
 	register_block_type( __DIR__ . '/../blocks/media-gate' );

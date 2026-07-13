@@ -179,8 +179,16 @@ default license** is a *snapshot stamped at upload*, not dynamic inheritance
 (`_ax_media_folder_default_license` term meta; `axismundi_media_stamp_folder_default_license()`
 runs only from `add_attachment`, resolves the nearest ancestor, falls back to
 all-rights-reserved at read time, never overwrites an attachment-set license, and a
-later folder move never re-stamps). Remaining 4b: the plugin-owned `axismundi/media-rights`
-display block + attachment-page auto-placement. Download policy is dropped — core does
+later folder move never re-stamps). The plugin-owned `axismundi/media-rights` dynamic
+block displays rights and a copyable attribution and is automatically appended once
+to Attachment content without a theme custom-block dependency. **Deferred within 4b
+(known limitation):** creator resolution reads only the explicit `_ax_media_creator_name`
+/ `_ax_media_creator_url` and omits the creator when both are empty. It does NOT yet
+read `_ax_media_creator_user_id`, and it must never fall back to `post_author` (that
+would rewrite attribution on an ownership transfer). The intended contract —
+explicit name/URL → `_ax_media_creator_user_id`'s `display_name`/`user_url` → omit,
+with a "Use my profile as creator" upload option that pins the user ID — lands with
+the Phase 5 account/profile surface. Download policy is dropped — core does
 not restrict downloads and neither can this plugin without controlled delivery.
 Collection Save is a bookmark, not reuse, and is therefore gated by visibility rather
 than license; license checks apply later to Import/Copy, redistribution, and

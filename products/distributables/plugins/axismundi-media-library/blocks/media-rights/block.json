@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/media-rights",
+	"version": "0.1.0",
+	"title": "Media Rights",
+	"category": "theme",
+	"icon": "privacy",
+	"description": "Displays license, creator, source, and a copyable attribution for an Attachment.",
+	"textdomain": "axismundi-media-library",
+	"usesContext": [ "postId", "postType" ],
+	"supports": {
+		"html": false,
+		"multiple": false,
+		"align": [ "wide", "full" ],
+		"spacing": { "margin": true, "padding": true }
+	},
+	"editorScript": "file:./edit.js",
+	"editorStyle": "file:./style.css",
+	"style": "file:./style.css",
+	"viewScript": "file:./view.js",
+	"render": "file:./render.php"
+}

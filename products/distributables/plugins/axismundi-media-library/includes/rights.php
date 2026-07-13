@@ -108,33 +108,100 @@ function axismundi_media_license_record( int $attachment_id ) : array {
 }
 
 /**
- * Display attribution: the authored `_ax_media_attribution` if present, else a
- * display-only fallback from title + creator + license. Never written to meta.
+ * Escape human text for a Markdown link label.
+ *
+ * @param string $text Label text.
+ * @return string
+ */
+function axismundi_media_markdown_label( string $text ) : string {
+	return str_replace( array( '\\', '[', ']' ), array( '\\\\', '\\[', '\\]' ), $text );
+}
+
+/**
+ * Build plain, Markdown, and HTML attribution from one normalized record.
+ * Authored attribution is treated as authoritative plain text; generated formats
+ * follow the Openverse credit pattern and link the work, creator, and license when
+ * their URLs are known. These strings are display/copy output and are never persisted.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @return array{plain:string,markdown:string,html:string}
+ */
+function axismundi_media_attribution_formats( int $attachment_id ) : array {
+	$authored = (string) get_post_meta( $attachment_id, '_ax_media_attribution', true );
+	if ( '' !== $authored ) {
+		return array(
+			'plain'    => $authored,
+			'markdown' => $authored,
+			'html'     => '<p class="attribution">' . esc_html( $authored ) . '</p>',
+		);
+	}
+
+	$record      = axismundi_media_license_record( $attachment_id );
+	$creator     = trim( (string) get_post_meta( $attachment_id, '_ax_media_creator_name', true ) );
+	$creator_url = (string) get_post_meta( $attachment_id, '_ax_media_creator_url', true );
+	$source_url  = (string) get_post_meta( $attachment_id, '_ax_media_source_url', true );
+	$title       = trim( (string) get_the_title( $attachment_id ) );
+	$title       = '' !== $title ? $title : __( 'This work', 'axismundi-media-library' );
+
+	$markdown_link = static function ( string $label, string $url ) : string {
+		if ( '' === $url ) {
+			return axismundi_media_markdown_label( $label );
+		}
+		$url = str_replace( array( '(', ')' ), array( '%28', '%29' ), esc_url_raw( $url ) );
+		return '[' . axismundi_media_markdown_label( $label ) . '](' . $url . ')';
+	};
+	$html_link = static function ( string $label, string $url ) : string {
+		return '' === $url
+			? esc_html( $label )
+			: '<a rel="noopener noreferrer" href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>';
+	};
+
+	$plain_work    = '"' . $title . '"';
+	$markdown_work = '"' . $markdown_link( $title, $source_url ) . '"';
+	$html_work     = '&quot;' . $html_link( $title, $source_url ) . '&quot;';
+	if ( '' !== $creator ) {
+		/* translators: %s: creator name, optionally linked. */
+		$by_pattern     = __( 'by %s', 'axismundi-media-library' );
+		$plain_work    .= ' ' . sprintf( $by_pattern, $creator );
+		$markdown_work .= ' ' . sprintf( $by_pattern, $markdown_link( $creator, $creator_url ) );
+		$html_work     .= ' ' . sprintf( $by_pattern, $html_link( $creator, $creator_url ) );
+	}
+	$plain_license    = $record['name'];
+	$markdown_license = $markdown_link( $record['name'], $record['url'] );
+	$html_license     = $html_link( $record['name'], $record['url'] );
+
+	if ( in_array( $record['code'], array( 'pdm', 'cc0' ), true ) ) {
+		/* translators: 1: work and creator, 2: rights statement. */
+		$pattern = __( '%1$s is marked with %2$s.', 'axismundi-media-library' );
+	} elseif ( $record['conditions']['known'] ) {
+		/* translators: 1: work and creator, 2: license. */
+		$pattern = __( '%1$s is licensed under %2$s.', 'axismundi-media-library' );
+	} elseif ( 'all-rights-reserved' === $record['code'] ) {
+		/* translators: 1: work and creator, 2: rights statement. */
+		$pattern = __( '%1$s. %2$s.', 'axismundi-media-library' );
+		$plain_license = $markdown_license = $html_license = __( 'All rights reserved', 'axismundi-media-library' );
+	} else {
+		/* translators: 1: work and creator, 2: license status. */
+		$pattern = __( '%1$s. %2$s.', 'axismundi-media-library' );
+		$plain_license = $markdown_license = $html_license = __( 'License unknown', 'axismundi-media-library' );
+	}
+
+	return array(
+		'plain'    => sprintf( $pattern, $plain_work, $plain_license ),
+		'markdown' => sprintf( $pattern, $markdown_work, $markdown_license ),
+		'html'     => '<p class="attribution">' . sprintf( $pattern, $html_work, $html_license ) . '</p>',
+	);
+}
+
+/**
+ * Plain-text attribution convenience wrapper.
  *
  * @param int $attachment_id Attachment ID.
  * @return string
  */
 function axismundi_media_attribution_text( int $attachment_id ) : string {
-	$authored = (string) get_post_meta( $attachment_id, '_ax_media_attribution', true );
-	if ( '' !== $authored ) {
-		return $authored;
-	}
-	$record  = axismundi_media_license_record( $attachment_id );
-	$creator = (string) get_post_meta( $attachment_id, '_ax_media_creator_name', true );
-	$title   = (string) get_the_title( $attachment_id );
-
-	$parts = array();
-	if ( '' !== $title ) {
-		$parts[] = $title;
-	}
-	if ( '' !== $creator ) {
-		/* translators: %s: creator name. */
-		$parts[] = sprintf( __( 'by %s', 'axismundi-media-library' ), $creator );
-	}
-	if ( $record['conditions']['known'] ) {
-		$parts[] = '(' . $record['name'] . ')';
-	}
-	return trim( implode( ' ', $parts ) );
+	$formats = axismundi_media_attribution_formats( $attachment_id );
+	return $formats['plain'];
 }
 
 /**
@@ -213,3 +280,23 @@ function axismundi_media_stamp_folder_default_license( int $attachment_id, int $
 		update_post_meta( $attachment_id, '_ax_media_license', $default );
 	}
 }
+
+/**
+ * Append the plugin-owned rights block to a single Attachment's main content.
+ * A manually rendered rights block wins and suppresses this automatic placement.
+ *
+ * @param string $content Rendered post content.
+ * @return string
+ */
+function axismundi_media_append_rights_to_attachment( string $content ) : string {
+	global $axismundi_media_rights_rendered;
+	if ( is_admin() || is_feed() || ! is_attachment() || ! in_the_loop() || ! is_main_query() || $axismundi_media_rights_rendered ) {
+		return $content;
+	}
+	$attachment_id = (int) get_the_ID();
+	if ( $attachment_id <= 0 || $attachment_id !== (int) get_queried_object_id() ) {
+		return $content;
+	}
+	return $content . do_blocks( '<!-- wp:axismundi/media-rights /-->' );
+}
+add_filter( 'the_content', 'axismundi_media_append_rights_to_attachment', 30 );

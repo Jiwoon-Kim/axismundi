@@ -61,7 +61,7 @@ try {
 	update_post_meta( $att, '_ax_media_license', 'cc-by-sa' );
 	update_post_meta( $att, '_ax_media_license_url', 'https://example.com/mine' );
 	$rec = axismundi_media_license_record( $att );
-	ax_rights_assert( $ax_results, 'canonical CC URL wins over user URL for standard code', 'https://creativecommons.org/licenses/by-sa/4.0/' === $rec['url'] && 'CC BY-SA' === $rec['name'] );
+	ax_rights_assert( $ax_results, 'canonical CC URL wins over user URL for standard code', 'https://creativecommons.org/licenses/by-sa/4.0/' === $rec['url'] && 'CC BY-SA 4.0' === $rec['name'] );
 
 	update_post_meta( $att, '_ax_media_license', 'all-rights-reserved' );
 	$rec = axismundi_media_license_record( $att );
@@ -79,8 +79,19 @@ try {
 	// Attribution fallback from title + creator + license.
 	delete_post_meta( $att, '_ax_media_attribution' );
 	update_post_meta( $att, '_ax_media_creator_name', 'Alice' );
+	update_post_meta( $att, '_ax_media_creator_url', 'https://example.com/alice' );
+	update_post_meta( $att, '_ax_media_source_url', 'https://example.com/photo' );
 	$fallback = axismundi_media_attribution_text( $att );
-	ax_rights_assert( $ax_results, 'attribution fallback composes title + creator + license', false !== strpos( $fallback, 'Photo' ) && false !== strpos( $fallback, 'Alice' ) && false !== strpos( $fallback, 'CC BY' ) );
+	ax_rights_assert( $ax_results, 'plain attribution fallback composes work, creator, and versioned license', false !== strpos( $fallback, 'Photo' ) && false !== strpos( $fallback, 'Alice' ) && false !== strpos( $fallback, 'CC BY 4.0' ) );
+	$formats = axismundi_media_attribution_formats( $att );
+	ax_rights_assert( $ax_results, 'generated Markdown and HTML attribution link work, creator, and license', false !== strpos( $formats['markdown'], '[Photo](https://example.com/photo)' ) && false !== strpos( $formats['markdown'], '[Alice](https://example.com/alice)' ) && false !== strpos( $formats['markdown'], '[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)' ) && false !== strpos( $formats['html'], '<a rel="noopener noreferrer" href="https://example.com/photo">Photo</a>' ) );
+
+	// Dynamic block: plugin-owned rights output + copyable attribution, once per page.
+	$_GET['post_id'] = $att; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Dev-only read fixture.
+	$rights_html = do_blocks( '<!-- wp:axismundi/media-rights /-->' );
+	ax_rights_assert( $ax_results, 'Media Rights block renders rich and Markdown attribution copy controls', false !== strpos( $rights_html, 'creativecommons.org/licenses/by/4.0' ) && false !== strpos( $rights_html, 'Alice' ) && false !== strpos( $rights_html, 'data-copy-html' ) && false !== strpos( $rights_html, 'data-copy-format="markdown"' ) );
+	ax_rights_assert( $ax_results, 'Media Rights block renders only once per page', '' === do_blocks( '<!-- wp:axismundi/media-rights /-->' ) );
+	unset( $_GET['post_id'], $GLOBALS['axismundi_media_rights_rendered'] );
 
 } finally {
 	foreach ( $ax_created['atts'] as $ax_a ) {

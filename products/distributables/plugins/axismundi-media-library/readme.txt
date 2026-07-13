@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.18
+Stable tag: 0.0.19
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,14 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.19 =
+* Add the plugin-owned Media Rights dynamic block with license conditions, creator,
+  copyright holder, source, and rich-text/Markdown attribution copying inspired by
+  Openverse and the WordPress Photo Directory.
+* Append Media Rights once to the main Attachment content without adding a custom
+  block dependency to the active theme. Manual placement suppresses the automatic
+  copy.
 
 = 0.0.18 =
 * Phase 4b (folder default license) — each folder can set a default license

@@ -37,14 +37,14 @@ function axismundi_media_attachment_select( int $post_id, string $name, string $
 function axismundi_media_license_options() : array {
 	return array(
 		'all-rights-reserved' => __( 'All rights reserved', 'axismundi-media-library' ),
-		'pdm'                 => __( 'Public Domain Mark', 'axismundi-media-library' ),
-		'cc0'                 => 'CC0',
-		'cc-by'               => 'CC BY',
-		'cc-by-sa'            => 'CC BY-SA',
-		'cc-by-nd'            => 'CC BY-ND',
-		'cc-by-nc'            => 'CC BY-NC',
-		'cc-by-nc-sa'         => 'CC BY-NC-SA',
-		'cc-by-nc-nd'         => 'CC BY-NC-ND',
+		'pdm'                 => __( 'Public Domain Mark 1.0', 'axismundi-media-library' ),
+		'cc0'                 => 'CC0 1.0',
+		'cc-by'               => 'CC BY 4.0',
+		'cc-by-sa'            => 'CC BY-SA 4.0',
+		'cc-by-nd'            => 'CC BY-ND 4.0',
+		'cc-by-nc'            => 'CC BY-NC 4.0',
+		'cc-by-nc-sa'         => 'CC BY-NC-SA 4.0',
+		'cc-by-nc-nd'         => 'CC BY-NC-ND 4.0',
 		'unknown'             => __( 'Unknown', 'axismundi-media-library' ),
 	);
 }

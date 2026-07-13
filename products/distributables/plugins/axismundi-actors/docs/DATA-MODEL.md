@@ -398,7 +398,13 @@ JSON alone** (need cross-reference / a Move verification flow).
 `wp_ax_actor_managers(identity_id, user_id, role owner|manager|editor,
 UNIQUE(identity_id, user_id))`, added **only when** Group / Service / Organization
 actors are actually created; `actor_scope='managed'` activates then (SPEC §4.1). The
-current Site/User actors do not need it.
+current Site/User actors do not need it. **Version numbers are implementation order,
+not schema dependencies** — if a Lemmy-style community (`Group`) ships before
+federation, pull this forward to just before that managed-Group work; nothing in
+v5–v7 depends on it. (A `Group` community is `Application` site actor's sibling: its
+posts/comments live in the object/activity store and its Follow / Accept / Announce /
+moderation in the social layer — §9.6 — never on the actor row; a shared folder stays
+an `OrderedCollection` + ACL and is *not* promoted to a `Group`.)
 
 ### 9.6 Owned by OTHER stores, never by Actors
 `wp_ax_activities`, `wp_ax_deliveries`, `wp_ax_follows`, `wp_ax_reactions`,
@@ -417,11 +423,34 @@ needs it:
 ```
 wp_ax_actor_network_index   blog_id, identity_uuid, canonical_uri_hash, acct_uri_hash, status
 ```
-It indexes location only — profile bodies and follow state are never globalised. The
+It indexes location only — profile bodies and follow state are never globalised.
+`wp_ax_identities` is **per-site**, so a UUID alone cannot be looked up network-wide —
+that is fine because the **canonical URI is the identifier**; the network index (a
+routing cache) is what enables cross-site lookup when it is actually needed. The
 minimum multisite-safe contract to hold now: never assume `user_id` is small / 1 /
-sequential; a WP user may own **many** actors (one per site); URI is the identity;
-cache keys include site context or hash the URI; network-wide activation must not
-break.
+sequential; a WP user may own **many** actors (one per site), each site an independent
+federation boundary; URI is the identity; cache keys include site context or hash the
+URI; network-wide activation must not break.
+
+### 9.8 WebFinger `acct:` handle policy — a pre-v5 PRODUCT decision (not a column)
+
+`acct:` collisions across a network are resolved by **policy, not schema**, and the
+policy must be fixed **before v5** (addresses):
+
+- **Subdomain** (`site-a.example`, `site-b.example`) and **mapped-domain** subsites:
+  `alice@site-a.example` vs `alice@site-b.example` resolve naturally — the authority
+  differs. No extra decision needed.
+- **Subdirectory** (`example.com/site-a`, `example.com/site-b`): both would be
+  `alice@example.com`, which **collides** — one `acct:` cannot resolve to two actors.
+  Pick one:
+  1. reserve `acct:` handles **network-wide** (a global handle namespace),
+  2. require subsites to use a **separate domain / subdomain** before federation is
+     enabled, or
+  3. let the **network routing index** designate one representative actor that owns
+     that `acct:`.
+
+This is a WebFinger *product* policy; the `wp_ax_actor_addresses` table (v5) records
+the outcome but does not decide it.
 
 ### Stays in `payload_json` (resolver-read, never columnized)
 `memorial`, `showFeatured` / `showMedia` / `showRepliesInMedia`, `interactionPolicy`,

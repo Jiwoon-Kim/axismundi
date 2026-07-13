@@ -147,7 +147,7 @@ new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v3
 ```
 4c  Actor avatar → WordPress avatar (get_avatar_data filter)   — no schema change
 DB v4  multilingual (default_language + wp_ax_actor_texts)      — Phase 4d
-DB v5  wp_ax_actor_addresses (handle/acct routing + history)    — before WebFinger
+DB v5  wp_ax_actor_addresses (handle/acct routing + history)    — LOCK the subdirectory WebFinger acct: policy first (DATA-MODEL §9.8)
 DB v6  wp_ax_actor_endpoints + follower/discovery policy cols   — inbox/outbox/…, lock, discoverable, indexable
 DB v7  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
 DB v8  wp_ax_actor_managers                                     — only when Group/Service/Org actors ship

@@ -1,6 +1,6 @@
 # Axismundi Actors — Projection Registry
 
-> Status: **Living specification. Pre-implementation (API lock).**
+> Status: **Living specification. Phase 3 implemented.**
 > The projection registry is the seam between Actors (identity + navigation) and
 > every domain plugin (Posts, Media, Notes, …). It is frozen here before code.
 
@@ -34,8 +34,8 @@ read the tables directly:
 interface Axismundi_Actor {
     public function get_uuid(): string;              // immutable anchor
     public function get_uri(): string;               // actor_uri = /actors/{uuid} (or remote canonical)
-    public function get_profile_url(): string;       // /@handle/  (mutable alias)
-    public function get_preferred_username(): string;
+    public function get_profile_url(): string;       // /@handle/ after registration; '' before
+    public function get_preferred_username(): string; // immutable after registration; '' before
     public function get_local_user_id(): ?int;       // null for site / remote
     public function get_type(): string;              // Person | Organization | Application | Service | Group
     public function get_scope(): ?string;            // site | user (local); null (remote)
@@ -103,6 +103,9 @@ add_action( 'axismundi_actors_register_projections', function () {
 6. **Graceful absence.** If a plugin that registered a projection is deactivated,
    its projection simply disappears (the hook no longer fires). Actors must not
    persist projection definitions.
+7. **Callback isolation.** A callback exception omits that projection and fires
+   `axismundi_actors_projection_error`; a broken optional integration must not take
+   down the actor profile hub.
 
 ## 4. The built-in `posts` projection
 

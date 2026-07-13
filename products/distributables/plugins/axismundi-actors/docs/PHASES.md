@@ -73,7 +73,7 @@ is rejected. Actor activation stays separate from WordPress "Anyone can register
 **Non-goals:** the activation UI (Settings/profile, Phase 4); any handle-change path
 (future admin recovery + alias/`Move`).
 
-## Phase 3 — Projection registry
+## Phase 3 — Projection registry *(shipped in 0.0.5)*
 
 **Entry:** Phase 2.
 **Build:** `axismundi_actors_register_projection()` + the

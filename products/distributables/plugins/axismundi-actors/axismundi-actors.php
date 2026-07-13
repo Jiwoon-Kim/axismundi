@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Actors
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-actors
  * Description:       Identity registry for Axismundi. Gives every local person, the site itself, and (later) remote actors one immutable identity URI and one human profile hub, and wires each domain plugin's archive in as a projection. Identity only — it owns no content, likes, collections, or activity.
- * Version:           0.0.4
+ * Version:           0.0.5
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -20,10 +20,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_VERSION = '0.0.4';
+const AXISMUNDI_ACTORS_VERSION = '0.0.5';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/routing.php';
+require_once __DIR__ . '/includes/projections.php';
 
 /**
  * Activation: install the schema, then seed (always the site actor; the site-owner
@@ -59,4 +60,4 @@ function axismundi_actors_maybe_upgrade() : void {
 }
 add_action( 'plugins_loaded', 'axismundi_actors_maybe_upgrade' );
 
-// Phase 3+ requires (projection registry and admin integration) are wired here.
+// Phase 4+ admin integration is wired here.

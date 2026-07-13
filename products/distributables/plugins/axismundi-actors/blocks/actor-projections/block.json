@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/actor-projections",
+	"version": "0.1.0",
+	"title": "Actor Projections",
+	"category": "theme",
+	"icon": "networking",
+	"description": "Navigation to the current actor's readable domain archives.",
+	"textdomain": "axismundi-actors",
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"],
+		"color": { "text": true },
+		"spacing": { "margin": true, "padding": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

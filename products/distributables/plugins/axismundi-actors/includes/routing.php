@@ -213,6 +213,7 @@ function axismundi_actors_profile_template_content() : string {
 /** @return void */
 function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-profile' );
+	register_block_type( __DIR__ . '/../blocks/actor-projections' );
 	if ( function_exists( 'register_block_template' ) ) {
 		register_block_template(
 			'axismundi-actors//actor-profile',

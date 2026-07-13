@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.4
+Stable tag: 0.0.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,13 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.5 =
+* Phase 3 projection registry: request-local public registration API and hook,
+  deterministic priority ordering, visibility/URL/count callbacks, graceful
+  disappearance on plugin deactivation, and callback error isolation.
+* Adds the built-in Posts projection and the dynamic actor-projections navigation
+  block. Actors links to the core author archive but never owns its query.
 
 = 0.0.4 =
 * Phase 2.1 — handle immutability and deferred registration. A user's actor is now

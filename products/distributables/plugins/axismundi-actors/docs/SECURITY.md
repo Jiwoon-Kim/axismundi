@@ -32,6 +32,15 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
   stays `internal` until the user (or an admin) opts in.
 - Owner and `manage_options` may **preview** their own non-public actor; everyone
   else gets the same 404 as a nonexistent handle (no existence oracle).
+- **`status` is lifecycle, not a privacy dial — do not add a `followers` status.**
+  A federated *locked* account is still publicly fetchable as an Actor document, so
+  "followers-only" is never an actor status. Reach/privacy are **separate axes**
+  (DATA-MODEL §9.3), each its own field: **follow approval**
+  (`manually_approves_followers` — the Mastodon lock), **discovery** (`discoverable`),
+  **search indexing** (`indexable`), and **followers/following list visibility**
+  (`follow_collections_visibility`). The **default posting audience**
+  (`public|unlisted|followers|mentioned`) is a per-activity policy owned by the
+  Activity plugin, not an actor field. Collapsing these into one switch is a bug.
 
 ## 2. PII
 

@@ -136,7 +136,27 @@ users; the handle-change prohibition and `@handle` ≠ author-URL are visible in
 email never appears in any actor screen or link; avatar/header and translations are
 Actor-owned while name/bio still read live from `WP_User`.
 **Non-goals:** managers table; bulk tools; vCard export (a later small feature); any
-federation table (schema v3, DATA-MODEL §9).
+federation table (DB v5+, DATA-MODEL §9).
+
+## DB version roadmap & implementation order
+
+The schema grows one version at a time; the version option is recorded only after the
+new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v3**
+(identity + actor + avatar/header). Next, in order:
+
+```
+4c  Actor avatar → WordPress avatar (get_avatar_data filter)   — no schema change
+DB v4  multilingual (default_language + wp_ax_actor_texts)      — Phase 4d
+DB v5  wp_ax_actor_addresses (handle/acct routing + history)    — before WebFinger
+DB v6  wp_ax_actor_endpoints + follower/discovery policy cols   — inbox/outbox/…, lock, discoverable, indexable
+DB v7  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
+DB v8  wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
+```
+
+Follow / Accept / Like / Announce / shared-folder membership start **after** this, in
+a **separate Activity / social-relation store and Media Library** — not in Actors
+(DATA-MODEL §9.6). Multisite `site-local` / `network-local` / `remote` stays a runtime
+determination (§9.7).
 
 ## Phase 5 — Media integration (cross-plugin)
 

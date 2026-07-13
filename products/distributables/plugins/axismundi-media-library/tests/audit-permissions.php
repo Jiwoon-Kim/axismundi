@@ -96,6 +96,9 @@ try {
 		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_a, $ax_alice );
 		ax_audit_assert( $ax_results, "Alice cannot move Bob's attachment (attachment IDOR)", ! is_wp_error( $r ) && 0 === count( $r['moved'] ) && 1 === count( $r['denied'] ) );
 
+		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_a, $ax_admin );
+		ax_audit_assert( $ax_results, 'Admin cannot create a cross-owner folder relation', ! is_wp_error( $r ) && 0 === count( $r['moved'] ) && 1 === count( $r['denied'] ) );
+
 		$r = axismundi_media_move_attachments( array( $ax_att_a ), $ax_f_b, $ax_alice );
 		ax_audit_assert( $ax_results, "Alice cannot move into Bob's folder (folder IDOR)", is_wp_error( $r ) );
 
@@ -107,6 +110,11 @@ try {
 		ax_audit_assert( $ax_results, 'Admin (edit_others_posts) can audit/manage any folder', axismundi_media_can_manage_folder( $ax_f_b, $ax_admin ) );
 		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_b, $ax_admin );
 		ax_audit_assert( $ax_results, "Admin can move another user's attachment", ! is_wp_error( $r ) && 1 === count( $r['moved'] ) );
+
+		wp_set_object_terms( $ax_att_b, array( $ax_f_a ), AXISMUNDI_MEDIA_FOLDER_TAX, false );
+		delete_option( 'ax_media_folder_owner_repair_version' );
+		axismundi_media_repair_folder_owner_relations();
+		ax_audit_assert( $ax_results, 'Repair normalizes a legacy cross-owner relation to Unfiled', 0 === axismundi_media_attachment_folder( $ax_att_b ) );
 
 		// Phase 4a resolved the earlier gap: a moderator (admin) sensitivity lock cannot
 		// be cleared by the owner.

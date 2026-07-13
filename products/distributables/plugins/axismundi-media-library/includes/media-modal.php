@@ -208,11 +208,18 @@ function axismundi_media_assign_uploaded_folder( int $attachment_id ) : void {
 	$folder = isset( $_REQUEST['ax_media_folder'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended -- Core upload request verifies its own upload nonce.
 		? absint( $_REQUEST['ax_media_folder'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended
 		: absint( get_user_meta( get_current_user_id(), '_ax_media_active_folder', true ) );
-	if ( $folder <= 0 || axismundi_media_is_root_term( $folder ) || ! axismundi_media_can_manage_folder( $folder ) || ! current_user_can( 'edit_post', $attachment_id ) ) {
+	if (
+		$folder <= 0
+		|| ! axismundi_media_folder_accepts_attachment( $attachment_id, $folder )
+		|| ! axismundi_media_can_manage_folder( $folder )
+		|| ! current_user_can( 'edit_post', $attachment_id )
+	) {
 		return;
 	}
 	update_post_meta( $attachment_id, '_ax_media_visibility', 'inherit' );
-	axismundi_media_set_attachment_folder( $attachment_id, $folder );
+	if ( ! axismundi_media_set_attachment_folder( $attachment_id, $folder ) ) {
+		return;
+	}
 	// Snapshot the folder default license onto the new upload (Phase 4b). Later
 	// moves never re-stamp, and an attachment-set license is never overwritten.
 	if ( function_exists( 'axismundi_media_stamp_folder_default_license' ) ) {

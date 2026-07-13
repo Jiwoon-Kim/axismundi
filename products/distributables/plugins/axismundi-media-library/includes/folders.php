@@ -23,6 +23,7 @@ const AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_TIER_META = '_ax_media_folder_effective_t
 const AXISMUNDI_MEDIA_FOLDER_ACCESS_META = '_ax_media_folder_access';
 const AXISMUNDI_MEDIA_FOLDER_PASSWORD_META = '_ax_media_folder_password_hash';
 const AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_GATE_META = '_ax_media_folder_effective_gated';
+const AXISMUNDI_MEDIA_FOLDER_OWNER_REPAIR_VERSION = 1;
 const AXISMUNDI_MEDIA_FOLDER_TIER_CACHE_VERSION = 2;
 
 /**
@@ -515,14 +516,40 @@ function axismundi_media_attachment_folder( int $attachment_id ) : int {
 }
 
 /**
+ * Whether a folder is a valid location for an Attachment.
+ *
+ * A folder is a location owned by the Attachment author. Administrators may
+ * manage another user's folder, but that capability must not create a
+ * cross-owner location relation.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @param int $folder_id     Folder term ID.
+ * @return bool
+ */
+function axismundi_media_folder_accepts_attachment( int $attachment_id, int $folder_id ) : bool {
+	if ( 'attachment' !== get_post_type( $attachment_id ) || $folder_id <= 0 || axismundi_media_is_root_term( $folder_id ) ) {
+		return false;
+	}
+
+	return axismundi_media_folder_owner( $folder_id ) === (int) get_post_field( 'post_author', $attachment_id );
+}
+
+/**
  * Set the attachment's single folder (0 = unfiled). Enforces the one-folder rule
  * (append = false). No permission check here — callers gate it.
  *
  * @param int $attachment_id Attachment ID.
  * @param int $folder_id     Folder term ID or 0.
- * @return void
+ * @return bool Whether the requested location was stored.
  */
-function axismundi_media_set_attachment_folder( int $attachment_id, int $folder_id ) : void {
+function axismundi_media_set_attachment_folder( int $attachment_id, int $folder_id ) : bool {
+	if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+		return false;
+	}
+	if ( $folder_id > 0 && ! axismundi_media_folder_accepts_attachment( $attachment_id, $folder_id ) ) {
+		return false;
+	}
+
 	wp_set_object_terms(
 		$attachment_id,
 		$folder_id > 0 ? array( $folder_id ) : array(),
@@ -534,6 +561,8 @@ function axismundi_media_set_attachment_folder( int $attachment_id, int $folder_
 	} else {
 		delete_post_meta( $attachment_id, '_ax_media_folder_added_at' );
 	}
+
+	return true;
 }
 
 /**
@@ -554,18 +583,72 @@ function axismundi_media_move_attachments( array $attachment_ids, int $folder_id
 	$denied = array();
 	foreach ( $attachment_ids as $raw ) {
 		$aid = (int) $raw;
-		if ( 'attachment' !== get_post_type( $aid ) || ! user_can( $user_id, 'edit_post', $aid ) ) {
+		if (
+			'attachment' !== get_post_type( $aid )
+			|| ! user_can( $user_id, 'edit_post', $aid )
+			|| ( $folder_id > 0 && ! axismundi_media_folder_accepts_attachment( $aid, $folder_id ) )
+		) {
 			$denied[] = $aid;
 			continue;
 		}
-		axismundi_media_set_attachment_folder( $aid, $folder_id );
-		$moved[] = $aid;
+		if ( axismundi_media_set_attachment_folder( $aid, $folder_id ) ) {
+			$moved[] = $aid;
+		} else {
+			$denied[] = $aid;
+		}
 	}
 	return array(
 		'moved'  => $moved,
 		'denied' => $denied,
 	);
 }
+
+/**
+ * Repair cross-owner, hidden-root, or multi-folder relations created before the
+ * attachment-author ownership invariant was enforced.
+ *
+ * Invalid locations are normalized to Unfiled. A bounded batch runs on each
+ * admin request so large libraries do not block an update request.
+ *
+ * @return void
+ */
+function axismundi_media_repair_folder_owner_relations() : void {
+	if ( (int) get_option( 'ax_media_folder_owner_repair_version', 0 ) >= AXISMUNDI_MEDIA_FOLDER_OWNER_REPAIR_VERSION ) {
+		return;
+	}
+
+	global $wpdb;
+	$limit = 100;
+	$sql   = $wpdb->prepare(
+		"SELECT p.ID
+		FROM {$wpdb->posts} p
+		INNER JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
+		INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
+		LEFT JOIN {$wpdb->termmeta} owner_meta ON owner_meta.term_id = tt.term_id AND owner_meta.meta_key = '_ax_media_folder_owner'
+		LEFT JOIN {$wpdb->termmeta} root_meta ON root_meta.term_id = tt.term_id AND root_meta.meta_key = '_ax_media_folder_root'
+		WHERE p.post_type = 'attachment' AND tt.taxonomy = %s
+		GROUP BY p.ID, p.post_author
+		HAVING COUNT(*) <> 1
+			OR MAX(CASE WHEN root_meta.meta_id IS NOT NULL OR CAST(COALESCE(owner_meta.meta_value, '0') AS UNSIGNED) <> p.post_author THEN 1 ELSE 0 END) = 1
+		LIMIT %d",
+		AXISMUNDI_MEDIA_FOLDER_TAX,
+		$limit
+	);
+	$ids   = $wpdb->get_col( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded one-time invariant repair.
+
+	if ( ! empty( $wpdb->last_error ) ) {
+		return;
+	}
+
+	foreach ( $ids as $attachment_id ) {
+		axismundi_media_set_attachment_folder( (int) $attachment_id, 0 );
+	}
+
+	if ( count( $ids ) < $limit ) {
+		update_option( 'ax_media_folder_owner_repair_version', AXISMUNDI_MEDIA_FOLDER_OWNER_REPAIR_VERSION, false );
+	}
+}
+add_action( 'admin_init', 'axismundi_media_repair_folder_owner_relations', 30 );
 
 /**
  * Direct object count of a folder (one folder per attachment, so the term count

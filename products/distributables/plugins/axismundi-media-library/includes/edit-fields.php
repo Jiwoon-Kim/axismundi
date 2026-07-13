@@ -334,7 +334,10 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 	// independent field and must not depend on the visibility-field sentinel.
 	if ( isset( $attachment['ax_media_folder'] ) ) {
 		$axismundi_media_target = absint( $attachment['ax_media_folder'] );
-		if ( 0 === $axismundi_media_target || ( ! axismundi_media_is_root_term( $axismundi_media_target ) && axismundi_media_can_manage_folder( $axismundi_media_target ) ) ) {
+		if (
+			0 === $axismundi_media_target
+			|| ( axismundi_media_folder_accepts_attachment( $post_id, $axismundi_media_target ) && axismundi_media_can_manage_folder( $axismundi_media_target ) )
+		) {
 			axismundi_media_set_attachment_folder( $post_id, $axismundi_media_target );
 		}
 	}

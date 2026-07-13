@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.22
+Stable tag: 0.0.23
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,14 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.23 =
+* Enforce that an Attachment can only be assigned to a virtual folder owned by
+  its WordPress author, including administrator, upload, edit, and FileBird
+  import paths.
+* Repair legacy cross-owner, hidden-root, and multi-folder relationships to
+  Unfiled in bounded admin batches so affected media reappears in its author
+  archive and Unfiled view.
 
 = 0.0.22 =
 * Add a FileBird CSV compatibility importer at Media > Import Folders for hosts

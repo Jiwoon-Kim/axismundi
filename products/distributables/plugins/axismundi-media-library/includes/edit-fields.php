@@ -307,7 +307,7 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 				'hidden'      => __( 'Hidden', 'axismundi-media-library' ),
 			)
 		),
-		'helps' => __( 'This flag does not remove GPS metadata from the original file.', 'axismundi-media-library' ),
+		'helps' => __( 'Controls location metadata shown by Axismundi only. Original and derivative file EXIF is never changed and may remain publicly readable.', 'axismundi-media-library' ),
 	);
 
 	return $form_fields;

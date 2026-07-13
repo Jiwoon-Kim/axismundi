@@ -79,8 +79,8 @@ policy meta only when explicitly edited; legacy rows remain legacy-public.
 
 ### 2.2 Attachment post meta — **stored only** in 0.1.0 (enforced Phase 4)
 
-Written by the editor UI so nothing is lost, but **not yet enforced**; 0.1.0 must
-not *claim* protection for these (esp. GPS — SPEC.md Invariant 8):
+Written by the editor UI so nothing is lost. Location visibility governs only
+plugin-rendered metadata and never claims file-level EXIF/GPS protection:
 
 ```
 # Creator / copyright are structured — a subject may be a site user OR an
@@ -93,7 +93,7 @@ _ax_media_source_url
 # Download policy dropped: core does not restrict downloads and neither can we without
 # Phase 6 controlled delivery; a delivery-affordance hint is not a security control.
 _ax_media_sensitive          _ax_media_content_warning    _ax_media_sensitivity_reason
-_ax_media_geo_visibility     (public | approximate | hidden)  ← flag only; EXIF strip = Phase 4
+_ax_media_geo_visibility     (public | approximate | hidden)  ← plugin output only; files unchanged
 _ax_media_federated          (bool; reserved for Phase 7)
 ```
 

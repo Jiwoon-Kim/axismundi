@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.19
+Stable tag: 0.0.20
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,12 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.20 =
+* Define Location visibility as an output policy for plugin-rendered metadata only.
+  Axismundi never rewrites original or derivative files to remove EXIF/GPS data.
+* Drop the planned destructive GPS/EXIF stripping phase and clarify the file-level
+  privacy boundary in the editor and specification.
 
 = 0.0.19 =
 * Add the plugin-owned Media Rights dynamic block with license conditions, creator,

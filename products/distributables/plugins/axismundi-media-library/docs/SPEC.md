@@ -50,10 +50,9 @@ Later layers (documented as deferred): **Saved Reference**, **Shared folders**,
    protect the Attachment object, its metadata, and plugin API/archive surfaces —
    **not** an already-known original file URL, its embedded EXIF/GPS, or copies
    in a CDN/cache. This boundary is stated wherever visibility is configured.
-8. GPS defaults to **hidden**; the Attachment page defaults to **public**. Note
-   that "GPS hidden" is only real once EXIF is stripped from delivered files
-   (Phase 4) — 0.1.0 stores the flag but does **not** claim file-level GPS
-   protection.
+8. Location metadata defaults to **hidden in plugin output**; the Attachment page
+   defaults to **public**. This policy never rewrites original or derivative files,
+   and does **not** claim file-level EXIF/GPS protection.
 
 ## 3. Identity model
 
@@ -103,8 +102,8 @@ Binary resource             file URL                       (immutable)
   separate owner meta: ownership transfer = change `post_author`, permission =
   core `edit_post` / `edit_others_posts`. Creator and copyright-holder are rights
   metadata, not capabilities. `post_author = 0` = unowned (uid 0 ≠ author 0).
-- Rights + sensitivity + GPS fields **stored** (enforcement of GPS/sensitivity is
-  Phase 4; see Invariant 8).
+- Rights + sensitivity + location-output fields **stored** (sensitivity enforcement
+  is Phase 4; location policy remains subject to Invariant 8).
 - File URL immutable; old attachment permalink → canonical redirect.
 - Full visibility enforcement across surfaces per SECURITY.md (HTML, REST
   single + collection, plugin archives/search, media modal).
@@ -114,8 +113,8 @@ Binary resource             file URL                       (immutable)
 Physical file move/rename · original file-URL protection · FTP/storage file
 manager · shared folders & invitations · remote ActivityPub Save · Like ·
 file copy / hotlink proxy · advanced EXIF/color search · simultaneous RSS+Atom ·
-multisite integration · `protected` visibility (Phase 3) · GPS/EXIF stripping
-(Phase 4).
+multisite integration · `protected` visibility (Phase 3) · destructive GPS/EXIF
+stripping (not planned).
 
 ## 6. Phase gates (summary; full criteria in PHASES.md)
 
@@ -124,7 +123,7 @@ Phase 0  Compatibility boundary        ← first release gate (with Phase 1)
 Phase 1  Independent Attachment pages  ← first public MVP
 Phase 2  Single virtual folder (ax_media_folder)
 Phase 3  Protection (protected, folder password, used-in index)
-Phase 4  Rights, sensitivity, GPS/EXIF enforcement
+Phase 4  Rights, sensitivity, output integration
 Phase 5  Saved Reference (object_uri + local_attachment_id)
 Phase 6  Storage Browser (filesystem mirror; the four Storage contracts)
 Phase 7  Federation (ActivityStreams objects/collections)

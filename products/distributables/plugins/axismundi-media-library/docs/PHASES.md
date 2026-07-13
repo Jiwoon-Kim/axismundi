@@ -156,7 +156,7 @@ merged in query/UI; **(3)** URL-string scanning is excluded from the default ind
 **Non-goals:** original-file protection (signed URLs) beyond page/query; URL-string
 reverse matching; folder password (shipped 2b).
 
-## Phase 4 — Rights, sensitivity, GPS/EXIF, download
+## Phase 4 — Rights, sensitivity, output integration
 
 **Entry:** Phase 3. Split 4a → 4b → 4c → 4d.
 
@@ -194,14 +194,15 @@ Collection Save is a bookmark, not reuse, and is therefore gated by visibility r
 than license; license checks apply later to Import/Copy, redistribution, and
 transformation.
 
-**Phase 4c — GPS/EXIF.** From storing only the `hidden` flag to an actual EXIF strip of
-delivered files (derivatives + original re-save); check derivatives and the delivered
-original — only then may "GPS hidden" be *claimed* as a security feature.
+**Location boundary.** `_ax_media_geo_visibility` controls location metadata emitted
+by Axismundi surfaces only. The plugin never rewrites original or derivative files;
+embedded EXIF/GPS may remain readable through file URLs. Destructive stripping is not
+planned and `hidden` must never be described as file-level protection.
 
-**Phase 4d — Output integration.** Sensitive blur/warning; OG-preview exclusion;
+**Phase 4c — Output integration.** Sensitive blur/warning; OG-preview exclusion;
 align Atom/MRSS + attachment-page rights output.
 
-**Acceptance:** `geo_visibility=hidden` yields no GPS in any delivered file;
+**Acceptance:** `geo_visibility=hidden` suppresses location in plugin-rendered output;
 license conditions are represented consistently; sensitive media is blurred +
 excluded from OG preview; a moderator sensitivity lock is not owner-clearable.
 **Non-goals:** federation rights re-check (Phase 7).
@@ -301,6 +302,6 @@ files; automatic purge during deactivate/uninstall.
 
 Multi-folder Save references · shared-folder upload ownership · Like AS
 representation · remote cache-expiry policy · full Storage exclusion list · FTP
-date-priority rules · original-file EXIF strip specifics ·
+date-priority rules · destructive file metadata rewriting ·
 real private storage / signed URLs · multisite · reset implementation before the
 plugin-owned data inventory stabilizes.

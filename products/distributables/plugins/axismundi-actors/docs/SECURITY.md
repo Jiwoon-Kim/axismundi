@@ -1,6 +1,6 @@
 # Axismundi Actors — Security
 
-> Status: **Living specification. Pre-implementation.**
+> Status: **Living specification. Phase 2 profile exposure gate implemented.**
 > Actors is an identity registry. Its risks are exposure (publishing an identity
 > or PII prematurely), impersonation (binding federation identity to a mutable
 > handle), and IDOR (reading/mutating another identity).
@@ -15,7 +15,7 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
 | `internal` | 404 | yes |
 | `public` | 200 | yes |
 | `disabled` | 404 | no (hidden) |
-| `tombstone` | 410/404 | no |
+| `tombstone` | 404 (410 is reserved for the federation phase) | no |
 
 - Activation always seeds the site actor as `internal`, and the site-owner Person
   actor as `internal` **only when the activating user is a valid admin** (skipped on

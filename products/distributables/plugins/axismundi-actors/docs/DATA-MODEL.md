@@ -1,6 +1,6 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Pre-implementation (schema lock).**
+> Status: **Living specification. Phase 1 schema implemented.**
 > Two tables: a shared **identity registry** and the **actor profile**. Local
 > person profile fields are read live from `WP_User`; only remote actors snapshot.
 

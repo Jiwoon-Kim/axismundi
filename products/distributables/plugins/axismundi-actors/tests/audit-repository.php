@@ -79,7 +79,7 @@ try {
 	}
 	$k1 = (string) $wpdb->get_var( $wpdb->prepare( "SELECT local_handle_key FROM {$actors} WHERE identity_id = %d", $c1->get_identity_id() ) ); // phpcs:ignore WordPress.DB
 	$k2 = (string) $wpdb->get_var( $wpdb->prepare( "SELECT local_handle_key FROM {$actors} WHERE identity_id = %d", $c2->get_identity_id() ) ); // phpcs:ignore WordPress.DB
-	ax_rep_assert( $ax_results, 'local handle collision is auto-resolved to distinct keys', '' !== $k1 && '' !== $k2 && $k1 !== $k2 );
+	ax_rep_assert( $ax_results, 'local handle collision is auto-resolved to distinct routable handles', '' !== $k1 && '' !== $k2 && $k1 !== $k2 && $c1->get_preferred_username() === $k1 && $c2->get_preferred_username() === $k2 && axismundi_actors_get_by_handle( $k2 )->get_identity_id() === $c2->get_identity_id() );
 
 	// explicit collision on set_handle is blocked
 	$clash = axismundi_actors_set_handle( $c2->get_identity_id(), 'dupe' );

@@ -123,7 +123,9 @@ final class Axismundi_Actor {
 
 	public function get_profile_url() : string {
 		if ( $this->is_local() ) {
-			return home_url( '/@' . $this->get_preferred_username() . '/' );
+			return get_option( 'permalink_structure' )
+				? home_url( '/@' . rawurlencode( $this->get_preferred_username() ) . '/' )
+				: add_query_arg( 'ax_actor_handle', $this->get_preferred_username(), home_url( '/' ) );
 		}
 		return (string) ( $this->row['profile_url'] ?? '' );
 	}
@@ -218,7 +220,9 @@ function axismundi_actors_create_local( array $args ) {
 	$scope = isset( $args['actor_scope'] ) ? (string) $args['actor_scope'] : null;
 	$uid   = isset( $args['local_user_id'] ) ? (int) $args['local_user_id'] : null;
 	$handle_key = axismundi_actors_unique_local_handle( (string) ( $args['preferred_username'] ?? 'actor' ) );
-	$username   = '' !== (string) ( $args['preferred_username'] ?? '' ) ? (string) $args['preferred_username'] : $handle_key;
+	// The stored human alias must match the unique routing key. Keeping the raw
+	// colliding handle here would mint two identical /@handle/ profile URLs.
+	$username   = $handle_key;
 
 	$uuid   = wp_generate_uuid4();
 	$uri    = home_url( '/actors/' . $uuid );
@@ -301,6 +305,22 @@ function axismundi_actors_get_by_uuid( string $uuid ) : ?Axismundi_Actor {
  */
 function axismundi_actors_get_by_uri( string $uri ) : ?Axismundi_Actor {
 	return axismundi_actors_query_one( 'i.canonical_uri_hash = %s', hash( 'sha256', $uri ) );
+}
+
+/**
+ * Resolve one local actor by its mutable human handle.
+ *
+ * Remote preferred usernames are intentionally excluded: they are not locally
+ * unique and remain addressable only by their canonical remote URI.
+ *
+ * @param string $handle Human handle.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_get_by_handle( string $handle ) : ?Axismundi_Actor {
+	$key = axismundi_actors_normalize_handle( $handle );
+	return '' !== $key
+		? axismundi_actors_query_one( 'a.local_handle_key = %s AND i.origin = %s', $key, 'local' )
+		: null;
 }
 
 /**

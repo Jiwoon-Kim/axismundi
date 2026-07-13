@@ -1,6 +1,6 @@
 # Axismundi Actors — Specification
 
-> Status: **Living specification. Pre-implementation (docs lock, no code yet).**
+> Status: **Living specification. Phases 0–2 implemented.**
 > Plugin brand: **Axismundi Actors** · slug: `axismundi-actors`
 > This document defines the product, its invariants, the v0.1 scope, and the
 > non-goals. Data model, routing, security, projections, and phases live in the
@@ -112,7 +112,8 @@ user the same identity as the site — Person and Site actors are distinct recor
   `ensure_for_user`, seed on activation, tombstone on user delete.
 - Canonical identity endpoint `/actors/{uuid}` (plain fallback `/?ax_actor={uuid}`)
   + human `/@{username}/` hub with a block template, actor header, and projection
-  navigation.
+  navigation (the profile header ships in Phase 2; registry-driven navigation in
+  Phase 3).
 - **Projection registry** (`axismundi_actors_register_projection`) with the built-in
   `posts` projection; a public API for other plugins. See PROJECTIONS.
 - Admin: a public/internal toggle on the user profile screen; a "Actor profile"

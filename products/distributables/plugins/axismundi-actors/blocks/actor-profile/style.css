@@ -1,0 +1,54 @@
+.wp-block-axismundi-actor-profile {
+	display: grid;
+	gap: var(--wp--preset--spacing--400, 1.5rem);
+}
+
+.ax-actor-profile__header {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--300, 1rem);
+}
+
+.ax-actor-profile__avatar {
+	inline-size: 6rem;
+	block-size: 6rem;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.ax-actor-profile__name,
+.ax-actor-profile__meta,
+.ax-actor-profile__summary > :first-child,
+.ax-actor-profile__summary > :last-child,
+.ax-actor-profile__website,
+.ax-actor-profile__preview {
+	margin-block: 0;
+}
+
+.ax-actor-profile__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.ax-actor-profile__type {
+	font-size: 0.8125em;
+	font-weight: 600;
+}
+
+.ax-actor-profile__preview {
+	padding: 0.75rem 1rem;
+	border-inline-start: 3px solid currentColor;
+}
+
+@media (max-width: 480px) {
+	.ax-actor-profile__header {
+		align-items: flex-start;
+	}
+
+	.ax-actor-profile__avatar {
+		inline-size: 4rem;
+		block-size: 4rem;
+	}
+}

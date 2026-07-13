@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/actor-profile",
+	"version": "0.1.0",
+	"title": "Actor Profile",
+	"category": "theme",
+	"icon": "admin-users",
+	"description": "Displays the actor resolved by the current profile route.",
+	"textdomain": "axismundi-actors",
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"],
+		"color": { "background": true, "text": true },
+		"spacing": { "margin": true, "padding": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

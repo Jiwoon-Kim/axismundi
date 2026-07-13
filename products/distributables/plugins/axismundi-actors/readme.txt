@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.2
+Stable tag: 0.0.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -19,18 +19,29 @@ without owning the content it points at.
 
 Each domain plugin keeps its own storage and screens; Actors holds identity and
 wires each archive in as a **projection** (Posts, Media, Notes, …) under one actor.
-The identity URI (`/?ax_actor={uuid}`) is immutable; the `/@handle/` alias may
-change with the username.
+The identity URI (`/actors/{uuid}`, with `/?ax_actor={uuid}` as the plain
+fallback) is derived from an immutable UUID; the `/@handle/` alias may change
+with the username.
 
-This is a pre-implementation scaffold. The design contract is locked in the
-plugin's docs/ directory (SPEC, DATA-MODEL, ROUTING, SECURITY, PROJECTIONS,
-PHASES); the repository, routing, and projection registry ship from Phase 1.
+The identity repository and actor profile routes are implemented. Projection
+registration, admin publishing controls, and federation remain later phases; see
+the plugin's docs/ directory for the living contracts.
 
 Not in this plugin: activity ledger, likes, JSON-LD, inbox/outbox, follow, HTTP
 signatures, and remote fetch — those belong to Axismundi Activities and Axismundi
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.3 =
+* Phase 2 actor profiles: canonical /actors/{uuid} and mutable /@handle/ routes,
+  plus plain-query fallbacks that work without pretty permalinks.
+* Adds a theme-overridable block template and the dynamic axismundi/actor-profile
+  block. Local Person and site profile fields are read live; email is never
+  rendered. Internal, disabled, and tombstoned actors return 404 to public
+  viewers while the linked owner and administrators may preview.
+* Keeps collision-resolved preferred usernames and local routing keys identical,
+  preventing two local actors from minting the same /@handle/ alias.
 
 = 0.0.2 =
 * Phase 1 — the actor repository. Creates wp_ax_identities + wp_ax_actors (dbDelta,

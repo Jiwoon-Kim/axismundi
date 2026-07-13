@@ -1,10 +1,10 @@
 # Axismundi Actors — Phases
 
-> Status: **Living implementation plan. Pre-implementation (Phase 0 in progress:
-> docs lock).** Entry · build · acceptance · non-goals per phase. Cross-refs:
+> Status: **Living implementation plan. Phases 0–2 shipped.** Entry · build ·
+> acceptance · non-goals per phase. Cross-refs:
 > SPEC, DATA-MODEL, ROUTING, SECURITY, PROJECTIONS.
 
-## Phase 0 — Docs & scaffold *(in progress)*
+## Phase 0 — Docs & scaffold *(shipped in 0.0.1)*
 
 **Build:** the six docs (SPEC, DATA-MODEL, ROUTING, SECURITY, PROJECTIONS,
 PHASES) locking the `actor_uri` / identity format and the projection registry
@@ -19,7 +19,7 @@ while local `canonical_uri` is a rebuildable cache; the `Axismundi_Actor` value
 object and the projection registry signature. No schema or route is implemented.
 **Non-goals:** any table creation or routing code.
 
-## Phase 1 — Repository
+## Phase 1 — Repository *(shipped in 0.0.2)*
 
 **Entry:** Phase 0.
 **Build:** `wp_ax_identities` + `wp_ax_actors` via dbDelta + schema-version option;
@@ -38,7 +38,7 @@ audit finds no actor row without its identity; reactivation creates no duplicate
 seed; deactivate/reactivate preserves rows.
 **Non-goals:** any public page; projections; admin UI.
 
-## Phase 2 — Actor profile page
+## Phase 2 — Actor profile page *(shipped in 0.0.3)*
 
 **Entry:** Phase 1.
 **Build:** `/actors/{uuid}` canonical identity endpoint (+ `/?ax_actor={uuid}` plain
@@ -49,6 +49,10 @@ header (live-read name/avatar/bio/type badge) + projection navigation region.
 (owner/`manage_options` preview only); `public` renders; a username change moves
 `/@handle/` while the identity URI is unchanged; works with pretty permalinks off.
 **Non-goals:** JSON-LD; sub-routes under the handle.
+
+**Implementation note:** Phase 2 renders only the actor header. The projection
+navigation region becomes visible when Phase 3 ships its registry; Phase 2 does
+not invent placeholder projection links or query another plugin's domain.
 
 ## Phase 3 — Projection registry
 

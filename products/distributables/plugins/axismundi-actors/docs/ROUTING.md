@@ -1,6 +1,6 @@
 # Axismundi Actors — Routing
 
-> Status: **Living specification. Pre-implementation.**
+> Status: **Living specification. Phase 2 implemented.**
 > Two URLs per actor: an immutable identity URI and a mutable human alias. Plain
 > query endpoints work without pretty permalinks; pretty aliases are sugar.
 
@@ -69,8 +69,9 @@ Namespaced sub-routes under the handle (`/@alice/activity/`, `/@alice/outbox`) a
 
 ## 4. Rewrite hygiene
 
-- Register the `@handle` rewrite on activation and flush **once**; remove on
-  deactivation and flush. The identity endpoint is a pure query var (no rewrite),
-  so the plugin still functions with pretty permalinks disabled.
+- Register both `/actors/{uuid}` and `/@handle/` rewrites on activation and flush
+  **once**; remove them on deactivation and flush. The public query vars remain the
+  routing foundation, so `/?ax_actor={uuid}` and `/?ax_actor_handle={handle}` work
+  with pretty permalinks disabled.
 - No global `pre_get_posts` hijack; resolution is confined to the registered query
   vars, mirroring the Media Library routing discipline.

@@ -462,6 +462,41 @@ authority, and is *disabled* (not guessed) where it would collide.
 not decide the policy. The endpoint enabling/disabling and the subdirectory-off test
 are the **WebFinger increment** after v5.
 
+### 9.9 Instance / NodeInfo host ledger — `wp_ax_instances` (federation phase)
+
+Three discovery roles are **distinct**: **WebFinger** (`@user@host` → an Actor URI),
+**Actor JSON-LD** (a remote actor → `wp_ax_identities` / `wp_ax_actors`), and
+**NodeInfo** (`/.well-known/nodeinfo` → a *host's* software / version / registration
+policy / usage). NodeInfo is **not required** to store a remote actor, but it drives
+the instance-info screen and compatibility decisions (e.g. Misskey's instance-info
+shows `softwareName` / `softwareVersion` / description / open-registrations).
+
+Host metadata is **per host, not per actor** — never put it on an actor row (N actors
+would duplicate one host's data). It goes in a dedicated ledger, added with **remote
+discovery/fetch** (around v7):
+
+```
+wp_ax_instances
+- id
+- host, host_hash UNIQUE
+- base_uri
+- software_name, software_version, nodeinfo_schema
+- name, description, icon_uri
+- open_registrations
+- fetched_at, fetch_status
+- payload_json
+```
+
+- **Local NodeInfo** (our site advertising itself at `/.well-known/nodeinfo` +
+  NodeInfo 2.1) needs **no table** — build it from WP options + live counts.
+- **Moderation is a separate local layer, not NodeInfo.** Misskey's `isBlocked` /
+  `isSilenced` / `moderationNote` are *local policy about* a host, not host metadata —
+  they belong to a moderation store, never in `wp_ax_instances` (which is a fetched
+  cache of the remote's own declarations).
+
+**Order:** WebFinger endpoint (+ subdirectory fail-closed test §9.8) → local NodeInfo
+2.1 → remote actor discovery/fetch → then `wp_ax_instances` + its NodeInfo cache.
+
 ### Stays in `payload_json` (resolver-read, never columnized)
 `memorial`, `showFeatured` / `showMedia` / `showRepliesInMedia`, `interactionPolicy`,
 `attributionDomains`, all `misskey:*` and `vcard:*`, `tag` (Emoji / Hashtag are

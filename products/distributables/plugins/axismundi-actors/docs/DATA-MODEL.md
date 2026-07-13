@@ -1,11 +1,11 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Schema v4 implemented (§2–§6 + §8 profile
-> presentation); §7 and DB v5+ in §9 are provisional.** Three tables exist today: a
-> shared **identity registry**, the **actor profile**, and explicitly authored
-> multilingual Actor text. Local person profile fields remain live `WP_User`
-> fallbacks; only remote actors snapshot. The next schema steps are v5 addresses →
-> v6 endpoints/policy → v7 keys/fetch.
+> Status: **Living specification. Schema v5 implemented (§2–§6, §8, §9.2 addresses);
+> §7 history and DB v6+ in §9 are provisional.** Four tables exist today: the shared
+> **identity registry**, the **actor profile**, multilingual Actor text, and the
+> **address ledger** (`wp_ax_actor_addresses`). Local person profile fields remain
+> live `WP_User` fallbacks; only remote actors snapshot. The next schema steps are v6
+> endpoints/policy → v7 keys/fetch. WebFinger acct policy is decided fail-closed (§9.8).
 
 ## 1. Conventions
 
@@ -341,23 +341,29 @@ self-check, §6). Design rules that gate every step:
 ### 9.1 DB v4 — multilingual profile *(shipped)*
 `wp_ax_actors += default_language`; `wp_ax_actor_texts` (§8.2).
 
-### 9.2 DB v5 — addresses & handle history (realizes §7)
+### 9.2 DB v5 — addresses & handle history (realizes §7) *(shipped)*
 ```
 wp_ax_actor_addresses
 - id, identity_id
 - address_type   local_handle | acct | former_handle
-- address, address_hash
+- address, address_hash   -- hash = sha256( namespace ':' address ); namespace='handle' for
+                          --   local_handle+former_handle (shared), else the type (e.g. 'acct')
 - status         primary | redirect | reserved | alias
 - verified_at, created_at, retired_at
-UNIQUE(address_type, address_hash)
+UNIQUE(address_hash)   -- shared 'handle' namespace ⇒ a reserved former handle blocks a new
+                       --   handle of the same string; acct addresses never collide with handles
+KEY(identity_id, status)
 ```
-- Backfill the current handle as `local_handle` / `primary`. This table is the
-  **routing + history ledger**; `preferred_username` on the actor row stays the
-  Actor-JSON display value. **Pick one source of truth before the first federation
-  release** — recommended: addresses = routing ledger, `preferred_username` = display.
-- `acct:` (e.g. `alice@example.test`) is verified **only after a successful WebFinger
-  HTTPS lookup** (RFC 7033); `preferredUsername` alone is never trusted. Old handles
-  are `reserved` to the same actor, never recycled.
+- Install **backfills** the current handle as `local_handle` / `primary`.
+  `register_handle()` writes the primary row and rejects a handle **reserved to a
+  different actor** (`axismundi_actors_handle_owner`); `reserve_former_handle()` is the
+  infrastructure for a future site-actor rename / admin recovery (a retired handle is
+  never recycled). This table is the **routing + history ledger**; `preferred_username`
+  on the actor row stays the Actor-JSON display value — **source of truth = addresses
+  for routing, `preferred_username` for display**.
+- `acct:` (e.g. `alice@example.test`) rows are **not written in v5** — they are added by
+  the WebFinger increment and verified **only after a successful WebFinger HTTPS lookup**
+  (RFC 7033); `preferredUsername` alone is never trusted.
 
 ### 9.3 DB v6 — endpoints & follower/discovery policy
 ```
@@ -432,25 +438,28 @@ sequential; a WP user may own **many** actors (one per site), each site an indep
 federation boundary; URI is the identity; cache keys include site context or hash the
 URI; network-wide activation must not break.
 
-### 9.8 WebFinger `acct:` handle policy — a pre-v5 PRODUCT decision (not a column)
+### 9.8 WebFinger `acct:` handle policy — DECIDED: fail-closed
 
-`acct:` collisions across a network are resolved by **policy, not schema**, and the
-policy must be fixed **before v5** (addresses):
+`acct:` collisions across a network are resolved by **policy, not schema**. The policy
+is **fail-closed**: WebFinger is enabled only where each site owns a distinct
+authority, and is *disabled* (not guessed) where it would collide.
 
-- **Subdomain** (`site-a.example`, `site-b.example`) and **mapped-domain** subsites:
-  `alice@site-a.example` vs `alice@site-b.example` resolve naturally — the authority
-  differs. No extra decision needed.
-- **Subdirectory** (`example.com/site-a`, `example.com/site-b`): both would be
-  `alice@example.com`, which **collides** — one `acct:` cannot resolve to two actors.
-  Pick one:
-  1. reserve `acct:` handles **network-wide** (a global handle namespace),
-  2. require subsites to use a **separate domain / subdomain** before federation is
-     enabled, or
-  3. let the **network routing index** designate one representative actor that owns
-     that `acct:`.
+- **Enabled — single-site, subdomain, or mapped-domain.** `alice@example.com`,
+  `alice@site-a.example`, `alice@mapped-domain.com` each resolve to exactly one actor
+  because the authority differs.
+- **Disabled — subdirectory multisite** (`example.com/site-a`, `example.com/site-b`).
+  Both handles would be `alice@example.com`, which cannot resolve to two actors, so the
+  WebFinger endpoint is **explicitly off** for such subsites (a tested behaviour, not a
+  silent misroute). The **Actor URI (`/actors/{uuid}`) and the profile keep working** —
+  only WebFinger discovery by `acct:` is withheld.
+- A **network-wide handle table** + representative-owner routing (`wp_ax_actor_network_index`
+  §9.7) is added **only when a real subdirectory-federation need appears** — not
+  pre-built. Until then, a subdirectory network that wants federation gives each subsite
+  its own domain / subdomain (which flips it to *enabled*).
 
-This is a WebFinger *product* policy; the `wp_ax_actor_addresses` table (v5) records
-the outcome but does not decide it.
+`wp_ax_actor_addresses` (v5) records the `acct:` addresses this policy allows; it does
+not decide the policy. The endpoint enabling/disabling and the subdirectory-off test
+are the **WebFinger increment** after v5.
 
 ### Stays in `payload_json` (resolver-read, never columnized)
 `memorial`, `showFeatured` / `showMedia` / `showRepliesInMedia`, `interactionPolicy`,

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '4';
+const AXISMUNDI_ACTORS_DB_VERSION = '5';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -29,6 +29,27 @@ function axismundi_actors_actors_table() : string {
 function axismundi_actors_texts_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_texts';
+}
+
+/** @return string actor address (handle / acct) ledger table name. */
+function axismundi_actors_addresses_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_addresses';
+}
+
+/**
+ * Namespace-scoped hash for an address. Local `local_handle` and `former_handle`
+ * share the **`handle`** namespace, so a reserved former handle blocks a new handle
+ * of the same string under `UNIQUE(address_hash)`. `acct:` addresses hash under their
+ * own namespace and never collide with handles.
+ *
+ * @param string $type    Address type.
+ * @param string $address Address value.
+ * @return string sha-256 hex.
+ */
+function axismundi_actors_address_hash( string $type, string $address ) : string {
+	$namespace = in_array( $type, array( 'local_handle', 'former_handle' ), true ) ? 'handle' : $type;
+	return hash( 'sha256', $namespace . ':' . strtolower( trim( $address ) ) );
 }
 
 /**
@@ -106,6 +127,24 @@ function axismundi_actors_install() : void {
 		) {$charset};"
 	);
 
+	$addresses = axismundi_actors_addresses_table();
+	dbDelta(
+		"CREATE TABLE {$addresses} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			address_type varchar(16) NOT NULL,
+			address varchar(191) NOT NULL,
+			address_hash char(64) NOT NULL,
+			status varchar(12) NOT NULL,
+			verified_at datetime DEFAULT NULL,
+			created_at datetime NOT NULL,
+			retired_at datetime DEFAULT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY address_hash (address_hash),
+			KEY identity_status (identity_id, status)
+		) {$charset};"
+	);
+
 	// dbDelta reliably ADDs columns but does NOT relax an existing NOT NULL to
 	// nullable, so do that explicitly (idempotent — a no-op on a fresh install where
 	// CREATE TABLE already made it nullable). Handle-less actors need a NULL handle.
@@ -127,13 +166,25 @@ function axismundi_actors_install() : void {
 		$wpdb->query( $wpdb->prepare( "UPDATE {$actors} SET default_language = %s WHERE default_language IS NULL AND actor_scope IN ('site','user')", $site_language ) );
 	}
 
-	// Only record the schema version once the new columns actually exist, so a
-	// failed upgrade retries next load rather than being marked done.
+	// Backfill: every local actor that already has a handle gets a `primary`
+	// `local_handle` address row (the routing ledger). Idempotent — keyed on the
+	// namespaced address hash.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off backfill on a custom table.
+	$handled = (array) $wpdb->get_results( "SELECT identity_id, local_handle_key FROM {$actors} WHERE local_handle_key IS NOT NULL", ARRAY_A );
+	foreach ( $handled as $row ) {
+		axismundi_actors_record_handle_address( (int) $row['identity_id'], (string) $row['local_handle_key'], 'primary' );
+	}
+
+	// Only record the schema version once the new columns/tables/indexes actually
+	// exist, so a failed upgrade retries next load rather than being marked done.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$columns      = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$text_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$texts}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$text_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$texts} WHERE Key_name = 'identity_field_language'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$address_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" );
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )
@@ -141,6 +192,7 @@ function axismundi_actors_install() : void {
 		&& in_array( 'language_tag', $text_columns, true )
 		&& in_array( 'value', $text_columns, true )
 		&& ! empty( $text_indexes )
+		&& ! empty( $address_indexes )
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
@@ -608,6 +660,98 @@ function axismundi_actors_handle_candidates( int $user_id ) : array {
  * @param string $handle      Desired handle.
  * @return true|WP_Error
  */
+/**
+ * The identity that owns a local handle string in the address ledger — as its
+ * `primary`, `reserved` (a retired handle held for the same actor), or `redirect`
+ * address — or 0. This is the reservation check: a retired handle is never recycled
+ * to a different actor.
+ *
+ * @param string $handle_key Normalized handle.
+ * @return int Identity id, or 0.
+ */
+function axismundi_actors_handle_owner( string $handle_key ) : int {
+	global $wpdb;
+	$addresses = axismundi_actors_addresses_table();
+	$hash      = axismundi_actors_address_hash( 'local_handle', $handle_key );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$addresses} WHERE address_hash = %s AND status IN ('primary','reserved','redirect') LIMIT 1", $hash ) );
+}
+
+/**
+ * Upsert an actor's local handle address row (routing ledger).
+ *
+ * @param int    $identity_id Identity id.
+ * @param string $handle_key  Normalized handle.
+ * @param string $status      primary | reserved | redirect | alias.
+ * @return void
+ */
+function axismundi_actors_record_handle_address( int $identity_id, string $handle_key, string $status = 'primary' ) : void {
+	global $wpdb;
+	$addresses = axismundi_actors_addresses_table();
+	$hash      = axismundi_actors_address_hash( 'local_handle', $handle_key );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$addresses} WHERE address_hash = %s", $hash ) );
+	$type     = 'primary' === $status ? 'local_handle' : 'former_handle';
+	if ( $existing > 0 ) {
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$addresses,
+			array( 'address_type' => $type, 'status' => $status, 'retired_at' => 'primary' === $status ? null : current_time( 'mysql', true ) ),
+			array( 'id' => $existing ),
+			array( '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+		return;
+	}
+	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$addresses,
+		array(
+			'identity_id'  => $identity_id,
+			'address_type' => $type,
+			'address'      => $handle_key,
+			'address_hash' => $hash,
+			'status'       => $status,
+			'created_at'   => current_time( 'mysql', true ),
+			'retired_at'   => 'primary' === $status ? null : current_time( 'mysql', true ),
+		),
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+	);
+}
+
+/**
+ * Reserve a (former) handle to an actor so no other actor can ever take it — the
+ * infrastructure for a future site-actor rename / admin recovery. Fails if the handle
+ * belongs to a different actor.
+ *
+ * @param int    $identity_id Identity id.
+ * @param string $handle      Handle to reserve.
+ * @return true|WP_Error
+ */
+function axismundi_actors_reserve_former_handle( int $identity_id, string $handle ) {
+	$key = strtolower( trim( $handle ) );
+	if ( ! axismundi_actors_is_valid_handle( $key ) ) {
+		return new WP_Error( 'ax_actors_handle', __( 'Invalid handle.', 'axismundi-actors' ) );
+	}
+	$owner = axismundi_actors_handle_owner( $key );
+	if ( $owner > 0 && $owner !== $identity_id ) {
+		return new WP_Error( 'ax_actors_handle_reserved', __( 'That handle belongs to another actor.', 'axismundi-actors' ) );
+	}
+	axismundi_actors_record_handle_address( $identity_id, $key, 'reserved' );
+	return true;
+}
+
+/**
+ * An identity's address ledger rows.
+ *
+ * @param int $identity_id Identity id.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_actors_get_addresses( int $identity_id ) : array {
+	global $wpdb;
+	$addresses = axismundi_actors_addresses_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$addresses} WHERE identity_id = %d", $identity_id ), ARRAY_A );
+}
+
 function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	global $wpdb;
 	$actors = axismundi_actors_actors_table();
@@ -630,6 +774,11 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	if ( $taken > 0 ) {
 		return new WP_Error( 'ax_actors_handle_taken', __( 'That handle is already in use.', 'axismundi-actors' ) );
 	}
+	// Reservation ledger: a handle retired by another actor is never recycled.
+	$owner = axismundi_actors_handle_owner( $key );
+	if ( $owner > 0 && $owner !== $identity_id ) {
+		return new WP_Error( 'ax_actors_handle_reserved', __( 'That handle is reserved to another actor.', 'axismundi-actors' ) );
+	}
 	$now  = current_time( 'mysql', true );
 	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$actors,
@@ -638,7 +787,11 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 		array( '%s', '%s', '%s', '%s' ),
 		array( '%d' )
 	);
-	return false === $done ? new WP_Error( 'ax_actors_handle_update', __( 'Could not register the handle.', 'axismundi-actors' ) ) : true;
+	if ( false === $done ) {
+		return new WP_Error( 'ax_actors_handle_update', __( 'Could not register the handle.', 'axismundi-actors' ) );
+	}
+	axismundi_actors_record_handle_address( $identity_id, $key, 'primary' );
+	return true;
 }
 
 /**

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.11
+Stable tag: 0.0.12
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,19 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.12 =
+* DB v5 — the actor address ledger (wp_ax_actor_addresses): a routing + history table
+  for local handles. Install backfills each handle as a primary local_handle address;
+  register_handle records it and now rejects a handle reserved to a different actor;
+  reserve_former_handle() is the infrastructure for a future site-actor rename / admin
+  recovery so a retired handle is never recycled. Address hashing is namespaced, so a
+  reserved former handle blocks the same string while acct: addresses never collide
+  with handles. The version is recorded only after the table and its unique index
+  exist.
+* WebFinger acct: policy decided fail-closed: enabled for single-site / subdomain /
+  mapped-domain; explicitly disabled for subdirectory multisite (Actor URI and profile
+  still work). acct: rows and the endpoint come in the WebFinger increment.
 
 = 0.0.11 =
 * Phase 4d / DB v4 — add optional multilingual Actor profile text (`name`,

@@ -29,7 +29,7 @@ try {
 	$texts  = axismundi_actors_texts_table();
 	$cols   = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" ); // phpcs:ignore WordPress.DB
 	$index  = (array) $wpdb->get_col( "SHOW INDEX FROM {$texts} WHERE Key_name = 'identity_field_language'" ); // phpcs:ignore WordPress.DB
-	ax_text_assert( $ax_text_results, 'schema v4 adds default_language, text table, unique key, and records version', in_array( 'default_language', $cols, true ) && $wpdb->get_var( "SHOW TABLES LIKE '{$texts}'" ) === $texts && ! empty( $index ) && '4' === (string) get_option( 'ax_actors_db_version' ) ); // phpcs:ignore WordPress.DB
+	ax_text_assert( $ax_text_results, 'schema adds default_language, text table, and unique key (v4+)', in_array( 'default_language', $cols, true ) && $wpdb->get_var( "SHOW TABLES LIKE '{$texts}'" ) === $texts && ! empty( $index ) && (int) get_option( 'ax_actors_db_version' ) >= 4 ); // phpcs:ignore WordPress.DB
 
 	$uid = (int) wp_insert_user( array( 'user_login' => 'ax_text_alice', 'user_pass' => wp_generate_password(), 'display_name' => 'Live Alice', 'description' => 'Live bio', 'role' => 'author' ) );
 	$ax_text_users[] = $uid;

@@ -49,6 +49,11 @@ dedicated attachment.html template.
   rebuilds, and confirmed full rebuilds.
 * Rename the Attachment Details folder field to Location and add a role-labelled,
   read-filtered Used in list. Saved in remains reserved for Phase 5 collections.
+* Add a guarded legacy-parent migration: immutable snapshot, read-only preview,
+  explicit detach, and ownership-safe rollback commands. Detach refuses missing or
+  conflicting snapshots; rollback never overwrites a newer nonzero parent.
+* Show an in-use deletion warning in Attachment Details without exposing source
+  titles or URLs the viewer cannot read.
 * Add dev-only permission, relation-store, provider, and reindex regression fixtures;
   the distributable ZIP excludes tests and build scripts.
 

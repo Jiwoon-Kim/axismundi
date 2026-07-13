@@ -115,8 +115,8 @@ function axismundi_media_render_settings_page() : void {
 			<?php submit_button(); ?>
 		</form>
 
-		<h2><?php esc_html_e( 'Relationship scan (read-only)', 'axismundi-media-library' ); ?></h2>
-		<p><?php esc_html_e( 'Preview of what a future migration would touch. This scan changes nothing.', 'axismundi-media-library' ); ?></p>
+		<h2><?php esc_html_e( 'Relationship migration preview (read-only)', 'axismundi-media-library' ); ?></h2>
+		<p><?php esc_html_e( 'Preview of what the guarded legacy-parent migration would touch. This settings screen changes nothing; snapshot, detach, and rollback execute only through explicit WP-CLI commands.', 'axismundi-media-library' ); ?></p>
 		<table class="widefat striped" style="max-width:520px">
 			<tbody>
 				<tr>
@@ -133,11 +133,12 @@ function axismundi_media_render_settings_page() : void {
 			<?php
 			printf(
 				/* translators: %s: number of attachments that have a parent post. */
-				esc_html__( 'Enabling Independent mode would eventually detach %s existing attachment(s) from their parent — but no bulk migration ships in 0.1.0 (scan / preview only).', 'axismundi-media-library' ),
+				esc_html__( '%s attachment(s) currently have a parent. Record immutable snapshots and inspect the detach dry-run before any explicit migration.', 'axismundi-media-library' ),
 				esc_html( number_format_i18n( $axismundi_media_scan['with_parent'] ) )
 			);
 			?>
 		</p>
+		<p><code>wp axismundi media relations legacy-parent snapshot --dry-run</code></p>
 
 		<h2><?php esc_html_e( 'Boundary', 'axismundi-media-library' ); ?></h2>
 		<p class="description">

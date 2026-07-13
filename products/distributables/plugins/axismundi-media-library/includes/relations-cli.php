@@ -137,3 +137,114 @@ class Axismundi_Media_Relations_CLI {
 }
 
 WP_CLI::add_command( 'axismundi media relations', 'Axismundi_Media_Relations_CLI' );
+
+/**
+ * Guarded legacy post_parent migration commands.
+ */
+class Axismundi_Media_Legacy_Parent_CLI {
+
+	/**
+	 * Preview or record immutable parent snapshots. This never detaches media.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Report what would be snapshotted without writing.
+	 *
+	 * [--yes]
+	 * : Record snapshots.
+	 *
+	 * @param array<int,string>    $args       Positional arguments (unused).
+	 * @param array<string,string> $assoc_args Associative arguments.
+	 * @return void
+	 */
+	public function snapshot( $args, $assoc_args ) : void {
+		$dry = $this->operation_mode( $assoc_args );
+		$r   = axismundi_media_legacy_parent_snapshot_all( $dry );
+		WP_CLI::log( sprintf( 'Candidates: %1$d; would snapshot: %2$d; snapshotted: %3$d; existing: %4$d; conflicts: %5$d; errors: %6$d.', $r['candidates'], $r['would_snapshot'], $r['snapshotted'], $r['existing'], $r['conflicts'], $r['errors'] ) );
+		$this->finish( $dry, $r['errors'], 'Legacy-parent snapshot' );
+	}
+
+	/**
+	 * Preview or detach Attachments whose current parent exactly matches a snapshot.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Report the detach plan without changing post_parent.
+	 *
+	 * [--yes]
+	 * : Detach after a clean snapshot preflight.
+	 *
+	 * @param array<int,string>    $args       Positional arguments (unused).
+	 * @param array<string,string> $assoc_args Associative arguments.
+	 * @return void
+	 */
+	public function detach( $args, $assoc_args ) : void {
+		$dry = $this->operation_mode( $assoc_args );
+		if ( ! axismundi_media_is_independent() ) {
+			WP_CLI::error( 'Detach requires Independent media mode.' );
+		}
+		$preflight = axismundi_media_legacy_parent_detach_all( true );
+		if ( ! $dry && ( $preflight['unsnapshotted'] > 0 || $preflight['conflicts'] > 0 || $preflight['errors'] > 0 ) ) {
+			WP_CLI::error( 'Detach preflight has unsnapshotted or conflicting relationships. Run snapshot and resolve conflicts first.' );
+		}
+		$r = $dry ? $preflight : axismundi_media_legacy_parent_detach_all( false );
+		WP_CLI::log( sprintf( 'Candidates: %1$d; would detach: %2$d; detached: %3$d; unsnapshotted: %4$d; conflicts: %5$d; errors: %6$d.', $r['candidates'], $r['would_detach'], $r['detached'], $r['unsnapshotted'], $r['conflicts'], $r['errors'] ) );
+		$this->finish( $dry, $r['errors'], 'Legacy-parent detach' );
+	}
+
+	/**
+	 * Preview or restore snapshots. Only currently detached Attachments are changed.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Report what would be restored.
+	 *
+	 * [--yes]
+	 * : Restore safe snapshots.
+	 *
+	 * @param array<int,string>    $args       Positional arguments (unused).
+	 * @param array<string,string> $assoc_args Associative arguments.
+	 * @return void
+	 */
+	public function rollback( $args, $assoc_args ) : void {
+		$dry = $this->operation_mode( $assoc_args );
+		$r   = axismundi_media_legacy_parent_rollback_all( $dry );
+		WP_CLI::log( sprintf( 'Snapshots: %1$d; would restore: %2$d; restored: %3$d; already restored: %4$d; conflicts: %5$d; missing: %6$d; errors: %7$d.', $r['snapshots'], $r['would_restore'], $r['restored'], $r['already_restored'], $r['conflicts'], $r['missing'], $r['errors'] ) );
+		$this->finish( $dry, $r['errors'], 'Legacy-parent rollback' );
+	}
+
+	/**
+	 * Require exactly one explicit operation mode.
+	 *
+	 * @param array<string,string> $assoc_args CLI args.
+	 * @return bool True for dry-run.
+	 */
+	private function operation_mode( array $assoc_args ) : bool {
+		$dry = isset( $assoc_args['dry-run'] );
+		$yes = isset( $assoc_args['yes'] );
+		if ( $dry === $yes ) {
+			WP_CLI::error( 'Choose exactly one: --dry-run or --yes.' );
+		}
+		return $dry;
+	}
+
+	/**
+	 * Finish one command with a truthful mutation/dry-run message.
+	 *
+	 * @param bool   $dry    Dry-run.
+	 * @param int    $errors Error count.
+	 * @param string $label  Operation label.
+	 * @return void
+	 */
+	private function finish( bool $dry, int $errors, string $label ) : void {
+		if ( $errors > 0 ) {
+			WP_CLI::error( $label . ' completed with errors.' );
+		}
+		WP_CLI::success( $label . ( $dry ? ' dry-run complete; no data changed.' : ' complete.' ) );
+	}
+}
+
+WP_CLI::add_command( 'axismundi media relations legacy-parent', 'Axismundi_Media_Legacy_Parent_CLI' );

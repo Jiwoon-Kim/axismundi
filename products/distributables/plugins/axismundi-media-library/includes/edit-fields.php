@@ -165,6 +165,21 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		'html'  => axismundi_media_attachment_used_in_html( $post->ID ),
 		'helps' => __( 'Indexed references you can read. Saved collections are shown separately in a later phase.', 'axismundi-media-library' ),
 	);
+	$used_in_count = axismundi_media_relations_used_in_subject_count( $post->ID );
+	if ( $used_in_count > 0 ) {
+		$form_fields['ax_media_delete_warning'] = array(
+			'label' => __( 'Deletion warning', 'axismundi-media-library' ),
+			'input' => 'html',
+			'html'  => '<strong class="ax-media-delete-warning">' . esc_html(
+				sprintf(
+					/* translators: %s: number of readable source items using the media. */
+					_n( 'Deleting this file may break %s indexed item.', 'Deleting this file may break %s indexed items.', $used_in_count, 'axismundi-media-library' ),
+					number_format_i18n( $used_in_count )
+				)
+			) . '</strong>',
+			'helps' => __( 'Review Used in before deleting permanently. Sources you cannot read are not identified here.', 'axismundi-media-library' ),
+		);
+	}
 
 	$form_fields['ax_media_creator_name'] = array(
 		'label' => __( 'Creator', 'axismundi-media-library' ),

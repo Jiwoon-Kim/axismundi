@@ -38,6 +38,7 @@ require_once __DIR__ . '/includes/admin-folders.php';
 require_once __DIR__ . '/includes/feeds.php';
 require_once __DIR__ . '/includes/relations.php';
 require_once __DIR__ . '/includes/relation-providers.php';
+require_once __DIR__ . '/includes/legacy-parent.php';
 require_once __DIR__ . '/includes/relations-cli.php';
 
 /**

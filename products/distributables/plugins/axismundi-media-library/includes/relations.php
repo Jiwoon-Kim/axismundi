@@ -273,6 +273,23 @@ function axismundi_media_relations_used_in( int $attachment_id, ?int $viewer_id 
 }
 
 /**
+ * Number of distinct readable source subjects that use a local Attachment.
+ *
+ * @param int      $attachment_id Attachment ID.
+ * @param int|null $viewer_id     Viewer (defaults to current user).
+ * @return int
+ */
+function axismundi_media_relations_used_in_subject_count( int $attachment_id, ?int $viewer_id = null ) : int {
+	$subjects = array();
+	foreach ( axismundi_media_relations_used_in( $attachment_id, $viewer_id ) as $row ) {
+		if ( 'post' === $row['subject_type'] && (int) $row['subject_post_id'] > 0 ) {
+			$subjects[ (int) $row['subject_post_id'] ] = true;
+		}
+	}
+	return count( $subjects );
+}
+
+/**
  * A subject's relation rows (all, or one provider). For UI/CLI and tests.
  *
  * @param int         $post_id  Subject post ID.

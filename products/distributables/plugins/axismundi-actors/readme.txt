@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.10
+Stable tag: 0.0.11
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,14 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.11 =
+* Phase 4d / DB v4 — add optional multilingual Actor profile text (`name`,
+  `summary`, and long `content`) with normalized BCP-47 language tags.
+* Keep WordPress user and site profile values live: translation rows are created
+  only when explicitly authored, and empty translations fall back to Core data.
+* Add language editing to Person and Site Actor management screens and resolve
+  profile output through exact/base/default/site/user-language fallbacks.
 
 = 0.0.10 =
 * Phase 4c — use a local Person actor's avatar as their WordPress avatar. When a

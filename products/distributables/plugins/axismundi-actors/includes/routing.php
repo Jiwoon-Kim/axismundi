@@ -179,21 +179,30 @@ add_filter( 'pre_handle_404', 'axismundi_actors_handle_profile_request', 10, 2 )
  * Actor profile data resolved live for local identities.
  *
  * @param Axismundi_Actor $actor Actor.
- * @return array{name:string,summary:string,url:string,avatar:string}
+ * @return array{name:string,summary:string,content:string,url:string,avatar:string}
  */
 function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
+	/**
+	 * Filter the language requested for an Actor profile view.
+	 *
+	 * @param string          $language Current WordPress request locale.
+	 * @param Axismundi_Actor $actor    Actor being viewed.
+	 */
+	$language = (string) apply_filters( 'axismundi_actors_requested_language', determine_locale(), $actor );
 	if ( 'site' === $actor->get_scope() ) {
 		return array(
-			'name'    => $actor->get_display_name(),
-			'summary' => (string) get_bloginfo( 'description' ),
+			'name'    => axismundi_actors_resolve_text( $actor, 'name', $language ),
+			'summary' => axismundi_actors_resolve_text( $actor, 'summary', $language ),
+			'content' => axismundi_actors_resolve_text( $actor, 'content', $language ),
 			'url'     => home_url( '/' ),
 			'avatar'  => (string) get_site_icon_url( 192 ),
 		);
 	}
 	$user_id = $actor->get_local_user_id();
 	return array(
-		'name'    => $actor->get_display_name(),
-		'summary' => $user_id ? (string) get_the_author_meta( 'description', $user_id ) : '',
+		'name'    => axismundi_actors_resolve_text( $actor, 'name', $language ),
+		'summary' => axismundi_actors_resolve_text( $actor, 'summary', $language ),
+		'content' => axismundi_actors_resolve_text( $actor, 'content', $language ),
 		'url'     => $user_id ? (string) get_the_author_meta( 'user_url', $user_id ) : '',
 		'avatar'  => $user_id ? (string) get_avatar_url( $user_id, array( 'size' => 192 ) ) : '',
 	);

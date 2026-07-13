@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '3';
+const AXISMUNDI_ACTORS_DB_VERSION = '4';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -23,6 +23,12 @@ function axismundi_actors_identities_table() : string {
 function axismundi_actors_actors_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actors';
+}
+
+/** @return string multilingual actor text table name. */
+function axismundi_actors_texts_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_texts';
 }
 
 /**
@@ -37,6 +43,7 @@ function axismundi_actors_install() : void {
 	$charset = $wpdb->get_charset_collate();
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
+	$texts      = axismundi_actors_texts_table();
 
 	dbDelta(
 		"CREATE TABLE {$identities} (
@@ -73,6 +80,7 @@ function axismundi_actors_install() : void {
 			payload_json longtext DEFAULT NULL,
 			avatar_attachment_id bigint(20) unsigned DEFAULT NULL,
 			header_attachment_id bigint(20) unsigned DEFAULT NULL,
+			default_language varchar(35) DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
@@ -80,6 +88,21 @@ function axismundi_actors_install() : void {
 			UNIQUE KEY local_user_id (local_user_id),
 			KEY preferred_username (preferred_username),
 			KEY scope_type (actor_scope, actor_type)
+		) {$charset};"
+	);
+
+	dbDelta(
+		"CREATE TABLE {$texts} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			field_name varchar(16) NOT NULL,
+			language_tag varchar(35) NOT NULL,
+			value longtext NOT NULL,
+			media_type varchar(64) DEFAULT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity_field_language (identity_id, field_name, language_tag),
+			KEY identity_language (identity_id, language_tag)
 		) {$charset};"
 	);
 
@@ -94,11 +117,31 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off upgrade backfill on a custom table.
 	$wpdb->query( "UPDATE {$actors} SET handle_locked_at = updated_at WHERE local_handle_key IS NOT NULL AND handle_locked_at IS NULL" );
 
+	// Existing local actors receive the site language as their scalar/map default,
+	// but no translated text rows are synthesized from WP_User or site data.
+	$site_language = function_exists( 'axismundi_actors_normalize_language_tag' )
+		? axismundi_actors_normalize_language_tag( get_locale() )
+		: str_replace( '_', '-', (string) get_locale() );
+	if ( '' !== $site_language ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off schema upgrade backfill on a custom table.
+		$wpdb->query( $wpdb->prepare( "UPDATE {$actors} SET default_language = %s WHERE default_language IS NULL AND actor_scope IN ('site','user')", $site_language ) );
+	}
+
 	// Only record the schema version once the new columns actually exist, so a
 	// failed upgrade retries next load rather than being marked done.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
-	if ( in_array( 'avatar_attachment_id', $columns, true ) && in_array( 'header_attachment_id', $columns, true ) ) {
+	$columns      = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	$text_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$texts}" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$text_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$texts} WHERE Key_name = 'identity_field_language'" );
+	if (
+		in_array( 'avatar_attachment_id', $columns, true )
+		&& in_array( 'header_attachment_id', $columns, true )
+		&& in_array( 'default_language', $columns, true )
+		&& in_array( 'language_tag', $text_columns, true )
+		&& in_array( 'value', $text_columns, true )
+		&& ! empty( $text_indexes )
+	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
 }
@@ -151,6 +194,13 @@ final class Axismundi_Actor {
 
 	public function get_header_attachment_id() : int {
 		return (int) ( $this->row['header_attachment_id'] ?? 0 );
+	}
+
+	public function get_default_language() : string {
+		$language = (string) ( $this->row['default_language'] ?? '' );
+		return function_exists( 'axismundi_actors_normalize_language_tag' )
+			? axismundi_actors_normalize_language_tag( $language )
+			: $language;
 	}
 
 	public function get_profile_url() : string {
@@ -285,6 +335,9 @@ function axismundi_actors_create_local( array $args ) {
 	$uri    = home_url( '/actors/' . $uuid );
 	$hash   = hash( 'sha256', $uri );
 	$now    = current_time( 'mysql', true );
+	$language = function_exists( 'axismundi_actors_normalize_language_tag' )
+		? axismundi_actors_normalize_language_tag( get_locale() )
+		: str_replace( '_', '-', (string) get_locale() );
 
 	// A handle is OPTIONAL at creation. When one is given (e.g. the site actor
 	// seed) it is uniquified, stored as the alias == routing key, and locked. A
@@ -333,10 +386,11 @@ function axismundi_actors_create_local( array $args ) {
 			'local_handle_key'   => $handle_key,
 			'handle_locked_at'   => $handle_locked,
 			'local_user_id'      => $uid,
+			'default_language'   => '' !== $language ? $language : null,
 			'created_at'         => $now,
 			'updated_at'         => $now,
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
 	);
 	if ( false === $ok ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

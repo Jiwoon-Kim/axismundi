@@ -126,7 +126,7 @@ on save; null the ref on `delete_attachment`.
 into WordPress via the `get_avatar_data` filter (default on for local Person) so
 comments / admin show it; the header stays Actor-only.
 
-**Phase 4d — multilingual profile (`wp_ax_actor_texts`).** `name` / `summary` /
+**Phase 4d — multilingual profile (`wp_ax_actor_texts`). Shipped in DB v4.** `name` / `summary` /
 `content` per language (AS `nameMap` / `summaryMap` / `contentMap`); `default_language`
 defaults to the **site language** with the user's profile language offered as a
 secondary tab (never auto-applied); resolution + BCP-47 normalization per §8.2.
@@ -145,8 +145,8 @@ new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v3
 (identity + actor + avatar/header). Next, in order:
 
 ```
-4c  Actor avatar → WordPress avatar (get_avatar_data filter)   — no schema change
-DB v4  multilingual (default_language + wp_ax_actor_texts)      — Phase 4d
+4c  Actor avatar → WordPress avatar (get_avatar_data filter)   — shipped, no schema change
+DB v4  multilingual (default_language + wp_ax_actor_texts)      — shipped, Phase 4d
 DB v5  wp_ax_actor_addresses (handle/acct routing + history)    — LOCK the subdirectory WebFinger acct: policy first (DATA-MODEL §9.8)
 DB v6  wp_ax_actor_endpoints + follower/discovery policy cols   — inbox/outbox/…, lock, discoverable, indexable
 DB v7  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo

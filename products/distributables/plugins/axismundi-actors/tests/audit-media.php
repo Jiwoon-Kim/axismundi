@@ -43,7 +43,7 @@ try {
 
 	// Schema upgrade gate.
 	$cols = (array) $wpdb->get_col( 'SHOW COLUMNS FROM ' . axismundi_actors_actors_table() ); // phpcs:ignore WordPress.DB
-	ax_media_assert( $ax_media_results, 'schema v3 adds avatar/header columns and records the version', in_array( 'avatar_attachment_id', $cols, true ) && in_array( 'header_attachment_id', $cols, true ) && '3' === (string) get_option( 'ax_actors_db_version' ) );
+	ax_media_assert( $ax_media_results, 'avatar/header columns remain present after later schema upgrades', in_array( 'avatar_attachment_id', $cols, true ) && in_array( 'header_attachment_id', $cols, true ) && version_compare( (string) get_option( 'ax_actors_db_version' ), '3', '>=' ) );
 
 	$uid = (int) wp_insert_user( array( 'user_login' => 'ax_media_alice', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );
 	$ax_media_users[] = $uid;

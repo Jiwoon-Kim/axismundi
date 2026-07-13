@@ -1,11 +1,11 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Schema v3 implemented (§2–§6 + §8.1 avatar/header);
-> §7, §8.2, §9 are provisional (documented, not created).** Two tables exist today: a
-> shared **identity registry** and the **actor profile** (with `avatar_attachment_id`
-> / `header_attachment_id`). Local person profile fields are read live from `WP_User`;
-> only remote actors snapshot. The **DB version roadmap (v4–v8)** is in §9; the next
-> steps are v4 multilingual → v5 addresses → v6 endpoints/policy → v7 keys/fetch.
+> Status: **Living specification. Schema v4 implemented (§2–§6 + §8 profile
+> presentation); §7 and DB v5+ in §9 are provisional.** Three tables exist today: a
+> shared **identity registry**, the **actor profile**, and explicitly authored
+> multilingual Actor text. Local person profile fields remain live `WP_User`
+> fallbacks; only remote actors snapshot. The next schema steps are v5 addresses →
+> v6 endpoints/policy → v7 keys/fetch.
 
 ## 1. Conventions
 
@@ -294,7 +294,7 @@ wp_ax_actors += avatar_attachment_id BIGINT UNSIGNED NULL   -- a CORE attachment
   via the `get_avatar_data` filter so comments / admin show it; the header is
   Actor-only.
 
-### 8.2 `wp_ax_actor_texts` + `default_language` — multilingual *(DB v4, Phase 4d)*
+### 8.2 `wp_ax_actor_texts` + `default_language` — multilingual *(shipped, DB v4, Phase 4d)*
 
 ```
 wp_ax_actors  += default_language VARCHAR(35) NULL   -- BCP 47
@@ -325,9 +325,9 @@ UNIQUE(identity_id, field_name, language_tag)
   user adds it; the fallback chain still ends at `WP_User`. If site and user language
   match, only one tab shows.
 
-## 9. DB version roadmap (v4–v8, provisional)
+## 9. DB version roadmap (v5–v8, provisional)
 
-Extend **v3** (current) step by step; the schema-version option is written **only
+Extend **v4** (current) step by step; the schema-version option is written **only
 after** the tables / columns / required indexes are confirmed to exist (install()
 self-check, §6). Design rules that gate every step:
 
@@ -338,8 +338,8 @@ self-check, §6). Design rules that gate every step:
   acceleration pointers. `blog_id` is **not** added to the current tables — the
   per-site `$wpdb->prefix` is the tenancy (§9.7).
 
-### 9.1 DB v4 — multilingual profile
-`wp_ax_actors += default_language`; `wp_ax_actor_texts` (§8.2). Ships with Phase 4d.
+### 9.1 DB v4 — multilingual profile *(shipped)*
+`wp_ax_actors += default_language`; `wp_ax_actor_texts` (§8.2).
 
 ### 9.2 DB v5 — addresses & handle history (realizes §7)
 ```

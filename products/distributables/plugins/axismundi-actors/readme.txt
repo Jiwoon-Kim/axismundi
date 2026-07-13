@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.13
+Stable tag: 0.0.14
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -20,18 +20,27 @@ without owning the content it points at.
 Each domain plugin keeps its own storage and screens; Actors holds identity and
 wires each archive in as a **projection** (Posts, Media, Notes, …) under one actor.
 The identity URI (`/actors/{uuid}`, with `/?ax_actor={uuid}` as the plain
-fallback) is derived from an immutable UUID; the `/@handle/` alias may change
-with the username.
+fallback) is derived from an immutable UUID; the `/@handle/` alias is registered
+once during Actor activation and does not track later WordPress username changes.
 
-The identity repository and actor profile routes are implemented. Projection
-registration, admin publishing controls, and federation remain later phases; see
-the plugin's docs/ directory for the living contracts.
+The identity repository, actor profile routes, projection registration, profile
+administration, and local WebFinger address discovery are implemented. Activity
+delivery and remote federation remain later phases; see docs/ for the contracts.
 
 Not in this plugin: activity ledger, likes, JSON-LD, inbox/outbox, follow, HTTP
 signatures, and remote fetch — those belong to Axismundi Activities and Axismundi
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.14 =
+* Add local WebFinger discovery at `/.well-known/webfinger` with a plain-query
+  fallback, strict host matching, public-actor-only resolution, and JRD output.
+* Record locally authoritative `acct:` rows in the address ledger and keep the
+  ActivityStreams `rel=self` link as an explicit Federation-plugin extension until
+  the canonical Actor URI actually serves ActivityStreams JSON.
+* Enforce the documented fail-closed topology policy: single-site, subdomain, and
+  mapped-domain sites are enabled; ambiguous subdirectory multisite is disabled.
 
 = 0.0.13 =
 * Prefer an explicitly authored profile translation matching a local Person's

@@ -146,7 +146,7 @@ new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v5
 
 ```
 DB v5  wp_ax_actor_addresses (handle routing + history)        — shipped; WebFinger acct policy fail-closed (§9.8)
-WebFinger endpoint  /.well-known/webfinger + acct: rows        — next; subdirectory multisite explicitly OFF (tested)
+WebFinger endpoint  /.well-known/webfinger + local acct: rows  — shipped; subdirectory multisite explicitly OFF (tested)
 Local NodeInfo      /.well-known/nodeinfo + NodeInfo 2.1        — small increment, NO table (WP options + live counts)
 Remote discovery    fetch a remote actor → identity/actor rows — then the host ledger below
 DB v?  wp_ax_instances (host software/version/policy ledger)   — per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.9)

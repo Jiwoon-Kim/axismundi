@@ -752,6 +752,56 @@ function axismundi_actors_get_addresses( int $identity_id ) : array {
 	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$addresses} WHERE identity_id = %d", $identity_id ), ARRAY_A );
 }
 
+/**
+ * Record the locally authoritative acct address for an actor. The local server
+ * controls this address, so it is verified at write time; remote acct addresses
+ * remain a later HTTPS WebFinger-discovery concern.
+ *
+ * @param int    $identity_id Identity id.
+ * @param string $acct        Bare acct address (`handle@example.test`).
+ * @return bool
+ */
+function axismundi_actors_record_local_acct_address( int $identity_id, string $acct ) : bool {
+	global $wpdb;
+	$acct = strtolower( trim( $acct ) );
+	if ( $identity_id <= 0 || '' === $acct ) {
+		return false;
+	}
+	$addresses = axismundi_actors_addresses_table();
+	$hash      = axismundi_actors_address_hash( 'acct', $acct );
+	$now       = current_time( 'mysql', true );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$addresses} WHERE address_hash = %s", $hash ) );
+	if ( $existing > 0 ) {
+		$owner = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$addresses} WHERE id = %d", $existing ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
+		if ( $owner !== $identity_id ) {
+			return false;
+		}
+		$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$addresses,
+			array( 'address_type' => 'acct', 'address' => $acct, 'status' => 'primary', 'verified_at' => $now, 'retired_at' => null ),
+			array( 'id' => $existing ),
+			array( '%s', '%s', '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+		return false !== $done;
+	}
+	$done = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$addresses,
+		array(
+			'identity_id'  => $identity_id,
+			'address_type' => 'acct',
+			'address'      => $acct,
+			'address_hash' => $hash,
+			'status'       => 'primary',
+			'verified_at'  => $now,
+			'created_at'   => $now,
+		),
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+	);
+	return false !== $done;
+}
+
 function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	global $wpdb;
 	$actors = axismundi_actors_actors_table();
@@ -791,6 +841,7 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 		return new WP_Error( 'ax_actors_handle_update', __( 'Could not register the handle.', 'axismundi-actors' ) );
 	}
 	axismundi_actors_record_handle_address( $identity_id, $key, 'primary' );
+	do_action( 'axismundi_actors_handle_registered', $identity_id, $key );
 	return true;
 }
 
@@ -813,6 +864,9 @@ function axismundi_actors_set_status( int $identity_id, string $status ) : bool 
 		array( '%s', '%s' ),
 		array( '%d' )
 	);
+	if ( false !== $done ) {
+		do_action( 'axismundi_actors_status_changed', $identity_id, $status );
+	}
 	return false !== $done;
 }
 

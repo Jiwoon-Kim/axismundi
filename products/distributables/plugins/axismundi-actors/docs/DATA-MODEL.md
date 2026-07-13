@@ -362,9 +362,11 @@ KEY(identity_id, status)
   never recycled). This table is the **routing + history ledger**; `preferred_username`
   on the actor row stays the Actor-JSON display value — **source of truth = addresses
   for routing, `preferred_username` for display**.
-- `acct:` (e.g. `alice@example.test`) rows are **not written in v5** — they are added by
-  the WebFinger increment and verified **only after a successful WebFinger HTTPS lookup**
-  (RFC 7033); `preferredUsername` alone is never trusted.
+- Local `acct:` rows (e.g. `alice@example.test`) are written by the WebFinger
+  increment after the site's authority and public Actor are validated; the local
+  server is authoritative for them. Future **remote** `acct:` rows are verified only
+  after a successful HTTPS WebFinger lookup (RFC 7033); remote
+  `preferredUsername` alone is never trusted.
 
 ### 9.3 DB v6 — endpoints & follower/discovery policy
 ```

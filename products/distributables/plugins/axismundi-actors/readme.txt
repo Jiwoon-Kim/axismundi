@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.12
+Stable tag: 0.0.13
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,12 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.13 =
+* Prefer an explicitly authored profile translation matching a local Person's
+  WordPress profile language on their human-facing Actor page.
+* Keep the ActivityStreams scalar language controlled separately by the Actor's
+  `default_language`.
 
 = 0.0.12 =
 * DB v5 — the actor address ledger (wp_ax_actor_addresses): a routing + history table

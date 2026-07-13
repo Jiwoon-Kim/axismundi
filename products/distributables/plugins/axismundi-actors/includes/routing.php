@@ -182,13 +182,7 @@ add_filter( 'pre_handle_404', 'axismundi_actors_handle_profile_request', 10, 2 )
  * @return array{name:string,summary:string,content:string,url:string,avatar:string}
  */
 function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
-	/**
-	 * Filter the language requested for an Actor profile view.
-	 *
-	 * @param string          $language Current WordPress request locale.
-	 * @param Axismundi_Actor $actor    Actor being viewed.
-	 */
-	$language = (string) apply_filters( 'axismundi_actors_requested_language', determine_locale(), $actor );
+	$language = axismundi_actors_profile_language( $actor );
 	if ( 'site' === $actor->get_scope() ) {
 		return array(
 			'name'    => axismundi_actors_resolve_text( $actor, 'name', $language ),

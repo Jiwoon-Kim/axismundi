@@ -43,6 +43,29 @@ function axismundi_actors_site_language() : string {
 }
 
 /**
+ * Preferred language for the human-facing HTML profile. A local Person uses their
+ * WordPress profile language when an authored translation exists; this does not
+ * change the Actor's serialization default_language.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return string
+ */
+function axismundi_actors_profile_language( Axismundi_Actor $actor ) : string {
+	$user_id  = $actor->get_local_user_id();
+	$language = $user_id
+		? axismundi_actors_normalize_language_tag( get_user_locale( $user_id ) )
+		: axismundi_actors_site_language();
+	/**
+	 * Filter the language preferred for a human-facing Actor profile.
+	 *
+	 * @param string          $language Preferred language.
+	 * @param Axismundi_Actor $actor    Actor being viewed.
+	 */
+	$filtered = axismundi_actors_normalize_language_tag( (string) apply_filters( 'axismundi_actors_profile_language', $language, $actor ) );
+	return '' !== $filtered ? $filtered : ( $actor->get_default_language() ?: axismundi_actors_site_language() );
+}
+
+/**
  * Set the language used for scalar Actor fields during serialization.
  *
  * @param int    $identity_id Actor identity id.
@@ -212,4 +235,3 @@ function axismundi_actors_delete_texts( int $identity_id ) : void {
 		$wpdb->delete( axismundi_actors_texts_table(), array( 'identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- logical child cleanup.
 	}
 }
-

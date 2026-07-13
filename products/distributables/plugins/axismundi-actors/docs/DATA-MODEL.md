@@ -312,10 +312,11 @@ UNIQUE(identity_id, field_name, language_tag)
 - Maps to AS `nameMap` / `summaryMap` / `contentMap` (name = plain text; summary /
   content = sanitized HTML; `content` is the optional long "About"). A table, not
   three JSON columns, so languages add/edit without rewriting a blob.
-- `default_language` = the **site language** at creation; the user's own profile
-  language (`profile.php`) is offered as a **secondary** tab, never auto-applied
-  (`get_user_locale()` is a candidate, not a decision — an admin-UI locale is not a
-  public-profile language). Unlike the handle, `default_language` is mutable later.
+- `default_language` = the **site language** at creation and is mutable later. The
+  user's profile language (`profile.php`) is offered as a secondary editing tab. For
+  a local Person's **human-facing HTML profile**, a matching explicitly authored
+  translation in that user language is preferred; this does not mutate
+  `default_language` or change the scalar language serialized to peers.
 - Viewer resolution: request-lang exact → request-lang base → `default_language` →
   site language → user profile language → `und` → first remaining → `WP_User`
   display_name / description. The **serialized scalar** `name` / `summary` /

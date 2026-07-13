@@ -74,8 +74,10 @@ try {
 	$actor      = axismundi_actors_get_by_uuid( $original_uuid );
 	ax_profile_assert( $ax_profile_results, 'activation registers and locks the handle', true === $registered && $actor instanceof Axismundi_Actor && 'alice_profile' === $actor->get_preferred_username() && $actor->is_handle_locked() );
 
-	ax_profile_assert( $ax_profile_results, 'local handle resolves through local_handle_key', $actor->get_identity_id() === axismundi_actors_get_by_handle( $actor->get_preferred_username() )->get_identity_id() );
-	ax_profile_assert( $ax_profile_results, 'UUID route resolves the same local actor', $actor->get_identity_id() === axismundi_actors_resolve_request_actor( $original_uuid, '' )->get_identity_id() );
+	$by_handle = $actor instanceof Axismundi_Actor ? axismundi_actors_get_by_handle( $actor->get_preferred_username() ) : null;
+	$by_uuid   = axismundi_actors_resolve_request_actor( $original_uuid, '' );
+	ax_profile_assert( $ax_profile_results, 'local handle resolves through local_handle_key', $actor instanceof Axismundi_Actor && $by_handle instanceof Axismundi_Actor && $actor->get_identity_id() === $by_handle->get_identity_id() );
+	ax_profile_assert( $ax_profile_results, 'UUID route resolves the same local actor', $actor instanceof Axismundi_Actor && $by_uuid instanceof Axismundi_Actor && $actor->get_identity_id() === $by_uuid->get_identity_id() );
 	ax_profile_assert( $ax_profile_results, 'malformed UUIDs do not resolve', null === axismundi_actors_resolve_request_actor( 'not-a-uuid', '' ) );
 
 	update_option( 'permalink_structure', '' );
@@ -123,6 +125,7 @@ try {
 	$GLOBALS['axismundi_actors_current_actor'] = null;
 	update_option( 'permalink_structure', $ax_old_permalink );
 	foreach ( array_unique( $ax_profile_ids ) as $identity_id ) {
+		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}

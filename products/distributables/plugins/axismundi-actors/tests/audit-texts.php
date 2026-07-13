@@ -44,6 +44,8 @@ try {
 	$set_long = axismundi_actors_set_text( $actor->get_identity_id(), 'content', 'en', '<p>Long about</p>' );
 	$map      = axismundi_actors_get_text_map( $actor->get_identity_id() );
 	ax_text_assert( $ax_text_results, 'explicit name, summary, and content translations upsert and sanitize', true === $set_name && true === $set_bio && true === $set_long && '앨리스' === $map['ko-KR']['name'] && false === strpos( $map['en-US']['summary'], '<script>' ) && '<p>Long about</p>' === $map['en']['content'] );
+	update_user_meta( $uid, 'locale', 'ko_KR' );
+	ax_text_assert( $ax_text_results, 'a local Person HTML profile prefers an authored translation matching their WordPress profile language', 'ko-KR' === axismundi_actors_profile_language( $actor ) && '앨리스' === axismundi_actors_resolve_text( $actor, 'name', axismundi_actors_profile_language( $actor ) ) );
 
 	axismundi_actors_set_default_language( $actor->get_identity_id(), 'ko_KR' );
 	$actor = axismundi_actors_get_by_identity( $actor->get_identity_id() );
@@ -61,6 +63,7 @@ try {
 } finally {
 	foreach ( array_unique( $ax_text_ids ) as $identity_id ) {
 		axismundi_actors_delete_texts( (int) $identity_id );
+		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 	}

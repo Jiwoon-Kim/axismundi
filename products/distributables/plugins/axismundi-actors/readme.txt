@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.14
+Stable tag: 0.0.15
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,14 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.15 =
+* Local NodeInfo 2.1. Advertises this site's software, protocol, registration policy,
+  and usage at /.well-known/nodeinfo (discovery) and /nodeinfo/2.1 (document) — no
+  table, built from WP options and live counts. usage.users.total counts only public
+  local actors with a registered handle; openRegistrations mirrors the WordPress
+  setting. software name/version, protocols, services, and metadata are filterable so
+  the future Federation plugin can own the real values.
 
 = 0.0.14 =
 * Add local WebFinger discovery at `/.well-known/webfinger` with a plain-query

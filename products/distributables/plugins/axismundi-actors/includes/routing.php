@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_REWRITE_VERSION = 2;
+const AXISMUNDI_ACTORS_REWRITE_VERSION = 3;
 
 /** @var Axismundi_Actor|null Actor resolved for the current front-end request. */
 $GLOBALS['axismundi_actors_current_actor'] = null;
@@ -20,6 +20,8 @@ $GLOBALS['axismundi_actors_current_actor'] = null;
 function axismundi_actors_rewrite_rules() : array {
 	return array(
 		'^\.well-known/webfinger/?$'      => 'index.php?ax_webfinger=1',
+		'^\.well-known/nodeinfo/?$'       => 'index.php?ax_nodeinfo=discovery',
+		'^nodeinfo/2\.1/?$'               => 'index.php?ax_nodeinfo=2.1',
 		'^actors/([0-9a-fA-F-]{36})/?$' => 'index.php?ax_actor=$matches[1]',
 		'^@([^/]+)/?$'                  => 'index.php?ax_actor_handle=$matches[1]',
 	);
@@ -62,6 +64,7 @@ function axismundi_actors_query_vars( array $vars ) : array {
 	$vars[] = 'ax_actor';
 	$vars[] = 'ax_actor_handle';
 	$vars[] = 'ax_webfinger';
+	$vars[] = 'ax_nodeinfo';
 	return array_values( array_unique( $vars ) );
 }
 add_filter( 'query_vars', 'axismundi_actors_query_vars' );

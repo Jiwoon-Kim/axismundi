@@ -73,7 +73,7 @@ Roles (not the vague owner/manager/guest):
 owner        delete folder, transfer, manage members/roles, all settings
 manager      members view, some settings, upload/move/remove items, sensitivity
              review — NOT delete/transfer
-contributor  view, upload own, edit/remove OWN items, view+allowed-reuse of others
+contributor  view, upload own, edit/remove OWN items, reference others
 viewer       view, open original, Save/insert where rights allow — no write
 ```
 
@@ -82,7 +82,7 @@ Per-folder settings separate **visibility** from **member powers**
 
 ```
 visibility: private | members | unlisted | protected | public
-allow_member_uploads · allow_member_reuse · allow_member_downloads · allow_member_invites
+allow_member_uploads · allow_member_add_references · allow_member_invites
 ```
 
 **Membership activities:** `Invite`(→`Accept`/`Reject`)→active; `Leave` / remove →

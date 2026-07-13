@@ -170,23 +170,24 @@ Caps `moderate_media_sensitivity`/`override_media_sensitivity` (edit_others) and
 `axismundi_media_set_sensitive_state()`; Attachment-Details state UI. Feeds/collections
 keep reading the effective boolean.
 
-**Phase 4b — Rights & reuse-policy resolver.** Normalize license/attribution/copyright/
-source + `_ax_media_reuse_policy`; **folder default inheritance**; a policy resolver
-(`axismundi_media_can_reuse()`) + API/tests for future consumers; surface rights on the
-attachment page. **Download policy is dropped** — core does not restrict downloads and
-neither can this plugin without Phase 6 controlled delivery; a delivery-affordance hint
-is not a security control, so it is not claimed. The **Save-button gate is wired in
-Phase 5a** (Collection), not here — Save does not exist until then.
+**Phase 4b — Rights & license semantics.** Normalize license/attribution/copyright/
+source; **folder default-license inheritance**; derive structured Creative Commons
+conditions from the selected license (attribution, share-alike, non-commercial, and
+derivative constraints) without a second mutable reuse-policy field; surface rights on
+the attachment page. Download policy is dropped — core does not restrict downloads and
+neither can this plugin without controlled delivery. Collection Save is a bookmark,
+not reuse, and is therefore gated by visibility rather than license; license checks
+apply later to Import/Copy, redistribution, and transformation.
 
 **Phase 4c — GPS/EXIF.** From storing only the `hidden` flag to an actual EXIF strip of
 delivered files (derivatives + original re-save); check derivatives and the delivered
 original — only then may "GPS hidden" be *claimed* as a security feature.
 
 **Phase 4d — Output integration.** Sensitive blur/warning; OG-preview exclusion;
-align Atom/MRSS + attachment page policy; prepare Phase 5 Save reuse gating.
+align Atom/MRSS + attachment-page rights output.
 
 **Acceptance:** `geo_visibility=hidden` yields no GPS in any delivered file;
-reuse/save flags gate the (Phase 5) Save button; sensitive media is blurred +
+license conditions are represented consistently; sensitive media is blurred +
 excluded from OG preview; a moderator sensitivity lock is not owner-clearable.
 **Non-goals:** federation rights re-check (Phase 7).
 
@@ -199,12 +200,13 @@ single-user Collection before adding shared-folder membership.
 folder's `relation = location` (FEDERATED-MEDIA.md §3). Save is the **`Add` activity,
 not `Like`** (Like never lands in a Collection). Local Save by id (live read) + manual
 external-URL save (`object_uri`, nullable `local_attachment_id`; Openverse adapter
-later); Save gated by reuse policy (`unknown = denied`), never widens origin
-visibility/rights; **license/reuse snapshot at save** (kept when the origin later
-tightens — bookmark stays, new insert/reuse blocked).
+later); Save is a bookmark/reference and is gated by current visibility, not by a
+reuse permission; it never widens origin visibility/rights. Record a **license snapshot
+at save** for provenance, while live rights remain authoritative for later Import/Copy.
 **Acceptance:** Save = reference (no file copy, no new Attachment); id-keyed so an
 origin folder move doesn't break it; origin visibility change respected (no permanent
-grant); a later reuse-denied origin keeps the bookmark but blocks new reuse.
+grant); later license changes keep the bookmark but are respected before Import/Copy,
+redistribution, or transformation.
 **Non-goals:** shared-folder membership (5b); remote/federated Save (Phase 7);
 multi-folder *folder* membership (references may be multi-container).
 

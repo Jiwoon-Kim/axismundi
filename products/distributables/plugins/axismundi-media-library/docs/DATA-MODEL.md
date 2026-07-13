@@ -89,7 +89,7 @@ _ax_media_creator_name           _ax_media_creator_user_id (opt)    _ax_media_cr
 _ax_media_copyright_holder_name  _ax_media_copyright_holder_user_id (opt)  _ax_media_copyright_holder_url
 _ax_media_copyright_notice
 _ax_media_license            _ax_media_license_url        _ax_media_attribution
-_ax_media_source_url         _ax_media_reuse_policy
+_ax_media_source_url
 # Download policy dropped: core does not restrict downloads and neither can we without
 # Phase 6 controlled delivery; a delivery-affordance hint is not a security control.
 _ax_media_sensitive          _ax_media_content_warning    _ax_media_sensitivity_reason
@@ -122,7 +122,7 @@ lives in §4 (`wp_ax_media_relations`, dual-key); it is not URI-only.
 ```
 container item   container_id · container_kind(personal_folder|shared_folder|collection)
                  · relation(location|bookmark) · object_uri · local_attachment_id?
-                 · added_by_actor_uri · added_at · sort · license_at_save/reuse_at_save
+                 · added_by_actor_uri · added_at · sort · license_at_save
 folder member    folder_id · principal(local_user|remote_actor) · actor_uri · role · status
 ```
 
@@ -154,7 +154,7 @@ _ax_media_folder_access       open | password                         (Phase 2b 
 _ax_media_folder_password_hash                                        (Phase 2b)
 _ax_media_folder_effective_gated  0 | 1 (derived chain cache; Phase 2b)
 _ax_media_folder_cover_id     _ax_media_folder_sort_mode              (later)
-_ax_media_folder_default_license _ax_media_folder_default_reuse_policy (later)
+_ax_media_folder_default_license                                      (later)
 _ax_media_folder_default_sensitive  _ax_media_folder_feed_enabled     (later)
 ```
 
@@ -316,7 +316,7 @@ table contract.**
 wp_ax_media_references  (provisional)
   id · object_uri (NOT NULL) · local_attachment_id (nullable)
   · saved_by_user_id · destination_folder_term_id
-  · license_at_save · reuse_policy_at_save
+  · license_at_save
   · cached_metadata · saved_at · last_checked_at
 UNIQUE(saved_by_user_id, object_uri)
 ```

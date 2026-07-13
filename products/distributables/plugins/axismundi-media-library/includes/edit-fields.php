@@ -25,6 +25,31 @@ function axismundi_media_attachment_select( int $post_id, string $name, string $
 }
 
 /**
+ * License vocabulary (value => label). The Creative Commons / Public Domain set
+ * mirrors Openverse so federation and reuse checks map 1:1; `all-rights-reserved` is
+ * kept as the conservative default for a creator's own copyrighted work (Openverse,
+ * being an open-media index, has no such value). One source of truth for the field
+ * and its save whitelist. CC conditions are derived from the license — there is no
+ * separate reuse-policy value (0.0.16).
+ *
+ * @return array<string,string>
+ */
+function axismundi_media_license_options() : array {
+	return array(
+		'all-rights-reserved' => __( 'All rights reserved', 'axismundi-media-library' ),
+		'pdm'                 => __( 'Public Domain Mark', 'axismundi-media-library' ),
+		'cc0'                 => 'CC0',
+		'cc-by'               => 'CC BY',
+		'cc-by-sa'            => 'CC BY-SA',
+		'cc-by-nd'            => 'CC BY-ND',
+		'cc-by-nc'            => 'CC BY-NC',
+		'cc-by-nc-sa'         => 'CC BY-NC-SA',
+		'cc-by-nc-nd'         => 'CC BY-NC-ND',
+		'unknown'             => __( 'Unknown', 'axismundi-media-library' ),
+	);
+}
+
+/**
  * Human labels for relation roles shown in Attachment Details.
  *
  * @return array<string,string>
@@ -216,18 +241,9 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 			$post->ID,
 			'ax_media_license',
 			$license,
-			array(
-				'all-rights-reserved' => __( 'All rights reserved', 'axismundi-media-library' ),
-				'cc0'                 => 'CC0',
-				'cc-by-4.0'           => 'CC BY 4.0',
-				'cc-by-sa-4.0'        => 'CC BY-SA 4.0',
-				'cc-by-nc-4.0'        => 'CC BY-NC 4.0',
-				'cc-by-nc-sa-4.0'     => 'CC BY-NC-SA 4.0',
-				'custom'              => __( 'Custom', 'axismundi-media-library' ),
-				'unknown'             => __( 'Unknown', 'axismundi-media-library' ),
-			)
+			axismundi_media_license_options()
 		),
-		'helps' => __( 'Stored metadata only in this release; it does not enforce reuse or downloads.', 'axismundi-media-library' ),
+		'helps' => __( 'Rights metadata only in this release. Creative Commons conditions are derived from the selected license.', 'axismundi-media-library' ),
 	);
 	$form_fields['ax_media_license_url'] = array(
 		'label' => __( 'License URL', 'axismundi-media-library' ),
@@ -243,22 +259,6 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		'label' => __( 'Source URL', 'axismundi-media-library' ),
 		'input' => 'text',
 		'value' => (string) get_post_meta( $post->ID, '_ax_media_source_url', true ),
-	);
-
-	$form_fields['ax_media_reuse_policy'] = array(
-		'label' => __( 'Reuse policy', 'axismundi-media-library' ),
-		'input' => 'html',
-		'html'  => axismundi_media_attachment_select(
-			$post->ID,
-			'ax_media_reuse_policy',
-			(string) get_post_meta( $post->ID, '_ax_media_reuse_policy', true ),
-			array(
-				''        => __( 'Not specified', 'axismundi-media-library' ),
-				'denied'  => __( 'No reuse', 'axismundi-media-library' ),
-				'save'    => __( 'Saving permitted', 'axismundi-media-library' ),
-				'reuse'   => __( 'Reuse permitted', 'axismundi-media-library' ),
-			)
-		),
 	);
 
 	// Sensitivity authority (Phase 4a): moderators pick a state; owners get a self-mark
@@ -382,13 +382,8 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 	$enum_fields = array(
 		'ax_media_license' => array(
 			'meta'    => '_ax_media_license',
-			'allowed' => array( 'all-rights-reserved', 'cc0', 'cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'custom', 'unknown' ),
+			'allowed' => array_keys( axismundi_media_license_options() ),
 			'default' => 'all-rights-reserved',
-		),
-		'ax_media_reuse_policy' => array(
-			'meta'    => '_ax_media_reuse_policy',
-			'allowed' => array( '', 'denied', 'save', 'reuse' ),
-			'default' => '',
 		),
 		'ax_media_geo_visibility' => array(
 			'meta'    => '_ax_media_geo_visibility',

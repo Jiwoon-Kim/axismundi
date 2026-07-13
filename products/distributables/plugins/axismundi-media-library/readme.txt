@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.15
+Stable tag: 0.0.16
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -37,12 +37,23 @@ dedicated attachment.html template.
 
 == Changelog ==
 
+= 0.0.16 =
+* Drop the duplicate Reuse policy field. Creative Commons permissions and conditions
+  derive from License, avoiding two mutable rights values that can drift apart.
+  Existing `_ax_media_reuse_policy` meta is left untouched for data preservation.
+* Clarify that Collection Save is a bookmark/reference gated by visibility, not a
+  licensed reuse. License checks apply to later Import/Copy, redistribution, and
+  transformation operations.
+* Align the License field with the Openverse vocabulary — Public Domain Mark, CC0,
+  CC BY, CC BY-SA, CC BY-ND, CC BY-NC, CC BY-NC-SA, CC BY-NC-ND, Unknown — plus an
+  All-rights-reserved default for a creator's own copyrighted work. The render field
+  and its save whitelist now share one source (axismundi_media_license_options()).
+
 = 0.0.15 =
 * Drop the never-enforced Download policy field. Core does not restrict downloads and
   this plugin cannot either without Phase 6 controlled delivery, so a delivery-
   affordance hint that claimed to be a control has been removed rather than shipped.
-  Existing `_ax_media_download_policy` meta is left untouched. Reuse policy stays and
-  becomes the Phase 4b rights resolver.
+  Existing `_ax_media_download_policy` meta is left untouched.
 
 = 0.0.14 =
 * Phase 4a — sensitive authority. `_ax_media_sensitive` becomes a derived, read-only

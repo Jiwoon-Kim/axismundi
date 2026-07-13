@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.20
+Stable tag: 0.0.21
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,16 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.21 =
+* Phase 4c (output integration) — sensitive media now gets a front-end
+  click-to-reveal blur overlay on the visual core blocks that render an
+  attachment: core/image, core/video, and core/post-featured-image. The overlay
+  shows the content warning and a Show button. This is a viewer content warning,
+  not access control: the file is never altered or withheld and the blur applies
+  to everyone including the owner. Assets load only on the front end in
+  Independent mode; the editor is untouched. Audio (no visual surface), Open
+  Graph preview exclusion, and post-level flagging are intentionally out of scope.
 
 = 0.0.20 =
 * Define Location visibility as an output policy for plugin-rendered metadata only.

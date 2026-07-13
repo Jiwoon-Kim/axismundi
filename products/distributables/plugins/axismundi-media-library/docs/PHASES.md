@@ -199,13 +199,24 @@ by Axismundi surfaces only. The plugin never rewrites original or derivative fil
 embedded EXIF/GPS may remain readable through file URLs. Destructive stripping is not
 planned and `hidden` must never be described as file-level protection.
 
-**Phase 4c — Output integration.** Sensitive blur/warning; OG-preview exclusion;
-align Atom/MRSS + attachment-page rights output.
+**Phase 4c — Output integration.** Sensitive media gets a front-end click-to-reveal
+blur overlay (`includes/output.php`, `render_block` filter) on the visual core blocks
+that render an attachment — **core/image, core/video, core/post-featured-image**. This
+is a viewer content warning, not access control: the file is never altered or withheld,
+and the blur applies to **everyone including the owner** (a warning is a viewer choice,
+not a permission). Assets load only on the front end in Independent mode; editor / REST
+block-renderer previews are left untouched. **Scope decisions:** audio is skipped (no
+visual surface); OG/oEmbed preview exclusion is deferred (embed-template territory);
+post-level flagging is out of scope (not a media-plugin role). Feed (Atom/MRSS)
+sensitivity/rights serialization already exists in `feeds.php` and is not re-touched
+here.
 
-**Acceptance:** `geo_visibility=hidden` suppresses location in plugin-rendered output;
-license conditions are represented consistently; sensitive media is blurred +
-excluded from OG preview; a moderator sensitivity lock is not owner-clearable.
-**Non-goals:** federation rights re-check (Phase 7).
+**Acceptance:** a sensitive attachment rendered through core/image, core/video, or
+core/post-featured-image is blurred with its content-warning text and a Show button on
+the front end; Core mode and the editor are untouched; the warning text is escaped; a
+moderator sensitivity lock remains not owner-clearable (Phase 4a).
+**Non-goals:** audio warnings; OG-preview exclusion; post flagging; federation rights
+re-check (Phase 7).
 
 ## Phase 5a — Collection / Save (URI-first container)
 

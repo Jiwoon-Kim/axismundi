@@ -93,6 +93,14 @@ try {
 		$r = axismundi_media_move_attachments( array( $ax_att_a ), $ax_f_a, $ax_alice );
 		ax_audit_assert( $ax_results, 'Alice moves her own attachment', ! is_wp_error( $r ) && 1 === count( $r['moved'] ) );
 
+		wp_set_current_user( $ax_alice );
+		$saved = axismundi_media_attachment_save(
+			array( 'ID' => $ax_att_a ),
+			array( 'ax_media_folder' => '0' )
+		);
+		ax_audit_assert( $ax_results, 'Attachment Details saves Location changes', $ax_att_a === (int) $saved['ID'] && 0 === axismundi_media_attachment_folder( $ax_att_a ) );
+		axismundi_media_move_attachments( array( $ax_att_a ), $ax_f_a, $ax_alice );
+
 		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_a, $ax_alice );
 		ax_audit_assert( $ax_results, "Alice cannot move Bob's attachment (attachment IDOR)", ! is_wp_error( $r ) && 0 === count( $r['moved'] ) && 1 === count( $r['denied'] ) );
 
@@ -106,6 +114,11 @@ try {
 
 		$ax_af = array_map( 'intval', wp_list_pluck( axismundi_media_user_folders( $ax_alice ), 'id' ) );
 		ax_audit_assert( $ax_results, 'Alice folder list is owner-isolated', in_array( $ax_f_a, $ax_af, true ) && ! in_array( $ax_f_b, $ax_af, true ) );
+
+		$_REQUEST['query'] = array( 'ax_media_folder' => 'unfiled' );
+		$unfiled_args      = axismundi_media_modal_folder_query( array() );
+		ax_audit_assert( $ax_results, 'Unfiled media-modal query is scoped to the current uploader', $ax_alice === (int) ( $unfiled_args['author'] ?? 0 ) );
+		unset( $_REQUEST['query'] );
 
 		ax_audit_assert( $ax_results, 'Admin (edit_others_posts) can audit/manage any folder', axismundi_media_can_manage_folder( $ax_f_b, $ax_admin ) );
 		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_b, $ax_admin );

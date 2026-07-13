@@ -38,6 +38,20 @@ function axismundi_media_modal_folder_options() : array {
 }
 
 /**
+ * The current user's valid upload target, or Unfiled.
+ *
+ * @return int
+ */
+function axismundi_media_active_upload_folder() : int {
+	$user_id = get_current_user_id();
+	$folder  = absint( get_user_meta( $user_id, '_ax_media_active_folder', true ) );
+	if ( $folder <= 0 || axismundi_media_is_root_term( $folder ) || axismundi_media_folder_owner( $folder ) !== $user_id ) {
+		return 0;
+	}
+	return $folder;
+}
+
+/**
  * The upload.php view mode ('grid' or 'list'). The `mode` query arg wins; otherwise
  * the saved per-user preference, defaulting to grid.
  *
@@ -118,6 +132,87 @@ function axismundi_media_enqueue_modal_folders() : void {
 add_action( 'admin_enqueue_scripts', 'axismundi_media_enqueue_modal_folders', 20 );
 
 /**
+ * Enqueue the Add New Media folder selector behaviour.
+ *
+ * @param string $hook_suffix Admin page hook.
+ * @return void
+ */
+function axismundi_media_enqueue_new_upload_folder( string $hook_suffix ) : void {
+	if ( 'media-new.php' !== $hook_suffix || ! axismundi_media_is_independent() || ! current_user_can( 'upload_files' ) ) {
+		return;
+	}
+
+	$base = dirname( __DIR__ ) . '/axismundi-media-library.php';
+	$path = dirname( __DIR__ ) . '/assets/media-new-folder.js';
+	wp_enqueue_script(
+		'axismundi-media-new-folder',
+		plugins_url( 'assets/media-new-folder.js', $base ),
+		array( 'plupload-handlers' ),
+		file_exists( $path ) ? (string) filemtime( $path ) : false,
+		true
+	);
+	wp_localize_script(
+		'axismundi-media-new-folder',
+		'axMediaNewFolder',
+		array(
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'ax_media_upload_folder' ),
+			'error'   => __( 'The upload folder could not be changed.', 'axismundi-media-library' ),
+		)
+	);
+}
+add_action( 'admin_enqueue_scripts', 'axismundi_media_enqueue_new_upload_folder', 25 );
+
+/**
+ * Render a folder target above the standalone media uploader.
+ *
+ * @return void
+ */
+function axismundi_media_render_new_upload_folder() : void {
+	if ( ! axismundi_media_is_independent() || ! current_user_can( 'upload_files' ) || 'media-new.php' !== ( $GLOBALS['pagenow'] ?? '' ) ) {
+		return;
+	}
+
+	$current = axismundi_media_active_upload_folder();
+	?>
+	<div class="ax-media-upload-folder">
+		<label for="ax-media-upload-folder"><strong><?php esc_html_e( 'Upload to folder', 'axismundi-media-library' ); ?></strong></label>
+		<select id="ax-media-upload-folder" name="ax_media_folder">
+			<option value="0" <?php selected( 0, $current ); ?>><?php esc_html_e( 'Unfiled', 'axismundi-media-library' ); ?></option>
+			<?php foreach ( axismundi_media_modal_folder_options() as $folder ) : ?>
+				<option value="<?php echo (int) $folder['id']; ?>" <?php selected( (int) $folder['id'], $current ); ?>><?php echo esc_html( $folder['label'] ); ?></option>
+			<?php endforeach; ?>
+		</select>
+		<p class="description"><?php esc_html_e( 'All files selected in this upload batch will use this location.', 'axismundi-media-library' ); ?></p>
+		<p class="ax-media-upload-folder-status" role="status" aria-live="polite"></p>
+	</div>
+	<?php
+}
+add_action( 'pre-upload-ui', 'axismundi_media_render_new_upload_folder' ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores
+
+/**
+ * Persist the standalone uploader target before Plupload starts a batch.
+ *
+ * @return void
+ */
+function axismundi_media_ajax_set_upload_folder() : void {
+	check_ajax_referer( 'ax_media_upload_folder', 'nonce' );
+	if ( ! axismundi_media_is_independent() || ! current_user_can( 'upload_files' ) ) {
+		wp_send_json_error( array( 'message' => __( 'You cannot select an upload folder.', 'axismundi-media-library' ) ), 403 );
+	}
+
+	$folder  = isset( $_POST['folder'] ) ? absint( $_POST['folder'] ) : 0;
+	$user_id = get_current_user_id();
+	if ( $folder > 0 && ( axismundi_media_is_root_term( $folder ) || axismundi_media_folder_owner( $folder ) !== $user_id ) ) {
+		wp_send_json_error( array( 'message' => __( 'That folder is not available.', 'axismundi-media-library' ) ), 403 );
+	}
+
+	update_user_meta( $user_id, '_ax_media_active_folder', $folder );
+	wp_send_json_success( array( 'folder' => $folder ) );
+}
+add_action( 'wp_ajax_axismundi_media_set_upload_folder', 'axismundi_media_ajax_set_upload_folder' );
+
+/**
  * Filter the list-mode Media Library table by the selected folder (grid mode uses
  * the ajax query filter below instead). Owner/editor rights are enforced; an
  * unauthorized or invalid folder yields an empty result rather than leaking.
@@ -137,10 +232,12 @@ function axismundi_media_list_folder_filter( WP_Query $query ) : void {
 	}
 	$folder = (int) $_GET['ax_media_folder']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	if ( 0 === $folder ) {
+		$query->set( 'author', get_current_user_id() );
 		$query->set( 'tax_query', array( array( 'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX, 'operator' => 'NOT EXISTS' ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 		return;
 	}
 	if ( $folder > 0 && ! axismundi_media_is_root_term( $folder ) && axismundi_media_can_manage_folder( $folder ) ) {
+		$query->set( 'author', axismundi_media_folder_owner( $folder ) );
 		$query->set( 'tax_query', array( array( 'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX, 'field' => 'term_id', 'terms' => array( $folder ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 	} else {
 		$query->set( 'post__in', array( 0 ) );
@@ -172,6 +269,7 @@ function axismundi_media_modal_folder_query( array $args ) : array {
 	if ( -1 === $folder ) {
 		return $args;
 	}
+	$args['author'] = 0 === $folder ? get_current_user_id() : axismundi_media_folder_owner( $folder );
 	$clause = array(
 		'taxonomy' => AXISMUNDI_MEDIA_FOLDER_TAX,
 		'operator' => 'NOT EXISTS',
@@ -207,7 +305,7 @@ function axismundi_media_assign_uploaded_folder( int $attachment_id ) : void {
 	}
 	$folder = isset( $_REQUEST['ax_media_folder'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended -- Core upload request verifies its own upload nonce.
 		? absint( $_REQUEST['ax_media_folder'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.NonceVerification.Recommended
-		: absint( get_user_meta( get_current_user_id(), '_ax_media_active_folder', true ) );
+		: axismundi_media_active_upload_folder();
 	if (
 		$folder <= 0
 		|| ! axismundi_media_folder_accepts_attachment( $attachment_id, $folder )
@@ -220,6 +318,7 @@ function axismundi_media_assign_uploaded_folder( int $attachment_id ) : void {
 	if ( ! axismundi_media_set_attachment_folder( $attachment_id, $folder ) ) {
 		return;
 	}
+	update_user_meta( get_current_user_id(), '_ax_media_active_folder', $folder );
 	// Snapshot the folder default license onto the new upload (Phase 4b). Later
 	// moves never re-stamp, and an attachment-set license is never overwritten.
 	if ( function_exists( 'axismundi_media_stamp_folder_default_license' ) ) {

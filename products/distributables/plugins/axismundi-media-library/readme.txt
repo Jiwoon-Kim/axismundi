@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.23
+Stable tag: 0.0.24
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,13 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.24 =
+* Scope Unfiled to the current user's uploads while keeping All media available
+  as the complete capability-filtered library view.
+* Add an Upload to folder selector to Media > Add New for both Plupload and the
+  browser uploader, using the same ownership checks as modal uploads and moves.
+* Cover Attachment Details Location saves with a regression fixture.
 
 = 0.0.23 =
 * Enforce that an Attachment can only be assigned to a virtual folder owned by

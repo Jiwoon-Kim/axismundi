@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.8
+Stable tag: 0.0.9
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,20 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.9 =
+* Phase 4b — actor avatar & header images. Schema v3 adds avatar_attachment_id and
+  header_attachment_id to wp_ax_actors (two fixed slots, no separate table); the
+  version is only recorded once the columns exist. The Actor Profile and Settings >
+  Actor Profile screens gain a core Media picker (assets loaded only there) for both
+  the current user's Person actor and the site actor. The public profile renders the
+  header cover and an avatar with srcset via wp_get_attachment_image; avatar falls
+  back to the core avatar / site icon, the header shows nothing when unset.
+* A shared setter validates that the image is an attachment, an image MIME type, and
+  editable by the current user, then runs the axismundi_actors_can_use_profile_media
+  filter (the seam for a future Media Library private/sensitive policy). Removing an
+  image only nulls the reference, and deleting an attachment auto-releases any actor
+  avatar/header that pointed at it — the file is never deleted by this plugin.
 
 = 0.0.8 =
 * Tighten the local actor handle rule for mention interoperability: lowercase

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '2';
+const AXISMUNDI_ACTORS_DB_VERSION = '3';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -71,6 +71,8 @@ function axismundi_actors_install() : void {
 			inbox_uri text DEFAULT NULL,
 			outbox_uri text DEFAULT NULL,
 			payload_json longtext DEFAULT NULL,
+			avatar_attachment_id bigint(20) unsigned DEFAULT NULL,
+			header_attachment_id bigint(20) unsigned DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
@@ -92,7 +94,13 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off upgrade backfill on a custom table.
 	$wpdb->query( "UPDATE {$actors} SET handle_locked_at = updated_at WHERE local_handle_key IS NOT NULL AND handle_locked_at IS NULL" );
 
-	update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
+	// Only record the schema version once the new columns actually exist, so a
+	// failed upgrade retries next load rather than being marked done.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	if ( in_array( 'avatar_attachment_id', $columns, true ) && in_array( 'header_attachment_id', $columns, true ) ) {
+		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
+	}
 }
 
 /**
@@ -135,6 +143,14 @@ final class Axismundi_Actor {
 
 	public function is_handle_locked() : bool {
 		return ! empty( $this->row['handle_locked_at'] );
+	}
+
+	public function get_avatar_attachment_id() : int {
+		return (int) ( $this->row['avatar_attachment_id'] ?? 0 );
+	}
+
+	public function get_header_attachment_id() : int {
+		return (int) ( $this->row['header_attachment_id'] ?? 0 );
 	}
 
 	public function get_profile_url() : string {
@@ -387,6 +403,86 @@ function axismundi_actors_get_by_handle( string $handle ) : ?Axismundi_Actor {
 function axismundi_actors_get_for_user( int $user_id ) : ?Axismundi_Actor {
 	return $user_id > 0 ? axismundi_actors_query_one( 'a.local_user_id = %d', $user_id ) : null;
 }
+
+/**
+ * @param int $identity_id Identity/actor key.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_get_by_identity( int $identity_id ) : ?Axismundi_Actor {
+	return $identity_id > 0 ? axismundi_actors_query_one( 'i.id = %d', $identity_id ) : null;
+}
+
+/**
+ * Set (attachment id) or clear (0) an actor's avatar or header image. The shared
+ * gate for both admin surfaces: it must be an image attachment the viewer may edit,
+ * and the `axismundi_actors_can_use_profile_media` filter must allow it (the seam
+ * for a future Media Library private/sensitive policy). Clearing only nulls the
+ * reference — the attachment file is never deleted.
+ *
+ * @param Axismundi_Actor $actor         Target actor.
+ * @param string          $role          avatar | header.
+ * @param int             $attachment_id Attachment id, or 0 to clear.
+ * @param int|null        $viewer        Acting user; defaults to current.
+ * @return true|WP_Error
+ */
+function axismundi_actors_set_profile_media( Axismundi_Actor $actor, string $role, int $attachment_id, ?int $viewer = null ) {
+	global $wpdb;
+	if ( ! in_array( $role, array( 'avatar', 'header' ), true ) ) {
+		return new WP_Error( 'ax_actors_media_role', __( 'Unknown media role.', 'axismundi-actors' ) );
+	}
+	$column = 'avatar' === $role ? 'avatar_attachment_id' : 'header_attachment_id';
+	$viewer = null === $viewer ? get_current_user_id() : $viewer;
+	$value  = null;
+	if ( $attachment_id > 0 ) {
+		if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+			return new WP_Error( 'ax_actors_media_attachment', __( 'That is not an attachment.', 'axismundi-actors' ) );
+		}
+		if ( 0 !== strpos( (string) get_post_mime_type( $attachment_id ), 'image/' ) ) {
+			return new WP_Error( 'ax_actors_media_image', __( 'The avatar and header must be images.', 'axismundi-actors' ) );
+		}
+		if ( ! user_can( $viewer, 'edit_post', $attachment_id ) ) {
+			return new WP_Error( 'ax_actors_media_cap', __( 'You cannot use that image.', 'axismundi-actors' ) );
+		}
+		/**
+		 * Allow or deny an attachment as an actor avatar / header. A future Media
+		 * Library integration can deny private or sensitive media here.
+		 *
+		 * @param bool            $allowed       Whether it may be used.
+		 * @param int             $attachment_id Attachment id.
+		 * @param Axismundi_Actor $actor         Target actor.
+		 * @param string          $role          avatar | header.
+		 */
+		if ( ! (bool) apply_filters( 'axismundi_actors_can_use_profile_media', true, $attachment_id, $actor, $role ) ) {
+			return new WP_Error( 'ax_actors_media_denied', __( 'That image cannot be used here.', 'axismundi-actors' ) );
+		}
+		$value = $attachment_id;
+	}
+	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		axismundi_actors_actors_table(),
+		array( $column => $value, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $actor->get_identity_id() ),
+		array( '%d', '%s' ),
+		array( '%d' )
+	);
+	return false === $done ? new WP_Error( 'ax_actors_media_save', __( 'Could not save the image.', 'axismundi-actors' ) ) : true;
+}
+
+/**
+ * Release avatar / header references to a deleted attachment (logical cleanup; the
+ * attachment itself is deleted by core, not here).
+ *
+ * @param int $post_id Deleted attachment id.
+ * @return void
+ */
+function axismundi_actors_clear_deleted_attachment( int $post_id ) : void {
+	global $wpdb;
+	$actors = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	$wpdb->query( $wpdb->prepare( "UPDATE {$actors} SET avatar_attachment_id = NULL WHERE avatar_attachment_id = %d", $post_id ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	$wpdb->query( $wpdb->prepare( "UPDATE {$actors} SET header_attachment_id = NULL WHERE header_attachment_id = %d", $post_id ) );
+}
+add_action( 'delete_attachment', 'axismundi_actors_clear_deleted_attachment' );
 
 /**
  * The single local site actor, if seeded.

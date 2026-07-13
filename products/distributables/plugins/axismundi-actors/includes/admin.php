@@ -251,7 +251,7 @@ function axismundi_actors_render_wizard( Axismundi_Actor $actor, int $user_id ) 
 		</table>
 		<?php submit_button( __( 'Activate actor profile', 'axismundi-actors' ) ); ?>
 	</form>
-	<p class="description"><?php esc_html_e( 'Avatar, header image, and profile translations are added in a later update.', 'axismundi-actors' ); ?></p>
+	<p class="description"><?php esc_html_e( 'Avatar, header image, and profile translations can be set after activation.', 'axismundi-actors' ); ?></p>
 	<?php
 }
 
@@ -281,7 +281,8 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 			<?php submit_button( __( 'Publish (make public)', 'axismundi-actors' ) ); ?>
 		<?php endif; ?>
 	</form>
-	<p class="description"><?php esc_html_e( 'Avatar, header image, and profile translations are added in a later update.', 'axismundi-actors' ); ?></p>
+	<?php axismundi_actors_media_form( $actor ); ?>
+	<p class="description"><?php esc_html_e( 'Profile translations are added in a later update.', 'axismundi-actors' ); ?></p>
 	<?php
 }
 
@@ -323,7 +324,87 @@ function axismundi_actors_render_site_page() : void {
 		</table>
 		<?php submit_button( __( 'Save site actor', 'axismundi-actors' ) ); ?>
 	</form>
+	<?php axismundi_actors_media_form( $actor ); ?>
 	</div>
+	<?php
+}
+
+/* -------------------------------------------------------------------------- *
+ * Avatar / header media pickers (core Media modal; assets on these screens only).
+ * -------------------------------------------------------------------------- */
+
+/**
+ * Enqueue the Media modal + picker script only on the actor screens.
+ *
+ * @param string $hook Current admin page hook suffix.
+ * @return void
+ */
+function axismundi_actors_enqueue_media_picker( string $hook ) : void {
+	if ( 'users_page_axismundi-actor-profile' !== $hook && 'settings_page_axismundi-actor-site' !== $hook ) {
+		return;
+	}
+	wp_enqueue_media();
+	$base = dirname( __DIR__ ) . '/axismundi-actors.php';
+	$js   = dirname( __DIR__ ) . '/assets/actor-media.js';
+	wp_enqueue_script(
+		'axismundi-actors-media',
+		plugins_url( 'assets/actor-media.js', $base ),
+		array( 'jquery' ),
+		file_exists( $js ) ? (string) filemtime( $js ) : false,
+		true
+	);
+}
+add_action( 'admin_enqueue_scripts', 'axismundi_actors_enqueue_media_picker' );
+
+/**
+ * One avatar/header picker field (preview + hidden id + select/remove buttons).
+ *
+ * @param string $role          avatar | header.
+ * @param int    $attachment_id Current attachment id (0 = none).
+ * @return void
+ */
+function axismundi_actors_media_field( string $role, int $attachment_id ) : void {
+	?>
+	<div class="ax-actor-media-field" data-role="<?php echo esc_attr( $role ); ?>">
+		<div class="ax-actor-media-preview">
+			<?php
+			if ( $attachment_id > 0 ) {
+				echo wp_get_attachment_image( $attachment_id, 'thumbnail', false, array( 'style' => 'max-width:150px;height:auto;' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core-generated image markup.
+			}
+			?>
+		</div>
+		<input type="hidden" name="<?php echo esc_attr( $role ); ?>_attachment_id" value="<?php echo esc_attr( (string) $attachment_id ); ?>">
+		<button type="button" class="button ax-actor-media-select"><?php esc_html_e( 'Select image', 'axismundi-actors' ); ?></button>
+		<button type="button" class="button-link ax-actor-media-remove"><?php esc_html_e( 'Remove', 'axismundi-actors' ); ?></button>
+	</div>
+	<?php
+}
+
+/**
+ * The avatar + header form for one actor (Person management or site settings).
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return void
+ */
+function axismundi_actors_media_form( Axismundi_Actor $actor ) : void {
+	?>
+	<h2><?php esc_html_e( 'Avatar & header', 'axismundi-actors' ); ?></h2>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="axismundi_actors_set_media">
+		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $actor->get_identity_id() ); ?>">
+		<?php wp_nonce_field( 'ax_actors_media_' . $actor->get_identity_id() ); ?>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Avatar', 'axismundi-actors' ); ?></th>
+				<td><?php axismundi_actors_media_field( 'avatar', $actor->get_avatar_attachment_id() ); ?><p class="description"><?php esc_html_e( 'Square image. Falls back to your Gravatar / site icon when empty.', 'axismundi-actors' ); ?></p></td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Header image', 'axismundi-actors' ); ?></th>
+				<td><?php axismundi_actors_media_field( 'header', $actor->get_header_attachment_id() ); ?><p class="description"><?php esc_html_e( 'Wide cover image. Not shown when empty.', 'axismundi-actors' ); ?></p></td>
+			</tr>
+		</table>
+		<?php submit_button( __( 'Save images', 'axismundi-actors' ) ); ?>
+	</form>
 	<?php
 }
 
@@ -401,3 +482,26 @@ function axismundi_actors_handle_site_settings() : void {
 	axismundi_actors_redirect_result( $back, true );
 }
 add_action( 'admin_post_axismundi_actors_site_settings', 'axismundi_actors_handle_site_settings' );
+
+/** @return void */
+function axismundi_actors_handle_set_media() : void {
+	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_media_' . $identity_id );
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
+		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$result = true;
+	foreach ( array( 'avatar', 'header' ) as $role ) {
+		$attachment_id = isset( $_POST[ $role . '_attachment_id' ] ) ? absint( $_POST[ $role . '_attachment_id' ] ) : 0;
+		$outcome       = axismundi_actors_set_profile_media( $actor, $role, $attachment_id );
+		if ( is_wp_error( $outcome ) && ! is_wp_error( $result ) ) {
+			$result = $outcome;
+		}
+	}
+	$back = 'site' === $actor->get_scope()
+		? admin_url( 'options-general.php?page=axismundi-actor-site' )
+		: axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
+	axismundi_actors_redirect_result( $back, $result );
+}
+add_action( 'admin_post_axismundi_actors_set_media', 'axismundi_actors_handle_set_media' );

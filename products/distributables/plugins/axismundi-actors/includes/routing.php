@@ -199,6 +199,40 @@ function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
 	);
 }
 
+/**
+ * Avatar markup: the actor's avatar attachment (with srcset), else a core avatar
+ * for a local Person, else the site icon for the site actor, else ''.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @param int             $size  Square size in px.
+ * @return string
+ */
+function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) : string {
+	$attachment_id = $actor->get_avatar_attachment_id();
+	if ( $attachment_id > 0 ) {
+		return (string) wp_get_attachment_image( $attachment_id, array( $size, $size ), false, array( 'class' => 'ax-actor-profile__avatar', 'alt' => '' ) );
+	}
+	if ( 'site' === $actor->get_scope() ) {
+		$icon = (string) get_site_icon_url( $size );
+		return '' !== $icon ? '<img class="ax-actor-profile__avatar" src="' . esc_url( $icon ) . '" alt="" width="' . (int) $size . '" height="' . (int) $size . '" />' : '';
+	}
+	$user_id = $actor->get_local_user_id();
+	return $user_id ? (string) get_avatar( $user_id, $size, '', '', array( 'class' => 'ax-actor-profile__avatar' ) ) : '';
+}
+
+/**
+ * Header (cover) markup: the actor's header attachment, else '' (no fallback).
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return string
+ */
+function axismundi_actors_header_html( Axismundi_Actor $actor ) : string {
+	$attachment_id = $actor->get_header_attachment_id();
+	return $attachment_id > 0
+		? (string) wp_get_attachment_image( $attachment_id, 'large', false, array( 'class' => 'ax-actor-profile__header-image', 'alt' => '' ) )
+		: '';
+}
+
 /** @return string */
 function axismundi_actors_profile_template_content() : string {
 	$path = __DIR__ . '/../templates/actor-profile.php';

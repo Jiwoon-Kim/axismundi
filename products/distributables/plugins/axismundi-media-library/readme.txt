@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.13
+Stable tag: 0.0.14
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,19 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.14 =
+* Phase 4a — sensitive authority. `_ax_media_sensitive` becomes a derived, read-only
+  effective boolean; the authority lives in `_ax_media_sensitive_state` (none /
+  self_marked / automated_flagged / moderator_marked / confirmed) with set-by, set-at,
+  and a locked flag.
+* An owner may self-mark and clear their own mark, but cannot clear a moderator or
+  confirmed lock, and can only appeal (not self-clear) an automated flag — closing the
+  Phase 2c audit gap. Capabilities moderate_media_sensitivity / override_media_sensitivity
+  (editors) and mark_own_media_sensitive (uploaders) map from existing roles.
+* Attachment Details shows the state: moderators get a state selector, owners a
+  self-mark checkbox while unlocked, and a read-only note when locked. Feeds and Media
+  Collections keep reading the effective boolean, so nothing downstream changes.
 
 = 0.0.13 =
 * Add the dual-key Used-in relation index (`wp_ax_media_relations`) with local-ID

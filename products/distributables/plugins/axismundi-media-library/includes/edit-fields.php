@@ -276,12 +276,25 @@ function axismundi_media_attachment_fields( array $form_fields, WP_Post $post ) 
 		),
 	);
 
-	$sensitive = get_post_meta( $post->ID, '_ax_media_sensitive', true );
+	// Sensitivity authority (Phase 4a): moderators pick a state; owners get a self-mark
+	// checkbox only while it is not locked; a moderator/automated lock is read-only.
+	$sensitive_state  = axismundi_media_sensitive_state( $post->ID );
+	$sensitive_labels = axismundi_media_sensitive_state_labels();
+	if ( current_user_can( 'moderate_media_sensitivity' ) ) {
+		$sensitive_html = axismundi_media_attachment_select( $post->ID, 'ax_media_sensitive_state', $sensitive_state, $sensitive_labels );
+	} elseif ( ! axismundi_media_sensitive_locked( $post->ID ) && in_array( $sensitive_state, array( 'none', 'self_marked' ), true ) ) {
+		$sensitive_html = '<label><input type="checkbox" name="attachments[' . (int) $post->ID . '][ax_media_sensitive]" value="1"' . checked( $sensitive_state, 'self_marked', false ) . ' /> ' . esc_html__( 'Flag this item as sensitive', 'axismundi-media-library' ) . '</label>';
+	} else {
+		$sensitive_note = 'automated_flagged' === $sensitive_state
+			? esc_html__( 'Automatically flagged — you may request review; a moderator can clear it.', 'axismundi-media-library' )
+			: esc_html__( 'Set by a moderator — you cannot change this.', 'axismundi-media-library' );
+		$sensitive_html = '<strong>' . esc_html( $sensitive_labels[ $sensitive_state ] ?? $sensitive_state ) . '</strong><br /><span class="description">' . $sensitive_note . '</span>';
+	}
 	$form_fields['ax_media_sensitive'] = array(
 		'label' => __( 'Sensitive media', 'axismundi-media-library' ),
 		'input' => 'html',
-		'html'  => '<label><input type="checkbox" name="attachments[' . (int) $post->ID . '][ax_media_sensitive]" value="1"' . checked( $sensitive, '1', false ) . ' /> ' . esc_html__( 'Flag this item as sensitive', 'axismundi-media-library' ) . '</label>',
-		'helps' => __( 'Stored metadata only in this release; it does not blur or hide the file.', 'axismundi-media-library' ),
+		'html'  => $sensitive_html,
+		'helps' => __( 'Owners can self-mark; a moderator lock cannot be cleared by the owner. Stored metadata only in this release.', 'axismundi-media-library' ),
 	);
 	$form_fields['ax_media_content_warning'] = array(
 		'label' => __( 'Content warning', 'axismundi-media-library' ),
@@ -409,7 +422,14 @@ function axismundi_media_attachment_save( array $post, array $attachment ) : arr
 			: $config['default'];
 		update_post_meta( $post_id, $config['meta'], $value );
 	}
-	update_post_meta( $post_id, '_ax_media_sensitive', empty( $attachment['ax_media_sensitive'] ) ? '0' : '1' );
+	// Sensitivity authority: route through the enforcing setter (defense in depth —
+	// it denies a moderator-only target or a locked change even if the control was
+	// bypassed). Moderators submit a state; owners submit the self-mark checkbox.
+	if ( array_key_exists( 'ax_media_sensitive_state', $attachment ) ) {
+		axismundi_media_set_sensitive_state( $post_id, (string) $attachment['ax_media_sensitive_state'] );
+	} elseif ( ! axismundi_media_sensitive_locked( $post_id ) && in_array( axismundi_media_sensitive_state( $post_id ), array( 'none', 'self_marked' ), true ) ) {
+		axismundi_media_set_sensitive_state( $post_id, empty( $attachment['ax_media_sensitive'] ) ? 'none' : 'self_marked' );
+	}
 
 	return $post;
 }

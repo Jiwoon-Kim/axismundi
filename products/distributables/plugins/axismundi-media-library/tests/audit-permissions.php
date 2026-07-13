@@ -108,14 +108,11 @@ try {
 		$r = axismundi_media_move_attachments( array( $ax_att_b ), $ax_f_b, $ax_admin );
 		ax_audit_assert( $ax_results, "Admin can move another user's attachment", ! is_wp_error( $r ) && 1 === count( $r['moved'] ) );
 
-		// Admin marks Alice's media sensitive; today's boolean model lets the owner
-		// clear it (owner has edit_post). Recorded as the Phase 4 authority gap.
-		update_post_meta( $ax_att_a, '_ax_media_sensitive', '1' );
-		if ( user_can( $ax_alice, 'edit_post', $ax_att_a ) ) {
-			ax_audit_gap( $ax_results, 'Owner can clear an admin-set sensitive flag', 'boolean model; Phase 4 sensitive authority (state+set_by+locked) — SECURITY.md §2.4' );
-		} else {
-			ax_audit_assert( $ax_results, 'Owner cannot clear an admin-set sensitive flag', true );
-		}
+		// Phase 4a resolved the earlier gap: a moderator (admin) sensitivity lock cannot
+		// be cleared by the owner.
+		axismundi_media_set_sensitive_state( $ax_att_a, 'moderator_marked', $ax_admin );
+		ax_audit_assert( $ax_results, 'Owner cannot clear a moderator-set sensitive flag (Phase 4a)', is_wp_error( axismundi_media_set_sensitive_state( $ax_att_a, 'none', $ax_alice ) ) && axismundi_media_is_sensitive( $ax_att_a ) );
+		axismundi_media_set_sensitive_state( $ax_att_a, 'none', $ax_admin );
 	}
 } finally {
 	wp_set_current_user( $ax_admin > 0 ? $ax_admin : 1 );

@@ -158,14 +158,32 @@ reverse matching; folder password (shipped 2b).
 
 ## Phase 4 — Rights, sensitivity, GPS/EXIF, download
 
-**Entry:** Phase 3.
-**Build:** enforce license/attribution/reuse/save policy; sensitive/content-warning
-UI (blur/warn); **GPS enforcement = actual EXIF strip** of delivered files
-(derivatives + original re-save) — only now may "GPS hidden" be *claimed*; download
-policy (original/derivative-only/disabled); folder default inheritance.
+**Entry:** Phase 3. Split 4a → 4b → 4c → 4d.
+
+**Phase 4a — Sensitive authority *(shipped, v0.0.14)*.** `_ax_media_sensitive` is a
+derived read-only effective boolean; the authority is `_ax_media_sensitive_state`
+(none/self_marked/automated_flagged/moderator_marked/confirmed) + set_by/set_at/locked
+(DATA-MODEL §2.3, SECURITY §2.4). Owner may self-mark/clear own; cannot clear a
+moderator/confirmed lock; may only appeal an automated flag — closes the Phase 2c gap.
+Caps `moderate_media_sensitivity`/`override_media_sensitivity` (edit_others) and
+`mark_own_media_sensitive` (upload_files) map from existing roles. Enforcing setter
+`axismundi_media_set_sensitive_state()`; Attachment-Details state UI. Feeds/collections
+keep reading the effective boolean.
+
+**Phase 4b — Rights & policy.** Enforce license/attribution/reuse/download policy
+(original / derivative-only / disabled); folder default inheritance; reuse/save flags
+gate the (Phase 5) Save button.
+
+**Phase 4c — GPS/EXIF.** From storing only the `hidden` flag to an actual EXIF strip of
+delivered files (derivatives + original re-save); check derivatives and the delivered
+original — only then may "GPS hidden" be *claimed* as a security feature.
+
+**Phase 4d — Output integration.** Sensitive blur/warning; OG-preview exclusion;
+align Atom/MRSS + attachment page policy; prepare Phase 5 Save reuse gating.
+
 **Acceptance:** `geo_visibility=hidden` yields no GPS in any delivered file;
 reuse/save flags gate the (Phase 5) Save button; sensitive media is blurred +
-excluded from OG preview.
+excluded from OG preview; a moderator sensitivity lock is not owner-clearable.
 **Non-goals:** federation rights re-check (Phase 7).
 
 ## Phase 5a — Collection / Save (URI-first container)

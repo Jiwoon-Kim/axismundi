@@ -133,6 +133,12 @@ per-actor decision, not one giant site actor:
   `Collection` are objects in the identity registry with `attributedTo` an actor and
   **no** inbox/outbox — created by the geodata / Media Library plugins, never by
   Actors (DATA-MODEL §2).
+- **A shared folder is a `Collection`, not a `Group`.** Multiple members do not make
+  it an actor: a shared folder has no inbox/outbox, receives no Follows, and emits no
+  activity — it is the **`target`** of `Add`/`Remove` and an `OrderedCollection`
+  (ordered by `_ax_media_folder_added_at`) `attributedTo` its owner. A `Group` actor
+  appears only when a collaboration *team* needs its own identity, and it then *owns*
+  one or more shared-folder Collections.
 
 ## 5. v0.1 scope
 

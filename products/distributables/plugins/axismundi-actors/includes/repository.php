@@ -484,6 +484,29 @@ function axismundi_actors_set_status( int $identity_id, string $status ) : bool 
 }
 
 /**
+ * Set a local actor's ActivityStreams type (e.g. the site actor Application ↔
+ * Organization). Person/user actors keep `Person`.
+ *
+ * @param int    $identity_id Identity key.
+ * @param string $type        Person | Organization | Application | Service | Group.
+ * @return bool
+ */
+function axismundi_actors_set_actor_type( int $identity_id, string $type ) : bool {
+	global $wpdb;
+	if ( ! in_array( $type, array( 'Person', 'Organization', 'Application', 'Service', 'Group' ), true ) ) {
+		return false;
+	}
+	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		axismundi_actors_actors_table(),
+		array( 'actor_type' => $type, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $identity_id ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	);
+	return false !== $done;
+}
+
+/**
  * Idempotently seed the always-present site actor, and — only when the activating
  * user is a valid administrator — the site-owner Person actor. Never depends on a
  * specific account existing (docs/SPEC.md §4).

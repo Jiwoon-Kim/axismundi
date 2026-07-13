@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.6
+Stable tag: 0.0.7
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,18 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.7 =
+* Phase 4a — actor activation & profile management. Adds a Users > Actor Profile
+  screen with the activation wizard (choose a handle from user_nicename / nickname /
+  free input, normalized + reserved/dup checked, registered once and then permanent;
+  choose Internal or Public), a read-only summary panel on profile.php / user-edit,
+  an Actor status column on users.php, and a Settings > Actor Profile screen for the
+  site actor's type (Application / Organization) and visibility.
+* Activation is a dedicated nonce'd, capability-checked POST action — never mixed
+  into the profile.php save — so registering the immutable handle and publishing is
+  one explicit act. No forced login redirect. Avatar, header, and translations are
+  shown only as notices here (Phase 4b/4d) and are not saved yet.
 
 = 0.0.6 =
 * Remove the premature built-in Posts projection. The actor profile's primary

@@ -92,6 +92,10 @@ function axismundi_media_handle_folder_admin_action() : void {
 		if ( ! is_wp_error( $result ) ) {
 			$result = axismundi_media_set_folder_feed_enabled( $term_id, ! empty( $_POST['feed_enabled'] ) );
 		}
+		if ( ! is_wp_error( $result ) ) {
+			$default_license = isset( $_POST['default_license'] ) ? sanitize_key( wp_unslash( $_POST['default_license'] ) ) : '';
+			$result = axismundi_media_set_folder_default_license( $term_id, $default_license );
+		}
 	} elseif ( 'delete' === $operation ) {
 		$result = axismundi_media_delete_folder( $term_id );
 	} else {
@@ -144,6 +148,16 @@ function axismundi_media_render_folder_row( array $folder, array $children, int 
 				<input id="ax-folder-password-<?php echo esc_attr( (string) $term_id ); ?>" type="password" name="folder_password" placeholder="<?php echo esc_attr__( 'New password (leave blank to keep)', 'axismundi-media-library' ); ?>" autocomplete="new-password">
 				<?php $axismundi_feed_on = '0' !== (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_FEED_META, true ); ?>
 				<label title="<?php esc_attr_e( 'Public folders publish an Atom feed by default; uncheck to opt out.', 'axismundi-media-library' ); ?>"><input type="checkbox" name="feed_enabled" value="1" <?php checked( $axismundi_feed_on ); ?>> <?php esc_html_e( 'Feed', 'axismundi-media-library' ); ?></label>
+				<label class="screen-reader-text" for="ax-folder-license-<?php echo esc_attr( (string) $term_id ); ?>"><?php esc_html_e( 'Default license', 'axismundi-media-library' ); ?></label>
+				<select id="ax-folder-license-<?php echo esc_attr( (string) $term_id ); ?>" name="default_license" title="<?php esc_attr_e( 'License stamped onto new uploads into this folder (existing items are never changed).', 'axismundi-media-library' ); ?>">
+					<option value=""><?php esc_html_e( 'No default license', 'axismundi-media-library' ); ?></option>
+					<?php
+					$axismundi_folder_license = (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_DEFAULT_LICENSE_META, true );
+					foreach ( axismundi_media_license_options() as $axismundi_license_code => $axismundi_license_label ) :
+						?>
+						<option value="<?php echo esc_attr( (string) $axismundi_license_code ); ?>" <?php selected( $axismundi_folder_license, (string) $axismundi_license_code ); ?>><?php echo esc_html( (string) $axismundi_license_label ); ?></option>
+					<?php endforeach; ?>
+				</select>
 				<?php submit_button( __( 'Save', 'axismundi-media-library' ), 'secondary small', 'submit', false ); ?>
 			</form>
 		</td>

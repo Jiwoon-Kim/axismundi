@@ -17,6 +17,12 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * Per-folder default license (term meta). A folder with no default walks up its
+ * parent chain; see axismundi_media_folder_default_license().
+ */
+const AXISMUNDI_MEDIA_FOLDER_DEFAULT_LICENSE_META = '_ax_media_folder_default_license';
+
+/**
  * The canonical CC / Public-Domain URL for a license code ('' for ARR/unknown).
  *
  * @param string $code License code.
@@ -129,4 +135,81 @@ function axismundi_media_attribution_text( int $attachment_id ) : string {
 		$parts[] = '(' . $record['name'] . ')';
 	}
 	return trim( implode( ' ', $parts ) );
+}
+
+/**
+ * The nearest authored default license walking up a folder's parent chain, or ''
+ * when no folder in the chain declares one (the caller then falls back to
+ * all-rights-reserved at read time via axismundi_media_license_code()). An invalid
+ * stored value is skipped, not treated as a default.
+ *
+ * @param int $term_id Folder term ID.
+ * @return string
+ */
+function axismundi_media_folder_default_license( int $term_id ) : string {
+	if ( $term_id <= 0 || ! defined( 'AXISMUNDI_MEDIA_FOLDER_TAX' ) ) {
+		return '';
+	}
+	$options = function_exists( 'axismundi_media_license_options' ) ? axismundi_media_license_options() : array();
+	$visited = array();
+	while ( $term_id > 0 && ! isset( $visited[ $term_id ] ) ) {
+		$visited[ $term_id ] = true;
+		$code = (string) get_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_DEFAULT_LICENSE_META, true );
+		if ( '' !== $code && isset( $options[ $code ] ) ) {
+			return $code;
+		}
+		$term    = get_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX );
+		$term_id = $term instanceof WP_Term ? (int) $term->parent : 0;
+	}
+	return '';
+}
+
+/**
+ * Set (or clear, with '') a folder's default license. Gated like the other folder
+ * setters: not the hidden root, and the actor must manage the folder.
+ *
+ * @param int      $term_id Folder term ID.
+ * @param string   $code    License code, or '' to clear.
+ * @param int|null $user_id Acting user.
+ * @return true|WP_Error
+ */
+function axismundi_media_set_folder_default_license( int $term_id, string $code, ?int $user_id = null ) {
+	$user_id = $user_id ?? get_current_user_id();
+	if ( axismundi_media_is_root_term( $term_id ) || ! axismundi_media_can_manage_folder( $term_id, $user_id ) ) {
+		return new WP_Error( 'ax_media_forbidden', __( 'Not allowed.', 'axismundi-media-library' ), array( 'status' => 403 ) );
+	}
+	if ( '' === $code ) {
+		delete_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_DEFAULT_LICENSE_META );
+		return true;
+	}
+	$options = function_exists( 'axismundi_media_license_options' ) ? axismundi_media_license_options() : array();
+	if ( ! isset( $options[ $code ] ) ) {
+		return new WP_Error( 'ax_media_folder_license', __( 'Invalid folder default license.', 'axismundi-media-library' ), array( 'status' => 400 ) );
+	}
+	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_DEFAULT_LICENSE_META, $code );
+	return true;
+}
+
+/**
+ * Stamp the folder default license onto a NEW upload — the single stamp service
+ * every upload path shares (docs/PHASES.md Phase 4b). It is a snapshot at upload,
+ * NOT dynamic inheritance: it runs only from add_attachment, never on a later move,
+ * and never overwrites a license the attachment already carries (contract 6-7). A
+ * folder chain with no default writes nothing (reads as all-rights-reserved).
+ *
+ * @param int $attachment_id Attachment ID.
+ * @param int $folder_id     Folder the upload landed in.
+ * @return void
+ */
+function axismundi_media_stamp_folder_default_license( int $attachment_id, int $folder_id ) : void {
+	if ( $folder_id <= 0 ) {
+		return;
+	}
+	if ( '' !== (string) get_post_meta( $attachment_id, '_ax_media_license', true ) ) {
+		return;
+	}
+	$default = axismundi_media_folder_default_license( $folder_id );
+	if ( '' !== $default ) {
+		update_post_meta( $attachment_id, '_ax_media_license', $default );
+	}
 }

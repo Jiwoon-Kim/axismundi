@@ -154,7 +154,7 @@ _ax_media_folder_access       open | password                         (Phase 2b 
 _ax_media_folder_password_hash                                        (Phase 2b)
 _ax_media_folder_effective_gated  0 | 1 (derived chain cache; Phase 2b)
 _ax_media_folder_cover_id     _ax_media_folder_sort_mode              (later)
-_ax_media_folder_default_license                                      (later)
+_ax_media_folder_default_license  license code stamped onto new uploads (Phase 4b)
 _ax_media_folder_default_sensitive  _ax_media_folder_feed_enabled     (later)
 ```
 

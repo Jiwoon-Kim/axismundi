@@ -170,14 +170,21 @@ Caps `moderate_media_sensitivity`/`override_media_sensitivity` (edit_others) and
 `axismundi_media_set_sensitive_state()`; Attachment-Details state UI. Feeds/collections
 keep reading the effective boolean.
 
-**Phase 4b — Rights & license semantics.** Normalize license/attribution/copyright/
-source; **folder default-license inheritance**; derive structured Creative Commons
-conditions from the selected license (attribution, share-alike, non-commercial, and
-derivative constraints) without a second mutable reuse-policy field; surface rights on
-the attachment page. Download policy is dropped — core does not restrict downloads and
-neither can this plugin without controlled delivery. Collection Save is a bookmark,
-not reuse, and is therefore gated by visibility rather than license; license checks
-apply later to Import/Copy, redistribution, and transformation.
+**Phase 4b — Rights & license semantics.** License is the single rights source of
+truth. The resolver (`includes/rights.php`, *shipped v0.0.17*) turns a license code
+into a canonical CC/PDM URL, display name, and derived Creative Commons conditions
+(attribution, share-alike, non-commercial, derivative constraints) without a second
+mutable reuse-policy field; all-rights-reserved / unknown grant nothing. **Folder
+default license** is a *snapshot stamped at upload*, not dynamic inheritance
+(`_ax_media_folder_default_license` term meta; `axismundi_media_stamp_folder_default_license()`
+runs only from `add_attachment`, resolves the nearest ancestor, falls back to
+all-rights-reserved at read time, never overwrites an attachment-set license, and a
+later folder move never re-stamps). Remaining 4b: the plugin-owned `axismundi/media-rights`
+display block + attachment-page auto-placement. Download policy is dropped — core does
+not restrict downloads and neither can this plugin without controlled delivery.
+Collection Save is a bookmark, not reuse, and is therefore gated by visibility rather
+than license; license checks apply later to Import/Copy, redistribution, and
+transformation.
 
 **Phase 4c — GPS/EXIF.** From storing only the `hidden` flag to an actual EXIF strip of
 delivered files (derivatives + original re-save); check derivatives and the delivered

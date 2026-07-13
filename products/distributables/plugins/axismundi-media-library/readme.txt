@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.17
+Stable tag: 0.0.18
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -36,6 +36,15 @@ dedicated attachment.html template.
 3. Choose Independent mode to enable independent-attachment visibility.
 
 == Changelog ==
+
+= 0.0.18 =
+* Phase 4b (folder default license) — each folder can set a default license
+  (Media > Folders). A new upload into that folder is stamped with the default as
+  a one-time snapshot: it resolves the nearest ancestor folder that declares one,
+  falls back to all-rights-reserved, and NEVER overwrites a license the upload
+  already carries. This is not dynamic inheritance — moving an existing item
+  between folders never changes its license. Every upload path (media modal, REST,
+  direct) shares the one stamp service on `add_attachment`.
 
 = 0.0.17 =
 * Phase 4b (resolver) — a single license/rights API. axismundi_media_license_record()

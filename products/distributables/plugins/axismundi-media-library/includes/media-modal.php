@@ -213,5 +213,10 @@ function axismundi_media_assign_uploaded_folder( int $attachment_id ) : void {
 	}
 	update_post_meta( $attachment_id, '_ax_media_visibility', 'inherit' );
 	axismundi_media_set_attachment_folder( $attachment_id, $folder );
+	// Snapshot the folder default license onto the new upload (Phase 4b). Later
+	// moves never re-stamp, and an attachment-set license is never overwritten.
+	if ( function_exists( 'axismundi_media_stamp_folder_default_license' ) ) {
+		axismundi_media_stamp_folder_default_license( $attachment_id, $folder );
+	}
 }
 add_action( 'add_attachment', 'axismundi_media_assign_uploaded_folder', 20 );

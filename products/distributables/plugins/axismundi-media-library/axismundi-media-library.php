@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Media Library
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-media-library
  * Description:       Promote WordPress attachments to independent media objects. Independent mode unbinds new uploads and adds visibility controls (public / unlisted / private) with per-surface access guards; Core mode leaves WordPress untouched.
- * Version:           0.0.17
+ * Version:           0.0.18
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON

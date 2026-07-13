@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.16
+Stable tag: 0.0.17
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -37,10 +37,21 @@ dedicated attachment.html template.
 
 == Changelog ==
 
+= 0.0.17 =
+* Phase 4b (resolver) — a single license/rights API. axismundi_media_license_record()
+  returns the code, display name, canonical CC/PDM URL, and derived reuse conditions
+  (attribution / commercial / derivatives / share-alike / known). The canonical URL
+  wins for standard codes so the code and URL can never disagree; all-rights-reserved
+  and unknown grant nothing. axismundi_media_attribution_text() prefers the authored
+  attribution and otherwise composes a display-only title + creator + license string.
+* Clean break: the plugin has no external installs yet, so there is no legacy license
+  alias, no `custom` value, and no reuse/download-policy migration — the resolver
+  treats any dropped/legacy code as all-rights-reserved. This is the last point to
+  finalize the schema cleanly.
+
 = 0.0.16 =
 * Drop the duplicate Reuse policy field. Creative Commons permissions and conditions
   derive from License, avoiding two mutable rights values that can drift apart.
-  Existing `_ax_media_reuse_policy` meta is left untouched for data preservation.
 * Clarify that Collection Save is a bookmark/reference gated by visibility, not a
   licensed reuse. License checks apply to later Import/Copy, redistribution, and
   transformation operations.
@@ -53,7 +64,6 @@ dedicated attachment.html template.
 * Drop the never-enforced Download policy field. Core does not restrict downloads and
   this plugin cannot either without Phase 6 controlled delivery, so a delivery-
   affordance hint that claimed to be a control has been removed rather than shipped.
-  Existing `_ax_media_download_policy` meta is left untouched.
 
 = 0.0.14 =
 * Phase 4a — sensitive authority. `_ax_media_sensitive` becomes a derived, read-only

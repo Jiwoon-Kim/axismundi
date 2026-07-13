@@ -184,13 +184,37 @@ final class Axismundi_Actor {
 }
 
 /**
- * Normalize a handle to its local uniqueness key (lowercased, slug-safe).
+ * Whether a string is a valid LOCAL actor handle. The rule is stricter than
+ * ActivityPub `preferredUsername` (which has no character rule) on purpose: local
+ * handles must survive naive `@\w+` mention parsers on other servers. So lowercase
+ * letters, digits, and underscores only (never hyphens or dots — `@kim-jiwoon`
+ * would be split to `@kim`), 1–30 chars, no leading/trailing underscore. See
+ * docs/DATA-MODEL.md §6 (mention-interop policy).
  *
- * @param string $handle Raw handle.
+ * @param string $key Candidate handle.
+ * @return bool
+ */
+function axismundi_actors_is_valid_handle( string $key ) : bool {
+	return 1 === preg_match( '/^[a-z0-9](?:[a-z0-9_]{0,28}[a-z0-9])?$/', $key );
+}
+
+/**
+ * Turn arbitrary text into a *suggested* handle (candidate stage only). Lowercase,
+ * fold hyphens/dots/spaces/other to underscore, collapse and trim underscores, cap
+ * at 30. Returns '' if nothing valid remains. This transform never runs at final
+ * registration — the handle is immutable, so `register_handle()` validates without
+ * silently changing what the user confirmed.
+ *
+ * @param string $raw Raw input.
  * @return string
  */
-function axismundi_actors_normalize_handle( string $handle ) : string {
-	return sanitize_title( $handle );
+function axismundi_actors_suggest_handle( string $raw ) : string {
+	$key = strtolower( remove_accents( $raw ) );
+	$key = (string) preg_replace( '/[^a-z0-9_]+/', '_', $key );
+	$key = (string) preg_replace( '/_+/', '_', $key );
+	$key = trim( $key, '_' );
+	$key = trim( substr( $key, 0, 30 ), '_' );
+	return axismundi_actors_is_valid_handle( $key ) ? $key : '';
 }
 
 /**
@@ -200,19 +224,20 @@ function axismundi_actors_normalize_handle( string $handle ) : string {
  * @return bool
  */
 function axismundi_actors_is_reserved_handle( string $key ) : bool {
-	$reserved = array( 'actors', 'ap', 'author', 'media', 'notes', 'feed', 'admin', 'login', 'wp-admin', 'wp-json', 'wp-login', 'wp-content', 'wp-includes' );
+	$reserved = array( 'actors', 'ap', 'author', 'media', 'notes', 'feed', 'admin', 'login', 'wp', 'wp_admin', 'wp_json', 'wp_login' );
 	return in_array( $key, $reserved, true );
 }
 
 /**
- * A local handle key not already taken (or reserved), suffixing on collision.
+ * A local handle key not already taken (or reserved), suffixing on collision with an
+ * underscore (never a hyphen — see the handle rule).
  *
  * @param string $base Desired handle.
  * @return string
  */
 function axismundi_actors_unique_local_handle( string $base ) : string {
 	global $wpdb;
-	$key = axismundi_actors_normalize_handle( $base );
+	$key = axismundi_actors_suggest_handle( $base );
 	if ( '' === $key || axismundi_actors_is_reserved_handle( $key ) ) {
 		$key = 'actor';
 	}
@@ -221,7 +246,7 @@ function axismundi_actors_unique_local_handle( string $base ) : string {
 	$i         = 2;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table existence probe.
 	while ( (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$actors} WHERE local_handle_key = %s", $candidate ) ) > 0 ) {
-		$candidate = $key . '-' . $i;
+		$candidate = substr( $key, 0, 27 ) . '_' . $i;
 		++$i;
 	}
 	return $candidate;
@@ -349,7 +374,7 @@ function axismundi_actors_get_by_uri( string $uri ) : ?Axismundi_Actor {
  * @return Axismundi_Actor|null
  */
 function axismundi_actors_get_by_handle( string $handle ) : ?Axismundi_Actor {
-	$key = axismundi_actors_normalize_handle( $handle );
+	$key = strtolower( trim( $handle ) );
 	return '' !== $key
 		? axismundi_actors_query_one( 'a.local_handle_key = %s AND i.origin = %s', $key, 'local' )
 		: null;
@@ -415,7 +440,7 @@ function axismundi_actors_handle_candidates( int $user_id ) : array {
 	}
 	$out = array();
 	foreach ( array( $user->user_nicename, get_user_meta( $user_id, 'nickname', true ) ) as $raw ) {
-		$key = axismundi_actors_normalize_handle( (string) $raw );
+		$key = axismundi_actors_suggest_handle( (string) $raw );
 		if ( '' !== $key && ! axismundi_actors_is_reserved_handle( $key ) && ! in_array( $key, $out, true ) ) {
 			$out[] = $key;
 		}
@@ -441,9 +466,14 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	if ( ! empty( $locked ) ) {
 		return new WP_Error( 'ax_actors_handle_locked', __( 'This handle is already set and cannot be changed.', 'axismundi-actors' ) );
 	}
-	$key = axismundi_actors_normalize_handle( $handle );
-	if ( '' === $key || axismundi_actors_is_reserved_handle( $key ) ) {
-		return new WP_Error( 'ax_actors_handle', __( 'That handle is not allowed.', 'axismundi-actors' ) );
+	// Case-fold only; every other character must already conform (no silent rewrite
+	// of an immutable handle).
+	$key = strtolower( trim( $handle ) );
+	if ( ! axismundi_actors_is_valid_handle( $key ) ) {
+		return new WP_Error( 'ax_actors_handle', __( 'Handles use lowercase letters, numbers, and underscores, 1–30 characters, with no leading or trailing underscore.', 'axismundi-actors' ) );
+	}
+	if ( axismundi_actors_is_reserved_handle( $key ) ) {
+		return new WP_Error( 'ax_actors_handle_reserved', __( 'That handle is reserved.', 'axismundi-actors' ) );
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
 	$taken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$actors} WHERE local_handle_key = %s AND identity_id <> %d", $key, $identity_id ) );

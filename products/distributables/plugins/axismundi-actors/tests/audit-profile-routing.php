@@ -70,9 +70,9 @@ try {
 
 	// A user's actor is handle-less until they activate; the handle is registered once.
 	ax_profile_assert( $ax_profile_results, 'a freshly ensured Person is handle-less until activation', '' === $actor->get_preferred_username() && '' === $actor->get_profile_url() );
-	$registered = axismundi_actors_register_handle( $actor->get_identity_id(), 'alice-profile' );
+	$registered = axismundi_actors_register_handle( $actor->get_identity_id(), 'alice_profile' );
 	$actor      = axismundi_actors_get_by_uuid( $original_uuid );
-	ax_profile_assert( $ax_profile_results, 'activation registers and locks the handle', true === $registered && $actor instanceof Axismundi_Actor && 'alice-profile' === $actor->get_preferred_username() && $actor->is_handle_locked() );
+	ax_profile_assert( $ax_profile_results, 'activation registers and locks the handle', true === $registered && $actor instanceof Axismundi_Actor && 'alice_profile' === $actor->get_preferred_username() && $actor->is_handle_locked() );
 
 	ax_profile_assert( $ax_profile_results, 'local handle resolves through local_handle_key', $actor->get_identity_id() === axismundi_actors_get_by_handle( $actor->get_preferred_username() )->get_identity_id() );
 	ax_profile_assert( $ax_profile_results, 'UUID route resolves the same local actor', $actor->get_identity_id() === axismundi_actors_resolve_request_actor( $original_uuid, '' )->get_identity_id() );
@@ -85,12 +85,12 @@ try {
 
 	// The handle is immutable once registered: re-registration is refused and the alias holds.
 	$old_handle = $actor->get_preferred_username();
-	$again      = axismundi_actors_register_handle( $actor->get_identity_id(), 'alice-profile-moved' );
+	$again      = axismundi_actors_register_handle( $actor->get_identity_id(), 'alice_profile_moved' );
 	$after      = axismundi_actors_get_by_uuid( $original_uuid );
 	ax_profile_assert(
 		$ax_profile_results,
 		'a registered handle is immutable; UUID, URI, and alias stay stable',
-		is_wp_error( $again ) && $after instanceof Axismundi_Actor && $after->get_uri() === $original_uri && $after->get_preferred_username() === $old_handle && null === axismundi_actors_get_by_handle( 'alice-profile-moved' )
+		is_wp_error( $again ) && $after instanceof Axismundi_Actor && $after->get_uri() === $original_uri && $after->get_preferred_username() === $old_handle && null === axismundi_actors_get_by_handle( 'alice_profile_moved' )
 	);
 
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );

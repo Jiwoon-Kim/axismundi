@@ -234,7 +234,7 @@ function axismundi_actors_render_wizard( Axismundi_Actor $actor, int $user_id ) 
 					<?php if ( $candidates ) : ?>
 						<p class="description"><?php esc_html_e( 'Suggestions:', 'axismundi-actors' ); ?> <?php echo esc_html( implode( ', ', $candidates ) ); ?></p>
 					<?php endif; ?>
-					<p class="description"><?php esc_html_e( 'Lowercase letters, numbers, and hyphens. It will be normalized on save.', 'axismundi-actors' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Lowercase letters, numbers, and underscores (no leading or trailing underscore), up to 30 characters. Your handle cannot be changed after activation.', 'axismundi-actors' ); ?></p>
 				</td>
 			</tr>
 			<tr>

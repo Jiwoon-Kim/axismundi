@@ -115,9 +115,12 @@ manage* an actor before public rendering matters.
 - Site-actor type (`Application` / `Organization`); the `ax_actors_site_owner_user_id`
   setting.
 
-**Phase 4b — avatar & header (`wp_ax_actor_media`).** Core Media-picker avatar (icon)
-+ header (image) with a remote-URI fallback; the public profile header renders them;
-resolution per DATA-MODEL §8.1 (avatar falls back to `get_avatar_url`, header to none).
+**Phase 4b — avatar & header (two columns, not a table).** Add
+`avatar_attachment_id` / `header_attachment_id` to `wp_ax_actors` (fixed 0..1 slots —
+no `wp_ax_actor_media` table); a core Media-picker in the management screen; render
+them in the public profile header; resolution per DATA-MODEL §8.1 (avatar falls back
+to `get_avatar_url`, header to none). Validate attachment + image MIME + `edit_post`
+on save; null the ref on `delete_attachment`.
 
 **Phase 4c — Actor avatar → WordPress avatar.** Optionally mirror the Actor avatar
 into WordPress via the `get_avatar_data` filter (default on for local Person) so

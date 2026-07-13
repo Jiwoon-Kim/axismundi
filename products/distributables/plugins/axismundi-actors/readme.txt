@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.7
+Stable tag: 0.0.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,18 @@ signatures, and remote fetch — those belong to Axismundi Activities and Axismu
 Federation, which attach to the identity and projection contracts defined here.
 
 == Changelog ==
+
+= 0.0.8 =
+* Tighten the local actor handle rule for mention interoperability: lowercase
+  letters, numbers, and underscores only (^[a-z0-9](?:[a-z0-9_]{0,28}[a-z0-9])?$) —
+  no hyphens or dots, because many servers parse mentions as a bare @\w+ and would
+  split @kim-jiwoon into @kim. Candidate suggestions fold hyphens/spaces to
+  underscores; registration validates the immutable handle without silently
+  rewriting it. Collision suffixing uses _N. Remote preferredUsernames keep their
+  own characters. UI copy updated.
+* Design revision: avatar and header are two columns on wp_ax_actors
+  (avatar_attachment_id / header_attachment_id), not a wp_ax_actor_media table —
+  they are fixed 0..1 slots and the site/Group/Service actors have no WP_User.
 
 = 0.0.7 =
 * Phase 4a — actor activation & profile management. Adds a Users > Actor Profile

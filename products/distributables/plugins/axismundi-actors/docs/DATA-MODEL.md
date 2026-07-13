@@ -143,8 +143,19 @@ Notes:
   registration on a locked actor is refused. This is deliberately not a rename API —
   an exceptional change is a future admin-recovery + alias/`Move` concern (SECURITY
   §3). Handle **candidates** come from `user_nicename` and the nickname, never
-  `user_login` (which may be an email or login id); the final handle is normalized
-  and dup/reserved-checked before locking, with the DB `UNIQUE` as the race backstop.
+  `user_login` (which may be an email or login id).
+- **Local handle character rule (mention interop).** A local handle must match
+  `^[a-z0-9](?:[a-z0-9_]{0,28}[a-z0-9])?$` — **lowercase letters, digits, and
+  underscores only** (1–30 chars, no leading/trailing underscore). This is stricter
+  than ActivityPub `preferredUsername` (which has *no* character rule) on purpose:
+  many servers/apps parse mentions as a bare `@\w+`, so a hyphen would split
+  `@kim-jiwoon` into `@kim`. Underscore is inside `\w`, so it is the widest-compatible
+  separator. The transform (lowercase; hyphen/dot/space → `_`; collapse/trim `_`) runs
+  only when generating **candidates** (`suggest_handle`); at registration the value is
+  case-folded and then **validated without silent rewriting** — since the handle is
+  immutable, the user must confirm the exact value. Collision suffixing uses `_N`, not
+  `-N`. **Remote** actors keep their `preferredUsername` verbatim (dots/hyphens/
+  unicode allowed) in `payload_json`; this rule is a *local* mention-interop policy.
 - `UNIQUE(local_user_id)` enforces one local Person per user for v0.1. When a user
   is later allowed to manage multiple actors, this unique is dropped and a
   `wp_ax_actor_managers(identity_id, user_id, role)` join table is added (reserved,
@@ -251,28 +262,36 @@ Supports avatar/header and multilingual profiles. Names and bios are still read 
 from `WP_User` (§4); only these presentation extras are Actor-owned. Documented now,
 created when the Phase 4 activation/management screens ship.
 
-### 8.1 `wp_ax_actor_media` — avatar (icon) + header (image)
+### 8.1 avatar / header — two columns on `wp_ax_actors` (NOT a table)
+
+Avatar and header are fixed **0..1 slots per actor**, so a relation table would be
+over-modelling. Two columns are exact:
 
 ```
-wp_ax_actor_media
-- identity_id
-- media_role          icon | header
-- local_attachment_id NULL   -- a CORE attachment id (not a Media Library object)
-- remote_uri          NULL   -- a remote actor's icon/image URL
-- remote_uri_hash     NULL
-- payload_json        NULL
-- updated_at
-UNIQUE(identity_id, media_role)
+wp_ax_actors += avatar_attachment_id BIGINT UNSIGNED NULL   -- a CORE attachment id
+                header_attachment_id BIGINT UNSIGNED NULL   -- a CORE attachment id
 ```
 
-- Local uses a core Media picker attachment id, resolved to a URL at render; remote
-  keeps the URI (no shadow attachment). Works without the Media Library plugin.
-- Resolution extends §4: **avatar** → `actor_media(icon)` → `get_avatar_url(user)`;
-  **header** → `actor_media(header)` → none. Name / bio / website stay live from
-  `WP_User`. `icon` / `image` in the Actor JSON-LD serialize from this table.
+- A core Media-picker attachment id (not a Media Library object), resolved to a URL
+  at render; works without the Media Library plugin. Columns (not usermeta) because
+  the **site / Group / Service actors have no `WP_User`** — Actor-owned values live on
+  the actor row so Person and non-Person share one path.
+- Serialization: `avatar_attachment_id → icon`, `header_attachment_id → image`.
+- Resolution extends §4: **avatar** → `avatar_attachment_id` → `get_avatar_url(user)`;
+  **header** → `header_attachment_id` → none. Name / bio / website stay live from
+  `WP_User`.
+- **Remote** actors read `icon` / `image` from `payload_json` (no URI column, no
+  shadow attachment) until real caching is needed.
+- On save: verify it is an attachment, an image MIME, and the current user
+  `edit_post`s it. On `delete_attachment`, null any `avatar_attachment_id` /
+  `header_attachment_id` that referenced it (logical cleanup, no physical FK).
+- A dedicated media table is revisited **only** when one of these appears: multiple
+  avatar/header variants, change history, remote-image local cache, per-language
+  header, crop/focal-point metadata, or media roles beyond avatar/header. None exist
+  now, so `avatar_attachment_id` / `header_attachment_id` it is.
 - Optional (default **on** for local Person): mirror the Actor avatar into WordPress
-  via the `get_avatar_data` filter so comments / admin show it. The header is
-  Actor-only. Site / Organization / Service actors use the same table.
+  via the `get_avatar_data` filter so comments / admin show it; the header is
+  Actor-only.
 
 ### 8.2 `wp_ax_actor_texts` + `default_language` — multilingual name/summary/content
 

@@ -64,13 +64,13 @@ try {
 	ax_rep_assert( $ax_results, 'a freshly ensured Person has no handle yet', '' === $alice->get_preferred_username() && ! $alice->is_handle_locked() );
 
 	// --- register_handle: first registration locks; UUID/URI stay stable ---
-	$reg   = axismundi_actors_register_handle( $alice->get_identity_id(), 'Alice Handle' );
+	$reg   = axismundi_actors_register_handle( $alice->get_identity_id(), 'alice_handle' );
 	$after = axismundi_actors_get_by_uuid( $uuid0 );
-	ax_rep_assert( $ax_results, 'register_handle sets a locked handle without touching UUID/URI', true === $reg && $after instanceof Axismundi_Actor && $after->get_uuid() === $uuid0 && $after->get_uri() === $uri0 && 'alice-handle' === $after->get_preferred_username() && $after->is_handle_locked() );
+	ax_rep_assert( $ax_results, 'register_handle sets a locked handle without touching UUID/URI', true === $reg && $after instanceof Axismundi_Actor && $after->get_uuid() === $uuid0 && $after->get_uri() === $uri0 && 'alice_handle' === $after->get_preferred_username() && $after->is_handle_locked() );
 
 	// --- the handle is immutable: a second registration is refused ---
-	$again = axismundi_actors_register_handle( $alice->get_identity_id(), 'alice-two' );
-	ax_rep_assert( $ax_results, 'a locked handle cannot be changed', is_wp_error( $again ) && 'ax_actors_handle_locked' === $again->get_error_code() && null !== axismundi_actors_get_by_handle( 'alice-handle' ) && null === axismundi_actors_get_by_handle( 'alice-two' ) );
+	$again = axismundi_actors_register_handle( $alice->get_identity_id(), 'alice_two' );
+	ax_rep_assert( $ax_results, 'a locked handle cannot be changed', is_wp_error( $again ) && 'ax_actors_handle_locked' === $again->get_error_code() && null !== axismundi_actors_get_by_handle( 'alice_handle' ) && null === axismundi_actors_get_by_handle( 'alice_two' ) );
 
 	// --- lookups round-trip ---
 	ax_rep_assert( $ax_results, 'get_by_uri and get_for_user resolve the same actor', axismundi_actors_get_by_uri( $uri0 ) instanceof Axismundi_Actor && axismundi_actors_get_for_user( $uid )->get_identity_id() === $alice->get_identity_id() );
@@ -95,6 +95,13 @@ try {
 	}
 	$clash = axismundi_actors_register_handle( $fresh->get_identity_id(), 'dupe' );
 	ax_rep_assert( $ax_results, 'registering a taken handle is blocked', is_wp_error( $clash ) && 'ax_actors_handle_taken' === $clash->get_error_code() );
+
+	// --- handle mention-interop rule: only [a-z0-9_], no hyphen/dot/edge-underscore ---
+	$bad_hyphen = axismundi_actors_register_handle( $fresh->get_identity_id(), 'kim-jiwoon' );
+	$bad_edge   = axismundi_actors_register_handle( $fresh->get_identity_id(), '_kim' );
+	$fresh_now  = axismundi_actors_get_by_uuid( $fresh->get_uuid() );
+	ax_rep_assert( $ax_results, 'hyphen and edge-underscore handles are rejected, leaving the actor handle-less', is_wp_error( $bad_hyphen ) && 'ax_actors_handle' === $bad_hyphen->get_error_code() && is_wp_error( $bad_edge ) && '' === $fresh_now->get_preferred_username() && ! $fresh_now->is_handle_locked() );
+	ax_rep_assert( $ax_results, 'suggest folds hyphens/spaces to underscores; validator rejects hyphens', 'kim_jiwoon_kim' === axismundi_actors_suggest_handle( 'Kim-Jiwoon Kim' ) && axismundi_actors_is_valid_handle( 'kim_jiwoon_kim' ) && ! axismundi_actors_is_valid_handle( 'kim-jiwoon' ) && ! axismundi_actors_is_valid_handle( '_kim' ) );
 
 	// --- same REMOTE handle allowed multiple times (local_handle_key NULL) ---
 	$now = current_time( 'mysql', true );

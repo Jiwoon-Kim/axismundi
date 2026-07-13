@@ -48,7 +48,7 @@ try {
 	$ax_projection_users[] = $user_id;
 	$actor = axismundi_actors_ensure_for_user( $user_id );
 	$ax_projection_ids[] = $actor->get_identity_id();
-	axismundi_actors_register_handle( $actor->get_identity_id(), 'projection-author' );
+	axismundi_actors_register_handle( $actor->get_identity_id(), 'projection_author' );
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	$actor = axismundi_actors_get_by_uuid( $actor->get_uuid() );
 
@@ -96,7 +96,7 @@ try {
 	$ax_projection_users[] = $empty_user;
 	$empty_actor = axismundi_actors_ensure_for_user( $empty_user );
 	$ax_projection_ids[] = $empty_actor->get_identity_id();
-	axismundi_actors_register_handle( $empty_actor->get_identity_id(), 'projection-empty' );
+	axismundi_actors_register_handle( $empty_actor->get_identity_id(), 'projection_empty' );
 	axismundi_actors_set_status( $empty_actor->get_identity_id(), 'public' );
 	$empty_actor = axismundi_actors_get_by_uuid( $empty_actor->get_uuid() );
 	$empty_ids   = array_column( axismundi_actors_get_projections( $empty_actor, 0 ), 'id' );

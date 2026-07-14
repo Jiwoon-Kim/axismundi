@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.1
+Stable tag: 0.0.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -21,11 +21,23 @@ It does not own an Activity ledger, inbox/outbox, Follow/Like, HTTP signatures, 
 those belong to Axismundi Activities and Axismundi Federation. It works standalone and treats
 the official ActivityPub plugin as optional (see docs/COMPATIBILITY.md).
 
-This release ships the Phase 0 contract and the Phase 1 registry + renderer only: there is no
-HTTP routing, rewrite, REST route, or table yet. Content negotiation on the existing URL and
-the Core Post → Article transformer are the next increments (docs/PHASES.md).
+This release also ships standalone content negotiation on the existing WordPress URL and
+the Core Post → Article transformer. It still creates no rewrite, REST route, or table.
+When the official ActivityPub plugin is active, the standalone negotiator turns itself off
+so a future adapter can preserve that plugin's established object ids.
 
 == Changelog ==
+
+= 0.0.2 =
+* Add precise Accept negotiation for application/activity+json and ActivityStreams-
+  profiled application/ld+json on existing WordPress object URLs. Bare application/json
+  and unprofiled application/ld+json never hijack HTML; responses emit Vary, alternate
+  Link, CORS, and nosniff headers, with GET/HEAD support.
+* Add the Core Post → Article transformer: stable /?p={ID} id, human permalink url,
+  public Actor attribution, rendered HTML content, manual summary, and timestamps.
+  Draft, private, password-protected, or Actor-less posts fail closed.
+* Disable standalone negotiation whenever the official ActivityPub plugin is active,
+  while leaving registry and renderer APIs available to the future compatibility adapter.
 
 = 0.0.1 =
 * Phase 0 — lock the projection contract and scaffold the plugin: object vs actor

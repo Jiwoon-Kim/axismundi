@@ -45,3 +45,14 @@ add_action( 'axismundi_op_register_transformers', function () {
 | Missing required member            | `WP_Error ax_op_invalid_object` |
 | `id` ≠ declared URI                | `WP_Error ax_op_id_mismatch`  |
 | Success                            | JSON-LD array with `@context` |
+
+## Built-in Core Post transformer (0.0.2)
+
+`core-post-article` supports only the core `post` post type and emits `Article` with a
+stable `/?p={ID}` id, human permalink `url`, Actor `attributedTo`, title, rendered HTML,
+manual excerpt, and published/updated timestamps. It requires a public user Actor, or a
+deliberately public site Actor fallback. It never creates an Actor during rendering.
+
+`axismundi_op_post_object_uri` is the compatibility seam for pre-existing object ids;
+`axismundi_op_post_actor_uri` is the seam for another Actor provider. A future official
+ActivityPub adapter must use the former to retain that plugin's per-post legacy choice.

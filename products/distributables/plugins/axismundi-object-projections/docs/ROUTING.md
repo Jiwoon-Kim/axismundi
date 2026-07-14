@@ -1,6 +1,7 @@
 # Routing & URI contract
 
-> Status: **Contract locked; the negotiation router itself is Phase 2 (not yet built).**
+> Status: **Standalone object negotiation implemented in 0.0.2.** Collection routing and
+> the official ActivityPub adapter remain later phases.
 
 ## 1. Principle — negotiate on the existing WordPress URL
 
@@ -39,7 +40,7 @@ Rules:
 - This supersedes the earlier reserved `?ax_media_object=` idea in the Media Library
   routing notes — attachments negotiate on their own `?attachment_id=` URL instead.
 
-## 3. Negotiation rules (Phase 2)
+## 3. Negotiation rules
 
 - Only a precise `Accept` triggers JSON-LD: `application/activity+json`, or
   `application/ld+json` **with** the ActivityStreams profile. A bare `application/json`
@@ -47,6 +48,12 @@ Rules:
 - Emit `Vary: Accept` and a `Link: rel="alternate"` pointing at the counterpart
   representation.
 - A browser (HTML `Accept`) always gets the existing theme render.
+- `GET` and `HEAD` are supported; other methods pass through untouched. JSON responses
+  use `application/activity+json`, CORS GET/HEAD, and `nosniff`.
+- An unsupported source passes through to WordPress. A supported but hidden source is
+  indistinguishable from missing (404); a transformer failure is 500.
+- The standalone router runs before core canonical redirects so `/?p={ID}` remains
+  fetchable under AS negotiation even when pretty permalinks are enabled.
 
 ## 4. Feed & REST
 

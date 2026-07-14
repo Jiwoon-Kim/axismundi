@@ -1,6 +1,6 @@
 # Compatibility with the official ActivityPub plugin
 
-> Status: **Contract locked; adapter not yet built.** Object Projections works fully
+> Status: **Standalone gate implemented; adapter not yet built.** Object Projections works
 > standalone. This document fixes how it must behave when Automattic's ActivityPub plugin
 > (tested against 9.0.2) is *also* active.
 
@@ -10,8 +10,8 @@ Both plugins want to answer the *same* WordPress URL with JSON-LD. They cannot b
 content negotiation on it. Therefore:
 
 - Object Projections always provides the **transformer API + renderer**.
-- It owns the **standalone negotiation router (Phase 2) only when the official ActivityPub
-  plugin is NOT active.**
+- It owns the standalone negotiation router only when `ACTIVITYPUB_PLUGIN_VERSION` is not
+  defined (filterable through `axismundi_op_standalone_router_enabled`).
 - When ActivityPub *is* active, the standalone router stays **off**, and a thin
   **compatibility adapter** feeds Axismundi's projections through the official plugin's
   extension points instead of registering a competing route.

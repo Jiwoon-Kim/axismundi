@@ -1,9 +1,8 @@
 # Axismundi Object Projections — specification
 
-> Status: **Phase 0–1 (contract + registry/renderer) implemented.** No table, no rewrite,
-> no REST route, no HTTP content negotiation yet (that is Phase 2). This package owns the
-> **projection contract** and the **JSON-LD serialization** of one object/collection —
-> nothing else.
+> Status: **Phases 0–2 implemented** (contract, registry/renderer, standalone
+> negotiation, Core Post → Article). No table, custom rewrite, REST route, Activity
+> ledger, or transport. This package owns the projection contract and representation.
 
 ## 1. Purpose
 
@@ -23,15 +22,19 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 - The transformer registry (object + collection).
 - Object / collection URIs (the stable AS `id`).
 - ActivityStreams JSON-LD serialization and the single `@context` assembly.
-- Object/collection representation + (Phase 2) content negotiation on the existing URL.
-- The Core Post → `Article` transformer (Phase 2/3).
+- Object/collection representation + content negotiation on the existing URL.
+- The Core Post → `Article` transformer.
 - Registering the `articles` projection on the Actor profile.
 - Object lifecycle *events* (publish/update/delete) — emitted, not stored.
+- In a later phase, URI-keyed **remote object projections**: rebuildable observed
+  snapshots and an administrator inspector, independent of Activity ingestion.
 
 **Does not own**
 
 - `wp_ax_activities`, inbox/outbox, Follow/Like/Announce, signatures, delivery, retry.
 - Note / media object storage itself (the domain plugins own it).
+- Authority over a remote canonical object: its URI remains the source identity and a
+  local projection row is only a refreshable cache, never a replacement identity.
 - The official ActivityPub plugin's internal models.
 
 ## 3. Terms (kept distinct)
@@ -54,14 +57,14 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 3. **Transformers are pure projections** — no DB writes, no network, no route ownership,
    no content-negotiation decisions.
 4. **Three outcomes are distinct**: no transformer (`ax_op_no_transformer`), a transformer
-   error (its own `WP_Error`), and a not-public source (`ax_op_not_public`). A future
-   router maps these to 404 vs 500 vs 404 respectively — never silently to an empty 200.
+   error (its own `WP_Error`), and a not-public source (`ax_op_not_public`). The router
+   passes unsupported sources through, maps not-public to 404 and real failures to 500.
 5. **Visibility is a callback, not the transformer body.** Public/private is decided by a
    registered `visible` callback, so the transform stays a pure mapping.
 6. **The official ActivityPub plugin is not a dependency.** Object Projections works fully
    standalone; when ActivityPub *is* active, only one negotiator owns a URL (§COMPATIBILITY).
 
-## 5. Public API (Phase 1)
+## 5. Public API
 
 ```
 axismundi_op_register_object_transformer( string $id, array $args ) : true|WP_Error
@@ -74,6 +77,10 @@ axismundi_op_transform_collection( mixed $source ) : array|WP_Error
 ```
 
 Registration is done on the `axismundi_op_register_transformers` action.
+
+The built-in `core-post-article` transformer is available in standalone mode. Adapters
+may filter `axismundi_op_post_object_uri` to preserve an established external id and
+`axismundi_op_post_actor_uri` to bridge another Actor provider.
 
 See TRANSFORMERS.md (contract detail), ROUTING.md (URI contract), COMPATIBILITY.md
 (ActivityPub co-existence), PHASES.md (roadmap).

@@ -66,6 +66,10 @@ $ax_remote_http = static function ( $preempt, array $args, string $url ) use ( &
 					'url'               => 'https://example.com/@alice',
 					'inbox'             => 'https://example.com/users/alice/inbox',
 					'outbox'            => 'https://example.com/users/alice/outbox',
+					'followers'         => 'https://example.com/users/alice/followers',
+					'following'         => 'https://example.com/users/alice/following',
+					'featured'          => 'https://example.com/users/alice/featured',
+					'endpoints'         => array( 'sharedInbox' => 'https://example.com/inbox/shared' ),
 					'icon'              => array( 'type' => 'Image', 'url' => 'https://example.com/alice.png' ),
 				)
 			)
@@ -108,6 +112,8 @@ try {
 
 	$stored = $actor instanceof Axismundi_Actor ? axismundi_actors_get_by_uri( $actor->get_uri() ) : null;
 	ax_remote_assert( $ax_remote_results, 'remote snapshot fields are normalized while the bounded payload remains available', $stored instanceof Axismundi_Actor && 'alice-example' === $stored->get_preferred_username() && 'Remote Alice' === $stored->get_display_name() && str_contains( (string) $wpdb->get_var( $wpdb->prepare( 'SELECT payload_json FROM ' . axismundi_actors_actors_table() . ' WHERE identity_id = %d', $stored->get_identity_id() ) ), 'alice.png' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture assertion on custom table.
+	$stored_endpoints = $stored instanceof Axismundi_Actor ? axismundi_actors_get_endpoints( $stored ) : array();
+	ax_remote_assert( $ax_remote_results, 'Actor payload discovery captures collection and sharedInbox endpoint roles', 6 === count( $stored_endpoints ) && 'https://example.com/inbox/shared' === ( $stored_endpoints['shared_inbox'] ?? '' ) );
 
 	$first_id       = $actor instanceof Axismundi_Actor ? $actor->get_identity_id() : 0;
 	$ax_remote_name = 'Remote Alice Updated';
@@ -134,6 +140,7 @@ try {
 	remove_filter( 'pre_http_request', $ax_remote_http, 10 );
 	foreach ( array_unique( $ax_remote_ids ) as $identity_id ) {
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}

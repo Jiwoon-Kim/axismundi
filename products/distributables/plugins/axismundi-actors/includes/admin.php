@@ -234,9 +234,10 @@ function axismundi_actors_remote_admin_notice() : void {
 
 /** @param Axismundi_Actor $actor Remote actor. @return void */
 function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) : void {
-	$payload  = axismundi_actors_get_remote_payload( $actor->get_identity_id() );
-	$host     = axismundi_actors_webfinger_authority_from_url( $actor->get_uri() );
-	$instance = '' !== $host ? axismundi_actors_get_instance( $host ) : null;
+	$payload   = axismundi_actors_get_remote_payload( $actor->get_identity_id() );
+	$endpoints = axismundi_actors_get_endpoints( $actor );
+	$host      = axismundi_actors_webfinger_authority_from_url( $actor->get_uri() );
+	$instance  = '' !== $host ? axismundi_actors_get_instance( $host ) : null;
 	$addresses = array_values( array_filter( axismundi_actors_get_addresses( $actor->get_identity_id() ), static fn( array $row ) : bool => 'acct' === $row['address_type'] ) );
 	?>
 	<hr>
@@ -247,6 +248,7 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 			<tr><th><?php esc_html_e( 'Type', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $actor->get_type() ); ?></td></tr>
 			<tr><th><?php esc_html_e( 'Preferred username', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $actor->get_preferred_username() ); ?></td></tr>
 			<tr><th><?php esc_html_e( 'Verified addresses', 'axismundi-actors' ); ?></th><td><?php echo esc_html( implode( ', ', array_column( $addresses, 'address' ) ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Endpoints', 'axismundi-actors' ); ?></th><td><?php foreach ( $endpoints as $type => $uri ) : ?><div><strong><?php echo esc_html( $type ); ?></strong>: <code><?php echo esc_html( $uri ); ?></code></div><?php endforeach; ?></td></tr>
 			<tr><th><?php esc_html_e( 'Instance', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $instance ? trim( (string) ( $instance['software_name'] ?? '' ) . ' ' . (string) ( $instance['software_version'] ?? '' ) ) : $host ); ?></td></tr>
 		</tbody>
 	</table>

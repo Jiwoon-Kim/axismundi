@@ -1,13 +1,13 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Schema v6 implemented (§2–§6, §8, §9.2 addresses,
-> §9.9 instances); §7 history and endpoints/keys are provisional.** Five tables exist
+> Status: **Living specification. Schema v7 implemented (§2–§6, §8, §9.2 addresses,
+> §9.3 endpoints, §9.10 instances); §7 history and policy/keys are provisional.** Six tables exist
 > today: the shared **identity registry**, the **actor profile**, multilingual Actor
 > text, the **address ledger** (`wp_ax_actor_addresses`), and the **instance / NodeInfo
-> host ledger** (`wp_ax_instances`). Local person profile fields remain live `WP_User`
-> fallbacks; only remote actors snapshot. Next schema steps: `wp_ax_actor_endpoints` +
-> follower/discovery policy columns → keys/fetch-state. WebFinger acct policy is
-> fail-closed (§9.8); bounded synchronous remote Actor discovery + NodeInfo caching are
+> host ledger** (`wp_ax_instances`), and normalized **Actor endpoints**. Local person
+> profile fields remain live `WP_User` fallbacks; only remote actors snapshot. Next
+> schema steps: follower/discovery policy columns → keys/fetch-state. WebFinger acct policy is
+> fail-closed (§9.9); bounded synchronous remote Actor discovery + NodeInfo caching are
 > implemented.
 
 ## 1. Conventions
@@ -95,8 +95,6 @@ local_user_id     BIGINT UNSIGNED  NULL       -- set only for local Person
 display_name      VARCHAR(191)     NULL       -- remote snapshot only (local reads WP_User / bloginfo live)
 summary           TEXT             NULL       -- remote snapshot only
 profile_url       TEXT             NULL       -- remote snapshot only (local is derived)
-inbox_uri         TEXT             NULL       -- reserved (federation); unused in v0.1
-outbox_uri        TEXT             NULL       -- reserved
 payload_json      LONGTEXT         NULL       -- remote Actor JSON-LD snapshot only
 created_at        DATETIME         NOT NULL
 updated_at        DATETIME         NOT NULL
@@ -338,9 +336,9 @@ self-check, §6). Design rules that gate every step:
 - Fixed **0..1** value → a `wp_ax_actors` column; a value with **rows that grow**
   (translations, addresses, keys) → a child table.
 - **Activity / Follow / Like / Delivery / Notification never live in the Actors DB**
-  (see §9.6). URI is the canonical identifier; DB id / blog id are internal
+  (see §9.7). URI is the canonical identifier; DB id / blog id are internal
   acceleration pointers. `blog_id` is **not** added to the current tables — the
-  per-site `$wpdb->prefix` is the tenancy (§9.7).
+  per-site `$wpdb->prefix` is the tenancy (§9.8).
 
 ### 9.1 DB v4 — multilingual profile *(shipped)*
 `wp_ax_actors += default_language`; `wp_ax_actor_texts` (§8.2).
@@ -371,29 +369,33 @@ KEY(identity_id, status)
   after a successful HTTPS WebFinger lookup (RFC 7033); remote
   `preferredUsername` alone is never trusted.
 
-### 9.3 DB v6 — endpoints & follower/discovery policy
+### 9.3 DB v7 — Actor endpoints *(implemented)*
 ```
-wp_ax_actors += published_at                    -- remote actor's declared creation (≠ created_at)
-              + manually_approves_followers      -- Follow approval (lock)
-              + discoverable                      -- recommendations / directory
-              + indexable                         -- public posts in search
-              + follow_collections_visibility     -- public | followers | private
-
 wp_ax_actor_endpoints
 - identity_id, endpoint_type, endpoint_uri, endpoint_uri_hash, updated_at
 - endpoint_type: inbox|outbox|followers|following|featured|shared_inbox
 UNIQUE(identity_id, endpoint_type)
 KEY(endpoint_uri_hash)   -- NOT unique: a sharedInbox is shared across many actors
 ```
-Copy `inbox_uri` / `outbox_uri` into the table, switch reads over, then (pre-release)
-drop the old columns. **These are separate axes, not one enum:** `internal|public`
-is *lifecycle* (§2.3); follow-approval, discovery/indexing, and collection visibility
-are independent policies; the **default posting audience** (`public|unlisted|followers|
-mentioned`) is **not here — it belongs to the Activity plugin**. `discoverable` /
-`indexable` on a *remote* actor are observed declarations, kept separate from any
-local policy flag of the same name.
+DB v7 backfills `inbox_uri` / `outbox_uri` plus followers/following/featured/sharedInbox
+from the bounded payload snapshot, verifies all non-empty legacy values, then drops
+the two old actor columns. Remote refresh atomically replaces the endpoint set with
+the Actor snapshot, so removed optional roles do not remain stale.
 
-### 9.4 DB v7 — keys, remote cache, moves
+### 9.4 DB v8 — follower/discovery policy axes
+```
+wp_ax_actors += published_at                     -- remote declaration (≠ created_at)
+              + manually_approves_followers      -- Follow approval (lock)
+              + discoverable                     -- recommendations / directory
+              + indexable                        -- public posts in search
+              + follow_collections_visibility    -- public | followers | private
+```
+These are separate axes, not one enum: `internal|public` is lifecycle (§2.3), while
+follow approval, discovery/indexing, and collection visibility are independent.
+The default posting audience belongs to the Activity plugin. Remote declarations
+must preserve NULL (unreported) separately from explicit false.
+
+### 9.5 DB v9 — keys, remote cache, moves
 ```
 wp_ax_actor_keys           key_uri(+hash), key_type, public_key_pem, fingerprint,
                            private_key_ref, status active|retired|revoked, valid_from/until
@@ -406,26 +408,26 @@ A **local private key is never stored in plaintext** — `private_key_ref` point
 separate secret storage. `alsoKnownAs` / `movedTo` are **never trusted on inbound
 JSON alone** (need cross-reference / a Move verification flow).
 
-### 9.5 DB v8 — managed actors
+### 9.6 DB v10 — managed actors
 `wp_ax_actor_managers(identity_id, user_id, role owner|manager|editor,
 UNIQUE(identity_id, user_id))`, added **only when** Group / Service / Organization
 actors are actually created; `actor_scope='managed'` activates then (SPEC §4.1). The
 current Site/User actors do not need it. **Version numbers are implementation order,
 not schema dependencies** — if a Lemmy-style community (`Group`) ships before
 federation, pull this forward to just before that managed-Group work; nothing in
-v5–v7 depends on it. (A `Group` community is `Application` site actor's sibling: its
+v5–v9 depends on it. (A `Group` community is `Application` site actor's sibling: its
 posts/comments live in the object/activity store and its Follow / Accept / Announce /
-moderation in the social layer — §9.6 — never on the actor row; a shared folder stays
+moderation in the social layer — §9.7 — never on the actor row; a shared folder stays
 an `OrderedCollection` + ACL and is *not* promoted to a `Group`.)
 
-### 9.6 Owned by OTHER stores, never by Actors
+### 9.7 Owned by OTHER stores, never by Actors
 `wp_ax_activities`, `wp_ax_deliveries`, `wp_ax_follows`, `wp_ax_reactions`,
 `wp_ax_notifications` → a separate **Activity / social-relation** store. Collections,
 memberships, and saved references → **Media Library**. Actors provides identity
 lookup + the actor profile only; the followers / following endpoint *content* is
 **projected** from the relation store, never stored on the actor row (counts included).
 
-### 9.7 Multisite scope is a runtime decision, not a stored column
+### 9.8 Multisite scope is a runtime decision, not a stored column
 `actor_scope` stays `site | user | managed`. **`site-local` / `network-local` /
 `remote` are computed at request time** (they depend on *which* site is asking) from
 the actor URI + a network index — do **not** freeze them onto the actor row, and do
@@ -444,7 +446,7 @@ sequential; a WP user may own **many** actors (one per site), each site an indep
 federation boundary; URI is the identity; cache keys include site context or hash the
 URI; network-wide activation must not break.
 
-### 9.8 WebFinger `acct:` handle policy — DECIDED: fail-closed
+### 9.9 WebFinger `acct:` handle policy — DECIDED: fail-closed
 
 `acct:` collisions across a network are resolved by **policy, not schema**. The policy
 is **fail-closed**: WebFinger is enabled only where each site owns a distinct
@@ -459,7 +461,7 @@ authority, and is *disabled* (not guessed) where it would collide.
   silent misroute). The **Actor URI (`/actors/{uuid}`) and the profile keep working** —
   only WebFinger discovery by `acct:` is withheld.
 - A **network-wide handle table** + representative-owner routing (`wp_ax_actor_network_index`
-  §9.7) is added **only when a real subdirectory-federation need appears** — not
+  §9.8) is added **only when a real subdirectory-federation need appears** — not
   pre-built. Until then, a subdirectory network that wants federation gives each subsite
   its own domain / subdomain (which flips it to *enabled*).
 
@@ -467,7 +469,7 @@ authority, and is *disabled* (not guessed) where it would collide.
 not decide the policy. The endpoint enabling/disabling and the subdirectory-off test
 are the **WebFinger increment** after v5.
 
-### 9.9 Instance / NodeInfo host ledger — `wp_ax_instances` *(shipped, DB v6)*
+### 9.10 Instance / NodeInfo host ledger — `wp_ax_instances` *(shipped, DB v6)*
 
 Three discovery roles are **distinct**: **WebFinger** (`@user@host` → an Actor URI),
 **Actor JSON-LD** (a remote actor → `wp_ax_identities` / `wp_ax_actors`), and
@@ -499,7 +501,7 @@ wp_ax_instances
   they belong to a moderation store, never in `wp_ax_instances` (which is a fetched
   cache of the remote's own declarations).
 
-**Order:** WebFinger endpoint (+ subdirectory fail-closed test §9.8) → local NodeInfo
+**Order:** WebFinger endpoint (+ subdirectory fail-closed test §9.9) → local NodeInfo
 2.1 → bounded remote Actor discovery/fetch *(shipped)* → then `wp_ax_instances` +
 its NodeInfo cache. Background refresh/backoff remains a Federation/fetch-state phase.
 

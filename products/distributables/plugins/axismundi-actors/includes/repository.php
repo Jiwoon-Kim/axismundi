@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '6';
+const AXISMUNDI_ACTORS_DB_VERSION = '7';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -41,6 +41,12 @@ function axismundi_actors_addresses_table() : string {
 function axismundi_actors_instances_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_instances';
+}
+
+/** @return string normalized actor endpoint table name. */
+function axismundi_actors_endpoints_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_endpoints';
 }
 
 /**
@@ -97,7 +103,7 @@ function axismundi_actors_install() : void {
 			UNIQUE KEY uuid (uuid),
 			UNIQUE KEY canonical_uri_hash (canonical_uri_hash),
 			KEY kind_origin_status (object_kind, origin, status)
-		) {$charset};"
+		) ENGINE=InnoDB {$charset};"
 	);
 
 	dbDelta(
@@ -112,8 +118,6 @@ function axismundi_actors_install() : void {
 			display_name varchar(191) DEFAULT NULL,
 			summary text DEFAULT NULL,
 			profile_url text DEFAULT NULL,
-			inbox_uri text DEFAULT NULL,
-			outbox_uri text DEFAULT NULL,
 			payload_json longtext DEFAULT NULL,
 			avatar_attachment_id bigint(20) unsigned DEFAULT NULL,
 			header_attachment_id bigint(20) unsigned DEFAULT NULL,
@@ -125,7 +129,7 @@ function axismundi_actors_install() : void {
 			UNIQUE KEY local_user_id (local_user_id),
 			KEY preferred_username (preferred_username),
 			KEY scope_type (actor_scope, actor_type)
-		) {$charset};"
+		) ENGINE=InnoDB {$charset};"
 	);
 
 	dbDelta(
@@ -140,7 +144,7 @@ function axismundi_actors_install() : void {
 			PRIMARY KEY  (id),
 			UNIQUE KEY identity_field_language (identity_id, field_name, language_tag),
 			KEY identity_language (identity_id, language_tag)
-		) {$charset};"
+		) ENGINE=InnoDB {$charset};"
 	);
 
 	$addresses = axismundi_actors_addresses_table();
@@ -158,7 +162,7 @@ function axismundi_actors_install() : void {
 			PRIMARY KEY  (id),
 			UNIQUE KEY address_hash (address_hash),
 			KEY identity_status (identity_id, status)
-		) {$charset};"
+		) ENGINE=InnoDB {$charset};"
 	);
 
 	$instances = axismundi_actors_instances_table();
@@ -182,8 +186,39 @@ function axismundi_actors_install() : void {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY host_hash (host_hash)
-		) {$charset};"
+		) ENGINE=InnoDB {$charset};"
 	);
+
+	$endpoints = axismundi_actors_endpoints_table();
+	dbDelta(
+		"CREATE TABLE {$endpoints} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			endpoint_type varchar(24) NOT NULL,
+			endpoint_uri text NOT NULL,
+			endpoint_uri_hash char(64) NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity_endpoint (identity_id, endpoint_type),
+			KEY endpoint_uri_hash (endpoint_uri_hash)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	// Remote snapshot + endpoint refresh spans these three tables. Make the storage
+	// engine contract explicit so START TRANSACTION is not merely decorative on an
+	// older installation created under a different server default.
+	$transactional_engines = true;
+	foreach ( array( $identities, $actors, $endpoints ) as $transactional_table ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name, schema inspection.
+		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
+		if ( 'InnoDB' !== $engine ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off custom-table engine upgrade.
+			$wpdb->query( "ALTER TABLE {$transactional_table} ENGINE=InnoDB" );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verify the one-off engine upgrade.
+			$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
+		}
+		$transactional_engines = $transactional_engines && 'InnoDB' === $engine;
+	}
 
 	// dbDelta reliably ADDs columns but does NOT relax an existing NOT NULL to
 	// nullable, so do that explicitly (idempotent — a no-op on a fresh install where
@@ -215,6 +250,62 @@ function axismundi_actors_install() : void {
 		axismundi_actors_record_handle_address( (int) $row['identity_id'], (string) $row['local_handle_key'], 'primary' );
 	}
 
+	// DB v7: copy legacy inbox/outbox columns and the richer payload snapshot into
+	// the endpoint ledger. Drop the old columns only after every non-empty legacy
+	// value can be read back from the new table. This makes the destructive part
+	// fail closed and retryable.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema migration inspection.
+	$legacy_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	$has_inbox      = in_array( 'inbox_uri', $legacy_columns, true );
+	$has_outbox     = in_array( 'outbox_uri', $legacy_columns, true );
+	$migrated       = true;
+	if ( $has_inbox || $has_outbox ) {
+		$select = 'identity_id, payload_json';
+		$select .= $has_inbox ? ', inbox_uri' : '';
+		$select .= $has_outbox ? ', outbox_uri' : '';
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table and column names.
+		$legacy_rows = (array) $wpdb->get_results( "SELECT {$select} FROM {$actors}", ARRAY_A );
+		foreach ( $legacy_rows as $row ) {
+			$payload = json_decode( (string) ( $row['payload_json'] ?? '' ), true );
+			$map     = axismundi_actors_extract_endpoints_from_payload(
+				is_array( $payload ) ? $payload : array(),
+				array(
+					'inbox'  => (string) ( $row['inbox_uri'] ?? '' ),
+					'outbox' => (string) ( $row['outbox_uri'] ?? '' ),
+				)
+			);
+			if ( ! axismundi_actors_write_endpoints( (int) $row['identity_id'], $map ) ) {
+				$migrated = false;
+				break;
+			}
+		}
+
+		if ( $migrated ) {
+			foreach ( $legacy_rows as $row ) {
+				foreach ( array( 'inbox' => 'inbox_uri', 'outbox' => 'outbox_uri' ) as $type => $column ) {
+					if ( ! array_key_exists( $column, $row ) || '' === trim( (string) $row[ $column ] ) ) {
+						continue;
+					}
+					if ( trim( (string) $row[ $column ] ) !== axismundi_actors_get_endpoint( (int) $row['identity_id'], $type ) ) {
+						$migrated = false;
+						break 2;
+					}
+				}
+			}
+		}
+
+		if ( $migrated ) {
+			if ( $has_inbox ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verified one-off schema migration.
+				$migrated = false !== $wpdb->query( "ALTER TABLE {$actors} DROP COLUMN inbox_uri" );
+			}
+			if ( $migrated && $has_outbox ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verified one-off schema migration.
+				$migrated = false !== $wpdb->query( "ALTER TABLE {$actors} DROP COLUMN outbox_uri" );
+			}
+		}
+	}
+
 	// Only record the schema version once the new columns/tables/indexes actually
 	// exist, so a failed upgrade retries next load rather than being marked done.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
@@ -227,6 +318,12 @@ function axismundi_actors_install() : void {
 	$address_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$instance_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$instances} WHERE Key_name = 'host_hash'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$endpoint_identity_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$endpoints} WHERE Key_name = 'identity_endpoint'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$endpoint_hash_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$endpoints} WHERE Key_name = 'endpoint_uri_hash'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final legacy-column check.
+	$final_actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )
@@ -236,6 +333,12 @@ function axismundi_actors_install() : void {
 		&& ! empty( $text_indexes )
 		&& ! empty( $address_indexes )
 		&& ! empty( $instance_indexes )
+		&& ! empty( $endpoint_identity_indexes )
+		&& ! empty( $endpoint_hash_indexes )
+		&& ! in_array( 'inbox_uri', $final_actor_columns, true )
+		&& ! in_array( 'outbox_uri', $final_actor_columns, true )
+		&& $transactional_engines
+		&& $migrated
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
@@ -584,6 +687,166 @@ function axismundi_actors_get_remote_payload( int $identity_id ) : array {
 	return is_array( $data ) ? $data : array();
 }
 
+/** @return string[] Supported normalized endpoint roles. */
+function axismundi_actors_endpoint_types() : array {
+	return array( 'inbox', 'outbox', 'followers', 'following', 'featured', 'shared_inbox' );
+}
+
+/**
+ * Normalize one stored endpoint URI. Persistence requires HTTPS and a host, but
+ * does not perform DNS resolution; network fetches retain the stricter SSRF gate.
+ *
+ * @param mixed $value Candidate URI.
+ * @return string Empty when invalid.
+ */
+function axismundi_actors_normalize_endpoint_uri( $value ) : string {
+	$url = esc_url_raw( is_string( $value ) ? trim( $value ) : '' );
+	return 'https' === strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) )
+		&& '' !== (string) wp_parse_url( $url, PHP_URL_HOST ) ? $url : '';
+}
+
+/**
+ * Extract normalized endpoint roles from an ActivityStreams Actor payload.
+ * Payload values win; fallback values exist only for the DB v6 inbox/outbox
+ * migration. Invalid optional endpoints are omitted.
+ *
+ * @param array<string,mixed> $payload  Actor JSON snapshot.
+ * @param array<string,mixed> $fallback Legacy endpoint values.
+ * @return array<string,string>
+ */
+function axismundi_actors_extract_endpoints_from_payload( array $payload, array $fallback = array() ) : array {
+	$values = array(
+		'inbox'       => '' !== trim( (string) ( $fallback['inbox'] ?? '' ) ) ? $fallback['inbox'] : ( $payload['inbox'] ?? '' ),
+		'outbox'      => '' !== trim( (string) ( $fallback['outbox'] ?? '' ) ) ? $fallback['outbox'] : ( $payload['outbox'] ?? '' ),
+		'followers'   => $payload['followers'] ?? '',
+		'following'   => $payload['following'] ?? '',
+		'featured'    => $payload['featured'] ?? '',
+		'shared_inbox' => is_array( $payload['endpoints'] ?? null ) ? ( $payload['endpoints']['sharedInbox'] ?? '' ) : '',
+	);
+	$normalized = array();
+	foreach ( $values as $type => $value ) {
+		$url = axismundi_actors_normalize_endpoint_uri( $value );
+		if ( '' !== $url ) {
+			$normalized[ $type ] = $url;
+		}
+	}
+	return $normalized;
+}
+
+/**
+ * Validate a complete endpoint replacement before any existing row is removed.
+ *
+ * @param array<string,mixed> $endpoints Endpoint map.
+ * @return array<string,string>|WP_Error
+ */
+function axismundi_actors_validate_endpoints( array $endpoints ) {
+	$normalized = array();
+	foreach ( $endpoints as $type => $value ) {
+		if ( ! in_array( $type, axismundi_actors_endpoint_types(), true ) ) {
+			return new WP_Error( 'ax_actors_endpoint_type', __( 'Unknown Actor endpoint type.', 'axismundi-actors' ) );
+		}
+		$url = axismundi_actors_normalize_endpoint_uri( $value );
+		if ( '' === $url ) {
+			return new WP_Error( 'ax_actors_endpoint_uri', __( 'Invalid Actor endpoint URI.', 'axismundi-actors' ) );
+		}
+		$normalized[ $type ] = $url;
+	}
+	return $normalized;
+}
+
+/**
+ * Exact endpoint writer used inside an existing transaction or schema migration.
+ * Callers must pass an already-normalized map.
+ *
+ * @param int                  $identity_id Identity id.
+ * @param array<string,string> $endpoints   Normalized endpoint map.
+ * @return bool
+ */
+function axismundi_actors_write_endpoints( int $identity_id, array $endpoints ) : bool {
+	global $wpdb;
+	if ( $identity_id <= 0 ) {
+		return false;
+	}
+	$table = axismundi_actors_endpoints_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact replacement in a custom relation table.
+	if ( false === $wpdb->delete( $table, array( 'identity_id' => $identity_id ), array( '%d' ) ) ) {
+		return false;
+	}
+	$now = current_time( 'mysql', true );
+	foreach ( $endpoints as $type => $uri ) {
+		$done = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom endpoint ledger.
+			$table,
+			array(
+				'identity_id'       => $identity_id,
+				'endpoint_type'     => $type,
+				'endpoint_uri'      => $uri,
+				'endpoint_uri_hash' => hash( 'sha256', $uri ),
+				'updated_at'        => $now,
+			),
+			array( '%d', '%s', '%s', '%s', '%s' )
+		);
+		if ( false === $done ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Atomically replace all endpoint roles for an Actor.
+ *
+ * @param int                  $identity_id Identity id.
+ * @param array<string,mixed>  $endpoints   Endpoint map.
+ * @return true|WP_Error
+ */
+function axismundi_actors_replace_endpoints( int $identity_id, array $endpoints ) {
+	global $wpdb;
+	if ( ! axismundi_actors_get_by_identity( $identity_id ) ) {
+		return new WP_Error( 'ax_actors_endpoint_actor', __( 'No such Actor.', 'axismundi-actors' ) );
+	}
+	$normalized = axismundi_actors_validate_endpoints( $endpoints );
+	if ( is_wp_error( $normalized ) ) {
+		return $normalized;
+	}
+	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( ! axismundi_actors_write_endpoints( $identity_id, $normalized ) ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_actors_endpoint_save', __( 'Could not save Actor endpoints.', 'axismundi-actors' ) );
+	}
+	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	return true;
+}
+
+/**
+ * @param int|Axismundi_Actor $actor Actor or identity id.
+ * @return array<string,string>
+ */
+function axismundi_actors_get_endpoints( $actor ) : array {
+	global $wpdb;
+	$identity_id = $actor instanceof Axismundi_Actor ? $actor->get_identity_id() : (int) $actor;
+	if ( $identity_id <= 0 ) {
+		return array();
+	}
+	$table = axismundi_actors_endpoints_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT endpoint_type, endpoint_uri FROM {$table} WHERE identity_id = %d", $identity_id ), ARRAY_A );
+	$map  = array();
+	foreach ( $rows as $row ) {
+		$map[ (string) $row['endpoint_type'] ] = (string) $row['endpoint_uri'];
+	}
+	return $map;
+}
+
+/**
+ * @param int|Axismundi_Actor $actor Actor or identity id.
+ * @param string              $type  Endpoint role.
+ * @return string
+ */
+function axismundi_actors_get_endpoint( $actor, string $type ) : string {
+	$endpoints = axismundi_actors_get_endpoints( $actor );
+	return (string) ( $endpoints[ $type ] ?? '' );
+}
+
 /**
  * Insert or refresh a normalized remote Actor snapshot. HTTP discovery and JSON
  * validation happen outside this repository; this function owns only persistence.
@@ -602,6 +865,10 @@ function axismundi_actors_upsert_remote( array $record ) {
 	if ( ! is_array( $payload ) ) {
 		return new WP_Error( 'ax_actors_remote_payload', __( 'Invalid remote Actor payload.', 'axismundi-actors' ) );
 	}
+	$endpoints = axismundi_actors_validate_endpoints( is_array( $record['endpoints'] ?? null ) ? $record['endpoints'] : array() );
+	if ( is_wp_error( $endpoints ) || empty( $endpoints['inbox'] ) || empty( $endpoints['outbox'] ) ) {
+		return new WP_Error( 'ax_actors_remote_endpoints', __( 'The remote Actor requires valid inbox and outbox endpoints.', 'axismundi-actors' ) );
+	}
 	$payload_json = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	if ( false === $payload_json ) {
 		return new WP_Error( 'ax_actors_remote_payload', __( 'Could not encode the remote Actor payload.', 'axismundi-actors' ) );
@@ -618,8 +885,6 @@ function axismundi_actors_upsert_remote( array $record ) {
 		'display_name'       => (string) ( $record['display_name'] ?? '' ),
 		'summary'            => (string) ( $record['summary'] ?? '' ),
 		'profile_url'        => (string) ( $record['profile_url'] ?? '' ),
-		'inbox_uri'          => (string) ( $record['inbox_uri'] ?? '' ),
-		'outbox_uri'         => (string) ( $record['outbox_uri'] ?? '' ),
 		'payload_json'       => $payload_json,
 		'updated_at'         => $now,
 	);
@@ -627,6 +892,7 @@ function axismundi_actors_upsert_remote( array $record ) {
 		if ( $existing->is_local() || 'tombstone' === $existing->get_status() ) {
 			return new WP_Error( 'ax_actors_remote_conflict', __( 'That identity cannot be refreshed as a remote Actor.', 'axismundi-actors' ) );
 		}
+		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor snapshot table.
 			axismundi_actors_actors_table(),
 			$fields,
@@ -635,15 +901,25 @@ function axismundi_actors_upsert_remote( array $record ) {
 			array( '%d' )
 		);
 		if ( false === $done ) {
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return new WP_Error( 'ax_actors_remote_update', __( 'Could not refresh the remote Actor.', 'axismundi-actors' ) );
 		}
-		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom identity table.
+		if ( ! axismundi_actors_write_endpoints( $existing->get_identity_id(), $endpoints ) ) {
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return new WP_Error( 'ax_actors_remote_endpoints', __( 'Could not refresh the remote Actor endpoints.', 'axismundi-actors' ) );
+		}
+		$identity_updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom identity table.
 			axismundi_actors_identities_table(),
 			array( 'updated_at' => $now ),
 			array( 'id' => $existing->get_identity_id() ),
 			array( '%s' ),
 			array( '%d' )
 		);
+		if ( false === $identity_updated ) {
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return new WP_Error( 'ax_actors_remote_identity', __( 'Could not refresh the remote identity.', 'axismundi-actors' ) );
+		}
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return axismundi_actors_get_by_uri( $uri );
 	}
 
@@ -673,6 +949,10 @@ function axismundi_actors_upsert_remote( array $record ) {
 	if ( false === $inserted ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_actors_remote_actor', __( 'Could not create the remote Actor.', 'axismundi-actors' ) );
+	}
+	if ( ! axismundi_actors_write_endpoints( $identity_id, $endpoints ) ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_actors_remote_endpoints', __( 'Could not save the remote Actor endpoints.', 'axismundi-actors' ) );
 	}
 	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	return axismundi_actors_get_by_uri( $uri );

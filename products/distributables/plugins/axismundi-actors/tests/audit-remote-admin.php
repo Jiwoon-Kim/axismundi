@@ -36,8 +36,10 @@ try {
 			'display_name'       => 'Admin Fixture',
 			'summary'            => '<p>Fixture summary.</p>',
 			'profile_url'        => 'https://example.com/@admin_fixture',
-			'inbox_uri'          => 'https://example.com/users/admin_fixture/inbox',
-			'outbox_uri'         => 'https://example.com/users/admin_fixture/outbox',
+			'endpoints'          => array(
+				'inbox'  => 'https://example.com/users/admin_fixture/inbox',
+				'outbox' => 'https://example.com/users/admin_fixture/outbox',
+			),
 			'payload'            => array( 'id' => 'https://example.com/users/admin_fixture', 'type' => 'Person', 'preferredUsername' => 'admin_fixture', 'name' => 'Admin Fixture' ),
 		)
 	);
@@ -55,12 +57,13 @@ try {
 	axismundi_actors_render_remote_admin_page();
 	$html = (string) ob_get_clean();
 	ax_remote_admin_assert( $ax_remote_admin_results, 'screen renders the nonce-protected acct/URL lookup form', str_contains( $html, 'axismundi_actors_discover_remote' ) && str_contains( $html, 'Fetch Actor' ) && str_contains( $html, '_wpnonce' ) );
-	ax_remote_admin_assert( $ax_remote_admin_results, 'selected Actor shows normalized identity, verified acct, and escaped raw JSON', str_contains( $html, 'Admin Fixture' ) && str_contains( $html, 'admin_fixture@example.com' ) && str_contains( $html, 'Raw Actor JSON' ) && str_contains( $html, 'preferredUsername' ) );
+	ax_remote_admin_assert( $ax_remote_admin_results, 'selected Actor shows normalized identity, endpoints, verified acct, and escaped raw JSON', str_contains( $html, 'Admin Fixture' ) && str_contains( $html, 'admin_fixture@example.com' ) && str_contains( $html, 'Endpoints' ) && str_contains( $html, '/inbox' ) && str_contains( $html, 'Raw Actor JSON' ) && str_contains( $html, 'preferredUsername' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'screen shows the linked instance software cache', str_contains( $html, 'fixture 1.2.3' ) && str_contains( $html, 'Cached instances' ) );
 } finally {
 	unset( $_GET['actor_id'] );
 	if ( $ax_remote_admin_id > 0 ) {
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => $ax_remote_admin_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => $ax_remote_admin_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_remote_admin_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_remote_admin_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}

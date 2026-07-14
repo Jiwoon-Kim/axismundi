@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.18
+Stable tag: 0.0.19
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -12,7 +12,7 @@ Identity registry for Axismundi: one immutable actor URI and one profile hub per
 
 == Description ==
 
-Axismundi Actors gives every local person, the site itself, and (later) remote
+Axismundi Actors gives every local person, the site itself, and cached remote
 federated actors **one stable identity record** and **one human profile hub**
 (`/@handle/`), without collapsing that identity into the WordPress user account and
 without owning the content it points at.
@@ -32,6 +32,17 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.19 =
+* DB v7 — normalize inbox, outbox, followers, following, featured, and sharedInbox
+  into wp_ax_actor_endpoints. One Actor has at most one URI per role, while the URI
+  hash is deliberately non-unique because many Actors may share one sharedInbox.
+* Make remote Actor refresh replace its endpoint set atomically with the snapshot,
+  removing stale optional roles. The administrator inspector now shows normalized
+  endpoints alongside verified addresses and raw JSON.
+* Backfill endpoints from legacy inbox/outbox columns and cached Actor payloads,
+  verify every legacy value, then remove the old columns. A failed migration remains
+  retryable and does not record DB v7.
 
 = 0.0.18 =
 * Add Users > Remote Actors for manage_options administrators: resolve an acct,

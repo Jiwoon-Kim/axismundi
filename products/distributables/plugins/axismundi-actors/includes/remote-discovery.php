@@ -129,6 +129,10 @@ function axismundi_actors_normalize_remote_actor_payload( array $payload, string
 	if ( '' === $username ) {
 		return new WP_Error( 'ax_actors_remote_username', __( 'The remote Actor has no preferred username.', 'axismundi-actors' ) );
 	}
+	$endpoints = axismundi_actors_extract_endpoints_from_payload( $payload );
+	if ( empty( $endpoints['inbox'] ) || empty( $endpoints['outbox'] ) ) {
+		return new WP_Error( 'ax_actors_remote_endpoints', __( 'The remote Actor has invalid inbox or outbox endpoints.', 'axismundi-actors' ) );
+	}
 	return array(
 		'uri'                => $uri,
 		'actor_type'         => $type,
@@ -136,8 +140,7 @@ function axismundi_actors_normalize_remote_actor_payload( array $payload, string
 		'display_name'       => axismundi_actors_remote_limit_text( sanitize_text_field( wp_strip_all_tags( (string) ( $payload['name'] ?? '' ) ) ), 191 ),
 		'summary'            => wp_kses_post( (string) ( $payload['summary'] ?? '' ) ),
 		'profile_url'        => axismundi_actors_remote_profile_url( $payload['url'] ?? null, $uri ),
-		'inbox_uri'          => $inbox,
-		'outbox_uri'         => $outbox,
+		'endpoints'          => $endpoints,
 		'payload'            => $payload,
 	);
 }

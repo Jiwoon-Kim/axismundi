@@ -286,6 +286,19 @@ function axismundi_act_get_following( string $actor_uri, int $limit = 100 ) : ar
 	return axismundi_act_relation_actor_list( 'subject', $actor_uri, $limit );
 }
 
+/** Pending Follow relation rows addressed to one local Actor. */
+function axismundi_act_get_pending_follow_requests( string $actor_uri, int $limit = 100 ) : array {
+	global $wpdb;
+	if ( ! axismundi_act_relations_ready() || '' === axismundi_act_uri( $actor_uri ) ) {
+		return array();
+	}
+	$table = axismundi_act_relations_table();
+	$limit = max( 1, min( 200, $limit ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table; values prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE relation_type = 'follow' AND state = 'pending' AND object_actor_uri_hash = %s ORDER BY updated_at DESC, id DESC LIMIT %d", hash( 'sha256', $actor_uri ), $limit ), ARRAY_A );
+	return array_values( array_filter( $rows, static fn( array $row ) : bool => hash_equals( (string) $row['object_actor_uri'], $actor_uri ) ) );
+}
+
 /** Query accepted Follow edges from either side. */
 function axismundi_act_relation_actor_list( string $side, string $actor_uri, int $limit ) : array {
 	global $wpdb;

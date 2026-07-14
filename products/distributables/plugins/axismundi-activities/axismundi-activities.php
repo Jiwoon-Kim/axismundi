@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Activities
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activities
  * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push.
- * Version:           0.0.3
+ * Version:           0.0.4
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  axismundi-actors
@@ -15,17 +15,20 @@
  *
  * @package AxismundiActivities
  *
- * Phase 2 implements the immutable Activity ledger, social relation materialization,
- * and a read-only administrator log. It creates no public route, scheduled event,
- * notification, signature, delivery queue, or network request.
+ * Phase 2.1 implements the immutable Activity ledger, social relation materialization,
+ * local Follow controls, and a read-only administrator log. It creates no public
+ * Activity route, scheduled event, notification, signature, delivery queue, or
+ * network request.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITIES_VERSION = '0.0.3';
+const AXISMUNDI_ACTIVITIES_VERSION = '0.0.4';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/relations.php';
+require_once __DIR__ . '/includes/local-social.php';
+require_once __DIR__ . '/includes/local-social-ui.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
 }

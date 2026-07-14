@@ -1,7 +1,7 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 2 Activity repository and social relation state implemented**. No public
-> route or network behavior.
+> Status: **Phase 2.1 Activity repository, social relation state, and local Follow UI
+> implemented**. No public Activity route or network behavior.
 
 ## 1. Purpose
 
@@ -40,6 +40,8 @@ Actor URI + Activity + Object URI
    its repository before an Activity is accepted; Activities never creates Actor identities.
 10. Relation state is derived in the same transaction as its Activity. Relation hooks fire
     only after commit, and duplicate Activity delivery never emits duplicate relation changes.
+11. The first product workflow is local-only Person-to-Person Follow. Remote interaction is
+    fail-closed until an explicit official ActivityPub compatibility adapter exists.
 
 ## 3. Supported activity vocabulary
 

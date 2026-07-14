@@ -1957,6 +1957,38 @@ function axismundi_actors_set_actor_type( int $identity_id, string $type ) : boo
 }
 
 /**
+ * Set one policy axis for a local Actor through the Actors-owned repository.
+ * Domain plugins may consume this API but must not write the Actor table directly.
+ *
+ * @param Axismundi_Actor $actor  Local Actor.
+ * @param string          $axis   Supported policy axis.
+ * @param bool|null       $value  Explicit value, or null to return to unreported/default.
+ * @param int|null        $viewer Acting user id; defaults to the current user.
+ * @return bool|WP_Error
+ */
+function axismundi_actors_set_local_policy( Axismundi_Actor $actor, string $axis, ?bool $value, ?int $viewer = null ) {
+	global $wpdb;
+	if ( ! $actor->is_local() || ! in_array( $axis, array( 'manually_approves_followers', 'discoverable', 'indexable' ), true ) ) {
+		return new WP_Error( 'ax_actors_policy_axis', __( 'That local Actor policy cannot be changed.', 'axismundi-actors' ) );
+	}
+	$viewer = null === $viewer ? get_current_user_id() : $viewer;
+	$owner  = $actor->get_local_user_id();
+	if ( $viewer <= 0 || ( $viewer !== $owner && ! user_can( $viewer, 'manage_options' ) ) ) {
+		return new WP_Error( 'ax_actors_policy_permission', __( 'You cannot change that Actor policy.', 'axismundi-actors' ) );
+	}
+	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Actors repository owns this custom table.
+		axismundi_actors_actors_table(),
+		array( $axis => null === $value ? null : ( $value ? 1 : 0 ), 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $actor->get_identity_id() ),
+		array( '%d', '%s' ),
+		array( '%d' )
+	);
+	return false === $done
+		? new WP_Error( 'ax_actors_policy_write', __( 'The Actor policy could not be saved.', 'axismundi-actors' ) )
+		: true;
+}
+
+/**
  * Idempotently seed the always-present site actor, and — only when the activating
  * user is a valid administrator — the site-owner Person actor. Never depends on a
  * specific account existing (docs/SPEC.md §4).

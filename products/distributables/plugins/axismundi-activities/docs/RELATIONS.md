@@ -39,3 +39,11 @@ stored identity.
 `Tools > Activity Log` is a read-only ledger inspector for administrators. It shows recent
 Activities, immutable payload JSON, and current materialized relations. It performs no fetch,
 delivery, state transition, or notification action.
+
+## 5. Local product workflow
+
+Activated public local Person actors may follow each other without HTTP transport. An explicit
+`manually_approves_followers=true` leaves the Follow pending until the target records Accept or
+Reject. False, or NULL under the default site policy, records an automatic target-authored
+Accept. The immutable Follow and Accept remain separate Activities. The `Follows` admin screen exposes
+only the current Actor's requests and accepted edges; remote Actor interaction remains disabled.

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.24
+Stable tag: 0.0.25
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,10 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.25 =
+* Add the permission-checked `axismundi_actors_set_local_policy()` repository API so
+  social-domain plugins can manage local follower approval without direct Actor-table writes.
 
 = 0.0.24 =
 * DB v10b — add wp_ax_identity_relations for alsoKnownAs and movedTo claims. Remote

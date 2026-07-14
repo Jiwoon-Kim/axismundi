@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -21,11 +21,21 @@ Federation will own HTTP inbox/outbox transport, signatures, and remote delivery
 
 Axismundi Actors is a required dependency and remains the authority for every actor URI.
 
-Version 0.0.3 implements the immutable URI-keyed Activity ledger, Follow/Block relation
-state, and a read-only administrator Activity Log. It creates no public route, cron event,
-network request, inbox, outbox, notification, or delivery queue.
+Version 0.0.4 implements the immutable URI-keyed Activity ledger, Follow/Block relation
+state, local Person-to-Person Follow controls, and read-only administrator inspection. It
+creates no public Activity route, cron event, network request, inbox, notification, or
+delivery queue.
 
 == Changelog ==
+
+= 0.0.4 =
+* Add local-only Follow, request cancellation, Unfollow, Accept, and Reject workflows for
+  activated public Person actors. Auto-accept undeclared policies by default while honoring
+  an Actor's explicit `manually_approves_followers` policy.
+* Add Follow controls to local Actor profiles and a self-service `Follows` admin screen
+  for approval policy, pending requests, followers, and following.
+* Keep every workflow offline, reject remote Actors, and add an Actors-owned policy setter
+  instead of writing the identity repository directly.
 
 = 0.0.3 =
 * Add verified DB v2 `wp_ax_activity_relations` materialization for Follow, Accept, Reject,

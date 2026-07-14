@@ -11,10 +11,12 @@ lease ownership, prefix tenancy, and package boundaries. No runtime state.
 idempotent `axismundi_act_record_activity()`; URI/actor/object lookup; valid Undo
 effectiveness; post-commit `axismundi_act_activity_recorded`. Network requests remain forbidden.
 
-## 0.0.3 — Phase 2: Follow, Accept, Reject, Block
+## 0.0.3 — Phase 2: Follow, Accept, Reject, Block (shipped)
 
 Create `wp_ax_activity_relations`; Follow pending state, Accept/Reject transition, Undo Follow,
-directional Block, and followers/following projections. Tests use local payload fixtures only.
+directional Block, followers/following projections, out-of-order transition reconciliation,
+and a read-only `Tools > Activity Log` inspector. Tests use stored local/remote Actor fixtures
+and perform no HTTP.
 
 ## Prerequisite — Object Projections lease substrate
 

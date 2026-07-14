@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '1';
+const AXISMUNDI_ACT_DB_VERSION        = '2';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -71,7 +71,7 @@ function axismundi_act_install() : bool {
 		$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table ) );
 	}
 
-	$valid = in_array( 'activity_uri', $columns, true )
+	$base_valid = in_array( 'activity_uri', $columns, true )
 		&& in_array( 'actor_uri', $columns, true )
 		&& in_array( 'payload_hash', $columns, true )
 		&& in_array( 'effective_status', $columns, true )
@@ -81,6 +81,8 @@ function axismundi_act_install() : bool {
 		&& ! empty( $uuid_index )
 		&& 0 === (int) $uuid_index[0]['Non_unique']
 		&& 'InnoDB' === $engine;
+	$relations_valid = function_exists( 'axismundi_act_install_relations' ) && axismundi_act_install_relations();
+	$valid           = $base_valid && $relations_valid;
 	if ( $valid ) {
 		update_option( AXISMUNDI_ACT_DB_VERSION_OPTION, AXISMUNDI_ACT_DB_VERSION, false );
 	}
@@ -257,6 +259,19 @@ function axismundi_act_get_by_actor( string $actor_uri, int $limit = 50 ) : arra
 /** Query recent activities by one exact Object URI. */
 function axismundi_act_get_by_object( string $object_uri, int $limit = 50 ) : array {
 	return axismundi_act_get_by_reference( 'object', $object_uri, $limit );
+}
+
+/** Recent Activity ledger rows for administration and collection providers. */
+function axismundi_act_get_recent( int $limit = 50 ) : array {
+	global $wpdb;
+	if ( AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return array();
+	}
+	$table = axismundi_act_activities_table();
+	$limit = max( 1, min( 200, $limit ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table; numeric limit prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d", $limit ), ARRAY_A );
+	return array_map( 'axismundi_act_hydrate', $rows );
 }
 
 /** @return Axismundi_Activity[] */
@@ -462,6 +477,14 @@ function axismundi_act_record_activity( array $payload, string $direction = 'loc
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_act_transition', __( 'The Activity effective state could not be derived.', 'axismundi-activities' ) );
 	}
+	$relation_events = array();
+	if ( function_exists( 'axismundi_act_apply_relation_activity' ) ) {
+		$relation_events = axismundi_act_apply_relation_activity( $normalized );
+		if ( is_wp_error( $relation_events ) ) {
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return $relation_events;
+		}
+	}
 	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$activity = axismundi_act_get( (string) $normalized['activity_uri'] );
 	if ( ! $activity instanceof Axismundi_Activity ) {
@@ -469,5 +492,9 @@ function axismundi_act_record_activity( array $payload, string $direction = 'loc
 	}
 	/** @param Axismundi_Activity $activity Newly committed Activity. */
 	do_action( 'axismundi_act_activity_recorded', $activity );
+	foreach ( $relation_events as $relation ) {
+		/** @param array<string,mixed> $relation Committed relation snapshot. */
+		do_action( 'axismundi_act_relation_changed', $relation );
+	}
 	return $activity;
 }

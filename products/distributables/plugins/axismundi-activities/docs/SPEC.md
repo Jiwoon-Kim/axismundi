@@ -1,6 +1,7 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 1 Activity repository implemented**. No routes or network behavior.
+> Status: **Phase 2 Activity repository and social relation state implemented**. No public
+> route or network behavior.
 
 ## 1. Purpose
 
@@ -37,6 +38,8 @@ Actor URI + Activity + Object URI
 8. Hooks such as `axismundi_act_activity_recorded` fire only after a successful commit.
 9. Axismundi Actors is a required plugin dependency. Every `actor_uri` must resolve through
    its repository before an Activity is accepted; Activities never creates Actor identities.
+10. Relation state is derived in the same transaction as its Activity. Relation hooks fire
+    only after commit, and duplicate Activity delivery never emits duplicate relation changes.
 
 ## 3. Supported activity vocabulary
 

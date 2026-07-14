@@ -1,6 +1,6 @@
 # Activity storage model
 
-> `wp_ax_activities` is implemented in DB v1. The Phase 2 relations table remains provisional.
+> `wp_ax_activities` and `wp_ax_activity_relations` are implemented in DB v2.
 
 ## 1. `wp_ax_activities`
 
@@ -50,7 +50,7 @@ subject_actor_uri_hash   CHAR(64) NOT NULL
 object_actor_uri         TEXT NOT NULL
 object_actor_uri_hash    CHAR(64) NOT NULL
 direction                inbound | outbound | local
-state                    pending | accepted | rejected | undone
+state                    pending | accepted | rejected | active | undone
 initiating_activity_uri  TEXT NOT NULL
 state_activity_uri       TEXT NULL
 created_at               DATETIME NOT NULL
@@ -64,6 +64,10 @@ identity. Direction is a local query convenience derived when the relation is wr
 
 Followers and following are projections of accepted Follow rows. They are not duplicated
 as authoritative collection tables.
+
+Follow uses `pending|accepted|rejected|undone`; Block uses `active|undone`. Relation rows
+are materialized in the same InnoDB transaction as their immutable Activity. The database
+version is recorded only after both verified tables and their unique indexes exist.
 
 ## 3. Future logical collection membership
 

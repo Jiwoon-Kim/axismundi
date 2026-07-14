@@ -43,7 +43,7 @@ try {
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies its custom index.
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'activity_uri_hash'", ARRAY_A );
-	ax_act_assert( $ax_act_results, 'schema v1 installs with verified unique URI identity and no blog_id tenancy column', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && ! in_array( 'blog_id', $columns, true ) );
+	ax_act_assert( $ax_act_results, 'the Activity table retains verified unique URI identity and no blog_id tenancy column after upgrade', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && ! in_array( 'blog_id', $columns, true ) );
 
 	$site_actor = axismundi_actors_get_site_actor();
 	$remote     = axismundi_actors_upsert_remote(

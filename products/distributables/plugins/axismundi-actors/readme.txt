@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.17
+Stable tag: 0.0.18
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,17 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.18 =
+* Add Users > Remote Actors for manage_options administrators: resolve an acct,
+  /@handle profile URL, or canonical Actor URL through the existing safe discovery
+  services, then inspect normalized identity data, verified addresses, raw Actor
+  JSON, and the associated instance/NodeInfo cache.
+* Add recent remote-Actor and instance cache tables plus a nonce-protected refresh
+  action. Profile aliases are resolved through WebFinger; arbitrary canonical URLs
+  must return an exactly matching Actor id.
+* Keep the screen diagnostic and read-only apart from explicit fetch/refresh. It
+  does not follow, deliver, mutate remote state, or bypass the existing SSRF limits.
 
 = 0.0.17 =
 * DB v6 — the remote instance / NodeInfo host ledger (wp_ax_instances). A host's

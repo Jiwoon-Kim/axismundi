@@ -141,14 +141,15 @@ federation table (DB v5+, DATA-MODEL §9).
 ## DB version roadmap & implementation order
 
 The schema grows one version at a time; the version option is recorded only after the
-new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v5**
-(identity + actor + avatar/header + multilingual + address ledger). Next, in order:
+new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v6**
+(identity + actor + avatar/header + multilingual + address + instance ledgers). Next:
 
 ```
 DB v5  wp_ax_actor_addresses (handle routing + history)        — shipped; WebFinger acct policy fail-closed (§9.8)
 WebFinger endpoint  /.well-known/webfinger + local acct: rows  — shipped; subdirectory multisite explicitly OFF (tested)
 Local NodeInfo      /.well-known/nodeinfo + NodeInfo 2.1        — shipped, NO table (WP options + live counts)
 Remote discovery    safe acct → WebFinger → Actor snapshot     — shipped; synchronous primitive, no refresh scheduler
+Remote admin        Users > Remote Actors lookup/cache inspector — shipped; manage_options + nonce
 DB v6  wp_ax_instances (host software/version/policy ledger)   — shipped; per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.9)
 DB v7  wp_ax_actor_endpoints + follower/discovery policy cols   — next; inbox/outbox/…, lock, discoverable, indexable
 DB v8  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo

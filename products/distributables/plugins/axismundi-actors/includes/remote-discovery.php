@@ -143,6 +143,42 @@ function axismundi_actors_normalize_remote_actor_payload( array $payload, string
 }
 
 /**
+ * Fetch, validate, and persist one canonical Actor URI.
+ *
+ * @param string $self          Expected canonical ActivityStreams Actor URI.
+ * @param string $verified_acct Optional already-verified bare acct address.
+ * @return Axismundi_Actor|WP_Error
+ */
+function axismundi_actors_discover_remote_actor_uri( string $self, string $verified_acct = '' ) {
+	if ( 'https' !== strtolower( (string) wp_parse_url( $self, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $self ) ) {
+		return new WP_Error( 'ax_actors_remote_self', __( 'Unsafe ActivityStreams Actor URL.', 'axismundi-actors' ) );
+	}
+	$payload = axismundi_actors_remote_get_json( $self, array( 'application/activity+json', 'application/ld+json', 'application/json' ) );
+	if ( is_wp_error( $payload ) ) {
+		return $payload;
+	}
+	$record = axismundi_actors_normalize_remote_actor_payload( $payload, $self );
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+	$actor = axismundi_actors_upsert_remote( $record );
+	if ( is_wp_error( $actor ) ) {
+		return $actor;
+	}
+	if ( '' !== $verified_acct && ! axismundi_actors_record_verified_acct_address( $actor->get_identity_id(), $verified_acct ) ) {
+		return new WP_Error( 'ax_actors_remote_address', __( 'Could not record the verified remote acct address.', 'axismundi-actors' ) );
+	}
+	/**
+	 * A remote actor was discovered and persisted. The instance ledger caches its
+	 * host's NodeInfo from here.
+	 *
+	 * @param Axismundi_Actor $actor Discovered remote actor.
+	 */
+	do_action( 'axismundi_actors_remote_actor_discovered', $actor );
+	return $actor;
+}
+
+/**
  * Discover and persist one remote Actor from an acct address.
  *
  * @param string $acct Remote acct input.
@@ -172,30 +208,25 @@ function axismundi_actors_discover_remote_actor( string $acct ) {
 			break;
 		}
 	}
-	if ( 'https' !== strtolower( (string) wp_parse_url( $self, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $self ) ) {
-		return new WP_Error( 'ax_actors_remote_self', __( 'WebFinger returned no safe ActivityStreams Actor link.', 'axismundi-actors' ) );
+	return axismundi_actors_discover_remote_actor_uri( $self, $parsed['acct'] );
+}
+
+/**
+ * Admin-friendly discovery input: acct, `/@handle` profile URL, or canonical URI.
+ * Profile aliases are resolved back through WebFinger rather than trusted as ids.
+ *
+ * @param string $input User input.
+ * @return Axismundi_Actor|WP_Error
+ */
+function axismundi_actors_discover_remote_input( string $input ) {
+	$input = trim( $input );
+	if ( 'https' !== strtolower( (string) wp_parse_url( $input, PHP_URL_SCHEME ) ) ) {
+		return axismundi_actors_discover_remote_actor( $input );
 	}
-	$payload = axismundi_actors_remote_get_json( $self, array( 'application/activity+json', 'application/ld+json', 'application/json' ) );
-	if ( is_wp_error( $payload ) ) {
-		return $payload;
+	$host = axismundi_actors_webfinger_authority_from_url( $input );
+	$path = trim( (string) wp_parse_url( $input, PHP_URL_PATH ), '/' );
+	if ( '' !== $host && str_starts_with( $path, '@' ) && ! str_contains( $path, '/' ) ) {
+		return axismundi_actors_discover_remote_actor( rawurldecode( substr( $path, 1 ) ) . '@' . $host );
 	}
-	$record = axismundi_actors_normalize_remote_actor_payload( $payload, $self );
-	if ( is_wp_error( $record ) ) {
-		return $record;
-	}
-	$actor = axismundi_actors_upsert_remote( $record );
-	if ( is_wp_error( $actor ) ) {
-		return $actor;
-	}
-	if ( ! axismundi_actors_record_verified_acct_address( $actor->get_identity_id(), $parsed['acct'] ) ) {
-		return new WP_Error( 'ax_actors_remote_address', __( 'Could not record the verified remote acct address.', 'axismundi-actors' ) );
-	}
-	/**
-	 * A remote actor was discovered and persisted. The instance ledger caches its
-	 * host's NodeInfo from here.
-	 *
-	 * @param Axismundi_Actor $actor Discovered remote actor.
-	 */
-	do_action( 'axismundi_actors_remote_actor_discovered', $actor );
-	return $actor;
+	return axismundi_actors_discover_remote_actor_uri( $input );
 }

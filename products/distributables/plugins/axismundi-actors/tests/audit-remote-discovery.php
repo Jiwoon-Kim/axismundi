@@ -113,6 +113,9 @@ try {
 	$ax_remote_name = 'Remote Alice Updated';
 	$refreshed      = axismundi_actors_discover_remote_actor( 'acct:remote_alice@example.com' );
 	ax_remote_assert( $ax_remote_results, 'rediscovery refreshes the same identity instead of duplicating it', $refreshed instanceof Axismundi_Actor && $first_id === $refreshed->get_identity_id() && 'Remote Alice Updated' === $refreshed->get_display_name() );
+	$from_profile = axismundi_actors_discover_remote_input( 'https://example.com/@remote_alice' );
+	$from_id      = axismundi_actors_discover_remote_input( 'https://example.com/users/alice' );
+	ax_remote_assert( $ax_remote_results, 'admin input accepts /@handle profile aliases through WebFinger and exact canonical Actor URLs', $from_profile instanceof Axismundi_Actor && $from_id instanceof Axismundi_Actor && $first_id === $from_profile->get_identity_id() && $first_id === $from_id->get_identity_id() );
 
 	$mismatch = axismundi_actors_discover_remote_actor( 'id_mismatch@example.com' );
 	ax_remote_assert( $ax_remote_results, 'an Actor id that differs from the WebFinger self URI is rejected', is_wp_error( $mismatch ) && 'ax_actors_remote_identity' === $mismatch->get_error_code() && null === axismundi_actors_get_by_uri( 'https://evil.example/users/substitute' ) );
@@ -134,6 +137,7 @@ try {
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
+	$wpdb->delete( axismundi_actors_instances_table(), array( 'host_hash' => axismundi_actors_host_hash( 'example.com' ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 }
 
 $ax_remote_failures = count( array_filter( $ax_remote_results, static fn( bool $result ) : bool => ! $result ) );

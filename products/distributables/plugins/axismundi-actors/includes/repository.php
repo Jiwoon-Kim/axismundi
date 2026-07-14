@@ -554,6 +554,37 @@ function axismundi_actors_get_for_user( int $user_id ) : ?Axismundi_Actor {
 }
 
 /**
+ * Recent cached remote actors for administration.
+ *
+ * @param int $limit Maximum rows.
+ * @return Axismundi_Actor[]
+ */
+function axismundi_actors_get_remote_actors( int $limit = 50 ) : array {
+	global $wpdb;
+	$limit      = max( 1, min( 200, $limit ) );
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table names; numeric limit is prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' ORDER BY i.updated_at DESC LIMIT %d", $limit ), ARRAY_A );
+	return array_map( static fn( array $row ) : Axismundi_Actor => Axismundi_Actor::from_row( $row ), $rows );
+}
+
+/**
+ * Decoded bounded payload snapshot for an actor.
+ *
+ * @param int $identity_id Identity id.
+ * @return array<string,mixed>
+ */
+function axismundi_actors_get_remote_payload( int $identity_id ) : array {
+	global $wpdb;
+	$actors = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name.
+	$json = (string) $wpdb->get_var( $wpdb->prepare( "SELECT payload_json FROM {$actors} WHERE identity_id = %d", $identity_id ) );
+	$data = json_decode( $json, true );
+	return is_array( $data ) ? $data : array();
+}
+
+/**
  * Insert or refresh a normalized remote Actor snapshot. HTTP discovery and JSON
  * validation happen outside this repository; this function owns only persistence.
  *
@@ -1005,6 +1036,20 @@ function axismundi_actors_get_instance( string $host ) : ?array {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$instances} WHERE host_hash = %s", axismundi_actors_host_hash( $host ) ), ARRAY_A );
 	return $row ?: null;
+}
+
+/**
+ * Recent cached remote instances for administration.
+ *
+ * @param int $limit Maximum rows.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_actors_get_instances( int $limit = 50 ) : array {
+	global $wpdb;
+	$limit     = max( 1, min( 200, $limit ) );
+	$instances = axismundi_actors_instances_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name; numeric limit is prepared.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$instances} ORDER BY updated_at DESC LIMIT %d", $limit ), ARRAY_A );
 }
 
 /**

@@ -66,6 +66,9 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
   canonical URI and never resurrects a tombstone.
 - Stored remote HTML/JSON remains untrusted. Snapshot fields are normalized for
   display; raw bounded `payload_json` is never printed without output sanitization.
+- The Remote Actors admin inspector requires `manage_options`; every fetch/refresh
+  is a nonce-protected POST. Its raw JSON view is escaped text, and all requests go
+  through the same bounded safe fetcher — the screen is not an SSRF bypass.
 
 ## 3. Identity integrity
 

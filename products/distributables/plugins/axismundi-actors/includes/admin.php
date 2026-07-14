@@ -221,6 +221,13 @@ function axismundi_actors_render_remote_admin_page() : void {
 
 		<h2><?php esc_html_e( 'Remote image cache', 'axismundi-actors' ); ?></h2>
 		<p><?php esc_html_e( 'Preview or purge all cached remote avatar/header mappings. Physical files are removed only when no Actor still references their content hash.', 'axismundi-actors' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="axismundi_actors_asset_settings">
+			<?php wp_nonce_field( 'ax_actors_asset_settings' ); ?>
+			<label><input type="checkbox" name="webp_enabled" value="1" <?php checked( axismundi_actors_asset_webp_enabled() ); ?>> <?php esc_html_e( 'Generate WebP candidates when they are smaller than JPEG/PNG', 'axismundi-actors' ); ?></label>
+			<p class="description"><?php esc_html_e( 'Disabled by default to reduce image-processing cost. Changing this queues an asynchronous cache rebuild.', 'axismundi-actors' ); ?></p>
+			<?php submit_button( __( 'Save image settings', 'axismundi-actors' ), 'secondary', 'submit', false ); ?>
+		</form>
 		<?php axismundi_actors_render_asset_cache_action( 'inspect', 'all', '', __( 'Preview full cache purge', 'axismundi-actors' ) ); ?>
 		<?php axismundi_actors_render_asset_cache_action( 'purge', 'all', '', __( 'Purge full image cache', 'axismundi-actors' ), true ); ?>
 	</div>
@@ -770,6 +777,18 @@ function axismundi_actors_handle_asset_cache() : void {
 	exit;
 }
 add_action( 'admin_post_axismundi_actors_asset_cache', 'axismundi_actors_handle_asset_cache' );
+
+/** Save the optional remote image conversion policy. */
+function axismundi_actors_handle_asset_settings() : void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You cannot manage the remote image cache.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'ax_actors_asset_settings' );
+	$updated = axismundi_actors_set_asset_webp_enabled( ! empty( $_POST['webp_enabled'] ) );
+	wp_safe_redirect( add_query_arg( 'ax_asset_rows', $updated, axismundi_actors_remote_admin_url() ) );
+	exit;
+}
+add_action( 'admin_post_axismundi_actors_asset_settings', 'axismundi_actors_handle_asset_settings' );
 
 /** @return void */
 function axismundi_actors_handle_set_visibility() : void {

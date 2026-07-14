@@ -25,7 +25,7 @@ wp-content/uploads/axismundi-cache/actors/v{processor}/
       └─ {content_hash}/ # full sha256 of the SOURCE BINARY
          ├─ avatar-96.{webp|jpg|png}
          ├─ avatar-192.{webp|jpg|png}
-         ├─ avatar-384.{webp|jpg|png}
+         ├─ avatar-400.{webp|jpg|png}
          ├─ header-640.{webp|jpg|png}
          └─ header-1024.{webp|jpg|png}
 ```
@@ -153,9 +153,10 @@ Render-time rules (frozen):
 ## 6. Derivative sizes
 
 ```
-avatar: 96×96, 192×192, 384×384 caps
+avatar: 96×96, 192×192, 400×400 caps
 header: 640px, 1024px maximum widths (aspect ratio preserved)
-format: normalized JPEG/PNG; WebP only when the resulting file is smaller
+format: normalized JPEG/PNG; optional WebP candidate generation is default-off and
+        WebP is selected only when the resulting file is smaller
 ```
 
 Images are never upscaled. An avatar is square-cropped only when both source
@@ -163,6 +164,9 @@ dimensions can supply that cap; otherwise its aspect ratio is preserved. If two 
 produce the same actual dimensions (a small source), only one physical derivative is
 published. Headers are never cover-cropped. A focal point or a changed encoding policy
 requires a `processor_version` bump (new `v{n}` tree).
+
+The front-end profile may crop the displayed header with CSS and currently limits it
+to 500px high; that presentation constraint does not create another binary variant.
 
 ---
 

@@ -3,6 +3,17 @@
 	gap: var(--wp--preset--spacing--400, 1.5rem);
 }
 
+.ax-actor-profile__cover {
+	overflow: hidden;
+}
+
+.ax-actor-profile__header-image {
+	display: block;
+	inline-size: 100%;
+	max-block-size: 500px;
+	object-fit: cover;
+}
+
 .ax-actor-profile__header {
 	display: flex;
 	align-items: center;

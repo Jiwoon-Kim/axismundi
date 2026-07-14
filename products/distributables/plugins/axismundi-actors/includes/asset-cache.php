@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION = 1;
+const AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION = 2;
 const AXISMUNDI_ACTORS_ASSET_MAX_BYTES         = 8388608;
 const AXISMUNDI_ACTORS_ASSET_MAX_DIMENSION     = 12000;
 const AXISMUNDI_ACTORS_ASSET_MAX_PIXELS        = 40000000;
@@ -20,13 +20,18 @@ function axismundi_actors_asset_variants() : array {
 		'avatar' => array(
 			96  => array( 'width' => 96, 'height' => 96 ),
 			192 => array( 'width' => 192, 'height' => 192 ),
-			384 => array( 'width' => 384, 'height' => 384 ),
+			400 => array( 'width' => 400, 'height' => 400 ),
 		),
 		'header' => array(
 			640  => array( 'width' => 640, 'height' => 0 ),
 			1024 => array( 'width' => 1024, 'height' => 0 ),
 		),
 	);
+}
+
+/** Whether optional WebP candidate generation is enabled. Default is off. */
+function axismundi_actors_asset_webp_enabled() : bool {
+	return (bool) apply_filters( 'axismundi_actors_asset_webp_enabled', (bool) get_option( 'ax_actors_asset_webp_enabled', false ) );
 }
 
 /**
@@ -109,7 +114,7 @@ function axismundi_actors_sync_asset_source( int $identity_id, string $role, str
 	if ( '' === $source_uri ) {
 		return false;
 	}
-	if ( $row && hash_equals( (string) $row['source_uri_hash'], hash( 'sha256', $source_uri ) ) ) {
+	if ( $row && AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION === (int) $row['processor_version'] && hash_equals( (string) $row['source_uri_hash'], hash( 'sha256', $source_uri ) ) ) {
 		return true;
 	}
 	$now    = current_time( 'mysql', true );
@@ -190,25 +195,38 @@ function axismundi_actors_asset_backfill_batch() : void {
 }
 add_action( 'axismundi_actors_asset_backfill_batch', 'axismundi_actors_asset_backfill_batch' );
 
-/** @return array{basedir:string,baseurl:string}|WP_Error Cache root. */
-function axismundi_actors_asset_root() {
+/** @return array{basedir:string,baseurl:string}|WP_Error Cache base. */
+function axismundi_actors_asset_base() {
 	$uploads = wp_upload_dir();
 	if ( ! empty( $uploads['error'] ) ) {
 		return new WP_Error( 'ax_actors_asset_uploads', (string) $uploads['error'] );
 	}
-	$suffix = '/axismundi-cache/actors/v' . AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION;
+	$suffix = '/axismundi-cache/actors';
 	return array(
 		'basedir' => untrailingslashit( (string) $uploads['basedir'] ) . $suffix,
 		'baseurl' => untrailingslashit( (string) $uploads['baseurl'] ) . $suffix,
 	);
 }
 
-/** @param string $content_hash Source-byte sha256. @return array{path:string,url:string}|WP_Error */
-function axismundi_actors_asset_content_root( string $content_hash ) {
+/** @param int|null $processor Processor version; current by default. @return array{basedir:string,baseurl:string}|WP_Error */
+function axismundi_actors_asset_root( ?int $processor = null ) {
+	$base = axismundi_actors_asset_base();
+	if ( is_wp_error( $base ) ) {
+		return $base;
+	}
+	$processor = null === $processor ? AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION : max( 1, $processor );
+	return array(
+		'basedir' => $base['basedir'] . '/v' . $processor,
+		'baseurl' => $base['baseurl'] . '/v' . $processor,
+	);
+}
+
+/** @param string $content_hash Source-byte sha256. @param int|null $processor Processor version. @return array{path:string,url:string}|WP_Error */
+function axismundi_actors_asset_content_root( string $content_hash, ?int $processor = null ) {
 	if ( ! preg_match( '/^[a-f0-9]{64}$/', $content_hash ) ) {
 		return new WP_Error( 'ax_actors_asset_hash', __( 'Invalid cached asset hash.', 'axismundi-actors' ) );
 	}
-	$root = axismundi_actors_asset_root();
+	$root = axismundi_actors_asset_root( $processor );
 	if ( is_wp_error( $root ) ) {
 		return $root;
 	}
@@ -319,7 +337,7 @@ function axismundi_actors_generate_asset_variants( string $source_path, string $
 			return $baseline;
 		}
 		$chosen = $baseline;
-		if ( 'image/webp' !== $baseline_mime && wp_image_editor_supports( array( 'mime_type' => 'image/webp' ) ) ) {
+		if ( axismundi_actors_asset_webp_enabled() && 'image/webp' !== $baseline_mime && wp_image_editor_supports( array( 'mime_type' => 'image/webp' ) ) ) {
 			$webp = axismundi_actors_save_asset_candidate( $source_path, $role, (int) $size, $staging . '/candidate-' . $size . '.webp', 'image/webp' );
 			if ( ! is_wp_error( $webp ) && filesize( (string) $webp['path'] ) < filesize( (string) $baseline['path'] ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_filesize -- bounded cache candidates.
 				$chosen = $webp;
@@ -337,6 +355,12 @@ function axismundi_actors_generate_asset_variants( string $source_path, string $
 		if ( ! file_exists( $final ) && ! rename( (string) $chosen['path'], $final ) ) {
 			axismundi_actors_remove_asset_tree( $staging );
 			return new WP_Error( 'ax_actors_asset_publish', __( 'Could not publish a cached image derivative.', 'axismundi-actors' ) );
+		}
+		foreach ( array( 'webp', 'jpg', 'png' ) as $obsolete_extension ) {
+			$obsolete = $root['path'] . '/' . $role . '-' . $size . '.' . $obsolete_extension;
+			if ( $obsolete !== $final && file_exists( $obsolete ) ) {
+				unlink( $obsolete ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- cache-owned obsolete alternative encoding.
+			}
 		}
 		$manifest[ (string) $size ] = array(
 			'width'  => (int) $chosen['width'],
@@ -550,7 +574,7 @@ function axismundi_actors_get_cached_asset_url( int $identity_id, string $role, 
 	}
 	$meta      = $manifest[ (string) $chosen ] ?? array();
 	$extension = axismundi_actors_asset_extension( (string) ( $meta['mime'] ?? '' ) );
-	$root      = axismundi_actors_asset_content_root( (string) $row['content_hash'] );
+	$root      = axismundi_actors_asset_content_root( (string) $row['content_hash'], (int) $row['processor_version'] );
 	if ( '' === $extension || is_wp_error( $root ) ) {
 		return '';
 	}
@@ -576,7 +600,7 @@ function axismundi_actors_get_cached_asset_sources( int $identity_id, string $ro
 		return array();
 	}
 	$manifest = json_decode( (string) $row['variants_json'], true );
-	$root     = axismundi_actors_asset_content_root( (string) $row['content_hash'] );
+	$root     = axismundi_actors_asset_content_root( (string) $row['content_hash'], (int) $row['processor_version'] );
 	if ( ! is_array( $manifest ) || is_wp_error( $root ) ) {
 		return array();
 	}
@@ -601,30 +625,33 @@ function axismundi_actors_get_cached_asset_sources( int $identity_id, string $ro
  */
 function axismundi_actors_asset_gc( bool $dry_run = true, int $grace_seconds = 604800 ) : array {
 	global $wpdb;
-	$root = axismundi_actors_asset_root();
-	if ( is_wp_error( $root ) || ! is_dir( $root['basedir'] ) ) {
+	$base = axismundi_actors_asset_base();
+	if ( is_wp_error( $base ) || ! is_dir( $base['basedir'] ) ) {
 		return array( 'directories' => 0, 'bytes' => 0 );
 	}
 	$table   = axismundi_actors_asset_cache_table();
 	$result  = array( 'directories' => 0, 'bytes' => 0 );
-	$pattern = $root['basedir'] . '/[a-f0-9][a-f0-9]/[a-f0-9][a-f0-9]/' . str_repeat( '[a-f0-9]', 64 );
-	foreach ( (array) glob( $pattern, GLOB_ONLYDIR ) as $directory ) {
-		$hash = basename( $directory );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- GC reference check on custom table.
-		$references = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE content_hash = %s AND processor_version = %d", $hash, AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION ) );
-		if ( $references > 0 || filemtime( $directory ) > time() - max( 0, $grace_seconds ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_filemtime -- cache GC age.
-			continue;
-		}
-		$bytes = 0;
-		foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS ) ) as $item ) {
-			if ( $item->isFile() ) {
-				$bytes += $item->getSize();
+	foreach ( (array) glob( $base['basedir'] . '/v[0-9]*', GLOB_ONLYDIR ) as $version_root ) {
+		$processor = (int) substr( basename( $version_root ), 1 );
+		$pattern   = $version_root . '/[a-f0-9][a-f0-9]/[a-f0-9][a-f0-9]/' . str_repeat( '[a-f0-9]', 64 );
+		foreach ( (array) glob( $pattern, GLOB_ONLYDIR ) as $directory ) {
+			$hash = basename( $directory );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- GC reference check on custom table.
+			$references = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE content_hash = %s AND processor_version = %d", $hash, $processor ) );
+			if ( $references > 0 || filemtime( $directory ) > time() - max( 0, $grace_seconds ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_filemtime -- cache GC age.
+				continue;
 			}
-		}
-		++$result['directories'];
-		$result['bytes'] += $bytes;
-		if ( ! $dry_run ) {
-			axismundi_actors_remove_asset_tree( $directory );
+			$bytes = 0;
+			foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS ) ) as $item ) {
+				if ( $item->isFile() ) {
+					$bytes += $item->getSize();
+				}
+			}
+			++$result['directories'];
+			$result['bytes'] += $bytes;
+			if ( ! $dry_run ) {
+				axismundi_actors_remove_asset_tree( $directory );
+			}
 		}
 	}
 	return $result;
@@ -689,10 +716,10 @@ function axismundi_actors_purge_asset_cache( string $scope, string $value = '', 
 	foreach ( $hashes as [ $hash, $processor ] ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- post-purge reference check.
 		$references = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE content_hash = %s AND processor_version = %d", $hash, $processor ) );
-		if ( $references > 0 || AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION !== $processor ) {
+		if ( $references > 0 ) {
 			continue;
 		}
-		$root = axismundi_actors_asset_content_root( $hash );
+		$root = axismundi_actors_asset_content_root( $hash, $processor );
 		if ( ! is_array( $root ) || ! is_dir( $root['path'] ) ) {
 			continue;
 		}
@@ -723,4 +750,22 @@ function axismundi_actors_refresh_asset_cache( int $identity_id ) : int {
 		axismundi_actors_queue_asset_worker( 1 );
 	}
 	return count( $rows );
+}
+
+/** Toggle optional WebP generation and queue every mapping for asynchronous rebuild. */
+function axismundi_actors_set_asset_webp_enabled( bool $enabled ) : int {
+	global $wpdb;
+	$previous = (bool) get_option( 'ax_actors_asset_webp_enabled', false );
+	update_option( 'ax_actors_asset_webp_enabled', $enabled ? 1 : 0, false );
+	if ( $previous === $enabled ) {
+		return 0;
+	}
+	$table = axismundi_actors_asset_cache_table();
+	$now   = current_time( 'mysql', true );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit global cache rebuild after an administrator setting change.
+	$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET fetch_status = IF(content_hash IS NULL, 'pending', 'stale'), source_etag = NULL, source_last_modified = NULL, next_refresh_at = %s, updated_at = %s", $now, $now ) );
+	if ( false !== $updated && $updated > 0 ) {
+		axismundi_actors_queue_asset_worker( 1 );
+	}
+	return false === $updated ? 0 : (int) $updated;
 }

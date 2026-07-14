@@ -406,7 +406,7 @@ wp_ax_actor_asset_cache    identity_id, asset_role avatar|header, source_uri(+ha
                            KEY(next_refresh_at, fetch_status) KEY(last_accessed_at)
 ```
 A **single** map/cache table; physical dedup is handled by the content-addressed file
-path (`…/actors/v{processor}/{ab}/{cd}/{content_hash}/{role}-{size}.webp`), so GC =
+path (`…/actors/v{processor}/{ab}/{cd}/{content_hash}/{role}-{size}.{ext}`), so GC =
 *no row references this `(content_hash, processor_version)`* → sweep after a grace
 period. Never a `WP_User` attachment (no Media Library pollution). Originals are not
 retained — validate + derive, then delete. `content_hash` is `NULL` in `pending`/`error`

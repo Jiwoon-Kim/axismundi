@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.21
+Stable tag: 0.0.22
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,17 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.22 =
+* Revise processor v2 defaults for lower compute cost: avatar caps are now
+  96/192/400px, while header width caps remain 640/1024px. Images are never
+  upscaled, and the front-end profile limits the displayed header height to 500px.
+* Make WebP candidate generation an administrator-controlled, default-off option in
+  Users > Remote Actors. A setting change queues stale mappings for asynchronous
+  regeneration instead of doing image work in the request.
+* Preserve old processor trees while referenced and teach render, purge, and GC paths
+  to resolve each row's processor version, allowing v1 to v2 migration without broken
+  images or a synchronous cache rebuild.
 
 = 0.0.21 =
 * Add DB v9 remote Actor avatar/header caching in one mapping table and a

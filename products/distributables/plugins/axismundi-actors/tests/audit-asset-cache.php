@@ -16,6 +16,7 @@ $ax_asset_ids     = array();
 $ax_asset_hash    = '';
 $ax_asset_http_calls = 0;
 $ax_asset_invalid = false;
+$ax_asset_webp_original = get_option( 'ax_actors_asset_webp_enabled', null );
 
 /** @param array $results Accumulator. @param string $label Contract. @param bool $condition Holds. */
 function ax_asset_assert( array &$results, string $label, bool $condition ) : void {
@@ -70,6 +71,12 @@ $ax_asset_http = static function ( $preempt, array $args, string $url ) use ( &$
 
 try {
 	axismundi_actors_install();
+	update_option( 'ax_actors_asset_webp_enabled', 0, false );
+	ax_asset_assert( $ax_asset_results, 'WebP candidate generation is opt-in and defaults to disabled', ! axismundi_actors_asset_webp_enabled() );
+	update_option( 'ax_actors_asset_webp_enabled', 1, false );
+	$webp_enabled = axismundi_actors_asset_webp_enabled();
+	update_option( 'ax_actors_asset_webp_enabled', 0, false );
+	ax_asset_assert( $ax_asset_results, 'the WebP policy can be enabled explicitly and returned to the low-compute default', $webp_enabled && ! axismundi_actors_asset_webp_enabled() );
 	$table = axismundi_actors_asset_cache_table();
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB
 	$identity_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'identity_asset'", ARRAY_A ); // phpcs:ignore WordPress.DB
@@ -97,9 +104,9 @@ try {
 	$ax_asset_hash = is_array( $ready ) ? (string) $ready['content_hash'] : '';
 	$root = '' !== $ax_asset_hash ? axismundi_actors_asset_content_root( $ax_asset_hash ) : null;
 	ax_asset_assert( $ax_asset_results, 'worker validates source bytes, creates local derivatives, and flips the row to ready', true === $fetched && is_array( $ready ) && 'ready' === $ready['fetch_status'] && 64 === strlen( $ax_asset_hash ) && '' !== $url && is_array( $root ) && is_dir( $root['path'] ) );
-	ax_asset_assert( $ax_asset_results, 'avatar derivatives use 96/192/384 caps without upscaling the 400px source', array( 96, 192, 384 ) === array_keys( $manifest ) && 384 === (int) $manifest[384]['width'] && max( array_column( $manifest, 'width' ) ) <= 400 );
-	$valid_mimes = ! empty( $manifest ) && empty( array_diff( array_column( $manifest, 'mime' ), array( 'image/png', 'image/webp' ) ) );
-	ax_asset_assert( $ax_asset_results, 'each derivative uses normalized PNG or a genuinely selected WebP candidate', $valid_mimes );
+	ax_asset_assert( $ax_asset_results, 'avatar derivatives use 96/192/400 caps without upscaling the 400px source', array( 96, 192, 400 ) === array_keys( $manifest ) && 400 === (int) $manifest[400]['width'] && max( array_column( $manifest, 'width' ) ) <= 400 );
+	$valid_mimes = ! empty( $manifest ) && empty( array_diff( array_column( $manifest, 'mime' ), array( 'image/png' ) ) );
+	ax_asset_assert( $ax_asset_results, 'default processing keeps normalized PNG and skips optional WebP computation', $valid_mimes );
 
 	if ( $first instanceof Axismundi_Actor ) {
 		axismundi_actors_sync_asset_source( $first->get_identity_id(), 'header', 'https://example.com/assets/header.png' );
@@ -140,6 +147,11 @@ try {
 	ax_asset_assert( $ax_asset_results, 'GC removes an unreferenced content-hash directory after its grace period', $gc['directories'] >= 1 && ( ! is_array( $root ) || ! is_dir( $root['path'] ) ) );
 } finally {
 	remove_filter( 'pre_http_request', $ax_asset_http, 10 );
+	if ( null === $ax_asset_webp_original ) {
+		delete_option( 'ax_actors_asset_webp_enabled' );
+	} else {
+		update_option( 'ax_actors_asset_webp_enabled', $ax_asset_webp_original, false );
+	}
 	foreach ( array_unique( $ax_asset_ids ) as $identity_id ) {
 		$wpdb->delete( axismundi_actors_asset_cache_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
 		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB

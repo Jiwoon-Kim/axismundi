@@ -65,6 +65,7 @@ function axismundi_act_users_follow_column_content( string $output, string $colu
 		. '<input type="hidden" name="action" value="axismundi_act_local_follow">'
 		. '<input type="hidden" name="intent" value="' . esc_attr( $intent ) . '">'
 		. '<input type="hidden" name="target_uri" value="' . esc_attr( $target->get_uri() ) . '">'
+		. '<input type="hidden" name="return_to" value="users">'
 		. '<input type="hidden" name="_wpnonce" value="' . esc_attr( $nonce ) . '">'
 		. '<button type="submit" class="button-link">' . esc_html( $label ) . '</button></form>';
 }
@@ -118,9 +119,15 @@ function axismundi_act_handle_local_follow() : void {
 	$subject    = axismundi_act_current_local_actor();
 	$target_uri = isset( $_POST['target_uri'] ) ? esc_url_raw( wp_unslash( $_POST['target_uri'] ) ) : '';
 	$intent     = isset( $_POST['intent'] ) ? sanitize_key( wp_unslash( $_POST['intent'] ) ) : '';
+	$return_to  = isset( $_POST['return_to'] ) ? sanitize_key( wp_unslash( $_POST['return_to'] ) ) : '';
 	check_admin_referer( 'axismundi_act_local_follow_' . hash( 'sha256', $target_uri ) );
 	$target   = axismundi_actors_get_by_uri( $target_uri );
 	$fallback = $target instanceof Axismundi_Actor && '' !== $target->get_profile_url() ? $target->get_profile_url() : home_url( '/' );
+	if ( 'follows' === $return_to ) {
+		$fallback = axismundi_act_follows_admin_url();
+	} elseif ( 'users' === $return_to && current_user_can( 'list_users' ) ) {
+		$fallback = admin_url( 'users.php' );
+	}
 	if ( ! $subject instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor || ! in_array( $intent, array( 'follow', 'unfollow' ), true ) ) {
 		axismundi_act_follow_redirect( $fallback, 'error' );
 	}
@@ -173,11 +180,12 @@ function axismundi_act_render_follows_page() : void {
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		wp_die( esc_html__( 'Activate and publish your Actor profile before using local follows.', 'axismundi-activities' ) );
 	}
-	$requests  = axismundi_act_get_pending_follow_requests( $actor->get_uri() );
-	$followers = axismundi_act_get_followers( $actor->get_uri(), 200 );
-	$following = axismundi_act_get_following( $actor->get_uri(), 200 );
-	$approval  = axismundi_act_local_follow_requires_approval( $actor );
-	$notice    = isset( $_GET['ax_follow_notice'] ) ? sanitize_key( wp_unslash( $_GET['ax_follow_notice'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect notice.
+	$requests      = axismundi_act_get_pending_follow_requests( $actor->get_uri() );
+	$sent_requests = axismundi_act_get_pending_following_requests( $actor->get_uri() );
+	$followers     = axismundi_act_get_followers( $actor->get_uri(), 200 );
+	$following     = axismundi_act_get_following( $actor->get_uri(), 200 );
+	$approval      = axismundi_act_local_follow_requires_approval( $actor );
+	$notice        = isset( $_GET['ax_follow_notice'] ) ? sanitize_key( wp_unslash( $_GET['ax_follow_notice'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect notice.
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Follows', 'axismundi-activities' ); ?></h1>
@@ -197,6 +205,19 @@ function axismundi_act_render_follows_page() : void {
 					<input type="hidden" name="action" value="axismundi_act_follow_decision"><input type="hidden" name="follow_uri" value="<?php echo esc_attr( (string) $request['initiating_activity_uri'] ); ?>">
 					<?php wp_nonce_field( 'axismundi_act_follow_decision_' . hash( 'sha256', (string) $request['initiating_activity_uri'] ) ); ?>
 					<button class="button button-primary" name="decision" value="accept"><?php esc_html_e( 'Accept', 'axismundi-activities' ); ?></button> <button class="button" name="decision" value="reject"><?php esc_html_e( 'Reject', 'axismundi-activities' ); ?></button>
+				</form>
+			</td></tr>
+		<?php endforeach; endif; ?>
+		</tbody></table>
+
+		<h2><?php esc_html_e( 'Sent requests', 'axismundi-activities' ); ?></h2>
+		<table class="widefat striped"><tbody>
+		<?php if ( empty( $sent_requests ) ) : ?><tr><td><?php esc_html_e( 'No pending sent requests.', 'axismundi-activities' ); ?></td></tr><?php else : foreach ( $sent_requests as $request ) : ?>
+			<tr><td><?php echo axismundi_act_local_actor_label( (string) $request['object_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete markup. ?></td><td>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="axismundi_act_local_follow"><input type="hidden" name="intent" value="unfollow"><input type="hidden" name="target_uri" value="<?php echo esc_attr( (string) $request['object_actor_uri'] ); ?>"><input type="hidden" name="return_to" value="follows">
+					<?php wp_nonce_field( 'axismundi_act_local_follow_' . hash( 'sha256', (string) $request['object_actor_uri'] ) ); ?>
+					<button class="button" type="submit"><?php esc_html_e( 'Cancel request', 'axismundi-activities' ); ?></button>
 				</form>
 			</td></tr>
 		<?php endforeach; endif; ?>

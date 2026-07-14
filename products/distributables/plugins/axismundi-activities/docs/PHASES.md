@@ -28,7 +28,8 @@ followers/following lists. Remote Actors are rejected and no transport is attemp
 
 Require `edit_posts` for Actor social actions, keep Subscribers read-only, and expose
 nonce-protected local Follow state/actions on the administrator Users table. Cached remote
-Actors remain display-only pending an official ActivityPub transport adapter.
+Actors remain display-only pending an official ActivityPub transport adapter. The Follows
+screen also lists pending outbound requests with cancellation controls.
 
 ## Prerequisite — Object Projections lease substrate
 

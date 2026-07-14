@@ -33,6 +33,7 @@ delivery queue.
   Subscribers remain read-only even if an older Actor record exists.
 * Add nonce-protected local Follow state and actions to the administrator Users table.
   Keep cached remote Actors display-only until an official ActivityPub transport adapter exists.
+* Show pending Follow requests sent by the current Actor with a cancellation action.
 
 = 0.0.4 =
 * Add local-only Follow, request cancellation, Unfollow, Accept, and Reject workflows for

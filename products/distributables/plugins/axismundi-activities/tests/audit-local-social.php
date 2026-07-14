@@ -91,6 +91,13 @@ try {
 	$pending  = axismundi_act_follow_local_actor( $follower, $target );
 	$requests = axismundi_act_get_pending_follow_requests( $target->get_uri() );
 	ax_local_assert( $ax_local_results, 'manual approval leaves one pending request visible to the target', is_array( $pending ) && 'pending' === $pending['state'] && 1 === count( $requests ) && $follower->get_uri() === $requests[0]['subject_actor_uri'] );
+	$sent_requests = axismundi_act_get_pending_following_requests( $follower->get_uri() );
+	ax_local_assert( $ax_local_results, 'manual approval leaves one pending sent request visible to the sender', 1 === count( $sent_requests ) && $target->get_uri() === $sent_requests[0]['object_actor_uri'] );
+	wp_set_current_user( (int) $follower->get_local_user_id() );
+	ob_start();
+	axismundi_act_render_follows_page();
+	$sent_html = (string) ob_get_clean();
+	ax_local_assert( $ax_local_results, 'Follows renders pending sent requests with a nonce-protected cancel action', str_contains( $sent_html, 'Sent requests' ) && str_contains( $sent_html, 'Cancel request' ) && str_contains( $sent_html, 'return_to' ) && str_contains( $sent_html, '_wpnonce' ) );
 
 	$wrong = axismundi_act_respond_to_local_follow( $follower, (string) $pending['initiating_activity_uri'], 'accept' );
 	ax_local_assert( $ax_local_results, 'a non-target Actor cannot accept another Actor\'s request', is_wp_error( $wrong ) && 'ax_act_follow_request' === $wrong->get_error_code() );

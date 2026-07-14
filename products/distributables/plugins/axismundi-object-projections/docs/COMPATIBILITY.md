@@ -50,6 +50,13 @@ Relevant official extension points to target when the adapter is built:
 `activitypub_pre_get_by_id`, `activitypub_pre_get_by_username`, `webfinger_data`
 (and see upstream issues #3073 pluggable virtual actors, #1975 dedicated actor profiles).
 
+Automatic post lifecycle publication has the same single-owner rule as negotiation. While
+`ACTIVITYPUB_PLUGIN_VERSION` is defined, Object Projections emits no Axismundi publish
+candidate by default because the official scheduler records its own Create/Update/Delete.
+An adapter may return `axismundi` from `axismundi_op_post_lifecycle_owner` only after it has
+disabled the corresponding official scheduler path. Merely recording both and attempting
+to deduplicate later is invalid: the competing publishers can mint different Activity ids.
+
 ## 4. Not sufficient
 
 Setting `ACTIVITYPUB_DISABLE_REWRITES` alone is **not** a solution: it would silence the

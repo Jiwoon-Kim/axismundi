@@ -22,6 +22,7 @@ function ax_article_assert( array &$results, string $label, bool $condition ) : 
 }
 
 try {
+	add_filter( 'axismundi_op_post_lifecycle_owner', static fn() : string => 'fixture' );
 	$author_id = get_current_user_id();
 	if ( $author_id <= 0 ) {
 		$admins    = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
@@ -90,6 +91,7 @@ try {
 	}
 	ax_article_assert( $ax_article_results, 'the object-uri filter preserves an adapter legacy permalink id choice', is_array( $legacy ) && get_permalink( $post ) === $legacy['id'] );
 	remove_all_filters( 'axismundi_op_post_object_uri' );
+	remove_all_filters( 'axismundi_op_post_lifecycle_owner' );
 
 	remove_all_filters( 'axismundi_op_post_actor_uri' );
 	$without_actor = axismundi_op_transform_object( $post );
@@ -102,6 +104,7 @@ try {
 } finally {
 	remove_all_filters( 'axismundi_op_post_actor_uri' );
 	remove_all_filters( 'axismundi_op_post_object_uri' );
+	remove_all_filters( 'axismundi_op_post_lifecycle_owner' );
 	foreach ( $ax_article_posts as $created_post_id ) {
 		wp_delete_post( (int) $created_post_id, true );
 	}

@@ -49,7 +49,7 @@ try {
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies its custom index.
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'relation_identity'", ARRAY_A );
-	ax_rel_assert( $ax_rel_results, 'schema v2 installs a unique URI relation identity without blog_id', $installed && '2' === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && ! in_array( 'blog_id', $columns, true ) );
+	ax_rel_assert( $ax_rel_results, 'the relation schema retains unique URI identity without blog_id after later upgrades', $installed && (int) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) >= 2 && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && ! in_array( 'blog_id', $columns, true ) );
 
 	$site_actor = axismundi_actors_get_site_actor();
 	$remote     = axismundi_actors_upsert_remote(

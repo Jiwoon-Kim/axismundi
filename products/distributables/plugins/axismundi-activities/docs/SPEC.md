@@ -1,7 +1,7 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 2.1 Activity repository, social relation state, and local Follow UI
-> implemented**. No public Activity route or network behavior.
+> Status: **Phase 2.3 Activity repository, social relation state, local Follow UI, and
+> Core Post Create lifecycle implemented**. No public Activity route or network behavior.
 
 ## 1. Purpose
 
@@ -44,6 +44,13 @@ Actor URI + Activity + Object URI
     fail-closed until an explicit official ActivityPub compatibility adapter exists.
 12. Actor activation and local social actions require `edit_posts`; Subscriber accounts are
     read-only and cannot acquire social write access merely by retaining an Actor row.
+13. Automatic Core Post publication is keyed by a stable source event and lifecycle state,
+    not by callback count. An effective Create/Update suppresses another Create; an effective
+    Delete permits one resurrection Create. Object Projections emits candidates and this
+    ledger owns deduplication.
+14. The official ActivityPub plugin and Axismundi must never publish two Create activities
+    for one post. Axismundi fails closed while the official scheduler owns the lifecycle;
+    an adapter may transfer ownership only after suppressing that scheduler path.
 
 ## 3. Supported activity vocabulary
 
@@ -63,3 +70,4 @@ Remote Activity ids are preserved exactly. Hash-index lookup always verifies the
 - Notifications, unread counts, email, PWA, service workers, or Web Push.
 - Actor/object JSON-LD transformation or remote object binary caching.
 - Automatic Activity creation from `add_attachment` or other incidental WordPress hooks.
+- Reply/thread semantics before the Axismundi Notes CPT defines canonical local Note identity.

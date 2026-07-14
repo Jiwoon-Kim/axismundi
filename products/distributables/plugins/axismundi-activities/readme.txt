@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.5
+Stable tag: 0.0.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -21,12 +21,22 @@ Federation will own HTTP inbox/outbox transport, signatures, and remote delivery
 
 Axismundi Actors is a required dependency and remains the authority for every actor URI.
 
-Version 0.0.5 implements the immutable URI-keyed Activity ledger, Follow/Block relation
+Version 0.0.6 implements the immutable URI-keyed Activity ledger, Follow/Block relation
 state, local Person-to-Person Follow controls, and read-only administrator inspection. It
-creates no public Activity route, cron event, network request, inbox, notification, or
-delivery queue.
+also records one local outbound Create when a projectable Core Post is first published.
+It creates no public Activity route, cron event, network request, inbox, notification, or
+delivery queue. Media upload remains intentionally silent.
 
 == Changelog ==
+
+= 0.0.6 =
+* Add verified DB v3 source-event identities so retries and concurrent WordPress save
+  requests converge on one immutable Activity.
+* Consume Object Projections Core Post publish candidates and record one URI-referenced
+  outbound Create. Publish edits and unpublish/re-publish do not duplicate Create; a later
+  effective Delete begins a new lifecycle generation.
+* Keep password posts and media uploads silent, perform no transport, and defer Reply until
+  the Axismundi Notes CPT establishes the canonical local Note model.
 
 = 0.0.5 =
 * Require Contributor-level `edit_posts` access for local Follow controls and management.

@@ -1,6 +1,6 @@
 # Axismundi Object Projections — specification
 
-> Status: **Phases 0–4b implemented** (local projections plus metadata-only remote
+> Status: **Phases 0–5a implemented** (local projections, metadata-only remote
 > discovery/cache inspection). No custom rewrite, REST route, Activity
 > ledger, or transport. This package owns the projection contract and representation.
 
@@ -69,6 +69,9 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 7. **First-party domain plugins remain ActivityStreams-agnostic.** Object Projections
    detects them and consumes their public service functions; it does not inspect their
    private SQL or metadata schema. Third-party plugins may register their own transformer.
+8. Core Post lifecycle candidates fire only after a committed, projectable public save.
+   They are idempotent hints, not proof of first publication. Activities owns lifecycle
+   state and storage. Media upload emits no candidate, and Reply waits for the Notes CPT.
 
 ## 5. Public API
 

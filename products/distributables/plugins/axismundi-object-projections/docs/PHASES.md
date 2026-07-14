@@ -21,7 +21,9 @@ Phase 4a remote object repository                    — shipped (0.0.5): URI-ke
                                                        cache table; no network/public route
 Phase 4b remote fetch + administrator inspector      — shipped (0.0.6): metadata-only,
                                                        bounded fetch, 30-day retention
-Phase 5  lifecycle events (publish/update/delete)    — emit only; Activities stores them
+Phase 5a Core Post publish candidate                — shipped (0.0.8): post-commit,
+                                                       single-owner, Create consumer seam
+Phase 5b update/delete lifecycle events             — emit only; Activities stores them
 Phase 6  extension & hardening                       — notes, collections, cache
                                                        invalidation, isolation, escaping
 ```

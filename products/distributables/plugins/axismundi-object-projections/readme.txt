@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.7
+Stable tag: 0.0.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -35,6 +35,14 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.8 =
+* Emit an idempotent Core Post publish candidate from `wp_after_insert_post`, after terms
+  and post meta are stored. Object Projections performs no Activity write or transport.
+* Exclude drafts, password posts, pages, attachments, and Actor-less posts. Keep media
+  uploads silent and defer Reply semantics until Axismundi Notes defines local Note identity.
+* Fail closed when the official ActivityPub plugin owns post lifecycle publication; a
+  compatibility adapter must explicitly transfer single-publisher ownership.
 
 = 0.0.7 =
 * Expand Remote Object details with structured Tags/Mentions, audience declarations,

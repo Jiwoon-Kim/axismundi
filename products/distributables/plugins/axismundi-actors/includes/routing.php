@@ -113,7 +113,7 @@ function axismundi_actors_is_public_profile( Axismundi_Actor $actor ) : bool {
  */
 function axismundi_actors_can_view( Axismundi_Actor $actor, ?int $user_id = null ) : bool {
 	return axismundi_actors_is_public_profile( $actor )
-		|| ( $actor->is_local() && axismundi_actors_can_preview( $actor, $user_id ) );
+		|| axismundi_actors_can_preview( $actor, $user_id );
 }
 
 /**
@@ -173,7 +173,7 @@ function axismundi_actors_handle_profile_request( bool $preempt, WP_Query $query
 	$query->is_archive = false;
 	$query->is_singular = false;
 	status_header( 200 );
-	if ( 'public' !== $actor->get_status() ) {
+	if ( ! $actor->is_local() || 'public' !== $actor->get_status() ) {
 		nocache_headers();
 	}
 	return true;
@@ -187,6 +187,20 @@ add_filter( 'pre_handle_404', 'axismundi_actors_handle_profile_request', 10, 2 )
  * @return array{name:string,summary:string,content:string,url:string,avatar:string}
  */
 function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
+	if ( ! $actor->is_local() ) {
+		$payload = axismundi_actors_get_remote_payload( $actor->get_identity_id() );
+		$url     = $actor->get_profile_url();
+		if ( '' === $url && isset( $payload['url'] ) && is_string( $payload['url'] ) ) {
+			$url = esc_url_raw( $payload['url'] );
+		}
+		return array(
+			'name'    => $actor->get_display_name() ?: $actor->get_preferred_username(),
+			'summary' => isset( $payload['summary'] ) && is_string( $payload['summary'] ) ? $payload['summary'] : '',
+			'content' => '',
+			'url'     => $url,
+			'avatar'  => '',
+		);
+	}
 	$language = axismundi_actors_profile_language( $actor );
 	if ( 'site' === $actor->get_scope() ) {
 		return array(
@@ -216,6 +230,15 @@ function axismundi_actors_profile_data( Axismundi_Actor $actor ) : array {
  * @return string
  */
 function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) : string {
+	if ( ! $actor->is_local() ) {
+		$src = axismundi_actors_get_cached_asset_url( $actor->get_identity_id(), 'avatar', $size );
+		if ( '' === $src ) {
+			return '';
+		}
+		$srcset       = axismundi_actors_get_cached_asset_sources( $actor->get_identity_id(), 'avatar' );
+		$srcset_value = implode( ', ', array_map( static fn( string $url, int $width ) : string => esc_url( $url ) . ' ' . $width . 'w', array_keys( $srcset ), array_values( $srcset ) ) );
+		return '<img class="ax-actor-profile__avatar" src="' . esc_url( $src ) . '"' . ( '' !== $srcset_value ? ' srcset="' . esc_attr( $srcset_value ) . '" sizes="' . (int) $size . 'px"' : '' ) . ' alt="" width="' . (int) $size . '" height="' . (int) $size . '" />';
+	}
 	$attachment_id = $actor->get_avatar_attachment_id();
 	if ( $attachment_id > 0 ) {
 		return (string) wp_get_attachment_image( $attachment_id, array( $size, $size ), false, array( 'class' => 'ax-actor-profile__avatar', 'alt' => '' ) );
@@ -235,6 +258,15 @@ function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) 
  * @return string
  */
 function axismundi_actors_header_html( Axismundi_Actor $actor ) : string {
+	if ( ! $actor->is_local() ) {
+		$src = axismundi_actors_get_cached_asset_url( $actor->get_identity_id(), 'header', 1024 );
+		if ( '' === $src ) {
+			return '';
+		}
+		$srcset       = axismundi_actors_get_cached_asset_sources( $actor->get_identity_id(), 'header' );
+		$srcset_value = implode( ', ', array_map( static fn( string $url, int $width ) : string => esc_url( $url ) . ' ' . $width . 'w', array_keys( $srcset ), array_values( $srcset ) ) );
+		return '<img class="ax-actor-profile__header-image" src="' . esc_url( $src ) . '"' . ( '' !== $srcset_value ? ' srcset="' . esc_attr( $srcset_value ) . '" sizes="100vw"' : '' ) . ' alt="" />';
+	}
 	$attachment_id = $actor->get_header_attachment_id();
 	return $attachment_id > 0
 		? (string) wp_get_attachment_image( $attachment_id, 'large', false, array( 'class' => 'ax-actor-profile__header-image', 'alt' => '' ) )
@@ -281,6 +313,18 @@ function axismundi_actors_profile_template_include( string $template ) : string 
 	return locate_block_template( locate_template( $templates ), 'actor-profile', $templates );
 }
 add_filter( 'template_include', 'axismundi_actors_profile_template_include', 99 );
+
+/** Prevent administrator-only remote cache previews from entering search indexes. */
+function axismundi_actors_remote_preview_robots( array $robots ) : array {
+	$actor = axismundi_actors_current_actor();
+	if ( $actor && ! $actor->is_local() ) {
+		$robots['noindex']   = true;
+		$robots['nofollow']  = true;
+		$robots['noarchive'] = true;
+	}
+	return $robots;
+}
+add_filter( 'wp_robots', 'axismundi_actors_remote_preview_robots' );
 
 /** @return void */
 function axismundi_actors_print_canonical() : void {

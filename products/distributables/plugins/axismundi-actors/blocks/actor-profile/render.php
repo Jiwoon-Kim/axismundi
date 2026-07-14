@@ -32,7 +32,7 @@ $axismundi_actor_allowed_image  = array(
 		<div class="ax-actor-profile__identity">
 			<h1 class="wp-block-heading ax-actor-profile__name"><?php echo esc_html( $axismundi_actor_profile_data['name'] ); ?></h1>
 			<p class="ax-actor-profile__meta">
-				<span class="ax-actor-profile__handle"><?php echo esc_html( '@' . $axismundi_actor_profile_actor->get_preferred_username() ); ?></span>
+				<span class="ax-actor-profile__handle"><?php echo esc_html( '@' . $axismundi_actor_profile_actor->get_preferred_username() . ( $axismundi_actor_profile_actor->is_local() ? '' : '@' . axismundi_actors_webfinger_authority_from_url( $axismundi_actor_profile_actor->get_uri() ) ) ); ?></span>
 				<span class="ax-actor-profile__type"><?php echo esc_html( $axismundi_actor_profile_actor->get_type() ); ?></span>
 			</p>
 		</div>
@@ -46,7 +46,9 @@ $axismundi_actor_allowed_image  = array(
 	<?php if ( '' !== $axismundi_actor_profile_data['url'] ) : ?>
 		<p class="ax-actor-profile__website"><a href="<?php echo esc_url( $axismundi_actor_profile_data['url'] ); ?>" rel="me"><?php echo esc_html( preg_replace( '#^https?://#', '', untrailingslashit( $axismundi_actor_profile_data['url'] ) ) ); ?></a></p>
 	<?php endif; ?>
-	<?php if ( 'public' !== $axismundi_actor_profile_actor->get_status() ) : ?>
+	<?php if ( ! $axismundi_actor_profile_actor->is_local() ) : ?>
+		<p class="ax-actor-profile__preview"><?php esc_html_e( 'Administrator preview of a cached remote Actor. This is not a public local mirror.', 'axismundi-actors' ); ?></p>
+	<?php elseif ( 'public' !== $axismundi_actor_profile_actor->get_status() ) : ?>
 		<p class="ax-actor-profile__preview"><?php esc_html_e( 'Private preview. This actor profile is not public.', 'axismundi-actors' ); ?></p>
 	<?php endif; ?>
 </article>

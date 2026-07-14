@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.20
+Stable tag: 0.0.21
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -33,6 +33,18 @@ delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
 
+= 0.0.21 =
+* Add DB v9 remote Actor avatar/header caching in one mapping table and a
+  content-addressed, processor-versioned uploads tree. Fetches are bounded,
+  asynchronous, stale-while-revalidate, signature-validated, and never run from a
+  render path; originals are discarded after local derivatives are produced.
+* Generate avatar caps at 96/192/384px and header width caps at 640/1024px without
+  upscaling. Preserve header aspect ratio, omit duplicate small-source outputs, and
+  select WebP only when it is actually smaller than normalized JPEG/PNG.
+* Add nonce-protected actor/instance/all cache inspect and purge controls, plus an
+  administrator-only, noindex/no-cache remote profile preview that reuses the local
+  actor-profile template and serves cached images only (never remote hotlinks).
+
 = 0.0.20 =
 * DB v8 — follower / discovery policy axes on wp_ax_actors: published_at,
   manually_approves_followers, discoverable, indexable, and
@@ -44,10 +56,9 @@ delivery. Those belong to Axismundi Activities and Axismundi Federation.
   a refresh only writes a boolean the payload actually reported. The administrator
   inspector shows "not reported" distinctly from yes/no. The default posting audience
   is not stored here — it belongs to the Activity plugin.
-* Documented and locked the remote avatar/header binary cache contract for a later
-  version (docs/REMOTE-ASSET-CACHE.md): content-addressed storage, single cache table,
-  asynchronous stale-while-revalidate, and strict fetch limits. No caching behaviour
-  ships in this release.
+* Documented and locked the remote avatar/header binary cache contract implemented in
+  the following release: content-addressed storage, one cache table, asynchronous
+  stale-while-revalidate, and strict fetch limits.
 
 = 0.0.19 =
 * DB v7 — normalize inbox, outbox, followers, following, featured, and sharedInbox

@@ -218,6 +218,11 @@ function axismundi_actors_render_remote_admin_page() : void {
 
 		<h2><?php esc_html_e( 'Cached instances', 'axismundi-actors' ); ?></h2>
 		<?php axismundi_actors_render_instance_table( axismundi_actors_get_instances() ); ?>
+
+		<h2><?php esc_html_e( 'Remote image cache', 'axismundi-actors' ); ?></h2>
+		<p><?php esc_html_e( 'Preview or purge all cached remote avatar/header mappings. Physical files are removed only when no Actor still references their content hash.', 'axismundi-actors' ); ?></p>
+		<?php axismundi_actors_render_asset_cache_action( 'inspect', 'all', '', __( 'Preview full cache purge', 'axismundi-actors' ) ); ?>
+		<?php axismundi_actors_render_asset_cache_action( 'purge', 'all', '', __( 'Purge full image cache', 'axismundi-actors' ), true ); ?>
 	</div>
 	<?php
 }
@@ -230,6 +235,33 @@ function axismundi_actors_remote_admin_notice() : void {
 	if ( isset( $_GET['ax_actor_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- escaped display-only message.
 		echo '<div class="notice notice-error"><p>' . esc_html( rawurldecode( sanitize_text_field( wp_unslash( $_GET['ax_actor_error'] ) ) ) ) . '</p></div>'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
+	if ( isset( $_GET['ax_asset_rows'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only operation result.
+		$rows = absint( $_GET['ax_asset_rows'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$dirs = isset( $_GET['ax_asset_dirs'] ) ? absint( $_GET['ax_asset_dirs'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		/* translators: 1: number of cache mappings, 2: number of content directories. */
+		echo '<div class="notice notice-info is-dismissible"><p>' . esc_html( sprintf( __( 'Remote image cache operation: %1$d mapping(s), %2$d content directorie(s).', 'axismundi-actors' ), $rows, $dirs ) ) . '</p></div>';
+	}
+}
+
+/**
+ * @param string $operation refresh|inspect|purge.
+ * @param string $scope actor|instance|all.
+ * @param string $value Identity id or host.
+ * @param string $label Button label.
+ * @param bool   $destructive Whether to require browser confirmation.
+ */
+function axismundi_actors_render_asset_cache_action( string $operation, string $scope, string $value, string $label, bool $destructive = false ) : void {
+	$confirm = $destructive ? "return window.confirm('" . esc_js( __( 'Purge this remote image cache scope?', 'axismundi-actors' ) ) . "');" : '';
+	?>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin:8px 8px 8px 0;">
+		<input type="hidden" name="action" value="axismundi_actors_asset_cache">
+		<input type="hidden" name="operation" value="<?php echo esc_attr( $operation ); ?>">
+		<input type="hidden" name="scope" value="<?php echo esc_attr( $scope ); ?>">
+		<input type="hidden" name="scope_value" value="<?php echo esc_attr( $value ); ?>">
+		<?php wp_nonce_field( 'ax_actors_asset_cache' ); ?>
+		<button type="submit" class="button<?php echo $destructive ? ' button-link-delete' : ''; ?>"<?php echo '' !== $confirm ? ' onclick="' . esc_attr( $confirm ) . '"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- complete attribute is escaped. ?>><?php echo esc_html( $label ); ?></button>
+	</form>
+	<?php
 }
 
 /**
@@ -253,6 +285,7 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 	$host      = axismundi_actors_webfinger_authority_from_url( $actor->get_uri() );
 	$instance  = '' !== $host ? axismundi_actors_get_instance( $host ) : null;
 	$addresses = array_values( array_filter( axismundi_actors_get_addresses( $actor->get_identity_id() ), static fn( array $row ) : bool => 'acct' === $row['address_type'] ) );
+	$assets    = axismundi_actors_asset_scope_rows( 'actor', (string) $actor->get_identity_id() );
 	?>
 	<hr>
 	<h2><?php echo esc_html( $actor->get_display_name() ?: $actor->get_preferred_username() ); ?></h2>
@@ -271,6 +304,24 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 			<tr><th><?php esc_html_e( 'Published', 'axismundi-actors' ); ?></th><td><?php echo esc_html( '' !== $actor->get_published_at() ? $actor->get_published_at() : esc_html__( 'not reported', 'axismundi-actors' ) ); ?></td></tr>
 		</tbody>
 	</table>
+	<h3><?php esc_html_e( 'Avatar and header cache', 'axismundi-actors' ); ?></h3>
+	<p><a class="button" href="<?php echo esc_url( add_query_arg( 'ax_actor', $actor->get_uuid(), home_url( '/' ) ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Preview cached profile', 'axismundi-actors' ); ?></a></p>
+	<?php if ( empty( $assets ) ) : ?>
+		<p><?php esc_html_e( 'No remote image sources were reported.', 'axismundi-actors' ); ?></p>
+	<?php else : ?>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Role', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Source', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Next refresh', 'axismundi-actors' ); ?></th></tr></thead><tbody>
+		<?php foreach ( $assets as $asset ) : ?>
+			<tr><td><?php echo esc_html( (string) $asset['asset_role'] ); ?></td><td><?php echo esc_html( (string) $asset['fetch_status'] ); ?></td><td><code><?php echo esc_html( (string) $asset['source_uri'] ); ?></code></td><td><?php echo esc_html( (string) $asset['next_refresh_at'] ); ?></td></tr>
+		<?php endforeach; ?>
+		</tbody></table>
+	<?php endif; ?>
+	<?php axismundi_actors_render_asset_cache_action( 'refresh', 'actor', (string) $actor->get_identity_id(), __( 'Refresh cached images', 'axismundi-actors' ) ); ?>
+	<?php axismundi_actors_render_asset_cache_action( 'inspect', 'actor', (string) $actor->get_identity_id(), __( 'Preview Actor cache purge', 'axismundi-actors' ) ); ?>
+	<?php axismundi_actors_render_asset_cache_action( 'purge', 'actor', (string) $actor->get_identity_id(), __( 'Purge Actor image cache', 'axismundi-actors' ), true ); ?>
+	<?php if ( '' !== $host ) : ?>
+		<?php axismundi_actors_render_asset_cache_action( 'inspect', 'instance', $host, __( 'Preview instance cache purge', 'axismundi-actors' ) ); ?>
+		<?php axismundi_actors_render_asset_cache_action( 'purge', 'instance', $host, __( 'Purge instance image cache', 'axismundi-actors' ), true ); ?>
+	<?php endif; ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_actors_discover_remote">
 		<input type="hidden" name="remote_actor" value="<?php echo esc_attr( (string) ( $addresses[0]['address'] ?? $actor->get_uri() ) ); ?>">
@@ -684,6 +735,41 @@ function axismundi_actors_handle_discover_remote() : void {
 	exit;
 }
 add_action( 'admin_post_axismundi_actors_discover_remote', 'axismundi_actors_handle_discover_remote' );
+
+/** Inspect, refresh, or purge a bounded remote image-cache scope. */
+function axismundi_actors_handle_asset_cache() : void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You cannot manage the remote image cache.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'ax_actors_asset_cache' );
+	$operation = isset( $_POST['operation'] ) ? sanitize_key( wp_unslash( $_POST['operation'] ) ) : '';
+	$scope     = isset( $_POST['scope'] ) ? sanitize_key( wp_unslash( $_POST['scope'] ) ) : '';
+	$value     = isset( $_POST['scope_value'] ) ? sanitize_text_field( wp_unslash( $_POST['scope_value'] ) ) : '';
+	$back      = axismundi_actors_remote_admin_url();
+	if ( 'actor' === $scope && absint( $value ) > 0 ) {
+		$back = add_query_arg( 'actor_id', absint( $value ), $back );
+	}
+	if ( ! in_array( $scope, array( 'actor', 'instance', 'all' ), true ) || ! in_array( $operation, array( 'refresh', 'inspect', 'purge' ), true ) || ( 'refresh' === $operation && 'actor' !== $scope ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_actor_error', rawurlencode( __( 'Invalid remote image cache operation.', 'axismundi-actors' ) ), $back ) );
+		exit;
+	}
+	if ( 'refresh' === $operation ) {
+		$result = array( 'rows' => axismundi_actors_refresh_asset_cache( absint( $value ) ), 'directories' => 0 );
+	} else {
+		$result = axismundi_actors_purge_asset_cache( $scope, $value, 'inspect' === $operation );
+	}
+	wp_safe_redirect(
+		add_query_arg(
+			array(
+				'ax_asset_rows' => (int) $result['rows'],
+				'ax_asset_dirs' => (int) $result['directories'],
+			),
+			$back
+		)
+	);
+	exit;
+}
+add_action( 'admin_post_axismundi_actors_asset_cache', 'axismundi_actors_handle_asset_cache' );
 
 /** @return void */
 function axismundi_actors_handle_set_visibility() : void {

@@ -1,13 +1,12 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Schema v7 implemented (§2–§6, §8, §9.2 addresses,
-> §9.3 endpoints, §9.10 instances); §7 history and policy/keys are provisional.** Six tables exist
+> Status: **Living specification. Schema v9 implemented (§2–§6, §8, §9.2 addresses,
+> §9.3 endpoints, §9.4 policy, §9.5 assets, §9.10 instances); §7 history and keys are provisional.** Seven tables exist
 > today: the shared **identity registry**, the **actor profile**, multilingual Actor
 > text, the **address ledger** (`wp_ax_actor_addresses`), and the **instance / NodeInfo
 > host ledger** (`wp_ax_instances`), and normalized **Actor endpoints**. Local person
 > profile fields remain live `WP_User` fallbacks; only remote actors snapshot. Next
-> schema steps: v8 follower/discovery policy columns → v9 remote asset cache
-> (REMOTE-ASSET-CACHE.md, spec locked) → v10 keys/fetch-state → v11 managers. WebFinger
+> schema steps: v10 keys/fetch-state → v11 managers. WebFinger
 > acct policy is fail-closed (§9.9); bounded synchronous remote Actor discovery + NodeInfo
 > caching are implemented.
 
@@ -396,7 +395,7 @@ follow approval, discovery/indexing, and collection visibility are independent.
 The default posting audience belongs to the Activity plugin. Remote declarations
 must preserve NULL (unreported) separately from explicit false.
 
-### 9.5 DB v9 — remote asset cache *(spec locked, REMOTE-ASSET-CACHE.md)*
+### 9.5 DB v9 — remote asset cache *(implemented; REMOTE-ASSET-CACHE.md)*
 ```
 wp_ax_actor_asset_cache    identity_id, asset_role avatar|header, source_uri(+hash),
                            content_hash (NULL until ready), source_etag/last_modified/mime/w/h/byte_size,
@@ -414,7 +413,8 @@ retained — validate + derive, then delete. `content_hash` is `NULL` in `pendin
 and **required once `ready`**. Downloads are asynchronous, stale-while-revalidate; the
 render path never blocks on a fetch and falls back to the default avatar / no header.
 Full contract (path, refresh, SSRF/MIME/pixel limits, derivative sizes, purge/uninstall)
-in **REMOTE-ASSET-CACHE.md**. Precedes the image-bearing remote profile preview.
+in **REMOTE-ASSET-CACHE.md**. The administrator-only remote profile preview consumes
+these local derivatives and never hotlinks the remote source.
 
 ### 9.6 DB v10 — keys, remote cache, moves
 ```

@@ -141,7 +141,7 @@ federation table (DB v5+, DATA-MODEL §9).
 ## DB version roadmap & implementation order
 
 The schema grows one version at a time; the version option is recorded only after the
-new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v7**
+new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v9**
 (identity + actor + avatar/header + multilingual + address + instance + endpoint
 ledgers). Next:
 
@@ -153,9 +153,9 @@ Remote discovery    safe acct → WebFinger → Actor snapshot     — shipped; 
 Remote admin        Users > Remote Actors lookup/cache inspector — shipped; manage_options + nonce
 DB v6  wp_ax_instances (host software/version/policy ledger)   — shipped; per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.10)
 DB v7  wp_ax_actor_endpoints                                    — shipped; inbox/outbox/followers/following/featured/sharedInbox
-DB v8  follower/discovery policy axes                           — next; NULL-aware lock/discoverable/indexable/collection visibility
-DB v9  wp_ax_actor_asset_cache (remote avatar/header cache)     — content-addressed binary cache (REMOTE-ASSET-CACHE.md); precedes image-bearing remote preview
-Remote preview      /actors/cache/{uuid} admin-only, noindex    — reuses the actor-profile template; images only once v9 cache is ready (never hotlinks)
+DB v8  follower/discovery policy axes                           — shipped; NULL-aware lock/discoverable/indexable/collection visibility
+DB v9  wp_ax_actor_asset_cache (remote avatar/header cache)     — shipped; content-addressed binary cache (REMOTE-ASSET-CACHE.md)
+Remote preview      /actors/{local-cache-uuid} admin-only       — shipped; same actor-profile template, noindex/no-cache, never hotlinks
 DB v10 wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
 DB v11 wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
 ```

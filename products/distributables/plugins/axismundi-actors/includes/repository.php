@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '8';
+const AXISMUNDI_ACTORS_DB_VERSION = '9';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -47,6 +47,12 @@ function axismundi_actors_instances_table() : string {
 function axismundi_actors_endpoints_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_endpoints';
+}
+
+/** @return string remote Actor avatar/header cache table name. */
+function axismundi_actors_asset_cache_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_asset_cache';
 }
 
 /**
@@ -209,6 +215,41 @@ function axismundi_actors_install() : void {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	$asset_cache = axismundi_actors_asset_cache_table();
+	dbDelta(
+		"CREATE TABLE {$asset_cache} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			asset_role varchar(12) NOT NULL,
+			source_uri text NOT NULL,
+			source_uri_hash char(64) NOT NULL,
+			content_hash char(64) DEFAULT NULL,
+			source_etag varchar(191) DEFAULT NULL,
+			source_last_modified varchar(191) DEFAULT NULL,
+			source_mime_type varchar(64) DEFAULT NULL,
+			source_width int(10) unsigned DEFAULT NULL,
+			source_height int(10) unsigned DEFAULT NULL,
+			source_byte_size bigint(20) unsigned DEFAULT NULL,
+			variants_json longtext DEFAULT NULL,
+			processor_version int(10) unsigned NOT NULL DEFAULT 1,
+			fetch_status varchar(12) NOT NULL,
+			fetched_at datetime DEFAULT NULL,
+			expires_at datetime DEFAULT NULL,
+			next_refresh_at datetime DEFAULT NULL,
+			last_accessed_at datetime DEFAULT NULL,
+			failure_count int(10) unsigned NOT NULL DEFAULT 0,
+			last_error_code varchar(64) DEFAULT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity_asset (identity_id, asset_role),
+			KEY source_uri_hash (source_uri_hash),
+			KEY content_processor (content_hash, processor_version),
+			KEY refresh_status (next_refresh_at, fetch_status),
+			KEY last_accessed_at (last_accessed_at)
+		) ENGINE=InnoDB {$charset};"
+	);
+
 	// Remote snapshot + endpoint refresh spans these three tables. Make the storage
 	// engine contract explicit so START TRANSACTION is not merely decorative on an
 	// older installation created under a different server default.
@@ -327,6 +368,12 @@ function axismundi_actors_install() : void {
 	$endpoint_identity_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$endpoints} WHERE Key_name = 'identity_endpoint'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$endpoint_hash_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$endpoints} WHERE Key_name = 'endpoint_uri_hash'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$asset_identity_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'identity_asset'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$asset_content_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'content_processor'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$asset_refresh_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'refresh_status'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final legacy-column check.
 	$final_actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
 	if (
@@ -345,6 +392,9 @@ function axismundi_actors_install() : void {
 		&& ! empty( $instance_indexes )
 		&& ! empty( $endpoint_identity_indexes )
 		&& ! empty( $endpoint_hash_indexes )
+		&& ! empty( $asset_identity_indexes )
+		&& ! empty( $asset_content_indexes )
+		&& ! empty( $asset_refresh_indexes )
 		&& ! in_array( 'inbox_uri', $final_actor_columns, true )
 		&& ! in_array( 'outbox_uri', $final_actor_columns, true )
 		&& $transactional_engines

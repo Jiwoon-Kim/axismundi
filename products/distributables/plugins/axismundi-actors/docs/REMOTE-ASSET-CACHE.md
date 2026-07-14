@@ -1,6 +1,6 @@
 # Remote Actor Asset Cache — locked contract (DB v9)
 
-> Status: **Spec locked; not yet implemented.** Scope: caching the binary avatar
+> Status: **Implemented in DB v9.** Scope: caching the binary avatar
 > (`icon`) and header (`image`) of **remote** actors as locally-served, resized
 > derivatives. This is a *remote binary cache subsystem*, not "download an image."
 > Implemented **before** any image-bearing remote profile preview so the preview never
@@ -10,9 +10,9 @@
 > Bilingual policy note (EN/KO): 원격 actor의 아바타/헤더만 대상. 로컬 아바타는 무관.
 > preview는 이 캐시가 준비된 뒤에만 이미지를 노출한다.
 
-Only the **storage identity, path derivation, GC unit, and the no-synchronous-download
-rule** are frozen. Derivative sizes and WebP quality are **provisional** (tunable during
-implementation).
+The **storage identity, path derivation, GC unit, no-synchronous-download rule, and
+default derivative caps** are frozen. Encoding quality remains tunable by processor
+version.
 
 ---
 
@@ -23,11 +23,11 @@ wp-content/uploads/axismundi-cache/actors/v{processor}/
 └─ {ab}/                 # first 2 hex of content_hash
    └─ {cd}/              # next 2 hex of content_hash
       └─ {content_hash}/ # full sha256 of the SOURCE BINARY
-         ├─ avatar-96.webp
-         ├─ avatar-192.webp
-         ├─ avatar-384.webp
-         ├─ header-640.webp
-         └─ header-1280.webp
+         ├─ avatar-96.{webp|jpg|png}
+         ├─ avatar-192.{webp|jpg|png}
+         ├─ avatar-384.{webp|jpg|png}
+         ├─ header-640.{webp|jpg|png}
+         └─ header-1024.{webp|jpg|png}
 ```
 
 Frozen rules:
@@ -150,27 +150,28 @@ Render-time rules (frozen):
 
 ---
 
-## 6. Derivative sizes — *provisional*
+## 6. Derivative sizes
 
 ```
-avatar: 96×96, 192×192, 384×384        (square)
-header: 640×213, 1280×427              (cover crop; 3:1-ish)
-format: WebP preferred, JPEG/PNG fallback
+avatar: 96×96, 192×192, 384×384 caps
+header: 640px, 1024px maximum widths (aspect ratio preserved)
+format: normalized JPEG/PNG; WebP only when the resulting file is smaller
 ```
 
-Header uses a `cover` crop; a focal point can be added later without a new table by
-bumping `processor_version` (new `v{n}` tree). These numbers and WebP quality may be
-tuned during implementation without re-locking the spec.
+Images are never upscaled. An avatar is square-cropped only when both source
+dimensions can supply that cap; otherwise its aspect ratio is preserved. If two caps
+produce the same actual dimensions (a small source), only one physical derivative is
+published. Headers are never cover-cropped. A focal point or a changed encoding policy
+requires a `processor_version` bump (new `v{n}` tree).
 
 ---
 
 ## 7. Ordering
 
 ```
-this spec (locked)
-→ DB v8  follower/discovery policy axes (NULL ≠ false)
-→ DB v9  wp_ax_actor_asset_cache (this doc)
-→ admin-only remote profile preview that uses the cache (images only once v9 is ready)
+DB v8  follower/discovery policy axes (NULL ≠ false)             shipped
+→ DB v9  wp_ax_actor_asset_cache (this doc)                       shipped
+→ admin-only remote profile preview using the same profile template shipped
 → DB v10 keys / fetch-state / relations
 → DB v11 managed actors
 ```

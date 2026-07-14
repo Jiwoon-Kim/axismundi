@@ -19,7 +19,8 @@
     "./products/distributables/plugins/axismundi-map",
     "./products/distributables/plugins/axismundi-dialogs",
     "./products/distributables/plugins/axismundi-media-library",
-    "./products/distributables/plugins/axismundi-actors"
+    "./products/distributables/plugins/axismundi-actors",
+    "./products/distributables/plugins/axismundi-object-projections"
   ],
   "port": 8884,
   "config": {

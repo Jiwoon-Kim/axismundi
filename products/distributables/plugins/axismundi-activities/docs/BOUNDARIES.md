@@ -12,6 +12,10 @@
 Federation delivery and notification delivery are distinct queues with independent retry and
 failure state. Activities never performs a network request.
 
+Axismundi Actors is a hard plugin dependency declared through `Requires Plugins`. Activities
+uses its repository to validate Actor references and determine direction; it never falls back
+to guessing locality from URI hosts or duplicating Actor rows.
+
 ## Object Projections lease API
 
 Activities will call a public API such as:

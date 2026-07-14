@@ -5,11 +5,11 @@
 Ownership, URI references, immutable Activity lifecycle, relation state, media no-Create,
 lease ownership, prefix tenancy, and package boundaries. No runtime state.
 
-## 0.0.2 — Phase 1: Activity repository
+## 0.0.2 — Phase 1: Activity repository (shipped)
 
-Create `wp_ax_activities` with verified DB-version gate; immutable value object; bounded,
-idempotent `record_activity()`; URI/actor/object lookup; valid Undo effectiveness; post-commit
-`axismundi_act_activity_recorded`. Network requests remain forbidden.
+`wp_ax_activities` with verified DB-version gate; immutable value object; bounded,
+idempotent `axismundi_act_record_activity()`; URI/actor/object lookup; valid Undo
+effectiveness; post-commit `axismundi_act_activity_recorded`. Network requests remain forbidden.
 
 ## 0.0.3 — Phase 2: Follow, Accept, Reject, Block
 

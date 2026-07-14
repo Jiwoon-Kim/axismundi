@@ -3,7 +3,8 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.1
+Requires Plugins: axismundi-actors
+Stable tag: 0.0.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -18,10 +19,21 @@ Axismundi. Actors owns identities, Object Projections owns object representation
 object cache retention, Notifications will own read state and recipient presentation, and
 Federation will own HTTP inbox/outbox transport, signatures, and remote delivery.
 
-Version 0.0.1 is a contract-only scaffold. It creates no table, route, cron event, network
-request, inbox, outbox, notification, or delivery queue.
+Axismundi Actors is a required dependency and remains the authority for every actor URI.
+
+Version 0.0.2 implements the immutable URI-keyed Activity ledger. It creates no route,
+cron event, network request, inbox, outbox, notification, or delivery queue.
 
 == Changelog ==
+
+= 0.0.2 =
+* Add the verified InnoDB `wp_ax_activities` repository with UUID local Activity URIs,
+  exact URI/hash identity, bounded immutable payloads, normalized audience, and Actor/Object
+  reverse lookups. Keep prefix tenancy and omit `blog_id`.
+* Require every Actor URI to resolve through Axismundi Actors and reject direction/origin
+  conflicts. Preserve remote inbound Activity ids exactly.
+* Add idempotent replay, payload identity-conflict protection, post-commit recorded hooks,
+  and same-Actor Undo effectiveness including out-of-order and Undo-of-Undo reconciliation.
 
 = 0.0.1 =
 * Lock Activity, relation, lifecycle, logical collection, media no-Create, lease, and

@@ -1,6 +1,6 @@
 # Activity storage model
 
-> Provisional for Phase 1/2 implementation. Phase 0 creates no table.
+> `wp_ax_activities` is implemented in DB v1. The Phase 2 relations table remains provisional.
 
 ## 1. `wp_ax_activities`
 
@@ -37,7 +37,8 @@ InnoDB and records its DB version only after table, engine, and unique indexes a
 
 `object_uri` follows ActivityStreams semantics: a Follow points to an Actor, Like to an
 Object, and Accept/Reject/Undo to another Activity. `target_uri` is used by collection
-operations such as Add, Remove, and Move.
+operations such as Add, Remove, and Move. Every supported concrete Activity requires an
+object URI; Add, Remove, and Move additionally require a target URI.
 
 ## 2. `wp_ax_activity_relations`
 

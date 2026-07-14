@@ -3,9 +3,10 @@
  * Plugin Name:       Axismundi Activities
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activities
  * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push.
- * Version:           0.0.1
+ * Version:           0.0.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
+ * Requires Plugins:  axismundi-actors
  * Author:            KIM JIWOON
  * Author URI:        https://designbusan.ai.kr
  * License:           GPL-3.0-or-later
@@ -14,10 +15,18 @@
  *
  * @package AxismundiActivities
  *
- * Phase 0 locks ownership, URI, lifecycle, relation, collection, and lease contracts.
- * It deliberately creates no table, route, scheduled event, or network request.
+ * Phase 1 implements the immutable Activity ledger. It creates no route, scheduled
+ * event, notification, signature, delivery queue, or network request.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITIES_VERSION = '0.0.1';
+const AXISMUNDI_ACTIVITIES_VERSION = '0.0.2';
+
+require_once __DIR__ . '/includes/repository.php';
+
+/** Install the Activity ledger. */
+function axismundi_activities_activate() : void {
+	axismundi_act_install();
+}
+register_activation_hook( __FILE__, 'axismundi_activities_activate' );

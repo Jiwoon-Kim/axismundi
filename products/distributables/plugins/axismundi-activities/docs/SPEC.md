@@ -1,6 +1,6 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 0 contract and scaffold only**. No tables, routes, or network behavior.
+> Status: **Phase 1 Activity repository implemented**. No routes or network behavior.
 
 ## 1. Purpose
 
@@ -35,6 +35,8 @@ Actor URI + Activity + Object URI
 7. The WordPress table prefix is the tenancy boundary. Activity tables do not contain a
    `blog_id`; a future network-wide index is a separate projection.
 8. Hooks such as `axismundi_act_activity_recorded` fire only after a successful commit.
+9. Axismundi Actors is a required plugin dependency. Every `actor_uri` must resolve through
+   its repository before an Activity is accepted; Activities never creates Actor identities.
 
 ## 3. Supported activity vocabulary
 

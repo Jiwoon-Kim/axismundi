@@ -1,6 +1,6 @@
 # Remote object projections
 
-> Status: **Phase 4b metadata-only discovery implemented**. Binary media caching is
+> Status: **Phase 4c metadata-only discovery and full-payload inspection implemented**. Binary media caching is
 > deliberately deferred to the shared-blob/shadow-attachment design.
 
 ## 1. Purpose and ownership
@@ -19,6 +19,8 @@ remote AS document     -> normalized local observation
 
 Activities may later reference the canonical object URI. Actors may best-effort resolve
 an `attributedTo` URI, but neither plugin is required for storing the object snapshot.
+Resolution is a deferred, deduplicated WP-Cron event for the primary Actor only; object
+fetch never waits on Actor discovery and never fans out through mentions or audience members.
 
 ## 2. Table (schema v2)
 
@@ -92,8 +94,11 @@ table and required unique/index keys are verified.
 - HTTP 401/403 is reported as signed-fetch-required. Object Projections does not fabricate
   signatures; a future Federation fetcher must explicitly provide that capability.
 - Rendering never performs a synchronous remote fetch. Cache miss uses a placeholder.
-- Phase 4a creates no public mirror route. The Phase 4b inspector is admin-only and
-  `noindex`; remote media is not hotlinked.
+- Phase 4a creates no public mirror route. The administrator inspector is admin-only and
+  `noindex`; remote media is not hotlinked. It displays Tags/Mentions, audience properties,
+  attachment descriptors, unknown extension properties, and the full payload only as
+  escaped text. If an Actor URI already exists in Axismundi Actors, references use its
+  internal administrator page; otherwise they remain external canonical links.
 
 ## 5. Cache levels and binary boundary
 

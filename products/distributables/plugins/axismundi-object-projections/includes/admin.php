@@ -60,8 +60,174 @@ function axismundi_op_remote_admin_notices() : void {
 	}
 }
 
+/** Normalize a scalar/object/list ActivityStreams member into a list. */
+function axismundi_op_remote_admin_members( $value ) : array {
+	if ( null === $value || '' === $value ) {
+		return array();
+	}
+	return is_array( $value ) && array_is_list( $value ) ? $value : array( $value );
+}
+
+/** First readable type label from an ActivityStreams member. */
+function axismundi_op_remote_admin_member_type( $member ) : string {
+	if ( ! is_array( $member ) || ! isset( $member['type'] ) ) {
+		return '';
+	}
+	$types = is_array( $member['type'] ) ? $member['type'] : array( $member['type'] );
+	foreach ( $types as $type ) {
+		if ( is_scalar( $type ) && '' !== trim( (string) $type ) ) {
+			return sanitize_text_field( (string) $type );
+		}
+	}
+	return '';
+}
+
+/** URI represented by a scalar or embedded AS Link/object. */
+function axismundi_op_remote_admin_member_uri( $member ) : string {
+	if ( is_array( $member ) ) {
+		foreach ( array( 'href', 'url', 'id' ) as $key ) {
+			if ( isset( $member[ $key ] ) ) {
+				$uri = axismundi_op_remote_member_uri( $member[ $key ] );
+				if ( '' !== $uri ) {
+					return $uri;
+				}
+			}
+		}
+	}
+	return axismundi_op_remote_member_uri( $member );
+}
+
+/** Human label represented by a scalar or embedded object. */
+function axismundi_op_remote_admin_member_name( $member ) : string {
+	if ( is_array( $member ) ) {
+		foreach ( array( 'name', 'preferredUsername' ) as $key ) {
+			if ( isset( $member[ $key ] ) && is_scalar( $member[ $key ] ) ) {
+				return sanitize_text_field( (string) $member[ $key ] );
+			}
+		}
+	}
+	return is_scalar( $member ) ? sanitize_text_field( (string) $member ) : '';
+}
+
+/**
+ * Link an Actor to its cached administrator record when available, otherwise remote.
+ *
+ * This performs no discovery or network request.
+ */
+function axismundi_op_remote_admin_reference_link( string $uri, string $label = '', bool $actor_candidate = false ) : string {
+	$href     = $uri;
+	$internal = false;
+	if ( $actor_candidate && function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		$actor = axismundi_actors_get_by_uri( $uri );
+		if ( $actor instanceof Axismundi_Actor ) {
+			if ( $actor->is_local() && '' !== $actor->get_profile_url() ) {
+				$href = $actor->get_profile_url();
+			} elseif ( function_exists( 'axismundi_actors_remote_admin_url' ) ) {
+				$href = add_query_arg( 'actor_id', $actor->get_identity_id(), axismundi_actors_remote_admin_url() );
+			}
+			$internal = $href !== $uri;
+		}
+	}
+	$label = '' !== $label ? $label : $uri;
+	return '<a href="' . esc_url( $href ) . '"' . ( $internal ? '' : ' rel="noopener noreferrer"' ) . '>' . esc_html( $label ) . '</a>';
+}
+
+/** Pretty, escaped JSON for diagnostic display. */
+function axismundi_op_remote_admin_json( $value ) : string {
+	$json = wp_json_encode( $value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+	return is_string( $json ) ? $json : '';
+}
+
+/** Render tag, Mention, Hashtag, and Emoji metadata without remote media. */
+function axismundi_op_render_remote_tags( array $payload ) : void {
+	$tags = axismundi_op_remote_admin_members( $payload['tag'] ?? null );
+	if ( empty( $tags ) ) {
+		return;
+	}
+	?>
+	<h3><?php esc_html_e( 'Tags and mentions', 'axismundi-object-projections' ); ?></h3>
+	<table class="widefat striped" style="max-width: 1000px"><thead><tr><th><?php esc_html_e( 'Type', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Name', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Reference', 'axismundi-object-projections' ); ?></th></tr></thead><tbody>
+	<?php foreach ( $tags as $tag ) :
+		$type = axismundi_op_remote_admin_member_type( $tag );
+		$name = axismundi_op_remote_admin_member_name( $tag );
+		$uri  = axismundi_op_remote_admin_member_uri( $tag );
+		?>
+		<tr><td><?php echo esc_html( '' !== $type ? $type : '—' ); ?></td><td><?php echo esc_html( '' !== $name ? $name : '—' ); ?></td><td><?php echo '' !== $uri ? axismundi_op_remote_admin_reference_link( $uri, $uri, 'Mention' === $type ) : '—'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
+	<?php endforeach; ?>
+	</tbody></table>
+	<?php
+}
+
+/** Render public and private audience declarations for administrator diagnostics. */
+function axismundi_op_render_remote_audience( array $payload ) : void {
+	$rows = array();
+	foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $property ) {
+		foreach ( axismundi_op_remote_admin_members( $payload[ $property ] ?? null ) as $member ) {
+			$rows[] = array( $property, $member );
+		}
+	}
+	if ( empty( $rows ) ) {
+		return;
+	}
+	?>
+	<h3><?php esc_html_e( 'Audience', 'axismundi-object-projections' ); ?></h3>
+	<table class="widefat striped" style="max-width: 1000px"><thead><tr><th><?php esc_html_e( 'Property', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Recipient', 'axismundi-object-projections' ); ?></th></tr></thead><tbody>
+	<?php foreach ( $rows as $row ) :
+		$uri   = axismundi_op_remote_admin_member_uri( $row[1] );
+		$label = axismundi_op_remote_admin_member_name( $row[1] );
+		?>
+		<tr><td><code><?php echo esc_html( $row[0] ); ?></code></td><td><?php echo '' !== $uri ? axismundi_op_remote_admin_reference_link( $uri, '' !== $label ? $label : $uri, true ) : esc_html( '' !== $label ? $label : '—' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
+	<?php endforeach; ?>
+	</tbody></table>
+	<?php
+}
+
+/** Render attachment descriptors only; never emit img/video/audio/embed elements. */
+function axismundi_op_render_remote_attachments( array $payload ) : void {
+	$attachments = axismundi_op_remote_admin_members( $payload['attachment'] ?? null );
+	if ( empty( $attachments ) ) {
+		return;
+	}
+	?>
+	<h3><?php esc_html_e( 'Attachment metadata', 'axismundi-object-projections' ); ?></h3>
+	<table class="widefat striped" style="max-width: 1000px"><thead><tr><th><?php esc_html_e( 'Type', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Name', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Media type', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Dimensions', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Remote reference', 'axismundi-object-projections' ); ?></th></tr></thead><tbody>
+	<?php foreach ( $attachments as $attachment ) :
+		$type       = axismundi_op_remote_admin_member_type( $attachment );
+		$name       = axismundi_op_remote_admin_member_name( $attachment );
+		$media_type = is_array( $attachment ) && isset( $attachment['mediaType'] ) && is_scalar( $attachment['mediaType'] ) ? sanitize_text_field( (string) $attachment['mediaType'] ) : '';
+		$width      = is_array( $attachment ) && isset( $attachment['width'] ) ? absint( $attachment['width'] ) : 0;
+		$height     = is_array( $attachment ) && isset( $attachment['height'] ) ? absint( $attachment['height'] ) : 0;
+		$uri        = axismundi_op_remote_admin_member_uri( $attachment );
+		?>
+		<tr><td><?php echo esc_html( '' !== $type ? $type : '—' ); ?></td><td><?php echo esc_html( '' !== $name ? $name : '—' ); ?></td><td><?php echo esc_html( '' !== $media_type ? $media_type : '—' ); ?></td><td><?php echo esc_html( $width || $height ? $width . ' × ' . $height : '—' ); ?></td><td><?php echo '' !== $uri ? axismundi_op_remote_admin_reference_link( $uri ) : '—'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
+	<?php endforeach; ?>
+	</tbody></table>
+	<?php
+}
+
+/** Render unnormalized extension properties plus the complete escaped payload. */
+function axismundi_op_render_remote_payload( array $payload ) : void {
+	$handled = array_flip( array( '@context', 'id', 'type', 'attributedTo', 'inReplyTo', 'url', 'name', 'summary', 'content', 'contentMap', 'mediaType', 'sensitive', 'published', 'updated', 'tag', 'to', 'cc', 'bto', 'bcc', 'audience', 'attachment' ) );
+	$extra   = array_diff_key( $payload, $handled );
+	if ( ! empty( $extra ) ) :
+		?>
+		<h3><?php esc_html_e( 'Additional properties', 'axismundi-object-projections' ); ?></h3>
+		<table class="widefat striped" style="max-width: 1000px"><tbody>
+		<?php foreach ( $extra as $property => $value ) : ?>
+			<tr><th scope="row"><code><?php echo esc_html( (string) $property ); ?></code></th><td><pre style="white-space:pre-wrap;overflow-wrap:anywhere;margin:0"><?php echo esc_html( axismundi_op_remote_admin_json( $value ) ); ?></pre></td></tr>
+		<?php endforeach; ?>
+		</tbody></table>
+	<?php endif; ?>
+	<details style="margin-top:16px;max-width:1000px">
+		<summary><strong><?php esc_html_e( 'Raw JSON', 'axismundi-object-projections' ); ?></strong></summary>
+		<pre style="max-height:600px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere"><?php echo esc_html( axismundi_op_remote_admin_json( $payload ) ); ?></pre>
+	</details>
+	<?php
+}
+
 /** Render one metadata-only cached object. */
 function axismundi_op_render_remote_object_detail( array $object ) : void {
+	$payload = isset( $object['payload'] ) && is_array( $object['payload'] ) ? $object['payload'] : array();
 	?>
 	<hr>
 	<h2><?php echo esc_html( '' !== (string) $object['name'] ? (string) $object['name'] : (string) $object['object_type'] ); ?></h2>
@@ -69,7 +235,7 @@ function axismundi_op_render_remote_object_detail( array $object ) : void {
 		<tbody>
 			<tr><th scope="row"><?php esc_html_e( 'Canonical URI', 'axismundi-object-projections' ); ?></th><td><code><?php echo esc_html( (string) $object['object_uri'] ); ?></code></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Type / status', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) $object['object_type'] . ' / ' . (string) $object['object_status'] ); ?></td></tr>
-			<tr><th scope="row"><?php esc_html_e( 'Attributed to', 'axismundi-object-projections' ); ?></th><td><?php echo empty( $object['attributed_to_uri'] ) ? '—' : '<a href="' . esc_url( (string) $object['attributed_to_uri'] ) . '" rel="noopener noreferrer">' . esc_html( (string) $object['attributed_to_uri'] ) . '</a>'; ?></td></tr>
+			<tr><th scope="row"><?php esc_html_e( 'Attributed to', 'axismundi-object-projections' ); ?></th><td><?php echo empty( $object['attributed_to_uri'] ) ? '—' : axismundi_op_remote_admin_reference_link( (string) $object['attributed_to_uri'], (string) $object['attributed_to_uri'], true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Published / updated', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) ( $object['published_at'] ?? '—' ) . ' / ' . (string) ( $object['remote_updated_at'] ?? '—' ) ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Sensitive', 'axismundi-object-projections' ); ?></th><td><?php echo null === $object['is_sensitive'] ? esc_html__( 'Not declared', 'axismundi-object-projections' ) : ( (int) $object['is_sensitive'] ? esc_html__( 'Yes', 'axismundi-object-projections' ) : esc_html__( 'No', 'axismundi-object-projections' ) ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Fetched / expires', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) $object['fetched_at'] . ' / ' . (string) $object['expires_at'] ); ?></td></tr>
@@ -84,6 +250,10 @@ function axismundi_op_render_remote_object_detail( array $object ) : void {
 		<h3><?php esc_html_e( 'Content preview', 'axismundi-object-projections' ); ?></h3>
 		<div class="ax-op-remote-content"><?php echo axismundi_op_remote_preview_html( (string) $object['content'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bounded allowlist above. ?></div>
 	<?php endif; ?>
+	<?php axismundi_op_render_remote_tags( $payload ); ?>
+	<?php axismundi_op_render_remote_audience( $payload ); ?>
+	<?php axismundi_op_render_remote_attachments( $payload ); ?>
+	<?php axismundi_op_render_remote_payload( $payload ); ?>
 	<p class="description"><?php esc_html_e( 'Metadata-only preview: remote images, video, audio, embeds, and attachment binaries are never rendered or downloaded.', 'axismundi-object-projections' ); ?></p>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block">
 		<input type="hidden" name="action" value="axismundi_op_fetch_remote_object">

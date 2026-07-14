@@ -19,6 +19,57 @@ function axismundi_op_remote_fetch_error( string $url, string $code, string $mes
 }
 
 /**
+ * Schedule best-effort discovery of one attributed Actor without extending fetch latency.
+ *
+ * Object storage never depends on Actors being installed or reachable. Only the primary
+ * `attributedTo` URI is warmed automatically; mentions and audience members do not fan out.
+ */
+function axismundi_op_schedule_remote_actor_discovery( string $actor_uri ) : bool {
+	$actor_uri = trim( $actor_uri );
+	if ( '' === $actor_uri || ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_actors_discover_remote_actor_uri' ) ) {
+		return false;
+	}
+	if ( null !== axismundi_actors_get_by_uri( $actor_uri ) ) {
+		return false;
+	}
+	$args = array( $actor_uri );
+	if ( false !== wp_next_scheduled( 'axismundi_op_discover_remote_actor', $args ) ) {
+		return true;
+	}
+	return false !== wp_schedule_single_event( time() + 5, 'axismundi_op_discover_remote_actor', $args );
+}
+
+/** Run one deferred Actor discovery request. */
+function axismundi_op_discover_remote_actor( string $actor_uri ) : void {
+	if ( ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_actors_discover_remote_actor_uri' ) ) {
+		return;
+	}
+	if ( null === axismundi_actors_get_by_uri( $actor_uri ) ) {
+		axismundi_actors_discover_remote_actor_uri( $actor_uri );
+	}
+}
+add_action( 'axismundi_op_discover_remote_actor', 'axismundi_op_discover_remote_actor' );
+
+/** Emit the post-fetch integration event and queue the primary Actor when needed. */
+function axismundi_op_remote_object_fetched( array $stored ) : void {
+	$actor = null;
+	if ( ! empty( $stored['attributed_to_uri'] ) && function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		$actor = axismundi_actors_get_by_uri( (string) $stored['attributed_to_uri'] );
+		if ( null === $actor ) {
+			axismundi_op_schedule_remote_actor_discovery( (string) $stored['attributed_to_uri'] );
+		}
+	}
+	/**
+	 * A remote object was cached. Actor discovery, when available, is deferred.
+	 *
+	 * @since 0.0.7
+	 * @param array<string,mixed>   $stored Stored object row.
+	 * @param Axismundi_Actor|null $actor  Already-cached Actor, if any.
+	 */
+	do_action( 'axismundi_op_remote_object_fetched', $stored, $actor );
+}
+
+/**
  * Fetch, validate, and cache one remote ActivityStreams object.
  *
  * No redirect is followed. Render paths must never call this function.
@@ -60,7 +111,11 @@ function axismundi_op_remote_object_fetch( string $url ) {
 	$status = (int) wp_remote_retrieve_response_code( $response );
 	if ( 304 === $status && is_array( $existing ) ) {
 		$not_modified = axismundi_op_remote_object_not_modified( $url );
-		return is_array( $not_modified ) ? $not_modified : new WP_Error( 'ax_op_remote_not_modified', __( 'The cached object could not be refreshed.', 'axismundi-object-projections' ) );
+		if ( is_array( $not_modified ) ) {
+			axismundi_op_remote_object_fetched( $not_modified );
+			return $not_modified;
+		}
+		return new WP_Error( 'ax_op_remote_not_modified', __( 'The cached object could not be refreshed.', 'axismundi-object-projections' ) );
 	}
 	if ( in_array( $status, array( 401, 403 ), true ) ) {
 		return axismundi_op_remote_fetch_error( $url, 'ax_op_remote_signed_fetch_required', __( 'This object requires authenticated or signed fetching, which is not available yet.', 'axismundi-object-projections' ) );
@@ -97,20 +152,6 @@ function axismundi_op_remote_object_fetch( string $url ) {
 		return $stored;
 	}
 
-	$actor_result = null;
-	if ( ! empty( $stored['attributed_to_uri'] ) && function_exists( 'axismundi_actors_get_by_uri' ) && function_exists( 'axismundi_actors_discover_remote_actor_uri' ) ) {
-		$actor_result = axismundi_actors_get_by_uri( (string) $stored['attributed_to_uri'] );
-		if ( null === $actor_result ) {
-			$actor_result = axismundi_actors_discover_remote_actor_uri( (string) $stored['attributed_to_uri'] );
-		}
-	}
-	/**
-	 * A remote object was cached. Actor discovery is best-effort and may be WP_Error.
-	 *
-	 * @since 0.0.6
-	 * @param array<string,mixed>             $stored       Stored object row.
-	 * @param Axismundi_Actor|WP_Error|null   $actor_result Optional Actor result.
-	 */
-	do_action( 'axismundi_op_remote_object_fetched', $stored, $actor_result );
+	axismundi_op_remote_object_fetched( $stored );
 	return $stored;
 }

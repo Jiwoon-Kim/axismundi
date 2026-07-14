@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.6
+Stable tag: 0.0.7
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -30,9 +30,21 @@ so a future adapter can preserve that plugin's established object ids.
 The remote-object repository stores URI-keyed, rebuildable observations for later
 administrator inspection and Activities integration. It performs no network requests and
 exposes no public mirror route. Administrators may fetch and inspect metadata-only remote
-objects under Tools > Remote Objects; remote media is never hotlinked or downloaded.
+objects under Tools > Remote Objects, including tags, mentions, audience declarations,
+attachment descriptors, extension properties, and the complete escaped JSON payload;
+remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.7 =
+* Expand Remote Object details with structured Tags/Mentions, audience declarations,
+  attachment metadata, extension properties, and complete escaped raw JSON. Remote media
+  remains metadata-only and is never rendered or downloaded.
+* Link Actor references to the cached Actors administrator record when available and fall
+  back to the canonical remote URI when absent; do not fetch while rendering.
+* Replace synchronous post-fetch Actor discovery with one deduplicated WP-Cron event for
+  the primary attributedTo Actor only. Object storage no longer waits on Actor discovery,
+  and Mention/audience members never cause request fan-out.
 
 = 0.0.6 =
 * Add Tools > Remote Objects: bounded public-HTTPS ActivityStreams fetch, conditional

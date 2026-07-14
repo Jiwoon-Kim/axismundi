@@ -14,11 +14,14 @@ require_once dirname( __DIR__ ) . '/includes/admin.php';
 $ax_fetch_results = array();
 $ax_fetch_url     = 'https://example.com/objects/ax-phase-4b';
 $ax_fetch_signed  = 'https://example.com/objects/ax-signed';
+$ax_fetch_actor   = 'https://example.com/users/ax-op-phase-4c-actor';
 $ax_fetch_mode    = 'success';
 $ax_fetch_args    = array();
 $ax_fetch_user    = get_current_user_id();
 $GLOBALS['ax_fetch_mode'] = 'success';
 $GLOBALS['ax_fetch_args'] = array();
+$GLOBALS['ax_fetch_urls'] = array();
+$GLOBALS['ax_fetch_actor'] = $ax_fetch_actor;
 
 /** @param array<bool> $results Results. @param string $label Label. @param bool $condition Condition. */
 function ax_fetch_assert( array &$results, string $label, bool $condition ) : void {
@@ -30,6 +33,7 @@ function ax_fetch_assert( array &$results, string $label, bool $condition ) : vo
 /** Mock bounded HTTP responses. */
 function ax_fetch_mock( $preempt, array $args, string $url ) {
 	$GLOBALS['ax_fetch_args'] = $args;
+	$GLOBALS['ax_fetch_urls'][] = $url;
 	$mode = (string) $GLOBALS['ax_fetch_mode'];
 	if ( 'signed' === $mode ) {
 		return array( 'headers' => array( 'content-type' => 'application/activity+json' ), 'body' => '', 'response' => array( 'code' => 401, 'message' => 'Unauthorized' ), 'cookies' => array(), 'filename' => null );
@@ -45,8 +49,19 @@ function ax_fetch_mock( $preempt, array $args, string $url ) {
 		'id'        => $url,
 		'type'      => 'Note',
 		'name'      => 'Fetched remote note',
+		'attributedTo' => $GLOBALS['ax_fetch_actor'],
 		'content'   => '<p>Visible text.</p><img src="https://remote.invalid/tracker.jpg"><video src="https://remote.invalid/video.mp4"></video>',
 		'sensitive' => true,
+		'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		'cc'        => array( 'https://example.com/users/ax-op-phase-4c-actor/followers' ),
+		'tag'       => array(
+			array( 'type' => 'Mention', 'name' => '@phase4c@example.com', 'href' => $GLOBALS['ax_fetch_actor'] ),
+			array( 'type' => 'Hashtag', 'name' => '#remoteobjects', 'href' => 'https://example.com/tags/remoteobjects' ),
+		),
+		'attachment' => array(
+			array( 'type' => 'Image', 'name' => 'Remote image metadata', 'mediaType' => 'image/jpeg', 'url' => 'https://example.com/media/image.jpg', 'width' => 640, 'height' => 480 ),
+		),
+		'quoteUrl'  => 'https://example.com/objects/quoted',
 	);
 	return array(
 		'headers'  => array( 'content-type' => 'application/activity+json; charset=utf-8', 'etag' => '"ax-phase-4b"', 'last-modified' => 'Tue, 14 Jul 2026 10:00:00 GMT' ),
@@ -70,6 +85,12 @@ try {
 			&& empty( $GLOBALS['ax_fetch_args']['cookies'] )
 	);
 	ax_fetch_assert( $ax_fetch_results, 'a valid response stores text metadata, tri-state sensitivity, validators, and expiry', is_array( $stored ) && 'Note' === $stored['object_type'] && 1 === (int) $stored['is_sensitive'] && '"ax-phase-4b"' === $stored['etag'] && ! empty( $stored['expires_at'] ) );
+	ax_fetch_assert(
+		$ax_fetch_results,
+		'object storage schedules only deferred primary-Actor discovery instead of synchronous HTTP fan-out',
+		false !== wp_next_scheduled( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) )
+			&& array( $ax_fetch_url ) === $GLOBALS['ax_fetch_urls']
+	);
 
 	$GLOBALS['ax_fetch_mode'] = 'not-modified';
 	$not_modified             = axismundi_op_remote_object_fetch( $ax_fetch_url );
@@ -92,6 +113,19 @@ try {
 	$admin_html = (string) ob_get_clean();
 	unset( $_GET['object_uri'] );
 	ax_fetch_assert( $ax_fetch_results, 'admin preview renders text metadata without any remote image/video/audio/embed element', false !== strpos( $admin_html, 'Visible text.' ) && false === stripos( $admin_html, '<img' ) && false === stripos( $admin_html, '<video' ) && false === stripos( $admin_html, '<audio' ) && false !== strpos( $admin_html, 'Metadata-only preview' ) );
+	ax_fetch_assert(
+		$ax_fetch_results,
+		'admin detail exposes tags, mentions, audience, attachment descriptors, extensions, and escaped raw JSON',
+		false !== strpos( $admin_html, 'Tags and mentions' )
+			&& false !== strpos( $admin_html, '@phase4c@example.com' )
+			&& false !== strpos( $admin_html, 'Audience' )
+			&& false !== strpos( $admin_html, 'Attachment metadata' )
+			&& false !== strpos( $admin_html, '640 × 480' )
+			&& false !== strpos( $admin_html, 'https://example.com/media/image.jpg' )
+			&& false !== strpos( $admin_html, 'quoteUrl' )
+			&& false !== strpos( $admin_html, 'Raw JSON' )
+			&& false !== strpos( $admin_html, '&quot;tag&quot;' )
+	);
 
 	global $wpdb;
 	$table = axismundi_op_remote_objects_table();
@@ -102,6 +136,7 @@ try {
 	ax_fetch_assert( $ax_fetch_results, 'expired metadata is counted and purged without touching a remote resource', 1 === $dry_count && 1 === $purged && null === axismundi_op_remote_object_get( $ax_fetch_url ) );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_fetch_mock', 10 );
+	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) );
 	axismundi_op_remote_object_delete( $ax_fetch_url );
 	axismundi_op_remote_object_delete( $ax_fetch_signed );
 	wp_set_current_user( $ax_fetch_user );

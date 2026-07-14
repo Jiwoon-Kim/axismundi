@@ -5,7 +5,8 @@
 > **identity registry**, the **actor profile**, multilingual Actor text, and the
 > **address ledger** (`wp_ax_actor_addresses`). Local person profile fields remain
 > live `WP_User` fallbacks; only remote actors snapshot. The next schema steps are v6
-> endpoints/policy → v7 keys/fetch. WebFinger acct policy is decided fail-closed (§9.8).
+> endpoints/policy → v7 keys/fetch-state. WebFinger acct policy is fail-closed
+> (§9.8); bounded synchronous remote Actor discovery is implemented without a new table.
 
 ## 1. Conventions
 
@@ -497,7 +498,8 @@ wp_ax_instances
   cache of the remote's own declarations).
 
 **Order:** WebFinger endpoint (+ subdirectory fail-closed test §9.8) → local NodeInfo
-2.1 → remote actor discovery/fetch → then `wp_ax_instances` + its NodeInfo cache.
+2.1 → bounded remote Actor discovery/fetch *(shipped)* → then `wp_ax_instances` +
+its NodeInfo cache. Background refresh/backoff remains a Federation/fetch-state phase.
 
 ### Stays in `payload_json` (resolver-read, never columnized)
 `memorial`, `showFeatured` / `showMedia` / `showRepliesInMedia`, `interactionPolicy`,

@@ -511,6 +511,100 @@ function axismundi_actors_get_for_user( int $user_id ) : ?Axismundi_Actor {
 }
 
 /**
+ * Insert or refresh a normalized remote Actor snapshot. HTTP discovery and JSON
+ * validation happen outside this repository; this function owns only persistence.
+ *
+ * @param array<string,mixed> $record Normalized remote Actor fields.
+ * @return Axismundi_Actor|WP_Error
+ */
+function axismundi_actors_upsert_remote( array $record ) {
+	global $wpdb;
+	$uri  = trim( (string) ( $record['uri'] ?? '' ) );
+	$type = (string) ( $record['actor_type'] ?? '' );
+	if ( 'https' !== strtolower( (string) wp_parse_url( $uri, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $uri ) || ! in_array( $type, array( 'Person', 'Organization', 'Application', 'Service', 'Group' ), true ) ) {
+		return new WP_Error( 'ax_actors_remote_record', __( 'Invalid remote Actor record.', 'axismundi-actors' ) );
+	}
+	$payload = $record['payload'] ?? null;
+	if ( ! is_array( $payload ) ) {
+		return new WP_Error( 'ax_actors_remote_payload', __( 'Invalid remote Actor payload.', 'axismundi-actors' ) );
+	}
+	$payload_json = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+	if ( false === $payload_json ) {
+		return new WP_Error( 'ax_actors_remote_payload', __( 'Could not encode the remote Actor payload.', 'axismundi-actors' ) );
+	}
+	$now      = current_time( 'mysql', true );
+	$existing = axismundi_actors_get_by_uri( $uri );
+	$fields   = array(
+		'actor_type'         => $type,
+		'actor_scope'        => null,
+		'preferred_username' => (string) ( $record['preferred_username'] ?? '' ),
+		'local_handle_key'   => null,
+		'handle_locked_at'   => null,
+		'local_user_id'      => null,
+		'display_name'       => (string) ( $record['display_name'] ?? '' ),
+		'summary'            => (string) ( $record['summary'] ?? '' ),
+		'profile_url'        => (string) ( $record['profile_url'] ?? '' ),
+		'inbox_uri'          => (string) ( $record['inbox_uri'] ?? '' ),
+		'outbox_uri'         => (string) ( $record['outbox_uri'] ?? '' ),
+		'payload_json'       => $payload_json,
+		'updated_at'         => $now,
+	);
+	if ( $existing ) {
+		if ( $existing->is_local() || 'tombstone' === $existing->get_status() ) {
+			return new WP_Error( 'ax_actors_remote_conflict', __( 'That identity cannot be refreshed as a remote Actor.', 'axismundi-actors' ) );
+		}
+		$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor snapshot table.
+			axismundi_actors_actors_table(),
+			$fields,
+			array( 'identity_id' => $existing->get_identity_id() ),
+			null,
+			array( '%d' )
+		);
+		if ( false === $done ) {
+			return new WP_Error( 'ax_actors_remote_update', __( 'Could not refresh the remote Actor.', 'axismundi-actors' ) );
+		}
+		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom identity table.
+			axismundi_actors_identities_table(),
+			array( 'updated_at' => $now ),
+			array( 'id' => $existing->get_identity_id() ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		return axismundi_actors_get_by_uri( $uri );
+	}
+
+	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom identity table.
+		axismundi_actors_identities_table(),
+		array(
+			'uuid'               => wp_generate_uuid4(),
+			'canonical_uri'      => $uri,
+			'canonical_uri_hash' => hash( 'sha256', $uri ),
+			'object_kind'        => 'actor',
+			'origin'             => 'remote',
+			'status'             => 'public',
+			'created_at'         => $now,
+			'updated_at'         => $now,
+		),
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+	);
+	if ( false === $inserted ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_actors_remote_identity', __( 'Could not create the remote identity.', 'axismundi-actors' ) );
+	}
+	$identity_id          = (int) $wpdb->insert_id;
+	$fields['identity_id'] = $identity_id;
+	$fields['created_at']  = $now;
+	$inserted = $wpdb->insert( axismundi_actors_actors_table(), $fields ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor snapshot table.
+	if ( false === $inserted ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_actors_remote_actor', __( 'Could not create the remote Actor.', 'axismundi-actors' ) );
+	}
+	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	return axismundi_actors_get_by_uri( $uri );
+}
+
+/**
  * @param int $identity_id Identity/actor key.
  * @return Axismundi_Actor|null
  */
@@ -761,7 +855,7 @@ function axismundi_actors_get_addresses( int $identity_id ) : array {
  * @param string $acct        Bare acct address (`handle@example.test`).
  * @return bool
  */
-function axismundi_actors_record_local_acct_address( int $identity_id, string $acct ) : bool {
+function axismundi_actors_record_verified_acct_address( int $identity_id, string $acct ) : bool {
 	global $wpdb;
 	$acct = strtolower( trim( $acct ) );
 	if ( $identity_id <= 0 || '' === $acct ) {
@@ -800,6 +894,17 @@ function axismundi_actors_record_local_acct_address( int $identity_id, string $a
 		array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
 	);
 	return false !== $done;
+}
+
+/**
+ * Record a locally authoritative acct address.
+ *
+ * @param int    $identity_id Identity id.
+ * @param string $acct        Bare acct address.
+ * @return bool
+ */
+function axismundi_actors_record_local_acct_address( int $identity_id, string $acct ) : bool {
+	return axismundi_actors_record_verified_acct_address( $identity_id, $acct );
 }
 
 function axismundi_actors_register_handle( int $identity_id, string $handle ) {

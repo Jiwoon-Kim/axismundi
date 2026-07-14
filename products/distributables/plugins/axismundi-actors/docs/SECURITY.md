@@ -1,6 +1,6 @@
 # Axismundi Actors — Security
 
-> Status: **Living specification. Phase 2 profile exposure gate implemented.**
+> Status: **Living specification. Profile exposure and bounded remote discovery gates implemented.**
 > Actors is an identity registry. Its risks are exposure (publishing an identity
 > or PII prematurely), impersonation (binding federation identity to a mutable
 > handle), and IDOR (reading/mutating another identity).
@@ -49,7 +49,23 @@ Creating an actor record and exposing its public profile are **separate** (SPEC
 - Local profile fields are read live from `WP_User`; the plugin exposes only what
   the user's public author profile already exposes (name, bio, URL, avatar).
 - `payload_json` is remote-only and must be sanitized/escaped on output like any
-  untrusted federation data (relevant only once the federation phase lands).
+  untrusted federation data.
+
+## 2.1 Remote discovery boundary
+
+- Remote discovery accepts only HTTPS WebFinger and Actor URLs validated through
+  WordPress safe-URL checks; loopback/private-network authorities are rejected.
+- HTTP redirects are disabled. A future redirect/Move flow must validate every hop
+  and identity relation explicitly rather than inheriting generic browser behavior.
+- Responses are capped at one megabyte, require an allowlisted JSON content type,
+  status 200, and valid JSON. WebFinger subject must equal the requested acct, and
+  the Actor `id` must exactly equal its WebFinger `rel=self` URI.
+- Actor type is limited to Person/Organization/Application/Service/Group;
+  preferredUsername and safe HTTPS inbox/outbox are required. Failed validation
+  writes neither an Actor nor an acct address. Rediscovery updates the same
+  canonical URI and never resurrects a tombstone.
+- Stored remote HTML/JSON remains untrusted. Snapshot fields are normalized for
+  display; raw bounded `payload_json` is never printed without output sanitization.
 
 ## 3. Identity integrity
 

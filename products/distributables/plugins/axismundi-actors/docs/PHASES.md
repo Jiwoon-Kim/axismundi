@@ -1,6 +1,6 @@
 # Axismundi Actors — Phases
 
-> Status: **Living implementation plan. Phases 0–2 shipped.** Entry · build ·
+> Status: **Living implementation plan. Phases 0–4 plus local discovery shipped.** Entry · build ·
 > acceptance · non-goals per phase. Cross-refs:
 > SPEC, DATA-MODEL, ROUTING, SECURITY, PROJECTIONS.
 
@@ -147,8 +147,8 @@ new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v5
 ```
 DB v5  wp_ax_actor_addresses (handle routing + history)        — shipped; WebFinger acct policy fail-closed (§9.8)
 WebFinger endpoint  /.well-known/webfinger + local acct: rows  — shipped; subdirectory multisite explicitly OFF (tested)
-Local NodeInfo      /.well-known/nodeinfo + NodeInfo 2.1        — small increment, NO table (WP options + live counts)
-Remote discovery    fetch a remote actor → identity/actor rows — then the host ledger below
+Local NodeInfo      /.well-known/nodeinfo + NodeInfo 2.1        — shipped, NO table (WP options + live counts)
+Remote discovery    safe acct → WebFinger → Actor snapshot     — shipped; synchronous primitive, no refresh scheduler
 DB v?  wp_ax_instances (host software/version/policy ledger)   — per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.9)
 DB v6  wp_ax_actor_endpoints + follower/discovery policy cols   — inbox/outbox/…, lock, discoverable, indexable
 DB v7  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
@@ -174,7 +174,7 @@ key while its profile stays 404.
 ## Out of scope for this plugin (separate packages)
 
 Activity ledger, Like/Undo, actor activity page → **Axismundi Activities**.
-Note/Question CPT + projection → **Axismundi Notes**. JSON-LD transformer,
-inbox/outbox, HTTP signatures, discovery, delivery, remote actor fetch/cache →
-**Axismundi Federation**. The identity registry, `actor_uri`, and projection
-contract defined here are the substrate those plugins attach to without a rewrite.
+Note/Question CPT + projection → **Axismundi Notes**. Local JSON-LD transformer,
+inbox/outbox processing, HTTP signatures, background remote refresh/cache policy,
+and delivery → **Axismundi Federation**. Actors owns only the bounded synchronous
+discovery primitive needed to populate its own remote identity repository.

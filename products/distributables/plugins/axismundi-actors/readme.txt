@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.15
+Stable tag: 0.0.16
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -24,14 +24,24 @@ fallback) is derived from an immutable UUID; the `/@handle/` alias is registered
 once during Actor activation and does not track later WordPress username changes.
 
 The identity repository, actor profile routes, projection registration, profile
-administration, and local WebFinger address discovery are implemented. Activity
-delivery and remote federation remain later phases; see docs/ for the contracts.
+administration, local WebFinger/NodeInfo, and bounded remote Actor discovery are
+implemented. Activity delivery and full federation remain later phases; see docs/.
 
-Not in this plugin: activity ledger, likes, JSON-LD, inbox/outbox, follow, HTTP
-signatures, and remote fetch — those belong to Axismundi Activities and Axismundi
-Federation, which attach to the identity and projection contracts defined here.
+Not in this plugin: activity ledger, likes, local JSON-LD serialization,
+inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, and
+delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.16 =
+* Add bounded remote Actor discovery: HTTPS WebFinger resolves an ActivityStreams
+  self URI, validates the Actor id/type/endpoints, and upserts a remote identity
+  snapshot plus its verified acct address.
+* Harden the network boundary with WordPress safe-URL validation, private-network
+  rejection, strict content types, no redirects, a one-megabyte response limit,
+  exact WebFinger-self/Actor-id matching, and tombstone non-resurrection.
+* Keep instance NodeInfo caching, background refresh/backoff, JSON-LD transforms,
+  signatures, inbox processing, and delivery out of this increment.
 
 = 0.0.15 =
 * Local NodeInfo 2.1. Advertises this site's software, protocol, registration policy,

@@ -159,12 +159,15 @@ per-actor decision, not one giant site actor:
   row link on Users; view/edit capabilities.
 - Media Library registers `media` / `folders` projections; Collection and Shared
   Folder owner/member keys move to `actor_uri` (Media Library Phase 5).
+- Bounded remote discovery primitive: HTTPS WebFinger → validated ActivityStreams
+  Actor → remote identity/profile snapshot + verified acct address. This is a
+  synchronous repository input, not a federation delivery engine.
 
 ## 6. Non-goals (v0.1)
 
 Activity table · Like / Undo · JSON-LD transformer & content negotiation ·
-inbox / outbox · Follow / followers / following · HTTP signatures · remote actor
-fetch / cache / delivery · Organization / Service editing UI · `wp_ax_actor_managers`
+inbox / outbox · Follow / followers / following · HTTP signatures · background
+remote refresh/backoff/cache policy · delivery · Organization / Service editing UI · `wp_ax_actor_managers`
 table (v0.1 uses `manage_options` + the site-owner option). These are later phases
 or separate plugins (Axismundi Activities, Axismundi Federation); the schema and
 routing here are shaped so they attach without a rewrite.

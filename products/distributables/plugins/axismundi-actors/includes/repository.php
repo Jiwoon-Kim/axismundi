@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '10';
+const AXISMUNDI_ACTORS_DB_VERSION = '10.1';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -65,6 +65,12 @@ function axismundi_actors_keys_table() : string {
 function axismundi_actors_fetch_state_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_fetch_state';
+}
+
+/** @return string observed / verified identity-relation table name. */
+function axismundi_actors_identity_relations_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_identity_relations';
 }
 
 /**
@@ -303,11 +309,32 @@ function axismundi_actors_install() : void {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	$identity_relations = axismundi_actors_identity_relations_table();
+	dbDelta(
+		"CREATE TABLE {$identity_relations} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			relation_type varchar(20) NOT NULL,
+			target_uri text NOT NULL,
+			target_uri_hash char(64) NOT NULL,
+			verification_state varchar(12) NOT NULL DEFAULT 'observed',
+			verified_at datetime DEFAULT NULL,
+			first_observed_at datetime NOT NULL,
+			last_observed_at datetime NOT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity_relation (identity_id, relation_type, target_uri_hash),
+			KEY target_uri_hash (target_uri_hash),
+			KEY verification_state (verification_state)
+		) ENGINE=InnoDB {$charset};"
+	);
+
 	// Remote snapshot + endpoint + key refresh spans these tables. Make the storage
 	// engine contract explicit so START TRANSACTION is not merely decorative on an
 	// older installation created under a different server default.
 	$transactional_engines = true;
-	foreach ( array( $identities, $actors, $endpoints, $keys ) as $transactional_table ) {
+	foreach ( array( $identities, $actors, $endpoints, $keys, $identity_relations ) as $transactional_table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name, schema inspection.
 		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
 		if ( 'InnoDB' !== $engine ) {
@@ -405,6 +432,26 @@ function axismundi_actors_install() : void {
 		}
 	}
 
+	// DB v10b: preserve identity claims already present in cached remote payloads.
+	// The extractor lives in remote-discovery.php during normal plugin loads; repository-
+	// only fixtures may install an empty schema without it.
+	$relations_migrated = true;
+	if ( function_exists( 'axismundi_actors_extract_identity_relations_from_payload' ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off custom-table backfill.
+		$remote_rows = (array) $wpdb->get_results( "SELECT a.identity_id, a.payload_json, i.canonical_uri FROM {$actors} a INNER JOIN {$identities} i ON i.id = a.identity_id WHERE i.origin = 'remote' AND a.payload_json IS NOT NULL", ARRAY_A );
+		foreach ( $remote_rows as $row ) {
+			$payload = json_decode( (string) $row['payload_json'], true );
+			if ( ! is_array( $payload ) ) {
+				continue;
+			}
+			$relations = axismundi_actors_extract_identity_relations_from_payload( $payload, (string) $row['canonical_uri'] );
+			if ( ! axismundi_actors_write_identity_relations( (int) $row['identity_id'], $relations, (string) $row['canonical_uri'] ) ) {
+				$relations_migrated = false;
+				break;
+			}
+		}
+	}
+
 	// Only record the schema version once the new columns/tables/indexes actually
 	// exist, so a failed upgrade retries next load rather than being marked done.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
@@ -430,6 +477,8 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$key_uri_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$keys} WHERE Key_name = 'key_uri_hash'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$identity_relation_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$identity_relations} WHERE Key_name = 'identity_relation'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$fetch_state_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$fetch_state}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final legacy-column check.
 	$final_actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
@@ -453,12 +502,14 @@ function axismundi_actors_install() : void {
 		&& ! empty( $asset_content_indexes )
 		&& ! empty( $asset_refresh_indexes )
 		&& ! empty( $key_uri_indexes )
+		&& ! empty( $identity_relation_indexes )
 		&& in_array( 'payload_hash', $fetch_state_columns, true )
 		&& in_array( 'next_refresh_at', $fetch_state_columns, true )
 		&& ! in_array( 'inbox_uri', $final_actor_columns, true )
 		&& ! in_array( 'outbox_uri', $final_actor_columns, true )
 		&& $transactional_engines
 		&& $migrated
+		&& $relations_migrated
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
@@ -1175,6 +1226,132 @@ function axismundi_actors_get_fetch_state( int $identity_id ) : ?array {
 }
 
 /**
+ * Normalize one inbound identity relation without assigning trust to it.
+ *
+ * @param array<string,mixed> $relation Relation descriptor.
+ * @param string              $source_uri Source Actor URI; self-relations are ignored.
+ * @return array<string,string>|null
+ */
+function axismundi_actors_normalize_identity_relation( array $relation, string $source_uri = '' ) : ?array {
+	$type   = (string) ( $relation['relation_type'] ?? '' );
+	$target = trim( (string) ( $relation['target_uri'] ?? '' ) );
+	if (
+		! in_array( $type, array( 'also_known_as', 'moved_to' ), true )
+		|| '' === $target
+		|| $target === $source_uri
+		|| 'https' !== strtolower( (string) wp_parse_url( $target, PHP_URL_SCHEME ) )
+		|| ! wp_http_validate_url( $target )
+	) {
+		return null;
+	}
+	return array(
+		'relation_type'  => $type,
+		'target_uri'     => $target,
+		'target_uri_hash' => hash( 'sha256', $target ),
+	);
+}
+
+/**
+ * Record relations observed in an Actor payload. This is append/update-only:
+ * omission in a later or partial payload does not erase evidence, and an inbound
+ * refresh never downgrades a verified/rejected decision back to observed.
+ *
+ * @param int                        $identity_id Actor identity.
+ * @param array<int,array<string,mixed>> $relations Declared relations.
+ * @param string                     $source_uri Canonical source Actor URI.
+ * @return bool
+ */
+function axismundi_actors_write_identity_relations( int $identity_id, array $relations, string $source_uri = '' ) : bool {
+	global $wpdb;
+	$table = axismundi_actors_identity_relations_table();
+	$now   = current_time( 'mysql', true );
+	foreach ( $relations as $raw ) {
+		$relation = axismundi_actors_normalize_identity_relation( is_array( $raw ) ? $raw : array(), $source_uri );
+		if ( null === $relation ) {
+			continue;
+		}
+		$id = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom relation ledger.
+			$wpdb->prepare(
+				"SELECT id FROM {$table} WHERE identity_id = %d AND relation_type = %s AND target_uri_hash = %s",
+				$identity_id,
+				$relation['relation_type'],
+				$relation['target_uri_hash']
+			)
+		);
+		if ( $id > 0 ) {
+			$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- refresh observation timestamps without changing trust.
+				$table,
+				array( 'target_uri' => $relation['target_uri'], 'last_observed_at' => $now, 'updated_at' => $now ),
+				array( 'id' => $id ),
+				array( '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+		} else {
+			$done = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom relation ledger.
+				$table,
+				array(
+					'identity_id'       => $identity_id,
+					'relation_type'     => $relation['relation_type'],
+					'target_uri'        => $relation['target_uri'],
+					'target_uri_hash'   => $relation['target_uri_hash'],
+					'verification_state' => 'observed',
+					'first_observed_at' => $now,
+					'last_observed_at'  => $now,
+					'created_at'        => $now,
+					'updated_at'        => $now,
+				),
+				array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			);
+		}
+		if ( false === $done ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * @param int    $identity_id Actor identity.
+ * @param string $relation_type Optional type filter.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_actors_get_identity_relations( int $identity_id, string $relation_type = '' ) : array {
+	global $wpdb;
+	$table = axismundi_actors_identity_relations_table();
+	if ( in_array( $relation_type, array( 'also_known_as', 'moved_to' ), true ) ) {
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d AND relation_type = %s ORDER BY id ASC", $identity_id, $relation_type ), ARRAY_A ); // phpcs:ignore WordPress.DB
+	}
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d ORDER BY id ASC", $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
+}
+
+/**
+ * Promote or reject an already-observed relation. Federation owns the verification
+ * procedure and calls this repository seam only after completing it.
+ *
+ * @param int    $identity_id Actor identity.
+ * @param string $relation_type Relation type.
+ * @param string $target_uri Target URI.
+ * @param string $state verified|rejected.
+ * @return bool
+ */
+function axismundi_actors_set_identity_relation_verification( int $identity_id, string $relation_type, string $target_uri, string $state ) : bool {
+	global $wpdb;
+	if ( ! in_array( $relation_type, array( 'also_known_as', 'moved_to' ), true ) || ! in_array( $state, array( 'verified', 'rejected' ), true ) ) {
+		return false;
+	}
+	$table = axismundi_actors_identity_relations_table();
+	$now   = current_time( 'mysql', true );
+	$done  = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit trust transition in custom relation ledger.
+		$table,
+		array( 'verification_state' => $state, 'verified_at' => 'verified' === $state ? $now : null, 'updated_at' => $now ),
+		array( 'identity_id' => $identity_id, 'relation_type' => $relation_type, 'target_uri_hash' => hash( 'sha256', trim( $target_uri ) ) ),
+		null,
+		array( '%d', '%s', '%s' )
+	);
+	return false !== $done && $done > 0;
+}
+
+/**
  * Normalize the DB v8 policy axes from a record, preserving the NULL / true / false
  * distinction. A key that is absent or explicitly null stays NULL ("unreported"),
  * never coerced to 0 — an undeclared follower policy is not the same as "off".
@@ -1217,6 +1394,7 @@ function axismundi_actors_upsert_remote( array $record ) {
 		return new WP_Error( 'ax_actors_remote_endpoints', __( 'The remote Actor requires valid inbox and outbox endpoints.', 'axismundi-actors' ) );
 	}
 	$keys         = is_array( $record['keys'] ?? null ) ? $record['keys'] : array();
+	$relations    = is_array( $record['relations'] ?? null ) ? $record['relations'] : array();
 	$payload_json = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	if ( false === $payload_json ) {
 		return new WP_Error( 'ax_actors_remote_payload', __( 'Could not encode the remote Actor payload.', 'axismundi-actors' ) );
@@ -1262,6 +1440,10 @@ function axismundi_actors_upsert_remote( array $record ) {
 		if ( ! axismundi_actors_write_keys( $existing->get_identity_id(), $keys ) ) {
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return new WP_Error( 'ax_actors_remote_keys', __( 'Could not refresh the remote Actor keys.', 'axismundi-actors' ) );
+		}
+		if ( ! axismundi_actors_write_identity_relations( $existing->get_identity_id(), $relations, $uri ) ) {
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return new WP_Error( 'ax_actors_remote_relations', __( 'Could not refresh the remote Actor identity relations.', 'axismundi-actors' ) );
 		}
 		$identity_updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom identity table.
 			axismundi_actors_identities_table(),
@@ -1312,6 +1494,10 @@ function axismundi_actors_upsert_remote( array $record ) {
 	if ( ! axismundi_actors_write_keys( $identity_id, $keys ) ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_actors_remote_keys', __( 'Could not save the remote Actor keys.', 'axismundi-actors' ) );
+	}
+	if ( ! axismundi_actors_write_identity_relations( $identity_id, $relations, $uri ) ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_actors_remote_relations', __( 'Could not save the remote Actor identity relations.', 'axismundi-actors' ) );
 	}
 	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	return axismundi_actors_get_by_uri( $uri );

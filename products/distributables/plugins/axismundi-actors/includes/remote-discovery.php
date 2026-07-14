@@ -155,8 +155,44 @@ function axismundi_actors_normalize_remote_actor_payload( array $payload, string
 			'payload'            => $payload,
 		),
 		axismundi_actors_extract_policy_from_payload( $payload ),
-		array( 'keys' => axismundi_actors_extract_keys_from_payload( $payload, $uri ) )
+		array(
+			'keys'      => axismundi_actors_extract_keys_from_payload( $payload, $uri ),
+			'relations' => axismundi_actors_extract_identity_relations_from_payload( $payload, $uri ),
+		)
 	);
+}
+
+/**
+ * Extract identity claims without verifying them. JSON-LD permits a string, object,
+ * or list for both fields; repository validation performs the final URI gate.
+ *
+ * @param array<string,mixed> $payload Actor JSON.
+ * @param string              $actor_uri Canonical Actor id.
+ * @return array<int,array<string,string>>
+ */
+function axismundi_actors_extract_identity_relations_from_payload( array $payload, string $actor_uri ) : array {
+	$out = array();
+	foreach ( array( 'alsoKnownAs' => 'also_known_as', 'movedTo' => 'moved_to' ) as $field => $type ) {
+		if ( ! array_key_exists( $field, $payload ) ) {
+			continue;
+		}
+		$value = $payload[ $field ];
+		$items = is_array( $value ) && array_is_list( $value ) ? $value : array( $value );
+		foreach ( $items as $item ) {
+			$target = is_array( $item ) ? (string) ( $item['id'] ?? '' ) : (string) $item;
+			$normalized = axismundi_actors_normalize_identity_relation(
+				array( 'relation_type' => $type, 'target_uri' => $target ),
+				$actor_uri
+			);
+			if ( null !== $normalized ) {
+				$out[ $type . ':' . $normalized['target_uri_hash'] ] = array(
+					'relation_type' => $type,
+					'target_uri'    => $normalized['target_uri'],
+				);
+			}
+		}
+	}
+	return array_values( $out );
 }
 
 /**

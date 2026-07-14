@@ -157,7 +157,7 @@ DB v8  follower/discovery policy axes                           — shipped; NUL
 DB v9  wp_ax_actor_asset_cache (remote avatar/header cache)     — shipped; content-addressed binary cache (REMOTE-ASSET-CACHE.md)
 Remote preview      /actors/{local-cache-uuid} admin-only       — shipped; same actor-profile template, noindex/no-cache, never hotlinks
 DB v10a wp_ax_actor_keys + wp_ax_actor_fetch_state             — shipped; keyring (rotation history) + fetch validators/backoff, publicKey captured at discovery
-DB v10b wp_ax_identity_relations                               — next; alsoKnownAs/movedTo stored observed/unverified (Move verify = Federation)
+DB v10b wp_ax_identity_relations                               — shipped; alsoKnownAs/movedTo stored observed/unverified (Move verify = Federation)
 DB v11 wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
 ```
 

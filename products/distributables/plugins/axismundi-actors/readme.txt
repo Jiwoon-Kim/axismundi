@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.23
+Stable tag: 0.0.24
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -33,6 +33,18 @@ delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
 
+= 0.0.24 =
+* DB v10b — add wp_ax_identity_relations for alsoKnownAs and movedTo claims. Remote
+  discovery accepts JSON-LD string, object, and list forms, then stores each safe
+  HTTPS target as observed/unverified under a compound identity/type/URI key.
+* Preserve relation evidence across partial refreshes and never let an inbound Actor
+  document downgrade a verified or rejected decision. A repository seam allows the
+  future Federation plugin to promote or reject an observed claim after reciprocal
+  identity or Move verification.
+* Show cached identity relations and their verification state in the Remote Actors
+  inspector. Actors records claims only; it does not redirect, migrate followers, or
+  process Move activities.
+
 = 0.0.23 =
 * DB v10a — the Actor public-key keyring (wp_ax_actor_keys) and remote fetch state
   (wp_ax_actor_fetch_state). Discovery now captures each remote Actor's declared
@@ -45,8 +57,7 @@ delivery. Those belong to Axismundi Activities and Axismundi Federation.
   validators, a one-day refresh horizon on success, and a capped exponential backoff on
   failure that keeps the last good snapshot. This is substrate for a future background
   refresher; Actors performs no scheduling, signature verification, or delivery — those
-  stay in Axismundi Federation. alsoKnownAs / movedTo (identity relations) are the next
-  increment (v10b).
+  stay in Axismundi Federation.
 
 = 0.0.22 =
 * Revise processor v2 defaults for lower compute cost: avatar caps are now

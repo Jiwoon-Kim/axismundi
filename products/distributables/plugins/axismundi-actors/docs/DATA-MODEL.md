@@ -1,12 +1,11 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Schema v9 implemented (§2–§6, §8, §9.2 addresses,
-> §9.3 endpoints, §9.4 policy, §9.5 assets, §9.10 instances); §7 history and keys are provisional.** Seven tables exist
-> today: the shared **identity registry**, the **actor profile**, multilingual Actor
-> text, the **address ledger** (`wp_ax_actor_addresses`), and the **instance / NodeInfo
-> host ledger** (`wp_ax_instances`), and normalized **Actor endpoints**. Local person
+> Status: **Living specification. Schema v10b (stored version 10.1) implemented
+> (§2–§6, §8, §9.2–§9.6b, §9.10).** Ten tables exist today: the shared identity and
+> actor profile records, multilingual text, address and instance ledgers, normalized
+> endpoints, remote asset mappings, keyring, fetch state, and identity relations. Local person
 > profile fields remain live `WP_User` fallbacks; only remote actors snapshot. Next
-> schema steps: v10 keys/fetch-state → v11 managers. WebFinger
+> schema step: v11 managers, only when managed actors ship. WebFinger
 > acct policy is fail-closed (§9.9); bounded synchronous remote Actor discovery + NodeInfo
 > caching are implemented.
 
@@ -432,14 +431,15 @@ storage. Fetch-state is best-effort substrate for a future background refresher
 (payload hash, HTTP validators, one-day horizon, capped exponential backoff); Actors
 does no scheduling, signature verification, or delivery.
 
-### 9.6b DB v10b — identity relations *(next)*
+### 9.6b DB v10b — identity relations *(shipped; stored schema version 10.1)*
 ```
 wp_ax_identity_relations   relation_type also_known_as|moved_to, target_uri(+hash),
                            verification_state, verified_at   UNIQUE(identity_id, relation_type, target_uri_hash)
 ```
 `alsoKnownAs` / `movedTo` are stored **observed/unverified** first and **never trusted
 on inbound JSON alone** — cross-reference / a Move verification flow (owned by
-Federation) promotes them.
+Federation) promotes or rejects them. Missing claims on a later/partial fetch do not
+erase evidence, and another inbound snapshot cannot downgrade a verified decision.
 
 #### 9.6.1 DB v11 — managed actors
 `wp_ax_actor_managers(identity_id, user_id, role owner|manager|editor,

@@ -293,6 +293,7 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 	$instance  = '' !== $host ? axismundi_actors_get_instance( $host ) : null;
 	$addresses = array_values( array_filter( axismundi_actors_get_addresses( $actor->get_identity_id() ), static fn( array $row ) : bool => 'acct' === $row['address_type'] ) );
 	$assets    = axismundi_actors_asset_scope_rows( 'actor', (string) $actor->get_identity_id() );
+	$relations = axismundi_actors_get_identity_relations( $actor->get_identity_id() );
 	?>
 	<hr>
 	<h2><?php echo esc_html( $actor->get_display_name() ?: $actor->get_preferred_username() ); ?></h2>
@@ -322,6 +323,15 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 				);
 			?>
 			<tr><th><?php esc_html_e( 'Public key', 'axismundi-actors' ); ?></th><td><code><?php echo esc_html( $ax_key_label ); ?></code></td></tr>
+			<tr><th><?php esc_html_e( 'Identity relations', 'axismundi-actors' ); ?></th><td>
+				<?php if ( empty( $relations ) ) : ?>
+					<?php esc_html_e( 'none reported', 'axismundi-actors' ); ?>
+				<?php else : ?>
+					<?php foreach ( $relations as $relation ) : ?>
+						<div><strong><?php echo esc_html( (string) $relation['relation_type'] ); ?></strong>: <code><?php echo esc_html( (string) $relation['target_uri'] ); ?></code> (<?php echo esc_html( (string) $relation['verification_state'] ); ?>)</div>
+					<?php endforeach; ?>
+				<?php endif; ?>
+			</td></tr>
 			<tr><th><?php esc_html_e( 'Last fetched', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $ax_fetch && ! empty( $ax_fetch['fetched_at'] ) ? (string) $ax_fetch['fetched_at'] : esc_html__( 'never', 'axismundi-actors' ) ); ?></td></tr>
 		</tbody>
 	</table>

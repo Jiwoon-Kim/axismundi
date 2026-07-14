@@ -154,8 +154,10 @@ Remote admin        Users > Remote Actors lookup/cache inspector — shipped; ma
 DB v6  wp_ax_instances (host software/version/policy ledger)   — shipped; per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.10)
 DB v7  wp_ax_actor_endpoints                                    — shipped; inbox/outbox/followers/following/featured/sharedInbox
 DB v8  follower/discovery policy axes                           — next; NULL-aware lock/discoverable/indexable/collection visibility
-DB v9  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
-DB v10 wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
+DB v9  wp_ax_actor_asset_cache (remote avatar/header cache)     — content-addressed binary cache (REMOTE-ASSET-CACHE.md); precedes image-bearing remote preview
+Remote preview      /actors/cache/{uuid} admin-only, noindex    — reuses the actor-profile template; images only once v9 cache is ready (never hotlinks)
+DB v10 wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
+DB v11 wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
 ```
 
 Follow / Accept / Like / Announce / shared-folder membership start **after** this, in

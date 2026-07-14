@@ -6,9 +6,10 @@
 > text, the **address ledger** (`wp_ax_actor_addresses`), and the **instance / NodeInfo
 > host ledger** (`wp_ax_instances`), and normalized **Actor endpoints**. Local person
 > profile fields remain live `WP_User` fallbacks; only remote actors snapshot. Next
-> schema steps: follower/discovery policy columns → keys/fetch-state. WebFinger acct policy is
-> fail-closed (§9.9); bounded synchronous remote Actor discovery + NodeInfo caching are
-> implemented.
+> schema steps: v8 follower/discovery policy columns → v9 remote asset cache
+> (REMOTE-ASSET-CACHE.md, spec locked) → v10 keys/fetch-state → v11 managers. WebFinger
+> acct policy is fail-closed (§9.9); bounded synchronous remote Actor discovery + NodeInfo
+> caching are implemented.
 
 ## 1. Conventions
 
@@ -395,7 +396,27 @@ follow approval, discovery/indexing, and collection visibility are independent.
 The default posting audience belongs to the Activity plugin. Remote declarations
 must preserve NULL (unreported) separately from explicit false.
 
-### 9.5 DB v9 — keys, remote cache, moves
+### 9.5 DB v9 — remote asset cache *(spec locked, REMOTE-ASSET-CACHE.md)*
+```
+wp_ax_actor_asset_cache    identity_id, asset_role avatar|header, source_uri(+hash),
+                           content_hash (NULL until ready), source_etag/last_modified/mime/w/h/byte_size,
+                           variants_json, processor_version, fetch_status pending|ready|stale|error,
+                           fetched_at, expires_at, next_refresh_at, last_accessed_at, failure_count, last_error_code
+                           UNIQUE(identity_id, asset_role)
+                           KEY(source_uri_hash) KEY(content_hash, processor_version)
+                           KEY(next_refresh_at, fetch_status) KEY(last_accessed_at)
+```
+A **single** map/cache table; physical dedup is handled by the content-addressed file
+path (`…/actors/v{processor}/{ab}/{cd}/{content_hash}/{role}-{size}.webp`), so GC =
+*no row references this `(content_hash, processor_version)`* → sweep after a grace
+period. Never a `WP_User` attachment (no Media Library pollution). Originals are not
+retained — validate + derive, then delete. `content_hash` is `NULL` in `pending`/`error`
+and **required once `ready`**. Downloads are asynchronous, stale-while-revalidate; the
+render path never blocks on a fetch and falls back to the default avatar / no header.
+Full contract (path, refresh, SSRF/MIME/pixel limits, derivative sizes, purge/uninstall)
+in **REMOTE-ASSET-CACHE.md**. Precedes the image-bearing remote profile preview.
+
+### 9.6 DB v10 — keys, remote cache, moves
 ```
 wp_ax_actor_keys           key_uri(+hash), key_type, public_key_pem, fingerprint,
                            private_key_ref, status active|retired|revoked, valid_from/until
@@ -408,14 +429,14 @@ A **local private key is never stored in plaintext** — `private_key_ref` point
 separate secret storage. `alsoKnownAs` / `movedTo` are **never trusted on inbound
 JSON alone** (need cross-reference / a Move verification flow).
 
-### 9.6 DB v10 — managed actors
+#### 9.6.1 DB v11 — managed actors
 `wp_ax_actor_managers(identity_id, user_id, role owner|manager|editor,
 UNIQUE(identity_id, user_id))`, added **only when** Group / Service / Organization
 actors are actually created; `actor_scope='managed'` activates then (SPEC §4.1). The
 current Site/User actors do not need it. **Version numbers are implementation order,
 not schema dependencies** — if a Lemmy-style community (`Group`) ships before
 federation, pull this forward to just before that managed-Group work; nothing in
-v5–v9 depends on it. (A `Group` community is `Application` site actor's sibling: its
+v5–v10 depends on it. (A `Group` community is `Application` site actor's sibling: its
 posts/comments live in the object/activity store and its Follow / Accept / Announce /
 moderation in the social layer — §9.7 — never on the actor row; a shared folder stays
 an `OrderedCollection` + ACL and is *not* promoted to a `Group`.)

@@ -1,12 +1,14 @@
 # Axismundi Actors — Data Model
 
-> Status: **Living specification. Schema v5 implemented (§2–§6, §8, §9.2 addresses);
-> §7 history and DB v6+ in §9 are provisional.** Four tables exist today: the shared
-> **identity registry**, the **actor profile**, multilingual Actor text, and the
-> **address ledger** (`wp_ax_actor_addresses`). Local person profile fields remain
-> live `WP_User` fallbacks; only remote actors snapshot. The next schema steps are v6
-> endpoints/policy → v7 keys/fetch-state. WebFinger acct policy is fail-closed
-> (§9.8); bounded synchronous remote Actor discovery is implemented without a new table.
+> Status: **Living specification. Schema v6 implemented (§2–§6, §8, §9.2 addresses,
+> §9.9 instances); §7 history and endpoints/keys are provisional.** Five tables exist
+> today: the shared **identity registry**, the **actor profile**, multilingual Actor
+> text, the **address ledger** (`wp_ax_actor_addresses`), and the **instance / NodeInfo
+> host ledger** (`wp_ax_instances`). Local person profile fields remain live `WP_User`
+> fallbacks; only remote actors snapshot. Next schema steps: `wp_ax_actor_endpoints` +
+> follower/discovery policy columns → keys/fetch-state. WebFinger acct policy is
+> fail-closed (§9.8); bounded synchronous remote Actor discovery + NodeInfo caching are
+> implemented.
 
 ## 1. Conventions
 
@@ -465,7 +467,7 @@ authority, and is *disabled* (not guessed) where it would collide.
 not decide the policy. The endpoint enabling/disabling and the subdirectory-off test
 are the **WebFinger increment** after v5.
 
-### 9.9 Instance / NodeInfo host ledger — `wp_ax_instances` (federation phase)
+### 9.9 Instance / NodeInfo host ledger — `wp_ax_instances` *(shipped, DB v6)*
 
 Three discovery roles are **distinct**: **WebFinger** (`@user@host` → an Actor URI),
 **Actor JSON-LD** (a remote actor → `wp_ax_identities` / `wp_ax_actors`), and

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '5';
+const AXISMUNDI_ACTORS_DB_VERSION = '6';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -35,6 +35,22 @@ function axismundi_actors_texts_table() : string {
 function axismundi_actors_addresses_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_addresses';
+}
+
+/** @return string remote instance (host / NodeInfo) ledger table name. */
+function axismundi_actors_instances_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_instances';
+}
+
+/**
+ * Hash of a host authority (the per-host key).
+ *
+ * @param string $host Host authority (host[:port]).
+ * @return string sha-256 hex.
+ */
+function axismundi_actors_host_hash( string $host ) : string {
+	return hash( 'sha256', strtolower( trim( $host ) ) );
 }
 
 /**
@@ -145,6 +161,30 @@ function axismundi_actors_install() : void {
 		) {$charset};"
 	);
 
+	$instances = axismundi_actors_instances_table();
+	dbDelta(
+		"CREATE TABLE {$instances} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			host varchar(191) NOT NULL,
+			host_hash char(64) NOT NULL,
+			base_uri text NOT NULL,
+			software_name varchar(64) DEFAULT NULL,
+			software_version varchar(64) DEFAULT NULL,
+			nodeinfo_schema varchar(191) DEFAULT NULL,
+			name varchar(191) DEFAULT NULL,
+			description text DEFAULT NULL,
+			icon_uri text DEFAULT NULL,
+			open_registrations tinyint(1) DEFAULT NULL,
+			fetched_at datetime DEFAULT NULL,
+			fetch_status varchar(12) DEFAULT NULL,
+			payload_json longtext DEFAULT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY host_hash (host_hash)
+		) {$charset};"
+	);
+
 	// dbDelta reliably ADDs columns but does NOT relax an existing NOT NULL to
 	// nullable, so do that explicitly (idempotent — a no-op on a fresh install where
 	// CREATE TABLE already made it nullable). Handle-less actors need a NULL handle.
@@ -185,6 +225,8 @@ function axismundi_actors_install() : void {
 	$text_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$texts} WHERE Key_name = 'identity_field_language'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$address_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$instance_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$instances} WHERE Key_name = 'host_hash'" );
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )
@@ -193,6 +235,7 @@ function axismundi_actors_install() : void {
 		&& in_array( 'value', $text_columns, true )
 		&& ! empty( $text_indexes )
 		&& ! empty( $address_indexes )
+		&& ! empty( $instance_indexes )
 	) {
 		update_option( 'ax_actors_db_version', AXISMUNDI_ACTORS_DB_VERSION, false );
 	}
@@ -948,6 +991,51 @@ function axismundi_actors_register_handle( int $identity_id, string $handle ) {
 	axismundi_actors_record_handle_address( $identity_id, $key, 'primary' );
 	do_action( 'axismundi_actors_handle_registered', $identity_id, $key );
 	return true;
+}
+
+/**
+ * A cached remote instance row by host, or null.
+ *
+ * @param string $host Host authority.
+ * @return array<string,mixed>|null
+ */
+function axismundi_actors_get_instance( string $host ) : ?array {
+	global $wpdb;
+	$instances = axismundi_actors_instances_table();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$instances} WHERE host_hash = %s", axismundi_actors_host_hash( $host ) ), ARRAY_A );
+	return $row ?: null;
+}
+
+/**
+ * Upsert a remote instance row keyed on host_hash. `$fields` may include
+ * software_name / software_version / nodeinfo_schema / name / description / icon_uri
+ * / open_registrations / fetch_status. Always stamps `fetched_at` / `updated_at`.
+ *
+ * @param string              $host   Host authority.
+ * @param array<string,mixed> $fields Instance fields.
+ * @return void
+ */
+function axismundi_actors_upsert_instance( string $host, array $fields ) : void {
+	global $wpdb;
+	$instances = axismundi_actors_instances_table();
+	$hash      = axismundi_actors_host_hash( $host );
+	$now       = current_time( 'mysql', true );
+	$allowed   = array( 'software_name', 'software_version', 'nodeinfo_schema', 'name', 'description', 'icon_uri', 'open_registrations', 'fetch_status', 'payload_json' );
+	$data      = array_intersect_key( $fields, array_flip( $allowed ) );
+	$data['fetched_at'] = $now;
+	$data['updated_at'] = $now;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$instances} WHERE host_hash = %s", $hash ) );
+	if ( $existing > 0 ) {
+		$wpdb->update( $instances, $data, array( 'id' => $existing ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return;
+	}
+	$data['host']       = strtolower( trim( $host ) );
+	$data['host_hash']  = $hash;
+	$data['base_uri']   = 'https://' . strtolower( trim( $host ) ) . '/';
+	$data['created_at'] = $now;
+	$wpdb->insert( $instances, $data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 }
 
 /**

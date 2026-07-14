@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.16
+Stable tag: 0.0.17
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,17 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.17 =
+* DB v6 — the remote instance / NodeInfo host ledger (wp_ax_instances). A host's
+  software, version, and registration policy are cached once per host (keyed on a
+  host hash), never duplicated across the actors that live there.
+  axismundi_actors_discover_remote_instance() fetches /.well-known/nodeinfo and the
+  NodeInfo 2.1/2.0 document over the same bounded, private-network-safe HTTPS helper;
+  a failed fetch still records the attempt (fetch_status=error) for later backoff.
+  Discovering a remote actor caches its host once (best-effort, once per day).
+* Background refresh/backoff scheduling, delivery, and moderation policy about a host
+  remain out of this increment (Federation plugin / a separate moderation layer).
 
 = 0.0.16 =
 * Add bounded remote Actor discovery: HTTPS WebFinger resolves an ActivityStreams

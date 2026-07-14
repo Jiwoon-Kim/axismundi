@@ -149,10 +149,10 @@ DB v5  wp_ax_actor_addresses (handle routing + history)        — shipped; WebF
 WebFinger endpoint  /.well-known/webfinger + local acct: rows  — shipped; subdirectory multisite explicitly OFF (tested)
 Local NodeInfo      /.well-known/nodeinfo + NodeInfo 2.1        — shipped, NO table (WP options + live counts)
 Remote discovery    safe acct → WebFinger → Actor snapshot     — shipped; synchronous primitive, no refresh scheduler
-DB v?  wp_ax_instances (host software/version/policy ledger)   — per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.9)
-DB v6  wp_ax_actor_endpoints + follower/discovery policy cols   — inbox/outbox/…, lock, discoverable, indexable
-DB v7  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
-DB v8  wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
+DB v6  wp_ax_instances (host software/version/policy ledger)   — shipped; per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.9)
+DB v7  wp_ax_actor_endpoints + follower/discovery policy cols   — next; inbox/outbox/…, lock, discoverable, indexable
+DB v8  wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
+DB v9  wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
 ```
 
 Follow / Accept / Like / Announce / shared-folder membership start **after** this, in

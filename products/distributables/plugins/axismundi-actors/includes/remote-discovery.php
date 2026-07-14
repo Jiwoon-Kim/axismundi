@@ -190,5 +190,12 @@ function axismundi_actors_discover_remote_actor( string $acct ) {
 	if ( ! axismundi_actors_record_verified_acct_address( $actor->get_identity_id(), $parsed['acct'] ) ) {
 		return new WP_Error( 'ax_actors_remote_address', __( 'Could not record the verified remote acct address.', 'axismundi-actors' ) );
 	}
+	/**
+	 * A remote actor was discovered and persisted. The instance ledger caches its
+	 * host's NodeInfo from here.
+	 *
+	 * @param Axismundi_Actor $actor Discovered remote actor.
+	 */
+	do_action( 'axismundi_actors_remote_actor_discovered', $actor );
 	return $actor;
 }

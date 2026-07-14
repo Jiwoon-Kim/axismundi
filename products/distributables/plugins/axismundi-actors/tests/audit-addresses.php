@@ -35,7 +35,7 @@ try {
 	// Schema gate.
 	$cols    = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$addresses}" ); // phpcs:ignore WordPress.DB
 	$indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" ); // phpcs:ignore WordPress.DB
-	ax_addr_assert( $ax_addr_results, 'v5 creates the address ledger with a unique address_hash and records the version', in_array( 'address_hash', $cols, true ) && ! empty( $indexes ) && '5' === (string) get_option( 'ax_actors_db_version' ) );
+	ax_addr_assert( $ax_addr_results, 'the address ledger has a unique address_hash and the version is recorded (v5+)', in_array( 'address_hash', $cols, true ) && ! empty( $indexes ) && (int) get_option( 'ax_actors_db_version' ) >= 5 );
 
 	// register_handle writes a primary local_handle address the ledger can resolve.
 	$u1 = (int) wp_insert_user( array( 'user_login' => 'ax_addr_alice', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );

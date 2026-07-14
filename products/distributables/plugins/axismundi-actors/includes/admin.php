@@ -309,6 +309,20 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 			<tr><th><?php esc_html_e( 'Indexable', 'axismundi-actors' ); ?></th><td><?php echo esc_html( axismundi_actors_policy_flag_label( $actor->get_policy_flag( 'indexable' ) ) ); ?></td></tr>
 			<tr><th><?php esc_html_e( 'Follow collections', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $actor->get_follow_collections_visibility() ?? esc_html__( 'not reported', 'axismundi-actors' ) ); ?></td></tr>
 			<tr><th><?php esc_html_e( 'Published', 'axismundi-actors' ); ?></th><td><?php echo esc_html( '' !== $actor->get_published_at() ? $actor->get_published_at() : esc_html__( 'not reported', 'axismundi-actors' ) ); ?></td></tr>
+			<?php
+			$ax_keys      = axismundi_actors_get_keys( $actor->get_identity_id(), 'active' );
+			$ax_fetch     = axismundi_actors_get_fetch_state( $actor->get_identity_id() );
+			$ax_key_label = empty( $ax_keys )
+				? esc_html__( 'none captured', 'axismundi-actors' )
+				: sprintf(
+					/* translators: 1: key URI, 2: fingerprint prefix. */
+					__( '%1$s (fp %2$s…)', 'axismundi-actors' ),
+					(string) $ax_keys[0]['key_uri'],
+					substr( (string) $ax_keys[0]['fingerprint'], 0, 12 )
+				);
+			?>
+			<tr><th><?php esc_html_e( 'Public key', 'axismundi-actors' ); ?></th><td><code><?php echo esc_html( $ax_key_label ); ?></code></td></tr>
+			<tr><th><?php esc_html_e( 'Last fetched', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $ax_fetch && ! empty( $ax_fetch['fetched_at'] ) ? (string) $ax_fetch['fetched_at'] : esc_html__( 'never', 'axismundi-actors' ) ); ?></td></tr>
 		</tbody>
 	</table>
 	<h3><?php esc_html_e( 'Avatar and header cache', 'axismundi-actors' ); ?></h3>

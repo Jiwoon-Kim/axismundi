@@ -46,11 +46,14 @@ function axismundi_actors_normalize_remote_acct( string $input ) {
 /**
  * Fetch one bounded HTTPS JSON document.
  *
- * @param string   $url           URL.
- * @param string[] $content_types Allowed media types, without parameters.
+ * @param string                    $url           URL.
+ * @param string[]                  $content_types Allowed media types, without parameters.
+ * @param array<string,string>|null $meta          Out-param filled with the response
+ *                                                 ETag / Last-Modified validators on success.
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_actors_remote_get_json( string $url, array $content_types ) {
+function axismundi_actors_remote_get_json( string $url, array $content_types, ?array &$meta = null ) {
+	$meta = array();
 	if ( 'https' !== strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $url ) ) {
 		return new WP_Error( 'ax_actors_remote_url', __( 'Unsafe remote URL.', 'axismundi-actors' ) );
 	}
@@ -83,7 +86,14 @@ function axismundi_actors_remote_get_json( string $url, array $content_types ) {
 	} catch ( JsonException $error ) {
 		return new WP_Error( 'ax_actors_remote_json', __( 'The remote response was not valid JSON.', 'axismundi-actors' ) );
 	}
-	return is_array( $data ) ? $data : new WP_Error( 'ax_actors_remote_json', __( 'The remote response was not a JSON object.', 'axismundi-actors' ) );
+	if ( ! is_array( $data ) ) {
+		return new WP_Error( 'ax_actors_remote_json', __( 'The remote response was not a JSON object.', 'axismundi-actors' ) );
+	}
+	$meta = array(
+		'etag'          => (string) wp_remote_retrieve_header( $response, 'etag' ),
+		'last_modified' => (string) wp_remote_retrieve_header( $response, 'last-modified' ),
+	);
+	return $data;
 }
 
 /**
@@ -144,8 +154,53 @@ function axismundi_actors_normalize_remote_actor_payload( array $payload, string
 			'endpoints'          => $endpoints,
 			'payload'            => $payload,
 		),
-		axismundi_actors_extract_policy_from_payload( $payload )
+		axismundi_actors_extract_policy_from_payload( $payload ),
+		array( 'keys' => axismundi_actors_extract_keys_from_payload( $payload, $uri ) )
 	);
+}
+
+/**
+ * Extract declared public keys from an Actor payload. Handles the single `publicKey`
+ * object and a `publicKey` / `assertionMethod` array; only keeps keys whose owner (when
+ * present) is this Actor, so a payload cannot smuggle a key attributed to someone else.
+ *
+ * @param array<string,mixed> $payload Actor JSON.
+ * @param string              $actor_uri Canonical Actor id.
+ * @return array<int,array<string,string>>
+ */
+function axismundi_actors_extract_keys_from_payload( array $payload, string $actor_uri ) : array {
+	$candidates = array();
+	foreach ( array( 'publicKey', 'assertionMethod' ) as $field ) {
+		if ( ! isset( $payload[ $field ] ) ) {
+			continue;
+		}
+		$value = $payload[ $field ];
+		// A single key object vs. a list of them.
+		if ( isset( $value['id'] ) || isset( $value['publicKeyPem'] ) ) {
+			$candidates[] = $value;
+		} elseif ( is_array( $value ) ) {
+			foreach ( $value as $entry ) {
+				if ( is_array( $entry ) ) {
+					$candidates[] = $entry;
+				}
+			}
+		}
+	}
+	$keys = array();
+	foreach ( $candidates as $entry ) {
+		$pem = (string) ( $entry['publicKeyPem'] ?? '' );
+		$id  = (string) ( $entry['id'] ?? '' );
+		$owner = (string) ( $entry['owner'] ?? $entry['controller'] ?? '' );
+		if ( '' === $pem || '' === $id || ( '' !== $owner && $owner !== $actor_uri ) ) {
+			continue;
+		}
+		$keys[ $id ] = array(
+			'key_uri'        => $id,
+			'key_type'       => (string) ( $entry['type'] ?? 'public' ),
+			'public_key_pem' => $pem,
+		);
+	}
+	return array_values( $keys );
 }
 
 /**
@@ -189,7 +244,8 @@ function axismundi_actors_discover_remote_actor_uri( string $self, string $verif
 	if ( 'https' !== strtolower( (string) wp_parse_url( $self, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $self ) ) {
 		return new WP_Error( 'ax_actors_remote_self', __( 'Unsafe ActivityStreams Actor URL.', 'axismundi-actors' ) );
 	}
-	$payload = axismundi_actors_remote_get_json( $self, array( 'application/activity+json', 'application/ld+json', 'application/json' ) );
+	$meta    = array();
+	$payload = axismundi_actors_remote_get_json( $self, array( 'application/activity+json', 'application/ld+json', 'application/json' ), $meta );
 	if ( is_wp_error( $payload ) ) {
 		return $payload;
 	}
@@ -204,6 +260,15 @@ function axismundi_actors_discover_remote_actor_uri( string $self, string $verif
 	if ( '' !== $verified_acct && ! axismundi_actors_record_verified_acct_address( $actor->get_identity_id(), $verified_acct ) ) {
 		return new WP_Error( 'ax_actors_remote_address', __( 'Could not record the verified remote acct address.', 'axismundi-actors' ) );
 	}
+	// Bookkeeping for a future background refresher (best-effort, non-fatal).
+	axismundi_actors_record_fetch_success(
+		$actor->get_identity_id(),
+		array(
+			'payload_hash'  => hash( 'sha256', (string) wp_json_encode( $payload ) ),
+			'etag'          => (string) ( $meta['etag'] ?? '' ),
+			'last_modified' => (string) ( $meta['last_modified'] ?? '' ),
+		)
+	);
 	/**
 	 * A remote actor was discovered and persisted. The instance ledger caches its
 	 * host's NodeInfo from here.

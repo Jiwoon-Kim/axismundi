@@ -416,18 +416,30 @@ Full contract (path, refresh, SSRF/MIME/pixel limits, derivative sizes, purge/un
 in **REMOTE-ASSET-CACHE.md**. The administrator-only remote profile preview consumes
 these local derivatives and never hotlinks the remote source.
 
-### 9.6 DB v10 — keys, remote cache, moves
+### 9.6 DB v10a — keys + remote fetch state *(implemented)*
 ```
-wp_ax_actor_keys           key_uri(+hash), key_type, public_key_pem, fingerprint,
+wp_ax_actor_keys           key_uri(+hash UNIQUE), key_type, public_key_pem, fingerprint,
                            private_key_ref, status active|retired|revoked, valid_from/until
 wp_ax_actor_fetch_state    identity_id PK, payload_hash, etag, last_modified,
                            fetched_at, last_success_at, next_refresh_at, failure_count, last_error_code
+```
+Keys are **multiple rows keyed by key URI**, so rotation retires the prior key as
+history (never an overwrite); a keyless refresh is a no-op (a partial fetch must not
+wipe a known key). Discovery owner-checks each declared `publicKey` (a payload cannot
+smuggle a foreign key) and writes it inside the snapshot transaction. A **local private
+key is never stored in plaintext** — `private_key_ref` points at separate secret
+storage. Fetch-state is best-effort substrate for a future background refresher
+(payload hash, HTTP validators, one-day horizon, capped exponential backoff); Actors
+does no scheduling, signature verification, or delivery.
+
+### 9.6b DB v10b — identity relations *(next)*
+```
 wp_ax_identity_relations   relation_type also_known_as|moved_to, target_uri(+hash),
                            verification_state, verified_at   UNIQUE(identity_id, relation_type, target_uri_hash)
 ```
-A **local private key is never stored in plaintext** — `private_key_ref` points at
-separate secret storage. `alsoKnownAs` / `movedTo` are **never trusted on inbound
-JSON alone** (need cross-reference / a Move verification flow).
+`alsoKnownAs` / `movedTo` are stored **observed/unverified** first and **never trusted
+on inbound JSON alone** — cross-reference / a Move verification flow (owned by
+Federation) promotes them.
 
 #### 9.6.1 DB v11 — managed actors
 `wp_ax_actor_managers(identity_id, user_id, role owner|manager|editor,

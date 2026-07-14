@@ -141,9 +141,9 @@ federation table (DB v5+, DATA-MODEL §9).
 ## DB version roadmap & implementation order
 
 The schema grows one version at a time; the version option is recorded only after the
-new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v9**
-(identity + actor + avatar/header + multilingual + address + instance + endpoint
-ledgers). Next:
+new tables/columns/indexes are verified (DATA-MODEL §6, §9). Current = **DB v10**
+(identity + actor + avatar/header + multilingual + address + instance + endpoint +
+asset-cache + keyring/fetch-state ledgers). Next:
 
 ```
 DB v5  wp_ax_actor_addresses (handle routing + history)        — shipped; WebFinger acct policy fail-closed (§9.9)
@@ -156,7 +156,8 @@ DB v7  wp_ax_actor_endpoints                                    — shipped; inb
 DB v8  follower/discovery policy axes                           — shipped; NULL-aware lock/discoverable/indexable/collection visibility
 DB v9  wp_ax_actor_asset_cache (remote avatar/header cache)     — shipped; content-addressed binary cache (REMOTE-ASSET-CACHE.md)
 Remote preview      /actors/{local-cache-uuid} admin-only       — shipped; same actor-profile template, noindex/no-cache, never hotlinks
-DB v10 wp_ax_actor_keys + fetch_state + identity_relations      — keyring, remote cache, alsoKnownAs/movedTo
+DB v10a wp_ax_actor_keys + wp_ax_actor_fetch_state             — shipped; keyring (rotation history) + fetch validators/backoff, publicKey captured at discovery
+DB v10b wp_ax_identity_relations                               — next; alsoKnownAs/movedTo stored observed/unverified (Move verify = Federation)
 DB v11 wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
 ```
 

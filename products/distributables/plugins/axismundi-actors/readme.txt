@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.22
+Stable tag: 0.0.23
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,21 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.23 =
+* DB v10a — the Actor public-key keyring (wp_ax_actor_keys) and remote fetch state
+  (wp_ax_actor_fetch_state). Discovery now captures each remote Actor's declared
+  publicKey (owner-checked so a payload cannot smuggle a foreign key) instead of
+  discarding it, storing it as a row keyed by key URI so key rotation retires the old
+  key as history rather than overwriting it. A keyless refresh never wipes a known key.
+  A local private key is reserved as a reference only (private_key_ref) — never stored
+  in plaintext here.
+* Record fetch bookkeeping on each discovery: payload hash, ETag / Last-Modified
+  validators, a one-day refresh horizon on success, and a capped exponential backoff on
+  failure that keeps the last good snapshot. This is substrate for a future background
+  refresher; Actors performs no scheduling, signature verification, or delivery — those
+  stay in Axismundi Federation. alsoKnownAs / movedTo (identity relations) are the next
+  increment (v10b).
 
 = 0.0.22 =
 * Revise processor v2 defaults for lower compute cost: avatar caps are now

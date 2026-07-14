@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '9';
+const AXISMUNDI_ACTORS_DB_VERSION = '10';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -53,6 +53,18 @@ function axismundi_actors_endpoints_table() : string {
 function axismundi_actors_asset_cache_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_asset_cache';
+}
+
+/** @return string Actor public-key keyring table name. */
+function axismundi_actors_keys_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_keys';
+}
+
+/** @return string remote Actor fetch-state (etag / backoff) table name. */
+function axismundi_actors_fetch_state_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_fetch_state';
 }
 
 /**
@@ -250,11 +262,52 @@ function axismundi_actors_install() : void {
 		) ENGINE=InnoDB {$charset};"
 	);
 
-	// Remote snapshot + endpoint refresh spans these three tables. Make the storage
+	$keys = axismundi_actors_keys_table();
+	dbDelta(
+		"CREATE TABLE {$keys} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			key_uri text NOT NULL,
+			key_uri_hash char(64) NOT NULL,
+			key_type varchar(32) NOT NULL DEFAULT 'public',
+			public_key_pem text DEFAULT NULL,
+			fingerprint char(64) DEFAULT NULL,
+			private_key_ref varchar(191) DEFAULT NULL,
+			status varchar(12) NOT NULL DEFAULT 'active',
+			valid_from datetime DEFAULT NULL,
+			valid_until datetime DEFAULT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY key_uri_hash (key_uri_hash),
+			KEY identity_status (identity_id, status)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$fetch_state = axismundi_actors_fetch_state_table();
+	dbDelta(
+		"CREATE TABLE {$fetch_state} (
+			identity_id bigint(20) unsigned NOT NULL,
+			payload_hash char(64) DEFAULT NULL,
+			etag varchar(191) DEFAULT NULL,
+			last_modified varchar(191) DEFAULT NULL,
+			fetched_at datetime DEFAULT NULL,
+			last_success_at datetime DEFAULT NULL,
+			next_refresh_at datetime DEFAULT NULL,
+			failure_count int(10) unsigned NOT NULL DEFAULT 0,
+			last_error_code varchar(64) DEFAULT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (identity_id),
+			KEY next_refresh_at (next_refresh_at)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	// Remote snapshot + endpoint + key refresh spans these tables. Make the storage
 	// engine contract explicit so START TRANSACTION is not merely decorative on an
 	// older installation created under a different server default.
 	$transactional_engines = true;
-	foreach ( array( $identities, $actors, $endpoints ) as $transactional_table ) {
+	foreach ( array( $identities, $actors, $endpoints, $keys ) as $transactional_table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name, schema inspection.
 		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
 		if ( 'InnoDB' !== $engine ) {
@@ -374,6 +427,10 @@ function axismundi_actors_install() : void {
 	$asset_content_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'content_processor'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$asset_refresh_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$asset_cache} WHERE Key_name = 'refresh_status'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$key_uri_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$keys} WHERE Key_name = 'key_uri_hash'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$fetch_state_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$fetch_state}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final legacy-column check.
 	$final_actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
 	if (
@@ -395,6 +452,9 @@ function axismundi_actors_install() : void {
 		&& ! empty( $asset_identity_indexes )
 		&& ! empty( $asset_content_indexes )
 		&& ! empty( $asset_refresh_indexes )
+		&& ! empty( $key_uri_indexes )
+		&& in_array( 'payload_hash', $fetch_state_columns, true )
+		&& in_array( 'next_refresh_at', $fetch_state_columns, true )
 		&& ! in_array( 'inbox_uri', $final_actor_columns, true )
 		&& ! in_array( 'outbox_uri', $final_actor_columns, true )
 		&& $transactional_engines
@@ -932,6 +992,189 @@ function axismundi_actors_get_endpoint( $actor, string $type ) : string {
 }
 
 /**
+ * Shape check for a PEM public-key block (structure only, not a crypto validation).
+ *
+ * @param string $pem Candidate PEM.
+ * @return bool
+ */
+function axismundi_actors_is_public_key_pem( string $pem ) : bool {
+	return (bool) preg_match( '/-----BEGIN (?:RSA )?PUBLIC KEY-----.+-----END (?:RSA )?PUBLIC KEY-----/s', $pem );
+}
+
+/**
+ * Normalize one incoming key descriptor; returns null when unusable.
+ *
+ * @param array<string,mixed> $key {key_uri, key_type?, public_key_pem}.
+ * @return array<string,string>|null
+ */
+function axismundi_actors_normalize_key_descriptor( array $key ) : ?array {
+	$uri = trim( (string) ( $key['key_uri'] ?? '' ) );
+	$pem = trim( (string) ( $key['public_key_pem'] ?? '' ) );
+	if ( '' === $uri || 'https' !== strtolower( (string) wp_parse_url( $uri, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $uri ) || ! axismundi_actors_is_public_key_pem( $pem ) ) {
+		return null;
+	}
+	return array(
+		'key_uri'        => $uri,
+		'key_uri_hash'   => hash( 'sha256', $uri ),
+		'key_type'       => substr( (string) ( $key['key_type'] ?? 'public' ), 0, 32 ),
+		'public_key_pem' => $pem,
+		'fingerprint'    => hash( 'sha256', $pem ),
+	);
+}
+
+/**
+ * Replace the active key set for an identity. Declared keys are upserted (keyed on
+ * key_uri_hash) as `active`; previously-active keys absent from the declared set are
+ * marked `retired` — never deleted, so the keyring is a rotation/revocation history.
+ * An empty declared set is a no-op (a partial fetch must not wipe a known key).
+ *
+ * @param int                        $identity_id Owner.
+ * @param array<int,array<string,mixed>> $keys    Declared key descriptors.
+ * @return bool
+ */
+function axismundi_actors_write_keys( int $identity_id, array $keys ) : bool {
+	global $wpdb;
+	$table = axismundi_actors_keys_table();
+	$now   = current_time( 'mysql', true );
+	$seen  = array();
+	foreach ( $keys as $raw ) {
+		$key = axismundi_actors_normalize_key_descriptor( is_array( $raw ) ? $raw : array() );
+		if ( null === $key ) {
+			continue;
+		}
+		$seen[] = $key['key_uri_hash'];
+		$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE key_uri_hash = %s", $key['key_uri_hash'] ) ); // phpcs:ignore WordPress.DB
+		if ( $exists > 0 ) {
+			$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom keyring table.
+				$table,
+				array( 'identity_id' => $identity_id, 'key_type' => $key['key_type'], 'public_key_pem' => $key['public_key_pem'], 'fingerprint' => $key['fingerprint'], 'status' => 'active', 'updated_at' => $now ),
+				array( 'id' => $exists )
+			);
+		} else {
+			$done = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom keyring table.
+				$table,
+				array( 'identity_id' => $identity_id, 'key_uri' => $key['key_uri'], 'key_uri_hash' => $key['key_uri_hash'], 'key_type' => $key['key_type'], 'public_key_pem' => $key['public_key_pem'], 'fingerprint' => $key['fingerprint'], 'status' => 'active', 'created_at' => $now, 'updated_at' => $now )
+			);
+		}
+		if ( false === $done ) {
+			return false;
+		}
+	}
+	if ( empty( $seen ) ) {
+		return true;
+	}
+	$placeholders = implode( ',', array_fill( 0, count( $seen ), '%s' ) );
+	$params       = array_merge( array( $now, $identity_id ), $seen );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- placeholders are all %s.
+	$retired = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status = 'retired', updated_at = %s WHERE identity_id = %d AND status = 'active' AND key_uri_hash NOT IN ({$placeholders})", $params ) );
+	return false !== $retired;
+}
+
+/**
+ * @param int    $identity_id Owner.
+ * @param string $status      Optional status filter (active|retired|revoked).
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_actors_get_keys( int $identity_id, string $status = '' ) : array {
+	global $wpdb;
+	$table = axismundi_actors_keys_table();
+	if ( '' !== $status ) {
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d AND status = %s ORDER BY updated_at DESC", $identity_id, $status ), ARRAY_A ); // phpcs:ignore WordPress.DB
+	} else {
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d ORDER BY status ASC, updated_at DESC", $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
+	}
+	return is_array( $rows ) ? $rows : array();
+}
+
+/**
+ * Record a successful remote fetch (best-effort bookkeeping): payload hash, HTTP
+ * validators, and a one-day refresh horizon; clears the failure/backoff state.
+ *
+ * @param int                 $identity_id Actor.
+ * @param array<string,mixed> $state       {payload_hash?, etag?, last_modified?}.
+ * @return void
+ */
+function axismundi_actors_record_fetch_success( int $identity_id, array $state ) : void {
+	global $wpdb;
+	$table  = axismundi_actors_fetch_state_table();
+	$now    = current_time( 'mysql', true );
+	$fields = array(
+		'payload_hash'    => isset( $state['payload_hash'] ) ? (string) $state['payload_hash'] : null,
+		'etag'            => isset( $state['etag'] ) ? substr( (string) $state['etag'], 0, 191 ) : null,
+		'last_modified'   => isset( $state['last_modified'] ) ? substr( (string) $state['last_modified'], 0, 191 ) : null,
+		'fetched_at'      => $now,
+		'last_success_at' => $now,
+		'failure_count'   => 0,
+		'last_error_code' => null,
+		'next_refresh_at' => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
+		'updated_at'      => $now,
+	);
+	axismundi_actors_upsert_fetch_state( $identity_id, $fields );
+}
+
+/**
+ * Record a failed remote fetch: increment the failure count and push the next refresh
+ * out with a capped exponential backoff, without discarding the last good snapshot.
+ *
+ * @param int    $identity_id Actor.
+ * @param string $error_code  WP_Error code.
+ * @return void
+ */
+function axismundi_actors_record_fetch_failure( int $identity_id, string $error_code ) : void {
+	global $wpdb;
+	$table   = axismundi_actors_fetch_state_table();
+	$now     = current_time( 'mysql', true );
+	$current = (int) $wpdb->get_var( $wpdb->prepare( "SELECT failure_count FROM {$table} WHERE identity_id = %d", $identity_id ) ); // phpcs:ignore WordPress.DB
+	$count   = $current + 1;
+	$backoff = min( DAY_IN_SECONDS * 7, HOUR_IN_SECONDS * ( 2 ** min( $count, 8 ) ) );
+	axismundi_actors_upsert_fetch_state(
+		$identity_id,
+		array(
+			'fetched_at'      => $now,
+			'failure_count'   => $count,
+			'last_error_code' => substr( $error_code, 0, 64 ),
+			'next_refresh_at' => gmdate( 'Y-m-d H:i:s', time() + $backoff ),
+			'updated_at'      => $now,
+		)
+	);
+}
+
+/**
+ * Insert-or-update one fetch-state row.
+ *
+ * @param int                 $identity_id Actor.
+ * @param array<string,mixed> $fields      Columns to write.
+ * @return void
+ */
+function axismundi_actors_upsert_fetch_state( int $identity_id, array $fields ) : void {
+	global $wpdb;
+	$table    = axismundi_actors_fetch_state_table();
+	$now      = current_time( 'mysql', true );
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$table} WHERE identity_id = %d", $identity_id ) ); // phpcs:ignore WordPress.DB
+	if ( $existing > 0 ) {
+		$wpdb->update( $table, $fields, array( 'identity_id' => $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom fetch-state table.
+		return;
+	}
+	$fields['identity_id'] = $identity_id;
+	$fields['created_at']  = $now;
+	if ( ! isset( $fields['failure_count'] ) ) {
+		$fields['failure_count'] = 0;
+	}
+	$wpdb->insert( $table, $fields ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom fetch-state table.
+}
+
+/**
+ * @param int $identity_id Actor.
+ * @return array<string,mixed>|null
+ */
+function axismundi_actors_get_fetch_state( int $identity_id ) : ?array {
+	global $wpdb;
+	$table = axismundi_actors_fetch_state_table();
+	$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE identity_id = %d", $identity_id ), ARRAY_A ); // phpcs:ignore WordPress.DB
+	return is_array( $row ) ? $row : null;
+}
+
+/**
  * Normalize the DB v8 policy axes from a record, preserving the NULL / true / false
  * distinction. A key that is absent or explicitly null stays NULL ("unreported"),
  * never coerced to 0 — an undeclared follower policy is not the same as "off".
@@ -973,6 +1216,7 @@ function axismundi_actors_upsert_remote( array $record ) {
 	if ( is_wp_error( $endpoints ) || empty( $endpoints['inbox'] ) || empty( $endpoints['outbox'] ) ) {
 		return new WP_Error( 'ax_actors_remote_endpoints', __( 'The remote Actor requires valid inbox and outbox endpoints.', 'axismundi-actors' ) );
 	}
+	$keys         = is_array( $record['keys'] ?? null ) ? $record['keys'] : array();
 	$payload_json = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	if ( false === $payload_json ) {
 		return new WP_Error( 'ax_actors_remote_payload', __( 'Could not encode the remote Actor payload.', 'axismundi-actors' ) );
@@ -1014,6 +1258,10 @@ function axismundi_actors_upsert_remote( array $record ) {
 		if ( ! axismundi_actors_write_endpoints( $existing->get_identity_id(), $endpoints ) ) {
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			return new WP_Error( 'ax_actors_remote_endpoints', __( 'Could not refresh the remote Actor endpoints.', 'axismundi-actors' ) );
+		}
+		if ( ! axismundi_actors_write_keys( $existing->get_identity_id(), $keys ) ) {
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return new WP_Error( 'ax_actors_remote_keys', __( 'Could not refresh the remote Actor keys.', 'axismundi-actors' ) );
 		}
 		$identity_updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom identity table.
 			axismundi_actors_identities_table(),
@@ -1060,6 +1308,10 @@ function axismundi_actors_upsert_remote( array $record ) {
 	if ( ! axismundi_actors_write_endpoints( $identity_id, $endpoints ) ) {
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return new WP_Error( 'ax_actors_remote_endpoints', __( 'Could not save the remote Actor endpoints.', 'axismundi-actors' ) );
+	}
+	if ( ! axismundi_actors_write_keys( $identity_id, $keys ) ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return new WP_Error( 'ax_actors_remote_keys', __( 'Could not save the remote Actor keys.', 'axismundi-actors' ) );
 	}
 	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	return axismundi_actors_get_by_uri( $uri );

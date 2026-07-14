@@ -12,10 +12,14 @@ Phase 2b Core Post → Article transformer             — shipped (0.0.2): /?p=
                                                        permalink url, Actor/public gates
 Phase 2c explicit representation selector            — shipped (0.0.3): ?activitypub
                                                        for browser inspection; id unchanged
-Phase 3  Article OrderedCollection (per Actor)       — registers the `articles` projection
+Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
+                                                       public service API boundary
+Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous
+                                                       visibility, bounded image rendition
+Phase 3c Media archive/folder OrderedCollections     — home/author/folder collection views
 Phase 4  lifecycle events (publish/update/delete)    — emit only; Activities stores them
-Phase 5  extension & hardening                       — media/notes hooks, context registry,
-                                                       cache invalidation, isolation, escaping
+Phase 5  extension & hardening                       — notes, context registry, cache
+                                                       invalidation, isolation, escaping
 Phase 6  remote object projections                   — URI-keyed observed cache + admin
                                                        inspector; no Activity required,
                                                        no render-time fetch or media hotlink
@@ -28,10 +32,14 @@ automatically disables it when the official ActivityPub plugin is active.
 
 ```
 Object Projections (this, including remote projection substrate)
-  → axismundi-activities (Create/Update/Delete store)
-  → axismundi-notes → media object transformer
+  → axismundi-activities (Actor outbox + Create/Update/Delete store)
+  → axismundi-notes
   → axismundi-federation → official ActivityPub compatibility adapter spike
 ```
+
+An Actor profile's primary feed is the Activities-owned outbox and may contain Note,
+Article, media, Announce, and other activities. An `articles` profile projection may be
+added later as an optional filtered tab; it is never the Actor's primary feed.
 
 ## Release gate (per phase, from Phase 2 on)
 

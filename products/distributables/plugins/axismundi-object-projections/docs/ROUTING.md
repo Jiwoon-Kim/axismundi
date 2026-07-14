@@ -1,6 +1,6 @@
 # Routing & URI contract
 
-> Status: **Standalone object negotiation implemented through 0.0.3.** Collection routing and
+> Status: **Standalone Post and Media attachment negotiation implemented through 0.0.4.** Collection routing and
 > the official ActivityPub adapter remain later phases.
 
 ## 1. Principle — negotiate on the existing WordPress URL
@@ -71,3 +71,5 @@ Rules:
   used as an object `id`.
 - An Actor's activity feed is later an **outbox `OrderedCollection`** owned by Axismundi
   Activities — not an Atom feed.
+- The outbox is activity-based, not an Article archive. Optional Article/Media tabs are
+  filtered profile projections and do not replace the primary activity feed.

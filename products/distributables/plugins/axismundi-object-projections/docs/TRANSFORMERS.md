@@ -56,3 +56,15 @@ deliberately public site Actor fallback. It never creates an Actor during render
 `axismundi_op_post_object_uri` is the compatibility seam for pre-existing object ids;
 `axismundi_op_post_actor_uri` is the seam for another Actor provider. A future official
 ActivityPub adapter must use the former to retain that plugin's per-post legacy choice.
+
+## First-party Media Library adapter (0.0.4)
+
+When Axismundi Media Library is active in Independent mode, Object Projections registers
+an attachment transformer without requiring Media Library to know ActivityStreams. It
+emits Image, Video, Audio, or Document with stable `/?attachment_id={ID}` identity, the
+human attachment page as `url`, Actor attribution, sensitivity, canonical license, and a
+nested media Link. Images use Media Library's bounded derivative service by default.
+
+Visibility is anonymous and cache-safe: public and unlisted, ungated attachments only.
+Owner/editor bypasses are deliberately not used. The adapter consumes public Media Library
+functions and never queries its tables or private metadata schema.

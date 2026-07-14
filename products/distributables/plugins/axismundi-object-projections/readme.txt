@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -21,12 +21,22 @@ It does not own an Activity ledger, inbox/outbox, Follow/Like, HTTP signatures, 
 those belong to Axismundi Activities and Axismundi Federation. It works standalone and treats
 the official ActivityPub plugin as optional (see docs/COMPATIBILITY.md).
 
-This release also ships standalone content negotiation on the existing WordPress URL and
-the Core Post → Article transformer. It still creates no rewrite, REST route, or table.
+This release also ships standalone content negotiation on the existing WordPress URL,
+the Core Post → Article transformer, and an optional first-party Axismundi Media Library
+attachment adapter. It still creates no rewrite, REST route, or table.
 When the official ActivityPub plugin is active, the standalone negotiator turns itself off
 so a future adapter can preserve that plugin's established object ids.
 
 == Changelog ==
+
+= 0.0.4 =
+* Detect Axismundi Media Library in Independent mode and project public/unlisted,
+  ungated attachments as Image, Video, Audio, or Document. Keep stable attachment ids,
+  human media-page URLs, bounded image renditions, sensitivity, and canonical licenses.
+* Keep the first-party boundary explicit: Media Library owns data and access services;
+  Object Projections owns ActivityStreams mapping and never uses authenticated bypasses.
+* Clarify that an Actor's primary feed is an Activities-owned outbox, not an Article
+  archive. Article and Media views may later be optional filtered profile tabs.
 
 = 0.0.3 =
 * Add the browser-friendly `?activitypub` representation selector alongside standard

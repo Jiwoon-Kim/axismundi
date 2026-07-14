@@ -18,17 +18,19 @@ defined( 'ABSPATH' ) || exit;
  * The ActivityStreams 2.0 context this renderer owns. Extensions may be added through
  * the `axismundi_op_jsonld_context` filter — never by a transformer's return value.
  *
+ * @param array<string,mixed>|null $object Object being finalized, when available.
  * @return array<int,mixed>|string
  */
-function axismundi_op_jsonld_context() {
+function axismundi_op_jsonld_context( ?array $object = null ) {
 	$context = array( 'https://www.w3.org/ns/activitystreams' );
 	/**
 	 * Filter the JSON-LD `@context` entries.
 	 *
 	 * @since 0.0.1
-	 * @param array<int,mixed> $context Context IRIs / inline maps.
+	 * @param array<int,mixed>        $context Context IRIs / inline maps.
+	 * @param array<string,mixed>|null $object Object being finalized, when available.
 	 */
-	$context = (array) apply_filters( 'axismundi_op_jsonld_context', $context );
+	$context = (array) apply_filters( 'axismundi_op_jsonld_context', $context, $object );
 	return 1 === count( $context ) ? $context[0] : array_values( $context );
 }
 
@@ -69,7 +71,7 @@ function axismundi_op_finalize_object( array $object, string $expected_id ) {
 	// The renderer is the sole owner of @context — drop any caller-supplied one, then
 	// prepend the canonical context so it is deterministic and first.
 	unset( $object['@context'] );
-	return array_merge( array( '@context' => axismundi_op_jsonld_context() ), $object );
+	return array_merge( array( '@context' => axismundi_op_jsonld_context( $object ) ), $object );
 }
 
 /**

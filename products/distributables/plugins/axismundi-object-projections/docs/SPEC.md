@@ -1,7 +1,7 @@
 # Axismundi Object Projections — specification
 
-> Status: **Phases 0–2 implemented** (contract, registry/renderer, standalone
-> negotiation, Core Post → Article). No table, custom rewrite, REST route, Activity
+> Status: **Phases 0–3b implemented** (contract, registry/renderer, standalone
+> negotiation, Core Post → Article, Media Library attachment adapter). No table, custom rewrite, REST route, Activity
 > ledger, or transport. This package owns the projection contract and representation.
 
 ## 1. Purpose
@@ -24,7 +24,8 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 - ActivityStreams JSON-LD serialization and the single `@context` assembly.
 - Object/collection representation + content negotiation on the existing URL.
 - The Core Post → `Article` transformer.
-- Registering the `articles` projection on the Actor profile.
+- First-party integration adapters that translate stable domain service APIs into
+  ActivityStreams semantics (currently Axismundi Media Library attachments).
 - Object lifecycle *events* (publish/update/delete) — emitted, not stored.
 - In a later phase, URI-keyed **remote object projections**: rebuildable observed
   snapshots and an administrator inspector, independent of Activity ingestion.
@@ -63,6 +64,9 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
    registered `visible` callback, so the transform stays a pure mapping.
 6. **The official ActivityPub plugin is not a dependency.** Object Projections works fully
    standalone; when ActivityPub *is* active, only one negotiator owns a URL (§COMPATIBILITY).
+7. **First-party domain plugins remain ActivityStreams-agnostic.** Object Projections
+   detects them and consumes their public service functions; it does not inspect their
+   private SQL or metadata schema. Third-party plugins may register their own transformer.
 
 ## 5. Public API
 

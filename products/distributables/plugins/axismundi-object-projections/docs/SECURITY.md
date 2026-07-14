@@ -15,6 +15,10 @@
   `post_status = publish`, password protection, and excludes revisions / autosaves /
   attachments-as-posts. It also requires a public local user or site Actor. Draft,
   private, password, and Actor-less sources never emit an object.
+- **Media negotiation is anonymous and cache-safe.** The Media Library adapter accepts
+  only effective public/unlisted, ungated attachments with a public Actor. It never calls
+  the owner/editor-aware single-view permission helper, so login state cannot widen a
+  negotiated representation.
 - **Callback isolation.** A transformer that throws yields a `WP_Error`, never a fatal, so
   one bad plugin cannot break negotiation for the rest.
 - **Id integrity.** The emitted `id` is forced to equal the declared stable object URI, so

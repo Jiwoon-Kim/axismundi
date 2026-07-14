@@ -21,27 +21,36 @@ function axismundi_op_post_article_supports( $source ) : bool {
 }
 
 /**
- * Resolve the public Actor URI that owns a post.
+ * Resolve a public local user Actor, with a deliberately public site Actor fallback.
  *
- * A public user Actor wins. A deliberately published site Actor is the fallback for
- * authors who have not activated a public Actor. Actors remains the identity owner;
- * this plugin never creates an Actor from a front-end request.
+ * Actors remains the identity owner; projections never create an Actor from a render
+ * request. This shared resolver is used by Core Post and first-party domain adapters.
  *
- * @param WP_Post $post Post.
+ * @param int $user_id Local WordPress user id.
  * @return string
  */
-function axismundi_op_post_actor_uri( WP_Post $post ) : string {
+function axismundi_op_local_author_actor_uri( int $user_id ) : string {
 	$actor = null;
 	if ( function_exists( 'axismundi_actors_get_for_user' ) ) {
-		$actor = axismundi_actors_get_for_user( (int) $post->post_author );
+		$actor = axismundi_actors_get_for_user( $user_id );
 	}
 	if ( ( ! $actor || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $actor ) ) && function_exists( 'axismundi_actors_get_site_actor' ) ) {
 		$actor = axismundi_actors_get_site_actor();
 	}
 
-	$uri = $actor && function_exists( 'axismundi_actors_is_public_profile' ) && axismundi_actors_is_public_profile( $actor )
+	return $actor && function_exists( 'axismundi_actors_is_public_profile' ) && axismundi_actors_is_public_profile( $actor )
 		? (string) $actor->get_uri()
 		: '';
+}
+
+/**
+ * Resolve the public Actor URI that owns a post.
+ *
+ * @param WP_Post $post Post.
+ * @return string
+ */
+function axismundi_op_post_actor_uri( WP_Post $post ) : string {
+	$uri = axismundi_op_local_author_actor_uri( (int) $post->post_author );
 
 	/**
 	 * Filter the Actor URI attributed to one local post.

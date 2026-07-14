@@ -32,9 +32,13 @@
 - **Remote rows are observations, not trust.** Their URI remains remote authority;
   normalized text is sanitized and raw payload JSON is never rendered directly. Invalid
   refresh input preserves the last good snapshot. Repository writes perform no network.
-- **Fetch is a separate SSRF boundary.** The next-phase fetcher must validate public HTTPS
-  targets, forward no cookies/auth, cap bytes, validate content type, and revalidate every
-  redirect (or disable redirects). Front-end rendering never fetches synchronously.
+- **Fetch is a separate SSRF boundary.** The administrator fetcher validates public HTTPS
+  targets, forwards no cookies/auth, caps responses at 1 MiB, validates content type, and
+  disables redirects. Front-end rendering never fetches synchronously. Signed fetching is
+  explicitly unavailable until Federation supplies it.
+- **Metadata-only means no passive remote media request.** Admin previews remove all
+  image/video/audio/embed elements from cached HTML. Source links require an explicit
+  click. Binary preview/display/original policies remain deferred.
 - **Single negotiator.** `ACTIVITYPUB_PLUGIN_VERSION` disables the standalone router;
   registry and renderer remain available for an adapter, but two plugins never answer
   the same canonical URL in one request.

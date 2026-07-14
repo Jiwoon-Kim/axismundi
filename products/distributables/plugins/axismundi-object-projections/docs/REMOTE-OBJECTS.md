@@ -1,7 +1,7 @@
 # Remote object projections
 
-> Status: **Phase 4a storage contract**. The URI-keyed repository is implemented;
-> network discovery and the administrator inspector follow in Phase 4b.
+> Status: **Phase 4b metadata-only discovery implemented**. Binary media caching is
+> deliberately deferred to the shared-blob/shadow-attachment design.
 
 ## 1. Purpose and ownership
 
@@ -20,7 +20,7 @@ remote AS document     -> normalized local observation
 Activities may later reference the canonical object URI. Actors may best-effort resolve
 an `attributedTo` URI, but neither plugin is required for storing the object snapshot.
 
-## 2. Table (schema v1)
+## 2. Table (schema v2)
 
 ```text
 wp_ax_remote_objects
@@ -46,6 +46,7 @@ wp_ax_remote_objects
   payload_hash               char(64)
   etag / last_modified       varchar(191) nullable
   fetched_at / last_success_at / next_refresh_at datetime nullable
+  expires_at / last_accessed_at datetime nullable
   failure_count              int unsigned
   last_error_code            varchar(64) nullable
   created_at / updated_at    datetime
@@ -72,6 +73,9 @@ table and required unique/index keys are verified.
 - `sensitive` preserves three states: undeclared (`NULL`), explicit false, explicit true.
 - Scalar `attributedTo`, `inReplyTo`, and `url` are normalized when present. Arrays and
   richer objects stay losslessly in `payload_json` until a justified relation table exists.
+- Metadata expires 30 days after last successful fetch or administrator inspection by
+  default (filterable to 1–365 days). Daily maintenance deletes the whole observation,
+  including sensitive metadata; it never contacts or mutates the remote resource.
 
 ## 4. Validation and security
 
@@ -82,13 +86,30 @@ table and required unique/index keys are verified.
 - `name` is plain text; normalized `summary` and `content` use `wp_kses_post`. Raw JSON
   is never printed directly.
 - Fetching is administrator-initiated or background work only: HTTPS, public-network
-  validation, no cookies/auth forwarding, bounded response, strict content type, and
-  redirects disabled or revalidated at every hop.
+  validation, no cookies/auth forwarding, 1 MiB response cap, strict content type, and
+  redirects disabled. ETag/Last-Modified drive conditional refresh; failures use capped
+  exponential backoff while preserving the last good payload.
+- HTTP 401/403 is reported as signed-fetch-required. Object Projections does not fabricate
+  signatures; a future Federation fetcher must explicitly provide that capability.
 - Rendering never performs a synchronous remote fetch. Cache miss uses a placeholder.
 - Phase 4a creates no public mirror route. The Phase 4b inspector is admin-only and
   `noindex`; remote media is not hotlinked.
 
-## 5. Binary boundary
+## 5. Cache levels and binary boundary
+
+The cache-level vocabulary is reserved as follows:
+
+```text
+metadata-only  shipped default; URI/text/author/license/sensitive/remote links
+preview        future shared-blob thumbnails for admin/board use
+display        future bounded front-end derivative; original remains remote
+original       future explicit policy only; never the default
+```
+
+Phase 4b is strictly `metadata-only`. Content HTML may remain in the payload, but the
+administrator preview removes `img`, `video`, `audio`, `source`, iframe, and embed markup.
+No remote media URL is loaded by the browser. A future hotlink option, if added, is an
+explicit site policy and defaults off; sensitive media must not silently opt into it.
 
 This table stores object metadata, not media bytes. Remote avatar/header and future
 attachment binaries use the separate remote-blob substrate. A later Media Library shadow

@@ -1,7 +1,7 @@
 # Axismundi Object Projections — specification
 
-> Status: **Phases 0–4a implemented** (local projections plus the remote-object
-> observation repository). No custom rewrite, REST route, Activity
+> Status: **Phases 0–4b implemented** (local projections plus metadata-only remote
+> discovery/cache inspection). No custom rewrite, REST route, Activity
 > ledger, or transport. This package owns the projection contract and representation.
 
 ## 1. Purpose
@@ -28,8 +28,8 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
   ActivityStreams semantics (currently Axismundi Media Library attachments).
 - Object lifecycle *events* (publish/update/delete) — emitted, not stored.
 - URI-keyed **remote object projections**: rebuildable observed snapshots independent
-  of Activity ingestion. Network fetch and the administrator inspector are separate
-  from the Phase 4a repository (see REMOTE-OBJECTS.md).
+  of Activity ingestion, with bounded administrator discovery and metadata-only
+  inspection (see REMOTE-OBJECTS.md).
 
 **Does not own**
 

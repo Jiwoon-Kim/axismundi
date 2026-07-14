@@ -11,9 +11,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '1';
+const AXISMUNDI_OP_DB_VERSION            = '2';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
+const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
 
 /** @return string Remote-object table name. */
 function axismundi_op_remote_objects_table() : string {
@@ -55,6 +56,8 @@ function axismundi_op_install() : bool {
 			fetched_at datetime DEFAULT NULL,
 			last_success_at datetime DEFAULT NULL,
 			next_refresh_at datetime DEFAULT NULL,
+			expires_at datetime DEFAULT NULL,
+			last_accessed_at datetime DEFAULT NULL,
 			failure_count int(10) unsigned NOT NULL DEFAULT 0,
 			last_error_code varchar(64) DEFAULT NULL,
 			created_at datetime NOT NULL,
@@ -63,7 +66,8 @@ function axismundi_op_install() : bool {
 			UNIQUE KEY object_uri_hash (object_uri_hash),
 			KEY attributed_to_uri_hash (attributed_to_uri_hash),
 			KEY in_reply_to_uri_hash (in_reply_to_uri_hash),
-			KEY refresh_status (next_refresh_at, object_status)
+			KEY refresh_status (next_refresh_at, object_status),
+			KEY expires_at (expires_at)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -85,12 +89,31 @@ function axismundi_op_install() : bool {
 		&& in_array( 'payload_hash', $columns, true )
 		&& in_array( 'is_sensitive', $columns, true )
 		&& in_array( 'next_refresh_at', $columns, true )
+		&& in_array( 'expires_at', $columns, true )
+		&& in_array( 'last_accessed_at', $columns, true )
 		&& $unique_identity
 		&& 'InnoDB' === $engine;
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
 	}
 	return $valid;
+}
+
+/** Metadata-only cache retention in days. */
+function axismundi_op_remote_retention_days() : int {
+	/**
+	 * Filter remote object metadata retention.
+	 *
+	 * @since 0.0.6
+	 * @param int $days Retention days, default 30.
+	 */
+	return max( 1, min( 365, (int) apply_filters( 'axismundi_op_remote_retention_days', AXISMUNDI_OP_REMOTE_RETENTION_DAYS ) ) );
+}
+
+/** UTC expiry calculated from a SQL datetime or now. */
+function axismundi_op_remote_expiry( ?string $from = null ) : string {
+	$timestamp = $from ? strtotime( $from . ' UTC' ) : time();
+	return gmdate( 'Y-m-d H:i:s', ( false === $timestamp ? time() : $timestamp ) + DAY_IN_SECONDS * axismundi_op_remote_retention_days() );
 }
 
 /** Upgrade without requiring plugin reactivation. */
@@ -235,6 +258,8 @@ function axismundi_op_remote_object_normalize( array $payload, array $fetch = ar
 		'fetched_at'             => $fetched,
 		'last_success_at'        => $fetched,
 		'next_refresh_at'        => $next,
+		'expires_at'             => axismundi_op_remote_expiry( $fetched ),
+		'last_accessed_at'       => $fetched,
 		'failure_count'          => 0,
 		'last_error_code'        => null,
 	);
@@ -283,7 +308,7 @@ function axismundi_op_remote_object_store( array $payload, array $fetch = array(
 }
 
 /** @return array<string,mixed>|null Exact URI row with decoded `payload`. */
-function axismundi_op_remote_object_get( string $uri ) : ?array {
+function axismundi_op_remote_object_get( string $uri, bool $touch = false ) : ?array {
 	global $wpdb;
 	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
 		return null;
@@ -298,10 +323,101 @@ function axismundi_op_remote_object_get( string $uri ) : ?array {
 	if ( ! is_array( $row ) || ! hash_equals( (string) $row['object_uri'], $valid ) ) {
 		return null;
 	}
+	if ( $touch ) {
+		$now = current_time( 'mysql', true );
+		$wpdb->update(
+			$table,
+			array( 'last_accessed_at' => $now, 'expires_at' => axismundi_op_remote_expiry( $now ) ),
+			array( 'id' => (int) $row['id'] )
+		);
+		$row['last_accessed_at'] = $now;
+		$row['expires_at']       = axismundi_op_remote_expiry( $now );
+	}
 	$payload        = json_decode( (string) $row['payload_json'], true );
 	$row['payload'] = is_array( $payload ) ? $payload : array();
 	return $row;
 }
+
+/** Record a failed refresh without destroying the last successful payload. */
+function axismundi_op_remote_object_record_failure( string $uri, string $error_code ) : bool {
+	global $wpdb;
+	$row = axismundi_op_remote_object_get( $uri );
+	if ( null === $row ) {
+		return false;
+	}
+	$failures = (int) $row['failure_count'] + 1;
+	$delay    = min( DAY_IN_SECONDS, 5 * MINUTE_IN_SECONDS * ( 2 ** min( 8, $failures - 1 ) ) );
+	return false !== $wpdb->update(
+		axismundi_op_remote_objects_table(),
+		array(
+			'failure_count'   => $failures,
+			'last_error_code' => substr( sanitize_key( $error_code ), 0, 64 ),
+			'next_refresh_at' => gmdate( 'Y-m-d H:i:s', time() + $delay ),
+			'updated_at'      => current_time( 'mysql', true ),
+		),
+		array( 'id' => (int) $row['id'] )
+	);
+}
+
+/** Mark a conditional 304 as fresh while retaining the payload. */
+function axismundi_op_remote_object_not_modified( string $uri ) : ?array {
+	global $wpdb;
+	$row = axismundi_op_remote_object_get( $uri );
+	if ( null === $row ) {
+		return null;
+	}
+	$now = current_time( 'mysql', true );
+	$wpdb->update(
+		axismundi_op_remote_objects_table(),
+		array(
+			'fetched_at'       => $now,
+			'last_success_at'  => $now,
+			'next_refresh_at'  => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
+			'expires_at'       => axismundi_op_remote_expiry( $now ),
+			'last_accessed_at' => $now,
+			'failure_count'    => 0,
+			'last_error_code'  => null,
+			'updated_at'       => $now,
+		),
+		array( 'id' => (int) $row['id'] )
+	);
+	return axismundi_op_remote_object_get( $uri );
+}
+
+/** Return recent cache rows for the administrator inspector. */
+function axismundi_op_remote_objects_list( int $limit = 50 ) : array {
+	global $wpdb;
+	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
+		return array();
+	}
+	$table = axismundi_op_remote_objects_table();
+	$limit = max( 1, min( 200, $limit ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded admin repository listing.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} ORDER BY updated_at DESC LIMIT %d", $limit ), ARRAY_A );
+}
+
+/** Purge expired metadata observations; returns deleted/would-delete row count. */
+function axismundi_op_remote_objects_purge_expired( bool $dry_run = false ) : int {
+	global $wpdb;
+	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
+		return 0;
+	}
+	$table = axismundi_op_remote_objects_table();
+	$now   = current_time( 'mysql', true );
+	if ( $dry_run ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded cache maintenance count.
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE expires_at IS NOT NULL AND expires_at <= %s", $now ) );
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache expiry maintenance.
+	$result = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE expires_at IS NOT NULL AND expires_at <= %s", $now ) );
+	return false === $result ? 0 : (int) $result;
+}
+
+/** Daily cron callback. */
+function axismundi_op_remote_objects_daily_maintenance() : void {
+	axismundi_op_remote_objects_purge_expired();
+}
+add_action( 'axismundi_op_remote_objects_daily', 'axismundi_op_remote_objects_daily_maintenance' );
 
 /** Delete one local cache observation only. */
 function axismundi_op_remote_object_delete( string $uri ) : bool {

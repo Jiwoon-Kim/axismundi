@@ -28,7 +28,7 @@ try {
 	$table     = axismundi_op_remote_objects_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the custom schema.
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'object_uri_hash'", ARRAY_A );
-	ax_remote_assert( $ax_remote_results, 'schema v1 installs with a unique URI hash and records its version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] );
+	ax_remote_assert( $ax_remote_results, 'schema v2 installs with a unique URI hash and records its version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] );
 
 	ax_remote_assert(
 		$ax_remote_results,

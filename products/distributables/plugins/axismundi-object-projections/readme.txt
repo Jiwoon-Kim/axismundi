@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.5
+Stable tag: 0.0.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -29,9 +29,20 @@ so a future adapter can preserve that plugin's established object ids.
 
 The remote-object repository stores URI-keyed, rebuildable observations for later
 administrator inspection and Activities integration. It performs no network requests and
-exposes no public mirror route in this release.
+exposes no public mirror route. Administrators may fetch and inspect metadata-only remote
+objects under Tools > Remote Objects; remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.6 =
+* Add Tools > Remote Objects: bounded public-HTTPS ActivityStreams fetch, conditional
+  ETag/Last-Modified refresh, explicit signed-fetch-required errors, refresh/delete, and
+  a text/metadata-only inspector that strips every media/embed element.
+* Add schema v2 metadata retention (`expires_at`, `last_accessed_at`) with a filterable
+  30-day sliding default, capped failure backoff, daily expiry maintenance, and manual
+  expired-cache purge. No front-end render path performs a network request.
+* Reserve metadata-only/preview/display/original cache levels while deferring every
+  binary, hotlink, shared-blob, and shadow-attachment decision.
 
 = 0.0.5 =
 * Add the InnoDB `wp_ax_remote_objects` repository for URI-keyed remote ActivityStreams

@@ -19,8 +19,8 @@ Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): stri
 Phase 3c Media archive/folder OrderedCollections     — home/author/folder collection views
 Phase 4a remote object repository                    — shipped (0.0.5): URI-keyed observed
                                                        cache table; no network/public route
-Phase 4b remote fetch + administrator inspector      — bounded fetch, refresh/purge,
-                                                       no render-time fetch/media hotlink
+Phase 4b remote fetch + administrator inspector      — shipped (0.0.6): metadata-only,
+                                                       bounded fetch, 30-day retention
 Phase 5  lifecycle events (publish/update/delete)    — emit only; Activities stores them
 Phase 6  extension & hardening                       — notes, collections, cache
                                                        invalidation, isolation, escaping

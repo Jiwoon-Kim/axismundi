@@ -22,7 +22,9 @@
 - **URL → id, never the reverse.** The renderer never reverse-resolves a URL string back
   to an attachment/post id; sources are passed in as typed objects.
 - **Narrow negotiation.** Bare `application/json`, unprofiled `application/ld+json`,
-  non-GET/HEAD requests, REST, AJAX, feeds, and wp-admin never enter the router.
+  non-GET/HEAD requests, REST, AJAX, feeds, and wp-admin never enter the router. The
+  read-only `?activitypub` selector may bypass only the Accept check, not these surface,
+  method, visibility, or single-negotiator gates.
 - **Single negotiator.** `ACTIVITYPUB_PLUGIN_VERSION` disables the standalone router;
   registry and renderer remain available for an adapter, but two plugins never answer
   the same canonical URL in one request.

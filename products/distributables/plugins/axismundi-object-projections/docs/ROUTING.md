@@ -1,6 +1,6 @@
 # Routing & URI contract
 
-> Status: **Standalone object negotiation implemented in 0.0.2.** Collection routing and
+> Status: **Standalone object negotiation implemented through 0.0.3.** Collection routing and
 > the official ActivityPub adapter remain later phases.
 
 ## 1. Principle — negotiate on the existing WordPress URL
@@ -45,6 +45,14 @@ Rules:
 - Only a precise `Accept` triggers JSON-LD: `application/activity+json`, or
   `application/ld+json` **with** the ActivityStreams profile. A bare `application/json`
   does **not** hijack the URL.
+- For direct browser inspection, appending **`?activitypub`** (or `&activitypub` when
+  query arguments already exist) explicitly selects the same JSON-LD representation.
+  It is a retrieval selector only and is never included in the emitted `id`:
+
+  ```
+  /?p=15&activitypub                   → document id remains /?p=15
+  /?attachment_id=44&activitypub       → id remains /?attachment_id=44
+  ```
 - Emit `Vary: Accept` and a `Link: rel="alternate"` pointing at the counterpart
   representation.
 - A browser (HTML `Accept`) always gets the existing theme render.

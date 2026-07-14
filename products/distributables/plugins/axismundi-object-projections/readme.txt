@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.2
+Stable tag: 0.0.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -27,6 +27,11 @@ When the official ActivityPub plugin is active, the standalone negotiator turns 
 so a future adapter can preserve that plugin's established object ids.
 
 == Changelog ==
+
+= 0.0.3 =
+* Add the browser-friendly `?activitypub` representation selector alongside standard
+  Accept negotiation. It changes only retrieval format: the selector is never included
+  in the emitted object id, and all existing visibility and single-negotiator gates apply.
 
 = 0.0.2 =
 * Add precise Accept negotiation for application/activity+json and ActivityStreams-

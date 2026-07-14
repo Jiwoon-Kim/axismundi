@@ -10,6 +10,8 @@ Phase 2a content-negotiation router (standalone)     — shipped (0.0.2): exact 
                                                        Vary/Link, single-negotiator gate
 Phase 2b Core Post → Article transformer             — shipped (0.0.2): /?p={ID} id,
                                                        permalink url, Actor/public gates
+Phase 2c explicit representation selector            — shipped (0.0.3): ?activitypub
+                                                       for browser inspection; id unchanged
 Phase 3  Article OrderedCollection (per Actor)       — registers the `articles` projection
 Phase 4  lifecycle events (publish/update/delete)    — emit only; Activities stores them
 Phase 5  extension & hardening                       — media/notes hooks, context registry,

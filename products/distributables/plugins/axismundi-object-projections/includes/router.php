@@ -54,6 +54,18 @@ function axismundi_op_accepts_activitystreams( string $accept ) : bool {
 }
 
 /**
+ * Whether an explicit browser-friendly representation selector is present.
+ *
+ * Like the official ActivityPub plugin, the parameter's presence is the signal; its
+ * value is not part of object identity and is intentionally ignored.
+ *
+ * @return bool
+ */
+function axismundi_op_explicit_activitypub_requested() : bool {
+	return isset( $_GET['activitypub'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only public representation selector.
+}
+
+/**
  * Whether the current request asks for ActivityStreams JSON-LD.
  *
  * @return bool
@@ -65,6 +77,9 @@ function axismundi_op_is_negotiated_request() : bool {
 	$method = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) );
 	if ( ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
 		return false;
+	}
+	if ( axismundi_op_explicit_activitypub_requested() ) {
+		return true;
 	}
 	$accept = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ?? '' ) );
 	return axismundi_op_accepts_activitystreams( $accept );

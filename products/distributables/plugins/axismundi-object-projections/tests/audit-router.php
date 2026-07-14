@@ -26,6 +26,11 @@ ax_router_assert( $ax_router_results, 'bare application/json and unprofiled ld+j
 ax_router_assert( $ax_router_results, 'q=0 explicitly refuses the ActivityStreams representation', ! axismundi_op_accepts_activitystreams( 'application/activity+json; q=0' ) );
 ax_router_assert( $ax_router_results, 'an allowed later range wins after a refused range', axismundi_op_accepts_activitystreams( 'application/activity+json; q=0, application/ld+json; profile="https://www.w3.org/ns/activitystreams"; q=0.8' ) );
 
+$_GET['activitypub'] = '';
+ax_router_assert( $ax_router_results, 'an explicit ?activitypub selector requests the representation without changing identity', axismundi_op_explicit_activitypub_requested() );
+unset( $_GET['activitypub'] );
+ax_router_assert( $ax_router_results, 'the explicit selector is false when the parameter is absent', ! axismundi_op_explicit_activitypub_requested() );
+
 add_filter( 'axismundi_op_standalone_router_enabled', '__return_false' );
 ax_router_assert( $ax_router_results, 'the ownership filter can disable standalone negotiation', ! axismundi_op_standalone_router_enabled() );
 remove_filter( 'axismundi_op_standalone_router_enabled', '__return_false' );
@@ -41,4 +46,3 @@ if ( class_exists( 'WP_CLI' ) ) {
 	WP_CLI::halt( $ax_router_failures > 0 ? 1 : 0 );
 }
 exit( $ax_router_failures > 0 ? 1 : 0 );
-

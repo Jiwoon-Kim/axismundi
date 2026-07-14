@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.25
+Stable tag: 0.0.26
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,12 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.26 =
+* Require the Contributor-level `edit_posts` capability for self-service Actor activation
+  and policy management. Keep administrator management through `manage_options`.
+* Keep the existing Users submenu for administrators while exposing Actor Profile under the
+  Contributor's accessible core Profile menu.
 
 = 0.0.25 =
 * Add the permission-checked `axismundi_actors_set_local_policy()` repository API so

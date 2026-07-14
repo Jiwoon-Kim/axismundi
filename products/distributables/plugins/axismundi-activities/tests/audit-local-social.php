@@ -42,6 +42,8 @@ function ax_local_create_person( string $login, array &$user_ids, array &$identi
 		return null;
 	}
 	$user_ids[] = (int) $user_id;
+	$user = new WP_User( (int) $user_id );
+	$user->set_role( 'contributor' );
 	$actor      = axismundi_actors_ensure_for_user( (int) $user_id );
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return null;
@@ -66,6 +68,14 @@ try {
 	$target   = ax_local_create_person( 'axtarget_' . $ax_local_suffix, $ax_local_user_ids, $ax_local_identity_ids, $ax_local_actor_uris );
 	ax_local_assert( $ax_local_results, 'fixture creates two activated public local Person actors', $follower instanceof Axismundi_Actor && $target instanceof Axismundi_Actor );
 
+	wp_set_current_user( (int) $follower->get_local_user_id() );
+	$subscriber = new WP_User( (int) $follower->get_local_user_id() );
+	$subscriber->set_role( 'subscriber' );
+	wp_set_current_user( 0 );
+	wp_set_current_user( (int) $follower->get_local_user_id() );
+	ax_local_assert( $ax_local_results, 'Subscriber cannot use local social actions even with an existing Actor', null === axismundi_act_current_local_actor() );
+	$subscriber->set_role( 'contributor' );
+	wp_set_current_user( 0 );
 	wp_set_current_user( (int) $follower->get_local_user_id() );
 	$auto = axismundi_act_follow_local_actor( $follower, $target );
 	ax_local_assert( $ax_local_results, 'NULL follower policy uses the site auto-accept default and records an accepted local edge', is_array( $auto ) && 'accepted' === $auto['state'] && 'local' === $auto['direction'] );
@@ -95,9 +105,14 @@ try {
 	ax_local_assert( $ax_local_results, 'Follows renders policy, requests, followers, and following for the current Actor only', str_contains( $admin_html, 'Require approval' ) && str_contains( $admin_html, 'Follow requests' ) && str_contains( $admin_html, 'Followers' ) && str_contains( $admin_html, $follower->get_preferred_username() ) );
 
 	wp_set_current_user( (int) $follower->get_local_user_id() );
+	$follows_url = axismundi_act_follows_admin_url();
+	ax_local_assert( $ax_local_results, 'Contributor Follows uses the transport-neutral Profile submenu slug', str_contains( $follows_url, 'profile.php?page=axismundi-follows' ) );
 	$GLOBALS['axismundi_actors_current_actor'] = $target;
 	$profile_html = axismundi_act_render_profile_follow_control( '<article>profile</article>' );
 	ax_local_assert( $ax_local_results, 'the public Actor profile control reflects accepted state as Unfollow', str_contains( $profile_html, 'Unfollow' ) && str_contains( $profile_html, 'target_uri' ) );
+	$columns = axismundi_act_users_follow_column( array( 'username' => 'Username' ) );
+	$cell    = axismundi_act_users_follow_column_content( '', 'ax_local_follow', (int) $target->get_local_user_id() );
+	ax_local_assert( $ax_local_results, 'administrative Users rows expose nonce-protected local Follow state and actions', isset( $columns['ax_local_follow'] ) && str_contains( $cell, '_wpnonce' ) && str_contains( $cell, 'Unfollow' ) );
 
 	$remote = axismundi_actors_upsert_remote(
 		array(

@@ -44,6 +44,8 @@ try {
 	$ax_admin_users[] = $admin;
 	$other = (int) wp_insert_user( array( 'user_login' => 'ax_admin_bob', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );
 	$ax_admin_users[] = $other;
+	$subscriber = (int) wp_insert_user( array( 'user_login' => 'ax_admin_reader', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+	$ax_admin_users[] = $subscriber;
 
 	$actor = axismundi_actors_ensure_for_user( $uid );
 	$ax_admin_ids[] = $actor->get_identity_id();
@@ -57,6 +59,11 @@ try {
 	ax_admin_assert( $ax_admin_results, 'the owner may manage their own actor', axismundi_actors_can_manage( $actor, $uid ) );
 	ax_admin_assert( $ax_admin_results, 'another non-admin user may not manage it', ! axismundi_actors_can_manage( $actor, $other ) );
 	ax_admin_assert( $ax_admin_results, 'an administrator may manage any actor', axismundi_actors_can_manage( $actor, $admin ) );
+	$subscriber_actor = axismundi_actors_ensure_for_user( $subscriber );
+	if ( $subscriber_actor instanceof Axismundi_Actor ) {
+		$ax_admin_ids[] = $subscriber_actor->get_identity_id();
+	}
+	ax_admin_assert( $ax_admin_results, 'a Subscriber cannot manage or activate even its own retained Actor row', $subscriber_actor instanceof Axismundi_Actor && ! axismundi_actors_can_manage( $subscriber_actor, $subscriber ) );
 
 	// Activation transition: register handle (internal) then publish.
 	axismundi_actors_register_handle( $actor->get_identity_id(), 'alice_admin' );

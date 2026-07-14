@@ -16,7 +16,8 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * May the viewer manage this actor? Own Person actor, or `manage_options`.
+ * May the viewer manage this actor? Own Person actor with content-writing access,
+ * or `manage_options`.
  *
  * @param Axismundi_Actor $actor   Actor.
  * @param int|null        $viewer  Viewer; defaults to current user.
@@ -31,7 +32,7 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 		return true;
 	}
 	$uid = $actor->get_local_user_id();
-	return null !== $uid && $uid === $viewer;
+	return null !== $uid && $uid === $viewer && user_can( $viewer, 'edit_posts' );
 }
 
 /** @return string The Actor Profile admin screen URL, optionally for a user. */
@@ -40,7 +41,8 @@ function axismundi_actors_admin_url( int $user_id = 0 ) : string {
 	if ( $user_id > 0 ) {
 		$args['user_id'] = $user_id;
 	}
-	return add_query_arg( $args, admin_url( 'users.php' ) );
+	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
+	return add_query_arg( $args, admin_url( $parent ) );
 }
 
 /** @return string Remote Actor lookup/cache screen URL. */
@@ -81,7 +83,7 @@ function axismundi_actors_status_label( ?Axismundi_Actor $actor ) : string {
 function axismundi_actors_profile_panel( WP_User $user ) : void {
 	$viewer = get_current_user_id();
 	$actor  = axismundi_actors_get_for_user( (int) $user->ID );
-	if ( ! ( (int) $user->ID === $viewer || current_user_can( 'manage_options' ) ) ) {
+	if ( ! ( current_user_can( 'manage_options' ) || ( (int) $user->ID === $viewer && current_user_can( 'edit_posts' ) ) ) ) {
 		return;
 	}
 	$is_self = (int) $user->ID === $viewer;
@@ -155,13 +157,24 @@ add_filter( 'manage_users_custom_column', 'axismundi_actors_users_column_content
 
 /** @return void */
 function axismundi_actors_register_admin_pages() : void {
-	add_users_page(
-		__( 'Actor Profile', 'axismundi-actors' ),
-		__( 'Actor Profile', 'axismundi-actors' ),
-		'read',
-		'axismundi-actor-profile',
-		'axismundi_actors_render_admin_page'
-	);
+	if ( current_user_can( 'list_users' ) ) {
+		add_users_page(
+			__( 'Actor Profile', 'axismundi-actors' ),
+			__( 'Actor Profile', 'axismundi-actors' ),
+			'edit_posts',
+			'axismundi-actor-profile',
+			'axismundi_actors_render_admin_page'
+		);
+	} else {
+		add_submenu_page(
+			'profile.php',
+			__( 'Actor Profile', 'axismundi-actors' ),
+			__( 'Actor Profile', 'axismundi-actors' ),
+			'edit_posts',
+			'axismundi-actor-profile',
+			'axismundi_actors_render_admin_page'
+		);
+	}
 	add_users_page(
 		__( 'Remote Actors', 'axismundi-actors' ),
 		__( 'Remote Actors', 'axismundi-actors' ),

@@ -47,3 +47,6 @@ Activated public local Person actors may follow each other without HTTP transpor
 Reject. False, or NULL under the default site policy, records an automatic target-authored
 Accept. The immutable Follow and Accept remain separate Activities. The `Follows` admin screen exposes
 only the current Actor's requests and accepted edges; remote Actor interaction remains disabled.
+Local product actions require the Contributor-level `edit_posts` capability. Administrators
+with an activated Actor may also act from local rows on the core Users table. Cached remote
+Actor rows intentionally have no Follow action until a transport adapter can deliver it.

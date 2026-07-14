@@ -9,22 +9,66 @@ defined( 'ABSPATH' ) || exit;
 
 /** Current user's local relationship screen URL. */
 function axismundi_act_follows_admin_url() : string {
-	return add_query_arg( 'page', 'axismundi-local-follows', admin_url( 'admin.php' ) );
+	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
+	return add_query_arg( 'page', 'axismundi-follows', admin_url( $parent ) );
 }
 
 /** Register the self-service local relationship screen. */
 function axismundi_act_register_follows_page() : void {
-	add_menu_page(
-		__( 'Follows', 'axismundi-activities' ),
-		__( 'Follows', 'axismundi-activities' ),
-		'read',
-		'axismundi-local-follows',
-		'axismundi_act_render_follows_page',
-		'dashicons-groups',
-		71
-	);
+	if ( current_user_can( 'list_users' ) ) {
+		add_users_page(
+			__( 'Follows', 'axismundi-activities' ),
+			__( 'Follows', 'axismundi-activities' ),
+			'edit_posts',
+			'axismundi-follows',
+			'axismundi_act_render_follows_page'
+		);
+	} else {
+		add_submenu_page(
+			'profile.php',
+			__( 'Follows', 'axismundi-activities' ),
+			__( 'Follows', 'axismundi-activities' ),
+			'edit_posts',
+			'axismundi-follows',
+			'axismundi_act_render_follows_page'
+		);
+	}
 }
 add_action( 'admin_menu', 'axismundi_act_register_follows_page' );
+
+/** Add local Follow state to the administrator Users table. */
+function axismundi_act_users_follow_column( array $columns ) : array {
+	if ( axismundi_act_current_local_actor() instanceof Axismundi_Actor ) {
+		$columns['ax_local_follow'] = __( 'Follow', 'axismundi-activities' );
+	}
+	return $columns;
+}
+add_filter( 'manage_users_columns', 'axismundi_act_users_follow_column', 20 );
+
+/** Render a nonce-protected local Follow action link for one Users row. */
+function axismundi_act_users_follow_column_content( string $output, string $column, int $user_id ) : string {
+	if ( 'ax_local_follow' !== $column ) {
+		return $output;
+	}
+	$subject = axismundi_act_current_local_actor();
+	$target  = axismundi_actors_get_for_user( $user_id );
+	if ( ! $subject instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor || ! $target->is_local() || 'Person' !== $target->get_type() || 'public' !== $target->get_status() || ! $target->is_handle_locked() || $subject->get_uri() === $target->get_uri() ) {
+		return '—';
+	}
+	$relation = axismundi_act_get_relation( 'follow', $subject->get_uri(), $target->get_uri() );
+	$state    = is_array( $relation ) ? (string) $relation['state'] : '';
+	$intent   = in_array( $state, array( 'pending', 'accepted' ), true ) ? 'unfollow' : 'follow';
+	$label    = 'pending' === $state ? __( 'Cancel request', 'axismundi-activities' ) : ( 'accepted' === $state ? __( 'Unfollow', 'axismundi-activities' ) : __( 'Follow', 'axismundi-activities' ) );
+	$nonce = wp_create_nonce( 'axismundi_act_local_follow_' . hash( 'sha256', $target->get_uri() ) );
+	return ( '' !== $state ? '<span>' . esc_html( ucfirst( $state ) ) . '</span> · ' : '' )
+		. '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">'
+		. '<input type="hidden" name="action" value="axismundi_act_local_follow">'
+		. '<input type="hidden" name="intent" value="' . esc_attr( $intent ) . '">'
+		. '<input type="hidden" name="target_uri" value="' . esc_attr( $target->get_uri() ) . '">'
+		. '<input type="hidden" name="_wpnonce" value="' . esc_attr( $nonce ) . '">'
+		. '<button type="submit" class="button-link">' . esc_html( $label ) . '</button></form>';
+}
+add_filter( 'manage_users_custom_column', 'axismundi_act_users_follow_column_content', 20, 3 );
 
 /** Append local Follow state/action to a public Actor profile block. */
 function axismundi_act_render_profile_follow_control( string $content ) : string {

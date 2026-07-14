@@ -42,6 +42,8 @@ Actor URI + Activity + Object URI
     only after commit, and duplicate Activity delivery never emits duplicate relation changes.
 11. The first product workflow is local-only Person-to-Person Follow. Remote interaction is
     fail-closed until an explicit official ActivityPub compatibility adapter exists.
+12. Actor activation and local social actions require `edit_posts`; Subscriber accounts are
+    read-only and cannot acquire social write access merely by retaining an Actor row.
 
 ## 3. Supported activity vocabulary
 

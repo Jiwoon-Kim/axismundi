@@ -10,6 +10,9 @@ defined( 'ABSPATH' ) || exit;
 /** The current user's activated public Person Actor, if available. */
 function axismundi_act_current_local_actor() : ?Axismundi_Actor {
 	$user_id = get_current_user_id();
+	if ( $user_id <= 0 || ! current_user_can( 'edit_posts' ) ) {
+		return null;
+	}
 	$actor   = $user_id > 0 ? axismundi_actors_get_for_user( $user_id ) : null;
 	return $actor instanceof Axismundi_Actor
 		&& $actor->is_local()
@@ -109,4 +112,3 @@ function axismundi_act_respond_to_local_follow( Axismundi_Actor $target, string 
 	);
 	return is_wp_error( $activity ) ? $activity : axismundi_act_get_relation( 'follow', $follow->get_actor_uri(), $target->get_uri() );
 }
-

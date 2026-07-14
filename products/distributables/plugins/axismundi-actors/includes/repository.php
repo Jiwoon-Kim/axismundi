@@ -1973,7 +1973,7 @@ function axismundi_actors_set_local_policy( Axismundi_Actor $actor, string $axis
 	}
 	$viewer = null === $viewer ? get_current_user_id() : $viewer;
 	$owner  = $actor->get_local_user_id();
-	if ( $viewer <= 0 || ( $viewer !== $owner && ! user_can( $viewer, 'manage_options' ) ) ) {
+	if ( $viewer <= 0 || ( ! user_can( $viewer, 'manage_options' ) && ( $viewer !== $owner || ! user_can( $viewer, 'edit_posts' ) ) ) ) {
 		return new WP_Error( 'ax_actors_policy_permission', __( 'You cannot change that Actor policy.', 'axismundi-actors' ) );
 	}
 	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Actors repository owns this custom table.

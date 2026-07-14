@@ -24,22 +24,28 @@ Local public Person-to-Person Follow/Unfollow controls, automatic or approval-re
 acceptance from the Actors-owned policy axis, pending request decisions, and self-service
 followers/following lists. Remote Actors are rejected and no transport is attempted.
 
+## 0.0.5 — Phase 2.2: contributor access and Users integration (shipped)
+
+Require `edit_posts` for Actor social actions, keep Subscribers read-only, and expose
+nonce-protected local Follow state/actions on the administrator Users table. Cached remote
+Actors remain display-only pending an official ActivityPub transport adapter.
+
 ## Prerequisite — Object Projections lease substrate
 
 Before Phase 3, Object Projections ships multi-reason object leases. Activities only consumes
 its feature-detected API.
 
-## 0.0.5 — Phase 3: Like, Announce, Undo
+## 0.0.6 — Phase 3: Like, Announce, Undo
 
 URI-referenced reactions, idempotent aggregate queries, Undo transitions, and optional
 `interaction` lease declarations for remote objects.
 
-## 0.0.6 — Phase 4: logical inbox/outbox membership
+## 0.0.7 — Phase 4: logical inbox/outbox membership
 
 Actor-scoped inbox/outbox memberships and collection query services. Object Projections may
 serialize collections; Federation serves HTTP. Notifications are explicitly excluded.
 
-## 0.0.7 — Phase 5: Add, Remove, Move, Join, Leave
+## 0.0.8 — Phase 5: Add, Remove, Move, Join, Leave
 
 Collection/community operations for saved media, shared folders, and managed Group workflows,
 plus optional `collection` leases. Domain plugins continue to own collection membership data.

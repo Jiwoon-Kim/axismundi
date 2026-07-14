@@ -133,16 +133,49 @@ function axismundi_actors_normalize_remote_actor_payload( array $payload, string
 	if ( empty( $endpoints['inbox'] ) || empty( $endpoints['outbox'] ) ) {
 		return new WP_Error( 'ax_actors_remote_endpoints', __( 'The remote Actor has invalid inbox or outbox endpoints.', 'axismundi-actors' ) );
 	}
-	return array(
-		'uri'                => $uri,
-		'actor_type'         => $type,
-		'preferred_username' => axismundi_actors_remote_limit_text( $username, 191 ),
-		'display_name'       => axismundi_actors_remote_limit_text( sanitize_text_field( wp_strip_all_tags( (string) ( $payload['name'] ?? '' ) ) ), 191 ),
-		'summary'            => wp_kses_post( (string) ( $payload['summary'] ?? '' ) ),
-		'profile_url'        => axismundi_actors_remote_profile_url( $payload['url'] ?? null, $uri ),
-		'endpoints'          => $endpoints,
-		'payload'            => $payload,
+	return array_merge(
+		array(
+			'uri'                => $uri,
+			'actor_type'         => $type,
+			'preferred_username' => axismundi_actors_remote_limit_text( $username, 191 ),
+			'display_name'       => axismundi_actors_remote_limit_text( sanitize_text_field( wp_strip_all_tags( (string) ( $payload['name'] ?? '' ) ) ), 191 ),
+			'summary'            => wp_kses_post( (string) ( $payload['summary'] ?? '' ) ),
+			'profile_url'        => axismundi_actors_remote_profile_url( $payload['url'] ?? null, $uri ),
+			'endpoints'          => $endpoints,
+			'payload'            => $payload,
+		),
+		axismundi_actors_extract_policy_from_payload( $payload )
 	);
+}
+
+/**
+ * Map an Actor JSON payload to the DB v8 policy axes, preserving the
+ * unreported (absent key) → NULL distinction from an explicit false. Only keys the
+ * remote actually declared are returned, so a refresh never fabricates a `false`.
+ *
+ * @param array<string,mixed> $payload Actor JSON.
+ * @return array<string,mixed>
+ */
+function axismundi_actors_extract_policy_from_payload( array $payload ) : array {
+	$record = array();
+	if ( isset( $payload['published'] ) && is_string( $payload['published'] ) ) {
+		$ts = strtotime( $payload['published'] );
+		if ( false !== $ts ) {
+			$record['published_at'] = gmdate( 'Y-m-d H:i:s', $ts );
+		}
+	}
+	// ActivityStreams / Mastodon actor flags; only pass through declared booleans.
+	$map = array(
+		'manually_approves_followers' => 'manuallyApprovesFollowers',
+		'discoverable'                => 'discoverable',
+		'indexable'                   => 'indexable',
+	);
+	foreach ( $map as $column => $key ) {
+		if ( array_key_exists( $key, $payload ) && is_bool( $payload[ $key ] ) ) {
+			$record[ $column ] = $payload[ $key ];
+		}
+	}
+	return $record;
 }
 
 /**

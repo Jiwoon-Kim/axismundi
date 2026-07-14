@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.19
+Stable tag: 0.0.20
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,22 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.20 =
+* DB v8 — follower / discovery policy axes on wp_ax_actors: published_at,
+  manually_approves_followers, discoverable, indexable, and
+  follow_collections_visibility. These are independent axes, not one enum:
+  internal|public stays lifecycle, while follow approval, discovery/indexing, and
+  collection visibility are separate.
+* Preserve the tri-state on remote actors: a policy the remote Actor JSON did not
+  declare is stored as NULL (unreported) and never conflated with an explicit false;
+  a refresh only writes a boolean the payload actually reported. The administrator
+  inspector shows "not reported" distinctly from yes/no. The default posting audience
+  is not stored here — it belongs to the Activity plugin.
+* Documented and locked the remote avatar/header binary cache contract for a later
+  version (docs/REMOTE-ASSET-CACHE.md): content-addressed storage, single cache table,
+  asynchronous stale-while-revalidate, and strict fetch limits. No caching behaviour
+  ships in this release.
 
 = 0.0.19 =
 * DB v7 — normalize inbox, outbox, followers, following, featured, and sharedInbox

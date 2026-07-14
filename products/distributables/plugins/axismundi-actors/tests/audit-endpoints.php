@@ -125,7 +125,7 @@ try {
 	axismundi_actors_install();
 	$migrated_map = $first instanceof Axismundi_Actor ? axismundi_actors_get_endpoints( $first ) : array();
 	$final_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" ); // phpcs:ignore WordPress.DB
-	ax_endpoint_assert( $ax_endpoint_results, 'v6 migration backfills legacy and payload roles before dropping old columns', $legacy_inbox === ( $migrated_map['inbox'] ?? '' ) && $legacy_outbox === ( $migrated_map['outbox'] ?? '' ) && isset( $migrated_map['followers'], $migrated_map['shared_inbox'] ) && ! in_array( 'inbox_uri', $final_columns, true ) && ! in_array( 'outbox_uri', $final_columns, true ) && '7' === (string) get_option( 'ax_actors_db_version' ) );
+	ax_endpoint_assert( $ax_endpoint_results, 'v6 migration backfills legacy and payload roles before dropping old columns', $legacy_inbox === ( $migrated_map['inbox'] ?? '' ) && $legacy_outbox === ( $migrated_map['outbox'] ?? '' ) && isset( $migrated_map['followers'], $migrated_map['shared_inbox'] ) && ! in_array( 'inbox_uri', $final_columns, true ) && ! in_array( 'outbox_uri', $final_columns, true ) && (int) get_option( 'ax_actors_db_version' ) >= 7 );
 } finally {
 	foreach ( array_unique( $ax_endpoint_ids ) as $identity_id ) {
 		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB

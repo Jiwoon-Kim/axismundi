@@ -232,6 +232,20 @@ function axismundi_actors_remote_admin_notice() : void {
 	}
 }
 
+/**
+ * Human label for a tri-state policy flag: unreported (NULL) is shown distinctly from
+ * an explicit yes/no so an admin can tell "the remote never declared it" from "off".
+ *
+ * @param bool|null $flag Policy value.
+ * @return string
+ */
+function axismundi_actors_policy_flag_label( ?bool $flag ) : string {
+	if ( null === $flag ) {
+		return __( 'not reported', 'axismundi-actors' );
+	}
+	return $flag ? __( 'yes', 'axismundi-actors' ) : __( 'no', 'axismundi-actors' );
+}
+
 /** @param Axismundi_Actor $actor Remote actor. @return void */
 function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) : void {
 	$payload   = axismundi_actors_get_remote_payload( $actor->get_identity_id() );
@@ -250,6 +264,11 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 			<tr><th><?php esc_html_e( 'Verified addresses', 'axismundi-actors' ); ?></th><td><?php echo esc_html( implode( ', ', array_column( $addresses, 'address' ) ) ); ?></td></tr>
 			<tr><th><?php esc_html_e( 'Endpoints', 'axismundi-actors' ); ?></th><td><?php foreach ( $endpoints as $type => $uri ) : ?><div><strong><?php echo esc_html( $type ); ?></strong>: <code><?php echo esc_html( $uri ); ?></code></div><?php endforeach; ?></td></tr>
 			<tr><th><?php esc_html_e( 'Instance', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $instance ? trim( (string) ( $instance['software_name'] ?? '' ) . ' ' . (string) ( $instance['software_version'] ?? '' ) ) : $host ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Manually approves followers', 'axismundi-actors' ); ?></th><td><?php echo esc_html( axismundi_actors_policy_flag_label( $actor->get_policy_flag( 'manually_approves_followers' ) ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Discoverable', 'axismundi-actors' ); ?></th><td><?php echo esc_html( axismundi_actors_policy_flag_label( $actor->get_policy_flag( 'discoverable' ) ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Indexable', 'axismundi-actors' ); ?></th><td><?php echo esc_html( axismundi_actors_policy_flag_label( $actor->get_policy_flag( 'indexable' ) ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Follow collections', 'axismundi-actors' ); ?></th><td><?php echo esc_html( $actor->get_follow_collections_visibility() ?? esc_html__( 'not reported', 'axismundi-actors' ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Published', 'axismundi-actors' ); ?></th><td><?php echo esc_html( '' !== $actor->get_published_at() ? $actor->get_published_at() : esc_html__( 'not reported', 'axismundi-actors' ) ); ?></td></tr>
 		</tbody>
 	</table>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

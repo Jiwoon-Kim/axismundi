@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '7';
+const AXISMUNDI_ACTORS_DB_VERSION = '8';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -122,6 +122,11 @@ function axismundi_actors_install() : void {
 			avatar_attachment_id bigint(20) unsigned DEFAULT NULL,
 			header_attachment_id bigint(20) unsigned DEFAULT NULL,
 			default_language varchar(35) DEFAULT NULL,
+			published_at datetime DEFAULT NULL,
+			manually_approves_followers tinyint(1) DEFAULT NULL,
+			discoverable tinyint(1) DEFAULT NULL,
+			indexable tinyint(1) DEFAULT NULL,
+			follow_collections_visibility varchar(16) DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
@@ -328,6 +333,11 @@ function axismundi_actors_install() : void {
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )
 		&& in_array( 'default_language', $columns, true )
+		&& in_array( 'published_at', $columns, true )
+		&& in_array( 'manually_approves_followers', $columns, true )
+		&& in_array( 'discoverable', $columns, true )
+		&& in_array( 'indexable', $columns, true )
+		&& in_array( 'follow_collections_visibility', $columns, true )
 		&& in_array( 'language_tag', $text_columns, true )
 		&& in_array( 'value', $text_columns, true )
 		&& ! empty( $text_indexes )
@@ -399,6 +409,30 @@ final class Axismundi_Actor {
 		return function_exists( 'axismundi_actors_normalize_language_tag' )
 			? axismundi_actors_normalize_language_tag( $language )
 			: $language;
+	}
+
+	/** @return string ISO/mysql published datetime, or '' if unreported. */
+	public function get_published_at() : string {
+		return (string) ( $this->row['published_at'] ?? '' );
+	}
+
+	/**
+	 * A DB v8 policy axis as a tri-state: null (unreported) vs true/false.
+	 *
+	 * @param string $axis manually_approves_followers | discoverable | indexable.
+	 * @return bool|null
+	 */
+	public function get_policy_flag( string $axis ) : ?bool {
+		if ( ! array_key_exists( $axis, $this->row ) || null === $this->row[ $axis ] ) {
+			return null;
+		}
+		return (bool) (int) $this->row[ $axis ];
+	}
+
+	/** @return string|null public|followers|private, or null if unreported. */
+	public function get_follow_collections_visibility() : ?string {
+		$value = $this->row['follow_collections_visibility'] ?? null;
+		return null !== $value && '' !== $value ? (string) $value : null;
 	}
 
 	public function get_profile_url() : string {
@@ -848,6 +882,26 @@ function axismundi_actors_get_endpoint( $actor, string $type ) : string {
 }
 
 /**
+ * Normalize the DB v8 policy axes from a record, preserving the NULL / true / false
+ * distinction. A key that is absent or explicitly null stays NULL ("unreported"),
+ * never coerced to 0 — an undeclared follower policy is not the same as "off".
+ *
+ * @param array<string,mixed> $record Remote/local actor fields.
+ * @return array<string,int|string|null> Column => value (nullable).
+ */
+function axismundi_actors_normalize_policy_fields( array $record ) : array {
+	$out       = array();
+	$published = isset( $record['published_at'] ) ? trim( (string) $record['published_at'] ) : '';
+	$out['published_at'] = '' !== $published ? $published : null;
+	foreach ( array( 'manually_approves_followers', 'discoverable', 'indexable' ) as $key ) {
+		$out[ $key ] = ( ! array_key_exists( $key, $record ) || null === $record[ $key ] ) ? null : (int) (bool) $record[ $key ];
+	}
+	$visibility = isset( $record['follow_collections_visibility'] ) ? (string) $record['follow_collections_visibility'] : '';
+	$out['follow_collections_visibility'] = in_array( $visibility, array( 'public', 'followers', 'private' ), true ) ? $visibility : null;
+	return $out;
+}
+
+/**
  * Insert or refresh a normalized remote Actor snapshot. HTTP discovery and JSON
  * validation happen outside this repository; this function owns only persistence.
  *
@@ -888,6 +942,9 @@ function axismundi_actors_upsert_remote( array $record ) {
 		'payload_json'       => $payload_json,
 		'updated_at'         => $now,
 	);
+	// Policy axes (DB v8): an undeclared value stays NULL, distinct from an explicit
+	// false — never conflate "the remote did not report this" with "off".
+	$fields = array_merge( $fields, axismundi_actors_normalize_policy_fields( $record ) );
 	if ( $existing ) {
 		if ( $existing->is_local() || 'tombstone' === $existing->get_status() ) {
 			return new WP_Error( 'ax_actors_remote_conflict', __( 'That identity cannot be refreshed as a remote Actor.', 'axismundi-actors' ) );

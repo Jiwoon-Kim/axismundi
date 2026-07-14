@@ -17,12 +17,13 @@ Phase 3a first-party Media Library adapter           — shipped (0.0.4): option
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous
                                                        visibility, bounded image rendition
 Phase 3c Media archive/folder OrderedCollections     — home/author/folder collection views
-Phase 4  lifecycle events (publish/update/delete)    — emit only; Activities stores them
-Phase 5  extension & hardening                       — notes, context registry, cache
+Phase 4a remote object repository                    — shipped (0.0.5): URI-keyed observed
+                                                       cache table; no network/public route
+Phase 4b remote fetch + administrator inspector      — bounded fetch, refresh/purge,
+                                                       no render-time fetch/media hotlink
+Phase 5  lifecycle events (publish/update/delete)    — emit only; Activities stores them
+Phase 6  extension & hardening                       — notes, collections, cache
                                                        invalidation, isolation, escaping
-Phase 6  remote object projections                   — URI-keyed observed cache + admin
-                                                       inspector; no Activity required,
-                                                       no render-time fetch or media hotlink
 ```
 
 Phases 0 and 1 are combined into 0.0.1. Phase 2 adds standalone routing in 0.0.2 but

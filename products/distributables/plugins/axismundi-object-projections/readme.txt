@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.4
+Stable tag: 0.0.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -23,11 +23,24 @@ the official ActivityPub plugin as optional (see docs/COMPATIBILITY.md).
 
 This release also ships standalone content negotiation on the existing WordPress URL,
 the Core Post → Article transformer, and an optional first-party Axismundi Media Library
-attachment adapter. It still creates no rewrite, REST route, or table.
+attachment adapter. It creates no custom rewrite or REST route.
 When the official ActivityPub plugin is active, the standalone negotiator turns itself off
 so a future adapter can preserve that plugin's established object ids.
 
+The remote-object repository stores URI-keyed, rebuildable observations for later
+administrator inspection and Activities integration. It performs no network requests and
+exposes no public mirror route in this release.
+
 == Changelog ==
+
+= 0.0.5 =
+* Add the InnoDB `wp_ax_remote_objects` repository for URI-keyed remote ActivityStreams
+  observations, with hash-indexed long URIs, normalized display fields, lossless bounded
+  payload JSON, tri-state sensitivity, fetch validators, refresh state, and Tombstones.
+* Keep invalid refresh input from overwriting the last good snapshot; verify the table,
+  unique identity index, and storage engine before recording schema version 1.
+* Keep fetching and public mirroring out of this increment. The repository performs no
+  network request; bounded administrator discovery follows separately.
 
 = 0.0.4 =
 * Detect Axismundi Media Library in Independent mode and project public/unlisted,

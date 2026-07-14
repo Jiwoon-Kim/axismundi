@@ -29,6 +29,12 @@
   non-GET/HEAD requests, REST, AJAX, feeds, and wp-admin never enter the router. The
   read-only `?activitypub` selector may bypass only the Accept check, not these surface,
   method, visibility, or single-negotiator gates.
+- **Remote rows are observations, not trust.** Their URI remains remote authority;
+  normalized text is sanitized and raw payload JSON is never rendered directly. Invalid
+  refresh input preserves the last good snapshot. Repository writes perform no network.
+- **Fetch is a separate SSRF boundary.** The next-phase fetcher must validate public HTTPS
+  targets, forward no cookies/auth, cap bytes, validate content type, and revalidate every
+  redirect (or disable redirects). Front-end rendering never fetches synchronously.
 - **Single negotiator.** `ACTIVITYPUB_PLUGIN_VERSION` disables the standalone router;
   registry and renderer remain available for an adapter, but two plugins never answer
   the same canonical URL in one request.

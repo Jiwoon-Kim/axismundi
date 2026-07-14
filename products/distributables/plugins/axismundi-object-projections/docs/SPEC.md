@@ -1,7 +1,7 @@
 # Axismundi Object Projections — specification
 
-> Status: **Phases 0–3b implemented** (contract, registry/renderer, standalone
-> negotiation, Core Post → Article, Media Library attachment adapter). No table, custom rewrite, REST route, Activity
+> Status: **Phases 0–4a implemented** (local projections plus the remote-object
+> observation repository). No custom rewrite, REST route, Activity
 > ledger, or transport. This package owns the projection contract and representation.
 
 ## 1. Purpose
@@ -27,8 +27,9 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 - First-party integration adapters that translate stable domain service APIs into
   ActivityStreams semantics (currently Axismundi Media Library attachments).
 - Object lifecycle *events* (publish/update/delete) — emitted, not stored.
-- In a later phase, URI-keyed **remote object projections**: rebuildable observed
-  snapshots and an administrator inspector, independent of Activity ingestion.
+- URI-keyed **remote object projections**: rebuildable observed snapshots independent
+  of Activity ingestion. Network fetch and the administrator inspector are separate
+  from the Phase 4a repository (see REMOTE-OBJECTS.md).
 
 **Does not own**
 
@@ -37,6 +38,7 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 - Authority over a remote canonical object: its URI remains the source identity and a
   local projection row is only a refreshable cache, never a replacement identity.
 - The official ActivityPub plugin's internal models.
+- Remote binary files; the object table stores metadata/payload observations only.
 
 ## 3. Terms (kept distinct)
 

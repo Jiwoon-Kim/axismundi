@@ -1,7 +1,8 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 2.3 Activity repository, social relation state, local Follow UI, and
-> Core Post Create lifecycle implemented**. No public Activity route or network behavior.
+> Status: **Phase 2.5 Activity repository, provenance-aware social relation state, local
+> Follow UI, Core Post Create lifecycle, and public Outbox query implemented**. No public
+> Activity route or network behavior.
 
 ## 1. Purpose
 

@@ -91,11 +91,11 @@ function axismundi_act_render_admin_page() : void {
 		</tbody></table>
 
 		<h2><?php esc_html_e( 'Social relations', 'axismundi-activities' ); ?></h2>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Type', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'Subject', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'Direction', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'State', 'axismundi-activities' ); ?></th></tr></thead><tbody>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Type', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'Subject', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'Direction', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'State', 'axismundi-activities' ); ?></th><th><?php esc_html_e( 'Evidence', 'axismundi-activities' ); ?></th></tr></thead><tbody>
 		<?php if ( empty( $relations ) ) : ?>
-			<tr><td colspan="5"><?php esc_html_e( 'No social relations derived.', 'axismundi-activities' ); ?></td></tr>
+			<tr><td colspan="6"><?php esc_html_e( 'No social relations derived.', 'axismundi-activities' ); ?></td></tr>
 		<?php else : foreach ( $relations as $relation ) : ?>
-			<tr><td><?php echo esc_html( (string) $relation['relation_type'] ); ?></td><td><?php echo axismundi_act_admin_actor_link( (string) $relation['subject_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td><td><?php echo axismundi_act_admin_actor_link( (string) $relation['object_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td><td><?php echo esc_html( (string) $relation['direction'] ); ?></td><td><?php echo esc_html( (string) $relation['state'] ); ?></td></tr>
+			<tr><td><?php echo esc_html( (string) $relation['relation_type'] ); ?></td><td><?php echo axismundi_act_admin_actor_link( (string) $relation['subject_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td><td><?php echo axismundi_act_admin_actor_link( (string) $relation['object_actor_uri'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes complete anchor. ?></td><td><?php echo esc_html( (string) $relation['direction'] ); ?></td><td><?php echo esc_html( (string) $relation['state'] ); ?></td><td><code><?php echo esc_html( (string) ( $relation['evidence_type'] ?? 'activity' ) ); ?></code></td></tr>
 		<?php endforeach; endif; ?>
 		</tbody></table>
 	</div>

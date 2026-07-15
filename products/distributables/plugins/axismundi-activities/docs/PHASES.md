@@ -44,22 +44,28 @@ Expose public-safe effective outbound Activity payloads by Actor URI. Preserve t
 ledger while stripping `bto`/`bcc` from projection copies and recognizing both the full Public
 IRI and `as:Public`. Activities owns no HTTP route; Object Projections owns serialization.
 
+## 0.0.8 — Phase 2.5: legacy relation provenance (shipped)
+
+DB v4 adds `legacy_snapshot` evidence for accepted followers/following and non-delivering
+`legacy_pending` outbound requests. Compatibility imports create no synthetic Activity.
+Actual Follow/Accept/Reject/Undo replay always takes ownership from snapshot evidence.
+
 ## Prerequisite — Object Projections lease substrate
 
 Before Phase 3, Object Projections ships multi-reason object leases. Activities only consumes
 its feature-detected API.
 
-## 0.0.8 — Phase 3: Like, Announce, Undo
+## 0.0.9 — Phase 3: Like, Announce, Undo
 
 URI-referenced reactions, idempotent aggregate queries, Undo transitions, and optional
 `interaction` lease declarations for remote objects.
 
-## 0.0.9 — Phase 4: logical inbox/outbox membership
+## 0.0.10 — Phase 4: logical inbox/outbox membership
 
 Actor-scoped inbox/outbox memberships and collection query services. Object Projections may
 serialize collections; Federation serves HTTP. Notifications are explicitly excluded.
 
-## 0.0.10 — Phase 5: Add, Remove, Move, Join, Leave
+## 0.0.11 — Phase 5: Add, Remove, Move, Join, Leave
 
 Collection/community operations for saved media, shared folders, and managed Group workflows,
 plus optional `collection` leases. Domain plugins continue to own collection membership data.

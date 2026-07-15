@@ -1,6 +1,6 @@
 # Activity storage model
 
-> `wp_ax_activities` and `wp_ax_activity_relations` are implemented in DB v2.
+> `wp_ax_activities` and `wp_ax_activity_relations` are implemented in DB v4.
 
 ## 1. `wp_ax_activities`
 
@@ -50,9 +50,11 @@ subject_actor_uri_hash   CHAR(64) NOT NULL
 object_actor_uri         TEXT NOT NULL
 object_actor_uri_hash    CHAR(64) NOT NULL
 direction                inbound | outbound | local
-state                    pending | accepted | rejected | active | undone
-initiating_activity_uri  TEXT NOT NULL
+state                    pending | legacy_pending | accepted | rejected | active | undone
+initiating_activity_uri  TEXT NULL
 state_activity_uri       TEXT NULL
+evidence_type            activity | legacy_snapshot
+evidence_ref             TEXT NULL
 created_at               DATETIME NOT NULL
 updated_at               DATETIME NOT NULL
 ```
@@ -65,7 +67,13 @@ identity. Direction is a local query convenience derived when the relation is wr
 Followers and following are projections of accepted Follow rows. They are not duplicated
 as authoritative collection tables.
 
-Follow uses `pending|accepted|rejected|undone`; Block uses `active|undone`. Relation rows
+Follow uses `pending|legacy_pending|accepted|rejected|undone`; Block uses `active|undone`.
+`legacy_pending` is preserved for administrator visibility but is excluded from accepted
+following projections and is never retransmitted. Snapshot rows have no initiating Activity;
+they carry a bounded compatibility-source reference instead. A real relation-bearing Activity
+atomically replaces snapshot provenance and can never be overwritten by a later snapshot.
+
+Relation rows
 are materialized in the same InnoDB transaction as their immutable Activity. The database
 version is recorded only after both verified tables and their unique indexes exist.
 

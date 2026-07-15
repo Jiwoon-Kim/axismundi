@@ -14,6 +14,12 @@ rewritten. Duplicate delivery of the same Activity URI is idempotent. A transiti
 verify that the transition Actor is authorized for the referenced relation; transport-level
 signature verification is Federation's responsibility and is additional to this domain check.
 
+A compatibility adapter may import an accepted or pending current-state assertion when the
+historical Follow Activity is unavailable. Such a row is marked `legacy_snapshot`, has no
+initiating Activity URI, and creates no synthetic Activity. `legacy_pending` is not delivered
+or projected as following. Any later real Follow takes ownership of the pair; its subsequent
+Accept, Reject, or Undo remains authoritative over every snapshot import.
+
 Accept or Reject may arrive before its Follow. The immutable transition is retained and the
 relation is reconciled when the referenced Follow arrives. Only the followed Actor may Accept
 or Reject. An unauthorized transition rolls back with its Activity row.

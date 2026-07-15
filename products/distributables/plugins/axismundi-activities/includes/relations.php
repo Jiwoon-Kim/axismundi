@@ -13,7 +13,7 @@ function axismundi_act_relations_table() : string {
 	return $wpdb->prefix . 'ax_activity_relations';
 }
 
-/** Whether the verified DB v2 repository is available for relation reads. */
+/** Whether the verified DB v4 repository is available for relation reads. */
 function axismundi_act_relations_ready() : bool {
 	return defined( 'AXISMUNDI_ACT_DB_VERSION' )
 		&& AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' );
@@ -34,9 +34,11 @@ function axismundi_act_install_relations() : bool {
 			object_actor_uri text NOT NULL,
 			object_actor_uri_hash char(64) NOT NULL,
 			direction varchar(8) NOT NULL,
-			state varchar(10) NOT NULL,
-			initiating_activity_uri text NOT NULL,
+			state varchar(16) NOT NULL,
+			initiating_activity_uri text DEFAULT NULL,
 			state_activity_uri text DEFAULT NULL,
+			evidence_type varchar(16) NOT NULL DEFAULT 'activity',
+			evidence_ref text DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -46,14 +48,34 @@ function axismundi_act_install_relations() : bool {
 			KEY direction_state (direction, state)
 		) ENGINE=InnoDB {$charset};"
 	);
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed schema verification.
-	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+	// dbDelta does not reliably relax NOT NULL or widen existing varchar columns.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed schema inspection.
+	$column_rows = (array) $wpdb->get_results( "SHOW COLUMNS FROM {$table}", ARRAY_A );
+	$column_map  = array_column( $column_rows, null, 'Field' );
+	if ( isset( $column_map['initiating_activity_uri'] ) && 'YES' !== (string) $column_map['initiating_activity_uri']['Null'] ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- verified v4 nullable migration.
+		$wpdb->query( "ALTER TABLE {$table} MODIFY initiating_activity_uri text NULL" );
+	}
+	if ( isset( $column_map['state'] ) && 'varchar(16)' !== strtolower( (string) $column_map['state']['Type'] ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- verified v4 state-width migration.
+		$wpdb->query( "ALTER TABLE {$table} MODIFY state varchar(16) NOT NULL" );
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- v4 provenance backfill.
+	$wpdb->query( "UPDATE {$table} SET evidence_type = 'activity', evidence_ref = initiating_activity_uri WHERE evidence_type IS NULL OR evidence_type = '' OR (evidence_type = 'activity' AND evidence_ref IS NULL)" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final fixed schema verification.
+	$column_rows = (array) $wpdb->get_results( "SHOW COLUMNS FROM {$table}", ARRAY_A );
+	$column_map  = array_column( $column_rows, null, 'Field' );
+	$columns     = array_keys( $column_map );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed index verification.
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'relation_identity'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed engine verification.
 	$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table ) );
 	return in_array( 'subject_actor_uri', $columns, true )
 		&& in_array( 'object_actor_uri', $columns, true )
+		&& in_array( 'evidence_type', $columns, true )
+		&& in_array( 'evidence_ref', $columns, true )
+		&& 'YES' === (string) ( $column_map['initiating_activity_uri']['Null'] ?? '' )
+		&& 'varchar(16)' === strtolower( (string) ( $column_map['state']['Type'] ?? '' ) )
 		&& ! in_array( 'blog_id', $columns, true )
 		&& ! empty( $index )
 		&& 0 === (int) $index[0]['Non_unique']
@@ -105,7 +127,7 @@ function axismundi_act_relation_direction( string $subject_uri, string $object_u
 }
 
 /** Insert or update one relation row inside the caller's transaction. */
-function axismundi_act_write_relation( string $type, string $subject_uri, string $object_uri, string $direction, string $state, string $initiating_uri, ?string $state_uri ) {
+function axismundi_act_write_relation( string $type, string $subject_uri, string $object_uri, string $direction, string $state, ?string $initiating_uri, ?string $state_uri, string $evidence_type = 'activity', ?string $evidence_ref = null ) {
 	global $wpdb;
 	$table = axismundi_act_relations_table();
 	$now   = current_time( 'mysql', true );
@@ -132,6 +154,8 @@ function axismundi_act_write_relation( string $type, string $subject_uri, string
 		'state'                  => $state,
 		'initiating_activity_uri' => $initiating_uri,
 		'state_activity_uri'     => $state_uri,
+		'evidence_type'          => $evidence_type,
+		'evidence_ref'           => null !== $evidence_ref ? $evidence_ref : $initiating_uri,
 		'updated_at'             => $now,
 	);
 	$ok = is_array( $existing )
@@ -144,7 +168,7 @@ function axismundi_act_write_relation( string $type, string $subject_uri, string
 function axismundi_act_start_relation( string $type, string $subject_uri, string $object_uri, string $direction, string $activity_uri ) {
 	$existing = axismundi_act_get_relation( $type, $subject_uri, $object_uri );
 	$live     = 'follow' === $type ? array( 'pending', 'accepted' ) : array( 'active' );
-	if ( is_array( $existing ) && in_array( (string) $existing['state'], $live, true ) ) {
+	if ( is_array( $existing ) && 'activity' === (string) ( $existing['evidence_type'] ?? 'activity' ) && in_array( (string) $existing['state'], $live, true ) ) {
 		return $existing;
 	}
 	return axismundi_act_write_relation(
@@ -156,6 +180,43 @@ function axismundi_act_start_relation( string $type, string $subject_uri, string
 		$activity_uri,
 		null
 	);
+}
+
+/**
+ * Import one current-state Follow assertion without inventing an Activity.
+ *
+ * Actual Follow/Accept/Reject/Undo Activities always take ownership later through
+ * axismundi_act_start_relation(). Snapshot writes never overwrite Activity evidence.
+ *
+ * @return array<string,mixed>|WP_Error
+ */
+function axismundi_act_import_follow_snapshot( string $subject_uri, string $object_uri, string $state, string $evidence_ref ) {
+	global $wpdb;
+	if ( ! in_array( $state, array( 'accepted', 'legacy_pending' ), true ) || '' === trim( $evidence_ref ) || strlen( $evidence_ref ) > 2048 ) {
+		return new WP_Error( 'ax_act_snapshot', __( 'The legacy Follow snapshot is invalid.', 'axismundi-activities' ) );
+	}
+	$direction = axismundi_act_relation_direction( $subject_uri, $object_uri );
+	if ( is_wp_error( $direction ) ) {
+		return $direction;
+	}
+	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic snapshot materialization.
+	$existing = axismundi_act_get_relation( 'follow', $subject_uri, $object_uri );
+	if ( is_array( $existing ) && 'activity' === (string) ( $existing['evidence_type'] ?? 'activity' ) ) {
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $existing;
+	}
+	if ( is_array( $existing ) && 'accepted' === (string) $existing['state'] && 'legacy_pending' === $state ) {
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $existing;
+	}
+	$resolved_state = is_array( $existing ) && 'accepted' === (string) $existing['state'] ? 'accepted' : $state;
+	$relation = axismundi_act_write_relation( 'follow', $subject_uri, $object_uri, $direction, $resolved_state, null, null, 'legacy_snapshot', $evidence_ref );
+	if ( is_wp_error( $relation ) ) {
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $relation;
+	}
+	$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	return $relation;
 }
 
 /** Transition a relation only when the referenced initiating Activity still owns it. */

@@ -31,7 +31,7 @@ try {
 	$table = axismundi_act_activities_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies schema v3.
 	$source_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'source_event_hash'", ARRAY_A );
-	ax_create_assert( $ax_create_results, 'schema v3 verifies a unique source-event identity', '3' === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $source_index ) && 0 === (int) $source_index[0]['Non_unique'] );
+	ax_create_assert( $ax_create_results, 'schema v3+ verifies a unique source-event identity', (int) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) >= 3 && ! empty( $source_index ) && 0 === (int) $source_index[0]['Non_unique'] );
 
 	$admins    = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
 	$author_id = isset( $admins[0] ) ? (int) $admins[0] : 0;

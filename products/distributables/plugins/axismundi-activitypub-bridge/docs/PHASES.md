@@ -44,3 +44,12 @@ Inspect official `ap_actor`, `ap_post`, `ap_inbox`, `ap_outbox`, follower snapsh
 purge decisions independently without writes, network requests, payload rendering, import,
 or deletion. Keep `ap_actor` runtime-required while official signature verification resolves
 public keys through that cache. Import follows in 0.0.8; fail-closed purge follows separately.
+
+## 0.0.8 — Legacy import and verification
+
+Require an explicit administrator confirmation and a complete bounded preflight. Import remote
+Actors, remote Objects, and verified Inbox history in dependency order through their public
+repository APIs, then read each identity back immediately. Preserve existing Axismundi caches,
+derive Follow state only by replaying Inbox Activities, and keep every official source row.
+Network requests, key copying, follower-snapshot writes, lifecycle synthesis, and purge remain
+disabled. The operation is retryable and URI-keyed.

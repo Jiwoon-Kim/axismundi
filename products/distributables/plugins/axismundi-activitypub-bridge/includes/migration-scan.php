@@ -158,7 +158,7 @@ function axismundi_activitypub_bridge_scan_legacy_inbox( array &$report, array $
 		$object_uri   = is_array( $payload ) ? axismundi_act_member_uri( $payload['object'] ?? '' ) : '';
 		$recipients   = array_map( 'intval', get_post_meta( $post->ID, '_activitypub_user_id', false ) );
 		$missing_local = array_filter( $recipients, static fn( int $user_id ) : bool => ! axismundi_activitypub_bridge_legacy_local_actor( $user_id ) instanceof Axismundi_Actor );
-		if ( '' === $activity_uri || '' === $actor_uri || '' === $type || '' === $object_uri || ! empty( $missing_local ) ) {
+		if ( '' === $activity_uri || '' === $actor_uri || '' === $type || '' === $object_uri || empty( $recipients ) || ! empty( $missing_local ) ) {
 			axismundi_activitypub_bridge_legacy_add_row( $report, 'ap_inbox', (string) $post->ID, $activity_uri, 'failed', 'blocked', __( 'The Activity id, actor, object, type, or local recipient mapping is incomplete.', 'axismundi-activitypub-bridge' ) );
 			continue;
 		}

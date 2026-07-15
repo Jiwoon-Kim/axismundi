@@ -1,7 +1,7 @@
 # Axismundi ActivityPub Bridge
 
-> Status: **0.0.7 verified Inbox handoff, Actor transport fields, official external
-> delivery spool integration, and read-only legacy storage dry scan implemented.**
+> Status: **0.0.8 verified Inbox handoff, Actor transport fields, official external
+> delivery spool integration, and explicit legacy import/verification implemented.**
 
 ## Purpose
 

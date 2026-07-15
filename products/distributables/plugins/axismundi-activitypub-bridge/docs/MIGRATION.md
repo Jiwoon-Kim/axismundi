@@ -1,12 +1,14 @@
 # Legacy ActivityPub migration contract
 
-> Status: **0.0.7 dry scan shipped. Import and purge are disabled.**
+> Status: **0.0.8 import and immediate verification shipped. Purge is disabled.**
 
 ## Ownership
 
 The Bridge owns migration because it is the only package allowed to understand both the
 official ActivityPub plugin's CPT/postmeta model and Axismundi's URI-keyed repositories.
-The scanner reads stored data only. It performs no remote discovery or refresh.
+The scanner reads stored data only. Import uses existing repository APIs and performs no remote
+discovery or refresh. It writes only missing supported Axismundi rows and never changes an
+existing cache from an older official snapshot.
 
 ## Independent decisions
 
@@ -42,3 +44,15 @@ An importable or duplicate row is not necessarily safe to purge.
    dataset and fails closed on blocked, failed, ambiguous, or truncated results.
 6. Official private/public key material is never rendered, copied into migration reports,
    or deleted while the official plugin remains the signing implementation.
+
+## Import scope (0.0.8)
+
+The explicit administrator action requires typing `IMPORT`. A complete, non-truncated dry
+preflight runs first, then the Bridge processes Actors, Objects, and Inbox Activities in that
+order. Each write is immediately read back and verified by canonical URI plus the strongest
+available type or payload-hash assertion. A failed row remains visible in the result and can be
+retried safely. Partial success is intentional: repositories own their own transactions and a
+repeat import converges without duplicate identities.
+
+Follower snapshots, transport Outbox rows, lifecycle markers, extra fields, comments, and
+signing keys remain analysis-only. Source deletes are always zero in this release.

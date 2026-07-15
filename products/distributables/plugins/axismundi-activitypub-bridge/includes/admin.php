@@ -28,6 +28,28 @@ function axismundi_activitypub_bridge_requested_legacy_report() : ?array {
 	return axismundi_activitypub_bridge_scan_legacy_data();
 }
 
+/** Run the explicit import after an exact typed confirmation. */
+function axismundi_activitypub_bridge_requested_legacy_import() : ?array {
+	if ( ! isset( $_POST['ax_bridge_legacy_import'] ) ) {
+		return null;
+	}
+	check_admin_referer( 'ax_bridge_legacy_import' );
+	$confirmation = isset( $_POST['ax_bridge_legacy_confirmation'] ) ? sanitize_text_field( wp_unslash( $_POST['ax_bridge_legacy_confirmation'] ) ) : '';
+	if ( 'IMPORT' !== $confirmation ) {
+		return array(
+			'generated_at'     => current_time( 'mysql', true ),
+			'official_version' => defined( 'ACTIVITYPUB_PLUGIN_VERSION' ) ? ACTIVITYPUB_PLUGIN_VERSION : '',
+			'summary'          => array( 'preflight' => array( 'failed' => 1 ) ),
+			'rows'             => array( array( 'source' => 'preflight', 'source_id' => 'confirmation', 'identity' => '', 'status' => 'failed', 'detail' => __( 'Type IMPORT exactly to run the migration.', 'axismundi-activitypub-bridge' ) ) ),
+			'writes'           => 0,
+			'deletes'          => 0,
+			'network_requests' => 0,
+			'complete'         => false,
+		);
+	}
+	return axismundi_activitypub_bridge_import_legacy_data();
+}
+
 /** Compact classification counts for one report axis. */
 function axismundi_activitypub_bridge_report_counts( array $counts ) : string {
 	ksort( $counts );
@@ -39,14 +61,58 @@ function axismundi_activitypub_bridge_report_counts( array $counts ) : string {
 }
 
 /** Render the migration dry-run controls and optional ephemeral report. */
-function axismundi_activitypub_bridge_render_legacy_scan( ?array $report ) : void {
+function axismundi_activitypub_bridge_render_legacy_scan( ?array $report, ?array $import_result = null ) : void {
 	?>
 	<h2><?php esc_html_e( 'Legacy ActivityPub migration', 'axismundi-activitypub-bridge' ); ?></h2>
-	<p><?php esc_html_e( 'Scan official ActivityPub storage without importing, deleting, fetching, or changing any row. Import and purge remain disabled in this release.', 'axismundi-activitypub-bridge' ); ?></p>
+	<p><?php esc_html_e( 'Scan official ActivityPub storage without changing any row, then explicitly import supported Actor, Object, and Inbox records through Axismundi repositories. Import never deletes official rows or performs network requests. Purge remains disabled.', 'axismundi-activitypub-bridge' ); ?></p>
 	<form method="post">
 		<?php wp_nonce_field( 'ax_bridge_legacy_scan' ); ?>
 		<?php submit_button( __( 'Run migration dry scan', 'axismundi-activitypub-bridge' ), 'secondary', 'ax_bridge_legacy_scan', false ); ?>
 	</form>
+	<form method="post" style="margin-top: 1em;">
+		<?php wp_nonce_field( 'ax_bridge_legacy_import' ); ?>
+		<label for="ax-bridge-legacy-confirmation"><?php esc_html_e( 'Type IMPORT to import and verify supported rows:', 'axismundi-activitypub-bridge' ); ?></label>
+		<input id="ax-bridge-legacy-confirmation" name="ax_bridge_legacy_confirmation" type="text" autocomplete="off" value="">
+		<?php submit_button( __( 'Import and verify', 'axismundi-activitypub-bridge' ), 'primary', 'ax_bridge_legacy_import', false ); ?>
+	</form>
+	<?php if ( is_array( $import_result ) ) : ?>
+		<h3><?php esc_html_e( 'Import result', 'axismundi-activitypub-bridge' ); ?></h3>
+		<p>
+			<strong><?php echo esc_html( ! empty( $import_result['complete'] ) ? __( 'Complete', 'axismundi-activitypub-bridge' ) : __( 'Incomplete', 'axismundi-activitypub-bridge' ) ); ?></strong>
+			<?php
+			echo esc_html(
+				sprintf(
+					/* translators: 1: writes, 2: deletes, 3: network requests. */
+					__( 'Repository writes: %1$d. Source deletes: %2$d. Network requests: %3$d.', 'axismundi-activitypub-bridge' ),
+					(int) $import_result['writes'],
+					(int) $import_result['deletes'],
+					(int) $import_result['network_requests']
+				)
+			);
+			?>
+		</p>
+		<table class="widefat striped">
+			<thead><tr><th><?php esc_html_e( 'Source', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Result', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+			<tbody>
+			<?php foreach ( $import_result['summary'] as $source => $counts ) : ?>
+				<tr><td><code><?php echo esc_html( (string) $source ); ?></code></td><td><?php echo esc_html( axismundi_activitypub_bridge_report_counts( (array) $counts ) ); ?></td></tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<table class="widefat striped" style="margin-top: 1em;">
+			<thead><tr><th><?php esc_html_e( 'Source row', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Canonical identity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Verification', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+			<tbody>
+			<?php foreach ( $import_result['rows'] as $row ) : ?>
+				<tr>
+					<td><code><?php echo esc_html( $row['source'] . ':' . $row['source_id'] ); ?></code></td>
+					<td><code><?php echo esc_html( '' !== $row['identity'] ? $row['identity'] : '—' ); ?></code></td>
+					<td><code><?php echo esc_html( $row['status'] ); ?></code></td>
+					<td><?php echo esc_html( $row['detail'] ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
 	<?php if ( ! is_array( $report ) ) : return; endif; ?>
 	<p><strong><?php esc_html_e( 'Result:', 'axismundi-activitypub-bridge' ); ?></strong>
 		<?php
@@ -147,12 +213,13 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		)
 	);
 	$legacy_report = axismundi_activitypub_bridge_requested_legacy_report();
+	$legacy_import = axismundi_activitypub_bridge_requested_legacy_import();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ); ?></h1>
 		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The official ActivityPub plugin verifies Inbox signatures and operates this outbound transport queue.', 'axismundi-activitypub-bridge' ); ?></p>
 
-		<?php axismundi_activitypub_bridge_render_legacy_scan( $legacy_report ); ?>
+		<?php axismundi_activitypub_bridge_render_legacy_scan( $legacy_report, $legacy_import ); ?>
 
 		<h2><?php esc_html_e( 'Endpoints', 'axismundi-activitypub-bridge' ); ?></h2>
 		<p><strong><?php esc_html_e( 'Shared Inbox', 'axismundi-activitypub-bridge' ); ?>:</strong> <code><?php echo esc_html( axismundi_activitypub_bridge_shared_inbox_url() ); ?></code></p>

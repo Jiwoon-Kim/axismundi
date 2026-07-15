@@ -38,7 +38,11 @@ ax_bridge_assert( $ax_bridge_results, 'the official outbox processor was never r
 
 $ax_bridge_inbox = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
 $ax_bridge_block = axismundi_activitypub_bridge_block_unclaimed_inbox( null, rest_get_server(), $ax_bridge_inbox );
-ax_bridge_assert( $ax_bridge_results, 'unclaimed shared Inbox writes fail closed with 503', is_wp_error( $ax_bridge_block ) && 503 === (int) $ax_bridge_block->get_error_data()['status'] );
+if ( function_exists( 'Activitypub\\handle_verified_inbox' ) ) {
+	ax_bridge_assert( $ax_bridge_results, 'the patched verified handoff replaces the pre-verification 503 guard', null === $ax_bridge_block );
+} else {
+	ax_bridge_assert( $ax_bridge_results, 'stock shared Inbox writes fail closed with 503', is_wp_error( $ax_bridge_block ) && 503 === (int) $ax_bridge_block->get_error_data()['status'] );
+}
 
 $ax_bridge_actor_inbox = new WP_REST_Request( 'POST', '/activitypub/1.0/actors/1/inbox' );
 ax_bridge_assert( $ax_bridge_results, 'unclaimed Actor Inbox writes are recognized', axismundi_activitypub_bridge_is_inbox_request( $ax_bridge_actor_inbox ) );

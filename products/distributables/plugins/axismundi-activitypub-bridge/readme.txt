@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -16,15 +16,20 @@ Connects Axismundi domain stores to supported S2S transport extension points in 
 This package is the only intended dependency boundary between Axismundi and the official
 ActivityPub plugin. Actors, Object Projections, and Activities remain independently usable.
 
-Version 0.0.3 uses the patched official plugin's module gate to retain only Signature, REST
-Server, and Inbox routes. Stock releases use a callback-removal fallback. Axismundi owns
-profiles, object negotiation, and local Activity lifecycle records. Cached rewrites are rebuilt
-once under Axismundi ownership. Inbox writes return 503 before signature lookup until a verified
-handoff can claim them safely.
+Version 0.0.4 uses the patched official plugin's module gate to retain only Signature, REST
+Server, and Inbox routes. After the official permission callback verifies the HTTP signature,
+the bridge claims Activities addressed to public local Axismundi Actors and records them in the
+Axismundi Activity ledger. Official domain handlers and persistence remain dormant. Stock
+ActivityPub releases have no verified handoff API and therefore retain the fail-closed 503 guard.
 
-Inbound handoff and outbound transport will be added only against supported upstream APIs.
+Outbound transport will be added only against a supported upstream API.
 
 == Changelog ==
+
+= 0.0.4 =
+* Claim signature-verified Inbox Activities through the patched upstream handoff.
+* Resolve local recipients and remote Actors before recording in the Axismundi ledger.
+* Bypass official domain handlers and persistence while retaining signature verification.
 
 = 0.0.3 =
 * Use the upstream module gate with a minimum explicit allowlist.

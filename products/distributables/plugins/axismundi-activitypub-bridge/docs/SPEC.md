@@ -1,6 +1,6 @@
 # Axismundi ActivityPub Bridge
 
-> Status: **0.0.5 verified Inbox handoff, Actor transport fields, Bridge Outbox, and
+> Status: **0.0.6 verified Inbox handoff, Actor transport fields, and
 > official external delivery spool integration implemented.**
 
 ## Purpose
@@ -11,9 +11,11 @@ repositories to supported network-facing extension points in the official Activi
 ## Ownership
 
 - **Axismundi Actors** owns Actor identities and local profile presentation.
-- **Object Projections** owns Actor and object JSON-LD representations and remote object observations.
+- **Object Projections** owns Actor, object, and public collection JSON-LD representations,
+  including the Actor Outbox GET route.
 - **Activities** owns the immutable Activity ledger and local social relationship state.
-- **This bridge** owns Inbox/Outbox semantics, endpoint declarations, and transport mapping.
+- **This bridge** owns verified Inbox handoff, transport endpoint declarations, signing
+  identity mapping, and outbound queue handoff.
 - **The official ActivityPub plugin** owns HTTP signatures, verified Inbox parsing, shared
   inbox delivery, queues, retry, and interoperability.
 - **This bridge** translates between those APIs and owns no authoritative domain table.

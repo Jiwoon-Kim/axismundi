@@ -44,7 +44,8 @@ Standalone mode (no official plugin) uses the plain stable ids in ROUTING.md §2
 | Identity / profile / repository      | Axismundi Actors              |
 | Object → AS mapping (transformers)   | Axismundi Object Projections  |
 | Actor JSON-LD representation          | Axismundi Object Projections |
-| Inbox/outbox semantics and routes      | Axismundi ActivityPub Bridge |
+| Public Outbox representation and GET route | Axismundi Object Projections |
+| Verified Inbox writes and S2S transport | Axismundi ActivityPub Bridge |
 | Signature verification / HTTP delivery | Official ActivityPub plugin  |
 | Content negotiation on the URL       | Official ActivityPub plugin (via its extension points) |
 

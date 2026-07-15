@@ -14,6 +14,8 @@ Phase 2c explicit representation selector            — shipped (0.0.3): ?activ
                                                        for browser inspection; id unchanged
 Phase 2d Axismundi Actor representation              — shipped (0.0.9): Actor URL JSON-LD;
                                                        Bridge supplies transport fields only
+Phase 2e Actor public Outbox representation          — shipped (0.0.10): neutral REST URI;
+                                                       Activities public-safe query contract
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous
@@ -37,7 +39,7 @@ automatically disables it when the official ActivityPub plugin is active.
 
 ```
 Object Projections (this, including remote projection substrate)
-  → axismundi-activities (Actor outbox + Create/Update/Delete store)
+  → axismundi-activities (public Outbox query + Create/Update/Delete store)
   → axismundi-notes
   → axismundi-federation → official ActivityPub compatibility adapter spike
 ```

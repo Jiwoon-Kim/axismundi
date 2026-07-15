@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.9
+Stable tag: 0.0.10
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -17,13 +17,15 @@ or Axismundi Actor into an ActivityStreams 2.0 object or collection, so its exis
 with JSON-LD under content negotiation. It owns representation only — a transformer registry,
 object/collection URIs, and the single JSON-LD renderer.
 
-It does not own an Activity ledger, inbox/outbox, Follow/Like, HTTP signatures, or delivery;
-those belong to Axismundi Activities and Axismundi Federation. It works standalone and treats
+It does not own an Activity ledger, Inbox writes, Follow/Like state, HTTP signatures, or delivery;
+those belong to Axismundi Activities and the ActivityPub transport boundary. It does own public
+read representations such as an Actor Outbox. It works standalone and treats
 the official ActivityPub plugin as optional (see docs/COMPATIBILITY.md).
 
 This release also ships standalone content negotiation on the existing WordPress URL,
 the Core Post → Article transformer, and an optional first-party Axismundi Media Library
-attachment adapter. It creates no custom rewrite or REST route.
+attachment adapter. It creates no custom rewrite. The Actor Outbox uses a stable, read-only
+REST collection URI.
 When the official ActivityPub plugin is active, the standalone negotiator turns itself off
 so a future adapter can preserve that plugin's established object ids.
 
@@ -36,12 +38,19 @@ remote media is never hotlinked or downloaded.
 
 == Changelog ==
 
+= 0.0.10 =
+* Own the public Actor Outbox representation and neutral `axismundi/v1` read route through
+  the collection-transformer registry, backed by Activities public-safe queries.
+* Advertise Outbox from the Actor document without requiring the ActivityPub Bridge.
+* Prevent transport filters from overriding Outbox identity; retain Inbox, sharedInbox, and
+  publicKey as Bridge-supplied transport properties.
+
 = 0.0.9 =
 * Project public local Axismundi Actor URLs as Person, Application, Organization, Group,
   or Service JSON-LD through the same renderer and content-negotiation surface.
 * Keep Actor representation ownership here while allowing the ActivityPub Bridge to add
-  only transport properties such as inbox, outbox, sharedInbox, and publicKey.
-* Keep Inbox/Outbox routes, Activity data, signatures, queues, and delivery outside this plugin.
+  transport properties such as inbox, sharedInbox, and publicKey.
+* Keep Inbox writes, Activity data, signatures, queues, and delivery outside this plugin.
 
 = 0.0.8 =
 * Emit an idempotent Core Post publish candidate from `wp_after_insert_post`, after terms

@@ -1,14 +1,14 @@
 # Axismundi Object Projections — specification
 
-> Status: **Phases 0–5a implemented** (local projections, metadata-only remote
-> discovery/cache inspection). No custom rewrite, REST route, Activity
+> Status: **Phases 0–5b implemented** (local projections, Actor Outbox, metadata-only remote
+> discovery/cache inspection). No Activity
 > ledger, or transport. This package owns the projection contract and representation.
 
 ## 1. Purpose
 
 Project a WordPress object (post, attachment, archive, folder) into an ActivityStreams
 2.0 object or `OrderedCollection`, so the existing WordPress URL can answer with JSON-LD
-under content negotiation. It does **not** own an Activity store, inbox/outbox, Follow /
+under content negotiation. It does **not** own an Activity store, Inbox writes, Follow /
 Like, signatures, delivery, or the objects' own storage.
 
 ```
@@ -23,6 +23,7 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 - Object / collection URIs (the stable AS `id`).
 - ActivityStreams JSON-LD serialization and the single `@context` assembly.
 - Object/collection representation + content negotiation on the existing URL.
+- Public read routes for representation-owned collections such as Actor Outbox.
 - The Core Post → `Article` transformer.
 - First-party integration adapters that translate stable domain service APIs into
   ActivityStreams semantics (currently Axismundi Media Library attachments).
@@ -33,7 +34,7 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 
 **Does not own**
 
-- `wp_ax_activities`, inbox/outbox, Follow/Like/Announce, signatures, delivery, retry.
+- `wp_ax_activities`, Inbox writes, Follow/Like/Announce state, signatures, delivery, retry.
 - Note / media object storage itself (the domain plugins own it).
 - Authority over a remote canonical object: its URI remains the source identity and a
   local projection row is only a refreshable cache, never a replacement identity.

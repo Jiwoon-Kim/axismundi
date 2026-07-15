@@ -7,11 +7,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Bridge-owned outbox URL for one immutable local Actor identity. */
-function axismundi_activitypub_bridge_outbox_url( Axismundi_Actor $actor ) : string {
-	return rest_url( 'axismundi-activitypub/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/outbox' );
-}
-
 /** Official signature-verified Inbox URL claimed by the Bridge after verification. */
 function axismundi_activitypub_bridge_inbox_url( Axismundi_Actor $actor ) : string {
 	$user_id = $actor->get_local_user_id();
@@ -59,7 +54,6 @@ function axismundi_activitypub_bridge_actor_transport_fields( array $fields, Axi
 		$fields,
 		array(
 			'inbox'     => axismundi_activitypub_bridge_inbox_url( $actor ),
-			'outbox'    => axismundi_activitypub_bridge_outbox_url( $actor ),
 			'endpoints' => array( 'sharedInbox' => axismundi_activitypub_bridge_shared_inbox_url() ),
 		)
 	);
@@ -73,72 +67,6 @@ function axismundi_activitypub_bridge_actor_transport_fields( array $fields, Axi
 	return $fields;
 }
 add_filter( 'axismundi_op_actor_transport_fields', 'axismundi_activitypub_bridge_actor_transport_fields', 10, 2 );
-
-/** Register the Bridge-owned Actor outbox route. */
-function axismundi_activitypub_bridge_register_routes() : void {
-	register_rest_route(
-		'axismundi-activitypub/v1',
-		'/actors/(?P<uuid>[0-9a-f-]{36})/outbox',
-		array(
-			'methods'             => WP_REST_Server::READABLE,
-			'callback'            => 'axismundi_activitypub_bridge_get_outbox',
-			'permission_callback' => '__return_true',
-			'args'                => array(
-				'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ),
-			),
-		)
-	);
-}
-add_action( 'rest_api_init', 'axismundi_activitypub_bridge_register_routes' );
-
-/** Public-safe Activity payload, or null when the Activity is not publicly addressed. */
-function axismundi_activitypub_bridge_public_activity( Axismundi_Activity $activity ) : ?array {
-	$public   = 'https://www.w3.org/ns/activitystreams#Public';
-	$audience = $activity->get_audience();
-	$visible  = in_array( $public, (array) ( $audience['to'] ?? array() ), true )
-		|| in_array( $public, (array) ( $audience['cc'] ?? array() ), true );
-	if ( ! $visible ) {
-		return null;
-	}
-	$payload = $activity->get_payload();
-	unset( $payload['bto'], $payload['bcc'] );
-	return $payload;
-}
-
-/** Serve the recent effective outbound Activity ledger as an OrderedCollection. */
-function axismundi_activitypub_bridge_get_outbox( WP_REST_Request $request ) {
-	$actor = axismundi_actors_get_by_uuid( strtolower( (string) $request['uuid'] ) );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
-		return new WP_Error( 'ax_bridge_outbox_not_found', __( 'The Actor outbox was not found.', 'axismundi-activitypub-bridge' ), array( 'status' => 404 ) );
-	}
-	$items = array();
-	foreach ( axismundi_act_get_by_actor( $actor->get_uri(), 200 ) as $activity ) {
-		if ( $activity instanceof Axismundi_Activity && 'outbound' === $activity->get_direction() && $activity->is_effective() ) {
-			$payload = axismundi_activitypub_bridge_public_activity( $activity );
-			if ( is_array( $payload ) ) {
-				$items[] = $payload;
-			}
-		}
-	}
-	$id         = axismundi_activitypub_bridge_outbox_url( $actor );
-	$collection = axismundi_op_finalize_object(
-		array(
-			'id'           => $id,
-			'type'         => 'OrderedCollection',
-			'attributedTo' => $actor->get_uri(),
-			'url'          => $actor->get_profile_url(),
-			'orderedItems' => $items,
-		),
-		$id
-	);
-	if ( is_wp_error( $collection ) ) {
-		return $collection;
-	}
-	$response = rest_ensure_response( $collection );
-	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
-	$response->header( 'Cache-Control', 'public, max-age=60' );
-	return $response;
-}
 
 /** Resolve private signing material only while the official worker is sending. */
 function axismundi_activitypub_bridge_resolve_signing_identity( $identity, array $descriptor ) {

@@ -34,7 +34,7 @@ remove_all_filters( 'axismundi_op_actor_transport_fields' );
 ax_actor_projection_assert( $ax_actor_projection_results, 'the Actors plugin supplies a site Actor source', $actor instanceof Axismundi_Actor );
 ax_actor_projection_assert( $ax_actor_projection_results, 'Actor projection owns immutable identity and ignores a transport id override', is_array( $raw ) && $actor->get_uri() === $raw['id'] && $actor->get_type() === $raw['type'] );
 ax_actor_projection_assert( $ax_actor_projection_results, 'Actor finalization does not require attributedTo', is_array( $finalized ) && ! isset( $finalized['attributedTo'] ) );
-ax_actor_projection_assert( $ax_actor_projection_results, 'transport fields may supply inbox, outbox, sharedInbox, and publicKey', is_array( $finalized ) && isset( $finalized['inbox'], $finalized['outbox'], $finalized['endpoints']['sharedInbox'], $finalized['publicKey'] ) );
+ax_actor_projection_assert( $ax_actor_projection_results, 'transport fields may supply inbox, sharedInbox, and publicKey but cannot override the representation-owned outbox', is_array( $finalized ) && isset( $finalized['inbox'], $finalized['outbox'], $finalized['endpoints']['sharedInbox'], $finalized['publicKey'] ) && axismundi_op_actor_outbox_url( $actor ) === $finalized['outbox'] );
 
 $failures = count( array_filter( $ax_actor_projection_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

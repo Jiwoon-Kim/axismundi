@@ -26,7 +26,13 @@ domain handlers/persistence exactly once.
 
 ## 0.0.5 — Actor transport and external delivery
 
-Keep Actor JSON-LD in Object Projections and inject only Inbox, Bridge Outbox,
-sharedInbox, and publicKey fields. Submit complete Axismundi payloads, URI-backed signing
+Keep Actor JSON-LD in Object Projections and inject only Inbox, sharedInbox, and publicKey
+fields. Submit complete Axismundi payloads, URI-backed signing
 Actors, and explicit recipient inboxes through the supported official delivery API. The
 official plugin remains queue/retry owner and its spool is never authoritative domain state.
+
+## 0.0.6 — Representation ownership correction
+
+Move the public Actor Outbox collection and GET route to Object Projections. Bridge retains
+only surfaces that require the official plugin: verified Inbox handoff, transport endpoints,
+signing identity resolution, queue handoff, retry, and HTTP delivery.

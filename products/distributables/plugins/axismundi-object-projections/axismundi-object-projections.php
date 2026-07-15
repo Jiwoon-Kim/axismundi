@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Axismundi Object Projections
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-object-projections
- * Description:       Projects WordPress objects (posts, media, collections) into ActivityStreams JSON-LD through a transformer registry and a single renderer. Representation only — it owns no Activity store, inbox/outbox, signatures, or delivery.
- * Version:           0.0.9
+ * Description:       Projects WordPress objects, Actors, and collections into ActivityStreams JSON-LD through a transformer registry and a single renderer. It owns representation and public read routes, not Activity state, Inbox writes, signatures, or delivery.
+ * Version:           0.0.10
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -15,13 +15,13 @@
  * @package AxismundiObjectProjections
  *
  * Local object projection plus the URI-keyed remote observation repository are
- * implemented. There is deliberately no custom rewrite, REST route, Activity store,
- * inbox/outbox, signature handling, or delivery.
+ * implemented. Public representation routes may be exposed for collections, but there is
+ * deliberately no Activity store, Inbox write handling, signature handling, or delivery.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_VERSION = '0.0.9';
+const AXISMUNDI_OP_VERSION = '0.0.10';
 
 require_once __DIR__ . '/includes/remote-objects.php';
 require_once __DIR__ . '/includes/remote-fetch.php';

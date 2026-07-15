@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.5
+Stable tag: 0.0.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -16,21 +16,27 @@ Connects Axismundi domain stores to supported S2S transport extension points in 
 This package is the only intended dependency boundary between Axismundi and the official
 ActivityPub plugin. Actors, Object Projections, and Activities remain independently usable.
 
-Version 0.0.5 uses the patched official plugin's module gate to retain only Signature, REST
+Version 0.0.6 uses the patched official plugin's module gate to retain only Signature, REST
 Server, and Inbox routes. After the official permission callback verifies the HTTP signature,
 the bridge claims Activities addressed to public local Axismundi Actors and records them in the
 Axismundi Activity ledger. Official domain handlers and persistence remain dormant. Stock
 ActivityPub releases have no verified handoff API and therefore retain the fail-closed 503 guard.
 
-Outbound transport will be added only against a supported upstream API.
+Outbound Activities use the supported external-delivery API in the patched official plugin;
+the official spool remains transport-only and Axismundi Activities remains authoritative.
 
 == Changelog ==
 
+= 0.0.6 =
+* Move public Actor Outbox representation and its GET route to Object Projections.
+* Keep Bridge ownership limited to Inbox/sharedInbox/publicKey transport fields, verified
+  Inbox handoff, signing identity resolution, and outbound delivery.
+* Continue showing the Object Projections-owned Outbox URL in the transport inspector.
+
 = 0.0.5 =
-* Supply inbox, Bridge-owned outbox, sharedInbox, and publicKey transport properties to
+* Supply inbox, sharedInbox, and publicKey transport properties to
   the Object Projections-owned Actor JSON-LD representation.
-* Add public Actor outbox OrderedCollections backed by the authoritative Axismundi
-  Activities ledger and a read-only Tools > ActivityPub Bridge inspector.
+* Add a read-only Tools > ActivityPub Bridge inspector.
 * Queue complete outbound Activities through the official plugin's external transport
   spool. Persist only a private-key reference; resolve signing material at send time.
 

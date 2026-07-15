@@ -62,9 +62,10 @@ ActivityPub adapter must use the former to retain that plugin's per-post legacy 
 Public local `Axismundi_Actor` values project at their immutable Actor URI. Object
 Projections owns the Actor document and its identity/profile fields. The optional
 `axismundi_op_actor_transport_fields` filter accepts only protocol transport members
-(`inbox`, `outbox`, follow collections, `endpoints`, and `publicKey`); it cannot replace
-the Actor `id`, `type`, or human profile `url`. Object Projections owns no Inbox or
-Outbox route and never reads the Activity ledger for this transformer.
+(`inbox`, follow collections, `endpoints`, and `publicKey`); it cannot replace the Actor
+`id`, `type`, human profile `url`, or Outbox. The Actor transformer advertises the
+representation-owned Outbox when Activities exposes its public query API. That Outbox is
+a separate collection transformer and never reads or mutates the Activity table directly.
 
 ## First-party Media Library adapter (0.0.4)
 

@@ -79,11 +79,11 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<h2><?php esc_html_e( 'Endpoints', 'axismundi-activitypub-bridge' ); ?></h2>
 		<p><strong><?php esc_html_e( 'Shared Inbox', 'axismundi-activitypub-bridge' ); ?>:</strong> <code><?php echo esc_html( axismundi_activitypub_bridge_shared_inbox_url() ); ?></code></p>
 		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Inbox', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Outbox', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Signing key', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
-		<?php foreach ( axismundi_activitypub_bridge_public_actors() as $actor ) : $sender = axismundi_activitypub_bridge_sender( $actor ); ?>
+		<?php foreach ( axismundi_activitypub_bridge_public_actors() as $actor ) : $sender = axismundi_activitypub_bridge_sender( $actor ); $outbox = function_exists( 'axismundi_op_actor_outbox_url' ) ? axismundi_op_actor_outbox_url( $actor ) : ''; ?>
 			<tr>
 				<td><a href="<?php echo esc_url( $actor->get_profile_url() ); ?>"><code><?php echo esc_html( $actor->get_uri() ); ?></code></a></td>
 				<td><code><?php echo esc_html( axismundi_activitypub_bridge_inbox_url( $actor ) ); ?></code></td>
-				<td><a href="<?php echo esc_url( axismundi_activitypub_bridge_outbox_url( $actor ) ); ?>"><code><?php echo esc_html( axismundi_activitypub_bridge_outbox_url( $actor ) ); ?></code></a></td>
+				<td><?php if ( '' !== $outbox ) : ?><a href="<?php echo esc_url( $outbox ); ?>"><code><?php echo esc_html( $outbox ); ?></code></a><?php else : ?>—<?php endif; ?></td>
 				<td><code><?php echo esc_html( $sender['key_id'] ); ?></code></td>
 			</tr>
 		<?php endforeach; ?>

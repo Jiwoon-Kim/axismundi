@@ -207,7 +207,9 @@ function axismundi_act_audience( array $payload ) : array {
 		$members = is_array( $members ) && array_is_list( $members ) ? $members : array( $members );
 		$uris    = array();
 		foreach ( $members as $member ) {
-			$uri = axismundi_act_member_uri( $member );
+			$uri = is_scalar( $member ) && 'as:Public' === (string) $member
+				? 'as:Public'
+				: axismundi_act_member_uri( $member );
 			if ( '' !== $uri ) {
 				$uris[] = $uri;
 			}
@@ -262,6 +264,42 @@ function axismundi_act_get( string $activity_uri ) : ?Axismundi_Activity {
 /** Query recent activities by one exact Actor URI. */
 function axismundi_act_get_by_actor( string $actor_uri, int $limit = 50 ) : array {
 	return axismundi_act_get_by_reference( 'actor', $actor_uri, $limit );
+}
+
+/** Whether one effective outbound Activity is addressed to the public. */
+function axismundi_act_is_public( Axismundi_Activity $activity ) : bool {
+	if ( 'outbound' !== $activity->get_direction() || ! $activity->is_effective() ) {
+		return false;
+	}
+	$audience = $activity->get_audience();
+	$public   = array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' );
+	return (bool) array_intersect( $public, (array) ( $audience['to'] ?? array() ) )
+		|| (bool) array_intersect( $public, (array) ( $audience['cc'] ?? array() ) );
+}
+
+/** Public-safe payload copy; the lossless ledger payload remains unchanged. */
+function axismundi_act_public_payload( Axismundi_Activity $activity ) : ?array {
+	if ( ! axismundi_act_is_public( $activity ) ) {
+		return null;
+	}
+	$payload = $activity->get_payload();
+	unset( $payload['bto'], $payload['bcc'] );
+	return $payload;
+}
+
+/** Public-safe recent outbound payloads for an Actor's Outbox projection. */
+function axismundi_act_get_public_outbox( string $actor_uri, int $limit = 200 ) : array {
+	$items = array();
+	foreach ( axismundi_act_get_by_actor( $actor_uri, $limit ) as $activity ) {
+		if ( ! $activity instanceof Axismundi_Activity ) {
+			continue;
+		}
+		$payload = axismundi_act_public_payload( $activity );
+		if ( is_array( $payload ) ) {
+			$items[] = $payload;
+		}
+	}
+	return $items;
 }
 
 /** Query recent activities by one exact Object URI. */

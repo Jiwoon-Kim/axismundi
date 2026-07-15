@@ -38,22 +38,28 @@ per object lifecycle generation. DB v3 adds a verified source-event identity for
 concurrency idempotency. Draft/password/media writes remain silent; no HTTP or delivery.
 Reply is deferred until the Notes CPT defines canonical local Note objects.
 
+## 0.0.7 — Phase 2.4: public Outbox query contract (shipped)
+
+Expose public-safe effective outbound Activity payloads by Actor URI. Preserve the lossless
+ledger while stripping `bto`/`bcc` from projection copies and recognizing both the full Public
+IRI and `as:Public`. Activities owns no HTTP route; Object Projections owns serialization.
+
 ## Prerequisite — Object Projections lease substrate
 
 Before Phase 3, Object Projections ships multi-reason object leases. Activities only consumes
 its feature-detected API.
 
-## 0.0.7 — Phase 3: Like, Announce, Undo
+## 0.0.8 — Phase 3: Like, Announce, Undo
 
 URI-referenced reactions, idempotent aggregate queries, Undo transitions, and optional
 `interaction` lease declarations for remote objects.
 
-## 0.0.8 — Phase 4: logical inbox/outbox membership
+## 0.0.9 — Phase 4: logical inbox/outbox membership
 
 Actor-scoped inbox/outbox memberships and collection query services. Object Projections may
 serialize collections; Federation serves HTTP. Notifications are explicitly excluded.
 
-## 0.0.9 — Phase 5: Add, Remove, Move, Join, Leave
+## 0.0.10 — Phase 5: Add, Remove, Move, Join, Leave
 
 Collection/community operations for saved media, shared folders, and managed Group workflows,
 plus optional `collection` leases. Domain plugins continue to own collection membership data.

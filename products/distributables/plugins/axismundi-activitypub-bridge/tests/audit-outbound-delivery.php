@@ -40,14 +40,14 @@ try {
 	}
 
 	$fields = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_actor_transport_fields( array(), $local ) : array();
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Bridge supplies Inbox, Outbox, sharedInbox, and publicKey transport fields', isset( $fields['inbox'], $fields['outbox'], $fields['endpoints']['sharedInbox'], $fields['publicKey']['publicKeyPem'] ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Bridge supplies Inbox, sharedInbox, and publicKey but does not own Outbox representation', isset( $fields['inbox'], $fields['endpoints']['sharedInbox'], $fields['publicKey']['publicKeyPem'] ) && ! isset( $fields['outbox'] ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'publicKey owner and id use the Axismundi Actor identity', $local instanceof Axismundi_Actor && $local->get_uri() === $fields['publicKey']['owner'] && $local->get_uri() . '#main-key' === $fields['publicKey']['id'] );
 
-	$request = new WP_REST_Request( 'GET', '/axismundi-activitypub/v1/actors/' . $local->get_uuid() . '/outbox' );
+	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $local->get_uuid() . '/outbox' );
 	$request->set_param( 'uuid', $local->get_uuid() );
-	$outbox = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_get_outbox( $request ) : null;
+	$outbox = $local instanceof Axismundi_Actor ? axismundi_op_get_actor_outbox( $request ) : null;
 	$data = $outbox instanceof WP_REST_Response ? $outbox->get_data() : array();
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Bridge serves an Activities-backed Actor OrderedCollection', isset( $data['type'], $data['attributedTo'] ) && 'OrderedCollection' === $data['type'] && $local->get_uri() === $data['attributedTo'] );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Object Projections serves the Activities-backed Actor OrderedCollection independently of Bridge transport', isset( $data['type'], $data['attributedTo'] ) && 'OrderedCollection' === $data['type'] && $local->get_uri() === $data['attributedTo'] );
 
 	$activity_uri = home_url( '/activities/' . wp_generate_uuid4() . '/' );
 	$remote_uri   = 'https://example.com/users/' . wp_generate_uuid4();
@@ -89,7 +89,7 @@ try {
 	$stored = $ax_bridge_delivery_spool > 0 ? get_post( $ax_bridge_delivery_spool ) : null;
 	$all_meta = $stored ? get_post_meta( $stored->ID ) : array();
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a committed outbound Activity automatically queues one transport-only spool row', $recorded instanceof Axismundi_Activity && $stored instanceof WP_Post );
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a non-public outbound Activity is excluded from the public Actor outbox', $recorded instanceof Axismundi_Activity && null === axismundi_activitypub_bridge_public_activity( $recorded ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a non-public outbound Activity is excluded by the Activities public projection contract', $recorded instanceof Axismundi_Activity && null === axismundi_act_public_payload( $recorded ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the official spool stores the complete payload and only a non-secret key reference', $stored instanceof WP_Post && false !== strpos( $stored->post_content, $activity_uri ) && false === strpos( wp_json_encode( $all_meta ), 'PRIVATE KEY' ) && $sender['private_key_ref'] === get_post_meta( $stored->ID, '_activitypub_external_private_key_ref', true ) );
 	$duplicate = Activitypub\deliver_activity( $payload, $sender, array( 'https://example.com/inbox' ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the Activity URI idempotently identifies one transport spool row', $ax_bridge_delivery_spool === $duplicate );

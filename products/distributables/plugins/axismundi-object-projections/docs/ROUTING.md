@@ -1,7 +1,7 @@
 # Routing & URI contract
 
-> Status: **Standalone Post and Media attachment negotiation implemented through 0.0.4.** Collection routing and
-> the official ActivityPub adapter remain later phases.
+> Status: **Standalone Post, Media attachment, Actor, and Actor Outbox representation
+> implemented through 0.0.10.** Additional collection routing remains a later phase.
 
 ## 1. Principle — negotiate on the existing WordPress URL
 
@@ -69,7 +69,7 @@ Rules:
   canonical ActivityStreams representation of an object.
 - **REST is optional** (admin inspector, editor preview, tests) and its URL is **never**
   used as an object `id`.
-- An Actor's activity feed is later an **outbox `OrderedCollection`** owned by Axismundi
-  Activities — not an Atom feed.
+- An Actor's activity feed is an **outbox `OrderedCollection`** routed and serialized by
+  Object Projections from the public-safe Activities query contract — not an Atom feed.
 - The outbox is activity-based, not an Article archive. Optional Article/Media tabs are
   filtered profile projections and do not replace the primary activity feed.

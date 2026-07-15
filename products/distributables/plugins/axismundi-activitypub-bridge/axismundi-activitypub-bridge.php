@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.0.2
+ * Version:           0.0.3
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.2';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.3';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 
 /** Rebuild rewrite rules after dormant ownership callbacks have been applied. */
@@ -67,6 +67,25 @@ function axismundi_activitypub_bridge_projection_router( bool $enabled ) : bool 
 add_filter( 'axismundi_op_standalone_router_enabled', 'axismundi_activitypub_bridge_projection_router', 100 );
 
 /**
+ * Select the minimum official modules retained by dormant transport mode.
+ *
+ * @param bool   $enabled Official default.
+ * @param string $module Stable upstream module identifier.
+ */
+function axismundi_activitypub_bridge_official_module_enabled( bool $enabled, string $module ) : bool {
+	if ( ! axismundi_activitypub_bridge_ready() ) {
+		return $enabled;
+	}
+
+	return in_array(
+		$module,
+		array( 'runtime.signature', 'rest.server', 'rest.inbox', 'rest.actors_inbox' ),
+		true
+	);
+}
+add_filter( 'activitypub_module_enabled', 'axismundi_activitypub_bridge_official_module_enabled', 100, 2 );
+
+/**
  * Put overlapping official modules into a dormant state before `init` runs.
  *
  * Signature and REST server classes remain available for the future verified
@@ -74,6 +93,9 @@ add_filter( 'axismundi_op_standalone_router_enabled', 'axismundi_activitypub_bri
  */
 function axismundi_activitypub_bridge_disable_conflicting_modules() : void {
 	if ( ! axismundi_activitypub_bridge_ready() ) {
+		return;
+	}
+	if ( function_exists( 'Activitypub\\is_module_enabled' ) ) {
 		return;
 	}
 
@@ -100,16 +122,17 @@ function axismundi_activitypub_bridge_is_inbox_request( WP_REST_Request $request
 /**
  * Fail closed until upstream can hand a verified request to the bridge.
  *
- * This filter runs after the official server's request validator (priority 9)
- * and before the route callback, so no default handler or persistence executes.
+ * Dormant mode runs before signature lookup and validation. This avoids even a
+ * temporary write to the official remote-Actor cache. Verified processing will
+ * replace this guard only after upstream exposes a supported handoff.
  *
  * @param mixed           $response Existing REST response.
- * @param array           $handler  Selected route handler.
+ * @param WP_REST_Server  $server   REST server instance.
  * @param WP_REST_Request $request  Current request.
  * @return mixed
  */
-function axismundi_activitypub_bridge_block_unclaimed_inbox( $response, array $handler, WP_REST_Request $request ) {
-	unset( $handler );
+function axismundi_activitypub_bridge_block_unclaimed_inbox( $response, WP_REST_Server $server, WP_REST_Request $request ) {
+	unset( $server );
 	if ( is_wp_error( $response ) || ! axismundi_activitypub_bridge_ready() || ! axismundi_activitypub_bridge_is_inbox_request( $request ) ) {
 		return $response;
 	}
@@ -120,7 +143,7 @@ function axismundi_activitypub_bridge_block_unclaimed_inbox( $response, array $h
 		array( 'status' => 503 )
 	);
 }
-add_filter( 'rest_request_before_callbacks', 'axismundi_activitypub_bridge_block_unclaimed_inbox', 10, 3 );
+add_filter( 'rest_pre_dispatch', 'axismundi_activitypub_bridge_block_unclaimed_inbox', 1, 3 );
 
 /** Announce a ready, behavior-free compatibility boundary to future adapters. */
 function axismundi_activitypub_bridge_boot() : void {

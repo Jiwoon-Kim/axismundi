@@ -22,6 +22,12 @@ ax_bridge_assert( $ax_bridge_results, 'the bridge keeps automatic post lifecycle
 
 ax_bridge_assert( $ax_bridge_results, 'Object Projections owns canonical URL negotiation', axismundi_activitypub_bridge_projection_router( false ) );
 
+if ( function_exists( 'Activitypub\\is_module_enabled' ) ) {
+	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps signature support enabled', Activitypub\is_module_enabled( 'runtime.signature' ) );
+	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps Inbox routes enabled', Activitypub\is_module_enabled( 'rest.inbox' ) && Activitypub\is_module_enabled( 'rest.actors_inbox' ) );
+	ax_bridge_assert( $ax_bridge_results, 'the upstream gate disables presentation and domain modules', ! Activitypub\is_module_enabled( 'runtime.router' ) && ! Activitypub\is_module_enabled( 'runtime.handler' ) && ! Activitypub\is_module_enabled( 'rest.actors' ) );
+}
+
 ax_bridge_assert( $ax_bridge_results, 'the official Router initializer is dormant', false === has_action( 'init', array( 'Activitypub\\Router', 'init' ) ) );
 ax_bridge_assert( $ax_bridge_results, 'the official Scheduler initializer is dormant', false === has_action( 'init', array( 'Activitypub\\Scheduler', 'init' ) ) );
 ax_bridge_assert( $ax_bridge_results, 'the official Handler initializer is dormant', false === has_action( 'init', array( 'Activitypub\\Handler', 'init' ) ) );
@@ -31,14 +37,14 @@ ax_bridge_assert( $ax_bridge_results, 'the official Follow domain handler was ne
 ax_bridge_assert( $ax_bridge_results, 'the official outbox processor was never registered', false === has_action( 'activitypub_process_outbox', array( 'Activitypub\\Dispatcher', 'process_outbox' ) ) );
 
 $ax_bridge_inbox = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
-$ax_bridge_block = axismundi_activitypub_bridge_block_unclaimed_inbox( null, array(), $ax_bridge_inbox );
+$ax_bridge_block = axismundi_activitypub_bridge_block_unclaimed_inbox( null, rest_get_server(), $ax_bridge_inbox );
 ax_bridge_assert( $ax_bridge_results, 'unclaimed shared Inbox writes fail closed with 503', is_wp_error( $ax_bridge_block ) && 503 === (int) $ax_bridge_block->get_error_data()['status'] );
 
 $ax_bridge_actor_inbox = new WP_REST_Request( 'POST', '/activitypub/1.0/actors/1/inbox' );
 ax_bridge_assert( $ax_bridge_results, 'unclaimed Actor Inbox writes are recognized', axismundi_activitypub_bridge_is_inbox_request( $ax_bridge_actor_inbox ) );
 
 $ax_bridge_read = new WP_REST_Request( 'GET', '/activitypub/1.0/inbox' );
-ax_bridge_assert( $ax_bridge_results, 'non-write requests pass through unchanged', null === axismundi_activitypub_bridge_block_unclaimed_inbox( null, array(), $ax_bridge_read ) );
+ax_bridge_assert( $ax_bridge_results, 'non-write requests pass through unchanged', null === axismundi_activitypub_bridge_block_unclaimed_inbox( null, rest_get_server(), $ax_bridge_read ) );
 
 $GLOBALS['ax_bridge_ready_seen'] = false;
 add_action( 'axismundi_activitypub_bridge_ready', static function () : void { $GLOBALS['ax_bridge_ready_seen'] = true; } );

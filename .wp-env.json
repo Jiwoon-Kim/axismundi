@@ -21,7 +21,9 @@
     "./products/distributables/plugins/axismundi-media-library",
     "./products/distributables/plugins/axismundi-actors",
     "./products/distributables/plugins/axismundi-object-projections",
-    "./products/distributables/plugins/axismundi-activities"
+    "./products/distributables/plugins/axismundi-activities",
+    "C:/Users/thaum/dev/activitypub",
+    "./products/distributables/plugins/axismundi-activitypub-bridge"
   ],
   "port": 8884,
   "config": {

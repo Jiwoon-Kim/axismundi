@@ -91,6 +91,12 @@ function axismundi_op_is_negotiated_request() : bool {
  * @return mixed|null
  */
 function axismundi_op_current_source() {
+	if ( function_exists( 'axismundi_actors_current_actor' ) ) {
+		$actor = axismundi_actors_current_actor();
+		if ( $actor instanceof Axismundi_Actor ) {
+			return $actor;
+		}
+	}
 	$source = get_queried_object();
 	return $source instanceof WP_Post ? $source : null;
 }

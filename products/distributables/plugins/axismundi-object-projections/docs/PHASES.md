@@ -12,6 +12,8 @@ Phase 2b Core Post → Article transformer             — shipped (0.0.2): /?p=
                                                        permalink url, Actor/public gates
 Phase 2c explicit representation selector            — shipped (0.0.3): ?activitypub
                                                        for browser inspection; id unchanged
+Phase 2d Axismundi Actor representation              — shipped (0.0.9): Actor URL JSON-LD;
+                                                       Bridge supplies transport fields only
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

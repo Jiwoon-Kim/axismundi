@@ -31,9 +31,9 @@ ax_router_assert( $ax_router_results, 'an explicit ?activitypub selector request
 unset( $_GET['activitypub'] );
 ax_router_assert( $ax_router_results, 'the explicit selector is false when the parameter is absent', ! axismundi_op_explicit_activitypub_requested() );
 
-add_filter( 'axismundi_op_standalone_router_enabled', '__return_false' );
+add_filter( 'axismundi_op_standalone_router_enabled', '__return_false', 200 );
 ax_router_assert( $ax_router_results, 'the ownership filter can disable standalone negotiation', ! axismundi_op_standalone_router_enabled() );
-remove_filter( 'axismundi_op_standalone_router_enabled', '__return_false' );
+remove_filter( 'axismundi_op_standalone_router_enabled', '__return_false', 200 );
 
 $merged = axismundi_op_merge_header_token( 'Origin, Accept', 'Accept' );
 ax_router_assert( $ax_router_results, 'Vary token merge is case-insensitive and does not duplicate Accept', 1 === substr_count( strtolower( $merged ), 'accept' ) );

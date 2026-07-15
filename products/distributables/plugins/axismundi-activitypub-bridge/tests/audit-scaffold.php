@@ -24,6 +24,7 @@ ax_bridge_assert( $ax_bridge_results, 'Object Projections owns canonical URL neg
 
 if ( function_exists( 'Activitypub\\is_module_enabled' ) ) {
 	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps signature support enabled', Activitypub\is_module_enabled( 'runtime.signature' ) );
+	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps the narrow external delivery worker enabled', Activitypub\is_module_enabled( 'runtime.external_delivery' ) );
 	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps Inbox routes enabled', Activitypub\is_module_enabled( 'rest.inbox' ) && Activitypub\is_module_enabled( 'rest.actors_inbox' ) );
 	ax_bridge_assert( $ax_bridge_results, 'the upstream gate disables presentation and domain modules', ! Activitypub\is_module_enabled( 'runtime.router' ) && ! Activitypub\is_module_enabled( 'runtime.handler' ) && ! Activitypub\is_module_enabled( 'rest.actors' ) );
 }

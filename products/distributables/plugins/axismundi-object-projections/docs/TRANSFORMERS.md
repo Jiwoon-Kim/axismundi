@@ -57,6 +57,15 @@ deliberately public site Actor fallback. It never creates an Actor during render
 `axismundi_op_post_actor_uri` is the seam for another Actor provider. A future official
 ActivityPub adapter must use the former to retain that plugin's per-post legacy choice.
 
+## First-party Actor transformer (0.0.9)
+
+Public local `Axismundi_Actor` values project at their immutable Actor URI. Object
+Projections owns the Actor document and its identity/profile fields. The optional
+`axismundi_op_actor_transport_fields` filter accepts only protocol transport members
+(`inbox`, `outbox`, follow collections, `endpoints`, and `publicKey`); it cannot replace
+the Actor `id`, `type`, or human profile `url`. Object Projections owns no Inbox or
+Outbox route and never reads the Activity ledger for this transformer.
+
 ## First-party Media Library adapter (0.0.4)
 
 When Axismundi Media Library is active in Independent mode, Object Projections registers

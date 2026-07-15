@@ -24,12 +24,9 @@ Consume the supported upstream verified-envelope hook. Claim only Activities who
 object, and authority checks pass; record through Axismundi Activities and suppress official
 domain handlers/persistence exactly once.
 
-## 0.0.5 — Virtual Actor mapping experiment
+## 0.0.5 — Actor transport and external delivery
 
-Adapt Axismundi local Actors through existing official virtual-Actor and WebFinger filters.
-Remain read-only and fail closed for signing/delivery paths that require a WP user id.
-
-## 0.0.6 — External Actor delivery
-
-Submit complete Axismundi payloads, URI-backed signing Actors, and explicit recipient inboxes
-through the supported official delivery API. The official plugin remains queue/retry owner.
+Keep Actor JSON-LD in Object Projections and inject only Inbox, Bridge Outbox,
+sharedInbox, and publicKey fields. Submit complete Axismundi payloads, URI-backed signing
+Actors, and explicit recipient inboxes through the supported official delivery API. The
+official plugin remains queue/retry owner and its spool is never authoritative domain state.

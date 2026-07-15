@@ -51,9 +51,13 @@ function axismundi_op_html_members() : array {
  * @return array<string,mixed>|WP_Error
  */
 function axismundi_op_finalize_object( array $object, string $expected_id ) {
-	foreach ( array( 'id', 'type', 'attributedTo', 'url' ) as $required ) {
-		if ( ! isset( $object[ $required ] ) || '' === $object[ $required ] ) {
-			return new WP_Error( 'ax_op_invalid_object', __( 'A projected object must define id, type, attributedTo, and url.', 'axismundi-object-projections' ) );
+	$actor_types = array( 'Application', 'Group', 'Organization', 'Person', 'Service' );
+	$required    = in_array( (string) ( $object['type'] ?? '' ), $actor_types, true )
+		? array( 'id', 'type', 'url' )
+		: array( 'id', 'type', 'attributedTo', 'url' );
+	foreach ( $required as $member ) {
+		if ( ! isset( $object[ $member ] ) || '' === $object[ $member ] ) {
+			return new WP_Error( 'ax_op_invalid_object', __( 'The projected value is missing a required member.', 'axismundi-object-projections' ) );
 		}
 	}
 	if ( (string) $object['id'] !== $expected_id ) {

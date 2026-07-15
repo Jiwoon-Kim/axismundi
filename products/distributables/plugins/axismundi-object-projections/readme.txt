@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.8
+Stable tag: 0.0.9
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -13,7 +13,7 @@ Projects WordPress objects into ActivityStreams JSON-LD through a transformer re
 == Description ==
 
 Axismundi Object Projections turns a WordPress object (post, attachment, archive, folder)
-into an ActivityStreams 2.0 object or collection, so the existing WordPress URL can answer
+or Axismundi Actor into an ActivityStreams 2.0 object or collection, so its existing URL can answer
 with JSON-LD under content negotiation. It owns representation only — a transformer registry,
 object/collection URIs, and the single JSON-LD renderer.
 
@@ -35,6 +35,13 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.9 =
+* Project public local Axismundi Actor URLs as Person, Application, Organization, Group,
+  or Service JSON-LD through the same renderer and content-negotiation surface.
+* Keep Actor representation ownership here while allowing the ActivityPub Bridge to add
+  only transport properties such as inbox, outbox, sharedInbox, and publicKey.
+* Keep Inbox/Outbox routes, Activity data, signatures, queues, and delivery outside this plugin.
 
 = 0.0.8 =
 * Emit an idempotent Core Post publish candidate from `wp_after_insert_post`, after terms

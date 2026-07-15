@@ -174,6 +174,54 @@ function axismundi_activitypub_bridge_import_legacy_inbox( array &$result ) : vo
 	}
 }
 
+/** Import current-state Follow snapshots after authoritative Inbox replay. */
+function axismundi_activitypub_bridge_import_legacy_relation_snapshots( array &$result ) : void {
+	$report = axismundi_activitypub_bridge_legacy_report();
+	foreach ( axismundi_activitypub_bridge_legacy_posts( 'ap_actor', $report ) as $post ) {
+		$payload = axismundi_activitypub_bridge_legacy_payload( $post );
+		$remote_uri = is_array( $payload ) ? axismundi_act_member_uri( $payload['id'] ?? $post->guid ) : '';
+		if ( '' === $remote_uri || ! axismundi_actors_get_by_uri( $remote_uri ) instanceof Axismundi_Actor ) {
+			continue;
+		}
+		$sets = array(
+			array( '_activitypub_following', 'follower_snapshot', true, 'accepted' ),
+			array( '_activitypub_followed_by', 'following_snapshot', false, 'accepted' ),
+			array( '_activitypub_followed_by_pending', 'following_pending_snapshot', false, 'legacy_pending' ),
+		);
+		foreach ( $sets as $set ) {
+			foreach ( get_post_meta( $post->ID, $set[0], false ) as $local_user_id ) {
+				$local = axismundi_activitypub_bridge_legacy_local_actor( (int) $local_user_id );
+				if ( ! $local instanceof Axismundi_Actor ) {
+					axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $remote_uri, 'failed', __( 'The referenced local user has no Axismundi Actor.', 'axismundi-activitypub-bridge' ) );
+					continue;
+				}
+				$subject  = $set[2] ? $remote_uri : $local->get_uri();
+				$object   = $set[2] ? $local->get_uri() : $remote_uri;
+				$before   = axismundi_act_get_relation( 'follow', $subject, $object );
+				$reference = 'activitypub:ap_actor:' . $post->ID . ':' . (int) $local_user_id . ':' . $set[0];
+				$relation = axismundi_act_import_follow_snapshot( $subject, $object, $set[3], $reference );
+				if ( is_wp_error( $relation ) ) {
+					axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $subject . ' -> ' . $object, 'failed', $relation->get_error_message() );
+					continue;
+				}
+				$verified = axismundi_act_get_relation( 'follow', $subject, $object );
+				if ( ! is_array( $verified ) ) {
+					axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $subject . ' -> ' . $object, 'failed', __( 'The imported Follow snapshot could not be verified.', 'axismundi-activitypub-bridge' ) );
+					continue;
+				}
+				$status = 'imported';
+				if ( is_array( $before ) ) {
+					$changed = (string) $before['state'] !== (string) $verified['state']
+						|| (string) ( $before['evidence_type'] ?? '' ) !== (string) ( $verified['evidence_type'] ?? '' )
+						|| (string) ( $before['evidence_ref'] ?? '' ) !== (string) ( $verified['evidence_ref'] ?? '' );
+					$status = $changed ? 'updated' : 'verified_existing';
+				}
+				axismundi_activitypub_bridge_legacy_import_row( $result, $set[1], $post->ID . ':' . (int) $local_user_id, $subject . ' -> ' . $object, $status, 'legacy_pending' === $set[3] ? __( 'Pending state was preserved without retransmission.', 'axismundi-activitypub-bridge' ) : __( 'Accepted state was preserved as a provenance-marked legacy snapshot.', 'axismundi-activitypub-bridge' ) );
+			}
+		}
+	}
+}
+
 /** Import supported legacy sources, verify them, and leave every official row intact. */
 function axismundi_activitypub_bridge_import_legacy_data() : array {
 	$result   = axismundi_activitypub_bridge_legacy_import_result();
@@ -186,6 +234,7 @@ function axismundi_activitypub_bridge_import_legacy_data() : array {
 	axismundi_activitypub_bridge_import_legacy_actors( $result );
 	axismundi_activitypub_bridge_import_legacy_objects( $result );
 	axismundi_activitypub_bridge_import_legacy_inbox( $result );
+	axismundi_activitypub_bridge_import_legacy_relation_snapshots( $result );
 	ksort( $result['summary'] );
 	return $result;
 }

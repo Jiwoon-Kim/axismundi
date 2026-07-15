@@ -122,7 +122,7 @@ try {
 	$row = ax_scan_row( $report, 'ap_actor', (string) $actor_post );
 	ax_scan_assert( $ax_scan_results, 'an already cached remote Actor is duplicate but remains runtime-required for official signature verification', is_array( $row ) && 'duplicate' === $row['import'] && 'runtime_required' === $row['purge'] );
 	$row = ax_scan_row( $report, 'follower_snapshot', $actor_post . ':' . $ax_scan_user );
-	ax_scan_assert( $ax_scan_results, 'a follower snapshot without replayed Follow history is snapshot-only and blocked from purge', is_array( $row ) && 'snapshot_only' === $row['import'] && 'blocked' === $row['purge'] );
+	ax_scan_assert( $ax_scan_results, 'a follower snapshot without replayed Follow history is importable with provenance while ap_actor remains runtime-required', is_array( $row ) && 'snapshot_importable' === $row['import'] && 'runtime_required' === $row['purge'] );
 	$row = ax_scan_row( $report, 'ap_post', (string) $object_post );
 	ax_scan_assert( $ax_scan_results, 'an already cached remote Object is duplicate and conditionally purgeable', is_array( $row ) && 'duplicate' === $row['import'] && 'purgeable' === $row['purge'] );
 	$row = ax_scan_row( $report, 'ap_inbox', (string) $inbox_post );

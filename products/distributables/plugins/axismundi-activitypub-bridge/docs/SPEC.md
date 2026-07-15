@@ -1,7 +1,7 @@
 # Axismundi ActivityPub Bridge
 
-> Status: **0.0.8 verified Inbox handoff, Actor transport fields, official external
-> delivery spool integration, and explicit legacy import/verification implemented.**
+> Status: **0.0.9 verified Inbox handoff, Actor transport fields, official external
+> delivery spool integration, and provenance-aware legacy import implemented.**
 
 ## Purpose
 
@@ -34,8 +34,9 @@ repositories to supported network-facing extension points in the official Activi
    GPL-3.0-only Axismundi implementation code is never copied into the upstream repository.
 7. Upstream versions without the verified Inbox handoff fail inbound writes with 503 before
    signature lookup rather than silently discarding or duplicating state.
-8. Legacy migration is Bridge-owned and repository-driven. The 0.0.7 scanner performs no
-   write, fetch, import, or purge; import and purge are separate later phases.
+8. Legacy migration is Bridge-owned and repository-driven. Scan, import, and purge remain
+   separate operations. Import performs no fetch or source deletion; relation snapshots carry
+   explicit provenance and can never override Activity-derived state.
 
 ## Dormant transport mode
 

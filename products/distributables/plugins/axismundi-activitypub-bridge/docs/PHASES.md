@@ -53,3 +53,10 @@ repository APIs, then read each identity back immediately. Preserve existing Axi
 derive Follow state only by replaying Inbox Activities, and keep every official source row.
 Network requests, key copying, follower-snapshot writes, lifecycle synthesis, and purge remain
 disabled. The operation is retryable and URI-keyed.
+
+## 0.0.9 — Legacy follower/following provenance
+
+After Inbox replay, import accepted inbound followers, accepted outbound following, and
+pending outbound following from official Actor postmeta. Use Activities DB v4 provenance,
+create no synthetic Activity, never retransmit imported pending state, and let real Activities
+take precedence. Purge moves to 0.0.10 and remains fail-closed.

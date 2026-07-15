@@ -57,6 +57,7 @@ try {
 	$ax_import_ids[] = $local->get_identity_id();
 
 	$remote_uri = 'https://example.com/users/import_' . wp_generate_uuid4();
+	$pending_remote_uri = 'https://example.com/users/import_pending_' . wp_generate_uuid4();
 	$object_uri = 'https://example.com/objects/' . wp_generate_uuid4();
 	$activity_uri = 'https://example.com/activities/' . wp_generate_uuid4();
 	$actor_payload = array(
@@ -67,14 +68,25 @@ try {
 		'inbox'             => $remote_uri . '/inbox',
 		'outbox'            => $remote_uri . '/outbox',
 	);
+	$pending_actor_payload = array(
+		'id'                => $pending_remote_uri,
+		'type'              => 'Person',
+		'preferredUsername' => 'legacy_import_pending',
+		'name'              => 'Legacy Import Pending',
+		'inbox'             => $pending_remote_uri . '/inbox',
+		'outbox'            => $pending_remote_uri . '/outbox',
+	);
 	$object_payload = array( 'id' => $object_uri, 'type' => 'Note', 'attributedTo' => $remote_uri, 'content' => '<p>Import payload sentinel</p>' );
 	$inbox_payload  = array( 'id' => $activity_uri, 'type' => 'Follow', 'actor' => $remote_uri, 'object' => $local->get_uri() );
 
 	$actor_post = wp_insert_post( array( 'post_type' => 'ap_actor', 'post_status' => 'publish', 'post_title' => 'Import Actor', 'post_content' => wp_slash( wp_json_encode( $actor_payload ) ), 'guid' => $remote_uri ) );
+	$pending_actor_post = wp_insert_post( array( 'post_type' => 'ap_actor', 'post_status' => 'publish', 'post_title' => 'Import Pending Actor', 'post_content' => wp_slash( wp_json_encode( $pending_actor_payload ) ), 'guid' => $pending_remote_uri ) );
 	$object_post = wp_insert_post( array( 'post_type' => 'ap_post', 'post_status' => 'publish', 'post_title' => 'Import Object', 'post_content' => wp_slash( wp_json_encode( $object_payload ) ), 'guid' => $object_uri ) );
 	$inbox_post = wp_insert_post( array( 'post_type' => 'ap_inbox', 'post_status' => 'publish', 'post_title' => 'Import Follow', 'post_content' => wp_slash( wp_json_encode( $inbox_payload ) ), 'guid' => $activity_uri ) );
-	$ax_import_posts = array( $actor_post, $object_post, $inbox_post );
+	$ax_import_posts = array( $actor_post, $pending_actor_post, $object_post, $inbox_post );
 	add_post_meta( $actor_post, '_activitypub_following', $ax_import_user );
+	add_post_meta( $actor_post, '_activitypub_followed_by', $ax_import_user );
+	add_post_meta( $pending_actor_post, '_activitypub_followed_by_pending', $ax_import_user );
 	add_post_meta( $inbox_post, '_activitypub_user_id', $ax_import_user );
 
 	$source_before = count( array_filter( array_map( 'get_post', $ax_import_posts ) ) );
@@ -83,19 +95,27 @@ try {
 	if ( $remote instanceof Axismundi_Actor ) {
 		$ax_import_ids[] = $remote->get_identity_id();
 	}
+	$pending_remote = axismundi_actors_get_by_uri( $pending_remote_uri );
+	if ( $pending_remote instanceof Axismundi_Actor ) {
+		$ax_import_ids[] = $pending_remote->get_identity_id();
+	}
 	$object   = axismundi_op_remote_object_get( $object_uri, false );
 	$activity = axismundi_act_get( $activity_uri );
 	$relation = axismundi_act_get_relation( 'follow', $remote_uri, $local->get_uri() );
+	$following_relation = axismundi_act_get_relation( 'follow', $local->get_uri(), $remote_uri );
+	$pending_relation   = axismundi_act_get_relation( 'follow', $local->get_uri(), $pending_remote_uri );
 
-	ax_import_assert( $ax_import_results, 'import completes through existing repositories with no delete or network request', ! empty( $result['complete'] ) && 3 === $result['writes'] && 0 === $result['deletes'] && 0 === $result['network_requests'] && 0 === $ax_import_http );
+	ax_import_assert( $ax_import_results, 'import completes through existing repositories with no delete or network request', ! empty( $result['complete'] ) && 6 === $result['writes'] && 0 === $result['deletes'] && 0 === $result['network_requests'] && 0 === $ax_import_http );
 	ax_import_assert( $ax_import_results, 'remote Actor is imported and verified by canonical URI', $remote instanceof Axismundi_Actor && 'Person' === $remote->get_type() );
 	ax_import_assert( $ax_import_results, 'remote Object is imported with the full bounded payload snapshot', is_array( $object ) && false !== strpos( (string) $object['payload_json'], 'Import payload sentinel' ) );
 	ax_import_assert( $ax_import_results, 'Inbox Follow is replayed into the Activity ledger', $activity instanceof Axismundi_Activity && 'Follow' === $activity->get_type() );
 	ax_import_assert( $ax_import_results, 'relation state is derived by replay rather than written from the follower snapshot', is_array( $relation ) && 'pending' === $relation['state'] );
+	ax_import_assert( $ax_import_results, 'accepted following snapshot is preserved with provenance and no synthetic Activity', is_array( $following_relation ) && 'accepted' === $following_relation['state'] && 'legacy_snapshot' === $following_relation['evidence_type'] && null === $following_relation['initiating_activity_uri'] );
+	ax_import_assert( $ax_import_results, 'pending following snapshot is preserved without retransmission', is_array( $pending_relation ) && 'legacy_pending' === $pending_relation['state'] && 'legacy_snapshot' === $pending_relation['evidence_type'] );
 	ax_import_assert( $ax_import_results, 'all official source rows remain after import', $source_before === count( array_filter( array_map( 'get_post', $ax_import_posts ) ) ) );
 
 	$again = axismundi_activitypub_bridge_import_legacy_data();
-	ax_import_assert( $ax_import_results, 'a second import is idempotent and reports verified existing rows', ! empty( $again['complete'] ) && 0 === $again['writes'] && 3 === array_sum( array_map( static fn( array $counts ) : int => (int) ( $counts['verified_existing'] ?? 0 ), $again['summary'] ) ) );
+	ax_import_assert( $ax_import_results, 'a second import is idempotent and reports verified existing rows', ! empty( $again['complete'] ) && 0 === $again['writes'] && 7 === array_sum( array_map( static fn( array $counts ) : int => (int) ( $counts['verified_existing'] ?? 0 ), $again['summary'] ) ) );
 	ax_import_assert( $ax_import_results, 'import remains offline across repeated runs', 0 === $ax_import_http && 0 === $again['network_requests'] );
 
 	ob_start();
@@ -118,7 +138,10 @@ try {
 	ax_import_assert( $ax_import_results, 'Inbox history without a mapped local recipient fails closed', empty( $rejected['complete'] ) && ! axismundi_act_get( $unaddressed_uri ) instanceof Axismundi_Activity );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_import_http_probe', 99 );
-	$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $remote_uri ?? '' ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- exact fixture cleanup.
+	foreach ( array_filter( array( $remote_uri ?? '', $pending_remote_uri ?? '' ) ) as $fixture_remote_uri ) {
+		$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $fixture_remote_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- exact fixture cleanup.
+		$wpdb->delete( axismundi_act_relations_table(), array( 'object_actor_uri_hash' => hash( 'sha256', $fixture_remote_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- exact fixture cleanup.
+	}
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $activity_uri ?? '' ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- exact fixture cleanup.
 	if ( isset( $object_uri ) ) {
 		axismundi_op_remote_object_delete( $object_uri );

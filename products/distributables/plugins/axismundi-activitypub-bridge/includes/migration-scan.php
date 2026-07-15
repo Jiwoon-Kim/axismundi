@@ -73,9 +73,34 @@ function axismundi_activitypub_bridge_legacy_posts( string $post_type, array &$r
 
 /** Map an official local user identifier without creating an Actor while scanning. */
 function axismundi_activitypub_bridge_legacy_local_actor( int $user_id ) : ?Axismundi_Actor {
-	return 0 === $user_id
+	return in_array( $user_id, array( -1, 0 ), true )
 		? axismundi_actors_get_site_actor()
 		: axismundi_actors_get_for_user( $user_id );
+}
+
+/** Scan one official current-state Follow assertion. */
+function axismundi_activitypub_bridge_scan_legacy_relation_snapshot( array &$report, WP_Post $post, string $remote_uri, int $local_user_id, string $source, bool $remote_is_subject, string $state ) : void {
+	$local = axismundi_activitypub_bridge_legacy_local_actor( $local_user_id );
+	if ( ! $local instanceof Axismundi_Actor ) {
+		axismundi_activitypub_bridge_legacy_add_row( $report, $source, $post->ID . ':' . $local_user_id, $remote_uri, 'failed', 'blocked', __( 'The referenced local user has no Axismundi Actor.', 'axismundi-activitypub-bridge' ) );
+		return;
+	}
+	$subject  = $remote_is_subject ? $remote_uri : $local->get_uri();
+	$object   = $remote_is_subject ? $local->get_uri() : $remote_uri;
+	$existing = axismundi_act_get_relation( 'follow', $subject, $object );
+	axismundi_activitypub_bridge_legacy_add_row(
+		$report,
+		$source,
+		$post->ID . ':' . $local_user_id,
+		$subject . ' -> ' . $object,
+		is_array( $existing ) ? 'duplicate' : 'snapshot_importable',
+		'runtime_required',
+		is_array( $existing )
+			? __( 'An Activity-derived or previously imported relation already owns this Actor pair.', 'axismundi-activitypub-bridge' )
+			: ( 'accepted' === $state
+				? __( 'The official plugin asserts a current accepted Follow without complete Activity history.', 'axismundi-activitypub-bridge' )
+				: __( 'The official plugin asserts a pending outbound Follow; it will not be retransmitted.', 'axismundi-activitypub-bridge' ) )
+	);
 }
 
 /** Scan official remote Actor rows and follower snapshots. */
@@ -108,24 +133,13 @@ function axismundi_activitypub_bridge_scan_legacy_actors( array &$report ) : arr
 		);
 
 		foreach ( get_post_meta( $post->ID, '_activitypub_following', false ) as $local_user_id ) {
-			$local = axismundi_activitypub_bridge_legacy_local_actor( (int) $local_user_id );
-			if ( ! $local instanceof Axismundi_Actor ) {
-				axismundi_activitypub_bridge_legacy_add_row( $report, 'follower_snapshot', $post->ID . ':' . (int) $local_user_id, $uri, 'failed', 'blocked', __( 'The referenced local user has no Axismundi Actor.', 'axismundi-activitypub-bridge' ) );
-				continue;
-			}
-			$followers = function_exists( 'axismundi_act_get_followers' ) ? axismundi_act_get_followers( $local->get_uri(), 1000 ) : array();
-			$matched   = in_array( $uri, $followers, true );
-			axismundi_activitypub_bridge_legacy_add_row(
-				$report,
-				'follower_snapshot',
-				$post->ID . ':' . (int) $local_user_id,
-				$uri . ' -> ' . $local->get_uri(),
-				$matched ? 'duplicate' : 'snapshot_only',
-				$matched ? 'runtime_required' : 'blocked',
-				$matched
-					? __( 'The accepted relation already exists; the ap_actor row remains a transport cache.', 'axismundi-activitypub-bridge' )
-					: __( 'No source Follow history has reconstructed this snapshot; direct relation writes are forbidden.', 'axismundi-activitypub-bridge' )
-			);
+			axismundi_activitypub_bridge_scan_legacy_relation_snapshot( $report, $post, $uri, (int) $local_user_id, 'follower_snapshot', true, 'accepted' );
+		}
+		foreach ( get_post_meta( $post->ID, '_activitypub_followed_by', false ) as $local_user_id ) {
+			axismundi_activitypub_bridge_scan_legacy_relation_snapshot( $report, $post, $uri, (int) $local_user_id, 'following_snapshot', false, 'accepted' );
+		}
+		foreach ( get_post_meta( $post->ID, '_activitypub_followed_by_pending', false ) as $local_user_id ) {
+			axismundi_activitypub_bridge_scan_legacy_relation_snapshot( $report, $post, $uri, (int) $local_user_id, 'following_pending_snapshot', false, 'legacy_pending' );
 		}
 	}
 	return $known;

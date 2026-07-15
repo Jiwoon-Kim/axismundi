@@ -1,6 +1,6 @@
 # Runtime ownership matrix
 
-> Status: **0.0.8 verified Inbox handoff, outbound transport, and migration import contract.**
+> Status: **0.0.9 verified Inbox handoff, outbound transport, and provenance import contract.**
 
 | Surface | Current owner | Official module state | Reason |
 |---|---|---|---|

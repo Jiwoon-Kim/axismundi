@@ -1,6 +1,6 @@
 # Legacy ActivityPub migration contract
 
-> Status: **0.0.8 import and immediate verification shipped. Purge is disabled.**
+> Status: **0.0.9 import, relation provenance, and immediate verification shipped. Purge is disabled.**
 
 ## Ownership
 
@@ -14,7 +14,7 @@ existing cache from an older official snapshot.
 
 Every source receives two decisions:
 
-- **Import**: `importable`, `duplicate`, `snapshot_only`, `deferred`,
+- **Import**: `importable`, `snapshot_importable`, `duplicate`, `deferred`,
   `transport_pending`, or `failed`.
 - **Purge**: `purgeable`, `runtime_required`, `deferred`, or `blocked`.
 
@@ -25,7 +25,9 @@ An importable or duplicate row is not necessarily safe to purge.
 | `ap_actor` | Actors remote Actor repository | `runtime_required` until official signature verification can resolve Axismundi public keys |
 | `ap_post` | Object Projections remote object repository | conditionally `purgeable` after URI/payload verification |
 | `ap_inbox` | Activities inbound ledger | conditionally `purgeable` after replay and recipient verification |
-| `ap_actor` + `_activitypub_following` | Activities relation state | `snapshot_only` unless Inbox replay reconstructs the accepted Follow |
+| `ap_actor` + `_activitypub_following` | accepted inbound follower snapshot | imported with provenance after Inbox replay; `ap_actor` remains runtime-required |
+| `ap_actor` + `_activitypub_followed_by` | accepted outbound following snapshot | imported with provenance; no synthetic Follow/Accept |
+| `ap_actor` + `_activitypub_followed_by_pending` | pending outbound following snapshot | imported as `legacy_pending`; never retransmitted |
 | `ap_outbox` | no authoritative import | pending rows blocked; delivered transport history has a separate purge scope |
 | `activitypub_status` | Activities lifecycle baseline | blocked until an existing federated object cannot emit a second Create |
 | extra fields/comments | future verified-link and Reply features | deferred |
@@ -45,7 +47,7 @@ An importable or duplicate row is not necessarily safe to purge.
 6. Official private/public key material is never rendered, copied into migration reports,
    or deleted while the official plugin remains the signing implementation.
 
-## Import scope (0.0.8)
+## Import scope (0.0.9)
 
 The explicit administrator action requires typing `IMPORT`. A complete, non-truncated dry
 preflight runs first, then the Bridge processes Actors, Objects, and Inbox Activities in that
@@ -54,5 +56,7 @@ available type or payload-hash assertion. A failed row remains visible in the re
 retried safely. Partial success is intentional: repositories own their own transactions and a
 repeat import converges without duplicate identities.
 
-Follower snapshots, transport Outbox rows, lifecycle markers, extra fields, comments, and
-signing keys remain analysis-only. Source deletes are always zero in this release.
+After Inbox replay, current-state follower/following snapshots are imported through the
+Activities provenance API. Snapshot state never overwrites Activity evidence. Transport Outbox
+rows, lifecycle markers, extra fields, comments, and signing keys remain analysis-only. Source
+deletes are always zero in this release.

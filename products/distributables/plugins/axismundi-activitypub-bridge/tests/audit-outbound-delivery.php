@@ -43,6 +43,16 @@ try {
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Bridge supplies Inbox, sharedInbox, and publicKey but does not own Outbox representation', isset( $fields['inbox'], $fields['endpoints']['sharedInbox'], $fields['publicKey']['publicKeyPem'] ) && ! isset( $fields['outbox'] ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'publicKey owner and id use the Axismundi Actor identity', $local instanceof Axismundi_Actor && $local->get_uri() === $fields['publicKey']['owner'] && $local->get_uri() . '#main-key' === $fields['publicKey']['id'] );
 
+	$resource   = 'acct:' . $local->get_preferred_username() . '@' . axismundi_actors_webfinger_authority();
+	$webfinger  = axismundi_activitypub_bridge_webfinger_data( new WP_Error( 'official_not_found' ), $resource );
+	$self_links = is_array( $webfinger )
+		? array_values( array_filter( (array) ( $webfinger['links'] ?? array() ), static fn( array $link ) : bool => 'self' === ( $link['rel'] ?? '' ) ) )
+		: array();
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'official WebFinger resolves a public Axismundi handle to its Actor identity', is_array( $webfinger ) && 'acct:' . substr( $resource, 5 ) === $webfinger['subject'] && in_array( $local->get_uri(), $webfinger['aliases'], true ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'WebFinger advertises the canonical ActivityStreams Actor document', isset( $self_links[0]['type'], $self_links[0]['href'] ) && 'application/activity+json' === $self_links[0]['type'] && $local->get_uri() === $self_links[0]['href'] );
+	$sentinel = new WP_Error( 'official_owner' );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'non-Axismundi WebFinger resources retain their existing provider result', $sentinel === axismundi_activitypub_bridge_webfinger_data( $sentinel, 'acct:remote@example.com' ) );
+
 	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $local->get_uuid() . '/outbox' );
 	$request->set_param( 'uuid', $local->get_uuid() );
 	$outbox = $local instanceof Axismundi_Actor ? axismundi_op_get_actor_outbox( $request ) : null;

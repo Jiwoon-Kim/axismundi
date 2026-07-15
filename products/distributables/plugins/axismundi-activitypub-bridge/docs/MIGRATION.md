@@ -1,6 +1,6 @@
 # Legacy ActivityPub migration contract
 
-> Status: **0.0.9 import, relation provenance, and immediate verification shipped. Purge is disabled.**
+> Status: **0.0.10 import, relation provenance, and WebFinger interop shipped. Purge remains disabled until 0.0.11.**
 
 ## Ownership
 

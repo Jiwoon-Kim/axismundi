@@ -59,4 +59,10 @@ disabled. The operation is retryable and URI-keyed.
 After Inbox replay, import accepted inbound followers, accepted outbound following, and
 pending outbound following from official Actor postmeta. Use Activities DB v4 provenance,
 create no synthetic Activity, never retransmit imported pending state, and let real Activities
-take precedence. Purge moves to 0.0.10 and remains fail-closed.
+take precedence. Purge remains fail-closed.
+
+## 0.0.10 — Official WebFinger interoperability
+
+Supply public Axismundi Actor descriptors through the official plugin's `webfinger_data`
+surface after its pseudo-user resolver runs. Add the canonical ActivityStreams Actor `self`
+link while leaving every non-Axismundi resource untouched. Destructive purge moves to 0.0.11.

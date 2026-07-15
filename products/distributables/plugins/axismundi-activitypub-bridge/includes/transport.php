@@ -68,6 +68,40 @@ function axismundi_activitypub_bridge_actor_transport_fields( array $fields, Axi
 }
 add_filter( 'axismundi_op_actor_transport_fields', 'axismundi_activitypub_bridge_actor_transport_fields', 10, 2 );
 
+/** Advertise the canonical ActivityStreams Actor document through WebFinger. */
+function axismundi_activitypub_bridge_webfinger_links( array $links, Axismundi_Actor $actor ) : array {
+	if ( ! axismundi_activitypub_bridge_ready() || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
+		return $links;
+	}
+	$links[] = array(
+		'rel'  => 'self',
+		'type' => 'application/activity+json',
+		'href' => $actor->get_uri(),
+	);
+	return $links;
+}
+add_filter( 'axismundi_actors_webfinger_links', 'axismundi_activitypub_bridge_webfinger_links', 10, 2 );
+
+/**
+ * Supply Axismundi local Actors through the official WebFinger controller.
+ *
+ * The late priority intentionally follows the official pseudo-user resolver. A
+ * resource outside the Axismundi namespace is returned untouched so official
+ * and third-party Actor providers retain ownership of their own handles.
+ *
+ * @param mixed  $data     Existing WebFinger result.
+ * @param string $resource Requested resource.
+ * @return mixed
+ */
+function axismundi_activitypub_bridge_webfinger_data( $data, string $resource ) {
+	if ( ! axismundi_activitypub_bridge_ready() || ! function_exists( 'axismundi_actors_webfinger_descriptor' ) ) {
+		return $data;
+	}
+	$descriptor = axismundi_actors_webfinger_descriptor( $resource );
+	return is_wp_error( $descriptor ) ? $data : $descriptor;
+}
+add_filter( 'webfinger_data', 'axismundi_activitypub_bridge_webfinger_data', 100, 2 );
+
 /** Resolve private signing material only while the official worker is sending. */
 function axismundi_activitypub_bridge_resolve_signing_identity( $identity, array $descriptor ) {
 	if ( null !== $identity ) {

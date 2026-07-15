@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.9
+Stable tag: 0.0.10
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -16,7 +16,7 @@ Connects Axismundi domain stores to supported S2S transport extension points in 
 This package is the only intended dependency boundary between Axismundi and the official
 ActivityPub plugin. Actors, Object Projections, and Activities remain independently usable.
 
-Version 0.0.9 uses the patched official plugin's module gate to retain only Signature, REST
+Version 0.0.10 uses the patched official plugin's module gate to retain only Signature, REST
 Server, and Inbox routes. After the official permission callback verifies the HTTP signature,
 the bridge claims Activities addressed to public local Axismundi Actors and records them in the
 Axismundi Activity ledger. Official domain handlers and persistence remain dormant. Stock
@@ -27,12 +27,18 @@ the official spool remains transport-only and Axismundi Activities remains autho
 
 == Changelog ==
 
+= 0.0.10 =
+* Supply public Axismundi Actors through the official plugin's WebFinger controller while
+  preserving official and third-party ownership of every other resource.
+* Advertise the canonical ActivityStreams Actor document with a WebFinger `self` link.
+* Keep destructive legacy-data purge deferred to 0.0.11.
+
 = 0.0.9 =
 * Import accepted followers, accepted following, and pending following from official Actor
   snapshots with explicit legacy provenance and without synthetic Activities.
 * Replay Inbox history first so real Follow state takes precedence; preserve pending requests
   without retransmitting them and map official blog/application IDs to the site Actor.
-* Keep `ap_actor` rows runtime-required and defer every purge operation to 0.0.10.
+* Keep `ap_actor` rows runtime-required and defer every purge operation to a later release.
 
 = 0.0.8 =
 * Add explicit, administrator-confirmed import and immediate verification for legacy remote

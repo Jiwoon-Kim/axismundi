@@ -37,20 +37,12 @@ ax_bridge_assert( $ax_bridge_results, 'the official Dispatcher initializer is do
 ax_bridge_assert( $ax_bridge_results, 'the official post lifecycle callback was never registered', false === has_action( 'wp_after_insert_post', array( 'Activitypub\\Scheduler\\Post', 'triage' ) ) );
 ax_bridge_assert( $ax_bridge_results, 'the official Follow domain handler was never registered', false === has_action( 'activitypub_inbox_follow', array( 'Activitypub\\Handler\\Follow', 'handle_follow' ) ) );
 ax_bridge_assert( $ax_bridge_results, 'the official outbox processor was never registered', false === has_action( 'activitypub_process_outbox', array( 'Activitypub\\Dispatcher', 'process_outbox' ) ) );
-
-$ax_bridge_inbox = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
-$ax_bridge_block = axismundi_activitypub_bridge_block_unclaimed_inbox( null, rest_get_server(), $ax_bridge_inbox );
-if ( function_exists( 'Activitypub\\handle_verified_inbox' ) ) {
-	ax_bridge_assert( $ax_bridge_results, 'the patched verified handoff replaces the pre-verification 503 guard', null === $ax_bridge_block );
-} else {
-	ax_bridge_assert( $ax_bridge_results, 'stock shared Inbox writes fail closed with 503', is_wp_error( $ax_bridge_block ) && 503 === (int) $ax_bridge_block->get_error_data()['status'] );
-}
-
-$ax_bridge_actor_inbox = new WP_REST_Request( 'POST', '/activitypub/1.0/actors/1/inbox' );
-ax_bridge_assert( $ax_bridge_results, 'unclaimed Actor Inbox writes are recognized', axismundi_activitypub_bridge_is_inbox_request( $ax_bridge_actor_inbox ) );
-
-$ax_bridge_read = new WP_REST_Request( 'GET', '/activitypub/1.0/inbox' );
-ax_bridge_assert( $ax_bridge_results, 'non-write requests pass through unchanged', null === axismundi_activitypub_bridge_block_unclaimed_inbox( null, rest_get_server(), $ax_bridge_read ) );
+ax_bridge_assert( $ax_bridge_results, 'the bridge consumes the existing per-Actor Inbox action', 10 === has_action( 'activitypub_inbox', 'axismundi_activitypub_bridge_actor_inbox' ) );
+ax_bridge_assert( $ax_bridge_results, 'the bridge consumes the existing shared Inbox action', 10 === has_action( 'activitypub_inbox_shared', 'axismundi_activitypub_bridge_shared_inbox' ) );
+$ax_bridge_claim_probe = array( 'id' => 'https://example.com/activities/' . wp_generate_uuid4() );
+ax_bridge_assert( $ax_bridge_results, 'unclaimed Activities retain official Inbox fallback storage', false === apply_filters( 'activitypub_skip_inbox_storage', false, $ax_bridge_claim_probe ) );
+axismundi_activitypub_bridge_inbox_claimed( $ax_bridge_claim_probe, true );
+ax_bridge_assert( $ax_bridge_results, 'only successfully claimed Activities skip official Inbox CPT storage', true === apply_filters( 'activitypub_skip_inbox_storage', false, $ax_bridge_claim_probe ) );
 
 $GLOBALS['ax_bridge_ready_seen'] = false;
 add_action( 'axismundi_activitypub_bridge_ready', static function () : void { $GLOBALS['ax_bridge_ready_seen'] = true; } );

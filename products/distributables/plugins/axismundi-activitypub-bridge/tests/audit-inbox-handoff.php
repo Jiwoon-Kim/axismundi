@@ -1,6 +1,6 @@
 <?php
 /**
- * Verified Inbox handoff regression (dev-only; dist-excluded).
+ * Existing Inbox action composition regression (dev-only; dist-excluded).
  *
  * @package AxismundiActivityPubBridge
  */
@@ -12,7 +12,8 @@ $ax_bridge_inbox_results   = array();
 $ax_bridge_inbox_user      = 0;
 $ax_bridge_inbox_actor_ids = array();
 $ax_bridge_inbox_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
-$GLOBALS['ax_bridge_default_inbox_calls'] = 0;
+$ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
+$ax_bridge_fallback_activity = '';
 
 /** @param bool[] $results Results. */
 function ax_bridge_inbox_assert( array &$results, string $label, bool $condition ) : void {
@@ -21,13 +22,7 @@ function ax_bridge_inbox_assert( array &$results, string $label, bool $condition
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
-/** Observe any accidental official default handler call. */
-function ax_bridge_inbox_observe_default() : void {
-	++$GLOBALS['ax_bridge_default_inbox_calls'];
-}
-
 try {
-	add_action( 'activitypub_inbox_shared', 'ax_bridge_inbox_observe_default' );
 	$login = 'ax_bridge_' . strtolower( wp_generate_password( 8, false, false ) );
 	$ax_bridge_inbox_user = (int) wp_insert_user(
 		array(
@@ -76,24 +71,46 @@ try {
 	$response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $request );
 	$stored   = axismundi_act_get( $ax_bridge_inbox_activity );
 	$relation = $local instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $remote_uri, $local->get_uri() ) : null;
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the verified controller handoff returns 202', $response instanceof WP_REST_Response && 202 === $response->get_status() );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the full inbound Activity is stored once in the Axismundi ledger', $stored instanceof Axismundi_Activity && 'inbound' === $stored->get_direction() );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox action composition returns 202', $response instanceof WP_REST_Response && 202 === $response->get_status() );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox records the full Activity once in the Axismundi ledger', $stored instanceof Axismundi_Activity && 'inbound' === $stored->get_direction() );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the inbound Follow materializes as a pending relation', is_array( $relation ) && 'pending' === (string) $relation['state'] && 'inbound' === (string) $relation['direction'] );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'official handlers and Inbox persistence are bypassed', 0 === $GLOBALS['ax_bridge_default_inbox_calls'] && 0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $ax_bridge_inbox_activity ) . '%' ) ) ); // phpcs:ignore WordPress.DB
+
+	$actor_payload       = $payload;
+	$actor_payload['id'] = $ax_bridge_actor_activity;
+	$actor_request       = new WP_REST_Request( 'POST', '/activitypub/1.0/actors/' . $ax_bridge_inbox_user . '/inbox' );
+	$actor_request->set_param( 'user_id', $ax_bridge_inbox_user );
+	$actor_request->set_param( 'type', 'Follow' );
+	$actor_request->set_header( 'Content-Type', 'application/activity+json' );
+	$actor_request->set_body( wp_json_encode( $actor_payload ) );
+	$actor_response = ( new Activitypub\Rest\Actors_Inbox_Controller() )->create_item( $actor_request );
+	$actor_stored   = axismundi_act_get( $ax_bridge_actor_activity );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the per-Actor Inbox action composition returns 202', $actor_response instanceof WP_REST_Response && 202 === $actor_response->get_status() );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the per-Actor Inbox records the Activity through the same URI-keyed ledger', $actor_stored instanceof Axismundi_Activity && 'inbound' === $actor_stored->get_direction() );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'official Inbox persistence remains dormant for both controller paths', 0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND (post_content LIKE %s OR post_content LIKE %s)", 'ap_inbox', '%' . $wpdb->esc_like( $ax_bridge_inbox_activity ) . '%', '%' . $wpdb->esc_like( $ax_bridge_actor_activity ) . '%' ) ) ); // phpcs:ignore WordPress.DB
 
 	$replay = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $request );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an identical delivery replay is idempotently acknowledged', $replay instanceof WP_REST_Response && 202 === $replay->get_status() && $stored->get_id() === axismundi_act_get( $ax_bridge_inbox_activity )->get_id() );
 
-	$untargeted           = $payload;
-	$untargeted['id']     = 'https://example.com/activities/' . wp_generate_uuid4();
-	$untargeted['object'] = 'https://example.net/objects/not-local';
-	$untargeted['to']     = array( 'https://www.w3.org/ns/activitystreams#Public' );
-	$unclaimed             = axismundi_activitypub_bridge_handle_verified_inbox( null, $untargeted, $request, 'shared_inbox', array() );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity without a local target is rejected without storage', is_wp_error( $unclaimed ) && 404 === (int) $unclaimed->get_error_data()['status'] && null === axismundi_act_get( $untargeted['id'] ) );
+	$untargeted                  = $payload;
+	$ax_bridge_fallback_activity = 'https://example.com/activities/' . wp_generate_uuid4();
+	$untargeted['id']            = $ax_bridge_fallback_activity;
+	$untargeted['actor']         = $local->get_uri();
+	$untargeted['to']            = array( $local->get_uri() );
+	$untargeted_request = new WP_REST_Request( 'POST', '/activitypub/1.0/actors/' . $ax_bridge_inbox_user . '/inbox' );
+	$untargeted_request->set_param( 'user_id', $ax_bridge_inbox_user );
+	$untargeted_request->set_param( 'type', 'Follow' );
+	$untargeted_request->set_header( 'Content-Type', 'application/activity+json' );
+	$untargeted_request->set_body( wp_json_encode( $untargeted ) );
+	$untargeted_response = ( new Activitypub\Rest\Actors_Inbox_Controller() )->create_item( $untargeted_request );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity the bridge cannot claim falls back to official Inbox storage instead of being lost', $untargeted_response instanceof WP_REST_Response && 202 === $untargeted_response->get_status() && null === axismundi_act_get( $untargeted['id'] ) && 1 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $untargeted['id'] ) . '%' ) ) ); // phpcs:ignore WordPress.DB
 } finally {
-	remove_action( 'activitypub_inbox_shared', 'ax_bridge_inbox_observe_default' );
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
+	if ( '' !== $ax_bridge_fallback_activity ) {
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $ax_bridge_fallback_activity ) . '%' ) ); // phpcs:ignore WordPress.DB
+	}
 	foreach ( array_unique( $ax_bridge_inbox_actor_ids ) as $identity_id ) {
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $table ) {
 			$wpdb->delete( $table, array( 'identity_id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB

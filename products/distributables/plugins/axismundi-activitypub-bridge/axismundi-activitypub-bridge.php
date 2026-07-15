@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.0.11
+ * Version:           0.0.12
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.11';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.12';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 
 require_once __DIR__ . '/includes/transport.php';
@@ -95,7 +95,7 @@ add_filter( 'activitypub_module_enabled', 'axismundi_activitypub_bridge_official
 /**
  * Put overlapping official modules into a dormant state before `init` runs.
  *
- * Signature and REST server classes remain active for verified Inbox handoff.
+ * Signature and REST server classes remain active for verified Inbox actions.
  * No official database rows or scheduled events are deleted.
  */
 function axismundi_activitypub_bridge_disable_conflicting_modules() : void {
@@ -112,19 +112,6 @@ function axismundi_activitypub_bridge_disable_conflicting_modules() : void {
 	remove_action( 'init', array( 'Activitypub\\Dispatcher', 'init' ) );
 }
 add_action( 'plugins_loaded', 'axismundi_activitypub_bridge_disable_conflicting_modules', 50 );
-
-/** Whether one request targets an official Inbox write route. */
-function axismundi_activitypub_bridge_is_inbox_request( WP_REST_Request $request ) : bool {
-	if ( WP_REST_Server::CREATABLE !== $request->get_method() ) {
-		return false;
-	}
-
-	$namespace = defined( 'ACTIVITYPUB_REST_NAMESPACE' ) ? ACTIVITYPUB_REST_NAMESPACE : 'activitypub/1.0';
-	$route     = trim( $request->get_route(), '/' );
-	$pattern   = '#^' . preg_quote( trim( $namespace, '/' ), '#' ) . '/(?:(?:users|actors)/-?\\d+/)?inbox/?$#';
-
-	return 1 === preg_match( $pattern, $route );
-}
 
 /** Collect URI members from one ActivityStreams scalar, object, or list. */
 function axismundi_activitypub_bridge_member_uris( $value ) : array {
@@ -225,22 +212,18 @@ function axismundi_activitypub_bridge_inbox_targets( array $activity, array $rec
 }
 
 /**
- * Claim a signature-verified Inbox Activity into Axismundi repositories.
+ * Record one signature-verified Inbox Activity into Axismundi repositories.
  *
- * @param mixed           $handled Existing claim result.
  * @param array           $activity Activity payload.
- * @param WP_REST_Request $request Verified request.
- * @param string          $context Inbox context.
  * @param int[]           $recipient_user_ids Official route recipients, if known.
- * @return true|WP_Error
+ * @return Axismundi_Activity|WP_Error|null
  */
-function axismundi_activitypub_bridge_handle_verified_inbox( $handled, array $activity, WP_REST_Request $request, string $context, array $recipient_user_ids ) {
-	unset( $request, $context );
-	if ( null !== $handled ) {
-		return $handled;
+function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array() ) {
+	if ( ! axismundi_activitypub_bridge_ready() ) {
+		return null;
 	}
 	if ( empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids ) ) ) {
-		return new WP_Error( 'ax_bridge_inbox_target', __( 'The Activity has no public local recipient.', 'axismundi-activitypub-bridge' ), array( 'status' => 404 ) );
+		return null;
 	}
 
 	$actor_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $activity['actor'] ?? '' ) : '';
@@ -249,46 +232,66 @@ function axismundi_activitypub_bridge_handle_verified_inbox( $handled, array $ac
 		$actor = axismundi_actors_discover_remote_actor_uri( $actor_uri );
 	}
 	if ( ! $actor instanceof Axismundi_Actor || $actor->is_local() ) {
-		return new WP_Error( 'ax_bridge_inbox_actor', __( 'The remote Actor could not be resolved.', 'axismundi-activitypub-bridge' ), array( 'status' => 503 ) );
+		return new WP_Error( 'ax_bridge_inbox_actor', __( 'The remote Actor could not be resolved.', 'axismundi-activitypub-bridge' ) );
 	}
 
-	$recorded = axismundi_act_record_activity( $activity, 'inbound' );
-	if ( is_wp_error( $recorded ) ) {
-		$status = in_array( $recorded->get_error_code(), array( 'ax_act_schema', 'ax_act_write' ), true ) ? 503 : 422;
-		return new WP_Error( 'ax_bridge_inbox_activity', $recorded->get_error_message(), array( 'status' => $status ) );
-	}
-	return true;
+	return axismundi_act_record_activity( $activity, 'inbound' );
 }
-add_filter( 'activitypub_pre_handle_verified_inbox', 'axismundi_activitypub_bridge_handle_verified_inbox', 10, 5 );
+
+/** Build a request-local key for one Inbox Activity. */
+function axismundi_activitypub_bridge_inbox_claim_key( array $activity ) : string {
+	$activity_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $activity['id'] ?? '' ) : '';
+	return '' !== $activity_uri ? hash( 'sha256', $activity_uri ) : hash( 'sha256', (string) wp_json_encode( $activity ) );
+}
+
+/** Mark or inspect successful Axismundi ownership during the current request. */
+function axismundi_activitypub_bridge_inbox_claimed( array $activity, bool $claim = false ) : bool {
+	static $claimed = array();
+	$key = axismundi_activitypub_bridge_inbox_claim_key( $activity );
+	if ( $claim ) {
+		$claimed[ $key ] = true;
+	}
+	return isset( $claimed[ $key ] );
+}
 
 /**
- * Fail closed on stock upstream versions without the verified handoff.
+ * Consume the per-Actor Inbox action after the official permission callback.
  *
- * This compatibility fallback runs before signature lookup and validation. The
- * patched upstream skips it and invokes the verified handoff from its controller.
+ * The shared controller also fires this deprecated per-recipient action. Ignore
+ * that context because `activitypub_inbox_shared` records the Activity once.
  *
- * @param mixed           $response Existing REST response.
- * @param WP_REST_Server  $server   REST server instance.
- * @param WP_REST_Request $request  Current request.
- * @return mixed
+ * @param array  $activity Activity payload.
+ * @param int    $user_id Recipient WordPress user id.
+ * @param string $type Activity type.
+ * @param mixed  $object Parsed official Activity object.
+ * @param string $context Inbox context.
  */
-function axismundi_activitypub_bridge_block_unclaimed_inbox( $response, WP_REST_Server $server, WP_REST_Request $request ) {
-	unset( $server );
-	if ( function_exists( 'Activitypub\\handle_verified_inbox' )
-		|| is_wp_error( $response )
-		|| ! axismundi_activitypub_bridge_ready()
-		|| ! axismundi_activitypub_bridge_is_inbox_request( $request )
-	) {
-		return $response;
+function axismundi_activitypub_bridge_actor_inbox( array $activity, $user_id, string $type, $object, string $context ) : void {
+	unset( $type, $object );
+	if ( 'inbox' === $context ) {
+		$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array( (int) $user_id ) );
+		if ( $recorded instanceof Axismundi_Activity ) {
+			axismundi_activitypub_bridge_inbox_claimed( $activity, true );
+		}
 	}
-
-	return new WP_Error(
-		'axismundi_activitypub_bridge_inbox_dormant',
-		__( 'Federated Inbox processing is temporarily unavailable.', 'axismundi-activitypub-bridge' ),
-		array( 'status' => 503 )
-	);
 }
-add_filter( 'rest_pre_dispatch', 'axismundi_activitypub_bridge_block_unclaimed_inbox', 1, 3 );
+add_action( 'activitypub_inbox', 'axismundi_activitypub_bridge_actor_inbox', 10, 5 );
+
+/** Consume the shared Inbox action once for all resolved recipients. */
+function axismundi_activitypub_bridge_shared_inbox( array $activity, array $user_ids, string $type, $object, string $context ) : void {
+	unset( $type, $object, $context );
+	$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array_map( 'intval', $user_ids ) );
+	if ( $recorded instanceof Axismundi_Activity ) {
+		axismundi_activitypub_bridge_inbox_claimed( $activity, true );
+	}
+}
+add_action( 'activitypub_inbox_shared', 'axismundi_activitypub_bridge_shared_inbox', 10, 5 );
+
+/** Keep the official Inbox CPT dormant while Axismundi owns Inbox state. */
+function axismundi_activitypub_bridge_skip_inbox_storage( bool $skip, array $activity ) : bool {
+	return axismundi_activitypub_bridge_ready() && axismundi_activitypub_bridge_inbox_claimed( $activity ) ? true : $skip;
+}
+add_filter( 'activitypub_skip_inbox_storage', 'axismundi_activitypub_bridge_skip_inbox_storage', 100, 2 );
 
 /** Announce a ready, behavior-free compatibility boundary to future adapters. */
 function axismundi_activitypub_bridge_boot() : void {

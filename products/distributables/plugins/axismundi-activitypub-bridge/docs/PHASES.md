@@ -71,4 +71,12 @@ link while leaving every non-Axismundi resource untouched. Destructive purge rem
 
 Keep the official `rest.webfinger` module enabled alongside the verified Inbox transport
 surface. This makes the 0.0.10 descriptor adapter reachable regardless of which compatible
-well-known rewrite currently wins. Destructive purge moves to 0.0.12.
+well-known rewrite currently wins. Destructive purge remains deferred.
+
+## 0.0.12 — Existing Inbox action composition
+
+Replace the provisional verified-envelope handoff and temporary 503 guard with the official
+controllers' existing `activitypub_inbox` and `activitypub_inbox_shared` actions. Keep type
+handlers dormant, skip official Inbox CPT persistence only for successfully claimed Activities,
+record shared delivery once, and preserve URI-keyed idempotency in Activities. Unclaimed
+Activities retain the official snapshot fallback. Destructive purge moves to 0.0.13.

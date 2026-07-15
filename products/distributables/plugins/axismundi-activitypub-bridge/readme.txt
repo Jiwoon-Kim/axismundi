@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.11
+Stable tag: 0.0.12
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -16,21 +16,31 @@ Connects Axismundi domain stores to supported S2S transport extension points in 
 This package is the only intended dependency boundary between Axismundi and the official
 ActivityPub plugin. Actors, Object Projections, and Activities remain independently usable.
 
-Version 0.0.11 uses the patched official plugin's module gate to retain only Signature, REST
-Server, and Inbox routes. After the official permission callback verifies the HTTP signature,
-the bridge claims Activities addressed to public local Axismundi Actors and records them in the
-Axismundi Activity ledger. Official domain handlers and persistence remain dormant. Stock
-ActivityPub releases have no verified handoff API and therefore retain the fail-closed 503 guard.
+Version 0.0.12 uses the patched official plugin's module gate to retain Signature, REST Server,
+WebFinger, and Inbox routes. After the official permission callback verifies the HTTP signature,
+the bridge consumes the existing `activitypub_inbox` and `activitypub_inbox_shared` actions and
+records Activities addressed to public local Axismundi Actors. Official domain handlers remain
+dormant and `activitypub_skip_inbox_storage` prevents duplicate CPT persistence. No additional
+verified-envelope API is required.
 
 Outbound Activities use the supported external-delivery API in the patched official plugin;
 the official spool remains transport-only and Axismundi Activities remains authoritative.
 
 == Changelog ==
 
+= 0.0.12 =
+* Consume the official controllers' existing per-Actor and shared Inbox actions after request
+  validation instead of requiring a new verified-Inbox handoff API.
+* Keep official type handlers dormant and skip official Inbox CPT persistence only after
+  Axismundi records one URI-keyed Activity and relationship state.
+* Remove the temporary 503 compatibility guard while retaining official Inbox snapshot storage
+  as a fail-safe for Activities the bridge cannot claim.
+* Keep destructive legacy-data purge deferred to 0.0.13.
+
 = 0.0.11 =
 * Keep the official WebFinger REST controller enabled in dormant transport mode so the
   0.0.10 Axismundi descriptor adapter is reachable at the standard well-known endpoint.
-* Keep destructive legacy-data purge deferred to 0.0.12.
+* Keep destructive legacy-data purge deferred to a later release.
 
 = 0.0.10 =
 * Supply public Axismundi Actors through the official plugin's WebFinger controller while

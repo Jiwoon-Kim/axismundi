@@ -1,6 +1,6 @@
 # Axismundi ActivityPub Bridge
 
-> Status: **0.0.1 scaffold. No Inbox claim or outbound delivery is implemented.**
+> Status: **0.0.2 conflict-safe dormant transport. No Inbox claim or outbound delivery is implemented.**
 
 ## Purpose
 
@@ -24,7 +24,24 @@ repositories to supported network-facing extension points in the official Activi
    suppresses both default handlers and default domain persistence.
 4. No outbound Activity is submitted until upstream accepts a complete payload, a URI-backed
    signing Actor, and explicit recipient inboxes through a supported API.
-5. One post lifecycle has one publisher. Version 0.0.1 leaves ownership with ActivityPub.
+5. One post lifecycle has one publisher. Axismundi owns local lifecycle records while the
+   official scheduler is dormant.
 6. Upstream patches are written independently under upstream-compatible MIT/GPLv2 terms;
    GPL-3.0-only Axismundi implementation code is never copied into the upstream repository.
+7. Until verified Inbox handoff exists, inbound writes fail with 503 rather than being
+   silently discarded or persisted by both systems.
 
+## Dormant transport mode
+
+The bridge suppresses the official Router, Scheduler, Handler, and Dispatcher initializers.
+Axismundi Actors owns profiles, WebFinger, and NodeInfo; Object Projections owns content
+negotiation; Activities owns local lifecycle records. Official signature and REST server code
+remains installed but does not mutate domain state or deliver Activities.
+
+This mode removes callbacks only. It never deletes official CPT rows, options, cron events, or
+queues. A later transport phase may re-enable the minimum required callbacks after the upstream
+handoff and external-sender APIs are available.
+
+Rewrite rules are rebuilt once after the ownership change so cached official routes cannot keep
+winning. Deactivation deletes only the rewrite cache, allowing the official plugin to rebuild its
+routes on the next request.

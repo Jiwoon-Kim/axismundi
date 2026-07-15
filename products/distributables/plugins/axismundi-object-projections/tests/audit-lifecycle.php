@@ -47,7 +47,7 @@ try {
 	$ax_lifecycle_posts = array_merge( $ax_lifecycle_posts, array( $password_id, $page_id, $attachment ) );
 	ax_lifecycle_assert( $ax_lifecycle_results, 'password posts, pages, and attachments never emit Core Post publish candidates', 1 === count( $GLOBALS['ax_lifecycle_events'] ) );
 
-	add_filter( 'axismundi_op_post_lifecycle_owner', static fn() : string => 'official-activitypub', 99 );
+	add_filter( 'axismundi_op_post_lifecycle_owner', static fn() : string => 'official-activitypub', 200 );
 	$gated_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $author_id, 'post_title' => 'Lifecycle official owner' ) );
 	$ax_lifecycle_posts[] = $gated_id;
 	ax_lifecycle_assert( $ax_lifecycle_results, 'a different lifecycle owner suppresses Axismundi emission to prevent two Create activities', 1 === count( $GLOBALS['ax_lifecycle_events'] ) );

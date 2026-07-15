@@ -65,4 +65,10 @@ take precedence. Purge remains fail-closed.
 
 Supply public Axismundi Actor descriptors through the official plugin's `webfinger_data`
 surface after its pseudo-user resolver runs. Add the canonical ActivityStreams Actor `self`
-link while leaving every non-Axismundi resource untouched. Destructive purge moves to 0.0.11.
+link while leaving every non-Axismundi resource untouched. Destructive purge remains deferred.
+
+## 0.0.11 — WebFinger route gate correction
+
+Keep the official `rest.webfinger` module enabled alongside the verified Inbox transport
+surface. This makes the 0.0.10 descriptor adapter reachable regardless of which compatible
+well-known rewrite currently wins. Destructive purge moves to 0.0.12.

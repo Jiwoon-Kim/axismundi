@@ -350,6 +350,7 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 	</table>
 	<h3><?php esc_html_e( 'Avatar and header cache', 'axismundi-actors' ); ?></h3>
 	<p><a class="button" href="<?php echo esc_url( add_query_arg( 'ax_actor', $actor->get_uuid(), home_url( '/' ) ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Preview cached profile', 'axismundi-actors' ); ?></a></p>
+	<?php do_action( 'axismundi_actors_remote_actor_actions', $actor ); ?>
 	<?php if ( empty( $assets ) ) : ?>
 		<p><?php esc_html_e( 'No remote image sources were reported.', 'axismundi-actors' ); ?></p>
 	<?php else : ?>

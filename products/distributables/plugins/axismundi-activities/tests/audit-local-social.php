@@ -20,6 +20,7 @@ $ax_local_old_user      = get_current_user_id();
 $ax_local_old_get       = $_GET;
 $ax_local_old_auto      = get_option( 'axismundi_activities_auto_accept_local_follows', null );
 $ax_local_suffix        = strtolower( wp_generate_password( 7, false, false ) );
+$ax_local_bridge_hook   = has_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound' );
 $GLOBALS['ax_local_http_count'] = 0;
 
 /** Record one fixture result. */
@@ -63,6 +64,7 @@ function ax_local_create_person( string $login, array &$user_ids, array &$identi
 try {
 	update_option( 'axismundi_activities_auto_accept_local_follows', true, false );
 	add_filter( 'pre_http_request', 'ax_local_observe_http' );
+	remove_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound', $ax_local_bridge_hook ?: 10 );
 
 	$follower = ax_local_create_person( 'axfollow_' . $ax_local_suffix, $ax_local_user_ids, $ax_local_identity_ids, $ax_local_actor_uris );
 	$target   = ax_local_create_person( 'axtarget_' . $ax_local_suffix, $ax_local_user_ids, $ax_local_identity_ids, $ax_local_actor_uris );
@@ -136,10 +138,35 @@ try {
 		$ax_local_identity_ids[] = $remote->get_identity_id();
 		$ax_local_actor_uris[]   = $remote->get_uri();
 	}
-	$remote_attempt = $remote instanceof Axismundi_Actor ? axismundi_act_follow_local_actor( $follower, $remote ) : null;
-	ax_local_assert( $ax_local_results, 'local Follow service rejects remote Actors and performs no HTTP', is_wp_error( $remote_attempt ) && 'ax_act_local_only' === $remote_attempt->get_error_code() && 0 === $GLOBALS['ax_local_http_count'] );
+	$remote_attempt = $remote instanceof Axismundi_Actor ? axismundi_act_follow_actor( $follower, $remote ) : null;
+	$remote_follow  = is_array( $remote_attempt ) ? axismundi_act_get( (string) $remote_attempt['initiating_activity_uri'] ) : null;
+	ax_local_assert( $ax_local_results, 'remote Follow records an outbound Activity with an explicit remote audience and no HTTP', is_array( $remote_attempt ) && 'pending' === $remote_attempt['state'] && $remote_follow instanceof Axismundi_Activity && 'outbound' === $remote_follow->get_direction() && in_array( $remote->get_uri(), (array) $remote_follow->get_audience()['to'], true ) && 0 === $GLOBALS['ax_local_http_count'] );
+
+	$GLOBALS['axismundi_actors_current_actor'] = $remote;
+	$remote_profile_html = axismundi_act_render_profile_follow_control( '<article>remote profile</article>' );
+	ob_start();
+	do_action( 'axismundi_actors_remote_actor_actions', $remote );
+	$remote_admin_html = (string) ob_get_clean();
+	ax_local_assert( $ax_local_results, 'cached remote profile and administrator detail share a nonce-protected Cancel request control', str_contains( $remote_profile_html, 'Cancel request' ) && str_contains( $remote_profile_html, 'axismundi_act_follow' ) && str_contains( $remote_admin_html, 'Relationship' ) && str_contains( $remote_admin_html, '_wpnonce' ) );
+
+	$remote_undone = axismundi_act_unfollow_actor( $follower, $remote );
+	$remote_undos  = $remote_follow instanceof Axismundi_Activity ? array_values( array_filter( axismundi_act_get_by_object( $remote_follow->get_uri() ), static fn( Axismundi_Activity $activity ) : bool => 'Undo' === $activity->get_type() ) ) : array();
+	$remote_undo   = $remote_undos[0] ?? null;
+	ax_local_assert( $ax_local_results, 'remote Unfollow records an outbound Undo addressed to the remote Actor', is_array( $remote_undone ) && 'undone' === $remote_undone['state'] && $remote_undo instanceof Axismundi_Activity && 'Undo' === $remote_undo->get_type() && 'outbound' === $remote_undo->get_direction() && in_array( $remote->get_uri(), (array) $remote_undo->get_audience()['to'], true ) );
+
+	$inbound_follow_uri = 'https://example.com/activities/follow_' . $ax_local_suffix;
+	$inbound_follow = axismundi_act_record_activity(
+		array( 'id' => $inbound_follow_uri, 'type' => 'Follow', 'actor' => $remote->get_uri(), 'object' => $target->get_uri(), 'to' => array( $target->get_uri() ) ),
+		'inbound'
+	);
+	$remote_accept_relation = $inbound_follow instanceof Axismundi_Activity ? axismundi_act_respond_to_local_follow( $target, $inbound_follow_uri, 'accept' ) : null;
+	$remote_accept = is_array( $remote_accept_relation ) && ! empty( $remote_accept_relation['state_activity_uri'] ) ? axismundi_act_get( (string) $remote_accept_relation['state_activity_uri'] ) : null;
+	ax_local_assert( $ax_local_results, 'accepting an inbound remote Follow records an outbound Accept addressed to its Actor', is_array( $remote_accept_relation ) && 'accepted' === $remote_accept_relation['state'] && $remote_accept instanceof Axismundi_Activity && 'Accept' === $remote_accept->get_type() && 'outbound' === $remote_accept->get_direction() && in_array( $remote->get_uri(), (array) $remote_accept->get_audience()['to'], true ) );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_local_observe_http' );
+	if ( false !== $ax_local_bridge_hook ) {
+		add_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound', (int) $ax_local_bridge_hook );
+	}
 	wp_set_current_user( $ax_local_old_user );
 	$_GET = $ax_local_old_get;
 	$GLOBALS['axismundi_actors_current_actor'] = null;

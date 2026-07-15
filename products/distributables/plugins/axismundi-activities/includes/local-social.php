@@ -47,6 +47,79 @@ function axismundi_act_validate_local_people( Axismundi_Actor $subject, Axismund
 	return true;
 }
 
+/** Validate a local Person acting on one cached remote Actor. */
+function axismundi_act_validate_remote_follow( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	if ( ! $subject->is_local() || 'Person' !== $subject->get_type() || 'public' !== $subject->get_status() || ! $subject->is_handle_locked() ) {
+		return new WP_Error( 'ax_act_actor_unavailable', __( 'An activated public local Person actor is required.', 'axismundi-activities' ) );
+	}
+	if ( $object->is_local() || 'tombstone' === $object->get_status() ) {
+		return new WP_Error( 'ax_act_remote_target', __( 'The remote Actor is unavailable.', 'axismundi-activities' ) );
+	}
+	return true;
+}
+
+/** Start an outbound Follow for one cached remote Actor. */
+function axismundi_act_follow_remote_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	$valid = axismundi_act_validate_remote_follow( $subject, $object );
+	if ( is_wp_error( $valid ) ) {
+		return $valid;
+	}
+	$existing = axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
+	if ( is_array( $existing ) && in_array( (string) $existing['state'], array( 'pending', 'accepted', 'legacy_pending' ), true ) ) {
+		return $existing;
+	}
+	$follow = axismundi_act_record_activity(
+		array(
+			'type'   => 'Follow',
+			'actor'  => $subject->get_uri(),
+			'object' => $object->get_uri(),
+			'to'     => array( $object->get_uri() ),
+		),
+		'outbound'
+	);
+	return is_wp_error( $follow ) ? $follow : axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
+}
+
+/** Undo an Activity-backed outbound Follow without fabricating legacy history. */
+function axismundi_act_unfollow_remote_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	$valid = axismundi_act_validate_remote_follow( $subject, $object );
+	if ( is_wp_error( $valid ) ) {
+		return $valid;
+	}
+	$relation = axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
+	if ( ! is_array( $relation ) || ! in_array( (string) $relation['state'], array( 'pending', 'accepted' ), true ) ) {
+		return new WP_Error( 'ax_act_follow_missing', __( 'There is no active Follow to undo.', 'axismundi-activities' ) );
+	}
+	$follow_uri = (string) ( $relation['initiating_activity_uri'] ?? '' );
+	if ( 'activity' !== (string) ( $relation['evidence_type'] ?? 'activity' ) || '' === $follow_uri ) {
+		return new WP_Error( 'ax_act_follow_legacy', __( 'An imported Follow cannot be undone without its original Activity.', 'axismundi-activities' ) );
+	}
+	$undo = axismundi_act_record_activity(
+		array(
+			'type'   => 'Undo',
+			'actor'  => $subject->get_uri(),
+			'object' => $follow_uri,
+			'to'     => array( $object->get_uri() ),
+		),
+		'outbound'
+	);
+	return is_wp_error( $undo ) ? $undo : axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
+}
+
+/** Follow either a local Person or a cached remote Actor through the correct state machine. */
+function axismundi_act_follow_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	return $object->is_local()
+		? axismundi_act_follow_local_actor( $subject, $object )
+		: axismundi_act_follow_remote_actor( $subject, $object );
+}
+
+/** Unfollow either a local Person or a cached remote Actor. */
+function axismundi_act_unfollow_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	return $object->is_local()
+		? axismundi_act_unfollow_local_actor( $subject, $object )
+		: axismundi_act_unfollow_remote_actor( $subject, $object );
+}
+
 /** Start a local Follow and auto-Accept unless the target requires approval. */
 function axismundi_act_follow_local_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
 	$valid = axismundi_act_validate_local_people( $subject, $object );
@@ -106,9 +179,12 @@ function axismundi_act_respond_to_local_follow( Axismundi_Actor $target, string 
 	if ( ! is_array( $relation ) || 'pending' !== (string) $relation['state'] || $follow_activity_uri !== (string) $relation['initiating_activity_uri'] ) {
 		return new WP_Error( 'ax_act_follow_request_state', __( 'That Follow request is no longer pending.', 'axismundi-activities' ) );
 	}
-	$activity = axismundi_act_record_activity(
-		array( 'type' => 'accept' === $decision ? 'Accept' : 'Reject', 'actor' => $target->get_uri(), 'object' => $follow_activity_uri ),
-		'local'
-	);
+	$follower = axismundi_actors_get_by_uri( $follow->get_actor_uri() );
+	$remote   = $follower instanceof Axismundi_Actor && ! $follower->is_local();
+	$payload  = array( 'type' => 'accept' === $decision ? 'Accept' : 'Reject', 'actor' => $target->get_uri(), 'object' => $follow_activity_uri );
+	if ( $remote ) {
+		$payload['to'] = array( $follower->get_uri() );
+	}
+	$activity = axismundi_act_record_activity( $payload, $remote ? 'outbound' : 'local' );
 	return is_wp_error( $activity ) ? $activity : axismundi_act_get_relation( 'follow', $follow->get_actor_uri(), $target->get_uri() );
 }

@@ -50,22 +50,30 @@ DB v4 adds `legacy_snapshot` evidence for accepted followers/following and non-d
 `legacy_pending` outbound requests. Compatibility imports create no synthetic Activity.
 Actual Follow/Accept/Reject/Undo replay always takes ownership from snapshot evidence.
 
+## 0.0.9 — Phase 2.6: cached remote Actor Follow controls (shipped)
+
+Add transport-neutral Follow and Undo state transitions for cached remote Actors. Public
+cached profiles and the Actors administrator detail screen share one nonce-protected control.
+Outbound Follow, Undo, Accept, and Reject records carry an explicit remote audience; Activities
+still performs no HTTP and a transport adapter decides whether and how to deliver them. Imported
+legacy relationships remain read-only when no original Follow Activity URI exists.
+
 ## Prerequisite — Object Projections lease substrate
 
 Before Phase 3, Object Projections ships multi-reason object leases. Activities only consumes
 its feature-detected API.
 
-## 0.0.9 — Phase 3: Like, Announce, Undo
+## 0.0.10 — Phase 3: Like, Announce, Undo
 
 URI-referenced reactions, idempotent aggregate queries, Undo transitions, and optional
 `interaction` lease declarations for remote objects.
 
-## 0.0.10 — Phase 4: logical inbox/outbox membership
+## 0.0.11 — Phase 4: logical inbox/outbox membership
 
 Actor-scoped inbox/outbox memberships and collection query services. Object Projections may
 serialize collections; Federation serves HTTP. Notifications are explicitly excluded.
 
-## 0.0.11 — Phase 5: Add, Remove, Move, Join, Leave
+## 0.0.12 — Phase 5: Add, Remove, Move, Join, Leave
 
 Collection/community operations for saved media, shared folders, and managed Group workflows,
 plus optional `collection` leases. Domain plugins continue to own collection membership data.

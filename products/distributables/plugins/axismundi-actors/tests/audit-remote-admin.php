@@ -17,6 +17,9 @@ global $wpdb;
 $ax_remote_admin_results = array();
 $ax_remote_admin_id      = 0;
 $ax_remote_admin_user    = get_current_user_id();
+$ax_remote_admin_action  = static function ( Axismundi_Actor $actor ) : void {
+	echo '<span class="ax-remote-action-fixture">' . esc_html( $actor->get_uri() ) . '</span>';
+};
 
 /** @param array $results Accumulator. @param string $label Contract. @param bool $condition Holds. */
 function ax_remote_admin_assert( array &$results, string $label, bool $condition ) : void {
@@ -53,12 +56,14 @@ try {
 	ax_remote_admin_assert( $ax_remote_admin_results, 'repository list APIs return the cached Actor and host rows', 1 <= count( array_filter( axismundi_actors_get_remote_actors(), static fn( Axismundi_Actor $item ) : bool => $item->get_identity_id() === $ax_remote_admin_id ) ) && null !== axismundi_actors_get_instance( 'example.com' ) );
 
 	$_GET['actor_id'] = $ax_remote_admin_id;
+	add_action( 'axismundi_actors_remote_actor_actions', $ax_remote_admin_action );
 	ob_start();
 	axismundi_actors_render_remote_admin_page();
 	$html = (string) ob_get_clean();
 	ax_remote_admin_assert( $ax_remote_admin_results, 'screen renders the nonce-protected acct/URL lookup form', str_contains( $html, 'axismundi_actors_discover_remote' ) && str_contains( $html, 'Fetch Actor' ) && str_contains( $html, '_wpnonce' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'selected Actor shows normalized identity, endpoints, verified acct, and escaped raw JSON', str_contains( $html, 'Admin Fixture' ) && str_contains( $html, 'admin_fixture@example.com' ) && str_contains( $html, 'Endpoints' ) && str_contains( $html, '/inbox' ) && str_contains( $html, 'Raw Actor JSON' ) && str_contains( $html, 'preferredUsername' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'screen shows the linked instance software cache', str_contains( $html, 'fixture 1.2.3' ) && str_contains( $html, 'Cached instances' ) );
+	ax_remote_admin_assert( $ax_remote_admin_results, 'selected Actor exposes the administrator action seam to companion plugins', str_contains( $html, 'ax-remote-action-fixture' ) && $actor instanceof Axismundi_Actor && str_contains( $html, $actor->get_uri() ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'remote cache controls, optional WebP setting, and administrator-only profile preview are linked', str_contains( $html, 'Remote image cache' ) && str_contains( $html, 'axismundi_actors_asset_cache' ) && str_contains( $html, 'axismundi_actors_asset_settings' ) && str_contains( $html, 'Preview cached profile' ) && $actor instanceof Axismundi_Actor && axismundi_actors_can_view( $actor, get_current_user_id() ) && ! axismundi_actors_can_view( $actor, 0 ) );
 	if ( $actor instanceof Axismundi_Actor ) {
 		$GLOBALS['axismundi_actors_current_actor'] = $actor;
@@ -68,6 +73,7 @@ try {
 		ax_remote_admin_assert( $ax_remote_admin_results, 'remote profile preview reads cached payload text and is noindex/nofollow', 'Admin Fixture' === $profile_data['name'] && true === $robots['noindex'] && true === $robots['nofollow'] );
 	}
 } finally {
+	remove_action( 'axismundi_actors_remote_actor_actions', $ax_remote_admin_action );
 	unset( $_GET['actor_id'] );
 	if ( $ax_remote_admin_id > 0 ) {
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => $ax_remote_admin_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

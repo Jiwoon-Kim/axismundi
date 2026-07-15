@@ -12,6 +12,8 @@ $ax_bridge_delivery_results   = array();
 $ax_bridge_delivery_user      = 0;
 $ax_bridge_delivery_actor_ids = array();
 $ax_bridge_delivery_spool     = 0;
+$ax_bridge_social_spools      = array();
+$ax_bridge_social_uris        = array();
 $GLOBALS['ax_bridge_delivery_http_args'] = array();
 
 /** @param bool[] $results Results. */
@@ -75,6 +77,53 @@ try {
 	if ( $remote instanceof Axismundi_Actor ) {
 		$ax_bridge_delivery_actor_ids[] = $remote->get_identity_id();
 	}
+	$remote_follow = $local instanceof Axismundi_Actor && $remote instanceof Axismundi_Actor
+		? axismundi_act_follow_remote_actor( $local, $remote )
+		: new WP_Error( 'fixture_actor_missing' );
+	$follow_uri    = is_array( $remote_follow ) ? (string) ( $remote_follow['initiating_activity_uri'] ?? '' ) : '';
+	$follow_spools = '' !== $follow_uri
+		? get_posts(
+			array(
+				'post_type'      => 'ap_outbox',
+				'post_status'    => array( 'pending', 'publish' ),
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'meta_key'       => '_activitypub_external_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'     => $follow_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		)
+		: array();
+	$ax_bridge_social_spools = array_merge( $ax_bridge_social_spools, array_map( 'intval', $follow_spools ) );
+	$ax_bridge_social_uris[] = $follow_uri;
+	$follow_payload = '' !== $follow_uri && isset( $follow_spools[0] ) ? json_decode( (string) get_post_field( 'post_content', (int) $follow_spools[0] ), true ) : array();
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a remote Follow queues exactly one spool addressed to the cached Actor inbox', 1 === count( $follow_spools ) && 'Follow' === ( $follow_payload['type'] ?? '' ) && in_array( $remote_uri, (array) ( $follow_payload['to'] ?? array() ), true ) );
+
+	$inbound_follow_uri = 'https://example.com/activities/' . wp_generate_uuid4();
+	$inbound_follow     = $local instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'id' => $inbound_follow_uri, 'type' => 'Follow', 'actor' => $remote_uri, 'object' => $local->get_uri() ), 'inbound' )
+		: new WP_Error( 'fixture_actor_missing' );
+	$remote_accept      = $local instanceof Axismundi_Actor && $inbound_follow instanceof Axismundi_Activity
+		? axismundi_act_respond_to_local_follow( $local, $inbound_follow->get_uri(), 'accept' )
+		: new WP_Error( 'fixture_follow_missing' );
+	$accept_uri         = is_array( $remote_accept ) ? (string) ( $remote_accept['state_activity_uri'] ?? '' ) : '';
+	$accept_spools      = '' !== $accept_uri
+		? get_posts(
+			array(
+				'post_type'      => 'ap_outbox',
+				'post_status'    => array( 'pending', 'publish' ),
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'meta_key'       => '_activitypub_external_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'     => $accept_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		)
+		: array();
+	$ax_bridge_social_spools = array_merge( $ax_bridge_social_spools, array_map( 'intval', $accept_spools ) );
+	$ax_bridge_social_uris[] = $inbound_follow_uri;
+	$ax_bridge_social_uris[] = $accept_uri;
+	$accept_payload = '' !== $accept_uri && isset( $accept_spools[0] ) ? json_decode( (string) get_post_field( 'post_content', (int) $accept_spools[0] ), true ) : array();
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'accepting an inbound remote Follow queues one Accept addressed back to that Actor', 1 === count( $accept_spools ) && 'Accept' === ( $accept_payload['type'] ?? '' ) && $inbound_follow_uri === ( $accept_payload['object'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
+
 	$payload = array( 'id' => $activity_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/liked', 'to' => array( $remote_uri ) );
 	$sender       = axismundi_activitypub_bridge_sender( $local );
 	$rejected     = Activitypub\deliver_activity( $payload, array_merge( $sender, array( 'private_key' => 'secret' ) ), array( 'https://example.com/inbox' ) );
@@ -117,6 +166,15 @@ try {
 	if ( $ax_bridge_delivery_spool > 0 ) {
 		wp_clear_scheduled_hook( Activitypub\External_Delivery::PROCESS_HOOK, array( $ax_bridge_delivery_spool, 1 ) );
 		wp_delete_post( $ax_bridge_delivery_spool, true );
+	}
+	foreach ( array_unique( $ax_bridge_social_spools ) as $social_spool ) {
+		wp_clear_scheduled_hook( Activitypub\External_Delivery::PROCESS_HOOK, array( $social_spool, 1 ) );
+		wp_delete_post( $social_spool, true );
+	}
+	foreach ( array_filter( array_unique( $ax_bridge_social_uris ) ) as $social_uri ) {
+		$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $social_uri ) ); // phpcs:ignore WordPress.DB
+		$wpdb->delete( axismundi_act_relations_table(), array( 'state_activity_uri' => $social_uri ) ); // phpcs:ignore WordPress.DB
+		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $social_uri ) ); // phpcs:ignore WordPress.DB
 	}
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $activity_uri ?? '' ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $activity_uri ?? '' ) ); // phpcs:ignore WordPress.DB

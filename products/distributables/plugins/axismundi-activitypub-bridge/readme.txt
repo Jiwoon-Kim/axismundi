@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.6
+Stable tag: 0.0.7
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -16,7 +16,7 @@ Connects Axismundi domain stores to supported S2S transport extension points in 
 This package is the only intended dependency boundary between Axismundi and the official
 ActivityPub plugin. Actors, Object Projections, and Activities remain independently usable.
 
-Version 0.0.6 uses the patched official plugin's module gate to retain only Signature, REST
+Version 0.0.7 uses the patched official plugin's module gate to retain only Signature, REST
 Server, and Inbox routes. After the official permission callback verifies the HTTP signature,
 the bridge claims Activities addressed to public local Axismundi Actors and records them in the
 Axismundi Activity ledger. Official domain handlers and persistence remain dormant. Stock
@@ -26,6 +26,14 @@ Outbound Activities use the supported external-delivery API in the patched offic
 the official spool remains transport-only and Axismundi Activities remains authoritative.
 
 == Changelog ==
+
+= 0.0.7 =
+* Add a read-only legacy ActivityPub migration dry scan under Tools > ActivityPub Bridge.
+* Classify import and purge independently for remote Actors, remote Objects, Inbox history,
+  follower snapshots, transport Outbox rows, local lifecycle markers, profile fields, comments,
+  and official signing keys.
+* Perform no import, deletion, option update, network request, or payload/key rendering. Keep
+  `ap_actor` and signing keys runtime-required until external public-key resolution exists.
 
 = 0.0.6 =
 * Move public Actor Outbox representation and its GET route to Object Projections.

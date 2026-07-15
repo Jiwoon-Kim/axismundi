@@ -1,6 +1,6 @@
 # Runtime ownership matrix
 
-> Status: **0.0.6 verified Inbox handoff and outbound transport contract.**
+> Status: **0.0.7 verified Inbox handoff, outbound transport, and migration scan contract.**
 
 | Surface | Current owner | Official module state | Reason |
 |---|---|---|---|
@@ -16,6 +16,7 @@
 | Outbound signature, spool, retry, HTTP | Official ActivityPub | External delivery module enabled | Transport-only rows; private keys are resolved only while sending. |
 | Signature and REST validation code | Official ActivityPub | Active for Inbox routes | This is the retained S2S boundary. |
 | Official stored rows/options/cron | Official ActivityPub | Preserved | Compatibility mode is reversible and non-destructive. |
+| Official-to-Axismundi migration analysis | ActivityPub Bridge | Read-only | Only this package understands both storage models; import and purge remain disabled. |
 
 ## Re-enable order
 

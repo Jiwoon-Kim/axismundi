@@ -19,6 +19,81 @@ function axismundi_activitypub_bridge_register_admin_page() : void {
 }
 add_action( 'admin_menu', 'axismundi_activitypub_bridge_register_admin_page' );
 
+/** Run the explicit read-only dry scan for this request only. */
+function axismundi_activitypub_bridge_requested_legacy_report() : ?array {
+	if ( ! isset( $_POST['ax_bridge_legacy_scan'] ) ) {
+		return null;
+	}
+	check_admin_referer( 'ax_bridge_legacy_scan' );
+	return axismundi_activitypub_bridge_scan_legacy_data();
+}
+
+/** Compact classification counts for one report axis. */
+function axismundi_activitypub_bridge_report_counts( array $counts ) : string {
+	ksort( $counts );
+	$parts = array();
+	foreach ( $counts as $status => $count ) {
+		$parts[] = sanitize_key( (string) $status ) . ': ' . (int) $count;
+	}
+	return empty( $parts ) ? '—' : implode( ', ', $parts );
+}
+
+/** Render the migration dry-run controls and optional ephemeral report. */
+function axismundi_activitypub_bridge_render_legacy_scan( ?array $report ) : void {
+	?>
+	<h2><?php esc_html_e( 'Legacy ActivityPub migration', 'axismundi-activitypub-bridge' ); ?></h2>
+	<p><?php esc_html_e( 'Scan official ActivityPub storage without importing, deleting, fetching, or changing any row. Import and purge remain disabled in this release.', 'axismundi-activitypub-bridge' ); ?></p>
+	<form method="post">
+		<?php wp_nonce_field( 'ax_bridge_legacy_scan' ); ?>
+		<?php submit_button( __( 'Run migration dry scan', 'axismundi-activitypub-bridge' ), 'secondary', 'ax_bridge_legacy_scan', false ); ?>
+	</form>
+	<?php if ( ! is_array( $report ) ) : return; endif; ?>
+	<p><strong><?php esc_html_e( 'Result:', 'axismundi-activitypub-bridge' ); ?></strong>
+		<?php
+		echo esc_html(
+			sprintf(
+				/* translators: 1: official plugin version, 2: UTC scan time. */
+				__( 'ActivityPub %1$s, scanned at %2$s UTC. Writes: 0. Network requests: 0.', 'axismundi-activitypub-bridge' ),
+				(string) $report['official_version'],
+				(string) $report['generated_at']
+			)
+		);
+		?>
+	</p>
+	<?php if ( ! empty( $report['truncated'] ) ) : ?>
+		<div class="notice notice-warning inline"><p><?php esc_html_e( 'The bounded scan limit was reached. Increase the scan limit only after reviewing site size.', 'axismundi-activitypub-bridge' ); ?></p></div>
+	<?php endif; ?>
+	<table class="widefat striped">
+		<thead><tr><th><?php esc_html_e( 'Source', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Scanned / available', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Import decision', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Purge decision', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+		<tbody>
+		<?php foreach ( $report['summary'] as $source => $summary ) : ?>
+			<tr>
+				<td><code><?php echo esc_html( (string) $source ); ?></code></td>
+				<td><?php echo esc_html( (int) $summary['scanned'] . ' / ' . (int) $summary['available'] ); ?></td>
+				<td><?php echo esc_html( axismundi_activitypub_bridge_report_counts( (array) $summary['import'] ) ); ?></td>
+				<td><?php echo esc_html( axismundi_activitypub_bridge_report_counts( (array) $summary['purge'] ) ); ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+	<h3><?php esc_html_e( 'Classified sample', 'axismundi-activitypub-bridge' ); ?></h3>
+	<table class="widefat striped">
+		<thead><tr><th><?php esc_html_e( 'Source row', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Canonical identity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Import', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Purge', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Reason', 'axismundi-activitypub-bridge' ); ?></th></tr></thead>
+		<tbody>
+		<?php foreach ( $report['rows'] as $row ) : ?>
+			<tr>
+				<td><code><?php echo esc_html( $row['source'] . ':' . $row['source_id'] ); ?></code></td>
+				<td><code><?php echo esc_html( '' !== $row['identity'] ? $row['identity'] : '—' ); ?></code></td>
+				<td><code><?php echo esc_html( $row['import'] ); ?></code></td>
+				<td><code><?php echo esc_html( $row['purge'] ); ?></code></td>
+				<td><?php echo esc_html( $row['detail'] ); ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+	<?php
+}
+
 /** Every currently public local Actor, without creating identities while reading. */
 function axismundi_activitypub_bridge_public_actors() : array {
 	$actors = array();
@@ -71,10 +146,13 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 			'meta_value'     => 1, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		)
 	);
+	$legacy_report = axismundi_activitypub_bridge_requested_legacy_report();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ); ?></h1>
 		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The official ActivityPub plugin verifies Inbox signatures and operates this outbound transport queue.', 'axismundi-activitypub-bridge' ); ?></p>
+
+		<?php axismundi_activitypub_bridge_render_legacy_scan( $legacy_report ); ?>
 
 		<h2><?php esc_html_e( 'Endpoints', 'axismundi-activitypub-bridge' ); ?></h2>
 		<p><strong><?php esc_html_e( 'Shared Inbox', 'axismundi-activitypub-bridge' ); ?>:</strong> <code><?php echo esc_html( axismundi_activitypub_bridge_shared_inbox_url() ); ?></code></p>

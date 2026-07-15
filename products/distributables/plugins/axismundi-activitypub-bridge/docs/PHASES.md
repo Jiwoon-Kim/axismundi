@@ -36,3 +36,11 @@ official plugin remains queue/retry owner and its spool is never authoritative d
 Move the public Actor Outbox collection and GET route to Object Projections. Bridge retains
 only surfaces that require the official plugin: verified Inbox handoff, transport endpoints,
 signing identity resolution, queue handoff, retry, and HTTP delivery.
+
+## 0.0.7 — Legacy storage scan and dry-run
+
+Inspect official `ap_actor`, `ap_post`, `ap_inbox`, `ap_outbox`, follower snapshots,
+`activitypub_status`, profile fields, comments, and signing-key custody. Report import and
+purge decisions independently without writes, network requests, payload rendering, import,
+or deletion. Keep `ap_actor` runtime-required while official signature verification resolves
+public keys through that cache. Import follows in 0.0.8; fail-closed purge follows separately.

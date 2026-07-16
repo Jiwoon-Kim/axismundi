@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.17
+Stable tag: 0.0.18
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -24,8 +24,8 @@ the official ActivityPub plugin as optional (see docs/COMPATIBILITY.md).
 
 This release also ships standalone content negotiation on the existing WordPress URL,
 the Core Post → Article transformer, and an optional first-party Axismundi Media Library
-attachment adapter. It creates no custom rewrite. The Actor Outbox uses a stable, read-only
-REST collection URI.
+attachment adapter. Shared media folders use a stable UUID collection route; the Actor
+Outbox uses a stable, read-only REST collection URI.
 When the official ActivityPub plugin is active, the standalone negotiator turns itself off
 so a future adapter can preserve that plugin's established object ids.
 
@@ -36,7 +36,20 @@ objects under Tools > Remote Objects, including tags, mentions, audience declara
 attachment descriptors, extension properties, and the complete escaped JSON payload;
 remote media is never hotlinked or downloaded.
 
+Administrators may also probe a remote ActivityStreams Collection and its same-host first
+page without persisting the Collection, fetching its item URLs, or downloading binaries.
+
 == Changelog ==
+
+= 0.0.18 =
+* Project an eligible Media Library folder as a UUID-keyed OrderedCollection with bounded
+  OrderedCollectionPage responses, direct folder membership, owner-Actor attribution, and
+  anonymous visibility filtering.
+* Serve `/media/folder/{uuid}` independently of object content negotiation, with a plain
+  query fallback for environments where pretty rewrites are unavailable.
+* Add a metadata-only remote Collection probe under Tools > Remote Objects. It fetches at
+  most the root and its same-host first page, never item URLs or media binaries, and stores
+  no Collection cache row.
 
 = 0.0.17 =
 * Advertise exactly one media Link, capped at 1024, for media embedded in an Article

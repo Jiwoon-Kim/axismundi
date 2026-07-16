@@ -1,7 +1,7 @@
 # Routing & URI contract
 
-> Status: **Standalone Post, Media attachment, Actor, and Actor Outbox representation
-> implemented through 0.0.10.** Additional collection routing remains a later phase.
+> Status: **Standalone Post, Media attachment, Actor, Actor Outbox, and UUID media-folder
+> representation implemented through 0.0.18.** Additional collection routing remains later.
 
 ## 1. Principle — negotiate on the existing WordPress URL
 
@@ -25,7 +25,7 @@ objects, so they do get their own stable collection endpoints.
 | Media home    | `/?ax_media_archive=landing`           | media landing archive       |
 | Media author  | ID-based plain archive endpoint        | author media archive        |
 | Folder        | owner-ID + term-ID plain endpoint      | folder archive URL          |
-| Shared folder | identity **UUID**-based Collection URI | shared-folder page          |
+| Shared folder | `/media/folder/{uuid}`                 | owner/path folder archive   |
 | Actor         | `/actors/{uuid}` (Actors plugin)       | `/@handle/`                 |
 
 Rules:
@@ -34,9 +34,9 @@ Rules:
   slug or permalink change never splits federated identity.
 - **`url` is the pretty/human permalink.** A pretty URL under an AS `Accept` returns the
   same object, but the JSON `id` stays the plain stable URI.
-- **Shared folders never key their `id` on a path/slug** — they use the identity UUID
-  assigned when the shared folder is registered as an identity (Media Library Phase 5b).
-  The exact URI form is fixed together with that identity-registration contract, not here.
+- **Shared folders never key their `id` on a path/slug** — `/media/folder/{uuid}` uses the
+  identity UUID assigned by Media Library. `/page/{n}` is an OrderedCollectionPage and never
+  a second folder identity.
 - This supersedes the earlier reserved `?ax_media_object=` idea in the Media Library
   routing notes — attachments negotiate on their own `?attachment_id=` URL instead.
 

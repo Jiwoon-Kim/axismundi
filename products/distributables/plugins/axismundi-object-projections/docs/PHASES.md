@@ -28,16 +28,17 @@ Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): stri
                                                        visibility, bounded image rendition
 Phase 3c Article media + Attachment usedIn           — shipped (0.0.13): relation-indexed
                                                        attachment/image and public reverse use
-Phase 3d Media archive/folder OrderedCollections     — home/author/folder collection views
+Phase 3d Media archive/folder OrderedCollections     — shared folder shipped (0.0.18): UUID
+                                                       root + bounded pages; home/author later
 Phase 3e FEP-1311 media renditions                   — shipped (0.0.16 + Media Library 0.0.27):
                                                        url[] Link array, media first, original
                                                        never advertised, max 4 existing
                                                        derivatives. Standalone name = title;
                                                        embedded name = alt. Media Library owns
                                                        selection (MEDIA-RENDITIONS.md).
-Phase 3f shared-folder rendition consumer            — next; read-only feasibility first:
-                                                       create a shared folder and read the
-                                                       collection. Binary caching deferred.
+Phase 3f shared-folder rendition consumer            — read-only feasibility shipped (0.0.18):
+                                                       remote root + first-page metadata probe;
+                                                       binary caching/shadow records deferred.
 Phase 4a remote object repository                    — shipped (0.0.5): URI-keyed observed
                                                        cache table; no network/public route
 Phase 4b remote fetch + administrator inspector      — shipped (0.0.6): metadata-only,

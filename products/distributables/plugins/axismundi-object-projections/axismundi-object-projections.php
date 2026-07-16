@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Object Projections
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-object-projections
  * Description:       Projects WordPress objects, Actors, and collections into ActivityStreams JSON-LD through a transformer registry and a single renderer. It owns representation and public read routes, not Activity state, Inbox writes, signatures, or delivery.
- * Version:           0.0.17
+ * Version:           0.0.18
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -21,11 +21,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_VERSION = '0.0.17';
+const AXISMUNDI_OP_VERSION = '0.0.18';
 
 require_once __DIR__ . '/includes/remote-objects.php';
 require_once __DIR__ . '/includes/leases.php';
 require_once __DIR__ . '/includes/remote-fetch.php';
+require_once __DIR__ . '/includes/remote-collections.php';
 require_once __DIR__ . '/includes/registry.php';
 require_once __DIR__ . '/includes/sanitize.php';
 require_once __DIR__ . '/includes/renderer.php';
@@ -34,6 +35,7 @@ require_once __DIR__ . '/includes/post-article.php';
 require_once __DIR__ . '/includes/lifecycle.php';
 require_once __DIR__ . '/includes/integrations/actors.php';
 require_once __DIR__ . '/includes/integrations/media-library.php';
+require_once __DIR__ . '/includes/integrations/media-folders.php';
 require_once __DIR__ . '/includes/integrations/reactions.php';
 require_once __DIR__ . '/includes/router.php';
 if ( is_admin() ) {

@@ -58,6 +58,49 @@ function axismundi_op_remote_admin_notices() : void {
 		$message = sanitize_text_field( wp_unslash( $_GET['ax_op_error'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- escaped display-only message.
 		echo '<div class="notice notice-error"><p>' . esc_html( $message ) . '</p></div>';
 	}
+	if ( isset( $_GET['ax_op_collection_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- redirect status only.
+		$message = sanitize_text_field( wp_unslash( $_GET['ax_op_collection_error'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- escaped display-only message.
+		echo '<div class="notice notice-error"><p>' . esc_html( $message ) . '</p></div>';
+	}
+}
+
+/** Render a metadata-only remote Collection probe. */
+function axismundi_op_render_remote_collection_probe( array $probe ) : void {
+	$root  = isset( $probe['root'] ) && is_array( $probe['root'] ) ? $probe['root'] : array();
+	$items = isset( $probe['items'] ) && is_array( $probe['items'] ) ? $probe['items'] : array();
+	?>
+	<h3><?php esc_html_e( 'Remote Collection preview', 'axismundi-object-projections' ); ?></h3>
+	<table class="widefat striped" style="max-width:1000px"><tbody>
+		<tr><th><?php esc_html_e( 'ID', 'axismundi-object-projections' ); ?></th><td><code><?php echo esc_html( axismundi_op_remote_collection_uri( $root['id'] ?? '' ) ); ?></code></td></tr>
+		<tr><th><?php esc_html_e( 'Type', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( is_array( $root['type'] ?? null ) ? implode( ', ', array_map( 'strval', $root['type'] ) ) : (string) ( $root['type'] ?? '' ) ); ?></td></tr>
+		<tr><th><?php esc_html_e( 'Name', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) ( $root['name'] ?? '' ) ); ?></td></tr>
+		<tr><th><?php esc_html_e( 'Attributed to', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( axismundi_op_remote_collection_uri( $root['attributedTo'] ?? '' ) ); ?></td></tr>
+		<tr><th><?php esc_html_e( 'Total items', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) absint( $root['totalItems'] ?? count( $items ) ) ); ?></td></tr>
+	</tbody></table>
+	<h4><?php esc_html_e( 'First page items', 'axismundi-object-projections' ); ?></h4>
+	<table class="widefat striped" style="max-width:1000px"><thead><tr><th><?php esc_html_e( 'Type', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Name', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Object URI', 'axismundi-object-projections' ); ?></th><th><?php esc_html_e( 'Media', 'axismundi-object-projections' ); ?></th></tr></thead><tbody>
+	<?php if ( empty( $items ) ) : ?>
+		<tr><td colspan="4"><?php esc_html_e( 'No items on the first page.', 'axismundi-object-projections' ); ?></td></tr>
+	<?php else : foreach ( $items as $item ) :
+		$item_array = is_array( $item ) ? $item : array();
+		$uri        = axismundi_op_remote_collection_uri( $item );
+		if ( '' === $uri ) {
+			$uri = axismundi_op_remote_collection_uri( $item_array['id'] ?? '' );
+		}
+		$urls       = $item_array['url'] ?? array();
+		$url_list   = is_array( $urls ) && array_is_list( $urls ) ? $urls : array( $urls );
+		$media      = array();
+		foreach ( $url_list as $link ) {
+			if ( is_array( $link ) && 'text/html' !== ( $link['mediaType'] ?? '' ) ) {
+				$media[] = trim( (string) ( $link['mediaType'] ?? '' ) . ' ' . absint( $link['width'] ?? 0 ) . 'x' . absint( $link['height'] ?? 0 ) );
+			}
+		}
+		?>
+		<tr><td><?php echo esc_html( (string) ( $item_array['type'] ?? '' ) ); ?></td><td><?php echo esc_html( (string) ( $item_array['name'] ?? '' ) ); ?></td><td><?php echo '' !== $uri ? '<a href="' . esc_url( $uri ) . '" rel="noopener noreferrer">' . esc_html( $uri ) . '</a>' : '—'; ?></td><td><?php echo esc_html( implode( ', ', array_filter( $media ) ) ); ?></td></tr>
+	<?php endforeach; endif; ?>
+	</tbody></table>
+	<p class="description"><?php esc_html_e( 'Metadata-only probe: item URLs are not fetched and no remote binary is downloaded or cached.', 'axismundi-object-projections' ); ?></p>
+	<?php
 }
 
 /** Normalize a scalar/object/list ActivityStreams member into a list. */
@@ -278,6 +321,14 @@ function axismundi_op_render_remote_admin_page() : void {
 	$selected_uri = isset( $_GET['object_uri'] ) ? esc_url_raw( wp_unslash( $_GET['object_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
 	$selected     = '' !== $selected_uri ? axismundi_op_remote_object_get( $selected_uri, true ) : null;
 	$objects      = axismundi_op_remote_objects_list();
+	$collection_probe = null;
+	$probe_token      = isset( $_GET['ax_op_collection_probe'] ) ? sanitize_key( wp_unslash( $_GET['ax_op_collection_probe'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Opaque read-only transient token.
+	if ( '' !== $probe_token ) {
+		$stored_probe = get_transient( 'ax_op_collection_' . $probe_token );
+		if ( is_array( $stored_probe ) && get_current_user_id() === (int) ( $stored_probe['user_id'] ?? 0 ) && is_array( $stored_probe['probe'] ?? null ) ) {
+			$collection_probe = $stored_probe['probe'];
+		}
+	}
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Remote Objects', 'axismundi-object-projections' ); ?></h1>
@@ -290,6 +341,17 @@ function axismundi_op_render_remote_admin_page() : void {
 			<input id="ax-op-remote-object" type="url" name="remote_object" class="large-text" placeholder="https://example.social/users/alice/statuses/123" required>
 			<?php submit_button( __( 'Fetch object metadata', 'axismundi-object-projections' ), 'primary', 'submit', false ); ?>
 		</form>
+
+		<h2><?php esc_html_e( 'Remote Collections', 'axismundi-object-projections' ); ?></h2>
+		<p><?php esc_html_e( 'Inspect a Collection root and its first page without storing objects or downloading media.', 'axismundi-object-projections' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="axismundi_op_probe_remote_collection">
+			<?php wp_nonce_field( 'ax_op_probe_remote_collection' ); ?>
+			<label class="screen-reader-text" for="ax-op-remote-collection"><?php esc_html_e( 'Remote Collection URL', 'axismundi-object-projections' ); ?></label>
+			<input id="ax-op-remote-collection" type="url" name="remote_collection" class="large-text" placeholder="https://example.social/media/folder/uuid" required>
+			<?php submit_button( __( 'Inspect Collection metadata', 'axismundi-object-projections' ), 'secondary', 'submit', false ); ?>
+		</form>
+		<?php if ( is_array( $collection_probe ) ) { axismundi_op_render_remote_collection_probe( $collection_probe ); } ?>
 
 		<?php if ( is_array( $selected ) ) : ?>
 			<?php axismundi_op_render_remote_object_detail( $selected ); ?>
@@ -340,6 +402,25 @@ function axismundi_op_handle_fetch_remote_object() : void {
 	exit;
 }
 add_action( 'admin_post_axismundi_op_fetch_remote_object', 'axismundi_op_handle_fetch_remote_object' );
+
+/** Probe one remote Collection without persistence. */
+function axismundi_op_handle_probe_remote_collection() : void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You cannot inspect remote Collections.', 'axismundi-object-projections' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'ax_op_probe_remote_collection' );
+	$url    = isset( $_POST['remote_collection'] ) ? esc_url_raw( wp_unslash( $_POST['remote_collection'] ) ) : '';
+	$result = '' !== $url ? axismundi_op_remote_collection_fetch( $url ) : new WP_Error( 'ax_op_collection_input', __( 'Enter a remote Collection URL.', 'axismundi-object-projections' ) );
+	if ( is_wp_error( $result ) ) {
+		wp_safe_redirect( add_query_arg( 'ax_op_collection_error', rawurlencode( $result->get_error_message() ), axismundi_op_remote_admin_url() ) );
+		exit;
+	}
+	$token = strtolower( wp_generate_password( 20, false, false ) );
+	set_transient( 'ax_op_collection_' . $token, array( 'user_id' => get_current_user_id(), 'probe' => $result ), 5 * MINUTE_IN_SECONDS );
+	wp_safe_redirect( add_query_arg( 'ax_op_collection_probe', $token, axismundi_op_remote_admin_url() ) );
+	exit;
+}
+add_action( 'admin_post_axismundi_op_probe_remote_collection', 'axismundi_op_handle_probe_remote_collection' );
 
 /** Delete one cache row. */
 function axismundi_op_handle_delete_remote_object() : void {

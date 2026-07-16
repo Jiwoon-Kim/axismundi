@@ -854,17 +854,59 @@ function axismundi_actors_get_for_user( int $user_id ) : ?Axismundi_Actor {
 /**
  * Recent cached remote actors for administration.
  *
- * @param int $limit Maximum rows.
+ * @param int    $limit  Maximum rows.
+ * @param int    $offset Result offset.
+ * @param string $search Optional username, display name, or canonical URI search.
  * @return Axismundi_Actor[]
  */
-function axismundi_actors_get_remote_actors( int $limit = 50 ) : array {
+function axismundi_actors_get_remote_actors( int $limit = 50, int $offset = 0, string $search = '' ) : array {
 	global $wpdb;
 	$limit      = max( 1, min( 200, $limit ) );
+	$offset     = max( 0, $offset );
+	$search     = trim( $search );
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table names; numeric limit is prepared.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' ORDER BY i.updated_at DESC LIMIT %d", $limit ), ARRAY_A );
+	$addresses  = axismundi_actors_addresses_table();
+	if ( '' !== $search ) {
+		$like = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
+		$sql  = $wpdb->prepare(
+			"SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address LIKE %s)) ORDER BY i.updated_at DESC LIMIT %d OFFSET %d",
+			$like,
+			$like,
+			$like,
+			$like,
+			$limit,
+			$offset
+		);
+	} else {
+		$sql = $wpdb->prepare( "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' ORDER BY i.updated_at DESC LIMIT %d OFFSET %d", $limit, $offset );
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table names; values, limit, and offset prepared above.
+	$rows = (array) $wpdb->get_results( $sql, ARRAY_A );
 	return array_map( static fn( array $row ) : Axismundi_Actor => Axismundi_Actor::from_row( $row ), $rows );
+}
+
+/** Count cached remote Actors for administration pagination. */
+function axismundi_actors_count_remote_actors( string $search = '' ) : int {
+	global $wpdb;
+	$search     = trim( $search );
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	$addresses  = axismundi_actors_addresses_table();
+	if ( '' !== $search ) {
+		$like = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
+		$sql  = $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote' AND (a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address LIKE %s))",
+			$like,
+			$like,
+			$like,
+			$like
+		);
+	} else {
+		$sql = "SELECT COUNT(*) FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE i.origin = 'remote'";
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table names; optional values prepared above.
+	return (int) $wpdb->get_var( $sql );
 }
 
 /**

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.27
+Stable tag: 0.0.28
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,10 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.28 =
+* Add search, total counts, and pagination to the cached remote Actor screen so older
+  imported or previously discovered Actors are not hidden behind the recent 50-row window.
 
 = 0.0.27 =
 * Add a remote Actor administrator-detail action seam so companion social plugins can

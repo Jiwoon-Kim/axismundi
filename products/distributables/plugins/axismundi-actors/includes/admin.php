@@ -202,8 +202,16 @@ function axismundi_actors_render_remote_admin_page() : void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( esc_html__( 'You cannot inspect remote Actors.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
-	$selected_id = isset( $_GET['actor_id'] ) ? absint( $_GET['actor_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
-	$selected    = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;
+	$selected_id  = isset( $_GET['actor_id'] ) ? absint( $_GET['actor_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
+	$selected     = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;
+	$actor_search = isset( $_GET['ax_actor_search'] ) ? sanitize_text_field( wp_unslash( $_GET['ax_actor_search'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only search.
+	$actor_page   = isset( $_GET['ax_actor_page'] ) ? max( 1, absint( $_GET['ax_actor_page'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination.
+	$actor_total  = axismundi_actors_count_remote_actors( $actor_search );
+	$actor_pages  = max( 1, (int) ceil( $actor_total / 50 ) );
+	$actor_page   = min( $actor_page, $actor_pages );
+	$remote_actors = axismundi_actors_get_remote_actors( 50, ( $actor_page - 1 ) * 50, $actor_search );
+	/* translators: %s: number of cached remote Actors. */
+	$actor_count_label = sprintf( _n( '%s item', '%s items', $actor_total, 'axismundi-actors' ), number_format_i18n( $actor_total ) );
 	if ( $selected instanceof Axismundi_Actor && $selected->is_local() ) {
 		$selected = null;
 	}
@@ -227,7 +235,32 @@ function axismundi_actors_render_remote_admin_page() : void {
 		<?php endif; ?>
 
 		<h2><?php esc_html_e( 'Cached remote Actors', 'axismundi-actors' ); ?></h2>
-		<?php axismundi_actors_render_remote_actor_table( axismundi_actors_get_remote_actors() ); ?>
+		<form method="get" action="<?php echo esc_url( admin_url( 'users.php' ) ); ?>">
+			<input type="hidden" name="page" value="axismundi-remote-actors">
+			<label class="screen-reader-text" for="ax-remote-actor-search"><?php esc_html_e( 'Search cached remote Actors', 'axismundi-actors' ); ?></label>
+			<input id="ax-remote-actor-search" type="search" name="ax_actor_search" value="<?php echo esc_attr( $actor_search ); ?>" placeholder="<?php esc_attr_e( 'Handle, name, or Actor URI', 'axismundi-actors' ); ?>">
+			<?php submit_button( __( 'Search cached Actors', 'axismundi-actors' ), 'secondary', 'submit', false ); ?>
+			<span class="displaying-num"><?php echo esc_html( $actor_count_label ); ?></span>
+		</form>
+		<?php axismundi_actors_render_remote_actor_table( $remote_actors ); ?>
+		<?php if ( $actor_pages > 1 ) : ?>
+			<div class="tablenav"><div class="tablenav-pages">
+				<?php
+				echo wp_kses_post(
+					paginate_links(
+						array(
+							'base'      => add_query_arg( array( 'ax_actor_page' => '%#%', 'ax_actor_search' => $actor_search ), axismundi_actors_remote_admin_url() ),
+							'format'    => '',
+							'current'   => $actor_page,
+							'total'     => $actor_pages,
+							'prev_text' => __( '&laquo; Previous', 'axismundi-actors' ),
+							'next_text' => __( 'Next &raquo;', 'axismundi-actors' ),
+						)
+					)
+				);
+				?>
+			</div></div>
+		<?php endif; ?>
 
 		<h2><?php esc_html_e( 'Cached instances', 'axismundi-actors' ); ?></h2>
 		<?php axismundi_actors_render_instance_table( axismundi_actors_get_instances() ); ?>

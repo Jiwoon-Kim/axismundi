@@ -54,6 +54,7 @@ try {
 
 	ax_remote_admin_assert( $ax_remote_admin_results, 'the remote screen lives under Users and requires manage_options', str_contains( axismundi_actors_remote_admin_url(), 'users.php?page=axismundi-remote-actors' ) && current_user_can( 'manage_options' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'repository list APIs return the cached Actor and host rows', 1 <= count( array_filter( axismundi_actors_get_remote_actors(), static fn( Axismundi_Actor $item ) : bool => $item->get_identity_id() === $ax_remote_admin_id ) ) && null !== axismundi_actors_get_instance( 'example.com' ) );
+	ax_remote_admin_assert( $ax_remote_admin_results, 'remote Actor search and count include verified acct addresses outside an unfiltered recent-page assumption', 1 === count( axismundi_actors_get_remote_actors( 50, 0, '@admin_fixture@example.com' ) ) && 1 === axismundi_actors_count_remote_actors( '@admin_fixture@example.com' ) );
 
 	$_GET['actor_id'] = $ax_remote_admin_id;
 	add_action( 'axismundi_actors_remote_actor_actions', $ax_remote_admin_action );
@@ -61,6 +62,7 @@ try {
 	axismundi_actors_render_remote_admin_page();
 	$html = (string) ob_get_clean();
 	ax_remote_admin_assert( $ax_remote_admin_results, 'screen renders the nonce-protected acct/URL lookup form', str_contains( $html, 'axismundi_actors_discover_remote' ) && str_contains( $html, 'Fetch Actor' ) && str_contains( $html, '_wpnonce' ) );
+	ax_remote_admin_assert( $ax_remote_admin_results, 'screen exposes cached Actor search, total count, and pagination-ready controls', str_contains( $html, 'ax_actor_search' ) && str_contains( $html, 'Search cached Actors' ) && str_contains( $html, 'displaying-num' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'selected Actor shows normalized identity, endpoints, verified acct, and escaped raw JSON', str_contains( $html, 'Admin Fixture' ) && str_contains( $html, 'admin_fixture@example.com' ) && str_contains( $html, 'Endpoints' ) && str_contains( $html, '/inbox' ) && str_contains( $html, 'Raw Actor JSON' ) && str_contains( $html, 'preferredUsername' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'screen shows the linked instance software cache', str_contains( $html, 'fixture 1.2.3' ) && str_contains( $html, 'Cached instances' ) );
 	ax_remote_admin_assert( $ax_remote_admin_results, 'selected Actor exposes the administrator action seam to companion plugins', str_contains( $html, 'ax-remote-action-fixture' ) && $actor instanceof Axismundi_Actor && str_contains( $html, $actor->get_uri() ) );

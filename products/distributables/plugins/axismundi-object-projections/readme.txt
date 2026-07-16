@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.12
+Stable tag: 0.0.13
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -37,6 +37,16 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.13 =
+* Align Core Post Article output with FEP-b2b8: a dedicated positive HTML allowlist,
+  manual Excerpt summary, More/Excerpt Note preview, Link-valued human URL, generator,
+  sensitivity, representative image, and rendered full content.
+* Project public Media Library reverse-index references as Article attachments. Embedded
+  local images, video, audio, and files are listed for prefetch without guessing IDs from
+  arbitrary external hotlinks.
+* Add a public Attachment `usedIn` OrderedCollection that lists distinct public Articles
+  only. Keep private usage and private/locked media fail-closed.
 
 = 0.0.12 =
 * Add DB v3 multi-reason object leases keyed by canonical object URI, reason, and reference.

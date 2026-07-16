@@ -35,14 +35,24 @@ try {
 			'post_status'  => 'publish',
 			'post_author'  => $author_id,
 			'post_title'   => 'Projection Article',
-			'post_content' => '<!-- wp:paragraph --><p>Hello <strong>world</strong>.</p><!-- /wp:paragraph -->',
-			'post_excerpt' => 'A short summary.',
+			'post_content' => '<!-- wp:paragraph --><p>Hello <strong>world</strong>.</p><!-- /wp:paragraph --><!-- wp:more --><!--more--><!-- /wp:more --><!-- wp:paragraph --><p>Extended body.</p><!-- /wp:paragraph -->',
+			'post_excerpt' => '<em>A short summary.</em>',
+		)
+	);
+	$fallback_id = wp_insert_post(
+		array(
+			'post_type'    => 'post',
+			'post_status'  => 'publish',
+			'post_author'  => $author_id,
+			'post_title'   => 'Excerpt Preview',
+			'post_content' => '<p>Full body without a More block.</p>',
+			'post_excerpt' => 'Editorial excerpt.',
 		)
 	);
 	$page_id = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Not an Article provider' ) );
 	$draft_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_author' => $author_id, 'post_title' => 'Draft' ) );
 	$locked_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $author_id, 'post_title' => 'Locked', 'post_password' => 'secret' ) );
-	$ax_article_posts = array_filter( array( $post_id, $page_id, $draft_id, $locked_id ), 'is_int' );
+	$ax_article_posts = array_filter( array( $post_id, $fallback_id, $page_id, $draft_id, $locked_id ), 'is_int' );
 
 	$post   = get_post( $post_id );
 	$page   = get_post( $page_id );
@@ -67,10 +77,13 @@ try {
 		is_array( $article )
 			&& 'Article' === $article['type']
 			&& add_query_arg( 'p', $post_id, home_url( '/' ) ) === $article['id']
-			&& get_permalink( $post_id ) === $article['url']
+			&& get_permalink( $post_id ) === $article['url']['href']
+			&& 'text/html' === $article['url']['mediaType']
 			&& 'https://example.com/actors/test-author' === $article['attributedTo']
-			&& 'https://www.w3.org/ns/activitystreams' === $article['@context']
-			&& 'A short summary.' === $article['summary']
+			&& is_array( $article['@context'] )
+			&& 'https://www.w3.org/ns/activitystreams' === $article['@context'][0]
+			&& array( 'sensitive' => 'as:sensitive' ) === $article['@context'][1]
+			&& false !== strpos( (string) $article['summary'], '<em>A short summary.</em>' )
 	);
 	$content_contract = is_array( $article ) && false !== strpos( (string) $article['content'], '<p' ) && ! empty( $article['published'] ) && ! empty( $article['updated'] );
 	if ( ! $content_contract && is_array( $article ) ) {
@@ -78,6 +91,26 @@ try {
 		printf( "[DEBUG] content=%s published=%s updated=%s\n", (string) $article['content'], (string) $article['published'], (string) $article['updated'] );
 	}
 	ax_article_assert( $ax_article_results, 'Article content is rendered HTML and has published/updated timestamps', $content_contract );
+	ax_article_assert(
+		$ax_article_results,
+		'a More block creates an embedded Note preview with no independent id/url or read-more link',
+		is_array( $article ) && isset( $article['preview'] )
+			&& 'Note' === $article['preview']['type']
+			&& 'https://example.com/actors/test-author' === $article['preview']['attributedTo']
+			&& ! empty( $article['preview']['published'] )
+			&& ! isset( $article['preview']['id'], $article['preview']['url'] )
+			&& false !== strpos( (string) $article['preview']['content'], 'Hello' )
+			&& false === strpos( (string) $article['preview']['content'], 'Extended body' )
+			&& false === stripos( (string) $article['preview']['content'], 'read more' )
+	);
+	$fallback = axismundi_op_transform_object( get_post( $fallback_id ) );
+	ax_article_assert(
+		$ax_article_results,
+		'a manual Excerpt remains the Article summary and supplies the Note preview when no More block exists',
+		is_array( $fallback ) && false !== strpos( (string) $fallback['summary'], 'Editorial excerpt.' )
+			&& false !== strpos( (string) $fallback['preview']['content'], '<strong>Excerpt Preview</strong>' )
+			&& false !== strpos( (string) $fallback['preview']['content'], 'Editorial excerpt.' )
+	);
 
 	$draft_result  = axismundi_op_transform_object( $draft );
 	$locked_result = axismundi_op_transform_object( $locked );

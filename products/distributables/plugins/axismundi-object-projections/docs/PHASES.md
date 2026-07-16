@@ -20,11 +20,15 @@ Phase 2f Activity JSON-LD transport finalization     — shipped (0.0.11): canon
                                                        immutable ledger remains unchanged
 Phase 2g Object likes collection                     — shipped (0.0.12): count-only public
                                                        REST collection; no liker enumeration
+Phase 2h FEP-b2b8 Article representation             — shipped (0.0.13): positive HTML
+                                                       allowlist, summary/preview/image/Link
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous
                                                        visibility, bounded image rendition
-Phase 3c Media archive/folder OrderedCollections     — home/author/folder collection views
+Phase 3c Article media + Attachment usedIn           — shipped (0.0.13): relation-indexed
+                                                       attachment/image and public reverse use
+Phase 3d Media archive/folder OrderedCollections     — home/author/folder collection views
 Phase 4a remote object repository                    — shipped (0.0.5): URI-keyed observed
                                                        cache table; no network/public route
 Phase 4b remote fetch + administrator inspector      — shipped (0.0.6): metadata-only,

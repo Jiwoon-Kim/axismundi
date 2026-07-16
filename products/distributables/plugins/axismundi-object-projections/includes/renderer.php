@@ -23,6 +23,9 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_op_jsonld_context( ?array $object = null ) {
 	$context = array( 'https://www.w3.org/ns/activitystreams' );
+	if ( is_array( $object ) && array_key_exists( 'sensitive', $object ) ) {
+		$context[] = array( 'sensitive' => 'as:sensitive' );
+	}
 	/**
 	 * Filter the JSON-LD `@context` entries.
 	 *
@@ -41,6 +44,23 @@ function axismundi_op_jsonld_context( ?array $object = null ) {
  */
 function axismundi_op_html_members() : array {
 	return array( 'content', 'summary' );
+}
+
+/** Resolve the HTML representation URL from a string or Link-valued `url`. */
+function axismundi_op_object_html_url( array $object ) : string {
+	$url = $object['url'] ?? '';
+	if ( is_string( $url ) ) {
+		return $url;
+	}
+	if ( isset( $url['href'] ) && is_string( $url['href'] ) ) {
+		return $url['href'];
+	}
+	foreach ( is_array( $url ) ? $url : array() as $link ) {
+		if ( is_array( $link ) && isset( $link['href'] ) && is_string( $link['href'] ) ) {
+			return $link['href'];
+		}
+	}
+	return '';
 }
 
 /**
@@ -63,14 +83,26 @@ function axismundi_op_finalize_object( array $object, string $expected_id ) {
 	if ( (string) $object['id'] !== $expected_id ) {
 		return new WP_Error( 'ax_op_id_mismatch', __( 'A projected object id must equal its declared object URI.', 'axismundi-object-projections' ) );
 	}
-	// Name is plain text; content / summary are a bounded HTML allowlist.
+	// Name is plain text; content / summary use the dedicated federation allowlist.
 	if ( isset( $object['name'] ) ) {
 		$object['name'] = sanitize_text_field( wp_strip_all_tags( (string) $object['name'] ) );
 	}
 	foreach ( axismundi_op_html_members() as $member ) {
 		if ( isset( $object[ $member ] ) ) {
-			$object[ $member ] = wp_kses_post( (string) $object[ $member ] );
+			$object[ $member ] = axismundi_op_clean_html( (string) $object[ $member ] );
 		}
+	}
+	// A preview is an embedded fallback object, not an independently identified object.
+	if ( isset( $object['preview'] ) && is_array( $object['preview'] ) ) {
+		if ( isset( $object['preview']['name'] ) ) {
+			$object['preview']['name'] = sanitize_text_field( wp_strip_all_tags( (string) $object['preview']['name'] ) );
+		}
+		foreach ( axismundi_op_html_members() as $member ) {
+			if ( isset( $object['preview'][ $member ] ) ) {
+				$object['preview'][ $member ] = axismundi_op_clean_html( (string) $object['preview'][ $member ] );
+			}
+		}
+		unset( $object['preview']['@context'] );
 	}
 	// The renderer is the sole owner of @context — drop any caller-supplied one, then
 	// prepend the canonical context so it is deterministic and first.

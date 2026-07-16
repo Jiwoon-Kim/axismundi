@@ -8,6 +8,7 @@
 defined( 'ABSPATH' ) || exit( 1 );
 
 require_once dirname( __DIR__ ) . '/includes/registry.php';
+require_once dirname( __DIR__ ) . '/includes/sanitize.php';
 require_once dirname( __DIR__ ) . '/includes/renderer.php';
 
 $ax_rnd_results = array();
@@ -66,6 +67,18 @@ ax_rnd_assert(
 		&& false === strpos( (string) $object['content'], '<script' )
 		&& array_key_first( $object ) === '@context'
 );
+
+// Global WordPress KSES extensions cannot widen the federation allowlist.
+add_filter(
+	'wp_kses_allowed_html',
+	static function ( array $allowed ) : array {
+		$allowed['iframe'] = array( 'src' => true );
+		return $allowed;
+	}
+);
+$cleaned = axismundi_op_clean_html( '<p>Keep</p><iframe src="https://evil.example/">leak</iframe><button>noise</button>' );
+remove_all_filters( 'wp_kses_allowed_html' );
+ax_rnd_assert( $ax_rnd_results, 'the FEP allowlist does not inherit global KSES widening and strips interactive contents', '<p>Keep</p>' === $cleaned );
 
 // A transformer-supplied @context never survives.
 ax_rnd_assert( $ax_rnd_results, 'a transformer-supplied @context is dropped in favor of the canonical one', is_array( $object ) && 'https://evil.example/context' !== $object['@context'] );

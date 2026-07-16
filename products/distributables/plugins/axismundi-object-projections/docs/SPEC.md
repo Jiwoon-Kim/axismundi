@@ -73,6 +73,14 @@ WP_Post ──(Transformer)──▶ normalized AS object ──(Renderer)──
 8. Core Post lifecycle candidates fire only after a committed, projectable public save.
    They are idempotent hints, not proof of first publication. Activities owns lifecycle
    state and storage. Media upload emits no candidate, and Reply waits for the Notes CPT.
+9. Core Posts are long-form `Article` objects following FEP-b2b8. Manual Excerpt and More
+   are distinct authored inputs (`summary` and embedded Note `preview`); no automatic
+   truncation is treated as authored content. Federated HTML uses a plugin-owned positive
+   allowlist rather than WordPress's globally extensible post allowlist.
+10. Media relationships come from the Media Library reverse index, never URL guessing.
+    Featured media is `image`; active in-content media is `attachment`. Attachment
+    `usedIn` is a representation-owned extension collection and must not reveal a source
+    that an anonymous viewer cannot project.
 
 ## 5. Public API
 

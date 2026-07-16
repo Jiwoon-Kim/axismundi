@@ -162,7 +162,10 @@ function axismundi_op_template_redirect() : void {
 	header( 'Access-Control-Allow-Origin: *' );
 	header( 'Access-Control-Allow-Methods: GET, HEAD' );
 	header( 'X-Content-Type-Options: nosniff' );
-	header( 'Link: <' . esc_url_raw( (string) $object['url'] ) . '>; rel="alternate"; type="text/html"', false );
+	$html_url = axismundi_op_object_html_url( $object );
+	if ( '' !== $html_url ) {
+		header( 'Link: <' . esc_url_raw( $html_url ) . '>; rel="alternate"; type="text/html"', false );
+	}
 	if ( 'HEAD' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
 		echo wp_json_encode( $object, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON encoded response.
 	}

@@ -72,7 +72,8 @@ function axismundi_op_post_actor_uri( WP_Post $post ) : string {
  * that plugin's per-post legacy permalink-ID decision. The standalone router is
  * disabled while that plugin is active, so two negotiators never mint competing ids.
  *
- * @param WP_Post $post Post.
+ * @param WP_Post     $post    Post.
+ * @param string|null $content Optional fragment; defaults to the full post content.
  * @return string
  */
 function axismundi_op_post_object_uri( WP_Post $post ) : string {
@@ -103,10 +104,11 @@ function axismundi_op_post_article_visible( WP_Post $post ) : bool {
 /**
  * Render post content through WordPress's normal content pipeline.
  *
- * @param WP_Post $post Post.
+ * @param WP_Post     $post    Post.
+ * @param string|null $content Optional fragment; defaults to the full post content.
  * @return string
  */
-function axismundi_op_post_article_content( WP_Post $post ) : string {
+function axismundi_op_post_article_content( WP_Post $post, ?string $content = null ) : string {
 	/**
 	 * Filter whether the normal `the_content` pipeline renders Article content.
 	 *
@@ -115,10 +117,49 @@ function axismundi_op_post_article_content( WP_Post $post ) : string {
 	 * @param WP_Post $post         Post.
 	 */
 	$use_pipeline = (bool) apply_filters( 'axismundi_op_use_the_content', true, $post );
+	$content = null === $content ? (string) $post->post_content : $content;
 	return $use_pipeline
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core content rendering pipeline.
-		? (string) apply_filters( 'the_content', $post->post_content )
-		: (string) $post->post_content;
+		? (string) apply_filters( 'the_content', $content )
+		: $content;
+}
+
+/** Build the optional embedded Note preview without minting another object id. */
+function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to, string $published ) : ?array {
+	$excerpt = trim( (string) $post->post_excerpt );
+	$parts    = get_extended( (string) $post->post_content );
+	$has_more = false !== strpos( (string) $post->post_content, '<!--more' );
+	$content  = '';
+	if ( $has_more && '' !== trim( (string) ( $parts['main'] ?? '' ) ) ) {
+		$content = axismundi_op_post_article_content( $post, (string) $parts['main'] );
+	} elseif ( '' !== $excerpt ) {
+		$content = '<p><strong>' . esc_html( get_the_title( $post ) ) . '</strong></p>' . wpautop( $excerpt );
+	}
+	if ( '' === trim( $content ) ) {
+		return null;
+	}
+	return array(
+		'type'         => 'Note',
+		'attributedTo' => $attributed_to,
+		'content'      => $content,
+		'published'    => $published,
+	);
+}
+
+/** Resolve the site Application used as the Article generator, when public. */
+function axismundi_op_post_article_generator() : ?array {
+	if ( ! function_exists( 'axismundi_actors_get_site_actor' ) ) {
+		return null;
+	}
+	$actor = axismundi_actors_get_site_actor();
+	if ( ! $actor || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $actor ) ) {
+		return null;
+	}
+	return array(
+		'type' => 'Application',
+		'id'   => (string) $actor->get_uri(),
+		'name' => sanitize_text_field( wp_strip_all_tags( get_bloginfo( 'name' ) ) ),
+	);
 }
 
 /**
@@ -135,21 +176,32 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 		return new WP_Error( 'ax_op_post_identity', __( 'The post has no public object or Actor URI.', 'axismundi-object-projections' ) );
 	}
 
-	$article = array(
+	$published = get_post_time( DATE_W3C, true, $post );
+	$article   = array(
 		'id'           => $id,
 		'type'         => 'Article',
 		'attributedTo' => $attributed_to,
-		'url'          => $url,
+		'url'          => array( 'type' => 'Link', 'href' => $url, 'mediaType' => 'text/html' ),
 		'name'         => get_the_title( $post ),
 		'content'      => axismundi_op_post_article_content( $post ),
 		'mediaType'    => 'text/html',
-		'published'    => get_post_time( DATE_W3C, true, $post ),
+		'published'    => $published,
 		'updated'      => get_post_modified_time( DATE_W3C, true, $post ),
 	);
 
 	if ( '' !== trim( (string) $post->post_excerpt ) ) {
-		$article['summary'] = (string) $post->post_excerpt;
+		$article['summary'] = wpautop( (string) $post->post_excerpt );
 	}
+	$preview = axismundi_op_post_article_preview( $post, $attributed_to, $published );
+	if ( null !== $preview ) {
+		$article['preview'] = $preview;
+	}
+	$generator = axismundi_op_post_article_generator();
+	if ( null !== $generator ) {
+		$article['generator'] = $generator;
+	}
+	/** Filter whether this Article is sensitive. */
+	$article['sensitive'] = (bool) apply_filters( 'axismundi_op_post_sensitive', false, $post );
 
 	/**
 	 * Filter the Core Post → Article projection before renderer validation.

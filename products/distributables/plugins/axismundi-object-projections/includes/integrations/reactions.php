@@ -70,7 +70,7 @@ function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source 
 		'id'           => axismundi_op_object_likes_url( $source->get_object_uri() ),
 		'type'         => 'OrderedCollection',
 		'attributedTo' => (string) $object['attributedTo'],
-		'url'          => (string) $object['url'],
+		'url'          => axismundi_op_object_html_url( $object ),
 		'totalItems'   => axismundi_act_get_like_count( $source->get_object_uri() ),
 	);
 }

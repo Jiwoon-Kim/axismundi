@@ -11,6 +11,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Read-only source for one Attachment's public reverse-usage collection. */
+final class Axismundi_OP_Media_Used_In {
+	public function __construct( private WP_Post $attachment ) {}
+	public function get_attachment() : WP_Post { return $this->attachment; }
+}
+
 /**
  * Whether the first-party Media Library integration can run this request.
  *
@@ -39,13 +45,20 @@ function axismundi_op_media_jsonld_context( array $context, ?array $object = nul
 		return $context;
 	}
 	$context[] = array(
-		'sensitive'       => 'as:sensitive',
 		'schema'          => 'https://schema.org/',
 		'license'         => array(
 			'@id'   => 'schema:license',
 			'@type' => '@id',
 		),
 	);
+	if ( isset( $object['usedIn'] ) ) {
+		$context[] = array(
+			'usedIn' => array(
+				'@id'   => 'https://github.com/Jiwoon-Kim/axismundi/ns#usedIn',
+				'@type' => '@id',
+			),
+		);
+	}
 	return $context;
 }
 
@@ -158,6 +171,65 @@ function axismundi_op_media_resource( int $attachment_id, string $mime ) : ?arra
 	return $link;
 }
 
+/** Build an embedded media descriptor without a nested JSON-LD context. */
+function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?array {
+	if ( ! axismundi_op_media_attachment_visible( $attachment ) ) {
+		return null;
+	}
+	$id       = (int) $attachment->ID;
+	$mime     = (string) get_post_mime_type( $attachment );
+	$resource = axismundi_op_media_resource( $id, $mime );
+	$url      = $resource ?? array( 'type' => 'Link', 'href' => get_attachment_link( $id ), 'mediaType' => 'text/html' );
+	return array(
+		'id'        => axismundi_op_media_attachment_uri( $attachment ),
+		'type'      => axismundi_op_media_object_type( $mime ),
+		'name'      => sanitize_text_field( wp_strip_all_tags( '' !== trim( (string) $attachment->post_title ) ? $attachment->post_title : __( '(untitled media)', 'axismundi-object-projections' ) ) ),
+		'mediaType' => $mime,
+		'url'       => $url,
+	);
+}
+
+/** Stable reverse-usage collection URI for one Attachment. */
+function axismundi_op_media_used_in_url( WP_Post $attachment ) : string {
+	return rest_url( 'axismundi/v1/media/' . (int) $attachment->ID . '/used-in' );
+}
+
+/** Add indexed Article media using only the Media Library's public relation API. */
+function axismundi_op_media_enrich_article( array $article, WP_Post $post ) : array {
+	if ( ! function_exists( 'axismundi_media_relations_for_subject' ) ) {
+		return $article;
+	}
+	$attachments = array();
+	foreach ( axismundi_media_relations_for_subject( (int) $post->ID ) as $relation ) {
+		if ( 'usage' !== ( $relation['relation_kind'] ?? '' ) || 'active' !== ( $relation['status'] ?? '' ) ) {
+			continue;
+		}
+		$attachment_id = (int) ( $relation['object_attachment_id'] ?? 0 );
+		$attachment    = $attachment_id > 0 ? get_post( $attachment_id ) : null;
+		if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type ) {
+			continue;
+		}
+		$descriptor = axismundi_op_media_attachment_descriptor( $attachment );
+		if ( null === $descriptor ) {
+			continue;
+		}
+		if ( 'as:image' === ( $relation['predicate'] ?? '' ) && 'featured' === ( $relation['role'] ?? '' ) ) {
+			$article['image'] = $descriptor;
+			continue;
+		}
+		if ( 'as:attachment' === ( $relation['predicate'] ?? '' ) ) {
+			$attachments[ $attachment_id ] = $descriptor;
+		}
+	}
+	if ( $attachments ) {
+		$article['attachment'] = array_values( $attachments );
+	}
+	if ( isset( $article['preview'], $article['image'] ) && is_array( $article['preview'] ) ) {
+		$article['preview']['attachment'] = $article['image'];
+	}
+	return $article;
+}
+
 /**
  * Transform one Media Library attachment.
  *
@@ -208,6 +280,9 @@ function axismundi_op_media_attachment_transform( WP_Post $attachment ) {
 	if ( ! empty( $license['url'] ) ) {
 		$object['license'] = (string) $license['url'];
 	}
+	if ( function_exists( 'axismundi_media_relations_used_in' ) ) {
+		$object['usedIn'] = axismundi_op_media_used_in_url( $attachment );
+	}
 
 	/**
 	 * Filter the Media Library attachment projection before renderer validation.
@@ -239,5 +314,83 @@ function axismundi_op_register_media_library_integration() : void {
 		)
 	);
 	add_filter( 'axismundi_op_jsonld_context', 'axismundi_op_media_jsonld_context', 10, 2 );
+	add_filter( 'axismundi_op_post_article', 'axismundi_op_media_enrich_article', 8, 2 );
+	if ( function_exists( 'axismundi_media_relations_used_in' ) ) {
+		axismundi_op_register_collection_transformer(
+			'axismundi-media-used-in',
+			array(
+				'supports'       => static fn( $source ) : bool => $source instanceof Axismundi_OP_Media_Used_In,
+				'collection_uri' => static fn( Axismundi_OP_Media_Used_In $source ) : string => axismundi_op_media_used_in_url( $source->get_attachment() ),
+				'transform'      => 'axismundi_op_media_used_in_transform',
+				'visible'        => 'axismundi_op_media_used_in_visible',
+				'priority'       => 5,
+			)
+		);
+	}
 }
 add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_media_library_integration' );
+
+/** Public visibility gate for one Attachment reverse-usage collection. */
+function axismundi_op_media_used_in_visible( Axismundi_OP_Media_Used_In $source ) : bool {
+	return axismundi_op_media_attachment_visible( $source->get_attachment() );
+}
+
+/** Project the distinct public Articles that currently reference an Attachment. */
+function axismundi_op_media_used_in_transform( Axismundi_OP_Media_Used_In $source ) : array {
+	$attachment = $source->get_attachment();
+	$items      = array();
+	foreach ( axismundi_media_relations_used_in( (int) $attachment->ID, 0 ) as $relation ) {
+		$post_id = (int) ( $relation['subject_post_id'] ?? 0 );
+		$post    = $post_id > 0 ? get_post( $post_id ) : null;
+		if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
+			continue;
+		}
+		$projected = axismundi_op_transform_object( $post );
+		if ( is_array( $projected ) && 'Article' === ( $projected['type'] ?? '' ) ) {
+			$items[ (string) $projected['id'] ] = get_post_time( 'U', true, $post );
+		}
+	}
+	arsort( $items, SORT_NUMERIC );
+	return array(
+		'id'           => axismundi_op_media_used_in_url( $attachment ),
+		'type'         => 'OrderedCollection',
+		'attributedTo' => axismundi_op_media_attachment_actor_uri( $attachment ),
+		'url'          => get_attachment_link( (int) $attachment->ID ),
+		'totalItems'   => count( $items ),
+		'orderedItems' => array_keys( $items ),
+	);
+}
+
+/** Register the public Attachment reverse-usage route. */
+function axismundi_op_register_media_used_in_route() : void {
+	if ( ! axismundi_op_media_library_available() || ! function_exists( 'axismundi_media_relations_used_in' ) ) {
+		return;
+	}
+	register_rest_route(
+		'axismundi/v1',
+		'/media/(?P<id>\d+)/used-in',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_op_get_media_used_in',
+			'permission_callback' => '__return_true',
+			'args'                => array( 'id' => array( 'required' => true, 'type' => 'integer', 'minimum' => 1 ) ),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_op_register_media_used_in_route' );
+
+/** Serve one public Attachment reverse-usage collection. */
+function axismundi_op_get_media_used_in( WP_REST_Request $request ) {
+	$attachment = get_post( (int) $request['id'] );
+	if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type || ! axismundi_op_media_attachment_visible( $attachment ) ) {
+		return new WP_Error( 'ax_op_used_in_not_found', __( 'The media usage collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
+	}
+	$collection = axismundi_op_transform_collection( new Axismundi_OP_Media_Used_In( $attachment ) );
+	if ( is_wp_error( $collection ) ) {
+		return $collection;
+	}
+	$response = rest_ensure_response( $collection );
+	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+	$response->header( 'Cache-Control', 'public, max-age=60' );
+	return $response;
+}

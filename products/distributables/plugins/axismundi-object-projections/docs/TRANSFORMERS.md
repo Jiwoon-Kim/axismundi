@@ -30,7 +30,8 @@ add_action( 'axismundi_op_register_transformers', function () {
 
 - Required members `id`, `type`, `attributedTo`, `url` are present and non-empty.
 - The emitted `id` equals the declared object/collection URI.
-- `name` is reduced to plain text; `content` / `summary` pass `wp_kses_post`.
+- `name` is reduced to plain text; `content` / `summary` pass the dedicated FEP-b2b8
+  positive allowlist. Embedded preview HTML uses the same sanitizer.
 - Exactly one canonical `@context`, owned by the renderer; a transformer-supplied
   `@context` is dropped.
 - A transformer exception becomes `ax_op_transform_threw`, never a fatal.
@@ -46,11 +47,14 @@ add_action( 'axismundi_op_register_transformers', function () {
 | `id` ≠ declared URI                | `WP_Error ax_op_id_mismatch`  |
 | Success                            | JSON-LD array with `@context` |
 
-## Built-in Core Post transformer (0.0.2)
+## Built-in Core Post transformer (0.0.13)
 
 `core-post-article` supports only the core `post` post type and emits `Article` with a
-stable `/?p={ID}` id, human permalink `url`, Actor `attributedTo`, title, rendered HTML,
-manual excerpt, and published/updated timestamps. It requires a public user Actor, or a
+stable `/?p={ID}` id, human permalink Link, Actor `attributedTo`, title, rendered HTML,
+manual Excerpt `summary`, and published/updated timestamps. A More teaser becomes an
+embedded `Note` preview; without More, a manual Excerpt supplies the title+summary preview
+recommended by FEP-b2b8. The preview has no independent `id` or `url`. No automatic
+excerpt is invented. It requires a public user Actor, or a
 deliberately public site Actor fallback. It never creates an Actor during rendering.
 
 `axismundi_op_post_object_uri` is the compatibility seam for pre-existing object ids;
@@ -78,3 +82,10 @@ nested media Link. Images use Media Library's bounded derivative service by defa
 Visibility is anonymous and cache-safe: public and unlisted, ungated attachments only.
 Owner/editor bypasses are deliberately not used. The adapter consumes public Media Library
 functions and never queries its tables or private metadata schema.
+
+From 0.0.13, the adapter consumes the Media Library relation API in both directions.
+Featured media becomes Article `image`; distinct active in-content image/video/audio/file
+references become Article `attachment`. Arbitrary external URLs in rendered HTML are not
+reverse-resolved into WordPress IDs. Each public Attachment advertises a `usedIn`
+OrderedCollection (an Axismundi extension term) containing only distinct public Article
+URIs. Private usage is never enumerated.

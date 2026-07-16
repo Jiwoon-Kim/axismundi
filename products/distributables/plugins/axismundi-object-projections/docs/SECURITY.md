@@ -5,7 +5,10 @@
   administrator-initiated fetch/cache work outside transformation; it still owns no
   inbox, delivery, or Activity processing.
 - **Output escaping.** `name` is reduced to plain text (`wp_strip_all_tags` +
-  `sanitize_text_field`); `content` / `summary` pass `wp_kses_post`. A future JSON-LD
+  `sanitize_text_field`); `content` / `summary` pass a dedicated FEP-b2b8-derived positive
+  allowlist. It deliberately does not inherit `wp_kses_allowed_html( 'post' )` or the
+  global `wp_kses_allowed_html` filter, so another plugin cannot widen federated HTML.
+  Interactive/embed elements and their contents are removed before KSES. A future JSON-LD
   emit path must still `wp_json_encode` with `JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE`
   and set the correct content type — never echo raw.
 - **`@context` cannot be injected** by a transformer or a caller; the renderer is the sole
@@ -19,6 +22,10 @@
   only effective public/unlisted, ungated attachments with a public Actor. It never calls
   the owner/editor-aware single-view permission helper, so login state cannot widen a
   negotiated representation.
+- **Relation-indexed media never widens visibility.** Article `image`/`attachment` members
+  include only public/unlisted, ungated Attachment projections. The `usedIn` reverse
+  collection resolves relations as an anonymous viewer and lists only freshly projectable
+  public Articles; drafts/private/password posts and private/locked media remain absent.
 - **Callback isolation.** A transformer that throws yields a `WP_Error`, never a fatal, so
   one bad plugin cannot break negotiation for the rest.
 - **Id integrity.** The emitted `id` is forced to equal the declared stable object URI, so

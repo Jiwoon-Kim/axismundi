@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.14
+Stable tag: 0.0.15
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -37,6 +37,11 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.15 =
+* Establish the projected Post as the temporary global context while running the normal
+  `the_content` pipeline, then restore every affected caller global exactly.
+* Add regression coverage for the existing FEP-b2b8 preview image attachment mapping.
 
 = 0.0.14 =
 * Add shared Core Post sensitivity and content-warning metadata with controls in the

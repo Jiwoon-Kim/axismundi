@@ -92,6 +92,26 @@ try {
 		printf( "[DEBUG] content=%s published=%s updated=%s\n", (string) $article['content'], (string) $article['published'], (string) $article['updated'] );
 	}
 	ax_article_assert( $ax_article_results, 'Article content is rendered HTML and has published/updated timestamps', $content_contract );
+	$previous_global_post = $GLOBALS['post'] ?? null;
+	$GLOBALS['post']      = $page;
+	$context_post_id      = 0;
+	$context_probe        = static function ( string $content ) use ( &$context_post_id ) : string {
+		$context_post_id = get_the_ID();
+		return $content;
+	};
+	add_filter( 'the_content', $context_probe, 999 );
+	axismundi_op_post_article_content( $post );
+	remove_filter( 'the_content', $context_probe, 999 );
+	ax_article_assert(
+		$ax_article_results,
+		'the content pipeline receives the projected Post context and restores the caller global afterward',
+		$post_id === $context_post_id && $page === ( $GLOBALS['post'] ?? null )
+	);
+	if ( null === $previous_global_post ) {
+		unset( $GLOBALS['post'] );
+	} else {
+		$GLOBALS['post'] = $previous_global_post;
+	}
 	ax_article_assert(
 		$ax_article_results,
 		'a More block creates an embedded Note preview with no independent id/url or read-more link',

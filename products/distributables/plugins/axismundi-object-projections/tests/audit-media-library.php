@@ -76,6 +76,7 @@ try {
 			'post_author'  => $author_id,
 			'post_title'   => 'Article using media',
 			'post_content' => '<!-- wp:image {"id":' . $image_id . '} --><figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $image_id ) ) . '" /></figure><!-- /wp:image --><!-- wp:video {"id":' . $video_id . '} --><figure class="wp-block-video"><video controls src="' . esc_url( wp_get_attachment_url( $video_id ) ) . '"></video></figure><!-- /wp:video -->',
+			'post_excerpt' => 'Media Article preview.',
 		)
 	);
 	$private_post_id = wp_insert_post(
@@ -102,6 +103,7 @@ try {
 		'Article image and attachment members are supplied by the Media Library relation index',
 		is_array( $article )
 			&& axismundi_op_media_attachment_uri( $image ) === ( $article['image']['id'] ?? '' )
+			&& ( $article['image'] ?? null ) === ( $article['preview']['attachment'] ?? null )
 			&& in_array( axismundi_op_media_attachment_uri( $image ), $attached_ids, true )
 			&& in_array( axismundi_op_media_attachment_uri( $video ), $attached_ids, true )
 	);

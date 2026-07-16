@@ -118,10 +118,33 @@ function axismundi_op_post_article_content( WP_Post $post, ?string $content = nu
 	 */
 	$use_pipeline = (bool) apply_filters( 'axismundi_op_use_the_content', true, $post );
 	$content = null === $content ? (string) $post->post_content : $content;
-	return $use_pipeline
+	if ( ! $use_pipeline ) {
+		return $content;
+	}
+
+	$postdata_keys = array( 'post', 'id', 'authordata', 'currentday', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages' );
+	$previous      = array();
+	foreach ( $postdata_keys as $key ) {
+		$previous[ $key ] = array(
+			'exists' => array_key_exists( $key, $GLOBALS ),
+			'value'  => $GLOBALS[ $key ] ?? null,
+		);
+	}
+
+	$GLOBALS['post'] = $post;
+	setup_postdata( $post );
+	try {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core content rendering pipeline.
-		? (string) apply_filters( 'the_content', $content )
-		: $content;
+		return (string) apply_filters( 'the_content', $content );
+	} finally {
+		foreach ( $previous as $key => $state ) {
+			if ( $state['exists'] ) {
+				$GLOBALS[ $key ] = $state['value'];
+			} else {
+				unset( $GLOBALS[ $key ] );
+			}
+		}
+	}
 }
 
 /** Build the optional embedded Note preview without minting another object id. */

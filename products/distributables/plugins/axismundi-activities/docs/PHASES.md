@@ -80,7 +80,8 @@ its feature-detected API.
 
 URI-referenced Like state, idempotent distinct-Actor aggregate queries, Undo transitions,
 nonce-protected Interactivity API block, and feature-detected `interaction` leases for remote
-objects. Object Projections publishes an Object `likes` collection. The internal Actor
+objects. Object Projections publishes a count-only Object `likes` collection without liker
+enumeration. The internal Actor
 `liked` query ships, but no public `liked` route is advertised until its privacy policy is set.
 
 ## 0.0.13 — Phase 3b: Announce and Undo

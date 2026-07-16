@@ -40,6 +40,7 @@ excluded from public projections.
   no second counter store, and expose a public-safe query for Object Projections.
 * Add a nonce-protected `axismundi/like-button` block using the WordPress Interactivity API.
   Optimistic UI state rolls back on failure and accepts the server response as final.
+  Logged-in renders set a page-cache bypass before exposing user state or a REST nonce.
 * Acquire and release Object Projections `interaction` leases for cached remote objects.
 
 = 0.0.11 =

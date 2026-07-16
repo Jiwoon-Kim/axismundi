@@ -41,11 +41,6 @@ function axismundi_act_get_effective_likes( string $object_uri, int $limit = 100
 	return $out;
 }
 
-/** @return Axismundi_Activity[] Effective Likes safe for an anonymous public collection. */
-function axismundi_act_get_public_effective_likes( string $object_uri, int $limit = 100 ) : array {
-	return array_values( array_filter( axismundi_act_get_effective_likes( $object_uri, $limit ), 'axismundi_act_has_public_audience' ) );
-}
-
 /** Count distinct Actors with an effective Like for one object URI. */
 function axismundi_act_get_like_count( string $object_uri ) : int {
 	global $wpdb;

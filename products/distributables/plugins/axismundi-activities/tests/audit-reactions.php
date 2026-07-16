@@ -105,7 +105,7 @@ try {
 
 	axismundi_act_register_like_button_block();
 	$markup = do_blocks( '<!-- wp:axismundi/like-button {"objectUri":"' . esc_url_raw( $ax_react_object_uri ) . '"} /-->' );
-	ax_react_assert( $ax_react_results, 'dynamic block emits Interactivity directives, canonical URI context, and accessible pressed state', str_contains( $markup, 'data-wp-interactive="axismundi/like-button"' ) && str_contains( $markup, 'data-wp-on--click="actions.toggleLike"' ) && str_contains( $markup, 'aria-pressed' ) && str_contains( str_replace( '\\/', '/', $markup ), esc_url_raw( $ax_react_object_uri ) ) );
+	ax_react_assert( $ax_react_results, 'dynamic block emits Interactivity directives, canonical URI context, accessible state, and a logged-in cache bypass', str_contains( $markup, 'data-wp-interactive="axismundi/like-button"' ) && str_contains( $markup, 'data-wp-on--click="actions.toggleLike"' ) && str_contains( $markup, 'aria-pressed' ) && str_contains( str_replace( '\\/', '/', $markup ), esc_url_raw( $ax_react_object_uri ) ) && defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE );
 
 	$post_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => (int) $local->get_local_user_id(), 'post_title' => 'Likes collection fixture', 'post_content' => 'Public Article.' ) );
 	if ( is_int( $post_id ) && $post_id > 0 ) {
@@ -128,12 +128,12 @@ try {
 	$collection_request->set_param( 'object', $article_uri );
 	$collection_response = '' !== $article_uri ? axismundi_op_get_object_likes( $collection_request ) : null;
 	$collection_data = $collection_response instanceof WP_REST_Response ? $collection_response->get_data() : array();
-	$collection_contract = is_array( $article ) && isset( $article['likes'] ) && axismundi_op_object_likes_url( $article_uri ) === $article['likes'] && $collection_response instanceof WP_REST_Response && 'OrderedCollection' === ( $collection_data['type'] ?? '' ) && 1 === (int) ( $collection_data['totalItems'] ?? 0 ) && $collection_like instanceof Axismundi_Activity && $collection_like->get_uri() === ( $collection_data['orderedItems'][0]['id'] ?? '' );
+	$collection_contract = is_array( $article ) && isset( $article['likes'] ) && axismundi_op_object_likes_url( $article_uri ) === $article['likes'] && $collection_response instanceof WP_REST_Response && 'OrderedCollection' === ( $collection_data['type'] ?? '' ) && 1 === (int) ( $collection_data['totalItems'] ?? 0 ) && ! array_key_exists( 'orderedItems', $collection_data ) && $private_collection_like instanceof Axismundi_Activity && $collection_like instanceof Axismundi_Activity;
 	if ( ! $collection_contract ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI diagnostic.
 		printf( "[DEBUG] article=%s response=%s error=%s data=%s\n", wp_json_encode( $article ), is_object( $collection_response ) ? get_class( $collection_response ) : gettype( $collection_response ), is_wp_error( $collection_response ) ? $collection_response->get_error_code() . ':' . $collection_response->get_error_message() : '', wp_json_encode( $collection_data ) );
 	}
-	ax_react_assert( $ax_react_results, 'a public Article advertises a Public-audience-only ActivityStreams likes collection derived from the activity ledger', $collection_contract );
+	ax_react_assert( $ax_react_results, 'a public Article advertises a count-only likes collection without disclosing liker identities', $collection_contract );
 } finally {
 	wp_set_current_user( $ax_react_old_user );
 	remove_all_filters( 'axismundi_op_post_lifecycle_owner' );

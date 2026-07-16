@@ -23,8 +23,10 @@
   one bad plugin cannot break negotiation for the rest.
 - **Id integrity.** The emitted `id` is forced to equal the declared stable object URI, so
   a transformer cannot point federated identity at an arbitrary URL.
-- **URL → id, never the reverse.** The renderer never reverse-resolves a URL string back
-  to an attachment/post id; sources are passed in as typed objects.
+- **Typed sources by default; exact canonical reverse lookup at interaction boundaries.**
+  Transformers receive typed objects and never reverse-resolve their own output. Public
+  interaction routes may use `url_to_postid()` only as a candidate lookup, then require the
+  source's freshly projected canonical `id` to exactly equal the requested URI.
 - **Narrow negotiation.** Bare `application/json`, unprofiled `application/ld+json`,
   non-GET/HEAD requests, REST, AJAX, feeds, and wp-admin never enter the router. The
   read-only `?activitypub` selector may bypass only the Accept check, not these surface,

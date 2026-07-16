@@ -18,8 +18,8 @@ Phase 2e Actor public Outbox representation          — shipped (0.0.10): neutr
                                                        Activities public-safe query contract
 Phase 2f Activity JSON-LD transport finalization     — shipped (0.0.11): canonical context;
                                                        immutable ledger remains unchanged
-Phase 2g Object likes collection                     — shipped (0.0.12): public REST
-                                                       OrderedCollection; Activities-backed
+Phase 2g Object likes collection                     — shipped (0.0.12): count-only public
+                                                       REST collection; no liker enumeration
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

@@ -83,6 +83,28 @@ function axismundi_act_register_like_rest_route() : void {
 }
 add_action( 'rest_api_init', 'axismundi_act_register_like_rest_route' );
 
+/** Prevent shared caches from storing a logged-in visitor's Like state and REST nonce. */
+function axismundi_act_no_cache_like_state() : void {
+	if ( ! is_user_logged_in() ) {
+		return;
+	}
+	if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+		define( 'DONOTCACHEPAGE', true );
+	}
+	if ( ! headers_sent() ) {
+		nocache_headers();
+	}
+}
+
+/** Mark singular pages containing the block before template output begins. */
+function axismundi_act_prepare_like_button_cache_policy() : void {
+	$post = get_queried_object();
+	if ( $post instanceof WP_Post && has_block( 'axismundi/like-button', $post ) ) {
+		axismundi_act_no_cache_like_state();
+	}
+}
+add_action( 'template_redirect', 'axismundi_act_prepare_like_button_cache_policy', 1 );
+
 /** Build the authoritative mutation response. */
 function axismundi_act_like_rest_response( Axismundi_Actor $actor, string $object_uri, Axismundi_Activity $activity ) : WP_REST_Response {
 	return new WP_REST_Response(
@@ -140,6 +162,7 @@ function axismundi_act_render_like_button( array $attributes, string $content, W
 	if ( '' === $object_uri ) {
 		return '';
 	}
+	axismundi_act_no_cache_like_state();
 	$actor    = axismundi_act_current_local_actor();
 	$can_like = $actor instanceof Axismundi_Actor && ! is_wp_error( axismundi_act_resolve_like_target( $object_uri ) );
 	$is_liked = $actor instanceof Axismundi_Actor ? axismundi_act_get_like_state( $actor->get_uri(), $object_uri ) : false;

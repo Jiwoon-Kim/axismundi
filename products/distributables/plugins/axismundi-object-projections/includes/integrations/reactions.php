@@ -56,27 +56,12 @@ function axismundi_op_local_source_from_object_uri( string $object_uri ) {
 
 /** Public visibility gate for an Object likes collection. */
 function axismundi_op_object_likes_visible( Axismundi_OP_Object_Likes $source ) : bool {
-	return function_exists( 'axismundi_act_get_public_effective_likes' )
+	return function_exists( 'axismundi_act_get_like_count' )
 		&& ! is_wp_error( axismundi_op_transform_object( $source->get_source() ) );
 }
 
-/** Minimal public-safe Like activity representation. */
-function axismundi_op_public_like_item( Axismundi_Activity $activity ) : array {
-	$item = array(
-		'id'     => $activity->get_uri(),
-		'type'   => 'Like',
-		'actor'  => $activity->get_actor_uri(),
-		'object' => $activity->get_object_uri(),
-	);
-	if ( null !== $activity->get_published_at() ) {
-		$item['published'] = mysql2date( DATE_RFC3339, $activity->get_published_at(), false );
-	}
-	return $item;
-}
-
-/** Project one Object's effective distinct Likes. */
+/** Project a count-only collection without disclosing liker identities. */
 function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source ) : array {
-	$likes  = axismundi_act_get_public_effective_likes( $source->get_object_uri(), 200 );
 	$object = axismundi_op_transform_object( $source->get_source() );
 	if ( is_wp_error( $object ) ) {
 		return $object;
@@ -86,14 +71,13 @@ function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source 
 		'type'         => 'OrderedCollection',
 		'attributedTo' => (string) $object['attributedTo'],
 		'url'          => (string) $object['url'],
-		'totalItems'   => count( $likes ),
-		'orderedItems' => array_map( 'axismundi_op_public_like_item', $likes ),
+		'totalItems'   => axismundi_act_get_like_count( $source->get_object_uri() ),
 	);
 }
 
 /** Register the collection transformer. */
 function axismundi_op_register_reaction_transformer() : void {
-	if ( ! function_exists( 'axismundi_act_get_public_effective_likes' ) ) {
+	if ( ! function_exists( 'axismundi_act_get_like_count' ) ) {
 		return;
 	}
 	axismundi_op_register_collection_transformer(
@@ -111,7 +95,7 @@ add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_reactio
 
 /** Register the public Object likes route. */
 function axismundi_op_register_object_likes_route() : void {
-	if ( ! function_exists( 'axismundi_act_get_public_effective_likes' ) ) {
+	if ( ! function_exists( 'axismundi_act_get_like_count' ) ) {
 		return;
 	}
 	register_rest_route(

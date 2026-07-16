@@ -41,8 +41,8 @@ remote media is never hotlinked or downloaded.
 = 0.0.12 =
 * Add DB v3 multi-reason object leases keyed by canonical object URI, reason, and reference.
   Expiry maintenance skips every observation with an active lease.
-* Add the public Object `likes` OrderedCollection projection backed by Activities effective
-  Public-audience Like queries, and advertise it from public Article and Media representations.
+* Add a count-only public Object `likes` OrderedCollection backed by the Activities distinct-
+  Actor total. Do not enumerate liker identities or cap `totalItems` to a serialized page.
 * Keep Actor `liked` publication deferred until a user-facing privacy policy is defined;
   Activities exposes only an internal current-liked-object query in this release.
 

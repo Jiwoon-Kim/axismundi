@@ -83,6 +83,13 @@ Visibility is anonymous and cache-safe: public and unlisted, ungated attachments
 Owner/editor bypasses are deliberately not used. The adapter consumes public Media Library
 functions and never queries its tables or private metadata schema.
 
+> **Superseded by a locked contract — see MEDIA-RENDITIONS.md.** The `url` = human page +
+> nested single media `attachment` structure above merges into a single FEP-1311 `url[]` Link
+> array (media Links first, the `text/html` page last, the original never advertised, at most
+> four already-generated derivatives). `name` becomes the alt text rather than the post title.
+> Media Library will own rendition selection through
+> `axismundi_media_federation_renditions()`; Object Projections only serializes. Not built yet.
+
 From 0.0.13, the adapter consumes the Media Library relation API in both directions.
 Featured media becomes Article `image`; distinct active in-content image/video/audio/file
 references become Article `attachment`. Arbitrary external URLs in rendered HTML are not

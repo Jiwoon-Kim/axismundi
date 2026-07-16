@@ -29,6 +29,11 @@ Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): stri
 Phase 3c Article media + Attachment usedIn           — shipped (0.0.13): relation-indexed
                                                        attachment/image and public reverse use
 Phase 3d Media archive/folder OrderedCollections     — home/author/folder collection views
+Phase 3e FEP-1311 media renditions                   — contract locked (MEDIA-RENDITIONS.md),
+                                                       NOT built: url[] Link array, media first,
+                                                       original never advertised, max 4 existing
+                                                       derivatives, name = alt text. Media Library
+                                                       owns selection; shared folders consume it.
 Phase 4a remote object repository                    — shipped (0.0.5): URI-keyed observed
                                                        cache table; no network/public route
 Phase 4b remote fetch + administrator inspector      — shipped (0.0.6): metadata-only,

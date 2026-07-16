@@ -138,6 +138,9 @@ try {
 		$ax_local_identity_ids[] = $remote->get_identity_id();
 		$ax_local_actor_uris[]   = $remote->get_uri();
 	}
+	$local_label  = axismundi_act_local_actor_label( $follower->get_uri() );
+	$remote_label = $remote instanceof Axismundi_Actor ? axismundi_act_local_actor_label( $remote->get_uri() ) : '';
+	ax_local_assert( $ax_local_results, 'relationship labels omit the local authority and disambiguate remote handles with their instance', str_contains( $local_label, '@' . $follower->get_preferred_username() . '</code>' ) && ! str_contains( $local_label, '@example.test' ) && str_contains( $remote_label, '@remote_' . $ax_local_suffix . '@example.com' ) );
 	$remote_attempt = $remote instanceof Axismundi_Actor ? axismundi_act_follow_actor( $follower, $remote ) : null;
 	$remote_follow  = is_array( $remote_attempt ) ? axismundi_act_get( (string) $remote_attempt['initiating_activity_uri'] ) : null;
 	ax_local_assert( $ax_local_results, 'remote Follow records an outbound Activity with an explicit remote audience and no HTTP', is_array( $remote_attempt ) && 'pending' === $remote_attempt['state'] && $remote_follow instanceof Axismundi_Activity && 'outbound' === $remote_follow->get_direction() && in_array( $remote->get_uri(), (array) $remote_follow->get_audience()['to'], true ) && 0 === $GLOBALS['ax_local_http_count'] );
@@ -162,6 +165,38 @@ try {
 	$remote_accept_relation = $inbound_follow instanceof Axismundi_Activity ? axismundi_act_respond_to_local_follow( $target, $inbound_follow_uri, 'accept' ) : null;
 	$remote_accept = is_array( $remote_accept_relation ) && ! empty( $remote_accept_relation['state_activity_uri'] ) ? axismundi_act_get( (string) $remote_accept_relation['state_activity_uri'] ) : null;
 	ax_local_assert( $ax_local_results, 'accepting an inbound remote Follow records an outbound Accept addressed to its Actor', is_array( $remote_accept_relation ) && 'accepted' === $remote_accept_relation['state'] && $remote_accept instanceof Axismundi_Activity && 'Accept' === $remote_accept->get_type() && 'outbound' === $remote_accept->get_direction() && in_array( $remote->get_uri(), (array) $remote_accept->get_audience()['to'], true ) );
+
+	wp_set_current_user( (int) $target->get_local_user_id() );
+	ob_start();
+	axismundi_act_render_follows_page();
+	$remote_follower_html = (string) ob_get_clean();
+	ax_local_assert( $ax_local_results, 'Followers exposes follow-back and Remove controls for an Activity-backed remote relationship', str_contains( $remote_follower_html, '@remote_' . $ax_local_suffix . '@example.com' ) && str_contains( $remote_follower_html, '>Follow<' ) && str_contains( $remote_follower_html, '>Remove<' ) );
+	$removed_relation = axismundi_act_respond_to_local_follow( $target, $inbound_follow_uri, 'reject' );
+	$remove_activity  = is_array( $removed_relation ) && ! empty( $removed_relation['state_activity_uri'] ) ? axismundi_act_get( (string) $removed_relation['state_activity_uri'] ) : null;
+	ax_local_assert( $ax_local_results, 'Remove rejects the Activity-backed original Follow and addresses the remote follower', is_array( $removed_relation ) && 'rejected' === $removed_relation['state'] && $remove_activity instanceof Axismundi_Activity && 'Reject' === $remove_activity->get_type() && $inbound_follow_uri === $remove_activity->get_object_uri() && in_array( $remote->get_uri(), (array) $remove_activity->get_audience()['to'], true ) );
+
+	$remote_legacy = axismundi_actors_upsert_remote(
+		array(
+			'uri'                => 'https://example.org/users/remote_' . $ax_local_suffix,
+			'actor_type'         => 'Person',
+			'preferred_username' => 'remote_' . $ax_local_suffix,
+			'display_name'       => 'Remote legacy fixture',
+			'profile_url'        => 'https://example.org/@remote_' . $ax_local_suffix,
+			'payload'            => array( 'id' => 'https://example.org/users/remote_' . $ax_local_suffix, 'type' => 'Person' ),
+			'endpoints'          => array( 'inbox' => 'https://example.org/inbox/' . $ax_local_suffix, 'outbox' => 'https://example.org/outbox/' . $ax_local_suffix ),
+		)
+	);
+	if ( $remote_legacy instanceof Axismundi_Actor ) {
+		$ax_local_identity_ids[] = $remote_legacy->get_identity_id();
+		$ax_local_actor_uris[]   = $remote_legacy->get_uri();
+	}
+	$legacy_outbound = $remote_legacy instanceof Axismundi_Actor
+		? axismundi_act_import_follow_snapshot( $follower->get_uri(), $remote_legacy->get_uri(), 'accepted', 'fixture:outbound-legacy:' . $ax_local_suffix )
+		: null;
+	$legacy_control = $remote_legacy instanceof Axismundi_Actor ? axismundi_act_follow_control_html( $follower, $remote_legacy, 'button', 'follows' ) : '';
+	$refollowed     = $remote_legacy instanceof Axismundi_Actor ? axismundi_act_refollow_imported_remote_actor( $follower, $remote_legacy ) : null;
+	$refollow       = is_array( $refollowed ) && ! empty( $refollowed['initiating_activity_uri'] ) ? axismundi_act_get( (string) $refollowed['initiating_activity_uri'] ) : null;
+	ax_local_assert( $ax_local_results, 'legacy Following offers Re-follow and replaces the snapshot with a real pending outbound Follow', is_array( $legacy_outbound ) && 'legacy_snapshot' === $legacy_outbound['evidence_type'] && str_contains( $legacy_control, 'Re-follow' ) && is_array( $refollowed ) && 'activity' === $refollowed['evidence_type'] && 'pending' === $refollowed['state'] && $refollow instanceof Axismundi_Activity && 'Follow' === $refollow->get_type() && 'outbound' === $refollow->get_direction() );
 
 	$remote_auto = axismundi_actors_upsert_remote(
 		array(
@@ -193,6 +228,17 @@ try {
 	$auto_relation = $remote_auto instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $remote_auto->get_uri(), $target->get_uri() ) : null;
 	$auto_accept   = is_array( $auto_relation ) && ! empty( $auto_relation['state_activity_uri'] ) ? axismundi_act_get( (string) $auto_relation['state_activity_uri'] ) : null;
 	ax_local_assert( $ax_local_results, 'a real inbound Follow supersedes a legacy snapshot and auto-accepts with one outbound Accept', is_array( $snapshot ) && 'legacy_snapshot' === $snapshot['evidence_type'] && $auto_follow instanceof Axismundi_Activity && is_array( $auto_relation ) && 'activity' === $auto_relation['evidence_type'] && 'accepted' === $auto_relation['state'] && $auto_follow_uri === $auto_relation['initiating_activity_uri'] && $auto_accept instanceof Axismundi_Activity && 'outbound' === $auto_accept->get_direction() && in_array( $remote_auto->get_uri(), (array) $auto_accept->get_audience()['to'], true ) );
+
+	$repeat_follow_uri = 'https://example.net/activities/follow_repeat_' . $ax_local_suffix;
+	$repeat_follow = $remote_auto instanceof Axismundi_Actor
+		? axismundi_act_record_activity(
+			array( 'id' => $repeat_follow_uri, 'type' => 'Follow', 'actor' => $remote_auto->get_uri(), 'object' => $target->get_uri(), 'to' => array( $target->get_uri() ) ),
+			'inbound'
+		)
+		: null;
+	$repeat_relation = $remote_auto instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $remote_auto->get_uri(), $target->get_uri() ) : null;
+	$repeat_accept   = is_array( $repeat_relation ) && ! empty( $repeat_relation['state_activity_uri'] ) ? axismundi_act_get( (string) $repeat_relation['state_activity_uri'] ) : null;
+	ax_local_assert( $ax_local_results, 'a new inbound Follow URI supersedes an accepted cycle and receives an Accept for that exact URI', $repeat_follow instanceof Axismundi_Activity && is_array( $repeat_relation ) && 'accepted' === $repeat_relation['state'] && $repeat_follow_uri === $repeat_relation['initiating_activity_uri'] && $repeat_accept instanceof Axismundi_Activity && 'Accept' === $repeat_accept->get_type() && $repeat_follow_uri === $repeat_accept->get_object_uri() );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_local_observe_http' );
 	if ( false !== $ax_local_bridge_hook ) {

@@ -169,7 +169,9 @@ function axismundi_act_start_relation( string $type, string $subject_uri, string
 	$existing = axismundi_act_get_relation( $type, $subject_uri, $object_uri );
 	$live     = 'follow' === $type ? array( 'pending', 'accepted' ) : array( 'active' );
 	if ( is_array( $existing ) && 'activity' === (string) ( $existing['evidence_type'] ?? 'activity' ) && in_array( (string) $existing['state'], $live, true ) ) {
-		return $existing;
+		if ( 'follow' !== $type || hash_equals( (string) ( $existing['initiating_activity_uri'] ?? '' ), $activity_uri ) ) {
+			return $existing;
+		}
 	}
 	return axismundi_act_write_relation(
 		$type,

@@ -80,6 +80,31 @@ function axismundi_act_follow_remote_actor( Axismundi_Actor $subject, Axismundi_
 	return is_wp_error( $follow ) ? $follow : axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
 }
 
+/** Replace one imported outbound snapshot with a real Follow Activity. */
+function axismundi_act_refollow_imported_remote_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
+	$valid = axismundi_act_validate_remote_follow( $subject, $object );
+	if ( is_wp_error( $valid ) ) {
+		return $valid;
+	}
+	$relation = axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
+	if ( ! is_array( $relation )
+		|| 'legacy_snapshot' !== (string) ( $relation['evidence_type'] ?? '' )
+		|| ! in_array( (string) $relation['state'], array( 'accepted', 'legacy_pending' ), true )
+	) {
+		return new WP_Error( 'ax_act_follow_not_legacy', __( 'Only an imported Follow relationship can be re-requested this way.', 'axismundi-activities' ) );
+	}
+	$follow = axismundi_act_record_activity(
+		array(
+			'type'   => 'Follow',
+			'actor'  => $subject->get_uri(),
+			'object' => $object->get_uri(),
+			'to'     => array( $object->get_uri() ),
+		),
+		'outbound'
+	);
+	return is_wp_error( $follow ) ? $follow : axismundi_act_get_relation( 'follow', $subject->get_uri(), $object->get_uri() );
+}
+
 /** Undo an Activity-backed outbound Follow without fabricating legacy history. */
 function axismundi_act_unfollow_remote_actor( Axismundi_Actor $subject, Axismundi_Actor $object ) {
 	$valid = axismundi_act_validate_remote_follow( $subject, $object );
@@ -176,7 +201,11 @@ function axismundi_act_respond_to_local_follow( Axismundi_Actor $target, string 
 		return new WP_Error( 'ax_act_follow_request', __( 'That Follow request does not belong to this Actor.', 'axismundi-activities' ) );
 	}
 	$relation = axismundi_act_get_relation( 'follow', $follow->get_actor_uri(), $target->get_uri() );
-	if ( ! is_array( $relation ) || 'pending' !== (string) $relation['state'] || $follow_activity_uri !== (string) $relation['initiating_activity_uri'] ) {
+	$state = is_array( $relation ) ? (string) $relation['state'] : '';
+	if ( ! is_array( $relation )
+		|| ( 'pending' !== $state && ! ( 'reject' === $decision && 'accepted' === $state ) )
+		|| $follow_activity_uri !== (string) $relation['initiating_activity_uri']
+	) {
 		return new WP_Error( 'ax_act_follow_request_state', __( 'That Follow request is no longer pending.', 'axismundi-activities' ) );
 	}
 	$remote   = 'inbound' === (string) $relation['direction'];

@@ -64,22 +64,29 @@ Auto-accept a verified inbound remote Follow when the local Actor does not requi
 Record one outbound Accept addressed to the remote Actor, derive transport direction from the
 committed relation, and let real Activity evidence supersede imported legacy snapshots.
 
+## 0.0.11 — Phase 2.8: relationship recovery and controls (shipped)
+
+Display remote relations as `@handle@instance`, expose Follow back and Activity-backed
+follower removal, and let imported outbound snapshots be replaced by an explicit Re-follow.
+A distinct newly received Follow URI starts the latest relationship cycle even when the
+previous cycle was accepted, so automatic approval targets the exact incoming Activity.
+
 ## Prerequisite — Object Projections lease substrate
 
 Before Phase 3, Object Projections ships multi-reason object leases. Activities only consumes
 its feature-detected API.
 
-## 0.0.11 — Phase 3: Like, Announce, Undo
+## 0.0.12 — Phase 3: Like, Announce, Undo
 
 URI-referenced reactions, idempotent aggregate queries, Undo transitions, and optional
 `interaction` lease declarations for remote objects.
 
-## 0.0.12 — Phase 4: logical inbox/outbox membership
+## 0.0.13 — Phase 4: logical inbox/outbox membership
 
 Actor-scoped inbox/outbox memberships and collection query services. Object Projections may
 serialize collections; Federation serves HTTP. Notifications are explicitly excluded.
 
-## 0.0.13 — Phase 5: Add, Remove, Move, Join, Leave
+## 0.0.14 — Phase 5: Add, Remove, Move, Join, Leave
 
 Collection/community operations for saved media, shared folders, and managed Group workflows,
 plus optional `collection` leases. Domain plugins continue to own collection membership data.

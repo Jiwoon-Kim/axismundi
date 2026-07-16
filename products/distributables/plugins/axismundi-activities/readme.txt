@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.10
+Stable tag: 0.0.11
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -21,7 +21,7 @@ Federation will own HTTP inbox/outbox transport, signatures, and remote delivery
 
 Axismundi Actors is a required dependency and remains the authority for every actor URI.
 
-Version 0.0.10 implements the immutable URI-keyed Activity ledger, Follow/Block relation
+Version 0.0.11 implements the immutable URI-keyed Activity ledger, Follow/Block relation
 state, local Person-to-Person and cached-remote-Actor Follow controls, and read-only administrator inspection. It
 also records one local outbound Create when a projectable Core Post is first published.
 It creates no public Activity route, cron event, network request, inbox, notification, or
@@ -32,6 +32,13 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.11 =
+* Disambiguate remote relationships as `@handle@instance` while keeping local handles short.
+* Add Follow back, Unfollow, and Activity-backed follower removal controls to the Follows screen.
+* Replace imported outbound snapshots through an explicit Re-follow Activity instead of
+  fabricating an Undo for unavailable legacy history.
+* Let a newly received Follow URI supersede an accepted cycle and Accept that exact Activity.
 
 = 0.0.10 =
 * Auto-accept verified inbound remote Follow Activities when the local Actor does not

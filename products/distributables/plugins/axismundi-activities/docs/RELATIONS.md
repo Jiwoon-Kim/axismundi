@@ -20,6 +20,12 @@ initiating Activity URI, and creates no synthetic Activity. `legacy_pending` is 
 or projected as following. Any later real Follow takes ownership of the pair; its subsequent
 Accept, Reject, or Undo remains authoritative over every snapshot import.
 
+An imported outbound snapshot cannot be undone because its original Follow Activity is
+unknown. The user may explicitly Re-follow instead: a new outbound Follow replaces snapshot
+evidence and begins an Activity-backed cycle. Likewise, a distinct newly received Follow URI
+supersedes an accepted or pending cycle for the same Actor pair. Automatic approval must Accept
+that exact incoming Follow URI; duplicate delivery of the same URI remains idempotent.
+
 Accept or Reject may arrive before its Follow. The immutable transition is retained and the
 relation is reconciled when the referenced Follow arrives. Only the followed Actor may Accept
 or Reject. An unauthorized transition rolls back with its Activity row.
@@ -51,8 +57,12 @@ delivery, state transition, or notification action.
 Activated public local Person actors may follow each other without HTTP transport. An explicit
 `manually_approves_followers=true` leaves the Follow pending until the target records Accept or
 Reject. False, or NULL under the default site policy, records an automatic target-authored
-Accept. The immutable Follow and Accept remain separate Activities. The `Follows` admin screen exposes
-only the current Actor's requests and accepted edges; remote Actor interaction remains disabled.
-Local product actions require the Contributor-level `edit_posts` capability. Administrators
-with an activated Actor may also act from local rows on the core Users table. Cached remote
-Actor rows intentionally have no Follow action until a transport adapter can deliver it.
+Accept. The immutable Follow and Accept remain separate Activities. The `Follows` admin screen
+exposes only the current Actor's requests and accepted edges. Remote handles include their
+instance while local handles omit it. Activity-backed following can be undone, imported
+outbound snapshots can be replaced through Re-follow, and Activity-backed followers can be
+removed with a Reject that references the original Follow. Follow back uses the same control
+for local and cached remote Actors. Local product actions require the Contributor-level
+`edit_posts` capability. Administrators with an activated Actor may also act from local rows
+on the core Users table. Activities records transport-neutral outbound Activities; a transport
+adapter decides whether and how remote inboxes receive them.

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.30
+Stable tag: 0.0.31
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,14 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.31 =
+* Open the identity registry to the non-actor kinds it already reserved (collection,
+  folder, media, activity, place), so an owning plugin can register a shared folder or
+  collection identity through the repository API instead of writing the table directly.
+* Refuse actor identities from that API: an actor identity without its profile row is an
+  orphan, and actors stay creatable only through their own transactional path.
+* No schema change; the object_kind column and its kinds were already specified.
 
 = 0.0.30 =
 * Recover due remote image-cache rows when plugin replacement or deactivation cleared

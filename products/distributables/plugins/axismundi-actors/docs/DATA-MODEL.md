@@ -1,7 +1,9 @@
 # Axismundi Actors — Data Model
 
 > Status: **Living specification. Schema v10b (stored version 10.1) implemented
-> (§2–§6, §8, §9.2–§9.6b, §9.10).** Ten tables exist today: the shared identity and
+> (§2–§6, §8, §9.2–§9.6b, §9.10).** The non-actor registry API (§2.1) is implemented as of
+> 0.0.31 with **no schema change** — `object_kind` and its kinds were already specified.
+> Ten tables exist today: the shared identity and
 > actor profile records, multilingual text, address and instance ledgers, normalized
 > endpoints, remote asset mappings, keyring, fetch state, and identity relations. Local person
 > profile fields remain live `WP_User` fallbacks; only remote actors snapshot. Next
@@ -68,15 +70,48 @@ Rules:
 - **Remote** identity: the remote `canonical_uri` is the source of truth; the local
   `uuid` is an internal record id only and is never presented as the object's
   identity, nor re-served under our `/actors/{uuid}`.
-- v0.1 writes only `object_kind = 'actor'`; collection / folder / media / activity /
-  **place** kinds are reserved (SPEC §3) so the registry is not prematurely
-  generalised. **`Place` and `Collection` are objects, not actors** — a place or a
-  place-collection (map / geodata grouping) reuses the identity registry with
-  `attributedTo` a real actor, but has **no** actor row and no inbox/outbox. They are
-  created by their owning plugins (geodata / Media Library), not by Actors.
+- `object_kind` is `actor` plus the non-actor kinds collection / folder / media /
+  activity / **place** (SPEC §3). **`Place` and `Collection` are objects, not actors** —
+  a place or a place-collection (map / geodata grouping) reuses the identity registry
+  with `attributedTo` a real actor, but has **no** actor row and no inbox/outbox. They
+  are created by their owning plugins (geodata / Media Library), not by Actors.
+- **The two creation paths are separate and must stay so.** `axismundi_actors_create_local()`
+  writes an identity **and** its actor row in one transaction; the non-actor registry API
+  (`includes/identity-registry.php`, §2.1) writes identity rows only and **refuses
+  `object_kind = 'actor'`** — an actor identity with no profile row is an orphan that no
+  actor lookup can hydrate, so the kind allowlist is that orphan guard.
 - `status` transitions: `internal → public` (admin publish), `→ disabled`
   (hidden but retained), `→ tombstone` (owner user deleted / remote Delete).
   `tombstone` is terminal for exposure; the row is never hard-deleted here.
+
+### 2.1 The non-actor registry API
+
+Owning plugins reach the registry only through `includes/identity-registry.php` — never
+direct SQL (§1). It is a separate file from the actor-profile repository so the documented
+extraction into a shared `axismundi-core` stays a file move.
+
+```php
+axismundi_actors_identity_kinds()                       // collection|folder|media|activity|place
+axismundi_actors_register_identity( array $args )       // → identity array | WP_Error
+axismundi_actors_get_identity( int $identity_id )       // → identity array | null
+axismundi_actors_get_identity_by_uuid( string $uuid )
+axismundi_actors_get_identity_by_uri( string $uri )     // matched on the hash column
+axismundi_actors_set_identity_uri( int $id, string $uri ) // domain move; UUID preserved
+axismundi_actors_set_status( int $id, string $status )  // shared with actors; kind-agnostic
+```
+
+`register_identity()` rules:
+
+- **A local caller supplies a `uri_template` containing `{uuid}`, not a finished URI.** A
+  local identity's URI contains its own UUID, so the registry owns UUID generation while
+  the caller owns its URI space. A remote caller supplies `canonical_uri` instead.
+- **A remote `canonical_uri` is validated for shape only** — https + host, no DNS
+  resolution — matching the endpoint-persistence rule (§9.4). Registering an identity is a
+  *record*, not a fetch: a peer may be temporarily unresolvable or behind split DNS
+  without that invalidating its canonical URI. The SSRF gate belongs at the fetch site.
+- **`status` defaults to `internal`**; `tombstone` is rejected at creation because it is an
+  end state reached through `set_status()`, not a birth state (SPEC §2.6).
+- A duplicate `canonical_uri` is refused across every kind (the hash column is UNIQUE).
 
 ## 3. `wp_ax_actors` — the actor profile
 

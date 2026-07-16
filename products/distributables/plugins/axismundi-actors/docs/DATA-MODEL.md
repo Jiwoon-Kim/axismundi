@@ -540,6 +540,50 @@ wp_ax_instances
 2.1 → bounded remote Actor discovery/fetch *(shipped)* → then `wp_ax_instances` +
 its NodeInfo cache. Background refresh/backoff remains a Federation/fetch-state phase.
 
+### 9.10.1 Instance availability — a separate operational axis *(contract locked; NOT built)*
+
+A host going away is an **operational** fact about *our* reach, not a statement the
+remote made about its objects. It therefore gets its own axis on the instance ledger:
+
+```
+instance availability:  active | degraded | unreachable | archived
+```
+
+- **Never conflate availability with `tombstone`.** `tombstone` is a *per-object*
+  lifecycle state declared by **remote authority** — an HTTP `410 Gone` or an explicit
+  AS2 `Tombstone` for **that** object (§2 `status`, remote-object `object_status`). An
+  instance outage must **never** tombstone its actors: the host may return, and the
+  actor never declared itself gone. Marking actors dead from our own infrastructure's
+  view would fabricate remote intent.
+- **NodeInfo failure is a hint, never a verdict.** Many live fediverse servers never
+  serve NodeInfo at all, and a failure is equally explained by a transient outage, a
+  CDN/WAF block, a DNS blip, or rate limiting. A verdict requires **sustained,
+  multi-signal** evidence (long-running DNS/HTTP failure, repeated delivery failure)
+  **plus an explicit administrator decision**. The default is always preserve.
+- **What survives an `unreachable` / `archived` host:** actors, relations, and the
+  **Activity ledger are kept**. The ledger is *our own* audit history (what we sent,
+  what they did to us); and because every reference is a URI rather than a physical FK,
+  it stays intact even without an actor row — that is the design's intent, not a gap.
+- **Remote objects are cleaned by the existing lease model, not by a host purge.**
+  Unreferenced observations expire out on their own; objects held by an
+  `interaction` / `collection` / `shared_shadow` lease are retained because a local
+  user cared about them. A host-wide bulk delete would delete exactly those protected
+  rows, so it is **not** the mechanism.
+- **`archived` stops network retries only.** It is not deletion and changes no object's
+  lifecycle state. Returning to `active` is an explicit administrator action.
+- **Space reclamation order, only when it is a real problem:** asset binaries first
+  (genuinely disposable), then **unreferenced objects only** (lease-checked,
+  fail-closed). Never an indiscriminate per-host delete.
+- **Remember the inversion:** a cache is normally disposable *because it is
+  re-fetchable*. Once a host is gone, our cached objects are the **only remaining
+  copy** — deletion becomes permanent. That argues for archive-by-default, not purge.
+
+**Not implemented, deliberately.** When a real shutdown case appears, add to
+`wp_ax_instances` an availability column **plus last-success / last-failure evidence**
+(what failed, when, for how long) — evidence first, verdict second. Availability is
+also distinct from moderation (`isBlocked` / `isSilenced`, above): one is "can we reach
+this host", the other is "do we choose to talk to it".
+
 ### Stays in `payload_json` (resolver-read, never columnized)
 `memorial`, `showFeatured` / `showMedia` / `showRepliesInMedia`, `interactionPolicy`,
 `attributionDomains`, all `misskey:*` and `vcard:*`, `tag` (Emoji / Hashtag are

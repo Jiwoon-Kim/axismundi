@@ -32,8 +32,9 @@ Phase 3d Media archive/folder OrderedCollections     — home/author/folder coll
 Phase 3e FEP-1311 media renditions                   — contract locked (MEDIA-RENDITIONS.md),
                                                        NOT built: url[] Link array, media first,
                                                        original never advertised, max 4 existing
-                                                       derivatives, name = alt text. Media Library
-                                                       owns selection; shared folders consume it.
+                                                       derivatives. Standalone name = title;
+                                                       embedded name = alt. Media Library owns
+                                                       selection; shared folders consume it.
 Phase 4a remote object repository                    — shipped (0.0.5): URI-keyed observed
                                                        cache table; no network/public route
 Phase 4b remote fetch + administrator inspector      — shipped (0.0.6): metadata-only,

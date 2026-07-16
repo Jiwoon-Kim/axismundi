@@ -33,7 +33,7 @@ contracts at once (§2).
 {
   "id": "https://example.com/?attachment_id=44",
   "type": "Image",
-  "name": "이미지 대체 텍스트",
+  "name": "독립 미디어 객체 제목",
   "url": [
     { "type": "Link", "href": "…/image-1024x683.jpg", "mediaType": "image/jpeg", "width": 1024, "height": 683, "size": 148320 },
     { "type": "Link", "href": "…/image-300x200.jpg",  "mediaType": "image/jpeg", "width": 300,  "height": 200, "size": 18420 },
@@ -63,8 +63,10 @@ Satisfied simultaneously:
 4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.
 5. **Only already-generated derivatives.** Projection never generates an image; it enumerates
    what WordPress already produced.
-6. **One descriptor builder** serves all three roles: Attachment Single, an Article's
-   `attachment[]`, and `preview.attachment`. They must not drift.
+6. **One rendition builder** serves all three roles: Attachment Single, an Article's
+   `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, `mediaType`, and
+   ordered `url[]` representations must not drift. Role-dependent descriptive fields such as
+   `name` are applied by the projection layer (§5), not by the rendition builder.
 
 ## 4. Ownership
 
@@ -87,12 +89,26 @@ axismundi_media_federation_renditions( int $attachment_id, array $policy = array
 internals or reconstruct size names — the same boundary as the rest of the Media Library
 adapter (TRANSFORMERS.md).
 
-## 5. Metadata
+## 5. Metadata and role-dependent `name`
 
-- **`name` = `_wp_attachment_image_alt`** (FEP-1311: *"alternative plain text description"*;
-  Mastodon renders attachment `name` as alt text). **Omit `name` when the alt text is empty —
-  never fabricate it from the post title.** The current projection emits the title here, which
-  is both wrong for consumers and an accessibility loss.
+FEP-1311's `name` guidance applies to a **media attachment embedded in another object**.
+ActivityStreams' general `name` property instead names the object itself. Axismundi has both
+roles, so `name` is deliberately context-sensitive while the rendition list remains shared:
+
+| Projection role | `name` |
+|---|---|
+| Standalone Attachment Single (`/?attachment_id={ID}`) | the attachment's `post_title`; this is a first-class object with its own HTML page, likes, and `usedIn` collection |
+| Article `attachment[]` | `_wp_attachment_image_alt`; omit when empty, and never substitute the title |
+| `preview.attachment` | the same embedded-media descriptor as the Article attachment: alt text or omission |
+
+The current accessibility gap is therefore **not** that Attachment Single uses its title. It
+is that embedded media does not emit the WordPress alt text. A filename-like title must not be
+invented as alt text for a screen reader.
+
+There is no settled ActivityStreams property for carrying both the standalone object's title
+and image alt text on that same standalone representation. A private extension is deferred
+until the shared-folder consumer and binary substrate establish a demonstrated need (§11).
+
 - **`size`** on every Link.
 - **`duration`** for Video / Audio, from WordPress metadata.
 - `sensitive`, the content warning, license, and `usedIn` keep their existing contracts.
@@ -137,19 +153,24 @@ parsing, since that is what the rest of the fediverse sends today.
 - No original URL appears anywhere in `url`.
 - At most 4 entries; dimension and URL dedupe hold.
 - An image with **no** derivatives emits the HTML Link only — no original leak.
-- `name` is the alt text; an empty alt omits `name` entirely.
+- Attachment Single keeps `name = post_title`.
+- Article `attachment[]` and `preview.attachment` use alt text for `name`; an empty alt omits
+  `name`, with no title fallback.
 - `size` is accurate.
 - Attachment Single, Article `attachment[]`, and `preview.attachment` produce identical
-  descriptors.
+  canonical IDs and ordered rendition links; their role-dependent `name` values follow §5.
 - private / locked media stay fail-closed.
 - A remote object with a single-valued `url` still parses.
 
 ## 11. Deferred
 
-`digestMultibase` and `focalPoint` land **with the shared-folder binary substrate**, where
+Standalone alt-text representation, `digestMultibase`, and `focalPoint` land **with the
+shared-folder binary substrate**, where
 they pay for themselves: `digestMultibase` lets a peer verify a fetched file against what was
 advertised and pairs naturally with the blob substrate's `content_hash`
-(REMOTE-ASSET-CACHE.md), and `focalPoint` needs the processor-version story.
+(REMOTE-ASSET-CACHE.md), and `focalPoint` needs the processor-version story. Standalone alt
+text will be added only if the consumer proves it cannot preserve that value from the
+embedding Article or collection item without a private vocabulary extension.
 
 ## 12. Order
 

@@ -86,7 +86,9 @@ functions and never queries its tables or private metadata schema.
 > **Superseded by a locked contract — see MEDIA-RENDITIONS.md.** The `url` = human page +
 > nested single media `attachment` structure above merges into a single FEP-1311 `url[]` Link
 > array (media Links first, the `text/html` page last, the original never advertised, at most
-> four already-generated derivatives). `name` becomes the alt text rather than the post title.
+> four already-generated derivatives). The standalone Attachment keeps `name = post_title`;
+> only Article `attachment[]` and `preview.attachment` use image alt text as `name` and omit it
+> when alt text is empty.
 > Media Library will own rendition selection through
 > `axismundi_media_federation_renditions()`; Object Projections only serializes. Not built yet.
 

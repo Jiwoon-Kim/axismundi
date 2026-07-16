@@ -105,6 +105,23 @@ $extended = axismundi_op_transform_object( 'x' );
 remove_all_filters( 'axismundi_op_jsonld_context' );
 ax_rnd_assert( $ax_rnd_results, 'the @context filter can add an extension entry while the renderer owns assembly', is_array( $extended ) && is_array( $extended['@context'] ) && 'https://www.w3.org/ns/activitystreams' === $extended['@context'][0] );
 
+// Activity payloads use the same renderer-owned context without object-only requirements.
+$activity_uri = 'https://example.com/activities/uuid/';
+$activity = axismundi_op_finalize_activity(
+	array(
+		'id'      => $activity_uri,
+		'type'    => 'Follow',
+		'actor'   => 'https://example.com/actors/alice',
+		'object'  => 'https://remote.example/actors/bob',
+		'@context' => 'https://evil.example/context',
+	),
+	$activity_uri
+);
+ax_rnd_assert( $ax_rnd_results, 'an Activity gets the canonical renderer-owned context without object-only url/attributedTo members', is_array( $activity ) && 'https://www.w3.org/ns/activitystreams' === $activity['@context'] && array_key_first( $activity ) === '@context' );
+$invalid_activity = axismundi_op_finalize_activity( array( 'id' => $activity_uri, 'type' => 'Follow' ), $activity_uri );
+$activity_mismatch = axismundi_op_finalize_activity( array( 'id' => $activity_uri, 'type' => 'Follow', 'actor' => 'https://example.com/actors/alice' ), $activity_uri . 'different' );
+ax_rnd_assert( $ax_rnd_results, 'Activity finalization rejects a missing actor and a ledger id mismatch', is_wp_error( $invalid_activity ) && 'ax_op_invalid_activity' === $invalid_activity->get_error_code() && is_wp_error( $activity_mismatch ) && 'ax_op_id_mismatch' === $activity_mismatch->get_error_code() );
+
 $ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_rnd_results ), $ax_rnd_failures );

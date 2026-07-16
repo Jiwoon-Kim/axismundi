@@ -96,7 +96,7 @@ try {
 	$ax_bridge_social_spools = array_merge( $ax_bridge_social_spools, array_map( 'intval', $follow_spools ) );
 	$ax_bridge_social_uris[] = $follow_uri;
 	$follow_payload = '' !== $follow_uri && isset( $follow_spools[0] ) ? json_decode( (string) get_post_field( 'post_content', (int) $follow_spools[0] ), true ) : array();
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a remote Follow queues exactly one spool addressed to the cached Actor inbox', 1 === count( $follow_spools ) && 'Follow' === ( $follow_payload['type'] ?? '' ) && in_array( $remote_uri, (array) ( $follow_payload['to'] ?? array() ), true ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a remote Follow queues exactly one JSON-LD spool addressed to the cached Actor inbox', 1 === count( $follow_spools ) && 'https://www.w3.org/ns/activitystreams' === ( $follow_payload['@context'] ?? '' ) && 'Follow' === ( $follow_payload['type'] ?? '' ) && in_array( $remote_uri, (array) ( $follow_payload['to'] ?? array() ), true ) );
 
 	$inbound_follow_uri = 'https://example.com/activities/' . wp_generate_uuid4();
 	$inbound_follow     = $local instanceof Axismundi_Actor
@@ -122,7 +122,7 @@ try {
 	$ax_bridge_social_uris[] = $inbound_follow_uri;
 	$ax_bridge_social_uris[] = $accept_uri;
 	$accept_payload = '' !== $accept_uri && isset( $accept_spools[0] ) ? json_decode( (string) get_post_field( 'post_content', (int) $accept_spools[0] ), true ) : array();
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'auto-accepting an inbound remote Follow queues one Accept addressed back to that Actor', $inbound_follow instanceof Axismundi_Activity && 1 === count( $accept_spools ) && 'Accept' === ( $accept_payload['type'] ?? '' ) && $inbound_follow_uri === ( $accept_payload['object'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'auto-accepting an inbound remote Follow queues one JSON-LD Accept addressed back to that Actor', $inbound_follow instanceof Axismundi_Activity && 1 === count( $accept_spools ) && 'https://www.w3.org/ns/activitystreams' === ( $accept_payload['@context'] ?? '' ) && 'Accept' === ( $accept_payload['type'] ?? '' ) && $inbound_follow_uri === ( $accept_payload['object'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
 
 	$payload = array( 'id' => $activity_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/liked', 'to' => array( $remote_uri ) );
 	$sender       = axismundi_activitypub_bridge_sender( $local );

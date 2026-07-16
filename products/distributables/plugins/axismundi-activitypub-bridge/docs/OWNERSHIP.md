@@ -1,6 +1,6 @@
 # Runtime ownership matrix
 
-> Status: **0.0.12 existing Inbox action composition, outbound transport, and provenance import contract.**
+> Status: **0.0.14 existing Inbox action composition, JSON-LD-finalized outbound transport, and provenance import contract.**
 
 | Surface | Current owner | Official module state | Reason |
 |---|---|---|---|
@@ -13,6 +13,7 @@
 | Inbox HTTP and signature validation | Official ActivityPub | Inbox routes enabled | The official permission callback verifies the network request. |
 | Inbox Activity and relationship state | Axismundi Activities | Default handlers dormant | Existing controller actions feed one URI-keyed Activity into the authoritative ledger. |
 | Verified Inbox action composition and transport mapping | ActivityPub Bridge | Default handlers dormant; CPT skipped only when claimed | The bridge consumes validated actions without losing unclaimed snapshots. |
+| Outbound Activity JSON-LD representation | Object Projections | N/A | Adds the canonical context without mutating the Activities ledger. |
 | Outbound signature, spool, retry, HTTP | Official ActivityPub | External delivery module enabled | Transport-only rows; private keys are resolved only while sending. |
 | Signature and REST validation code | Official ActivityPub | Active for Inbox routes | This is the retained S2S boundary. |
 | Official stored rows/options/cron | Official ActivityPub | Preserved | Compatibility mode is reversible and non-destructive. |

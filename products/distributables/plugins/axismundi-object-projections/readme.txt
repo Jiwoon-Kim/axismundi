@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.10
+Stable tag: 0.0.11
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -37,6 +37,12 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.11 =
+* Add an Activity-specific JSON-LD finalizer so transport adapters can emit the canonical
+  ActivityStreams context without imposing object-only `url` and `attributedTo` members.
+* Keep the immutable Activity ledger free of representation concerns while retaining
+  Object Projections as the sole `@context` owner.
 
 = 0.0.10 =
 * Own the public Actor Outbox representation and neutral `axismundi/v1` read route through

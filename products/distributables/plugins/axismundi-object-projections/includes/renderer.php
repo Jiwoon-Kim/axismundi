@@ -79,6 +79,30 @@ function axismundi_op_finalize_object( array $object, string $expected_id ) {
 }
 
 /**
+ * Validate and finalize one Activity payload for transport.
+ *
+ * Activities owns the immutable domain payload; this renderer remains the sole owner of
+ * JSON-LD context assembly. Activity documents require actor rather than the object
+ * projection members attributedTo/url.
+ *
+ * @param array<string,mixed> $activity    Activity payload.
+ * @param string              $expected_id Ledger Activity URI.
+ * @return array<string,mixed>|WP_Error
+ */
+function axismundi_op_finalize_activity( array $activity, string $expected_id ) {
+	foreach ( array( 'id', 'type', 'actor' ) as $member ) {
+		if ( ! isset( $activity[ $member ] ) || '' === $activity[ $member ] ) {
+			return new WP_Error( 'ax_op_invalid_activity', __( 'The Activity is missing a required member.', 'axismundi-object-projections' ) );
+		}
+	}
+	if ( (string) $activity['id'] !== $expected_id ) {
+		return new WP_Error( 'ax_op_id_mismatch', __( 'An Activity id must equal its ledger URI.', 'axismundi-object-projections' ) );
+	}
+	unset( $activity['@context'] );
+	return array_merge( array( '@context' => axismundi_op_jsonld_context( $activity ) ), $activity );
+}
+
+/**
  * Project one WordPress source into an ActivityStreams object.
  *
  * @param mixed $source Source (e.g. WP_Post).

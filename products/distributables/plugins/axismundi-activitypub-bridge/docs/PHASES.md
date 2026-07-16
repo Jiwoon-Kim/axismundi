@@ -89,3 +89,9 @@ verified shared Inbox delivery to use `object.tag[].type=Mention` href/id as a s
 Actor target when Activity/Object audience fields omit it. Every unclaimed result still falls back
 to official Inbox snapshot storage. Legacy purge remains disabled until old local Actor documents,
 `alsoKnownAs`, `movedTo`, and Move delivery have an explicit migration contract.
+
+## 0.0.14 — Outbound Activity JSON-LD finalization
+
+Pass every outbound ledger payload through Object Projections' Activity finalizer before
+queueing it with the official transport. The ledger remains representation-neutral while the
+wire payload receives the canonical ActivityStreams `@context` required by remote processors.

@@ -170,6 +170,12 @@ function axismundi_activitypub_bridge_queue_outbound( Axismundi_Activity $activi
 	if ( empty( $inboxes ) ) {
 		return;
 	}
-	Activitypub\deliver_activity( $activity->get_payload(), axismundi_activitypub_bridge_sender( $actor ), $inboxes );
+	$payload = function_exists( 'axismundi_op_finalize_activity' )
+		? axismundi_op_finalize_activity( $activity->get_payload(), $activity->get_uri() )
+		: new WP_Error( 'ax_bridge_activity_renderer', __( 'The Activity JSON-LD renderer is unavailable.', 'axismundi-activitypub-bridge' ) );
+	if ( is_wp_error( $payload ) ) {
+		return;
+	}
+	Activitypub\deliver_activity( $payload, axismundi_activitypub_bridge_sender( $actor ), $inboxes );
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound' );

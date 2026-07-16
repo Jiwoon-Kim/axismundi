@@ -16,6 +16,8 @@ Phase 2d Axismundi Actor representation              — shipped (0.0.9): Actor 
                                                        Bridge supplies transport fields only
 Phase 2e Actor public Outbox representation          — shipped (0.0.10): neutral REST URI;
                                                        Activities public-safe query contract
+Phase 2f Activity JSON-LD transport finalization     — shipped (0.0.11): canonical context;
+                                                       immutable ledger remains unchanged
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

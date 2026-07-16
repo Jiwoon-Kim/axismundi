@@ -155,12 +155,47 @@ _ax_media_folder_effective_gated  0 | 1 (derived chain cache; Phase 2b)
 _ax_media_folder_cover_id     _ax_media_folder_sort_mode              (later)
 _ax_media_folder_default_license  license code stamped onto new uploads (Phase 4b)
 _ax_media_folder_default_sensitive  _ax_media_folder_feed_enabled     (later)
+_ax_media_folder_uuid         federation identity UUID                (Phase 5a)
 ```
 
 **Per-user hidden root** — each user's top-level folders are parented to a hidden
 root term (`_ax_media_folder_root = uid`) so two users can both have a top-level
 `Travel` (WordPress term names collide only within the same parent). The root is
 never shown or assignable.
+
+### 3.0 Folder federation identity — `_ax_media_folder_uuid` (Phase 5a)
+
+A shared folder is a `Collection`, not a `Group` (FEDERATED-MEDIA.md §12): no inbox, no
+outbox, no Follows, `attributedTo` its owner's Actor. `includes/folder-identity.php` owns
+this layer; folder ACL stays in `folders.php` and is only read from here.
+
+- **The term meta stores the UUID, never the registry row id.** `identity.id` is internal
+  and changes on re-import; the UUID is the only immutable anchor (Actors DATA-MODEL §1).
+- **Registered at folder creation, not at first share.** The UUID is the anchor, so it
+  must not depend on when someone decided to share. Identities are registered `internal`:
+  the record exists and is usable as a membership key while publication is separate
+  (Actors SPEC §2.6).
+- **Get-or-create** (`axismundi_media_folder_identity_uuid()`, the same shape as
+  `axismundi_media_user_root()`) is what backfills folders predating this feature and
+  folders created while Actors was inactive — no migration pass exists or is needed. A
+  UUID the registry no longer knows is re-registered rather than left dangling.
+- **Hidden roots never get an identity**: a root is a namespace mechanism, not a folder
+  anyone can share.
+- **Actors is optional.** The Media Library has never required it. Without Actors a folder
+  has no federation identity and every accessor returns empty/false; local folder
+  behaviour is unchanged.
+- **Publication follows visibility, both ways.** `public`/`unlisted` + ungated + a public
+  owner Actor ⇒ identity `public`; anything else returns it to `internal`. Withdrawal is
+  never a tombstone.
+- **Deletion tombstones, never deletes.** A peer may hold the folder URI in a collection
+  or replica: that reference must resolve to "gone" rather than to nothing, and the UUID
+  must never be reissued.
+- **Local ownership and federation attribution remain distinct.** The taxonomy term stays
+  owned by `_ax_media_folder_owner` (the media author); its Collection is `attributedTo`
+  that user's public Person Actor. Publishing never transfers Attachment or folder ownership.
+- Object Projections serializes the root and bounded pages. Media Library supplies only the
+  anonymous direct-member query; member invitations, roles, replicas, and binary caching are
+  deliberately absent from this feasibility increment.
 
 ### 3.1 Folder visibility — tier + gate (narrow-only)
 

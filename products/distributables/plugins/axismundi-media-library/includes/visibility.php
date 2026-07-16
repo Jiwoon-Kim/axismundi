@@ -140,11 +140,12 @@ add_filter(
 		if ( ! $query->get( 'ax_media_visibility_filter' ) ) {
 			return $where;
 		}
-		if ( current_user_can( 'edit_others_posts' ) ) {
+		$force_anonymous = (bool) $query->get( 'ax_media_force_anonymous' );
+		if ( ! $force_anonymous && current_user_can( 'edit_others_posts' ) ) {
 			return $where;
 		}
 		global $wpdb;
-		$uid = (int) get_current_user_id();
+		$uid = $force_anonymous ? 0 : (int) get_current_user_id();
 		$max_rank = min( 1, max( 0, (int) $query->get( 'ax_media_visibility_max_rank' ) ) );
 		$excluded = 1 === $max_rank ? "('private')" : "('unlisted','private')";
 		// "mine" only applies to a real logged-in user — a logged-out uid of 0

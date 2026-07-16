@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.27
+Stable tag: 0.0.28
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,25 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.28 =
+* Give every folder a permanent federation identity UUID, registered through the Axismundi
+  Actors identity registry, so a shared folder keeps one immutable URI across renames,
+  moves, and domain changes. The display permalink stays owner-scoped and mutable; the
+  identity URI is /media/folder/{uuid}/ and is not derived from it.
+* Attribute a folder to its owner's Actor, resolved live from the user rather than copied
+  onto the term.
+* Publish and withdraw a folder identity as its visibility changes: public or unlisted,
+  ungated, and owned by a public Actor federates; anything else stays unpublished.
+  Withdrawal returns the record to internal, and deleting a folder tombstones its
+  identity so a URI a peer already holds resolves to gone rather than to nothing.
+* Axismundi Actors remains optional: without it a folder simply has no federation
+  identity, and local folder behaviour is unchanged.
+* Show the folder's federation state and immutable Collection JSON-LD link in Media >
+  Folders. Opening this manager lazily backfills identities for pre-existing folders.
+* Expose a bounded, anonymous folder-item query API for Object Projections. Direct members
+  are ordered by folder-add time; private and gated media remain excluded even for an
+  administrator request.
 
 = 0.0.27 =
 * Add the FEP-1311 federation rendition service: axismundi_media_federation_renditions()

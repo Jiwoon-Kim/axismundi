@@ -211,6 +211,17 @@ function axismundi_media_refresh_folder_effective_tier( int $term_id, bool $incl
 		AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_GATE_META,
 		axismundi_media_calculate_folder_effective_gate( $term_id ) ? 1 : 0
 	);
+	/**
+	 * Fires when a folder's effective visibility or gate may have changed.
+	 *
+	 * Folder ACL is local; whether a folder is federated is a separate concern that
+	 * listens here rather than being wired into this cache (folder-identity.php).
+	 *
+	 * @since 0.0.28
+	 * @param int $term_id Folder term ID.
+	 */
+	do_action( 'axismundi_media_folder_visibility_changed', $term_id );
+
 	if ( ! $include_descendants ) {
 		return;
 	}
@@ -225,6 +236,7 @@ function axismundi_media_refresh_folder_effective_tier( int $term_id, bool $incl
 			AXISMUNDI_MEDIA_FOLDER_EFFECTIVE_GATE_META,
 			axismundi_media_calculate_folder_effective_gate( (int) $child_id ) ? 1 : 0
 		);
+		do_action( 'axismundi_media_folder_visibility_changed', (int) $child_id );
 	}
 }
 
@@ -441,6 +453,19 @@ function axismundi_media_create_folder( string $name, int $parent = 0, ?int $own
 	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_TIER_META, 'inherit' );
 	update_term_meta( $term_id, AXISMUNDI_MEDIA_FOLDER_ACCESS_META, 'open' );
 	axismundi_media_refresh_folder_effective_tier( $term_id, false );
+
+	/**
+	 * Fires after this service creates a folder, with its owner and visibility settled.
+	 *
+	 * Distinct from `created_{taxonomy}`, which also fires for the hidden per-user roots
+	 * this service never routes through, and fires before the owner meta exists.
+	 *
+	 * @since 0.0.28
+	 * @param int $term_id Folder term ID.
+	 * @param int $owner   Owner user ID.
+	 */
+	do_action( 'axismundi_media_folder_created', $term_id, $owner );
+
 	return $term_id;
 }
 

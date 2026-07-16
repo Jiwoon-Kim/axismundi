@@ -24,7 +24,21 @@ COLLECTION (a browse surface)
   /media/                                              home
   /media/author/{nicename}/                            author media archive
   /media/author/{nicename}/folder/{path}/              author folder / board
+
+FOLDER IDENTITY (federation; not a browse surface)
+  /media/folder/{uuid}              canonical folder identity URI (immutable)
+  /media/folder/{uuid}/page/{n}     OrderedCollectionPage
 ```
+
+**A folder has two URLs and they are not interchangeable.**
+`/media/author/{nicename}/folder/{path}/` is the *display* permalink: it is scoped to an
+owner and it changes on every rename, move, and ownership transfer. A federated folder's
+identity must not. So a folder's canonical identity is the UUID-keyed
+`/media/folder/{uuid}`, minted from the Actors identity registry at folder creation and
+immutable thereafter (FEDERATED-MEDIA.md §12; Actors DATA-MODEL.md §2.1). The top-level
+`folder` segment was already reserved and was unused by the author-scoped display route.
+`{uuid}` and `{path}` cannot collide: a path segment is a folder name, and a folder named
+as a bare UUIDv4 still resolves under its owner's tree, never at the top level.
 
 **Reserved first segments under `/media/`:** `image`, `video`, `audio`, `file`,
 `author`, `folder`, `search`, `feed`. Because every user lives under

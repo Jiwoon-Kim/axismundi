@@ -119,12 +119,30 @@ add_action( 'admin_post_axismundi_media_folder_action', 'axismundi_media_handle_
  * @return void
  */
 function axismundi_media_render_folder_row( array $folder, array $children, int $depth = 0 ) : void {
-	$term_id = (int) $folder['id'];
+	$term_id        = (int) $folder['id'];
+	$identity_uuid  = function_exists( 'axismundi_media_folder_identity_uuid' ) ? axismundi_media_folder_identity_uuid( $term_id ) : '';
+	$collection_uri = '' !== $identity_uuid && function_exists( 'axismundi_media_folder_uri' ) ? axismundi_media_folder_uri( $term_id, false ) : '';
+	$actor_uri      = function_exists( 'axismundi_media_folder_actor_uri' ) ? axismundi_media_folder_actor_uri( $term_id ) : '';
+	$federated      = '' !== $collection_uri && function_exists( 'axismundi_media_folder_federation_allowed' ) && axismundi_media_folder_federation_allowed( $term_id );
 	?>
 	<tr>
 		<td><strong><?php echo esc_html( str_repeat( '— ', $depth ) . (string) $folder['name'] ); ?></strong></td>
 		<td><?php echo esc_html( (string) $folder['count'] ); ?> / <?php echo esc_html( (string) $folder['recursive_count'] ); ?></td>
 		<td><?php echo esc_html( (string) $folder['effective_tier'] . ( $folder['effective_gate'] ? ' + password' : '' ) ); ?></td>
+		<td>
+			<?php if ( $federated ) : ?>
+				<strong><?php esc_html_e( 'Published', 'axismundi-media-library' ); ?></strong><br>
+				<a href="<?php echo esc_url( $collection_uri ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Collection JSON-LD', 'axismundi-media-library' ); ?></a>
+			<?php elseif ( '' === $identity_uuid ) : ?>
+				<?php esc_html_e( 'Actors unavailable', 'axismundi-media-library' ); ?>
+			<?php elseif ( '' === $actor_uri ) : ?>
+				<?php esc_html_e( 'Activate a public Actor', 'axismundi-media-library' ); ?>
+			<?php elseif ( ! empty( $folder['effective_gate'] ) ) : ?>
+				<?php esc_html_e( 'Password-protected', 'axismundi-media-library' ); ?>
+			<?php else : ?>
+				<?php esc_html_e( 'Internal', 'axismundi-media-library' ); ?>
+			<?php endif; ?>
+		</td>
 		<td>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ax-media-folder-row-form">
 				<input type="hidden" name="action" value="axismundi_media_folder_action">
@@ -218,10 +236,10 @@ function axismundi_media_render_folders_page() : void {
 
 		<h2><?php esc_html_e( 'Your folders', 'axismundi-media-library' ); ?></h2>
 		<table class="widefat striped">
-			<thead><tr><th><?php esc_html_e( 'Folder', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Items (direct / total)', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Effective visibility', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Settings', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Archive', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Delete', 'axismundi-media-library' ); ?></th></tr></thead>
+			<thead><tr><th><?php esc_html_e( 'Folder', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Items (direct / total)', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Effective visibility', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Federation', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Settings', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Archive', 'axismundi-media-library' ); ?></th><th><?php esc_html_e( 'Delete', 'axismundi-media-library' ); ?></th></tr></thead>
 			<tbody>
 			<?php if ( empty( $folders ) ) : ?>
-				<tr><td colspan="6"><?php esc_html_e( 'No folders yet.', 'axismundi-media-library' ); ?></td></tr>
+				<tr><td colspan="7"><?php esc_html_e( 'No folders yet.', 'axismundi-media-library' ); ?></td></tr>
 			<?php else : ?>
 				<?php foreach ( $children[0] ?? array() as $folder ) { axismundi_media_render_folder_row( $folder, $children ); } ?>
 			<?php endif; ?>

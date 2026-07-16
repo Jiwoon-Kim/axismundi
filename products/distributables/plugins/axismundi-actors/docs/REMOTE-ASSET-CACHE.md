@@ -108,6 +108,9 @@ Invariants:
 4. Generate derivatives; on success **atomic rename** into the content-addressed dir.
 5. Flip the DB row to the new `content_hash`, `fetch_status = ready`.
 6. The previous binary is GC'd after the grace period **only when unreferenced** (§4).
+7. A `ready` row has no time-based refresh deadline. It is queued again only when a
+   verified Actor snapshot changes the `icon` / `image` source URI, or an administrator
+   explicitly rebuilds the cache.
 
 Render-time rules (frozen):
 
@@ -115,6 +118,8 @@ Render-time rules (frozen):
   / no header.
 - On download failure, keep serving the **last good** cache (stale-while-revalidate);
   bump `failure_count` / `last_error_code`, back off via `next_refresh_at`.
+- `next_refresh_at` schedules initial, changed-source, and failed work only. It is
+  `NULL` for a successful `ready` row; routine page views never refresh remote bytes.
 
 ---
 

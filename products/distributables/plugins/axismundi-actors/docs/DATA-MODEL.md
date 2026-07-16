@@ -409,7 +409,9 @@ path (`…/actors/v{processor}/{ab}/{cd}/{content_hash}/{role}-{size}.{ext}`), s
 *no row references this `(content_hash, processor_version)`* → sweep after a grace
 period. Never a `WP_User` attachment (no Media Library pollution). Originals are not
 retained — validate + derive, then delete. `content_hash` is `NULL` in `pending`/`error`
-and **required once `ready`**. Downloads are asynchronous, stale-while-revalidate; the
+and **required once `ready`**. Downloads are asynchronous, stale-while-revalidate; a
+successful row has no timer refresh and is queued again only when a verified Actor
+snapshot changes its image source (or an administrator explicitly rebuilds it). The
 render path never blocks on a fetch and falls back to the default avatar / no header.
 Full contract (path, refresh, SSRF/MIME/pixel limits, derivative sizes, purge/uninstall)
 in **REMOTE-ASSET-CACHE.md**. The administrator-only remote profile preview consumes

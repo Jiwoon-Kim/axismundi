@@ -267,6 +267,17 @@ function axismundi_actors_render_remote_admin_page() : void {
 
 		<h2><?php esc_html_e( 'Remote image cache', 'axismundi-actors' ); ?></h2>
 		<p><?php esc_html_e( 'Preview or purge all cached remote avatar/header mappings. Physical files are removed only when no Actor still references their content hash.', 'axismundi-actors' ); ?></p>
+		<?php
+		$ax_asset_due       = axismundi_actors_asset_due_count();
+		$ax_asset_scheduled = wp_next_scheduled( 'axismundi_actors_process_asset_batch' );
+		$ax_asset_worker_status = sprintf(
+			/* translators: 1: number of due image-cache rows, 2: scheduled UTC time or not scheduled. */
+			__( 'Worker status: %1$s due; next run %2$s.', 'axismundi-actors' ),
+			number_format_i18n( $ax_asset_due ),
+			false === $ax_asset_scheduled ? __( 'not scheduled', 'axismundi-actors' ) : gmdate( 'Y-m-d H:i:s', $ax_asset_scheduled ) . ' UTC'
+		);
+		?>
+		<p><strong><?php echo esc_html( $ax_asset_worker_status ); ?></strong></p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="axismundi_actors_asset_settings">
 			<?php wp_nonce_field( 'ax_actors_asset_settings' ); ?>

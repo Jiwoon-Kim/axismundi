@@ -52,8 +52,9 @@ function ax_asset_response( string $body, int $code = 200, string $type = 'image
 	);
 }
 
+$ax_asset_color = hexdec( substr( md5( wp_generate_uuid4() ), 0, 6 ) );
 $ax_asset_image = imagecreatetruecolor( 400, 400 );
-imagefill( $ax_asset_image, 0, 0, imagecolorallocate( $ax_asset_image, 36, 120, 190 ) );
+imagefill( $ax_asset_image, 0, 0, imagecolorallocate( $ax_asset_image, ( $ax_asset_color >> 16 ) & 255, ( $ax_asset_color >> 8 ) & 255, $ax_asset_color & 255 ) );
 ob_start();
 imagepng( $ax_asset_image );
 $ax_asset_png = (string) ob_get_clean();
@@ -95,6 +96,11 @@ try {
 	$synced = $first instanceof Axismundi_Actor && axismundi_actors_sync_asset_source( $first->get_identity_id(), 'avatar', $source );
 	$pending = $first instanceof Axismundi_Actor ? axismundi_actors_get_asset_cache_row( $first->get_identity_id(), 'avatar' ) : null;
 	ax_asset_assert( $ax_asset_results, 'source synchronization creates pending state without a render-time/network fetch', $synced && is_array( $pending ) && 'pending' === $pending['fetch_status'] && null === $pending['content_hash'] && $before_calls === $ax_asset_http_calls );
+	wp_clear_scheduled_hook( 'axismundi_actors_process_asset_batch' );
+	$recovered_worker = axismundi_actors_recover_asset_worker();
+	$recovered_event  = wp_next_scheduled( 'axismundi_actors_process_asset_batch' );
+	ax_asset_assert( $ax_asset_results, 'queue health recovers a due pending row after its one-shot worker was cleared', $recovered_worker && false !== $recovered_event && 1 <= axismundi_actors_asset_due_count() && $before_calls === $ax_asset_http_calls );
+	wp_clear_scheduled_hook( 'axismundi_actors_process_asset_batch' );
 
 	add_filter( 'pre_http_request', $ax_asset_http, 10, 3 );
 	$fetched = $first instanceof Axismundi_Actor ? axismundi_actors_fetch_remote_asset( $first->get_identity_id(), 'avatar' ) : null;
@@ -104,6 +110,10 @@ try {
 	$ax_asset_hash = is_array( $ready ) ? (string) $ready['content_hash'] : '';
 	$root = '' !== $ax_asset_hash ? axismundi_actors_asset_content_root( $ax_asset_hash ) : null;
 	ax_asset_assert( $ax_asset_results, 'worker validates source bytes, creates local derivatives, and flips the row to ready', true === $fetched && is_array( $ready ) && 'ready' === $ready['fetch_status'] && 64 === strlen( $ax_asset_hash ) && '' !== $url && is_array( $root ) && is_dir( $root['path'] ) );
+	$before_ready_idle = $ax_asset_http_calls;
+	$same_source_idle  = $first instanceof Axismundi_Actor && axismundi_actors_sync_asset_source( $first->get_identity_id(), 'avatar', $source );
+	$ready_idle        = $first instanceof Axismundi_Actor ? axismundi_actors_get_asset_cache_row( $first->get_identity_id(), 'avatar' ) : null;
+	ax_asset_assert( $ax_asset_results, 'a ready cache has no timer deadline and is not fetched again until its Actor source changes', $same_source_idle && is_array( $ready_idle ) && 'ready' === $ready_idle['fetch_status'] && null === $ready_idle['expires_at'] && null === $ready_idle['next_refresh_at'] && $before_ready_idle === $ax_asset_http_calls );
 	ax_asset_assert( $ax_asset_results, 'avatar derivatives use 96/192/400 caps without upscaling the 400px source', array( 96, 192, 400 ) === array_keys( $manifest ) && 400 === (int) $manifest[400]['width'] && max( array_column( $manifest, 'width' ) ) <= 400 );
 	$valid_mimes = ! empty( $manifest ) && empty( array_diff( array_column( $manifest, 'mime' ), array( 'image/png' ) ) );
 	ax_asset_assert( $ax_asset_results, 'default processing keeps normalized PNG and skips optional WebP computation', $valid_mimes );
@@ -147,6 +157,7 @@ try {
 	ax_asset_assert( $ax_asset_results, 'GC removes an unreferenced content-hash directory after its grace period', $gc['directories'] >= 1 && ( ! is_array( $root ) || ! is_dir( $root['path'] ) ) );
 } finally {
 	remove_filter( 'pre_http_request', $ax_asset_http, 10 );
+	wp_clear_scheduled_hook( 'axismundi_actors_process_asset_batch' );
 	if ( null === $ax_asset_webp_original ) {
 		delete_option( 'ax_actors_asset_webp_enabled' );
 	} else {

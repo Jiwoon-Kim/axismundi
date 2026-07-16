@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.29
+Stable tag: 0.0.30
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,13 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.30 =
+* Recover due remote image-cache rows when plugin replacement or deactivation cleared
+  their one-shot cron worker, instead of leaving them permanently pending.
+* Show due-row and next-worker diagnostics on the Remote Actors administration screen.
+* Keep successful remote images until a verified Actor update changes their source URI;
+  ready assets no longer refresh on a timer.
 
 = 0.0.29 =
 * Queue a first-time NodeInfo cache fill when a cached remote Actor participates in

@@ -82,11 +82,46 @@ function axismundi_actors_get_asset_cache_row( int $identity_id, string $role ) 
 }
 
 /** Queue one bounded asset worker, coalescing repeated discoveries. */
-function axismundi_actors_queue_asset_worker( int $delay = 10 ) : void {
+function axismundi_actors_queue_asset_worker( int $delay = 10 ) : bool {
 	if ( ! wp_next_scheduled( 'axismundi_actors_process_asset_batch' ) ) {
-		wp_schedule_single_event( time() + max( 1, $delay ), 'axismundi_actors_process_asset_batch' );
+		$result = wp_schedule_single_event( time() + max( 1, $delay ), 'axismundi_actors_process_asset_batch', array(), true );
+		return ! is_wp_error( $result ) && false !== $result;
+	}
+	return true;
+}
+
+/** Number of cache rows currently due for processing. */
+function axismundi_actors_asset_due_count() : int {
+	global $wpdb;
+	$table = axismundi_actors_asset_cache_table();
+	$now   = current_time( 'mysql', true );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed queue-health query on a fixed custom table.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error')", $now ) );
+}
+
+/** Remove legacy timer deadlines from successful rows once per refresh-policy version. */
+function axismundi_actors_normalize_asset_refresh_policy() : void {
+	global $wpdb;
+	if ( 2 <= (int) get_option( 'ax_actors_asset_refresh_policy_version', 0 ) ) {
+		return;
+	}
+	$table = axismundi_actors_asset_cache_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration of the fixed custom cache table.
+	$updated = $wpdb->query( "UPDATE {$table} SET expires_at = NULL, next_refresh_at = NULL WHERE fetch_status = 'ready'" );
+	if ( false !== $updated ) {
+		update_option( 'ax_actors_asset_refresh_policy_version', 2, false );
 	}
 }
+add_action( 'init', 'axismundi_actors_normalize_asset_refresh_policy', 19 );
+
+/** Recover due rows orphaned when a plugin replacement cleared the one-shot event. */
+function axismundi_actors_recover_asset_worker() : bool {
+	if ( wp_next_scheduled( 'axismundi_actors_process_asset_batch' ) ) {
+		return true;
+	}
+	return axismundi_actors_asset_due_count() > 0 ? axismundi_actors_queue_asset_worker( 1 ) : false;
+}
+add_action( 'init', 'axismundi_actors_recover_asset_worker', 20 );
 
 /**
  * Synchronize one remote Actor role to a source URI without fetching it.
@@ -451,7 +486,7 @@ function axismundi_actors_fetch_remote_asset( int $identity_id, string $role ) {
 	$now    = current_time( 'mysql', true );
 	if ( 304 === $status && '' !== (string) ( $row['content_hash'] ?? '' ) ) {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- conditional refresh state.
-		$wpdb->update( axismundi_actors_asset_cache_table(), array( 'fetch_status' => 'ready', 'fetched_at' => $now, 'expires_at' => gmdate( 'Y-m-d H:i:s', time() + WEEK_IN_SECONDS ), 'next_refresh_at' => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ), 'failure_count' => 0, 'last_error_code' => null, 'updated_at' => $now ), array( 'id' => (int) $row['id'] ) );
+		$wpdb->update( axismundi_actors_asset_cache_table(), array( 'fetch_status' => 'ready', 'fetched_at' => $now, 'expires_at' => null, 'next_refresh_at' => null, 'failure_count' => 0, 'last_error_code' => null, 'updated_at' => $now ), array( 'id' => (int) $row['id'] ) );
 		return true;
 	}
 	if ( 200 !== $status ) {
@@ -510,8 +545,8 @@ function axismundi_actors_fetch_remote_asset( int $identity_id, string $role ) {
 				'processor_version'    => AXISMUNDI_ACTORS_ASSET_PROCESSOR_VERSION,
 				'fetch_status'         => 'ready',
 				'fetched_at'           => $now,
-				'expires_at'           => gmdate( 'Y-m-d H:i:s', time() + WEEK_IN_SECONDS ),
-				'next_refresh_at'      => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
+				'expires_at'           => null,
+				'next_refresh_at'      => null,
 				'last_accessed_at'     => $now,
 				'failure_count'        => 0,
 				'last_error_code'      => null,
@@ -534,14 +569,14 @@ function axismundi_actors_process_asset_batch() : void {
 	$table = axismundi_actors_asset_cache_table();
 	$now   = current_time( 'mysql', true );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded due-cache queue.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, asset_role FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error','ready') ORDER BY next_refresh_at ASC LIMIT %d", $now, AXISMUNDI_ACTORS_ASSET_BATCH_SIZE ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT identity_id, asset_role FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error') ORDER BY next_refresh_at ASC LIMIT %d", $now, AXISMUNDI_ACTORS_ASSET_BATCH_SIZE ), ARRAY_A );
 	foreach ( $rows as $row ) {
 		axismundi_actors_fetch_remote_asset( (int) $row['identity_id'], (string) $row['asset_role'] );
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- determine whether another bounded batch is due.
-	$remaining = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s", $now ) );
+	$remaining = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE next_refresh_at IS NOT NULL AND next_refresh_at <= %s AND fetch_status IN ('pending','stale','error')", $now ) );
 	if ( $remaining > 0 ) {
-		wp_schedule_single_event( time() + 30, 'axismundi_actors_process_asset_batch' );
+		axismundi_actors_queue_asset_worker( 30 );
 	}
 }
 add_action( 'axismundi_actors_process_asset_batch', 'axismundi_actors_process_asset_batch' );

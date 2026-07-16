@@ -179,12 +179,35 @@ function axismundi_act_respond_to_local_follow( Axismundi_Actor $target, string 
 	if ( ! is_array( $relation ) || 'pending' !== (string) $relation['state'] || $follow_activity_uri !== (string) $relation['initiating_activity_uri'] ) {
 		return new WP_Error( 'ax_act_follow_request_state', __( 'That Follow request is no longer pending.', 'axismundi-activities' ) );
 	}
-	$follower = axismundi_actors_get_by_uri( $follow->get_actor_uri() );
-	$remote   = $follower instanceof Axismundi_Actor && ! $follower->is_local();
+	$remote   = 'inbound' === (string) $relation['direction'];
 	$payload  = array( 'type' => 'accept' === $decision ? 'Accept' : 'Reject', 'actor' => $target->get_uri(), 'object' => $follow_activity_uri );
 	if ( $remote ) {
-		$payload['to'] = array( $follower->get_uri() );
+		$payload['to'] = array( $follow->get_actor_uri() );
 	}
 	$activity = axismundi_act_record_activity( $payload, $remote ? 'outbound' : 'local' );
 	return is_wp_error( $activity ) ? $activity : axismundi_act_get_relation( 'follow', $follow->get_actor_uri(), $target->get_uri() );
 }
+
+/** Auto-accept a newly committed inbound Follow when the local target permits it. */
+function axismundi_act_maybe_auto_accept_inbound_follow( array $relation ) : void {
+	if ( 'follow' !== (string) ( $relation['relation_type'] ?? '' )
+		|| 'inbound' !== (string) ( $relation['direction'] ?? '' )
+		|| 'pending' !== (string) ( $relation['state'] ?? '' )
+		|| 'activity' !== (string) ( $relation['evidence_type'] ?? '' )
+		|| empty( $relation['initiating_activity_uri'] )
+	) {
+		return;
+	}
+	$target = axismundi_actors_get_by_uri( (string) ( $relation['object_actor_uri'] ?? '' ) );
+	if ( ! $target instanceof Axismundi_Actor
+		|| ! $target->is_local()
+		|| 'Person' !== $target->get_type()
+		|| 'public' !== $target->get_status()
+		|| ! $target->is_handle_locked()
+		|| axismundi_act_local_follow_requires_approval( $target )
+	) {
+		return;
+	}
+	axismundi_act_respond_to_local_follow( $target, (string) $relation['initiating_activity_uri'], 'accept' );
+}
+add_action( 'axismundi_act_relation_changed', 'axismundi_act_maybe_auto_accept_inbound_follow' );

@@ -102,9 +102,9 @@ try {
 	$inbound_follow     = $local instanceof Axismundi_Actor
 		? axismundi_act_record_activity( array( 'id' => $inbound_follow_uri, 'type' => 'Follow', 'actor' => $remote_uri, 'object' => $local->get_uri() ), 'inbound' )
 		: new WP_Error( 'fixture_actor_missing' );
-	$remote_accept      = $local instanceof Axismundi_Actor && $inbound_follow instanceof Axismundi_Activity
-		? axismundi_act_respond_to_local_follow( $local, $inbound_follow->get_uri(), 'accept' )
-		: new WP_Error( 'fixture_follow_missing' );
+	$remote_accept      = $local instanceof Axismundi_Actor && $remote instanceof Axismundi_Actor
+		? axismundi_act_get_relation( 'follow', $remote->get_uri(), $local->get_uri() )
+		: null;
 	$accept_uri         = is_array( $remote_accept ) ? (string) ( $remote_accept['state_activity_uri'] ?? '' ) : '';
 	$accept_spools      = '' !== $accept_uri
 		? get_posts(
@@ -122,7 +122,7 @@ try {
 	$ax_bridge_social_uris[] = $inbound_follow_uri;
 	$ax_bridge_social_uris[] = $accept_uri;
 	$accept_payload = '' !== $accept_uri && isset( $accept_spools[0] ) ? json_decode( (string) get_post_field( 'post_content', (int) $accept_spools[0] ), true ) : array();
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'accepting an inbound remote Follow queues one Accept addressed back to that Actor', 1 === count( $accept_spools ) && 'Accept' === ( $accept_payload['type'] ?? '' ) && $inbound_follow_uri === ( $accept_payload['object'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'auto-accepting an inbound remote Follow queues one Accept addressed back to that Actor', $inbound_follow instanceof Axismundi_Activity && 1 === count( $accept_spools ) && 'Accept' === ( $accept_payload['type'] ?? '' ) && $inbound_follow_uri === ( $accept_payload['object'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
 
 	$payload = array( 'id' => $activity_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/liked', 'to' => array( $remote_uri ) );
 	$sender       = axismundi_activitypub_bridge_sender( $local );

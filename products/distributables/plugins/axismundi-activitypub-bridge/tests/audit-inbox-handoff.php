@@ -15,6 +15,7 @@ $ax_bridge_inbox_activity  = 'https://example.com/activities/' . wp_generate_uui
 $ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_fallback_activity = '';
+$ax_bridge_accept_activity = '';
 $ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
 
 /** @param bool[] $results Results. */
@@ -73,9 +74,11 @@ try {
 	$response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $request );
 	$stored   = axismundi_act_get( $ax_bridge_inbox_activity );
 	$relation = $local instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $remote_uri, $local->get_uri() ) : null;
+	$ax_bridge_accept_activity = is_array( $relation ) ? (string) ( $relation['state_activity_uri'] ?? '' ) : '';
+	$accept = '' !== $ax_bridge_accept_activity ? axismundi_act_get( $ax_bridge_accept_activity ) : null;
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox action composition returns 202', $response instanceof WP_REST_Response && 202 === $response->get_status() );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox records the full Activity once in the Axismundi ledger', $stored instanceof Axismundi_Activity && 'inbound' === $stored->get_direction() );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the inbound Follow materializes as a pending relation', is_array( $relation ) && 'pending' === (string) $relation['state'] && 'inbound' === (string) $relation['direction'] );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the inbound Follow auto-accepts through an outbound Activity when approval is not required', is_array( $relation ) && 'accepted' === (string) $relation['state'] && 'inbound' === (string) $relation['direction'] && $accept instanceof Axismundi_Activity && 'outbound' === $accept->get_direction() );
 
 	$actor_payload       = $payload;
 	$actor_payload['id'] = $ax_bridge_actor_activity;
@@ -134,6 +137,13 @@ try {
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_mention_activity ) ); // phpcs:ignore WordPress.DB
+	if ( '' !== $ax_bridge_accept_activity ) {
+		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB
+		$spools = get_posts( array( 'post_type' => 'ap_outbox', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_activitypub_external_activity_uri', 'meta_value' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
+		foreach ( $spools as $spool_id ) {
+			wp_delete_post( (int) $spool_id, true );
+		}
+	}
 	if ( '' !== $ax_bridge_fallback_activity ) {
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $ax_bridge_fallback_activity ) . '%' ) ); // phpcs:ignore WordPress.DB
 	}

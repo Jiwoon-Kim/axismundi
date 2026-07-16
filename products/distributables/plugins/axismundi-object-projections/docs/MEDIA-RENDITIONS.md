@@ -64,9 +64,19 @@ Satisfied simultaneously:
 5. **Only already-generated derivatives.** Projection never generates an image; it enumerates
    what WordPress already produced.
 6. **One rendition builder** serves all three roles: Attachment Single, an Article's
-   `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, `mediaType`, and
-   ordered `url[]` representations must not drift. Role-dependent descriptive fields such as
-   `name` are applied by the projection layer (§5), not by the rendition builder.
+   `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, and `mediaType`
+   must not drift, and every role builds `url[]` by the same rules (media first, HTML last,
+   no original, dedupe, largest first). Role-dependent descriptive fields such as `name` are
+   applied by the projection layer (§5), not by the rendition builder.
+7. **The rendition policy is role-dependent** — the builder is shared, the policy narrows it:
+
+   | Role | Policy | Why |
+   |---|---|---|
+   | Standalone Attachment Single | the full ladder (max 4) | its consumer is an Axismundi peer choosing a size it can afford — the reason §1 exists |
+   | Article `attachment[]` / `preview.attachment` | **one Link, capped at 1024** | nothing in the wider fediverse selects between versions today, so extra Links are payload with no consumer; 1024 is also WordPress's own `large` default |
+
+   A policy may only **narrow**. It can never introduce the original, which is excluded
+   structurally (§3.3), so a role policy cannot widen what is federated.
 
 ## 4. Ownership
 

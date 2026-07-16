@@ -35,6 +35,22 @@ try {
 			'post_title'     => 'Projected image',
 			'post_excerpt'   => 'Original caption',
 			'guid'           => home_url( '/wp-content/uploads/projected-image.jpg' ),
+		),
+		'2026/07/projected-image.jpg'
+	);
+	// Synthesize a real subsize ladder so the rendition policy is actually exercised: one
+	// entry above the embedded 1024 cap and two below it.
+	wp_update_attachment_metadata(
+		$image_id,
+		array(
+			'file'   => '2026/07/projected-image.jpg',
+			'width'  => 4000,
+			'height' => 3000,
+			'sizes'  => array(
+				'thumbnail'    => array( 'file' => 'projected-image-150x150.jpg', 'width' => 150, 'height' => 150, 'mime-type' => 'image/jpeg', 'filesize' => 6000 ),
+				'medium'       => array( 'file' => 'projected-image-300x225.jpg', 'width' => 300, 'height' => 225, 'mime-type' => 'image/jpeg', 'filesize' => 18000 ),
+				'large'        => array( 'file' => 'projected-image-1024x768.jpg', 'width' => 1024, 'height' => 768, 'mime-type' => 'image/jpeg', 'filesize' => 140000 ),
+			),
 		)
 	);
 	$video_id = wp_insert_attachment(
@@ -129,13 +145,25 @@ try {
 	);
 
 	$image_object = axismundi_op_transform_object( $image );
-	// Only the descriptive members diverge by role; the identity core must not drift.
-	$core_keys = array( 'id', 'type', 'mediaType', 'url' );
+	// Identity never drifts by role; only `name` and the rendition policy do.
+	$core_keys = array( 'id', 'type', 'mediaType' );
 	ax_media_projection_assert(
 		$ax_media_projection_results,
-		'standalone and embedded descriptors share one identity/type/mediaType/url core',
+		'standalone and embedded descriptors share one identity/type/mediaType core',
 		is_array( $image_object )
 			&& array_intersect_key( $image_object, array_flip( $core_keys ) ) === array_intersect_key( $embedded_noalt, array_flip( $core_keys ) )
+	);
+	// Outbound consumers do not select between versions, so embedded media carries exactly
+	// one media Link capped at 1024, while the standalone keeps the ladder for peers.
+	$embedded_links = (array) ( $embedded_noalt['url'] ?? array() );
+	$embedded_media = array_values( array_filter( $embedded_links, static fn( array $l ) : bool => 'text/html' !== ( $l['mediaType'] ?? '' ) ) );
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'embedded media advertises a single Link capped at 1024 while the standalone keeps every rendition',
+		1 === count( $embedded_media )
+			&& (int) $embedded_media[0]['width'] <= 1024 && (int) $embedded_media[0]['height'] <= 1024
+			&& 'text/html' === ( end( $embedded_links )['mediaType'] ?? '' )
+			&& count( (array) $image_object['url'] ) >= count( $embedded_links )
 	);
 
 	$used_in      = axismundi_op_transform_collection( new Axismundi_OP_Media_Used_In( $image ) );

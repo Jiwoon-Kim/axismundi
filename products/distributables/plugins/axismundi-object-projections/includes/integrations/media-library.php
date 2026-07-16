@@ -149,7 +149,7 @@ function axismundi_op_media_object_type( string $mime ) : string {
  * @param string $mime          MIME type.
  * @return array<string,mixed>|null
  */
-function axismundi_op_media_url_links( WP_Post $attachment ) : array {
+function axismundi_op_media_url_links( WP_Post $attachment, array $policy = array() ) : array {
 	$id    = (int) $attachment->ID;
 	$mime  = (string) get_post_mime_type( $attachment );
 	$links = array();
@@ -158,7 +158,7 @@ function axismundi_op_media_url_links( WP_Post $attachment ) : array {
 		// Images advertise only already-generated derivatives. Media Library owns the
 		// selection and structurally excludes the original, so there is deliberately no
 		// wp_get_attachment_url() fallback here: no derivative means no media Link.
-		foreach ( axismundi_media_federation_renditions( $id ) as $rendition ) {
+		foreach ( axismundi_media_federation_renditions( $id, $policy ) as $rendition ) {
 			$links[] = array(
 				'type'      => 'Link',
 				'href'      => (string) $rendition['url'],
@@ -187,18 +187,35 @@ function axismundi_op_media_url_links( WP_Post $attachment ) : array {
 }
 
 /**
- * The descriptor core shared by every projection role: identity, type, MIME, and the
- * ordered `url[]`. Role-dependent descriptive members such as `name` are added by the
- * caller (MEDIA-RENDITIONS.md §5), never here.
+ * Rendition policy for media embedded in another object.
  *
- * @param WP_Post $attachment Attachment.
+ * Nothing in the wider fediverse selects between multiple media versions today, so an
+ * embedded image advertises exactly one Link. Multiple versions exist for the standalone
+ * object, whose consumer is an Axismundi peer picking a size it can afford
+ * (MEDIA-RENDITIONS.md §1). Capping at 1024 also lands on WordPress's own `large` default,
+ * which is what themes already render in content.
+ *
+ * @return array<string,mixed>
+ */
+function axismundi_op_media_embedded_rendition_policy() : array {
+	return array( 'max' => 1, 'max_dimension' => 1024 );
+}
+
+/**
+ * The descriptor core: identity, type, and MIME are shared by every projection role; the
+ * ordered `url[]` is built by the same rules but under a role-dependent rendition policy.
+ * Role-dependent descriptive members such as `name` are added by the caller
+ * (MEDIA-RENDITIONS.md §5), never here.
+ *
+ * @param WP_Post             $attachment Attachment.
+ * @param array<string,mixed> $policy     Rendition policy; may narrow, never widen.
  * @return array<string,mixed>|null
  */
-function axismundi_op_media_descriptor_core( WP_Post $attachment ) : ?array {
+function axismundi_op_media_descriptor_core( WP_Post $attachment, array $policy = array() ) : ?array {
 	if ( ! axismundi_op_media_attachment_visible( $attachment ) ) {
 		return null;
 	}
-	$links = axismundi_op_media_url_links( $attachment );
+	$links = axismundi_op_media_url_links( $attachment, $policy );
 	if ( empty( $links ) ) {
 		return null;
 	}
@@ -221,7 +238,7 @@ function axismundi_op_media_descriptor_core( WP_Post $attachment ) : ?array {
  * @return array<string,mixed>|null
  */
 function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?array {
-	$descriptor = axismundi_op_media_descriptor_core( $attachment );
+	$descriptor = axismundi_op_media_descriptor_core( $attachment, axismundi_op_media_embedded_rendition_policy() );
 	if ( null === $descriptor ) {
 		return null;
 	}

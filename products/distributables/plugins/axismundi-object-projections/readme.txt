@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.16
+Stable tag: 0.0.17
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -37,6 +37,15 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.17 =
+* Advertise exactly one media Link, capped at 1024, for media embedded in an Article
+  attachment or preview. Nothing in the wider fediverse selects between multiple versions
+  today, so extra Links were payload with no consumer; 1024 is also WordPress's own `large`
+  default. The standalone Attachment keeps the full ladder for Axismundi peers, which is the
+  case multiple versions exist for.
+* Keep the rendition builder shared and narrow only the policy per role, so identity, type,
+  MIME, and the media-first ordering never drift and a role can never widen what is federated.
 
 = 0.0.16 =
 * Merge the attachment's human page and nested media Link into one FEP-1311 `url` Link array:

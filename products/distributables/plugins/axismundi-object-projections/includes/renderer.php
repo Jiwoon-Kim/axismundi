@@ -26,6 +26,9 @@ function axismundi_op_jsonld_context( ?array $object = null ) {
 	if ( is_array( $object ) && array_key_exists( 'sensitive', $object ) ) {
 		$context[] = array( 'sensitive' => 'as:sensitive' );
 	}
+	if ( is_array( $object ) && array_key_exists( 'dcterms:subject', $object ) ) {
+		$context[] = array( 'dcterms' => 'http://purl.org/dc/terms/' );
+	}
 	/**
 	 * Filter the JSON-LD `@context` entries.
 	 *

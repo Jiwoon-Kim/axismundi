@@ -201,7 +201,11 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 		$article['generator'] = $generator;
 	}
 	/** Filter whether this Article is sensitive. */
-	$article['sensitive'] = (bool) apply_filters( 'axismundi_op_post_sensitive', false, $post );
+	$article['sensitive'] = (bool) apply_filters( 'axismundi_op_post_sensitive', axismundi_op_post_is_sensitive( $post ), $post );
+	$warning = axismundi_op_post_content_warning( $post );
+	if ( $article['sensitive'] && '' !== $warning ) {
+		$article['dcterms:subject'] = $warning;
+	}
 
 	/**
 	 * Filter the Core Post → Article projection before renderer validation.

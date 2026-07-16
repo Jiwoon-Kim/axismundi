@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.13
+Stable tag: 0.0.14
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -37,6 +37,12 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.14 =
+* Add shared Core Post sensitivity and content-warning metadata with controls in the
+  block editor document settings and Posts Quick Edit.
+* Project sensitive Articles with a boolean `sensitive` member and the warning as
+  FEP-b2b8 `dcterms:subject`, while retaining the manual Excerpt as `summary`.
 
 = 0.0.13 =
 * Align Core Post Article output with FEP-b2b8: a dedicated positive HTML allowlist,

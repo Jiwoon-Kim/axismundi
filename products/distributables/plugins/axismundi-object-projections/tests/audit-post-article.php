@@ -9,6 +9,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 
 require_once dirname( __DIR__ ) . '/includes/registry.php';
 require_once dirname( __DIR__ ) . '/includes/renderer.php';
+require_once dirname( __DIR__ ) . '/includes/post-settings.php';
 require_once dirname( __DIR__ ) . '/includes/post-article.php';
 
 $ax_article_results = array();
@@ -110,6 +111,26 @@ try {
 		is_array( $fallback ) && false !== strpos( (string) $fallback['summary'], 'Editorial excerpt.' )
 			&& false !== strpos( (string) $fallback['preview']['content'], '<strong>Excerpt Preview</strong>' )
 			&& false !== strpos( (string) $fallback['preview']['content'], 'Editorial excerpt.' )
+	);
+
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_SENSITIVE_META, '1' );
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_WARNING_META, 'Spoilers & distressing imagery' );
+	$sensitive = axismundi_op_transform_object( get_post( $post_id ) );
+	ax_article_assert(
+		$ax_article_results,
+		'sensitive Post metadata emits the boolean and dcterms subject without replacing the Excerpt summary',
+		is_array( $sensitive )
+			&& true === $sensitive['sensitive']
+			&& 'Spoilers & distressing imagery' === $sensitive['dcterms:subject']
+			&& false !== strpos( (string) $sensitive['summary'], 'A short summary.' )
+			&& in_array( array( 'dcterms' => 'http://purl.org/dc/terms/' ), $sensitive['@context'], true )
+	);
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_SENSITIVE_META, '0' );
+	$standard = axismundi_op_transform_object( get_post( $post_id ) );
+	ax_article_assert(
+		$ax_article_results,
+		'a stored warning is not exposed while the sensitive flag is disabled',
+		is_array( $standard ) && false === $standard['sensitive'] && ! isset( $standard['dcterms:subject'] )
 	);
 
 	$draft_result  = axismundi_op_transform_object( $draft );

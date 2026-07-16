@@ -237,6 +237,22 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<h2><?php esc_html_e( 'Inbox ledger', 'axismundi-activitypub-bridge' ); ?></h2>
 		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'inbound' ); ?></tbody></table>
 
+		<h2><?php esc_html_e( 'Inbox diagnostics', 'axismundi-activitypub-bridge' ); ?></h2>
+		<p><?php esc_html_e( 'Recent verified Inbox outcomes. Payload content and recipient data are never copied into this diagnostic buffer.', 'axismundi-activitypub-bridge' ); ?></p>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'UTC time', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Route', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Type', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Activity hash', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Outcome', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
+		<?php $diagnostics = axismundi_activitypub_bridge_inbox_diagnostics(); ?>
+		<?php if ( empty( $diagnostics ) ) : ?><tr><td colspan="5"><?php esc_html_e( 'No Inbox diagnostics recorded yet.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
+		<?php foreach ( $diagnostics as $entry ) : ?>
+			<tr>
+				<td><?php echo esc_html( (string) ( $entry['time'] ?? '' ) ); ?></td>
+				<td><code><?php echo esc_html( (string) ( $entry['route'] ?? '' ) ); ?></code></td>
+				<td><?php echo esc_html( (string) ( $entry['activity_type'] ?? '' ) ); ?></td>
+				<td><code><?php echo esc_html( substr( (string) ( $entry['activity_id_hash'] ?? '' ), 0, 16 ) ); ?></code></td>
+				<td><strong><?php echo esc_html( (string) ( $entry['outcome'] ?? '' ) ); ?></strong><?php if ( ! empty( $entry['code'] ) ) : ?> — <code><?php echo esc_html( (string) $entry['code'] ); ?></code><?php endif; ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody></table>
+
 		<h2><?php esc_html_e( 'Outbox ledger', 'axismundi-activitypub-bridge' ); ?></h2>
 		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'outbound' ); ?></tbody></table>
 

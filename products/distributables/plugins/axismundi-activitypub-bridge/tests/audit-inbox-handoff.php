@@ -13,7 +13,9 @@ $ax_bridge_inbox_user      = 0;
 $ax_bridge_inbox_actor_ids = array();
 $ax_bridge_inbox_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
+$ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_fallback_activity = '';
+$ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
 
 /** @param bool[] $results Results. */
 function ax_bridge_inbox_assert( array &$results, string $label, bool $condition ) : void {
@@ -91,6 +93,26 @@ try {
 	$replay = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $request );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an identical delivery replay is idempotently acknowledged', $replay instanceof WP_REST_Response && 202 === $replay->get_status() && $stored->get_id() === axismundi_act_get( $ax_bridge_inbox_activity )->get_id() );
 
+	$mention_payload = array(
+		'id'     => $ax_bridge_mention_activity,
+		'type'   => 'Create',
+		'actor'  => $remote_uri,
+		'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		'object' => array(
+			'id'      => 'https://example.com/notes/' . wp_generate_uuid4(),
+			'type'    => 'Note',
+			'to'      => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'tag'     => array( array( 'type' => 'Mention', 'href' => $local->get_uri(), 'name' => '@fixture@example.test' ) ),
+			'content' => '<p>Private content is not copied into diagnostics.</p>',
+		),
+	);
+	$mention_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$mention_request->set_header( 'Content-Type', 'application/activity+json' );
+	$mention_request->set_body( wp_json_encode( $mention_payload ) );
+	$mention_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $mention_request );
+	$mention_stored   = axismundi_act_get( $ax_bridge_mention_activity );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified shared-Inbox Mention href can supplement an otherwise absent local audience target', $mention_response instanceof WP_REST_Response && 202 === $mention_response->get_status() && $mention_stored instanceof Axismundi_Activity );
+
 	$untargeted                  = $payload;
 	$ax_bridge_fallback_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 	$untargeted['id']            = $ax_bridge_fallback_activity;
@@ -103,11 +125,15 @@ try {
 	$untargeted_request->set_body( wp_json_encode( $untargeted ) );
 	$untargeted_response = ( new Activitypub\Rest\Actors_Inbox_Controller() )->create_item( $untargeted_request );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity the bridge cannot claim falls back to official Inbox storage instead of being lost', $untargeted_response instanceof WP_REST_Response && 202 === $untargeted_response->get_status() && null === axismundi_act_get( $untargeted['id'] ) && 1 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $untargeted['id'] ) . '%' ) ) ); // phpcs:ignore WordPress.DB
+	$diagnostics = axismundi_activitypub_bridge_inbox_diagnostics();
+	$diagnostic_json = wp_json_encode( $diagnostics );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'bounded diagnostics distinguish recorded and unclaimed Inbox outcomes without copying payload content', count( $diagnostics ) <= 50 && str_contains( $diagnostic_json, 'recorded' ) && str_contains( $diagnostic_json, 'unclaimed' ) && str_contains( $diagnostic_json, 'ax_bridge_inbox_actor' ) && ! str_contains( $diagnostic_json, 'Private content' ) );
 } finally {
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_mention_activity ) ); // phpcs:ignore WordPress.DB
 	if ( '' !== $ax_bridge_fallback_activity ) {
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $ax_bridge_fallback_activity ) . '%' ) ); // phpcs:ignore WordPress.DB
 	}
@@ -121,6 +147,11 @@ try {
 	if ( $ax_bridge_inbox_user > 0 && get_userdata( $ax_bridge_inbox_user ) ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 		wp_delete_user( $ax_bridge_inbox_user );
+	}
+	if ( null === $ax_bridge_diagnostics_before ) {
+		delete_option( 'ax_activitypub_bridge_inbox_diagnostics' );
+	} else {
+		update_option( 'ax_activitypub_bridge_inbox_diagnostics', $ax_bridge_diagnostics_before, false );
 	}
 }
 

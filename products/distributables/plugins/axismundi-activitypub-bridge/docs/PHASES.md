@@ -79,4 +79,13 @@ Replace the provisional verified-envelope handoff and temporary 503 guard with t
 controllers' existing `activitypub_inbox` and `activitypub_inbox_shared` actions. Keep type
 handlers dormant, skip official Inbox CPT persistence only for successfully claimed Activities,
 record shared delivery once, and preserve URI-keyed idempotency in Activities. Unclaimed
-Activities retain the official snapshot fallback. Destructive purge moves to 0.0.13.
+Activities retain the official snapshot fallback. Destructive purge remains deferred.
+
+## 0.0.13 — Inbox observability and Mention target supplement
+
+Record a bounded administrator diagnostic ring containing only UTC time, route, Activity type,
+Activity URI hash, outcome, and error code. Never copy payload content or recipients. Permit a
+verified shared Inbox delivery to use `object.tag[].type=Mention` href/id as a supplemental local
+Actor target when Activity/Object audience fields omit it. Every unclaimed result still falls back
+to official Inbox snapshot storage. Legacy purge remains disabled until old local Actor documents,
+`alsoKnownAs`, `movedTo`, and Move delivery have an explicit migration contract.

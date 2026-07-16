@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.0.12
+ * Version:           0.0.13
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.12';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.13';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 
 require_once __DIR__ . '/includes/transport.php';
@@ -176,7 +176,7 @@ function axismundi_activitypub_bridge_object_actor( string $uri ) : ?Axismundi_A
 }
 
 /** Resolve every local Actor targeted by one verified Activity. */
-function axismundi_activitypub_bridge_inbox_targets( array $activity, array $recipient_user_ids ) : array {
+function axismundi_activitypub_bridge_inbox_targets( array $activity, array $recipient_user_ids, bool $allow_mention_targets = false ) : array {
 	$targets = array();
 	foreach ( $recipient_user_ids as $user_id ) {
 		$actor = axismundi_actors_get_for_user( (int) $user_id );
@@ -192,6 +192,15 @@ function axismundi_activitypub_bridge_inbox_targets( array $activity, array $rec
 	$object = is_array( $activity['object'] ?? null ) ? $activity['object'] : array();
 	foreach ( array( 'actor', 'attributedTo', 'to', 'cc', 'audience' ) as $field ) {
 		$candidates = array_merge( $candidates, axismundi_activitypub_bridge_member_uris( $object[ $field ] ?? array() ) );
+	}
+	if ( $allow_mention_targets ) {
+		$tags = $object['tag'] ?? array();
+		$tags = is_array( $tags ) && array_is_list( $tags ) ? $tags : array( $tags );
+		foreach ( $tags as $tag ) {
+			if ( is_array( $tag ) && 'Mention' === (string) ( $tag['type'] ?? '' ) ) {
+				$candidates = array_merge( $candidates, axismundi_activitypub_bridge_member_uris( $tag['href'] ?? $tag['id'] ?? '' ) );
+			}
+		}
 	}
 	if ( in_array( (string) ( $activity['type'] ?? '' ), array( 'Follow', 'Block' ), true ) ) {
 		$candidates = array_merge( $candidates, axismundi_activitypub_bridge_member_uris( $activity['object'] ?? '' ) );
@@ -216,14 +225,15 @@ function axismundi_activitypub_bridge_inbox_targets( array $activity, array $rec
  *
  * @param array           $activity Activity payload.
  * @param int[]           $recipient_user_ids Official route recipients, if known.
- * @return Axismundi_Activity|WP_Error|null
+ * @param bool            $allow_mention_targets Trust Mention href only after the official shared Inbox has verified the request.
+ * @return Axismundi_Activity|WP_Error
  */
-function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array() ) {
+function axismundi_activitypub_bridge_record_inbox( array $activity, array $recipient_user_ids = array(), bool $allow_mention_targets = false ) {
 	if ( ! axismundi_activitypub_bridge_ready() ) {
-		return null;
+		return new WP_Error( 'ax_bridge_inbox_not_ready', __( 'The Axismundi Inbox repositories are unavailable.', 'axismundi-activitypub-bridge' ) );
 	}
-	if ( empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids ) ) ) {
-		return null;
+	if ( empty( axismundi_activitypub_bridge_inbox_targets( $activity, $recipient_user_ids, $allow_mention_targets ) ) ) {
+		return new WP_Error( 'ax_bridge_inbox_no_target', __( 'No public local Actor target could be resolved.', 'axismundi-activitypub-bridge' ) );
 	}
 
 	$actor_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $activity['actor'] ?? '' ) : '';
@@ -236,6 +246,32 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 	}
 
 	return axismundi_act_record_activity( $activity, 'inbound' );
+}
+
+/** Store one bounded, content-free Inbox outcome for administrator diagnostics. */
+function axismundi_activitypub_bridge_record_inbox_diagnostic( string $route, array $activity, $result ) : void {
+	$activity_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $activity['id'] ?? '' ) : '';
+	$outcome      = $result instanceof Axismundi_Activity ? 'recorded' : ( is_wp_error( $result ) ? 'unclaimed' : 'unknown' );
+	$entries      = get_option( 'ax_activitypub_bridge_inbox_diagnostics', array() );
+	$entries      = is_array( $entries ) ? $entries : array();
+	array_unshift(
+		$entries,
+		array(
+			'time'             => current_time( 'mysql', true ),
+			'route'            => sanitize_key( $route ),
+			'activity_type'    => sanitize_key( (string) ( $activity['type'] ?? '' ) ),
+			'activity_id_hash' => '' !== $activity_uri ? hash( 'sha256', $activity_uri ) : hash( 'sha256', (string) wp_json_encode( $activity ) ),
+			'outcome'          => $outcome,
+			'code'             => is_wp_error( $result ) ? sanitize_key( $result->get_error_code() ) : '',
+		)
+	);
+	update_option( 'ax_activitypub_bridge_inbox_diagnostics', array_slice( $entries, 0, 50 ), false );
+}
+
+/** Read the bounded Inbox diagnostic ring buffer. */
+function axismundi_activitypub_bridge_inbox_diagnostics() : array {
+	$entries = get_option( 'ax_activitypub_bridge_inbox_diagnostics', array() );
+	return is_array( $entries ) ? $entries : array();
 }
 
 /** Build a request-local key for one Inbox Activity. */
@@ -270,6 +306,7 @@ function axismundi_activitypub_bridge_actor_inbox( array $activity, $user_id, st
 	unset( $type, $object );
 	if ( 'inbox' === $context ) {
 		$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array( (int) $user_id ) );
+		axismundi_activitypub_bridge_record_inbox_diagnostic( 'actor', $activity, $recorded );
 		if ( $recorded instanceof Axismundi_Activity ) {
 			axismundi_activitypub_bridge_inbox_claimed( $activity, true );
 		}
@@ -280,7 +317,8 @@ add_action( 'activitypub_inbox', 'axismundi_activitypub_bridge_actor_inbox', 10,
 /** Consume the shared Inbox action once for all resolved recipients. */
 function axismundi_activitypub_bridge_shared_inbox( array $activity, array $user_ids, string $type, $object, string $context ) : void {
 	unset( $type, $object, $context );
-	$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array_map( 'intval', $user_ids ) );
+	$recorded = axismundi_activitypub_bridge_record_inbox( $activity, array_map( 'intval', $user_ids ), true );
+	axismundi_activitypub_bridge_record_inbox_diagnostic( 'shared', $activity, $recorded );
 	if ( $recorded instanceof Axismundi_Activity ) {
 		axismundi_activitypub_bridge_inbox_claimed( $activity, true );
 	}

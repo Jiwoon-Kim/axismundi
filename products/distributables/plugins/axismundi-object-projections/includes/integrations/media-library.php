@@ -149,44 +149,87 @@ function axismundi_op_media_object_type( string $mime ) : string {
  * @param string $mime          MIME type.
  * @return array<string,mixed>|null
  */
-function axismundi_op_media_resource( int $attachment_id, string $mime ) : ?array {
-	$rendition = null;
+function axismundi_op_media_url_links( WP_Post $attachment ) : array {
+	$id    = (int) $attachment->ID;
+	$mime  = (string) get_post_mime_type( $attachment );
+	$links = array();
+
 	if ( str_starts_with( $mime, 'image/' ) ) {
-		$rendition = axismundi_media_feed_rendition( $attachment_id, array( 'medium_large', 'large', 'medium' ) );
+		// Images advertise only already-generated derivatives. Media Library owns the
+		// selection and structurally excludes the original, so there is deliberately no
+		// wp_get_attachment_url() fallback here: no derivative means no media Link.
+		foreach ( axismundi_media_federation_renditions( $id ) as $rendition ) {
+			$links[] = array(
+				'type'      => 'Link',
+				'href'      => (string) $rendition['url'],
+				'mediaType' => (string) $rendition['mediaType'],
+				'width'     => (int) $rendition['width'],
+				'height'    => (int) $rendition['height'],
+				'size'      => (int) $rendition['size'],
+			);
+		}
+	} else {
+		// Video / audio / documents keep their existing single-file policy: without a
+		// transcoding substrate no versions are invented (MEDIA-RENDITIONS.md §6), and
+		// whether the file is downloadable stays a separate policy question.
+		$file = (string) wp_get_attachment_url( $id );
+		if ( '' !== $file ) {
+			$links[] = array( 'type' => 'Link', 'href' => $file, 'mediaType' => $mime );
+		}
 	}
 
-	$url = is_array( $rendition ) ? (string) $rendition['url'] : (string) wp_get_attachment_url( $attachment_id );
-	if ( '' === $url ) {
-		return null;
+	// The human page is always last so a naive url[0] consumer reads media, not HTML.
+	$page = get_attachment_link( $id );
+	if ( $page ) {
+		$links[] = array( 'type' => 'Link', 'href' => (string) $page, 'mediaType' => 'text/html' );
 	}
-	$link = array(
-		'type'      => 'Link',
-		'href'      => $url,
-		'mediaType' => is_array( $rendition ) ? (string) $rendition['mime'] : $mime,
-	);
-	if ( is_array( $rendition ) ) {
-		$link['width']  = (int) $rendition['width'];
-		$link['height'] = (int) $rendition['height'];
-	}
-	return $link;
+	return $links;
 }
 
-/** Build an embedded media descriptor without a nested JSON-LD context. */
-function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?array {
+/**
+ * The descriptor core shared by every projection role: identity, type, MIME, and the
+ * ordered `url[]`. Role-dependent descriptive members such as `name` are added by the
+ * caller (MEDIA-RENDITIONS.md §5), never here.
+ *
+ * @param WP_Post $attachment Attachment.
+ * @return array<string,mixed>|null
+ */
+function axismundi_op_media_descriptor_core( WP_Post $attachment ) : ?array {
 	if ( ! axismundi_op_media_attachment_visible( $attachment ) ) {
 		return null;
 	}
-	$id       = (int) $attachment->ID;
-	$mime     = (string) get_post_mime_type( $attachment );
-	$resource = axismundi_op_media_resource( $id, $mime );
-	$url      = $resource ?? array( 'type' => 'Link', 'href' => get_attachment_link( $id ), 'mediaType' => 'text/html' );
+	$links = axismundi_op_media_url_links( $attachment );
+	if ( empty( $links ) ) {
+		return null;
+	}
 	return array(
 		'id'        => axismundi_op_media_attachment_uri( $attachment ),
-		'type'      => axismundi_op_media_object_type( $mime ),
-		'name'      => sanitize_text_field( wp_strip_all_tags( '' !== trim( (string) $attachment->post_title ) ? $attachment->post_title : __( '(untitled media)', 'axismundi-object-projections' ) ) ),
-		'mediaType' => $mime,
-		'url'       => $url,
+		'type'      => axismundi_op_media_object_type( (string) get_post_mime_type( $attachment ) ),
+		'mediaType' => (string) get_post_mime_type( $attachment ),
+		'url'       => $links,
 	);
+}
+
+/**
+ * Embedded media descriptor for an Article `attachment[]` or `preview.attachment`.
+ *
+ * FEP-1311 scopes `name` on an embedded media attachment to the alternative text, which is
+ * what Mastodon renders as alt. An empty alt omits `name`: a filename-like title in that
+ * slot is worse than none for a screen reader.
+ *
+ * @param WP_Post $attachment Attachment.
+ * @return array<string,mixed>|null
+ */
+function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?array {
+	$descriptor = axismundi_op_media_descriptor_core( $attachment );
+	if ( null === $descriptor ) {
+		return null;
+	}
+	$alt = trim( (string) get_post_meta( (int) $attachment->ID, '_wp_attachment_image_alt', true ) );
+	if ( '' !== $alt ) {
+		$descriptor['name'] = sanitize_text_field( wp_strip_all_tags( $alt ) );
+	}
+	return $descriptor;
 }
 
 /** Stable reverse-usage collection URI for one Attachment. */
@@ -240,20 +283,21 @@ function axismundi_op_media_attachment_transform( WP_Post $attachment ) {
 	$id            = (int) $attachment->ID;
 	$mime          = (string) get_post_mime_type( $attachment );
 	$attributed_to = axismundi_op_media_attachment_actor_uri( $attachment );
-	$url           = get_attachment_link( $id );
-	if ( ! $url || '' === $attributed_to ) {
+	$core          = axismundi_op_media_descriptor_core( $attachment );
+	if ( null === $core || '' === $attributed_to ) {
 		return new WP_Error( 'ax_op_media_identity', __( 'The attachment has no public object, page, or Actor URI.', 'axismundi-object-projections' ) );
 	}
 
-	$object = array(
-		'id'           => axismundi_op_media_attachment_uri( $attachment ),
-		'type'         => axismundi_op_media_object_type( $mime ),
-		'attributedTo' => $attributed_to,
-		'url'          => $url,
-		'name'         => '' !== trim( (string) $attachment->post_title ) ? $attachment->post_title : __( '(untitled media)', 'axismundi-object-projections' ),
-		'mediaType'    => $mime,
-		'published'    => get_post_time( DATE_W3C, true, $attachment ),
-		'updated'      => get_post_modified_time( DATE_W3C, true, $attachment ),
+	// The standalone Attachment is a first-class object with its own page, likes, and
+	// usedIn collection, so its `name` is the attachment's own title rather than alt text.
+	$object = array_merge(
+		$core,
+		array(
+			'attributedTo' => $attributed_to,
+			'name'         => '' !== trim( (string) $attachment->post_title ) ? $attachment->post_title : __( '(untitled media)', 'axismundi-object-projections' ),
+			'published'    => get_post_time( DATE_W3C, true, $attachment ),
+			'updated'      => get_post_modified_time( DATE_W3C, true, $attachment ),
+		)
 	);
 
 	$description = trim( (string) $attachment->post_content );
@@ -263,11 +307,6 @@ function axismundi_op_media_attachment_transform( WP_Post $attachment ) {
 	}
 	if ( '' !== $caption ) {
 		$object['summary'] = $caption;
-	}
-
-	$resource = axismundi_op_media_resource( $id, $mime );
-	if ( null !== $resource ) {
-		$object['attachment'] = $resource;
 	}
 
 	$sensitive = axismundi_media_is_sensitive( $id );

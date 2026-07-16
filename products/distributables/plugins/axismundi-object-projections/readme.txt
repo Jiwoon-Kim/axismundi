@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.15
+Stable tag: 0.0.16
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -37,6 +37,20 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.16 =
+* Merge the attachment's human page and nested media Link into one FEP-1311 `url` Link array:
+  media Links first with mediaType/width/height/size, the text/html page last, so a naive
+  url[0] consumer of an Image reads media rather than the page.
+* Advertise only the derivatives Media Library already generated. An image with no derivative
+  now emits the HTML Link alone: the original file is never advertised, and the previous
+  full-size fallback is gone. Video, audio, and documents keep their existing single-file
+  policy while no transcoding substrate exists.
+* Name embedded media with its alt text and omit `name` when alt is empty, while the
+  standalone Attachment keeps its own title. Identity, type, mediaType, and the ordered url[]
+  stay identical across the standalone, Article attachment, and preview.attachment roles.
+* Resolve the HTML representation by mediaType so an ordered url[] cannot make an alternate
+  Link or a collection url point at a media file.
 
 = 0.0.15 =
 * Establish the projected Post as the temporary global context while running the normal

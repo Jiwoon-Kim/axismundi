@@ -83,14 +83,25 @@ Visibility is anonymous and cache-safe: public and unlisted, ungated attachments
 Owner/editor bypasses are deliberately not used. The adapter consumes public Media Library
 functions and never queries its tables or private metadata schema.
 
-> **Superseded by a locked contract — see MEDIA-RENDITIONS.md.** The `url` = human page +
-> nested single media `attachment` structure above merges into a single FEP-1311 `url[]` Link
-> array (media Links first, the `text/html` page last, the original never advertised, at most
-> four already-generated derivatives). The standalone Attachment keeps `name = post_title`;
-> only Article `attachment[]` and `preview.attachment` use image alt text as `name` and omit it
-> when alt text is empty.
-> Media Library will own rendition selection through
-> `axismundi_media_federation_renditions()`; Object Projections only serializes. Not built yet.
+## FEP-1311 media renditions (0.0.16)
+
+The `url` = human page + nested single media `attachment` structure described above is
+**superseded**. An attachment now emits one FEP-1311 `url` **Link array** — see
+MEDIA-RENDITIONS.md for the full contract:
+
+- Media Links first (`mediaType` / `width` / `height` / `size`), the `text/html` page **last**,
+  so a naive `url[0]` consumer of an `Image` reads media rather than the page. Resolve the HTML
+  representation by `mediaType`, never by position.
+- Images advertise **only already-generated derivatives**, supplied by Media Library's
+  `axismundi_media_federation_renditions()`. **The original is never advertised**; an image with
+  no derivative emits the HTML Link alone. Video / audio / documents keep their existing
+  single-file policy while no transcoding substrate exists.
+- `id`, `type`, `mediaType`, and the ordered `url[]` form **one shared core** across the
+  standalone Attachment, an Article's `attachment[]`, and `preview.attachment`. Only the
+  descriptive `name` diverges: the standalone keeps `post_title`; embedded media uses the image
+  **alt text** and omits `name` when alt is empty.
+- Object Projections **serializes only** — Media Library owns selection, and no attachment
+  metadata internals are read here.
 
 From 0.0.13, the adapter consumes the Media Library relation API in both directions.
 Featured media becomes Article `image`; distinct active in-content image/video/audio/file

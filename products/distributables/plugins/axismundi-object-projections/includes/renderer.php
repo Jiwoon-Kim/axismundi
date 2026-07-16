@@ -49,7 +49,13 @@ function axismundi_op_html_members() : array {
 	return array( 'content', 'summary' );
 }
 
-/** Resolve the HTML representation URL from a string or Link-valued `url`. */
+/**
+ * Resolve the HTML representation URL from a string or Link-valued `url`.
+ *
+ * An ordered FEP-1311 `url[]` deliberately lists media Links before the human page, so the
+ * first href is a media file. Match on `mediaType` first; only fall back to the first href
+ * when nothing declares itself as HTML, which keeps `url`-derived required members present.
+ */
 function axismundi_op_object_html_url( array $object ) : string {
 	$url = $object['url'] ?? '';
 	if ( is_string( $url ) ) {
@@ -58,7 +64,13 @@ function axismundi_op_object_html_url( array $object ) : string {
 	if ( isset( $url['href'] ) && is_string( $url['href'] ) ) {
 		return $url['href'];
 	}
-	foreach ( is_array( $url ) ? $url : array() as $link ) {
+	$links = is_array( $url ) ? $url : array();
+	foreach ( $links as $link ) {
+		if ( is_array( $link ) && 'text/html' === ( $link['mediaType'] ?? '' ) && isset( $link['href'] ) && is_string( $link['href'] ) ) {
+			return $link['href'];
+		}
+	}
+	foreach ( $links as $link ) {
 		if ( is_array( $link ) && isset( $link['href'] ) && is_string( $link['href'] ) ) {
 			return $link['href'];
 		}

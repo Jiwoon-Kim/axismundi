@@ -108,7 +108,36 @@ try {
 			&& in_array( axismundi_op_media_attachment_uri( $video ), $attached_ids, true )
 	);
 
+	// Role-dependent name: embedded media carries alt text, never the title (MEDIA-RENDITIONS §5).
+	update_post_meta( $image_id, '_wp_attachment_image_alt', 'A described test image' );
+	$article_alt   = axismundi_op_transform_object( get_post( $article_id ) );
+	$embedded_alt  = is_array( $article_alt ) ? (array) ( $article_alt['image'] ?? array() ) : array();
+	delete_post_meta( $image_id, '_wp_attachment_image_alt' );
+	$article_noalt = axismundi_op_transform_object( get_post( $article_id ) );
+	$embedded_noalt = is_array( $article_noalt ) ? (array) ( $article_noalt['image'] ?? array() ) : array();
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'embedded media names itself with alt text and omits name entirely when alt is empty',
+		'A described test image' === ( $embedded_alt['name'] ?? '' )
+			&& ! isset( $embedded_noalt['name'] )
+			&& get_post( $image_id )->post_title !== ( $embedded_noalt['name'] ?? null )
+	);
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'Article attachment and preview.attachment descriptors stay identical',
+		( $article_alt['image'] ?? null ) === ( $article_alt['preview']['attachment'] ?? null )
+	);
+
 	$image_object = axismundi_op_transform_object( $image );
+	// Only the descriptive members diverge by role; the identity core must not drift.
+	$core_keys = array( 'id', 'type', 'mediaType', 'url' );
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'standalone and embedded descriptors share one identity/type/mediaType/url core',
+		is_array( $image_object )
+			&& array_intersect_key( $image_object, array_flip( $core_keys ) ) === array_intersect_key( $embedded_noalt, array_flip( $core_keys ) )
+	);
+
 	$used_in      = axismundi_op_transform_collection( new Axismundi_OP_Media_Used_In( $image ) );
 	ax_media_projection_assert(
 		$ax_media_projection_results,
@@ -119,18 +148,28 @@ try {
 	);
 	ax_media_projection_assert(
 		$ax_media_projection_results,
-		'the attachment object keeps a stable query id, human page URL, and Actor attribution',
+		'the attachment object keeps a stable query id and Actor attribution, and names itself with its own title',
 		is_array( $image_object )
 			&& add_query_arg( 'attachment_id', $image_id, home_url( '/' ) ) === $image_object['id']
-			&& get_attachment_link( $image_id ) === $image_object['url']
 			&& 'https://example.com/actors/media-owner' === $image_object['attributedTo']
+			&& get_post( $image_id )->post_title === $image_object['name']
+			&& ! isset( $image_object['attachment'] )
+	);
+	$image_links = is_array( $image_object ) && is_array( $image_object['url'] ?? null ) ? $image_object['url'] : array();
+	$last_link   = $image_links ? end( $image_links ) : array();
+	ax_media_projection_assert(
+		$ax_media_projection_results,
+		'url is an ordered Link array whose last entry is the human HTML page',
+		! empty( $image_links )
+			&& 'text/html' === ( $last_link['mediaType'] ?? '' )
+			&& get_attachment_link( $image_id ) === ( $last_link['href'] ?? '' )
+			&& axismundi_op_object_html_url( $image_object ) === get_attachment_link( $image_id )
 	);
 	ax_media_projection_assert(
 		$ax_media_projection_results,
-		'the binary is a nested Link with its MIME type rather than the human page URL',
-		is_array( $image_object ) && isset( $image_object['attachment']['href'], $image_object['attachment']['mediaType'] )
-			&& 'image/jpeg' === $image_object['attachment']['mediaType']
-			&& $image_object['attachment']['href'] !== $image_object['url']
+		'the original file URL never appears anywhere in the projected payload',
+		! empty( $image_links )
+			&& false === strpos( (string) wp_json_encode( $image_object ), (string) wp_get_attachment_url( $image_id ) )
 	);
 
 	update_post_meta( $image_id, AXISMUNDI_MEDIA_SENSITIVE_STATE_META, 'self_marked' );

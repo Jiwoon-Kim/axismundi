@@ -71,22 +71,29 @@ follower removal, and let imported outbound snapshots be replaced by an explicit
 A distinct newly received Follow URI starts the latest relationship cycle even when the
 previous cycle was accepted, so automatic approval targets the exact incoming Activity.
 
-## Prerequisite — Object Projections lease substrate
+## Prerequisite — Object Projections lease substrate (shipped)
 
 Before Phase 3, Object Projections ships multi-reason object leases. Activities only consumes
 its feature-detected API.
 
-## 0.0.12 — Phase 3: Like, Announce, Undo
+## 0.0.12 — Phase 3a: Like and Undo (shipped)
 
-URI-referenced reactions, idempotent aggregate queries, Undo transitions, and optional
-`interaction` lease declarations for remote objects.
+URI-referenced Like state, idempotent distinct-Actor aggregate queries, Undo transitions,
+nonce-protected Interactivity API block, and feature-detected `interaction` leases for remote
+objects. Object Projections publishes an Object `likes` collection. The internal Actor
+`liked` query ships, but no public `liked` route is advertised until its privacy policy is set.
 
-## 0.0.13 — Phase 4: logical inbox/outbox membership
+## 0.0.13 — Phase 3b: Announce and Undo
+
+URI-referenced Announce state and matching Undo transitions, using the same immutable ledger
+and collection-query boundary.
+
+## 0.0.14 — Phase 4: logical inbox/outbox membership
 
 Actor-scoped inbox/outbox memberships and collection query services. Object Projections may
 serialize collections; Federation serves HTTP. Notifications are explicitly excluded.
 
-## 0.0.14 — Phase 5: Add, Remove, Move, Join, Leave
+## 0.0.15 — Phase 5: Add, Remove, Move, Join, Leave
 
 Collection/community operations for saved media, shared folders, and managed Group workflows,
 plus optional `collection` leases. Domain plugins continue to own collection membership data.

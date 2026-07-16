@@ -1,7 +1,7 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 2.5 Activity repository, provenance-aware social relation state, local
-> Follow UI, Core Post Create lifecycle, and public Outbox query implemented**. No public
+> Status: **Phase 3a Activity repository, provenance-aware social relation state, Follow and
+> Like UI, Core Post Create lifecycle, and public collection queries implemented**. No public
 > Activity route or network behavior.
 
 ## 1. Purpose
@@ -52,6 +52,9 @@ Actor URI + Activity + Object URI
 14. The official ActivityPub plugin and Axismundi must never publish two Create activities
     for one post. Axismundi fails closed while the official scheduler owns the lifecycle;
     an adapter may transfer ownership only after suppressing that scheduler path.
+15. `Undo.object` is the URI of the Like Activity being reversed, never the liked Object URI.
+    Like counts and collection members are derived from effective ledger rows and distinct
+    Actors; no second authoritative counter store exists.
 
 ## 3. Supported activity vocabulary
 

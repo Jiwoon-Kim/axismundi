@@ -18,6 +18,8 @@ Phase 2e Actor public Outbox representation          — shipped (0.0.10): neutr
                                                        Activities public-safe query contract
 Phase 2f Activity JSON-LD transport finalization     — shipped (0.0.11): canonical context;
                                                        immutable ledger remains unchanged
+Phase 2g Object likes collection                     — shipped (0.0.12): public REST
+                                                       OrderedCollection; Activities-backed
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous
@@ -27,6 +29,8 @@ Phase 4a remote object repository                    — shipped (0.0.5): URI-ke
                                                        cache table; no network/public route
 Phase 4b remote fetch + administrator inspector      — shipped (0.0.6): metadata-only,
                                                        bounded fetch, 30-day retention
+Phase 4c multi-reason object leases                  — shipped (0.0.12): DB v3 interaction,
+                                                       collection, and shared-shadow holds
 Phase 5a Core Post publish candidate                — shipped (0.0.8): post-commit,
                                                        single-owner, Create consumer seam
 Phase 5b update/delete lifecycle events             — emit only; Activities stores them

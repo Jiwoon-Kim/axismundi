@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.11
+Stable tag: 0.0.12
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -37,6 +37,14 @@ attachment descriptors, extension properties, and the complete escaped JSON payl
 remote media is never hotlinked or downloaded.
 
 == Changelog ==
+
+= 0.0.12 =
+* Add DB v3 multi-reason object leases keyed by canonical object URI, reason, and reference.
+  Expiry maintenance skips every observation with an active lease.
+* Add the public Object `likes` OrderedCollection projection backed by Activities effective
+  Public-audience Like queries, and advertise it from public Article and Media representations.
+* Keep Actor `liked` publication deferred until a user-facing privacy policy is defined;
+  Activities exposes only an internal current-liked-object query in this release.
 
 = 0.0.11 =
 * Add an Activity-specific JSON-LD finalizer so transport adapters can emit the canonical

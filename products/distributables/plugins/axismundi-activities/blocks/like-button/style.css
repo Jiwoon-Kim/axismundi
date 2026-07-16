@@ -1,0 +1,37 @@
+.wp-block-axismundi-like-button {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.axismundi-like-button__button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	min-height: 2.75rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+}
+
+.axismundi-like-button__button.is-liked .dashicons {
+	color: #c62828;
+}
+
+.axismundi-like-button__button:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.axismundi-like-button__count {
+	min-width: 1ch;
+	font-variant-numeric: tabular-nums;
+}
+
+.axismundi-like-button__status {
+	font-size: 0.875rem;
+}

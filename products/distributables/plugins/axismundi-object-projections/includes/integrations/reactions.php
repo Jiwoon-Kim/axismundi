@@ -1,0 +1,145 @@
+<?php
+/**
+ * Activity-backed Object likes collection projection.
+ *
+ * @package AxismundiObjectProjections
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+/** Read-only source for one publicly projectable object's likes collection. */
+final class Axismundi_OP_Object_Likes {
+	/** @param mixed $source Local object source. */
+	public function __construct( private string $object_uri, private $source ) {}
+	public function get_object_uri() : string { return $this->object_uri; }
+	/** @return mixed */
+	public function get_source() { return $this->source; }
+}
+
+/** Stable representation URI for an Object's likes collection. */
+function axismundi_op_object_likes_url( string $object_uri ) : string {
+	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/v1/objects/likes' ) );
+}
+
+/** Attach the likes collection URI to a projected local object. */
+function axismundi_op_add_likes_property( array $object ) : array {
+	if ( function_exists( 'axismundi_act_get_like_count' ) && ! empty( $object['id'] ) ) {
+		$object['likes'] = axismundi_op_object_likes_url( (string) $object['id'] );
+	}
+	return $object;
+}
+add_filter( 'axismundi_op_post_article', 'axismundi_op_add_likes_property' );
+add_filter( 'axismundi_op_media_attachment', 'axismundi_op_add_likes_property' );
+
+/** Resolve an exact public local projection source from its canonical object URI. */
+function axismundi_op_local_source_from_object_uri( string $object_uri ) {
+	$parts = wp_parse_url( $object_uri );
+	if ( ! is_array( $parts ) ) {
+		return null;
+	}
+	$home = wp_parse_url( home_url( '/' ) );
+	if ( ! is_array( $home ) || strtolower( (string) ( $parts['host'] ?? '' ) ) !== strtolower( (string) ( $home['host'] ?? '' ) ) ) {
+		return null;
+	}
+	$query = array();
+	if ( isset( $parts['query'] ) ) {
+		parse_str( (string) $parts['query'], $query );
+	}
+	$post_id = isset( $query['p'] ) ? absint( $query['p'] ) : ( isset( $query['attachment_id'] ) ? absint( $query['attachment_id'] ) : url_to_postid( $object_uri ) );
+	$source  = $post_id > 0 ? get_post( $post_id ) : null;
+	if ( ! $source instanceof WP_Post ) {
+		return null;
+	}
+	$projected = axismundi_op_transform_object( $source );
+	return is_array( $projected ) && isset( $projected['id'] ) && hash_equals( (string) $projected['id'], $object_uri ) ? $source : null;
+}
+
+/** Public visibility gate for an Object likes collection. */
+function axismundi_op_object_likes_visible( Axismundi_OP_Object_Likes $source ) : bool {
+	return function_exists( 'axismundi_act_get_public_effective_likes' )
+		&& ! is_wp_error( axismundi_op_transform_object( $source->get_source() ) );
+}
+
+/** Minimal public-safe Like activity representation. */
+function axismundi_op_public_like_item( Axismundi_Activity $activity ) : array {
+	$item = array(
+		'id'     => $activity->get_uri(),
+		'type'   => 'Like',
+		'actor'  => $activity->get_actor_uri(),
+		'object' => $activity->get_object_uri(),
+	);
+	if ( null !== $activity->get_published_at() ) {
+		$item['published'] = mysql2date( DATE_RFC3339, $activity->get_published_at(), false );
+	}
+	return $item;
+}
+
+/** Project one Object's effective distinct Likes. */
+function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source ) : array {
+	$likes  = axismundi_act_get_public_effective_likes( $source->get_object_uri(), 200 );
+	$object = axismundi_op_transform_object( $source->get_source() );
+	if ( is_wp_error( $object ) ) {
+		return $object;
+	}
+	return array(
+		'id'           => axismundi_op_object_likes_url( $source->get_object_uri() ),
+		'type'         => 'OrderedCollection',
+		'attributedTo' => (string) $object['attributedTo'],
+		'url'          => (string) $object['url'],
+		'totalItems'   => count( $likes ),
+		'orderedItems' => array_map( 'axismundi_op_public_like_item', $likes ),
+	);
+}
+
+/** Register the collection transformer. */
+function axismundi_op_register_reaction_transformer() : void {
+	if ( ! function_exists( 'axismundi_act_get_public_effective_likes' ) ) {
+		return;
+	}
+	axismundi_op_register_collection_transformer(
+		'axismundi-object-likes',
+		array(
+			'supports'       => static fn( $source ) : bool => $source instanceof Axismundi_OP_Object_Likes,
+			'collection_uri' => static fn( Axismundi_OP_Object_Likes $source ) : string => axismundi_op_object_likes_url( $source->get_object_uri() ),
+			'transform'      => 'axismundi_op_object_likes_transform',
+			'visible'        => 'axismundi_op_object_likes_visible',
+			'priority'       => 5,
+		)
+	);
+}
+add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_reaction_transformer' );
+
+/** Register the public Object likes route. */
+function axismundi_op_register_object_likes_route() : void {
+	if ( ! function_exists( 'axismundi_act_get_public_effective_likes' ) ) {
+		return;
+	}
+	register_rest_route(
+		'axismundi/v1',
+		'/objects/likes',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_op_get_object_likes',
+			'permission_callback' => '__return_true',
+			'args'                => array( 'object' => array( 'required' => true, 'type' => 'string', 'format' => 'uri' ) ),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_op_register_object_likes_route' );
+
+/** Serve one public local Object likes collection. */
+function axismundi_op_get_object_likes( WP_REST_Request $request ) {
+	$uri    = trim( (string) $request['object'] );
+	$source = axismundi_op_local_source_from_object_uri( $uri );
+	if ( null === $source ) {
+		return new WP_Error( 'ax_op_likes_not_found', __( 'The Object likes collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
+	}
+	$collection = axismundi_op_transform_collection( new Axismundi_OP_Object_Likes( $uri, $source ) );
+	if ( is_wp_error( $collection ) ) {
+		return $collection;
+	}
+	$response = rest_ensure_response( $collection );
+	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+	$response->header( 'Cache-Control', 'public, max-age=60' );
+	return $response;
+}

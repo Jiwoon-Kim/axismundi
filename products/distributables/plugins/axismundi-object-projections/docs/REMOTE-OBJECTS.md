@@ -1,6 +1,6 @@
 # Remote object projections
 
-> Status: **Phase 4c metadata-only discovery and full-payload inspection implemented**. Binary media caching is
+> Status: **Phase 4b metadata-only discovery and full-payload inspection plus DB v3 leases implemented**. Binary media caching is
 > deliberately deferred to the shared-blob/shadow-attachment design.
 
 ## 1. Purpose and ownership
@@ -22,7 +22,7 @@ an `attributedTo` URI, but neither plugin is required for storing the object sna
 Resolution is a deferred, deduplicated WP-Cron event for the primary Actor only; object
 fetch never waits on Actor discovery and never fans out through mentions or audience members.
 
-## 2. Table (schema v2)
+## 2. Tables (schema v3)
 
 ```text
 wp_ax_remote_objects
@@ -58,6 +58,20 @@ Long URIs are indexed only through SHA-256 hashes. Hash lookup is always followe
 exact URI comparison. The table is InnoDB and schema version is recorded only after the
 table and required unique/index keys are verified.
 
+`wp_ax_object_leases` stores independent retention reasons without copying object payloads:
+
+```text
+object_uri + object_uri_hash
+lease_type       transient | interaction | collection | shared_shadow
+lease_ref + lease_ref_hash
+expires_at       nullable; NULL means explicit release is required
+UNIQUE(object_uri_hash, lease_type, lease_ref_hash)
+```
+
+Hash lookup always verifies both full URI/reference strings. An active lease prevents expiry
+maintenance from deleting the observation; releasing the final lease makes an already expired
+observation eligible again.
+
 ## 3. Repository contract
 
 - `axismundi_op_remote_object_store($payload, $fetch)` validates then atomically upserts
@@ -76,7 +90,7 @@ table and required unique/index keys are verified.
 - Scalar `attributedTo`, `inReplyTo`, and `url` are normalized when present. Arrays and
   richer objects stay losslessly in `payload_json` until a justified relation table exists.
 - Metadata expires 30 days after last successful fetch or administrator inspection by
-  default (filterable to 1–365 days). Daily maintenance deletes the whole observation,
+  default (filterable to 1–365 days). Daily maintenance deletes an unleased observation,
   including sensitive metadata; it never contacts or mutates the remote resource.
 
 ## 4. Validation and security

@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.11
+Stable tag: 0.0.12
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -21,8 +21,8 @@ Federation will own HTTP inbox/outbox transport, signatures, and remote delivery
 
 Axismundi Actors is a required dependency and remains the authority for every actor URI.
 
-Version 0.0.11 implements the immutable URI-keyed Activity ledger, Follow/Block relation
-state, local Person-to-Person and cached-remote-Actor Follow controls, and read-only administrator inspection. It
+Version 0.0.12 implements the immutable URI-keyed Activity ledger, Follow/Block relation
+state, local and cached-remote Follow controls, URI-keyed Like/Undo, and read-only administrator inspection. It
 also records one local outbound Create when a projectable Core Post is first published.
 It creates no public Activity route, cron event, network request, inbox, notification, or
 delivery queue. Media upload remains intentionally silent.
@@ -32,6 +32,15 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.12 =
+* Add idempotent Like and Undo workflows keyed by canonical object URI. Undo always targets
+  the Like Activity URI and preserves its explicit remote audience for transport adapters.
+* Derive authoritative Like state and distinct-Actor counts from the immutable ledger, with
+  no second counter store, and expose a public-safe query for Object Projections.
+* Add a nonce-protected `axismundi/like-button` block using the WordPress Interactivity API.
+  Optimistic UI state rolls back on failure and accepts the server response as final.
+* Acquire and release Object Projections `interaction` leases for cached remote objects.
 
 = 0.0.11 =
 * Disambiguate remote relationships as `@handle@instance` while keeping local handles short.

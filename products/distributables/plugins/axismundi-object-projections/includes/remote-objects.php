@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '2';
+const AXISMUNDI_OP_DB_VERSION            = '3';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -92,6 +92,8 @@ function axismundi_op_install() : bool {
 		&& in_array( 'expires_at', $columns, true )
 		&& in_array( 'last_accessed_at', $columns, true )
 		&& $unique_identity
+		&& function_exists( 'axismundi_op_install_lease_schema' )
+		&& axismundi_op_install_lease_schema()
 		&& 'InnoDB' === $engine;
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
@@ -402,14 +404,16 @@ function axismundi_op_remote_objects_purge_expired( bool $dry_run = false ) : in
 	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
 		return 0;
 	}
-	$table = axismundi_op_remote_objects_table();
-	$now   = current_time( 'mysql', true );
+	$table  = axismundi_op_remote_objects_table();
+	$leases = axismundi_op_object_leases_table();
+	$now    = current_time( 'mysql', true );
+	$where  = "o.expires_at IS NOT NULL AND o.expires_at <= %s AND NOT EXISTS (SELECT 1 FROM {$leases} l WHERE l.object_uri_hash = o.object_uri_hash AND l.object_uri = o.object_uri AND (l.expires_at IS NULL OR l.expires_at > %s))";
 	if ( $dry_run ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded cache maintenance count.
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE expires_at IS NOT NULL AND expires_at <= %s", $now ) );
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} o WHERE {$where}", $now, $now ) );
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache expiry maintenance.
-	$result = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE expires_at IS NOT NULL AND expires_at <= %s", $now ) );
+	$result = $wpdb->query( $wpdb->prepare( "DELETE o FROM {$table} o WHERE {$where}", $now, $now ) );
 	return false === $result ? 0 : (int) $result;
 }
 

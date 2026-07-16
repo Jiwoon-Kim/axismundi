@@ -266,15 +266,17 @@ function axismundi_act_get_by_actor( string $actor_uri, int $limit = 50 ) : arra
 	return axismundi_act_get_by_reference( 'actor', $actor_uri, $limit );
 }
 
-/** Whether one effective outbound Activity is addressed to the public. */
-function axismundi_act_is_public( Axismundi_Activity $activity ) : bool {
-	if ( 'outbound' !== $activity->get_direction() || ! $activity->is_effective() ) {
-		return false;
-	}
+/** Whether an Activity declares the ActivityStreams Public audience. */
+function axismundi_act_has_public_audience( Axismundi_Activity $activity ) : bool {
 	$audience = $activity->get_audience();
 	$public   = array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' );
 	return (bool) array_intersect( $public, (array) ( $audience['to'] ?? array() ) )
 		|| (bool) array_intersect( $public, (array) ( $audience['cc'] ?? array() ) );
+}
+
+/** Whether one effective outbound Activity is addressed to the public. */
+function axismundi_act_is_public( Axismundi_Activity $activity ) : bool {
+	return 'outbound' === $activity->get_direction() && $activity->is_effective() && axismundi_act_has_public_audience( $activity );
 }
 
 /** Public-safe payload copy; the lossless ledger payload remains unchanged. */

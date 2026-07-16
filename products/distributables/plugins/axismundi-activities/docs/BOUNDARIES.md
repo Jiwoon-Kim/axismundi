@@ -18,16 +18,16 @@ to guessing locality from URI hosts or duplicating Actor rows.
 
 ## Object Projections lease API
 
-Activities will call a public API such as:
+Activities calls the feature-detected public API:
 
 ```php
 axismundi_op_add_lease( $object_uri, 'interaction', $activity_uri );
 axismundi_op_release_lease( $object_uri, 'interaction', $activity_uri );
 ```
 
-The exact API ships in Object Projections before Activities Phase 3. Calls are optional and
-feature-detected. The cache owner decides expiry and garbage collection; Activities does not
-write its tables or duplicate a lease table.
+The cache owner decides expiry and garbage collection; Activities does not write its tables
+or duplicate a lease table. Like acquires an `interaction` lease keyed by the Like Activity
+URI, and Undo of that Like releases the exact lease.
 
 ## Media policy
 

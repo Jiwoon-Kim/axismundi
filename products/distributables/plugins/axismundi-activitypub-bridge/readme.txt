@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.14
+Stable tag: 0.0.15
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -27,6 +27,12 @@ Outbound Activities use the supported external-delivery API in the patched offic
 the official spool remains transport-only and Axismundi Activities remains authoritative.
 
 == Changelog ==
+
+= 0.0.15 =
+* Queue a missing host instance-cache fill when verified Inbox traffic references an
+  already cached remote Actor.
+* Apply signature-verified Update(Actor) payloads only through Actors' cached-only,
+  complete-document repository gate; Follow and Accept never refresh Actor snapshots.
 
 = 0.0.14 =
 * Finalize outbound Activities through Object Projections before transport so Follow,

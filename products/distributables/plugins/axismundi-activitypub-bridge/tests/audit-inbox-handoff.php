@@ -16,6 +16,7 @@ $ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uui
 $ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_fallback_activity = '';
 $ax_bridge_accept_activity = '';
+$ax_bridge_update_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
 
 /** @param bool[] $results Results. */
@@ -79,6 +80,30 @@ try {
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox action composition returns 202', $response instanceof WP_REST_Response && 202 === $response->get_status() );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox records the full Activity once in the Axismundi ledger', $stored instanceof Axismundi_Activity && 'inbound' === $stored->get_direction() );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the inbound Follow auto-accepts through an outbound Activity when approval is not required', is_array( $relation ) && 'accepted' === (string) $relation['state'] && 'inbound' === (string) $relation['direction'] && $accept instanceof Axismundi_Activity && 'outbound' === $accept->get_direction() );
+	$instance_fill = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'verified Follow traffic queues one missing instance-cache fill without refreshing the Actor snapshot', false !== $instance_fill && null === axismundi_actors_get_instance( 'example.com' ) );
+
+	$update_payload = array(
+		'id'     => $ax_bridge_update_activity,
+		'type'   => 'Update',
+		'actor'  => $remote_uri,
+		'to'     => array( $local->get_uri() ),
+		'object' => array(
+			'id'                => $remote_uri,
+			'type'              => 'Person',
+			'preferredUsername' => 'bridge_remote',
+			'name'              => 'Bridge Remote Updated',
+			'url'               => $remote_uri,
+			'inbox'             => $remote_uri . '/inbox',
+			'outbox'            => $remote_uri . '/outbox',
+		),
+	);
+	$update_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$update_request->set_header( 'Content-Type', 'application/activity+json' );
+	$update_request->set_body( wp_json_encode( $update_payload ) );
+	$update_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $update_request );
+	$updated_remote  = axismundi_actors_get_by_uri( $remote_uri );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified complete Update(Actor) refreshes the existing cache row and records the Activity', $update_response instanceof WP_REST_Response && 202 === $update_response->get_status() && $updated_remote instanceof Axismundi_Actor && 'Bridge Remote Updated' === $updated_remote->get_display_name() && axismundi_act_get( $ax_bridge_update_activity ) instanceof Axismundi_Activity );
 
 	$actor_payload       = $payload;
 	$actor_payload['id'] = $ax_bridge_actor_activity;
@@ -137,6 +162,11 @@ try {
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_mention_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_update_activity ) ); // phpcs:ignore WordPress.DB
+	$instance_fill = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
+	if ( false !== $instance_fill ) {
+		wp_unschedule_event( $instance_fill, 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
+	}
 	if ( '' !== $ax_bridge_accept_activity ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB
 		$spools = get_posts( array( 'post_type' => 'ap_outbox', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_activitypub_external_activity_uri', 'meta_value' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB.SlowDBQuery

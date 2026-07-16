@@ -163,6 +163,38 @@ function axismundi_actors_normalize_remote_actor_payload( array $payload, string
 }
 
 /**
+ * Apply a complete, signature-verified Update(Actor) document to an existing cache row.
+ *
+ * The caller owns signature verification. This repository gate deliberately accepts
+ * no partial documents, creates no new identity, and records no verified acct address.
+ *
+ * @param array<string,mixed> $payload   Complete Actor object from Update.object.
+ * @param string              $actor_uri Verified Activity actor URI.
+ * @return Axismundi_Actor|WP_Error
+ */
+function axismundi_actors_apply_remote_actor_update( array $payload, string $actor_uri ) {
+	$object_uri = (string) ( $payload['id'] ?? '' );
+	if ( '' === $actor_uri || ! hash_equals( $actor_uri, $object_uri ) ) {
+		return new WP_Error( 'ax_actors_update_actor_mismatch', __( 'The Actor Update did not match its Activity actor.', 'axismundi-actors' ) );
+	}
+	$existing = axismundi_actors_get_by_uri( $object_uri );
+	if ( ! $existing instanceof Axismundi_Actor || $existing->is_local() ) {
+		return new WP_Error( 'ax_actors_update_not_cached', __( 'Actor Updates may only refresh an existing remote Actor.', 'axismundi-actors' ) );
+	}
+	$record = axismundi_actors_normalize_remote_actor_payload( $payload, $object_uri );
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+	$updated = axismundi_actors_upsert_remote( $record );
+	if ( is_wp_error( $updated ) ) {
+		return $updated;
+	}
+	/** @param Axismundi_Actor $updated Complete remote Actor snapshot updated from a verified Activity. */
+	do_action( 'axismundi_actors_remote_actor_updated', $updated );
+	return $updated;
+}
+
+/**
  * Extract identity claims without verifying them. JSON-LD permits a string, object,
  * or list for both fields; repository validation performs the final URI gate.
  *

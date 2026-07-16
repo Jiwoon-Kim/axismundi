@@ -96,6 +96,39 @@ try {
 	$local = axismundi_actors_discover_remote_instance( axismundi_actors_webfinger_authority() );
 	ax_inst_assert( $ax_inst_results, 'the local host is refused as a remote instance', is_wp_error( $local ) && null === axismundi_actors_get_instance( axismundi_actors_webfinger_authority() ) );
 
+	// A cached Actor whose host row is missing queues one asynchronous first fill.
+	$wpdb->delete( $instances, array( 'host_hash' => axismundi_actors_host_hash( 'example.com' ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture setup.
+	$queued_actor = axismundi_actors_upsert_remote(
+		array(
+			'uri'                => 'https://example.com/users/instance-fixture',
+			'actor_type'         => 'Person',
+			'preferred_username' => 'instance-fixture',
+			'display_name'       => 'Instance Fixture',
+			'profile_url'        => 'https://example.com/@instance-fixture',
+			'endpoints'          => array( 'inbox' => 'https://example.com/users/instance-fixture/inbox', 'outbox' => 'https://example.com/users/instance-fixture/outbox' ),
+			'payload'            => array( 'id' => 'https://example.com/users/instance-fixture', 'type' => 'Person', 'preferredUsername' => 'instance-fixture' ),
+		)
+	);
+	$queued_once = $queued_actor instanceof Axismundi_Actor && axismundi_actors_ensure_remote_instance_cached( $queued_actor );
+	$queued_twice = $queued_actor instanceof Axismundi_Actor && axismundi_actors_ensure_remote_instance_cached( $queued_actor );
+	$scheduled = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
+	ax_inst_assert( $ax_inst_results, 'a missing host row queues one first-time NodeInfo fill without fetching synchronously', $queued_once && $queued_twice && false !== $scheduled && null === axismundi_actors_get_instance( 'example.com' ) );
+	axismundi_actors_cache_remote_instance( 'example.com' );
+	$first_fill = axismundi_actors_get_instance( 'example.com' );
+	$ax_inst_software = 'misskey';
+	axismundi_actors_cache_remote_instance( 'example.com' );
+	$unchanged_fill = axismundi_actors_get_instance( 'example.com' );
+	ax_inst_assert( $ax_inst_results, 'the queued worker fills a host once and does not refresh an existing instance row', is_array( $first_fill ) && 'akkoma' === $first_fill['software_name'] && is_array( $unchanged_fill ) && 'akkoma' === $unchanged_fill['software_name'] );
+	if ( false !== $scheduled ) {
+		wp_unschedule_event( $scheduled, 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
+	}
+	if ( $queued_actor instanceof Axismundi_Actor ) {
+		foreach ( array( axismundi_actors_endpoints_table(), axismundi_actors_actors_table() ) as $table ) {
+			$wpdb->delete( $table, array( 'identity_id' => $queued_actor->get_identity_id() ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		}
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $queued_actor->get_identity_id() ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+	}
+
 } finally {
 	remove_filter( 'pre_http_request', $ax_inst_http, 10 );
 	$wpdb->query( "DELETE FROM " . axismundi_actors_instances_table() . " WHERE host IN ('example.com','example.net')" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- fixture cleanup, fixed hosts.

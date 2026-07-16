@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.28
+Stable tag: 0.0.29
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,14 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.29 =
+* Queue a first-time NodeInfo cache fill when a cached remote Actor participates in
+  federation without an instance row; never delay Inbox processing for NodeInfo.
+* Add a cached-only, complete-document repository gate for verified Update(Actor)
+  Activities. Ordinary Follow and Accept traffic never refreshes Actor snapshots.
+* Clarify that the administrator Fetch Actor action ensures caches exist and remains
+  the explicit recovery path.
 
 = 0.0.28 =
 * Add search, total counts, and pagination to the cached remote Actor screen so older

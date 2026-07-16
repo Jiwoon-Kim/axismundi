@@ -158,6 +158,7 @@ function axismundi_actors_sync_remote_actor_assets( Axismundi_Actor $actor ) : v
 	axismundi_actors_sync_asset_source( $actor->get_identity_id(), 'header', axismundi_actors_remote_asset_source( $payload['image'] ?? null ) );
 }
 add_action( 'axismundi_actors_remote_actor_discovered', 'axismundi_actors_sync_remote_actor_assets', 20 );
+add_action( 'axismundi_actors_remote_actor_updated', 'axismundi_actors_sync_remote_actor_assets', 20 );
 
 /** Queue a paged backfill for remote snapshots cached before DB v9. */
 function axismundi_actors_queue_asset_backfill() : void {

@@ -123,6 +123,25 @@ try {
 	$from_id      = axismundi_actors_discover_remote_input( 'https://example.com/users/alice' );
 	ax_remote_assert( $ax_remote_results, 'admin input accepts /@handle profile aliases through WebFinger and exact canonical Actor URLs', $from_profile instanceof Axismundi_Actor && $from_id instanceof Axismundi_Actor && $first_id === $from_profile->get_identity_id() && $first_id === $from_id->get_identity_id() );
 
+	$update_payload = array(
+		'id'                => 'https://example.com/users/alice',
+		'type'              => 'Person',
+		'preferredUsername' => 'alice-example',
+		'name'              => 'Alice from verified Update',
+		'summary'           => '<p>Updated profile.</p>',
+		'url'               => 'https://example.com/@alice',
+		'inbox'             => 'https://example.com/users/alice/inbox',
+		'outbox'            => 'https://example.com/users/alice/outbox',
+	);
+	$updated_from_activity = axismundi_actors_apply_remote_actor_update( $update_payload, 'https://example.com/users/alice' );
+	$unknown_update = $update_payload;
+	$unknown_update['id'] = 'https://example.com/users/unknown';
+	$unknown_result = axismundi_actors_apply_remote_actor_update( $unknown_update, 'https://example.com/users/unknown' );
+	$partial_result = axismundi_actors_apply_remote_actor_update( array( 'id' => 'https://example.com/users/alice', 'type' => 'Person', 'preferredUsername' => 'alice-example' ), 'https://example.com/users/alice' );
+	$after_partial  = axismundi_actors_get_by_uri( 'https://example.com/users/alice' );
+	ax_remote_assert( $ax_remote_results, 'a complete verified Update refreshes only the existing canonical Actor identity', $updated_from_activity instanceof Axismundi_Actor && $first_id === $updated_from_activity->get_identity_id() && 'Alice from verified Update' === $updated_from_activity->get_display_name() );
+	ax_remote_assert( $ax_remote_results, 'Update cannot create an unknown Actor or apply a partial document', is_wp_error( $unknown_result ) && 'ax_actors_update_not_cached' === $unknown_result->get_error_code() && null === axismundi_actors_get_by_uri( 'https://example.com/users/unknown' ) && is_wp_error( $partial_result ) && 'ax_actors_remote_endpoints' === $partial_result->get_error_code() && $after_partial instanceof Axismundi_Actor && 'Alice from verified Update' === $after_partial->get_display_name() );
+
 	$mismatch = axismundi_actors_discover_remote_actor( 'id_mismatch@example.com' );
 	ax_remote_assert( $ax_remote_results, 'an Actor id that differs from the WebFinger self URI is rejected', is_wp_error( $mismatch ) && 'ax_actors_remote_identity' === $mismatch->get_error_code() && null === axismundi_actors_get_by_uri( 'https://evil.example/users/substitute' ) );
 
@@ -131,8 +150,8 @@ try {
 	$redirect   = axismundi_actors_remote_get_json( 'https://example.com/redirect', array( 'application/json' ) );
 	ax_remote_assert( $ax_remote_results, 'content type, one-megabyte limit, and redirect denial are enforced', is_wp_error( $wrong_type ) && 'ax_actors_remote_content_type' === $wrong_type->get_error_code() && is_wp_error( $too_large ) && 'ax_actors_remote_size' === $too_large->get_error_code() && is_wp_error( $redirect ) && 'ax_actors_remote_status' === $redirect->get_error_code() );
 
-	if ( $refreshed instanceof Axismundi_Actor ) {
-		axismundi_actors_set_status( $refreshed->get_identity_id(), 'tombstone' );
+	if ( $updated_from_activity instanceof Axismundi_Actor ) {
+		axismundi_actors_set_status( $updated_from_activity->get_identity_id(), 'tombstone' );
 		$tombstoned = axismundi_actors_discover_remote_actor( 'remote_alice@example.com' );
 		ax_remote_assert( $ax_remote_results, 'rediscovery never resurrects a tombstoned remote identity', is_wp_error( $tombstoned ) && 'ax_actors_remote_conflict' === $tombstoned->get_error_code() );
 	}

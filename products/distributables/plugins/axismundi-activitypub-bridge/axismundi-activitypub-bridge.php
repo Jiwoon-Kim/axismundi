@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.0.14
+ * Version:           0.0.15
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.14';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.15';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 
 require_once __DIR__ . '/includes/transport.php';
@@ -243,6 +243,23 @@ function axismundi_activitypub_bridge_record_inbox( array $activity, array $reci
 	}
 	if ( ! $actor instanceof Axismundi_Actor || $actor->is_local() ) {
 		return new WP_Error( 'ax_bridge_inbox_actor', __( 'The remote Actor could not be resolved.', 'axismundi-activitypub-bridge' ) );
+	}
+	if ( function_exists( 'axismundi_actors_ensure_remote_instance_cached' ) ) {
+		axismundi_actors_ensure_remote_instance_cached( $actor );
+	}
+
+	$object      = is_array( $activity['object'] ?? null ) ? $activity['object'] : array();
+	$object_type = (string) ( $object['type'] ?? '' );
+	if ( 'Update' === (string) ( $activity['type'] ?? '' )
+		&& in_array( $object_type, array( 'Person', 'Organization', 'Application', 'Service', 'Group' ), true )
+	) {
+		if ( ! function_exists( 'axismundi_actors_apply_remote_actor_update' ) ) {
+			return new WP_Error( 'ax_bridge_actor_update_unavailable', __( 'The remote Actor update repository is unavailable.', 'axismundi-activitypub-bridge' ) );
+		}
+		$updated = axismundi_actors_apply_remote_actor_update( $object, $actor_uri );
+		if ( is_wp_error( $updated ) ) {
+			return $updated;
+		}
 	}
 
 	return axismundi_act_record_activity( $activity, 'inbound' );

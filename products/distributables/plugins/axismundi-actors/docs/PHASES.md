@@ -149,9 +149,10 @@ asset-cache + keyring/fetch-state ledgers). Next:
 DB v5  wp_ax_actor_addresses (handle routing + history)        — shipped; WebFinger acct policy fail-closed (§9.9)
 WebFinger endpoint  /.well-known/webfinger + local acct: rows  — shipped; subdirectory multisite explicitly OFF (tested)
 Local NodeInfo      /.well-known/nodeinfo + NodeInfo 2.1        — shipped, NO table (WP options + live counts)
-Remote discovery    safe acct → WebFinger → Actor snapshot     — shipped; synchronous primitive, no refresh scheduler
+Remote discovery    safe acct → WebFinger → Actor snapshot     — shipped; bounded explicit fetch, no periodic refresh scheduler
 Remote admin        Users > Remote Actors lookup/cache inspector — shipped; manage_options + nonce
 DB v6  wp_ax_instances (host software/version/policy ledger)   — shipped; per-host NodeInfo cache (NOT on actor rows); moderation is a separate layer (§9.10)
+Remote maintenance  first missing instance fill + Update(Actor) — shipped; async host fill, cached-only complete Actor updates
 DB v7  wp_ax_actor_endpoints                                    — shipped; inbox/outbox/followers/following/featured/sharedInbox
 DB v8  follower/discovery policy axes                           — shipped; NULL-aware lock/discoverable/indexable/collection visibility
 DB v9  wp_ax_actor_asset_cache (remote avatar/header cache)     — shipped; content-addressed binary cache (REMOTE-ASSET-CACHE.md)

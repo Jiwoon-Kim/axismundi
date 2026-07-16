@@ -70,24 +70,35 @@ function axismundi_actors_discover_remote_instance( string $host ) {
 }
 
 /**
- * When a remote actor is discovered, cache its host's NodeInfo once (best-effort,
- * skipped if already cached today) so the actor row never duplicates host metadata.
+ * Queue one first-time host cache fill without delaying an Inbox or discovery request.
  *
  * @param Axismundi_Actor $actor Discovered remote actor.
- * @return void
+ * @return bool Whether the host is already cached or a fill is scheduled.
  */
-function axismundi_actors_cache_actor_instance( Axismundi_Actor $actor ) : void {
+function axismundi_actors_ensure_remote_instance_cached( Axismundi_Actor $actor ) : bool {
 	if ( $actor->is_local() ) {
-		return;
+		return false;
 	}
 	$host = axismundi_actors_webfinger_authority_from_url( $actor->get_uri() );
 	if ( '' === $host ) {
-		return;
+		return false;
 	}
-	$existing = axismundi_actors_get_instance( $host );
-	if ( $existing && 'ok' === ( $existing['fetch_status'] ?? '' ) && ! empty( $existing['fetched_at'] ) && ( time() - strtotime( (string) $existing['fetched_at'] . ' UTC' ) ) < DAY_IN_SECONDS ) {
-		return; // Fresh enough; a real refresh policy is the Federation plugin's job.
+	if ( axismundi_actors_get_instance( $host ) ) {
+		return true;
 	}
-	axismundi_actors_discover_remote_instance( $host );
+	$args = array( $host );
+	if ( ! wp_next_scheduled( 'axismundi_actors_cache_remote_instance', $args ) ) {
+		wp_schedule_single_event( time() + 1, 'axismundi_actors_cache_remote_instance', $args );
+	}
+	return true;
 }
-add_action( 'axismundi_actors_remote_actor_discovered', 'axismundi_actors_cache_actor_instance' );
+
+/** Execute one queued first-time NodeInfo cache fill. */
+function axismundi_actors_cache_remote_instance( string $host ) : void {
+	if ( null === axismundi_actors_get_instance( $host ) ) {
+		axismundi_actors_discover_remote_instance( $host );
+	}
+}
+add_action( 'axismundi_actors_cache_remote_instance', 'axismundi_actors_cache_remote_instance' );
+add_action( 'axismundi_actors_remote_actor_discovered', 'axismundi_actors_ensure_remote_instance_cached' );
+add_action( 'axismundi_actors_remote_actor_updated', 'axismundi_actors_ensure_remote_instance_cached' );

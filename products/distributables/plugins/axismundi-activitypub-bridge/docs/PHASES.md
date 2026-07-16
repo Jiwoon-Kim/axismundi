@@ -95,3 +95,11 @@ to official Inbox snapshot storage. Legacy purge remains disabled until old loca
 Pass every outbound ledger payload through Object Projections' Activity finalizer before
 queueing it with the official transport. The ledger remains representation-neutral while the
 wire payload receives the canonical ActivityStreams `@context` required by remote processors.
+
+## 0.0.15 — Remote Actor cache maintenance at the verified Inbox boundary
+
+Queue a first-time NodeInfo fill when verified traffic references a cached remote Actor whose
+host ledger is absent. Ordinary Follow/Accept traffic does not refresh Actor snapshots. A
+complete `Update(Actor)` may refresh an existing canonical Actor only when Activity.actor equals
+object.id and Actors' normal discovery validator accepts the whole object. Unknown or partial
+Actor Updates remain unclaimed and cannot create or erase cached identity state.

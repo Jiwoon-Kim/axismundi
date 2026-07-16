@@ -219,7 +219,7 @@ function axismundi_actors_render_remote_admin_page() : void {
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Remote Actors', 'axismundi-actors' ); ?></h1>
 		<?php axismundi_actors_remote_admin_notice(); ?>
-		<p><?php esc_html_e( 'Resolve an acct address, a /@handle profile URL, or a canonical ActivityStreams Actor URL. A successful lookup refreshes both the Actor snapshot and its host NodeInfo cache.', 'axismundi-actors' ); ?></p>
+		<p><?php esc_html_e( 'Resolve an acct address, a /@handle profile URL, or a canonical ActivityStreams Actor URL. A successful lookup ensures the Actor and instance caches exist.', 'axismundi-actors' ); ?></p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="axismundi_actors_discover_remote">
 			<?php wp_nonce_field( 'ax_actors_discover_remote' ); ?>
@@ -808,6 +808,10 @@ function axismundi_actors_handle_discover_remote() : void {
 	if ( is_wp_error( $result ) ) {
 		wp_safe_redirect( add_query_arg( 'ax_actor_error', rawurlencode( $result->get_error_message() ), $back ) );
 		exit;
+	}
+	$host = axismundi_actors_webfinger_authority_from_url( $result->get_uri() );
+	if ( '' !== $host && null === axismundi_actors_get_instance( $host ) ) {
+		axismundi_actors_discover_remote_instance( $host );
 	}
 	wp_safe_redirect( add_query_arg( array( 'ax_actor_done' => 1, 'actor_id' => $result->get_identity_id() ), $back ) );
 	exit;

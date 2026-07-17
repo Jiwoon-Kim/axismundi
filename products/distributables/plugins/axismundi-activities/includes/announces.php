@@ -128,6 +128,18 @@ function axismundi_act_unannounce_object( Axismundi_Actor $actor, string $object
 	}
 	$announce = axismundi_act_get_actor_announce( $actor->get_uri(), $object, true );
 	if ( ! $announce instanceof Axismundi_Activity ) {
+		$latest = axismundi_act_get_actor_announce( $actor->get_uri(), $object, false );
+		if ( $latest instanceof Axismundi_Activity && ! $latest->is_effective() ) {
+			$undos = array_filter(
+				axismundi_act_get_by_object( $latest->get_uri(), 20 ),
+				static fn( Axismundi_Activity $item ) : bool => 'Undo' === $item->get_type()
+					&& $item->is_effective()
+					&& $item->get_actor_uri() === $actor->get_uri()
+			);
+			if ( ! empty( $undos ) ) {
+				return reset( $undos );
+			}
+		}
 		return new WP_Error( 'ax_act_announce_missing', __( 'There is no active Announce to undo.', 'axismundi-activities' ) );
 	}
 	$payload  = array( 'type' => 'Undo', 'actor' => $actor->get_uri(), 'object' => $announce->get_uri() );

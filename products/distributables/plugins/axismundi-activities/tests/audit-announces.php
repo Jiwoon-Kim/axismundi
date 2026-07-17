@@ -75,6 +75,8 @@ try {
 		$activity_uris[] = $undo->get_uri();
 	}
 	ax_announce_assert( $results, 'Undo targets the Announce Activity URI and preserves its public and origin-server audience', $undo instanceof Axismundi_Activity && $announce instanceof Axismundi_Activity && $announce->get_uri() === $undo->get_object_uri() && ! axismundi_act_get_announce_state( $local->get_uri(), $public_uri ) && axismundi_act_has_public_audience( $undo ) && in_array( $remote_uri, (array) ( $undo->get_audience()['cc'] ?? array() ), true ) && 0 === axismundi_op_active_lease_count( $public_uri ) );
+	$undo_replay = $local instanceof Axismundi_Actor ? axismundi_act_unannounce_object( $local, $public_uri ) : null;
+	ax_announce_assert( $results, 'replayed Unannounce returns the existing effective Undo without minting another transition', $undo instanceof Axismundi_Activity && $undo_replay instanceof Axismundi_Activity && $undo->get_uri() === $undo_replay->get_uri() );
 
 	$again = $local instanceof Axismundi_Actor ? axismundi_act_announce_object( $local, $public_uri, $remote_uri ) : null;
 	if ( $again instanceof Axismundi_Activity ) {

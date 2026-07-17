@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.18
+Stable tag: 0.0.19
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -40,6 +40,14 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.19 =
+* Fix /media/folder/{uuid} returning 404 after updating to 0.0.18. The routes were
+  registered but never reached the stored rewrite table, and the version counter meant to
+  install them had already burned itself, so the only remedy was saving permalinks by
+  hand. The routes now install whenever they are found missing, which also covers a
+  ZIP-replace update that never fires the activation hook and a host that discards the
+  write. Retries are limited to once an hour, and sites on plain permalinks are untouched.
 
 = 0.0.18 =
 * Project an eligible Media Library folder as a UUID-keyed OrderedCollection with bounded

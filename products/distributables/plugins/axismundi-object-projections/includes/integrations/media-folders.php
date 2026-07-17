@@ -10,7 +10,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_MEDIA_FOLDER_REWRITE_VERSION = 1;
 const AXISMUNDI_OP_MEDIA_FOLDER_PAGE_SIZE = 20;
 
 /** Immutable source descriptor for one folder collection or page. */
@@ -111,28 +110,79 @@ function axismundi_op_register_media_folder_transformer() : void {
 }
 add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_media_folder_transformer' );
 
+/**
+ * The rewrite expressions owned by this route, keyed exactly as WordPress stores them.
+ *
+ * @return array<string,string>
+ */
+function axismundi_op_media_folder_rewrite_rules() : array {
+	return array(
+		'^media/folder/([0-9a-fA-F-]{36})/page/([0-9]+)/?$' => 'index.php?ax_op_media_folder=$matches[1]&ax_op_media_folder_page=$matches[2]',
+		'^media/folder/([0-9a-fA-F-]{36})/?$'               => 'index.php?ax_op_media_folder=$matches[1]',
+	);
+}
+
 /** Register stable UUID collection routes. */
 function axismundi_op_register_media_folder_routes() : void {
-	add_rewrite_rule(
-		'^media/folder/([0-9a-fA-F-]{36})/page/([0-9]+)/?$',
-		'index.php?ax_op_media_folder=$matches[1]&ax_op_media_folder_page=$matches[2]',
-		'top'
-	);
-	add_rewrite_rule(
-		'^media/folder/([0-9a-fA-F-]{36})/?$',
-		'index.php?ax_op_media_folder=$matches[1]',
-		'top'
-	);
+	foreach ( axismundi_op_media_folder_rewrite_rules() as $regex => $query ) {
+		add_rewrite_rule( $regex, $query, 'top' );
+	}
 }
 add_action( 'init', 'axismundi_op_register_media_folder_routes', 7 );
 
-/** Flush once when the folder route contract changes. */
+/**
+ * Whether every folder rule is actually present in the persisted rewrite table.
+ *
+ * Registration and persistence are different things: add_rewrite_rule() only fills an
+ * in-memory array, while WordPress routes requests from the stored `rewrite_rules`
+ * option. This asks the question that matters — is the rule really there?
+ *
+ * @return bool
+ */
+function axismundi_op_media_folder_routes_installed() : bool {
+	$stored = get_option( 'rewrite_rules' );
+	if ( ! is_array( $stored ) ) {
+		return false;
+	}
+	foreach ( array_keys( axismundi_op_media_folder_rewrite_rules() ) as $regex ) {
+		if ( ! isset( $stored[ $regex ] ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Install the folder routes whenever they are missing, not once per version.
+ *
+ * A version counter is the wrong gate here, because it records an *intent* to flush and
+ * then burns itself whether or not the flush actually persisted — flush_rewrite_rules()
+ * returns void, so the old code could never tell. That failure mode is not theoretical:
+ * these routes shipped in 0.0.18, the counter was consumed, the rules never reached the
+ * table, and every /media/folder/{uuid} 404'd until permalinks were saved by hand. A
+ * plugin must not require that of its users.
+ *
+ * Checking for the rules instead makes this self-healing for any cause — a ZIP-replace
+ * update that never fires the activation hook, a host that discards the write, or another
+ * plugin rebuilding the table. The transient bounds the retry so a permanently
+ * unpersistable rule degrades to one flush an hour rather than one per request.
+ *
+ * @return void
+ */
 function axismundi_op_maybe_upgrade_media_folder_routes() : void {
-	if ( (int) get_option( 'ax_op_media_folder_rewrite_version', 0 ) >= AXISMUNDI_OP_MEDIA_FOLDER_REWRITE_VERSION ) {
+	// Plain permalinks keep no rewrite table at all, so there is nothing to install and
+	// nothing to compare against; without this guard the check below would flush forever.
+	if ( '' === (string) get_option( 'permalink_structure', '' ) ) {
 		return;
 	}
+	if ( axismundi_op_media_folder_routes_installed() ) {
+		return;
+	}
+	if ( get_transient( 'ax_op_media_folder_rewrite_retry' ) ) {
+		return;
+	}
+	set_transient( 'ax_op_media_folder_rewrite_retry', 1, HOUR_IN_SECONDS );
 	flush_rewrite_rules( false );
-	update_option( 'ax_op_media_folder_rewrite_version', AXISMUNDI_OP_MEDIA_FOLDER_REWRITE_VERSION, false );
 }
 add_action( 'init', 'axismundi_op_maybe_upgrade_media_folder_routes', 12 );
 

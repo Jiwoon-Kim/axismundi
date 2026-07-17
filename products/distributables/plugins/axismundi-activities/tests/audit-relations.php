@@ -107,7 +107,7 @@ try {
 		$ax_rel_activity_uris
 	);
 	$inbound_row = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
-	ax_rel_assert( $ax_rel_results, 'inbound Follow accepted by the local target appears in derived followers', $inbound_follow instanceof Axismundi_Activity && $inbound_accept instanceof Axismundi_Activity && 'accepted' === $inbound_row['state'] && in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) );
+	ax_rel_assert( $ax_rel_results, 'inbound Follow accepted by the local target appears in derived followers and the count-only query', $inbound_follow instanceof Axismundi_Activity && $inbound_accept instanceof Axismundi_Activity && 'accepted' === $inbound_row['state'] && in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) && 1 === axismundi_act_get_follower_count( $site_actor->get_uri() ) );
 
 	$inbound_undo = ax_rel_record(
 		array( 'id' => 'https://example.com/activities/undo-in-' . $ax_rel_suffix, 'type' => 'Undo', 'actor' => $ax_rel_remote_uri, 'object' => $inbound_follow_uri ),
@@ -115,7 +115,7 @@ try {
 		$ax_rel_activity_uris
 	);
 	$inbound_row = axismundi_act_get_relation( 'follow', $ax_rel_remote_uri, $site_actor->get_uri() );
-	ax_rel_assert( $ax_rel_results, 'remote Undo(Follow) removes the accepted inbound follower edge', $inbound_undo instanceof Axismundi_Activity && 'undone' === $inbound_row['state'] && ! in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) );
+	ax_rel_assert( $ax_rel_results, 'remote Undo(Follow) removes the accepted inbound follower edge and decrements the count-only query', $inbound_undo instanceof Axismundi_Activity && 'undone' === $inbound_row['state'] && ! in_array( $ax_rel_remote_uri, axismundi_act_get_followers( $site_actor->get_uri() ), true ) && 0 === axismundi_act_get_follower_count( $site_actor->get_uri() ) );
 
 	$reject_follow = ax_rel_record(
 		array( 'id' => 'https://example.com/activities/follow-reject-' . $ax_rel_suffix, 'type' => 'Follow', 'actor' => $ax_rel_remote_uri, 'object' => $site_actor->get_uri() ),

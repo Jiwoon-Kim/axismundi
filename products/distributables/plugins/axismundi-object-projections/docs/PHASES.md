@@ -24,6 +24,8 @@ Phase 2h Object shares collection                    — shipped (0.0.21): count
                                                        REST collection and Announce gate
 Phase 2i FEP-b2b8 Article representation             — shipped (0.0.13): positive HTML
                                                        allowlist, summary/preview/image/Link
+Phase 2j Actor followers collection                 — shipped (0.0.22): stable UUID URI;
+                                                       policy-gated count-only Collection
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

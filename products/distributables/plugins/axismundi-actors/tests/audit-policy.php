@@ -16,6 +16,9 @@ require_once dirname( __DIR__ ) . '/includes/remote-discovery.php';
 global $wpdb;
 $ax_pol_results = array();
 $ax_pol_ids     = array();
+$ax_pol_site_actor = null;
+$ax_pol_old_follow_visibility = null;
+$ax_pol_admin_id = 0;
 
 /**
  * @param array  $results Accumulator.
@@ -104,7 +107,24 @@ try {
 	$bad_fields = axismundi_actors_normalize_policy_fields( array( 'follow_collections_visibility' => 'everyone' ) );
 	ax_pol_assert( $ax_pol_results, 'follow_collections_visibility validates to the enum or NULL', 'followers' === $ok_fields['follow_collections_visibility'] && null === $bad_fields['follow_collections_visibility'] );
 
+	$ax_pol_site_actor = axismundi_actors_get_site_actor();
+	$admin_ids         = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
+	$ax_pol_admin_id   = isset( $admin_ids[0] ) ? (int) $admin_ids[0] : 0;
+	$ax_pol_old_follow_visibility = $ax_pol_site_actor instanceof Axismundi_Actor ? $ax_pol_site_actor->get_follow_collections_visibility() : null;
+	$set_public = $ax_pol_site_actor instanceof Axismundi_Actor
+		? axismundi_actors_set_follow_collections_visibility( $ax_pol_site_actor, 'public', $ax_pol_admin_id )
+		: new WP_Error( 'ax_pol_site_actor' );
+	$refreshed = $ax_pol_site_actor instanceof Axismundi_Actor ? axismundi_actors_get_by_uuid( $ax_pol_site_actor->get_uuid() ) : null;
+	ax_pol_assert( $ax_pol_results, 'the repository permission-checks and persists local Follow collection visibility', true === $set_public && $refreshed instanceof Axismundi_Actor && 'public' === $refreshed->get_follow_collections_visibility() );
+	$invalid = $ax_pol_site_actor instanceof Axismundi_Actor
+		? axismundi_actors_set_follow_collections_visibility( $ax_pol_site_actor, 'everyone', $ax_pol_admin_id )
+		: null;
+	ax_pol_assert( $ax_pol_results, 'the local Follow collection setter rejects values outside the enum', is_wp_error( $invalid ) && 'ax_actors_follow_collections_visibility' === $invalid->get_error_code() );
+
 } finally {
+	if ( $ax_pol_site_actor instanceof Axismundi_Actor && $ax_pol_admin_id > 0 ) {
+		axismundi_actors_set_follow_collections_visibility( $ax_pol_site_actor, $ax_pol_old_follow_visibility, $ax_pol_admin_id );
+	}
 	foreach ( array_unique( array_filter( $ax_pol_ids ) ) as $iid ) {
 		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => (int) $iid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

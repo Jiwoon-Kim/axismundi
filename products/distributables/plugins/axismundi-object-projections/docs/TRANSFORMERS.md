@@ -71,7 +71,7 @@ profile `url`, Outbox, or representation-owned social collections. The Actor tra
 representation-owned Outbox when Activities exposes its public query API. That Outbox is
 a separate collection transformer and never reads or mutates the Activity table directly.
 
-### Planned followers and Quote policy projection
+### Followers and planned Quote policy projection
 
 Object Projections owns the stable Actor `followers` URI and its representation, following
 the existing Outbox boundary: Activities supplies public-safe relation queries, while the
@@ -86,7 +86,8 @@ member enumeration.
 - QuoteRequest approval checks the internal accepted-Follow relation. It does not fetch this
   Collection, so a count-only or inaccessible representation does not weaken policy.
 
-The same increment adds the post setting `Who can quote this post?` with `anyone`,
+The shipped Followers increment is deliberately count-only. A later increment adds the
+post setting `Who can quote this post?` with `anyone`,
 `followers`, and `me`, and projects it as FEP-044f `interactionPolicy.canQuote`. `followers`
 references the stable followers URI; `me` references the author Actor URI. These values are
 advisory policy declarations and never constitute proof that a particular quote was

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.21
+Stable tag: 0.0.22
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -40,6 +40,12 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.22 =
+* Advertise an OP-owned UUID Followers URI on local Actor documents and serve a
+  count-only ActivityStreams Collection only when Actor policy permits public disclosure.
+* Restrict the Actor transport seam to inbox, endpoints, and publicKey so a Bridge cannot
+  replace representation-owned social collection identities.
 
 = 0.0.21 =
 * Advertise and serve count-only Object shares OrderedCollections backed by effective,

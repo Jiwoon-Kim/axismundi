@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.15
+Stable tag: 0.0.16
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -21,7 +21,7 @@ Federation will own HTTP inbox/outbox transport, signatures, and remote delivery
 
 Axismundi Actors is a required dependency and remains the authority for every actor URI.
 
-Version 0.0.13 implements the immutable URI-keyed Activity ledger, Follow/Block relation
+Version 0.0.16 implements the immutable URI-keyed Activity ledger, Follow/Block relation
 state, local and cached-remote Follow controls, URI-keyed Like/Undo and Announce/Undo, and read-only administrator inspection. It
 also records one local outbound Create when a projectable Core Post is first published.
 It creates no public Activity route, cron event, network request, inbox, notification, or
@@ -32,6 +32,10 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.16 =
+* Expose a public-safe accepted-follower count derived from the relationship ledger,
+  using the URI hash and exact URI together without exposing follower identities.
 
 = 0.0.15 =
 * DB v6 — add the FEP-044f QuoteAuthorization store. Consent state belongs to this ledger and

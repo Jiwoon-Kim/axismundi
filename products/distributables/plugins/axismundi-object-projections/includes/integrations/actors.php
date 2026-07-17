@@ -13,9 +13,20 @@ final class Axismundi_OP_Actor_Outbox {
 	public function get_actor() : Axismundi_Actor { return $this->actor; }
 }
 
+/** Read-only source for one Actor's follower-count projection. */
+final class Axismundi_OP_Actor_Followers {
+	public function __construct( private Axismundi_Actor $actor ) {}
+	public function get_actor() : Axismundi_Actor { return $this->actor; }
+}
+
 /** Stable public Outbox URI owned by the representation layer. */
 function axismundi_op_actor_outbox_url( Axismundi_Actor $actor ) : string {
 	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/outbox' );
+}
+
+/** Stable Followers URI owned by the representation layer. */
+function axismundi_op_actor_followers_url( Axismundi_Actor $actor ) : string {
+	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/followers' );
 }
 
 /** Public representation gate for one local Actor. */
@@ -60,6 +71,9 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	if ( function_exists( 'axismundi_act_get_public_outbox' ) ) {
 		$object['outbox'] = axismundi_op_actor_outbox_url( $actor );
 	}
+	if ( function_exists( 'axismundi_act_get_follower_count' ) ) {
+		$object['followers'] = axismundi_op_actor_followers_url( $actor );
+	}
 
 	/**
 	 * Supply protocol transport properties without transferring representation ownership.
@@ -68,7 +82,7 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	 * @param Axismundi_Actor     $actor  Local Actor.
 	 */
 	$fields  = (array) apply_filters( 'axismundi_op_actor_transport_fields', array(), $actor );
-	$allowed = array_intersect_key( $fields, array_flip( array( 'inbox', 'followers', 'following', 'featured', 'endpoints', 'publicKey' ) ) );
+	$allowed = array_intersect_key( $fields, array_flip( array( 'inbox', 'endpoints', 'publicKey' ) ) );
 	return array_merge( $object, $allowed );
 }
 
@@ -87,6 +101,26 @@ function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source 
 		'attributedTo' => $actor->get_uri(),
 		'url'          => $actor->get_profile_url(),
 		'orderedItems' => axismundi_act_get_public_outbox( $actor->get_uri(), 200 ),
+	);
+}
+
+/** Public disclosure gate for an Actor Followers collection. */
+function axismundi_op_actor_followers_visible( Axismundi_OP_Actor_Followers $source ) : bool {
+	$actor = $source->get_actor();
+	return axismundi_op_actor_visible( $actor )
+		&& 'public' === $actor->get_follow_collections_visibility()
+		&& function_exists( 'axismundi_act_get_follower_count' );
+}
+
+/** Project a count-only Followers Collection without exposing member Actors. */
+function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $source ) : array {
+	$actor = $source->get_actor();
+	return array(
+		'id'           => axismundi_op_actor_followers_url( $actor ),
+		'type'         => 'Collection',
+		'attributedTo' => $actor->get_uri(),
+		'url'          => $actor->get_profile_url(),
+		'totalItems'   => axismundi_act_get_follower_count( $actor->get_uri() ),
 	);
 }
 
@@ -115,6 +149,16 @@ function axismundi_op_register_actor_transformers() : void {
 			'priority'       => 5,
 		)
 	);
+	axismundi_op_register_collection_transformer(
+		'axismundi-actor-followers',
+		array(
+			'supports'       => static fn( $source ) : bool => $source instanceof Axismundi_OP_Actor_Followers,
+			'collection_uri' => static fn( Axismundi_OP_Actor_Followers $source ) : string => axismundi_op_actor_followers_url( $source->get_actor() ),
+			'transform'      => 'axismundi_op_actor_followers_transform',
+			'visible'        => 'axismundi_op_actor_followers_visible',
+			'priority'       => 5,
+		)
+	);
 }
 add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_actor_transformers' );
 
@@ -138,6 +182,26 @@ function axismundi_op_register_actor_outbox_route() : void {
 }
 add_action( 'rest_api_init', 'axismundi_op_register_actor_outbox_route' );
 
+/** Register the representation-owned Followers route. */
+function axismundi_op_register_actor_followers_route() : void {
+	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) || ! function_exists( 'axismundi_act_get_follower_count' ) ) {
+		return;
+	}
+	register_rest_route(
+		'axismundi/v1',
+		'/actors/(?P<uuid>[0-9a-f-]{36})/followers',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_op_get_actor_followers',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ),
+			),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_op_register_actor_followers_route' );
+
 /** Serve one public local Actor Outbox without transport-plugin involvement. */
 function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 	$actor = axismundi_actors_get_by_uuid( strtolower( (string) $request['uuid'] ) );
@@ -145,6 +209,23 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 		return new WP_Error( 'ax_op_outbox_not_found', __( 'The Actor outbox was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
 	$collection = axismundi_op_transform_collection( new Axismundi_OP_Actor_Outbox( $actor ) );
+	if ( is_wp_error( $collection ) ) {
+		return $collection;
+	}
+	$response = rest_ensure_response( $collection );
+	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+	$response->header( 'Cache-Control', 'public, max-age=60' );
+	return $response;
+}
+
+/** Serve one public count-only Followers collection. */
+function axismundi_op_get_actor_followers( WP_REST_Request $request ) {
+	$actor  = axismundi_actors_get_by_uuid( strtolower( (string) $request['uuid'] ) );
+	$source = $actor instanceof Axismundi_Actor ? new Axismundi_OP_Actor_Followers( $actor ) : null;
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $source instanceof Axismundi_OP_Actor_Followers || ! axismundi_op_actor_followers_visible( $source ) ) {
+		return new WP_Error( 'ax_op_followers_not_found', __( 'The Actor followers collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
+	}
+	$collection = axismundi_op_transform_collection( $source );
 	if ( is_wp_error( $collection ) ) {
 		return $collection;
 	}

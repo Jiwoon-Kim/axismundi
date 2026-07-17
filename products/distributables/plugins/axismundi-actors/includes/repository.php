@@ -2031,6 +2031,39 @@ function axismundi_actors_set_local_policy( Axismundi_Actor $actor, string $axis
 }
 
 /**
+ * Set whether a local Actor's Follow collections may disclose their contents.
+ *
+ * The collection URI remains a stable address regardless of this policy; this
+ * value controls dereference-time disclosure only.
+ *
+ * @param Axismundi_Actor $actor      Local Actor.
+ * @param string|null     $visibility public|followers|private, or null for unreported.
+ * @param int|null        $viewer     Acting user id; defaults to the current user.
+ * @return bool|WP_Error
+ */
+function axismundi_actors_set_follow_collections_visibility( Axismundi_Actor $actor, ?string $visibility, ?int $viewer = null ) {
+	global $wpdb;
+	if ( ! $actor->is_local() || ( null !== $visibility && ! in_array( $visibility, array( 'public', 'followers', 'private' ), true ) ) ) {
+		return new WP_Error( 'ax_actors_follow_collections_visibility', __( 'That Follow collection visibility is invalid.', 'axismundi-actors' ) );
+	}
+	$viewer = null === $viewer ? get_current_user_id() : $viewer;
+	$owner  = $actor->get_local_user_id();
+	if ( $viewer <= 0 || ( ! user_can( $viewer, 'manage_options' ) && ( $viewer !== $owner || ! user_can( $viewer, 'edit_posts' ) ) ) ) {
+		return new WP_Error( 'ax_actors_policy_permission', __( 'You cannot change that Actor policy.', 'axismundi-actors' ) );
+	}
+	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Actors repository owns this custom table.
+		axismundi_actors_actors_table(),
+		array( 'follow_collections_visibility' => $visibility, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'identity_id' => $actor->get_identity_id() ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	);
+	return false === $done
+		? new WP_Error( 'ax_actors_policy_write', __( 'The Actor policy could not be saved.', 'axismundi-actors' ) )
+		: true;
+}
+
+/**
  * Idempotently seed the always-present site actor, and — only when the activating
  * user is a valid administrator — the site-owner Person actor. Never depends on a
  * specific account existing (docs/SPEC.md §4).

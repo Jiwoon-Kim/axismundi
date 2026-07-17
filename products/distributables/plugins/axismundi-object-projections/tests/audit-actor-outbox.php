@@ -30,6 +30,10 @@ try {
 		axismundi_actors_set_status( $ax_op_outbox_identity, 'public' );
 		$actor = axismundi_actors_get_for_user( $ax_op_outbox_user );
 	}
+	$visibility = $actor instanceof Axismundi_Actor
+		? axismundi_actors_set_follow_collections_visibility( $actor, 'public', $ax_op_outbox_user )
+		: new WP_Error( 'ax_op_fixture_actor' );
+	$actor = $actor instanceof Axismundi_Actor ? axismundi_actors_get_for_user( $ax_op_outbox_user ) : null;
 
 	$ax_op_outbox_activity = home_url( '/activities/' . wp_generate_uuid4() . '/' );
 	$recorded              = axismundi_act_record_activity(
@@ -54,6 +58,20 @@ try {
 	$response = axismundi_op_get_actor_outbox( $request );
 	$data     = $response instanceof WP_REST_Response ? $response->get_data() : array();
 	ax_op_outbox_assert( $ax_op_outbox_results, 'the public REST callback serves the same ActivityStreams collection', $response instanceof WP_REST_Response && $collection['id'] === $data['id'] && 'OrderedCollection' === $data['type'] );
+
+	$followers_source     = new Axismundi_OP_Actor_Followers( $actor );
+	$followers_collection = axismundi_op_transform_collection( $followers_source );
+	$followers_request    = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/followers' );
+	$followers_response = rest_do_request( $followers_request );
+	$followers_data     = $followers_response instanceof WP_REST_Response ? $followers_response->get_data() : array();
+	ax_op_outbox_assert( $ax_op_outbox_results, 'the Actors repository accepts the explicit public disclosure policy', true === $visibility && 'public' === $actor->get_follow_collections_visibility() );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'the Followers URI serves a count-only Collection without exposing members', is_array( $followers_collection ) && $followers_response instanceof WP_REST_Response && 'Collection' === $followers_data['type'] && 0 === $followers_data['totalItems'] && ! isset( $followers_data['items'], $followers_data['orderedItems'] ) );
+	$actor_document = axismundi_op_actor_transform( $actor );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'the Actor document advertises the same stable Followers URI', is_array( $followers_collection ) && isset( $actor_document['followers'], $followers_data['id'] ) && axismundi_op_actor_followers_url( $actor ) === $actor_document['followers'] && $followers_collection['id'] === $followers_data['id'] );
+
+	axismundi_actors_set_follow_collections_visibility( $actor, 'private', $ax_op_outbox_user );
+	$hidden_followers = rest_do_request( $followers_request );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'a non-public Followers policy fails closed without disclosing even the count', $hidden_followers instanceof WP_REST_Response && 404 === $hidden_followers->get_status() );
 
 	axismundi_actors_set_status( $actor->get_identity_id(), 'internal' );
 	$hidden = axismundi_op_get_actor_outbox( $request );

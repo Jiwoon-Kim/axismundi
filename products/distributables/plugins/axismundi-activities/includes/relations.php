@@ -344,6 +344,18 @@ function axismundi_act_get_followers( string $actor_uri, int $limit = 100 ) : ar
 	return axismundi_act_relation_actor_list( 'object', $actor_uri, $limit );
 }
 
+/** Count accepted follower edges without exposing their Actor URIs. */
+function axismundi_act_get_follower_count( string $actor_uri ) : int {
+	global $wpdb;
+	$actor_uri = axismundi_act_uri( $actor_uri );
+	if ( ! axismundi_act_relations_ready() || '' === $actor_uri ) {
+		return 0;
+	}
+	$table = axismundi_act_relations_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table; values prepared and exact URI checked alongside its hash.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE relation_type = 'follow' AND state = 'accepted' AND object_actor_uri_hash = %s AND object_actor_uri = %s", hash( 'sha256', $actor_uri ), $actor_uri ) );
+}
+
 /** Accepted followed Actor URIs for one Actor. */
 function axismundi_act_get_following( string $actor_uri, int $limit = 100 ) : array {
 	return axismundi_act_relation_actor_list( 'subject', $actor_uri, $limit );

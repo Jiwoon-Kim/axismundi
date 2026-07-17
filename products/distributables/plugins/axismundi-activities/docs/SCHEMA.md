@@ -1,6 +1,10 @@
 # Activity storage model
 
-> `wp_ax_activities` and `wp_ax_activity_relations` are implemented in DB v4.
+> `wp_ax_activities` and `wp_ax_activity_relations` are implemented, and share **one**
+> schema version — currently **DB v5**. There is no per-table version: `install()` verifies
+> both tables and records the single version only when both pass, so a partial migration
+> leaves the version behind and is retried. v5 added `instrument` to the ledger and left the
+> relation table unchanged; the version still advances for both.
 
 ## 1. `wp_ax_activities`
 

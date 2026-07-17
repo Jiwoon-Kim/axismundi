@@ -13,7 +13,7 @@ function axismundi_act_relations_table() : string {
 	return $wpdb->prefix . 'ax_activity_relations';
 }
 
-/** Whether the verified DB v4 repository is available for relation reads. */
+/** Whether the verified repository schema is available for relation reads. */
 function axismundi_act_relations_ready() : bool {
 	return defined( 'AXISMUNDI_ACT_DB_VERSION' )
 		&& AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' );

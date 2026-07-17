@@ -13,6 +13,11 @@ $ax_act_results       = array();
 $ax_act_uris          = array();
 $ax_act_remote_id     = 0;
 $ax_act_suffix        = strtolower( wp_generate_password( 8, false, false ) );
+// Declared up front so `finally` can always restore the prefix and drop the shadow tables,
+// even if the migration block throws while $wpdb->prefix is redirected.
+$ax_act_real_prefix   = $GLOBALS['wpdb']->prefix;
+$ax_act_real_version  = get_option( AXISMUNDI_ACT_DB_VERSION_OPTION );
+$ax_act_shadow_prefix = '';
 $ax_act_remote_uri    = 'https://example.com/users/ax_activity_' . $ax_act_suffix;
 $GLOBALS['ax_act_hook_uris'] = array();
 $GLOBALS['ax_act_http_requests'] = 0;
@@ -239,10 +244,95 @@ try {
 			&& $ax_act_first instanceof Axismundi_Activity
 			&& $ax_act_replay->get_uri() === $ax_act_first->get_uri()
 	);
+
+	// The real v4 -> v5 upgrade runs once per site, so reproduce it — but never on the shared
+	// ledger. Dropping the column there is unrecoverable in practice: nothing backfills
+	// instrument_uri from payload_json, so every pre-existing row would keep its payload and
+	// lose the normalized column and index forever. The installer is prefix-driven, so point
+	// it at a throwaway prefix instead and leave the real tables untouched.
+	$ax_act_shadow_prefix = $ax_act_real_prefix . 'axfix' . $ax_act_suffix . '_';
+	$wpdb->prefix         = $ax_act_shadow_prefix;
+	$ax_act_shadow        = axismundi_act_activities_table();
+	$ax_act_shadow_built  = axismundi_act_install();
+
+	// Take the shadow down to the v4 shape and seed a row that predates the column.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- throwaway fixture table.
+	$wpdb->query( "ALTER TABLE {$ax_act_shadow} DROP INDEX instrument_uri_hash, DROP COLUMN instrument_uri, DROP COLUMN instrument_uri_hash" );
+	$ax_act_seed_uri = 'https://remote.example/activities/v4-row-' . $ax_act_suffix;
+	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
+		$ax_act_shadow,
+		array(
+			'activity_uri' => $ax_act_seed_uri,
+			'activity_uri_hash' => hash( 'sha256', $ax_act_seed_uri ),
+			'activity_type' => 'Like',
+			'actor_uri' => $ax_act_remote_uri,
+			'actor_uri_hash' => hash( 'sha256', $ax_act_remote_uri ),
+			'object_uri' => $ax_act_quoted_uri,
+			'object_uri_hash' => hash( 'sha256', $ax_act_quoted_uri ),
+			'direction' => 'inbound',
+			'effective_status' => 'active',
+			'audience_json' => '{}',
+			'payload_json' => '{}',
+			'payload_hash' => hash( 'sha256', '{}' ),
+			'created_at' => current_time( 'mysql', true ),
+			'updated_at' => current_time( 'mysql', true ),
+		)
+	);
+	delete_option( AXISMUNDI_ACT_DB_VERSION_OPTION );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
+	$ax_act_v4_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$ax_act_shadow}" );
+
+	$ax_act_migrated = axismundi_act_install();
+
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
+	$ax_act_v5_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$ax_act_shadow}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
+	$ax_act_v5_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$ax_act_shadow} WHERE Key_name = 'instrument_uri_hash'", ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
+	$ax_act_seed_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$ax_act_shadow} WHERE activity_uri_hash = %s", hash( 'sha256', $ax_act_seed_uri ) ), ARRAY_A );
+
+	// Restored here so the assertions below read the real site; `finally` repeats it because
+	// a throw above must not leave the prefix redirected.
+	$wpdb->prefix = $ax_act_real_prefix;
+	update_option( AXISMUNDI_ACT_DB_VERSION_OPTION, $ax_act_real_version, false );
+
+	ax_act_assert(
+		$ax_act_results,
+		'a populated v4 ledger upgrades in place: the column and index appear, an existing row survives with a null instrument, and the version is recorded only afterwards',
+		$ax_act_shadow_built
+			&& ! in_array( 'instrument_uri', $ax_act_v4_columns, true )
+			&& $ax_act_migrated
+			&& in_array( 'instrument_uri', $ax_act_v5_columns, true )
+			&& in_array( 'instrument_uri_hash', $ax_act_v5_columns, true )
+			&& ! empty( $ax_act_v5_index )
+			&& is_array( $ax_act_seed_row )
+			&& null === $ax_act_seed_row['instrument_uri']
+			&& null === $ax_act_seed_row['instrument_uri_hash']
+	);
+
+	$ax_act_real_table = axismundi_act_activities_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name; real-table safety check.
+	$ax_act_real_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$ax_act_real_table}" );
+	ax_act_assert(
+		$ax_act_results,
+		'the migration test leaves the real ledger and its recorded version untouched',
+		$wpdb->prefix === $ax_act_real_prefix
+			&& AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION )
+			&& in_array( 'instrument_uri', $ax_act_real_columns, true )
+	);
 } finally {
 	remove_action( 'axismundi_act_activity_recorded', 'ax_act_observe_record' );
 	remove_filter( 'pre_http_request', 'ax_act_observe_http' );
 	global $wpdb;
+	// First, before any cleanup below resolves a table name: a throw inside the migration
+	// block would otherwise leave the prefix redirected and point every delete at the shadow.
+	$wpdb->prefix = $ax_act_real_prefix;
+	update_option( AXISMUNDI_ACT_DB_VERSION_OPTION, $ax_act_real_version, false );
+	if ( '' !== $ax_act_shadow_prefix ) {
+		foreach ( array( $ax_act_shadow_prefix . 'ax_activities', $ax_act_shadow_prefix . 'ax_activity_relations' ) as $ax_act_shadow_table ) {
+			$wpdb->query( "DROP TABLE IF EXISTS {$ax_act_shadow_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- fixture-owned throwaway table.
+		}
+	}
 	foreach ( array_unique( $ax_act_uris ) as $ax_act_uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $ax_act_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}

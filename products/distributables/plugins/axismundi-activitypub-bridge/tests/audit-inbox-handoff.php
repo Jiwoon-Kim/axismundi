@@ -11,6 +11,9 @@ global $wpdb;
 $ax_bridge_inbox_results   = array();
 $ax_bridge_inbox_user      = 0;
 $ax_bridge_inbox_actor_ids = array();
+$ax_bridge_inbox_host      = 'example.com';
+$ax_bridge_instance_before = axismundi_actors_get_instance( $ax_bridge_inbox_host );
+$ax_bridge_schedule_before = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
 $ax_bridge_inbox_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uuid4();
@@ -27,6 +30,13 @@ function ax_bridge_inbox_assert( array &$results, string $label, bool $condition
 }
 
 try {
+	// The bridge assertion needs a missing instance row. Preserve shared fixture state and
+	// restore it in `finally`; the remote Actor repository intentionally accepts only hosts
+	// that pass WordPress's public-network URL validation, so an invented hostname is not a
+	// valid isolation mechanism here.
+	wp_clear_scheduled_hook( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
+	$wpdb->delete( axismundi_actors_instances_table(), array( 'host_hash' => hash( 'sha256', $ax_bridge_inbox_host ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture setup; exact row is restored in finally.
+
 	$login = 'ax_bridge_' . strtolower( wp_generate_password( 8, false, false ) );
 	$ax_bridge_inbox_user = (int) wp_insert_user(
 		array(
@@ -43,7 +53,7 @@ try {
 		$local = axismundi_actors_get_for_user( $ax_bridge_inbox_user );
 	}
 
-	$remote_uri = 'https://example.com/users/' . wp_generate_uuid4();
+	$remote_uri = 'https://' . $ax_bridge_inbox_host . '/users/' . wp_generate_uuid4();
 	$remote     = axismundi_actors_upsert_remote(
 		array(
 			'uri'                => $remote_uri,
@@ -61,6 +71,11 @@ try {
 	if ( $remote instanceof Axismundi_Actor ) {
 		$ax_bridge_inbox_actor_ids[] = $remote->get_identity_id();
 	}
+	// Remote discovery has its own first-fill hook. Remove that event so this fixture proves
+	// the verified Follow handoff independently schedules a missing host rather than merely
+	// observing work queued by fixture setup.
+	wp_clear_scheduled_hook( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
+	$wpdb->delete( axismundi_actors_instances_table(), array( 'host_hash' => hash( 'sha256', $ax_bridge_inbox_host ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- restore shared state in finally after exercising the missing-host path.
 
 	$payload = array(
 		'id'     => $ax_bridge_inbox_activity,
@@ -80,8 +95,8 @@ try {
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox action composition returns 202', $response instanceof WP_REST_Response && 202 === $response->get_status() );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the shared Inbox records the full Activity once in the Axismundi ledger', $stored instanceof Axismundi_Activity && 'inbound' === $stored->get_direction() );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the inbound Follow auto-accepts through an outbound Activity when approval is not required', is_array( $relation ) && 'accepted' === (string) $relation['state'] && 'inbound' === (string) $relation['direction'] && $accept instanceof Axismundi_Activity && 'outbound' === $accept->get_direction() );
-	$instance_fill = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'verified Follow traffic queues one missing instance-cache fill without refreshing the Actor snapshot', false !== $instance_fill && null === axismundi_actors_get_instance( 'example.com' ) );
+	$instance_fill = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'verified Follow traffic queues one missing instance-cache fill without refreshing the Actor snapshot', false !== $instance_fill && null === axismundi_actors_get_instance( $ax_bridge_inbox_host ) );
 
 	$update_payload = array(
 		'id'     => $ax_bridge_update_activity,
@@ -163,10 +178,15 @@ try {
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_mention_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_update_activity ) ); // phpcs:ignore WordPress.DB
-	$instance_fill = wp_next_scheduled( 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
-	if ( false !== $instance_fill ) {
-		wp_unschedule_event( $instance_fill, 'axismundi_actors_cache_remote_instance', array( 'example.com' ) );
+	wp_clear_scheduled_hook( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
+	$wpdb->delete( axismundi_actors_instances_table(), array( 'host_hash' => hash( 'sha256', $ax_bridge_inbox_host ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- remove fixture state before restoring the saved row.
+	if ( is_array( $ax_bridge_instance_before ) ) {
+		$wpdb->replace( axismundi_actors_instances_table(), $ax_bridge_instance_before ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- restore the exact row, including identity and timestamps, captured before fixture setup.
 	}
+	if ( false !== $ax_bridge_schedule_before ) {
+		wp_schedule_single_event( max( time() + 1, (int) $ax_bridge_schedule_before ), 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
+	}
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the fixture restores the pre-existing instance cache row after exercising the missing-host path', $ax_bridge_instance_before === axismundi_actors_get_instance( $ax_bridge_inbox_host ) );
 	if ( '' !== $ax_bridge_accept_activity ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB
 		$spools = get_posts( array( 'post_type' => 'ap_outbox', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_activitypub_external_activity_uri', 'meta_value' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB.SlowDBQuery

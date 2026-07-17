@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/boost-button",
+	"version": "0.0.13",
+	"title": "Boost Button",
+	"category": "widgets",
+	"icon": "share-alt2",
+	"description": "Publicly announces the current projected object as the active Axismundi Actor.",
+	"textdomain": "axismundi-activities",
+	"attributes": { "objectUri": { "type": "string", "default": "" } },
+	"usesContext": [ "postId", "postType" ],
+	"supports": {
+		"html": false,
+		"interactivity": true,
+		"color": { "text": true, "background": true },
+		"spacing": { "margin": true, "padding": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php",
+	"viewScriptModule": "file:./view.js"
+}

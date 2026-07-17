@@ -20,7 +20,9 @@ Phase 2f Activity JSON-LD transport finalization     — shipped (0.0.11): canon
                                                        immutable ledger remains unchanged
 Phase 2g Object likes collection                     — shipped (0.0.12): count-only public
                                                        REST collection; no liker enumeration
-Phase 2h FEP-b2b8 Article representation             — shipped (0.0.13): positive HTML
+Phase 2h Object shares collection                    — shipped (0.0.21): count-only public
+                                                       REST collection and Announce gate
+Phase 2i FEP-b2b8 Article representation             — shipped (0.0.13): positive HTML
                                                        allowlist, summary/preview/image/Link
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.20
+Stable tag: 0.0.21
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -17,7 +17,7 @@ or Axismundi Actor into an ActivityStreams 2.0 object or collection, so its exis
 with JSON-LD under content negotiation. It owns representation only — a transformer registry,
 object/collection URIs, and the single JSON-LD renderer.
 
-It does not own an Activity ledger, Inbox writes, Follow/Like state, HTTP signatures, or delivery;
+It does not own an Activity ledger, Inbox writes, Follow/Like/Announce state, HTTP signatures, or delivery;
 those belong to Axismundi Activities and the ActivityPub transport boundary. It does own public
 read representations such as an Actor Outbox. It works standalone and treats
 the official ActivityPub plugin as optional (see docs/COMPATIBILITY.md).
@@ -40,6 +40,13 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.21 =
+* Advertise and serve count-only Object shares OrderedCollections backed by effective,
+  distinct-Actor Announce rows without exposing Actor or Activity membership.
+* Provide a fail-closed Announce visibility decision for public local projections and cached
+  remote observations that explicitly address ActivityStreams Public.
+* Resolve the original Object author for Announce delivery without a network request.
 
 = 0.0.20 =
 * List a folder's child folders alongside its media, so a remote peer can navigate a shared

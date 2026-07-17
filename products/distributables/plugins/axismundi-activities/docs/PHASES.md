@@ -84,10 +84,13 @@ objects. Object Projections publishes a count-only Object `likes` collection wit
 enumeration. The internal Actor
 `liked` query ships, but no public `liked` route is advertised until its privacy policy is set.
 
-## 0.0.13 — Phase 3b: Announce and Undo
+## 0.0.13 — Phase 3b: Announce and Undo (shipped)
 
-URI-referenced Announce state and matching Undo transitions, using the same immutable ledger
-and collection-query boundary.
+URI-referenced personal Announce state and matching Undo transitions, a nonce-protected Boost
+block, fail-closed Object Projections visibility decisions, interaction leases, and a
+count-only public Object `shares` collection. Axismundi keeps `shares` as an
+`OrderedCollection` for consistency with its existing `likes` representation; Mastodon uses
+an unordered `Collection`, and ActivityPub permits either. Group fan-out remains Phase 5 work.
 
 ## 0.0.14 — Phase 4: logical inbox/outbox membership
 

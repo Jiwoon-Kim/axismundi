@@ -1,7 +1,7 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 3a Activity repository, provenance-aware social relation state, Follow and
-> Like UI, Core Post Create lifecycle, and public collection queries implemented**. No public
+> Status: **Phase 3b Activity repository, provenance-aware social relation state, Follow,
+> Like, and personal Announce UI, Core Post Create lifecycle, and public collection queries implemented**. No public
 > Activity route or network behavior.
 
 ## 1. Purpose
@@ -55,6 +55,16 @@ Actor URI + Activity + Object URI
 15. `Undo.object` is the URI of the Like Activity being reversed, never the liked Object URI.
     Like counts and collection members are derived from effective ledger rows and distinct
     Actors; no second authoritative counter store exists.
+16. A personal Announce references the canonical Object URI. One Actor has at most one
+    effective Announce per Object, while Undo and a later re-Announce remain separate immutable
+    cycles. `Undo.object` is the Announce Activity URI and retains its delivery audience.
+17. Personal Announce is allowed only when an object-domain provider proves public or
+    quiet-public visibility without a network request. Unknown, followers-only, direct,
+    private, and local-only objects fail closed.
+18. A public personal Announce addresses ActivityStreams Public and copies the original
+    Object author to `cc`. This lets the origin server receive the Announce and apply the
+    ActivityPub `shares` side effect. Group fan-out Announce is a separate future workflow:
+    it may wrap an Activity and must not reuse this personal-boost API.
 
 ## 3. Supported activity vocabulary
 

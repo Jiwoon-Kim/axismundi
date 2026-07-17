@@ -145,3 +145,10 @@ references become Article `attachment`. Arbitrary external URLs in rendered HTML
 reverse-resolved into WordPress IDs. Each public Attachment advertises a `usedIn`
 OrderedCollection (an Axismundi extension term) containing only distinct public Article
 URIs. Private usage is never enumerated.
+
+Public Article and Attachment projections advertise count-only `likes` and `shares`
+collections backed by the Activities ledger. They intentionally do not enumerate Actor or
+Activity members. Both use `OrderedCollection` for Axismundi representation consistency;
+Mastodon's corresponding ActivityPub endpoints use unordered `Collection`, and the
+ActivityPub vocabulary permits either. Human-facing liker and booster lists are separate
+local UI/API projections, not members synchronized through S2S federation.

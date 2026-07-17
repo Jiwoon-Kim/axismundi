@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.28
+Stable tag: 0.0.29
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,16 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.29 =
+* Install the media archive routes whenever they are found missing from the rewrite table,
+  instead of once per version counter. The counter was consumed even on the branch that
+  deliberately skipped the flush in Core mode, so the record claimed rules were installed
+  that had never been written; and because a flush cannot report success, a rule that
+  failed to persist stayed missing until someone saved permalinks by hand.
+* A changed rule set no longer needs a manual counter bump to take effect. Retries are
+  limited to once an hour, Core-mode sites install nothing as before, and sites on plain
+  permalinks are untouched.
 
 = 0.0.28 =
 * Give every folder a permanent federation identity UUID, registered through the Axismundi

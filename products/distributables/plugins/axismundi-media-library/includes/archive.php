@@ -8,8 +8,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_MEDIA_REWRITE_VERSION = 2;
-
 /**
  * Rewrite expressions owned by this plugin.
  *
@@ -43,18 +41,67 @@ function axismundi_media_register_rewrite_rules() : void {
 add_action( 'init', 'axismundi_media_register_rewrite_rules', 9 );
 
 /**
- * Flush once after an upgrade changes this plugin's rewrite contract.
+ * Whether every rule this plugin owns is present in the persisted rewrite table.
+ *
+ * Registration and persistence are different things: add_rewrite_rule() only fills an
+ * in-memory array, while WordPress routes requests from the stored `rewrite_rules`
+ * option. This asks the question that matters — are the rules really there?
+ *
+ * The archive rules are a sufficient canary for the feed rules too: those are injected
+ * through the `rewrite_rules_array` filter (feeds.php), so any flush that stored these
+ * stored those in the same pass.
+ *
+ * @return bool
+ */
+function axismundi_media_rewrite_rules_installed() : bool {
+	$stored = get_option( 'rewrite_rules' );
+	if ( ! is_array( $stored ) ) {
+		return false;
+	}
+	foreach ( array_keys( axismundi_media_rewrite_rules() ) as $regex ) {
+		if ( ! isset( $stored[ $regex ] ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Install the routes whenever they are missing, rather than once per version counter.
+ *
+ * The counter was wrong twice over. It burned itself even on the branch that deliberately
+ * skipped the flush in Core mode, so the record said "installed" about rules that had
+ * never been written. And because flush_rewrite_rules() returns void, it could not tell a
+ * flush that persisted from one that did not, then never retried either way — the failure
+ * that left Object Projections 0.0.18 serving 404s on a live site until permalinks were
+ * saved by hand.
+ *
+ * Checking for the rules is self-healing for any cause, and a changed rule set no longer
+ * needs a manual counter bump: a table without the new rule reports as not installed.
  *
  * @return void
  */
 function axismundi_media_maybe_upgrade_rewrite_rules() : void {
-	if ( (int) get_option( 'ax_media_rewrite_version', 0 ) >= AXISMUNDI_MEDIA_REWRITE_VERSION ) {
+	// Core mode owns no rules by design. Leaving them out is the correct state here, not a
+	// missing install, and the mode-change hook flushes when that changes (mode.php).
+	if ( ! axismundi_media_is_independent() ) {
 		return;
 	}
-	if ( axismundi_media_is_independent() ) {
-		flush_rewrite_rules( false );
+	// Plain permalinks keep no rewrite table at all, so there is nothing to install and
+	// nothing to compare against; without this guard the check below would flush forever.
+	if ( '' === (string) get_option( 'permalink_structure', '' ) ) {
+		return;
 	}
-	update_option( 'ax_media_rewrite_version', AXISMUNDI_MEDIA_REWRITE_VERSION, false );
+	if ( axismundi_media_rewrite_rules_installed() ) {
+		return;
+	}
+	// Bound the retry so a rule that can never persist degrades to one flush an hour
+	// rather than one per request.
+	if ( get_transient( 'ax_media_rewrite_retry' ) ) {
+		return;
+	}
+	set_transient( 'ax_media_rewrite_retry', 1, HOUR_IN_SECONDS );
+	flush_rewrite_rules( false );
 }
 add_action( 'init', 'axismundi_media_maybe_upgrade_rewrite_rules', 11 );
 

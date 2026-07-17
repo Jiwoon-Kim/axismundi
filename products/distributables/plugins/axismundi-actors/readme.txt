@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.31
+Stable tag: 0.0.32
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,16 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.32 =
+* Install the actor, handle, WebFinger, and NodeInfo routes whenever they are found
+  missing from the rewrite table, instead of once per version counter. A counter records
+  an intent to flush and then burns itself whether or not the flush persisted, so a rule
+  that never reached the table stayed missing until someone saved permalinks by hand.
+  This is self-healing for any cause, including a ZIP-replace update that never fires the
+  activation hook and a host that discards the write.
+* A changed rule set no longer needs a manual counter bump to take effect. Retries are
+  limited to once an hour, and sites on plain permalinks are untouched.
 
 = 0.0.31 =
 * Open the identity registry to the non-actor kinds it already reserved (collection,

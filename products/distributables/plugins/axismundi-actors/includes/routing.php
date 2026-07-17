@@ -7,8 +7,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_REWRITE_VERSION = 3;
-
 /** @var Axismundi_Actor|null Actor resolved for the current front-end request. */
 $GLOBALS['axismundi_actors_current_actor'] = null;
 
@@ -46,13 +44,59 @@ function axismundi_actors_remove_rewrite_rules() : void {
 	}
 }
 
-/** @return void */
+/**
+ * Whether every rule this plugin owns is present in the persisted rewrite table.
+ *
+ * Registration and persistence are different things: add_rewrite_rule() only fills an
+ * in-memory array, while WordPress routes requests from the stored `rewrite_rules`
+ * option. This asks the question that matters — are the rules really there?
+ *
+ * @return bool
+ */
+function axismundi_actors_rewrite_rules_installed() : bool {
+	$stored = get_option( 'rewrite_rules' );
+	if ( ! is_array( $stored ) ) {
+		return false;
+	}
+	foreach ( array_keys( axismundi_actors_rewrite_rules() ) as $regex ) {
+		if ( ! isset( $stored[ $regex ] ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Install the routes whenever they are missing, rather than once per version counter.
+ *
+ * A version counter records an *intent* to flush and then burns itself whether or not the
+ * flush persisted — flush_rewrite_rules() returns void, so it can never tell. Once
+ * consumed it never retries, so a rule that failed to reach the table stays missing until
+ * someone saves permalinks by hand. That is not hypothetical: Object Projections shipped
+ * exactly this gate in 0.0.18 and every /media/folder/{uuid} 404'd on a live site.
+ *
+ * Checking for the rules is self-healing for any cause, and it also removes the reason
+ * this counter reached 3: a changed rule set no longer needs a manual bump to take
+ * effect, because a table without the new rule simply reports as not installed.
+ *
+ * @return void
+ */
 function axismundi_actors_maybe_upgrade_rewrite_rules() : void {
-	if ( (int) get_option( 'ax_actors_rewrite_version', 0 ) >= AXISMUNDI_ACTORS_REWRITE_VERSION ) {
+	// Plain permalinks keep no rewrite table at all, so there is nothing to install and
+	// nothing to compare against; without this guard the check below would flush forever.
+	if ( '' === (string) get_option( 'permalink_structure', '' ) ) {
 		return;
 	}
+	if ( axismundi_actors_rewrite_rules_installed() ) {
+		return;
+	}
+	// Bound the retry so a rule that can never persist degrades to one flush an hour
+	// rather than one per request.
+	if ( get_transient( 'ax_actors_rewrite_retry' ) ) {
+		return;
+	}
+	set_transient( 'ax_actors_rewrite_retry', 1, HOUR_IN_SECONDS );
 	flush_rewrite_rules( false );
-	update_option( 'ax_actors_rewrite_version', AXISMUNDI_ACTORS_REWRITE_VERSION, false );
 }
 add_action( 'init', 'axismundi_actors_maybe_upgrade_rewrite_rules', 11 );
 

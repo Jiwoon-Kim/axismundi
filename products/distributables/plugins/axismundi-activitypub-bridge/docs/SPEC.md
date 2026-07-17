@@ -29,7 +29,7 @@ repositories to supported network-facing extension points in the official Activi
    dormant and `activitypub_skip_inbox_storage` prevents duplicate CPT persistence only after
    Axismundi has successfully claimed the Activity.
 4. Outbound delivery stores a complete payload, URI-backed signing Actor descriptor, and explicit
-   recipient inboxes in the private `ax_ap_delivery` spool. `ap_outbox` is never reused.
+   recipient inboxes in `{prefix}ax_ap_deliveries`. `ap_outbox` and the Posts state machine are never reused.
 5. One post lifecycle has one publisher. Axismundi owns local lifecycle records while the
    official scheduler is dormant.
 6. Upstream patches are written independently under upstream-compatible MIT/GPLv2 terms;
@@ -54,10 +54,11 @@ recipients and remote Actors, records the full Activity through Activities, and 
 Inbox CPT storage. Unclaimed Activities retain the official Inbox snapshot as a recovery path.
 
 The official request-signing filter signs Bridge-owned `wp_safe_remote_post()` requests carrying
-transient `key_id` and `private_key` arguments. Private keys are never persisted by Bridge. A
-one-time migration copies experimental fork delivery jobs into `ax_ap_delivery`, links and
-preserves the source rows, clears old worker events, and removes pending source rows from the
-official Outbox scheduler's scan.
+transient `key_id` and `private_key` arguments. Private keys are never persisted by Bridge. The
+delivery table has one status field, a unique Activity URI hash, and an atomic conditional-update
+worker claim. A one-time migration copies experimental fork and provisional Bridge CPT jobs into
+the table, links and preserves the source rows, clears old worker events, and removes pending fork
+rows from the official Outbox scheduler's scan.
 
 Rewrite rules are rebuilt once after the ownership change so cached official routes cannot keep
 winning. Deactivation deletes only the rewrite cache, allowing the official plugin to rebuild its

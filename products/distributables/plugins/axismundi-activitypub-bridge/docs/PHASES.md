@@ -108,5 +108,6 @@ Actor Updates remain unclaimed and cannot create or erase cached identity state.
 
 Retire the patched module gate and external-delivery API. Compose existing official handler and
 scheduler registration seams, retain the official signature and REST validation surfaces, and
-move transport jobs out of `ap_outbox` into a private Bridge queue with bounded retry and a
-single-worker lock. Preserve legacy fork rows while linking them to migrated jobs.
+move transport jobs out of `ap_outbox` and the Posts state machine into a private Bridge table
+with bounded retry and an atomic single-worker claim. Preserve both legacy fork and provisional
+Bridge CPT rows while linking them to migrated jobs.

@@ -30,9 +30,10 @@ remains the authoritative ledger.
 = 0.0.16 =
 * Replace the broad patched module gate with behavior-level composition using the official
   handler and scheduler registration hooks; retain official request validation and Dispatcher.
-* Move external delivery rows out of `ap_outbox` into a private Bridge spool with bounded retry,
-  an atomic worker lock, and no persisted private key material.
-* Preserve and link legacy fork delivery rows during a one-time non-destructive migration.
+* Move external delivery rows out of `ap_outbox` and the Posts state machine into a private,
+  site-prefixed `ax_ap_deliveries` table with bounded retry and no persisted private key material.
+* Use a unique Activity URI identity and conditional-update worker claim to prevent duplicate delivery.
+* Preserve and link legacy fork and provisional Bridge CPT rows during a non-destructive migration.
 
 = 0.0.15 =
 * Queue a missing host instance-cache fill when verified Inbox traffic references an

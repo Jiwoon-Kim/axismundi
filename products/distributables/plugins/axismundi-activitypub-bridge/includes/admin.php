@@ -253,11 +253,11 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<?php if ( empty( $queue ) ) : ?><tr><td colspan="5"><?php esc_html_e( 'No transport jobs.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
 		<?php foreach ( $queue as $job ) : ?>
 			<tr>
-				<td><code><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_activity_uri', true ) ); ?></code></td>
-				<td><code><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_actor_uri', true ) ); ?></code></td>
-				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_status', true ) ); ?></td>
-				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_attempt', true ) ); ?></td>
-				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_last_error', true ) ); ?></td>
+				<td><code><?php echo esc_html( (string) $job->activity_uri ); ?></code></td>
+				<td><code><?php echo esc_html( (string) $job->actor_uri ); ?></code></td>
+				<td><?php echo esc_html( (string) $job->status ); ?></td>
+				<td><?php echo esc_html( (string) $job->attempt ); ?></td>
+				<td><?php echo esc_html( (string) $job->last_error ); ?></td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody></table>

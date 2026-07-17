@@ -189,6 +189,13 @@ try {
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'the fixture restores the pre-existing instance cache row after exercising the missing-host path', $ax_bridge_instance_before === axismundi_actors_get_instance( $ax_bridge_inbox_host ) );
 	if ( '' !== $ax_bridge_accept_activity ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB
+		$delivery_id = axismundi_activitypub_bridge_find_delivery( $ax_bridge_accept_activity );
+		if ( $delivery_id > 0 ) {
+			for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
+				wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $delivery_id, $attempt ) );
+			}
+			$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
+		}
 		$spools = get_posts( array( 'post_type' => 'ap_outbox', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_activitypub_external_activity_uri', 'meta_value' => $ax_bridge_accept_activity ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
 		foreach ( $spools as $spool_id ) {
 			wp_delete_post( (int) $spool_id, true );

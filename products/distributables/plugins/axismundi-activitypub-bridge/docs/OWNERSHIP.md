@@ -15,7 +15,7 @@
 | Verified Inbox action composition and transport mapping | ActivityPub Bridge | Default handlers dormant; CPT skipped only when claimed | The bridge consumes validated actions without losing unclaimed snapshots. |
 | Remote Actor snapshot maintenance | Actors through Bridge | Default Actor handlers dormant | Follow only queues a missing host cache; complete cached-only Update(Actor) documents may refresh snapshots under the official same-host signature trust boundary. |
 | Outbound Activity JSON-LD representation | Object Projections | N/A | Adds the canonical context without mutating the Activities ledger. |
-| Outbound spool, retry, and HTTP | ActivityPub Bridge | Private `ax_ap_delivery` jobs | Official `ap_outbox` invariants remain private to its Dispatcher and Scheduler. |
+| Outbound spool, retry, and HTTP | ActivityPub Bridge | Private `{prefix}ax_ap_deliveries` table | Official `ap_outbox` invariants remain private to its Dispatcher and Scheduler. |
 | Outbound HTTP signature | Official ActivityPub | Existing request-signing filter active | Bridge supplies a transient key reference and resolves private key material only while sending. |
 | Signature and REST validation code | Official ActivityPub | Active for Inbox routes | This is the retained S2S boundary. |
 | Official stored rows/options/cron | Official ActivityPub | Preserved | Compatibility mode is reversible and non-destructive. |

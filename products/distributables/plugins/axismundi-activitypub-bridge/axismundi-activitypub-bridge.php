@@ -30,6 +30,8 @@ if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
 }
 
+register_activation_hook( __FILE__, 'axismundi_activitypub_bridge_install_delivery_table' );
+
 /** Rebuild rewrite rules after dormant ownership callbacks have been applied. */
 function axismundi_activitypub_bridge_maybe_refresh_rewrites() : void {
 	if ( ! axismundi_activitypub_bridge_ready()

@@ -40,6 +40,15 @@ Object, and Accept/Reject/Undo to another Activity. `target_uri` is used by coll
 operations such as Add, Remove, and Move. Every supported concrete Activity requires an
 object URI; Add, Remove, and Move additionally require a target URI.
 
+### Planned Quote increment
+
+The FEP-044f increment adds nullable `instrument_uri` and `instrument_uri_hash` columns
+with an index on the hash. `instrument` is a general ActivityStreams member, not a Quote-
+specific alias: for `QuoteRequest`, `object_uri` is the quoted Object and `instrument_uri`
+is the independent Object that quotes it. `target_uri` must not be reused because its
+meaning remains collection destination/origin for Add, Remove, and Move. Hash lookup must
+continue to verify the full instrument URI.
+
 ## 2. `wp_ax_activity_relations`
 
 ```text
@@ -82,3 +91,36 @@ version is recorded only after both verified tables and their unique indexes exi
 Phase 4 may add `wp_ax_activity_memberships` for `inbox|outbox` membership keyed by owner
 Actor URI and Activity URI. It must not contain `notifications`: notification state belongs
 to the Notifications plugin.
+
+## 4. Planned `wp_ax_quote_authorizations`
+
+Quote consent state belongs to Activities and is separate from the observed fact that one
+Object quotes another. The planned table is:
+
+```text
+id                           BIGINT UNSIGNED PK
+local_uuid                   CHAR(36) NOT NULL UNIQUE
+authorization_uri            TEXT NOT NULL
+authorization_uri_hash       CHAR(64) NOT NULL UNIQUE
+request_activity_uri         TEXT NOT NULL
+request_activity_uri_hash    CHAR(64) NOT NULL
+quoted_object_uri            TEXT NOT NULL
+quoted_object_uri_hash       CHAR(64) NOT NULL
+quoting_object_uri           TEXT NOT NULL
+quoting_object_uri_hash      CHAR(64) NOT NULL
+requester_actor_uri          TEXT NOT NULL
+requester_actor_uri_hash     CHAR(64) NOT NULL
+author_actor_uri             TEXT NOT NULL
+author_actor_uri_hash        CHAR(64) NOT NULL
+status                       active | revoked
+created_at                   DATETIME NOT NULL
+revoked_at                   DATETIME NULL
+updated_at                   DATETIME NOT NULL
+```
+
+The canonical local identity is `/?ax_quote_authorization={uuid}`. Activities mints and
+stores that identity; Object Projections owns its dereferenceable JSON-LD representation.
+The row remains after revocation so a previously issued authorization URI never changes
+meaning or gets reassigned. Required lookups use URI hashes plus exact URI verification.
+At minimum, one QuoteRequest may issue at most one authorization, and one active
+authorization may exist for a quoting/quoted Object pair and author.

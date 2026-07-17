@@ -134,3 +134,44 @@ This table stores object metadata, not media bytes. Remote avatar/header and fut
 attachment binaries use the separate remote-blob substrate. A later Media Library shadow
 attachment points to the canonical remote object/blob; it does not convert this cache row
 into a second local identity.
+
+## 6. Planned object-relation projection
+
+Quote discovery needs an indexed relationship between the independent quoting Object and
+the quoted Object. Scanning bounded JSON payloads for every count is not a query contract,
+so a later schema increment adds a rebuildable `wp_ax_object_relations` projection. Its first
+and only accepted `relation_type` is `quote`; reply and other relation semantics remain
+deferred until their owning product contracts exist.
+
+```text
+id                       bigint unsigned PK
+relation_type            quote
+source_object_uri        text
+source_object_uri_hash   char(64)
+target_object_uri        text
+target_object_uri_hash   char(64)
+source_actor_uri         text nullable
+source_actor_uri_hash    char(64) nullable
+evidence_type            fep044f | misskey | legacy
+consent_status           approved | legacy_unverified | rejected | revoked | ambiguous
+created_at / updated_at  datetime
+UNIQUE(relation_type, source_object_uri_hash, target_object_uri_hash)
+```
+
+Hashes are accelerators only and every read/write verifies both full Object URIs. This table
+is a disposable index: remote rows can be rebuilt from `payload_json`, and future local Quote
+Objects are projected from their canonical local source. It is not an Activity ledger or the
+authority for QuoteAuthorization lifecycle; Activities owns that state.
+
+Normalization accepts the canonical FEP-044f `quote` relation and the compatibility forms
+`_misskey_quote`, `quoteUrl`, `quoteUri`, and the applicable FEP-e232 Link form. Multiple
+aliases that resolve to the same URI are one relation. Conflicting aliases are retained as
+`ambiguous`, must not silently choose a target, and are excluded from public counts.
+
+The public quote count is the number of distinct, publicly visible source Object URIs that
+quote one target Object. It is not a distinct-Actor count: one Actor may author several
+independent quote posts. Deleted/Tombstone, private, followers-only, direct, blocked, and
+ambiguous source Objects are excluded. Approved, legacy-unverified, rejected, and revoked
+relations remain countable while their public source Object exists because consent status
+does not rewrite the observed quote fact. No compatibility alias is treated as authorization
+evidence, and the projection never fabricates `quoteAuthorization`.

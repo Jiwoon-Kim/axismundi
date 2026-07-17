@@ -66,10 +66,40 @@ ActivityPub adapter must use the former to retain that plugin's per-post legacy 
 Public local `Axismundi_Actor` values project at their immutable Actor URI. Object
 Projections owns the Actor document and its identity/profile fields. The optional
 `axismundi_op_actor_transport_fields` filter accepts only protocol transport members
-(`inbox`, follow collections, `endpoints`, and `publicKey`); it cannot replace the Actor
-`id`, `type`, human profile `url`, or Outbox. The Actor transformer advertises the
+(`inbox`, `endpoints`, and `publicKey`); it cannot replace the Actor `id`, `type`, human
+profile `url`, Outbox, or representation-owned social collections. The Actor transformer advertises the
 representation-owned Outbox when Activities exposes its public query API. That Outbox is
 a separate collection transformer and never reads or mutates the Activity table directly.
+
+### Planned followers and Quote policy projection
+
+Object Projections owns the stable Actor `followers` URI and its representation, following
+the existing Outbox boundary: Activities supplies public-safe relation queries, while the
+Bridge is uninvolved. The first increment deliberately omits `following` and follower
+member enumeration.
+
+- The Actor document advertises a UUID-based `followers` URI.
+- When `follow_collections_visibility` permits public disclosure, dereferencing it returns
+  a count-only ActivityStreams `Collection` with `totalItems` and no member list.
+- When policy forbids disclosure, the endpoint exposes neither count nor members and fails
+  closed. Advertising an identity does not grant enumeration permission.
+- QuoteRequest approval checks the internal accepted-Follow relation. It does not fetch this
+  Collection, so a count-only or inaccessible representation does not weaken policy.
+
+The same increment adds the post setting `Who can quote this post?` with `anyone`,
+`followers`, and `me`, and projects it as FEP-044f `interactionPolicy.canQuote`. `followers`
+references the stable followers URI; `me` references the author Actor URI. These values are
+advisory policy declarations and never constitute proof that a particular quote was
+authorized.
+
+The renderer remains the sole JSON-LD context owner. FEP-044f quote and authorization terms,
+GoToSocial interaction-policy terms, and Misskey compatibility terms are added only through
+`axismundi_op_jsonld_context`; transformers must not emit a second `@context`.
+
+Object Projections also owns the dereferenceable representation of an Activities-issued
+`/?ax_quote_authorization={uuid}` identity. It emits the FEP-044f authorization members,
+including the quoting Object, quoted Object, and author Actor, without becoming the owner of
+authorization lifecycle state.
 
 ## First-party Media Library adapter (0.0.4)
 

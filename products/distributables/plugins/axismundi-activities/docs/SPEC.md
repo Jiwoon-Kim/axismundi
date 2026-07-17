@@ -65,12 +65,52 @@ Actor URI + Activity + Object URI
     Object author to `cc`. This lets the origin server receive the Announce and apply the
     ActivityPub `shares` side effect. Group fan-out Announce is a separate future workflow:
     it may wrap an Activity and must not reuse this personal-boost API.
+19. A Quote is an independent Object that references another Object. It is not an Announce,
+    reply, or standalone `Quote` Activity type. The observed quote relation and its consent
+    status are orthogonal: absence, rejection, or revocation of authorization does not erase
+    the fact that a quote Object exists.
+20. FEP-044f consent state belongs to Activities. Object Projections may index quote
+    relations for discovery and counting, but that rebuildable index is not authorization
+    truth. The official ActivityPub plugin supplies verified S2S transport only; its
+    WP_User/CPT-backed Quote handler remains disabled.
 
 ## 3. Supported activity vocabulary
 
 The initial vocabulary is Follow, Accept, Reject, Undo, Like, Announce, Create, Update,
 Delete, Add, Remove, Move, Join, Leave, Block, and Flag. Supporting a type in storage does
 not imply a transport or product workflow exists for it.
+
+### Planned FEP-044f vocabulary and state machine
+
+The Quote increment adds `QuoteRequest` to the stored vocabulary. A request uses:
+
+```text
+actor       requester Actor URI
+object      quoted Object URI
+instrument  independent quoting Object URI
+```
+
+Processing is idempotent by the remote Activity URI and by the local authorization issued
+for it. Policy evaluation uses the authoritative Activities Follow relation directly; it
+never fetches or enumerates the public `followers` Collection.
+
+```text
+anyone     requester is automatically accepted
+followers requester is accepted only when an accepted Follow relation exists
+me         only a self-quote is accepted
+```
+
+An accepted request records an outbound Accept whose `object` is the QuoteRequest URI and
+whose `result` is a stable QuoteAuthorization URI. A denied request records Reject with the
+QuoteRequest URI as its object. Re-delivery must return the existing decision rather than
+minting another Activity or authorization. A later policy change does not automatically
+revoke an authorization already issued under the earlier policy.
+
+A valid `Delete(QuoteAuthorization)` changes authorization state to `revoked`; it does not
+delete the row or the observed quote relation. When this site owns the quoting Object, the
+Delete must be forwarded to that Object's audience as required by FEP-044f. Activities
+records the lifecycle and audience; the Bridge delegates only signed delivery and retry to
+the official plugin.
 
 ## 4. Local identity
 

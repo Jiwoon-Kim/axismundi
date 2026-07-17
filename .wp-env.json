@@ -27,7 +27,7 @@
   ],
   "port": 8884,
   "mappings": {
-    ".htaccess": "./tools/wp-env/htaccess"
+    "wp-cli.yml": "./tools/wp-env/wp-cli.yml"
   },
   "config": {
     "WP_DEBUG": true,
@@ -35,6 +35,6 @@
     "SCRIPT_DEBUG": true
   },
   "lifecycleScripts": {
-    "afterStart": "wp-env run cli wp rewrite structure /%postname%/"
+    "afterStart": "wp-env run cli wp rewrite structure /%postname%/ && wp-env run cli wp rewrite flush --hard"
   }
 }

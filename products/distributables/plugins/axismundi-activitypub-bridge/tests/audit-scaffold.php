@@ -22,21 +22,15 @@ ax_bridge_assert( $ax_bridge_results, 'the bridge keeps automatic post lifecycle
 
 ax_bridge_assert( $ax_bridge_results, 'Object Projections owns canonical URL negotiation', axismundi_activitypub_bridge_projection_router( false ) );
 
-if ( function_exists( 'Activitypub\\is_module_enabled' ) ) {
-	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps signature support enabled', Activitypub\is_module_enabled( 'runtime.signature' ) );
-	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps the narrow external delivery worker enabled', Activitypub\is_module_enabled( 'runtime.external_delivery' ) );
-	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps public WebFinger discovery enabled', Activitypub\is_module_enabled( 'rest.webfinger' ) );
-	ax_bridge_assert( $ax_bridge_results, 'the upstream gate keeps Inbox routes enabled', Activitypub\is_module_enabled( 'rest.inbox' ) && Activitypub\is_module_enabled( 'rest.actors_inbox' ) );
-	ax_bridge_assert( $ax_bridge_results, 'the upstream gate disables presentation and domain modules', ! Activitypub\is_module_enabled( 'runtime.router' ) && ! Activitypub\is_module_enabled( 'runtime.handler' ) && ! Activitypub\is_module_enabled( 'rest.actors' ) );
-}
-
-ax_bridge_assert( $ax_bridge_results, 'the official Router initializer is dormant', false === has_action( 'init', array( 'Activitypub\\Router', 'init' ) ) );
-ax_bridge_assert( $ax_bridge_results, 'the official Scheduler initializer is dormant', false === has_action( 'init', array( 'Activitypub\\Scheduler', 'init' ) ) );
-ax_bridge_assert( $ax_bridge_results, 'the official Handler initializer is dormant', false === has_action( 'init', array( 'Activitypub\\Handler', 'init' ) ) );
-ax_bridge_assert( $ax_bridge_results, 'the official Dispatcher initializer is dormant', false === has_action( 'init', array( 'Activitypub\\Dispatcher', 'init' ) ) );
-ax_bridge_assert( $ax_bridge_results, 'the official post lifecycle callback was never registered', false === has_action( 'wp_after_insert_post', array( 'Activitypub\\Scheduler\\Post', 'triage' ) ) );
-ax_bridge_assert( $ax_bridge_results, 'the official Follow domain handler was never registered', false === has_action( 'activitypub_inbox_follow', array( 'Activitypub\\Handler\\Follow', 'handle_follow' ) ) );
-ax_bridge_assert( $ax_bridge_results, 'the official outbox processor was never registered', false === has_action( 'activitypub_process_outbox', array( 'Activitypub\\Dispatcher', 'process_outbox' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'official protocol and domain initializers remain available', 0 === has_action( 'init', array( 'Activitypub\\Scheduler', 'init' ) ) && 10 === has_action( 'init', array( 'Activitypub\\Handler', 'init' ) ) && 10 === has_action( 'init', array( 'Activitypub\\Dispatcher', 'init' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'the overlapping official presentation initializer alone is dormant', false === has_action( 'init', array( 'Activitypub\\Router', 'init' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'the superseded fork delivery initializer alone is dormant', false === has_action( 'init', array( 'Activitypub\\External_Delivery', 'init' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'official presentation callbacks yield to Object Projections', false === has_action( 'init', array( 'Activitypub\\Router', 'add_rewrite_rules' ) ) && false === has_filter( 'template_include', array( 'Activitypub\\Router', 'render_activitypub_template' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'the official post lifecycle callback is unhooked after scheduler registration', false === has_action( 'wp_after_insert_post', array( 'Activitypub\\Scheduler\\Post', 'triage' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'official local Actor lifecycle callbacks are unhooked without disabling remote cache maintenance', false === has_action( 'profile_update', array( 'Activitypub\\Scheduler\\Actor', 'user_update' ) ) && 10 === has_action( 'activitypub_update_remote_actors', array( 'Activitypub\\Scheduler', 'update_remote_actors' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'the official Follow domain handler is unhooked after handler registration', false === has_action( 'activitypub_inbox_follow', array( 'Activitypub\\Handler\\Follow', 'handle_follow' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'the official Dispatcher remains available for its own Outbox rows', 10 === has_action( 'activitypub_process_outbox', array( 'Activitypub\\Dispatcher', 'process_outbox' ) ) );
+ax_bridge_assert( $ax_bridge_results, 'the Bridge owns a distinct private delivery post type and worker hook', post_type_exists( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_POST_TYPE ) && 10 === has_action( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, 'axismundi_activitypub_bridge_process_delivery' ) );
 ax_bridge_assert( $ax_bridge_results, 'the bridge consumes the existing per-Actor Inbox action', 10 === has_action( 'activitypub_inbox', 'axismundi_activitypub_bridge_actor_inbox' ) );
 ax_bridge_assert( $ax_bridge_results, 'the bridge consumes the existing shared Inbox action', 10 === has_action( 'activitypub_inbox_shared', 'axismundi_activitypub_bridge_shared_inbox' ) );
 $ax_bridge_claim_probe = array( 'id' => 'https://example.com/activities/' . wp_generate_uuid4() );

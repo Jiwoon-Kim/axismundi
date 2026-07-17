@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.15
+Stable tag: 0.0.16
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -16,17 +16,23 @@ Connects Axismundi domain stores to supported S2S transport extension points in 
 This package is the only intended dependency boundary between Axismundi and the official
 ActivityPub plugin. Actors, Object Projections, and Activities remain independently usable.
 
-Version 0.0.14 uses the patched official plugin's module gate to retain Signature, REST Server,
-WebFinger, and Inbox routes. After the official permission callback verifies the HTTP signature,
-the bridge consumes the existing `activitypub_inbox` and `activitypub_inbox_shared` actions and
-records Activities addressed to public local Axismundi Actors. Official domain handlers remain
-dormant and `activitypub_skip_inbox_storage` prevents duplicate CPT persistence. No additional
-verified-envelope API is required.
+After the official permission callback verifies the HTTP signature, the bridge consumes the
+existing `activitypub_inbox` and `activitypub_inbox_shared` actions and records Activities
+addressed to public local Axismundi Actors. Official domain callbacks are unhooked through their
+registration seams, while `activitypub_skip_inbox_storage` prevents duplicate CPT persistence.
 
-Outbound Activities use the supported external-delivery API in the patched official plugin;
-the official spool remains transport-only and Axismundi Activities remains authoritative.
+Outbound Activities use a private Bridge-owned transport spool and WordPress HTTP requests.
+The official plugin's existing request-signing filter signs those requests; Axismundi Activities
+remains the authoritative ledger.
 
 == Changelog ==
+
+= 0.0.16 =
+* Replace the broad patched module gate with behavior-level composition using the official
+  handler and scheduler registration hooks; retain official request validation and Dispatcher.
+* Move external delivery rows out of `ap_outbox` into a private Bridge spool with bounded retry,
+  an atomic worker lock, and no persisted private key material.
+* Preserve and link legacy fork delivery rows during a one-time non-destructive migration.
 
 = 0.0.15 =
 * Queue a missing host instance-cache fill when verified Inbox traffic references an

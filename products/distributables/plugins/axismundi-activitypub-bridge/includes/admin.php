@@ -203,21 +203,13 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( esc_html__( 'You cannot inspect federation transport.', 'axismundi-activitypub-bridge' ), '', array( 'response' => 403 ) );
 	}
-	$queue = get_posts(
-		array(
-			'post_type'      => 'ap_outbox',
-			'post_status'    => array( 'pending', 'publish' ),
-			'posts_per_page' => 100,
-			'meta_key'       => '_activitypub_external_delivery', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-			'meta_value'     => 1, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-		)
-	);
+	$queue = axismundi_activitypub_bridge_delivery_jobs( 100 );
 	$legacy_report = axismundi_activitypub_bridge_requested_legacy_report();
 	$legacy_import = axismundi_activitypub_bridge_requested_legacy_import();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ); ?></h1>
-		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The official ActivityPub plugin verifies Inbox signatures and operates this outbound transport queue.', 'axismundi-activitypub-bridge' ); ?></p>
+		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The Bridge owns this outbound queue and reuses the official ActivityPub plugin only for HTTP signature generation and Inbox verification.', 'axismundi-activitypub-bridge' ); ?></p>
 
 		<?php axismundi_activitypub_bridge_render_legacy_scan( $legacy_report, $legacy_import ); ?>
 
@@ -261,11 +253,11 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<?php if ( empty( $queue ) ) : ?><tr><td colspan="5"><?php esc_html_e( 'No transport jobs.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
 		<?php foreach ( $queue as $job ) : ?>
 			<tr>
-				<td><code><?php echo esc_html( (string) get_post_meta( $job->ID, '_activitypub_external_activity_uri', true ) ); ?></code></td>
-				<td><code><?php echo esc_html( (string) get_post_meta( $job->ID, '_activitypub_external_actor_uri', true ) ); ?></code></td>
-				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_activitypub_external_status', true ) ); ?></td>
-				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_activitypub_external_attempt', true ) ); ?></td>
-				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_activitypub_external_last_error', true ) ); ?></td>
+				<td><code><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_activity_uri', true ) ); ?></code></td>
+				<td><code><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_actor_uri', true ) ); ?></code></td>
+				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_status', true ) ); ?></td>
+				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_attempt', true ) ); ?></td>
+				<td><?php echo esc_html( (string) get_post_meta( $job->ID, '_ax_ap_last_error', true ) ); ?></td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody></table>

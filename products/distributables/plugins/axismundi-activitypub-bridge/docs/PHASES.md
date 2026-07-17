@@ -103,3 +103,10 @@ host ledger is absent. Ordinary Follow/Accept traffic does not refresh Actor sna
 complete `Update(Actor)` may refresh an existing canonical Actor only when Activity.actor equals
 object.id and Actors' normal discovery validator accepts the whole object. Unknown or partial
 Actor Updates remain unclaimed and cannot create or erase cached identity state.
+
+## 0.0.16 — Behavior composition and Bridge-owned delivery queue
+
+Retire the patched module gate and external-delivery API. Compose existing official handler and
+scheduler registration seams, retain the official signature and REST validation surfaces, and
+move transport jobs out of `ap_outbox` into a private Bridge queue with bounded retry and a
+single-worker lock. Preserve legacy fork rows while linking them to migrated jobs.

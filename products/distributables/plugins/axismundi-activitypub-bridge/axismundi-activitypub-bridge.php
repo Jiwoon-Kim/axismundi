@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.0.15
+ * Version:           0.0.16
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -18,10 +18,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.15';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.16';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 
 require_once __DIR__ . '/includes/transport.php';
+require_once __DIR__ . '/includes/delivery.php';
+require_once __DIR__ . '/includes/composition.php';
 require_once __DIR__ . '/includes/migration-scan.php';
 require_once __DIR__ . '/includes/migration-import.php';
 if ( is_admin() ) {
@@ -72,46 +74,6 @@ function axismundi_activitypub_bridge_projection_router( bool $enabled ) : bool 
 	return axismundi_activitypub_bridge_ready() ? true : $enabled;
 }
 add_filter( 'axismundi_op_standalone_router_enabled', 'axismundi_activitypub_bridge_projection_router', 100 );
-
-/**
- * Select the minimum official modules retained by dormant transport mode.
- *
- * @param bool   $enabled Official default.
- * @param string $module Stable upstream module identifier.
- */
-function axismundi_activitypub_bridge_official_module_enabled( bool $enabled, string $module ) : bool {
-	if ( ! axismundi_activitypub_bridge_ready() ) {
-		return $enabled;
-	}
-
-	return in_array(
-		$module,
-		array( 'runtime.signature', 'runtime.external_delivery', 'rest.server', 'rest.webfinger', 'rest.inbox', 'rest.actors_inbox' ),
-		true
-	);
-}
-add_filter( 'activitypub_module_enabled', 'axismundi_activitypub_bridge_official_module_enabled', 100, 2 );
-
-/**
- * Put overlapping official modules into a dormant state before `init` runs.
- *
- * Signature and REST server classes remain active for verified Inbox actions.
- * No official database rows or scheduled events are deleted.
- */
-function axismundi_activitypub_bridge_disable_conflicting_modules() : void {
-	if ( ! axismundi_activitypub_bridge_ready() ) {
-		return;
-	}
-	if ( function_exists( 'Activitypub\\is_module_enabled' ) ) {
-		return;
-	}
-
-	remove_action( 'init', array( 'Activitypub\\Router', 'init' ) );
-	remove_action( 'init', array( 'Activitypub\\Scheduler', 'init' ), 0 );
-	remove_action( 'init', array( 'Activitypub\\Handler', 'init' ) );
-	remove_action( 'init', array( 'Activitypub\\Dispatcher', 'init' ) );
-}
-add_action( 'plugins_loaded', 'axismundi_activitypub_bridge_disable_conflicting_modules', 50 );
 
 /** Collect URI members from one ActivityStreams scalar, object, or list. */
 function axismundi_activitypub_bridge_member_uris( $value ) : array {

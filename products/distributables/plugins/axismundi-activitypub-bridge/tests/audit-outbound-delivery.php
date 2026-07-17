@@ -12,8 +12,11 @@ $ax_bridge_delivery_results   = array();
 $ax_bridge_delivery_user      = 0;
 $ax_bridge_delivery_actor_ids = array();
 $ax_bridge_delivery_spool     = 0;
+$ax_bridge_legacy_source      = 0;
+$ax_bridge_legacy_job         = 0;
 $ax_bridge_social_spools      = array();
 $ax_bridge_social_uris        = array();
+$ax_bridge_migration_before   = get_option( 'ax_activitypub_bridge_delivery_migration', null );
 $GLOBALS['ax_bridge_delivery_http_args'] = array();
 
 /** @param bool[] $results Results. */
@@ -84,11 +87,11 @@ try {
 	$follow_spools = '' !== $follow_uri
 		? get_posts(
 			array(
-				'post_type'      => 'ap_outbox',
+				'post_type'      => AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_POST_TYPE,
 				'post_status'    => array( 'pending', 'publish' ),
 				'posts_per_page' => -1,
 				'fields'         => 'ids',
-				'meta_key'       => '_activitypub_external_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => '_ax_ap_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value'     => $follow_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		)
@@ -109,11 +112,11 @@ try {
 	$accept_spools      = '' !== $accept_uri
 		? get_posts(
 			array(
-				'post_type'      => 'ap_outbox',
+				'post_type'      => AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_POST_TYPE,
 				'post_status'    => array( 'pending', 'publish' ),
 				'posts_per_page' => -1,
 				'fields'         => 'ids',
-				'meta_key'       => '_activitypub_external_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => '_ax_ap_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				'meta_value'     => $accept_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		)
@@ -126,8 +129,8 @@ try {
 
 	$payload = array( 'id' => $activity_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/liked', 'to' => array( $remote_uri ) );
 	$sender       = axismundi_activitypub_bridge_sender( $local );
-	$rejected     = Activitypub\deliver_activity( $payload, array_merge( $sender, array( 'private_key' => 'secret' ) ), array( 'https://example.com/inbox' ) );
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the transport API rejects caller-supplied private key material', is_wp_error( $rejected ) && 'activitypub_external_delivery_private_key' === $rejected->get_error_code() );
+	$rejected     = axismundi_activitypub_bridge_enqueue_delivery( $payload, array_merge( $sender, array( 'private_key' => 'secret' ) ), array( 'https://example.com/inbox' ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the Bridge spool rejects caller-supplied private key material', is_wp_error( $rejected ) && 'ax_bridge_delivery_private_key' === $rejected->get_error_code() );
 
 	$recorded = axismundi_act_record_activity( $payload, 'outbound' );
 	if ( is_wp_error( $recorded ) ) {
@@ -136,11 +139,11 @@ try {
 	}
 	$queued = get_posts(
 		array(
-			'post_type'      => 'ap_outbox',
+			'post_type'      => AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_POST_TYPE,
 			'post_status'    => array( 'pending', 'publish' ),
 			'posts_per_page' => 1,
 			'fields'         => 'ids',
-			'meta_key'       => '_activitypub_external_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'meta_key'       => '_ax_ap_activity_uri', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			'meta_value'     => $activity_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		)
 	);
@@ -149,26 +152,70 @@ try {
 	$all_meta = $stored ? get_post_meta( $stored->ID ) : array();
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a committed outbound Activity automatically queues one transport-only spool row', $recorded instanceof Axismundi_Activity && $stored instanceof WP_Post );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a non-public outbound Activity is excluded by the Activities public projection contract', $recorded instanceof Axismundi_Activity && null === axismundi_act_public_payload( $recorded ) );
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the official spool stores the complete payload and only a non-secret key reference', $stored instanceof WP_Post && false !== strpos( $stored->post_content, $activity_uri ) && false === strpos( wp_json_encode( $all_meta ), 'PRIVATE KEY' ) && $sender['private_key_ref'] === get_post_meta( $stored->ID, '_activitypub_external_private_key_ref', true ) );
-	$duplicate = Activitypub\deliver_activity( $payload, $sender, array( 'https://example.com/inbox' ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the Bridge-owned spool stores the complete payload and no private key material', $stored instanceof WP_Post && AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_POST_TYPE === $stored->post_type && false !== strpos( $stored->post_content, $activity_uri ) && false === strpos( wp_json_encode( $all_meta ), 'PRIVATE KEY' ) && false === strpos( wp_json_encode( $all_meta ), 'private_key' ) );
+	$stock_rows = get_posts( array( 'post_type' => 'ap_outbox', 'post_status' => array( 'pending', 'publish' ), 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_activitypub_external_activity_uri', 'meta_value' => $activity_uri ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the stock Outbox scheduler cannot discover a Bridge transport job', empty( $stock_rows ) );
+	$duplicate = axismundi_activitypub_bridge_enqueue_delivery( $payload, $sender, array( 'https://example.com/inbox' ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the Activity URI idempotently identifies one transport spool row', $ax_bridge_delivery_spool === $duplicate );
 
 	add_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99, 3 );
-	Activitypub\External_Delivery::process( $ax_bridge_delivery_spool, 1 );
+	axismundi_activitypub_bridge_process_delivery( $ax_bridge_delivery_spool, 1 );
 	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
 	$args = (array) ( $GLOBALS['ax_bridge_delivery_http_args']['args'] ?? array() );
 	$headers = array_change_key_case( (array) ( $args['headers'] ?? array() ), CASE_LOWER );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the worker resolves signing material only in memory and signs the HTTP request', isset( $headers['signature'] ) || isset( $headers['signature-input'] ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the worker releases its single-job lock after transport', '' === (string) get_post_meta( $ax_bridge_delivery_spool, '_ax_ap_worker_lock', true ) );
 	$ledger = axismundi_act_get( $activity_uri );
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a successful transport job is published as delivered without replacing the Axismundi ledger', 'delivered' === get_post_meta( $ax_bridge_delivery_spool, '_activitypub_external_status', true ) && 'publish' === get_post_status( $ax_bridge_delivery_spool ) && $recorded instanceof Axismundi_Activity && $ledger instanceof Axismundi_Activity && $recorded->get_id() === $ledger->get_id() );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a successful transport job is published as delivered without replacing the Axismundi ledger', 'delivered' === get_post_meta( $ax_bridge_delivery_spool, '_ax_ap_status', true ) && 'publish' === get_post_status( $ax_bridge_delivery_spool ) && $recorded instanceof Axismundi_Activity && $ledger instanceof Axismundi_Activity && $recorded->get_id() === $ledger->get_id() );
+
+	$legacy_uri = home_url( '/activities/legacy-' . wp_generate_uuid4() . '/' );
+	$legacy_payload = array( 'id' => $legacy_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/legacy', 'to' => array( $remote_uri ) );
+	$ax_bridge_legacy_source = wp_insert_post(
+		array(
+			'post_type'    => 'ap_outbox',
+			'post_status'  => 'pending',
+			'post_content' => wp_slash( wp_json_encode( $legacy_payload ) ),
+			'meta_input'   => array(
+				'_activitypub_external_delivery'        => 1,
+				'_activitypub_external_activity_uri'    => $legacy_uri,
+				'_activitypub_external_actor_uri'       => $local->get_uri(),
+				'_activitypub_external_key_id'          => $sender['key_id'],
+				'_activitypub_external_inboxes'         => wp_json_encode( array( 'https://example.com/inbox' ) ),
+				'_activitypub_external_pending_inboxes' => wp_json_encode( array( 'https://example.com/inbox' ) ),
+				'_activitypub_external_attempt'         => 0,
+				'_activitypub_external_status'          => 'queued',
+			),
+		),
+		true
+	);
+	delete_option( 'ax_activitypub_bridge_delivery_migration' );
+	axismundi_activitypub_bridge_migrate_external_outbox();
+	$ax_bridge_legacy_job = axismundi_activitypub_bridge_find_delivery( $legacy_uri );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'legacy external Outbox rows migrate without deletion and leave the stock pending scan', $ax_bridge_legacy_job > 0 && 'publish' === get_post_status( $ax_bridge_legacy_source ) && $ax_bridge_legacy_job === (int) get_post_meta( $ax_bridge_legacy_source, '_ax_ap_migrated_to', true ) && AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_POST_TYPE === get_post_type( $ax_bridge_legacy_job ) );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
 	if ( $ax_bridge_delivery_spool > 0 ) {
-		wp_clear_scheduled_hook( Activitypub\External_Delivery::PROCESS_HOOK, array( $ax_bridge_delivery_spool, 1 ) );
+		wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $ax_bridge_delivery_spool, 1 ) );
 		wp_delete_post( $ax_bridge_delivery_spool, true );
 	}
+	if ( $ax_bridge_legacy_job > 0 ) {
+		for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
+			wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $ax_bridge_legacy_job, $attempt ) );
+		}
+		wp_delete_post( $ax_bridge_legacy_job, true );
+	}
+	if ( $ax_bridge_legacy_source > 0 ) {
+		wp_delete_post( $ax_bridge_legacy_source, true );
+	}
+	if ( null === $ax_bridge_migration_before ) {
+		delete_option( 'ax_activitypub_bridge_delivery_migration' );
+	} else {
+		update_option( 'ax_activitypub_bridge_delivery_migration', $ax_bridge_migration_before, false );
+	}
 	foreach ( array_unique( $ax_bridge_social_spools ) as $social_spool ) {
-		wp_clear_scheduled_hook( Activitypub\External_Delivery::PROCESS_HOOK, array( $social_spool, 1 ) );
+		for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
+			wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $social_spool, $attempt ) );
+		}
 		wp_delete_post( $social_spool, true );
 	}
 	foreach ( array_filter( array_unique( $ax_bridge_social_uris ) ) as $social_uri ) {

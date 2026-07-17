@@ -1,7 +1,7 @@
 # Axismundi ActivityPub Bridge
 
-> Status: **0.0.12 existing Inbox action composition, Actor transport fields, official external
-> delivery spool integration, and provenance-aware legacy import implemented.**
+> Status: **0.0.16 existing Inbox action composition, Bridge-owned delivery spool, and
+> provenance-aware legacy import implemented.**
 
 ## Purpose
 
@@ -14,10 +14,10 @@ repositories to supported network-facing extension points in the official Activi
 - **Object Projections** owns Actor, object, and public collection JSON-LD representations,
   including the Actor Outbox GET route.
 - **Activities** owns the immutable Activity ledger and local social relationship state.
-- **This bridge** owns verified Inbox action composition, transport endpoint declarations, signing
-  identity mapping, and outbound queue handoff.
-- **The official ActivityPub plugin** owns HTTP signatures, verified Inbox parsing, shared
-  inbox delivery, queues, retry, and interoperability.
+- **This bridge** owns verified Inbox action composition, transport endpoint declarations,
+  recipient selection, its private delivery spool, retry, and HTTP dispatch.
+- **The official ActivityPub plugin** owns HTTP signature implementation, verified Inbox parsing,
+  and protocol interoperability.
 - **This bridge** translates between those APIs and owns no authoritative domain table.
 
 ## Invariants
@@ -28,8 +28,8 @@ repositories to supported network-facing extension points in the official Activi
    `activitypub_inbox_shared` action after permission validation. Official type handlers remain
    dormant and `activitypub_skip_inbox_storage` prevents duplicate CPT persistence only after
    Axismundi has successfully claimed the Activity.
-4. Outbound delivery submits a complete payload, URI-backed signing Actor descriptor, and
-   explicit recipient inboxes. The official spool never becomes an authoritative Activity row.
+4. Outbound delivery stores a complete payload, URI-backed signing Actor descriptor, and explicit
+   recipient inboxes in the private `ax_ap_delivery` spool. `ap_outbox` is never reused.
 5. One post lifecycle has one publisher. Axismundi owns local lifecycle records while the
    official scheduler is dormant.
 6. Upstream patches are written independently under upstream-compatible MIT/GPLv2 terms;
@@ -40,20 +40,24 @@ repositories to supported network-facing extension points in the official Activi
    separate operations. Import performs no fetch or source deletion; relation snapshots carry
    explicit provenance and can never override Activity-derived state.
 
-## Dormant transport mode
+## Runtime composition
 
-On the patched official plugin, the bridge uses `activitypub_module_enabled` to retain only
-Signature, the external-delivery worker, REST Server, WebFinger, and the two Inbox controllers. Stock versions fall back to suppressing
-the official Router, Scheduler, Handler, and Dispatcher initializers.
+The bridge uses the official `activitypub_register_handlers` and
+`activitypub_register_schedulers` seams to remove only callbacks whose domain state Axismundi
+owns. Handler, Scheduler, and Dispatcher initializers remain active. The overlapping Router has
+no equivalent registration seam, so its initializer alone is disabled while Object Projections
+owns public Actor and Object routes.
 Axismundi Actors owns profiles, WebFinger, and NodeInfo; Object Projections owns Actor/content
 negotiation; Activities owns local lifecycle records. Official signature and REST server code
 verifies Inbox requests before firing its existing Inbox actions. The bridge resolves local
 recipients and remote Actors, records the full Activity through Activities, and skips official
 Inbox CPT storage. Unclaimed Activities retain the official Inbox snapshot as a recovery path.
 
-This mode removes callbacks only. It never deletes official CPT rows, options, cron events, or
-queues. A later transport phase may re-enable the minimum required callbacks after an
-external-sender API is available.
+The official request-signing filter signs Bridge-owned `wp_safe_remote_post()` requests carrying
+transient `key_id` and `private_key` arguments. Private keys are never persisted by Bridge. A
+one-time migration copies experimental fork delivery jobs into `ax_ap_delivery`, links and
+preserves the source rows, clears old worker events, and removes pending source rows from the
+official Outbox scheduler's scan.
 
 Rewrite rules are rebuilt once after the ownership change so cached official routes cannot keep
 winning. Deactivation deletes only the rewrite cache, allowing the official plugin to rebuild its

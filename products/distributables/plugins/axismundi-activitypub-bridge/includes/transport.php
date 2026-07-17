@@ -23,11 +23,9 @@ function axismundi_activitypub_bridge_shared_inbox_url() : string {
 
 /** Non-secret descriptor for resolving one local Actor's signing key on demand. */
 function axismundi_activitypub_bridge_sender( Axismundi_Actor $actor ) : array {
-	$user_id = $actor->get_local_user_id();
 	return array(
-		'actor_uri'       => $actor->get_uri(),
-		'key_id'          => $actor->get_uri() . '#main-key',
-		'private_key_ref' => $user_id ? 'activitypub:user:' . $user_id : 'activitypub:application',
+		'actor_uri' => $actor->get_uri(),
+		'key_id'    => $actor->get_uri() . '#main-key',
 	);
 }
 
@@ -102,29 +100,6 @@ function axismundi_activitypub_bridge_webfinger_data( $data, string $resource ) 
 }
 add_filter( 'webfinger_data', 'axismundi_activitypub_bridge_webfinger_data', 100, 2 );
 
-/** Resolve private signing material only while the official worker is sending. */
-function axismundi_activitypub_bridge_resolve_signing_identity( $identity, array $descriptor ) {
-	if ( null !== $identity ) {
-		return $identity;
-	}
-	$actor = axismundi_actors_get_by_uri( (string) ( $descriptor['actor_uri'] ?? '' ) );
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
-		return null;
-	}
-	$expected = axismundi_activitypub_bridge_sender( $actor );
-	if ( $expected !== $descriptor ) {
-		return null;
-	}
-	$user_id = $actor->get_local_user_id();
-	$key     = $user_id
-		? Activitypub\Collection\Actors::get_private_key( $user_id )
-		: Activitypub\Application::get_private_key();
-	return is_string( $key ) && '' !== $key
-		? array( 'actor_uri' => $actor->get_uri(), 'key_id' => $expected['key_id'], 'private_key' => $key )
-		: null;
-}
-add_filter( 'activitypub_resolve_external_signing_identity', 'axismundi_activitypub_bridge_resolve_signing_identity', 10, 2 );
-
 /** Resolve one cached remote Actor's best Inbox endpoint. */
 function axismundi_activitypub_bridge_remote_inbox( string $actor_uri ) : string {
 	$actor = axismundi_actors_get_by_uri( $actor_uri );
@@ -159,7 +134,7 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 
 /** Queue transport after an outbound Axismundi Activity commits. */
 function axismundi_activitypub_bridge_queue_outbound( Axismundi_Activity $activity ) : void {
-	if ( ! axismundi_activitypub_bridge_ready() || 'outbound' !== $activity->get_direction() || ! function_exists( 'Activitypub\\deliver_activity' ) ) {
+	if ( ! axismundi_activitypub_bridge_ready() || 'outbound' !== $activity->get_direction() ) {
 		return;
 	}
 	$actor = axismundi_actors_get_by_uri( $activity->get_actor_uri() );
@@ -176,6 +151,6 @@ function axismundi_activitypub_bridge_queue_outbound( Axismundi_Activity $activi
 	if ( is_wp_error( $payload ) ) {
 		return;
 	}
-	Activitypub\deliver_activity( $payload, axismundi_activitypub_bridge_sender( $actor ), $inboxes );
+	axismundi_activitypub_bridge_enqueue_delivery( $payload, axismundi_activitypub_bridge_sender( $actor ), $inboxes );
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_activitypub_bridge_queue_outbound' );

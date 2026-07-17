@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.14
+Stable tag: 0.0.15
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -32,6 +32,20 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.15 =
+* DB v6 — add the FEP-044f QuoteAuthorization store. Consent state belongs to this ledger and
+  is deliberately separate from the observed fact that one Object quotes another: withholding,
+  rejecting, or revoking an authorization never erases a quote that exists.
+* Mint each authorization its own immutable identity at /?ax_quote_authorization={uuid}. A
+  query URI rather than a path, so proving consent never depends on permalink state. Object
+  Projections owns the representation and route.
+* One QuoteRequest issues at most one authorization: a re-delivered request returns the
+  decision already made instead of minting a second identity for the same consent.
+* Revocation withdraws the authorization and keeps the row, so a URI a peer already holds
+  resolves to "revoked" rather than to nothing, and its UUID is never reassigned. Replaying
+  the original request does not re-grant it; a new grant needs a new request.
+* Verify the table, its unique indexes, and the engine before recording the schema version.
 
 = 0.0.14 =
 * DB v5 — store the ActivityStreams `instrument` member as an indexed URI and hash. This is

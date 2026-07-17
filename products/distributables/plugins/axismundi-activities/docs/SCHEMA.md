@@ -1,10 +1,11 @@
 # Activity storage model
 
-> `wp_ax_activities` and `wp_ax_activity_relations` are implemented, and share **one**
-> schema version — currently **DB v5**. There is no per-table version: `install()` verifies
-> both tables and records the single version only when both pass, so a partial migration
-> leaves the version behind and is retried. v5 added `instrument` to the ledger and left the
-> relation table unchanged; the version still advances for both.
+> `wp_ax_activities`, `wp_ax_activity_relations`, and `wp_ax_quote_authorizations` are
+> implemented and share **one** schema version — currently **DB v6**. There is no per-table
+> version: `install()` verifies every table and records the single version only when all of
+> them pass, so a partial migration leaves the version behind and is retried. v5 added
+> `instrument` to the ledger; v6 added the QuoteAuthorization table. A change to one table
+> still advances the version for all.
 
 ## 1. `wp_ax_activities`
 
@@ -106,10 +107,10 @@ Phase 4 may add `wp_ax_activity_memberships` for `inbox|outbox` membership keyed
 Actor URI and Activity URI. It must not contain `notifications`: notification state belongs
 to the Notifications plugin.
 
-## 4. Planned `wp_ax_quote_authorizations`
+## 4. `wp_ax_quote_authorizations` (DB v6)
 
 Quote consent state belongs to Activities and is separate from the observed fact that one
-Object quotes another. The planned table is:
+Object quotes another. The table is:
 
 ```text
 id                           BIGINT UNSIGNED PK
@@ -127,14 +128,47 @@ requester_actor_uri_hash     CHAR(64) NOT NULL
 author_actor_uri             TEXT NOT NULL
 author_actor_uri_hash        CHAR(64) NOT NULL
 status                       active | revoked
+standing_key                 CHAR(64) NULL UNIQUE
 created_at                   DATETIME NOT NULL
 revoked_at                   DATETIME NULL
 updated_at                   DATETIME NOT NULL
 ```
 
-The canonical local identity is `/?ax_quote_authorization={uuid}`. Activities mints and
-stores that identity; Object Projections owns its dereferenceable JSON-LD representation.
+The canonical local identity is `/?ax_quote_authorization={uuid}`. It is a query URI rather
+than a path so that consent resolves without a rewrite rule: proving a quote was authorized
+must not depend on permalink state. Activities mints and stores that identity; Object
+Projections owns its dereferenceable JSON-LD representation and the route.
+
 The row remains after revocation so a previously issued authorization URI never changes
-meaning or gets reassigned. Required lookups use URI hashes plus exact URI verification.
-At minimum, one QuoteRequest may issue at most one authorization, and one active
-authorization may exist for a quoting/quoted Object pair and author.
+meaning or gets reassigned. `status` moves `active → revoked` and never back: a withdrawn
+consent is not re-granted by replaying its original request, because that request already
+holds its decision. A new grant needs a new QuoteRequest, which mints a new identity.
+
+Both uniqueness rules are enforced by the database, not by a read-then-write check:
+
+- **One QuoteRequest issues at most one authorization.** Unique `request_activity_uri_hash`.
+  A re-delivered request returns the decision already made rather than minting a second
+  identity for the same consent.
+- **One standing authorization per quoting/quoted/author triple.** `standing_key` is the
+  hash of that triple, held only while the authorization stands and cleared on revocation,
+  under a unique index. A composite `(triple, status)` index cannot express this: it would
+  also forbid the second honest revocation. Nulling the key instead lets revoked rows for
+  the same triple accumulate, because SQL treats each NULL as distinct. A different request
+  for the same triple therefore returns the standing authorization instead of issuing a
+  second one.
+
+Identity resolution is exact. A candidate URI must match this site's origin **and path**,
+carry exactly the one `ax_quote_authorization` argument, and have no credentials or
+fragment. Matching the host alone would accept `/anything/?ax_quote_authorization={uuid}`,
+which is a URI this site never issued; accepting extra arguments would let one
+authorization be referenced under unboundedly many spellings. Lookups use URI hashes plus
+exact URI verification, so a foreign URI carrying a known UUID resolves nothing.
+
+Revocation is a conditional transition on `status = 'active'`, so exactly one caller
+withdraws an authorization and only that caller's `axismundi_act_quote_authorization_revoked`
+fires. A caller that loses the race receives the current row without announcing a withdrawal
+it did not perform — Delete forwarding hangs on that hook, and forwarding twice is a
+protocol error.
+
+Revocation says nothing about whether the quote Object still exists. That is the
+projection's observation, not this store's decision (SPEC §19).

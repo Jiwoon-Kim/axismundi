@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '5';
+const AXISMUNDI_ACT_DB_VERSION        = '6';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -101,7 +101,8 @@ function axismundi_act_install() : bool {
 		&& 0 === (int) $source_index[0]['Non_unique']
 		&& 'InnoDB' === $engine;
 	$relations_valid = function_exists( 'axismundi_act_install_relations' ) && axismundi_act_install_relations();
-	$valid           = $base_valid && $relations_valid;
+	$quotes_valid    = function_exists( 'axismundi_act_install_quote_authorizations' ) && axismundi_act_install_quote_authorizations();
+	$valid           = $base_valid && $relations_valid && $quotes_valid;
 	if ( $valid ) {
 		update_option( AXISMUNDI_ACT_DB_VERSION_OPTION, AXISMUNDI_ACT_DB_VERSION, false );
 	}

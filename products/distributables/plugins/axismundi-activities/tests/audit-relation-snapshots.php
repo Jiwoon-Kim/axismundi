@@ -40,7 +40,9 @@ try {
 	$table     = axismundi_act_relations_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture schema inspection.
 	$columns = (array) $wpdb->get_results( "SHOW COLUMNS FROM {$table}", OBJECT_K );
-	ax_snap_assert( $ax_snap_results, 'DB v4 adds provenance, nullable initiating Activity, and legacy_pending width', $installed && '4' === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && isset( $columns['evidence_type'], $columns['evidence_ref'] ) && 'YES' === $columns['initiating_activity_uri']->Null && 'varchar(16)' === strtolower( $columns['state']->Type ) );
+	// Asserts the relation schema contract and that install() stored the version it claims,
+	// not a literal number: pinning the digit here breaks on every unrelated ledger bump.
+	ax_snap_assert( $ax_snap_results, 'the relation schema carries provenance, a nullable initiating Activity, and legacy_pending width once install records its version', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && isset( $columns['evidence_type'], $columns['evidence_ref'] ) && 'YES' === $columns['initiating_activity_uri']->Null && 'varchar(16)' === strtolower( $columns['state']->Type ) );
 
 	$site    = axismundi_actors_get_site_actor();
 	$remote1 = ax_snap_remote( $ax_snap_suffix . '_one' );

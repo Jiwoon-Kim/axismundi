@@ -156,6 +156,89 @@ try {
 	ax_act_assert( $ax_act_results, 'an out-of-order Undo is reconciled when its same-Actor target arrives', $early_undo instanceof Axismundi_Activity && $future_like instanceof Axismundi_Activity && 'undone' === $future_like->get_effective_status() );
 
 	ax_act_assert( $ax_act_results, 'recorded hooks observe committed rows exactly once and repository operations perform no HTTP', 6 === count( $GLOBALS['ax_act_hook_uris'] ) && 0 === $GLOBALS['ax_act_http_requests'] && count( $GLOBALS['ax_act_hook_uris'] ) === count( array_filter( $GLOBALS['ax_act_hook_uris'], static fn( string $uri ) : bool => axismundi_act_get( $uri ) instanceof Axismundi_Activity ) ) );
+
+	// v5 `instrument`. Deliberately after the hook-count assertion above, which counts every
+	// Activity this fixture records.
+	$ax_act_instrument_uri = 'https://remote.example/users/bob/statuses/' . $ax_act_suffix;
+	$ax_act_quoted_uri     = 'https://remote.example/users/alice/statuses/' . $ax_act_suffix;
+	// FEP-044f sends the quoting Object embedded, not as a bare URI.
+	$ax_act_embedded = axismundi_act_normalize(
+		array(
+			'type'       => 'Like',
+			'actor'      => $site_actor->get_uri(),
+			'object'     => $ax_act_quoted_uri,
+			'instrument' => array( 'type' => 'Note', 'id' => $ax_act_instrument_uri, 'quote' => $ax_act_quoted_uri ),
+		),
+		'outbound'
+	);
+	ax_act_assert(
+		$ax_act_results,
+		'an embedded instrument is reduced to its id and hashed, distinct from the object it accompanies',
+		is_array( $ax_act_instrument = $ax_act_embedded )
+			&& $ax_act_instrument_uri === ( $ax_act_embedded['instrument_uri'] ?? '' )
+			&& hash( 'sha256', $ax_act_instrument_uri ) === ( $ax_act_embedded['instrument_uri_hash'] ?? '' )
+			&& $ax_act_quoted_uri === ( $ax_act_embedded['object_uri'] ?? '' )
+	);
+
+	$ax_act_no_instrument = axismundi_act_normalize( array( 'type' => 'Like', 'actor' => $site_actor->get_uri(), 'object' => $ax_act_quoted_uri ), 'outbound' );
+	ax_act_assert(
+		$ax_act_results,
+		'an Activity without an instrument stores null rather than an empty string',
+		is_array( $ax_act_no_instrument )
+			&& null === $ax_act_no_instrument['instrument_uri']
+			&& null === $ax_act_no_instrument['instrument_uri_hash']
+	);
+
+	$ax_act_with_instrument = axismundi_act_record_activity(
+		array(
+			'type'       => 'Like',
+			'actor'      => $site_actor->get_uri(),
+			'object'     => $ax_act_quoted_uri,
+			'instrument' => array( 'type' => 'Note', 'id' => $ax_act_instrument_uri ),
+		),
+		'outbound'
+	);
+	if ( $ax_act_with_instrument instanceof Axismundi_Activity ) {
+		$ax_act_uris[] = $ax_act_with_instrument->get_uri();
+	}
+	$ax_act_reread = $ax_act_with_instrument instanceof Axismundi_Activity ? axismundi_act_get( $ax_act_with_instrument->get_uri() ) : null;
+	ax_act_assert(
+		$ax_act_results,
+		'instrument survives the write and rehydration, and the payload keeps the embedded original',
+		$ax_act_reread instanceof Axismundi_Activity
+			&& $ax_act_instrument_uri === $ax_act_reread->get_instrument_uri()
+			&& $ax_act_instrument_uri === ( $ax_act_reread->get_payload()['instrument']['id'] ?? '' )
+	);
+
+	// A source event that resolves to a different instrument is a different Activity.
+	$ax_act_source = 'fixture-instrument:' . $ax_act_suffix;
+	$ax_act_first  = axismundi_act_record_source_activity(
+		array( 'type' => 'Like', 'actor' => $site_actor->get_uri(), 'object' => $ax_act_quoted_uri, 'instrument' => $ax_act_instrument_uri ),
+		'outbound',
+		$ax_act_source
+	);
+	if ( $ax_act_first instanceof Axismundi_Activity ) {
+		$ax_act_uris[] = $ax_act_first->get_uri();
+	}
+	$ax_act_conflict = axismundi_act_record_source_activity(
+		array( 'type' => 'Like', 'actor' => $site_actor->get_uri(), 'object' => $ax_act_quoted_uri, 'instrument' => $ax_act_instrument_uri . '-other' ),
+		'outbound',
+		$ax_act_source
+	);
+	$ax_act_replay = axismundi_act_record_source_activity(
+		array( 'type' => 'Like', 'actor' => $site_actor->get_uri(), 'object' => $ax_act_quoted_uri, 'instrument' => $ax_act_instrument_uri ),
+		'outbound',
+		$ax_act_source
+	);
+	ax_act_assert(
+		$ax_act_results,
+		'one source event cannot silently change its instrument, while an identical replay stays idempotent',
+		is_wp_error( $ax_act_conflict )
+			&& 'ax_act_source_conflict' === $ax_act_conflict->get_error_code()
+			&& $ax_act_replay instanceof Axismundi_Activity
+			&& $ax_act_first instanceof Axismundi_Activity
+			&& $ax_act_replay->get_uri() === $ax_act_first->get_uri()
+	);
 } finally {
 	remove_action( 'axismundi_act_activity_recorded', 'ax_act_observe_record' );
 	remove_filter( 'pre_http_request', 'ax_act_observe_http' );

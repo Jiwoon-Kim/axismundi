@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.13
+Stable tag: 0.0.14
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -32,6 +32,17 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.14 =
+* DB v5 — store the ActivityStreams `instrument` member as an indexed URI and hash. This is
+  a general member rather than a Quote alias: a FEP-044f QuoteRequest names the quoted
+  Object in `object` and the independent Object doing the quoting in `instrument`, and
+  `target` keeps its collection destination meaning for Add, Remove, and Move.
+* Reduce an embedded instrument to its canonical id while keeping the original in the
+  immutable payload, and treat a source event whose replay names a different instrument as a
+  conflict rather than the same Activity.
+* Verify the new column and index before recording the schema version, so a site whose
+  migration failed retries instead of recording a version it never reached.
 
 = 0.0.13 =
 * Add idempotent personal Announce and matching Undo cycles. Announce references the canonical

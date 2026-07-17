@@ -16,6 +16,8 @@ object_uri            TEXT NULL
 object_uri_hash       CHAR(64) NULL
 target_uri            TEXT NULL
 target_uri_hash       CHAR(64) NULL
+instrument_uri        TEXT NULL
+instrument_uri_hash   CHAR(64) NULL
 direction             inbound | outbound | local
 effective_status      active | undone
 audience_json         LONGTEXT NOT NULL
@@ -40,14 +42,22 @@ Object, and Accept/Reject/Undo to another Activity. `target_uri` is used by coll
 operations such as Add, Remove, and Move. Every supported concrete Activity requires an
 object URI; Add, Remove, and Move additionally require a target URI.
 
-### Planned Quote increment
+### `instrument` (DB v5)
 
-The FEP-044f increment adds nullable `instrument_uri` and `instrument_uri_hash` columns
-with an index on the hash. `instrument` is a general ActivityStreams member, not a Quote-
-specific alias: for `QuoteRequest`, `object_uri` is the quoted Object and `instrument_uri`
-is the independent Object that quotes it. `target_uri` must not be reused because its
-meaning remains collection destination/origin for Add, Remove, and Move. Hash lookup must
-continue to verify the full instrument URI.
+Nullable `instrument_uri` / `instrument_uri_hash`, indexed on the hash. `instrument` is a
+general ActivityStreams member, not a Quote-specific alias: for `QuoteRequest`, `object_uri`
+is the quoted Object and `instrument_uri` is the independent Object that quotes it.
+`target_uri` is not reused because its meaning remains collection destination/origin for
+Add, Remove, and Move. Hash lookup verifies the full instrument URI.
+
+The member is normalized whenever present and no type requires it, so the column stays
+general. FEP-044f sends the quoting Object embedded rather than as a bare URI; normalization
+reduces it to its `id` while `payload_json` keeps the original untouched. A source event
+whose replay resolves to a different instrument is a conflict, not the same Activity.
+
+Install verifies both columns and the index **before** storing the version. A site that
+recorded v5 while dbDelta failed to add the column would never retry, and every
+QuoteRequest would silently lose its instrument.
 
 ## 2. `wp_ax_activity_relations`
 

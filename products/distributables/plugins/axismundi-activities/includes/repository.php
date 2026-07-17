@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '4';
+const AXISMUNDI_ACT_DB_VERSION        = '5';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -37,6 +37,8 @@ function axismundi_act_install() : bool {
 			object_uri_hash char(64) DEFAULT NULL,
 			target_uri text DEFAULT NULL,
 			target_uri_hash char(64) DEFAULT NULL,
+			instrument_uri text DEFAULT NULL,
+			instrument_uri_hash char(64) DEFAULT NULL,
 			source_event_key text DEFAULT NULL,
 			source_event_hash char(64) DEFAULT NULL,
 			direction varchar(8) NOT NULL,
@@ -55,6 +57,7 @@ function axismundi_act_install() : bool {
 			KEY actor_uri_hash (actor_uri_hash),
 			KEY object_uri_hash (object_uri_hash),
 			KEY target_uri_hash (target_uri_hash),
+			KEY instrument_uri_hash (instrument_uri_hash),
 			KEY direction_status (direction, effective_status)
 		) ENGINE=InnoDB {$charset};"
 	);
@@ -67,6 +70,8 @@ function axismundi_act_install() : bool {
 	$uuid_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'local_uuid'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom index verification.
 	$source_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'source_event_hash'", ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom index verification.
+	$instrument_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'instrument_uri_hash'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table engine verification.
 	$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table ) );
 	if ( 'InnoDB' !== $engine && ! empty( $columns ) ) {
@@ -81,6 +86,12 @@ function axismundi_act_install() : bool {
 		&& in_array( 'payload_hash', $columns, true )
 		&& in_array( 'effective_status', $columns, true )
 		&& in_array( 'source_event_key', $columns, true )
+		// v5. Verified before the version is stored: a site that recorded v5 while dbDelta
+		// failed to add the column would never retry, and every QuoteRequest would silently
+		// lose its instrument.
+		&& in_array( 'instrument_uri', $columns, true )
+		&& in_array( 'instrument_uri_hash', $columns, true )
+		&& ! empty( $instrument_index )
 		&& ! in_array( 'blog_id', $columns, true )
 		&& ! empty( $uri_index )
 		&& 0 === (int) $uri_index[0]['Non_unique']
@@ -127,6 +138,8 @@ final class Axismundi_Activity {
 	public function get_actor_uri() : string { return (string) $this->row['actor_uri']; }
 	public function get_object_uri() : ?string { return null !== $this->row['object_uri'] ? (string) $this->row['object_uri'] : null; }
 	public function get_target_uri() : ?string { return null !== $this->row['target_uri'] ? (string) $this->row['target_uri'] : null; }
+	/** The AS2 `instrument`: for a QuoteRequest, the independent Object doing the quoting. */
+	public function get_instrument_uri() : ?string { return null !== ( $this->row['instrument_uri'] ?? null ) ? (string) $this->row['instrument_uri'] : null; }
 	public function get_direction() : string { return (string) $this->row['direction']; }
 	public function get_effective_status() : string { return (string) $this->row['effective_status']; }
 	public function is_effective() : bool { return 'active' === $this->get_effective_status(); }
@@ -395,6 +408,10 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 
 	$object_uri = axismundi_act_member_uri( $payload['object'] ?? '' );
 	$target_uri = axismundi_act_member_uri( $payload['target'] ?? '' );
+	// A general AS2 member, not a Quote alias: FEP-044f sends the quoting Object here as an
+	// embedded object, and member_uri() reduces that to its id. Stored whenever present so
+	// the column is not Quote-specific; no type requires it yet.
+	$instrument_uri = axismundi_act_member_uri( $payload['instrument'] ?? '' );
 	if ( '' === $object_uri ) {
 		return new WP_Error( 'ax_act_object', __( 'This Activity type requires an object URI.', 'axismundi-activities' ) );
 	}
@@ -422,6 +439,8 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 		'object_uri_hash'   => '' !== $object_uri ? hash( 'sha256', $object_uri ) : null,
 		'target_uri'        => '' !== $target_uri ? $target_uri : null,
 		'target_uri_hash'   => '' !== $target_uri ? hash( 'sha256', $target_uri ) : null,
+		'instrument_uri'      => '' !== $instrument_uri ? $instrument_uri : null,
+		'instrument_uri_hash' => '' !== $instrument_uri ? hash( 'sha256', $instrument_uri ) : null,
 		'direction'         => $direction,
 		'effective_status'  => 'active',
 		'audience_json'     => $audience_json,
@@ -535,6 +554,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 				|| ! hash_equals( (string) $source_row['actor_uri'], (string) $normalized['actor_uri'] )
 				|| ! hash_equals( (string) ( $source_row['object_uri'] ?? '' ), (string) ( $normalized['object_uri'] ?? '' ) )
 				|| ! hash_equals( (string) ( $source_row['target_uri'] ?? '' ), (string) ( $normalized['target_uri'] ?? '' ) )
+				|| ! hash_equals( (string) ( $source_row['instrument_uri'] ?? '' ), (string) ( $normalized['instrument_uri'] ?? '' ) )
 			) {
 				return new WP_Error( 'ax_act_source_conflict', __( 'That source event already identifies a different Activity.', 'axismundi-activities' ) );
 			}
@@ -580,6 +600,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 					|| ! hash_equals( (string) $winner['actor_uri'], (string) $normalized['actor_uri'] )
 					|| ! hash_equals( (string) ( $winner['object_uri'] ?? '' ), (string) ( $normalized['object_uri'] ?? '' ) )
 					|| ! hash_equals( (string) ( $winner['target_uri'] ?? '' ), (string) ( $normalized['target_uri'] ?? '' ) )
+					|| ! hash_equals( (string) ( $winner['instrument_uri'] ?? '' ), (string) ( $normalized['instrument_uri'] ?? '' ) )
 				) {
 					return new WP_Error( 'ax_act_source_conflict', __( 'That source event already identifies a different Activity.', 'axismundi-activities' ) );
 				}

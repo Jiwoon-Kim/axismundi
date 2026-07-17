@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.29
+Stable tag: 0.0.30
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,20 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.30 =
+* Add a folder listing API that returns a folder's visible child folders followed by its
+  direct media as one paginated sequence, so a federated folder can be navigated like the
+  directory it is meant to be. Children are gated by the same rule that decides whether a
+  folder federates at all, rather than a second gate: an internal, private, or gated child
+  is absent from the listing and from its count.
+* Lock the sensitivity model for remote objects in docs: an origin's declaration is an
+  observation, never an authority state, so it stays out of the state machine that decides
+  who may clear a flag. A remote "sensitive" is never clearable locally; a remote false or
+  unreported may be overridden locally through the normal authority record.
+* Lock sensitivity scopes (site, user, folder, collection) as narrow-only, and record that
+  blurring remote media is not privacy — the request itself must be withheld until reveal,
+  or the origin already has the viewer's IP and the browser already has the image.
 
 = 0.0.29 =
 * Install the media archive routes whenever they are found missing from the rewrite table,

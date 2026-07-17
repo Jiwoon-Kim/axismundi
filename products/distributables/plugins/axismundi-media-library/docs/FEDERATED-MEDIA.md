@@ -57,6 +57,36 @@ container item relation:
   `Like` is a reaction (no target container, no reuse intent); `Add` places an object
   into a target collection with sort/note/`license_at_save`.
 
+### 3.1 A folder listing contains its child folders
+
+The OS-directory affordance above is the whole reason folders exist here, and a directory
+that cannot show its subdirectories is not one. A federated listing therefore contains
+**both** the folder's child folders and its direct media. Without this a remote peer can
+reach a folder's URI and go nowhere: a parent holding a thousand items across eight
+children reads as an empty folder, because the count is of *direct* members and nothing
+points at the children.
+
+```
+folder listing = visible child folders + direct media members
+totalItems     = the same, counted
+```
+
+Nothing recurses. A child appears as a **reference** — its identity and how to open it —
+never with its own items inlined, so one listing is one folder and depth costs one request
+per level, as a drive does.
+
+**Children are gated exactly like roots.** A child is listed only if it would federate on
+its own (`axismundi_media_folder_federation_allowed()`): public or unlisted, ungated,
+attributed to a public Actor. An `internal`, private, or password-gated child is absent
+from the listing and absent from `totalItems` — a name is a disclosure, and a hidden folder
+whose existence is advertised is not hidden. This reuses the visibility cascade rather than
+inventing a second gate, so a parent turning private removes its children from listings in
+the same pass that withdraws their identities (DATA-MODEL §3.0).
+
+Ordering is **children first, then media** — the drive convention, and forced anyway:
+folder order is `_ax_media_folder_added_at`, which a child folder does not have. See the
+Object Projections representation contract for the serialized shape.
+
 ## 4. Membership & roles (actor-URI keyed)
 
 Membership is keyed on **actor URI** (local user ID is an optimization pointer), so
@@ -125,6 +155,68 @@ Rules: `self_marked` — user may clear. `automated_flagged` — user may appeal
 self-clear (→ pending moderation). `moderator_marked`/`confirmed` — user cannot clear.
 Capabilities: `mark_own_media_sensitive` · `moderate_media_sensitivity` ·
 `override_media_sensitivity`. Feed/serializer read the effective value only.
+
+### 6.1 A remote declaration is an observation, not an authority state
+
+**The origin's `sensitive` value never enters the state enum above.** That enum answers
+*who may clear this*, and every one of its values names a decision **we** made. "The origin
+said so" is not our decision — it is an observed fact about someone else's object, and
+folding it in would make `set_by` a lie and break the clearing rules.
+
+It already has a home: `wp_ax_remote_objects.is_sensitive` is **nullable on purpose** —
+`true` / `false` / `NULL` = the origin did not report one. Never conflate `NULL` with
+`false`, the same tri-state rule Actors applies to remote policy flags.
+
+```
+remote_declared   observed  wp_ax_remote_objects.is_sensitive   true | false | NULL
+local_authority   decided   the state machine above
+effective         derived   remote_declared OR local_authority
+```
+
+- A remote `true` is **never clearable locally**. Un-flagging another instance's content is
+  not ours to do; a viewer who disagrees is asking the origin, not us.
+- A remote `false` or `NULL` **may be overridden to sensitive locally**, through the normal
+  authority record. The override records *our* decision and does not claim to be the
+  origin's.
+- Absence of a remote object row means no declaration, not a `false` one.
+
+### 6.2 Sensitivity is scoped
+
+One flag per object is not enough: a viewer may want to hide something only for themselves,
+and a moderator may want to blanket a whole container without touching each item. So an
+authority record carries a **scope**, and `effective` is the OR across every scope that
+applies to the current viewer and surface:
+
+```
+site        everyone on this instance
+user        one viewer's personal hide; never visible to others
+folder      blanket within one folder, local or remote
+collection  blanket within one collection view
+```
+
+**Scopes narrow only.** A scope may add sensitivity; none may remove it. This is the same
+narrow-only rule folder visibility already follows (DATA-MODEL §3.1), and it is what keeps
+`effective` computable without ordering the scopes against each other.
+
+Storage is an annotation keyed by object + scope + scope ref, **never a column on the
+object cache** — an override is our moderation state, and mixing it into a cached remote
+payload would corrupt the record of what the origin actually sent.
+
+### 6.3 Blur is not privacy for remote media
+
+The local click-to-reveal overlay (0.0.21) blurs a file we already own and serve; the only
+thing at stake is what the eye sees. For **remote** media the same overlay is a lie: an
+`<img src>` at the origin has already downloaded the image and already told the origin
+server the viewer's IP, referrer, and that this person is looking at this item.
+
+So for anything whose `effective` sensitivity is true and whose bytes are remote:
+
+```
+before reveal   no request to the origin at all — local placeholder only
+on reveal       fetch the remote preview, or a local proxy under privacy mode
+```
+
+Withholding the request, not blurring the result, is the control.
 
 ## 7. Used-in ⊋ federated `attachment` projection
 

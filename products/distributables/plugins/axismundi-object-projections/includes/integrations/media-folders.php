@@ -23,7 +23,7 @@ final class Axismundi_OP_Media_Folder_Collection {
 function axismundi_op_media_folder_available() : bool {
 	return function_exists( 'axismundi_media_folder_from_identity_uuid' )
 		&& function_exists( 'axismundi_media_folder_federation_allowed' )
-		&& function_exists( 'axismundi_media_folder_federation_items' )
+		&& function_exists( 'axismundi_media_folder_federation_entries' )
 		&& function_exists( 'axismundi_media_folder_uri' )
 		&& function_exists( 'axismundi_media_folder_actor_uri' );
 }
@@ -44,12 +44,38 @@ function axismundi_op_media_folder_html_url( WP_Term $folder ) : string {
 	return axismundi_media_folder_url( axismundi_media_folder_owner( $folder->term_id ), $folder->term_id );
 }
 
+/**
+ * Serialize one child folder as a shallow reference.
+ *
+ * Identity and enough to render a row and open it — never the child's own items. Inlining
+ * those would recurse the whole tree into one document; depth costs one request per level,
+ * as a drive does (TRANSFORMERS.md, rule 2).
+ *
+ * @param int $term_id Child folder term ID.
+ * @return array<string,mixed>|null
+ */
+function axismundi_op_media_folder_child_reference( int $term_id ) : ?array {
+	$child = get_term( $term_id, AXISMUNDI_MEDIA_FOLDER_TAX );
+	$uri   = axismundi_media_folder_uri( $term_id, false );
+	if ( ! $child instanceof WP_Term || '' === $uri ) {
+		return null;
+	}
+	$items = axismundi_media_folder_federation_entries( $term_id, 1, 1 );
+	return array(
+		'id'         => $uri,
+		'type'       => 'OrderedCollection',
+		'name'       => $child->name,
+		'totalItems' => is_wp_error( $items ) ? 0 : (int) $items['total'],
+		'url'        => axismundi_op_media_folder_html_url( $child ),
+	);
+}
+
 /** Project one folder root or page. */
 function axismundi_op_media_folder_collection_transform( Axismundi_OP_Media_Folder_Collection $source ) {
 	$folder = $source->get_folder();
 	$page   = $source->get_page();
 	$root   = axismundi_media_folder_uri( $folder->term_id, false );
-	$items  = axismundi_media_folder_federation_items( $folder->term_id, max( 1, $page ), AXISMUNDI_OP_MEDIA_FOLDER_PAGE_SIZE );
+	$items  = axismundi_media_folder_federation_entries( $folder->term_id, max( 1, $page ), AXISMUNDI_OP_MEDIA_FOLDER_PAGE_SIZE );
 	if ( is_wp_error( $items ) ) {
 		return $items;
 	}
@@ -68,12 +94,22 @@ function axismundi_op_media_folder_collection_transform( Axismundi_OP_Media_Fold
 		return $base;
 	}
 
+	// Children first, then media — Media Library owns that order; this only serializes it.
 	$ordered = array();
-	foreach ( $items['ids'] as $attachment_id ) {
-		$attachment = get_post( (int) $attachment_id );
+	foreach ( $items['entries'] as $entry ) {
+		if ( 'folder' === $entry['kind'] ) {
+			$reference = axismundi_op_media_folder_child_reference( (int) $entry['id'] );
+			if ( null !== $reference ) {
+				$ordered[] = $reference;
+			}
+			continue;
+		}
+		$attachment = get_post( (int) $entry['id'] );
 		if ( ! $attachment instanceof WP_Post ) {
 			continue;
 		}
+		// A media item is the full standalone object, identical to what its own id returns,
+		// so a consumer needs one request per page rather than one per item.
 		$projected = axismundi_op_transform_object( $attachment );
 		if ( is_array( $projected ) ) {
 			unset( $projected['@context'] );

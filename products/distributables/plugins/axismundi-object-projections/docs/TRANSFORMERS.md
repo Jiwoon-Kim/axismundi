@@ -103,6 +103,42 @@ MEDIA-RENDITIONS.md for the full contract:
 - Object Projections **serializes only** — Media Library owns selection, and no attachment
   metadata internals are read here.
 
+## Media folder collection (0.0.18; children 0.0.20)
+
+A federated folder is an `OrderedCollection` at its immutable identity URI, paginated as
+`OrderedCollectionPage`. Media Library owns identity, ACL, ordering, and item selection —
+this transformer serializes and owns the public read route, nothing else.
+
+`orderedItems` is **heterogeneous by contract**: a folder is an OS-directory affordance
+(FEDERATED-MEDIA.md §3.1), so its listing carries the folder's child folders *and* its
+direct media. AS2 permits a Collection among a Collection's items; this is not an
+extension.
+
+```
+orderedItems = [ child folder refs … , media objects … ]
+totalItems   = visible children + visible media
+```
+
+Frozen rules:
+
+1. **Children first, then media.** Not a preference: media order is
+   `_ax_media_folder_added_at`, which a child folder has no value for, so the two cannot
+   interleave under one key. Children sort by name, media by add time descending. The order
+   is total, so page boundaries are stable even though they cut across both kinds.
+2. **A child is a shallow reference, never an inlined collection.** It carries `id`, `type`,
+   `name`, `totalItems`, and its human `url` — enough to render a row and open it. Inlining
+   a child's items would recurse the whole tree into one document; depth costs one request
+   per level, as a drive does.
+3. **A media item is the full standalone object**, identical to what its own `id` returns.
+   The collection is not a summary, so a consumer needs one request per page rather than
+   one per item. This is why the item and its `id` fetch the same document byte for byte.
+4. **A child is listed only if it would federate alone.** The gate is Media Library's
+   `axismundi_media_folder_federation_allowed()`, unchanged and unduplicated. `internal`,
+   private, and gated children are absent from `orderedItems` **and** from `totalItems` —
+   a name is a disclosure.
+5. **`totalItems` counts what is listed.** A parent whose media are all private and whose
+   children are all internal reports 0 and offers no `first`.
+
 From 0.0.13, the adapter consumes the Media Library relation API in both directions.
 Featured media becomes Article `image`; distinct active in-content image/video/audio/file
 references become Article `attachment`. Arbitrary external URLs in rendered HTML are not

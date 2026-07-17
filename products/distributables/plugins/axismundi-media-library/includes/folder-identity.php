@@ -205,28 +205,24 @@ function axismundi_media_folder_federation_allowed( int $term_id ) : bool {
 }
 
 /**
- * Query one page of anonymously visible direct folder items.
+ * Query a slice of the anonymously visible media held directly by one folder.
  *
- * Folder membership is a direct location relation. Descendant folders publish their own
- * collections and are never folded into a parent's orderedItems.
+ * Offset-based rather than paged, because a federated listing puts child folders ahead of
+ * media (§3.1) and the media slice therefore begins wherever the children stop — a page
+ * boundary that `paged` cannot express.
  *
  * @param int $term_id Folder term ID.
- * @param int $page Page number.
- * @param int $per_page Items per page.
- * @return array{ids:int[],total:int,pages:int,page:int,per_page:int}|WP_Error
+ * @param int $offset  Media rows to skip.
+ * @param int $limit   Media rows to return; 0 counts without fetching.
+ * @return array{ids:int[],total:int}
  */
-function axismundi_media_folder_federation_items( int $term_id, int $page = 1, int $per_page = 20 ) {
-	if ( ! axismundi_media_folder_federation_allowed( $term_id ) ) {
-		return new WP_Error( 'ax_media_folder_not_public', __( 'The shared folder is not publicly available.', 'axismundi-media-library' ), array( 'status' => 404 ) );
-	}
-	$page     = max( 1, $page );
-	$per_page = min( 50, max( 1, $per_page ) );
-	$query    = new WP_Query(
+function axismundi_media_folder_media_slice( int $term_id, int $offset, int $limit ) : array {
+	$query = new WP_Query(
 		array(
 			'post_type'                    => 'attachment',
 			'post_status'                  => 'inherit',
-			'posts_per_page'               => $per_page,
-			'paged'                        => $page,
+			'posts_per_page'               => max( 1, $limit ),
+			'offset'                       => max( 0, $offset ),
 			'fields'                       => 'ids',
 			'author'                       => axismundi_media_folder_owner( $term_id ),
 			'ignore_sticky_posts'          => true,
@@ -247,9 +243,124 @@ function axismundi_media_folder_federation_items( int $term_id, int $page = 1, i
 		)
 	);
 	return array(
-		'ids'      => array_map( 'intval', $query->posts ),
-		'total'    => (int) $query->found_posts,
-		'pages'    => (int) $query->max_num_pages,
+		// A zero limit means the caller only needs the count, so the fetched row is dropped.
+		'ids'   => $limit > 0 ? array_map( 'intval', $query->posts ) : array(),
+		'total' => (int) $query->found_posts,
+	);
+}
+
+/**
+ * Query one page of anonymously visible direct folder media.
+ *
+ * The media half of a listing. Child folders are the other half and are supplied by
+ * axismundi_media_folder_federation_entries(); this function deliberately answers only
+ * "what media does this folder hold", which is what the archive and feed surfaces want.
+ *
+ * @param int $term_id Folder term ID.
+ * @param int $page Page number.
+ * @param int $per_page Items per page.
+ * @return array{ids:int[],total:int,pages:int,page:int,per_page:int}|WP_Error
+ */
+function axismundi_media_folder_federation_items( int $term_id, int $page = 1, int $per_page = 20 ) {
+	if ( ! axismundi_media_folder_federation_allowed( $term_id ) ) {
+		return new WP_Error( 'ax_media_folder_not_public', __( 'The shared folder is not publicly available.', 'axismundi-media-library' ), array( 'status' => 404 ) );
+	}
+	$page     = max( 1, $page );
+	$per_page = min( 50, max( 1, $per_page ) );
+	$slice    = axismundi_media_folder_media_slice( $term_id, ( $page - 1 ) * $per_page, $per_page );
+	return array(
+		'ids'      => $slice['ids'],
+		'total'    => $slice['total'],
+		'pages'    => (int) ceil( $slice['total'] / $per_page ),
+		'page'     => $page,
+		'per_page' => $per_page,
+	);
+}
+
+/**
+ * The child folders of one folder that may be federated in their own right.
+ *
+ * A child is listed only if it would federate alone, so this reuses the same gate rather
+ * than inventing a second one: an internal, private, or gated child is absent, because a
+ * name is a disclosure and a hidden folder whose existence is advertised is not hidden
+ * (FEDERATED-MEDIA.md §3.1).
+ *
+ * @param int $term_id Folder term ID.
+ * @return int[] Child term IDs, ordered by name.
+ */
+function axismundi_media_folder_federation_children( int $term_id ) : array {
+	$children = get_terms(
+		array(
+			'taxonomy'   => AXISMUNDI_MEDIA_FOLDER_TAX,
+			'hide_empty' => false,
+			'parent'     => $term_id,
+			'orderby'    => 'name',
+			'order'      => 'ASC',
+			'fields'     => 'ids',
+		)
+	);
+	if ( is_wp_error( $children ) ) {
+		return array();
+	}
+	$visible = array();
+	foreach ( (array) $children as $child_id ) {
+		if ( axismundi_media_folder_federation_allowed( (int) $child_id ) ) {
+			$visible[] = (int) $child_id;
+		}
+	}
+	return $visible;
+}
+
+/**
+ * Query one page of a folder's federated listing: its visible children, then its media.
+ *
+ * A folder is an OS-directory affordance, and a directory that cannot show its
+ * subdirectories is not one, so a listing carries both kinds (FEDERATED-MEDIA.md §3.1).
+ * Ordering is children first and is not a preference: media order is
+ * `_ax_media_folder_added_at`, which a child folder has no value for, so the two cannot
+ * interleave under one key. The resulting order is total, so page boundaries stay stable
+ * even where they cut across both kinds.
+ *
+ * Nothing recurses. A child is returned as an id for the caller to reference, never with
+ * its own listing folded in.
+ *
+ * @param int $term_id  Folder term ID.
+ * @param int $page     Page number.
+ * @param int $per_page Entries per page.
+ * @return array{entries:array<int,array{kind:string,id:int}>,total:int,pages:int,page:int,per_page:int}|WP_Error
+ */
+function axismundi_media_folder_federation_entries( int $term_id, int $page = 1, int $per_page = 20 ) {
+	if ( ! axismundi_media_folder_federation_allowed( $term_id ) ) {
+		return new WP_Error( 'ax_media_folder_not_public', __( 'The shared folder is not publicly available.', 'axismundi-media-library' ), array( 'status' => 404 ) );
+	}
+	$page     = max( 1, $page );
+	$per_page = min( 50, max( 1, $per_page ) );
+	$offset   = ( $page - 1 ) * $per_page;
+
+	$children    = axismundi_media_folder_federation_children( $term_id );
+	$child_count = count( $children );
+
+	$entries = array();
+	foreach ( array_slice( $children, $offset, $per_page ) as $child_id ) {
+		$entries[] = array( 'kind' => 'folder', 'id' => (int) $child_id );
+	}
+
+	// The media slice starts where the children stop; a page filled by children still needs
+	// the media count for `total`, hence the zero-limit count.
+	$slice = axismundi_media_folder_media_slice(
+		$term_id,
+		max( 0, $offset - $child_count ),
+		$per_page - count( $entries )
+	);
+	foreach ( $slice['ids'] as $attachment_id ) {
+		$entries[] = array( 'kind' => 'media', 'id' => (int) $attachment_id );
+	}
+
+	$total = $child_count + (int) $slice['total'];
+	return array(
+		'entries'  => $entries,
+		'total'    => $total,
+		'pages'    => (int) ceil( $total / $per_page ),
 		'page'     => $page,
 		'per_page' => $per_page,
 	);

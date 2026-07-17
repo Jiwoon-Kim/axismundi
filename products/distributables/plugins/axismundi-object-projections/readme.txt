@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.19
+Stable tag: 0.0.20
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -40,6 +40,20 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.20 =
+* List a folder's child folders alongside its media, so a remote peer can navigate a shared
+  folder instead of landing on a dead end. A parent holding a thousand items across eight
+  children previously reported zero and offered nothing to open, because the count was of
+  direct members only and nothing pointed at the children.
+* Order children first, then media. Media order comes from the folder-add time a child
+  folder has no value for, so the two cannot interleave; the resulting order is total and
+  page boundaries stay stable where they cut across both kinds.
+* Serialize a child as a shallow reference — identity, name, count, and its human URL —
+  never with its own items inlined, so depth costs one request per level rather than
+  recursing a tree into one document.
+* Hide a child that would not federate on its own. An internal, private, or gated child is
+  absent from the listing and from totalItems: a name is a disclosure.
 
 = 0.0.19 =
 * Fix /media/folder/{uuid} returning 404 after updating to 0.0.18. The routes were

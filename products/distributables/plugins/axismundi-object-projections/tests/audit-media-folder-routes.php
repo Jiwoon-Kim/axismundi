@@ -8,8 +8,10 @@
  * saved by hand. Registration is not persistence — these assertions are about the stored
  * `rewrite_rules` option, which is what WordPress actually routes from.
  *
- * Deliberately does not use HTTP: wp-env's Apache ignores .htaccess, so no pretty URL can
- * be fetched locally. The rewrite table is testable, and it is where the bug lived.
+ * Asserts against the table rather than over HTTP because the table is the precise unit
+ * under test. Pretty URLs *are* fetchable locally — .wp-env.json maps a real .htaccess and
+ * turns on pretty permalinks — so an end-to-end check is a separate, complementary thing,
+ * not something this file is working around.
  *
  * @package AxismundiObjectProjections
  */

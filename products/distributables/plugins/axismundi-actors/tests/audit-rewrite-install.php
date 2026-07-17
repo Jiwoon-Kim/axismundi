@@ -7,8 +7,10 @@
  * already burned itself so nothing ever retried. Assertions are about the stored
  * `rewrite_rules` option, which is what WordPress actually routes from.
  *
- * Deliberately not over HTTP: wp-env's Apache ignores .htaccess, so no pretty URL is
- * fetchable locally. The rewrite table is testable, and it is where the bug lives.
+ * Asserts against the table rather than over HTTP because the table is the precise unit
+ * under test. Pretty URLs *are* fetchable locally — .wp-env.json maps a real .htaccess and
+ * turns on pretty permalinks — so an end-to-end check is a separate, complementary thing,
+ * not something this file is working around.
  *
  * @package AxismundiActors
  */

@@ -26,9 +26,15 @@
     "./products/distributables/plugins/axismundi-activitypub-bridge"
   ],
   "port": 8884,
+  "mappings": {
+    ".htaccess": "./tools/wp-env/htaccess"
+  },
   "config": {
     "WP_DEBUG": true,
     "WP_DEBUG_LOG": true,
     "SCRIPT_DEBUG": true
+  },
+  "lifecycleScripts": {
+    "afterStart": "wp-env run cli wp rewrite structure /%postname%/"
   }
 }

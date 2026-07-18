@@ -216,6 +216,23 @@ function axismundi_activitypub_bridge_delivery_should_retry( $response, int $cod
 	return is_wp_error( $response ) || in_array( $code, array( 408, 425, 429, 500, 502, 503, 504 ), true );
 }
 
+/** Bounded peer error detail for transport diagnostics. */
+function axismundi_activitypub_bridge_delivery_error( $response, int $code ) : string {
+	if ( is_wp_error( $response ) ) {
+		return $response->get_error_message();
+	}
+	$message = '';
+	$body    = wp_remote_retrieve_body( $response );
+	if ( is_string( $body ) && '' !== trim( $body ) ) {
+		$decoded = json_decode( $body, true );
+		$message = is_array( $decoded ) && is_scalar( $decoded['error'] ?? null )
+			? (string) $decoded['error']
+			: wp_strip_all_tags( $body );
+	}
+	$message = sanitize_text_field( $message );
+	return 'HTTP ' . $code . ( '' !== $message ? ': ' . substr( $message, 0, 500 ) : '' );
+}
+
 /** Resolve a local Actor's private signing key only for the active request. */
 function axismundi_activitypub_bridge_delivery_identity( object $job ) {
 	$actor = axismundi_actors_get_by_uri( (string) $job->actor_uri );
@@ -356,7 +373,7 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 				$retry[] = $inbox;
 			}
 			if ( is_wp_error( $response ) || $code < 200 || $code >= 300 ) {
-				$errors[] = is_wp_error( $response ) ? $response->get_error_message() : 'HTTP ' . $code;
+				$errors[] = axismundi_activitypub_bridge_delivery_error( $response, $code );
 			}
 		}
 

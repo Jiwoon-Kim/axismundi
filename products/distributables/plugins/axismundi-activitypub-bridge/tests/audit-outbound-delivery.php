@@ -154,6 +154,8 @@ try {
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the worker releases its claim and reaches one terminal state', is_object( $job ) && null === $job->lock_token && null === $job->locked_at && 'delivered' === $job->status );
 	$ledger = axismundi_act_get( $activity_uri );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'delivery completion does not replace the Axismundi ledger', $recorded instanceof Axismundi_Activity && $ledger instanceof Axismundi_Activity && $recorded->get_id() === $ledger->get_id() );
+	$peer_error = axismundi_activitypub_bridge_delivery_error( array( 'body' => '{"error":"Signature rejected by peer"}' ), 401 );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a failed peer response retains one bounded sanitized diagnostic message', 'HTTP 401: Signature rejected by peer' === $peer_error );
 
 	$provisional_uri = home_url( '/activities/provisional-' . wp_generate_uuid4() . '/' );
 	$provisional_payload = array( 'id' => $provisional_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/provisional', 'to' => array( $remote_uri ) );

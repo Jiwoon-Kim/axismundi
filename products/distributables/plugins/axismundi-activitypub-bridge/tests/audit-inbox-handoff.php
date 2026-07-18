@@ -17,6 +17,7 @@ $ax_bridge_schedule_before = wp_next_scheduled( 'axismundi_actors_cache_remote_i
 $ax_bridge_inbox_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uuid4();
+$ax_bridge_mention_object = 'https://example.com/notes/' . wp_generate_uuid4();
 $ax_bridge_fallback_activity = '';
 $ax_bridge_accept_activity = '';
 $ax_bridge_update_activity = 'https://example.com/activities/' . wp_generate_uuid4();
@@ -182,8 +183,9 @@ try {
 		'actor'  => $remote_uri,
 		'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 		'object' => array(
-			'id'      => 'https://example.com/notes/' . wp_generate_uuid4(),
+		'id'      => $ax_bridge_mention_object,
 			'type'    => 'Note',
+			'attributedTo' => $remote_uri,
 			'to'      => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'tag'     => array( array( 'type' => 'Mention', 'href' => $local->get_uri(), 'name' => '@fixture@example.test' ) ),
 			'content' => '<p>Private content is not copied into diagnostics.</p>',
@@ -195,6 +197,8 @@ try {
 	$mention_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $mention_request );
 	$mention_stored   = axismundi_act_get( $ax_bridge_mention_activity );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified shared-Inbox Mention href can supplement an otherwise absent local audience target', $mention_response instanceof WP_REST_Response && 202 === $mention_response->get_status() && $mention_stored instanceof Axismundi_Activity );
+	$mention_object = axismundi_op_remote_object_get( $ax_bridge_mention_object );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified inbound Create caches its complete self-consistent embedded Object without a second network fetch', is_array( $mention_object ) && $remote_uri === $mention_object['attributed_to_uri'] && false !== strpos( (string) $mention_object['content'], 'Private content' ) );
 
 	$untargeted                  = $payload;
 	$ax_bridge_fallback_activity = 'https://example.com/activities/' . wp_generate_uuid4();
@@ -218,6 +222,7 @@ try {
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_mention_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_op_remote_objects_table(), array( 'object_uri' => $ax_bridge_mention_object ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_update_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_activity ) ); // phpcs:ignore WordPress.DB
 	if ( '' !== $ax_bridge_quote_decision ) {

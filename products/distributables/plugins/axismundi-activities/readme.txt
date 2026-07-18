@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.18
+Stable tag: 0.0.19
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,10 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.19 =
+* Embed the minimal FEP-044f QuoteRequest object in Accept and Reject decisions instead of
+  reducing the protocol object to its URI.
 
 = 0.0.18 =
 * Revoke a standing QuoteAuthorization without deleting its identity and record one durable,

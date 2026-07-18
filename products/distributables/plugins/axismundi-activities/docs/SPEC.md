@@ -101,9 +101,10 @@ followers requester is accepted only when an accepted Follow relation exists
 me         only a self-quote is accepted
 ```
 
-An accepted request records an outbound Accept whose `object` is the QuoteRequest URI and
-whose `result` is a stable QuoteAuthorization URI. A denied request records Reject with the
-QuoteRequest URI as its object. Re-delivery must return the existing decision rather than
+An accepted request records an outbound Accept whose `object` is the minimal QuoteRequest
+object (`id`, `type`, `actor`, `object`, and `instrument`) and whose `result` is a stable
+QuoteAuthorization URI. A denied request uses the same minimal QuoteRequest object. The
+normalized `object_uri` remains the QuoteRequest `id`. Re-delivery must return the existing decision rather than
 minting another Activity or authorization. A later policy change does not automatically
 revoke an authorization already issued under the earlier policy.
 

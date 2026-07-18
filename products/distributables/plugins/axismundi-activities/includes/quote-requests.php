@@ -97,6 +97,17 @@ function axismundi_act_quote_request_is_approved( Axismundi_Activity $request, a
 	return is_array( $relation ) && 'accepted' === (string) ( $relation['state'] ?? '' );
 }
 
+/** Minimal FEP-044f QuoteRequest object embedded in an Accept or Reject. */
+function axismundi_act_quote_request_response_object( Axismundi_Activity $request ) : array {
+	return array(
+		'id'         => $request->get_uri(),
+		'type'       => 'QuoteRequest',
+		'actor'      => $request->get_actor_uri(),
+		'object'     => (string) $request->get_object_uri(),
+		'instrument' => (string) $request->get_instrument_uri(),
+	);
+}
+
 /**
  * Process one committed inbound QuoteRequest into one stable Accept or Reject.
  *
@@ -149,7 +160,7 @@ function axismundi_act_process_quote_request( Axismundi_Activity $request ) {
 	$payload  = array(
 		'type'   => $approved ? 'Accept' : 'Reject',
 		'actor'  => (string) $target['author_actor_uri'],
-		'object' => $request_uri,
+		'object' => axismundi_act_quote_request_response_object( $request ),
 		'to'     => array( $request->get_actor_uri() ),
 	);
 	if ( $approved ) {

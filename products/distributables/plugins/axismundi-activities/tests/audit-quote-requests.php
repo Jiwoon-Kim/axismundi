@@ -105,6 +105,11 @@ try {
 			&& $accept instanceof Axismundi_Activity
 			&& 'Accept' === $accept->get_type()
 			&& $anyone->get_uri() === $accept->get_object_uri()
+			&& is_array( $accept_payload['object'] ?? null )
+			&& array( 'id', 'type', 'actor', 'object', 'instrument' ) === array_keys( $accept_payload['object'] )
+			&& 'QuoteRequest' === $accept_payload['object']['type']
+			&& $anyone->get_uri() === $accept_payload['object']['id']
+			&& $anyone->get_instrument_uri() === $accept_payload['object']['instrument']
 			&& in_array( $requester->get_uri(), (array) ( $accept->get_audience()['to'] ?? array() ), true )
 			&& is_array( $authorization )
 			&& 'active' === $authorization['status']

@@ -23,6 +23,9 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_op_jsonld_context( ?array $object = null ) {
 	$context = array( 'https://www.w3.org/ns/activitystreams' );
+	if ( is_array( $object ) && ( 'QuoteRequest' === ( $object['type'] ?? '' ) || 'QuoteRequest' === ( $object['object']['type'] ?? '' ) ) ) {
+		$context[] = array( 'QuoteRequest' => 'https://w3id.org/fep/044f#QuoteRequest' );
+	}
 	if ( is_array( $object ) && ( 'QuoteAuthorization' === ( $object['type'] ?? '' ) || 'QuoteAuthorization' === ( $object['formerType'] ?? '' ) ) ) {
 		$context[] = array(
 			'QuoteAuthorization' => 'https://w3id.org/fep/044f#QuoteAuthorization',

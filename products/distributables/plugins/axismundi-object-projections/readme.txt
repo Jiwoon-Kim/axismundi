@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.26
+Stable tag: 0.0.27
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -30,7 +30,9 @@ When the official ActivityPub plugin is active, the standalone negotiator turns 
 so a future adapter can preserve that plugin's established object ids.
 
 The remote-object repository stores URI-keyed, rebuildable observations for later
-administrator inspection and Activities integration. It performs no network requests and
+administrator inspection and Activities integration. A complete Object embedded in a
+verified inbound Create is cached after the Activity ledger commit when its identity and
+attribution exactly match the enclosing Activity. This path performs no network request and
 exposes no public mirror route. Administrators may fetch and inspect metadata-only remote
 objects under Tools > Remote Objects, including tags, mentions, audience declarations,
 attachment descriptors, extension properties, and the complete escaped JSON payload;
@@ -40,6 +42,11 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.27 =
+* Cache complete, self-consistent Objects embedded in verified inbound Create activities
+  without a second network request, and declare the FEP-044f QuoteRequest context for
+  Accept and Reject payloads that embed the request.
 
 = 0.0.26 =
 * Add the rebuildable DB v4 quote-relation projection for FEP-044f, Misskey aliases, FEP-e232 links, consent-independent public counts, and verified authorization revocation mapping.

@@ -131,6 +131,16 @@ $activity = axismundi_op_finalize_activity(
 	$activity_uri
 );
 ax_rnd_assert( $ax_rnd_results, 'an Activity gets the canonical renderer-owned context without object-only url/attributedTo members', is_array( $activity ) && 'https://www.w3.org/ns/activitystreams' === $activity['@context'] && array_key_first( $activity ) === '@context' );
+$quote_accept = axismundi_op_finalize_activity(
+	array(
+		'id'     => $activity_uri,
+		'type'   => 'Accept',
+		'actor'  => 'https://example.com/actors/alice',
+		'object' => array( 'id' => 'https://remote.example/quote-requests/1', 'type' => 'QuoteRequest', 'actor' => 'https://remote.example/actors/bob', 'object' => 'https://example.com/posts/1', 'instrument' => 'https://remote.example/posts/2' ),
+	),
+	$activity_uri
+);
+ax_rnd_assert( $ax_rnd_results, 'an Accept embedding a QuoteRequest declares the FEP-044f activity type in the renderer-owned context', is_array( $quote_accept ) && is_array( $quote_accept['@context'] ) && in_array( array( 'QuoteRequest' => 'https://w3id.org/fep/044f#QuoteRequest' ), $quote_accept['@context'], true ) );
 $invalid_activity = axismundi_op_finalize_activity( array( 'id' => $activity_uri, 'type' => 'Follow' ), $activity_uri );
 $activity_mismatch = axismundi_op_finalize_activity( array( 'id' => $activity_uri, 'type' => 'Follow', 'actor' => 'https://example.com/actors/alice' ), $activity_uri . 'different' );
 ax_rnd_assert( $ax_rnd_results, 'Activity finalization rejects a missing actor and a ledger id mismatch', is_wp_error( $invalid_activity ) && 'ax_op_invalid_activity' === $invalid_activity->get_error_code() && is_wp_error( $activity_mismatch ) && 'ax_op_id_mismatch' === $activity_mismatch->get_error_code() );

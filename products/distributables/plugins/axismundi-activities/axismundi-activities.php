@@ -26,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
 const AXISMUNDI_ACTIVITIES_VERSION = '0.0.19';
 
 require_once __DIR__ . '/includes/repository.php';
+require_once __DIR__ . '/includes/audience.php';
 require_once __DIR__ . '/includes/relations.php';
 require_once __DIR__ . '/includes/quote-authorizations.php';
 require_once __DIR__ . '/includes/quote-requests.php';

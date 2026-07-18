@@ -200,22 +200,51 @@ function axismundi_activitypub_bridge_enqueue_delivery( array $payload, array $s
 	return $id;
 }
 
-/** Maximum attempts for one transport delivery. */
+/** Maximum attempts for one ordinary transient transport delivery. */
 function axismundi_activitypub_bridge_delivery_max_attempts() : int {
 	return max( 1, min( 10, (int) apply_filters( 'axismundi_activitypub_bridge_delivery_max_attempts', 5 ) ) );
 }
 
-/** Delay before the next transport attempt. */
+/** Delay before the next ordinary transient transport attempt. */
 function axismundi_activitypub_bridge_delivery_retry_delay( int $attempt ) : int {
 	$delay = max( 60, $attempt * $attempt * 60 );
 	return max( 60, min( DAY_IN_SECONDS, (int) apply_filters( 'axismundi_activitypub_bridge_delivery_retry_delay', $delay, $attempt ) ) );
 }
 
-/** Whether one transport result should be retried. */
-function axismundi_activitypub_bridge_delivery_should_retry( $response, int $code ) : bool {
-	if ( is_wp_error( $response ) || in_array( $code, array( 408, 425, 429, 500, 502, 503, 504 ), true ) ) {
-		return true;
+/**
+ * Bounded long backoff steps, in seconds, for the peer key-recovery case.
+ *
+ * A remote server that cached a keyless Actor keeps it for roughly one day, so
+ * this schedule crosses that staleness window (5m -> 1h -> 24h -> 48h) before
+ * the job dead-letters. It is deliberately longer than the transient schedule
+ * yet still finite, so a genuinely revoked or blocked peer is not retried forever.
+ */
+function axismundi_activitypub_bridge_delivery_key_recovery_schedule() : array {
+	$schedule = array( 5 * MINUTE_IN_SECONDS, HOUR_IN_SECONDS, DAY_IN_SECONDS, 2 * DAY_IN_SECONDS );
+	$schedule = (array) apply_filters( 'axismundi_activitypub_bridge_delivery_key_recovery_schedule', $schedule );
+	return array_values( array_map( static fn( $step ) : int => max( 60, (int) $step ), $schedule ) );
+}
+
+/**
+ * Seconds until the next attempt, or -1 when the job must dead-letter.
+ *
+ * The key-recovery track follows the bounded long backoff; ordinary transient
+ * errors keep the short quadratic schedule capped at the maximum attempt count.
+ */
+function axismundi_activitypub_bridge_delivery_next_delay( int $attempt, bool $key_recovery ) : int {
+	$attempt = max( 1, $attempt );
+	if ( $key_recovery ) {
+		$schedule = axismundi_activitypub_bridge_delivery_key_recovery_schedule();
+		return array_key_exists( $attempt - 1, $schedule ) ? (int) $schedule[ $attempt - 1 ] : -1;
 	}
+	if ( $attempt >= axismundi_activitypub_bridge_delivery_max_attempts() ) {
+		return -1;
+	}
+	return axismundi_activitypub_bridge_delivery_retry_delay( $attempt + 1 );
+}
+
+/** Whether one 401 is the peer "public key not yet resolvable" recovery case. */
+function axismundi_activitypub_bridge_delivery_is_key_recovery_error( $response, int $code ) : bool {
 	if ( 401 !== $code ) {
 		return false;
 	}
@@ -223,6 +252,19 @@ function axismundi_activitypub_bridge_delivery_should_retry( $response, int $cod
 	$decoded = is_string( $body ) ? json_decode( $body, true ) : null;
 	$message = is_array( $decoded ) && is_scalar( $decoded['error'] ?? null ) ? (string) $decoded['error'] : '';
 	return str_starts_with( $message, 'Public key not found for key ' );
+}
+
+/**
+ * Whether one transport result should be retried.
+ *
+ * A generic 401, a revoked key, or an invalid signature is terminal at once;
+ * only the peer key-recovery 401 and ordinary transient failures are retryable.
+ */
+function axismundi_activitypub_bridge_delivery_should_retry( $response, int $code ) : bool {
+	if ( is_wp_error( $response ) || in_array( $code, array( 408, 425, 429, 500, 502, 503, 504 ), true ) ) {
+		return true;
+	}
+	return axismundi_activitypub_bridge_delivery_is_key_recovery_error( $response, $code );
 }
 
 /** Requeue one terminal delivery without changing its immutable Activity payload. */
@@ -289,13 +331,20 @@ function axismundi_activitypub_bridge_delivery_identity( object $job ) {
 	}
 	$expected = axismundi_activitypub_bridge_sender( $actor );
 	if ( ! hash_equals( $expected['key_id'], (string) $job->key_id ) ) {
-		return new WP_Error( 'ax_bridge_delivery_key', __( 'The signing key reference no longer matches the Actor.', 'axismundi-activitypub-bridge' ) );
+		return new WP_Error( 'ax_bridge_delivery_key_mismatch', __( 'The signing key reference no longer matches the Actor.', 'axismundi-activitypub-bridge' ) );
 	}
-	$user_id = $actor->get_local_user_id();
-	$key     = $user_id ? Activitypub\Collection\Actors::get_private_key( $user_id ) : Activitypub\Application::get_private_key();
+	// Never emit signed traffic while the matching public key cannot be projected.
+	// A remote that fetched the Actor during this
+	// window would cache a keyless document and reject the signature. This is a
+	// retryable "not yet" condition, not a terminal failure, so the queue row is
+	// preserved for the key-recovery track.
+	if ( '' === axismundi_activitypub_bridge_public_key( $actor ) ) {
+		return new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The Actor public key cannot be projected yet.', 'axismundi-activitypub-bridge' ) );
+	}
+	$key = axismundi_activitypub_bridge_private_key( $actor );
 	return is_string( $key ) && '' !== $key
 		? array( 'key_id' => (string) $job->key_id, 'private_key' => $key )
-		: new WP_Error( 'ax_bridge_delivery_key', __( 'The private signing key is unavailable.', 'axismundi-activitypub-bridge' ) );
+		: new WP_Error( 'ax_bridge_delivery_key_unready', __( 'The private signing key is unavailable.', 'axismundi-activitypub-bridge' ) );
 }
 
 /** Atomically claim one due job. */
@@ -370,6 +419,42 @@ function axismundi_activitypub_bridge_finish_delivery( int $id, string $token, s
 	);
 }
 
+/**
+ * Move one claimed job onto its next attempt, or return false when it dead-letters.
+ *
+ * @param string[] $retry Recipients to attempt again.
+ */
+function axismundi_activitypub_bridge_reschedule_delivery( int $id, string $token, int $attempt, bool $key_recovery, array $retry, string $error ) : bool {
+	global $wpdb;
+	$attempt = max( 1, $attempt );
+	$delay   = axismundi_activitypub_bridge_delivery_next_delay( $attempt, $key_recovery );
+	if ( $delay < 0 || empty( $retry ) ) {
+		return false;
+	}
+	$next         = $attempt + 1;
+	$now          = current_time( 'mysql', true );
+	$available_at = gmdate( 'Y-m-d H:i:s', time() + $delay );
+	$table        = axismundi_activitypub_bridge_delivery_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
+	$updated = $wpdb->query(
+		$wpdb->prepare(
+			"UPDATE {$table} SET status = 'retrying', attempt = %d, pending_inboxes_json = %s, available_at = %s, last_error = %s, lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND lock_token = %s",
+			$attempt,
+			wp_json_encode( array_values( $retry ) ),
+			$available_at,
+			substr( $error, 0, 4000 ),
+			$now,
+			$id,
+			$token
+		)
+	);
+	if ( 1 !== $updated ) {
+		return false;
+	}
+	wp_schedule_single_event( strtotime( $available_at . ' UTC' ), AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $id, $next ) );
+	return true;
+}
+
 /** Process one Bridge-owned transport job. */
 function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 1 ) : void {
 	global $wpdb;
@@ -383,18 +468,25 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 		if ( ! is_object( $job ) || ! hash_equals( $token, (string) $job->lock_token ) ) {
 			return;
 		}
-		$identity = axismundi_activitypub_bridge_delivery_identity( $job );
-		if ( is_wp_error( $identity ) ) {
-			axismundi_activitypub_bridge_finish_delivery( $id, $token, 'failed', $identity->get_error_message() );
-			return;
-		}
 		$pending = json_decode( (string) $job->pending_inboxes_json, true );
 		if ( ! is_array( $pending ) || empty( $pending ) ) {
 			axismundi_activitypub_bridge_finish_delivery( $id, $token, 'failed', 'The pending recipient set is empty or invalid.' );
 			return;
 		}
-		$retry  = array();
-		$errors = array();
+		$identity = axismundi_activitypub_bridge_delivery_identity( $job );
+		if ( is_wp_error( $identity ) ) {
+			// Hold, do not send, while the signing key is not yet projectable; any
+			// other identity error (actor gone, key rotated) is terminal at once.
+			if ( 'ax_bridge_delivery_key_unready' === $identity->get_error_code()
+				&& axismundi_activitypub_bridge_reschedule_delivery( $id, $token, $attempt, true, $pending, $identity->get_error_message() ) ) {
+				return;
+			}
+			axismundi_activitypub_bridge_finish_delivery( $id, $token, 'failed', $identity->get_error_message() );
+			return;
+		}
+		$retry        = array();
+		$errors       = array();
+		$key_recovery = false;
 		foreach ( $pending as $inbox ) {
 			if ( ! axismundi_activitypub_bridge_touch_delivery_claim( $id, $token ) ) {
 				return;
@@ -418,7 +510,8 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 			);
 			$code = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 			if ( axismundi_activitypub_bridge_delivery_should_retry( $response, $code ) ) {
-				$retry[] = $inbox;
+				$retry[]      = $inbox;
+				$key_recovery = $key_recovery || axismundi_activitypub_bridge_delivery_is_key_recovery_error( $response, $code );
 			}
 			if ( is_wp_error( $response ) || $code < 200 || $code >= 300 ) {
 				$errors[] = axismundi_activitypub_bridge_delivery_error( $response, $code );
@@ -426,27 +519,9 @@ function axismundi_activitypub_bridge_process_delivery( int $id, int $attempt = 
 		}
 
 		$attempt = max( 1, $attempt );
-		$now     = current_time( 'mysql', true );
 		$table   = axismundi_activitypub_bridge_delivery_table();
-		if ( ! empty( $retry ) && $attempt < axismundi_activitypub_bridge_delivery_max_attempts() ) {
-			$next         = $attempt + 1;
-			$available_at = gmdate( 'Y-m-d H:i:s', time() + axismundi_activitypub_bridge_delivery_retry_delay( $next ) );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
-			$updated = $wpdb->query(
-				$wpdb->prepare(
-					"UPDATE {$table} SET status = 'retrying', attempt = %d, pending_inboxes_json = %s, available_at = %s, last_error = %s, lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND lock_token = %s",
-					$attempt,
-					wp_json_encode( $retry ),
-					$available_at,
-					substr( implode( '; ', $errors ), 0, 4000 ),
-					$now,
-					$id,
-					$token
-				)
-			);
-			if ( 1 === $updated ) {
-				wp_schedule_single_event( strtotime( $available_at . ' UTC' ), AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $id, $next ) );
-			}
+		if ( ! empty( $retry )
+			&& axismundi_activitypub_bridge_reschedule_delivery( $id, $token, $attempt, $key_recovery, $retry, implode( '; ', $errors ) ) ) {
 			return;
 		}
 

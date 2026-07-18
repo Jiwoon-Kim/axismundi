@@ -31,48 +31,96 @@ function axismundi_activitypub_bridge_sender( Axismundi_Actor $actor ) : array {
 
 /** Resolve the official plugin's public key without changing Actor ownership. */
 function axismundi_activitypub_bridge_public_key( Axismundi_Actor $actor ) : string {
+	$key = '';
+	if ( class_exists( 'Activitypub\\Collection\\Actors' ) ) {
+		$user_id = $actor->get_local_user_id();
+		if ( $user_id ) {
+			$key = Activitypub\Collection\Actors::get_public_key( $user_id );
+		} elseif ( class_exists( 'Activitypub\\Application' ) ) {
+			$key = Activitypub\Application::get_public_key();
+		} else {
+			$key = Activitypub\Collection\Actors::get_public_key( 0 );
+		}
+	}
+	$key = is_string( $key ) ? $key : '';
+	/**
+	 * Observe or withhold one Actor's projected signing key.
+	 *
+	 * Returning an empty string forces the fail-closed transport contract, so
+	 * operations and regression fixtures can exercise a keyless Actor window.
+	 */
+	return (string) apply_filters( 'axismundi_activitypub_bridge_actor_public_key', $key, $actor );
+}
+
+/** Resolve the official plugin's private key without changing Actor ownership. */
+function axismundi_activitypub_bridge_private_key( Axismundi_Actor $actor ) : string {
 	if ( ! class_exists( 'Activitypub\\Collection\\Actors' ) ) {
 		return '';
 	}
 	$user_id = $actor->get_local_user_id();
 	if ( $user_id ) {
-		$key = Activitypub\Collection\Actors::get_public_key( $user_id );
+		$key = Activitypub\Collection\Actors::get_private_key( $user_id );
 	} elseif ( class_exists( 'Activitypub\\Application' ) ) {
-		$key = Activitypub\Application::get_public_key();
+		$key = Activitypub\Application::get_private_key();
 	} else {
-		$key = Activitypub\Collection\Actors::get_public_key( 0 );
+		$key = Activitypub\Collection\Actors::get_private_key( 0 );
 	}
 	return is_string( $key ) ? $key : '';
 }
 
-/** Add transport-owned fields to the Object Projections-owned Actor document. */
+/**
+ * Whether one local public Actor may be advertised for federation right now.
+ *
+ * An Actor is federatable only when its
+ * signing public key can be projected. Advertising an Inbox, endpoints, or a
+ * WebFinger self link without the matching key lets a remote server cache a
+ * keyless Actor that then rejects our signed traffic until its cache goes stale
+ * (Mastodon holds a fetched Actor for roughly one day). The local HTML Actor
+ * representation is unaffected; only new federation discovery is withheld.
+ */
+function axismundi_activitypub_bridge_actor_federatable( Axismundi_Actor $actor ) : bool {
+	return axismundi_activitypub_bridge_ready()
+		&& $actor->is_local()
+		&& 'public' === $actor->get_status()
+		&& '' !== axismundi_activitypub_bridge_public_key( $actor );
+}
+
+/**
+ * Add transport-owned fields to the Object Projections-owned Actor document.
+ *
+ * The Inbox, endpoints, and publicKey advertise together as one atomic bundle:
+ * when the key cannot be projected none of them are emitted, so a remote server
+ * never caches a half-Actor that advertises an Inbox without a verifiable key.
+ */
 function axismundi_activitypub_bridge_actor_transport_fields( array $fields, Axismundi_Actor $actor ) : array {
 	if ( ! axismundi_activitypub_bridge_ready() || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
 		return $fields;
 	}
+	$key = axismundi_activitypub_bridge_public_key( $actor );
+	if ( '' === $key ) {
+		return $fields;
+	}
 	$sender = axismundi_activitypub_bridge_sender( $actor );
-	$key    = axismundi_activitypub_bridge_public_key( $actor );
-	$fields = array_merge(
+	return array_merge(
 		$fields,
 		array(
 			'inbox'     => axismundi_activitypub_bridge_inbox_url( $actor ),
 			'endpoints' => array( 'sharedInbox' => axismundi_activitypub_bridge_shared_inbox_url() ),
+			'publicKey' => array(
+				'id'           => $sender['key_id'],
+				'owner'        => $actor->get_uri(),
+				'publicKeyPem' => $key,
+			),
 		)
 	);
-	if ( '' !== $key ) {
-		$fields['publicKey'] = array(
-			'id'           => $sender['key_id'],
-			'owner'        => $actor->get_uri(),
-			'publicKeyPem' => $key,
-		);
-	}
-	return $fields;
 }
 add_filter( 'axismundi_op_actor_transport_fields', 'axismundi_activitypub_bridge_actor_transport_fields', 10, 2 );
 
 /** Advertise the canonical ActivityStreams Actor document through WebFinger. */
 function axismundi_activitypub_bridge_webfinger_links( array $links, Axismundi_Actor $actor ) : array {
-	if ( ! axismundi_activitypub_bridge_ready() || ! $actor->is_local() || 'public' !== $actor->get_status() ) {
+	// Discovery fail-closed: withhold the ActivityStreams self link while the
+	// Actor cannot project its signing key, so no remote resolves a keyless Actor.
+	if ( ! axismundi_activitypub_bridge_actor_federatable( $actor ) ) {
 		return $links;
 	}
 	$links[] = array(

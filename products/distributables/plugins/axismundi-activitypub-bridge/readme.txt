@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.19
+Stable tag: 0.0.20
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -26,6 +26,11 @@ The official plugin's existing request-signing filter signs those requests; Axis
 remains the authoritative ledger.
 
 == Changelog ==
+
+= 0.0.20 =
+* Advertise Inbox, endpoints, and publicKey as one atomic bundle and withhold the WebFinger self link when a public Actor cannot project its signing key, so a remote server never caches a keyless Actor.
+* Hold, rather than fail, an outbound delivery while the signing key is not yet projectable, preserving the queue row for retry.
+* Extend the peer key-recovery backoff to a bounded long schedule (5m, 1h, 24h, 48h) that crosses a remote Actor cache staleness window before dead-lettering; a generic 401, revoked key, or invalid signature stays terminal at once.
 
 = 0.0.19 =
 * Retry bounded peer key-discovery failures and let administrators safely requeue an immutable failed delivery.

@@ -64,6 +64,23 @@ try {
 	$sentinel = new WP_Error( 'official_owner' );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'non-Axismundi WebFinger resources retain their existing provider result', $sentinel === axismundi_activitypub_bridge_webfinger_data( $sentinel, 'acct:remote@example.com' ) );
 
+	add_filter( 'axismundi_activitypub_bridge_actor_public_key', '__return_empty_string', 99 );
+	$keyless_federatable = $local instanceof Axismundi_Actor && axismundi_activitypub_bridge_actor_federatable( $local );
+	$keyless_fields      = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_actor_transport_fields( array( 'existing' => true ), $local ) : array();
+	$keyless_links       = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_webfinger_links( array(), $local ) : array( array( 'rel' => 'self' ) );
+	remove_filter( 'axismundi_activitypub_bridge_actor_public_key', '__return_empty_string', 99 );
+	$keyless_self = array_values( array_filter( $keyless_links, static fn( array $link ) : bool => 'self' === ( $link['rel'] ?? '' ) ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a keyless Actor advertises no Inbox, endpoints, publicKey, or WebFinger self link while preserving existing fields (atomic fail-closed)', ! $keyless_federatable && true === ( $keyless_fields['existing'] ?? null ) && ! isset( $keyless_fields['inbox'], $keyless_fields['endpoints'], $keyless_fields['publicKey'] ) && array() === $keyless_self );
+	$key_reads = 0;
+	$one_shot_key = static function ( string $key ) use ( &$key_reads ) : string {
+		++$key_reads;
+		return 1 === $key_reads ? $key : '';
+	};
+	add_filter( 'axismundi_activitypub_bridge_actor_public_key', $one_shot_key, 99 );
+	$atomic_fields = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_actor_transport_fields( array(), $local ) : array();
+	remove_filter( 'axismundi_activitypub_bridge_actor_public_key', $one_shot_key, 99 );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the atomic transport bundle resolves one stable public-key snapshot', 1 === $key_reads && ! empty( $atomic_fields['publicKey']['publicKeyPem'] ) && isset( $atomic_fields['inbox'], $atomic_fields['endpoints'] ) );
+
 	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $local->get_uuid() . '/outbox' );
 	$request->set_param( 'uuid', $local->get_uuid() );
 	$outbox = $local instanceof Axismundi_Actor ? axismundi_op_get_actor_outbox( $request ) : null;
@@ -158,6 +175,9 @@ try {
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a failed peer response retains one bounded sanitized diagnostic message', 'HTTP 401: Signature rejected by peer' === $peer_error );
 	$key_missing_response = array( 'body' => '{"error":"Public key not found for key https://local.example/actor#main-key"}' );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'only the peer public-key discovery 401 joins the bounded retry policy', axismundi_activitypub_bridge_delivery_should_retry( $key_missing_response, 401 ) && ! axismundi_activitypub_bridge_delivery_should_retry( array( 'body' => '{"error":"Signature rejected"}' ), 401 ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the peer key-recovery backoff crosses a one-day cache window then dead-letters', array( 300, 3600, 86400, 172800 ) === axismundi_activitypub_bridge_delivery_key_recovery_schedule() && 300 === axismundi_activitypub_bridge_delivery_next_delay( 1, true ) && 3600 === axismundi_activitypub_bridge_delivery_next_delay( 2, true ) && 86400 === axismundi_activitypub_bridge_delivery_next_delay( 3, true ) && 172800 === axismundi_activitypub_bridge_delivery_next_delay( 4, true ) && -1 === axismundi_activitypub_bridge_delivery_next_delay( 5, true ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the ordinary transient backoff keeps its bounded quadratic schedule and dead-letters at the attempt ceiling', axismundi_activitypub_bridge_delivery_retry_delay( 2 ) === axismundi_activitypub_bridge_delivery_next_delay( 1, false ) && -1 === axismundi_activitypub_bridge_delivery_next_delay( axismundi_activitypub_bridge_delivery_max_attempts(), false ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'only the peer public-key discovery 401 is classified as key recovery', axismundi_activitypub_bridge_delivery_is_key_recovery_error( $key_missing_response, 401 ) && ! axismundi_activitypub_bridge_delivery_is_key_recovery_error( array( 'body' => '{"error":"Signature rejected"}' ), 401 ) && ! axismundi_activitypub_bridge_delivery_is_key_recovery_error( array(), 500 ) );
 	wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $job_id, 1 ) );
 	$wpdb->update(
 		$table,

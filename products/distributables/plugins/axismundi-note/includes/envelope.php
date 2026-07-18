@@ -70,6 +70,49 @@ function axismundi_note_sanitize_language( $value ) : string {
 	return preg_match( '/^[A-Za-z0-9-]{1,35}$/', $tag ) ? $tag : '';
 }
 
+/** Normalize one candidate to a usable BCP-47 tag, or '' for empty/undetermined. */
+function axismundi_note_normalize_language( string $language ) : string {
+	$tag = function_exists( 'axismundi_actors_normalize_language_tag' )
+		? axismundi_actors_normalize_language_tag( $language )
+		: axismundi_note_sanitize_language( str_replace( '_', '-', $language ) );
+	return 'und' === $tag ? '' : $tag;
+}
+
+/**
+ * Resolve the effective BCP-47 language for one Note.
+ *
+ * The stored envelope value wins outright — it is the authored (and, after the
+ * first Create, frozen) snapshot. Only when a draft has none does the read-time
+ * chain apply: the author Actor's default language, then the author's WordPress
+ * locale, then the site locale. Increment 5 writes the resolved value into the
+ * envelope at the first Create; this resolver never stores anything.
+ */
+function axismundi_note_effective_language( WP_Post $post ) : string {
+	$envelope = axismundi_note_get( $post->ID );
+	$stored   = is_array( $envelope ) ? axismundi_note_normalize_language( (string) $envelope['language_tag'] ) : '';
+	if ( '' !== $stored ) {
+		return $stored;
+	}
+	$candidates = array();
+	if ( function_exists( 'axismundi_actors_get_for_user' ) ) {
+		$actor = axismundi_actors_get_for_user( (int) $post->post_author );
+		if ( $actor instanceof Axismundi_Actor ) {
+			$candidates[] = $actor->get_default_language();
+		}
+	}
+	if ( (int) $post->post_author > 0 ) {
+		$candidates[] = get_user_locale( (int) $post->post_author );
+	}
+	$candidates[] = function_exists( 'axismundi_actors_site_language' ) ? axismundi_actors_site_language() : get_locale();
+	foreach ( $candidates as $candidate ) {
+		$normalized = axismundi_note_normalize_language( (string) $candidate );
+		if ( '' !== $normalized ) {
+			return $normalized;
+		}
+	}
+	return 'und';
+}
+
 /**
  * Validate one explicit mention list, failing closed on any bad or excess input.
  *
@@ -215,6 +258,16 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		$mentions = is_array( $prior ) ? array_values( array_filter( array_map( 'strval', $prior ) ) ) : array();
 	}
 
+	if ( array_key_exists( 'language_tag', $fields ) ) {
+		$raw_language = is_scalar( $fields['language_tag'] ) ? trim( (string) $fields['language_tag'] ) : '';
+		$language     = '' === $raw_language ? '' : axismundi_note_normalize_language( $raw_language );
+		if ( '' !== $raw_language && '' === $language ) {
+			return new WP_Error( 'ax_note_language', __( 'Enter a valid BCP-47 language tag.', 'axismundi-note' ) );
+		}
+	} else {
+		$language = is_array( $existing ) ? axismundi_note_normalize_language( (string) $existing['language_tag'] ) : '';
+	}
+
 	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
 	$in_reply_to = axismundi_note_sanitize_uri( $fields['in_reply_to_uri'] ?? ( $existing['in_reply_to_uri'] ?? '' ) );
 	$context     = axismundi_note_sanitize_uri( $fields['context_uri'] ?? ( $existing['context_uri'] ?? '' ) );
@@ -227,7 +280,7 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		'actor_uri'               => $actor,
 		'actor_uri_hash'          => hash( 'sha256', $actor ),
 		'visibility'              => $visibility,
-		'language_tag'            => axismundi_note_sanitize_language( $fields['language_tag'] ?? ( $existing['language_tag'] ?? '' ) ),
+		'language_tag'            => $language,
 		'in_reply_to_uri'         => $in_reply_to,
 		'in_reply_to_uri_hash'    => '' === $in_reply_to ? '' : hash( 'sha256', $in_reply_to ),
 		'context_uri'             => $context,

@@ -22,6 +22,7 @@ $ax_bridge_accept_activity = '';
 $ax_bridge_update_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_quote_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_quote_decision  = '';
+$ax_bridge_quote_delete    = '';
 $ax_bridge_quote_auth      = '';
 $ax_bridge_quote_post      = 0;
 $ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
@@ -153,6 +154,11 @@ try {
 	$ax_bridge_quote_auth = (string) ( $quote_decision_payload['result'] ?? '' );
 	$quote_authorization = '' !== $ax_bridge_quote_auth ? axismundi_act_get_quote_authorization( $ax_bridge_quote_auth ) : null;
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified QuoteRequest composes through the generic Inbox into one Activities-owned Accept and authorization', $quote_response instanceof WP_REST_Response && 202 === $quote_response->get_status() && $quote_stored instanceof Axismundi_Activity && $quote_decision instanceof Axismundi_Activity && 'Accept' === $quote_decision->get_type() && 'outbound' === $quote_decision->get_direction() && is_array( $quote_authorization ) && 'active' === $quote_authorization['status'] );
+	$quote_revoked = '' !== $ax_bridge_quote_auth ? axismundi_act_revoke_quote_authorization( $ax_bridge_quote_auth, 'fixture' ) : null;
+	$quote_deletes = '' !== $ax_bridge_quote_auth ? array_values( array_filter( axismundi_act_get_by_object( $ax_bridge_quote_auth, 50 ), static fn( Axismundi_Activity $item ) : bool => 'Delete' === $item->get_type() && 'outbound' === $item->get_direction() ) ) : array();
+	$ax_bridge_quote_delete = isset( $quote_deletes[0] ) ? $quote_deletes[0]->get_uri() : '';
+	$quote_delete_delivery  = '' !== $ax_bridge_quote_delete ? axismundi_activitypub_bridge_find_delivery( $ax_bridge_quote_delete ) : 0;
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'revoking that stamp records one privacy-minimal Delete and composes it into the Bridge delivery queue', is_array( $quote_revoked ) && 'revoked' === $quote_revoked['status'] && 1 === count( $quote_deletes ) && $quote_delete_delivery > 0 );
 
 	$actor_payload       = $payload;
 	$actor_payload['id'] = $ax_bridge_actor_activity;
@@ -217,6 +223,16 @@ try {
 	if ( '' !== $ax_bridge_quote_decision ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_decision ) ); // phpcs:ignore WordPress.DB
 		$delivery_id = axismundi_activitypub_bridge_find_delivery( $ax_bridge_quote_decision );
+		if ( $delivery_id > 0 ) {
+			for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
+				wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $delivery_id, $attempt ) );
+			}
+			$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
+		}
+	}
+	if ( '' !== $ax_bridge_quote_delete ) {
+		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_delete ) ); // phpcs:ignore WordPress.DB
+		$delivery_id = axismundi_activitypub_bridge_find_delivery( $ax_bridge_quote_delete );
 		if ( $delivery_id > 0 ) {
 			for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
 				wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $delivery_id, $attempt ) );

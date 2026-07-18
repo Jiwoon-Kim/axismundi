@@ -112,11 +112,18 @@ consent for a pre-policy Post. A consistent inline instrument may be inspected w
 network request; contradictory `attributedTo` or `quote` members prevent a decision while the
 immutable inbound request remains recorded for diagnosis.
 
-A valid `Delete(QuoteAuthorization)` changes authorization state to `revoked`; it does not
-delete the row or the observed quote relation. When this site owns the quoting Object, the
-Delete must be forwarded to that Object's audience as required by FEP-044f. Activities
-records the lifecycle and audience; the Bridge delegates only signed delivery and retry to
-the official plugin.
+A local revocation changes authorization state to `revoked`; it does not delete the row or
+the observed quote relation. It records one outbound `Delete` whose object is only the
+authorization URI and whose recipient is the quote author. The protected quoting and quoted
+Objects are never embedded in that Activity. The Bridge delegates only signed delivery and
+retry to the official plugin.
+
+When this site owns a quoting Object and receives a remote `Delete(QuoteAuthorization)`, it
+must forward that Delete to the quote Object's audience as required by FEP-044f. A Delete is
+privacy-minimal and cannot reveal that mapping by itself, so this path remains fail-closed
+until the observed-quote relation index stores a previously verified authorization-to-quote
+association. It must not infer the quote Object from URI shape or perform an unauthenticated
+network fetch during Inbox processing.
 
 ## 4. Local identity
 

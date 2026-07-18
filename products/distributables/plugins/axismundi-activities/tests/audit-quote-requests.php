@@ -155,6 +155,21 @@ try {
 	$follower_accept  = $follower_request instanceof Axismundi_Activity ? axismundi_act_get_quote_request_decision( $follower_request->get_uri() ) : null;
 	ax_qr_assert( $ax_qr_results, 'followers reads the accepted relation directly and approves without fetching the public Collection', is_array( $follow ) && 'accepted' === $follow['state'] && $follower_accept instanceof Axismundi_Activity && 'Accept' === $follower_accept->get_type() );
 
+	$revoked = is_array( $authorization ) ? axismundi_act_revoke_quote_authorization( (string) $authorization['authorization_uri'], 'fixture' ) : null;
+	$deletes = is_array( $authorization ) ? array_values( array_filter( axismundi_act_get_by_object( (string) $authorization['authorization_uri'], 50 ), static fn( Axismundi_Activity $item ) : bool => 'Delete' === $item->get_type() && 'outbound' === $item->get_direction() ) ) : array();
+	$delete_payload = isset( $deletes[0] ) ? $deletes[0]->get_payload() : array();
+	$revoked_again  = is_array( $authorization ) ? axismundi_act_revoke_quote_authorization( (string) $authorization['authorization_uri'] ) : null;
+	$delete_replay  = is_array( $authorization ) ? array_values( array_filter( axismundi_act_get_by_object( (string) $authorization['authorization_uri'], 50 ), static fn( Axismundi_Activity $item ) : bool => 'Delete' === $item->get_type() && 'outbound' === $item->get_direction() ) ) : array();
+	ax_qr_assert(
+		$ax_qr_results,
+		'revocation records one idempotent addressed Delete without embedding either protected Object',
+		is_array( $revoked ) && 'revoked' === $revoked['status']
+			&& is_array( $revoked_again ) && 1 === count( $deletes ) && 1 === count( $delete_replay )
+			&& (string) $authorization['authorization_uri'] === ( $delete_payload['object'] ?? '' )
+			&& in_array( $requester->get_uri(), (array) ( $deletes[0]->get_audience()['to'] ?? array() ), true )
+			&& ! isset( $delete_payload['instrument'], $delete_payload['target'], $delete_payload['interactingObject'], $delete_payload['interactionTarget'] )
+	);
+
 	$bad_uri = $requester->get_uri() . '/statuses/bad-' . $ax_qr_suffix;
 	$bad = axismundi_act_record_activity(
 		array(

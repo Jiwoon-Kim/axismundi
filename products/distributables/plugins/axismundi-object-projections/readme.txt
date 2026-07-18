@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.24
+Stable tag: 0.0.25
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -40,6 +40,15 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.25 =
+* Dereference Activities-issued QuoteAuthorization identities as the exact FEP-044f stamp:
+  author, interacting Object, and interaction target remain URI references and are never
+  embedded.
+* Serve only the canonical root query URI, fail closed for unknown or malformed identities,
+  and bypass permalink rewrite dependence.
+* Return a privacy-minimal `410 Gone` Tombstone after revocation with `Cache-Control: no-store`,
+  preserving identity while exposing neither protected Object.
 
 = 0.0.24 =
 * Supply Activities with an exact local Article, author Actor, and explicit Quote policy

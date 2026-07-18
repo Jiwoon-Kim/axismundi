@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.17
+Stable tag: 0.0.18
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -21,7 +21,7 @@ Federation will own HTTP inbox/outbox transport, signatures, and remote delivery
 
 Axismundi Actors is a required dependency and remains the authority for every actor URI.
 
-Version 0.0.17 implements the immutable URI-keyed Activity ledger, Follow/Block relation
+Version 0.0.18 implements the immutable URI-keyed Activity ledger, Follow/Block relation
 state, local and cached-remote Follow controls, URI-keyed Like/Undo and Announce/Undo,
 FEP-044f QuoteRequest decisions, and read-only administrator inspection. It
 also records one local outbound Create when a projectable Core Post is first published.
@@ -33,6 +33,14 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.18 =
+* Revoke a standing QuoteAuthorization without deleting its identity and record one durable,
+  idempotent outbound Delete addressed to the quote author.
+* Keep the Delete privacy-minimal: its object is only the authorization URI, and neither the
+  quoting Object nor quoted Object is embedded in the revocation Activity.
+* Retry the same ledger projection on repeated or racing revocation calls without firing the
+  authorization lifecycle hook or delivery queue twice.
 
 = 0.0.17 =
 * Store and process FEP-044f QuoteRequest Activities after their inbound ledger commit.

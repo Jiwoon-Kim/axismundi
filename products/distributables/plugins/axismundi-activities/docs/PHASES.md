@@ -92,14 +92,17 @@ count-only public Object `shares` collection. Axismundi keeps `shares` as an
 `OrderedCollection` for consistency with its existing `likes` representation; Mastodon uses
 an unordered `Collection`, and ActivityPub permits either. Group fan-out remains Phase 5 work.
 
-## 0.0.14–0.0.17 — Phase 3c: FEP-044f Quote consent (shipped through request decisions)
+## 0.0.14–0.0.18 — Phase 3c: FEP-044f Quote consent (shipped through local revocation)
 
 Store the general AS2 `instrument` member, issue immutable QuoteAuthorization identities,
 derive a count-only accepted-follower query, and process committed inbound QuoteRequest
 Activities against the quoted Post's explicit policy. Accepted requests produce one addressed
 Accept with the authorization URI in `result`; denied requests produce one Reject. Replays and
 later policy changes preserve the first decision. Authorization representation, revocation
-forwarding, and observed quote indexing remain the next increments.
+of locally issued stamps, and delivery to the remote quote author are shipped. Forwarding a
+remote revocation through a locally owned quote's audience requires the inbound authorization
+relation index planned with observed quote indexing; that later increment must not guess from
+a privacy-minimal Delete that deliberately embeds neither Object.
 
 ## Future — Phase 4: logical inbox/outbox membership
 

@@ -264,6 +264,43 @@ function axismundi_act_get_active_quote_authorization( string $quoting_object_ur
 }
 
 /**
+ * Record the one outbound Delete that withdraws a local QuoteAuthorization.
+ *
+ * The object is the authorization URI itself. The authorization members are deliberately
+ * not embedded: FEP-044f forbids copying the interacting Object or interaction target into
+ * a revocation because either may disclose content to an unintended recipient.
+ *
+ * @param array<string,mixed> $authorization Revoked authorization row.
+ * @return Axismundi_Activity|WP_Error
+ */
+function axismundi_act_ensure_quote_authorization_delete( array $authorization ) {
+	$authorization_uri = axismundi_act_uri( (string) ( $authorization['authorization_uri'] ?? '' ) );
+	$author_uri        = axismundi_act_uri( (string) ( $authorization['author_actor_uri'] ?? '' ) );
+	$requester_uri     = axismundi_act_uri( (string) ( $authorization['requester_actor_uri'] ?? '' ) );
+	if ( '' === $authorization_uri || '' === $author_uri || '' === $requester_uri || 'revoked' !== (string) ( $authorization['status'] ?? '' ) ) {
+		return new WP_Error( 'ax_act_quote_auth_delete_args', __( 'A revoked QuoteAuthorization and both Actors are required.', 'axismundi-activities' ) );
+	}
+	foreach ( axismundi_act_get_by_object( $authorization_uri, 50 ) as $activity ) {
+		if ( 'Delete' === $activity->get_type()
+			&& 'outbound' === $activity->get_direction()
+			&& hash_equals( $author_uri, $activity->get_actor_uri() )
+		) {
+			return $activity;
+		}
+	}
+	return axismundi_act_record_source_activity(
+		array(
+			'type'   => 'Delete',
+			'actor'  => $author_uri,
+			'object' => $authorization_uri,
+			'to'     => array( $requester_uri ),
+		),
+		'outbound',
+		'quote-authorization-delete:' . hash( 'sha256', $authorization_uri )
+	);
+}
+
+/**
  * Issue the authorization for one accepted QuoteRequest, or return the existing one.
  *
  * Idempotent by QuoteRequest URI: a re-delivered request must return the decision already
@@ -360,6 +397,10 @@ function axismundi_act_revoke_quote_authorization( string $authorization_uri, st
 		return new WP_Error( 'ax_act_quote_auth_missing', __( 'That QuoteAuthorization is unknown.', 'axismundi-activities' ) );
 	}
 	if ( 'revoked' === $authorization['status'] ) {
+		// Retrying the public state transition also retries the durable protocol projection.
+		// A malformed legacy row may be unable to produce that projection, but its already
+		// committed lifecycle state must remain readable and idempotent.
+		axismundi_act_ensure_quote_authorization_delete( $authorization );
 		return $authorization;
 	}
 	$now = current_time( 'mysql', true );
@@ -378,13 +419,20 @@ function axismundi_act_revoke_quote_authorization( string $authorization_uri, st
 	$revoked = axismundi_act_get_quote_authorization( $authorization['authorization_uri'] );
 	if ( 1 !== (int) $updated ) {
 		// Zero rows changed: a concurrent caller already revoked it between our read and our
-		// write. Return the current row without firing the hook — step 5 hangs Delete
-		// forwarding on it, and a lost race must not send that Delete twice.
-		return is_array( $revoked ) ? $revoked : new WP_Error( 'ax_act_quote_auth_revoke', __( 'The QuoteAuthorization could not be revoked.', 'axismundi-activities' ) );
+		// write. Re-run the idempotent ledger projection so a crash between the winning update
+		// and its Delete cannot strand a revoked stamp without a protocol event.
+		if ( ! is_array( $revoked ) ) {
+			return new WP_Error( 'ax_act_quote_auth_revoke', __( 'The QuoteAuthorization could not be revoked.', 'axismundi-activities' ) );
+		}
+		axismundi_act_ensure_quote_authorization_delete( $revoked );
+		return $revoked;
 	}
+	axismundi_act_ensure_quote_authorization_delete( $revoked );
 
 	/**
-	 * Fires once, for the caller that actually withdrew the authorization.
+	 * Fires once, after the caller that actually withdrew the authorization also records
+	 * its durable outbound Delete. A racing or retrying caller may ensure that same Delete,
+	 * but never fires this lifecycle hook.
 	 *
 	 * @since 0.0.15
 	 * @param array<string,mixed> $revoked The revoked authorization.

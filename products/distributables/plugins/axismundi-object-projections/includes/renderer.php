@@ -23,6 +23,14 @@ defined( 'ABSPATH' ) || exit;
  */
 function axismundi_op_jsonld_context( ?array $object = null ) {
 	$context = array( 'https://www.w3.org/ns/activitystreams' );
+	if ( is_array( $object ) && ( 'QuoteAuthorization' === ( $object['type'] ?? '' ) || 'QuoteAuthorization' === ( $object['formerType'] ?? '' ) ) ) {
+		$context[] = array(
+			'QuoteAuthorization' => 'https://w3id.org/fep/044f#QuoteAuthorization',
+			'gts'                => 'https://gotosocial.org/ns#',
+			'interactingObject'  => array( '@id' => 'gts:interactingObject', '@type' => '@id' ),
+			'interactionTarget'  => array( '@id' => 'gts:interactionTarget', '@type' => '@id' ),
+		);
+	}
 	if ( is_array( $object ) && array_key_exists( 'sensitive', $object ) ) {
 		$context[] = array( 'sensitive' => 'as:sensitive' );
 	}

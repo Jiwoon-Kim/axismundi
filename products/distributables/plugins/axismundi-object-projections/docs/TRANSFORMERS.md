@@ -106,7 +106,10 @@ must not emit a second `@context`.
 Object Projections also owns the dereferenceable representation of an Activities-issued
 `/?ax_quote_authorization={uuid}` identity. It emits the FEP-044f authorization members,
 including the quoting Object, quoted Object, and author Actor, without becoming the owner of
-authorization lifecycle state.
+authorization lifecycle state. Both Object members are URI references and are never embedded.
+The exact canonical query URI returns the active stamp with `Cache-Control: no-store`; after
+Activities revokes it, the same URI returns `410 Gone` with a privacy-minimal Tombstone and
+no quoting or quoted Object members.
 
 ## First-party Media Library adapter (0.0.4)
 

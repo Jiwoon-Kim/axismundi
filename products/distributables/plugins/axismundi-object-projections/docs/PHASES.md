@@ -30,6 +30,8 @@ Phase 2k FEP-044f Quote policy                      — shipped (0.0.23): explic
                                                        setting + advisory canQuote output
 Phase 2l QuoteRequest policy provider               — shipped (0.0.24): exact local Article,
                                                        author, and explicit policy seam
+Phase 2m QuoteAuthorization representation          — shipped (0.0.25): canonical query route,
+                                                       active stamp + revoked 410 Tombstone
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

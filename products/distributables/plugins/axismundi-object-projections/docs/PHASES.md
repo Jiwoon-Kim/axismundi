@@ -26,6 +26,8 @@ Phase 2i FEP-b2b8 Article representation             — shipped (0.0.13): posit
                                                        allowlist, summary/preview/image/Link
 Phase 2j Actor followers collection                 — shipped (0.0.22): stable UUID URI;
                                                        policy-gated count-only Collection
+Phase 2k FEP-044f Quote policy                      — shipped (0.0.23): explicit Post
+                                                       setting + advisory canQuote output
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

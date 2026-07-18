@@ -71,7 +71,7 @@ profile `url`, Outbox, or representation-owned social collections. The Actor tra
 representation-owned Outbox when Activities exposes its public query API. That Outbox is
 a separate collection transformer and never reads or mutates the Activity table directly.
 
-### Followers and planned Quote policy projection
+### Followers and Quote policy projection
 
 Object Projections owns the stable Actor `followers` URI and its representation, following
 the existing Outbox boundary: Activities supplies public-safe relation queries, while the
@@ -86,16 +86,22 @@ member enumeration.
 - QuoteRequest approval checks the internal accepted-Follow relation. It does not fetch this
   Collection, so a count-only or inaccessible representation does not weaken policy.
 
-The shipped Followers increment is deliberately count-only. A later increment adds the
-post setting `Who can quote this post?` with `anyone`,
+The shipped Followers increment is deliberately count-only. Version 0.0.23 adds the
+post setting `Who can quote this post?` with an explicit unset state plus `anyone`,
 `followers`, and `me`, and projects it as FEP-044f `interactionPolicy.canQuote`. `followers`
 references the stable followers URI; `me` references the author Actor URI. These values are
 advisory policy declarations and never constitute proof that a particular quote was
 authorized.
 
-The renderer remains the sole JSON-LD context owner. FEP-044f quote and authorization terms,
-GoToSocial interaction-policy terms, and Misskey compatibility terms are added only through
-`axismundi_op_jsonld_context`; transformers must not emit a second `@context`.
+An unset policy emits no `interactionPolicy`; Object Projections never invents a default
+consent declaration for older Posts. `me` advertises the author Actor as the sole automatic
+approval value, matching FEP-044f's self-quote exception. QuoteRequest decisions and
+QuoteAuthorization lifecycle state remain Activities-owned later increments.
+
+The renderer remains the sole JSON-LD context owner. GoToSocial interaction-policy terms are
+added only when `interactionPolicy` is emitted. Later FEP-044f quote/authorization and Misskey
+compatibility terms must follow the same `axismundi_op_jsonld_context` boundary; transformers
+must not emit a second `@context`.
 
 Object Projections also owns the dereferenceable representation of an Activities-issued
 `/?ax_quote_authorization={uuid}` identity. It emits the FEP-044f authorization members,

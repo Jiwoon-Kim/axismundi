@@ -29,6 +29,14 @@ function axismundi_op_jsonld_context( ?array $object = null ) {
 	if ( is_array( $object ) && array_key_exists( 'dcterms:subject', $object ) ) {
 		$context[] = array( 'dcterms' => 'http://purl.org/dc/terms/' );
 	}
+	if ( is_array( $object ) && array_key_exists( 'interactionPolicy', $object ) ) {
+		$context[] = array(
+			'gts'               => 'https://gotosocial.org/ns#',
+			'interactionPolicy' => array( '@id' => 'gts:interactionPolicy', '@type' => '@id' ),
+			'canQuote'          => array( '@id' => 'gts:canQuote', '@type' => '@id' ),
+			'automaticApproval' => array( '@id' => 'gts:automaticApproval', '@type' => '@id' ),
+		);
+	}
 	/**
 	 * Filter the JSON-LD `@context` entries.
 	 *

@@ -85,6 +85,7 @@ try {
 			&& 'https://www.w3.org/ns/activitystreams' === $article['@context'][0]
 			&& array( 'sensitive' => 'as:sensitive' ) === $article['@context'][1]
 			&& false !== strpos( (string) $article['summary'], '<em>A short summary.</em>' )
+			&& ! isset( $article['interactionPolicy'], $article['quoteAuthorization'] )
 	);
 	$content_contract = is_array( $article ) && false !== strpos( (string) $article['content'], '<p' ) && ! empty( $article['published'] ) && ! empty( $article['updated'] );
 	if ( ! $content_contract && is_array( $article ) ) {
@@ -152,6 +153,33 @@ try {
 		'a stored warning is not exposed while the sensitive flag is disabled',
 		is_array( $standard ) && false === $standard['sensitive'] && ! isset( $standard['dcterms:subject'] )
 	);
+
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );
+	$quote_anyone  = axismundi_op_transform_object( get_post( $post_id ) );
+	$policy_context = array(
+		'gts'               => 'https://gotosocial.org/ns#',
+		'interactionPolicy' => array( '@id' => 'gts:interactionPolicy', '@type' => '@id' ),
+		'canQuote'          => array( '@id' => 'gts:canQuote', '@type' => '@id' ),
+		'automaticApproval' => array( '@id' => 'gts:automaticApproval', '@type' => '@id' ),
+	);
+	ax_article_assert(
+		$ax_article_results,
+		'an explicit anyone policy projects FEP-044f canQuote without fabricating authorization evidence',
+		is_array( $quote_anyone )
+			&& 'https://www.w3.org/ns/activitystreams#Public' === $quote_anyone['interactionPolicy']['canQuote']['automaticApproval']
+			&& in_array( $policy_context, $quote_anyone['@context'], true )
+			&& ! isset( $quote_anyone['quoteAuthorization'] )
+	);
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'me' );
+	$quote_me = axismundi_op_transform_object( get_post( $post_id ) );
+	ax_article_assert( $ax_article_results, 'the me policy advertises only the author Actor and preserves the self-quote exception', is_array( $quote_me ) && 'https://example.com/actors/test-author' === $quote_me['interactionPolicy']['canQuote']['automaticApproval'] );
+	$site_actor = axismundi_actors_get_site_actor();
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'followers' );
+	$followers_policy = $site_actor instanceof Axismundi_Actor ? axismundi_op_post_quote_interaction_policy( get_post( $post_id ), $site_actor->get_uri() ) : null;
+	ax_article_assert( $ax_article_results, 'the followers policy references the OP-owned stable Followers address without dereferencing it', is_array( $followers_policy ) && axismundi_op_actor_followers_url( $site_actor ) === $followers_policy['canQuote']['automaticApproval'] );
+	delete_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META );
+	$quote_unreported = axismundi_op_transform_object( get_post( $post_id ) );
+	ax_article_assert( $ax_article_results, 'removing the explicit policy removes interactionPolicy instead of inventing a default', is_array( $quote_unreported ) && ! isset( $quote_unreported['interactionPolicy'] ) );
 
 	$draft_result  = axismundi_op_transform_object( $draft );
 	$locked_result = axismundi_op_transform_object( $locked );

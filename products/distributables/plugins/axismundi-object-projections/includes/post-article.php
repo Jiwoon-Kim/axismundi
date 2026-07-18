@@ -186,6 +186,39 @@ function axismundi_op_post_article_generator() : ?array {
 }
 
 /**
+ * Project an explicitly authored FEP-044f canQuote policy.
+ *
+ * The declaration is advisory and never fabricates QuoteAuthorization evidence.
+ *
+ * @return array<string,mixed>|null
+ */
+function axismundi_op_post_quote_interaction_policy( WP_Post $post, string $actor_uri ) : ?array {
+	$policy = axismundi_op_post_quote_policy( $post );
+	if ( '' === $policy ) {
+		return null;
+	}
+	$automatic = '';
+	if ( 'anyone' === $policy ) {
+		$automatic = 'https://www.w3.org/ns/activitystreams#Public';
+	} elseif ( 'me' === $policy ) {
+		$automatic = $actor_uri;
+	} elseif ( 'followers' === $policy && function_exists( 'axismundi_actors_get_by_uri' ) && function_exists( 'axismundi_op_actor_followers_url' ) ) {
+		$actor = axismundi_actors_get_by_uri( $actor_uri );
+		if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+			$automatic = axismundi_op_actor_followers_url( $actor );
+		}
+	}
+	if ( '' === $automatic ) {
+		return null;
+	}
+	return array(
+		'canQuote' => array(
+			'automaticApproval' => $automatic,
+		),
+	);
+}
+
+/**
  * Transform a public core post into an Article.
  *
  * @param WP_Post $post Post.
@@ -228,6 +261,10 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	$warning = axismundi_op_post_content_warning( $post );
 	if ( $article['sensitive'] && '' !== $warning ) {
 		$article['dcterms:subject'] = $warning;
+	}
+	$interaction_policy = axismundi_op_post_quote_interaction_policy( $post, $attributed_to );
+	if ( null !== $interaction_policy ) {
+		$article['interactionPolicy'] = $interaction_policy;
 	}
 
 	/**

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.22
+Stable tag: 0.0.23
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -40,6 +40,14 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.23 =
+* Add an explicit `Who can quote this post?` policy to the block-editor Federation
+  panel and Posts Quick Edit, preserving an unset state rather than inventing consent.
+* Project authored `anyone`, `followers`, and `me` choices as FEP-044f
+  `interactionPolicy.canQuote.automaticApproval`, with renderer-owned JSON-LD context.
+* Keep the declaration advisory: no policy value fabricates a QuoteAuthorization or
+  changes the Activities-owned consent state.
 
 = 0.0.22 =
 * Advertise an OP-owned UUID Followers URI on local Actor documents and serve a

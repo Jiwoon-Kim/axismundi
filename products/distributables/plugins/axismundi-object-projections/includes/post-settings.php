@@ -7,8 +7,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_POST_SENSITIVE_META = '_ax_op_sensitive';
-const AXISMUNDI_OP_POST_WARNING_META   = '_ax_op_content_warning';
+const AXISMUNDI_OP_POST_SENSITIVE_META    = '_ax_op_sensitive';
+const AXISMUNDI_OP_POST_WARNING_META      = '_ax_op_content_warning';
+const AXISMUNDI_OP_POST_QUOTE_POLICY_META = '_ax_op_quote_policy';
 
 /** Sanitize a REST or form boolean. */
 function axismundi_op_sanitize_post_sensitive( $value ) : bool {
@@ -19,6 +20,12 @@ function axismundi_op_sanitize_post_sensitive( $value ) : bool {
 function axismundi_op_sanitize_content_warning( $value ) : string {
 	$value = sanitize_text_field( (string) $value );
 	return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, 500 ) : substr( $value, 0, 500 );
+}
+
+/** Sanitize an explicitly authored FEP-044f Quote policy. */
+function axismundi_op_sanitize_quote_policy( $value ) : string {
+	$value = sanitize_key( (string) $value );
+	return in_array( $value, array( 'anyone', 'followers', 'me' ), true ) ? $value : '';
 }
 
 /** Authorize edits to federation post metadata. */
@@ -57,6 +64,23 @@ function axismundi_op_register_post_settings_meta() : void {
 			'auth_callback'     => 'axismundi_op_auth_post_setting',
 		)
 	);
+	register_post_meta(
+		'post',
+		AXISMUNDI_OP_POST_QUOTE_POLICY_META,
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'default'           => '',
+			'show_in_rest'      => array(
+				'schema' => array(
+					'type' => 'string',
+					'enum' => array( '', 'anyone', 'followers', 'me' ),
+				),
+			),
+			'sanitize_callback' => 'axismundi_op_sanitize_quote_policy',
+			'auth_callback'     => 'axismundi_op_auth_post_setting',
+		)
+	);
 }
 add_action( 'init', 'axismundi_op_register_post_settings_meta' );
 
@@ -68,6 +92,11 @@ function axismundi_op_post_is_sensitive( WP_Post $post ) : bool {
 /** Return the post's public content-warning label. */
 function axismundi_op_post_content_warning( WP_Post $post ) : string {
 	return axismundi_op_sanitize_content_warning( get_post_meta( $post->ID, AXISMUNDI_OP_POST_WARNING_META, true ) );
+}
+
+/** Return an explicit Quote policy, or an empty string when the author set none. */
+function axismundi_op_post_quote_policy( WP_Post $post ) : string {
+	return axismundi_op_sanitize_quote_policy( get_post_meta( $post->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, true ) );
 }
 
 /** Add a compact federation state column used by Quick Edit. */
@@ -86,12 +115,14 @@ function axismundi_op_render_post_column( string $column, int $post_id ) : void 
 	if ( ! $post instanceof WP_Post ) {
 		return;
 	}
-	$sensitive = axismundi_op_post_is_sensitive( $post );
-	$warning   = axismundi_op_post_content_warning( $post );
+	$sensitive    = axismundi_op_post_is_sensitive( $post );
+	$warning      = axismundi_op_post_content_warning( $post );
+	$quote_policy = axismundi_op_post_quote_policy( $post );
 	printf(
-		'<span class="axismundi-op-federation-state" data-sensitive="%1$d" data-warning="%2$s">%3$s</span>',
+		'<span class="axismundi-op-federation-state" data-sensitive="%1$d" data-warning="%2$s" data-quote-policy="%3$s">%4$s</span>',
 		$sensitive ? 1 : 0,
 		esc_attr( $warning ),
+		esc_attr( $quote_policy ),
 		esc_html( $sensitive ? __( 'Sensitive', 'axismundi-object-projections' ) : __( 'Standard', 'axismundi-object-projections' ) )
 	);
 }
@@ -116,6 +147,15 @@ function axismundi_op_quick_edit_fields( string $column, string $post_type ) : v
 				<span class="title"><?php esc_html_e( 'Content warning', 'axismundi-object-projections' ); ?></span>
 				<span class="input-text-wrap"><input type="text" name="axismundi_op_content_warning" maxlength="500" /></span>
 			</label>
+			<label class="alignleft">
+				<span class="title"><?php esc_html_e( 'Who can quote this post?', 'axismundi-object-projections' ); ?></span>
+				<select name="axismundi_op_quote_policy">
+					<option value=""><?php esc_html_e( 'Not specified', 'axismundi-object-projections' ); ?></option>
+					<option value="anyone"><?php esc_html_e( 'Anyone', 'axismundi-object-projections' ); ?></option>
+					<option value="followers"><?php esc_html_e( 'Followers only', 'axismundi-object-projections' ); ?></option>
+					<option value="me"><?php esc_html_e( 'Just me', 'axismundi-object-projections' ); ?></option>
+				</select>
+			</label>
 		</div>
 	</fieldset>
 	<?php
@@ -134,6 +174,13 @@ function axismundi_op_save_quick_edit( int $post_id, WP_Post $post ) : void {
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_SENSITIVE_META, isset( $_POST['axismundi_op_sensitive'] ) ? '1' : '0' );
 	$warning = isset( $_POST['axismundi_op_content_warning'] ) ? sanitize_text_field( wp_unslash( $_POST['axismundi_op_content_warning'] ) ) : '';
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_WARNING_META, axismundi_op_sanitize_content_warning( $warning ) );
+	$quote_policy = isset( $_POST['axismundi_op_quote_policy'] ) ? sanitize_key( wp_unslash( $_POST['axismundi_op_quote_policy'] ) ) : '';
+	$quote_policy = axismundi_op_sanitize_quote_policy( $quote_policy );
+	if ( '' === $quote_policy ) {
+		delete_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META );
+	} else {
+		update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, $quote_policy );
+	}
 }
 add_action( 'save_post_post', 'axismundi_op_save_quick_edit', 10, 2 );
 

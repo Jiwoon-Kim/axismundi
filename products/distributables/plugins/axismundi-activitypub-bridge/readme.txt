@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.17
+Stable tag: 0.0.18
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -26,6 +26,9 @@ The official plugin's existing request-signing filter signs those requests; Axis
 remains the authoritative ledger.
 
 == Changelog ==
+
+= 0.0.18 =
+* Keep user Actor public-key projection compatible with official ActivityPub versions that do not load the Application signing identity.
 
 = 0.0.17 =
 * Preserve a bounded peer-provided error message with failed delivery diagnostics so HTTP

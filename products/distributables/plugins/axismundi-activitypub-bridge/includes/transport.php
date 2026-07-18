@@ -31,13 +31,17 @@ function axismundi_activitypub_bridge_sender( Axismundi_Actor $actor ) : array {
 
 /** Resolve the official plugin's public key without changing Actor ownership. */
 function axismundi_activitypub_bridge_public_key( Axismundi_Actor $actor ) : string {
-	if ( ! class_exists( 'Activitypub\\Collection\\Actors' ) || ! class_exists( 'Activitypub\\Application' ) ) {
+	if ( ! class_exists( 'Activitypub\\Collection\\Actors' ) ) {
 		return '';
 	}
 	$user_id = $actor->get_local_user_id();
-	$key     = $user_id
-		? Activitypub\Collection\Actors::get_public_key( $user_id )
-		: Activitypub\Application::get_public_key();
+	if ( $user_id ) {
+		$key = Activitypub\Collection\Actors::get_public_key( $user_id );
+	} elseif ( class_exists( 'Activitypub\\Application' ) ) {
+		$key = Activitypub\Application::get_public_key();
+	} else {
+		$key = Activitypub\Collection\Actors::get_public_key( 0 );
+	}
 	return is_string( $key ) ? $key : '';
 }
 

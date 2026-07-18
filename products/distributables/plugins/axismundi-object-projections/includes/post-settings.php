@@ -158,9 +158,42 @@ function axismundi_op_post_visibility( WP_Post $post ) : string {
 	return axismundi_op_sanitize_post_visibility( get_post_meta( $post->ID, AXISMUNDI_OP_POST_VISIBILITY_META, true ) );
 }
 
-/** Return explicitly mentioned Actor URIs. */
+/**
+ * Derive validated Actor mention URIs from `a.mention[href]` anchors in one HTML body.
+ *
+ * The neutral parser is shared by every local object type (Core Post Article and
+ * the Note CPT) so both derive mentions with one `WP_HTML_Tag_Processor` contract
+ * and cannot drift. Only URL-shaped hrefs survive; Actor identity is verified at
+ * the publish boundary, not here.
+ */
+function axismundi_op_content_mention_uris( string $html ) : array {
+	if ( '' === trim( $html ) || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		return array();
+	}
+	$processor = new WP_HTML_Tag_Processor( $html );
+	$uris      = array();
+	while ( $processor->next_tag( 'A' ) ) {
+		$classes = preg_split( '/\s+/', trim( (string) $processor->get_attribute( 'class' ) ) );
+		if ( ! in_array( 'mention', (array) $classes, true ) ) {
+			continue;
+		}
+		$valid = axismundi_op_sanitize_post_mentions( array( (string) $processor->get_attribute( 'href' ) ) );
+		if ( isset( $valid[0] ) ) {
+			$uris[] = $valid[0];
+		}
+	}
+	return array_values( array_unique( $uris ) );
+}
+
+/** Derive Actor URIs from explicit mention anchors in saved block HTML. */
+function axismundi_op_post_content_mentions( WP_Post $post ) : array {
+	return axismundi_op_content_mention_uris( $post->post_content );
+}
+
+/** Return the ordered union of authored and content-derived Actor mentions. */
 function axismundi_op_post_mentions( WP_Post $post ) : array {
-	return axismundi_op_sanitize_post_mentions( get_post_meta( $post->ID, AXISMUNDI_OP_POST_MENTIONS_META, true ) );
+	$explicit = axismundi_op_sanitize_post_mentions( get_post_meta( $post->ID, AXISMUNDI_OP_POST_MENTIONS_META, true ) );
+	return array_values( array_unique( array_merge( $explicit, axismundi_op_post_content_mentions( $post ) ) ) );
 }
 
 /** Add a compact federation state column used by Quick Edit. */
@@ -287,7 +320,15 @@ function axismundi_op_enqueue_post_editor_settings() : void {
 		AXISMUNDI_OP_VERSION,
 		true
 	);
+	wp_enqueue_script(
+		'axismundi-op-mention-autocomplete',
+		plugins_url( 'assets/mention-autocomplete.js', dirname( __DIR__ ) . '/axismundi-object-projections.php' ),
+		array( 'wp-api-fetch', 'wp-element', 'wp-hooks', 'wp-i18n', 'wp-url' ),
+		AXISMUNDI_OP_VERSION . '-mentions',
+		true
+	);
 	wp_set_script_translations( 'axismundi-op-post-settings', 'axismundi-object-projections' );
+	wp_set_script_translations( 'axismundi-op-mention-autocomplete', 'axismundi-object-projections' );
 }
 add_action( 'enqueue_block_editor_assets', 'axismundi_op_enqueue_post_editor_settings' );
 

@@ -52,6 +52,17 @@ try {
 	);
 	$editor_script = file_get_contents( dirname( __DIR__ ) . '/assets/post-settings.js' );
 	ax_settings_assert( $ax_settings_results, 'the block-editor Federation panel exposes the same audience and Quote-policy controls', is_string( $editor_script ) && false !== strpos( $editor_script, 'SelectControl' ) && false !== strpos( $editor_script, "'_ax_op_quote_policy'" ) && false !== strpos( $editor_script, "'_ax_op_visibility'" ) && false !== strpos( $editor_script, "'_ax_op_mentions'" ) && false !== strpos( $editor_script, "value: 'mentioned'" ) );
+	$mention_script = file_get_contents( dirname( __DIR__ ) . '/assets/mention-autocomplete.js' );
+	ax_settings_assert(
+		$ax_settings_results,
+		'the editor replaces the Core user completer with canonical Actor mention anchors',
+		is_string( $mention_script )
+			&& false !== strpos( $mention_script, 'editor.Autocomplete.completers' )
+			&& false !== strpos( $mention_script, "'users' !== completer.name" )
+			&& false !== strpos( $mention_script, '/actors/mention-search' )
+			&& false !== strpos( $mention_script, "className: 'mention'" )
+			&& false !== strpos( $mention_script, 'href: actor.uri' )
+	);
 
 	$user_id = get_current_user_id();
 	if ( $user_id <= 0 ) {
@@ -89,6 +100,21 @@ try {
 			&& 'mentioned' === axismundi_op_post_visibility( $post )
 			&& array( 'https://remote.example/users/alice' ) === axismundi_op_post_mentions( $post )
 	);
+	wp_update_post(
+		array(
+			'ID'           => $ax_settings_post_id,
+			'post_content' => '<!-- wp:paragraph --><p>Hello <a class="mention" href="https://remote.example/users/bob">@bob@example</a> and <a href="https://remote.example/users/not-mentioned">a normal link</a>.</p><!-- /wp:paragraph -->',
+		)
+	);
+	$post = get_post( $ax_settings_post_id );
+	ax_settings_assert(
+		$ax_settings_results,
+		'saved mention anchors derive recipients while ordinary links do not and explicit recipients remain an ordered fallback',
+		array( 'https://remote.example/users/alice', 'https://remote.example/users/bob' ) === axismundi_op_post_mentions( $post )
+	);
+	wp_update_post( array( 'ID' => $ax_settings_post_id, 'post_content' => '<p>The mention was removed.</p>' ) );
+	$post = get_post( $ax_settings_post_id );
+	ax_settings_assert( $ax_settings_results, 'removing a mention anchor removes its derived recipient without deleting explicit metadata', array( 'https://remote.example/users/alice' ) === axismundi_op_post_mentions( $post ) );
 	$_POST = array(
 		'axismundi_op_quick_edit_present' => '1',
 		'axismundi_op_quick_edit_nonce'   => wp_create_nonce( 'axismundi_op_quick_edit' ),

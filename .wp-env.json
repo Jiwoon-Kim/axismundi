@@ -19,6 +19,7 @@
     "./products/distributables/plugins/axismundi-map",
     "./products/distributables/plugins/axismundi-dialogs",
     "./products/distributables/plugins/axismundi-media-library",
+    "./products/distributables/plugins/axismundi-note",
     "./products/distributables/plugins/axismundi-actors",
     "./products/distributables/plugins/axismundi-object-projections",
     "./products/distributables/plugins/axismundi-activities",

@@ -83,6 +83,14 @@ try {
 	$ax_create_objects[] = $rest_object_uri;
 	ax_create_assert( $ax_create_results, 'block-editor REST publication waits for metadata and records a followers-only Create instead of leaking the public default', 201 === $rest_response->get_status() && 'followers' === axismundi_op_post_visibility( $rest_post ) && array( axismundi_op_actor_followers_url( $site ) ) === ( $rest_payload['to'] ?? null ) && array() === ( $rest_payload['cc'] ?? null ) );
 
+	$unknown_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_author' => $author_id, 'post_title' => 'Unknown mention', 'post_content' => '<p><a class="mention" href="https://arbitrary.example/not-an-actor">invalid</a></p>' ) );
+	$ax_create_posts[] = $unknown_id;
+	$unknown_uri = axismundi_op_post_object_uri( get_post( $unknown_id ) );
+	$ax_create_objects[] = $unknown_uri;
+	wp_update_post( array( 'ID' => $unknown_id, 'post_status' => 'publish' ) );
+	$unknown_create = axismundi_act_record_post_create( get_post( $unknown_id ), $unknown_uri, $actor_uri );
+	ax_create_assert( $ax_create_results, 'an unresolved authored mention prevents Create while the committed public Article remains available for tolerant live projection', is_wp_error( $unknown_create ) && 'ax_op_post_mention_actor' === $unknown_create->get_error_code() && array() === axismundi_act_get_by_object( $unknown_uri ) && is_array( axismundi_op_transform_object( get_post( $unknown_id ) ) ) );
+
 	wp_update_post( array( 'ID' => $post_id, 'post_title' => 'Create bridge edited' ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'draft' ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );

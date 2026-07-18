@@ -101,19 +101,56 @@ function axismundi_op_post_article_visible( WP_Post $post ) : bool {
 		&& '' !== axismundi_op_post_actor_uri( $post );
 }
 
-/** Resolve the authored Article audience through the Activities policy owner. */
-function axismundi_op_post_article_audience( WP_Post $post ) {
+/**
+ * Resolve Mention descriptors from the Actors authority.
+ *
+ * Strict authoring rejects an unresolved recipient. Tolerant live projection
+ * keeps the Article available and omits only the stale display descriptor.
+ */
+function axismundi_op_post_article_mention_tags( WP_Post $post, bool $strict = true ) {
+	$tags = array();
+	foreach ( axismundi_op_post_mentions( $post ) as $uri ) {
+		$actor = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $uri ) : null;
+		$name  = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_federated_mention_name' )
+			? axismundi_actors_federated_mention_name( $actor )
+			: '';
+		if ( ! $actor instanceof Axismundi_Actor || 'public' !== $actor->get_status() || '' === $name ) {
+			if ( $strict ) {
+				return new WP_Error( 'ax_op_post_mention_actor', __( 'A mentioned Actor could not be resolved safely.', 'axismundi-object-projections' ) );
+			}
+			continue;
+		}
+		$tags[] = array( 'type' => 'Mention', 'name' => $name, 'href' => $uri );
+	}
+	return $tags;
+}
+
+/**
+ * Resolve the authored Article audience through the Activities policy owner.
+ *
+ * Omitting `$mention_uris` is the strict authoring boundary. Live projections
+ * pass their already-sanitized stored URI snapshot so stale Actor cache state
+ * cannot make an existing Article unavailable.
+ */
+function axismundi_op_post_article_audience( WP_Post $post, ?array $mention_uris = null ) {
 	$actor_uri = axismundi_op_post_actor_uri( $post );
 	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
 	if ( ! $actor instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_resolve_audience' ) ) {
 		return new WP_Error( 'ax_op_post_audience', __( 'The post audience cannot be resolved.', 'axismundi-object-projections' ) );
 	}
-	return axismundi_act_resolve_audience( $actor, axismundi_op_post_visibility( $post ), axismundi_op_post_mentions( $post ) );
+	if ( null === $mention_uris ) {
+		$mention_tags = axismundi_op_post_article_mention_tags( $post, true );
+		if ( is_wp_error( $mention_tags ) ) {
+			return $mention_tags;
+		}
+		$mention_uris = array_column( $mention_tags, 'href' );
+	}
+	return axismundi_act_resolve_audience( $actor, axismundi_op_post_visibility( $post ), $mention_uris );
 }
 
 /** Whether anonymous ActivityStreams negotiation may disclose this Article. */
 function axismundi_op_post_article_publicly_readable( WP_Post $post ) : bool {
-	$audience = axismundi_op_post_article_visible( $post ) ? axismundi_op_post_article_audience( $post ) : null;
+	$audience = axismundi_op_post_article_visible( $post ) ? axismundi_op_post_article_audience( $post, axismundi_op_post_mentions( $post ) ) : null;
 	return is_array( $audience ) && true === $audience['public'];
 }
 
@@ -266,7 +303,9 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	if ( ! $url || '' === $attributed_to ) {
 		return new WP_Error( 'ax_op_post_identity', __( 'The post has no public object or Actor URI.', 'axismundi-object-projections' ) );
 	}
-	$audience = axismundi_op_post_article_audience( $post );
+	$mention_uris = axismundi_op_post_mentions( $post );
+	$mentions     = axismundi_op_post_article_mention_tags( $post, false );
+	$audience     = axismundi_op_post_article_audience( $post, $mention_uris );
 	if ( is_wp_error( $audience ) ) {
 		return $audience;
 	}
@@ -285,12 +324,8 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 		'to'           => $audience['to'],
 		'cc'           => $audience['cc'],
 	);
-	$mentions = axismundi_op_post_mentions( $post );
 	if ( ! empty( $mentions ) ) {
-		$article['tag'] = array_map(
-			static fn( string $uri ) : array => array( 'type' => 'Mention', 'href' => $uri ),
-			$mentions
-		);
+		$article['tag'] = $mentions;
 	}
 
 	if ( '' !== trim( (string) $post->post_excerpt ) ) {

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '3';
+const AXISMUNDI_OP_DB_VERSION            = '4';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -25,6 +25,7 @@ function axismundi_op_remote_objects_table() : string {
 /** Install/upgrade the Object Projections schema, recording success only after verification. */
 function axismundi_op_install() : bool {
 	global $wpdb;
+	$previous_version = (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' );
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 	$table   = axismundi_op_remote_objects_table();
@@ -94,7 +95,13 @@ function axismundi_op_install() : bool {
 		&& $unique_identity
 		&& function_exists( 'axismundi_op_install_lease_schema' )
 		&& axismundi_op_install_lease_schema()
+		&& function_exists( 'axismundi_op_install_object_relations' )
+		&& axismundi_op_install_object_relations()
 		&& 'InnoDB' === $engine;
+	if ( $valid && version_compare( $previous_version, '4', '<' ) ) {
+		$rebuild = function_exists( 'axismundi_op_rebuild_quote_relations' ) ? axismundi_op_rebuild_quote_relations() : array( 'failed' => 1 );
+		$valid   = 0 === (int) ( $rebuild['failed'] ?? 1 );
+	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
 	}
@@ -306,7 +313,11 @@ function axismundi_op_remote_object_store( array $payload, array $fetch = array(
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit custom repository transaction.
 	$wpdb->query( 'COMMIT' );
-	return axismundi_op_remote_object_get( (string) $normalized['object_uri'] );
+	$stored = axismundi_op_remote_object_get( (string) $normalized['object_uri'] );
+	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_quote_relations' ) ) {
+		axismundi_op_index_quote_relations( $stored );
+	}
+	return $stored;
 }
 
 /** @return array<string,mixed>|null Exact URI row with decoded `payload`. */
@@ -414,6 +425,9 @@ function axismundi_op_remote_objects_purge_expired( bool $dry_run = false ) : in
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache expiry maintenance.
 	$result = $wpdb->query( $wpdb->prepare( "DELETE o FROM {$table} o WHERE {$where}", $now, $now ) );
+	if ( false !== $result && function_exists( 'axismundi_op_purge_orphan_object_relations' ) ) {
+		axismundi_op_purge_orphan_object_relations();
+	}
 	return false === $result ? 0 : (int) $result;
 }
 
@@ -435,5 +449,9 @@ function axismundi_op_remote_object_delete( string $uri ) : bool {
 	}
 	$table = axismundi_op_remote_objects_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache deletion.
-	return false !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s", hash( 'sha256', $valid ), $valid ) );
+	$deleted = false !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s", hash( 'sha256', $valid ), $valid ) );
+	if ( $deleted && function_exists( 'axismundi_op_delete_object_relations_for_source' ) ) {
+		axismundi_op_delete_object_relations_for_source( $valid );
+	}
+	return $deleted;
 }

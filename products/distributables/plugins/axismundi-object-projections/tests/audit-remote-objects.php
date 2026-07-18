@@ -7,6 +7,7 @@
 
 defined( 'ABSPATH' ) || exit( 1 );
 
+require_once dirname( __DIR__ ) . '/includes/object-relations.php';
 require_once dirname( __DIR__ ) . '/includes/remote-objects.php';
 
 $ax_remote_results = array();
@@ -28,7 +29,7 @@ try {
 	$table     = axismundi_op_remote_objects_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the custom schema.
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'object_uri_hash'", ARRAY_A );
-	ax_remote_assert( $ax_remote_results, 'schema v3 installs with a unique URI hash and records its version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] );
+	ax_remote_assert( $ax_remote_results, 'the schema installs with a unique URI hash and records its verified set version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] );
 
 	ax_remote_assert(
 		$ax_remote_results,

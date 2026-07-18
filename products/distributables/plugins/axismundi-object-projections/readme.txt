@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.25
+Stable tag: 0.0.26
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -40,6 +40,9 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.26 =
+* Add the rebuildable DB v4 quote-relation projection for FEP-044f, Misskey aliases, FEP-e232 links, consent-independent public counts, and verified authorization revocation mapping.
 
 = 0.0.25 =
 * Dereference Activities-issued QuoteAuthorization identities as the exact FEP-044f stamp:

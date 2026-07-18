@@ -32,6 +32,12 @@ Phase 2l QuoteRequest policy provider               — shipped (0.0.24): exact 
                                                        author, and explicit policy seam
 Phase 2m QuoteAuthorization representation          — shipped (0.0.25): canonical query route,
                                                        active stamp + revoked 410 Tombstone
+Phase 2n Quote relation projection                  — shipped (0.0.26): DB v4 rebuildable quote
+                                                       relations, FEP/Misskey/e232 aliases,
+                                                       consent-independent public counts, and
+                                                       verified authorization revocation mapping
+                                                       (cross-actor Delete forwarding remains
+                                                       fail-closed pending a signer-preserving seam)
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

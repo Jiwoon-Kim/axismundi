@@ -1,6 +1,6 @@
 # Remote object projections
 
-> Status: **Phase 4b metadata-only discovery and full-payload inspection plus DB v3 leases implemented**. Binary media caching is
+> Status: **Phase 4b metadata-only discovery and full-payload inspection plus DB v4 leases and quote relations implemented**. Binary media caching is
 > deliberately deferred to the shared-blob/shadow-attachment design.
 
 ## 1. Purpose and ownership
@@ -22,7 +22,7 @@ an `attributedTo` URI, but neither plugin is required for storing the object sna
 Resolution is a deferred, deduplicated WP-Cron event for the primary Actor only; object
 fetch never waits on Actor discovery and never fans out through mentions or audience members.
 
-## 2. Tables (schema v3)
+## 2. Tables (schema v4)
 
 ```text
 wp_ax_remote_objects
@@ -135,11 +135,11 @@ attachment binaries use the separate remote-blob substrate. A later Media Librar
 attachment points to the canonical remote object/blob; it does not convert this cache row
 into a second local identity.
 
-## 6. Planned object-relation projection
+## 6. Object-relation projection
 
 Quote discovery needs an indexed relationship between the independent quoting Object and
 the quoted Object. Scanning bounded JSON payloads for every count is not a query contract,
-so a later schema increment adds a rebuildable `wp_ax_object_relations` projection. Its first
+so schema v4 adds a rebuildable `wp_ax_object_relations` projection. Its first
 and only accepted `relation_type` is `quote`; reply and other relation semantics remain
 deferred until their owning product contracts exist.
 
@@ -154,6 +154,8 @@ source_actor_uri         text nullable
 source_actor_uri_hash    char(64) nullable
 evidence_type            fep044f | misskey | legacy
 consent_status           approved | legacy_unverified | rejected | revoked | ambiguous
+authorization_uri        text nullable
+authorization_uri_hash   char(64) nullable, indexed
 created_at / updated_at  datetime
 UNIQUE(relation_type, source_object_uri_hash, target_object_uri_hash)
 ```
@@ -175,3 +177,16 @@ ambiguous source Objects are excluded. Approved, legacy-unverified, rejected, an
 relations remain countable while their public source Object exists because consent status
 does not rewrite the observed quote fact. No compatibility alias is treated as authorization
 evidence, and the projection never fabricates `quoteAuthorization`.
+
+`quoteAuthorization` declared by a remote Object is retained as an unverified mapping but
+never upgrades consent. Only `axismundi_op_verify_quote_consent()` may mark the exact
+source/target/authorization triple approved, rejected, or revoked. A later payload refresh
+preserves that verified decision. A signature-verified inbound Delete can therefore revoke
+the mapped relation without guessing from URI shape or fetching during Inbox processing.
+
+Forwarding that remote Delete to a locally owned quote audience remains fail-closed. The
+current delivery adapter signs as the local Axismundi Actor and enforces that the Activity
+actor is that signer; re-signing a remote actor's Delete as local would falsify its actor and
+break the verifier's actor/key-host invariant. The verified mapping and revocation event are
+available, but no outbound forwarding Activity is fabricated until transport has an explicit
+forwarding contract that preserves the original actor/signature semantics.

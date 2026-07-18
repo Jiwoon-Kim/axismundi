@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Object Projections
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-object-projections
  * Description:       Projects WordPress objects, Actors, and collections into ActivityStreams JSON-LD through a transformer registry and a single renderer. It owns representation and public read routes, not Activity state, Inbox writes, signatures, or delivery.
- * Version:           0.0.25
+ * Version:           0.0.26
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -21,8 +21,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_VERSION = '0.0.25';
+const AXISMUNDI_OP_VERSION = '0.0.26';
 
+require_once __DIR__ . '/includes/object-relations.php';
 require_once __DIR__ . '/includes/remote-objects.php';
 require_once __DIR__ . '/includes/leases.php';
 require_once __DIR__ . '/includes/remote-fetch.php';

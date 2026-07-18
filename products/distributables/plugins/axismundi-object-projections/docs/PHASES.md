@@ -28,6 +28,8 @@ Phase 2j Actor followers collection                 — shipped (0.0.22): stable
                                                        policy-gated count-only Collection
 Phase 2k FEP-044f Quote policy                      — shipped (0.0.23): explicit Post
                                                        setting + advisory canQuote output
+Phase 2l QuoteRequest policy provider               — shipped (0.0.24): exact local Article,
+                                                       author, and explicit policy seam
 Phase 3a first-party Media Library adapter           — shipped (0.0.4): optional detection,
                                                        public service API boundary
 Phase 3b Attachment → Image/Video/Audio/Document     — shipped (0.0.4): strict anonymous

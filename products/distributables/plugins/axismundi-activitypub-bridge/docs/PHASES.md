@@ -111,3 +111,11 @@ scheduler registration seams, retain the official signature and REST validation 
 move transport jobs out of `ap_outbox` and the Posts state machine into a private Bridge table
 with bounded retry and an atomic single-worker claim. Preserve both legacy fork and provisional
 Bridge CPT rows while linking them to migrated jobs.
+
+## Deferred — official authoring UI composition
+
+When Axismundi owns a product workflow, suppress the corresponding official editor control
+through a behavior-level seam rather than another module gate. Quote policy currently appears
+in both the Axismundi Federation panel and the official Fediverse panel even though the
+official QuoteRequest handler is dormant. Remove that duplicate only after the Activities
+state machine consumes the Axismundi policy and a narrow UI composition seam is identified.

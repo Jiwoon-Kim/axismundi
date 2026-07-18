@@ -188,7 +188,7 @@ function axismundi_act_member_uri( $value ) : string {
 
 /** Supported Activity types. */
 function axismundi_act_types() : array {
-	$types = array( 'Follow', 'Accept', 'Reject', 'Undo', 'Like', 'Announce', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Block', 'Flag' );
+	$types = array( 'Follow', 'Accept', 'Reject', 'Undo', 'Like', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Block', 'Flag' );
 	/** @param string[] $types Supported ActivityStreams activity types. */
 	return array_values( array_unique( array_filter( array_map( 'sanitize_text_field', (array) apply_filters( 'axismundi_act_types', $types ) ) ) ) );
 }
@@ -411,13 +411,16 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 	$target_uri = axismundi_act_member_uri( $payload['target'] ?? '' );
 	// A general AS2 member, not a Quote alias: FEP-044f sends the quoting Object here as an
 	// embedded object, and member_uri() reduces that to its id. Stored whenever present so
-	// the column is not Quote-specific; no type requires it yet.
+	// the column is not Quote-specific. QuoteRequest is the first type that requires it.
 	$instrument_uri = axismundi_act_member_uri( $payload['instrument'] ?? '' );
 	if ( '' === $object_uri ) {
 		return new WP_Error( 'ax_act_object', __( 'This Activity type requires an object URI.', 'axismundi-activities' ) );
 	}
 	if ( in_array( $type, array( 'Add', 'Remove', 'Move' ), true ) && '' === $target_uri ) {
 		return new WP_Error( 'ax_act_target', __( 'This collection Activity requires a target URI.', 'axismundi-activities' ) );
+	}
+	if ( 'QuoteRequest' === $type && '' === $instrument_uri ) {
+		return new WP_Error( 'ax_act_instrument', __( 'A QuoteRequest requires a quoting Object in instrument.', 'axismundi-activities' ) );
 	}
 	$now = current_time( 'mysql', true );
 	if ( ! isset( $payload['published'] ) && 'inbound' !== $direction ) {

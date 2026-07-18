@@ -20,6 +20,10 @@ $ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uu
 $ax_bridge_fallback_activity = '';
 $ax_bridge_accept_activity = '';
 $ax_bridge_update_activity = 'https://example.com/activities/' . wp_generate_uuid4();
+$ax_bridge_quote_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
+$ax_bridge_quote_decision  = '';
+$ax_bridge_quote_auth      = '';
+$ax_bridge_quote_post      = 0;
 $ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
 
 /** @param bool[] $results Results. */
@@ -27,6 +31,11 @@ function ax_bridge_inbox_assert( array &$results, string $label, bool $condition
 	$results[] = $condition;
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
+}
+
+/** Keep fixture Post publication from producing an unrelated Create Activity. */
+function ax_bridge_inbox_fixture_lifecycle_owner() : string {
+	return 'fixture';
 }
 
 try {
@@ -120,6 +129,31 @@ try {
 	$updated_remote  = axismundi_actors_get_by_uri( $remote_uri );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified complete Update(Actor) refreshes the existing cache row and records the Activity', $update_response instanceof WP_REST_Response && 202 === $update_response->get_status() && $updated_remote instanceof Axismundi_Actor && 'Bridge Remote Updated' === $updated_remote->get_display_name() && axismundi_act_get( $ax_bridge_update_activity ) instanceof Axismundi_Activity );
 
+	add_filter( 'axismundi_op_post_lifecycle_owner', 'ax_bridge_inbox_fixture_lifecycle_owner', 100 );
+	$ax_bridge_quote_post = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $ax_bridge_inbox_user, 'post_title' => 'Quote target', 'post_content' => '<p>Quoted.</p>' ) );
+	remove_filter( 'axismundi_op_post_lifecycle_owner', 'ax_bridge_inbox_fixture_lifecycle_owner', 100 );
+	$quoted_uri = $ax_bridge_quote_post > 0 ? add_query_arg( 'p', $ax_bridge_quote_post, home_url( '/' ) ) : '';
+	update_post_meta( $ax_bridge_quote_post, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );
+	$quote_payload = array(
+		'id'         => $ax_bridge_quote_activity,
+		'type'       => 'QuoteRequest',
+		'actor'      => $remote_uri,
+		'object'     => $quoted_uri,
+		'instrument' => array( 'id' => $remote_uri . '/statuses/quote', 'type' => 'Note', 'attributedTo' => $remote_uri, 'quote' => $quoted_uri ),
+		'to'         => array( $local->get_uri() ),
+	);
+	$quote_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$quote_request->set_header( 'Content-Type', 'application/activity+json' );
+	$quote_request->set_body( wp_json_encode( $quote_payload ) );
+	$quote_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $quote_request );
+	$quote_stored   = axismundi_act_get( $ax_bridge_quote_activity );
+	$quote_decision = $quote_stored instanceof Axismundi_Activity ? axismundi_act_get_quote_request_decision( $quote_stored->get_uri() ) : null;
+	$quote_decision_payload = $quote_decision instanceof Axismundi_Activity ? $quote_decision->get_payload() : array();
+	$ax_bridge_quote_decision = $quote_decision instanceof Axismundi_Activity ? $quote_decision->get_uri() : '';
+	$ax_bridge_quote_auth = (string) ( $quote_decision_payload['result'] ?? '' );
+	$quote_authorization = '' !== $ax_bridge_quote_auth ? axismundi_act_get_quote_authorization( $ax_bridge_quote_auth ) : null;
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified QuoteRequest composes through the generic Inbox into one Activities-owned Accept and authorization', $quote_response instanceof WP_REST_Response && 202 === $quote_response->get_status() && $quote_stored instanceof Axismundi_Activity && $quote_decision instanceof Axismundi_Activity && 'Accept' === $quote_decision->get_type() && 'outbound' === $quote_decision->get_direction() && is_array( $quote_authorization ) && 'active' === $quote_authorization['status'] );
+
 	$actor_payload       = $payload;
 	$actor_payload['id'] = $ax_bridge_actor_activity;
 	$actor_request       = new WP_REST_Request( 'POST', '/activitypub/1.0/actors/' . $ax_bridge_inbox_user . '/inbox' );
@@ -172,12 +206,30 @@ try {
 	$diagnostic_json = wp_json_encode( $diagnostics );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'bounded diagnostics distinguish recorded and unclaimed Inbox outcomes without copying payload content', count( $diagnostics ) <= 50 && str_contains( $diagnostic_json, 'recorded' ) && str_contains( $diagnostic_json, 'unclaimed' ) && str_contains( $diagnostic_json, 'ax_bridge_inbox_actor' ) && ! str_contains( $diagnostic_json, 'Private content' ) );
 } finally {
+	remove_filter( 'axismundi_op_post_lifecycle_owner', 'ax_bridge_inbox_fixture_lifecycle_owner', 100 );
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_actor_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_mention_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_update_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_activity ) ); // phpcs:ignore WordPress.DB
+	if ( '' !== $ax_bridge_quote_decision ) {
+		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_decision ) ); // phpcs:ignore WordPress.DB
+		$delivery_id = axismundi_activitypub_bridge_find_delivery( $ax_bridge_quote_decision );
+		if ( $delivery_id > 0 ) {
+			for ( $attempt = 1; $attempt <= 10; ++$attempt ) {
+				wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $delivery_id, $attempt ) );
+			}
+			$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB
+		}
+	}
+	if ( '' !== $ax_bridge_quote_auth ) {
+		$wpdb->delete( axismundi_act_quote_authorizations_table(), array( 'authorization_uri_hash' => hash( 'sha256', $ax_bridge_quote_auth ) ) ); // phpcs:ignore WordPress.DB
+	}
+	if ( $ax_bridge_quote_post > 0 ) {
+		wp_delete_post( $ax_bridge_quote_post, true );
+	}
 	wp_clear_scheduled_hook( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
 	$wpdb->delete( axismundi_actors_instances_table(), array( 'host_hash' => hash( 'sha256', $ax_bridge_inbox_host ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- remove fixture state before restoring the saved row.
 	if ( is_array( $ax_bridge_instance_before ) ) {

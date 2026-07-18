@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.23
+Stable tag: 0.0.24
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -40,6 +40,12 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.24 =
+* Supply Activities with an exact local Article, author Actor, and explicit Quote policy
+  through a fail-closed object-domain provider seam.
+* Keep QuoteRequest decisions out of the representation plugin: the provider performs no
+  ledger write, Follow lookup, authorization issue, or network request.
 
 = 0.0.23 =
 * Add an explicit `Who can quote this post?` policy to the block-editor Federation

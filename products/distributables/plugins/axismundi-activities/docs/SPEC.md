@@ -1,7 +1,8 @@
 # Axismundi Activities — specification
 
-> Status: **Phase 3b Activity repository, provenance-aware social relation state, Follow,
-> Like, and personal Announce UI, Core Post Create lifecycle, and public collection queries implemented**. No public
+> Status: **Phase 3c Activity repository, provenance-aware social relation state, Follow,
+> Like, personal Announce, and FEP-044f QuoteRequest decisions implemented, with Core Post
+> Create lifecycle and public collection queries**. No public
 > Activity route or network behavior.
 
 ## 1. Purpose
@@ -76,11 +77,11 @@ Actor URI + Activity + Object URI
 
 ## 3. Supported activity vocabulary
 
-The initial vocabulary is Follow, Accept, Reject, Undo, Like, Announce, Create, Update,
+The initial vocabulary is Follow, Accept, Reject, Undo, Like, Announce, QuoteRequest, Create, Update,
 Delete, Add, Remove, Move, Join, Leave, Block, and Flag. Supporting a type in storage does
 not imply a transport or product workflow exists for it.
 
-### Planned FEP-044f vocabulary and state machine
+### FEP-044f vocabulary and state machine
 
 The Quote increment adds `QuoteRequest` to the stored vocabulary. A request uses:
 
@@ -105,6 +106,11 @@ whose `result` is a stable QuoteAuthorization URI. A denied request records Reje
 QuoteRequest URI as its object. Re-delivery must return the existing decision rather than
 minting another Activity or authorization. A later policy change does not automatically
 revoke an authorization already issued under the earlier policy.
+
+An absent policy automatically approves nobody: it produces Reject rather than inventing
+consent for a pre-policy Post. A consistent inline instrument may be inspected without a
+network request; contradictory `attributedTo` or `quote` members prevent a decision while the
+immutable inbound request remains recorded for diagnosis.
 
 A valid `Delete(QuoteAuthorization)` changes authorization state to `revoked`; it does not
 delete the row or the observed quote relation. When this site owns the quoting Object, the

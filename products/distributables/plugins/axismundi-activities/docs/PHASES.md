@@ -92,12 +92,21 @@ count-only public Object `shares` collection. Axismundi keeps `shares` as an
 `OrderedCollection` for consistency with its existing `likes` representation; Mastodon uses
 an unordered `Collection`, and ActivityPub permits either. Group fan-out remains Phase 5 work.
 
-## 0.0.14 — Phase 4: logical inbox/outbox membership
+## 0.0.14–0.0.17 — Phase 3c: FEP-044f Quote consent (shipped through request decisions)
+
+Store the general AS2 `instrument` member, issue immutable QuoteAuthorization identities,
+derive a count-only accepted-follower query, and process committed inbound QuoteRequest
+Activities against the quoted Post's explicit policy. Accepted requests produce one addressed
+Accept with the authorization URI in `result`; denied requests produce one Reject. Replays and
+later policy changes preserve the first decision. Authorization representation, revocation
+forwarding, and observed quote indexing remain the next increments.
+
+## Future — Phase 4: logical inbox/outbox membership
 
 Actor-scoped inbox/outbox memberships and collection query services. Object Projections may
 serialize collections; Federation serves HTTP. Notifications are explicitly excluded.
 
-## 0.0.15 — Phase 5: Add, Remove, Move, Join, Leave
+## Future — Phase 5: Add, Remove, Move, Join, Leave
 
 Collection/community operations for saved media, shared folders, and managed Group workflows,
 plus optional `collection` leases. Domain plugins continue to own collection membership data.

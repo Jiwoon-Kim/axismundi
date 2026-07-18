@@ -218,6 +218,25 @@ function axismundi_op_post_quote_interaction_policy( WP_Post $post, string $acto
 	);
 }
 
+/** Supply Activities with one local Post's explicit Quote policy and author. */
+function axismundi_op_resolve_quote_request_target( $target, string $object_uri ) {
+	$source = function_exists( 'axismundi_op_local_source_from_object_uri' ) ? axismundi_op_local_source_from_object_uri( $object_uri ) : null;
+	if ( ! $source instanceof WP_Post || 'post' !== $source->post_type ) {
+		return $target;
+	}
+	$object = axismundi_op_transform_object( $source );
+	$policy = axismundi_op_post_quote_policy( $source );
+	if ( ! is_array( $object ) || empty( $object['id'] ) || empty( $object['attributedTo'] ) ) {
+		return $target;
+	}
+	return array(
+		'object_uri'       => (string) $object['id'],
+		'author_actor_uri' => axismundi_op_remote_member_uri( $object['attributedTo'] ),
+		'policy'           => $policy,
+	);
+}
+add_filter( 'axismundi_act_resolve_quote_request_target', 'axismundi_op_resolve_quote_request_target', 10, 2 );
+
 /**
  * Transform a public core post into an Article.
  *

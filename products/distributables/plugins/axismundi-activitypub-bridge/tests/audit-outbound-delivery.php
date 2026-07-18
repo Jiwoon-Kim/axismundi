@@ -156,6 +156,27 @@ try {
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'delivery completion does not replace the Axismundi ledger', $recorded instanceof Axismundi_Activity && $ledger instanceof Axismundi_Activity && $recorded->get_id() === $ledger->get_id() );
 	$peer_error = axismundi_activitypub_bridge_delivery_error( array( 'body' => '{"error":"Signature rejected by peer"}' ), 401 );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a failed peer response retains one bounded sanitized diagnostic message', 'HTTP 401: Signature rejected by peer' === $peer_error );
+	$key_missing_response = array( 'body' => '{"error":"Public key not found for key https://local.example/actor#main-key"}' );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'only the peer public-key discovery 401 joins the bounded retry policy', axismundi_activitypub_bridge_delivery_should_retry( $key_missing_response, 401 ) && ! axismundi_activitypub_bridge_delivery_should_retry( array( 'body' => '{"error":"Signature rejected"}' ), 401 ) );
+	wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $job_id, 1 ) );
+	$wpdb->update(
+		$table,
+		array( 'status' => 'failed', 'attempt' => 1, 'pending_inboxes_json' => '[]', 'last_error' => 'HTTP 401: Public key not found for key fixture' ),
+		array( 'id' => $job_id ),
+		array( '%s', '%d', '%s', '%s' ),
+		array( '%d' )
+	);
+	$manual_retry = axismundi_activitypub_bridge_retry_failed_delivery( $job_id );
+	$retried_job  = axismundi_activitypub_bridge_get_delivery( $job_id );
+	$retried_inboxes = is_object( $retried_job ) ? json_decode( (string) $retried_job->pending_inboxes_json, true ) : array();
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'an administrator can atomically restore the immutable recipient set of one failed delivery', true === $manual_retry && is_object( $retried_job ) && 'retrying' === $retried_job->status && 0 === (int) $retried_job->attempt && array( 'https://example.com/inbox' ) === $retried_inboxes );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'a second manual retry loses the failed-state compare-and-swap', is_wp_error( axismundi_activitypub_bridge_retry_failed_delivery( $job_id ) ) );
+	wp_clear_scheduled_hook( AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $job_id, 1 ) );
+	add_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99, 3 );
+	axismundi_activitypub_bridge_process_delivery( $job_id, 1 );
+	remove_filter( 'pre_http_request', 'ax_bridge_delivery_http_mock', 99 );
+	$retried_job = axismundi_activitypub_bridge_get_delivery( $job_id );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the manually retried immutable Activity can reach the delivered terminal state', is_object( $retried_job ) && 'delivered' === $retried_job->status );
 
 	$provisional_uri = home_url( '/activities/provisional-' . wp_generate_uuid4() . '/' );
 	$provisional_payload = array( 'id' => $provisional_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/provisional', 'to' => array( $remote_uri ) );

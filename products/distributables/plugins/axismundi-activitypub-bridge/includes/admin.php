@@ -50,6 +50,16 @@ function axismundi_activitypub_bridge_requested_legacy_import() : ?array {
 	return axismundi_activitypub_bridge_import_legacy_data();
 }
 
+/** Requeue one explicitly selected failed transport job. */
+function axismundi_activitypub_bridge_requested_delivery_retry() {
+	if ( ! isset( $_POST['ax_bridge_retry_delivery'] ) ) {
+		return null;
+	}
+	$id = isset( $_POST['ax_bridge_delivery_id'] ) ? absint( $_POST['ax_bridge_delivery_id'] ) : 0;
+	check_admin_referer( 'ax_bridge_retry_delivery_' . $id );
+	return axismundi_activitypub_bridge_retry_failed_delivery( $id );
+}
+
 /** Compact classification counts for one report axis. */
 function axismundi_activitypub_bridge_report_counts( array $counts ) : string {
 	ksort( $counts );
@@ -203,6 +213,7 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( esc_html__( 'You cannot inspect federation transport.', 'axismundi-activitypub-bridge' ), '', array( 'response' => 403 ) );
 	}
+	$retry_result = axismundi_activitypub_bridge_requested_delivery_retry();
 	$queue = axismundi_activitypub_bridge_delivery_jobs( 100 );
 	$legacy_report = axismundi_activitypub_bridge_requested_legacy_report();
 	$legacy_import = axismundi_activitypub_bridge_requested_legacy_import();
@@ -210,6 +221,11 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 	<div class="wrap">
 		<h1><?php esc_html_e( 'ActivityPub Bridge', 'axismundi-activitypub-bridge' ); ?></h1>
 		<p><?php esc_html_e( 'Axismundi owns Actor representations and Activity state. The Bridge owns this outbound queue and reuses the official ActivityPub plugin only for HTTP signature generation and Inbox verification.', 'axismundi-activitypub-bridge' ); ?></p>
+		<?php if ( true === $retry_result ) : ?>
+			<div class="notice notice-success inline"><p><?php esc_html_e( 'The failed delivery was queued for retry.', 'axismundi-activitypub-bridge' ); ?></p></div>
+		<?php elseif ( is_wp_error( $retry_result ) ) : ?>
+			<div class="notice notice-error inline"><p><?php echo esc_html( $retry_result->get_error_message() ); ?></p></div>
+		<?php endif; ?>
 
 		<?php axismundi_activitypub_bridge_render_legacy_scan( $legacy_report, $legacy_import ); ?>
 
@@ -249,8 +265,8 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Actor', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Object', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody><?php axismundi_activitypub_bridge_render_activity_rows( 'outbound' ); ?></tbody></table>
 
 		<h2><?php esc_html_e( 'Transport queue', 'axismundi-activitypub-bridge' ); ?></h2>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Sender', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Attempt', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Last error', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
-		<?php if ( empty( $queue ) ) : ?><tr><td colspan="5"><?php esc_html_e( 'No transport jobs.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
+		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Activity', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Sender', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Attempt', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Last error', 'axismundi-activitypub-bridge' ); ?></th><th><?php esc_html_e( 'Action', 'axismundi-activitypub-bridge' ); ?></th></tr></thead><tbody>
+		<?php if ( empty( $queue ) ) : ?><tr><td colspan="6"><?php esc_html_e( 'No transport jobs.', 'axismundi-activitypub-bridge' ); ?></td></tr><?php endif; ?>
 		<?php foreach ( $queue as $job ) : ?>
 			<tr>
 				<td><code><?php echo esc_html( (string) $job->activity_uri ); ?></code></td>
@@ -258,6 +274,15 @@ function axismundi_activitypub_bridge_render_admin_page() : void {
 				<td><?php echo esc_html( (string) $job->status ); ?></td>
 				<td><?php echo esc_html( (string) $job->attempt ); ?></td>
 				<td><?php echo esc_html( (string) $job->last_error ); ?></td>
+				<td>
+				<?php if ( 'failed' === (string) $job->status ) : ?>
+					<form method="post">
+						<?php wp_nonce_field( 'ax_bridge_retry_delivery_' . (int) $job->id ); ?>
+						<input type="hidden" name="ax_bridge_delivery_id" value="<?php echo esc_attr( (string) $job->id ); ?>">
+						<?php submit_button( __( 'Retry', 'axismundi-activitypub-bridge' ), 'small', 'ax_bridge_retry_delivery', false ); ?>
+					</form>
+				<?php else : ?>—<?php endif; ?>
+				</td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody></table>

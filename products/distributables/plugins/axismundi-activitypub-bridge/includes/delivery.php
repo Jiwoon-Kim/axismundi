@@ -213,7 +213,55 @@ function axismundi_activitypub_bridge_delivery_retry_delay( int $attempt ) : int
 
 /** Whether one transport result should be retried. */
 function axismundi_activitypub_bridge_delivery_should_retry( $response, int $code ) : bool {
-	return is_wp_error( $response ) || in_array( $code, array( 408, 425, 429, 500, 502, 503, 504 ), true );
+	if ( is_wp_error( $response ) || in_array( $code, array( 408, 425, 429, 500, 502, 503, 504 ), true ) ) {
+		return true;
+	}
+	if ( 401 !== $code ) {
+		return false;
+	}
+	$body    = wp_remote_retrieve_body( $response );
+	$decoded = is_string( $body ) ? json_decode( $body, true ) : null;
+	$message = is_array( $decoded ) && is_scalar( $decoded['error'] ?? null ) ? (string) $decoded['error'] : '';
+	return str_starts_with( $message, 'Public key not found for key ' );
+}
+
+/** Requeue one terminal delivery without changing its immutable Activity payload. */
+function axismundi_activitypub_bridge_retry_failed_delivery( int $id ) {
+	global $wpdb;
+	$job = axismundi_activitypub_bridge_get_delivery( $id );
+	if ( ! is_object( $job ) || 'failed' !== (string) $job->status ) {
+		return new WP_Error( 'ax_bridge_delivery_retry_state', __( 'Only a failed delivery can be retried.', 'axismundi-activitypub-bridge' ) );
+	}
+	$inboxes = json_decode( (string) $job->inboxes_json, true );
+	if ( ! is_array( $inboxes ) || empty( $inboxes ) ) {
+		return new WP_Error( 'ax_bridge_delivery_retry_recipients', __( 'The original recipient set is unavailable.', 'axismundi-activitypub-bridge' ) );
+	}
+	$now   = current_time( 'mysql', true );
+	$table = axismundi_activitypub_bridge_delivery_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
+	$updated = $wpdb->query(
+		$wpdb->prepare(
+			"UPDATE {$table} SET status = 'retrying', attempt = 0, pending_inboxes_json = inboxes_json, available_at = %s, last_error = '', lock_token = NULL, locked_at = NULL, updated_at = %s WHERE id = %d AND status = 'failed' AND lock_token IS NULL",
+			$now,
+			$now,
+			$id
+		)
+	);
+	if ( 1 !== $updated ) {
+		return new WP_Error( 'ax_bridge_delivery_retry_race', __( 'The delivery state changed before it could be retried.', 'axismundi-activitypub-bridge' ) );
+	}
+	$scheduled = wp_schedule_single_event( time() + 1, AXISMUNDI_ACTIVITYPUB_BRIDGE_DELIVERY_HOOK, array( $id, 1 ), true );
+	if ( is_wp_error( $scheduled ) || false === $scheduled ) {
+		$wpdb->update(
+			$table,
+			array( 'status' => 'failed', 'last_error' => __( 'The retry worker could not be scheduled.', 'axismundi-activitypub-bridge' ), 'updated_at' => $now ),
+			array( 'id' => $id, 'status' => 'retrying' ),
+			array( '%s', '%s', '%s' ),
+			array( '%d', '%s' )
+		);
+		return is_wp_error( $scheduled ) ? $scheduled : new WP_Error( 'ax_bridge_delivery_retry_schedule', __( 'The retry worker could not be scheduled.', 'axismundi-activitypub-bridge' ) );
+	}
+	return true;
 }
 
 /** Bounded peer error detail for transport diagnostics. */

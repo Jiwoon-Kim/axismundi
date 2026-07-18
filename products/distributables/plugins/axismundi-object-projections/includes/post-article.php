@@ -101,6 +101,22 @@ function axismundi_op_post_article_visible( WP_Post $post ) : bool {
 		&& '' !== axismundi_op_post_actor_uri( $post );
 }
 
+/** Resolve the authored Article audience through the Activities policy owner. */
+function axismundi_op_post_article_audience( WP_Post $post ) {
+	$actor_uri = axismundi_op_post_actor_uri( $post );
+	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
+	if ( ! $actor instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_resolve_audience' ) ) {
+		return new WP_Error( 'ax_op_post_audience', __( 'The post audience cannot be resolved.', 'axismundi-object-projections' ) );
+	}
+	return axismundi_act_resolve_audience( $actor, axismundi_op_post_visibility( $post ), axismundi_op_post_mentions( $post ) );
+}
+
+/** Whether anonymous ActivityStreams negotiation may disclose this Article. */
+function axismundi_op_post_article_publicly_readable( WP_Post $post ) : bool {
+	$audience = axismundi_op_post_article_visible( $post ) ? axismundi_op_post_article_audience( $post ) : null;
+	return is_array( $audience ) && true === $audience['public'];
+}
+
 /**
  * Render post content through WordPress's normal content pipeline.
  *
@@ -250,6 +266,10 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	if ( ! $url || '' === $attributed_to ) {
 		return new WP_Error( 'ax_op_post_identity', __( 'The post has no public object or Actor URI.', 'axismundi-object-projections' ) );
 	}
+	$audience = axismundi_op_post_article_audience( $post );
+	if ( is_wp_error( $audience ) ) {
+		return $audience;
+	}
 
 	$published = get_post_time( DATE_W3C, true, $post );
 	$article   = array(
@@ -262,7 +282,16 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 		'mediaType'    => 'text/html',
 		'published'    => $published,
 		'updated'      => get_post_modified_time( DATE_W3C, true, $post ),
+		'to'           => $audience['to'],
+		'cc'           => $audience['cc'],
 	);
+	$mentions = axismundi_op_post_mentions( $post );
+	if ( ! empty( $mentions ) ) {
+		$article['tag'] = array_map(
+			static fn( string $uri ) : array => array( 'type' => 'Mention', 'href' => $uri ),
+			$mentions
+		);
+	}
 
 	if ( '' !== trim( (string) $post->post_excerpt ) ) {
 		$article['summary'] = wpautop( (string) $post->post_excerpt );

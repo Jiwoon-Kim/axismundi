@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Activities
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activities
  * Description:       ActivityStreams activity ledger and social relationship state for Axismundi. It owns no HTTP inbox, signatures, delivery queue, notifications, or Web Push.
- * Version:           0.0.19
+ * Version:           0.0.20
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  axismundi-actors
@@ -23,7 +23,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITIES_VERSION = '0.0.19';
+const AXISMUNDI_ACTIVITIES_VERSION = '0.0.20';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/audience.php';

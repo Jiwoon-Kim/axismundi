@@ -171,7 +171,14 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 	if ( in_array( $activity->get_type(), array( 'Follow', 'Block' ), true ) && $activity->get_object_uri() ) {
 		$candidates[] = $activity->get_object_uri();
 	}
-	if ( in_array( 'https://www.w3.org/ns/activitystreams#Public', $candidates, true ) || in_array( 'as:Public', $candidates, true ) ) {
+	$actor         = axismundi_actors_get_by_uri( $activity->get_actor_uri() );
+	$followers_uri = $actor instanceof Axismundi_Actor && $actor->is_local() && function_exists( 'axismundi_op_actor_followers_url' )
+		? axismundi_op_actor_followers_url( $actor )
+		: '';
+	$addresses_followers = in_array( 'https://www.w3.org/ns/activitystreams#Public', $candidates, true )
+		|| in_array( 'as:Public', $candidates, true )
+		|| ( '' !== $followers_uri && in_array( $followers_uri, $candidates, true ) );
+	if ( $addresses_followers ) {
 		$candidates = array_merge( $candidates, axismundi_act_get_followers( $activity->get_actor_uri(), 1000 ) );
 	}
 	$inboxes = array();

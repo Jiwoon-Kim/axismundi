@@ -25,13 +25,15 @@ try {
 	$registered = get_registered_meta_keys( 'post', 'post' );
 	ax_settings_assert(
 		$ax_settings_results,
-		'sensitive, content-warning, and Quote policy metadata are registered for REST-backed Core Post editing',
-		isset( $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ], $registered[ AXISMUNDI_OP_POST_WARNING_META ], $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ] )
+		'sensitive, warning, Quote policy, visibility, and mention metadata are registered for REST-backed Core Post editing',
+		isset( $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ], $registered[ AXISMUNDI_OP_POST_WARNING_META ], $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ], $registered[ AXISMUNDI_OP_POST_VISIBILITY_META ], $registered[ AXISMUNDI_OP_POST_MENTIONS_META ] )
 			&& 'boolean' === $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ]['type']
 			&& true === $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ]['show_in_rest']
 			&& 'string' === $registered[ AXISMUNDI_OP_POST_WARNING_META ]['type']
 			&& is_array( $registered[ AXISMUNDI_OP_POST_WARNING_META ]['show_in_rest'] )
 			&& array( '', 'anyone', 'followers', 'me' ) === $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ]['show_in_rest']['schema']['enum']
+			&& array( 'public', 'unlisted', 'followers', 'mentioned' ) === $registered[ AXISMUNDI_OP_POST_VISIBILITY_META ]['show_in_rest']['schema']['enum']
+			&& 'array' === $registered[ AXISMUNDI_OP_POST_MENTIONS_META ]['type']
 	);
 
 	$columns = axismundi_op_post_columns( array( 'title' => 'Title' ) );
@@ -40,14 +42,16 @@ try {
 	$quick_edit = (string) ob_get_clean();
 	ax_settings_assert(
 		$ax_settings_results,
-		'Posts Quick Edit exposes the shared sensitive, warning, and Quote-policy controls',
+		'Posts Quick Edit exposes the shared sensitive, warning, audience, mentions, and Quote-policy controls',
 		isset( $columns['axismundi_op_federation'] )
 			&& false !== strpos( $quick_edit, 'name="axismundi_op_sensitive"' )
 			&& false !== strpos( $quick_edit, 'name="axismundi_op_content_warning"' )
 			&& false !== strpos( $quick_edit, 'name="axismundi_op_quote_policy"' )
+			&& false !== strpos( $quick_edit, 'name="axismundi_op_visibility"' )
+			&& false !== strpos( $quick_edit, 'name="axismundi_op_mentions"' )
 	);
 	$editor_script = file_get_contents( dirname( __DIR__ ) . '/assets/post-settings.js' );
-	ax_settings_assert( $ax_settings_results, 'the block-editor Federation panel exposes the same explicit Quote-policy enum', is_string( $editor_script ) && false !== strpos( $editor_script, 'SelectControl' ) && false !== strpos( $editor_script, "'_ax_op_quote_policy'" ) && false !== strpos( $editor_script, "value: 'followers'" ) );
+	ax_settings_assert( $ax_settings_results, 'the block-editor Federation panel exposes the same audience and Quote-policy controls', is_string( $editor_script ) && false !== strpos( $editor_script, 'SelectControl' ) && false !== strpos( $editor_script, "'_ax_op_quote_policy'" ) && false !== strpos( $editor_script, "'_ax_op_visibility'" ) && false !== strpos( $editor_script, "'_ax_op_mentions'" ) && false !== strpos( $editor_script, "value: 'mentioned'" ) );
 
 	$user_id = get_current_user_id();
 	if ( $user_id <= 0 ) {
@@ -70,6 +74,8 @@ try {
 		'axismundi_op_sensitive'          => '1',
 		'axismundi_op_content_warning'    => '<b>Spoilers</b> and distressing imagery',
 		'axismundi_op_quote_policy'       => 'followers',
+		'axismundi_op_visibility'         => 'mentioned',
+		'axismundi_op_mentions'           => "https://remote.example/users/alice\nhttps://remote.example/users/alice",
 	);
 	axismundi_op_save_quick_edit( $ax_settings_post_id, $post );
 	$post = get_post( $ax_settings_post_id );
@@ -80,7 +86,18 @@ try {
 			&& axismundi_op_post_is_sensitive( $post )
 			&& 'Spoilers and distressing imagery' === axismundi_op_post_content_warning( $post )
 			&& 'followers' === axismundi_op_post_quote_policy( $post )
+			&& 'mentioned' === axismundi_op_post_visibility( $post )
+			&& array( 'https://remote.example/users/alice' ) === axismundi_op_post_mentions( $post )
 	);
+	$_POST = array(
+		'axismundi_op_quick_edit_present' => '1',
+		'axismundi_op_quick_edit_nonce'   => wp_create_nonce( 'axismundi_op_quick_edit' ),
+		'axismundi_op_visibility'         => 'public',
+		'axismundi_op_mentions'           => "https://remote.example/users/alice\nnot-an-actor-uri",
+	);
+	axismundi_op_save_quick_edit( $ax_settings_post_id, $post );
+	$post = get_post( $ax_settings_post_id );
+	ax_settings_assert( $ax_settings_results, 'Quick Edit rejects a mixed invalid recipient set instead of silently narrowing delivery', 'mentioned' === axismundi_op_post_visibility( $post ) && array( 'https://remote.example/users/alice' ) === axismundi_op_post_mentions( $post ) );
 
 	$_POST = array(
 		'axismundi_op_quick_edit_present' => '1',
@@ -96,6 +113,8 @@ try {
 			&& ! axismundi_op_post_is_sensitive( $post )
 			&& 'Retained draft warning' === axismundi_op_post_content_warning( $post )
 			&& '' === axismundi_op_post_quote_policy( $post )
+			&& 'public' === axismundi_op_post_visibility( $post )
+			&& array() === axismundi_op_post_mentions( $post )
 	);
 } finally {
 	$_POST = $ax_settings_post;

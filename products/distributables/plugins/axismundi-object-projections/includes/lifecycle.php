@@ -39,9 +39,10 @@ function axismundi_op_post_lifecycle_owner( WP_Post $post ) : string {
  * @param bool         $update     Whether this was an update.
  * @param WP_Post|null $post_before Previous post snapshot.
  */
-function axismundi_op_emit_post_publish_candidate( int $post_id, WP_Post $post, bool $update, ?WP_Post $post_before ) : void {
+function axismundi_op_emit_post_publish_candidate( int $post_id, WP_Post $post, bool $update, ?WP_Post $post_before, bool $rest_complete = false ) : void {
 	unset( $post_id, $update );
 	if ( ( defined( 'WP_IMPORTING' ) && WP_IMPORTING )
+		|| ( wp_is_serving_rest_request() && ! $rest_complete )
 		|| ! axismundi_op_post_article_supports( $post )
 		|| ! axismundi_op_post_article_visible( $post )
 		|| 'axismundi' !== axismundi_op_post_lifecycle_owner( $post )
@@ -71,3 +72,9 @@ function axismundi_op_emit_post_publish_candidate( int $post_id, WP_Post $post, 
 }
 add_action( 'wp_after_insert_post', 'axismundi_op_emit_post_publish_candidate', 40, 4 );
 
+/** Emit after REST-backed post metadata has been committed by the block editor. */
+function axismundi_op_emit_rest_post_publish_candidate( WP_Post $post, WP_REST_Request $request, bool $creating ) : void {
+	unset( $request );
+	axismundi_op_emit_post_publish_candidate( $post->ID, $post, ! $creating, null, true );
+}
+add_action( 'rest_after_insert_post', 'axismundi_op_emit_rest_post_publish_candidate', 40, 3 );

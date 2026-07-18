@@ -29,6 +29,12 @@ function axismundi_op_actor_followers_url( Axismundi_Actor $actor ) : string {
 	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/followers' );
 }
 
+/** Supply Activities with the representation-owned Followers address. */
+function axismundi_op_supply_actor_followers_url( string $uri, Axismundi_Actor $actor ) : string {
+	return axismundi_op_actor_followers_url( $actor );
+}
+add_filter( 'axismundi_act_actor_followers_uri', 'axismundi_op_supply_actor_followers_url', 10, 2 );
+
 /** Public representation gate for one local Actor. */
 function axismundi_op_actor_visible( Axismundi_Actor $actor ) : bool {
 	return function_exists( 'axismundi_actors_is_public_profile' )

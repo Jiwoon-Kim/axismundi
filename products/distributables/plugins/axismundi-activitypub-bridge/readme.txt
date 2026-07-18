@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.20
+Stable tag: 0.0.21
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -26,6 +26,10 @@ The official plugin's existing request-signing filter signs those requests; Axis
 remains the authoritative ledger.
 
 == Changelog ==
+
+= 0.0.21 =
+* Expand the sending Actor's Followers collection address into accepted remote follower
+  inboxes only at the transport boundary, enabling followers-only Create delivery.
 
 = 0.0.20 =
 * Advertise Inbox, endpoints, and publicKey as one atomic bundle and withhold the WebFinger self link when a public Actor cannot project its signing key, so a remote server never caches a keyless Actor.

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.27
+Stable tag: 0.0.28
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,11 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.28 =
+* Add Core Post audience and Mention authoring controls to the block editor and Quick Edit.
+* Project matching Article to/cc members and Mention tags, while returning 404 and withholding
+  ActivityStreams discovery for followers-only and mentioned-only anonymous requests.
 
 = 0.0.27 =
 * Cache complete, self-consistent Objects embedded in verified inbound Create activities

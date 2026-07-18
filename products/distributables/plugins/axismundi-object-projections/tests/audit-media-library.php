@@ -16,6 +16,7 @@ $ax_media_projection_results = array();
 $ax_media_projection_posts   = array();
 $ax_media_projection_subjects = array();
 $ax_media_projection_mode    = get_option( AXISMUNDI_MEDIA_MODE_OPTION, AXISMUNDI_MEDIA_MODE_DEFAULT );
+$ax_media_projection_actor_id = 0;
 
 /** @param array<bool> $results Results. @param string $label Label. @param bool $condition Condition. */
 function ax_media_projection_assert( array &$results, string $label, bool $condition ) : void {
@@ -71,7 +72,14 @@ try {
 
 	update_option( AXISMUNDI_MEDIA_MODE_OPTION, 'independent' );
 	add_filter( 'axismundi_op_media_attachment_actor_uri', static fn() : string => 'https://example.com/actors/media-owner' );
-	add_filter( 'axismundi_op_post_actor_uri', static fn() : string => 'https://example.com/actors/article-author' );
+	$article_actor = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'media-article-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
+	if ( $article_actor instanceof Axismundi_Actor ) {
+		$ax_media_projection_actor_id = $article_actor->get_identity_id();
+		axismundi_actors_set_status( $ax_media_projection_actor_id, 'public' );
+		$article_actor = axismundi_actors_get_by_identity( $ax_media_projection_actor_id );
+	}
+	$article_actor_uri = $article_actor instanceof Axismundi_Actor ? $article_actor->get_uri() : '';
+	add_filter( 'axismundi_op_post_actor_uri', static fn() : string => $article_actor_uri );
 	$GLOBALS['axismundi_op_loaded']              = false;
 	$GLOBALS['axismundi_op_object_transformers'] = array();
 	$GLOBALS['axismundi_op_sequence']            = 0;
@@ -234,6 +242,11 @@ try {
 	}
 	foreach ( $ax_media_projection_posts as $attachment_id ) {
 		wp_delete_attachment( (int) $attachment_id, true );
+	}
+	if ( $ax_media_projection_actor_id > 0 ) {
+		global $wpdb;
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_media_projection_actor_id ), array( '%d' ) );
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_media_projection_actor_id ), array( '%d' ) );
 	}
 }
 

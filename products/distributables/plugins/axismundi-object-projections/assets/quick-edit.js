@@ -11,5 +11,7 @@
 		editRow.find( '[name="axismundi_op_sensitive"]' ).prop( 'checked', state.data( 'sensitive' ) === 1 );
 		editRow.find( '[name="axismundi_op_content_warning"]' ).val( state.attr( 'data-warning' ) || '' );
 		editRow.find( '[name="axismundi_op_quote_policy"]' ).val( state.attr( 'data-quote-policy' ) || '' );
+		editRow.find( '[name="axismundi_op_visibility"]' ).val( state.attr( 'data-visibility' ) || 'public' );
+		editRow.find( '[name="axismundi_op_mentions"]' ).val( state.attr( 'data-mentions' ) || '' );
 	};
 }( jQuery, inlineEditPost ) );

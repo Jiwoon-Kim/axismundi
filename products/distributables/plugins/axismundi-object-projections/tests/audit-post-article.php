@@ -14,6 +14,7 @@ require_once dirname( __DIR__ ) . '/includes/post-article.php';
 
 $ax_article_results = array();
 $ax_article_posts   = array();
+$ax_article_identity_id = 0;
 
 /** @param array<bool> $results Results. @param string $label Label. @param bool $condition Condition. */
 function ax_article_assert( array &$results, string $label, bool $condition ) : void {
@@ -62,7 +63,20 @@ try {
 
 	ax_article_assert( $ax_article_results, 'the built-in transformer supports core posts but not pages', $post instanceof WP_Post && $page instanceof WP_Post && axismundi_op_post_article_supports( $post ) && ! axismundi_op_post_article_supports( $page ) );
 
-	add_filter( 'axismundi_op_post_actor_uri', static fn( string $uri, WP_Post $source ) : string => 'https://example.com/actors/test-author', 10, 2 );
+	$fixture_actor = axismundi_actors_create_local(
+		array(
+			'actor_type'         => 'Person',
+			'actor_scope'        => 'user',
+			'preferred_username' => 'article-author-' . strtolower( wp_generate_password( 8, false, false ) ),
+		)
+	);
+	if ( $fixture_actor instanceof Axismundi_Actor ) {
+		$ax_article_identity_id = $fixture_actor->get_identity_id();
+		axismundi_actors_set_status( $ax_article_identity_id, 'public' );
+		$fixture_actor = axismundi_actors_get_by_identity( $ax_article_identity_id );
+	}
+	$fixture_actor_uri = $fixture_actor instanceof Axismundi_Actor ? $fixture_actor->get_uri() : '';
+	add_filter( 'axismundi_op_post_actor_uri', static fn( string $uri, WP_Post $source ) : string => $fixture_actor_uri, 10, 2 );
 	$GLOBALS['axismundi_op_loaded']              = false;
 	$GLOBALS['axismundi_op_object_transformers'] = array();
 	$GLOBALS['axismundi_op_sequence']            = 0;
@@ -80,7 +94,9 @@ try {
 			&& add_query_arg( 'p', $post_id, home_url( '/' ) ) === $article['id']
 			&& get_permalink( $post_id ) === $article['url']['href']
 			&& 'text/html' === $article['url']['mediaType']
-			&& 'https://example.com/actors/test-author' === $article['attributedTo']
+			&& $fixture_actor_uri === $article['attributedTo']
+			&& array( axismundi_act_public_audience_uri() ) === $article['to']
+			&& in_array( axismundi_op_actor_followers_url( $fixture_actor ), $article['cc'], true )
 			&& is_array( $article['@context'] )
 			&& 'https://www.w3.org/ns/activitystreams' === $article['@context'][0]
 			&& array( 'sensitive' => 'as:sensitive' ) === $article['@context'][1]
@@ -118,7 +134,7 @@ try {
 		'a More block creates an embedded Note preview with no independent id/url or read-more link',
 		is_array( $article ) && isset( $article['preview'] )
 			&& 'Note' === $article['preview']['type']
-			&& 'https://example.com/actors/test-author' === $article['preview']['attributedTo']
+			&& $fixture_actor_uri === $article['preview']['attributedTo']
 			&& ! empty( $article['preview']['published'] )
 			&& ! isset( $article['preview']['id'], $article['preview']['url'] )
 			&& false !== strpos( (string) $article['preview']['content'], 'Hello' )
@@ -172,7 +188,14 @@ try {
 	);
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'me' );
 	$quote_me = axismundi_op_transform_object( get_post( $post_id ) );
-	ax_article_assert( $ax_article_results, 'the me policy advertises only the author Actor and preserves the self-quote exception', is_array( $quote_me ) && 'https://example.com/actors/test-author' === $quote_me['interactionPolicy']['canQuote']['automaticApproval'] );
+	ax_article_assert( $ax_article_results, 'the me policy advertises only the author Actor and preserves the self-quote exception', is_array( $quote_me ) && $fixture_actor_uri === $quote_me['interactionPolicy']['canQuote']['automaticApproval'] );
+	$mention_uri = 'https://remote.example/users/mentioned';
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_VISIBILITY_META, 'mentioned' );
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_MENTIONS_META, array( $mention_uri ) );
+	$direct = axismundi_op_transform_object( get_post( $post_id ) );
+	ax_article_assert( $ax_article_results, 'mentioned-only Article addresses and tags exactly its explicit recipient without Public', is_array( $direct ) && array( $mention_uri ) === $direct['to'] && array() === $direct['cc'] && array( 'type' => 'Mention', 'href' => $mention_uri ) === $direct['tag'][0] && ! axismundi_op_post_article_publicly_readable( get_post( $post_id ) ) );
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_VISIBILITY_META, 'public' );
+	delete_post_meta( $post_id, AXISMUNDI_OP_POST_MENTIONS_META );
 	$site_actor = axismundi_actors_get_site_actor();
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'followers' );
 	$followers_policy = $site_actor instanceof Axismundi_Actor ? axismundi_op_post_quote_interaction_policy( get_post( $post_id ), $site_actor->get_uri() ) : null;
@@ -209,6 +232,11 @@ try {
 	remove_all_filters( 'axismundi_op_post_lifecycle_owner' );
 	foreach ( $ax_article_posts as $created_post_id ) {
 		wp_delete_post( (int) $created_post_id, true );
+	}
+	if ( $ax_article_identity_id > 0 ) {
+		global $wpdb;
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_article_identity_id ), array( '%d' ) );
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_article_identity_id ), array( '%d' ) );
 	}
 }
 

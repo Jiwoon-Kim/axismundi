@@ -132,6 +132,17 @@ try {
 	}
 	$ax_bridge_delivery_social_uris = array_merge( $ax_bridge_delivery_social_uris, array( $inbound_follow_uri, $accept_uri ) );
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'auto-accepting an inbound Follow queues one JSON-LD Accept back to that Actor', $inbound_follow instanceof Axismundi_Activity && $accept_id > 0 && 'Accept' === ( $accept_payload['type'] ?? '' ) && $inbound_follow_uri === ( $accept_payload['object'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
+	$followers_address = $local instanceof Axismundi_Actor ? axismundi_op_actor_followers_url( $local ) : '';
+	$followers_activity = $local instanceof Axismundi_Actor ? axismundi_act_record_activity( array( 'type' => 'Announce', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/followers-only', 'to' => array( $followers_address ) ), 'outbound' ) : null;
+	$followers_inboxes = $followers_activity instanceof Axismundi_Activity ? axismundi_activitypub_bridge_activity_inboxes( $followers_activity ) : array();
+	if ( $followers_activity instanceof Axismundi_Activity ) {
+		$ax_bridge_delivery_social_uris[] = $followers_activity->get_uri();
+		$followers_delivery_id = axismundi_activitypub_bridge_find_delivery( $followers_activity->get_uri() );
+		if ( $followers_delivery_id > 0 ) {
+			$ax_bridge_delivery_ids[] = $followers_delivery_id;
+		}
+	}
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the sender Followers collection address expands to accepted follower inboxes only at the transport boundary', in_array( 'https://example.com/inbox', $followers_inboxes, true ) );
 
 	$activity_uri = home_url( '/activities/' . wp_generate_uuid4() . '/' );
 	$payload      = array( 'id' => $activity_uri, 'type' => 'Like', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/liked', 'to' => array( $remote_uri ) );

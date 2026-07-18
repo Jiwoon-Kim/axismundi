@@ -147,6 +147,9 @@ function axismundi_op_template_redirect() : void {
 	if ( null === $source ) {
 		return;
 	}
+	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && axismundi_op_post_article_supports( $source ) && ! axismundi_op_post_article_publicly_readable( $source ) ) {
+		axismundi_op_emit_error( 404 );
+	}
 
 	$object = axismundi_op_transform_object( $source );
 	if ( is_wp_error( $object ) ) {
@@ -187,6 +190,9 @@ function axismundi_op_html_headers( array $headers ) : array {
 	if ( null === $source ) {
 		return $headers;
 	}
+	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && axismundi_op_post_article_supports( $source ) && ! axismundi_op_post_article_publicly_readable( $source ) ) {
+		return $headers;
+	}
 	$transformer = axismundi_op_resolve_object_transformer( $source );
 	if ( null === $transformer ) {
 		return $headers;
@@ -217,6 +223,9 @@ add_filter( 'wp_headers', 'axismundi_op_html_headers' );
 function axismundi_op_html_alternate_link() : void {
 	$source = axismundi_op_current_source();
 	if ( null === $source || ! axismundi_op_standalone_router_enabled() ) {
+		return;
+	}
+	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && axismundi_op_post_article_supports( $source ) && ! axismundi_op_post_article_publicly_readable( $source ) ) {
 		return;
 	}
 	$transformer = axismundi_op_resolve_object_transformer( $source );

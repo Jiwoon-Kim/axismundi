@@ -10,6 +10,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 $ax_create_results = array();
 $ax_create_posts   = array();
 $ax_create_objects = array();
+$ax_create_identity_id = 0;
 $GLOBALS['ax_create_http'] = 0;
 
 /** @param bool[] $results Results. */
@@ -35,7 +36,13 @@ try {
 
 	$admins    = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
 	$author_id = isset( $admins[0] ) ? (int) $admins[0] : 0;
-	$site      = axismundi_actors_get_site_actor();
+	wp_set_current_user( $author_id );
+	$site = axismundi_actors_create_local( array( 'actor_type' => 'Person', 'actor_scope' => 'user', 'preferred_username' => 'create-author-' . strtolower( wp_generate_password( 8, false, false ) ) ) );
+	if ( $site instanceof Axismundi_Actor ) {
+		$ax_create_identity_id = $site->get_identity_id();
+		axismundi_actors_set_status( $ax_create_identity_id, 'public' );
+		$site = axismundi_actors_get_by_identity( $ax_create_identity_id );
+	}
 	$actor_uri = $site instanceof Axismundi_Actor ? $site->get_uri() : '';
 	add_filter( 'axismundi_op_post_actor_uri', static fn() : string => $actor_uri );
 	add_filter( 'axismundi_op_post_lifecycle_owner', static fn() : string => 'axismundi', 99 );
@@ -50,9 +57,31 @@ try {
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
 	$activities = axismundi_act_get_by_object( $object_uri );
 	$create     = $activities[0] ?? null;
-	ax_create_assert( $ax_create_results, 'first public commit records one outbound Create with URI references only', 1 === count( $activities ) && $create instanceof Axismundi_Activity && 'Create' === $create->get_type() && 'outbound' === $create->get_direction() && $actor_uri === $create->get_actor_uri() && $object_uri === $create->get_object_uri() && ! is_array( $create->get_payload()['object'] ?? null ) );
+	$create_payload = $create instanceof Axismundi_Activity ? $create->get_payload() : array();
+	ax_create_assert( $ax_create_results, 'first public commit records one outbound Create with URI references and the same resolved audience as its Article', 1 === count( $activities ) && $create instanceof Axismundi_Activity && 'Create' === $create->get_type() && 'outbound' === $create->get_direction() && $actor_uri === $create->get_actor_uri() && $object_uri === $create->get_object_uri() && ! is_array( $create_payload['object'] ?? null ) && array( axismundi_act_public_audience_uri() ) === $create_payload['to'] && in_array( axismundi_op_actor_followers_url( $site ), $create_payload['cc'], true ) );
 	$mismatched_projection = axismundi_act_record_post_create( get_post( $post_id ), $object_uri . '#wrong', $actor_uri );
 	ax_create_assert( $ax_create_results, 'the bridge rejects event arguments that do not match the current public projection', is_wp_error( $mismatched_projection ) && 'ax_act_post_projection' === $mismatched_projection->get_error_code() );
+
+	$rest_request = new WP_REST_Request( 'POST', '/wp/v2/posts' );
+	$rest_request->set_body_params(
+		array(
+			'title'  => 'REST followers Create',
+			'status' => 'publish',
+			'meta'   => array( AXISMUNDI_OP_POST_VISIBILITY_META => 'followers' ),
+		)
+	);
+	$rest_response = rest_do_request( $rest_request );
+	$rest_data     = $rest_response->get_data();
+	$rest_post_id  = (int) ( $rest_data['id'] ?? 0 );
+	if ( $rest_post_id > 0 ) {
+		$ax_create_posts[] = $rest_post_id;
+	}
+	$rest_post       = $rest_post_id > 0 ? get_post( $rest_post_id ) : null;
+	$rest_object_uri = $rest_post instanceof WP_Post ? axismundi_op_post_object_uri( $rest_post ) : '';
+	$rest_create     = '' !== $rest_object_uri ? ( axismundi_act_get_by_object( $rest_object_uri )[0] ?? null ) : null;
+	$rest_payload    = $rest_create instanceof Axismundi_Activity ? $rest_create->get_payload() : array();
+	$ax_create_objects[] = $rest_object_uri;
+	ax_create_assert( $ax_create_results, 'block-editor REST publication waits for metadata and records a followers-only Create instead of leaking the public default', 201 === $rest_response->get_status() && 'followers' === axismundi_op_post_visibility( $rest_post ) && array( axismundi_op_actor_followers_url( $site ) ) === ( $rest_payload['to'] ?? null ) && array() === ( $rest_payload['cc'] ?? null ) );
 
 	wp_update_post( array( 'ID' => $post_id, 'post_title' => 'Create bridge edited' ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'draft' ) );
@@ -87,6 +116,10 @@ try {
 	}
 	foreach ( array_filter( $ax_create_posts, 'is_int' ) as $post_id ) {
 		wp_delete_post( $post_id, true );
+	}
+	if ( $ax_create_identity_id > 0 ) {
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_create_identity_id ), array( '%d' ) );
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $ax_create_identity_id ), array( '%d' ) );
 	}
 }
 

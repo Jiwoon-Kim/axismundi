@@ -85,9 +85,8 @@ function axismundi_act_resolve_audience( Axismundi_Actor $actor, string $visibil
 
 	$followers = '';
 	if ( in_array( $visibility, array( 'public', 'unlisted', 'followers' ), true ) ) {
-		$followers = $actor->is_local() && function_exists( 'axismundi_op_actor_followers_url' )
-			? (string) axismundi_op_actor_followers_url( $actor )
-			: '';
+		/** Let the representation owner supply the stable Followers collection address. */
+		$followers = (string) apply_filters( 'axismundi_act_actor_followers_uri', '', $actor );
 		if ( '' === $followers ) {
 			return new WP_Error( 'ax_act_audience_followers', __( 'The Actor followers collection URI is unavailable.', 'axismundi-activities' ) );
 		}

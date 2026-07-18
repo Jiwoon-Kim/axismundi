@@ -22,6 +22,10 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 	if ( $lifecycle instanceof Axismundi_Activity && 'Delete' !== $lifecycle->get_type() ) {
 		return $lifecycle;
 	}
+	$audience = function_exists( 'axismundi_op_post_article_audience' ) ? axismundi_op_post_article_audience( $post ) : null;
+	if ( ! is_array( $audience ) ) {
+		return is_wp_error( $audience ) ? $audience : new WP_Error( 'ax_act_post_audience', __( 'The post audience is unavailable.', 'axismundi-activities' ) );
+	}
 
 	$generation = $lifecycle instanceof Axismundi_Activity ? $lifecycle->get_uri() : 'initial';
 	$event_key  = 'wp-post-create:' . $object_uri . ':after:' . $generation;
@@ -30,7 +34,8 @@ function axismundi_act_record_post_create( WP_Post $post, string $object_uri, st
 			'type'   => 'Create',
 			'actor'  => $actor_uri,
 			'object' => $object_uri,
-			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'to'     => $audience['to'],
+			'cc'     => $audience['cc'],
 		),
 		'outbound',
 		$event_key

@@ -29,24 +29,19 @@ function axismundi_note_object_uri( string $uuid ) : string {
  * single Note has exactly one canonical identifier.
  */
 function axismundi_note_local_uuid_from_uri( string $uri ) : ?string {
-	$home = wp_parse_url( home_url( '/' ) );
 	$part = wp_parse_url( $uri );
-	if ( ! is_array( $home ) || ! is_array( $part )
-		|| isset( $part['user'] ) || isset( $part['pass'] ) || isset( $part['fragment'] )
-		|| strtolower( (string) ( $home['scheme'] ?? '' ) ) !== strtolower( (string) ( $part['scheme'] ?? '' ) )
-		|| strtolower( (string) ( $home['host'] ?? '' ) ) !== strtolower( (string) ( $part['host'] ?? '' ) )
-		|| (int) ( $home['port'] ?? 0 ) !== (int) ( $part['port'] ?? 0 )
-		|| untrailingslashit( (string) ( $home['path'] ?? '' ) ) !== untrailingslashit( (string) ( $part['path'] ?? '' ) )
-	) {
-		return null;
-	}
 	$args = array();
-	wp_parse_str( (string) ( $part['query'] ?? '' ), $args );
-	if ( array( 'ax_note' ) !== array_keys( $args ) ) {
+	if ( is_array( $part ) ) {
+		wp_parse_str( (string) ( $part['query'] ?? '' ), $args );
+	}
+	$uuid = strtolower( trim( (string) ( $args['ax_note'] ?? '' ) ) );
+	if ( ! preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uuid ) ) {
 		return null;
 	}
-	$uuid = strtolower( trim( (string) $args['ax_note'] ) );
-	return preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uuid ) ? $uuid : null;
+	// Close every alias — a different path, an extra or duplicated query argument,
+	// a fragment, or userinfo — by requiring an exact match against the one
+	// reconstructed canonical URI. A Note has exactly one identifier string.
+	return axismundi_note_object_uri( $uuid ) === $uri ? $uuid : null;
 }
 
 /** Normalize one absolute HTTP(S) URI, or '' when it is not a valid address. */
@@ -193,9 +188,11 @@ function axismundi_note_save( int $post_id, array $fields ) {
 	}
 
 	$existing = axismundi_note_get( $post_id );
-	$locked   = is_array( $existing ) && ! empty( $existing['attribution_locked_at'] );
 	$uuid     = is_array( $existing ) ? (string) $existing['local_uuid'] : wp_generate_uuid4();
-	$actor    = $locked ? (string) $existing['actor_uri'] : axismundi_note_author_actor_uri( $post );
+	// The current author is the candidate attribution; whether it is actually
+	// written is decided atomically at UPDATE time against attribution_locked_at,
+	// so a concurrent lock cannot be overwritten by an in-flight save.
+	$actor    = axismundi_note_author_actor_uri( $post );
 
 	// An absent field preserves the stored value; a present field overwrites it.
 	// An explicitly invalid value fails closed rather than widening the audience.
@@ -243,7 +240,24 @@ function axismundi_note_save( int $post_id, array $fields ) {
 	$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' );
 
 	if ( is_array( $existing ) ) {
-		$result = $wpdb->update( axismundi_note_table(), $data, array( 'post_id' => $post_id ), $format, array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$table = axismundi_note_table();
+		// actor_uri and its hash only change while attribution is still unlocked;
+		// the CASE decides this in the same statement that writes the row.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- Trusted table identifier; values are prepared.
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table} SET
+					visibility = %s, language_tag = %s, in_reply_to_uri = %s, in_reply_to_uri_hash = %s,
+					context_uri = %s, context_uri_hash = %s, is_sensitive = %d, content_warning = %s,
+					mention_actor_uris_json = %s, updated_at = %s,
+					actor_uri = CASE WHEN attribution_locked_at IS NULL THEN %s ELSE actor_uri END,
+					actor_uri_hash = CASE WHEN attribution_locked_at IS NULL THEN %s ELSE actor_uri_hash END
+				WHERE post_id = %d",
+				$data['visibility'], $data['language_tag'], $data['in_reply_to_uri'], $data['in_reply_to_uri_hash'],
+				$data['context_uri'], $data['context_uri_hash'], $data['is_sensitive'], $data['content_warning'],
+				$data['mention_actor_uris_json'], $now, $actor, hash( 'sha256', $actor ), $post_id
+			)
+		);
 	} else {
 		$data['object_status'] = 'active';
 		$data['created_at']    = $now;
@@ -277,6 +291,29 @@ function axismundi_note_lock_attribution( int $post_id ) {
 	$table = axismundi_note_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- Trusted table identifier.
 	$result = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET attribution_locked_at = %s, updated_at = %s WHERE post_id = %d AND attribution_locked_at IS NULL", $now, $now, $post_id ) );
+	if ( false === $result ) {
+		return new WP_Error( 'ax_note_write', __( 'The Note attribution could not be locked.', 'axismundi-note' ) );
+	}
+	if ( $result >= 1 ) {
+		return true;
+	}
+	// Zero rows changed: distinguish an already-locked envelope from a missing one.
+	$existing = axismundi_note_get( $post_id );
+	if ( ! is_array( $existing ) ) {
+		return new WP_Error( 'ax_note_post', __( 'There is no Note envelope to lock.', 'axismundi-note' ) );
+	}
+	return ! empty( $existing['attribution_locked_at'] )
+		? true
+		: new WP_Error( 'ax_note_write', __( 'The Note attribution could not be locked.', 'axismundi-note' ) );
+}
+
+/** Convert one active envelope to a tombstone; false only on a write failure. */
+function axismundi_note_tombstone( int $post_id ) : bool {
+	global $wpdb;
+	$now   = current_time( 'mysql', true );
+	$table = axismundi_note_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- Trusted table identifier.
+	$result = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET object_status = 'tombstone', deleted_at = %s, updated_at = %s WHERE post_id = %d AND object_status <> 'tombstone'", $now, $now, $post_id ) );
 	return false !== $result;
 }
 
@@ -303,27 +340,25 @@ function axismundi_note_ensure_baseline( int $post_id, WP_Post $post ) : void {
 add_action( 'save_post_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_ensure_baseline', 9, 2 );
 
 /**
- * Convert one Note's envelope to a tombstone on permanent post deletion.
+ * Tombstone one Note's envelope at permanent deletion, aborting on write failure.
  *
  * The row is never dropped: the canonical UUID and Actor snapshot must survive
  * the Core Post so a later Delete Activity and Tombstone projection stay
- * expressible. Trash is not deletion, so this fires only on hard delete.
+ * expressible. `pre_delete_post` fires only on permanent deletion (not trash) and
+ * can short-circuit it, so a failed tombstone write returns false to abort the
+ * deletion rather than orphan an active envelope for a post that no longer exists.
+ *
+ * @param WP_Post|false|null $delete Short-circuit value (null lets deletion proceed).
+ * @return WP_Post|false|null
  */
-function axismundi_note_on_before_delete_post( int $post_id, WP_Post $post ) : void {
+function axismundi_note_pre_delete_post( $delete, WP_Post $post ) {
 	if ( AXISMUNDI_NOTE_POST_TYPE !== $post->post_type || ! axismundi_note_ready() ) {
-		return;
+		return $delete;
 	}
-	if ( ! is_array( axismundi_note_get( $post_id ) ) ) {
-		return;
+	$envelope = axismundi_note_get( $post->ID );
+	if ( ! is_array( $envelope ) || 'tombstone' === $envelope['object_status'] ) {
+		return $delete;
 	}
-	global $wpdb;
-	$now = current_time( 'mysql', true );
-	$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		axismundi_note_table(),
-		array( 'object_status' => 'tombstone', 'deleted_at' => $now, 'updated_at' => $now ),
-		array( 'post_id' => $post_id ),
-		array( '%s', '%s', '%s' ),
-		array( '%d' )
-	);
+	return axismundi_note_tombstone( $post->ID ) ? $delete : false;
 }
-add_action( 'before_delete_post', 'axismundi_note_on_before_delete_post', 10, 2 );
+add_filter( 'pre_delete_post', 'axismundi_note_pre_delete_post', 10, 2 );

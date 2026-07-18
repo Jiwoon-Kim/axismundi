@@ -12,8 +12,16 @@ $ax_note_results     = array();
 $ax_note_post_ids    = array();
 $ax_note_user_ids    = array();
 $ax_note_actor_ids   = array();
-$ax_note_real_prefix = $wpdb->prefix;
+$ax_note_real_prefix  = $wpdb->prefix;
+$ax_note_shadow_table = '';
 $GLOBALS['ax_note_http'] = 0;
+
+/** Break only the tombstone UPDATE so a delete-time write failure can be tested. */
+function ax_note_break_tombstone( $query ) {
+	return ( false !== strpos( (string) $query, 'ax_notes' ) && false !== strpos( (string) $query, "object_status = 'tombstone'" ) )
+		? 'UPDATE ax_notes_deliberately_missing SET id = id WHERE 1 = 0'
+		: $query;
+}
 
 /** @param bool[] $results Results. */
 function ax_note_assert( array &$results, string $label, bool $condition ) : void {
@@ -63,6 +71,7 @@ try {
 	$wpdb->prefix  = $shadow_prefix;
 	$shadow_ok     = axismundi_note_install_table();
 	$shadow_table  = axismundi_note_table();
+	$ax_note_shadow_table = $shadow_table;
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway shadow probe.
 	$shadow_post_key = $wpdb->get_results( "SHOW INDEX FROM {$shadow_table} WHERE Key_name = 'post_id'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway shadow teardown.
@@ -140,7 +149,8 @@ try {
 	$alias_extra = (string) add_query_arg( 'extra', '1', $object_uri );
 	$alias_path  = home_url( '/not-canonical/?ax_note=' . $uuid );
 	$alias_frag  = $object_uri . '#fragment';
-	ax_note_assert( $ax_note_results, 'non-canonical alias URIs do not resolve to the Note UUID', null === axismundi_note_local_uuid_from_uri( $alias_extra ) && null === axismundi_note_local_uuid_from_uri( $alias_path ) && null === axismundi_note_local_uuid_from_uri( $alias_frag ) );
+	$alias_dup   = $object_uri . '&ax_note=' . $uuid;
+	ax_note_assert( $ax_note_results, 'non-canonical alias URIs including a duplicated key do not resolve to the Note UUID', null === axismundi_note_local_uuid_from_uri( $alias_extra ) && null === axismundi_note_local_uuid_from_uri( $alias_path ) && null === axismundi_note_local_uuid_from_uri( $alias_frag ) && null === axismundi_note_local_uuid_from_uri( $alias_dup ) );
 
 	// F2: locking through the owned API freezes attribution against an author change.
 	$lock  = axismundi_note_lock_attribution( $post_id );
@@ -148,6 +158,18 @@ try {
 	wp_update_post( array( 'ID' => $post_id, 'post_author' => $other instanceof WP_User ? $other->ID : 0 ) );
 	$locked = axismundi_note_save( $post_id, array( 'visibility' => 'public' ) );
 	ax_note_assert( $ax_note_results, 'a locked envelope keeps its original attribution after an author change', true === $lock && is_array( $locked ) && $actor_uri === $locked['actor_uri'] && '' !== $actor_uri );
+
+	// P1: locking a nonexistent envelope is an error, not a false success.
+	ax_note_assert( $ax_note_results, 'locking attribution for a nonexistent Note is rejected', is_wp_error( axismundi_note_lock_attribution( 999999999 ) ) );
+
+	// P1: a failed tombstone write aborts the permanent delete instead of orphaning.
+	$abort_post = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $author instanceof WP_User ? $author->ID : 0, 'post_title' => 'Abort note' ) );
+	$ax_note_post_ids[] = $abort_post;
+	add_filter( 'query', 'ax_note_break_tombstone' );
+	$abort_result = wp_delete_post( $abort_post, true );
+	remove_filter( 'query', 'ax_note_break_tombstone' );
+	$abort_env = axismundi_note_get( $abort_post );
+	ax_note_assert( $ax_note_results, 'a failed tombstone write aborts the permanent delete and preserves the active envelope', false === $abort_result && get_post( $abort_post ) instanceof WP_Post && is_array( $abort_env ) && 'active' === $abort_env['object_status'] );
 
 	// F1: a permanent delete tombstones the envelope instead of dropping it.
 	wp_delete_post( $post_id, true );
@@ -157,7 +179,12 @@ try {
 	ax_note_assert( $ax_note_results, 'the envelope layer performs no HTTP request', 0 === $GLOBALS['ax_note_http'] );
 } finally {
 	$wpdb->prefix = $ax_note_real_prefix;
+	remove_filter( 'query', 'ax_note_break_tombstone' );
 	remove_filter( 'pre_http_request', 'ax_note_http' );
+	if ( '' !== $ax_note_shadow_table ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway shadow teardown.
+		$wpdb->query( "DROP TABLE IF EXISTS {$ax_note_shadow_table}" );
+	}
 	foreach ( array_unique( $ax_note_post_ids ) as $pid ) {
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $pid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( get_post( (int) $pid ) instanceof WP_Post ) {

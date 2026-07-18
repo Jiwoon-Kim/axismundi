@@ -78,7 +78,7 @@ function axismundi_note_save_meta_box( int $post_id, WP_Post $post ) : void {
 	) {
 		return;
 	}
-	axismundi_note_save(
+	$result = axismundi_note_save(
 		$post_id,
 		array(
 			'visibility'         => isset( $_POST['axismundi_note_visibility'] ) ? sanitize_text_field( wp_unslash( $_POST['axismundi_note_visibility'] ) ) : 'public',
@@ -90,5 +90,29 @@ function axismundi_note_save_meta_box( int $post_id, WP_Post $post ) : void {
 			'mention_actor_uris' => isset( $_POST['axismundi_note_mentions'] ) ? sanitize_textarea_field( wp_unslash( $_POST['axismundi_note_mentions'] ) ) : '',
 		)
 	);
+	// A rejected envelope field would otherwise leave the post looking saved while
+	// the federation envelope silently kept its previous value. Surface the error.
+	if ( is_wp_error( $result ) ) {
+		set_transient( 'axismundi_note_error_' . get_current_user_id(), $result->get_error_message(), MINUTE_IN_SECONDS );
+	}
 }
 add_action( 'save_post_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_save_meta_box', 10, 2 );
+
+/** Surface a rejected envelope save to the editor as a dismissible error notice. */
+function axismundi_note_admin_notice() : void {
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen instanceof WP_Screen || AXISMUNDI_NOTE_POST_TYPE !== $screen->post_type ) {
+		return;
+	}
+	$key     = 'axismundi_note_error_' . get_current_user_id();
+	$message = get_transient( $key );
+	if ( false === $message ) {
+		return;
+	}
+	delete_transient( $key );
+	printf(
+		'<div class="notice notice-error is-dismissible"><p>%s</p></div>',
+		esc_html( __( 'Federation envelope not saved: ', 'axismundi-note' ) . (string) $message )
+	);
+}
+add_action( 'admin_notices', 'axismundi_note_admin_notice' );

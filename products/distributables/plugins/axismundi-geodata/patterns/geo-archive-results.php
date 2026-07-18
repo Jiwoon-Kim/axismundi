@@ -1,7 +1,7 @@
 <?php
 /**
  * Title: Geo archive results
- * Slug: axismundi/geo-archive-results
+ * Slug: axismundi-geodata/geo-archive-results
  * Description: A geo taxonomy archive (geotag / geo area): the tonal hero, a Query Map View of the current term, then a card-grid query feed beside a geo-specific sidebar.
  * Categories: query
  * Inserter: no
@@ -15,8 +15,10 @@
  * provider (Settings > Geodata); without them it degrades to a short notice and
  * the feed still renders.
  *
- * @package Axismundi
+ * @package AxismundiGeodata
  */
+
+defined( 'ABSPATH' ) || exit;
 
 ?>
 <!-- wp:group {"tagName":"main","metadata":{"name":"Geo archive results"},"align":"full","style":{"spacing":{"padding":{"right":"var:preset|spacing|200","bottom":"var:preset|spacing|800","left":"var:preset|spacing|200"}}},"layout":{"type":"constrained"}} -->
@@ -64,11 +66,11 @@
 <!-- wp:query-no-results -->
 <!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|600","bottom":"var:preset|spacing|600"}}},"layout":{"type":"constrained","contentSize":"480px"}} -->
 <div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--600);padding-bottom:var(--wp--preset--spacing--600)"><!-- wp:heading {"style":{"typography":{"textAlign":"center"}},"fontSize":"headline-medium"} -->
-<h2 class="wp-block-heading has-text-align-center has-headline-medium-font-size"><?php echo esc_html_x( 'Nothing here yet', 'Geo archive empty-state heading.', 'axismundi' ); ?></h2>
+<h2 class="wp-block-heading has-text-align-center has-headline-medium-font-size"><?php echo esc_html_x( 'Nothing here yet', 'Geo archive empty-state heading.', 'axismundi-geodata' ); ?></h2>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"className":"has-on-surface-variant-color has-text-color","style":{"typography":{"textAlign":"center"}},"textColor":"on-surface-variant","fontSize":"body-large"} -->
-<p class="has-text-align-center has-on-surface-variant-color has-text-color has-body-large-font-size"><?php echo esc_html_x( 'There are no posts for this place yet. Try a nearby place or return home.', 'Geo archive empty-state guidance.', 'axismundi' ); ?></p>
+<p class="has-text-align-center has-on-surface-variant-color has-text-color has-body-large-font-size"><?php echo esc_html_x( 'There are no posts for this place yet. Try a nearby place or return home.', 'Geo archive empty-state guidance.', 'axismundi-geodata' ); ?></p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:group -->
 <!-- /wp:query-no-results --></div>
@@ -80,7 +82,7 @@
 <div class="wp-block-group is-position-sticky"><!-- wp:group {"metadata":{"name":"Geo archive sidebar"},"style":{"spacing":{"blockGap":"var:preset|spacing|300","padding":{"top":"var:preset|spacing|300","bottom":"var:preset|spacing|300"}}},"layout":{"type":"default"}} -->
 <div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--300);padding-bottom:var(--wp--preset--spacing--300)"><!-- wp:group {"style":{"color":{"background":"var:preset|color|surface-container-low"},"border":{"radius":"12px"},"spacing":{"padding":"var:preset|spacing|200","blockGap":"var:preset|spacing|200"}},"layout":{"type":"default"}} -->
 <div class="wp-block-group has-background" style="border-radius:12px;background-color:var(--wp--preset--color--surface-container-low);padding:var(--wp--preset--spacing--200)"><!-- wp:heading {"fontSize":"title-medium"} -->
-<h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Geo areas', 'Geo archive sidebar heading.', 'axismundi' ); ?></h2>
+<h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Geo areas', 'Geo archive sidebar heading.', 'axismundi-geodata' ); ?></h2>
 <!-- /wp:heading -->
 
 <!-- wp:categories {"taxonomy":"geo_area","showHierarchy":true,"showPostCounts":true,"showEmpty":true,"className":"is-style-row"} /--></div>
@@ -88,7 +90,7 @@
 
 <!-- wp:group {"style":{"color":{"background":"var:preset|color|surface-container-low"},"border":{"radius":"12px"},"spacing":{"padding":"var:preset|spacing|200","blockGap":"var:preset|spacing|200"}},"layout":{"type":"default"}} -->
 <div class="wp-block-group has-background" style="border-radius:12px;background-color:var(--wp--preset--color--surface-container-low);padding:var(--wp--preset--spacing--200)"><!-- wp:heading {"fontSize":"title-medium"} -->
-<h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Geotags', 'Geo archive sidebar heading.', 'axismundi' ); ?></h2>
+<h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Geotags', 'Geo archive sidebar heading.', 'axismundi-geodata' ); ?></h2>
 <!-- /wp:heading -->
 
 <!-- wp:tag-cloud {"taxonomy":"geotag","showTagCounts":true,"className":"is-style-tags"} /--></div>
@@ -96,7 +98,7 @@
 
 <!-- wp:group {"style":{"color":{"background":"var:preset|color|surface-container-low"},"border":{"radius":"12px"},"spacing":{"padding":"var:preset|spacing|200","blockGap":"var:preset|spacing|200"}},"layout":{"type":"default"}} -->
 <div class="wp-block-group has-background" style="border-radius:12px;background-color:var(--wp--preset--color--surface-container-low);padding:var(--wp--preset--spacing--200)"><!-- wp:heading {"fontSize":"title-medium"} -->
-<h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Archives', 'Geo archive sidebar heading.', 'axismundi' ); ?></h2>
+<h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Archives', 'Geo archive sidebar heading.', 'axismundi-geodata' ); ?></h2>
 <!-- /wp:heading -->
 
 <!-- wp:archives {"showPostCounts":true,"className":"is-style-row"} /--></div>

@@ -4,7 +4,7 @@ Tags: geo, geotag, location, taxonomy, rest-api
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -42,6 +42,13 @@ track, and geo-archive maps. Attachments carry coordinate meta only — they are
 never auto-tagged with place terms. A future ax_note post type can opt into the
 geo taxonomies through the `axismundi_geodata_object_types` filter.
 
+Both public taxonomies include plugin-owned block templates for their archive
+pages. They retain the tonal archive header, current-term map, inherited card
+feed, and geo navigation sidebar previously supplied by the Axismundi theme.
+Themes and site owners can still override them through the normal template
+hierarchy. The map remains optional; without Axismundi Map the archive feed and
+navigation continue to render.
+
 A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, with the
 광안리해수욕장 geotag) ships with the plugin but is created only on request — it
 is never seeded automatically. Run `wp axismundi-geodata seed-demo` to add it and
@@ -77,10 +84,8 @@ external GeoRSS and W3C Geo feeds into GeoJSON for map clients.
 
 == Installation ==
 
-1. Install and activate the Axismundi theme (for the dormant geo presentation
-   templates and styles, when those ship).
-2. Upload and activate this plugin.
-3. Posts and pages gain the Geo Area and Geotag taxonomies; attachments gain GPS
+1. Upload and activate this plugin under any block theme.
+2. Posts and pages gain the Geo Area and Geotag taxonomies; attachments gain GPS
    coordinate fields. All are available over the REST API.
 
 == Third-party libraries ==
@@ -103,6 +108,10 @@ shared renderer assets; Map owns the public block and Query Map View. See
 docs/map-strategy.md for the boundary.
 
 == Changelog ==
+
+= 0.2.1 =
+* Move the complete geo_area and geotag archive templates from the Axismundi theme to their Geodata domain owner.
+* Preserve the current-term map, inherited card feed, and geographic navigation while allowing normal theme and user overrides.
 
 = 0.2.0 =
 * Extend both RSS 2.0 and Atom feeds with conditional GeoRSS Simple geometry for

@@ -1,8 +1,8 @@
 # Note federation route contract (increment 4)
 
-Status: **locked, not yet implemented.** Increment 3 owns the storage substrate;
+Status: **#4a implemented locally and unreleased; #4b remains pending.** Increment 3 owns the storage substrate;
 increment 3.5 owns language inheritance. This document freezes the HTTP,
-source, projection, and HTML-view boundaries for increment 4 before code lands.
+source, projection, and HTML-view boundaries across the two increment 4 slices.
 
 Increment 4 is implemented as two reviewable commits and released only after both
 are complete:
@@ -50,23 +50,26 @@ transformer and both HTTP routes are read-only and never perform either write.
 Increment 5 consumes these already-frozen fields when recording Create; it does not
 mint a second attribution or language snapshot.
 
-## OP fallback source seam (#4a)
+## OP request source seam (#4a)
 
 `axismundi_op_current_source()` keeps its existing precedence:
 
 1. resolved Actor;
 2. queried Core `WP_Post`;
-3. only when both are absent, a fallback filter.
+3. a preserve-by-default product filter.
 
-The fallback filter is therefore unable to replace an existing Actor or Article
-route. Its contract is:
+Its contract is:
 
 ```php
-apply_filters( 'axismundi_op_current_source', null )
+apply_filters( 'axismundi_op_current_source', $source )
     -> source | WP_Error( 'ax_op_not_found' ) | null
 ```
 
-- A source means that one product plugin claims and resolved the request.
+- A resolver preserves a non-null source unless the request explicitly names its own
+  product namespace. This narrow override is necessary because WordPress may ignore an
+  unregistered query and resolve a static front-page `WP_Post`.
+- A replacement source means that one product plugin claimed and resolved its exact
+  namespace.
 - `ax_op_not_found` means a product namespace was present but malformed, aliased, or
   unknown. Negotiated JSON-LD and the #4b HTML route map it to 404.
 - `null` means no product claimed the request; WordPress continues normally.
@@ -118,7 +121,7 @@ An **active federatable Note** satisfies every condition below:
 | active but any readiness condition fails | anyone | `404` |
 | tombstone envelope, Post optional | anyone | `410` Tombstone |
 | claimed malformed/aliased/unknown Note URI | anyone | `404` |
-| no Note namespace | anyone | fallback returns `null`; OP does not handle |
+| no Note namespace | anyone | existing source is preserved; OP adds no handling |
 
 Authenticated viewing of followers/mentioned Notes is deferred until a separate
 authorization contract. UUID opacity is not an authorization mechanism.

@@ -161,7 +161,7 @@ function axismundi_op_post_article_publicly_readable( WP_Post $post ) : bool {
  * @param string|null $content Optional fragment; defaults to the full post content.
  * @return string
  */
-function axismundi_op_post_article_content( WP_Post $post, ?string $content = null ) : string {
+function axismundi_op_render_post_content( WP_Post $post, ?string $content = null ) : string {
 	/**
 	 * Filter whether the normal `the_content` pipeline renders Article content.
 	 *
@@ -198,6 +198,11 @@ function axismundi_op_post_article_content( WP_Post $post, ?string $content = nu
 			}
 		}
 	}
+}
+
+/** Backward-compatible Article wrapper around the shared post-content renderer. */
+function axismundi_op_post_article_content( WP_Post $post, ?string $content = null ) : string {
+	return axismundi_op_render_post_content( $post, $content );
 }
 
 /** Build the optional embedded Note preview without minting another object id. */

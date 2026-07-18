@@ -105,6 +105,21 @@ function axismundi_op_object_html_url( array $object ) : string {
  * @return array<string,mixed>|WP_Error
  */
 function axismundi_op_finalize_object( array $object, string $expected_id ) {
+	if ( 'Tombstone' === (string) ( $object['type'] ?? '' ) ) {
+		if ( empty( $object['id'] ) || (string) $object['id'] !== $expected_id ) {
+			return new WP_Error( 'ax_op_id_mismatch', __( 'A projected object id must equal its declared object URI.', 'axismundi-object-projections' ) );
+		}
+		$tombstone = array(
+			'id'   => (string) $object['id'],
+			'type' => 'Tombstone',
+		);
+		foreach ( array( 'formerType', 'deleted' ) as $member ) {
+			if ( isset( $object[ $member ] ) && '' !== trim( (string) $object[ $member ] ) ) {
+				$tombstone[ $member ] = sanitize_text_field( (string) $object[ $member ] );
+			}
+		}
+		return array_merge( array( '@context' => axismundi_op_jsonld_context( $tombstone ) ), $tombstone );
+	}
 	$actor_types = array( 'Application', 'Group', 'Organization', 'Person', 'Service' );
 	$required    = in_array( (string) ( $object['type'] ?? '' ), $actor_types, true )
 		? array( 'id', 'type', 'url' )
@@ -125,6 +140,15 @@ function axismundi_op_finalize_object( array $object, string $expected_id ) {
 		if ( isset( $object[ $member ] ) ) {
 			$object[ $member ] = axismundi_op_clean_html( (string) $object[ $member ] );
 		}
+	}
+	if ( isset( $object['contentMap'] ) && is_array( $object['contentMap'] ) ) {
+		$content_map = array();
+		foreach ( $object['contentMap'] as $language => $content ) {
+			if ( is_string( $language ) && is_scalar( $content ) ) {
+				$content_map[ $language ] = axismundi_op_clean_html( (string) $content );
+			}
+		}
+		$object['contentMap'] = $content_map;
 	}
 	// A preview is an embedded fallback object, not an independently identified object.
 	if ( isset( $object['preview'] ) && is_array( $object['preview'] ) ) {

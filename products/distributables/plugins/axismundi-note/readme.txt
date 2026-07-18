@@ -19,12 +19,11 @@ table that holds the authored federation fields with no Core Post home:
 visibility, language, in-reply-to and context URIs, sensitivity, a content
 warning, and an explicit mention list.
 
-The post type is intentionally non-public in this release. It is editable in
-wp-admin through the Classic Editor but is not publicly queryable and has no
-public rewrite, so a followers-only or mentioned-only body cannot leak through a
-Core permalink before the fail-closed content-negotiation route exists. The
-JSON-LD transformer and the Create, Update, and Delete lifecycle are owned by
-Object Projections and Activities in later increments.
+The post type remains private and is editable through the Classic Editor. An
+exact canonical `?ax_note={uuid}` request can project public and quiet-public
+Notes as ActivityStreams JSON-LD; followers-only and mentioned-only Notes fail
+closed for anonymous requests. Human-readable object pages and the Create,
+Update, and Delete lifecycle remain later increments.
 
 A permanent post deletion converts the envelope to a tombstone instead of
 dropping it, so the canonical object UUID and author attribution survive for a

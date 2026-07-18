@@ -68,6 +68,49 @@ ax_rnd_assert(
 		&& array_key_first( $object ) === '@context'
 );
 
+// Every contentMap entry uses the same federation HTML allowlist as content.
+ax_rnd_register(
+	array(
+		'supports'   => '__return_true',
+		'object_uri' => $uri_cb,
+		'transform'  => static fn( $s ) => array(
+			'id'           => $uri,
+			'type'         => 'Article',
+			'attributedTo' => 'https://example.com/actors/uuid',
+			'url'          => 'https://example.com/hello/',
+			'content'      => '<p>Safe</p>',
+			'contentMap'   => array( 'en' => '<p>Safe</p><iframe src="https://evil.example/"></iframe>' ),
+		),
+	)
+);
+$mapped = axismundi_op_transform_object( 'x' );
+ax_rnd_assert( $ax_rnd_results, 'contentMap scalar values use the federation HTML allowlist', is_array( $mapped ) && '<p>Safe</p>' === $mapped['contentMap']['en'] );
+
+// Tombstones retain only their stable identity and non-sensitive lifecycle fields.
+ax_rnd_register(
+	array(
+		'supports'   => '__return_true',
+		'object_uri' => $uri_cb,
+		'transform'  => static fn( $s ) => array(
+			'id'           => $uri,
+			'type'         => 'Tombstone',
+			'formerType'   => 'Note',
+			'deleted'      => '2026-07-19T00:00:00Z',
+			'attributedTo' => 'https://example.com/actors/uuid',
+			'url'          => 'https://example.com/private/',
+			'content'      => '<p>must not survive</p>',
+		),
+	)
+);
+$tombstone = axismundi_op_transform_object( 'x' );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'a Tombstone is privacy-minimal and maps to generic HTTP 410 semantics',
+	is_array( $tombstone )
+		&& array( '@context', 'id', 'type', 'formerType', 'deleted' ) === array_keys( $tombstone )
+		&& 410 === axismundi_op_object_http_status( $tombstone )
+);
+
 // Global WordPress KSES extensions cannot widen the federation allowlist.
 add_filter(
 	'wp_kses_allowed_html',

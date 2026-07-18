@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Axismundi Note
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-note
- * Description:       Note-owned local object container: the ax_note CPT plus a federation envelope (visibility, language, reply/context, sensitivity, mentions). Authoring storage only; transport and JSON-LD projection stay with the base plugins.
+ * Description:       Note-owned local object container with a private authoring CPT, federation envelope, and fail-closed ActivityStreams Note projection.
  * Version:           0.0.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
@@ -15,13 +15,10 @@
  *
  * @package AxismundiNote
  *
- * Increment 3 owns the storage substrate only: the private ax_note CPT, the
- * wp_ax_notes envelope table, a Classic Editor authoring UI, and a read/write
- * envelope API. It registers no JSON-LD transformer, opens no public object
- * route, records no Activity, and performs no network request. The Note object
- * transformer (increment 4) and Create/Update/Delete lifecycle (increment 5)
- * are deliberately deferred so followers-only and mentioned-only bodies cannot
- * leak before the fail-closed content-negotiation route exists.
+ * Increment 4a adds the fail-closed JSON-LD source and transformer on top of
+ * the increment 3 storage substrate. Human-readable HTML (#4b) and the
+ * Create/Update/Delete lifecycle (#5) remain deliberately deferred. The
+ * plugin performs no network request.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -31,6 +28,7 @@ const AXISMUNDI_NOTE_VERSION = '0.0.1';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/envelope.php';
+require_once __DIR__ . '/includes/federation.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/editor.php';
 }

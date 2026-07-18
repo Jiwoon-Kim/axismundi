@@ -91,14 +91,30 @@ function axismundi_op_is_negotiated_request() : bool {
  * @return mixed|null
  */
 function axismundi_op_current_source() {
+	$source = null;
 	if ( function_exists( 'axismundi_actors_current_actor' ) ) {
 		$actor = axismundi_actors_current_actor();
 		if ( $actor instanceof Axismundi_Actor ) {
-			return $actor;
+			$source = $actor;
 		}
 	}
-	$source = get_queried_object();
-	return $source instanceof WP_Post ? $source : null;
+	if ( null === $source ) {
+		$queried = get_queried_object();
+		$source  = $queried instanceof WP_Post ? $queried : null;
+	}
+	/**
+	 * Let a product resolve an explicitly claimed namespace after Core resolution.
+	 *
+	 * Resolvers must preserve a non-null source unless the current request explicitly
+	 * names their owned namespace. This exception is needed because WordPress may
+	 * ignore an unregistered product query and resolve a static front-page WP_Post.
+	 * A claimed malformed or unknown identity returns `ax_op_not_found` instead of
+	 * leaking through to that homepage source.
+	 *
+	 * @since 0.0.30
+	 * @param mixed|null $source Actor, queried Post, or null.
+	 */
+	return apply_filters( 'axismundi_op_current_source', $source );
 }
 
 /**
@@ -134,6 +150,11 @@ function axismundi_op_emit_error( int $status ) : void {
 	exit;
 }
 
+/** HTTP status for one successfully finalized object representation. */
+function axismundi_op_object_http_status( array $object ) : int {
+	return 'Tombstone' === (string) ( $object['type'] ?? '' ) ? 410 : 200;
+}
+
 /**
  * Serve the negotiated representation before core canonical redirects run.
  *
@@ -144,6 +165,9 @@ function axismundi_op_template_redirect() : void {
 		return;
 	}
 	$source = axismundi_op_current_source();
+	if ( is_wp_error( $source ) ) {
+		axismundi_op_emit_error( 'ax_op_not_found' === $source->get_error_code() ? 404 : 500 );
+	}
 	if ( null === $source ) {
 		return;
 	}
@@ -159,9 +183,13 @@ function axismundi_op_template_redirect() : void {
 		axismundi_op_emit_error( 'ax_op_not_public' === $object->get_error_code() ? 404 : 500 );
 	}
 
-	status_header( 200 );
+	$status = axismundi_op_object_http_status( $object );
+	status_header( $status );
 	header( 'Content-Type: application/activity+json; charset=' . get_option( 'blog_charset' ) );
 	header( 'Vary: Accept', false );
+	if ( 410 === $status ) {
+		header( 'Cache-Control: no-store' );
+	}
 	header( 'Access-Control-Allow-Origin: *' );
 	header( 'Access-Control-Allow-Methods: GET, HEAD' );
 	header( 'X-Content-Type-Options: nosniff' );
@@ -187,7 +215,7 @@ function axismundi_op_html_headers( array $headers ) : array {
 		return $headers;
 	}
 	$source = axismundi_op_current_source();
-	if ( null === $source ) {
+	if ( null === $source || is_wp_error( $source ) ) {
 		return $headers;
 	}
 	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && axismundi_op_post_article_supports( $source ) && ! axismundi_op_post_article_publicly_readable( $source ) ) {
@@ -222,7 +250,7 @@ add_filter( 'wp_headers', 'axismundi_op_html_headers' );
  */
 function axismundi_op_html_alternate_link() : void {
 	$source = axismundi_op_current_source();
-	if ( null === $source || ! axismundi_op_standalone_router_enabled() ) {
+	if ( null === $source || is_wp_error( $source ) || ! axismundi_op_standalone_router_enabled() ) {
 		return;
 	}
 	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && axismundi_op_post_article_supports( $source ) && ! axismundi_op_post_article_publicly_readable( $source ) ) {

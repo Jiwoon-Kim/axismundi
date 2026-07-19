@@ -53,6 +53,10 @@ Envelope fields (visibility / language / inReplyTo / context / quote target /
 Who can quote / sensitive / CW / mentions)
 ```
 
+New Notes default to `public` visibility and `anyone` automatic Quote approval. The
+Federation panel edits the quote target URI and displays ledger-derived Quote status;
+status is read-only and never becomes approval evidence by itself.
+
 Block palette is restricted via `allowed_block_types_all` scoped to `ax_note`.
 
 ## Rework of committed increment 3

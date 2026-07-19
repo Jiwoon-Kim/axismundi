@@ -211,8 +211,8 @@ try {
 	$followers_policy = $site_actor instanceof Axismundi_Actor ? axismundi_op_post_quote_interaction_policy( get_post( $post_id ), $site_actor->get_uri() ) : null;
 	ax_article_assert( $ax_article_results, 'the followers policy references the OP-owned stable Followers address without dereferencing it', is_array( $followers_policy ) && axismundi_op_actor_followers_url( $site_actor ) === $followers_policy['canQuote']['automaticApproval'] );
 	delete_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META );
-	$quote_unreported = axismundi_op_transform_object( get_post( $post_id ) );
-	ax_article_assert( $ax_article_results, 'removing the explicit policy removes interactionPolicy instead of inventing a default', is_array( $quote_unreported ) && ! isset( $quote_unreported['interactionPolicy'] ) );
+	$quote_default = axismundi_op_transform_object( get_post( $post_id ) );
+	ax_article_assert( $ax_article_results, 'an Article without explicit metadata projects the authored product default of anyone', is_array( $quote_default ) && axismundi_act_public_audience_uri() === $quote_default['interactionPolicy']['canQuote']['automaticApproval'] && ! isset( $quote_default['quoteAuthorization'] ) );
 
 	$draft_result  = axismundi_op_transform_object( $draft );
 	$locked_result = axismundi_op_transform_object( $locked );

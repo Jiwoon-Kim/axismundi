@@ -206,7 +206,12 @@ function axismundi_note_source_visible( Axismundi_Note_Source $source ) : bool {
 		return true;
 	}
 	$audience = axismundi_note_source_audience( $source );
-	return is_array( $audience ) && true === $audience['public'];
+	if ( ! is_array( $audience ) || true !== $audience['public'] ) {
+		return false;
+	}
+	$post = $source->get_post();
+	$status = $post instanceof WP_Post && function_exists( 'axismundi_note_quote_status' ) ? axismundi_note_quote_status( $post ) : array( 'state' => 'none' );
+	return in_array( (string) ( $status['state'] ?? '' ), array( 'none', 'self', 'accepted' ), true );
 }
 
 /** Project an explicitly authored Quote policy without inventing approval evidence. */
@@ -297,7 +302,7 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	if ( is_array( $interaction_policy ) ) {
 		$object['interactionPolicy'] = $interaction_policy;
 	}
-	return $object;
+	return function_exists( 'axismundi_note_quote_project_object' ) ? axismundi_note_quote_project_object( $post, $object ) : $object;
 }
 
 /**

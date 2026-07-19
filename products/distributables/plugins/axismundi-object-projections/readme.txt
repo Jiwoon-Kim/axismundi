@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.33
+Stable tag: 0.0.34
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,11 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.34 =
+* Default Core Post Articles to public audience with anyone Quote approval when no
+  explicit federation metadata exists.
+* Keep the block editor and Quick Edit policy choices aligned with that default.
 
 = 0.0.33 =
 * Accept cached QuoteAuthorization objects for verified outbound Quote decisions.

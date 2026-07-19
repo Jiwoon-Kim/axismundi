@@ -177,7 +177,7 @@ function axismundi_note_validate_quote_policy( $value ) {
 		return new WP_Error( 'ax_note_quote_policy', __( 'The Quote policy is not recognized.', 'axismundi-note' ) );
 	}
 	$policy = sanitize_key( $value );
-	return '' === $policy || in_array( $policy, array( 'anyone', 'followers', 'me' ), true )
+	return in_array( $policy, array( 'anyone', 'followers', 'me' ), true )
 		? $policy
 		: new WP_Error( 'ax_note_quote_policy', __( 'The Quote policy is not recognized.', 'axismundi-note' ) );
 }
@@ -324,7 +324,7 @@ function axismundi_note_save( int $post_id, array $fields ) {
 			return $quote_policy;
 		}
 	} else {
-		$quote_policy = (string) ( $existing['quote_policy'] ?? '' );
+		$quote_policy = (string) ( $existing['quote_policy'] ?? 'anyone' );
 	}
 
 	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
@@ -398,6 +398,10 @@ function axismundi_note_save( int $post_id, array $fields ) {
 function axismundi_note_get_envelope( int $post_id ) : array {
 	$row      = axismundi_note_get( $post_id );
 	$mentions = array();
+	$post     = get_post( $post_id );
+	$quote_status = $post instanceof WP_Post && function_exists( 'axismundi_note_quote_status' )
+		? axismundi_note_quote_status( $post )
+		: array( 'state' => 'none', 'target' => '', 'request' => '', 'authorization' => '', 'error' => '' );
 	if ( is_array( $row ) ) {
 		$decoded  = json_decode( (string) $row['mention_actor_uris_json'], true );
 		$mentions = is_array( $decoded ) ? array_values( array_filter( array_map( 'strval', $decoded ) ) ) : array();
@@ -408,7 +412,8 @@ function axismundi_note_get_envelope( int $post_id ) : array {
 		'inReplyTo'      => is_array( $row ) ? (string) $row['in_reply_to_uri'] : '',
 		'context'        => is_array( $row ) ? (string) $row['context_uri'] : '',
 		'quoteTarget'    => is_array( $row ) ? (string) ( $row['quote_target_uri'] ?? '' ) : '',
-		'quotePolicy'    => is_array( $row ) ? (string) ( $row['quote_policy'] ?? '' ) : '',
+		'quotePolicy'    => is_array( $row ) ? (string) ( $row['quote_policy'] ?? 'anyone' ) : 'anyone',
+		'quoteStatus'    => $quote_status,
 		'sensitive'      => is_array( $row ) && ! empty( $row['is_sensitive'] ),
 		'contentWarning' => is_array( $row ) ? (string) $row['content_warning'] : '',
 		'mentions'       => $mentions,

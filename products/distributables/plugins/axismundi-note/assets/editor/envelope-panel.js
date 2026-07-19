@@ -36,7 +36,6 @@
 		{ label: __( 'Mentioned only', 'axismundi-note' ), value: 'mentioned' }
 	];
 	var QUOTE_POLICY = [
-		{ label: __( 'Not set', 'axismundi-note' ), value: '' },
 		{ label: __( 'Anyone', 'axismundi-note' ), value: 'anyone' },
 		{ label: __( 'Followers', 'axismundi-note' ), value: 'followers' },
 		{ label: __( 'Only me', 'axismundi-note' ), value: 'me' }
@@ -63,6 +62,16 @@
 		}
 
 		var envelope = state.envelope;
+		var quoteStatus = envelope.quoteStatus || { state: 'none' };
+		var quoteStatusLabels = {
+			none: __( 'No quote target', 'axismundi-note' ),
+			'not-requested': __( 'Request will be sent when published', 'axismundi-note' ),
+			self: __( 'Self-quote: no approval required', 'axismundi-note' ),
+			pending: __( 'Waiting for quote approval', 'axismundi-note' ),
+			accepted: __( 'Quote approved', 'axismundi-note' ),
+			rejected: __( 'Quote rejected', 'axismundi-note' ),
+			invalid: __( 'Quote state is invalid', 'axismundi-note' )
+		};
 		function update( changes ) {
 			var next = Object.assign( {}, envelope, changes );
 			if ( ! window.axismundiNoteEditor || ! window.axismundiNoteEditor.attachmentsEnabled ) {
@@ -144,11 +153,24 @@
 			} ),
 			el( C.SelectControl, {
 				label: __( 'Who can quote this post?', 'axismundi-note' ),
-				value: envelope.quotePolicy || '',
+				value: envelope.quotePolicy || 'anyone',
 				options: QUOTE_POLICY,
 				__next40pxDefaultSize: true,
 				onChange: function ( value ) { update( { quotePolicy: value } ); }
 			} ),
+			el( C.TextControl, {
+				label: __( 'Quote target (URI)', 'axismundi-note' ),
+				type: 'url',
+				value: envelope.quoteTarget || '',
+				__next40pxDefaultSize: true,
+				onChange: function ( value ) { update( { quoteTarget: value } ); }
+			} ),
+			el(
+				'p',
+				{ className: 'axismundi-note-quote-status' },
+				el( 'strong', {}, __( 'Quote status:', 'axismundi-note' ) + ' ' ),
+				quoteStatusLabels[ quoteStatus.state ] || quoteStatus.state
+			),
 			el( C.TextControl, {
 				label: __( 'Language (BCP-47)', 'axismundi-note' ),
 				value: envelope.language || '',

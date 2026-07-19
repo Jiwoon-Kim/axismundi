@@ -39,11 +39,11 @@ try {
 	ax_auth_assert( $ax_auth_results, 'the Note post type uses the block editor with a restricted palette', use_block_editor_for_post_type( AXISMUNDI_NOTE_POST_TYPE ) && in_array( 'core/paragraph', axismundi_note_allowed_block_types( true, (object) array( 'post' => get_post( $post_id ) ) ), true ) && ! in_array( 'core/image', (array) axismundi_note_allowed_block_types( true, (object) array( 'post' => get_post( $post_id ) ) ), true ) );
 	ax_auth_assert( $ax_auth_results, 'the Note post type does not acquire the Core category taxonomy', ! in_array( 'category', get_object_taxonomies( AXISMUNDI_NOTE_POST_TYPE ), true ) );
 	$panel_script = file_get_contents( dirname( __DIR__ ) . '/assets/editor/envelope-panel.js' );
-	ax_auth_assert( $ax_auth_results, 'the Note Federation panel exposes the authored Quote policy choices', is_string( $panel_script ) && false !== strpos( $panel_script, 'Who can quote this post?' ) && false !== strpos( $panel_script, 'quotePolicy' ) && false !== strpos( $panel_script, "value: 'anyone'" ) && false !== strpos( $panel_script, "value: 'followers'" ) && false !== strpos( $panel_script, "value: 'me'" ) );
+	ax_auth_assert( $ax_auth_results, 'the Note Federation panel exposes Quote policy, target, and decision status', is_string( $panel_script ) && false !== strpos( $panel_script, 'Who can quote this post?' ) && false !== strpos( $panel_script, 'Quote target (URI)' ) && false !== strpos( $panel_script, 'Quote status:' ) && false !== strpos( $panel_script, 'quotePolicy' ) && false !== strpos( $panel_script, "value: 'anyone'" ) && false !== strpos( $panel_script, "value: 'followers'" ) && false !== strpos( $panel_script, "value: 'me'" ) );
 
 	// The structured read exposes envelope defaults for a fresh Note.
 	$default = axismundi_note_get_envelope( $post_id );
-	ax_auth_assert( $ax_auth_results, 'the structured envelope view exposes defaults for a fresh Note', 'public' === $default['visibility'] && '' === $default['language'] && '' === $default['quotePolicy'] && false === $default['sensitive'] && array() === $default['mentions'] );
+	ax_auth_assert( $ax_auth_results, 'a fresh Note defaults to public audience and anyone Quote approval', 'public' === $default['visibility'] && '' === $default['language'] && 'anyone' === $default['quotePolicy'] && false === $default['sensitive'] && array() === $default['mentions'] );
 
 	// The structured save round-trips through the fail-closed field contract.
 	$mention = 'https://example.com/users/authoring-' . strtolower( wp_generate_password( 6, false, false ) );

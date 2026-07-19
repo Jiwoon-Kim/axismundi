@@ -153,7 +153,9 @@ try {
 	$self_lifecycle = axismundi_act_get_object_lifecycle( $self_quote['uri'] );
 	$self_object    = $self_lifecycle instanceof Axismundi_Activity ? $self_lifecycle->get_payload()['object'] ?? array() : array();
 	$self_request   = axismundi_act_get_outbound_quote_request( $self_quote['uri'], $self_target['uri'], $actor_uri, $actor_uri );
-	ax_nql_assert( $ax_nql_results, 'a self-quote records Create immediately with a mapped quote and no fabricated authorization', $self_lifecycle instanceof Axismundi_Activity && 'Create' === $self_lifecycle->get_type() && $self_target['uri'] === ( $self_object['quote'] ?? '' ) && ! isset( $self_object['quoteAuthorization'] ) && ax_nql_has_quote_context( $self_object ) && null === $self_request );
+	$self_source = new Axismundi_Note_Source( axismundi_note_get( $self_quote['post_id'] ), get_post( $self_quote['post_id'] ) );
+	$self_projection = axismundi_op_transform_object( $self_source );
+	ax_nql_assert( $ax_nql_results, 'a self-quote records Create and remains publicly re-projectable without fabricated authorization', $self_lifecycle instanceof Axismundi_Activity && 'Create' === $self_lifecycle->get_type() && $self_target['uri'] === ( $self_object['quote'] ?? '' ) && ! isset( $self_object['quoteAuthorization'] ) && ax_nql_has_quote_context( $self_object ) && null === $self_request && is_array( $self_projection ) && $self_target['uri'] === ( $self_projection['quote'] ?? '' ) && ! isset( $self_projection['quoteAuthorization'] ) );
 
 	$local_target = ax_nql_note( $ax_nql_post_ids, (int) $other->ID, 'Local target.' );
 	axismundi_note_save( $local_target['post_id'], array( 'quote_policy' => 'anyone' ) );
@@ -172,7 +174,9 @@ try {
 	ax_nql_publish( $remote_quote['post_id'] );
 	$remote_request = $remote_actor instanceof Axismundi_Actor ? axismundi_act_get_outbound_quote_request( $remote_quote['uri'], $remote_target, $actor_uri, $remote_actor->get_uri() ) : null;
 	$remote_instrument = $remote_request instanceof Axismundi_Activity ? $remote_request->get_payload()['instrument'] ?? array() : array();
-	ax_nql_assert( $ax_nql_results, 'a remote quote records one outbound QuoteRequest with a finalized inline instrument and holds Create while undecided', $remote_request instanceof Axismundi_Activity && 'outbound' === $remote_request->get_direction() && is_array( $remote_instrument ) && ax_nql_has_quote_context( $remote_instrument ) && null === axismundi_act_get_object_lifecycle( $remote_quote['uri'] ) );
+	$remote_pending_source = new Axismundi_Note_Source( axismundi_note_get( $remote_quote['post_id'] ), get_post( $remote_quote['post_id'] ) );
+	$remote_pending_status = axismundi_note_quote_status( get_post( $remote_quote['post_id'] ) );
+	ax_nql_assert( $ax_nql_results, 'a remote quote records one request and stays hidden while its finalized inline instrument awaits approval', $remote_request instanceof Axismundi_Activity && 'outbound' === $remote_request->get_direction() && is_array( $remote_instrument ) && ax_nql_has_quote_context( $remote_instrument ) && null === axismundi_act_get_object_lifecycle( $remote_quote['uri'] ) && 'pending' === $remote_pending_status['state'] && ! axismundi_note_source_visible( $remote_pending_source ) );
 
 	$remote_auth_uri = 'https://remote.example/authorizations/' . strtolower( wp_generate_password( 8, false, false ) );
 	$auth_cached = $remote_request instanceof Axismundi_Activity && $remote_actor instanceof Axismundi_Actor
@@ -193,11 +197,14 @@ try {
 		: null;
 	$remote_lifecycle = axismundi_act_get_object_lifecycle( $remote_quote['uri'] );
 	$remote_object = $remote_lifecycle instanceof Axismundi_Activity ? $remote_lifecycle->get_payload()['object'] ?? array() : array();
+	$remote_accepted_source = new Axismundi_Note_Source( axismundi_note_get( $remote_quote['post_id'] ), get_post( $remote_quote['post_id'] ) );
+	$remote_projection = axismundi_op_transform_object( $remote_accepted_source );
+	$remote_accepted_status = axismundi_note_quote_status( get_post( $remote_quote['post_id'] ) );
 	if ( ! $remote_lifecycle instanceof Axismundi_Activity ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture diagnostic.
 		printf( "[INFO] remote lifecycle errors: %s\n", implode( ',', $GLOBALS['ax_nql_errors'] ) );
 	}
-	ax_nql_assert( $ax_nql_results, 'a signed remote Accept plus an exact cached authorization wakes one Create with mapped evidence', $auth_cached && $accept instanceof Axismundi_Activity && $remote_lifecycle instanceof Axismundi_Activity && 'Create' === $remote_lifecycle->get_type() && $remote_auth_uri === ( $remote_object['quoteAuthorization'] ?? '' ) && ax_nql_has_quote_context( $remote_object, true ) );
+	ax_nql_assert( $ax_nql_results, 'a signed remote Accept wakes one Create and the route re-projects the same verified evidence', $auth_cached && $accept instanceof Axismundi_Activity && $remote_lifecycle instanceof Axismundi_Activity && 'Create' === $remote_lifecycle->get_type() && $remote_auth_uri === ( $remote_object['quoteAuthorization'] ?? '' ) && ax_nql_has_quote_context( $remote_object, true ) && 'accepted' === $remote_accepted_status['state'] && is_array( $remote_projection ) && $remote_auth_uri === ( $remote_projection['quoteAuthorization'] ?? '' ) && axismundi_note_source_visible( $remote_accepted_source ) );
 
 	$rejected_target = $remote_actor instanceof Axismundi_Actor ? ax_nql_remote_target( $ax_nql_remote_objects, $remote_actor, 'rejected-' . strtolower( wp_generate_password( 6, false, false ) ) ) : '';
 	$rejected_quote  = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Rejected quote.', $rejected_target );
@@ -216,7 +223,9 @@ try {
 		)
 		: null;
 	$rejected_decision = $rejected_request instanceof Axismundi_Activity ? axismundi_act_outbound_quote_decision( $rejected_request->get_uri() ) : null;
-	ax_nql_assert( $ax_nql_results, 'a remote Reject is durable but never opens the held Create', $reject instanceof Axismundi_Activity && is_array( $rejected_decision ) && 'rejected' === $rejected_decision['decision'] && null === axismundi_act_get_object_lifecycle( $rejected_quote['uri'] ) );
+	$rejected_source = new Axismundi_Note_Source( axismundi_note_get( $rejected_quote['post_id'] ), get_post( $rejected_quote['post_id'] ) );
+	$rejected_status = axismundi_note_quote_status( get_post( $rejected_quote['post_id'] ) );
+	ax_nql_assert( $ax_nql_results, 'a remote Reject is durable and keeps both Create and the public route closed', $reject instanceof Axismundi_Activity && is_array( $rejected_decision ) && 'rejected' === $rejected_decision['decision'] && null === axismundi_act_get_object_lifecycle( $rejected_quote['uri'] ) && 'rejected' === $rejected_status['state'] && ! axismundi_note_source_visible( $rejected_source ) );
 
 	$bad_auth_target = $remote_actor instanceof Axismundi_Actor ? ax_nql_remote_target( $ax_nql_remote_objects, $remote_actor, 'bad-auth-' . strtolower( wp_generate_password( 6, false, false ) ) ) : '';
 	$bad_auth_quote  = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Mismatched authorization quote.', $bad_auth_target );

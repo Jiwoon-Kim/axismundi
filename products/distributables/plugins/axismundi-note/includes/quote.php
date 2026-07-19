@@ -280,9 +280,9 @@ function axismundi_note_quote_local_authorization( string $authorization_uri, Ax
 }
 
 /** Fetch/cache and validate one remote QuoteAuthorization named by a signed Accept. */
-function axismundi_note_quote_remote_authorization( string $authorization_uri, Axismundi_Activity $request, array $state ) {
+function axismundi_note_quote_remote_authorization( string $authorization_uri, Axismundi_Activity $request, array $state, bool $allow_fetch = true ) {
 	$row = function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $authorization_uri ) : null;
-	if ( ! is_array( $row ) && function_exists( 'axismundi_op_remote_object_fetch' ) ) {
+	if ( ! is_array( $row ) && $allow_fetch && function_exists( 'axismundi_op_remote_object_fetch' ) ) {
 		$row = axismundi_op_remote_object_fetch( $authorization_uri );
 	}
 	$payload = is_array( $row ) && is_array( $row['payload'] ?? null ) ? $row['payload'] : array();
@@ -301,6 +301,75 @@ function axismundi_note_quote_remote_authorization( string $authorization_uri, A
 		return new WP_Error( 'ax_note_quote_authorization', __( 'The remote QuoteAuthorization does not match the signed decision.', 'axismundi-note' ) );
 	}
 	return $authorization_uri;
+}
+
+/**
+ * Read the current outbound Quote state without recording or fetching anything.
+ *
+ * @return array{state:string,target:string,request:string,authorization:string,error:string}
+ */
+function axismundi_note_quote_status( WP_Post $post ) : array {
+	$status = array( 'state' => 'none', 'target' => '', 'request' => '', 'authorization' => '', 'error' => '' );
+	$envelope = axismundi_note_get( $post->ID );
+	$target   = is_array( $envelope ) ? (string) ( $envelope['quote_target_uri'] ?? '' ) : '';
+	$status['target'] = $target;
+	if ( '' === $target ) {
+		return $status;
+	}
+	$author = is_array( $envelope ) ? (string) ( $envelope['actor_uri'] ?? '' ) : '';
+	$state  = axismundi_note_quote_target_state( $target, $author );
+	if ( is_wp_error( $state ) ) {
+		$status['state'] = 'invalid';
+		$status['error'] = $state->get_error_code();
+		return $status;
+	}
+	if ( AXISMUNDI_NOTE_QUOTE_SELF === $state['classification'] ) {
+		$status['state'] = 'self';
+		return $status;
+	}
+	$uri = is_array( $envelope ) ? axismundi_note_object_uri( (string) $envelope['local_uuid'] ) : '';
+	$request = function_exists( 'axismundi_act_get_outbound_quote_request' )
+		? axismundi_act_get_outbound_quote_request( $uri, $target, $author, (string) $state['target_actor_uri'] )
+		: null;
+	if ( ! $request instanceof Axismundi_Activity ) {
+		$status['state'] = 'not-requested';
+		return $status;
+	}
+	$status['request'] = $request->get_uri();
+	$decision = axismundi_act_outbound_quote_decision( $request->get_uri() );
+	if ( null === $decision ) {
+		$status['state'] = 'pending';
+		return $status;
+	}
+	if ( 'accepted' !== (string) $decision['decision'] ) {
+		$status['state'] = 'rejected';
+		return $status;
+	}
+	$authorization_uri = (string) $decision['authorization_uri'];
+	$authorization = 'local' === $request->get_direction()
+		? axismundi_note_quote_local_authorization( $authorization_uri, $request, $state )
+		: axismundi_note_quote_remote_authorization( $authorization_uri, $request, $state, false );
+	if ( is_wp_error( $authorization ) ) {
+		$status['state'] = 'invalid';
+		$status['error'] = $authorization->get_error_code();
+		return $status;
+	}
+	$status['state']         = 'accepted';
+	$status['authorization'] = $authorization_uri;
+	return $status;
+}
+
+/** Add the read-only Quote snapshot used by JSON-LD and lifecycle preparation. */
+function axismundi_note_quote_project_object( WP_Post $post, array $object ) {
+	$status = axismundi_note_quote_status( $post );
+	if ( 'none' === $status['state'] ) {
+		return $object;
+	}
+	if ( 'invalid' === $status['state'] ) {
+		$code = '' !== $status['error'] ? $status['error'] : 'ax_note_quote_projection';
+		return new WP_Error( $code, __( 'The authored Quote cannot be projected from verified state.', 'axismundi-note' ) );
+	}
+	return axismundi_note_quote_decorate_object( $object, $status['target'], 'accepted' === $status['state'] ? $status['authorization'] : '' );
 }
 
 /** Turn the current ledger decision into the Object that may be committed. */

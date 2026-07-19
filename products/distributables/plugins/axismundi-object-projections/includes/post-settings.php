@@ -100,11 +100,11 @@ function axismundi_op_register_post_settings_meta() : void {
 		array(
 			'type'              => 'string',
 			'single'            => true,
-			'default'           => '',
+			'default'           => 'anyone',
 			'show_in_rest'      => array(
 				'schema' => array(
 					'type' => 'string',
-					'enum' => array( '', 'anyone', 'followers', 'me' ),
+					'enum' => array( 'anyone', 'followers', 'me' ),
 				),
 			),
 			'sanitize_callback' => 'axismundi_op_sanitize_quote_policy',
@@ -148,9 +148,11 @@ function axismundi_op_post_content_warning( WP_Post $post ) : string {
 	return axismundi_op_sanitize_content_warning( get_post_meta( $post->ID, AXISMUNDI_OP_POST_WARNING_META, true ) );
 }
 
-/** Return an explicit Quote policy, or an empty string when the author set none. */
+/** Return the authored Quote policy, defaulting an absent legacy value to anyone. */
 function axismundi_op_post_quote_policy( WP_Post $post ) : string {
-	return axismundi_op_sanitize_quote_policy( get_post_meta( $post->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, true ) );
+	return metadata_exists( 'post', $post->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META )
+		? axismundi_op_sanitize_quote_policy( get_post_meta( $post->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, true ) )
+		: 'anyone';
 }
 
 /** Return the post's canonical authored federation visibility. */
@@ -264,7 +266,6 @@ function axismundi_op_quick_edit_fields( string $column, string $post_type ) : v
 			<label class="alignleft">
 				<span class="title"><?php esc_html_e( 'Who can quote this post?', 'axismundi-object-projections' ); ?></span>
 				<select name="axismundi_op_quote_policy">
-					<option value=""><?php esc_html_e( 'Not specified', 'axismundi-object-projections' ); ?></option>
 					<option value="anyone"><?php esc_html_e( 'Anyone', 'axismundi-object-projections' ); ?></option>
 					<option value="followers"><?php esc_html_e( 'Followers only', 'axismundi-object-projections' ); ?></option>
 					<option value="me"><?php esc_html_e( 'Just me', 'axismundi-object-projections' ); ?></option>

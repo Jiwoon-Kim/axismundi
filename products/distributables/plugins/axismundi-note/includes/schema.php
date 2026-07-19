@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NOTE_DB_VERSION        = '3';
+const AXISMUNDI_NOTE_DB_VERSION        = '4';
 const AXISMUNDI_NOTE_DB_VERSION_OPTION = 'ax_note_db_version';
 
 /** Envelope table for the current site. */
@@ -44,7 +44,7 @@ function axismundi_note_install_table() : bool {
 			context_uri_hash char(64) NOT NULL,
 			quote_target_uri text NULL,
 			quote_target_uri_hash char(64) NOT NULL DEFAULT '',
-			quote_policy varchar(16) NOT NULL DEFAULT '',
+			quote_policy varchar(16) NOT NULL DEFAULT 'anyone',
 			is_sensitive tinyint(1) unsigned NOT NULL DEFAULT 0,
 			content_warning varchar(500) NOT NULL DEFAULT '',
 			mention_actor_uris_json longtext NOT NULL,
@@ -63,6 +63,10 @@ function axismundi_note_install_table() : bool {
 			KEY object_status (object_status)
 		) ENGINE=InnoDB {$charset};"
 	);
+	// v4 changes the product default. Empty legacy rows were the old default and
+	// are migrated so projection and incoming Quote decisions read one policy.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- Trusted table identifier; fixed value.
+	$wpdb->query( "UPDATE {$table} SET quote_policy = 'anyone' WHERE quote_policy = ''" );
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Trusted table identifier.
 	$columns  = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );

@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.5
+Stable tag: 0.0.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,13 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.6 =
+* Default new and migrated Notes to public audience with anyone Quote approval.
+* Add Quote target authoring and read-only pending, accepted, rejected, self, and invalid
+  status to the Federation panel.
+* Re-project quote aliases and verified QuoteAuthorization evidence from the immutable
+  ledger, while pending, rejected, or invalid Quotes remain unavailable on public routes.
 
 = 0.0.5 =
 * Add the authored Who can quote this post? policy to the Note envelope, REST document

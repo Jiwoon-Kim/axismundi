@@ -40,7 +40,10 @@ function axismundi_note_register_cpt() : void {
 			'rewrite'             => false,
 			'query_var'           => false,
 			'menu_icon'           => 'dashicons-format-status',
-			'supports'            => array( 'title', 'editor', 'author', 'revisions' ),
+			// Title-less by default: a Note is short-form. Programmatic authors may still
+			// set post_title and the transformer preserves it as AS `name`; the later
+			// opt-in title control will expose that capability through the editor REST field.
+			'supports'            => array( 'editor', 'author', 'revisions' ),
 			'map_meta_cap'        => true,
 		)
 	);
@@ -48,13 +51,18 @@ function axismundi_note_register_cpt() : void {
 add_action( 'init', 'axismundi_note_register_cpt' );
 
 /**
- * Force the Classic Editor for Notes.
+ * Restrict the Note block editor to a short-form palette.
  *
- * `show_in_rest` alone would hand the type to the block editor; the envelope
- * authoring UI and the `a.mention` anchor contract target the Classic Editor,
- * so the block editor is explicitly withheld for this type.
+ * A Note is a short, linear body: a paragraph plus optional embeds. Media is
+ * managed through the Media Library attachment relationship, never a body block,
+ * so no media blocks are offered. The reused block-editor mention completer
+ * (owned by Object Projections and enqueued globally) provides the `a.mention`
+ * anchor contract inside `core/paragraph`.
  */
-function axismundi_note_force_classic_editor( bool $use_block_editor, string $post_type ) : bool {
-	return AXISMUNDI_NOTE_POST_TYPE === $post_type ? false : $use_block_editor;
+function axismundi_note_allowed_block_types( $allowed, $context ) {
+	if ( ! isset( $context->post ) || ! $context->post instanceof WP_Post || AXISMUNDI_NOTE_POST_TYPE !== $context->post->post_type ) {
+		return $allowed;
+	}
+	return array( 'core/paragraph', 'core/embed', 'core/list', 'core/list-item', 'core/quote' );
 }
-add_filter( 'use_block_editor_for_post_type', 'axismundi_note_force_classic_editor', 10, 2 );
+add_filter( 'allowed_block_types_all', 'axismundi_note_allowed_block_types', 10, 2 );

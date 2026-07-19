@@ -29,6 +29,7 @@ require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/federation.php';
+require_once __DIR__ . '/includes/rest.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/editor.php';
 }

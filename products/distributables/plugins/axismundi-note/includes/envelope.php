@@ -327,6 +327,59 @@ function axismundi_note_save( int $post_id, array $fields ) {
 }
 
 /**
+ * Structured envelope view for one Note, for the REST editor field.
+ *
+ * @return array<string,mixed>
+ */
+function axismundi_note_get_envelope( int $post_id ) : array {
+	$row      = axismundi_note_get( $post_id );
+	$mentions = array();
+	if ( is_array( $row ) ) {
+		$decoded  = json_decode( (string) $row['mention_actor_uris_json'], true );
+		$mentions = is_array( $decoded ) ? array_values( array_filter( array_map( 'strval', $decoded ) ) ) : array();
+	}
+	return array(
+		'visibility'     => is_array( $row ) ? (string) $row['visibility'] : 'public',
+		'language'       => is_array( $row ) ? (string) $row['language_tag'] : '',
+		'inReplyTo'      => is_array( $row ) ? (string) $row['in_reply_to_uri'] : '',
+		'context'        => is_array( $row ) ? (string) $row['context_uri'] : '',
+		'sensitive'      => is_array( $row ) && ! empty( $row['is_sensitive'] ),
+		'contentWarning' => is_array( $row ) ? (string) $row['content_warning'] : '',
+		'mentions'       => $mentions,
+	);
+}
+
+/**
+ * Validate and atomically store one structured authored envelope.
+ *
+ * The single source of authority for the block-editor panel: the React panel is
+ * only an editing surface, so this maps the structured field to the same
+ * fail-closed `axismundi_note_save()` contract. An absent key preserves its
+ * stored value; a present invalid value fails the whole save.
+ *
+ * @param array<string,mixed> $envelope Structured authored fields.
+ * @return array<string,mixed>|WP_Error
+ */
+function axismundi_note_save_envelope( int $post_id, array $envelope ) {
+	$map = array(
+		'visibility'     => 'visibility',
+		'language'       => 'language_tag',
+		'inReplyTo'      => 'in_reply_to_uri',
+		'context'        => 'context_uri',
+		'sensitive'      => 'sensitive',
+		'contentWarning' => 'content_warning',
+		'mentions'       => 'mention_actor_uris',
+	);
+	$fields = array();
+	foreach ( $map as $incoming => $stored ) {
+		if ( array_key_exists( $incoming, $envelope ) ) {
+			$fields[ $stored ] = $envelope[ $incoming ];
+		}
+	}
+	return axismundi_note_save( $post_id, $fields );
+}
+
+/**
  * Freeze one Note's attribution at its first federation, idempotently.
  *
  * Increment 5 calls this the moment it records the first Create so a later

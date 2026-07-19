@@ -31,6 +31,7 @@ require_once __DIR__ . '/includes/object-lifecycle.php';
 require_once __DIR__ . '/includes/relations.php';
 require_once __DIR__ . '/includes/quote-authorizations.php';
 require_once __DIR__ . '/includes/quote-requests.php';
+require_once __DIR__ . '/includes/quote-outbound.php';
 require_once __DIR__ . '/includes/local-social.php';
 require_once __DIR__ . '/includes/reactions.php';
 require_once __DIR__ . '/includes/announces.php';

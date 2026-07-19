@@ -49,7 +49,8 @@ Restricted block palette:
   - axismundi/context (or reply) block
   - embed / link blocks as needed
 No media blocks — media is managed through the attachment field, not the body
-Envelope fields (visibility / language / inReplyTo / context / sensitive / CW / mentions)
+Envelope fields (visibility / language / inReplyTo / context / quote target /
+Who can quote / sensitive / CW / mentions)
 ```
 
 Block palette is restricted via `allowed_block_types_all` scoped to `ax_note`.
@@ -78,8 +79,8 @@ unchanged; only the authoring surface changes.
    so an authored title is always distinguishable from an admin fallback. A title does not
    make a Note an Article.
 2. **Envelope UI — React document panel.** A `PluginDocumentSettingPanel` gathers every
-   document-level field (audience, language, reply/context, sensitive/CW, attachments,
-   mentions, optional title). The editor exposes **one structured REST field**,
+   document-level field (audience, language, reply/context, quote policy, sensitive/CW,
+   attachments, mentions, optional title). The editor exposes **one structured REST field**,
    `axismundi_note_envelope`, and the server `axismundi_note_save_envelope()` validates and
    stores it **atomically**. React is only the editing surface; validation and authority
    stay in the PHP envelope layer. The increment 3 meta box is removed once the panel

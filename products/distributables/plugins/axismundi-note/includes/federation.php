@@ -209,6 +209,27 @@ function axismundi_note_source_visible( Axismundi_Note_Source $source ) : bool {
 	return is_array( $audience ) && true === $audience['public'];
 }
 
+/** Project an explicitly authored Quote policy without inventing approval evidence. */
+function axismundi_note_quote_interaction_policy( array $envelope ) : ?array {
+	$policy = (string) ( $envelope['quote_policy'] ?? '' );
+	if ( ! in_array( $policy, array( 'anyone', 'followers', 'me' ), true ) ) {
+		return null;
+	}
+	$actor_uri = axismundi_note_sanitize_uri( $envelope['actor_uri'] ?? '' );
+	$automatic = '';
+	if ( 'anyone' === $policy ) {
+		$automatic = 'https://www.w3.org/ns/activitystreams#Public';
+	} elseif ( 'me' === $policy ) {
+		$automatic = $actor_uri;
+	} elseif ( function_exists( 'axismundi_actors_get_by_uri' ) && function_exists( 'axismundi_op_actor_followers_url' ) ) {
+		$actor = axismundi_actors_get_by_uri( $actor_uri );
+		if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+			$automatic = axismundi_op_actor_followers_url( $actor );
+		}
+	}
+	return '' === $automatic ? null : array( 'canQuote' => array( 'automaticApproval' => $automatic ) );
+}
+
 /** Transform one Note-owned source into Note or privacy-minimal Tombstone. */
 function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	$envelope = $source->get_envelope();
@@ -271,6 +292,10 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	}
 	if ( $object['sensitive'] && '' !== trim( (string) $envelope['content_warning'] ) ) {
 		$object['dcterms:subject'] = (string) $envelope['content_warning'];
+	}
+	$interaction_policy = axismundi_note_quote_interaction_policy( $envelope );
+	if ( is_array( $interaction_policy ) ) {
+		$object['interactionPolicy'] = $interaction_policy;
 	}
 	return $object;
 }

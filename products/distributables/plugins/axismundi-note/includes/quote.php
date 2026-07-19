@@ -143,7 +143,7 @@ function axismundi_note_quote_local_target( string $target_uri ) {
 	return array(
 		'object_uri'       => $target_uri,
 		'author_actor_uri' => $actor->get_uri(),
-		'policy'          => '',
+		'policy'           => (string) ( $envelope['quote_policy'] ?? '' ),
 	);
 }
 

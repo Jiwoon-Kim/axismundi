@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.4
+Stable tag: 0.0.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -26,7 +26,7 @@ Notes as ActivityStreams JSON-LD; followers-only and mentioned-only Notes fail
 closed for anonymous requests. The same URI has a plugin-owned human-readable
 block template: active public Notes return 200, concealed or unknown Notes return
 404, and deleted Notes return a privacy-minimal 410 Tombstone. Active public
-views expose Like and Boost controls while Quote remains a later increment.
+views expose Like and Boost controls.
 
 Publishing records one immutable Create with the complete committed Note Object.
 Later representation changes record Update only when that snapshot changes;
@@ -45,6 +45,14 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.5 =
+* Add the authored Who can quote this post? policy to the Note envelope, REST document
+  panel, local QuoteRequest decision path, and conditional interactionPolicy projection.
+* Gate outbound Quotes through self, local-other, and remote branches: self-quotes create
+  immediately, while other targets require a matching QuoteAuthorization before Create.
+* Reconcile missed approval wake-ups idempotently and fail closed on rejected, stale,
+  tombstoned, unauthenticated, or mismatched Quote evidence.
 
 = 0.0.4 =
 * Store an authored outbound Quote target URI (schema v2) alongside the existing envelope, read and

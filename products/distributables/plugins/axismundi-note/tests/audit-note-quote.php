@@ -1,6 +1,6 @@
 <?php
 /**
- * Outbound Quote target storage (schema v2) and three-way classification (dev-only).
+ * Outbound Quote target/policy storage and three-way classification (dev-only).
  *
  * @package AxismundiNote
  */
@@ -72,14 +72,14 @@ function ax_note_quote_make_remote_actor( array &$actor_ids, string $slug ) : ?A
 try {
 	add_filter( 'pre_http_request', 'ax_note_quote_http' );
 
-	// The v2 migration verifies its own columns and index, same discipline as v1.
+	// The v3 migration verifies its own columns and index, same discipline as v1.
 	$installed = axismundi_note_install_table();
 	$table     = axismundi_note_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixture schema probe.
 	$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixture schema probe.
 	$quote_key = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'quote_target_uri_hash'", ARRAY_A );
-	ax_note_quote_assert( $ax_note_quote_results, 'schema v2 installs the quote target columns and a supporting index', $installed && in_array( 'quote_target_uri', $columns, true ) && in_array( 'quote_target_uri_hash', $columns, true ) && ! empty( $quote_key ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'schema v3 installs the quote target, policy, and supporting index', $installed && in_array( 'quote_target_uri', $columns, true ) && in_array( 'quote_target_uri_hash', $columns, true ) && in_array( 'quote_policy', $columns, true ) && ! empty( $quote_key ) );
 
 	// P2: exercise the real v1->v2 ALTER path against a populated table, not just a
 	// fresh install -- a hand-built v1-shaped table (the schema before this slice,
@@ -161,16 +161,18 @@ try {
 
 	ax_note_quote_assert(
 		$ax_note_quote_results,
-		'a v1 table with an existing row upgrades to v2 in place, preserving the row and adding the quote columns',
+		'a v1 table with an existing row upgrades to v3 in place, preserving the row and adding the quote fields',
 		1 === $pre_row_count
 		&& $upgraded
 		&& is_array( $post_upgrade_row )
 		&& $fixture_uuid === $post_upgrade_row['local_uuid']
 		&& in_array( 'quote_target_uri', $post_columns, true )
 		&& in_array( 'quote_target_uri_hash', $post_columns, true )
+		&& in_array( 'quote_policy', $post_columns, true )
 		&& ! empty( $post_quote_key )
 		&& '' === (string) ( $post_upgrade_row['quote_target_uri'] ?? '' )
 		&& '' === (string) $post_upgrade_row['quote_target_uri_hash']
+		&& '' === (string) $post_upgrade_row['quote_policy']
 	);
 
 	$author = ax_note_quote_make_author( $ax_note_quote_user_ids, $ax_note_quote_actor_ids );
@@ -179,6 +181,19 @@ try {
 	$other_actor = $other instanceof WP_User ? axismundi_actors_get_for_user( $other->ID ) : null;
 	$actor_uri       = $actor instanceof Axismundi_Actor ? $actor->get_uri() : '';
 	$other_actor_uri = $other_actor instanceof Axismundi_Actor ? $other_actor->get_uri() : '';
+	$unset_policy    = axismundi_note_quote_interaction_policy( array( 'actor_uri' => $actor_uri, 'quote_policy' => '' ) );
+	$anyone_policy   = axismundi_note_quote_interaction_policy( array( 'actor_uri' => $actor_uri, 'quote_policy' => 'anyone' ) );
+	$followers_policy = axismundi_note_quote_interaction_policy( array( 'actor_uri' => $actor_uri, 'quote_policy' => 'followers' ) );
+	$me_policy       = axismundi_note_quote_interaction_policy( array( 'actor_uri' => $actor_uri, 'quote_policy' => 'me' ) );
+	ax_note_quote_assert(
+		$ax_note_quote_results,
+		'the four Quote-policy projections preserve unset, Public, Followers, and author-only semantics',
+		null === $unset_policy
+		&& axismundi_act_public_audience_uri() === $anyone_policy['canQuote']['automaticApproval']
+		&& $actor instanceof Axismundi_Actor
+		&& axismundi_op_actor_followers_url( $actor ) === $followers_policy['canQuote']['automaticApproval']
+		&& $actor_uri === $me_policy['canQuote']['automaticApproval']
+	);
 
 	// A Note by the same author, used as a self-quote target.
 	$own_post_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $author instanceof WP_User ? $author->ID : 0, 'post_content' => 'Own note.' ) );
@@ -202,8 +217,14 @@ try {
 	$envelope_view = axismundi_note_get_envelope( $quoting_id );
 	ax_note_quote_assert( $ax_note_quote_results, 'the structured envelope view exposes quoteTarget', $other_uri === $envelope_view['quoteTarget'] );
 
-	$rest_saved = axismundi_note_save_envelope( $quoting_id, array( 'quoteTarget' => $own_uri ) );
-	ax_note_quote_assert( $ax_note_quote_results, 'the structured REST save writes quoteTarget through the same fail-closed contract', is_array( $rest_saved ) && $own_uri === $rest_saved['quote_target_uri'] );
+	$policy_saved = axismundi_note_save( $quoting_id, array( 'quote_policy' => 'followers' ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'saving a Quote policy preserves the explicit automatic-approval choice', is_array( $policy_saved ) && 'followers' === $policy_saved['quote_policy'] );
+
+	$rest_saved = axismundi_note_save_envelope( $quoting_id, array( 'quoteTarget' => $own_uri, 'quotePolicy' => 'me' ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'the structured REST save writes quoteTarget and quotePolicy through the same contract', is_array( $rest_saved ) && $own_uri === $rest_saved['quote_target_uri'] && 'me' === $rest_saved['quote_policy'] );
+
+	$bad_policy = axismundi_note_save( $quoting_id, array( 'quote_policy' => 'surprise-me' ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'an invalid Quote policy fails closed instead of widening or clearing consent', is_wp_error( $bad_policy ) && 'ax_note_quote_policy' === $bad_policy->get_error_code() && 'me' === axismundi_note_get( $quoting_id )['quote_policy'] );
 
 	$absent = axismundi_note_save( $quoting_id, array( 'visibility' => 'public' ) );
 	ax_note_quote_assert( $ax_note_quote_results, 'an absent quote_target_uri field preserves the stored value', is_array( $absent ) && $own_uri === $absent['quote_target_uri'] );

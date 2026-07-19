@@ -13,7 +13,6 @@ $ax_nql_post_ids       = array();
 $ax_nql_user_ids       = array();
 $ax_nql_actor_ids      = array();
 $ax_nql_remote_objects = array();
-$GLOBALS['ax_nql_allow_target'] = '';
 $GLOBALS['ax_nql_errors'] = array();
 
 /** @param bool[] $results Results. */
@@ -100,14 +99,6 @@ function ax_nql_publish( int $post_id ) : ?WP_Post {
 	return $post instanceof WP_Post ? $post : null;
 }
 
-/** Allow automatic local consent for one fixture target only. */
-function ax_nql_allow_quote_policy( $target, string $object_uri ) {
-	if ( is_array( $target ) && hash_equals( (string) $GLOBALS['ax_nql_allow_target'], $object_uri ) ) {
-		$target['policy'] = 'anyone';
-	}
-	return $target;
-}
-
 /** Store one remote Note target. */
 function ax_nql_remote_target( array &$remote_objects, Axismundi_Actor $actor, string $slug ) : string {
 	$uri = 'https://remote.example/notes/' . $slug;
@@ -145,7 +136,6 @@ function ax_nql_remote_authorization( array &$remote_objects, string $uri, Axism
 }
 
 try {
-	add_filter( 'axismundi_act_resolve_quote_request_target', 'ax_nql_allow_quote_policy', 30, 2 );
 	add_action( 'axismundi_note_lifecycle_failed', 'ax_nql_capture_error', 10, 1 );
 
 	$author = ax_nql_local_author( $ax_nql_user_ids, $ax_nql_actor_ids );
@@ -166,8 +156,8 @@ try {
 	ax_nql_assert( $ax_nql_results, 'a self-quote records Create immediately with a mapped quote and no fabricated authorization', $self_lifecycle instanceof Axismundi_Activity && 'Create' === $self_lifecycle->get_type() && $self_target['uri'] === ( $self_object['quote'] ?? '' ) && ! isset( $self_object['quoteAuthorization'] ) && ax_nql_has_quote_context( $self_object ) && null === $self_request );
 
 	$local_target = ax_nql_note( $ax_nql_post_ids, (int) $other->ID, 'Local target.' );
+	axismundi_note_save( $local_target['post_id'], array( 'quote_policy' => 'anyone' ) );
 	ax_nql_publish( $local_target['post_id'] );
-	$GLOBALS['ax_nql_allow_target'] = $local_target['uri'];
 	$local_quote = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Local approved quote.', $local_target['uri'] );
 	ax_nql_publish( $local_quote['post_id'] );
 	$local_request = axismundi_act_get_outbound_quote_request( $local_quote['uri'], $local_target['uri'], $actor_uri, $other_actor_uri );
@@ -285,7 +275,6 @@ try {
 	ax_nql_publish( $bad_quote['post_id'] );
 	ax_nql_assert( $ax_nql_results, 'a self-owned draft target cannot use the self exception to open Create', null === axismundi_act_get_object_lifecycle( $bad_quote['uri'] ) );
 } finally {
-	remove_filter( 'axismundi_act_resolve_quote_request_target', 'ax_nql_allow_quote_policy', 30 );
 	remove_action( 'axismundi_note_lifecycle_failed', 'ax_nql_capture_error', 10 );
 	add_action( 'axismundi_act_outbound_quote_decided', 'axismundi_note_quote_decided', 20, 3 );
 	foreach ( array_unique( $ax_nql_remote_objects ) as $uri ) {

@@ -71,7 +71,7 @@ try {
 		)
 	);
 	$ax_nf_post_ids[] = $post_id;
-	axismundi_note_save( $post_id, array( 'visibility' => 'public', 'sensitive' => false, 'content_warning' => '' ) );
+	axismundi_note_save( $post_id, array( 'visibility' => 'public', 'quote_policy' => 'anyone', 'sensitive' => false, 'content_warning' => '' ) );
 	axismundi_note_replace_attachments( $post_id, array( $attachment_id ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
 	$post     = get_post( $post_id );
@@ -118,6 +118,7 @@ try {
 		&& isset( $object['tag'][0]['name'], $object['tag'][0]['href'] )
 		&& $mention_uri === $object['tag'][0]['href']
 		&& true === $object['sensitive']
+		&& axismundi_act_public_audience_uri() === $object['interactionPolicy']['canQuote']['automaticApproval']
 		&& ! isset( $object['dcterms:subject'] )
 	);
 	ax_nf_assert(

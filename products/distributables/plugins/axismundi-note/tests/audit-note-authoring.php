@@ -38,10 +38,12 @@ try {
 	// The Note post type is now edited in the block editor, not the Classic Editor.
 	ax_auth_assert( $ax_auth_results, 'the Note post type uses the block editor with a restricted palette', use_block_editor_for_post_type( AXISMUNDI_NOTE_POST_TYPE ) && in_array( 'core/paragraph', axismundi_note_allowed_block_types( true, (object) array( 'post' => get_post( $post_id ) ) ), true ) && ! in_array( 'core/image', (array) axismundi_note_allowed_block_types( true, (object) array( 'post' => get_post( $post_id ) ) ), true ) );
 	ax_auth_assert( $ax_auth_results, 'the Note post type does not acquire the Core category taxonomy', ! in_array( 'category', get_object_taxonomies( AXISMUNDI_NOTE_POST_TYPE ), true ) );
+	$panel_script = file_get_contents( dirname( __DIR__ ) . '/assets/editor/envelope-panel.js' );
+	ax_auth_assert( $ax_auth_results, 'the Note Federation panel exposes the authored Quote policy choices', is_string( $panel_script ) && false !== strpos( $panel_script, 'Who can quote this post?' ) && false !== strpos( $panel_script, 'quotePolicy' ) && false !== strpos( $panel_script, "value: 'anyone'" ) && false !== strpos( $panel_script, "value: 'followers'" ) && false !== strpos( $panel_script, "value: 'me'" ) );
 
 	// The structured read exposes envelope defaults for a fresh Note.
 	$default = axismundi_note_get_envelope( $post_id );
-	ax_auth_assert( $ax_auth_results, 'the structured envelope view exposes defaults for a fresh Note', 'public' === $default['visibility'] && '' === $default['language'] && false === $default['sensitive'] && array() === $default['mentions'] );
+	ax_auth_assert( $ax_auth_results, 'the structured envelope view exposes defaults for a fresh Note', 'public' === $default['visibility'] && '' === $default['language'] && '' === $default['quotePolicy'] && false === $default['sensitive'] && array() === $default['mentions'] );
 
 	// The structured save round-trips through the fail-closed field contract.
 	$mention = 'https://example.com/users/authoring-' . strtolower( wp_generate_password( 6, false, false ) );
@@ -52,13 +54,14 @@ try {
 			'visibility'     => 'followers',
 			'language'       => 'ko-KR',
 			'inReplyTo'      => $reply,
+			'quotePolicy'    => 'followers',
 			'sensitive'      => true,
 			'contentWarning' => 'cw',
 			'mentions'       => array( $mention ),
 		)
 	);
 	$view = axismundi_note_get_envelope( $post_id );
-	ax_auth_assert( $ax_auth_results, 'a structured envelope save round-trips through the read view', is_array( $saved ) && 'followers' === $view['visibility'] && 'ko-KR' === $view['language'] && $reply === $view['inReplyTo'] && true === $view['sensitive'] && 'cw' === $view['contentWarning'] && array( $mention ) === $view['mentions'] );
+	ax_auth_assert( $ax_auth_results, 'a structured envelope save round-trips through the read view', is_array( $saved ) && 'followers' === $view['visibility'] && 'ko-KR' === $view['language'] && $reply === $view['inReplyTo'] && 'followers' === $view['quotePolicy'] && true === $view['sensitive'] && 'cw' === $view['contentWarning'] && array( $mention ) === $view['mentions'] );
 
 	// The structured save fails closed on an explicitly invalid value.
 	$bad = axismundi_note_save_envelope( $post_id, array( 'visibility' => 'nonsense' ) );
@@ -67,11 +70,11 @@ try {
 	// The REST field wires the panel write to the server-authoritative save.
 	wp_set_current_user( $uid );
 	$request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_NOTE_POST_TYPE . '/' . $post_id );
-	$request->set_body_params( array( 'axismundi_note_envelope' => array( 'visibility' => 'unlisted', 'language' => 'en', 'mentions' => array() ) ) );
+	$request->set_body_params( array( 'axismundi_note_envelope' => array( 'visibility' => 'unlisted', 'language' => 'en', 'quotePolicy' => 'anyone', 'mentions' => array() ) ) );
 	$response = rest_do_request( $request );
 	$data     = $response instanceof WP_REST_Response ? $response->get_data() : array();
 	$after    = axismundi_note_get_envelope( $post_id );
-	ax_auth_assert( $ax_auth_results, 'the REST envelope field persists a panel write through save_envelope', ! $response->is_error() && 'unlisted' === $after['visibility'] && 'en' === $after['language'] && isset( $data['axismundi_note_envelope']['visibility'] ) && 'unlisted' === $data['axismundi_note_envelope']['visibility'] );
+	ax_auth_assert( $ax_auth_results, 'the REST envelope field persists a panel write through save_envelope', ! $response->is_error() && 'unlisted' === $after['visibility'] && 'en' === $after['language'] && 'anyone' === $after['quotePolicy'] && isset( $data['axismundi_note_envelope']['visibility'] ) && 'unlisted' === $data['axismundi_note_envelope']['visibility'] );
 
 	// A REST write with an invalid envelope is rejected rather than silently applied.
 	$bad_request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_NOTE_POST_TYPE . '/' . $post_id );

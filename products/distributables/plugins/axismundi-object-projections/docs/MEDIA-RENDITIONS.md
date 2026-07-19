@@ -62,9 +62,11 @@ Satisfied simultaneously:
    where a missing intermediate size silently served the full-size file.)
 4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.
 5. **Only already-generated or provider-addressed trusted virtual derivatives.** Projection
-   never generates or fetches an image. A virtual derivative must be the exact HTTPS
-   URL recorded by the rendition provider and use an allowlisted image-service host. It
-   must not depend on a request-context image-downsize filter being active.
+   never generates or fetches an image. A virtual derivative must use the exact HTTPS URL
+   recorded by the rendition provider or resolved by WordPress image downsize for metadata
+   that explicitly marks the size virtual, and must use an allowlisted image-service host.
+   Runtime URLs remain candidates, not authority: trusted-host, dimension-transform,
+   dimension, pixel, and source-byte gates still apply before advertisement.
 6. **One rendition builder** serves all three roles: Attachment Single, an Article's
    `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, and `mediaType`
    must not drift, and every role builds `url[]` by the same rules (media first, HTML last,

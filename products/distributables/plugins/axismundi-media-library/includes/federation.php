@@ -114,20 +114,23 @@ function axismundi_media_federation_source_bytes( int $attachment_id ) : int {
  * Validate a virtual image derivative without fetching it.
  *
  * Jetpack Photon records virtual subsizes in attachment metadata because no local subsize
- * file exists. Admission requires the metadata marker, the exact URL selected by
- * attachment metadata, HTTPS, and a narrowly trusted CDN host. Sites may narrow or extend
- * the host list, but cannot bypass the remaining structural checks.
+ * file exists. Admission requires the metadata marker, the provider URL recorded in
+ * attachment metadata or resolved by WordPress image downsize, HTTPS, and a narrowly
+ * trusted CDN host. Sites may narrow or extend the host list, but cannot bypass the
+ * remaining structural checks.
  *
  * @param int                 $attachment_id Attachment.
  * @param array<string,mixed> $info          One `sizes` entry.
  * @param array<string,mixed> $policy        Resolved policy.
+ * @param string              $candidate_url Runtime provider URL from image downsize.
  * @return string Validated URL, or empty string.
  */
-function axismundi_media_federation_virtual_rendition_url( int $attachment_id, array $info, array $policy ) : string {
-	if ( empty( $info['source_url'] ) ) {
+function axismundi_media_federation_virtual_rendition_url( int $attachment_id, array $info, array $policy, string $candidate_url = '' ) : string {
+	$raw_url = ! empty( $info['source_url'] ) ? (string) $info['source_url'] : $candidate_url;
+	if ( '' === $raw_url ) {
 		return '';
 	}
-	$source_url = esc_url_raw( (string) $info['source_url'], array( 'https' ) );
+	$source_url = esc_url_raw( $raw_url, array( 'https' ) );
 	if ( '' === $source_url ) {
 		return '';
 	}
@@ -167,14 +170,25 @@ function axismundi_media_federation_virtual_rendition_url( int $attachment_id, a
  * @return array{url:string,mediaType:string,width:int,height:int,size?:int}|null
  */
 function axismundi_media_federation_rendition_entry( int $attachment_id, string $size, array $info, array $policy ) : ?array {
-	$virtual_url = axismundi_media_federation_virtual_rendition_url( $attachment_id, $info, $policy );
-	if ( ! empty( $info['source_url'] ) ) {
+	$downsize    = wp_get_attachment_image_src( $attachment_id, $size );
+	$virtual_url = axismundi_media_federation_virtual_rendition_url(
+		$attachment_id,
+		$info,
+		$policy,
+		is_array( $downsize ) ? (string) ( $downsize[0] ?? '' ) : ''
+	);
+	if ( ! empty( $info['virtual'] ) || ! empty( $info['source_url'] ) ) {
 		if ( '' === $virtual_url ) {
 			return null;
 		}
-		$src = array( $virtual_url, (int) ( $info['width'] ?? 0 ), (int) ( $info['height'] ?? 0 ), true );
+		$src = array(
+			$virtual_url,
+			(int) ( $info['width'] ?? ( $downsize[1] ?? 0 ) ),
+			(int) ( $info['height'] ?? ( $downsize[2] ?? 0 ) ),
+			true,
+		);
 	} else {
-		$src = wp_get_attachment_image_src( $attachment_id, $size );
+		$src = $downsize;
 		// $src[3] is core's is-intermediate flag. False means core fell back to the full
 		// file, so treating it as a rendition would advertise the original.
 		if ( ! $src || empty( $src[0] ) || empty( $src[3] ) ) {
@@ -282,6 +296,7 @@ function axismundi_media_federation_rendition_diagnostics( int $attachment_id ) 
 	$sizes  = array();
 	foreach ( (array) $policy['sizes'] as $size ) {
 		$info = is_array( $meta ) && isset( $meta['sizes'][ $size ] ) && is_array( $meta['sizes'][ $size ] ) ? $meta['sizes'][ $size ] : array();
+		$downsize = $info ? wp_get_attachment_image_src( $attachment_id, (string) $size ) : false;
 		$sizes[ (string) $size ] = array(
 			'exists'       => ! empty( $info ),
 			'virtual'      => $info['virtual'] ?? null,
@@ -289,7 +304,8 @@ function axismundi_media_federation_rendition_diagnostics( int $attachment_id ) 
 			'width'        => (int) ( $info['width'] ?? 0 ),
 			'height'       => (int) ( $info['height'] ?? 0 ),
 			'bytes'        => $info ? axismundi_media_federation_rendition_bytes( $attachment_id, $info ) : 0,
-			'provider_url' => $info ? axismundi_media_federation_virtual_rendition_url( $attachment_id, $info, $policy ) : '',
+			'downsize_url' => is_array( $downsize ) ? (string) ( $downsize[0] ?? '' ) : '',
+			'provider_url' => $info ? axismundi_media_federation_virtual_rendition_url( $attachment_id, $info, $policy, is_array( $downsize ) ? (string) ( $downsize[0] ?? '' ) : '' ) : '',
 			'accepted'     => $info ? axismundi_media_federation_rendition_entry( $attachment_id, (string) $size, $info, $policy ) : null,
 		);
 	}

@@ -85,18 +85,18 @@ try {
 	$ax_fed_ids[] = $sizeless;
 	ax_fed_assert( $ax_fed_results, 'a subsize with no readable byte size is omitted', array() === axismundi_media_federation_renditions( $sizeless ) );
 
-	// Jetpack Photon virtual subsizes have no local file or derivative byte count. Admit
-	// only its explicitly marked, trusted URL and do not invent a serialized size.
+	// Jetpack Photon virtual subsizes have no local file, derivative byte count, or raw
+	// metadata URL. WordPress image downsize resolves the provider URL at runtime.
 	$photon_url = 'https://i0.wp.com/example.test/wp-content/uploads/2026/07/probe.webp?fit=1024%2C768&ssl=1';
 	$virtual    = ax_fed_attachment(
 		'image/webp',
 		array(
 			'large' => array(
-				'file'       => 'probe.webp',
-				'width'      => 1024,
-				'height'     => 768,
-				'mime-type'  => 'image/webp',
-				'source_url' => $photon_url,
+				'file'      => 'probe.webp',
+				'width'     => 1024,
+				'height'    => 768,
+				'mime-type' => 'image/webp',
+				'virtual'   => true,
 			),
 		)
 	);
@@ -104,20 +104,26 @@ try {
 	$virtual_meta = wp_get_attachment_metadata( $virtual );
 	$virtual_meta['filesize'] = 250000;
 	wp_update_attachment_metadata( $virtual, $virtual_meta );
+	$trusted_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $photon_url ) {
+		return $virtual === $attachment_id && 'large' === $size ? array( $photon_url, 1024, 768, true ) : $downsize;
+	};
+	add_filter( 'image_downsize', $trusted_downsize, 10, 3 );
 	$virtual_out = axismundi_media_federation_renditions( $virtual );
 	ax_fed_assert(
 		$ax_fed_results,
-		'a trusted provider metadata URL is sufficient without a request-context marker/registry/downsize filter or invented byte size',
+		'a trusted runtime provider URL is accepted when raw metadata only marks the size virtual',
 		1 === count( $virtual_out ) && $photon_url === $virtual_out[0]['url']
 			&& 'image/webp' === $virtual_out[0]['mediaType'] && ! isset( $virtual_out[0]['size'] )
 	);
 	$virtual_capped = axismundi_media_federation_renditions( $virtual, array( 'max_bytes' => 200000 ) );
 	ax_fed_assert( $ax_fed_results, 'a virtual rendition is rejected when its source exceeds the byte ceiling', array() === $virtual_capped );
+	remove_filter( 'image_downsize', $trusted_downsize, 10 );
 
 	$untrusted_url = 'https://cdn.example.test/probe.webp?width=1024';
-	$untrusted_meta = $virtual_meta;
-	$untrusted_meta['sizes']['large']['source_url'] = $untrusted_url;
-	wp_update_attachment_metadata( $virtual, $untrusted_meta );
+	$untrusted_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $untrusted_url ) {
+		return $virtual === $attachment_id && 'large' === $size ? array( $untrusted_url, 1024, 768, true ) : $downsize;
+	};
+	add_filter( 'image_downsize', $untrusted_downsize, 10, 3 );
 	$untrusted_out = axismundi_media_federation_renditions( $virtual );
 	ax_fed_assert( $ax_fed_results, 'an arbitrary virtual CDN URL remains fail-closed', array() === $untrusted_out );
 	$diagnostics = axismundi_media_federation_rendition_diagnostics( $virtual );
@@ -125,8 +131,10 @@ try {
 		$ax_fed_results,
 		'the authenticated diagnostic service reports each policy gate without filesystem paths',
 		isset( $diagnostics['sizes']['large'] ) && null === $diagnostics['sizes']['large']['accepted']
+			&& $untrusted_url === $diagnostics['sizes']['large']['downsize_url']
 			&& ! isset( $diagnostics['path'] )
 	);
+	remove_filter( 'image_downsize', $untrusted_downsize, 10 );
 	$previous_user = get_current_user_id();
 	wp_set_current_user( 0 );
 	$public_diagnostic = rest_do_request( '/axismundi/v1/media/' . $virtual . '/federation-diagnostics' );

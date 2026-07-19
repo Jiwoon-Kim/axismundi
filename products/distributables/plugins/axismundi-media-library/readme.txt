@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.36
+Stable tag: 0.0.37
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,11 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.37 =
+* Resolve virtual rendition URLs through WordPress image downsize when raw attachment
+  metadata contains the virtual marker but omits the provider URL. The computed URL still
+  passes trusted-host, transform, dimension, pixel, and byte policy.
 
 = 0.0.36 =
 * Allow rendition diagnostics for media already eligible for anonymous federation while

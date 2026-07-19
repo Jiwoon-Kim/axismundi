@@ -115,35 +115,33 @@ function axismundi_media_federation_source_bytes( int $attachment_id ) : int {
  *
  * Jetpack Photon records virtual subsizes in attachment metadata because no local subsize
  * file exists. Admission requires the metadata marker, the exact URL selected by
- * WordPress, HTTPS, and a narrowly trusted CDN host. Sites may narrow or extend the host
- * list, but cannot bypass the remaining structural checks.
+ * attachment metadata, HTTPS, and a narrowly trusted CDN host. Sites may narrow or extend
+ * the host list, but cannot bypass the remaining structural checks.
  *
  * @param int                 $attachment_id Attachment.
  * @param array<string,mixed> $info          One `sizes` entry.
- * @param array<int,mixed>    $src           `wp_get_attachment_image_src()` result.
  * @param array<string,mixed> $policy        Resolved policy.
- * @return bool
+ * @return string Validated URL, or empty string.
  */
-function axismundi_media_federation_virtual_rendition_allowed( int $attachment_id, array $info, array $src, array $policy ) : bool {
-	if ( true !== ( $info['virtual'] ?? false ) || empty( $info['source_url'] ) || empty( $src[0] ) ) {
-		return false;
+function axismundi_media_federation_virtual_rendition_url( int $attachment_id, array $info, array $policy ) : string {
+	if ( true !== ( $info['virtual'] ?? false ) || empty( $info['source_url'] ) ) {
+		return '';
 	}
 	$source_url = esc_url_raw( (string) $info['source_url'], array( 'https' ) );
-	$src_url    = esc_url_raw( (string) $src[0], array( 'https' ) );
-	if ( '' === $source_url || ! hash_equals( $source_url, $src_url ) ) {
-		return false;
+	if ( '' === $source_url ) {
+		return '';
 	}
 	$parts = wp_parse_url( $source_url );
 	if ( ! is_array( $parts ) || 'https' !== ( $parts['scheme'] ?? '' ) || isset( $parts['user'], $parts['pass'], $parts['fragment'] )
 		|| ( isset( $parts['port'] ) && 443 !== (int) $parts['port'] ) ) {
-		return false;
+		return '';
 	}
 	$query = array();
 	parse_str( (string) ( $parts['query'] ?? '' ), $query );
 	if ( ! array_intersect( array( 'fit', 'resize', 'w' ), array_keys( $query ) ) ) {
 		// A Photon host alone does not prove that the response is a derivative. Require an
 		// explicit dimension transform so the CDN URL cannot become an original fallback.
-		return false;
+		return '';
 	}
 	/**
 	 * Filter trusted hosts for explicitly marked virtual federation renditions.
@@ -153,10 +151,10 @@ function axismundi_media_federation_virtual_rendition_allowed( int $attachment_i
 	 */
 	$hosts = array_map( 'strtolower', (array) apply_filters( 'axismundi_media_federation_virtual_hosts', array( 'i0.wp.com', 'i1.wp.com', 'i2.wp.com' ) ) );
 	if ( ! in_array( strtolower( (string) ( $parts['host'] ?? '' ) ), $hosts, true ) ) {
-		return false;
+		return '';
 	}
 	$source_bytes = axismundi_media_federation_source_bytes( $attachment_id );
-	return $source_bytes > 0 && $source_bytes <= (int) $policy['max_bytes'];
+	return $source_bytes > 0 && $source_bytes <= (int) $policy['max_bytes'] ? $source_url : '';
 }
 
 /**
@@ -169,11 +167,19 @@ function axismundi_media_federation_virtual_rendition_allowed( int $attachment_i
  * @return array{url:string,mediaType:string,width:int,height:int,size?:int}|null
  */
 function axismundi_media_federation_rendition_entry( int $attachment_id, string $size, array $info, array $policy ) : ?array {
-	$src = wp_get_attachment_image_src( $attachment_id, $size );
-	// $src[3] is core's is-intermediate flag. False means core fell back to the full file,
-	// so treating it as a rendition would advertise the original.
-	if ( ! $src || empty( $src[0] ) || empty( $src[3] ) ) {
-		return null;
+	$virtual_url = axismundi_media_federation_virtual_rendition_url( $attachment_id, $info, $policy );
+	if ( true === ( $info['virtual'] ?? false ) ) {
+		if ( '' === $virtual_url ) {
+			return null;
+		}
+		$src = array( $virtual_url, (int) ( $info['width'] ?? 0 ), (int) ( $info['height'] ?? 0 ), true );
+	} else {
+		$src = wp_get_attachment_image_src( $attachment_id, $size );
+		// $src[3] is core's is-intermediate flag. False means core fell back to the full
+		// file, so treating it as a rendition would advertise the original.
+		if ( ! $src || empty( $src[0] ) || empty( $src[3] ) ) {
+			return null;
+		}
 	}
 	$width  = (int) $src[1];
 	$height = (int) $src[2];
@@ -181,7 +187,7 @@ function axismundi_media_federation_rendition_entry( int $attachment_id, string 
 		return null;
 	}
 	$bytes   = axismundi_media_federation_rendition_bytes( $attachment_id, $info );
-	$virtual = $bytes <= 0 && axismundi_media_federation_virtual_rendition_allowed( $attachment_id, $info, $src, $policy );
+	$virtual = '' !== $virtual_url;
 	if ( $bytes <= 0 && ! $virtual ) {
 		return null;
 	}

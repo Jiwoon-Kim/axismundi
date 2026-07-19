@@ -63,7 +63,8 @@ Satisfied simultaneously:
 4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.
 5. **Only already-generated or explicitly marked trusted virtual derivatives.** Projection
    never generates or fetches an image. A virtual derivative must be the exact HTTPS
-   intermediate URL selected by WordPress and use an allowlisted image-service host.
+   URL recorded by the rendition provider and use an allowlisted image-service host. It
+   must not depend on a request-context image-downsize filter being active.
 6. **One rendition builder** serves all three roles: Attachment Single, an Article's
    `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, and `mediaType`
    must not drift, and every role builds `url[]` by the same rules (media first, HTML last,

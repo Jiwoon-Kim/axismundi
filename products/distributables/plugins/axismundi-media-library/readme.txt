@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.32
+Stable tag: 0.0.33
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,12 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.33 =
+* Read an explicitly marked virtual rendition from its provider-owned metadata URL rather
+  than requiring the request-context image-downsize filter to select the same URL. This
+  restores PNG, JPEG, and WebP Note attachments on sites whose image sizes are all backed
+  by Jetpack Photon.
 
 = 0.0.32 =
 * Admit explicitly marked Jetpack Photon virtual image derivatives as federatable

@@ -56,6 +56,9 @@ Who can quote / sensitive / CW / mentions)
 New Notes default to `public` visibility and `anyone` automatic Quote approval. The
 Federation panel edits the quote target URI and displays ledger-derived Quote status;
 status is read-only and never becomes approval evidence by itself.
+The default is persisted as authored state only when a new Note envelope is created.
+Legacy rows without authored-policy evidence remain unset and therefore deny approval;
+an upgrade must never turn absence into consent.
 
 Block palette is restricted via `allowed_block_types_all` scoped to `ax_note`.
 

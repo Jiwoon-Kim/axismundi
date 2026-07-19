@@ -177,7 +177,7 @@ function axismundi_note_validate_quote_policy( $value ) {
 		return new WP_Error( 'ax_note_quote_policy', __( 'The Quote policy is not recognized.', 'axismundi-note' ) );
 	}
 	$policy = sanitize_key( $value );
-	return in_array( $policy, array( 'anyone', 'followers', 'me' ), true )
+	return in_array( $policy, array( '', 'anyone', 'followers', 'me' ), true )
 		? $policy
 		: new WP_Error( 'ax_note_quote_policy', __( 'The Quote policy is not recognized.', 'axismundi-note' ) );
 }
@@ -191,6 +191,9 @@ function axismundi_note_get( int $post_id ) : ?array {
 	$table = axismundi_note_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- URI-keyed custom repository lookup.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE post_id = %d", $post_id ), ARRAY_A );
+	if ( is_array( $row ) && empty( $row['quote_policy_authored'] ) ) {
+		$row['quote_policy'] = '';
+	}
 	return is_array( $row ) ? $row : null;
 }
 
@@ -204,6 +207,9 @@ function axismundi_note_get_by_uuid( string $uuid ) : ?array {
 	$table = axismundi_note_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- URI-keyed custom repository lookup.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE local_uuid = %s", $uuid ), ARRAY_A );
+	if ( is_array( $row ) && empty( $row['quote_policy_authored'] ) ) {
+		$row['quote_policy'] = '';
+	}
 	return is_array( $row ) && hash_equals( (string) $row['local_uuid'], $uuid ) ? $row : null;
 }
 
@@ -318,13 +324,22 @@ function axismundi_note_save( int $post_id, array $fields ) {
 	} else {
 		$quote_target = (string) ( $existing['quote_target_uri'] ?? '' );
 	}
+	$quote_generation = max( 1, (int) ( $existing['quote_generation'] ?? 1 ) );
+	if ( is_array( $existing )
+		&& array_key_exists( 'quote_target_uri', $fields )
+		&& '' !== (string) $existing['quote_target_uri']
+		&& ! hash_equals( (string) $existing['quote_target_uri'], $quote_target ) ) {
+		++$quote_generation;
+	}
 	if ( array_key_exists( 'quote_policy', $fields ) ) {
 		$quote_policy = axismundi_note_validate_quote_policy( $fields['quote_policy'] );
 		if ( is_wp_error( $quote_policy ) ) {
 			return $quote_policy;
 		}
+		$quote_policy_authored = '' === $quote_policy ? 0 : 1;
 	} else {
-		$quote_policy = (string) ( $existing['quote_policy'] ?? 'anyone' );
+		$quote_policy          = is_array( $existing ) ? (string) $existing['quote_policy'] : 'anyone';
+		$quote_policy_authored = is_array( $existing ) ? (int) $existing['quote_policy_authored'] : 1;
 	}
 
 	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
@@ -346,13 +361,15 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		'context_uri_hash'        => '' === $context ? '' : hash( 'sha256', $context ),
 		'quote_target_uri'        => $quote_target,
 		'quote_target_uri_hash'   => '' === $quote_target ? '' : hash( 'sha256', $quote_target ),
+		'quote_generation'        => $quote_generation,
 		'quote_policy'            => $quote_policy,
+		'quote_policy_authored'   => $quote_policy_authored,
 		'is_sensitive'            => $sensitive,
 		'content_warning'         => $warning,
 		'mention_actor_uris_json' => (string) wp_json_encode( $mentions ),
 		'updated_at'              => $now,
 	);
-	$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' );
+	$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%d', '%s', '%s', '%s' );
 
 	if ( is_array( $existing ) ) {
 		$table = axismundi_note_table();
@@ -363,14 +380,16 @@ function axismundi_note_save( int $post_id, array $fields ) {
 			$wpdb->prepare(
 				"UPDATE {$table} SET
 					visibility = %s, language_tag = %s, in_reply_to_uri = %s, in_reply_to_uri_hash = %s,
-					context_uri = %s, context_uri_hash = %s, quote_target_uri = %s, quote_target_uri_hash = %s, quote_policy = %s,
+					context_uri = %s, context_uri_hash = %s, quote_target_uri = %s, quote_target_uri_hash = %s,
+					quote_generation = %d, quote_policy = %s, quote_policy_authored = %d,
 					is_sensitive = %d, content_warning = %s,
 					mention_actor_uris_json = %s, updated_at = %s,
 					actor_uri = CASE WHEN attribution_locked_at IS NULL THEN %s ELSE actor_uri END,
 					actor_uri_hash = CASE WHEN attribution_locked_at IS NULL THEN %s ELSE actor_uri_hash END
 				WHERE post_id = %d",
 				$data['visibility'], $data['language_tag'], $data['in_reply_to_uri'], $data['in_reply_to_uri_hash'],
-				$data['context_uri'], $data['context_uri_hash'], $data['quote_target_uri'], $data['quote_target_uri_hash'], $data['quote_policy'],
+				$data['context_uri'], $data['context_uri_hash'], $data['quote_target_uri'], $data['quote_target_uri_hash'],
+				$data['quote_generation'], $data['quote_policy'], $data['quote_policy_authored'],
 				$data['is_sensitive'], $data['content_warning'],
 				$data['mention_actor_uris_json'], $now, $actor, hash( 'sha256', $actor ), $post_id
 			)

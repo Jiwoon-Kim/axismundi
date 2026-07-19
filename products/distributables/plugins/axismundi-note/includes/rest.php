@@ -78,7 +78,7 @@ function axismundi_note_register_rest_field() : void {
 					'inReplyTo'      => array( 'type' => 'string' ),
 					'context'        => array( 'type' => 'string' ),
 					'quoteTarget'    => array( 'type' => 'string' ),
-					'quotePolicy'    => array( 'type' => 'string', 'enum' => array( 'anyone', 'followers', 'me' ) ),
+					'quotePolicy'    => array( 'type' => 'string', 'enum' => array( '', 'anyone', 'followers', 'me' ) ),
 					'quoteStatus'    => array(
 						'type'       => 'object',
 						'readonly'   => true,

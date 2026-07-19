@@ -227,6 +227,15 @@ try {
 	$rejected_status = axismundi_note_quote_status( get_post( $rejected_quote['post_id'] ) );
 	ax_nql_assert( $ax_nql_results, 'a remote Reject is durable and keeps both Create and the public route closed', $reject instanceof Axismundi_Activity && is_array( $rejected_decision ) && 'rejected' === $rejected_decision['decision'] && null === axismundi_act_get_object_lifecycle( $rejected_quote['uri'] ) && 'rejected' === $rejected_status['state'] && ! axismundi_note_source_visible( $rejected_source ) );
 
+	// Removing and re-adding the same target is an explicit retry. It must mint a
+	// new request generation rather than resolving forever to the immutable Reject.
+	axismundi_note_save( $rejected_quote['post_id'], array( 'quote_target_uri' => '' ) );
+	$retried_envelope = axismundi_note_save( $rejected_quote['post_id'], array( 'quote_target_uri' => $rejected_target ) );
+	$retry_result     = axismundi_note_reconcile_quote( $rejected_quote['post_id'] );
+	$retried_request  = $remote_actor instanceof Axismundi_Actor ? axismundi_act_get_outbound_quote_request( $rejected_quote['uri'], $rejected_target, $actor_uri, $remote_actor->get_uri(), (int) ( $retried_envelope['quote_generation'] ?? 0 ) ) : null;
+	$retried_status   = axismundi_note_quote_status( get_post( $rejected_quote['post_id'] ) );
+	ax_nql_assert( $ax_nql_results, 'removing and re-adding a rejected target records a fresh pending QuoteRequest generation', is_array( $retried_envelope ) && (int) $retried_envelope['quote_generation'] > 1 && is_wp_error( $retry_result ) && 'ax_note_quote_pending' === $retry_result->get_error_code() && $retried_request instanceof Axismundi_Activity && ! hash_equals( $rejected_request->get_uri(), $retried_request->get_uri() ) && null === axismundi_act_outbound_quote_decision( $retried_request->get_uri() ) && 'pending' === $retried_status['state'] );
+
 	$bad_auth_target = $remote_actor instanceof Axismundi_Actor ? ax_nql_remote_target( $ax_nql_remote_objects, $remote_actor, 'bad-auth-' . strtolower( wp_generate_password( 6, false, false ) ) ) : '';
 	$bad_auth_quote  = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Mismatched authorization quote.', $bad_auth_target );
 	ax_nql_publish( $bad_auth_quote['post_id'] );

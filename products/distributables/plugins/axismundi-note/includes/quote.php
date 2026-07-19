@@ -228,8 +228,10 @@ function axismundi_note_quote_ensure_request( array $object, array $state ) {
 	$quoted  = axismundi_act_member_uri( $state['target_uri'] ?? '' );
 	$author = axismundi_act_member_uri( $object['attributedTo'] ?? '' );
 	$target = (string) $state['target_actor_uri'];
+	$envelope = axismundi_note_get_by_uri( $quoting );
+	$generation = max( 1, (int) ( $envelope['quote_generation'] ?? 1 ) );
 	$request = function_exists( 'axismundi_act_get_outbound_quote_request' )
-		? axismundi_act_get_outbound_quote_request( $quoting, $quoted, $author, $target )
+		? axismundi_act_get_outbound_quote_request( $quoting, $quoted, $author, $target, $generation )
 		: null;
 	$expected_direction = AXISMUNDI_NOTE_QUOTE_LOCAL_OTHER === $state['classification'] ? 'local' : 'outbound';
 	if ( $request instanceof Axismundi_Activity && $expected_direction !== $request->get_direction() ) {
@@ -246,7 +248,7 @@ function axismundi_note_quote_ensure_request( array $object, array $state ) {
 				'quoted_object_uri'   => $quoted,
 				'author_actor_uri'    => $author,
 				'target_author_uri'   => $target,
-				'generation'          => 1,
+				'generation'          => $generation,
 				'direction'           => $expected_direction,
 			)
 		);
@@ -329,7 +331,7 @@ function axismundi_note_quote_status( WP_Post $post ) : array {
 	}
 	$uri = is_array( $envelope ) ? axismundi_note_object_uri( (string) $envelope['local_uuid'] ) : '';
 	$request = function_exists( 'axismundi_act_get_outbound_quote_request' )
-		? axismundi_act_get_outbound_quote_request( $uri, $target, $author, (string) $state['target_actor_uri'] )
+		? axismundi_act_get_outbound_quote_request( $uri, $target, $author, (string) $state['target_actor_uri'], max( 1, (int) ( $envelope['quote_generation'] ?? 1 ) ) )
 		: null;
 	if ( ! $request instanceof Axismundi_Activity ) {
 		$status['state'] = 'not-requested';

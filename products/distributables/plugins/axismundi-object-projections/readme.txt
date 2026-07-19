@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.34
+Stable tag: 0.0.35
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,10 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.35 =
+* Persist public and anyone defaults only for newly created Articles while
+  preserving fail-closed Quote semantics for legacy or explicitly unset Posts.
 
 = 0.0.34 =
 * Default Core Post Articles to public audience with anyone Quote approval when no

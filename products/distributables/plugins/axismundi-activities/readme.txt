@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.21
+Stable tag: 0.0.22
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,10 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.22 =
+* Allow consumers to resolve one exact outbound QuoteRequest generation while
+  retaining the latest-request lookup for reconciliation and inspection.
 
 = 0.0.21 =
 * Record idempotent outbound and local FEP-044f QuoteRequests with finalized inline

@@ -72,18 +72,18 @@ function ax_note_quote_make_remote_actor( array &$actor_ids, string $slug ) : ?A
 try {
 	add_filter( 'pre_http_request', 'ax_note_quote_http' );
 
-	// The v4 migration verifies its own columns and index, same discipline as v1.
+	// The v5 migration verifies its own columns and index, same discipline as v1.
 	$installed = axismundi_note_install_table();
 	$table     = axismundi_note_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixture schema probe.
 	$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixture schema probe.
 	$quote_key = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'quote_target_uri_hash'", ARRAY_A );
-	ax_note_quote_assert( $ax_note_quote_results, 'schema v4 installs the quote target, anyone-default policy, and supporting index', $installed && in_array( 'quote_target_uri', $columns, true ) && in_array( 'quote_target_uri_hash', $columns, true ) && in_array( 'quote_policy', $columns, true ) && ! empty( $quote_key ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'schema v5 installs Quote target, generation, authored-policy evidence, and supporting index', $installed && in_array( 'quote_target_uri', $columns, true ) && in_array( 'quote_target_uri_hash', $columns, true ) && in_array( 'quote_generation', $columns, true ) && in_array( 'quote_policy', $columns, true ) && in_array( 'quote_policy_authored', $columns, true ) && ! empty( $quote_key ) );
 
-	// P2: exercise the real v1->v2 ALTER path against a populated table, not just a
-	// fresh install -- a hand-built v1-shaped table (the schema before this slice,
-	// with no quote columns) carrying one existing row, then upgraded in place.
+	// Exercise the real v4->v5 ALTER path against a populated table. v4 backfilled
+	// `anyone`, so v5 must preserve the row while marking that ambiguous value as
+	// un-authored rather than inventing consent.
 	$shadow_prefix = $ax_note_quote_real_prefix . 'axnq_shadow_' . strtolower( wp_generate_password( 6, false, false ) ) . '_';
 	$wpdb->prefix  = $shadow_prefix;
 	$shadow_table  = axismundi_note_table();
@@ -103,6 +103,9 @@ try {
 			in_reply_to_uri_hash char(64) NOT NULL,
 			context_uri text NOT NULL,
 			context_uri_hash char(64) NOT NULL,
+			quote_target_uri text NULL,
+			quote_target_uri_hash char(64) NOT NULL DEFAULT '',
+			quote_policy varchar(16) NOT NULL DEFAULT 'anyone',
 			is_sensitive tinyint(1) unsigned NOT NULL DEFAULT 0,
 			content_warning varchar(500) NOT NULL DEFAULT '',
 			mention_actor_uris_json longtext NOT NULL,
@@ -117,6 +120,7 @@ try {
 			KEY actor_uri_hash (actor_uri_hash),
 			KEY in_reply_to_uri_hash (in_reply_to_uri_hash),
 			KEY context_uri_hash (context_uri_hash),
+			KEY quote_target_uri_hash (quote_target_uri_hash),
 			KEY object_status (object_status)
 		) ENGINE=InnoDB {$charset}"
 	);
@@ -161,18 +165,22 @@ try {
 
 	ax_note_quote_assert(
 		$ax_note_quote_results,
-		'a v1 table with an existing row upgrades to v4 in place and receives the new anyone default',
+		'a v4 table upgrades in place without treating its ambiguous anyone backfill as authored consent',
 		1 === $pre_row_count
 		&& $upgraded
 		&& is_array( $post_upgrade_row )
 		&& $fixture_uuid === $post_upgrade_row['local_uuid']
 		&& in_array( 'quote_target_uri', $post_columns, true )
 		&& in_array( 'quote_target_uri_hash', $post_columns, true )
+		&& in_array( 'quote_generation', $post_columns, true )
 		&& in_array( 'quote_policy', $post_columns, true )
+		&& in_array( 'quote_policy_authored', $post_columns, true )
 		&& ! empty( $post_quote_key )
 		&& '' === (string) ( $post_upgrade_row['quote_target_uri'] ?? '' )
 		&& '' === (string) $post_upgrade_row['quote_target_uri_hash']
+		&& 1 === (int) $post_upgrade_row['quote_generation']
 		&& 'anyone' === (string) $post_upgrade_row['quote_policy']
+		&& 0 === (int) $post_upgrade_row['quote_policy_authored']
 	);
 
 	$author = ax_note_quote_make_author( $ax_note_quote_user_ids, $ax_note_quote_actor_ids );
@@ -210,7 +218,7 @@ try {
 	$ax_note_quote_post_ids[] = $quoting_id;
 
 	$saved = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => $other_uri ) );
-	ax_note_quote_assert( $ax_note_quote_results, 'saving a quote target persists the URI and its hash', is_array( $saved ) && $other_uri === $saved['quote_target_uri'] && hash( 'sha256', $other_uri ) === $saved['quote_target_uri_hash'] );
+	ax_note_quote_assert( $ax_note_quote_results, 'saving the first quote target persists its URI, hash, and initial generation', is_array( $saved ) && $other_uri === $saved['quote_target_uri'] && hash( 'sha256', $other_uri ) === $saved['quote_target_uri_hash'] && 1 === (int) $saved['quote_generation'] );
 
 	$envelope_view = axismundi_note_get_envelope( $quoting_id );
 	ax_note_quote_assert( $ax_note_quote_results, 'the structured envelope view exposes quoteTarget', $other_uri === $envelope_view['quoteTarget'] );
@@ -238,10 +246,11 @@ try {
 
 	// An explicit empty string is a deliberate clear, distinct from the malformed case above.
 	$cleared = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => '' ) );
-	ax_note_quote_assert( $ax_note_quote_results, 'an explicit empty quote target clears the stored value', is_array( $cleared ) && '' === $cleared['quote_target_uri'] && '' === $cleared['quote_target_uri_hash'] );
+	ax_note_quote_assert( $ax_note_quote_results, 'an explicit empty quote target clears it and advances the immutable request generation', is_array( $cleared ) && '' === $cleared['quote_target_uri'] && '' === $cleared['quote_target_uri_hash'] && 3 === (int) $cleared['quote_generation'] );
 
 	// Restore a target for the classification checks below.
-	axismundi_note_save( $quoting_id, array( 'quote_target_uri' => $own_uri ) );
+	$restored = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => $own_uri ) );
+	ax_note_quote_assert( $ax_note_quote_results, 're-adding a target uses the generation minted by its explicit removal', is_array( $restored ) && 3 === (int) $restored['quote_generation'] );
 
 	// Classification: self.
 	$self_class = axismundi_note_quote_classify( $own_uri, $actor_uri );

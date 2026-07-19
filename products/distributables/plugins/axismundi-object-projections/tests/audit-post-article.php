@@ -212,7 +212,7 @@ try {
 	ax_article_assert( $ax_article_results, 'the followers policy references the OP-owned stable Followers address without dereferencing it', is_array( $followers_policy ) && axismundi_op_actor_followers_url( $site_actor ) === $followers_policy['canQuote']['automaticApproval'] );
 	delete_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META );
 	$quote_default = axismundi_op_transform_object( get_post( $post_id ) );
-	ax_article_assert( $ax_article_results, 'an Article without explicit metadata projects the authored product default of anyone', is_array( $quote_default ) && axismundi_act_public_audience_uri() === $quote_default['interactionPolicy']['canQuote']['automaticApproval'] && ! isset( $quote_default['quoteAuthorization'] ) );
+	ax_article_assert( $ax_article_results, 'an Article whose explicit policy was removed invents no Quote consent', is_array( $quote_default ) && ! isset( $quote_default['interactionPolicy'], $quote_default['quoteAuthorization'] ) );
 
 	$draft_result  = axismundi_op_transform_object( $draft );
 	$locked_result = axismundi_op_transform_object( $locked );

@@ -100,11 +100,11 @@ function axismundi_op_register_post_settings_meta() : void {
 		array(
 			'type'              => 'string',
 			'single'            => true,
-			'default'           => 'anyone',
+			'default'           => '',
 			'show_in_rest'      => array(
 				'schema' => array(
 					'type' => 'string',
-					'enum' => array( 'anyone', 'followers', 'me' ),
+					'enum' => array( '', 'anyone', 'followers', 'me' ),
 				),
 			),
 			'sanitize_callback' => 'axismundi_op_sanitize_quote_policy',
@@ -138,6 +138,20 @@ function axismundi_op_register_post_settings_meta() : void {
 }
 add_action( 'init', 'axismundi_op_register_post_settings_meta' );
 
+/** Persist product defaults only for newly created Posts, never legacy content. */
+function axismundi_op_initialize_post_settings( int $post_id, WP_Post $post, bool $update ) : void {
+	if ( $update || 'post' !== $post->post_type || wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+	if ( ! metadata_exists( 'post', $post_id, AXISMUNDI_OP_POST_VISIBILITY_META ) ) {
+		update_post_meta( $post_id, AXISMUNDI_OP_POST_VISIBILITY_META, 'public' );
+	}
+	if ( ! metadata_exists( 'post', $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META ) ) {
+		update_post_meta( $post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );
+	}
+}
+add_action( 'wp_after_insert_post', 'axismundi_op_initialize_post_settings', 10, 3 );
+
 /** Whether a post is marked sensitive. */
 function axismundi_op_post_is_sensitive( WP_Post $post ) : bool {
 	return rest_sanitize_boolean( get_post_meta( $post->ID, AXISMUNDI_OP_POST_SENSITIVE_META, true ) );
@@ -148,11 +162,9 @@ function axismundi_op_post_content_warning( WP_Post $post ) : string {
 	return axismundi_op_sanitize_content_warning( get_post_meta( $post->ID, AXISMUNDI_OP_POST_WARNING_META, true ) );
 }
 
-/** Return the authored Quote policy, defaulting an absent legacy value to anyone. */
+/** Return only an explicitly stored Quote policy; legacy unset content denies. */
 function axismundi_op_post_quote_policy( WP_Post $post ) : string {
-	return metadata_exists( 'post', $post->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META )
-		? axismundi_op_sanitize_quote_policy( get_post_meta( $post->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, true ) )
-		: 'anyone';
+	return axismundi_op_sanitize_quote_policy( get_post_meta( $post->ID, AXISMUNDI_OP_POST_QUOTE_POLICY_META, true ) );
 }
 
 /** Return the post's canonical authored federation visibility. */
@@ -266,6 +278,7 @@ function axismundi_op_quick_edit_fields( string $column, string $post_type ) : v
 			<label class="alignleft">
 				<span class="title"><?php esc_html_e( 'Who can quote this post?', 'axismundi-object-projections' ); ?></span>
 				<select name="axismundi_op_quote_policy">
+					<option value=""><?php esc_html_e( 'Not specified (deny)', 'axismundi-object-projections' ); ?></option>
 					<option value="anyone"><?php esc_html_e( 'Anyone', 'axismundi-object-projections' ); ?></option>
 					<option value="followers"><?php esc_html_e( 'Followers only', 'axismundi-object-projections' ); ?></option>
 					<option value="me"><?php esc_html_e( 'Just me', 'axismundi-object-projections' ); ?></option>

@@ -36,6 +36,7 @@
 		{ label: __( 'Mentioned only', 'axismundi-note' ), value: 'mentioned' }
 	];
 	var QUOTE_POLICY = [
+		{ label: __( 'Not specified (deny)', 'axismundi-note' ), value: '' },
 		{ label: __( 'Anyone', 'axismundi-note' ), value: 'anyone' },
 		{ label: __( 'Followers', 'axismundi-note' ), value: 'followers' },
 		{ label: __( 'Only me', 'axismundi-note' ), value: 'me' }
@@ -153,7 +154,7 @@
 			} ),
 			el( C.SelectControl, {
 				label: __( 'Who can quote this post?', 'axismundi-note' ),
-				value: envelope.quotePolicy || 'anyone',
+				value: envelope.quotePolicy || '',
 				options: QUOTE_POLICY,
 				__next40pxDefaultSize: true,
 				onChange: function ( value ) { update( { quotePolicy: value } ); }

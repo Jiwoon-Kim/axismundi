@@ -31,7 +31,7 @@ try {
 			&& true === $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ]['show_in_rest']
 			&& 'string' === $registered[ AXISMUNDI_OP_POST_WARNING_META ]['type']
 			&& is_array( $registered[ AXISMUNDI_OP_POST_WARNING_META ]['show_in_rest'] )
-			&& array( 'anyone', 'followers', 'me' ) === $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ]['show_in_rest']['schema']['enum']
+			&& array( '', 'anyone', 'followers', 'me' ) === $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ]['show_in_rest']['schema']['enum']
 			&& array( 'public', 'unlisted', 'followers', 'mentioned' ) === $registered[ AXISMUNDI_OP_POST_VISIBILITY_META ]['show_in_rest']['schema']['enum']
 			&& 'array' === $registered[ AXISMUNDI_OP_POST_MENTIONS_META ]['type']
 	);
@@ -80,6 +80,9 @@ try {
 	);
 	$post = get_post( $ax_settings_post_id );
 	ax_settings_assert( $ax_settings_results, 'a new Article defaults to public audience and anyone Quote approval', $post instanceof WP_Post && 'public' === axismundi_op_post_visibility( $post ) && 'anyone' === axismundi_op_post_quote_policy( $post ) );
+	delete_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META );
+	ax_settings_assert( $ax_settings_results, 'removing the stored policy restores fail-closed unset semantics', '' === axismundi_op_post_quote_policy( $post ) );
+	update_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );
 	$_POST = array(
 		'axismundi_op_quick_edit_present' => '1',
 		'axismundi_op_quick_edit_nonce'   => wp_create_nonce( 'axismundi_op_quick_edit' ),
@@ -139,7 +142,7 @@ try {
 		$post instanceof WP_Post
 			&& ! axismundi_op_post_is_sensitive( $post )
 			&& 'Retained draft warning' === axismundi_op_post_content_warning( $post )
-			&& 'anyone' === axismundi_op_post_quote_policy( $post )
+			&& '' === axismundi_op_post_quote_policy( $post )
 			&& 'public' === axismundi_op_post_visibility( $post )
 			&& array() === axismundi_op_post_mentions( $post )
 	);

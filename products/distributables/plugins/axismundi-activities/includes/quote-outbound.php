@@ -15,6 +15,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Stable source identity for one outbound QuoteRequest generation. */
+function axismundi_act_outbound_quote_event_key( string $quoting, string $quoted, string $target, int $generation ) : string {
+	return 'outbound-quote-request:' . hash( 'sha256', $quoting . '|' . $quoted . '|' . $target . '|' . max( 1, $generation ) );
+}
+
 /**
  * Record one QuoteRequest, idempotent per quoting Object, quoted Object, target, and generation.
  *
@@ -57,7 +62,7 @@ function axismundi_act_record_outbound_quote_request( array $args ) {
 			'to'         => array( $target ),
 		),
 		$direction,
-		'outbound-quote-request:' . hash( 'sha256', $quoting . '|' . $quoted . '|' . $target . '|' . $generation )
+		axismundi_act_outbound_quote_event_key( $quoting, $quoted, $target, $generation )
 	);
 }
 
@@ -68,7 +73,7 @@ function axismundi_act_record_outbound_quote_request( array $args ) {
  * candidates are cursor-paged by the other exact URI references and verified
  * against the lossless payload. No fixed result window may hide a prior request.
  */
-function axismundi_act_get_outbound_quote_request( string $quoting_uri, string $quoted_uri, string $author_uri, string $target_uri ) : ?Axismundi_Activity {
+function axismundi_act_get_outbound_quote_request( string $quoting_uri, string $quoted_uri, string $author_uri, string $target_uri, ?int $generation = null ) : ?Axismundi_Activity {
 	global $wpdb;
 	$quoting = axismundi_act_uri( $quoting_uri );
 	$quoted  = axismundi_act_uri( $quoted_uri );
@@ -78,6 +83,19 @@ function axismundi_act_get_outbound_quote_request( string $quoting_uri, string $
 		return null;
 	}
 	$table  = axismundi_act_activities_table();
+	if ( null !== $generation ) {
+		$event_key = axismundi_act_outbound_quote_event_key( $quoting, $quoted, $target, $generation );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table and prepared source identity.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE source_event_hash = %s AND source_event_key = %s",
+				hash( 'sha256', $event_key ),
+				$event_key
+			),
+			ARRAY_A
+		);
+		return is_array( $row ) ? axismundi_act_hydrate( $row ) : null;
+	}
 	$page   = 200;
 	$cursor = PHP_INT_MAX;
 	do {

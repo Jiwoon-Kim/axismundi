@@ -30,6 +30,8 @@ remains the authoritative ledger.
 = 0.0.21 =
 * Expand the sending Actor's Followers collection address into accepted remote follower
   inboxes only at the transport boundary, enabling followers-only Create delivery.
+* Deliver domain-recorded Note Create, Update, and Delete Activities through the same private,
+  atomically claimed transport spool without giving the Note domain network ownership.
 
 = 0.0.20 =
 * Advertise Inbox, endpoints, and publicKey as one atomic bundle and withhold the WebFinger self link when a public Actor cannot project its signing key, so a remote server never caches a keyless Actor.

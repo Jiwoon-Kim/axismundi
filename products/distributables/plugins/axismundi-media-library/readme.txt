@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.30
+Stable tag: 0.0.31
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,11 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.31 =
+* Let domain plugins register readable relation subjects without making Media Library
+  depend on those domains, enabling ordered Note attachments to reuse the canonical
+  media-relation store.
 
 = 0.0.30 =
 * Add a folder listing API that returns a folder's visible child folders followed by its

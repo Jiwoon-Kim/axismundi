@@ -38,6 +38,8 @@ excluded from public projections.
 * Add one shared, fail-closed audience resolver for public, quiet-public, followers,
   and mentioned-only Objects, and snapshot the resolved to/cc members onto Core Post Create.
 * Wait for block-editor REST metadata before recording the immutable initial Create.
+* Add a domain-neutral lifecycle recorder that converges duplicate callbacks while recording
+  embedded-object Create and Update Activities plus audience-preserving URI-only Delete.
 
 = 0.0.19 =
 * Embed the minimal FEP-044f QuoteRequest object in Accept and Reject decisions instead of

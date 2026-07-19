@@ -45,6 +45,12 @@ page without persisting the Collection, fetching its item URLs, or downloading b
 
 = 0.0.29 =
 * Replace Core user autocomplete with canonical Actor mentions, validate saved mention anchors against the Actor registry, and derive Article recipients and Mention tags.
+* Add fallback-only source and deterministic view-model extension seams used by domain-owned
+  objects without introducing a dependency on those domains.
+* Register the dynamic object-view block and preserve plugin template, theme override, and
+  user-saved template precedence for human-readable object pages.
+* Reuse public Media Library descriptors for ordered Note attachments while keeping the
+  relation authority in Media Library.
 
 = 0.0.28 =
 * Add Core Post audience and Mention authoring controls to the block editor and Quick Edit.

@@ -1,6 +1,6 @@
 # Note federation route contract (increment 4)
 
-Status: **#4a and #4b implemented locally and unreleased.** Increment 3 owns the storage substrate;
+Status: **#4a and #4b implemented for the 0.0.1 release.** Increment 3 owns the storage substrate;
 increment 3.5 owns language inheritance. This document freezes the HTTP,
 source, projection, and HTML-view boundaries across the two increment 4 slices.
 

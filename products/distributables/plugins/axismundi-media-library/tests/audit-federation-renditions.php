@@ -96,7 +96,7 @@ try {
 				'width'      => 1024,
 				'height'     => 768,
 				'mime-type'  => 'image/webp',
-				'virtual'    => true,
+				'virtual'    => 1,
 				'source_url' => $photon_url,
 			),
 		)
@@ -108,7 +108,7 @@ try {
 	$virtual_out = axismundi_media_federation_renditions( $virtual );
 	ax_fed_assert(
 		$ax_fed_results,
-		'a trusted Photon metadata URL is admitted without depending on the request-context downsize filter or inventing its byte size',
+		'a trusted Photon metadata URL is admitted without depending on a request-context registry/downsize filter or inventing its byte size',
 		1 === count( $virtual_out ) && $photon_url === $virtual_out[0]['url']
 			&& 'image/webp' === $virtual_out[0]['mediaType'] && ! isset( $virtual_out[0]['size'] )
 	);

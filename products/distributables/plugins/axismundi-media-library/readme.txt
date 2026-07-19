@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.33
+Stable tag: 0.0.34
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,12 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.34 =
+* Treat provider metadata as the rendition inventory for policy-selected virtual sizes,
+  without requiring those historical sizes to remain registered in the current request.
+  Accept boolean-like virtual markers while retaining trusted-host, transform, dimension,
+  pixel, and source-byte gates.
 
 = 0.0.33 =
 * Read an explicitly marked virtual rendition from its provider-owned metadata URL rather

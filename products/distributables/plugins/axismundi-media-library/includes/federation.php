@@ -124,7 +124,7 @@ function axismundi_media_federation_source_bytes( int $attachment_id ) : int {
  * @return string Validated URL, or empty string.
  */
 function axismundi_media_federation_virtual_rendition_url( int $attachment_id, array $info, array $policy ) : string {
-	if ( true !== ( $info['virtual'] ?? false ) || empty( $info['source_url'] ) ) {
+	if ( empty( $info['virtual'] ) || empty( $info['source_url'] ) ) {
 		return '';
 	}
 	$source_url = esc_url_raw( (string) $info['source_url'], array( 'https' ) );
@@ -168,7 +168,7 @@ function axismundi_media_federation_virtual_rendition_url( int $attachment_id, a
  */
 function axismundi_media_federation_rendition_entry( int $attachment_id, string $size, array $info, array $policy ) : ?array {
 	$virtual_url = axismundi_media_federation_virtual_rendition_url( $attachment_id, $info, $policy );
-	if ( true === ( $info['virtual'] ?? false ) ) {
+	if ( ! empty( $info['virtual'] ) ) {
 		if ( '' === $virtual_url ) {
 			return null;
 		}
@@ -239,11 +239,10 @@ function axismundi_media_federation_renditions( int $attachment_id, array $polic
 	}
 
 	$policy     = axismundi_media_federation_rendition_policy( $policy );
-	$registered = get_intermediate_image_sizes();
 	$entries    = array();
 	foreach ( (array) $policy['sizes'] as $size ) {
 		$size = (string) $size;
-		if ( ! in_array( $size, $registered, true ) || empty( $meta['sizes'][ $size ] ) || ! is_array( $meta['sizes'][ $size ] ) ) {
+		if ( empty( $meta['sizes'][ $size ] ) || ! is_array( $meta['sizes'][ $size ] ) ) {
 			continue;
 		}
 		$entry = axismundi_media_federation_rendition_entry( $attachment_id, $size, $meta['sizes'][ $size ], $policy );

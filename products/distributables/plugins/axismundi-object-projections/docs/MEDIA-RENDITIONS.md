@@ -89,7 +89,8 @@ axismundi_media_federation_renditions( int $attachment_id, array $policy = array
 ```
 
 - enumerates **existing** derivatives only
-- inherits the site's registered image sizes
+- enumerates policy-selected names that exist in provider metadata; it does not require the
+  same size to remain registered in the current request
 - applies pixel / byte / dimension caps; max 4; dedupes
 - excludes the original
 - honors public / locked / sensitive policy (fail-closed)

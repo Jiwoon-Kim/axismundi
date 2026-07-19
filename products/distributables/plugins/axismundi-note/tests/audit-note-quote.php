@@ -8,14 +8,16 @@
 defined( 'ABSPATH' ) || exit( 1 );
 
 global $wpdb;
-$ax_note_quote_results      = array();
-$ax_note_quote_post_ids     = array();
-$ax_note_quote_user_ids     = array();
-$ax_note_quote_actor_ids    = array();
-$ax_note_quote_remote       = '';
-$ax_note_quote_spoof_remote = '';
-$ax_note_quote_shadow_table = '';
-$ax_note_quote_real_prefix  = $wpdb->prefix;
+$ax_note_quote_results        = array();
+$ax_note_quote_post_ids       = array();
+$ax_note_quote_user_ids       = array();
+$ax_note_quote_actor_ids      = array();
+$ax_note_quote_remote         = '';
+$ax_note_quote_spoof_remote   = '';
+$ax_note_quote_unknown_remote = '';
+$ax_note_quote_gone_remote    = '';
+$ax_note_quote_shadow_table   = '';
+$ax_note_quote_real_prefix    = $wpdb->prefix;
 $GLOBALS['ax_note_quote_http'] = 0;
 
 /** @param bool[] $results Results. */
@@ -46,6 +48,25 @@ function ax_note_quote_make_author( array &$user_ids, array &$actor_ids ) : ?WP_
 		axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	}
 	return get_userdata( $uid ) ?: null;
+}
+
+/** Create one cached remote Actor with deliverable inbox/outbox endpoints. */
+function ax_note_quote_make_remote_actor( array &$actor_ids, string $slug ) : ?Axismundi_Actor {
+	$uri     = 'https://example.com/actors/' . $slug;
+	$payload = array(
+		'id'                => $uri,
+		'type'              => 'Person',
+		'preferredUsername' => $slug,
+		'inbox'             => $uri . '/inbox',
+		'outbox'            => $uri . '/outbox',
+	);
+	$record = axismundi_actors_normalize_remote_actor_payload( $payload, $uri );
+	$actor  = is_array( $record ) ? axismundi_actors_upsert_remote( $record ) : null;
+	if ( $actor instanceof Axismundi_Actor ) {
+		$actor_ids[] = $actor->get_identity_id();
+		return $actor;
+	}
+	return null;
 }
 
 try {
@@ -193,6 +214,9 @@ try {
 	$rejected = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => 'not-a-uri' ) );
 	ax_note_quote_assert( $ax_note_quote_results, 'an explicitly invalid quote target fails closed instead of silently clearing it', is_wp_error( $rejected ) && 'ax_note_quote_target_uri' === $rejected->get_error_code() && $own_uri === axismundi_note_get( $quoting_id )['quote_target_uri'] );
 
+	$non_string = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => array( $own_uri ) ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'a non-string quote target fails closed instead of being coerced into a clear', is_wp_error( $non_string ) && 'ax_note_quote_target_uri' === $non_string->get_error_code() && $own_uri === axismundi_note_get( $quoting_id )['quote_target_uri'] );
+
 	// An explicit empty string is a deliberate clear, distinct from the malformed case above.
 	$cleared = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => '' ) );
 	ax_note_quote_assert( $ax_note_quote_results, 'an explicit empty quote target clears the stored value', is_array( $cleared ) && '' === $cleared['quote_target_uri'] && '' === $cleared['quote_target_uri_hash'] );
@@ -210,7 +234,8 @@ try {
 
 	// Classification: remote, seeded through the Object Projections remote-object cache
 	// (a read of a stored observation, not a fetch).
-	$remote_actor_uri = 'https://remote.example/actors/quote-target-' . strtolower( wp_generate_password( 6, false, false ) );
+	$remote_actor = ax_note_quote_make_remote_actor( $ax_note_quote_actor_ids, 'quote-target-' . strtolower( wp_generate_password( 6, false, false ) ) );
+	$remote_actor_uri = $remote_actor instanceof Axismundi_Actor ? $remote_actor->get_uri() : '';
 	$ax_note_quote_remote = 'https://remote.example/objects/quote-target-' . strtolower( wp_generate_password( 6, false, false ) );
 	$stored_remote = axismundi_op_remote_object_store(
 		array(
@@ -221,7 +246,38 @@ try {
 		)
 	);
 	$remote_class = axismundi_note_quote_classify( $ax_note_quote_remote, $actor_uri );
-	ax_note_quote_assert( $ax_note_quote_results, 'quoting a cached remote object classifies as remote', is_array( $stored_remote ) && AXISMUNDI_NOTE_QUOTE_REMOTE === $remote_class );
+	ax_note_quote_assert( $ax_note_quote_results, 'quoting a cached object attributed to a registered remote Actor classifies as remote', $remote_actor instanceof Axismundi_Actor && is_array( $stored_remote ) && AXISMUNDI_NOTE_QUOTE_REMOTE === $remote_class );
+
+	// A cached Object alone is insufficient: without a registered Actor and inbox,
+	// Bridge cannot address the QuoteRequest and the quoting Note would remain held.
+	$unknown_actor_uri = 'https://remote.example/actors/unknown-' . strtolower( wp_generate_password( 6, false, false ) );
+	$ax_note_quote_unknown_remote = 'https://remote.example/objects/unknown-actor-' . strtolower( wp_generate_password( 6, false, false ) );
+	$stored_unknown = axismundi_op_remote_object_store(
+		array(
+			'id'           => $ax_note_quote_unknown_remote,
+			'type'         => 'Note',
+			'attributedTo' => $unknown_actor_uri,
+			'content'      => 'Remote note with no cached Actor.',
+		)
+	);
+	$unknown_actor_class = axismundi_note_quote_classify( $ax_note_quote_unknown_remote, $actor_uri );
+	ax_note_quote_assert( $ax_note_quote_results, 'a cached object whose remote Actor is unregistered remains unresolved', is_array( $stored_unknown ) && is_wp_error( $unknown_actor_class ) && 'ax_note_quote_unresolved' === $unknown_actor_class->get_error_code() );
+
+	$gone_actor = ax_note_quote_make_remote_actor( $ax_note_quote_actor_ids, 'gone-' . strtolower( wp_generate_password( 6, false, false ) ) );
+	if ( $gone_actor instanceof Axismundi_Actor ) {
+		axismundi_actors_set_status( $gone_actor->get_identity_id(), 'tombstone' );
+	}
+	$ax_note_quote_gone_remote = 'https://remote.example/objects/gone-actor-' . strtolower( wp_generate_password( 6, false, false ) );
+	$stored_gone = axismundi_op_remote_object_store(
+		array(
+			'id'           => $ax_note_quote_gone_remote,
+			'type'         => 'Note',
+			'attributedTo' => $gone_actor instanceof Axismundi_Actor ? $gone_actor->get_uri() : '',
+			'content'      => 'Remote note whose Actor is gone.',
+		)
+	);
+	$gone_class = axismundi_note_quote_classify( $ax_note_quote_gone_remote, $actor_uri );
+	ax_note_quote_assert( $ax_note_quote_results, 'a cached object attributed to a tombstoned remote Actor is refused', is_array( $stored_gone ) && is_wp_error( $gone_class ) && 'ax_note_quote_actor_gone' === $gone_class->get_error_code() );
 
 	// P1: a remote-cache row claiming attributedTo = a real local Actor URI must never
 	// earn self/local-other -- that is a spoofed or stale observation, not evidence the
@@ -259,6 +315,11 @@ try {
 	}
 	if ( '' !== $ax_note_quote_spoof_remote && function_exists( 'axismundi_op_remote_object_delete' ) ) {
 		axismundi_op_remote_object_delete( $ax_note_quote_spoof_remote );
+	}
+	foreach ( array( $ax_note_quote_unknown_remote, $ax_note_quote_gone_remote ) as $remote_uri ) {
+		if ( '' !== $remote_uri && function_exists( 'axismundi_op_remote_object_delete' ) ) {
+			axismundi_op_remote_object_delete( $remote_uri );
+		}
 	}
 	foreach ( array_unique( $ax_note_quote_post_ids ) as $pid ) {
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $pid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

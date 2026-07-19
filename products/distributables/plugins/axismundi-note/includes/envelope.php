@@ -147,17 +147,23 @@ function axismundi_note_validate_mentions( $value ) {
 }
 
 /**
- * Validate one authored quote target, failing closed on a non-empty invalid URI.
+ * Validate one authored quote target, failing closed on anything but a real URI.
  *
  * Unlike in_reply_to/context, an invalid quote target is never silently
  * dropped: it authorizes a lifecycle branch (self/local-other/remote consent),
  * so a malformed value must never be mistaken for "no quote" and skip the
- * QuoteRequest gate. An explicit empty string is a deliberate clear.
+ * QuoteRequest gate. Only the literal string '' is a deliberate clear; any
+ * other non-URI value -- including a non-scalar, boolean, or number that would
+ * otherwise cast to an empty or misleading string -- fails closed rather than
+ * being coerced into a clear it never asked for.
  *
  * @return string|WP_Error
  */
 function axismundi_note_validate_quote_target( $value ) {
-	$raw = is_scalar( $value ) ? trim( (string) $value ) : '';
+	if ( ! is_string( $value ) ) {
+		return new WP_Error( 'ax_note_quote_target_uri', __( 'The quote target must be a valid absolute URI.', 'axismundi-note' ) );
+	}
+	$raw = trim( $value );
 	if ( '' === $raw ) {
 		return '';
 	}

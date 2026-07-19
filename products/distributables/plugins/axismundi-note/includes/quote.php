@@ -11,10 +11,11 @@
  * synchronous local authorization state machine), or remote (an outbound
  * QuoteRequest).
  *
- * Classification is ownership-only: it does not check whether a local target
- * is published, tombstoned, or otherwise fit to quote. Slice 3 must verify the
- * target's federation lifecycle state before acting on a `self` or
- * `local-other` result.
+ * Classification is ownership-only: it does not check whether a local or
+ * remote-cache target is published, tombstoned, or otherwise fit to quote (a
+ * remote-cache row can itself carry `object_status = tombstone`). Slice 3 must
+ * verify the target's federation lifecycle state before acting on any of the
+ * three results, not only `self`/`local-other`.
  *
  * @package AxismundiNote
  */
@@ -65,9 +66,13 @@ function axismundi_note_quote_target_origin( string $target_uri ) : array {
  * this site's own Note envelope; a cached remote object can never earn either
  * label no matter what Actor URI its payload claims to be attributed to, so a
  * remote payload cannot spoof its way past the outbound QuoteRequest gate by
- * forging `attributedTo` to a local Actor. A target this site cannot yet
- * attribute to any Actor is unresolved and returns a WP_Error; the caller
- * decides whether to fetch and retry.
+ * forging `attributedTo` to a local Actor. `remote` additionally requires a
+ * genuinely registered, non-tombstone remote Actor: Bridge can only deliver a
+ * QuoteRequest to a known inbox, so an `attributedTo` that names an Actor this
+ * site has never registered is unresolved rather than a false `remote` that
+ * would record a QuoteRequest with nowhere to deliver it. A target this site
+ * cannot yet attribute to any Actor is unresolved and returns a WP_Error; the
+ * caller decides whether to fetch and retry.
  *
  * @return string|WP_Error One of the AXISMUNDI_NOTE_QUOTE_* labels.
  */
@@ -91,8 +96,17 @@ function axismundi_note_quote_classify( string $target_uri, string $author_actor
 	// cache entry, not evidence of local ownership, so it fails closed instead
 	// of silently granting the self-quote consent exception.
 	$actor = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $origin['actor_uri'] ) : null;
-	if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		// An attributedTo claim this site has never registered as an Actor cannot
+		// be delivered a QuoteRequest, so it is unresolved rather than a false
+		// 'remote' that would hold forever with no addressable inbox.
+		return new WP_Error( 'ax_note_quote_unresolved', __( 'The quoted object could not be attributed to an Actor.', 'axismundi-note' ) );
+	}
+	if ( $actor->is_local() ) {
 		return new WP_Error( 'ax_note_quote_origin_mismatch', __( 'A cached remote object cannot be attributed to a local Actor.', 'axismundi-note' ) );
+	}
+	if ( 'tombstone' === $actor->get_status() ) {
+		return new WP_Error( 'ax_note_quote_actor_gone', __( 'The quoted object\'s Actor is no longer available.', 'axismundi-note' ) );
 	}
 	return AXISMUNDI_NOTE_QUOTE_REMOTE;
 }

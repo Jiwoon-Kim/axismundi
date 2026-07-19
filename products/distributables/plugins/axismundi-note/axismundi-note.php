@@ -15,9 +15,9 @@
  *
  * @package AxismundiNote
  *
- * Increment 4a adds the fail-closed JSON-LD source and transformer on top of
- * the increment 3 storage substrate. Human-readable HTML (#4b) and the
- * Create/Update/Delete lifecycle (#5) remain deliberately deferred. The
+ * Increment 4 adds fail-closed JSON-LD and human-readable Note/Tombstone
+ * representations on top of the increment 3 storage substrate. The
+ * Create/Update/Delete lifecycle (#5) remains deliberately deferred. The
  * plugin performs no network request.
  */
 
@@ -29,6 +29,8 @@ require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/federation.php';
+require_once __DIR__ . '/includes/view.php';
+require_once __DIR__ . '/includes/interactions.php';
 require_once __DIR__ . '/includes/rest.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/editor.php';

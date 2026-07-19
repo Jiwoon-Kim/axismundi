@@ -242,6 +242,11 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 		'cc'           => $audience['cc'],
 		'sensitive'    => ! empty( $envelope['is_sensitive'] ),
 	);
+	$title = trim( wp_strip_all_tags( (string) $post->post_title ) );
+	if ( '' !== $title ) {
+		$object['name']    = $title;
+		$object['nameMap'] = array( $language => $title );
+	}
 	$tags = axismundi_note_mention_tags( $post, false );
 	if ( ! empty( $tags ) ) {
 		$object['tag'] = $tags;
@@ -298,6 +303,7 @@ function axismundi_note_object_view_model( $source ) : ?array {
 		'status'          => 'active',
 		'object_uri'      => $id,
 		'language'        => (string) ( $envelope['language_tag'] ?? '' ),
+		'title'           => $post instanceof WP_Post ? trim( wp_strip_all_tags( (string) $post->post_title ) ) : '',
 		'author'          => array(
 			'name'   => '' !== $name ? $name : ( $handle ? ltrim( $handle, '@' ) : '' ),
 			'handle' => $handle,

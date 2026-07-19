@@ -1,10 +1,10 @@
 # Note federation route contract (increment 4)
 
-Status: **#4a implemented locally and unreleased; #4b remains pending.** Increment 3 owns the storage substrate;
+Status: **#4a and #4b implemented locally and unreleased.** Increment 3 owns the storage substrate;
 increment 3.5 owns language inheritance. This document freezes the HTTP,
 source, projection, and HTML-view boundaries across the two increment 4 slices.
 
-Increment 4 is implemented as two reviewable commits and released only after both
+Increment 4 was implemented as two reviewable commits and is released only after both
 are complete:
 
 - **#4a - Federation readiness + source + JSON-LD**: freeze the authored identity
@@ -162,8 +162,10 @@ reads live language inheritance and never reconstructs deleted content.
 
 ## HTML view-model and template boundary (#4b)
 
-OP owns a storage-neutral `object_view_model` adapter registry and a safe fallback
-single-object template. Product plugins provide adapters; storage remains separate.
+OP owns a storage-neutral `object_view_model` adapter registry and the dynamic
+`axismundi/object-view` block. Note owns the canonical functional single-object
+block template; a theme or user-saved template may override its slug. Product
+plugins provide adapters and templates while storage remains separate.
 
 The routed surface introduced in increment 4 is the canonical Note HTML URL:
 

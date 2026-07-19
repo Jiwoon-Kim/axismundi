@@ -91,6 +91,8 @@ try {
 		is_array( $object )
 		&& 'Note' === $object['type']
 		&& $id === $object['id']
+		&& 'Federated Note' === $object['name']
+		&& 'Federated Note' === $object['nameMap']['en']
 		&& 'en' === array_key_first( $object['contentMap'] )
 		&& (string) $object['content'] === (string) $object['contentMap']['en']
 		&& false === stripos( (string) $object['content'], '<iframe' )

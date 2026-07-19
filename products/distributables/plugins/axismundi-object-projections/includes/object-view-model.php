@@ -116,6 +116,10 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 	}
 
 	$parts   = array();
+	$title   = trim( (string) ( $model['title'] ?? '' ) );
+	if ( '' !== $title ) {
+		$parts[] = '<h1 class="axismundi-object__title">' . esc_html( $title ) . '</h1>';
+	}
 	$parts[] = axismundi_op_object_view_author( $model );
 
 	$published = (string) ( $model['published'] ?? '' );

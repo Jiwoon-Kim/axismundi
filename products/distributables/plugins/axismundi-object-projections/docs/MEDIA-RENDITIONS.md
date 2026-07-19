@@ -61,7 +61,7 @@ Satisfied simultaneously:
    the HTML Link — never fall back to the original.** (This closes the existing fallback
    where a missing intermediate size silently served the full-size file.)
 4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.
-5. **Only already-generated or explicitly marked trusted virtual derivatives.** Projection
+5. **Only already-generated or provider-addressed trusted virtual derivatives.** Projection
    never generates or fetches an image. A virtual derivative must be the exact HTTPS
    URL recorded by the rendition provider and use an allowlisted image-service host. It
    must not depend on a request-context image-downsize filter being active.

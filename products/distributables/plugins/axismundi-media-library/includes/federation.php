@@ -124,7 +124,7 @@ function axismundi_media_federation_source_bytes( int $attachment_id ) : int {
  * @return string Validated URL, or empty string.
  */
 function axismundi_media_federation_virtual_rendition_url( int $attachment_id, array $info, array $policy ) : string {
-	if ( empty( $info['virtual'] ) || empty( $info['source_url'] ) ) {
+	if ( empty( $info['source_url'] ) ) {
 		return '';
 	}
 	$source_url = esc_url_raw( (string) $info['source_url'], array( 'https' ) );
@@ -168,7 +168,7 @@ function axismundi_media_federation_virtual_rendition_url( int $attachment_id, a
  */
 function axismundi_media_federation_rendition_entry( int $attachment_id, string $size, array $info, array $policy ) : ?array {
 	$virtual_url = axismundi_media_federation_virtual_rendition_url( $attachment_id, $info, $policy );
-	if ( ! empty( $info['virtual'] ) ) {
+	if ( ! empty( $info['source_url'] ) ) {
 		if ( '' === $virtual_url ) {
 			return null;
 		}
@@ -266,3 +266,61 @@ function axismundi_media_federation_renditions( int $attachment_id, array $polic
 	usort( $unique, static fn( array $a, array $b ) : int => ( $b['width'] * $b['height'] ) <=> ( $a['width'] * $a['height'] ) );
 	return array_slice( $unique, 0, max( 1, (int) $policy['max'] ) );
 }
+
+/**
+ * Explain the federation rendition decision for one attachment.
+ *
+ * The result contains public media metadata and policy decisions only. It deliberately
+ * omits filesystem paths and is exposed solely through an authenticated admin endpoint.
+ *
+ * @param int $attachment_id Attachment.
+ * @return array<string,mixed>
+ */
+function axismundi_media_federation_rendition_diagnostics( int $attachment_id ) : array {
+	$meta   = wp_get_attachment_metadata( $attachment_id );
+	$policy = axismundi_media_federation_rendition_policy();
+	$sizes  = array();
+	foreach ( (array) $policy['sizes'] as $size ) {
+		$info = is_array( $meta ) && isset( $meta['sizes'][ $size ] ) && is_array( $meta['sizes'][ $size ] ) ? $meta['sizes'][ $size ] : array();
+		$sizes[ (string) $size ] = array(
+			'exists'       => ! empty( $info ),
+			'virtual'      => $info['virtual'] ?? null,
+			'source_url'   => (string) ( $info['source_url'] ?? '' ),
+			'width'        => (int) ( $info['width'] ?? 0 ),
+			'height'       => (int) ( $info['height'] ?? 0 ),
+			'bytes'        => $info ? axismundi_media_federation_rendition_bytes( $attachment_id, $info ) : 0,
+			'provider_url' => $info ? axismundi_media_federation_virtual_rendition_url( $attachment_id, $info, $policy ) : '',
+			'accepted'     => $info ? axismundi_media_federation_rendition_entry( $attachment_id, (string) $size, $info, $policy ) : null,
+		);
+	}
+	return array(
+		'attachment_id' => $attachment_id,
+		'allowed'       => axismundi_media_federation_renditions_allowed( $attachment_id ),
+		'mime_type'     => (string) get_post_mime_type( $attachment_id ),
+		'source_bytes'  => axismundi_media_federation_source_bytes( $attachment_id ),
+		'policy'        => $policy,
+		'sizes'         => $sizes,
+		'renditions'    => axismundi_media_federation_renditions( $attachment_id ),
+	);
+}
+
+/** Register the authenticated federation-rendition diagnostic endpoint. */
+function axismundi_media_register_federation_diagnostic_route() : void {
+	register_rest_route(
+		'axismundi/v1',
+		'/media/(?P<id>\d+)/federation-diagnostics',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => static function ( WP_REST_Request $request ) {
+				$attachment_id = (int) $request['id'];
+				if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+					return new WP_Error( 'ax_media_diagnostic_not_found', __( 'The attachment was not found.', 'axismundi-media-library' ), array( 'status' => 404 ) );
+				}
+				return rest_ensure_response( axismundi_media_federation_rendition_diagnostics( $attachment_id ) );
+			},
+			'permission_callback' => static fn() : bool => current_user_can( 'upload_files' ),
+			'args'                => array( 'id' => array( 'required' => true, 'type' => 'integer', 'minimum' => 1 ) ),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_media_register_federation_diagnostic_route' );

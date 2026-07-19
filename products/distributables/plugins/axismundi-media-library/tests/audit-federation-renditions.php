@@ -96,7 +96,6 @@ try {
 				'width'      => 1024,
 				'height'     => 768,
 				'mime-type'  => 'image/webp',
-				'virtual'    => 1,
 				'source_url' => $photon_url,
 			),
 		)
@@ -108,7 +107,7 @@ try {
 	$virtual_out = axismundi_media_federation_renditions( $virtual );
 	ax_fed_assert(
 		$ax_fed_results,
-		'a trusted Photon metadata URL is admitted without depending on a request-context registry/downsize filter or inventing its byte size',
+		'a trusted provider metadata URL is sufficient without a request-context marker/registry/downsize filter or invented byte size',
 		1 === count( $virtual_out ) && $photon_url === $virtual_out[0]['url']
 			&& 'image/webp' === $virtual_out[0]['mediaType'] && ! isset( $virtual_out[0]['size'] )
 	);
@@ -121,6 +120,13 @@ try {
 	wp_update_attachment_metadata( $virtual, $untrusted_meta );
 	$untrusted_out = axismundi_media_federation_renditions( $virtual );
 	ax_fed_assert( $ax_fed_results, 'an arbitrary virtual CDN URL remains fail-closed', array() === $untrusted_out );
+	$diagnostics = axismundi_media_federation_rendition_diagnostics( $virtual );
+	ax_fed_assert(
+		$ax_fed_results,
+		'the authenticated diagnostic service reports each policy gate without filesystem paths',
+		isset( $diagnostics['sizes']['large'] ) && null === $diagnostics['sizes']['large']['accepted']
+			&& ! isset( $diagnostics['path'] )
+	);
 
 	// Duplicate dimensions collapse.
 	$dupe = ax_fed_attachment(

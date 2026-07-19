@@ -127,6 +127,18 @@ try {
 		isset( $diagnostics['sizes']['large'] ) && null === $diagnostics['sizes']['large']['accepted']
 			&& ! isset( $diagnostics['path'] )
 	);
+	$previous_user = get_current_user_id();
+	wp_set_current_user( 0 );
+	$public_diagnostic = rest_do_request( '/axismundi/v1/media/' . $virtual . '/federation-diagnostics' );
+	update_post_meta( $virtual, '_ax_media_visibility', 'private' );
+	$private_diagnostic = rest_do_request( '/axismundi/v1/media/' . $virtual . '/federation-diagnostics' );
+	update_post_meta( $virtual, '_ax_media_visibility', 'public' );
+	wp_set_current_user( $previous_user );
+	ax_fed_assert(
+		$ax_fed_results,
+		'anonymous diagnostics are limited to media already eligible for public federation',
+		200 === $public_diagnostic->get_status() && 404 === $private_diagnostic->get_status()
+	);
 
 	// Duplicate dimensions collapse.
 	$dupe = ax_fed_attachment(

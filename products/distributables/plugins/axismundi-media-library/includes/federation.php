@@ -316,9 +316,12 @@ function axismundi_media_register_federation_diagnostic_route() : void {
 				if ( 'attachment' !== get_post_type( $attachment_id ) ) {
 					return new WP_Error( 'ax_media_diagnostic_not_found', __( 'The attachment was not found.', 'axismundi-media-library' ), array( 'status' => 404 ) );
 				}
+				if ( ! current_user_can( 'upload_files' ) && ! axismundi_media_federation_renditions_allowed( $attachment_id ) ) {
+					return new WP_Error( 'ax_media_diagnostic_not_found', __( 'The attachment was not found.', 'axismundi-media-library' ), array( 'status' => 404 ) );
+				}
 				return rest_ensure_response( axismundi_media_federation_rendition_diagnostics( $attachment_id ) );
 			},
-			'permission_callback' => static fn() : bool => current_user_can( 'upload_files' ),
+			'permission_callback' => '__return_true',
 			'args'                => array( 'id' => array( 'required' => true, 'type' => 'integer', 'minimum' => 1 ) ),
 		)
 	);

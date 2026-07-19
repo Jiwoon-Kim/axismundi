@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.35
+Stable tag: 0.0.36
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,11 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.36 =
+* Allow rendition diagnostics for media already eligible for anonymous federation while
+  keeping private and locked attachments hidden behind the upload capability. Diagnostic
+  output contains public rendition metadata and policy decisions, never filesystem paths.
 
 = 0.0.35 =
 * Treat a validated provider source URL as the virtual-rendition marker instead of

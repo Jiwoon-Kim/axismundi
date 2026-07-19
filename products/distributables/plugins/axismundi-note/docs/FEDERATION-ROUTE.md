@@ -186,13 +186,26 @@ Like and Announce controls appear only when their existing capability checks pas
 Quote capability remains false until outbound Quote authoring is implemented. No
 interaction control is rendered for Tombstones or unauthorized objects.
 
-## Deferred (increment 5 and later)
+## Increment 5 lifecycle
 
-- Object-type-agnostic Create / Update / Delete lifecycle. Create reuses the frozen
-  Actor and language plus the same authored audience/mention state resolved at the
-  publication event; the immutable Create payload is the Activity snapshot.
-- Strict Create/Update rejection and editor feedback when an addressed Actor cannot be
-  resolved.
+Increment 5 records a complete finalized Note Object snapshot as the embedded `object`
+of Create and Update. Activities compares that snapshot with the immediately preceding
+lifecycle event: duplicate callbacks converge, a changed representation records Update,
+and returning to an older representation remains a new Update. Create after Delete begins
+a new generation.
+
+The Gutenberg REST write is marked request-locally so `save_post` cannot record the
+pre-envelope intermediate state; `rest_after_insert_ax_note` records only after the
+structured field commits. Invalid recipients return a REST error and no Activity. The
+stored Actor and language snapshots are immutable after first exposure.
+
+Withdrawal and permanent deletion record a URI-only Delete using the preceding ledger
+audience, never the now-withdrawn Object. Hard deletion tombstones first and aborts until
+that Delete is durable. Note writes no transport state; Bridge independently queues each
+committed outbound Activity.
+
+## Deferred
+
 - Authenticated followers/mentioned HTML and JSON-LD authorization.
 - A public local route for cached remote objects, if separately approved.
 - Outbound Quote authoring and its HTML capability.

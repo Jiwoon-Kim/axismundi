@@ -117,12 +117,15 @@ function axismundi_note_prepare_for_federation( WP_Post $post ) {
 
 /** Prepare a Note after baseline and Classic envelope fields have been saved. */
 function axismundi_note_prepare_saved_post( int $post_id, WP_Post $post ) : void {
-	if ( 'publish' !== $post->post_status ) {
+	// Gutenberg commits the structured envelope after save_post. Preparing here
+	// would freeze inherited defaults before the user's REST fields arrive.
+	if ( 'publish' !== $post->post_status || ( function_exists( 'axismundi_note_is_rest_write' ) && axismundi_note_is_rest_write() ) ) {
 		return;
 	}
 	$result = axismundi_note_prepare_for_federation( $post );
-	if ( is_wp_error( $result ) && is_admin() ) {
-		set_transient( 'axismundi_note_error_' . get_current_user_id(), $result->get_error_message(), MINUTE_IN_SECONDS );
+	if ( is_wp_error( $result ) ) {
+		/** @param WP_Error $result @param WP_Post $post Failed Note federation preparation. */
+		do_action( 'axismundi_note_prepare_failed', $result, $post );
 	}
 }
 add_action( 'save_post_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_prepare_saved_post', 20, 2 );

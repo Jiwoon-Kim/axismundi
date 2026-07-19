@@ -16,7 +16,7 @@
  * @package AxismundiActivities
  *
  * Phase 3 implements the immutable Activity ledger, social relation materialization,
- * Follow, Like, and personal Announce controls, Core Post Create recording, public-safe collection queries, and a read-only administrator log. It creates no public
+ * Follow, Like, and personal Announce controls, local Object lifecycle recording, public-safe collection queries, and a read-only administrator log. It creates no public
  * Activity route, scheduled event, notification, signature, delivery queue, or
  * network request. Reply remains deferred until the Notes CPT contract is established.
  */
@@ -27,6 +27,7 @@ const AXISMUNDI_ACTIVITIES_VERSION = '0.0.20';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/audience.php';
+require_once __DIR__ . '/includes/object-lifecycle.php';
 require_once __DIR__ . '/includes/relations.php';
 require_once __DIR__ . '/includes/quote-authorizations.php';
 require_once __DIR__ . '/includes/quote-requests.php';

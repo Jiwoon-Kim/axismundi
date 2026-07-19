@@ -12,6 +12,30 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** @var bool Request-local guard while the Note REST controller owns a write. */
+$GLOBALS['axismundi_note_rest_write'] = false;
+
+/** Mark internal and HTTP REST writes before wp_insert_post fires its callbacks. */
+function axismundi_note_mark_rest_write( $prepared_post, WP_REST_Request $request ) {
+	$GLOBALS['axismundi_note_rest_write'] = true;
+	return $prepared_post;
+}
+add_filter( 'rest_pre_insert_' . AXISMUNDI_NOTE_POST_TYPE, 'axismundi_note_mark_rest_write', 1, 2 );
+
+/** Clear the request-local guard even when an additional-field callback fails. */
+function axismundi_note_clear_rest_write( $response, array $handler, WP_REST_Request $request ) {
+	if ( preg_match( '#^/wp/v2/' . preg_quote( AXISMUNDI_NOTE_POST_TYPE, '#' ) . '(?:/|$)#', $request->get_route() ) ) {
+		$GLOBALS['axismundi_note_rest_write'] = false;
+	}
+	return $response;
+}
+add_filter( 'rest_request_after_callbacks', 'axismundi_note_clear_rest_write', 100, 3 );
+
+/** Whether a complete Note REST write currently owns persistence. */
+function axismundi_note_is_rest_write() : bool {
+	return ! empty( $GLOBALS['axismundi_note_rest_write'] ) || wp_is_serving_rest_request();
+}
+
 /** Register the single structured envelope field on the Note REST resource. */
 function axismundi_note_register_rest_field() : void {
 	register_rest_field(
@@ -31,7 +55,19 @@ function axismundi_note_register_rest_field() : void {
 					return new WP_Error( 'ax_note_forbidden', __( 'You cannot edit this Note.', 'axismundi-note' ), array( 'status' => 403 ) );
 				}
 				$result = axismundi_note_save_envelope( $post->ID, $value );
-				return is_wp_error( $result ) ? $result : true;
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
+				// The additional-field callback can return a real REST error before
+				// rest_after_insert records an Activity, so unresolved recipients never
+				// look like a successful federated publication in the editor.
+				if ( 'publish' === $post->post_status && function_exists( 'axismundi_note_lifecycle_object' ) ) {
+					$ready = axismundi_note_lifecycle_object( $post );
+					if ( is_wp_error( $ready ) ) {
+						return $ready;
+					}
+				}
+				return true;
 			},
 			'schema'          => array(
 				'type'       => 'object',

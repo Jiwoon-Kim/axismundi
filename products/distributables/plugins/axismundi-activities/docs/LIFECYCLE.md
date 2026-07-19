@@ -13,6 +13,13 @@ and delivery-failed are deliberately absent from Activity lifecycle:
 Undo is itself an Activity whose `object_uri` points to the original Activity URI. Undoing an
 Undo may restore the original Activity's effective state when the domain transition is valid.
 
+Local Object products submit a complete finalized Object snapshot at a committed authoring
+boundary. The first snapshot, or the first after Delete, records Create. A snapshot that differs
+from the immediately preceding Create/Update records Update; an identical callback returns that
+existing Activity. Create and Update embed the immutable Object snapshot so deduplication follows
+representation semantics, including ordered attachments, while a later return to an older state
+still becomes a new event.
+
 ## 2. Delete, Gone, and Tombstone
 
 `Delete` is an Activity and does not erase prior events. Remote object cache state remains an
@@ -21,6 +28,11 @@ Object Projections concern:
 - cache expiry removes a rebuildable observation, not its canonical URI references;
 - HTTP 410 without an AS document is `gone`, not a fabricated Tombstone;
 - only an actual `type: Tombstone` document is stored as a Tombstone observation.
+
+A local Delete contains only the canonical Object URI and reuses the latest committed lifecycle
+audience. It therefore remains deliverable after the source has become private, invalid, or a
+Tombstone, without embedding withdrawn content. A repeated Delete returns the existing event;
+republishing after it starts a new Create generation.
 
 ## 3. Hooks
 

@@ -26,8 +26,14 @@ Notes as ActivityStreams JSON-LD; followers-only and mentioned-only Notes fail
 closed for anonymous requests. The same URI has a plugin-owned human-readable
 block template: active public Notes return 200, concealed or unknown Notes return
 404, and deleted Notes return a privacy-minimal 410 Tombstone. Active public
-views expose Like and Boost controls while Quote and the Create, Update, and
-Delete lifecycle remain later increments.
+views expose Like and Boost controls while Quote remains a later increment.
+
+Publishing records one immutable Create with the complete committed Note Object.
+Later representation changes record Update only when that snapshot changes;
+withdrawal records a privacy-minimal URI-only Delete addressed to the preceding
+lifecycle audience. Repeated callbacks converge on the same ledger event, and a
+post-Delete republication begins a new Create generation. ActivityPub Bridge may
+deliver those committed Activities, but Note itself performs no network request.
 
 When Axismundi Media Library runs in Independent mode, the same document panel
 selects ordered attachments through its relation store. Note keeps no duplicate
@@ -47,3 +53,4 @@ later Delete Activity and Tombstone projection.
 * Project public Notes and deleted Tombstones as ActivityStreams JSON-LD and human-readable block-template pages.
 * Add Like and Boost controls to active public Note pages without exposing private or deleted objects.
 * Add ordered Media Library attachment selection without adding an envelope column, and reuse public FEP-1311 descriptors in JSON-LD and HTML.
+* Record idempotent embedded-object Create/Update and URI-only Delete Activities from strict Note publication boundaries.

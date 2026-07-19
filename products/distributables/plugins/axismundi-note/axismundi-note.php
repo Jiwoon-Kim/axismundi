@@ -15,9 +15,8 @@
  *
  * @package AxismundiNote
  *
- * Increment 4 adds fail-closed JSON-LD and human-readable Note/Tombstone
- * representations on top of the increment 3 storage substrate. The
- * Create/Update/Delete lifecycle (#5) remains deliberately deferred. The
+ * Increment 5 records immutable Create, Update, and Delete Activities from
+ * strict committed Note snapshots. Delivery remains a Bridge concern; this
  * plugin performs no network request.
  */
 
@@ -30,6 +29,7 @@ require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/envelope.php';
 require_once __DIR__ . '/includes/attachments.php';
 require_once __DIR__ . '/includes/federation.php';
+require_once __DIR__ . '/includes/lifecycle.php';
 require_once __DIR__ . '/includes/view.php';
 require_once __DIR__ . '/includes/interactions.php';
 require_once __DIR__ . '/includes/rest.php';

@@ -212,8 +212,8 @@ function axismundi_note_author_actor_uri( WP_Post $post ) : string {
  * Create or update one Note's federation envelope from authored fields.
  *
  * The local UUID is minted once and never changes. Attribution follows the
- * current author only while the envelope is unlocked; once increment 5 records
- * the first Create it sets attribution_locked_at and the Actor URI freezes.
+	 * current author only while the envelope is unlocked; first federation exposure
+	 * sets attribution_locked_at and freezes both the Actor and language snapshot.
  * Storage is lenient (URI shape only); strict public-Actor verification is a
  * publish-boundary concern. Callers own capability and nonce checks.
  *
@@ -266,6 +266,12 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		}
 	} else {
 		$language = is_array( $existing ) ? axismundi_note_normalize_language( (string) $existing['language_tag'] ) : '';
+	}
+	if ( is_array( $existing )
+		&& ! empty( $existing['attribution_locked_at'] )
+		&& array_key_exists( 'language_tag', $fields )
+		&& ! hash_equals( (string) $existing['language_tag'], $language ) ) {
+		return new WP_Error( 'ax_note_language_locked', __( 'A federated Note keeps its original language snapshot.', 'axismundi-note' ) );
 	}
 
 	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );

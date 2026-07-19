@@ -1,6 +1,6 @@
 # FEP-1311 media renditions — locked contract
 
-> Status: **Contract locked; not built.** Covers how a Media Library attachment advertises
+> Status: **Implemented.** Covers how a Media Library attachment advertises
 > its available media versions. The Media Library rendition API, the Object Projections
 > representation transition, and the shared-folder consumer are separate increments.
 >
@@ -69,17 +69,17 @@ Satisfied simultaneously:
    dimension, pixel, and source-byte gates still apply before advertisement.
    Provider discovery is scoped so an editor-originated REST request cannot suppress the
    federation lookup; any provider editor policy is restored immediately after that lookup.
-6. **One rendition builder** serves all three roles: Attachment Single, an Article's
+6. **One rendition builder** serves all three roles: Attachment Single, an Article or Note
    `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, and `mediaType`
-   must not drift, and every role builds `url[]` by the same rules (media first, HTML last,
-   no original, dedupe, largest first). Role-dependent descriptive fields such as `name` are
-   applied by the projection layer (§5), not by the rendition builder.
+   must not drift. The standalone role serializes the resulting ladder as FEP-1311 Links;
+   an embedded role selects one interoperable scalar media URL. Role-dependent descriptive
+   fields such as `name` are applied by the projection layer (§5), not by the builder.
 7. **The rendition policy is role-dependent** — the builder is shared, the policy narrows it:
 
    | Role | Policy | Why |
    |---|---|---|
    | Standalone Attachment Single | the full ladder (max 4) | its consumer is an Axismundi peer choosing a size it can afford — the reason §1 exists |
-   | Article `attachment[]` / `preview.attachment` | **one Link, capped at 1024** | nothing in the wider fediverse selects between versions today, so extra Links are payload with no consumer; 1024 is also WordPress's own `large` default |
+   | Article/Note `attachment[]` / `preview.attachment` | **one scalar media URL, capped at 1024** | Misskey requires a string URL for embedded files and Mastodon needs one directly fetchable representation; 1024 is also WordPress's own `large` default |
 
    A policy may only **narrow**. It can never introduce the original, which is excluded
    structurally (§3.3), so a role policy cannot widen what is federated.
@@ -102,6 +102,9 @@ axismundi_media_federation_renditions( int $attachment_id, array $policy = array
 - omits an ordinary entry whose file is missing or whose `filesize` cannot be read
 - may admit an explicitly marked, trusted virtual derivative without `size`; it never
   fetches the CDN response or substitutes the source file's bytes as the derivative size
+- an embedded-only policy may ask a trusted provider for one bounded derivative based on
+  the source dimensions even when that virtual size is not persisted in attachment metadata;
+  the result still passes every host, transform, dimension, pixel, and source-byte gate
 - the existing singular `axismundi_media_feed_rendition()` remains
 
 **Object Projections serializes only.** It must never read `wp_get_attachment_metadata()`

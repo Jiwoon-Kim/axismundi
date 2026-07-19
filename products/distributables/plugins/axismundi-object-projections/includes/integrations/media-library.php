@@ -192,21 +192,20 @@ function axismundi_op_media_url_links( WP_Post $attachment, array $policy = arra
 /**
  * Rendition policy for media embedded in another object.
  *
- * Nothing in the wider fediverse selects between multiple media versions today, so an
- * embedded image advertises exactly one Link. Multiple versions exist for the standalone
- * object, whose consumer is an Axismundi peer picking a size it can afford
- * (MEDIA-RENDITIONS.md §1). Capping at 1024 also lands on WordPress's own `large` default,
- * which is what themes already render in content.
+ * Nothing in the wider fediverse reliably selects between multiple media versions today,
+ * so an embedded image advertises one scalar media URL. Multiple Link versions remain on
+ * the standalone object, whose consumer is an Axismundi peer picking a size it can afford
+ * (MEDIA-RENDITIONS.md §1). Capping at 1024 also lands on WordPress's own `large` default.
  *
  * @return array<string,mixed>
  */
 function axismundi_op_media_embedded_rendition_policy() : array {
-	return array( 'max' => 1, 'max_dimension' => 1024 );
+	return array( 'max' => 1, 'max_dimension' => 1024, 'provider_source' => true );
 }
 
 /**
  * The descriptor core: identity, type, and MIME are shared by every projection role; the
- * ordered `url[]` is built by the same rules but under a role-dependent rendition policy.
+ * rendition candidates are built by the same rules under a role-dependent policy.
  * Role-dependent descriptive members such as `name` are added by the caller
  * (MEDIA-RENDITIONS.md §5), never here.
  *
@@ -233,7 +232,7 @@ function axismundi_op_media_descriptor_core( WP_Post $attachment, array $policy 
 /**
  * Embedded media descriptor for an Article `attachment[]` or `preview.attachment`.
  *
- * FEP-1311 scopes `name` on an embedded media attachment to the alternative text, which is
+ * The embedded media attachment scopes `name` to the alternative text, which is
  * what Mastodon renders as alt. An empty alt omits `name`: a filename-like title in that
  * slot is worse than none for a screen reader.
  *
@@ -254,6 +253,11 @@ function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?arra
 		// An embedded attachment must identify a fetchable media resource. An HTML-only
 		// Image descriptor is interpreted as broken media by Mastodon and ignored by
 		// Misskey. Keep the standalone object page, but do not advertise it as media.
+		return null;
+	}
+	$selected          = reset( $media_links );
+	$descriptor['url'] = (string) ( $selected['href'] ?? '' );
+	if ( '' === $descriptor['url'] ) {
 		return null;
 	}
 	$alt = trim( (string) get_post_meta( (int) $attachment->ID, '_wp_attachment_image_alt', true ) );

@@ -71,7 +71,7 @@ try {
 		)
 	);
 	$ax_nf_post_ids[] = $post_id;
-	axismundi_note_save( $post_id, array( 'visibility' => 'public', 'sensitive' => true, 'content_warning' => 'CW' ) );
+	axismundi_note_save( $post_id, array( 'visibility' => 'public', 'sensitive' => false, 'content_warning' => '' ) );
 	axismundi_note_replace_attachments( $post_id, array( $attachment_id ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
 	$post     = get_post( $post_id );
@@ -118,8 +118,17 @@ try {
 		&& isset( $object['tag'][0]['name'], $object['tag'][0]['href'] )
 		&& $mention_uri === $object['tag'][0]['href']
 		&& true === $object['sensitive']
-		&& 'CW' === $object['dcterms:subject']
+		&& ! isset( $object['dcterms:subject'] )
 	);
+	ax_nf_assert(
+		$ax_nf_results,
+		'a sensitive attachment elevates the federated Note flag without mutating the authored envelope',
+		is_array( $envelope ) && empty( $envelope['is_sensitive'] ) && true === ( $object['sensitive'] ?? false )
+	);
+	axismundi_note_save( $post_id, array( 'sensitive' => true, 'content_warning' => 'CW' ) );
+	$warning_source = new Axismundi_Note_Source( axismundi_note_get( $post_id ), get_post( $post_id ) );
+	$warning_object = axismundi_op_transform_object( $warning_source );
+	ax_nf_assert( $ax_nf_results, 'an authored Note warning remains the top-level sensitive subject', is_array( $warning_object ) && true === $warning_object['sensitive'] && 'CW' === $warning_object['dcterms:subject'] );
 	ax_nf_assert( $ax_nf_results, 'a public Note appears in anonymous Media Library reverse provenance through the custom-route visibility seam', 1 === count( axismundi_media_relations_used_in( $attachment_id, 0 ) ) );
 
 	// An addressed-only audience remains a valid stored object but is not anonymously projectable.

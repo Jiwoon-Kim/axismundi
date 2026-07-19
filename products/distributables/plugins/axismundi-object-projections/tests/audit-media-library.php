@@ -161,17 +161,15 @@ try {
 		is_array( $image_object )
 			&& array_intersect_key( $image_object, array_flip( $core_keys ) ) === array_intersect_key( $embedded_noalt, array_flip( $core_keys ) )
 	);
-	// Outbound consumers do not select between versions, so embedded media carries exactly
-	// one media Link capped at 1024, while the standalone keeps the ladder for peers.
-	$embedded_links = (array) ( $embedded_noalt['url'] ?? array() );
-	$embedded_media = array_values( array_filter( $embedded_links, static fn( array $l ) : bool => 'text/html' !== ( $l['mediaType'] ?? '' ) ) );
+	// Wider-fediverse consumers do not select between versions. Embedded media therefore
+	// carries one fetchable URL string, while the standalone object keeps its Link ladder.
 	ax_media_projection_assert(
 		$ax_media_projection_results,
-		'embedded media advertises a single Link capped at 1024 while the standalone keeps every rendition',
-		1 === count( $embedded_media )
-			&& (int) $embedded_media[0]['width'] <= 1024 && (int) $embedded_media[0]['height'] <= 1024
-			&& 'text/html' === ( end( $embedded_links )['mediaType'] ?? '' )
-			&& count( (array) $image_object['url'] ) >= count( $embedded_links )
+		'embedded media advertises one interoperable URL string while the standalone keeps its FEP-1311 Link ladder',
+		is_string( $embedded_noalt['url'] ?? null )
+			&& false !== strpos( (string) $embedded_noalt['url'], 'projected-image-1024x768.jpg' )
+			&& is_array( $image_object['url'] ?? null )
+			&& count( $image_object['url'] ) > 1
 	);
 
 	$used_in      = axismundi_op_transform_collection( new Axismundi_OP_Media_Used_In( $image ) );

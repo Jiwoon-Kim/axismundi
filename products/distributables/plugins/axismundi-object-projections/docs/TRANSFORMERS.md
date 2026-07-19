@@ -126,8 +126,9 @@ functions and never queries its tables or private metadata schema.
 ## FEP-1311 media renditions (0.0.16)
 
 The `url` = human page + nested single media `attachment` structure described above is
-**superseded**. An attachment now emits one FEP-1311 `url` **Link array** — see
-MEDIA-RENDITIONS.md for the full contract:
+**superseded**. A standalone attachment emits one FEP-1311 `url` **Link array**, while an
+attachment embedded in an Article, Note, or preview emits one bounded scalar media URL for
+wider-fediverse interoperability. See MEDIA-RENDITIONS.md for the full contract:
 
 - Media Links first (`mediaType` / `width` / `height` / `size`), the `text/html` page **last**,
   so a naive `url[0]` consumer of an `Image` reads media rather than the page. Resolve the HTML
@@ -136,10 +137,11 @@ MEDIA-RENDITIONS.md for the full contract:
   `axismundi_media_federation_renditions()`. **The original is never advertised**; an image with
   no derivative emits the HTML Link alone. Video / audio / documents keep their existing
   single-file policy while no transcoding substrate exists.
-- `id`, `type`, `mediaType`, and the ordered `url[]` form **one shared core** across the
-  standalone Attachment, an Article's `attachment[]`, and `preview.attachment`. Only the
-  descriptive `name` diverges: the standalone keeps `post_title`; embedded media uses the image
-  **alt text** and omits `name` when alt is empty.
+- `id`, `type`, and `mediaType` form **one shared core** across the standalone Attachment,
+  Article/Note `attachment[]`, and `preview.attachment`. URL cardinality is role-dependent:
+  standalone keeps the ordered Link ladder; embedded uses its first eligible media URL as a
+  scalar string. The descriptive `name` also diverges: standalone keeps `post_title`; embedded
+  media uses the image **alt text** and omits `name` when alt is empty.
 - Object Projections **serializes only** — Media Library owns selection, and no attachment
   metadata internals are read here.
 

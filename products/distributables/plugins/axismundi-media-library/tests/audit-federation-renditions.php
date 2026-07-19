@@ -130,6 +130,43 @@ try {
 	remove_filter( 'image_downsize', $trusted_downsize, 10 );
 	remove_filter( 'jetpack_photon_override_image_downsize', $editor_override, 999999 );
 
+	$provider_source = ax_fed_attachment(
+		'image/png',
+		array(
+			'medium' => array( 'file' => 'provider.png', 'width' => 212, 'height' => 300, 'mime-type' => 'image/png', 'virtual' => true ),
+		)
+	);
+	$ax_fed_ids[] = $provider_source;
+	$provider_meta = wp_get_attachment_metadata( $provider_source );
+	$provider_meta['width'] = 724;
+	$provider_meta['height'] = 1023;
+	$provider_meta['filesize'] = 311951;
+	wp_update_attachment_metadata( $provider_source, $provider_meta );
+	$provider_url = 'https://i0.wp.com/example.test/wp-content/uploads/2026/07/provider.png?fit=724%2C1023&ssl=1';
+	$provider_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $provider_source, $provider_url ) {
+		return $provider_source === $attachment_id && is_array( $size ) && array( 724, 1023 ) === array_values( $size )
+			? array( $provider_url, 724, 1023, true )
+			: $downsize;
+	};
+	add_filter( 'image_downsize', $provider_downsize, 10, 3 );
+	$embedded_out = axismundi_media_federation_renditions( $provider_source, array( 'max' => 1, 'max_dimension' => 1024, 'provider_source' => true ) );
+	ax_fed_assert(
+		$ax_fed_results,
+		'an embedded role may select a bounded provider derivative larger than stored virtual subsizes without exposing the original',
+		1 === count( $embedded_out ) && $provider_url === $embedded_out[0]['url']
+			&& 724 === $embedded_out[0]['width'] && 1023 === $embedded_out[0]['height']
+			&& wp_get_attachment_url( $provider_source ) !== $embedded_out[0]['url']
+	);
+	$provider_meta['sizes'] = array();
+	wp_update_attachment_metadata( $provider_source, $provider_meta );
+	$provider_without_sizes = axismundi_media_federation_renditions( $provider_source, array( 'max' => 1, 'max_dimension' => 1024, 'provider_source' => true ) );
+	ax_fed_assert(
+		$ax_fed_results,
+		'an explicit embedded provider policy does not depend on a persisted subsize inventory',
+		1 === count( $provider_without_sizes ) && $provider_url === $provider_without_sizes[0]['url']
+	);
+	remove_filter( 'image_downsize', $provider_downsize, 10 );
+
 	$untrusted_url = 'https://cdn.example.test/probe.webp?width=1024';
 	$untrusted_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $untrusted_url ) {
 		return $virtual === $attachment_id && 'large' === $size ? array( $untrusted_url, 1024, 768, true ) : $downsize;

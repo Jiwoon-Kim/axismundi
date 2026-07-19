@@ -253,6 +253,12 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	$media = function_exists( 'axismundi_op_media_subject_descriptors' ) ? axismundi_op_media_subject_descriptors( $post ) : array();
 	if ( ! empty( $media['attachments'] ) ) {
 		$object['attachment'] = array_values( $media['attachments'] );
+		foreach ( $object['attachment'] as $attachment ) {
+			if ( ! empty( $attachment['sensitive'] ) ) {
+				$object['sensitive'] = true;
+				break;
+			}
+		}
 	}
 	$tags = axismundi_note_mention_tags( $post, false );
 	if ( ! empty( $tags ) ) {

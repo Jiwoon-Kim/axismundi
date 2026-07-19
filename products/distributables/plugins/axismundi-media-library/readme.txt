@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.38
+Stable tag: 0.0.39
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,12 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.39 =
+* Let an embedded-media policy select one bounded provider derivative up to 1024 pixels,
+  even when the provider does not persist that larger virtual size in attachment metadata.
+  The candidate still passes HTTPS host, transform, dimension, pixel, and source-byte gates;
+  the original file remains excluded.
 
 = 0.0.38 =
 * Keep trusted virtual rendition discovery available during Gutenberg REST saves. Jetpack

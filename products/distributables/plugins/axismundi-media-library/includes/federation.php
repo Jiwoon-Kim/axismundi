@@ -42,9 +42,10 @@ function axismundi_media_federation_rendition_policy( array $policy = array() ) 
 	$defaults = array(
 		'sizes'         => AXISMUNDI_MEDIA_FEDERATION_SIZES,
 		'max'           => AXISMUNDI_MEDIA_FEDERATION_MAX,
-		'max_bytes'     => 8388608,
-		'max_dimension' => 4096,
-		'max_pixels'    => 16000000,
+		'max_bytes'       => 8388608,
+		'max_dimension'   => 4096,
+		'max_pixels'      => 16000000,
+		'provider_source' => false,
 	);
 	$policy = array_merge( $defaults, $policy );
 	/**
@@ -130,10 +131,10 @@ function axismundi_media_federation_allow_provider_downsize( $override ) : bool 
  * Resolve one image size without inheriting an editor-only provider suppression.
  *
  * @param int    $attachment_id Attachment.
- * @param string $size          Registered size name.
+ * @param string|int[] $size    Registered size name or bounded dimensions.
  * @return array{0:string,1:int,2:int,3:bool}|false
  */
-function axismundi_media_federation_image_downsize( int $attachment_id, string $size ) {
+function axismundi_media_federation_image_downsize( int $attachment_id, $size ) {
 	add_filter( 'jetpack_photon_override_image_downsize', 'axismundi_media_federation_allow_provider_downsize', PHP_INT_MAX, 1 );
 	try {
 		return wp_get_attachment_image_src( $attachment_id, $size );
@@ -196,12 +197,12 @@ function axismundi_media_federation_virtual_rendition_url( int $attachment_id, a
  * Build one advertisable rendition, or null when it fails any structural rule.
  *
  * @param int                 $attachment_id Attachment.
- * @param string              $size          Registered size name.
+ * @param string|int[]        $size          Registered size name or bounded dimensions.
  * @param array<string,mixed> $info          One `sizes` entry.
  * @param array<string,mixed> $policy        Resolved policy.
  * @return array{url:string,mediaType:string,width:int,height:int,size?:int}|null
  */
-function axismundi_media_federation_rendition_entry( int $attachment_id, string $size, array $info, array $policy ) : ?array {
+function axismundi_media_federation_rendition_entry( int $attachment_id, $size, array $info, array $policy ) : ?array {
 	$downsize    = axismundi_media_federation_image_downsize( $attachment_id, $size );
 	$virtual_url = axismundi_media_federation_virtual_rendition_url(
 		$attachment_id,
@@ -280,7 +281,7 @@ function axismundi_media_federation_renditions( int $attachment_id, array $polic
 		return array();
 	}
 	$meta = wp_get_attachment_metadata( $attachment_id );
-	if ( empty( $meta['sizes'] ) || ! is_array( $meta['sizes'] ) ) {
+	if ( ! is_array( $meta ) ) {
 		return array();
 	}
 
@@ -288,10 +289,28 @@ function axismundi_media_federation_renditions( int $attachment_id, array $polic
 	$entries    = array();
 	foreach ( (array) $policy['sizes'] as $size ) {
 		$size = (string) $size;
-		if ( empty( $meta['sizes'][ $size ] ) || ! is_array( $meta['sizes'][ $size ] ) ) {
+		if ( empty( $meta['sizes'] ) || ! is_array( $meta['sizes'] ) || empty( $meta['sizes'][ $size ] ) || ! is_array( $meta['sizes'][ $size ] ) ) {
 			continue;
 		}
 		$entry = axismundi_media_federation_rendition_entry( $attachment_id, $size, $meta['sizes'][ $size ], $policy );
+		if ( null !== $entry ) {
+			$entries[] = $entry;
+		}
+	}
+	if ( ! empty( $policy['provider_source'] ) && ! empty( $meta['width'] ) && ! empty( $meta['height'] ) ) {
+		$dimensions = wp_constrain_dimensions(
+			(int) $meta['width'],
+			(int) $meta['height'],
+			(int) $policy['max_dimension'],
+			(int) $policy['max_dimension']
+		);
+		$provider_info = array(
+			'width'     => (int) ( $dimensions[0] ?? 0 ),
+			'height'    => (int) ( $dimensions[1] ?? 0 ),
+			'mime-type' => (string) get_post_mime_type( $attachment_id ),
+			'virtual'   => true,
+		);
+		$entry = axismundi_media_federation_rendition_entry( $attachment_id, $dimensions, $provider_info, $policy );
 		if ( null !== $entry ) {
 			$entries[] = $entry;
 		}

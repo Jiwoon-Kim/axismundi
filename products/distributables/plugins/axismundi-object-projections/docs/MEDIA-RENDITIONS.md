@@ -67,6 +67,8 @@ Satisfied simultaneously:
    that explicitly marks the size virtual, and must use an allowlisted image-service host.
    Runtime URLs remain candidates, not authority: trusted-host, dimension-transform,
    dimension, pixel, and source-byte gates still apply before advertisement.
+   Provider discovery is scoped so an editor-originated REST request cannot suppress the
+   federation lookup; any provider editor policy is restored immediately after that lookup.
 6. **One rendition builder** serves all three roles: Attachment Single, an Article's
    `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, and `mediaType`
    must not drift, and every role builds `url[]` by the same rules (media first, HTML last,

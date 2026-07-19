@@ -76,6 +76,46 @@ try {
 	$invalid = axismundi_note_save_envelope( $post_id, array( 'visibility' => 'followers', 'attachments' => array( 99999999 ) ) );
 	ax_na_assert( $ax_na_results, 'an invalid attachment rejects the whole structured save before changing envelope or relations', is_wp_error( $invalid ) && 'public' === axismundi_note_get_envelope( $post_id )['visibility'] && array( $two, $one ) === axismundi_note_attachment_ids( $post_id ) );
 
+	$virtual_id = (int) wp_insert_attachment(
+		array(
+			'post_title'     => 'Editor REST virtual image',
+			'post_status'    => 'inherit',
+			'post_author'    => $uid,
+			'post_mime_type' => 'image/webp',
+			'guid'           => home_url( '/wp-content/uploads/2026/07/ax-note-virtual.webp' ),
+		),
+		'2026/07/ax-note-virtual.webp'
+	);
+	$ax_na_attach_ids[] = $virtual_id;
+	wp_update_attachment_metadata(
+		$virtual_id,
+		array(
+			'file'     => '2026/07/ax-note-virtual.webp',
+			'width'    => 1200,
+			'height'   => 900,
+			'filesize' => 250000,
+			'sizes'    => array(
+				'large' => array( 'file' => 'ax-note-virtual.webp', 'width' => 1024, 'height' => 768, 'mime-type' => 'image/webp', 'virtual' => true ),
+			),
+		)
+	);
+	update_post_meta( $virtual_id, '_ax_media_visibility', 'public' );
+	$photon_url = 'https://i0.wp.com/example.test/wp-content/uploads/2026/07/ax-note-virtual.webp?fit=1024%2C768&ssl=1';
+	$virtual_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual_id, $photon_url ) {
+		if ( apply_filters( 'jetpack_photon_override_image_downsize', false, compact( 'attachment_id', 'size' ) ) ) {
+			return $downsize;
+		}
+		return $virtual_id === $attachment_id && 'large' === $size ? array( $photon_url, 1024, 768, true ) : $downsize;
+	};
+	$editor_override = static fn() : bool => true;
+	add_filter( 'image_downsize', $virtual_downsize, 10, 3 );
+	add_filter( 'jetpack_photon_override_image_downsize', $editor_override, 999999 );
+	$virtual_saved = axismundi_note_save_envelope( $post_id, array( 'attachments' => array( $virtual_id ) ) );
+	ax_na_assert( $ax_na_results, 'a Gutenberg REST save accepts a trusted virtual rendition despite the provider editor override', ! is_wp_error( $virtual_saved ) && array( $virtual_id ) === axismundi_note_attachment_ids( $post_id ) );
+	remove_filter( 'image_downsize', $virtual_downsize, 10 );
+	remove_filter( 'jetpack_photon_override_image_downsize', $editor_override, 999999 );
+	axismundi_note_save_envelope( $post_id, array( 'visibility' => 'public', 'attachments' => array( $two, $one ) ) );
+
 	$svg_id = (int) wp_insert_attachment(
 		array(
 			'post_title'     => 'HTML-only SVG',

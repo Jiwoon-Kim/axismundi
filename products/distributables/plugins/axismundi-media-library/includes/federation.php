@@ -111,6 +111,38 @@ function axismundi_media_federation_source_bytes( int $attachment_id ) : int {
 }
 
 /**
+ * Keep a provider downsize available for this federation-only lookup.
+ *
+ * Jetpack deliberately disables Photon image downsize for editor-originated REST requests
+ * through `jetpack_photon_override_image_downsize`. That is correct for editor rendering,
+ * but a Note save uses downsize only to validate and record a public federation descriptor.
+ * Override the override for this one synchronous lookup, then remove our filter immediately.
+ *
+ * @param mixed $override Existing provider override.
+ * @return bool
+ */
+function axismundi_media_federation_allow_provider_downsize( $override ) : bool {
+	unset( $override );
+	return false;
+}
+
+/**
+ * Resolve one image size without inheriting an editor-only provider suppression.
+ *
+ * @param int    $attachment_id Attachment.
+ * @param string $size          Registered size name.
+ * @return array{0:string,1:int,2:int,3:bool}|false
+ */
+function axismundi_media_federation_image_downsize( int $attachment_id, string $size ) {
+	add_filter( 'jetpack_photon_override_image_downsize', 'axismundi_media_federation_allow_provider_downsize', PHP_INT_MAX, 1 );
+	try {
+		return wp_get_attachment_image_src( $attachment_id, $size );
+	} finally {
+		remove_filter( 'jetpack_photon_override_image_downsize', 'axismundi_media_federation_allow_provider_downsize', PHP_INT_MAX );
+	}
+}
+
+/**
  * Validate a virtual image derivative without fetching it.
  *
  * Jetpack Photon records virtual subsizes in attachment metadata because no local subsize
@@ -170,7 +202,7 @@ function axismundi_media_federation_virtual_rendition_url( int $attachment_id, a
  * @return array{url:string,mediaType:string,width:int,height:int,size?:int}|null
  */
 function axismundi_media_federation_rendition_entry( int $attachment_id, string $size, array $info, array $policy ) : ?array {
-	$downsize    = wp_get_attachment_image_src( $attachment_id, $size );
+	$downsize    = axismundi_media_federation_image_downsize( $attachment_id, $size );
 	$virtual_url = axismundi_media_federation_virtual_rendition_url(
 		$attachment_id,
 		$info,
@@ -296,7 +328,7 @@ function axismundi_media_federation_rendition_diagnostics( int $attachment_id ) 
 	$sizes  = array();
 	foreach ( (array) $policy['sizes'] as $size ) {
 		$info = is_array( $meta ) && isset( $meta['sizes'][ $size ] ) && is_array( $meta['sizes'][ $size ] ) ? $meta['sizes'][ $size ] : array();
-		$downsize = $info ? wp_get_attachment_image_src( $attachment_id, (string) $size ) : false;
+		$downsize = $info ? axismundi_media_federation_image_downsize( $attachment_id, (string) $size ) : false;
 		$sizes[ (string) $size ] = array(
 			'exists'       => ! empty( $info ),
 			'virtual'      => $info['virtual'] ?? null,

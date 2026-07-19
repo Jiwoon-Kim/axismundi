@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.37
+Stable tag: 0.0.38
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: media, attachments
@@ -40,6 +40,12 @@ dedicated attachment.html template.
    import a FileBird CSV export without overwriting existing Axismundi assignments.
 
 == Changelog ==
+
+= 0.0.38 =
+* Keep trusted virtual rendition discovery available during Gutenberg REST saves. Jetpack
+  suppresses Photon image downsize when the editor request header is present; Axismundi now
+  lifts that suppression only for its synchronous federation lookup and immediately restores
+  the editor policy.
 
 = 0.0.37 =
 * Resolve virtual rendition URLs through WordPress image downsize when raw attachment

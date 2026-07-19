@@ -105,19 +105,30 @@ try {
 	$virtual_meta['filesize'] = 250000;
 	wp_update_attachment_metadata( $virtual, $virtual_meta );
 	$trusted_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $photon_url ) {
+		if ( apply_filters( 'jetpack_photon_override_image_downsize', false, compact( 'attachment_id', 'size' ) ) ) {
+			return $downsize;
+		}
 		return $virtual === $attachment_id && 'large' === $size ? array( $photon_url, 1024, 768, true ) : $downsize;
 	};
+	$editor_override = static fn() : bool => true;
 	add_filter( 'image_downsize', $trusted_downsize, 10, 3 );
+	add_filter( 'jetpack_photon_override_image_downsize', $editor_override, 999999 );
 	$virtual_out = axismundi_media_federation_renditions( $virtual );
 	ax_fed_assert(
 		$ax_fed_results,
-		'a trusted runtime provider URL is accepted when raw metadata only marks the size virtual',
+		'a trusted runtime provider URL remains available inside an editor-originated REST save',
 		1 === count( $virtual_out ) && $photon_url === $virtual_out[0]['url']
 			&& 'image/webp' === $virtual_out[0]['mediaType'] && ! isset( $virtual_out[0]['size'] )
+	);
+	ax_fed_assert(
+		$ax_fed_results,
+		'the federation lookup restores the provider editor override after its scoped downsize',
+		true === apply_filters( 'jetpack_photon_override_image_downsize', false )
 	);
 	$virtual_capped = axismundi_media_federation_renditions( $virtual, array( 'max_bytes' => 200000 ) );
 	ax_fed_assert( $ax_fed_results, 'a virtual rendition is rejected when its source exceeds the byte ceiling', array() === $virtual_capped );
 	remove_filter( 'image_downsize', $trusted_downsize, 10 );
+	remove_filter( 'jetpack_photon_override_image_downsize', $editor_override, 999999 );
 
 	$untrusted_url = 'https://cdn.example.test/probe.webp?width=1024';
 	$untrusted_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $untrusted_url ) {

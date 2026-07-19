@@ -146,6 +146,25 @@ function axismundi_note_validate_mentions( $value ) {
 	return $uris;
 }
 
+/**
+ * Validate one authored quote target, failing closed on a non-empty invalid URI.
+ *
+ * Unlike in_reply_to/context, an invalid quote target is never silently
+ * dropped: it authorizes a lifecycle branch (self/local-other/remote consent),
+ * so a malformed value must never be mistaken for "no quote" and skip the
+ * QuoteRequest gate. An explicit empty string is a deliberate clear.
+ *
+ * @return string|WP_Error
+ */
+function axismundi_note_validate_quote_target( $value ) {
+	$raw = is_scalar( $value ) ? trim( (string) $value ) : '';
+	if ( '' === $raw ) {
+		return '';
+	}
+	$uri = axismundi_note_sanitize_uri( $raw );
+	return '' !== $uri ? $uri : new WP_Error( 'ax_note_quote_target_uri', __( 'The quote target must be a valid absolute URI.', 'axismundi-note' ) );
+}
+
 /** Fetch one envelope row by its owning post id. */
 function axismundi_note_get( int $post_id ) : ?array {
 	global $wpdb;
@@ -274,12 +293,20 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		return new WP_Error( 'ax_note_language_locked', __( 'A federated Note keeps its original language snapshot.', 'axismundi-note' ) );
 	}
 
-	$sensitive    = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
-	$in_reply_to  = axismundi_note_sanitize_uri( $fields['in_reply_to_uri'] ?? ( $existing['in_reply_to_uri'] ?? '' ) );
-	$context      = axismundi_note_sanitize_uri( $fields['context_uri'] ?? ( $existing['context_uri'] ?? '' ) );
-	$quote_target = axismundi_note_sanitize_uri( $fields['quote_target_uri'] ?? ( $existing['quote_target_uri'] ?? '' ) );
-	$warning      = mb_substr( sanitize_text_field( (string) ( $fields['content_warning'] ?? ( $existing['content_warning'] ?? '' ) ) ), 0, 500 );
-	$now          = current_time( 'mysql', true );
+	if ( array_key_exists( 'quote_target_uri', $fields ) ) {
+		$quote_target = axismundi_note_validate_quote_target( $fields['quote_target_uri'] );
+		if ( is_wp_error( $quote_target ) ) {
+			return $quote_target;
+		}
+	} else {
+		$quote_target = (string) ( $existing['quote_target_uri'] ?? '' );
+	}
+
+	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
+	$in_reply_to = axismundi_note_sanitize_uri( $fields['in_reply_to_uri'] ?? ( $existing['in_reply_to_uri'] ?? '' ) );
+	$context     = axismundi_note_sanitize_uri( $fields['context_uri'] ?? ( $existing['context_uri'] ?? '' ) );
+	$warning     = mb_substr( sanitize_text_field( (string) ( $fields['content_warning'] ?? ( $existing['content_warning'] ?? '' ) ) ), 0, 500 );
+	$now         = current_time( 'mysql', true );
 
 	$data = array(
 		'post_id'                 => $post_id,

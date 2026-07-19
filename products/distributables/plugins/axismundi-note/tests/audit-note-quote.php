@@ -8,11 +8,14 @@
 defined( 'ABSPATH' ) || exit( 1 );
 
 global $wpdb;
-$ax_note_quote_results   = array();
-$ax_note_quote_post_ids  = array();
-$ax_note_quote_user_ids  = array();
-$ax_note_quote_actor_ids = array();
-$ax_note_quote_remote    = '';
+$ax_note_quote_results      = array();
+$ax_note_quote_post_ids     = array();
+$ax_note_quote_user_ids     = array();
+$ax_note_quote_actor_ids    = array();
+$ax_note_quote_remote       = '';
+$ax_note_quote_spoof_remote = '';
+$ax_note_quote_shadow_table = '';
+$ax_note_quote_real_prefix  = $wpdb->prefix;
 $GLOBALS['ax_note_quote_http'] = 0;
 
 /** @param bool[] $results Results. */
@@ -57,6 +60,98 @@ try {
 	$quote_key = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'quote_target_uri_hash'", ARRAY_A );
 	ax_note_quote_assert( $ax_note_quote_results, 'schema v2 installs the quote target columns and a supporting index', $installed && in_array( 'quote_target_uri', $columns, true ) && in_array( 'quote_target_uri_hash', $columns, true ) && ! empty( $quote_key ) );
 
+	// P2: exercise the real v1->v2 ALTER path against a populated table, not just a
+	// fresh install -- a hand-built v1-shaped table (the schema before this slice,
+	// with no quote columns) carrying one existing row, then upgraded in place.
+	$shadow_prefix = $ax_note_quote_real_prefix . 'axnq_shadow_' . strtolower( wp_generate_password( 6, false, false ) ) . '_';
+	$wpdb->prefix  = $shadow_prefix;
+	$shadow_table  = axismundi_note_table();
+	$ax_note_quote_shadow_table = $shadow_table;
+	$charset       = $wpdb->get_charset_collate();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway v1-shaped fixture table.
+	$wpdb->query(
+		"CREATE TABLE {$shadow_table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			post_id bigint(20) unsigned NOT NULL,
+			local_uuid char(36) NOT NULL,
+			actor_uri text NOT NULL,
+			actor_uri_hash char(64) NOT NULL,
+			visibility varchar(16) NOT NULL,
+			language_tag varchar(35) NOT NULL,
+			in_reply_to_uri text NOT NULL,
+			in_reply_to_uri_hash char(64) NOT NULL,
+			context_uri text NOT NULL,
+			context_uri_hash char(64) NOT NULL,
+			is_sensitive tinyint(1) unsigned NOT NULL DEFAULT 0,
+			content_warning varchar(500) NOT NULL DEFAULT '',
+			mention_actor_uris_json longtext NOT NULL,
+			object_status varchar(16) NOT NULL DEFAULT 'active',
+			attribution_locked_at datetime NULL,
+			deleted_at datetime NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY post_id (post_id),
+			UNIQUE KEY local_uuid (local_uuid),
+			KEY actor_uri_hash (actor_uri_hash),
+			KEY in_reply_to_uri_hash (in_reply_to_uri_hash),
+			KEY context_uri_hash (context_uri_hash),
+			KEY object_status (object_status)
+		) ENGINE=InnoDB {$charset}"
+	);
+	$fixture_uuid  = wp_generate_uuid4();
+	$fixture_actor = 'https://example.com/actors/pre-migration';
+	$now           = current_time( 'mysql', true );
+	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- throwaway v1-shaped fixture row.
+		$shadow_table,
+		array(
+			'post_id'                 => 999001,
+			'local_uuid'              => $fixture_uuid,
+			'actor_uri'               => $fixture_actor,
+			'actor_uri_hash'          => hash( 'sha256', $fixture_actor ),
+			'visibility'              => 'public',
+			'language_tag'            => 'en',
+			'in_reply_to_uri'         => '',
+			'in_reply_to_uri_hash'    => '',
+			'context_uri'             => '',
+			'context_uri_hash'        => '',
+			'is_sensitive'            => 0,
+			'content_warning'         => '',
+			'mention_actor_uris_json' => '[]',
+			'object_status'           => 'active',
+			'created_at'              => $now,
+			'updated_at'              => $now,
+		)
+	);
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway v1-shaped fixture probe.
+	$pre_row_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$shadow_table} WHERE local_uuid = %s", $fixture_uuid ) );
+
+	$upgraded = axismundi_note_install_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway v1-shaped fixture probe.
+	$post_upgrade_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$shadow_table} WHERE local_uuid = %s", $fixture_uuid ), ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway v1-shaped fixture probe.
+	$post_columns = $wpdb->get_col( "SHOW COLUMNS FROM {$shadow_table}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway v1-shaped fixture probe.
+	$post_quote_key = $wpdb->get_results( "SHOW INDEX FROM {$shadow_table} WHERE Key_name = 'quote_target_uri_hash'", ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway shadow teardown.
+	$wpdb->query( "DROP TABLE IF EXISTS {$shadow_table}" );
+	$ax_note_quote_shadow_table = '';
+	$wpdb->prefix = $ax_note_quote_real_prefix;
+
+	ax_note_quote_assert(
+		$ax_note_quote_results,
+		'a v1 table with an existing row upgrades to v2 in place, preserving the row and adding the quote columns',
+		1 === $pre_row_count
+		&& $upgraded
+		&& is_array( $post_upgrade_row )
+		&& $fixture_uuid === $post_upgrade_row['local_uuid']
+		&& in_array( 'quote_target_uri', $post_columns, true )
+		&& in_array( 'quote_target_uri_hash', $post_columns, true )
+		&& ! empty( $post_quote_key )
+		&& '' === (string) ( $post_upgrade_row['quote_target_uri'] ?? '' )
+		&& '' === (string) $post_upgrade_row['quote_target_uri_hash']
+	);
+
 	$author = ax_note_quote_make_author( $ax_note_quote_user_ids, $ax_note_quote_actor_ids );
 	$other  = ax_note_quote_make_author( $ax_note_quote_user_ids, $ax_note_quote_actor_ids );
 	$actor       = $author instanceof WP_User ? axismundi_actors_get_for_user( $author->ID ) : null;
@@ -92,8 +187,18 @@ try {
 	$absent = axismundi_note_save( $quoting_id, array( 'visibility' => 'public' ) );
 	ax_note_quote_assert( $ax_note_quote_results, 'an absent quote_target_uri field preserves the stored value', is_array( $absent ) && $own_uri === $absent['quote_target_uri'] );
 
-	$cleared = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => 'not-a-uri' ) );
-	ax_note_quote_assert( $ax_note_quote_results, 'a malformed quote target sanitizes to empty rather than failing the save, matching in_reply_to/context', is_array( $cleared ) && '' === $cleared['quote_target_uri'] && '' === $cleared['quote_target_uri_hash'] );
+	// P1: an explicitly invalid, non-empty quote target must fail closed rather than
+	// silently clearing -- the author's expressed quote intent must never be dropped
+	// into an ungated ordinary Create.
+	$rejected = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => 'not-a-uri' ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'an explicitly invalid quote target fails closed instead of silently clearing it', is_wp_error( $rejected ) && 'ax_note_quote_target_uri' === $rejected->get_error_code() && $own_uri === axismundi_note_get( $quoting_id )['quote_target_uri'] );
+
+	// An explicit empty string is a deliberate clear, distinct from the malformed case above.
+	$cleared = axismundi_note_save( $quoting_id, array( 'quote_target_uri' => '' ) );
+	ax_note_quote_assert( $ax_note_quote_results, 'an explicit empty quote target clears the stored value', is_array( $cleared ) && '' === $cleared['quote_target_uri'] && '' === $cleared['quote_target_uri_hash'] );
+
+	// Restore a target for the classification checks below.
+	axismundi_note_save( $quoting_id, array( 'quote_target_uri' => $own_uri ) );
 
 	// Classification: self.
 	$self_class = axismundi_note_quote_classify( $own_uri, $actor_uri );
@@ -118,6 +223,21 @@ try {
 	$remote_class = axismundi_note_quote_classify( $ax_note_quote_remote, $actor_uri );
 	ax_note_quote_assert( $ax_note_quote_results, 'quoting a cached remote object classifies as remote', is_array( $stored_remote ) && AXISMUNDI_NOTE_QUOTE_REMOTE === $remote_class );
 
+	// P1: a remote-cache row claiming attributedTo = a real local Actor URI must never
+	// earn self/local-other -- that is a spoofed or stale observation, not evidence the
+	// object is actually ours, so it must fail closed instead of skipping QuoteRequest.
+	$ax_note_quote_spoof_remote = 'https://remote.example/objects/spoofed-' . strtolower( wp_generate_password( 6, false, false ) );
+	$stored_spoof = axismundi_op_remote_object_store(
+		array(
+			'id'           => $ax_note_quote_spoof_remote,
+			'type'         => 'Note',
+			'attributedTo' => $other_actor_uri,
+			'content'      => 'Spoofed remote note claiming local attribution.',
+		)
+	);
+	$spoof_class = axismundi_note_quote_classify( $ax_note_quote_spoof_remote, $actor_uri );
+	ax_note_quote_assert( $ax_note_quote_results, 'a remote-cache object claiming a local Actor URI fails closed rather than classifying as local', is_array( $stored_spoof ) && is_wp_error( $spoof_class ) && 'ax_note_quote_origin_mismatch' === $spoof_class->get_error_code() );
+
 	// Classification: unresolved (never cached and not a local Note).
 	$unknown_class = axismundi_note_quote_classify( 'https://remote.example/objects/never-seen', $actor_uri );
 	ax_note_quote_assert( $ax_note_quote_results, 'an uncached, unowned target is unresolved rather than misclassified', is_wp_error( $unknown_class ) && 'ax_note_quote_unresolved' === $unknown_class->get_error_code() );
@@ -129,8 +249,16 @@ try {
 	ax_note_quote_assert( $ax_note_quote_results, 'quote storage and classification perform no HTTP request', 0 === $GLOBALS['ax_note_quote_http'] );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_note_quote_http' );
+	$wpdb->prefix = $ax_note_quote_real_prefix;
+	if ( '' !== $ax_note_quote_shadow_table ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway shadow teardown.
+		$wpdb->query( "DROP TABLE IF EXISTS {$ax_note_quote_shadow_table}" );
+	}
 	if ( '' !== $ax_note_quote_remote && function_exists( 'axismundi_op_remote_object_delete' ) ) {
 		axismundi_op_remote_object_delete( $ax_note_quote_remote );
+	}
+	if ( '' !== $ax_note_quote_spoof_remote && function_exists( 'axismundi_op_remote_object_delete' ) ) {
+		axismundi_op_remote_object_delete( $ax_note_quote_spoof_remote );
 	}
 	foreach ( array_unique( $ax_note_quote_post_ids ) as $pid ) {
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $pid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

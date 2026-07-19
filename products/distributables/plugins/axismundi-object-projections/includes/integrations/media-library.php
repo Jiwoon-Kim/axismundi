@@ -242,6 +242,17 @@ function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?arra
 	if ( null === $descriptor ) {
 		return null;
 	}
+	$media_links = array_filter(
+		(array) $descriptor['url'],
+		static fn( array $link ) : bool => 'text/html' !== (string) ( $link['mediaType'] ?? '' )
+			&& '' !== (string) ( $link['href'] ?? '' )
+	);
+	if ( empty( $media_links ) ) {
+		// An embedded attachment must identify a fetchable media resource. An HTML-only
+		// Image descriptor is interpreted as broken media by Mastodon and ignored by
+		// Misskey. Keep the standalone object page, but do not advertise it as media.
+		return null;
+	}
 	$alt = trim( (string) get_post_meta( (int) $attachment->ID, '_wp_attachment_image_alt', true ) );
 	if ( '' !== $alt ) {
 		$descriptor['name'] = sanitize_text_field( wp_strip_all_tags( $alt ) );

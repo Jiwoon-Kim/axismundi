@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Note
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-note
  * Description:       Note-owned local object container with a private authoring CPT, federation envelope, and fail-closed ActivityStreams Note projection.
- * Version:           0.0.1
+ * Version:           0.0.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -22,7 +22,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NOTE_VERSION = '0.0.1';
+const AXISMUNDI_NOTE_VERSION = '0.0.2';
 
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';

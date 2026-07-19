@@ -17,6 +17,18 @@
 	var useDispatch = wp.data.useDispatch;
 	var POST_TYPE = 'ax_note';
 
+	wp.domReady( function () {
+		if ( POST_TYPE !== wp.data.select( 'core/editor' ).getCurrentPostType() ) {
+			return;
+		}
+		[ 'core/editor', 'core/edit-post' ].forEach( function ( store ) {
+			var actions = wp.data.dispatch( store );
+			if ( actions && 'function' === typeof actions.removeEditorPanel ) {
+				actions.removeEditorPanel( 'taxonomy-panel-category' );
+			}
+		} );
+	} );
+
 	var VISIBILITY = [
 		{ label: __( 'Public', 'axismundi-note' ), value: 'public' },
 		{ label: __( 'Quiet public', 'axismundi-note' ), value: 'unlisted' },

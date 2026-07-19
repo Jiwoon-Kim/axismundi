@@ -15,6 +15,7 @@ function axismundi_note_attachments_available() : bool {
 	return function_exists( 'axismundi_media_relations_replace' )
 		&& function_exists( 'axismundi_media_relations_for_subject' )
 		&& function_exists( 'axismundi_op_media_library_available' )
+		&& function_exists( 'axismundi_op_media_attachment_descriptor' )
 		&& axismundi_op_media_library_available();
 }
 
@@ -59,6 +60,9 @@ function axismundi_note_validate_attachment_ids( int $post_id, $value ) {
 			|| 'trash' === $attachment->post_status
 			|| ! current_user_can( 'edit_post', $id ) ) {
 			return new WP_Error( 'ax_note_attachment', __( 'A selected attachment is unavailable or cannot be used.', 'axismundi-note' ) );
+		}
+		if ( null === axismundi_op_media_attachment_descriptor( $attachment ) ) {
+			return new WP_Error( 'ax_note_attachment_rendition', __( 'Every Note attachment must have a federatable media rendition.', 'axismundi-note' ) );
 		}
 		$ids[ $id ] = $id;
 	}

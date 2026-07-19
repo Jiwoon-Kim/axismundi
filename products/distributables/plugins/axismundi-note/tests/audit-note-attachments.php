@@ -14,6 +14,7 @@ $ax_na_attach_ids  = array();
 $ax_na_user_ids    = array();
 $ax_na_previous_user = get_current_user_id();
 $ax_na_previous_mode = get_option( AXISMUNDI_MEDIA_MODE_OPTION, AXISMUNDI_MEDIA_MODE_DEFAULT );
+$ax_na_actor_filter  = static fn() : string => 'https://example.com/actors/note-author';
 
 /** @param bool[] $results Results. */
 function ax_na_assert( array &$results, string $label, bool $condition ) : void {
@@ -27,11 +28,35 @@ try {
 	$uid = (int) wp_insert_user( array( 'user_login' => 'ax_na_' . strtolower( wp_generate_password( 8, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'administrator' ) );
 	$ax_na_user_ids[] = $uid;
 	wp_set_current_user( $uid );
+	add_filter( 'axismundi_op_media_attachment_actor_uri', $ax_na_actor_filter );
 	$post_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $uid, 'post_content' => '<p>Attachment fixture.</p>' ) );
 	$ax_na_post_ids[] = $post_id;
 
-	foreach ( array( 'One', 'Two', 'Other provider' ) as $title ) {
-		$ax_na_attach_ids[] = (int) wp_insert_attachment( array( 'post_title' => $title, 'post_status' => 'inherit', 'post_author' => $uid, 'post_mime_type' => 'image/jpeg' ) );
+	foreach ( array( 'One', 'Two', 'Other provider' ) as $position => $title ) {
+		$filename = 'ax-note-' . $position . '.jpg';
+		$id       = (int) wp_insert_attachment(
+			array(
+				'post_title'     => $title,
+				'post_status'    => 'inherit',
+				'post_author'    => $uid,
+				'post_mime_type' => 'image/jpeg',
+				'guid'           => home_url( '/wp-content/uploads/2026/07/' . $filename ),
+			),
+			'2026/07/' . $filename
+		);
+		wp_update_attachment_metadata(
+			$id,
+			array(
+				'file'   => '2026/07/' . $filename,
+				'width'  => 1200,
+				'height' => 900,
+				'sizes'  => array(
+					'large' => array( 'file' => 'ax-note-' . $position . '-1024x768.jpg', 'width' => 1024, 'height' => 768, 'mime-type' => 'image/jpeg', 'filesize' => 120000 ),
+				),
+			)
+		);
+		update_post_meta( $id, '_ax_media_visibility', 'public' );
+		$ax_na_attach_ids[] = $id;
 	}
 	list( $one, $two, $other ) = $ax_na_attach_ids;
 	axismundi_media_relations_replace(
@@ -50,6 +75,21 @@ try {
 
 	$invalid = axismundi_note_save_envelope( $post_id, array( 'visibility' => 'followers', 'attachments' => array( 99999999 ) ) );
 	ax_na_assert( $ax_na_results, 'an invalid attachment rejects the whole structured save before changing envelope or relations', is_wp_error( $invalid ) && 'public' === axismundi_note_get_envelope( $post_id )['visibility'] && array( $two, $one ) === axismundi_note_attachment_ids( $post_id ) );
+
+	$svg_id = (int) wp_insert_attachment(
+		array(
+			'post_title'     => 'HTML-only SVG',
+			'post_status'    => 'inherit',
+			'post_author'    => $uid,
+			'post_mime_type' => 'image/svg+xml',
+			'guid'           => home_url( '/wp-content/uploads/2026/07/ax-note.svg' ),
+		)
+	);
+	$ax_na_attach_ids[] = $svg_id;
+	update_post_meta( $svg_id, '_ax_media_visibility', 'public' );
+	$svg_descriptor = axismundi_op_media_attachment_descriptor( get_post( $svg_id ) );
+	$unsupported    = axismundi_note_save_envelope( $post_id, array( 'attachments' => array( $svg_id ) ) );
+	ax_na_assert( $ax_na_results, 'an HTML-only media object is neither projected nor saved as a Note attachment', null === $svg_descriptor && is_wp_error( $unsupported ) && 'ax_note_attachment_rendition' === $unsupported->get_error_code() && array( $two, $one ) === axismundi_note_attachment_ids( $post_id ) );
 
 	$too_many = array_fill( 0, AXISMUNDI_NOTE_ATTACHMENT_MAX_COUNT + 1, $one );
 	$bounded  = axismundi_note_save_envelope( $post_id, array( 'attachments' => $too_many ) );
@@ -71,6 +111,7 @@ try {
 	$ax_na_attach_ids = array_values( array_diff( $ax_na_attach_ids, array( $one ) ) );
 	ax_na_assert( $ax_na_results, 'deleting one Media Library object removes its Note relation while preserving surviving attachments', array( $two ) === axismundi_note_attachment_ids( $post_id ) );
 } finally {
+	remove_filter( 'axismundi_op_media_attachment_actor_uri', $ax_na_actor_filter );
 	update_option( AXISMUNDI_MEDIA_MODE_OPTION, $ax_na_previous_mode );
 	wp_set_current_user( $ax_na_previous_user );
 	foreach ( array_unique( $ax_na_post_ids ) as $post_id ) {

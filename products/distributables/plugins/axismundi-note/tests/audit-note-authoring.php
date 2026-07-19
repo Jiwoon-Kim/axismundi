@@ -37,6 +37,7 @@ try {
 
 	// The Note post type is now edited in the block editor, not the Classic Editor.
 	ax_auth_assert( $ax_auth_results, 'the Note post type uses the block editor with a restricted palette', use_block_editor_for_post_type( AXISMUNDI_NOTE_POST_TYPE ) && in_array( 'core/paragraph', axismundi_note_allowed_block_types( true, (object) array( 'post' => get_post( $post_id ) ) ), true ) && ! in_array( 'core/image', (array) axismundi_note_allowed_block_types( true, (object) array( 'post' => get_post( $post_id ) ) ), true ) );
+	ax_auth_assert( $ax_auth_results, 'the Note post type does not acquire the Core category taxonomy', ! in_array( 'category', get_object_taxonomies( AXISMUNDI_NOTE_POST_TYPE ), true ) );
 
 	// The structured read exposes envelope defaults for a fresh Note.
 	$default = axismundi_note_get_envelope( $post_id );

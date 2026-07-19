@@ -47,6 +47,10 @@ function axismundi_note_record_commit( WP_Post $post ) {
 		return new WP_Error( 'ax_note_activities', __( 'The Activity lifecycle service is unavailable.', 'axismundi-note' ) );
 	}
 	$object = axismundi_note_lifecycle_object( $post );
+	if ( is_wp_error( $object ) ) {
+		return $object;
+	}
+	$object = function_exists( 'axismundi_note_quote_commit_object' ) ? axismundi_note_quote_commit_object( $post, $object ) : $object;
 	return is_wp_error( $object ) ? $object : axismundi_act_record_object_commit( $object );
 }
 
@@ -78,7 +82,7 @@ function axismundi_note_emit_saved_lifecycle( int $post_id, WP_Post $post, bool 
 		return;
 	}
 	$result = axismundi_note_record_commit( $post );
-	if ( is_wp_error( $result ) ) {
+	if ( is_wp_error( $result ) && ( ! function_exists( 'axismundi_note_quote_is_held_error' ) || ! axismundi_note_quote_is_held_error( $result ) ) ) {
 		axismundi_note_lifecycle_failed( $result, $post );
 	}
 }

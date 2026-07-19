@@ -180,7 +180,7 @@ function axismundi_op_remote_member_uri( $value ) : string {
  * @return string[]
  */
 function axismundi_op_remote_object_types() : array {
-	$types = array( 'Object', 'Article', 'Audio', 'Document', 'Event', 'Image', 'Note', 'Page', 'Place', 'Profile', 'Question', 'Relationship', 'Tombstone', 'Video' );
+	$types = array( 'Object', 'Article', 'Audio', 'Document', 'Event', 'Image', 'Note', 'Page', 'Place', 'Profile', 'Question', 'QuoteAuthorization', 'Relationship', 'Tombstone', 'Video' );
 	/**
 	 * Filter remote AS object types accepted by this repository.
 	 *

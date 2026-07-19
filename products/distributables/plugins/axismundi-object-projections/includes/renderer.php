@@ -34,6 +34,16 @@ function axismundi_op_jsonld_context( ?array $object = null ) {
 			'interactionTarget'  => array( '@id' => 'gts:interactionTarget', '@type' => '@id' ),
 		);
 	}
+	if ( is_array( $object ) && ( array_key_exists( 'quote', $object ) || array_key_exists( 'quoteAuthorization', $object ) ) ) {
+		$quote_context = array();
+		if ( array_key_exists( 'quote', $object ) ) {
+			$quote_context['quote'] = array( '@id' => 'https://w3id.org/fep/044f#quote', '@type' => '@id' );
+		}
+		if ( array_key_exists( 'quoteAuthorization', $object ) ) {
+			$quote_context['quoteAuthorization'] = array( '@id' => 'https://w3id.org/fep/044f#quoteAuthorization', '@type' => '@id' );
+		}
+		$context[] = $quote_context;
+	}
 	if ( is_array( $object ) && array_key_exists( 'sensitive', $object ) ) {
 		$context[] = array( 'sensitive' => 'as:sensitive' );
 	}

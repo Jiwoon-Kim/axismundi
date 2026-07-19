@@ -62,6 +62,54 @@ function axismundi_act_record_outbound_quote_request( array $args ) {
 }
 
 /**
+ * Find the latest request for one exact quoting/quoted/author/target tuple.
+ *
+ * The target lives in the audience rather than an indexed identity column, so
+ * candidates are cursor-paged by the other exact URI references and verified
+ * against the lossless payload. No fixed result window may hide a prior request.
+ */
+function axismundi_act_get_outbound_quote_request( string $quoting_uri, string $quoted_uri, string $author_uri, string $target_uri ) : ?Axismundi_Activity {
+	global $wpdb;
+	$quoting = axismundi_act_uri( $quoting_uri );
+	$quoted  = axismundi_act_uri( $quoted_uri );
+	$author  = axismundi_act_uri( $author_uri );
+	$target  = axismundi_act_uri( $target_uri );
+	if ( '' === $quoting || '' === $quoted || '' === $author || '' === $target ) {
+		return null;
+	}
+	$table  = axismundi_act_activities_table();
+	$page   = 200;
+	$cursor = PHP_INT_MAX;
+	do {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table and prepared values.
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE id < %d AND activity_type = 'QuoteRequest' AND direction IN ('outbound','local') AND actor_uri_hash = %s AND actor_uri = %s AND object_uri_hash = %s AND object_uri = %s AND instrument_uri_hash = %s AND instrument_uri = %s ORDER BY id DESC LIMIT {$page}",
+				$cursor,
+				hash( 'sha256', $author ),
+				$author,
+				hash( 'sha256', $quoted ),
+				$quoted,
+				hash( 'sha256', $quoting ),
+				$quoting
+			),
+			ARRAY_A
+		);
+		foreach ( $rows as $row ) {
+			$cursor   = min( $cursor, (int) $row['id'] );
+			$request  = axismundi_act_hydrate( $row );
+			$audience = $request->get_audience();
+			foreach ( (array) ( $audience['to'] ?? array() ) as $recipient ) {
+				if ( is_string( $recipient ) && hash_equals( $target, $recipient ) ) {
+					return $request;
+				}
+			}
+		}
+	} while ( count( $rows ) === $page );
+	return null;
+}
+
+/**
  * Whether one Accept/Reject's embedded QuoteRequest matches the stored request.
  *
  * A URI-only reference is allowed. An inlined object must match every field it

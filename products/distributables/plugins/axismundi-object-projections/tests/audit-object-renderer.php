@@ -86,6 +86,25 @@ ax_rnd_register(
 $mapped = axismundi_op_transform_object( 'x' );
 ax_rnd_assert( $ax_rnd_results, 'contentMap scalar values use the federation HTML allowlist', is_array( $mapped ) && '<p>Safe</p>' === $mapped['contentMap']['en'] );
 
+// Quote declaration and approval evidence map only the FEP terms actually emitted.
+$quote_context = axismundi_op_jsonld_context( array( 'quote' => 'https://remote.example/notes/1' ) );
+$approved_quote_context = axismundi_op_jsonld_context(
+	array(
+		'quote'              => 'https://remote.example/notes/1',
+		'quoteAuthorization' => 'https://remote.example/authorizations/1',
+	)
+);
+$quote_serialized          = serialize( $quote_context );
+$approved_quote_serialized = serialize( $approved_quote_context );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'quote extension terms are conditional and URI-valued in the renderer-owned context',
+	false !== strpos( $quote_serialized, 'https://w3id.org/fep/044f#quote' )
+		&& false === strpos( $quote_serialized, 'https://w3id.org/fep/044f#quoteAuthorization' )
+		&& false !== strpos( $approved_quote_serialized, 'https://w3id.org/fep/044f#quoteAuthorization' )
+		&& false !== strpos( $approved_quote_serialized, '@id' )
+);
+
 // Tombstones retain only their stable identity and non-sensitive lifecycle fields.
 ax_rnd_register(
 	array(

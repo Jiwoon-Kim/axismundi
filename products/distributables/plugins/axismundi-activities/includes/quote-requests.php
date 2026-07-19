@@ -114,8 +114,8 @@ function axismundi_act_quote_request_response_object( Axismundi_Activity $reques
  * @return Axismundi_Activity|WP_Error
  */
 function axismundi_act_process_quote_request( Axismundi_Activity $request ) {
-	if ( 'QuoteRequest' !== $request->get_type() || 'inbound' !== $request->get_direction() ) {
-		return new WP_Error( 'ax_act_quote_request', __( 'Only a committed inbound QuoteRequest can be decided.', 'axismundi-activities' ) );
+	if ( 'QuoteRequest' !== $request->get_type() || ! in_array( $request->get_direction(), array( 'inbound', 'local' ), true ) ) {
+		return new WP_Error( 'ax_act_quote_request', __( 'Only a committed inbound or local QuoteRequest can be decided.', 'axismundi-activities' ) );
 	}
 	$request_uri = $request->get_uri();
 	$quoted_uri  = (string) $request->get_object_uri();
@@ -183,7 +183,8 @@ function axismundi_act_process_quote_request( Axismundi_Activity $request ) {
 		}
 		$payload['result'] = (string) $authorization['authorization_uri'];
 	}
-	return axismundi_act_record_source_activity( $payload, 'outbound', 'quote-request-decision:' . hash( 'sha256', $request_uri ) );
+	$direction = 'local' === $request->get_direction() ? 'local' : 'outbound';
+	return axismundi_act_record_source_activity( $payload, $direction, 'quote-request-decision:' . hash( 'sha256', $request_uri ) );
 }
 
 /** Process a newly committed QuoteRequest after the inbound ledger transaction closes. */

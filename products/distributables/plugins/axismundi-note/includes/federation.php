@@ -257,6 +257,75 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	return $object;
 }
 
+/**
+ * Normalize one Note-owned source into the neutral OP view model.
+ *
+ * The route decides 200/404/410 and only binds this model for an exposable
+ * source, so the adapter itself produces the active or Tombstone shape without
+ * re-checking audience. A Tombstone carries no author or content.
+ *
+ * @return array<string,mixed>|null
+ */
+function axismundi_note_object_view_model( $source ) : ?array {
+	if ( ! $source instanceof Axismundi_Note_Source ) {
+		return null;
+	}
+	$envelope = $source->get_envelope();
+	$id       = $source->get_uri();
+	if ( $source->is_tombstone() ) {
+		$model = array( 'id' => $id, 'type' => 'Tombstone', 'status' => 'tombstone' );
+		if ( ! empty( $envelope['deleted_at'] ) ) {
+			$timestamp = strtotime( (string) $envelope['deleted_at'] . ' UTC' );
+			if ( false !== $timestamp ) {
+				$model['deleted'] = gmdate( 'c', $timestamp );
+			}
+		}
+		return $model;
+	}
+
+	$post   = $source->get_post();
+	$actor  = axismundi_note_envelope_actor( $envelope );
+	$name   = $actor instanceof Axismundi_Actor ? $actor->get_display_name() : '';
+	$handle = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_federated_mention_name' )
+		? axismundi_actors_federated_mention_name( $actor )
+		: '';
+	$body   = $post instanceof WP_Post
+		? ( function_exists( 'axismundi_op_render_post_content' ) ? axismundi_op_render_post_content( $post ) : (string) $post->post_content )
+		: '';
+	return array(
+		'id'              => $id,
+		'type'            => 'Note',
+		'status'          => 'active',
+		'object_uri'      => $id,
+		'language'        => (string) ( $envelope['language_tag'] ?? '' ),
+		'author'          => array(
+			'name'   => '' !== $name ? $name : ( $handle ? ltrim( $handle, '@' ) : '' ),
+			'handle' => $handle,
+			'url'    => (string) ( $envelope['actor_uri'] ?? '' ),
+		),
+		'content_html'    => wp_kses_post( $body ),
+		'published'       => $post instanceof WP_Post ? get_post_time( 'c', true, $post ) : '',
+		'updated'         => $post instanceof WP_Post ? get_post_modified_time( 'c', true, $post ) : '',
+		'sensitive'       => ! empty( $envelope['is_sensitive'] ),
+		'content_warning' => (string) ( $envelope['content_warning'] ?? '' ),
+	);
+}
+
+/** Register the Note view-model adapter with Object Projections. */
+function axismundi_note_register_view_model() : void {
+	if ( function_exists( 'axismundi_op_register_object_view_model' ) ) {
+		axismundi_op_register_object_view_model(
+			'local-note',
+			array(
+				'supports'  => static fn( $source ) : bool => $source instanceof Axismundi_Note_Source,
+				'transform' => 'axismundi_note_object_view_model',
+				'priority'  => 10,
+			)
+		);
+	}
+}
+add_action( 'init', 'axismundi_note_register_view_model', 5 );
+
 /** Register the Note transformer without adding a Note dependency to OP. */
 function axismundi_note_register_transformer() : void {
 	if ( ! function_exists( 'axismundi_op_register_object_transformer' ) ) {

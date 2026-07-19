@@ -32,6 +32,7 @@ require_once __DIR__ . '/includes/remote-collections.php';
 require_once __DIR__ . '/includes/registry.php';
 require_once __DIR__ . '/includes/sanitize.php';
 require_once __DIR__ . '/includes/renderer.php';
+require_once __DIR__ . '/includes/object-view-model.php';
 require_once __DIR__ . '/includes/post-settings.php';
 require_once __DIR__ . '/includes/post-article.php';
 require_once __DIR__ . '/includes/quote-authorizations.php';

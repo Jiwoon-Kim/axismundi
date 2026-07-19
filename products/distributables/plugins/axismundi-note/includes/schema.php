@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NOTE_DB_VERSION        = '1';
+const AXISMUNDI_NOTE_DB_VERSION        = '2';
 const AXISMUNDI_NOTE_DB_VERSION_OPTION = 'ax_note_db_version';
 
 /** Envelope table for the current site. */
@@ -42,6 +42,8 @@ function axismundi_note_install_table() : bool {
 			in_reply_to_uri_hash char(64) NOT NULL,
 			context_uri text NOT NULL,
 			context_uri_hash char(64) NOT NULL,
+			quote_target_uri text NULL,
+			quote_target_uri_hash char(64) NOT NULL DEFAULT '',
 			is_sensitive tinyint(1) unsigned NOT NULL DEFAULT 0,
 			content_warning varchar(500) NOT NULL DEFAULT '',
 			mention_actor_uris_json longtext NOT NULL,
@@ -56,6 +58,7 @@ function axismundi_note_install_table() : bool {
 			KEY actor_uri_hash (actor_uri_hash),
 			KEY in_reply_to_uri_hash (in_reply_to_uri_hash),
 			KEY context_uri_hash (context_uri_hash),
+			KEY quote_target_uri_hash (quote_target_uri_hash),
 			KEY object_status (object_status)
 		) ENGINE=InnoDB {$charset};"
 	);
@@ -72,10 +75,11 @@ function axismundi_note_install_table() : bool {
 	$needed  = array(
 		'id', 'post_id', 'local_uuid', 'actor_uri', 'actor_uri_hash', 'visibility',
 		'language_tag', 'in_reply_to_uri', 'in_reply_to_uri_hash', 'context_uri',
-		'context_uri_hash', 'is_sensitive', 'content_warning', 'mention_actor_uris_json',
+		'context_uri_hash', 'quote_target_uri', 'quote_target_uri_hash', 'is_sensitive',
+		'content_warning', 'mention_actor_uris_json',
 		'object_status', 'attribution_locked_at', 'deleted_at', 'created_at', 'updated_at',
 	);
-	$required_indexes = array( 'post_id', 'local_uuid', 'actor_uri_hash', 'in_reply_to_uri_hash', 'context_uri_hash', 'object_status' );
+	$required_indexes = array( 'post_id', 'local_uuid', 'actor_uri_hash', 'in_reply_to_uri_hash', 'context_uri_hash', 'quote_target_uri_hash', 'object_status' );
 	$valid = empty( array_diff( $needed, $columns ) )
 		&& empty( array_diff( $required_indexes, $indexes ) )
 		&& ! empty( $post_key ) && 0 === (int) $post_key[0]['Non_unique']

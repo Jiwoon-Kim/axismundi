@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,13 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.4 =
+* Store an authored outbound Quote target URI (schema v2) alongside the existing envelope, read and
+  written through the same structured REST panel field.
+* Add a no-fetch, three-way classification of a quote target's ownership -- the quoting Note's own
+  author, a different local Actor, or a remote Actor -- as the foundation for the outbound Quote
+  request/authorization lifecycle.
 
 = 0.0.3 =
 * Elevate an attachment's sensitive state to the containing federated Note so Mastodon and

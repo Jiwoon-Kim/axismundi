@@ -77,6 +77,7 @@ function axismundi_note_register_rest_field() : void {
 					'language'       => array( 'type' => 'string' ),
 					'inReplyTo'      => array( 'type' => 'string' ),
 					'context'        => array( 'type' => 'string' ),
+					'quoteTarget'    => array( 'type' => 'string' ),
 					'sensitive'      => array( 'type' => 'boolean' ),
 					'contentWarning' => array( 'type' => 'string' ),
 					'mentions'       => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),

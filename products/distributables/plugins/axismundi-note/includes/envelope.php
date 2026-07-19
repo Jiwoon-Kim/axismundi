@@ -274,11 +274,12 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		return new WP_Error( 'ax_note_language_locked', __( 'A federated Note keeps its original language snapshot.', 'axismundi-note' ) );
 	}
 
-	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
-	$in_reply_to = axismundi_note_sanitize_uri( $fields['in_reply_to_uri'] ?? ( $existing['in_reply_to_uri'] ?? '' ) );
-	$context     = axismundi_note_sanitize_uri( $fields['context_uri'] ?? ( $existing['context_uri'] ?? '' ) );
-	$warning     = mb_substr( sanitize_text_field( (string) ( $fields['content_warning'] ?? ( $existing['content_warning'] ?? '' ) ) ), 0, 500 );
-	$now         = current_time( 'mysql', true );
+	$sensitive    = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
+	$in_reply_to  = axismundi_note_sanitize_uri( $fields['in_reply_to_uri'] ?? ( $existing['in_reply_to_uri'] ?? '' ) );
+	$context      = axismundi_note_sanitize_uri( $fields['context_uri'] ?? ( $existing['context_uri'] ?? '' ) );
+	$quote_target = axismundi_note_sanitize_uri( $fields['quote_target_uri'] ?? ( $existing['quote_target_uri'] ?? '' ) );
+	$warning      = mb_substr( sanitize_text_field( (string) ( $fields['content_warning'] ?? ( $existing['content_warning'] ?? '' ) ) ), 0, 500 );
+	$now          = current_time( 'mysql', true );
 
 	$data = array(
 		'post_id'                 => $post_id,
@@ -291,12 +292,14 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		'in_reply_to_uri_hash'    => '' === $in_reply_to ? '' : hash( 'sha256', $in_reply_to ),
 		'context_uri'             => $context,
 		'context_uri_hash'        => '' === $context ? '' : hash( 'sha256', $context ),
+		'quote_target_uri'        => $quote_target,
+		'quote_target_uri_hash'   => '' === $quote_target ? '' : hash( 'sha256', $quote_target ),
 		'is_sensitive'            => $sensitive,
 		'content_warning'         => $warning,
 		'mention_actor_uris_json' => (string) wp_json_encode( $mentions ),
 		'updated_at'              => $now,
 	);
-	$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' );
+	$format = array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' );
 
 	if ( is_array( $existing ) ) {
 		$table = axismundi_note_table();
@@ -307,13 +310,15 @@ function axismundi_note_save( int $post_id, array $fields ) {
 			$wpdb->prepare(
 				"UPDATE {$table} SET
 					visibility = %s, language_tag = %s, in_reply_to_uri = %s, in_reply_to_uri_hash = %s,
-					context_uri = %s, context_uri_hash = %s, is_sensitive = %d, content_warning = %s,
+					context_uri = %s, context_uri_hash = %s, quote_target_uri = %s, quote_target_uri_hash = %s,
+					is_sensitive = %d, content_warning = %s,
 					mention_actor_uris_json = %s, updated_at = %s,
 					actor_uri = CASE WHEN attribution_locked_at IS NULL THEN %s ELSE actor_uri END,
 					actor_uri_hash = CASE WHEN attribution_locked_at IS NULL THEN %s ELSE actor_uri_hash END
 				WHERE post_id = %d",
 				$data['visibility'], $data['language_tag'], $data['in_reply_to_uri'], $data['in_reply_to_uri_hash'],
-				$data['context_uri'], $data['context_uri_hash'], $data['is_sensitive'], $data['content_warning'],
+				$data['context_uri'], $data['context_uri_hash'], $data['quote_target_uri'], $data['quote_target_uri_hash'],
+				$data['is_sensitive'], $data['content_warning'],
 				$data['mention_actor_uris_json'], $now, $actor, hash( 'sha256', $actor ), $post_id
 			)
 		);
@@ -349,6 +354,7 @@ function axismundi_note_get_envelope( int $post_id ) : array {
 		'language'       => is_array( $row ) ? (string) $row['language_tag'] : '',
 		'inReplyTo'      => is_array( $row ) ? (string) $row['in_reply_to_uri'] : '',
 		'context'        => is_array( $row ) ? (string) $row['context_uri'] : '',
+		'quoteTarget'    => is_array( $row ) ? (string) ( $row['quote_target_uri'] ?? '' ) : '',
 		'sensitive'      => is_array( $row ) && ! empty( $row['is_sensitive'] ),
 		'contentWarning' => is_array( $row ) ? (string) $row['content_warning'] : '',
 		'mentions'       => $mentions,
@@ -383,6 +389,7 @@ function axismundi_note_save_envelope( int $post_id, array $envelope ) {
 		'language'       => 'language_tag',
 		'inReplyTo'      => 'in_reply_to_uri',
 		'context'        => 'context_uri',
+		'quoteTarget'    => 'quote_target_uri',
 		'sensitive'      => 'sensitive',
 		'contentWarning' => 'content_warning',
 		'mentions'       => 'mention_actor_uris',

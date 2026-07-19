@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '4';
+const AXISMUNDI_OP_DB_VERSION            = '5';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -97,6 +97,8 @@ function axismundi_op_install() : bool {
 		&& axismundi_op_install_lease_schema()
 		&& function_exists( 'axismundi_op_install_object_relations' )
 		&& axismundi_op_install_object_relations()
+		&& function_exists( 'axismundi_op_install_thread_edges' )
+		&& axismundi_op_install_thread_edges()
 		&& 'InnoDB' === $engine;
 	if ( $valid && version_compare( $previous_version, '4', '<' ) ) {
 		$rebuild = function_exists( 'axismundi_op_rebuild_quote_relations' ) ? axismundi_op_rebuild_quote_relations() : array( 'failed' => 1 );
@@ -316,6 +318,9 @@ function axismundi_op_remote_object_store( array $payload, array $fetch = array(
 	$stored = axismundi_op_remote_object_get( (string) $normalized['object_uri'] );
 	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_quote_relations' ) ) {
 		axismundi_op_index_quote_relations( $stored );
+	}
+	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_thread_edge_from_remote_object' ) ) {
+		axismundi_op_index_thread_edge_from_remote_object( $stored );
 	}
 	return $stored;
 }

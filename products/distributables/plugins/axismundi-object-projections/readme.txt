@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.35
+Stable tag: 0.0.36
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,20 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.36 =
+* Add the URI-keyed, rebuildable thread-edge index (`wp_ax_thread_edges`): one direct-parent
+  edge per reply, local or remote, indexed generically from the Activities ledger and the
+  remote-object cache with no per-product wiring. A reply to an unresolved parent is preserved
+  rather than dropped, and automatically reconciles to resolved the moment that parent becomes
+  known; a Tombstone never erases a standing edge.
+* Add `axismundi_op_resolve_source_by_uri()`, a fallback-only URI resolver mirroring the
+  existing current-request source filter, plus OP's own remote-cache view-model adapter (the
+  `local-note`-sibling gap deferred from the single-object HTML view), so a reply or parent
+  resolves to one normalized view model regardless of local or remote origin.
+* Add the `axismundi/reply-context` and `axismundi/replies` server-rendered blocks, gated
+  through each source's own registered public-visibility predicate so a followers-only or
+  mentioned-only local reply can never surface through another object's thread display.
 
 = 0.0.35 =
 * Persist public and anyone defaults only for newly created Articles while

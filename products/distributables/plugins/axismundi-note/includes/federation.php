@@ -177,6 +177,27 @@ function axismundi_note_resolve_current_source( $source ) {
 }
 add_filter( 'axismundi_op_current_source', 'axismundi_note_resolve_current_source' );
 
+/**
+ * Resolve an arbitrary URI (not the current request) into its Note source, when local.
+ *
+ * Shares no state with `axismundi_note_resolve_current_source()`'s $_GET-scoped
+ * parse; both terminate in the same canonical-UUID envelope lookup. Used by OP's
+ * thread-edge reply/parent lookups, which have no request of their own to read.
+ */
+function axismundi_note_resolve_source_by_uri( $source, string $uri ) {
+	$uuid = axismundi_note_local_uuid_from_uri( $uri );
+	if ( null === $uuid ) {
+		return $source;
+	}
+	$envelope = axismundi_note_get_by_uuid( $uuid );
+	if ( ! is_array( $envelope ) ) {
+		return $source;
+	}
+	$post = get_post( (int) $envelope['post_id'] );
+	return new Axismundi_Note_Source( $envelope, $post instanceof WP_Post ? $post : null );
+}
+add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_note_resolve_source_by_uri', 10, 2 );
+
 /** Resolve the current shared audience for one active Note source. */
 function axismundi_note_source_audience( Axismundi_Note_Source $source ) {
 	$envelope = $source->get_envelope();

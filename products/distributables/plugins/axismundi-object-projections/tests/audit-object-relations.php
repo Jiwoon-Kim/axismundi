@@ -27,7 +27,7 @@ try {
 	$table     = axismundi_op_object_relations_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the custom schema.
 	$unique = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'relation_identity'", ARRAY_A );
-	ax_or_assert( $ax_or_results, 'schema v4 installs a unique source-target quote identity before recording its version', $installed && '4' === AXISMUNDI_OP_DB_VERSION && '4' === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && count( $unique ) >= 3 && 0 === (int) $unique[0]['Non_unique'] );
+	ax_or_assert( $ax_or_results, 'schema installs a unique source-target quote identity before recording its version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && count( $unique ) >= 3 && 0 === (int) $unique[0]['Non_unique'] );
 
 	$public = array(
 		'id'                 => $ax_or_source,

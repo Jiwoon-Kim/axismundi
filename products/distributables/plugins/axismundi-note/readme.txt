@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.7
+Stable tag: 0.0.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,13 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.8 =
+* Resolve an arbitrary Note URI (not only the current request) for Object Projections'
+  new URI-keyed thread-edge index, so a Note's own `inReplyTo` participates in the same
+  unified local/remote reply and parent lookup other object types share without any
+  Note-specific write code -- the index derives every edge from the Activities ledger.
+* Add the reply-context and replies blocks to the single-Note template.
 
 = 0.0.7 =
 * Keep legacy unset Quote policy fail-closed while giving newly authored Notes

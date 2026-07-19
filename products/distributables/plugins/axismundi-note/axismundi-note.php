@@ -28,6 +28,7 @@ const AXISMUNDI_NOTE_VERSION = '0.0.1';
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/envelope.php';
+require_once __DIR__ . '/includes/attachments.php';
 require_once __DIR__ . '/includes/federation.php';
 require_once __DIR__ . '/includes/view.php';
 require_once __DIR__ . '/includes/interactions.php';

@@ -29,6 +29,11 @@ block template: active public Notes return 200, concealed or unknown Notes retur
 views expose Like and Boost controls while Quote and the Create, Update, and
 Delete lifecycle remain later increments.
 
+When Axismundi Media Library runs in Independent mode, the same document panel
+selects ordered attachments through its relation store. Note keeps no duplicate
+media metadata: Object Projections reuses Media Library's FEP-1311 renditions,
+alternative text, visibility, and sensitive-content authority.
+
 A permanent post deletion converts the envelope to a tombstone instead of
 dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
@@ -41,3 +46,4 @@ later Delete Activity and Tombstone projection.
 * Add a strict read/write envelope API whose mention read is the ordered union of the explicit list and body-derived anchors.
 * Project public Notes and deleted Tombstones as ActivityStreams JSON-LD and human-readable block-template pages.
 * Add Like and Boost controls to active public Note pages without exposing private or deleted objects.
+* Add ordered Media Library attachment selection without adding an envelope column, and reuse public FEP-1311 descriptors in JSON-LD and HTML.

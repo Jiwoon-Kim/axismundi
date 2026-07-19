@@ -1,7 +1,8 @@
 # Note authoring model
 
-Status: **direction decided (limited block editor), sub-decisions pending.** This
-reverses the increment 3 Classic Editor choice; see "Rework" below.
+Status: **limited block editor and Media Library attachment picker implemented;
+context/reply block pending.** This reverses the increment 3 Classic Editor choice;
+see "Rework" below.
 
 ## Jetpack Social Notes — reference only
 
@@ -95,8 +96,11 @@ unchanged; only the authoring surface changes.
 
 Attachments are **not** a new `wp_ax_notes` column. The React panel's attachment picker
 reads and writes the Media Library's `wp_ax_media_relations` (subject post id model); Media
-Library keeps ownership of the attachment relationship and its sensitivity. Increment 3.6
-adds no envelope schema column for media.
+Library keeps ownership of the attachment relationship, rendition policy, alt text, and
+sensitivity. The picker writes only the `axismundi-note-picker` provider rows and preserves
+every other provider. It is available only in Media Library Independent mode; otherwise
+the control and attachment key are omitted so existing rows remain untouched. Increment
+3.6 adds no envelope schema column for media.
 
 ## Increment 3.6 scope (authoring pivot)
 

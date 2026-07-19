@@ -44,6 +44,7 @@ function axismundi_note_register_rest_field() : void {
 					'sensitive'      => array( 'type' => 'boolean' ),
 					'contentWarning' => array( 'type' => 'string' ),
 					'mentions'       => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+					'attachments'    => array( 'type' => 'array', 'maxItems' => AXISMUNDI_NOTE_ATTACHMENT_MAX_COUNT, 'uniqueItems' => true, 'items' => array( 'type' => 'integer', 'minimum' => 1 ) ),
 				),
 			),
 		)

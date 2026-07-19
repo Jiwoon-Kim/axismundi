@@ -346,6 +346,7 @@ function axismundi_note_get_envelope( int $post_id ) : array {
 		'sensitive'      => is_array( $row ) && ! empty( $row['is_sensitive'] ),
 		'contentWarning' => is_array( $row ) ? (string) $row['content_warning'] : '',
 		'mentions'       => $mentions,
+		'attachments'    => function_exists( 'axismundi_note_attachment_ids' ) ? axismundi_note_attachment_ids( $post_id ) : array(),
 	);
 }
 
@@ -361,6 +362,16 @@ function axismundi_note_get_envelope( int $post_id ) : array {
  * @return array<string,mixed>|WP_Error
  */
 function axismundi_note_save_envelope( int $post_id, array $envelope ) {
+	$attachments = null;
+	if ( array_key_exists( 'attachments', $envelope ) ) {
+		$attachments = function_exists( 'axismundi_note_validate_attachment_ids' )
+			? axismundi_note_validate_attachment_ids( $post_id, $envelope['attachments'] )
+			: new WP_Error( 'ax_note_attachment_provider', __( 'The Note attachment service is unavailable.', 'axismundi-note' ) );
+		if ( is_wp_error( $attachments ) ) {
+			return $attachments;
+		}
+	}
+	$previous = axismundi_note_get_envelope( $post_id );
 	$map = array(
 		'visibility'     => 'visibility',
 		'language'       => 'language_tag',
@@ -376,7 +387,20 @@ function axismundi_note_save_envelope( int $post_id, array $envelope ) {
 			$fields[ $stored ] = $envelope[ $incoming ];
 		}
 	}
-	return axismundi_note_save( $post_id, $fields );
+	$saved = axismundi_note_save( $post_id, $fields );
+	if ( is_wp_error( $saved ) || null === $attachments ) {
+		return $saved;
+	}
+	$related = axismundi_note_replace_attachments( $post_id, $attachments );
+	if ( is_wp_error( $related ) ) {
+		// The relation store preserves its prior rows on failure. Compensate the
+		// envelope write so one structured REST field never partially succeeds.
+		$restore = $previous;
+		unset( $restore['attachments'] );
+		axismundi_note_save_envelope( $post_id, $restore );
+		return $related;
+	}
+	return $saved;
 }
 
 /**

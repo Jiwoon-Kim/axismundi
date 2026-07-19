@@ -12,6 +12,7 @@ $ax_nf_results   = array();
 $ax_nf_post_ids  = array();
 $ax_nf_user_ids  = array();
 $ax_nf_actor_ids = array();
+$ax_nf_attachment_ids = array();
 $ax_nf_get       = $_GET;
 $ax_nf_uri       = $_SERVER['REQUEST_URI'] ?? null;
 
@@ -46,6 +47,19 @@ try {
 	$mentioned = ax_nf_actor( $ax_nf_user_ids, $ax_nf_actor_ids );
 	$author_id = $author instanceof Axismundi_Actor ? (int) $author->get_local_user_id() : 0;
 	$mention_uri = $mentioned instanceof Axismundi_Actor ? $mentioned->get_uri() : '';
+	$attachment_id = (int) wp_insert_attachment(
+		array(
+			'post_title'     => 'Federated document',
+			'post_excerpt'   => 'Attachment warning',
+			'post_status'    => 'inherit',
+			'post_author'    => $author_id,
+			'post_mime_type' => 'application/pdf',
+			'guid'           => home_url( '/wp-content/uploads/ax-note-fixture.pdf' ),
+		)
+	);
+	$ax_nf_attachment_ids[] = $attachment_id;
+	update_post_meta( $attachment_id, '_ax_media_visibility', 'public' );
+	axismundi_media_set_sensitive_state( $attachment_id, 'self_marked', $author_id );
 
 	$post_id = (int) wp_insert_post(
 		array(
@@ -58,6 +72,7 @@ try {
 	);
 	$ax_nf_post_ids[] = $post_id;
 	axismundi_note_save( $post_id, array( 'visibility' => 'public', 'sensitive' => true, 'content_warning' => 'CW' ) );
+	axismundi_note_replace_attachments( $post_id, array( $attachment_id ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
 	$post     = get_post( $post_id );
 	$envelope = axismundi_note_get( $post_id );
@@ -96,12 +111,16 @@ try {
 		&& 'en' === array_key_first( $object['contentMap'] )
 		&& (string) $object['content'] === (string) $object['contentMap']['en']
 		&& false === stripos( (string) $object['content'], '<iframe' )
+		&& isset( $object['attachment'][0] )
+		&& 'Document' === $object['attachment'][0]['type']
+		&& true === $object['attachment'][0]['sensitive']
 		&& in_array( axismundi_act_public_audience_uri(), $object['to'], true )
 		&& isset( $object['tag'][0]['name'], $object['tag'][0]['href'] )
 		&& $mention_uri === $object['tag'][0]['href']
 		&& true === $object['sensitive']
 		&& 'CW' === $object['dcterms:subject']
 	);
+	ax_nf_assert( $ax_nf_results, 'a public Note appears in anonymous Media Library reverse provenance through the custom-route visibility seam', 1 === count( axismundi_media_relations_used_in( $attachment_id, 0 ) ) );
 
 	// An addressed-only audience remains a valid stored object but is not anonymously projectable.
 	axismundi_note_save( $post_id, array( 'visibility' => 'followers' ) );
@@ -154,6 +173,11 @@ try {
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( get_post( (int) $post_id ) instanceof WP_Post ) {
 			wp_delete_post( (int) $post_id, true );
+		}
+	}
+	foreach ( array_unique( $ax_nf_attachment_ids ) as $attachment_id ) {
+		if ( get_post( (int) $attachment_id ) instanceof WP_Post ) {
+			wp_delete_attachment( (int) $attachment_id, true );
 		}
 	}
 	foreach ( array_unique( $ax_nf_actor_ids ) as $identity_id ) {

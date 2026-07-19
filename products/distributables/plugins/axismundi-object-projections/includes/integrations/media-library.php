@@ -246,6 +246,10 @@ function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?arra
 	if ( '' !== $alt ) {
 		$descriptor['name'] = sanitize_text_field( wp_strip_all_tags( $alt ) );
 	}
+	$descriptor['sensitive'] = axismundi_media_is_sensitive( (int) $attachment->ID );
+	if ( $descriptor['sensitive'] ) {
+		$descriptor['summary'] = axismundi_media_content_warning_text( (int) $attachment->ID );
+	}
 	return $descriptor;
 }
 
@@ -254,12 +258,13 @@ function axismundi_op_media_used_in_url( WP_Post $attachment ) : string {
 	return rest_url( 'axismundi/v1/media/' . (int) $attachment->ID . '/used-in' );
 }
 
-/** Add indexed Article media using only the Media Library's public relation API. */
-function axismundi_op_media_enrich_article( array $article, WP_Post $post ) : array {
+/** Public embedded descriptors indexed for one local subject Post. */
+function axismundi_op_media_subject_descriptors( WP_Post $post ) : array {
 	if ( ! function_exists( 'axismundi_media_relations_for_subject' ) ) {
-		return $article;
+		return array( 'image' => null, 'attachments' => array() );
 	}
 	$attachments = array();
+	$image       = null;
 	foreach ( axismundi_media_relations_for_subject( (int) $post->ID ) as $relation ) {
 		if ( 'usage' !== ( $relation['relation_kind'] ?? '' ) || 'active' !== ( $relation['status'] ?? '' ) ) {
 			continue;
@@ -274,15 +279,24 @@ function axismundi_op_media_enrich_article( array $article, WP_Post $post ) : ar
 			continue;
 		}
 		if ( 'as:image' === ( $relation['predicate'] ?? '' ) && 'featured' === ( $relation['role'] ?? '' ) ) {
-			$article['image'] = $descriptor;
+			$image = $descriptor;
 			continue;
 		}
 		if ( 'as:attachment' === ( $relation['predicate'] ?? '' ) ) {
 			$attachments[ $attachment_id ] = $descriptor;
 		}
 	}
-	if ( $attachments ) {
-		$article['attachment'] = array_values( $attachments );
+	return array( 'image' => $image, 'attachments' => array_values( $attachments ) );
+}
+
+/** Add indexed Article media using only the Media Library's public relation API. */
+function axismundi_op_media_enrich_article( array $article, WP_Post $post ) : array {
+	$media = axismundi_op_media_subject_descriptors( $post );
+	if ( is_array( $media['image'] ) ) {
+		$article['image'] = $media['image'];
+	}
+	if ( $media['attachments'] ) {
+		$article['attachment'] = $media['attachments'];
 	}
 	if ( isset( $article['preview'], $article['image'] ) && is_array( $article['preview'] ) ) {
 		$article['preview']['attachment'] = $article['image'];

@@ -95,6 +95,45 @@ function axismundi_op_object_view_author( array $model ) : string {
 	return '<p class="axismundi-object__author">' . $inner . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above.
 }
 
+/** Render one already-sanitized local media descriptor without guessing storage. */
+function axismundi_op_object_view_attachment( array $descriptor ) : string {
+	$urls = $descriptor['url'] ?? array();
+	$urls = is_array( $urls ) && array_is_list( $urls ) ? $urls : array( $urls );
+	$link = null;
+	foreach ( $urls as $candidate ) {
+		if ( is_array( $candidate ) && ! empty( $candidate['href'] ) ) {
+			$link = $candidate;
+			break;
+		}
+	}
+	if ( ! is_array( $link ) ) {
+		return '';
+	}
+	$href = esc_url( (string) $link['href'] );
+	if ( '' === $href ) {
+		return '';
+	}
+	$name       = trim( (string) ( $descriptor['name'] ?? '' ) );
+	$media_type = strtolower( (string) ( $link['mediaType'] ?? $descriptor['mediaType'] ?? '' ) );
+	$type       = strtolower( (string) ( $descriptor['type'] ?? 'document' ) );
+	if ( 'image' === $type && str_starts_with( $media_type, 'image/' ) ) {
+		$body = '<figure class="axismundi-object__attachment axismundi-object__attachment--image"><img src="' . $href . '" alt="' . esc_attr( $name ) . '" loading="lazy" />';
+		if ( '' !== $name ) {
+			$body .= '<figcaption>' . esc_html( $name ) . '</figcaption>';
+		}
+		$body .= '</figure>';
+	} else {
+		$label = '' !== $name ? $name : __( 'Open attachment', 'axismundi-object-projections' );
+		$body  = '<p class="axismundi-object__attachment axismundi-object__attachment--file"><a href="' . $href . '">' . esc_html( $label ) . '</a></p>';
+	}
+	if ( ! empty( $descriptor['sensitive'] ) ) {
+		$warning = trim( (string) ( $descriptor['summary'] ?? '' ) );
+		$summary = '' !== $warning ? esc_html( $warning ) : esc_html__( 'Sensitive media', 'axismundi-object-projections' );
+		return '<details class="axismundi-object__attachment-warning"><summary>' . $summary . '</summary>' . $body . '</details>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Body escaped above.
+	}
+	return $body;
+}
+
 /**
  * Render the request's current object view model.
  *
@@ -140,6 +179,19 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 			. '<div class="axismundi-object__content">' . $body . '</div></details>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Body is wp_kses_post rendered by the adapter.
 	} else {
 		$parts[] = '<div class="axismundi-object__content">' . $body . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Body is wp_kses_post rendered by the adapter.
+	}
+
+	$attachment_html = array();
+	foreach ( (array) ( $model['attachments'] ?? array() ) as $descriptor ) {
+		if ( is_array( $descriptor ) ) {
+			$rendered = axismundi_op_object_view_attachment( $descriptor );
+			if ( '' !== $rendered ) {
+				$attachment_html[] = $rendered;
+			}
+		}
+	}
+	if ( $attachment_html ) {
+		$parts[] = '<div class="axismundi-object__attachments">' . implode( '', $attachment_html ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Children escaped by renderer.
 	}
 
 	/**

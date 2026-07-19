@@ -247,6 +247,10 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 		$object['name']    = $title;
 		$object['nameMap'] = array( $language => $title );
 	}
+	$media = function_exists( 'axismundi_op_media_subject_descriptors' ) ? axismundi_op_media_subject_descriptors( $post ) : array();
+	if ( ! empty( $media['attachments'] ) ) {
+		$object['attachment'] = array_values( $media['attachments'] );
+	}
 	$tags = axismundi_note_mention_tags( $post, false );
 	if ( ! empty( $tags ) ) {
 		$object['tag'] = $tags;
@@ -297,6 +301,9 @@ function axismundi_note_object_view_model( $source ) : ?array {
 	$body   = $post instanceof WP_Post
 		? ( function_exists( 'axismundi_op_render_post_content' ) ? axismundi_op_render_post_content( $post ) : (string) $post->post_content )
 		: '';
+	$media  = $post instanceof WP_Post && function_exists( 'axismundi_op_media_subject_descriptors' )
+		? axismundi_op_media_subject_descriptors( $post )
+		: array();
 	return array(
 		'id'              => $id,
 		'type'            => 'Note',
@@ -314,6 +321,7 @@ function axismundi_note_object_view_model( $source ) : ?array {
 		'updated'         => $post instanceof WP_Post ? get_post_modified_time( 'c', true, $post ) : '',
 		'sensitive'       => ! empty( $envelope['is_sensitive'] ),
 		'content_warning' => (string) ( $envelope['content_warning'] ?? '' ),
+		'attachments'     => ! empty( $media['attachments'] ) ? array_values( $media['attachments'] ) : array(),
 	);
 }
 

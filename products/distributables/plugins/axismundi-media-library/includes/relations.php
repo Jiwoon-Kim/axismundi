@@ -326,10 +326,16 @@ function axismundi_media_relation_can_read_subject( int $post_id, int $viewer_id
 	}
 	// Publicly viewable = a viewable status AND a public post type — not merely
 	// `publish`, since a non-publicly_queryable internal CPT can be published too.
-	if ( is_post_publicly_viewable( $post ) ) {
-		return true;
-	}
-	return $viewer_id > 0 && ( user_can( $viewer_id, 'read_post', $post_id ) || user_can( $viewer_id, 'edit_post', $post_id ) );
+	$readable = is_post_publicly_viewable( $post )
+		|| ( $viewer_id > 0 && ( user_can( $viewer_id, 'read_post', $post_id ) || user_can( $viewer_id, 'edit_post', $post_id ) ) );
+	/**
+	 * Let a custom-routed product disclose a subject its own public gate approves.
+	 *
+	 * @param bool    $readable  Core visibility/permission decision.
+	 * @param WP_Post $post      Relation subject.
+	 * @param int     $viewer_id Viewer, or 0 for anonymous.
+	 */
+	return (bool) apply_filters( 'axismundi_media_relation_can_read_subject', $readable, $post, $viewer_id );
 }
 
 /**

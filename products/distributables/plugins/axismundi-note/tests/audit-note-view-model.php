@@ -70,6 +70,22 @@ try {
 	axismundi_op_set_current_object_view_model( null );
 	ax_vm_assert( $ax_vm_results, 'the object-view block renders an active Note with content and author but no deleted notice', false !== strpos( $active_html, 'axismundi-object--note' ) && false !== strpos( $active_html, 'Hello from a note.' ) && false !== strpos( $active_html, 'axismundi-object__author' ) && false === strpos( $active_html, 'has been deleted' ) );
 
+	$media_vm = $vm;
+	$media_vm['attachments'] = array(
+		array(
+			'type'      => 'Document',
+			'mediaType' => 'application/pdf',
+			'name'      => 'A document',
+			'url'       => array( array( 'type' => 'Link', 'href' => home_url( '/document.pdf' ), 'mediaType' => 'application/pdf' ) ),
+			'sensitive' => true,
+			'summary'   => 'Attachment warning',
+		),
+	);
+	axismundi_op_set_current_object_view_model( $media_vm );
+	$media_html = axismundi_op_render_object_view_block();
+	axismundi_op_set_current_object_view_model( null );
+	ax_vm_assert( $ax_vm_results, 'the object-view block renders descriptor links behind Media-owned sensitivity', false !== strpos( $media_html, 'axismundi-object__attachments' ) && false !== strpos( $media_html, 'Attachment warning' ) && false !== strpos( $media_html, 'document.pdf' ) );
+
 	// OP sanitizes the neutral model again instead of trusting every future adapter.
 	$unsafe_vm                 = $vm;
 	$unsafe_vm['content_html'] = '<p>safe</p><script>unsafe()</script>';

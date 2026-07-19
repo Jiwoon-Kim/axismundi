@@ -29,9 +29,12 @@
 
 		var state = useSelect( function ( select ) {
 			var editor = select( 'core/editor' );
+			var envelope = editor.getEditedPostAttribute( 'axismundi_note_envelope' ) || {};
+			var ids = envelope.attachments || [];
 			return {
 				postType: editor.getCurrentPostType(),
-				envelope: editor.getEditedPostAttribute( 'axismundi_note_envelope' ) || {}
+				envelope: envelope,
+				media: ids.map( function ( id ) { return select( 'core' ).getMedia( id ); } )
 			};
 		}, [] );
 
@@ -44,7 +47,71 @@
 		var envelope = state.envelope;
 		function update( changes ) {
 			var next = Object.assign( {}, envelope, changes );
+			if ( ! window.axismundiNoteEditor || ! window.axismundiNoteEditor.attachmentsEnabled ) {
+				delete next.attachments;
+			}
 			editPost( { axismundi_note_envelope: next } );
+		}
+
+		function openAttachmentPicker() {
+			if ( ! wp.media ) {
+				return;
+			}
+			var frame = wp.media( {
+				title: __( 'Select Note attachments', 'axismundi-note' ),
+				button: { text: __( 'Use selected media', 'axismundi-note' ) },
+				multiple: true
+			} );
+			frame.on( 'open', function () {
+				var selection = frame.state().get( 'selection' );
+				( envelope.attachments || [] ).forEach( function ( id ) {
+					selection.add( wp.media.attachment( id ) );
+				} );
+			} );
+			frame.on( 'select', function () {
+				update( { attachments: frame.state().get( 'selection' ).map( function ( item ) { return item.id; } ) } );
+			} );
+			frame.open();
+		}
+
+		function moveAttachment( index, direction ) {
+			var ids = ( envelope.attachments || [] ).slice();
+			var target = index + direction;
+			if ( target < 0 || target >= ids.length ) {
+				return;
+			}
+			var moved = ids[ index ];
+			ids[ index ] = ids[ target ];
+			ids[ target ] = moved;
+			update( { attachments: ids } );
+		}
+
+		function removeAttachment( id ) {
+			update( { attachments: ( envelope.attachments || [] ).filter( function ( candidate ) { return candidate !== id; } ) } );
+		}
+
+		var attachmentControls = null;
+		if ( window.axismundiNoteEditor && window.axismundiNoteEditor.attachmentsEnabled ) {
+			attachmentControls = el(
+				'div',
+				{ className: 'axismundi-note-attachments' },
+				el( 'h3', {}, __( 'Attachments', 'axismundi-note' ) ),
+				( envelope.attachments || [] ).length
+					? el( 'ul', { className: 'axismundi-note-attachments__list' }, ( envelope.attachments || [] ).map( function ( id, index ) {
+						var item = state.media[ index ];
+						var label = item && item.title && item.title.rendered ? item.title.rendered : __( 'Media item', 'axismundi-note' ) + ' #' + id;
+						return el(
+							'li',
+							{ key: id },
+							el( 'span', { className: 'axismundi-note-attachments__label' }, label ),
+							el( C.Button, { icon: 'arrow-up-alt2', label: __( 'Move up', 'axismundi-note' ), disabled: 0 === index, onClick: function () { moveAttachment( index, -1 ); } } ),
+							el( C.Button, { icon: 'arrow-down-alt2', label: __( 'Move down', 'axismundi-note' ), disabled: index === envelope.attachments.length - 1, onClick: function () { moveAttachment( index, 1 ); } } ),
+							el( C.Button, { icon: 'remove', label: __( 'Remove attachment', 'axismundi-note' ), isDestructive: true, onClick: function () { removeAttachment( id ); } } )
+						);
+					} ) )
+					: el( 'p', {}, __( 'No media selected.', 'axismundi-note' ) ),
+				el( C.Button, { icon: 'format-image', variant: 'secondary', onClick: openAttachmentPicker }, __( 'Select media', 'axismundi-note' ) )
+			);
 		}
 
 		return el(
@@ -93,7 +160,8 @@
 				help: __( 'One Actor URI per line. Body @-mention anchors merge automatically.', 'axismundi-note' ),
 				value: ( envelope.mentions || [] ).join( '\n' ),
 				onChange: function ( value ) { update( { mentions: window.axismundiNote.linesToList( value ) } ); }
-			} )
+			} ),
+			attachmentControls
 		);
 	}
 

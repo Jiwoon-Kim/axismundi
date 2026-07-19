@@ -19,6 +19,10 @@ function axismundi_note_enqueue_editor_assets() : void {
 		return;
 	}
 	$plugin = dirname( __DIR__ ) . '/axismundi-note.php';
+	$attachments_enabled = function_exists( 'axismundi_note_attachments_available' ) && axismundi_note_attachments_available();
+	if ( $attachments_enabled ) {
+		wp_enqueue_media();
+	}
 
 	wp_enqueue_script(
 		'axismundi-note-editor-helpers',
@@ -30,6 +34,9 @@ function axismundi_note_enqueue_editor_assets() : void {
 	// PluginDocumentSettingPanel moved from wp-edit-post to wp-editor; declaring an
 	// unregistered handle would silently drop the panel, so depend on whichever exists.
 	$deps = array( 'axismundi-note-editor-helpers', 'wp-element', 'wp-plugins', 'wp-data', 'wp-core-data', 'wp-components', 'wp-i18n' );
+	if ( $attachments_enabled && wp_script_is( 'media-editor', 'registered' ) ) {
+		$deps[] = 'media-editor';
+	}
 	if ( wp_script_is( 'wp-editor', 'registered' ) ) {
 		$deps[] = 'wp-editor';
 	} elseif ( wp_script_is( 'wp-edit-post', 'registered' ) ) {
@@ -43,5 +50,10 @@ function axismundi_note_enqueue_editor_assets() : void {
 		true
 	);
 	wp_set_script_translations( 'axismundi-note-envelope-panel', 'axismundi-note' );
+	wp_localize_script(
+		'axismundi-note-envelope-panel',
+		'axismundiNoteEditor',
+		array( 'attachmentsEnabled' => $attachments_enabled )
+	);
 }
 add_action( 'enqueue_block_editor_assets', 'axismundi_note_enqueue_editor_assets' );

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.30
+Stable tag: 0.0.31
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,11 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.31 =
+* Serialize trusted virtual image renditions without inventing a byte size, allowing
+  Jetpack Photon WebP derivatives to remain fetchable Note attachments while preserving
+  the original-file exclusion and fail-closed media boundary.
 
 = 0.0.30 =
 * Omit embedded media descriptors that have only an HTML object page and no fetchable

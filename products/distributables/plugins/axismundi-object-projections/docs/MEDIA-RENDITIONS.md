@@ -4,7 +4,7 @@
 > its available media versions. The Media Library rendition API, the Object Projections
 > representation transition, and the shared-folder consumer are separate increments.
 >
-> Bilingual note (EN/KO): 첨부는 **이미 생성된** 파생본만 광고한다. 원본은 광고하지 않는다.
+> Bilingual note (EN/KO): 첨부는 **이미 생성되었거나 신뢰된 서비스가 주소화한** 파생본만 광고한다. 원본은 광고하지 않는다.
 
 ## 1. Why adopt a "not yet supported" FEP
 
@@ -61,8 +61,9 @@ Satisfied simultaneously:
    the HTML Link — never fall back to the original.** (This closes the existing fallback
    where a missing intermediate size silently served the full-size file.)
 4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.
-5. **Only already-generated derivatives.** Projection never generates an image; it enumerates
-   what WordPress already produced.
+5. **Only already-generated or explicitly marked trusted virtual derivatives.** Projection
+   never generates or fetches an image. A virtual derivative must be the exact HTTPS
+   intermediate URL selected by WordPress and use an allowlisted image-service host.
 6. **One rendition builder** serves all three roles: Attachment Single, an Article's
    `attachment[]`, and `preview.attachment`. Their canonical `id`, `type`, and `mediaType`
    must not drift, and every role builds `url[]` by the same rules (media first, HTML last,
@@ -91,8 +92,10 @@ axismundi_media_federation_renditions( int $attachment_id, array $policy = array
 - applies pixel / byte / dimension caps; max 4; dedupes
 - excludes the original
 - honors public / locked / sensitive policy (fail-closed)
-- returns `url`, `mediaType`, `width`, `height`, `size`
-- omits any entry whose file is missing or whose `filesize` cannot be read
+- returns `url`, `mediaType`, `width`, `height`, and an accurate `size` when known
+- omits an ordinary entry whose file is missing or whose `filesize` cannot be read
+- may admit an explicitly marked, trusted virtual derivative without `size`; it never
+  fetches the CDN response or substitutes the source file's bytes as the derivative size
 - the existing singular `axismundi_media_feed_rendition()` remains
 
 **Object Projections serializes only.** It must never read `wp_get_attachment_metadata()`
@@ -119,7 +122,8 @@ There is no settled ActivityStreams property for carrying both the standalone ob
 and image alt text on that same standalone representation. A private extension is deferred
 until the shared-folder consumer and binary substrate establish a demonstrated need (§11).
 
-- **`size`** on every Link.
+- **`size`** on every locally measurable Link; omitted rather than guessed for a trusted
+  virtual derivative.
 - **`duration`** for Video / Audio, from WordPress metadata.
 - `sensitive`, the content warning, license, and `usedIn` keep their existing contracts.
 
@@ -166,7 +170,7 @@ parsing, since that is what the rest of the fediverse sends today.
 - Attachment Single keeps `name = post_title`.
 - Article `attachment[]` and `preview.attachment` use alt text for `name`; an empty alt omits
   `name`, with no title fallback.
-- `size` is accurate.
+- `size`, when present, is accurate; a trusted virtual derivative omits it.
 - Attachment Single, Article `attachment[]`, and `preview.attachment` produce identical
   canonical IDs and ordered rendition links; their role-dependent `name` values follow §5.
 - private / locked media stay fail-closed.

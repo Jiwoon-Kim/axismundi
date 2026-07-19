@@ -2,14 +2,15 @@
 /**
  * FEP-1311 federation rendition service.
  *
- * The Media Library owns *which* already-generated derivatives may be advertised to the
+ * The Media Library owns *which* already-addressable derivatives may be advertised to the
  * federation; Object Projections only serializes the result and never reads attachment
  * metadata internals. The contract lives in
  * axismundi-object-projections/docs/MEDIA-RENDITIONS.md.
  *
  * Two rules are structural rather than advisory here:
- * the original file is never advertised, and an entry whose byte size cannot be read is
- * omitted rather than guessed.
+ * the original file is never advertised, and an ordinary generated entry whose byte size
+ * cannot be read is omitted rather than guessed. Explicitly marked, trusted virtual image
+ * derivatives may omit `size`; their CDN is never fetched during projection.
  *
  * @package AxismundiMediaLibrary
  */
@@ -92,13 +93,80 @@ function axismundi_media_federation_rendition_bytes( int $attachment_id, array $
 }
 
 /**
+ * Byte ceiling available for a virtual derivative's source image.
+ *
+ * This is only a conservative admission gate. It is never serialized as the derivative's
+ * size because a virtual CDN response may use a different encoding and byte length.
+ *
+ * @param int $attachment_id Attachment.
+ * @return int
+ */
+function axismundi_media_federation_source_bytes( int $attachment_id ) : int {
+	$meta = wp_get_attachment_metadata( $attachment_id );
+	if ( is_array( $meta ) && ! empty( $meta['filesize'] ) ) {
+		return (int) $meta['filesize'];
+	}
+	$path = get_attached_file( $attachment_id );
+	return is_string( $path ) && file_exists( $path ) ? (int) filesize( $path ) : 0;
+}
+
+/**
+ * Validate a virtual image derivative without fetching it.
+ *
+ * Jetpack Photon records virtual subsizes in attachment metadata because no local subsize
+ * file exists. Admission requires the metadata marker, the exact URL selected by
+ * WordPress, HTTPS, and a narrowly trusted CDN host. Sites may narrow or extend the host
+ * list, but cannot bypass the remaining structural checks.
+ *
+ * @param int                 $attachment_id Attachment.
+ * @param array<string,mixed> $info          One `sizes` entry.
+ * @param array<int,mixed>    $src           `wp_get_attachment_image_src()` result.
+ * @param array<string,mixed> $policy        Resolved policy.
+ * @return bool
+ */
+function axismundi_media_federation_virtual_rendition_allowed( int $attachment_id, array $info, array $src, array $policy ) : bool {
+	if ( true !== ( $info['virtual'] ?? false ) || empty( $info['source_url'] ) || empty( $src[0] ) ) {
+		return false;
+	}
+	$source_url = esc_url_raw( (string) $info['source_url'], array( 'https' ) );
+	$src_url    = esc_url_raw( (string) $src[0], array( 'https' ) );
+	if ( '' === $source_url || ! hash_equals( $source_url, $src_url ) ) {
+		return false;
+	}
+	$parts = wp_parse_url( $source_url );
+	if ( ! is_array( $parts ) || 'https' !== ( $parts['scheme'] ?? '' ) || isset( $parts['user'], $parts['pass'], $parts['fragment'] )
+		|| ( isset( $parts['port'] ) && 443 !== (int) $parts['port'] ) ) {
+		return false;
+	}
+	$query = array();
+	parse_str( (string) ( $parts['query'] ?? '' ), $query );
+	if ( ! array_intersect( array( 'fit', 'resize', 'w' ), array_keys( $query ) ) ) {
+		// A Photon host alone does not prove that the response is a derivative. Require an
+		// explicit dimension transform so the CDN URL cannot become an original fallback.
+		return false;
+	}
+	/**
+	 * Filter trusted hosts for explicitly marked virtual federation renditions.
+	 *
+	 * @since 0.0.32
+	 * @param string[] $hosts Trusted lowercase host names.
+	 */
+	$hosts = array_map( 'strtolower', (array) apply_filters( 'axismundi_media_federation_virtual_hosts', array( 'i0.wp.com', 'i1.wp.com', 'i2.wp.com' ) ) );
+	if ( ! in_array( strtolower( (string) ( $parts['host'] ?? '' ) ), $hosts, true ) ) {
+		return false;
+	}
+	$source_bytes = axismundi_media_federation_source_bytes( $attachment_id );
+	return $source_bytes > 0 && $source_bytes <= (int) $policy['max_bytes'];
+}
+
+/**
  * Build one advertisable rendition, or null when it fails any structural rule.
  *
  * @param int                 $attachment_id Attachment.
  * @param string              $size          Registered size name.
  * @param array<string,mixed> $info          One `sizes` entry.
  * @param array<string,mixed> $policy        Resolved policy.
- * @return array{url:string,mediaType:string,width:int,height:int,size:int}|null
+ * @return array{url:string,mediaType:string,width:int,height:int,size?:int}|null
  */
 function axismundi_media_federation_rendition_entry( int $attachment_id, string $size, array $info, array $policy ) : ?array {
 	$src = wp_get_attachment_image_src( $attachment_id, $size );
@@ -112,23 +180,27 @@ function axismundi_media_federation_rendition_entry( int $attachment_id, string 
 	if ( $width <= 0 || $height <= 0 ) {
 		return null;
 	}
-	$bytes = axismundi_media_federation_rendition_bytes( $attachment_id, $info );
-	if ( $bytes <= 0 ) {
+	$bytes   = axismundi_media_federation_rendition_bytes( $attachment_id, $info );
+	$virtual = $bytes <= 0 && axismundi_media_federation_virtual_rendition_allowed( $attachment_id, $info, $src, $policy );
+	if ( $bytes <= 0 && ! $virtual ) {
 		return null;
 	}
 	if ( $width > (int) $policy['max_dimension'] || $height > (int) $policy['max_dimension'] ) {
 		return null;
 	}
-	if ( $width * $height > (int) $policy['max_pixels'] || $bytes > (int) $policy['max_bytes'] ) {
+	if ( $width * $height > (int) $policy['max_pixels'] || ( $bytes > 0 && $bytes > (int) $policy['max_bytes'] ) ) {
 		return null;
 	}
-	return array(
+	$entry = array(
 		'url'       => (string) $src[0],
 		'mediaType' => ! empty( $info['mime-type'] ) ? (string) $info['mime-type'] : (string) get_post_mime_type( $attachment_id ),
 		'width'     => $width,
 		'height'    => $height,
-		'size'      => $bytes,
 	);
+	if ( $bytes > 0 ) {
+		$entry['size'] = $bytes;
+	}
+	return $entry;
 }
 
 /**
@@ -142,7 +214,7 @@ function axismundi_media_federation_rendition_entry( int $attachment_id, string 
  *
  * @param int                 $attachment_id Attachment.
  * @param array<string,mixed> $policy        Optional policy overrides.
- * @return array<int,array{url:string,mediaType:string,width:int,height:int,size:int}>
+ * @return array<int,array{url:string,mediaType:string,width:int,height:int,size?:int}>
  */
 function axismundi_media_federation_renditions( int $attachment_id, array $policy = array() ) : array {
 	$attachment_id = (int) $attachment_id;

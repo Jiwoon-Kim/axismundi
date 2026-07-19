@@ -85,6 +85,55 @@ try {
 	$ax_fed_ids[] = $sizeless;
 	ax_fed_assert( $ax_fed_results, 'a subsize with no readable byte size is omitted', array() === axismundi_media_federation_renditions( $sizeless ) );
 
+	// Jetpack Photon virtual subsizes have no local file or derivative byte count. Admit
+	// only its explicitly marked, trusted URL and do not invent a serialized size.
+	$photon_url = 'https://i0.wp.com/example.test/wp-content/uploads/2026/07/probe.webp?fit=1024%2C768&ssl=1';
+	$virtual    = ax_fed_attachment(
+		'image/webp',
+		array(
+			'large' => array(
+				'file'       => 'probe.webp',
+				'width'      => 1024,
+				'height'     => 768,
+				'mime-type'  => 'image/webp',
+				'virtual'    => true,
+				'source_url' => $photon_url,
+			),
+		)
+	);
+	$ax_fed_ids[] = $virtual;
+	$virtual_meta = wp_get_attachment_metadata( $virtual );
+	$virtual_meta['filesize'] = 250000;
+	wp_update_attachment_metadata( $virtual, $virtual_meta );
+	$virtual_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $photon_url ) {
+		return $virtual === $attachment_id && 'large' === $size ? array( $photon_url, 1024, 768, true ) : $downsize;
+	};
+	add_filter( 'image_downsize', $virtual_downsize, 10, 3 );
+	$virtual_out = axismundi_media_federation_renditions( $virtual );
+	remove_filter( 'image_downsize', $virtual_downsize, 10 );
+	ax_fed_assert(
+		$ax_fed_results,
+		'a trusted Photon virtual WebP rendition is admitted without inventing its byte size',
+		1 === count( $virtual_out ) && $photon_url === $virtual_out[0]['url']
+			&& 'image/webp' === $virtual_out[0]['mediaType'] && ! isset( $virtual_out[0]['size'] )
+	);
+	add_filter( 'image_downsize', $virtual_downsize, 10, 3 );
+	$virtual_capped = axismundi_media_federation_renditions( $virtual, array( 'max_bytes' => 200000 ) );
+	remove_filter( 'image_downsize', $virtual_downsize, 10 );
+	ax_fed_assert( $ax_fed_results, 'a virtual rendition is rejected when its source exceeds the byte ceiling', array() === $virtual_capped );
+
+	$untrusted_url = 'https://cdn.example.test/probe.webp?width=1024';
+	$untrusted_meta = $virtual_meta;
+	$untrusted_meta['sizes']['large']['source_url'] = $untrusted_url;
+	wp_update_attachment_metadata( $virtual, $untrusted_meta );
+	$untrusted_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $untrusted_url ) {
+		return $virtual === $attachment_id && 'large' === $size ? array( $untrusted_url, 1024, 768, true ) : $downsize;
+	};
+	add_filter( 'image_downsize', $untrusted_downsize, 10, 3 );
+	$untrusted_out = axismundi_media_federation_renditions( $virtual );
+	remove_filter( 'image_downsize', $untrusted_downsize, 10 );
+	ax_fed_assert( $ax_fed_results, 'an arbitrary virtual CDN URL remains fail-closed', array() === $untrusted_out );
+
 	// Duplicate dimensions collapse.
 	$dupe = ax_fed_attachment(
 		'image/jpeg',

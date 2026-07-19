@@ -159,14 +159,17 @@ function axismundi_op_media_url_links( WP_Post $attachment, array $policy = arra
 		// selection and structurally excludes the original, so there is deliberately no
 		// wp_get_attachment_url() fallback here: no derivative means no media Link.
 		foreach ( axismundi_media_federation_renditions( $id, $policy ) as $rendition ) {
-			$links[] = array(
+			$link = array(
 				'type'      => 'Link',
 				'href'      => (string) $rendition['url'],
 				'mediaType' => (string) $rendition['mediaType'],
 				'width'     => (int) $rendition['width'],
 				'height'    => (int) $rendition['height'],
-				'size'      => (int) $rendition['size'],
 			);
+			if ( isset( $rendition['size'] ) && (int) $rendition['size'] > 0 ) {
+				$link['size'] = (int) $rendition['size'];
+			}
+			$links[] = $link;
 		}
 	} else {
 		// Video / audio / documents keep their existing single-file policy: without a

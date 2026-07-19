@@ -102,6 +102,44 @@ every other provider. It is available only in Media Library Independent mode; ot
 the control and attachment key are omitted so existing rows remain untouched. Increment
 3.6 adds no envelope schema column for media.
 
+### Attachment picker UI (pending enhancement)
+
+The 3.6b picker works but its selected-state presentation is minimal. A later UI pass
+adopts the visual pattern from the official ActivityPub media-attachments PR as a **UX
+reference only** (do not vendor): <https://github.com/Automattic/wordpress-activitypub/pull/2138>.
+
+Adopt: a compact row per **selected** attachment (thumbnail or type icon for audio /
+video / file, title, an `#order` badge, a remove control), a clear selected border, and
+separated empty / loading states.
+
+Do **not** adopt: regex-scanning the body for attachment candidates, an auto mode that
+merges featured image / `post_parent` / body images, listing all selected *and* unselected
+media in the sidebar, or an image-only assumption. The PR's review problem — reconciling
+body data with a separate sidebar selection state — does not apply here: `wp_ax_media_relations`
+is authoritative and the panel edits relations directly.
+
+Note layout:
+
+```
+Attachments
+├─ selected-only compact list
+│  ├─ drag handle + up/down buttons (keyboard-accessible reorder)
+│  ├─ thumbnail / type icon
+│  ├─ title
+│  ├─ sensitive / CW indicator (read-only; Media Library owns it)
+│  ├─ #order
+│  └─ remove
+└─ Select media  (the standard WordPress Media Library modal browses unselected media)
+```
+
+`#order` is **federation-significant**, not cosmetic: it is the order the attachments are
+emitted in the AS `attachment[]` array, so reorder must be a real, keyboard-accessible
+operation (drag-and-drop alone is insufficient). With a 50-item cap, the sidebar lists
+only the selected set; unselected browsing stays in the Media Library modal.
+
+This UI pass is paired with the still-outstanding **editor runtime verification** of the
+attachment picker (blocked only by the lack of a login session during automated review).
+
 ## Increment 3.6 scope (authoring pivot)
 
 - Remove the `use_block_editor_for_post_type` = false filter; restrict the palette with

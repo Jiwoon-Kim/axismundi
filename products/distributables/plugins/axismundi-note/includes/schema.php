@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NOTE_DB_VERSION        = '5';
+const AXISMUNDI_NOTE_DB_VERSION        = '6';
 const AXISMUNDI_NOTE_DB_VERSION_OPTION = 'ax_note_db_version';
 
 /** Envelope table for the current site. */
@@ -93,7 +93,9 @@ function axismundi_note_install_table() : bool {
 		&& empty( array_diff( $required_indexes, $indexes ) )
 		&& ! empty( $post_key ) && 0 === (int) $post_key[0]['Non_unique']
 		&& ! empty( $uuid_key ) && 0 === (int) $uuid_key[0]['Non_unique']
-		&& 'InnoDB' === (string) ( $status['Engine'] ?? '' );
+		&& 'InnoDB' === (string) ( $status['Engine'] ?? '' )
+		&& function_exists( 'axismundi_note_install_question_schema' )
+		&& axismundi_note_install_question_schema();
 	if ( $valid ) {
 		update_option( AXISMUNDI_NOTE_DB_VERSION_OPTION, AXISMUNDI_NOTE_DB_VERSION, false );
 	}

@@ -86,7 +86,8 @@ function axismundi_note_prepare_for_federation( WP_Post $post ) {
 	}
 	if ( ! empty( $envelope['attribution_locked_at'] ) ) {
 		$language = axismundi_note_normalize_language( (string) $envelope['language_tag'] );
-		return '' !== $language && 'und' !== $language && axismundi_note_envelope_actor( $envelope ) instanceof Axismundi_Actor
+		$question_ready = ! function_exists( 'axismundi_note_is_question' ) || ! axismundi_note_is_question( $post->ID ) || axismundi_note_question_ready( $post->ID );
+		return '' !== $language && 'und' !== $language && axismundi_note_envelope_actor( $envelope ) instanceof Axismundi_Actor && $question_ready
 			? true
 			: new WP_Error( 'ax_note_readiness', __( 'The frozen Note identity is incomplete.', 'axismundi-note' ) );
 	}
@@ -111,6 +112,14 @@ function axismundi_note_prepare_for_federation( WP_Post $post ) {
 	$mentions = axismundi_note_mention_tags( $post, true );
 	if ( is_wp_error( $mentions ) ) {
 		return $mentions;
+	}
+	if ( function_exists( 'axismundi_note_is_question' ) && axismundi_note_is_question( $post->ID ) ) {
+		// Mode and options freeze at the exact same moment as attribution -- this
+		// site's first federation exposure -- never later, never on delivery.
+		$question_lock = axismundi_note_question_lock( $post->ID );
+		if ( is_wp_error( $question_lock ) ) {
+			return $question_lock;
+		}
 	}
 	return axismundi_note_lock_attribution( $post->ID );
 }

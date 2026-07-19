@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.8
+Stable tag: 0.0.9
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,16 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.9 =
+* Add Question, a sibling object type on the same private ax_note post: structured
+  `wp_ax_questions`/`wp_ax_question_options` storage (never post_content or a block
+  attribute), a plain-text option list unique and exact-match within one Question,
+  and mode/options that freeze at the same first-federation moment attribution does.
+  A Note already federated as an ordinary Note cannot retroactively become a Question,
+  and an under-provisioned Question is held rather than federated incomplete. Storage
+  and the freeze contract only in this release; JSON-LD projection, the read-only Poll
+  block, and the vote classifier are later increments.
 
 = 0.0.8 =
 * Resolve an arbitrary Note URI (not only the current request) for Object Projections'

@@ -263,6 +263,46 @@ function axismundi_note_cast_poll_vote( string $question_uri, array $names ) {
 	return $created;
 }
 
+/** Return the current user's one-time vote-notice key for one canonical Question. */
+function axismundi_note_poll_vote_notice_key( string $uri ) : string {
+	return 'ax_note_vote_' . get_current_user_id() . '_' . substr( hash( 'sha256', $uri ), 0, 24 );
+}
+
+/** Store a short-lived result without adding non-canonical query arguments to the object URI. */
+function axismundi_note_set_poll_vote_notice( string $uri, $result ) : void {
+	if ( get_current_user_id() <= 0 || '' === $uri ) {
+		return;
+	}
+	$message = is_wp_error( $result )
+		? $result->get_error_message()
+		: __( 'Your vote was recorded.', 'axismundi-note' );
+	set_transient(
+		axismundi_note_poll_vote_notice_key( $uri ),
+		array(
+			'type'    => is_wp_error( $result ) ? 'error' : 'success',
+			'message' => sanitize_text_field( $message ),
+		),
+		MINUTE_IN_SECONDS
+	);
+}
+
+/** Consume the current user's one-time vote result, if any. */
+function axismundi_note_take_poll_vote_notice( string $uri ) : ?array {
+	if ( get_current_user_id() <= 0 || '' === $uri ) {
+		return null;
+	}
+	$key    = axismundi_note_poll_vote_notice_key( $uri );
+	$notice = get_transient( $key );
+	delete_transient( $key );
+	return is_array( $notice ) && isset( $notice['type'], $notice['message'] ) ? $notice : null;
+}
+
+/** Record a one-time result and return the exact canonical Question URI. */
+function axismundi_note_poll_vote_redirect_uri( string $uri, $result ) : string {
+	axismundi_note_set_poll_vote_notice( $uri, $result );
+	return $uri;
+}
+
 /** Render a nonce-protected local vote form in OP's neutral Question action slot. */
 function axismundi_note_question_actions( string $html, array $model, array $poll ) : string {
 	$uri = (string) ( $model['object_uri'] ?? '' );
@@ -271,17 +311,20 @@ function axismundi_note_question_actions( string $html, array $model, array $pol
 	}
 	$type  = 'anyOf' === (string) ( $poll['mode'] ?? '' ) ? 'checkbox' : 'radio';
 	$items = '';
-	foreach ( (array) ( $poll['options'] ?? array() ) as $option ) {
+	foreach ( (array) ( $poll['options'] ?? array() ) as $index => $option ) {
 		$name = (string) ( $option['name'] ?? '' );
 		if ( '' !== $name ) {
-			$items .= '<label><input type="' . esc_attr( $type ) . '" name="ax_note_vote[]" value="' . esc_attr( $name ) . '"> ' . esc_html( $name ) . '</label>';
+			$required = 'radio' === $type && 0 === (int) $index ? ' required' : '';
+			$items .= '<label><input type="' . esc_attr( $type ) . '" name="ax_note_vote[]" value="' . esc_attr( $name ) . '"' . $required . '> ' . esc_html( $name ) . '</label>';
 		}
 	}
+	$notice = axismundi_note_take_poll_vote_notice( $uri );
+	$feedback = is_array( $notice ) ? '<p class="axismundi-question__vote-notice is-' . esc_attr( (string) $notice['type'] ) . '" role="status">' . esc_html( (string) $notice['message'] ) . '</p>' : '';
 	return '<form class="axismundi-question__vote" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
 		. '<input type="hidden" name="action" value="axismundi_note_vote">'
 		. '<input type="hidden" name="question" value="' . esc_attr( $uri ) . '">'
 		. wp_nonce_field( 'axismundi_note_vote:' . $uri, '_axismundi_note_vote_nonce', true, false )
-		. '<fieldset><legend>' . esc_html__( 'Cast your vote', 'axismundi-note' ) . '</legend>' . $items . '</fieldset>'
+		. $feedback . '<fieldset><legend>' . esc_html__( 'Cast your vote', 'axismundi-note' ) . '</legend>' . $items . '</fieldset>'
 		. '<button type="submit">' . esc_html__( 'Vote', 'axismundi-note' ) . '</button></form>';
 }
 add_filter( 'axismundi_op_question_actions', 'axismundi_note_question_actions', 10, 3 );
@@ -295,8 +338,7 @@ function axismundi_note_handle_poll_vote() : void {
 	$raw   = isset( $_POST['ax_note_vote'] ) ? (array) wp_unslash( $_POST['ax_note_vote'] ) : array();
 	$names = array_values( array_filter( $raw, 'is_string' ) );
 	$result = axismundi_note_cast_poll_vote( $uri, $names );
-	$redirect = add_query_arg( 'ax_vote', is_wp_error( $result ) ? 'error' : 'recorded', $uri );
-	wp_safe_redirect( $redirect );
+	wp_safe_redirect( axismundi_note_poll_vote_redirect_uri( $uri, $result ) );
 	exit;
 }
 add_action( 'admin_post_axismundi_note_vote', 'axismundi_note_handle_poll_vote' );

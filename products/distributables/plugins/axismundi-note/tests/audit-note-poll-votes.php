@@ -112,6 +112,11 @@ try {
 	}
 	$cast_view = axismundi_note_question_view( $cast_question['post_id'] );
 	ax_npv_assert( $ax_npv_results, 'the local vote action creates a constrained Note through the normal lifecycle and increments the same tally', is_array( $cast ) && 1 === count( $cast ) && 1 === $cast_view['voters_count'] && array( 1, 0 ) === array_column( $cast_view['options'], 'votes' ) );
+	$redirect_uri = axismundi_note_poll_vote_redirect_uri( $cast_question['uri'], new WP_Error( 'ax_note_vote_choice', 'Choose a valid option.' ) );
+	$notice = axismundi_note_take_poll_vote_notice( $cast_question['uri'] );
+	$notice_consumed = axismundi_note_take_poll_vote_notice( $cast_question['uri'] );
+	$form = axismundi_note_question_actions( '', array( 'object_uri' => $cast_question['uri'] ), array( 'mode' => 'oneOf', 'options' => array( array( 'name' => 'Tea' ), array( 'name' => 'Coffee' ) ) ) );
+	ax_npv_assert( $ax_npv_results, 'vote redirects keep the exact canonical Question URI and pass one-time feedback without a route-breaking query key', $cast_question['uri'] === $redirect_uri && false === strpos( $redirect_uri, 'ax_vote' ) && is_array( $notice ) && 'error' === $notice['type'] && 'Choose a valid option.' === $notice['message'] && null === $notice_consumed && false !== strpos( $form, 'required' ) );
 	wp_set_current_user( 0 );
 
 	$dedupe_question = ax_npv_question( $ax_npv_posts, (int) $owner->ID, 'anyOf', array( 'Spring', 'Autumn' ) );

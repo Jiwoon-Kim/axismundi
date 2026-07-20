@@ -233,7 +233,12 @@
 			return 'string' === typeof option ? option : ( option && 'string' === typeof option.name ? option.name : '' );
 		} );
 		var locked = !! question.locked_at;
-		function update( changes ) { editPost( { axismundi_note_question: Object.assign( {}, question, { options: optionNames }, changes, { enabled: true } ) } ); }
+		function update( changes ) {
+			var writable = locked
+				? { enabled: true }
+				: Object.assign( {}, question, { options: optionNames }, { enabled: true } );
+			editPost( { axismundi_note_question: Object.assign( writable, changes ) } );
+		}
 		function optionRows() {
 			var rows = optionNames.map( function ( value ) { return { value: value, persisted: true }; } );
 			while ( rows.length < 2 ) {

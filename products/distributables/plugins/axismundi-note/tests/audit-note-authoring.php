@@ -92,9 +92,25 @@ try {
 	$remove_question_request->set_body_params( array( 'axismundi_note_question' => array( 'enabled' => false ) ) );
 	$remove_question_response = rest_do_request( $remove_question_request );
 	ax_auth_assert( $ax_auth_results, 'the REST Question field turns an unfederated Question back into an ordinary Note', ! $question_response->is_error() && $question_created && ! $remove_question_response->is_error() && ! axismundi_note_is_question( $post_id ) );
+
+	$locked_question_request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_NOTE_POST_TYPE . '/' . $post_id );
+	$locked_question_request->set_body_params( array( 'axismundi_note_question' => array( 'enabled' => true, 'mode' => 'oneOf', 'options' => array( 'Spring', 'Autumn' ) ) ) );
+	$locked_question_response = rest_do_request( $locked_question_request );
+	$locked_question          = axismundi_note_question_lock( $post_id );
+	$close_question_request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_NOTE_POST_TYPE . '/' . $post_id );
+	$close_question_request->set_body_params( array( 'axismundi_note_question' => array( 'enabled' => true, 'closes_at' => '2026-08-01T12:00:00Z' ) ) );
+	$close_question_response = rest_do_request( $close_question_request );
+	$closed_question         = axismundi_note_question_get( $post_id );
+	ax_auth_assert( $ax_auth_results, 'a locked Question REST update can change closes_at without resending frozen mode or options', ! $locked_question_response->is_error() && true === $locked_question && ! $close_question_response->is_error() && is_array( $closed_question ) && null !== $closed_question['closes_at'] );
 } finally {
 	wp_set_current_user( $ax_auth_prev_user );
 	foreach ( array_unique( $ax_auth_post_ids ) as $pid ) {
+		$question = axismundi_note_question_row( (int) $pid );
+		if ( is_array( $question ) ) {
+			$wpdb->delete( axismundi_note_poll_votes_table(), array( 'question_id' => (int) $question['id'] ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( axismundi_note_question_options_table(), array( 'question_id' => (int) $question['id'] ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( axismundi_note_questions_table(), array( 'id' => (int) $question['id'] ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		}
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $pid ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( get_post( (int) $pid ) instanceof WP_Post ) {
 			wp_delete_post( (int) $pid, true );

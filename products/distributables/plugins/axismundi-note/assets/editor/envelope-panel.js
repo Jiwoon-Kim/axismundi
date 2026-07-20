@@ -234,6 +234,45 @@
 		} );
 		var locked = !! question.locked_at;
 		function update( changes ) { editPost( { axismundi_note_question: Object.assign( {}, question, { options: optionNames }, changes, { enabled: true } ) } ); }
+		function optionRows() {
+			var rows = optionNames.map( function ( value ) { return { value: value, persisted: true }; } );
+			while ( rows.length < 2 ) {
+				rows.push( { value: '', persisted: true } );
+			}
+			if ( '' !== rows[ rows.length - 1 ].value ) {
+				rows.push( { value: '', persisted: false } );
+			}
+			return rows;
+		}
+		function updateOption( index, value ) {
+			var options = optionNames.slice();
+			if ( index >= options.length ) {
+				if ( '' !== value ) {
+					options.push( value );
+				}
+			} else {
+				options[ index ] = value;
+				while ( options.length > 2 && '' === options[ options.length - 1 ] ) {
+					options.pop();
+				}
+			}
+			update( { options: options } );
+		}
+		function addOption() {
+			update( { options: optionNames.concat( [ '' ] ) } );
+		}
+		function removeOption( index ) {
+			var options = optionNames.slice();
+			if ( index >= options.length ) {
+				return;
+			}
+			options.splice( index, 1 );
+			while ( options.length < 2 ) {
+				options.push( '' );
+			}
+			update( { options: options } );
+		}
+		var options = optionRows();
 		return el(
 			Panel,
 			{ name: 'axismundi-note-question', title: __( 'Question', 'axismundi-note' ) },
@@ -241,7 +280,17 @@
 				? el( C.Button, { variant: 'secondary', onClick: function () { editPost( { axismundi_note_question: { enabled: true, mode: 'oneOf', options: [ '', '' ] } } ); } }, __( 'Turn this Note into a Question', 'axismundi-note' ) )
 				: el( 'div', {},
 					el( C.SelectControl, { label: __( 'Voting mode', 'axismundi-note' ), value: question.mode || 'oneOf', options: [ { label: __( 'Choose one', 'axismundi-note' ), value: 'oneOf' }, { label: __( 'Choose any', 'axismundi-note' ), value: 'anyOf' } ], disabled: locked, __next40pxDefaultSize: true, onChange: function ( value ) { update( { mode: value } ); } } ),
-					el( C.TextareaControl, { label: __( 'Options', 'axismundi-note' ), help: locked ? __( 'Options are frozen after federation.', 'axismundi-note' ) : __( 'One exact option name per line.', 'axismundi-note' ), disabled: locked, value: optionNames.join( '\n' ), onChange: function ( value ) { update( { options: window.axismundiNote.linesToList( value ) } ); } } ),
+					el( 'div', { className: 'axismundi-note-question-options' },
+						el( 'p', { className: 'components-base-control__label' }, __( 'Options', 'axismundi-note' ) ),
+						locked ? el( 'p', { className: 'components-base-control__help' }, __( 'Options are frozen after federation.', 'axismundi-note' ) ) : null,
+						options.map( function ( option, index ) {
+							return el( 'div', { className: 'axismundi-note-question-option', key: index },
+								el( C.TextControl, { label: __( 'Option', 'axismundi-note' ) + ' ' + ( index + 1 ), hideLabelFromVision: true, disabled: locked, value: option.value, __next40pxDefaultSize: true, onChange: function ( value ) { updateOption( index, value ); } } ),
+								option.persisted ? el( C.Button, { icon: 'trash', label: __( 'Remove option', 'axismundi-note' ), disabled: locked || optionNames.length <= 2, isDestructive: true, onClick: function () { removeOption( index ); } } ) : null
+							);
+						} ),
+						el( C.Button, { icon: 'plus', label: __( 'Add option', 'axismundi-note' ), disabled: locked, onClick: addOption }, __( 'Add option', 'axismundi-note' ) )
+					),
 					el( C.TextControl, { label: __( 'Closes at (optional)', 'axismundi-note' ), type: 'datetime-local', value: question.closes_at || '', __next40pxDefaultSize: true, onChange: function ( value ) { update( { closes_at: value } ); } } )
 				)
 		);

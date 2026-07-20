@@ -9,6 +9,7 @@ defined( 'ABSPATH' ) || exit;
 	<div class="wp-block-group alignwide" style="padding-top:var(--wp--preset--spacing--500);padding-bottom:var(--wp--preset--spacing--500)">
 		<!-- wp:axismundi/reply-context /-->
 		<!-- wp:axismundi/object-view /-->
+		<!-- wp:axismundi/question /-->
 		<!-- wp:axismundi/replies /-->
 	</div>
 	<!-- /wp:group -->

@@ -157,6 +157,38 @@ function axismundi_note_question_get( int $post_id ) : ?array {
 	);
 }
 
+/** UTC SQL datetime to ISO-8601, or '' when empty or unparsable. */
+function axismundi_note_question_iso( ?string $sql_datetime ) : string {
+	if ( null === $sql_datetime || '' === $sql_datetime ) {
+		return '';
+	}
+	$timestamp = strtotime( $sql_datetime . ' UTC' );
+	return false !== $timestamp ? gmdate( 'c', $timestamp ) : '';
+}
+
+/**
+ * Neutral, tally-agnostic poll view for one Question, shared by the JSON-LD
+ * projection and the HTML view model so both stay in lockstep.
+ *
+ * Every vote count is zero: this file owns Question storage and the freeze
+ * contract only, not vote recording, which is a later increment.
+ *
+ * @return array{mode:string,options:array<int,array{name:string,votes:int}>,voters_count:int,closes_at:string,closed_at:string}|null
+ */
+function axismundi_note_question_view( int $post_id ) : ?array {
+	$question = axismundi_note_question_get( $post_id );
+	if ( ! is_array( $question ) ) {
+		return null;
+	}
+	return array(
+		'mode'         => $question['mode'],
+		'options'      => array_map( static fn( array $option ) : array => array( 'name' => $option['name'], 'votes' => 0 ), $question['options'] ),
+		'voters_count' => 0,
+		'closes_at'    => axismundi_note_question_iso( $question['closes_at'] ),
+		'closed_at'    => axismundi_note_question_iso( $question['closed_at'] ),
+	);
+}
+
 /** Whether one Question has enough options to be federated. */
 function axismundi_note_question_ready( int $post_id ) : bool {
 	$question = axismundi_note_question_get( $post_id );

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.36
+Stable tag: 0.0.37
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,12 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.37 =
+* Add the read-only `axismundi/question` block: a unified, purely presentational
+  Poll display driven by whatever `poll` shape the current object view model's
+  adapter supplies. Renders nothing for a non-Question object or a Tombstone.
+  Editing (casting a vote) is a later increment; this owns no vote authority.
 
 = 0.0.36 =
 * Add the URI-keyed, rebuildable thread-edge index (`wp_ax_thread_edges`): one direct-parent

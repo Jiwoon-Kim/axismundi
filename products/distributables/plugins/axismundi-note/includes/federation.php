@@ -265,6 +265,39 @@ function axismundi_note_quote_interaction_policy( array $envelope ) : ?array {
 	return '' === $automatic ? null : array( 'canQuote' => array( 'automaticApproval' => $automatic ) );
 }
 
+/**
+ * Add the AS2 Question members onto an already-built Note object.
+ *
+ * Tallies are always zero: this increment owns Question storage and the freeze
+ * contract only, not vote recording, so `votersCount` and each option's
+ * `replies.totalItems` are structurally correct placeholders until the vote
+ * store and classifier exist.
+ */
+function axismundi_note_apply_question_object( array $object, int $post_id ) : array {
+	$poll = function_exists( 'axismundi_note_question_view' ) ? axismundi_note_question_view( $post_id ) : null;
+	if ( ! is_array( $poll ) ) {
+		return $object;
+	}
+	$object['type'] = 'Question';
+	$mode_key       = 'anyOf' === $poll['mode'] ? 'anyOf' : 'oneOf';
+	$object[ $mode_key ] = array_map(
+		static fn( array $option ) : array => array(
+			'type'    => 'Note',
+			'name'    => $option['name'],
+			'replies' => array( 'type' => 'Collection', 'totalItems' => $option['votes'] ),
+		),
+		$poll['options']
+	);
+	$object['votersCount'] = $poll['voters_count'];
+	if ( '' !== $poll['closes_at'] ) {
+		$object['endTime'] = $poll['closes_at'];
+	}
+	if ( '' !== $poll['closed_at'] ) {
+		$object['closed'] = $poll['closed_at'];
+	}
+	return $object;
+}
+
 /** Transform one Note-owned source into Note or privacy-minimal Tombstone. */
 function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	$envelope = $source->get_envelope();
@@ -328,6 +361,9 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	if ( $object['sensitive'] && '' !== trim( (string) $envelope['content_warning'] ) ) {
 		$object['dcterms:subject'] = (string) $envelope['content_warning'];
 	}
+	if ( function_exists( 'axismundi_note_is_question' ) && axismundi_note_is_question( $post->ID ) ) {
+		$object = axismundi_note_apply_question_object( $object, $post->ID );
+	}
 	$interaction_policy = axismundi_note_quote_interaction_policy( $envelope );
 	if ( is_array( $interaction_policy ) ) {
 		$object['interactionPolicy'] = $interaction_policy;
@@ -373,9 +409,12 @@ function axismundi_note_object_view_model( $source ) : ?array {
 	$media  = $post instanceof WP_Post && function_exists( 'axismundi_op_media_subject_descriptors' )
 		? axismundi_op_media_subject_descriptors( $post )
 		: array();
+	$poll   = $post instanceof WP_Post && function_exists( 'axismundi_note_question_view' )
+		? axismundi_note_question_view( $post->ID )
+		: null;
 	return array(
 		'id'              => $id,
-		'type'            => 'Note',
+		'type'            => is_array( $poll ) ? 'Question' : 'Note',
 		'status'          => 'active',
 		'object_uri'      => $id,
 		'language'        => (string) ( $envelope['language_tag'] ?? '' ),
@@ -391,6 +430,7 @@ function axismundi_note_object_view_model( $source ) : ?array {
 		'sensitive'       => ! empty( $envelope['is_sensitive'] ),
 		'content_warning' => (string) ( $envelope['content_warning'] ?? '' ),
 		'attachments'     => ! empty( $media['attachments'] ) ? array_values( $media['attachments'] ) : array(),
+		'poll'            => $poll,
 	);
 }
 

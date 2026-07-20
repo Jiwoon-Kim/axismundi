@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.9
+Stable tag: 0.0.10
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,15 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.10 =
+* Project a Question Note as ActivityStreams `type: Question` with a name-only
+  `oneOf`/`anyOf` option array, `votersCount`, and `endTime`/`closed` -- an ordinary
+  Note is completely unaffected. All tallies are structurally correct zero
+  placeholders; vote recording is a later increment.
+* Add the shared, tally-agnostic poll view (`axismundi_note_question_view()`) the
+  JSON-LD projection and the HTML view model both read, so a Question's `type`,
+  options, and closing state stay in lockstep between the two.
 
 = 0.0.9 =
 * Add Question, a sibling object type on the same private ax_note post: structured

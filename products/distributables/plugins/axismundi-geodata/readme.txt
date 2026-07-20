@@ -91,7 +91,7 @@ configuring a lookup provider makes no external request.
   API key and explicitly searches for or reverse-geocodes a place in the term
   editor. The server sends the search text or clicked latitude/longitude, selected
   language/region, and the configured API key to Google. Google Maps Platform
-  Terms: https://mapsplatform.google.com/terms/ Privacy Policy:
+  Terms: https://cloud.google.com/maps-platform/terms/ Privacy Policy:
   https://policies.google.com/privacy
 * **OpenStreetMap Nominatim** is used only when an administrator selects the
   public Nominatim provider or configures a custom Nominatim-compatible endpoint,

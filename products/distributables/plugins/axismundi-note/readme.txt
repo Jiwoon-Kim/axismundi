@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.12
+Stable tag: 0.0.13
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,10 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.13 =
+* Derive local Question tallies from strict Activity-ledger vote observations, including oneOf/anyOf duplicate rules and Undo/Delete removal.
+* Keep confirmed votes out of the textual reply thread while preserving ordinary replies to Questions.
 
 = 0.0.12 =
 * Render a public Create(Note) on an Actor Activity feed through the current

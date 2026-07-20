@@ -369,6 +369,9 @@ function axismundi_op_source_publicly_visible( $source ) : bool {
 function axismundi_op_get_reply_view_models( string $parent_uri, int $limit = 50 ) : array {
 	$models = array();
 	foreach ( axismundi_op_get_thread_reply_uris( $parent_uri, $limit ) as $child_uri ) {
+		if ( ! apply_filters( 'axismundi_op_thread_include_reply', true, $child_uri, $parent_uri ) ) {
+			continue;
+		}
 		$source = axismundi_op_resolve_source_by_uri( $child_uri );
 		if ( null === $source || ! axismundi_op_source_publicly_visible( $source ) ) {
 			continue;
@@ -434,6 +437,9 @@ function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, ar
 			break;
 		}
 		if ( in_array( $child_uri, $ancestors, true ) ) {
+			continue;
+		}
+		if ( ! apply_filters( 'axismundi_op_thread_include_reply', true, $child_uri, $parent_uri ) ) {
 			continue;
 		}
 		$source = axismundi_op_resolve_source_by_uri( $child_uri );

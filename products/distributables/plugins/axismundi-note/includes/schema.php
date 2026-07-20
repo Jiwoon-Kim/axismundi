@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NOTE_DB_VERSION        = '6';
+const AXISMUNDI_NOTE_DB_VERSION        = '7';
 const AXISMUNDI_NOTE_DB_VERSION_OPTION = 'ax_note_db_version';
 
 /** Envelope table for the current site. */

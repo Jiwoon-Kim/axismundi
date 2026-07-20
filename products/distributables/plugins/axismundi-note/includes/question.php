@@ -38,6 +38,12 @@ function axismundi_note_question_options_table() : string {
 	return $wpdb->prefix . 'ax_question_options';
 }
 
+/** Materialized, Activity-ledger-derived local vote observations. */
+function axismundi_note_poll_votes_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_poll_votes';
+}
+
 /** Install and verify the Question and option stores. */
 function axismundi_note_install_question_schema() : bool {
 	global $wpdb;
@@ -45,6 +51,7 @@ function axismundi_note_install_question_schema() : bool {
 
 	$questions = axismundi_note_questions_table();
 	$options   = axismundi_note_question_options_table();
+	$votes     = axismundi_note_poll_votes_table();
 	$charset   = $wpdb->get_charset_collate();
 	dbDelta(
 		"CREATE TABLE {$questions} (
@@ -72,6 +79,26 @@ function axismundi_note_install_question_schema() : bool {
 			UNIQUE KEY option_uuid (option_uuid),
 			UNIQUE KEY question_option_identity (question_id, name_hash),
 			KEY question_id (question_id)
+		) ENGINE=InnoDB {$charset};\n\n"
+		. "CREATE TABLE {$votes} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			question_id bigint(20) unsigned NOT NULL,
+			option_uuid char(36) NOT NULL,
+			option_name varchar(200) NOT NULL,
+			voter_actor_uri text NOT NULL,
+			voter_actor_uri_hash char(64) NOT NULL,
+			vote_object_uri text NOT NULL,
+			vote_object_uri_hash char(64) NOT NULL,
+			vote_activity_uri text NOT NULL,
+			vote_activity_uri_hash char(64) NOT NULL,
+			vote_status varchar(16) NOT NULL DEFAULT 'active',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY vote_activity_uri_hash (vote_activity_uri_hash),
+			KEY question_option_status (question_id, option_uuid, vote_status),
+			KEY question_voter_status (question_id, voter_actor_uri_hash, vote_status),
+			KEY vote_object_uri_hash (vote_object_uri_hash)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -89,6 +116,12 @@ function axismundi_note_install_question_schema() : bool {
 	$option_uuid_key = (array) $wpdb->get_results( "SHOW INDEX FROM {$options} WHERE Key_name = 'option_uuid'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixed custom engine verification.
 	$option_engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$options}'" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixed custom schema verification.
+	$vote_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$votes}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixed custom index verification.
+	$vote_identity_key = (array) $wpdb->get_results( "SHOW INDEX FROM {$votes} WHERE Key_name = 'vote_activity_uri_hash'", ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixed custom engine verification.
+	$vote_engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$votes}'" );
 
 	return in_array( 'locked_at', $question_columns, true )
 		&& in_array( 'closes_at', $question_columns, true )
@@ -99,7 +132,11 @@ function axismundi_note_install_question_schema() : bool {
 		&& in_array( 'position', $option_columns, true )
 		&& ! empty( $option_identity_key ) && 0 === (int) $option_identity_key[0]['Non_unique']
 		&& ! empty( $option_uuid_key ) && 0 === (int) $option_uuid_key[0]['Non_unique']
-		&& 'InnoDB' === $option_engine;
+		&& 'InnoDB' === $option_engine
+		&& in_array( 'vote_status', $vote_columns, true )
+		&& in_array( 'vote_activity_uri_hash', $vote_columns, true )
+		&& ! empty( $vote_identity_key ) && 0 === (int) $vote_identity_key[0]['Non_unique']
+		&& 'InnoDB' === $vote_engine;
 }
 
 /** Whether one Note post owns a Question row. */
@@ -170,8 +207,9 @@ function axismundi_note_question_iso( ?string $sql_datetime ) : string {
  * Neutral, tally-agnostic poll view for one Question, shared by the JSON-LD
  * projection and the HTML view model so both stay in lockstep.
  *
- * Every vote count is zero: this file owns Question storage and the freeze
- * contract only, not vote recording, which is a later increment.
+ * Vote observations are derived from immutable Activity rows. This presentation
+ * never inspects reply content directly, so a textual reply and a vote cannot
+ * be conflated by a renderer.
  *
  * `closed_at` reflects the effective close, not only an explicit one: a Question
  * whose scheduled `closes_at` has already passed is closed at that scheduled
@@ -194,10 +232,14 @@ function axismundi_note_question_view( int $post_id ) : ?array {
 			$closed_at_iso = gmdate( 'c', $closes_timestamp );
 		}
 	}
+	$question_row = axismundi_note_question_row( $post_id );
+	$tally = function_exists( 'axismundi_note_poll_tally' )
+		? axismundi_note_poll_tally( is_array( $question_row ) ? (int) $question_row['id'] : 0 )
+		: array( 'voters_count' => 0, 'options' => array() );
 	return array(
 		'mode'         => $question['mode'],
-		'options'      => array_map( static fn( array $option ) : array => array( 'name' => $option['name'], 'votes' => 0 ), $question['options'] ),
-		'voters_count' => 0,
+		'options'      => array_map( static fn( array $option ) : array => array( 'name' => $option['name'], 'votes' => (int) ( $tally['options'][ $option['uuid'] ] ?? 0 ) ), $question['options'] ),
+		'voters_count' => (int) ( $tally['voters_count'] ?? 0 ),
 		'closes_at'    => $closes_at_iso,
 		'closed_at'    => $closed_at_iso,
 	);

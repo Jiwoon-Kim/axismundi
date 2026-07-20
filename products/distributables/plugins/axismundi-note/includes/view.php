@@ -82,6 +82,38 @@ function axismundi_note_html_route() : ?array {
 	return is_array( $route ) ? $route : null;
 }
 
+/**
+ * Add the canonical object document to the private CPT's admin row actions.
+ *
+ * Core omits its usual View action because ax_note deliberately has no public
+ * permalink. Reuse the same anonymous-read gate as the route itself so an
+ * admin-list link cannot disclose a followers-only or mentioned-only Note.
+ *
+ * @param array<string,string> $actions Existing row actions.
+ * @param WP_Post              $post    Listed post.
+ * @return array<string,string>
+ */
+function axismundi_note_admin_view_row_action( array $actions, WP_Post $post ) : array {
+	if ( AXISMUNDI_NOTE_POST_TYPE !== $post->post_type ) {
+		return $actions;
+	}
+	$envelope = axismundi_note_get( $post->ID );
+	if ( ! is_array( $envelope ) ) {
+		return $actions;
+	}
+	$source = new Axismundi_Note_Source( $envelope, $post );
+	if ( ! $source->is_tombstone() && ! axismundi_note_source_visible( $source ) ) {
+		return $actions;
+	}
+	$uri = $source->get_uri();
+	if ( '' === $uri ) {
+		return $actions;
+	}
+	$actions['view'] = '<a href="' . esc_url( $uri ) . '">' . esc_html__( 'View', 'axismundi-note' ) . '</a>';
+	return $actions;
+}
+add_filter( 'post_row_actions', 'axismundi_note_admin_view_row_action', 10, 2 );
+
 /** Conceal a missing or non-public Note with a real empty 404 query. */
 function axismundi_note_set_html_not_found( WP_Query $query ) : void {
 	axismundi_note_clear_main_query( $query );

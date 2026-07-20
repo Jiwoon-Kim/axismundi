@@ -84,6 +84,11 @@ try {
 	$private   = ax_nh_note( $author_id, 'followers', $ax_nh_post_ids );
 	$public_id = axismundi_note_object_uri( (string) $public['local_uuid'] );
 	$private_id = axismundi_note_object_uri( (string) $private['local_uuid'] );
+	$public_post = get_post( (int) $public['post_id'] );
+	$private_post = get_post( (int) $private['post_id'] );
+	$public_actions = $public_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $public_post ) : array();
+	$private_actions = $private_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $private_post ) : array();
+	ax_nh_assert( $ax_nh_results, 'the private Note list adds View only for canonical documents anonymous visitors may read', isset( $public_actions['view'] ) && false !== strpos( $public_actions['view'], esc_url( $public_id ) ) && ! isset( $private_actions['view'] ) );
 
 	$template = function_exists( 'get_block_template' ) ? get_block_template( 'axismundi-note//axismundi-note-object', 'wp_template' ) : null;
 	$content  = axismundi_note_object_template_content();

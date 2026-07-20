@@ -41,6 +41,7 @@ try {
 	$panel_script = file_get_contents( dirname( __DIR__ ) . '/assets/editor/envelope-panel.js' );
 	ax_auth_assert( $ax_auth_results, 'the Note Federation panel exposes Quote policy, target, and decision status', is_string( $panel_script ) && false !== strpos( $panel_script, 'Who can quote this post?' ) && false !== strpos( $panel_script, 'Quote target (URI)' ) && false !== strpos( $panel_script, 'Quote status:' ) && false !== strpos( $panel_script, 'quotePolicy' ) && false !== strpos( $panel_script, "value: 'anyone'" ) && false !== strpos( $panel_script, "value: 'followers'" ) && false !== strpos( $panel_script, "value: 'me'" ) );
 	ax_auth_assert( $ax_auth_results, 'the Question panel uses add/remove option rows instead of a newline textarea', is_string( $panel_script ) && false !== strpos( $panel_script, 'axismundi-note-question-option' ) && false !== strpos( $panel_script, 'Add option' ) && false !== strpos( $panel_script, 'Remove option' ) && false === strpos( $panel_script, "label: __( 'Options', 'axismundi-note' ), help:" ) );
+	ax_auth_assert( $ax_auth_results, 'the Question panel offers the reciprocal Note conversion command before federation', is_string( $panel_script ) && false !== strpos( $panel_script, 'Turn this Question into a Note' ) && false !== strpos( $panel_script, 'enabled: false' ) );
 
 	// The structured read exposes envelope defaults for a fresh Note.
 	$default = axismundi_note_get_envelope( $post_id );
@@ -82,6 +83,15 @@ try {
 	$bad_request->set_body_params( array( 'axismundi_note_envelope' => array( 'visibility' => 'bogus' ) ) );
 	$bad_response = rest_do_request( $bad_request );
 	ax_auth_assert( $ax_auth_results, 'the REST envelope field rejects an invalid panel write', $bad_response->is_error() && 'unlisted' === axismundi_note_get_envelope( $post_id )['visibility'] );
+
+	$question_request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_NOTE_POST_TYPE . '/' . $post_id );
+	$question_request->set_body_params( array( 'axismundi_note_question' => array( 'enabled' => true, 'mode' => 'oneOf', 'options' => array( 'Yes', 'No' ) ) ) );
+	$question_response = rest_do_request( $question_request );
+	$question_created  = axismundi_note_is_question( $post_id );
+	$remove_question_request = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_NOTE_POST_TYPE . '/' . $post_id );
+	$remove_question_request->set_body_params( array( 'axismundi_note_question' => array( 'enabled' => false ) ) );
+	$remove_question_response = rest_do_request( $remove_question_request );
+	ax_auth_assert( $ax_auth_results, 'the REST Question field turns an unfederated Question back into an ordinary Note', ! $question_response->is_error() && $question_created && ! $remove_question_response->is_error() && ! axismundi_note_is_question( $post_id ) );
 } finally {
 	wp_set_current_user( $ax_auth_prev_user );
 	foreach ( array_unique( $ax_auth_post_ids ) as $pid ) {

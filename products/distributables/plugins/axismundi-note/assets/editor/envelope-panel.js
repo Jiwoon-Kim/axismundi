@@ -291,7 +291,10 @@
 						} ),
 						el( C.Button, { icon: 'plus', label: __( 'Add option', 'axismundi-note' ), disabled: locked, onClick: addOption }, __( 'Add option', 'axismundi-note' ) )
 					),
-					el( C.TextControl, { label: __( 'Closes at (optional)', 'axismundi-note' ), type: 'datetime-local', value: question.closes_at || '', __next40pxDefaultSize: true, onChange: function ( value ) { update( { closes_at: value } ); } } )
+					el( C.TextControl, { label: __( 'Closes at (optional)', 'axismundi-note' ), type: 'datetime-local', value: question.closes_at || '', __next40pxDefaultSize: true, onChange: function ( value ) { update( { closes_at: value } ); } } ),
+					locked
+						? el( 'p', { className: 'components-base-control__help' }, __( 'Question type is frozen after federation.', 'axismundi-note' ) )
+						: el( C.Button, { variant: 'tertiary', isDestructive: true, onClick: function () { editPost( { axismundi_note_question: { enabled: false } } ); } }, __( 'Turn this Question into a Note', 'axismundi-note' ) )
 				)
 		);
 	}

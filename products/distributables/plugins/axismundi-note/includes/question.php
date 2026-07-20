@@ -144,6 +144,50 @@ function axismundi_note_is_question( int $post_id ) : bool {
 	return null !== axismundi_note_question_row( $post_id );
 }
 
+/**
+ * Remove an unfederated Question definition and restore its Note to ordinary state.
+ *
+ * A federated Question is intentionally retained until poll-revision lifecycle support
+ * can retire its historical options and vote observations without losing their ledger
+ * provenance.
+ *
+ * @return true|WP_Error
+ */
+function axismundi_note_question_remove( int $post_id ) {
+	global $wpdb;
+	if ( ! axismundi_note_ready() ) {
+		return new WP_Error( 'ax_note_store', __( 'The Note envelope store is unavailable.', 'axismundi-note' ) );
+	}
+	$existing = axismundi_note_question_row( $post_id );
+	if ( ! is_array( $existing ) ) {
+		return true;
+	}
+	$questions_table = axismundi_note_questions_table();
+	$options_table   = axismundi_note_question_options_table();
+	$votes_table     = axismundi_note_poll_votes_table();
+	$question_id     = (int) $existing['id'];
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic Question removal.
+	$wpdb->query( 'START TRANSACTION' );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed row lock at the type-change boundary.
+	$locked_at = $wpdb->get_var( $wpdb->prepare( "SELECT locked_at FROM {$questions_table} WHERE id = %d FOR UPDATE", $question_id ) );
+	if ( null !== $locked_at ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- release type-change transaction.
+		$wpdb->query( 'ROLLBACK' );
+		return new WP_Error( 'ax_note_question_type_locked', __( 'A federated Question cannot become an ordinary Note yet.', 'axismundi-note' ) );
+	}
+	$ok = false !== $wpdb->delete( $votes_table, array( 'question_id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- derived rows belong to the discarded draft Question.
+	$ok = $ok && false !== $wpdb->delete( $options_table, array( 'question_id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- draft Question options.
+	$ok = $ok && false !== $wpdb->delete( $questions_table, array( 'id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- draft Question definition.
+	if ( ! $ok ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- revert incomplete removal.
+		$wpdb->query( 'ROLLBACK' );
+		return new WP_Error( 'ax_note_question_write', __( 'The Question could not be removed.', 'axismundi-note' ) );
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit complete removal.
+	$wpdb->query( 'COMMIT' );
+	return true;
+}
+
 /** Raw Question row for one Note post, or null. */
 function axismundi_note_question_row( int $post_id ) : ?array {
 	global $wpdb;

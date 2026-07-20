@@ -52,6 +52,9 @@ function axismundi_note_register_rest_field() : void {
 				if ( ! current_user_can( 'edit_post', $post->ID ) ) {
 					return new WP_Error( 'ax_note_forbidden', __( 'You cannot edit this Note.', 'axismundi-note' ), array( 'status' => 403 ) );
 				}
+				if ( array_key_exists( 'enabled', $value ) && false === $value['enabled'] ) {
+					return axismundi_note_question_remove( $post->ID );
+				}
 				if ( empty( $value['enabled'] ) && ! axismundi_note_is_question( $post->ID ) ) {
 					return true;
 				}

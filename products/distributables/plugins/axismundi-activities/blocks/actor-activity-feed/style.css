@@ -1,0 +1,32 @@
+.axismundi-activity-feed {
+	margin-block: var(--wp--preset--spacing--500, 2rem);
+}
+
+.axismundi-activity-feed__heading {
+	margin: 0 0 var(--wp--preset--spacing--300, 1rem);
+}
+
+.axismundi-activity-feed__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border-top: 1px solid currentColor;
+}
+
+.axismundi-activity-feed__item {
+	padding-block: var(--wp--preset--spacing--300, 1rem);
+	border-bottom: 1px solid currentColor;
+}
+
+.axismundi-activity-feed__header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1rem;
+	align-items: baseline;
+	font-size: 0.875rem;
+}
+
+.axismundi-activity-feed__header time { opacity: 0.7; }
+.axismundi-activity-feed__title { margin: 0.5rem 0 0; font-size: 1rem; }
+.axismundi-activity-feed__content { margin-top: 0.5rem; }
+.axismundi-activity-feed__target { display: inline-block; margin-top: 0.5rem; }

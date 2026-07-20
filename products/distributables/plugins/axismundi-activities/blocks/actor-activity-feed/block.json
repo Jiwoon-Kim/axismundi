@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/actor-activity-feed",
+	"version": "0.0.23",
+	"title": "Actor Activity Feed",
+	"category": "theme",
+	"icon": "list-view",
+	"description": "Displays the current Actor's public Activity ledger.",
+	"textdomain": "axismundi-activities",
+	"supports": {
+		"html": false,
+		"inserter": false,
+		"align": ["wide", "full"],
+		"spacing": { "margin": true, "padding": true }
+	},
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.22
+Stable tag: 0.0.23
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,11 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.23 =
+* Add the server-rendered `axismundi/actor-activity-feed` block. It projects
+  only public outbound ledger entries for a public local Actor, never a second
+  content archive or a disclosure of blind recipients.
 
 = 0.0.22 =
 * Allow consumers to resolve one exact outbound QuoteRequest generation while

@@ -395,9 +395,10 @@ function axismundi_op_get_parent_view_model( string $child_uri ) : ?array {
 }
 
 /** Render one compact reply-list item, tombstone-aware. */
-function axismundi_op_render_thread_item( array $model ) : string {
+function axismundi_op_render_thread_item( array $model, string $children_html = '' ) : string {
+	$children = '' !== $children_html ? '<ol class="axismundi-thread__list axismundi-thread__list--nested">' . $children_html . '</ol>' : '';
 	if ( 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
-		return '<li class="axismundi-thread__item axismundi-thread__item--tombstone">' . esc_html__( 'This reply has been deleted.', 'axismundi-object-projections' ) . '</li>';
+		return '<li class="axismundi-thread__item axismundi-thread__item--tombstone">' . esc_html__( 'This reply has been deleted.', 'axismundi-object-projections' ) . $children . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Nested items are escaped by this renderer.
 	}
 	$uri     = (string) ( $model['object_uri'] ?? '' );
 	$author  = axismundi_op_object_view_author( $model );
@@ -406,7 +407,59 @@ function axismundi_op_render_thread_item( array $model ) : string {
 	if ( '' !== $uri ) {
 		$body = '<a class="axismundi-thread__link" href="' . esc_url( $uri ) . '">' . $body . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $body escaped above.
 	}
-	return '<li class="axismundi-thread__item">' . $author . $body . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above.
+	return '<li class="axismundi-thread__item">' . $author . $body . $children . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above and nested output is recursively rendered here.
+}
+
+/**
+ * Render a bounded reply tree from one parent URI.
+ *
+ * The graph stores exactly one direct parent per child, but defensive cycle
+ * detection remains necessary for malformed remote observations. The same
+ * shared `remaining` counter bounds an entire tree rather than each level.
+ *
+ * @param string[] $ancestors Canonical URIs already on this branch.
+ * @return array{html:string,count:int,truncated:bool}
+ */
+function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, array $ancestors = array() ) : array {
+	if ( $remaining <= 0 ) {
+		return array( 'html' => '', 'count' => 0, 'truncated' => false );
+	}
+	$uris      = axismundi_op_get_thread_reply_uris( $parent_uri, min( 200, $remaining + 1 ) );
+	$truncated = count( $uris ) > $remaining;
+	$items     = array();
+	$count     = 0;
+	foreach ( $uris as $child_uri ) {
+		if ( $remaining <= 0 ) {
+			$truncated = true;
+			break;
+		}
+		if ( in_array( $child_uri, $ancestors, true ) ) {
+			continue;
+		}
+		$source = axismundi_op_resolve_source_by_uri( $child_uri );
+		if ( null === $source || ! axismundi_op_source_publicly_visible( $source ) ) {
+			continue;
+		}
+		$model = axismundi_op_object_view_model( $source );
+		if ( ! is_array( $model ) ) {
+			continue;
+		}
+		--$remaining;
+		if ( $remaining > 0 ) {
+			$branch = axismundi_op_render_reply_tree( $child_uri, $remaining, array_merge( $ancestors, array( $child_uri ) ) );
+		} else {
+			$branch = array(
+				'html'      => '',
+				'count'     => 0,
+				'truncated' => ! empty( axismundi_op_get_thread_reply_uris( $child_uri, 1 ) ),
+			);
+		}
+		$items[] = axismundi_op_render_thread_item( $model, $branch['html'] );
+		++$count;
+		$count += $branch['count'];
+		$truncated = $truncated || $branch['truncated'];
+	}
+	return array( 'html' => implode( '', $items ), 'count' => $count, 'truncated' => $truncated );
 }
 
 /** Render the "in reply to" context line for the request's current object view model. */
@@ -440,18 +493,22 @@ function axismundi_op_render_replies_block() : string {
 	if ( '' === $uri || 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
 		return '';
 	}
-	$replies = axismundi_op_get_reply_view_models( $uri );
-	if ( empty( $replies ) ) {
+	$remaining = 50;
+	$tree      = axismundi_op_render_reply_tree( $uri, $remaining, array( $uri ) );
+	if ( 0 === $tree['count'] ) {
 		return '';
 	}
-	$items = array_map( 'axismundi_op_render_thread_item', $replies );
+	$notice = $tree['truncated']
+		? '<p class="axismundi-thread__notice">' . esc_html__( 'Some replies are not shown in this preview.', 'axismundi-object-projections' ) . '</p>'
+		: '';
 	return '<div class="axismundi-thread axismundi-thread--replies">'
 		. '<h2 class="axismundi-thread__heading">' . esc_html( sprintf(
 			/* translators: %d: number of replies. */
-			_n( '%d Reply', '%d Replies', count( $replies ), 'axismundi-object-projections' ),
-			count( $replies )
+			_n( '%d Reply', '%d Replies', $tree['count'], 'axismundi-object-projections' ),
+			$tree['count']
 		) ) . '</h2>'
-		. '<ul class="axismundi-thread__list">' . implode( '', $items ) . '</ul>'
+		. '<ol class="axismundi-thread__list">' . $tree['html'] . '</ol>'
+		. $notice
 		. '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Items escaped by axismundi_op_render_thread_item().
 }
 

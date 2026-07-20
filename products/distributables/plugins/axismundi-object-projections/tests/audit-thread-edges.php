@@ -126,6 +126,22 @@ try {
 	}
 	ax_te_assert( $ax_te_results, 'a tombstoned remote reply keeps its edge and still resolves, as a Tombstone view model', is_array( $tombstoned_remote_reply ) && is_array( $tombstone_model ) && 'tombstone' === ( $tombstone_model['status'] ?? '' ) );
 
+	// A tombstoned intermediate reply must keep its live descendants connected.
+	// This catches the classic comment-table failure mode where deleting a parent
+	// silently hides the entire lower branch.
+	$remote_grandchild_uri = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
+	$stored_remote_grandchild = axismundi_op_remote_object_store( array( 'id' => $remote_grandchild_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $remote_reply_uri, 'content' => 'Remote reply below a deleted parent.' ) );
+	$ax_te_remote_uris[] = $remote_grandchild_uri;
+	$ax_te_edge_uris[]   = $remote_grandchild_uri;
+	$root_source = new Axismundi_Note_Source( axismundi_note_get( $root['post_id'] ), get_post( $root['post_id'] ) );
+	$root_model  = axismundi_op_object_view_model( $root_source );
+	$remaining   = 50;
+	$reply_tree  = axismundi_op_render_reply_tree( $root['uri'], $remaining, array( $root['uri'] ) );
+	axismundi_op_set_current_object_view_model( $root_model );
+	$nested_replies_html = axismundi_op_render_replies_block();
+	axismundi_op_set_current_object_view_model( null );
+	ax_te_assert( $ax_te_results, 'the replies block keeps a live descendant beneath its tombstoned parent and counts the complete visible tree', is_array( $stored_remote_grandchild ) && false !== strpos( $nested_replies_html, 'This reply has been deleted.' ) && false !== strpos( $nested_replies_html, 'Remote reply below a deleted parent.' ) && 3 === $reply_tree['count'] );
+
 	// A local Note that stops being a reply (edited to clear in_reply_to, then
 	// republished) drops its edge -- the envelope write alone does not, since the
 	// index only reads the object actually committed to the ledger.

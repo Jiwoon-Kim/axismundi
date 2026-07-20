@@ -225,15 +225,23 @@
 		}
 		var question = state.question || {};
 		var enabled = !! question.enabled || !! question.mode;
-		function update( changes ) { editPost( { axismundi_note_question: Object.assign( {}, question, changes, { enabled: true } ) } ); }
+		// The REST read shape includes stable option metadata ({uuid,name,position}),
+		// while the write contract intentionally accepts only authored string names.
+		// Normalize at this boundary so an unrelated edit never sends cached option
+		// objects back through the strict server validator.
+		var optionNames = ( question.options || [] ).map( function ( option ) {
+			return 'string' === typeof option ? option : ( option && 'string' === typeof option.name ? option.name : '' );
+		} );
+		var locked = !! question.locked_at;
+		function update( changes ) { editPost( { axismundi_note_question: Object.assign( {}, question, { options: optionNames }, changes, { enabled: true } ) } ); }
 		return el(
 			Panel,
 			{ name: 'axismundi-note-question', title: __( 'Question', 'axismundi-note' ) },
 			! enabled
 				? el( C.Button, { variant: 'secondary', onClick: function () { editPost( { axismundi_note_question: { enabled: true, mode: 'oneOf', options: [ '', '' ] } } ); } }, __( 'Turn this Note into a Question', 'axismundi-note' ) )
 				: el( 'div', {},
-					el( C.SelectControl, { label: __( 'Voting mode', 'axismundi-note' ), value: question.mode || 'oneOf', options: [ { label: __( 'Choose one', 'axismundi-note' ), value: 'oneOf' }, { label: __( 'Choose any', 'axismundi-note' ), value: 'anyOf' } ], __next40pxDefaultSize: true, onChange: function ( value ) { update( { mode: value } ); } } ),
-					el( C.TextareaControl, { label: __( 'Options', 'axismundi-note' ), help: __( 'One exact option name per line.', 'axismundi-note' ), value: ( question.options || [] ).join( '\n' ), onChange: function ( value ) { update( { options: window.axismundiNote.linesToList( value ) } ); } } ),
+					el( C.SelectControl, { label: __( 'Voting mode', 'axismundi-note' ), value: question.mode || 'oneOf', options: [ { label: __( 'Choose one', 'axismundi-note' ), value: 'oneOf' }, { label: __( 'Choose any', 'axismundi-note' ), value: 'anyOf' } ], disabled: locked, __next40pxDefaultSize: true, onChange: function ( value ) { update( { mode: value } ); } } ),
+					el( C.TextareaControl, { label: __( 'Options', 'axismundi-note' ), help: locked ? __( 'Options are frozen after federation.', 'axismundi-note' ) : __( 'One exact option name per line.', 'axismundi-note' ), disabled: locked, value: optionNames.join( '\n' ), onChange: function ( value ) { update( { options: window.axismundiNote.linesToList( value ) } ); } } ),
 					el( C.TextControl, { label: __( 'Closes at (optional)', 'axismundi-note' ), type: 'datetime-local', value: question.closes_at || '', __next40pxDefaultSize: true, onChange: function ( value ) { update( { closes_at: value } ); } } )
 				)
 		);

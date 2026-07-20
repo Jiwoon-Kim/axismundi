@@ -114,6 +114,16 @@ try {
 	ax_npv_assert( $ax_npv_results, 'the local vote action creates a constrained Note through the normal lifecycle and increments the same tally', is_array( $cast ) && 1 === count( $cast ) && 1 === $cast_view['voters_count'] && array( 1, 0 ) === array_column( $cast_view['options'], 'votes' ) );
 	wp_set_current_user( 0 );
 
+	$dedupe_question = ax_npv_question( $ax_npv_posts, (int) $owner->ID, 'anyOf', array( 'Spring', 'Autumn' ) );
+	wp_set_current_user( (int) $voter->ID );
+	$deduped = axismundi_note_cast_poll_vote( $dedupe_question['uri'], array( 'Spring', 'Spring' ) );
+	if ( is_array( $deduped ) ) {
+		$ax_npv_posts = array_merge( $ax_npv_posts, $deduped );
+	}
+	$dedupe_view = axismundi_note_question_view( $dedupe_question['post_id'] );
+	ax_npv_assert( $ax_npv_results, 'a manipulated duplicate option submission creates one vote Note and one tally observation', is_array( $deduped ) && 1 === count( $deduped ) && 1 === $dedupe_view['voters_count'] && array( 1, 0 ) === array_column( $dedupe_view['options'], 'votes' ) );
+	wp_set_current_user( 0 );
+
 	$edge_uri = (string) ( $first->get_payload()['object']['id'] ?? '' );
 	ax_npv_assert( $ax_npv_results, 'a confirmed vote object is excluded from the textual reply projection', '' !== $edge_uri && false === axismundi_note_exclude_poll_vote_reply( true, $edge_uri ) && true === axismundi_note_exclude_poll_vote_reply( true, (string) ( $text_reply->get_payload()['object']['id'] ?? '' ) ) );
 } finally {

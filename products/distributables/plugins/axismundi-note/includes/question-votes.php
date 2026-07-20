@@ -233,7 +233,7 @@ function axismundi_note_cast_poll_vote( string $question_uri, array $names ) {
 	if ( ! $actor instanceof Axismundi_Actor || ! is_array( $question ) ) {
 		return new WP_Error( 'ax_note_vote_target', __( 'This Question is not available for voting.', 'axismundi-note' ) );
 	}
-	$names = array_values( array_filter( $names, 'is_string' ) );
+	$names = array_values( array_unique( array_filter( $names, 'is_string' ), SORT_STRING ) );
 	if ( empty( $names ) || ( 'oneOf' === $question['mode'] && 1 !== count( $names ) ) ) {
 		return new WP_Error( 'ax_note_vote_choice', __( 'Choose a valid option.', 'axismundi-note' ) );
 	}

@@ -84,7 +84,7 @@ function axismundi_op_get_thread_parent_uri( string $child_uri ) : string {
 }
 
 /** Direct reply (child) URIs for one parent, oldest first. */
-function axismundi_op_get_thread_reply_uris( string $parent_uri, int $limit = 50 ) : array {
+function axismundi_op_get_thread_reply_uris( string $parent_uri, int $limit = 50, int $offset = 0 ) : array {
 	global $wpdb;
 	$parent = axismundi_op_relation_uri( $parent_uri );
 	if ( '' === $parent ) {
@@ -92,8 +92,9 @@ function axismundi_op_get_thread_reply_uris( string $parent_uri, int $limit = 50
 	}
 	$table = axismundi_op_thread_edges_table();
 	$limit = max( 1, min( 200, $limit ) );
+	$offset = max( 0, $offset );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed exact-URI lookup.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT child_uri, parent_uri FROM {$table} WHERE parent_uri_hash = %s AND parent_uri = %s ORDER BY id ASC LIMIT %d", hash( 'sha256', $parent ), $parent, $limit ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT child_uri, parent_uri FROM {$table} WHERE parent_uri_hash = %s AND parent_uri = %s ORDER BY id ASC LIMIT %d OFFSET %d", hash( 'sha256', $parent ), $parent, $limit, $offset ), ARRAY_A );
 	$uris  = array();
 	foreach ( $rows as $row ) {
 		if ( hash_equals( $parent, (string) $row['parent_uri'] ) ) {
@@ -101,6 +102,48 @@ function axismundi_op_get_thread_reply_uris( string $parent_uri, int $limit = 50
 		}
 	}
 	return $uris;
+}
+
+/**
+ * Reply URIs after product-level interaction filtering, oldest first.
+ *
+ * A raw page can be full of poll votes (or a later non-text interaction) that
+ * intentionally do not render in a textual thread. Apply the limit after that
+ * filter, otherwise those hidden rows can silently starve genuine replies.
+ * The scan has a hard ceiling so a hostile or pathological thread cannot turn a
+ * one-page render into an unbounded database walk.
+ *
+ * @return array{uris:string[],truncated:bool}
+ */
+function axismundi_op_get_display_thread_reply_uris( string $parent_uri, int $limit = 50 ) : array {
+	$limit       = max( 1, min( 200, $limit ) );
+	$batch_size  = 100;
+	$scan_limit  = 1000;
+	$offset      = 0;
+	$uris        = array();
+	$truncated   = false;
+	while ( $offset < $scan_limit && count( $uris ) < $limit ) {
+		$batch = axismundi_op_get_thread_reply_uris( $parent_uri, min( $batch_size, $scan_limit - $offset ), $offset );
+		if ( empty( $batch ) ) {
+			break;
+		}
+		foreach ( $batch as $child_uri ) {
+			if ( apply_filters( 'axismundi_op_thread_include_reply', true, $child_uri, $parent_uri ) ) {
+				$uris[] = $child_uri;
+				if ( count( $uris ) >= $limit ) {
+					break 2;
+				}
+			}
+		}
+		$offset += count( $batch );
+		if ( count( $batch ) < $batch_size ) {
+			break;
+		}
+	}
+	if ( $offset >= $scan_limit ) {
+		$truncated = true;
+	}
+	return array( 'uris' => $uris, 'truncated' => $truncated );
 }
 
 /**
@@ -368,10 +411,8 @@ function axismundi_op_source_publicly_visible( $source ) : bool {
  */
 function axismundi_op_get_reply_view_models( string $parent_uri, int $limit = 50 ) : array {
 	$models = array();
-	foreach ( axismundi_op_get_thread_reply_uris( $parent_uri, $limit ) as $child_uri ) {
-		if ( ! apply_filters( 'axismundi_op_thread_include_reply', true, $child_uri, $parent_uri ) ) {
-			continue;
-		}
+	$display = axismundi_op_get_display_thread_reply_uris( $parent_uri, $limit );
+	foreach ( $display['uris'] as $child_uri ) {
 		$source = axismundi_op_resolve_source_by_uri( $child_uri );
 		if ( null === $source || ! axismundi_op_source_publicly_visible( $source ) ) {
 			continue;
@@ -427,8 +468,9 @@ function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, ar
 	if ( $remaining <= 0 ) {
 		return array( 'html' => '', 'count' => 0, 'truncated' => false );
 	}
-	$uris      = axismundi_op_get_thread_reply_uris( $parent_uri, min( 200, $remaining + 1 ) );
-	$truncated = count( $uris ) > $remaining;
+	$display   = axismundi_op_get_display_thread_reply_uris( $parent_uri, min( 200, $remaining + 1 ) );
+	$uris      = $display['uris'];
+	$truncated = $display['truncated'] || count( $uris ) > $remaining;
 	$items     = array();
 	$count     = 0;
 	foreach ( $uris as $child_uri ) {
@@ -437,9 +479,6 @@ function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, ar
 			break;
 		}
 		if ( in_array( $child_uri, $ancestors, true ) ) {
-			continue;
-		}
-		if ( ! apply_filters( 'axismundi_op_thread_include_reply', true, $child_uri, $parent_uri ) ) {
 			continue;
 		}
 		$source = axismundi_op_resolve_source_by_uri( $child_uri );
@@ -457,7 +496,7 @@ function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, ar
 			$branch = array(
 				'html'      => '',
 				'count'     => 0,
-				'truncated' => ! empty( axismundi_op_get_thread_reply_uris( $child_uri, 1 ) ),
+				'truncated' => ! empty( axismundi_op_get_display_thread_reply_uris( $child_uri, 1 )['uris'] ),
 			);
 		}
 		$items[] = axismundi_op_render_thread_item( $model, $branch['html'] );
@@ -501,7 +540,7 @@ function axismundi_op_render_replies_block() : string {
 	}
 	$remaining = 50;
 	$tree      = axismundi_op_render_reply_tree( $uri, $remaining, array( $uri ) );
-	if ( 0 === $tree['count'] ) {
+	if ( 0 === $tree['count'] && ! $tree['truncated'] ) {
 		return '';
 	}
 	$notice = $tree['truncated']

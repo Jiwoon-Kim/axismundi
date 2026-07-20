@@ -50,6 +50,11 @@ function ax_te_note( array &$post_ids, int $author_id, string $content, string $
 	return array( 'post_id' => $post_id, 'uri' => is_array( $envelope ) ? axismundi_note_object_uri( (string) $envelope['local_uuid'] ) : '' );
 }
 
+/** Fixture-only filter that hides a known set of non-text interaction URIs. */
+function ax_te_hide_interactions( bool $include, string $child_uri ) : bool {
+	return $include && ! in_array( $child_uri, (array) ( $GLOBALS['ax_te_hidden_uris'] ?? array() ), true );
+}
+
 try {
 	$installed = axismundi_op_install();
 	$table     = axismundi_op_thread_edges_table();
@@ -166,6 +171,27 @@ try {
 
 	$root_no_parent = axismundi_op_get_parent_view_model( $root['uri'] );
 	ax_te_assert( $ax_te_results, 'a root object has no parent view model', null === $root_no_parent );
+
+	// A raw page full of hidden poll-vote-like interactions must not consume the
+	// textual reply window. The 52nd edge is intentionally visible: before the
+	// post-filter scan this would be silently starved by the raw LIMIT 51.
+	$hidden_parent = home_url( '/?ax_thread_parent=' . wp_generate_uuid4() );
+	$hidden = array();
+	for ( $i = 0; $i < 51; ++$i ) {
+		$uri = home_url( '/?ax_thread_hidden=' . wp_generate_uuid4() );
+		$hidden[] = $uri;
+		$ax_te_edge_uris[] = $uri;
+		axismundi_op_record_thread_edge( $uri, $hidden_parent );
+	}
+	$visible_after_hidden = home_url( '/?ax_thread_visible=' . wp_generate_uuid4() );
+	$ax_te_edge_uris[] = $visible_after_hidden;
+	axismundi_op_record_thread_edge( $visible_after_hidden, $hidden_parent );
+	$GLOBALS['ax_te_hidden_uris'] = $hidden;
+	add_filter( 'axismundi_op_thread_include_reply', 'ax_te_hide_interactions', 1, 2 );
+	$display_window = axismundi_op_get_display_thread_reply_uris( $hidden_parent, 1 );
+	remove_filter( 'axismundi_op_thread_include_reply', 'ax_te_hide_interactions', 1 );
+	unset( $GLOBALS['ax_te_hidden_uris'] );
+	ax_te_assert( $ax_te_results, 'hidden interaction rows do not starve a later textual reply from the display window', array( $visible_after_hidden ) === $display_window['uris'] && ! $display_window['truncated'] );
 } finally {
 	foreach ( array_unique( $ax_te_remote_uris ) as $uri ) {
 		axismundi_op_remote_object_delete( $uri );

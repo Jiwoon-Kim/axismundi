@@ -169,12 +169,7 @@ function axismundi_note_question_remove( int $post_id ) {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- atomic Question removal.
 	$wpdb->query( 'START TRANSACTION' );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed row lock at the type-change boundary.
-	$locked_at = $wpdb->get_var( $wpdb->prepare( "SELECT locked_at FROM {$questions_table} WHERE id = %d FOR UPDATE", $question_id ) );
-	if ( null !== $locked_at ) {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- release type-change transaction.
-		$wpdb->query( 'ROLLBACK' );
-		return new WP_Error( 'ax_note_question_type_locked', __( 'A federated Question cannot become an ordinary Note yet.', 'axismundi-note' ) );
-	}
+	$wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$questions_table} WHERE id = %d FOR UPDATE", $question_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- serialize Question removal against vote writes and the initial federation lock.
 	$ok = false !== $wpdb->delete( $votes_table, array( 'question_id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- derived rows belong to the discarded draft Question.
 	$ok = $ok && false !== $wpdb->delete( $options_table, array( 'question_id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- draft Question options.
 	$ok = $ok && false !== $wpdb->delete( $questions_table, array( 'id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- draft Question definition.

@@ -137,6 +137,36 @@ try {
 	$resurrected = axismundi_act_get_by_object( $object_uri );
 	ax_nl_assert( $ax_nl_results, 'republishing after Delete begins a new generation with one Create', 5 === count( $resurrected ) && 'Create' === $resurrected[0]->get_type() );
 
+	$question_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $uid, 'post_content' => '<p>Question revision.</p>' ) );
+	$ax_nl_post_ids[] = $question_id;
+	axismundi_note_save_envelope( $question_id, array( 'visibility' => 'public', 'language' => 'en' ) );
+	axismundi_note_question_save( $question_id, array( 'mode' => 'oneOf', 'options' => array( 'Yes', 'No' ) ) );
+	wp_update_post( array( 'ID' => $question_id, 'post_status' => 'publish' ) );
+	$question_envelope = axismundi_note_get( $question_id );
+	$question_uri      = is_array( $question_envelope ) ? axismundi_note_object_uri( (string) $question_envelope['local_uuid'] ) : '';
+	$ax_nl_object_uris[] = $question_uri;
+	$question_before = axismundi_act_get_by_object( $question_uri );
+	$question_rest = new WP_REST_Request( 'POST', '/wp/v2/' . AXISMUNDI_NOTE_POST_TYPE . '/' . $question_id );
+	$question_rest->set_body_params( array( 'axismundi_note_question' => array( 'enabled' => false ) ) );
+	$question_response = rest_do_request( $question_rest );
+	$question_after    = axismundi_act_get_by_object( $question_uri );
+	$question_update   = $question_after[0] ?? null;
+	$question_payload  = $question_update instanceof Axismundi_Activity ? $question_update->get_payload() : array();
+	ax_nl_assert(
+		$ax_nl_results,
+		'a REST Question-to-Note conversion records one same-URI Update with a Note snapshot',
+		200 === $question_response->get_status()
+		&& 1 === count( $question_before )
+		&& 'Create' === ( $question_before[0]->get_type() ?? '' )
+		&& 2 === count( $question_after )
+		&& $question_update instanceof Axismundi_Activity
+		&& 'Update' === $question_update->get_type()
+		&& 'Note' === ( $question_payload['object']['type'] ?? '' )
+		&& $question_uri === ( $question_payload['object']['id'] ?? '' )
+		&& ! isset( $question_payload['object']['oneOf'] )
+		&& ! isset( $question_payload['object']['anyOf'] )
+	);
+
 	$abort_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $uid, 'post_content' => '<p>Abort lifecycle.</p>' ) );
 	$ax_nl_post_ids[] = $abort_id;
 	axismundi_note_save_envelope( $abort_id, array( 'visibility' => 'public', 'language' => 'en' ) );
@@ -162,6 +192,13 @@ try {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 	foreach ( array_unique( $ax_nl_post_ids ) as $post_id ) {
+		$question = axismundi_note_question_row( (int) $post_id );
+		if ( is_array( $question ) ) {
+			$question_id = (int) $question['id'];
+			$wpdb->delete( axismundi_note_poll_votes_table(), array( 'question_id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( axismundi_note_question_options_table(), array( 'question_id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( axismundi_note_questions_table(), array( 'id' => $question_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		}
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( get_post( (int) $post_id ) instanceof WP_Post ) {
 			wp_delete_post( (int) $post_id, true );

@@ -41,7 +41,7 @@ try {
 	$panel_script = file_get_contents( dirname( __DIR__ ) . '/assets/editor/envelope-panel.js' );
 	ax_auth_assert( $ax_auth_results, 'the Note Federation panel exposes Quote policy, target, and decision status', is_string( $panel_script ) && false !== strpos( $panel_script, 'Who can quote this post?' ) && false !== strpos( $panel_script, 'Quote target (URI)' ) && false !== strpos( $panel_script, 'Quote status:' ) && false !== strpos( $panel_script, 'quotePolicy' ) && false !== strpos( $panel_script, "value: 'anyone'" ) && false !== strpos( $panel_script, "value: 'followers'" ) && false !== strpos( $panel_script, "value: 'me'" ) );
 	ax_auth_assert( $ax_auth_results, 'the Question panel uses add/remove option rows instead of a newline textarea', is_string( $panel_script ) && false !== strpos( $panel_script, 'axismundi-note-question-option' ) && false !== strpos( $panel_script, 'Add option' ) && false !== strpos( $panel_script, 'Remove option' ) && false === strpos( $panel_script, "label: __( 'Options', 'axismundi-note' ), help:" ) );
-	ax_auth_assert( $ax_auth_results, 'the Question panel offers the reciprocal Note conversion command before federation', is_string( $panel_script ) && false !== strpos( $panel_script, 'Turn this Question into a Note' ) && false !== strpos( $panel_script, 'enabled: false' ) );
+	ax_auth_assert( $ax_auth_results, 'the Question panel offers the reciprocal Note conversion command', is_string( $panel_script ) && false !== strpos( $panel_script, 'Turn this Question into a Note' ) && false !== strpos( $panel_script, 'enabled: false' ) );
 
 	// The structured read exposes envelope defaults for a fresh Note.
 	$default = axismundi_note_get_envelope( $post_id );

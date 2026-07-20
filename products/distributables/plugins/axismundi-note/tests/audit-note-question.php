@@ -126,11 +126,10 @@ try {
 	$locked_mode_change = axismundi_note_question_save( $post_id, array( 'mode' => 'oneOf' ) );
 	$locked_option_change = axismundi_note_question_save( $post_id, array( 'options' => array( 'Yes', 'No', 'Maybe' ) ) );
 	ax_nq_assert( $ax_nq_results, 'a locked Question keeps its original mode and options', is_wp_error( $locked_mode_change ) && 'ax_note_question_locked' === $locked_mode_change->get_error_code() && is_wp_error( $locked_option_change ) && 'ax_note_question_locked' === $locked_option_change->get_error_code() );
-	$locked_remove = axismundi_note_question_remove( $post_id );
-	ax_nq_assert( $ax_nq_results, 'a federated Question cannot silently lose its type and vote history', is_wp_error( $locked_remove ) && 'ax_note_question_type_locked' === $locked_remove->get_error_code() && axismundi_note_is_question( $post_id ) );
-
 	$closed = axismundi_note_question_save( $post_id, array( 'closed_at' => '2026-01-01T00:00:00Z' ) );
 	ax_nq_assert( $ax_nq_results, 'closed_at remains writable after mode/options lock', is_array( $closed ) && null !== $closed['closed_at'] && array( 'Yes', 'No' ) === array_column( axismundi_note_question_get( $post_id )['options'], 'name' ) );
+	$locked_remove = axismundi_note_question_remove( $post_id );
+	ax_nq_assert( $ax_nq_results, 'a federated Question can become an ordinary Note while preserving the immutable Activity history', true === $locked_remove && ! axismundi_note_is_question( $post_id ) && null === axismundi_note_question_get( $post_id ) );
 
 	// F3: a Question corrupted below the minimum cannot be locked (defensive; unreachable via save()).
 	$defensive_post = ax_nq_draft( $ax_nq_post_ids, (int) $author->ID, 'Defensive.' );

@@ -173,6 +173,12 @@ function axismundi_note_question_iso( ?string $sql_datetime ) : string {
  * Every vote count is zero: this file owns Question storage and the freeze
  * contract only, not vote recording, which is a later increment.
  *
+ * `closed_at` reflects the effective close, not only an explicit one: a Question
+ * whose scheduled `closes_at` has already passed is closed at that scheduled
+ * moment even if nothing ever recorded a `closed_at`, so the JSON-LD `closed`
+ * member and every display of this shape agree with the wire's own `endTime`
+ * semantics instead of only the locally-known explicit-close flag.
+ *
  * @return array{mode:string,options:array<int,array{name:string,votes:int}>,voters_count:int,closes_at:string,closed_at:string}|null
  */
 function axismundi_note_question_view( int $post_id ) : ?array {
@@ -180,12 +186,20 @@ function axismundi_note_question_view( int $post_id ) : ?array {
 	if ( ! is_array( $question ) ) {
 		return null;
 	}
+	$closes_at_iso = axismundi_note_question_iso( $question['closes_at'] );
+	$closed_at_iso = axismundi_note_question_iso( $question['closed_at'] );
+	if ( '' === $closed_at_iso && '' !== $closes_at_iso ) {
+		$closes_timestamp = strtotime( $closes_at_iso );
+		if ( false !== $closes_timestamp && $closes_timestamp <= time() ) {
+			$closed_at_iso = gmdate( 'c', $closes_timestamp );
+		}
+	}
 	return array(
 		'mode'         => $question['mode'],
 		'options'      => array_map( static fn( array $option ) : array => array( 'name' => $option['name'], 'votes' => 0 ), $question['options'] ),
 		'voters_count' => 0,
-		'closes_at'    => axismundi_note_question_iso( $question['closes_at'] ),
-		'closed_at'    => axismundi_note_question_iso( $question['closed_at'] ),
+		'closes_at'    => $closes_at_iso,
+		'closed_at'    => $closed_at_iso,
 	);
 }
 
@@ -261,7 +275,12 @@ function axismundi_note_question_save( int $post_id, array $fields ) {
 		return new WP_Error( 'ax_note_post', __( 'A Note post is required.', 'axismundi-note' ) );
 	}
 	$existing = axismundi_note_question_row( $post_id );
-	$locked   = is_array( $existing ) && ! empty( $existing['locked_at'] );
+	// This non-transactional read only powers a fast-path rejection for the
+	// common case. It is not the enforcement boundary: a concurrent
+	// axismundi_note_question_lock() can still commit between this read and the
+	// write below, so freezing mode/options is re-verified atomically there
+	// against the row's live state, not this snapshot.
+	$locked = is_array( $existing ) && ! empty( $existing['locked_at'] );
 
 	if ( ! is_array( $existing ) ) {
 		$envelope = axismundi_note_get( $post_id );
@@ -269,7 +288,8 @@ function axismundi_note_question_save( int $post_id, array $fields ) {
 			return new WP_Error( 'ax_note_question_type_locked', __( 'A Note already federated as an ordinary Note cannot become a Question.', 'axismundi-note' ) );
 		}
 	}
-	if ( $locked && ( array_key_exists( 'mode', $fields ) || array_key_exists( 'options', $fields ) ) ) {
+	$changing_frozen_fields = array_key_exists( 'mode', $fields ) || array_key_exists( 'options', $fields );
+	if ( $locked && $changing_frozen_fields ) {
 		return new WP_Error( 'ax_note_question_locked', __( 'A federated Question keeps its original mode and options.', 'axismundi-note' ) );
 	}
 
@@ -296,19 +316,36 @@ function axismundi_note_question_save( int $post_id, array $fields ) {
 	$closed_at = array_key_exists( 'closed_at', $fields ) ? axismundi_note_question_sanitize_datetime( $fields['closed_at'] ) : ( $existing['closed_at'] ?? null );
 	$now       = current_time( 'mysql', true );
 
+	$questions_table = axismundi_note_questions_table();
 	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- atomic Question + option replacement.
 	if ( is_array( $existing ) ) {
+		$question_id = (int) $existing['id'];
+		if ( $changing_frozen_fields ) {
+			// The actual freeze boundary. A row lock -- not an UPDATE affected-rows
+			// count, which mysqli reports as changed-values rather than
+			// matched-rows and would false-positive whenever the new value equals
+			// the old one -- so a concurrent axismundi_note_question_lock() that
+			// commits after the non-transactional read above but before this
+			// statement is still caught: FOR UPDATE blocks until that lock's own
+			// UPDATE (ordinary autocommit, still row-locked by InnoDB) finishes,
+			// then this SELECT sees its result.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- indexed row lock inside this transaction.
+			$locked_now = $wpdb->get_var( $wpdb->prepare( "SELECT locked_at FROM {$questions_table} WHERE id = %d FOR UPDATE", $question_id ) );
+			if ( null !== $locked_now ) {
+				$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- a concurrent lock won the race; discard this write entirely.
+				return new WP_Error( 'ax_note_question_locked', __( 'A federated Question keeps its original mode and options.', 'axismundi-note' ) );
+			}
+		}
 		$ok = false !== $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- atomic Question update.
-			axismundi_note_questions_table(),
+			$questions_table,
 			array( 'mode' => $mode, 'closes_at' => $closes_at, 'closed_at' => $closed_at, 'updated_at' => $now ),
-			array( 'id' => (int) $existing['id'] ),
+			array( 'id' => $question_id ),
 			array( '%s', '%s', '%s', '%s' ),
 			array( '%d' )
 		);
-		$question_id = (int) $existing['id'];
 	} else {
 		$ok = false !== $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- atomic Question insertion.
-			axismundi_note_questions_table(),
+			$questions_table,
 			array( 'note_post_id' => $post_id, 'mode' => $mode, 'closes_at' => $closes_at, 'closed_at' => $closed_at, 'created_at' => $now, 'updated_at' => $now )
 		);
 		$question_id = (int) $wpdb->insert_id;

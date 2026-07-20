@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.10
+Stable tag: 0.0.11
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,16 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.11 =
+* Close a race where a Question's mode/options freeze could be bypassed: a save
+  that read the row as unlocked can no longer overwrite mode or options if a
+  concurrent lock commits before its own write runs. The freeze boundary is now
+  a `SELECT ... FOR UPDATE` row lock evaluated inside the write transaction,
+  not the earlier non-transactional read.
+* Treat a Question whose scheduled `closes_at` has already passed as closed --
+  in the JSON-LD `closed` member and the read-only Poll block alike -- even
+  when nothing ever recorded an explicit `closed_at`.
 
 = 0.0.10 =
 * Project a Question Note as ActivityStreams `type: Question` with a name-only

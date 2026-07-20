@@ -37,6 +37,27 @@ function ax_nq_author( array &$user_ids, array &$actor_ids ) : ?WP_User {
 	return get_userdata( $uid ) ?: null;
 }
 
+/**
+ * Simulate a concurrent axismundi_note_question_lock() winning the race.
+ *
+ * Fires exactly once, right as save()'s own row-lock SELECT ... FOR UPDATE is
+ * about to run for the targeted Question, so the lock this injects lands after
+ * save()'s earlier non-transactional "unlocked" read but before its guarded
+ * write -- the exact interleaving the freeze boundary must survive.
+ */
+function ax_nq_race_lock_before_select( $query ) {
+	$target = (int) ( $GLOBALS['ax_nq_race_question_id'] ?? 0 );
+	if ( $target <= 0 || false === strpos( (string) $query, 'FOR UPDATE' ) || false === strpos( (string) $query, (string) $target ) ) {
+		return $query;
+	}
+	global $wpdb;
+	$GLOBALS['ax_nq_race_question_id'] = 0;
+	$table = axismundi_note_questions_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- fixture-induced concurrent lock, fired exactly once.
+	$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET locked_at = %s WHERE id = %d", current_time( 'mysql', true ), $target ) );
+	return $query;
+}
+
 /** Create one draft Note post (no envelope-level Question data). */
 function ax_nq_draft( array &$post_ids, int $author_id, string $content ) : int {
 	$post_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $author_id, 'post_content' => $content ) );
@@ -111,6 +132,22 @@ try {
 	$wpdb->delete( axismundi_note_question_options_table(), array( 'question_id' => (int) $defensive_question['id'] ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- fixture-induced corruption to exercise the defensive gate.
 	$incomplete_lock = axismundi_note_question_lock( $defensive_post );
 	ax_nq_assert( $ax_nq_results, 'locking is refused when a Question has fallen below the minimum option count', is_wp_error( $incomplete_lock ) && 'ax_note_question_incomplete' === $incomplete_lock->get_error_code() );
+
+	// F4: a concurrent lock that commits between save()'s non-transactional read and
+	// its guarded write must still be caught, not just an already-locked row read
+	// up front. Inject the concurrent lock via the `query` filter right as save()'s
+	// own row-lock SELECT is about to run, simulating another request's
+	// axismundi_note_question_lock() winning the race a moment after our own
+	// stale "unlocked" read.
+	$race_post = ax_nq_draft( $ax_nq_post_ids, (int) $author->ID, 'Race.' );
+	axismundi_note_question_save( $race_post, array( 'mode' => 'oneOf', 'options' => array( 'A', 'B' ) ) );
+	$race_question = axismundi_note_question_row( $race_post );
+	$GLOBALS['ax_nq_race_question_id'] = (int) $race_question['id'];
+	add_filter( 'query', 'ax_nq_race_lock_before_select' );
+	$race_result = axismundi_note_question_save( $race_post, array( 'options' => array( 'C', 'D' ) ) );
+	remove_filter( 'query', 'ax_nq_race_lock_before_select' );
+	$race_options_after = axismundi_note_question_get( $race_post )['options'];
+	ax_nq_assert( $ax_nq_results, 'a lock that commits between the read and the write is still caught, and the options table is left untouched', is_wp_error( $race_result ) && 'ax_note_question_locked' === $race_result->get_error_code() && array( 'A', 'B' ) === array_column( $race_options_after, 'name' ) );
 
 	// End-to-end: publishing a ready Question locks both attribution and the Question together.
 	$e2e_post = ax_nq_draft( $ax_nq_post_ids, (int) $author->ID, 'End to end.' );

@@ -103,6 +103,22 @@ try {
 	axismundi_op_set_current_object_view_model( null );
 	ax_nqv_assert( $ax_nqv_results, 'a closed Question renders the closed variant with final-results meta', false !== strpos( $multi_block_html, 'axismundi-question--closed' ) && false !== strpos( $multi_block_html, 'Final results' ) );
 
+	// A Question whose scheduled closes_at has already passed is effectively
+	// closed even though nothing ever recorded an explicit closed_at.
+	$expired = ax_nqv_publish( $ax_nqv_post_ids, (int) $author->ID, 'Already past its close.' );
+	axismundi_note_question_save( $expired['post_id'], array( 'mode' => 'oneOf', 'options' => array( 'A', 'B' ), 'closes_at' => '2020-01-01T00:00:00Z' ) );
+	wp_update_post( array( 'ID' => $expired['post_id'], 'post_status' => 'publish' ) );
+	$expired_envelope = axismundi_note_get( $expired['post_id'] );
+	$expired_source   = new Axismundi_Note_Source( $expired_envelope, get_post( $expired['post_id'] ) );
+	$expired_object   = axismundi_note_transform_source( $expired_source );
+	ax_nqv_assert( $ax_nqv_results, 'a Question past its scheduled closes_at projects an AS2 closed member at that scheduled moment, with no explicit closed_at ever stored', '2020-01-01T00:00:00+00:00' === ( $expired_object['closed'] ?? '' ) && null === axismundi_note_question_get( $expired['post_id'] )['closed_at'] );
+
+	$expired_model = axismundi_note_object_view_model( $expired_source );
+	axismundi_op_set_current_object_view_model( $expired_model );
+	$expired_block_html = axismundi_op_render_question_block();
+	axismundi_op_set_current_object_view_model( null );
+	ax_nqv_assert( $ax_nqv_results, 'the Poll block treats a past closes_at as closed, not open, without an explicit closed_at', '2020-01-01T00:00:00+00:00' === $expired_model['poll']['closed_at'] && false !== strpos( $expired_block_html, 'axismundi-question--closed' ) && false !== strpos( $expired_block_html, 'Final results' ) );
+
 	// A tombstoned Question never exposes poll data or renders the block.
 	wp_delete_post( $question['post_id'], true );
 	$tombstoned_envelope = axismundi_note_get_by_uuid( (string) $q_envelope['local_uuid'] );

@@ -65,6 +65,25 @@ function axismundi_geodata_register_geojson_routes() : void {
 add_action( 'rest_api_init', 'axismundi_geodata_register_geojson_routes' );
 
 /**
+ * Whether an attachment's location data is safe for an anonymous GeoJSON response.
+ *
+ * `inherit` only means the attachment follows its parent; it is not evidence that
+ * the parent is public. Require the explicit coordinate opt-in and a published,
+ * non-password-protected parent so public routes cannot bypass WordPress visibility.
+ */
+function axismundi_geodata_attachment_geojson_publicly_viewable( int $attachment_id ) : bool {
+	$attachment = get_post( $attachment_id );
+	if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type || ! axismundi_geodata_is_public( $attachment_id ) ) {
+		return false;
+	}
+	$parent = get_post( (int) $attachment->post_parent );
+	return $parent instanceof WP_Post
+		&& 'publish' === $parent->post_status
+		&& '' === (string) $parent->post_password
+		&& is_post_publicly_viewable( $parent );
+}
+
+/**
  * Parse a "W,S,E,N" bbox string, or null.
  *
  * @param string $bbox Bbox param.
@@ -174,7 +193,7 @@ function axismundi_geodata_rest_geotags_geojson( WP_REST_Request $request ) : WP
  */
 function axismundi_geodata_rest_track_geojson( WP_REST_Request $request ) {
 	$id = (int) $request['id'];
-	if ( ! axismundi_geodata_is_track_attachment( $id ) || ! in_array( get_post_status( $id ), array( 'inherit', 'publish' ), true ) ) {
+	if ( ! axismundi_geodata_is_track_attachment( $id ) || ! axismundi_geodata_attachment_geojson_publicly_viewable( $id ) ) {
 		return new WP_Error( 'axismundi_not_track', __( 'Not a track attachment.', 'axismundi-geodata' ), array( 'status' => 404 ) );
 	}
 
@@ -214,7 +233,7 @@ function axismundi_geodata_rest_track_geojson( WP_REST_Request $request ) {
  * @return array<string,mixed>|null
  */
 function axismundi_geodata_attachment_point_feature( int $attachment_id ) : ?array {
-	if ( 'attachment' !== get_post_type( $attachment_id ) || ! axismundi_geodata_is_public( $attachment_id ) ) {
+	if ( ! axismundi_geodata_attachment_geojson_publicly_viewable( $attachment_id ) ) {
 		return null;
 	}
 
@@ -254,7 +273,7 @@ function axismundi_geodata_attachment_point_feature( int $attachment_id ) : ?arr
  * @return array<string,mixed>|null
  */
 function axismundi_geodata_track_feature( int $attachment_id ) : ?array {
-	if ( ! axismundi_geodata_is_track_attachment( $attachment_id ) || ! in_array( get_post_status( $attachment_id ), array( 'inherit', 'publish' ), true ) ) {
+	if ( ! axismundi_geodata_is_track_attachment( $attachment_id ) || ! axismundi_geodata_attachment_geojson_publicly_viewable( $attachment_id ) ) {
 		return null;
 	}
 

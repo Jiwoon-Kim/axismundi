@@ -4,7 +4,7 @@ Tags: geo, geotag, location, taxonomy, rest-api
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -82,6 +82,41 @@ serializer uses public geotag facts only and never exposes post or attachment GP
 meta. A server-side adapter uses WordPress `fetch_feed()` / SimplePie to convert
 external GeoRSS and W3C Geo feeds into GeoJSON for map clients.
 
+== External services ==
+
+All external services are optional. Choosing **None** for preview maps and not
+configuring a lookup provider makes no external request.
+
+* **Google Maps Platform** is used only when an administrator configures a Google
+  API key and explicitly searches for or reverse-geocodes a place in the term
+  editor. The server sends the search text or clicked latitude/longitude, selected
+  language/region, and the configured API key to Google. Google Maps Platform
+  Terms: https://mapsplatform.google.com/terms/ Privacy Policy:
+  https://policies.google.com/privacy
+* **OpenStreetMap Nominatim** is used only when an administrator selects the
+  public Nominatim provider or configures a custom Nominatim-compatible endpoint,
+  then performs a place lookup. The server sends the search text or clicked
+  latitude/longitude to that endpoint. Public Nominatim usage policy:
+  https://operations.osmfoundation.org/policies/nominatim/ OpenStreetMap privacy
+  policy: https://wiki.osmfoundation.org/wiki/Privacy_Policy
+* **Protomaps assets** supply glyph and sprite files only when an administrator
+  selects a Protomaps PMTiles preview style. The administrator's browser requests
+  the selected glyph/sprite URLs, which disclose the browser IP address and the
+  requested map assets to Protomaps' GitHub Pages host. Protomaps legal terms:
+  https://protomaps.com/legal GitHub privacy statement:
+  https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+* **MapTiler** and **Thunderforest** are optional raster-tile providers selected
+  by the site administrator. When selected, the viewer's browser requests map
+  tile coordinates and sends its IP address, referrer, and the provider key in
+  the configured tile URL. MapTiler Terms: https://www.maptiler.com/terms/
+  Privacy Policy: https://www.maptiler.com/privacy-policy/ Thunderforest Terms:
+  https://www.thunderforest.com/terms/ Privacy Policy:
+  https://www.thunderforest.com/privacy/
+* **External GeoRSS/W3C Geo feeds** are fetched only when a site administrator
+  supplies a feed URL to the server-side GeoRSS importer. The server sends the
+  configured feed URL request to that feed's host. Its terms and privacy policy
+  are determined by the feed provider selected by the site administrator.
+
 == Installation ==
 
 1. Upload and activate this plugin under any block theme.
@@ -108,6 +143,10 @@ shared renderer assets; Map owns the public block and Query Map View. See
 docs/map-strategy.md for the boundary.
 
 == Changelog ==
+
+= 0.2.2 =
+* Document every optional external service, the information it receives, and its terms and privacy links.
+* Restrict anonymous attachment and GPS-track GeoJSON output to opted-in media whose actual parent post is published and publicly viewable.
 
 = 0.2.1 =
 * Move the complete geo_area and geotag archive templates from the Axismundi theme to their Geodata domain owner.

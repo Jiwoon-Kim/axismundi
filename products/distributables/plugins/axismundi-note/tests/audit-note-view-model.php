@@ -36,6 +36,7 @@ try {
 			'post_type'    => AXISMUNDI_NOTE_POST_TYPE,
 			'post_status'  => 'draft',
 			'post_author'  => $uid,
+			'post_title'   => 'View model note.',
 			'post_content' => '<!-- wp:paragraph --><p>Hello from a note.</p><!-- /wp:paragraph -->',
 		)
 	);
@@ -69,6 +70,25 @@ try {
 	$active_html = axismundi_op_render_object_view_block();
 	axismundi_op_set_current_object_view_model( null );
 	ax_vm_assert( $ax_vm_results, 'the object-view block renders an active Note with content and author but no deleted notice', false !== strpos( $active_html, 'axismundi-object--note' ) && false !== strpos( $active_html, 'Hello from a note.' ) && false !== strpos( $active_html, 'axismundi-object__author' ) && false === strpos( $active_html, 'has been deleted' ) );
+
+	// An embedded object caller can choose a smaller heading and suppress the
+	// personalized interaction slot without changing the source view model.
+	axismundi_op_set_current_object_view_model( $vm );
+	$compact_html = axismundi_op_render_object_view_block( array( 'headingTag' => 'h3', 'interactions' => false ) );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vm_assert( $ax_vm_results, 'the object renderer supports a compact non-personalized embedding mode', false !== strpos( $compact_html, '<h3 class="axismundi-object__title">' ) && false === strpos( $compact_html, 'axismundi-object__interactions' ) );
+
+	// The Actor feed is ledger-selected by Activities but a local Create(Note)
+	// resolves the current Note source and renderer rather than duplicating the
+	// stored Activity snapshot. The request binding must be restored afterward.
+	$feed_item = array( 'type' => 'Create', 'actor_uri' => $actor->get_uri(), 'object_uri' => axismundi_note_object_uri( $uuid ) );
+	axismundi_op_set_current_object_view_model( array( 'id' => 'fixture-previous' ) );
+	$feed_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $feed_item );
+	$restored  = axismundi_op_current_object_view_model();
+	axismundi_op_set_current_object_view_model( null );
+	ax_vm_assert( $ax_vm_results, 'a matching public Create(Note) renders through the canonical compact Note view and restores request state', false !== strpos( $feed_html, 'axismundi-object--note' ) && false !== strpos( $feed_html, 'Hello from a note.' ) && false !== strpos( $feed_html, '<h3 class="axismundi-object__title">' ) && ! empty( $restored ) && 'fixture-previous' === ( $restored['id'] ?? '' ) );
+	$wrong_feed_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', array_merge( $feed_item, array( 'actor_uri' => 'https://example.invalid/actors/not-the-author' ) ) );
+	ax_vm_assert( $ax_vm_results, 'an Actor feed Create with mismatched attribution cannot render a Note object', '' === $wrong_feed_html );
 
 	$media_vm = $vm;
 	$media_vm['attachments'] = array(

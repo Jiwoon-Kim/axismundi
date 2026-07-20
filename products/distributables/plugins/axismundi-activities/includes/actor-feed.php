@@ -38,6 +38,7 @@ function axismundi_act_actor_feed_item( Axismundi_Activity $activity ) : ?array 
 	return array(
 		'id'          => $activity->get_uri(),
 		'type'        => $type,
+		'actor_uri'   => $activity->get_actor_uri(),
 		'label'       => $verbs[ $type ] ?? sprintf(
 			/* translators: %s: ActivityStreams activity type. */
 			__( 'Performed %s', 'axismundi-activities' ),
@@ -97,6 +98,21 @@ function axismundi_act_render_actor_activity_feed() : string {
 	}
 	$cards = array();
 	foreach ( $items as $item ) {
+		/**
+		 * Let an object-owning product render a public activity's object through
+		 * its own view model. Activities deliberately owns only ledger selection,
+		 * so it never reaches into Note or Object Projections directly.
+		 *
+		 * @param string               $html Empty by default.
+		 * @param array<string,mixed>  $item Public-safe Activity feed item.
+		 */
+		$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item );
+		if ( '' !== $object_html ) {
+			$cards[] = '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--object axismundi-activity-feed__item--' . esc_attr( strtolower( $item['type'] ) ) . '">'
+				. $object_html
+				. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The owning product owns and escapes its renderer output.
+			continue;
+		}
 		$meta = '';
 		if ( '' !== $item['published'] ) {
 			$timestamp = strtotime( $item['published'] );

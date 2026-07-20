@@ -195,3 +195,48 @@ function axismundi_note_object_robots( array $robots ) : array {
 	return $robots;
 }
 add_filter( 'wp_robots', 'axismundi_note_object_robots' );
+
+/**
+ * Render a public Create(Note) ledger entry as the canonical compact Note view.
+ *
+ * Activities owns which public ledger entries appear in the Actor feed. Note
+ * claims only its own active, public sources and deliberately suppresses the
+ * personalized interaction slot: an Actor profile can be shared-cached.
+ *
+ * @param string              $html Existing product renderer output.
+ * @param array<string,mixed> $item Public-safe Activity feed item.
+ */
+function axismundi_note_actor_feed_object_html( string $html, array $item ) : string {
+	if ( '' !== $html || 'Create' !== (string) ( $item['type'] ?? '' ) ) {
+		return $html;
+	}
+	$object_uri = (string) ( $item['object_uri'] ?? '' );
+	$actor_uri  = (string) ( $item['actor_uri'] ?? '' );
+	if ( '' === $object_uri || '' === $actor_uri
+		|| ! function_exists( 'axismundi_op_resolve_source_by_uri' )
+		|| ! function_exists( 'axismundi_op_object_view_model' )
+		|| ! function_exists( 'axismundi_op_render_object_view_block' )
+	) {
+		return $html;
+	}
+	$source = axismundi_op_resolve_source_by_uri( $object_uri );
+	if ( ! $source instanceof Axismundi_Note_Source || $source->is_tombstone() || ! axismundi_note_source_visible( $source ) ) {
+		return $html;
+	}
+	$model = axismundi_op_object_view_model( $source );
+	if ( ! is_array( $model ) || $actor_uri !== (string) ( $model['author']['url'] ?? '' ) ) {
+		return $html;
+	}
+	$previous = function_exists( 'axismundi_op_current_object_view_model' ) ? axismundi_op_current_object_view_model() : null;
+	axismundi_op_set_current_object_view_model( $model );
+	try {
+		$view = axismundi_op_render_object_view_block( array( 'headingTag' => 'h3', 'interactions' => false ) );
+		if ( 'Question' === (string) ( $model['type'] ?? '' ) && function_exists( 'axismundi_op_render_question_block' ) ) {
+			$view .= axismundi_op_render_question_block();
+		}
+		return $view;
+	} finally {
+		axismundi_op_set_current_object_view_model( $previous );
+	}
+}
+add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_note_actor_feed_object_html', 10, 2 );

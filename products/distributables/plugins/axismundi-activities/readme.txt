@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.23
+Stable tag: 0.0.24
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,11 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.24 =
+* Let an object-owning product render a public ledger entry through its own
+  canonical view-model path. Activities continues to select only public
+  outbound Activity rows and has no dependency on a particular object product.
 
 = 0.0.23 =
 * Add the server-rendered `axismundi/actor-activity-feed` block. It projects

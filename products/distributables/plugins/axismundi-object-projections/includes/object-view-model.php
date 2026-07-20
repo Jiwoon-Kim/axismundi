@@ -142,11 +142,13 @@ function axismundi_op_object_view_attachment( array $descriptor ) : string {
  * content-warning wrapper and an interactions slot products may fill.
  */
 function axismundi_op_render_object_view_block( array $attributes = array(), string $content = '' ) : string {
-	unset( $attributes, $content );
+	unset( $content );
 	$model = axismundi_op_current_object_view_model();
 	if ( null === $model ) {
 		return '';
 	}
+	$heading_tag          = isset( $attributes['headingTag'] ) && in_array( $attributes['headingTag'], array( 'h1', 'h2', 'h3', 'h4' ), true ) ? $attributes['headingTag'] : 'h1';
+	$interactions_enabled = ! isset( $attributes['interactions'] ) || (bool) $attributes['interactions'];
 
 	if ( 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
 		return '<div class="axismundi-object axismundi-object--tombstone">'
@@ -157,7 +159,7 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 	$parts   = array();
 	$title   = trim( (string) ( $model['title'] ?? '' ) );
 	if ( '' !== $title ) {
-		$parts[] = '<h1 class="axismundi-object__title">' . esc_html( $title ) . '</h1>';
+		$parts[] = '<' . $heading_tag . ' class="axismundi-object__title">' . esc_html( $title ) . '</' . $heading_tag . '>';
 	}
 	$parts[] = axismundi_op_object_view_author( $model );
 
@@ -203,7 +205,7 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
 	 * @param string               $html  Interaction markup (empty by default).
 	 * @param array<string,mixed>  $model The active object view model.
 	 */
-	$interactions = (string) apply_filters( 'axismundi_op_object_view_interactions', '', $model );
+	$interactions = $interactions_enabled ? (string) apply_filters( 'axismundi_op_object_view_interactions', '', $model ) : '';
 	if ( '' !== $interactions ) {
 		$parts[] = '<div class="axismundi-object__interactions">' . $interactions . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Interaction consumer owns escaping.
 	}

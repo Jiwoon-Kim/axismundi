@@ -34,7 +34,30 @@ Get-ChildItem -LiteralPath $pluginRoot -Force | ForEach-Object {
 if (Test-Path $zipPath) {
 	Remove-Item -LiteralPath $zipPath -Force
 }
-Compress-Archive -Path (Join-Path $stageRoot $pluginSlug) -DestinationPath $zipPath -CompressionLevel Optimal
+# Compress-Archive emits Windows backslashes in ZIP entry names under PowerShell 7.
+# WordPress expects portable forward-slash entry names, so write entries explicitly.
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::Open(
+	$zipPath,
+	[System.IO.Compression.ZipArchiveMode]::Create
+)
+try {
+	Get-ChildItem -LiteralPath $stagePlugin -File -Recurse | ForEach-Object {
+		$relativePath = $_.FullName.Substring($stageRoot.Length).TrimStart([char] 92, [char] 47).Replace([string] [char] 92, '/')
+		$entry = $archive.CreateEntry($relativePath, [System.IO.Compression.CompressionLevel]::Optimal)
+		$sourceStream = [System.IO.File]::OpenRead($_.FullName)
+		$destinationStream = $entry.Open()
+		try {
+			$sourceStream.CopyTo($destinationStream)
+		} finally {
+			$destinationStream.Dispose()
+			$sourceStream.Dispose()
+		}
+	}
+} finally {
+	$archive.Dispose()
+}
 Remove-Item -LiteralPath $stageRoot -Recurse -Force
 
 $sizeMb = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)

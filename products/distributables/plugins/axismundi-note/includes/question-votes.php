@@ -225,3 +225,78 @@ function axismundi_note_exclude_poll_vote_reply( bool $include, string $child_ur
 	return null === $found;
 }
 add_filter( 'axismundi_op_thread_include_reply', 'axismundi_note_exclude_poll_vote_reply', 10, 2 );
+
+/** Create one local vote Note; its normal lifecycle records the actual Create. */
+function axismundi_note_cast_poll_vote( string $question_uri, array $names ) {
+	$actor    = function_exists( 'axismundi_act_current_local_actor' ) ? axismundi_act_current_local_actor() : null;
+	$question = axismundi_note_poll_question_target( $question_uri );
+	if ( ! $actor instanceof Axismundi_Actor || ! is_array( $question ) ) {
+		return new WP_Error( 'ax_note_vote_target', __( 'This Question is not available for voting.', 'axismundi-note' ) );
+	}
+	$names = array_values( array_filter( $names, 'is_string' ) );
+	if ( empty( $names ) || ( 'oneOf' === $question['mode'] && 1 !== count( $names ) ) ) {
+		return new WP_Error( 'ax_note_vote_choice', __( 'Choose a valid option.', 'axismundi-note' ) );
+	}
+	$uuid = axismundi_note_local_uuid_from_uri( $question_uri );
+	$target_envelope = null !== $uuid ? axismundi_note_get_by_uuid( $uuid ) : null;
+	$target_actor    = is_array( $target_envelope ) ? (string) ( $target_envelope['actor_uri'] ?? '' ) : '';
+	if ( '' === $target_actor ) {
+		return new WP_Error( 'ax_note_vote_target', __( 'This Question is not available for voting.', 'axismundi-note' ) );
+	}
+	$created = array();
+	foreach ( $names as $name ) {
+		$option = axismundi_note_poll_option( (int) $question['id'], $name );
+		if ( ! is_array( $option ) ) {
+			return new WP_Error( 'ax_note_vote_choice', __( 'Choose a valid option.', 'axismundi-note' ) );
+		}
+		$post_id = wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => (int) $actor->get_local_user_id(), 'post_title' => $name, 'post_content' => '' ), true );
+		if ( is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+		$saved = axismundi_note_save( (int) $post_id, array( 'visibility' => 'mentioned', 'mention_actor_uris' => array( $target_actor ), 'in_reply_to_uri' => $question_uri ) );
+		if ( is_wp_error( $saved ) || 0 === wp_update_post( array( 'ID' => (int) $post_id, 'post_status' => 'publish' ), true ) ) {
+			wp_delete_post( (int) $post_id, true );
+			return is_wp_error( $saved ) ? $saved : new WP_Error( 'ax_note_vote_write', __( 'The vote could not be recorded.', 'axismundi-note' ) );
+		}
+		$created[] = (int) $post_id;
+	}
+	return $created;
+}
+
+/** Render a nonce-protected local vote form in OP's neutral Question action slot. */
+function axismundi_note_question_actions( string $html, array $model, array $poll ) : string {
+	$uri = (string) ( $model['object_uri'] ?? '' );
+	if ( '' !== $html || ! empty( $poll['closed_at'] ) || ! function_exists( 'axismundi_act_current_local_actor' ) || ! ( axismundi_act_current_local_actor() instanceof Axismundi_Actor ) || ! is_array( axismundi_note_poll_question_target( $uri ) ) ) {
+		return $html;
+	}
+	$type  = 'anyOf' === (string) ( $poll['mode'] ?? '' ) ? 'checkbox' : 'radio';
+	$items = '';
+	foreach ( (array) ( $poll['options'] ?? array() ) as $option ) {
+		$name = (string) ( $option['name'] ?? '' );
+		if ( '' !== $name ) {
+			$items .= '<label><input type="' . esc_attr( $type ) . '" name="ax_note_vote[]" value="' . esc_attr( $name ) . '"> ' . esc_html( $name ) . '</label>';
+		}
+	}
+	return '<form class="axismundi-question__vote" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
+		. '<input type="hidden" name="action" value="axismundi_note_vote">'
+		. '<input type="hidden" name="question" value="' . esc_attr( $uri ) . '">'
+		. wp_nonce_field( 'axismundi_note_vote:' . $uri, '_axismundi_note_vote_nonce', true, false )
+		. '<fieldset><legend>' . esc_html__( 'Cast your vote', 'axismundi-note' ) . '</legend>' . $items . '</fieldset>'
+		. '<button type="submit">' . esc_html__( 'Vote', 'axismundi-note' ) . '</button></form>';
+}
+add_filter( 'axismundi_op_question_actions', 'axismundi_note_question_actions', 10, 3 );
+
+/** Handle the HTML vote form and return to its canonical Question document. */
+function axismundi_note_handle_poll_vote() : void {
+	$uri = axismundi_act_uri( wp_unslash( $_POST['question'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce checked below.
+	if ( '' === $uri || ! isset( $_POST['_axismundi_note_vote_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_axismundi_note_vote_nonce'] ) ), 'axismundi_note_vote:' . $uri ) ) {
+		wp_die( esc_html__( 'The vote request could not be verified.', 'axismundi-note' ), 403 );
+	}
+	$raw   = isset( $_POST['ax_note_vote'] ) ? (array) wp_unslash( $_POST['ax_note_vote'] ) : array();
+	$names = array_values( array_filter( $raw, 'is_string' ) );
+	$result = axismundi_note_cast_poll_vote( $uri, $names );
+	$redirect = add_query_arg( 'ax_vote', is_wp_error( $result ) ? 'error' : 'recorded', $uri );
+	wp_safe_redirect( $redirect );
+	exit;
+}
+add_action( 'admin_post_axismundi_note_vote', 'axismundi_note_handle_poll_vote' );

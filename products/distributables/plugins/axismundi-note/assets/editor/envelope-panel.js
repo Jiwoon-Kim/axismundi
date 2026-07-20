@@ -213,5 +213,32 @@
 		);
 	}
 
+	function QuestionPanel() {
+		var Panel = window.axismundiNote.documentPanel();
+		var state = useSelect( function ( select ) {
+			var editor = select( 'core/editor' );
+			return { postType: editor.getCurrentPostType(), question: editor.getEditedPostAttribute( 'axismundi_note_question' ) };
+		}, [] );
+		var editPost = useDispatch( 'core/editor' ).editPost;
+		if ( ! Panel || POST_TYPE !== state.postType ) {
+			return null;
+		}
+		var question = state.question || {};
+		var enabled = !! question.enabled || !! question.mode;
+		function update( changes ) { editPost( { axismundi_note_question: Object.assign( {}, question, changes, { enabled: true } ) } ); }
+		return el(
+			Panel,
+			{ name: 'axismundi-note-question', title: __( 'Question', 'axismundi-note' ) },
+			! enabled
+				? el( C.Button, { variant: 'secondary', onClick: function () { editPost( { axismundi_note_question: { enabled: true, mode: 'oneOf', options: [ '', '' ] } } ); } }, __( 'Turn this Note into a Question', 'axismundi-note' ) )
+				: el( 'div', {},
+					el( C.SelectControl, { label: __( 'Voting mode', 'axismundi-note' ), value: question.mode || 'oneOf', options: [ { label: __( 'Choose one', 'axismundi-note' ), value: 'oneOf' }, { label: __( 'Choose any', 'axismundi-note' ), value: 'anyOf' } ], __next40pxDefaultSize: true, onChange: function ( value ) { update( { mode: value } ); } } ),
+					el( C.TextareaControl, { label: __( 'Options', 'axismundi-note' ), help: __( 'One exact option name per line.', 'axismundi-note' ), value: ( question.options || [] ).join( '\n' ), onChange: function ( value ) { update( { options: window.axismundiNote.linesToList( value ) } ); } } ),
+					el( C.TextControl, { label: __( 'Closes at (optional)', 'axismundi-note' ), type: 'datetime-local', value: question.closes_at || '', __next40pxDefaultSize: true, onChange: function ( value ) { update( { closes_at: value } ); } } )
+				)
+		);
+	}
+
 	registerPlugin( 'axismundi-note-envelope', { render: EnvelopePanel } );
+	registerPlugin( 'axismundi-note-question', { render: QuestionPanel } );
 } )( window.wp );

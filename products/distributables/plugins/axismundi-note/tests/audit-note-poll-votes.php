@@ -104,6 +104,16 @@ try {
 	$many_view = axismundi_note_question_view( $many['post_id'] );
 	ax_npv_assert( $ax_npv_results, 'anyOf accepts distinct options from one actor but ignores the same option twice', 1 === $many_view['voters_count'] && array( 1, 1 ) === array_column( $many_view['options'], 'votes' ) );
 
+	$cast_question = ax_npv_question( $ax_npv_posts, (int) $owner->ID, 'oneOf', array( 'Tea', 'Coffee' ) );
+	wp_set_current_user( (int) $voter->ID );
+	$cast = axismundi_note_cast_poll_vote( $cast_question['uri'], array( 'Tea' ) );
+	if ( is_array( $cast ) ) {
+		$ax_npv_posts = array_merge( $ax_npv_posts, $cast );
+	}
+	$cast_view = axismundi_note_question_view( $cast_question['post_id'] );
+	ax_npv_assert( $ax_npv_results, 'the local vote action creates a constrained Note through the normal lifecycle and increments the same tally', is_array( $cast ) && 1 === count( $cast ) && 1 === $cast_view['voters_count'] && array( 1, 0 ) === array_column( $cast_view['options'], 'votes' ) );
+	wp_set_current_user( 0 );
+
 	$edge_uri = (string) ( $first->get_payload()['object']['id'] ?? '' );
 	ax_npv_assert( $ax_npv_results, 'a confirmed vote object is excluded from the textual reply projection', '' !== $edge_uri && false === axismundi_note_exclude_poll_vote_reply( true, $edge_uri ) && true === axismundi_note_exclude_poll_vote_reply( true, (string) ( $text_reply->get_payload()['object']['id'] ?? '' ) ) );
 } finally {

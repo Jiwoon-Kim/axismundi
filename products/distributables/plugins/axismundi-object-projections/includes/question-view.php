@@ -69,9 +69,11 @@ function axismundi_op_render_question_block() : string {
 		$meta_parts[] = __( 'Open for voting', 'axismundi-object-projections' );
 	}
 
+	$actions = (string) apply_filters( 'axismundi_op_question_actions', '', $model, $poll );
 	return '<div class="axismundi-question axismundi-question--' . ( $closed ? 'closed' : 'open' ) . '">'
 		. '<ul class="axismundi-question__options">' . implode( '', $items ) . '</ul>'
 		. '<p class="axismundi-question__meta">' . esc_html( implode( ' | ', $meta_parts ) ) . '</p>'
+		. $actions
 		. '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Items escaped by axismundi_op_render_question_option(); meta escaped above.
 }
 

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.40
+Stable tag: 0.0.41
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,9 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.41 =
+* Add a product action slot to the read-only Question block for its owning product's local vote form.
 
 = 0.0.40 =
 * Add a product filter for excluding non-text interactions from the shared reply-thread view.

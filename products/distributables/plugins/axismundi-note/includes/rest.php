@@ -40,6 +40,45 @@ function axismundi_note_is_rest_write() : bool {
 function axismundi_note_register_rest_field() : void {
 	register_rest_field(
 		AXISMUNDI_NOTE_POST_TYPE,
+		'axismundi_note_question',
+		array(
+			'get_callback'    => static function ( array $post ) {
+				return axismundi_note_question_get( (int) $post['id'] );
+			},
+			'update_callback' => static function ( $value, WP_Post $post ) {
+				if ( ! is_array( $value ) ) {
+					return true;
+				}
+				if ( ! current_user_can( 'edit_post', $post->ID ) ) {
+					return new WP_Error( 'ax_note_forbidden', __( 'You cannot edit this Note.', 'axismundi-note' ), array( 'status' => 403 ) );
+				}
+				if ( empty( $value['enabled'] ) && ! axismundi_note_is_question( $post->ID ) ) {
+					return true;
+				}
+				$fields = array();
+				foreach ( array( 'mode', 'options', 'closes_at', 'closed_at' ) as $key ) {
+					if ( array_key_exists( $key, $value ) ) {
+						$fields[ $key ] = $value[ $key ];
+					}
+				}
+				$result = axismundi_note_question_save( $post->ID, $fields );
+				return is_wp_error( $result ) ? $result : true;
+			},
+			'schema'          => array(
+				'type'       => array( 'object', 'null' ),
+				'context'    => array( 'edit' ),
+				'properties' => array(
+					'enabled'   => array( 'type' => 'boolean' ),
+					'mode'      => array( 'type' => 'string', 'enum' => AXISMUNDI_NOTE_QUESTION_MODES ),
+					'options'   => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+					'closes_at' => array( 'type' => array( 'string', 'null' ) ),
+					'closed_at' => array( 'type' => array( 'string', 'null' ) ),
+				),
+			),
+		)
+	);
+	register_rest_field(
+		AXISMUNDI_NOTE_POST_TYPE,
 		'axismundi_note_envelope',
 		array(
 			'get_callback'    => static function ( array $post ) : array {

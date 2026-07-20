@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.42
+Stable tag: 0.0.43
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -42,6 +42,9 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.43 =
+* Refresh cached remote Objects from verified inbound Update activities, including interoperable Question-to-Note type changes.
 
 = 0.0.42 =
 * Apply product reply filtering before the textual-thread display limit, so hidden interactions cannot starve later replies.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Cache complete remote Objects observed in verified inbound Create activities.
+ * Cache complete remote Objects observed in verified inbound Create and Update activities.
  *
  * @package AxismundiObjectProjections
  */
@@ -8,8 +8,8 @@
 defined( 'ABSPATH' ) || exit;
 
 /** Store one complete, self-consistent Object after the inbound ledger commit. */
-function axismundi_op_observe_inbound_create_object( Axismundi_Activity $activity ) : void {
-	if ( 'Create' !== $activity->get_type() || 'inbound' !== $activity->get_direction() ) {
+function axismundi_op_observe_inbound_object( Axismundi_Activity $activity ) : void {
+	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) || 'inbound' !== $activity->get_direction() ) {
 		return;
 	}
 	$payload = $activity->get_payload();
@@ -30,4 +30,4 @@ function axismundi_op_observe_inbound_create_object( Axismundi_Activity $activit
 		do_action( 'axismundi_op_remote_object_observed', $stored, $activity );
 	}
 }
-add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_create_object', 20 );
+add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_object', 20 );

@@ -1,28 +1,73 @@
 .wp-block-axismundi-actor-profile {
-	display: grid;
-	gap: var(--wp--preset--spacing--400, 1.5rem);
+	--ax-actor-profile-avatar-size: 7.5rem;
+	margin-block: 0;
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant, currentColor);
 }
 
 .ax-actor-profile__cover {
+	position: relative;
+	block-size: clamp(8rem, 23vw, 18rem);
 	overflow: hidden;
+	border: 1px solid var(--wp--preset--color--outline-variant, currentColor);
+	border-radius: 8px 8px 0 0;
+	background-color: var(--wp--preset--color--tertiary-container, #d8e2f8);
+}
+
+.ax-actor-profile__cover:not(.has-image)::before,
+.ax-actor-profile__cover:not(.has-image)::after {
+	position: absolute;
+	content: "";
+	pointer-events: none;
+}
+
+.ax-actor-profile__cover:not(.has-image)::before {
+	inset-inline: 8%;
+	inset-block-start: 50%;
+	block-size: 1px;
+	background: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container, currentColor) 28%, transparent);
+}
+
+.ax-actor-profile__cover:not(.has-image)::after {
+	inset-inline-start: 26%;
+	inset-block: 0;
+	inline-size: 1px;
+	background: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container, currentColor) 18%, transparent);
 }
 
 .ax-actor-profile__header-image {
 	display: block;
 	inline-size: 100%;
-	max-block-size: 500px;
+	block-size: 100%;
 	object-fit: cover;
 }
 
-.ax-actor-profile__header {
-	display: flex;
-	align-items: center;
+.ax-actor-profile__body {
+	padding-inline: clamp(1rem, 4vw, 2rem);
+	padding-block-end: var(--wp--preset--spacing--500, 2rem);
+}
+
+.ax-actor-profile__head {
+	display: grid;
+	grid-template-columns: var(--ax-actor-profile-avatar-size) minmax(0, 1fr);
+	align-items: end;
 	gap: var(--wp--preset--spacing--300, 1rem);
+	margin-block-start: calc(var(--ax-actor-profile-avatar-size) / -2);
+}
+
+.ax-actor-profile__avatar-frame {
+	display: grid;
+	place-items: center;
+	inline-size: var(--ax-actor-profile-avatar-size);
+	block-size: var(--ax-actor-profile-avatar-size);
+	overflow: hidden;
+	border-radius: 50%;
+	background-color: var(--wp--preset--color--surface-container-high, #ece6f0);
+	box-shadow: 0 0 0 4px var(--wp--preset--color--surface, #fff);
 }
 
 .ax-actor-profile__avatar {
-	inline-size: 6rem;
-	block-size: 6rem;
+	inline-size: 100%;
+	block-size: 100%;
 	border-radius: 50%;
 	object-fit: cover;
 }
@@ -36,30 +81,80 @@
 	margin-block: 0;
 }
 
+.ax-actor-profile__name {
+	font-family: var(--wp--preset--font-family--roboto-serif, Georgia, serif);
+	font-size: clamp(1.75rem, 4vw, 2.5rem);
+	font-weight: 550;
+	line-height: 1.15;
+}
+
 .ax-actor-profile__meta {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.75rem;
+	gap: 0.5rem;
+	margin-block-start: 0.25rem;
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+	font-size: 0.875rem;
+}
+
+.ax-actor-profile__handle,
+.ax-actor-profile__website {
+	font-family: var(--wp--preset--font-family--roboto-mono, ui-monospace, monospace);
 }
 
 .ax-actor-profile__type {
-	font-size: 0.8125em;
+	padding-inline-start: 0.5rem;
+	border-inline-start: 1px solid var(--wp--preset--color--outline-variant, currentColor);
+	font-size: 0.875rem;
 	font-weight: 600;
 }
 
+.ax-actor-profile__summary,
+.ax-actor-profile__content,
+.ax-actor-profile__website,
 .ax-actor-profile__preview {
+	max-inline-size: 46rem;
+}
+
+.ax-actor-profile__summary {
+	margin-block-start: var(--wp--preset--spacing--400, 1.5rem);
+	font-family: var(--wp--preset--font-family--roboto-serif, Georgia, serif);
+	font-size: 1.25rem;
+	line-height: 1.45;
+}
+
+.ax-actor-profile__content {
+	margin-block-start: var(--wp--preset--spacing--250, 0.75rem);
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+}
+
+.ax-actor-profile__website {
+	margin-block-start: var(--wp--preset--spacing--300, 1rem);
+	font-size: 0.875rem;
+}
+
+.ax-actor-profile__website a {
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.2em;
+}
+
+.ax-actor-profile__preview {
+	margin-block-start: var(--wp--preset--spacing--300, 1rem);
 	padding: 0.75rem 1rem;
 	border-inline-start: 3px solid currentColor;
 }
 
 @media (max-width: 480px) {
-	.ax-actor-profile__header {
-		align-items: flex-start;
+	.wp-block-axismundi-actor-profile {
+		--ax-actor-profile-avatar-size: 5.5rem;
 	}
 
-	.ax-actor-profile__avatar {
-		inline-size: 4rem;
-		block-size: 4rem;
+	.ax-actor-profile__body {
+		padding-inline: 1rem;
+	}
+
+	.ax-actor-profile__name {
+		font-size: 1.6rem;
 	}
 }

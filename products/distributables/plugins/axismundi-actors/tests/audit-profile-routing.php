@@ -110,7 +110,7 @@ try {
 
 	$GLOBALS['axismundi_actors_current_actor'] = $public_actor;
 	$rendered = render_block( array( 'blockName' => 'axismundi/actor-profile', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ) );
-	ax_profile_assert( $ax_profile_results, 'profile block renders identity data without exposing email', false !== strpos( $rendered, 'Alice Profile' ) && false !== strpos( $rendered, 'A live profile summary.' ) && false === strpos( $rendered, 'alice-private@example.test' ) );
+	ax_profile_assert( $ax_profile_results, 'profile block renders a banner, overlapping profile head, and identity data without exposing email', false !== strpos( $rendered, 'ax-actor-profile__cover' ) && false !== strpos( $rendered, 'ax-actor-profile__head' ) && false !== strpos( $rendered, 'ax-actor-profile__avatar-frame' ) && false !== strpos( $rendered, 'Alice Profile' ) && false !== strpos( $rendered, 'A live profile summary.' ) && false === strpos( $rendered, 'alice-private@example.test' ) );
 	$title_parts = axismundi_actors_document_title_parts( array( 'title' => 'Fallback' ) );
 	ax_profile_assert( $ax_profile_results, 'document title uses the resolved actor display name', 'Alice Profile' === $title_parts['title'] );
 

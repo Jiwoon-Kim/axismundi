@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.35
+Stable tag: 0.0.36
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,10 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.36 =
+* Refine the actor profile header into a durable cover, overlapping avatar, and identity layout that remains legible without profile media.
+* Keep profile biography, website, projection navigation, and the activity feed as separate readable regions across desktop and mobile layouts.
 
 = 0.0.35 =
 * Compose the public Activity-ledger feed block into the default Actor profile

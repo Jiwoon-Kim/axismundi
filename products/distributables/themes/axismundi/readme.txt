@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.10
+Stable tag: 0.1.11
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: block-patterns, custom-colors, custom-logo, editor-style
@@ -35,6 +35,9 @@ Category, tag, and date archives share the axismundi/query-feed feed body via
 archive.html.
 
 == Changelog ==
+
+= 0.1.11 =
+* Remove hard-coded geographic taxonomy blocks and taxonomy-specific presentation rules. The Axismundi Geodata plugin owns opt-in geographic term presentation.
 
 = 0.1.10 =
 * Keep the Dialogs companion plugin's Sheet and Dialog defaults as editable

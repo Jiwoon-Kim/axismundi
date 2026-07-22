@@ -47,7 +47,7 @@ $axismundi_dialogs_backdrop = $axismundi_dialogs_modal && $axismundi_dialogs_bac
 // its title as a fallback for the dynamic axismundi/dialog-title block.
 $axismundi_dialogs_body       = '';
 $axismundi_dialogs_part_title = '';
-$axismundi_dialogs_part       = (string) ( $attributes['templatePart'] ?? '' );
+	$axismundi_dialogs_part       = (string) ( $attributes['templatePart'] ?? '' );
 $axismundi_dialogs_template   = null;
 if ( '' !== $axismundi_dialogs_part ) {
 	$axismundi_dialogs_part_id = str_contains( $axismundi_dialogs_part, '//' )

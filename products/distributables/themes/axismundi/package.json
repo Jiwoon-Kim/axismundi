@@ -1,7 +1,7 @@
 {
   "name": "axismundi",
   "private": true,
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Axismundi — a standalone Material Design 3 block theme for WordPress.",
   "scripts": {
     "build:zip": "pwsh -NoProfile -File scripts/build-zip.ps1"

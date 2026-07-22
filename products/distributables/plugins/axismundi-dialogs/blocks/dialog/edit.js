@@ -45,7 +45,7 @@
 
 			var parts = useSelect( function ( select ) {
 				var recs = select( 'core' ).getEntityRecords( 'postType', 'wp_template_part', { per_page: -1 } );
-				return ( recs || [] ).filter( function ( r ) { return r.area === 'dialog'; } );
+				return ( recs || [] ).filter( function ( r ) { return r.area === 'general' && r.slug.indexOf( 'dialog-' ) === 0; } );
 			}, [] );
 
 			var partOptions = [ { label: __( 'Select a Dialog part…', 'axismundi-dialogs' ), value: '' } ].concat(

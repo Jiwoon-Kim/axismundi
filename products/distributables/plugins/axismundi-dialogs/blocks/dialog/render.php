@@ -35,7 +35,7 @@ $axismundi_dialogs_variant_class = 'fullscreen' === $axismundi_dialogs_variant ?
 // Resolve the referenced Dialog template part + its title fallback.
 $axismundi_dialogs_body       = '';
 $axismundi_dialogs_part_title = '';
-$axismundi_dialogs_part       = (string) ( $attributes['templatePart'] ?? '' );
+	$axismundi_dialogs_part       = (string) ( $attributes['templatePart'] ?? '' );
 $axismundi_dialogs_template   = null;
 if ( '' !== $axismundi_dialogs_part ) {
 	$axismundi_dialogs_part_id = str_contains( $axismundi_dialogs_part, '//' )

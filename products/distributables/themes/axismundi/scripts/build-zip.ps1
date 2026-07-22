@@ -50,8 +50,19 @@ if ($excludeFiles.Count) { $rcArgs += '/XF'; $rcArgs += $excludeFiles }
 & robocopy @rcArgs | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit code $LASTEXITCODE" }
 
-# --- compress (theme folder at ZIP root) ---
-Compress-Archive -Path $staging -DestinationPath $zipPath -Force
+# --- compress (theme folder at ZIP root, portable forward-slash entry names) ---
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+$stageParent = Split-Path -Parent (Resolve-Path -LiteralPath $staging)
+try {
+    Get-ChildItem -LiteralPath $staging -File -Recurse | ForEach-Object {
+        $relativePath = $_.FullName.Substring($stageParent.Length).TrimStart([char] 92, [char] 47).Replace([string] [char] 92, '/')
+        $entry = $archive.CreateEntry($relativePath, [System.IO.Compression.CompressionLevel]::Optimal)
+        $sourceStream = [System.IO.File]::OpenRead($_.FullName); $destinationStream = $entry.Open()
+        try { $sourceStream.CopyTo($destinationStream) } finally { $destinationStream.Dispose(); $sourceStream.Dispose() }
+    }
+} finally { $archive.Dispose() }
 
 $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 $fileCount = (Get-ChildItem -Recurse -File -LiteralPath $staging).Count

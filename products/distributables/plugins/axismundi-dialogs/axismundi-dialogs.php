@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Axismundi Dialogs
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-dialogs
- * Description:       Accessible Material Design 3 side / bottom sheet host for Axismundi. The block owns the trigger and the native <dialog> host; a Sheet template part owns the content and layout.
- * Version:           0.2.0
+ * Description:       Accessible Material Design 3 side / bottom sheet and dialog blocks for Axismundi. The blocks own native dialog behavior; theme template parts own default content and layout.
+ * Version:           0.2.2
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -16,6 +16,8 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+require_once __DIR__ . '/includes/interaction-dialog.php';
 
 /**
  * Register the Sheet collection, host, and close blocks.
@@ -49,45 +51,11 @@ function axismundi_dialogs_register_blocks() : void {
 add_action( 'init', 'axismundi_dialogs_register_blocks' );
 
 /**
- * Own the custom `sheet` template-part area.
+ * Keep part-only Dialogs blocks out of the post/page inserter.
  *
- * The theme ships the default Sheet parts (theme.json templateParts), but the
- * AREA itself is a plugin concern: it exists only while a Sheet host can consume
- * it. Registering it here gives the Site Editor a labelled, icon'd category for
- * Sheet parts instead of dropping them into "Uncategorized".
- *
- * @param array<int,array<string,mixed>> $areas Registered template-part areas.
- * @return array<int,array<string,mixed>>
- */
-function axismundi_dialogs_register_part_area( array $areas ) : array {
-	$areas[] = array(
-		'area'        => 'sheet',
-		'area_tag'    => 'div',
-		'label'       => __( 'Sheet', 'axismundi-dialogs' ),
-		'description' => __( 'Content shown inside an Axismundi side or bottom sheet.', 'axismundi-dialogs' ),
-		'icon'        => 'layout',
-	);
-	$areas[] = array(
-		'area'        => 'dialog',
-		'area_tag'    => 'div',
-		'label'       => __( 'Dialog', 'axismundi-dialogs' ),
-		'description' => __( 'Content shown inside an Axismundi basic or full-screen dialog.', 'axismundi-dialogs' ),
-		'icon'        => 'admin-page',
-	);
-
-	return $areas;
-}
-add_filter( 'default_wp_template_part_areas', 'axismundi_dialogs_register_part_area' );
-
-/**
- * Keep the part-only Sheet blocks out of the post/page inserter.
- *
- * sheet-close and sheet-title only do anything inside a Sheet template part (they
- * dismiss / label the enclosing dialog), so they should only be insertable while
- * editing a template part in the Site Editor. The post editor passes a concrete
- * WP_Post context; if that post is not a wp_template_part, drop them from the
- * allowed list. The Site Editor passes no post here, so parts and templates are
- * unaffected.
+ * The close, title, and icon blocks only have a meaningful role inside the
+ * referenced template part. Keep those building blocks available in the Site
+ * Editor, but do not offer them in ordinary post content.
  *
  * @param bool|array<int,string>        $allowed Allowed block names, or true for all.
  * @param WP_Block_Editor_Context|mixed $context Current editor context.

@@ -1242,32 +1242,32 @@
 			"title": "Navigation Overlay"
 		},
 		{
-			"area": "sheet",
+			"area": "general",
 			"name": "sheet-navigation",
 			"title": "Side Sheet"
 		},
 		{
-			"area": "sheet",
+			"area": "general",
 			"name": "sheet-table-of-contents",
 			"title": "Table of Contents Sheet"
 		},
 		{
-			"area": "sheet",
+			"area": "general",
 			"name": "sheet-generic",
 			"title": "Generic Sheet"
 		},
 		{
-			"area": "dialog",
+			"area": "general",
 			"name": "dialog-basic",
 			"title": "Basic Dialog"
 		},
 		{
-			"area": "dialog",
+			"area": "general",
 			"name": "dialog-list",
 			"title": "List Dialog"
 		},
 		{
-			"area": "dialog",
+			"area": "general",
 			"name": "dialog-fullscreen",
 			"title": "Full-screen Dialog"
 		}

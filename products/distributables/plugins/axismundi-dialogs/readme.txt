@@ -4,11 +4,11 @@ Tags: sheet, drawer, dialog, offcanvas, block
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.2.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Accessible Material Design 3 side and bottom sheets for Axismundi, composed from theme parts.
+Accessible Material Design 3 sheets and dialogs for Axismundi, composed from theme template parts.
 
 == Description ==
 
@@ -33,13 +33,16 @@ close button, title, and body layout — the same `theme//slug` contract the cor
 Navigation overlay uses. An `axismundi/dialog-close` block lets a part place its
 dismiss control anywhere.
 
-The plugin registers `sheet` and `dialog` template-part areas. Axismundi Theme
-0.1.6 or later ships editable Navigation, Table of Contents, and Generic Sheet
-parts plus Basic, List, and Full-screen Dialog parts.
+WordPress core reserves the template-part area vocabulary. The plugin therefore
+does not register custom `sheet` or `dialog` areas: Axismundi Theme 0.1.10 or
+later supplies the default parts in the supported **General** area, where they
+remain editable in the Site Editor. The picker distinguishes them by their
+`sheet-` and `dialog-` slugs. This preserves the standard `theme//slug`
+template-part contract while keeping behavior with the plugin.
 
 == Installation ==
 
-1. Install and activate Axismundi Theme 0.1.6 or later (recommended; blocks work with
+1. Install and activate Axismundi Theme 0.1.10 or later (recommended; blocks work with
    any block theme, styled by its own fallbacks).
 2. Upload and activate this plugin.
 3. Insert the Sheets block, edit its trigger text, and choose each Sheet's
@@ -55,9 +58,23 @@ the WordPress Interactivity API.
 = Can it be used without the Axismundi theme? =
 
 Yes. The sheet renders with its own token fallbacks, but it needs at least one
-`sheet` area template part to show as content.
+template part to show as content. With Axismundi Theme, use a Sheet or Dialog
+part from the Site Editor's General area.
 
 == Changelog ==
+
+= 0.2.2 =
+
+* Keep the standard `theme//slug` template-part contract for Sheet and Dialog
+  content while using the core-supported General template-part area.
+* Remove the plugin-defined `sheet` and `dialog` area registrations so the
+  Theme Directory does not categorize the parts as unsupported.
+
+= 0.2.1 =
+
+* Expose the native basic-dialog surface to dynamic Axismundi interaction
+  blocks, so contextual UI can reuse the accessible dialog chrome without a
+  template-part indirection.
 
 = 0.2.0 =
 

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.49
+Stable tag: 0.0.50
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,10 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.50 =
+* Add the shared ax_hashtag vocabulary, remote-object hashtag index, mixed public hashtag archive, and persisted Object-to-Actor mention relations.
+* Unify single-object, actor-feed, and hashtag-archive rendering around configurable object card blocks, including declared Object.image featured-image presentation.
 
 = 0.0.49 =
 * Add a shared renderer that resolves one object URI (local product source or

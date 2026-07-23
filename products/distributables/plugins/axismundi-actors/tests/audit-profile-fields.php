@@ -90,14 +90,24 @@ try {
 		$profile_block_markup = render_block(
 			array(
 				'blockName'    => 'axismundi/actor-profile-fields',
-				'attrs'        => array(),
+				'attrs'        => array( 'display' => 'list' ),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			)
+		);
+		$profile_fields_grid_markup = render_block(
+			array(
+				'blockName'    => 'axismundi/actor-profile-fields',
+				'attrs'        => array( 'display' => 'grid' ),
 				'innerBlocks'  => array(),
 				'innerHTML'    => '',
 				'innerContent' => array(),
 			)
 		);
 		$GLOBALS['axismundi_actors_current_actor'] = $previous_route_actor;
-		ax_profile_field_assert( $ax_profile_field_results, 'the profile-fields block renders saved links and a check only for verified links', false !== strpos( $profile_block_markup, 'Renamed Website' ) && false !== strpos( $profile_block_markup, 'ax-actor-profile-fields-block__verified' ) );
+		ax_profile_field_assert( $ax_profile_field_results, 'the profile-fields block renders saved links, a verified-link indicator, and its list layout', false !== strpos( $profile_block_markup, 'Renamed Website' ) && false !== strpos( $profile_block_markup, 'ax-actor-profile-fields-block__verified' ) && false !== strpos( $profile_block_markup, 'is-display-list' ) );
+		ax_profile_field_assert( $ax_profile_field_results, 'the profile-fields block renders its grid layout when selected', false !== strpos( $profile_fields_grid_markup, 'is-display-grid' ) );
 
 		$changed_url = axismundi_actors_save_profile_fields( $actor, array( array( 'name' => 'Mastodon', 'url' => 'https://mastodon.example/@alice' ), array( 'name' => 'Changed Website', 'url' => 'https://example.com/changed/' ) ) );
 		$after_changed_url = axismundi_actors_get_profile_fields( $actor->get_identity_id() );

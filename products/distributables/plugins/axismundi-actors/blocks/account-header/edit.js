@@ -9,7 +9,7 @@
 
 	var TEMPLATE = [
 		[ 'core/group', { layout: { type: 'constrained' } }, [
-			[ 'axismundi/object-featured-image', { showPlaceholder: true, style: { dimensions: { minHeight: '200px' } } } ],
+			[ 'axismundi/object-featured-image', { showPlaceholder: true, style: { dimensions: { height: '200px' } } } ],
 			[ 'core/group', {
 				className: 'ax-account-header__head',
 				style: { spacing: { margin: { top: '-36px' }, padding: { right: 'var:preset|spacing|100', left: 'var:preset|spacing|100' }, blockGap: 'var:preset|spacing|100' } },

@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/object-featured-image",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"title": "Object Featured Image",
 	"category": "theme",
 	"icon": "format-image",
@@ -74,6 +74,7 @@
 		},
 		"dimensions": {
 			"aspectRatio": true,
+			"height": true,
 			"minHeight": true,
 			"__experimentalDefaultControls": {
 				"aspectRatio": true

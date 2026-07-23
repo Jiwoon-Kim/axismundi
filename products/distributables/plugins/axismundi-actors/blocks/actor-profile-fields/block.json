@@ -2,17 +2,54 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/actor-profile-fields",
-	"version": "0.1.0",
+	"version": "0.4.0",
 	"title": "Actor Profile Fields",
 	"category": "theme",
 	"icon": "admin-links",
-	"description": "Ordered profile links for the Actor resolved by the enclosing Account Header, with a verified reciprocal-link indicator.",
+	"description": "Ordered profile links for the Actor in context, with a verified reciprocal-link indicator. Card styling is a style sibling of Core's Latest Posts list/grid.",
 	"textdomain": "axismundi-actors",
 	"usesContext": [ "axismundi/actorId" ],
+	"attributes": {
+		"display": {
+			"type": "string",
+			"default": "list"
+		},
+		"columns": {
+			"type": "number",
+			"default": 2
+		},
+		"itemsToShow": {
+			"type": "number",
+			"default": 8
+		}
+	},
 	"supports": {
 		"html": false,
 		"multiple": false,
-		"spacing": { "margin": true }
+		"anchor": true,
+		"spacing": { "margin": true, "padding": true },
+		"color": {
+			"link": true,
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true
+			}
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalDefaultControls": {
+				"fontSize": true
+			}
+		},
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true
+		}
 	},
 	"editorScript": "file:./edit.js",
 	"style": "file:./style.css",

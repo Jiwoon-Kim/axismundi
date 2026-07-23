@@ -1,23 +1,99 @@
+/**
+ * Actor Profile Fields — a style sibling of the theme's Latest Posts / RSS
+ * list-grid treatment (see themes/axismundi/assets/styles/blocks.collections.css):
+ * every item is a filled, shadow-less card (surface-container, 12px radius), a
+ * list is a single-column stack of cards, and a grid arranges the same cards into
+ * columns with the identical inline-size division formula. Field rows are short
+ * (a label, a URL, an optional badge) rather than post-length content, so the
+ * item's own interior stays a wrapping flex row instead of Latest Posts' stacked
+ * block-level children -- everything above the item (surface, radius, stacking,
+ * gap, columns math) is the same contract.
+ */
+
 .wp-block-axismundi-actor-profile-fields {
-	display: grid;
-	gap: 0.45rem;
 	margin-block: var(--wp--preset--spacing--300, 1rem) 0;
 	padding: 0;
 	list-style: none;
 }
 
-.ax-actor-profile-fields-block__item {
+/* List = a single-column stack of cards, exactly like Latest Posts' list. */
+.wp-block-axismundi-actor-profile-fields.is-display-list {
+	display: grid;
+	gap: var(--wp--preset--spacing--200);
+}
+
+/* Grid = the same cards arranged into columns, with Latest Posts' own inline-size
+ * division formula so both blocks fill a row identically at the same width. */
+.wp-block-axismundi-actor-profile-fields.is-display-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.35rem;
+	gap: var(--wp--preset--spacing--200);
+}
+
+/* The card surface -- shared by list and grid, matching
+ * `.wp-block-latest-posts > li` / `.wp-block-rss.is-grid > li`. */
+.ax-actor-profile-fields-block__item {
+	box-sizing: border-box;
+	display: flex;
+	flex-wrap: wrap;
 	align-items: baseline;
+	gap: 0.35rem;
+	padding: var(--wp--preset--spacing--200);
+	border-radius: 12px;
+	background-color: var(--wp--preset--color--surface-container);
+	box-shadow: none;
 }
 
+.wp-block-axismundi-actor-profile-fields.is-display-grid .ax-actor-profile-fields-block__item {
+	margin: 0;
+	inline-size: 100%;
+}
+
+@media (min-width: 480px) {
+	.wp-block-axismundi-actor-profile-fields.is-display-grid.columns-2 .ax-actor-profile-fields-block__item {
+		inline-size: calc((100% - var(--wp--preset--spacing--200)) / 2);
+	}
+	.wp-block-axismundi-actor-profile-fields.is-display-grid.columns-3 .ax-actor-profile-fields-block__item {
+		inline-size: calc((100% - 2 * var(--wp--preset--spacing--200)) / 3);
+	}
+	.wp-block-axismundi-actor-profile-fields.is-display-grid.columns-4 .ax-actor-profile-fields-block__item {
+		inline-size: calc((100% - 3 * var(--wp--preset--spacing--200)) / 4);
+	}
+}
+
+/* Field label -- the row's metadata, styled like Latest Posts' date/author. */
 .ax-actor-profile-fields-block__name {
+	color: var(--wp--preset--color--on-surface-variant);
+	font-size: var(--wp--preset--font-size--body-small);
 	font-weight: 600;
+	line-height: 1.333;
+	letter-spacing: 0.4px;
 }
 
+/* The URL is the row's clickable content -- styled like Latest Posts' title. */
+.ax-actor-profile-fields-block__url {
+	color: var(--wp--preset--color--on-surface);
+	font-size: var(--wp--preset--font-size--title-medium);
+	font-weight: 500;
+	line-height: 1.5;
+	letter-spacing: 0.15px;
+	text-decoration: none;
+	overflow-wrap: anywhere;
+}
+
+.ax-actor-profile-fields-block__url:hover,
+.ax-actor-profile-fields-block__url:focus-visible {
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+/* The verified mark is the theme's own Material Symbols "verified" glyph (see
+ * assets/styles/icons.css) rather than a hand-drawn badge, flat and coloured
+ * like Mastodon's own field-verification icon rather than boxed in a chip --
+ * the glyph is already a shield-and-check shape, so a second circular
+ * background around it would read as a badge inside a badge. */
 .ax-actor-profile-fields-block__verified {
-	color: #087443;
-	font-weight: 700;
+	--md-icon-size: 1.125em;
+	color: var(--wp--preset--color--primary, #087443);
+	flex-shrink: 0;
 }

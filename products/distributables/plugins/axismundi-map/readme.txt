@@ -5,7 +5,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-geodata
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -54,6 +54,9 @@ later work.
 3. Add the Axismundi Map block to a post or page and choose a source.
 
 == Changelog ==
+
+= 0.2.1 =
+* Follow Axismundi Geodata's namespaced internal taxonomy identifiers while keeping the public map and GeoJSON query contract unchanged.
 
 = 0.2.0 =
 * Add a GeoRSS feed source: overlay an external GeoRSS Simple / W3C Geo feed,

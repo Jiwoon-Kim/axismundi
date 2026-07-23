@@ -84,11 +84,15 @@ try {
 	ax_feed_assert( $ax_feed_results, 'a Create whose object author is not the acting Actor renders nothing', '' === (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $spoof_item ) );
 
 	$missing_item = array( 'type' => 'Announce', 'actor_uri' => $actor_uri, 'object_uri' => 'https://example.com/notes/' . wp_generate_uuid4() );
-	ax_feed_assert( $ax_feed_results, 'an unresolved object URI renders nothing', '' === (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $missing_item ) );
+	$missing_object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $missing_item );
+	$missing_fallback_html = '' === $missing_object_html ? (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $missing_item ) : $missing_object_html;
+	ax_feed_assert( $ax_feed_results, 'an uncached public Object URI renders a safe external reference and queues deferred acquisition rather than erasing its Announce', false !== strpos( $missing_fallback_html, 'axismundi-object-card--external-reference' ) && false !== strpos( $missing_fallback_html, 'example.com' ) && false !== strpos( $missing_fallback_html, 'target="_blank"' ) && false !== wp_next_scheduled( 'axismundi_op_fetch_announced_object', array( $missing_item['object_uri'] ) ) );
 
 	$wpdb->update( axismundi_op_remote_objects_table(), array( 'object_status' => 'tombstone' ), array( 'object_uri_hash' => hash( 'sha256', $tomb_note_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$tomb_item = array( 'type' => 'Announce', 'actor_uri' => $actor_uri, 'object_uri' => $tomb_note_uri );
-	ax_feed_assert( $ax_feed_results, 'a tombstoned object renders nothing', '' === (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $tomb_item ) );
+	$tomb_object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $tomb_item );
+	$tomb_fallback_html = '' === $tomb_object_html ? (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $tomb_item ) : $tomb_object_html;
+	ax_feed_assert( $ax_feed_results, 'a tombstoned object remains hidden rather than becoming an external reference', '' === $tomb_fallback_html );
 
 	// --- Selection (Activities ledger query) ---
 	$create_uri   = home_url( '/activities/' . wp_generate_uuid4() . '/' );
@@ -97,8 +101,10 @@ try {
 	$update_uri   = home_url( '/activities/' . wp_generate_uuid4() . '/' );
 	$remote_create_uri = 'https://example.com/activities/' . wp_generate_uuid4();
 	$remote_announce_uri = 'https://example.com/activities/' . wp_generate_uuid4();
+	$remote_uncached_announce_uri = 'https://example.com/activities/' . wp_generate_uuid4();
+	$remote_uncached_object_uri = 'https://unresolved.example/objects/' . wp_generate_uuid4();
 	$note_uri     = home_url( '/notes/' . wp_generate_uuid4() . '/' );
-	$ax_feed_activities = array( $create_uri, $private_uri, $like_uri, $update_uri, $remote_create_uri, $remote_announce_uri );
+	$ax_feed_activities = array( $create_uri, $private_uri, $like_uri, $update_uri, $remote_create_uri, $remote_announce_uri, $remote_uncached_announce_uri );
 
 	axismundi_act_record_activity( array( 'id' => $create_uri, 'type' => 'Create', 'actor' => $actor_uri, 'object' => array( 'id' => $note_uri, 'type' => 'Note', 'content' => '<p>Authored.</p>' ), 'to' => array( $public_uri ) ), 'outbound' );
 	axismundi_act_record_activity( array( 'id' => $private_uri, 'type' => 'Create', 'actor' => $actor_uri, 'object' => array( 'id' => home_url( '/notes/' . wp_generate_uuid4() . '/' ), 'type' => 'Note', 'content' => '<p>Followers only.</p>' ), 'to' => array( $actor_uri . '/followers' ) ), 'outbound' );
@@ -106,6 +112,7 @@ try {
 	axismundi_act_record_activity( array( 'id' => $update_uri, 'type' => 'Update', 'actor' => $actor_uri, 'object' => array( 'id' => $note_uri, 'type' => 'Note', 'content' => '<p>Edited.</p>' ), 'to' => array( $public_uri ) ), 'outbound' );
 	axismundi_act_record_activity( array( 'id' => $remote_create_uri, 'type' => 'Create', 'actor' => $remote_actor_uri, 'object' => $remote_note_uri, 'to' => array( $public_uri ) ), 'inbound' );
 	axismundi_act_record_activity( array( 'id' => $remote_announce_uri, 'type' => 'Announce', 'actor' => $remote_actor_uri, 'object' => $observed_note_uri, 'to' => array( $public_uri ) ), 'inbound' );
+	axismundi_act_record_activity( array( 'id' => $remote_uncached_announce_uri, 'type' => 'Announce', 'actor' => $remote_actor_uri, 'object' => $remote_uncached_object_uri, 'to' => array( $public_uri ) ), 'inbound' );
 
 	$announce = axismundi_act_announce_object( $actor, $remote_note_uri, $remote_actor_uri );
 	$announce_uri = $announce instanceof Axismundi_Activity ? $announce->get_uri() : '';
@@ -135,6 +142,11 @@ try {
 	ax_feed_assert( $ax_feed_results, 'a public cache-only Object such as a fetched remote inReplyTo parent appears as one observed row without manufacturing a Create Activity', 1 === count( $observed_items ) && $unanchored_note_uri === (string) ( $observed_item['object_uri'] ?? '' ) && false !== strpos( (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $observed_item ), 'Still cache-only parent body.' ) && ! in_array( 'observed:' . hash( 'sha256', $private_note_uri ), $remote_ids, true ) );
 	$announced_object_rows = array_values( array_filter( $remote_items, static fn( array $item ) : bool => $observed_note_uri === (string) ( $item['object_uri'] ?? '' ) ) );
 	ax_feed_assert( $ax_feed_results, 'an Object already framed by an Announce is not also added as an observed fallback card', 1 === count( $announced_object_rows ) && $remote_announce_uri === (string) ( $announced_object_rows[0]['id'] ?? '' ) && 'activity' === (string) ( $announced_object_rows[0]['kind'] ?? '' ) );
+	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = $remote_actor;
+	$remote_feed_markup = axismundi_act_render_actor_activity_feed();
+	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
+	ax_feed_assert( $ax_feed_results, 'a public remote Actor profile renders an uncached Announce as a Boosted external-object row', false !== strpos( $remote_feed_markup, 'axismundi-activity-feed__boost' ) && false !== strpos( $remote_feed_markup, 'axismundi-object-card--external-reference' ) && false !== strpos( $remote_feed_markup, 'unresolved.example' ) );
 
 	$undo = axismundi_act_unannounce_object( $actor, $remote_note_uri );
 	if ( $undo instanceof Axismundi_Activity ) {
@@ -154,6 +166,9 @@ try {
 		if ( function_exists( 'axismundi_op_object_leases_table' ) ) {
 			$wpdb->delete( axismundi_op_object_leases_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fixture cleanup.
 		}
+	}
+	if ( isset( $missing_item['object_uri'] ) ) {
+		wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object', array( $missing_item['object_uri'] ) );
 	}
 	foreach ( array_unique( array_filter( $ax_feed_identities ) ) as $iid ) {
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $table ) {

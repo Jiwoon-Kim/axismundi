@@ -31,3 +31,17 @@ function axismundi_op_observe_inbound_object( Axismundi_Activity $activity ) : v
 	}
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_object', 20 );
+
+/** Queue the URI-only target of a public inbound Announce for cache acquisition. */
+function axismundi_op_observe_inbound_announce( Axismundi_Activity $activity ) : void {
+	if ( 'Announce' !== $activity->get_type()
+		|| 'inbound' !== $activity->get_direction()
+		|| ! function_exists( 'axismundi_act_is_publicly_renderable' )
+		|| ! axismundi_act_is_publicly_renderable( $activity )
+		|| ! function_exists( 'axismundi_op_schedule_announced_object_fetch' )
+	) {
+		return;
+	}
+	axismundi_op_schedule_announced_object_fetch( $activity->get_object_uri() );
+}
+add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_announce', 21 );

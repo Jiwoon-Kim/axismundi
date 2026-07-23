@@ -158,8 +158,19 @@ function axismundi_act_render_actor_activity_feed() : string {
 		 */
 		$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item );
 		if ( '' === $object_html ) {
-			// A deleted, tombstoned, or otherwise unrenderable object hides its row.
-			continue;
+			/**
+			 * A public Activity can reference a remote Object which was not embedded in
+			 * a Create and has not been explicitly cached. Products may render a safe
+			 * external reference in that narrow cache-miss case. A known tombstone or
+			 * non-public source still returns an empty string and hides the row.
+			 *
+			 * @param string               $html Empty by default.
+			 * @param array<string,mixed>  $item Public-safe Activity feed item.
+			 */
+			$object_html = (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $item );
+			if ( '' === $object_html ) {
+				continue;
+			}
 		}
 		$frame = '';
 		if ( 'Announce' === $item['type'] ) {

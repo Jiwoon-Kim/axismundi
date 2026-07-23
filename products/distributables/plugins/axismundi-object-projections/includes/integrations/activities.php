@@ -37,6 +37,44 @@ function axismundi_op_actor_feed_object_html( string $html, array $item ) : stri
 add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_op_actor_feed_object_html', 20, 2 );
 
 /**
+ * Render a public Activity's uncached Object as an outbound reference.
+ *
+ * An inbound Announce usually carries an Object URI rather than an embedded
+ * snapshot. Rendering must never fetch that URI during a profile request, but
+ * hiding the public Announce entirely loses the Actor's activity history. This
+ * fallback applies only when no local or cached source exists. Known remote
+ * tombstones and non-public cached Objects remain hidden through the normal
+ * renderer above.
+ *
+ * @param string              $html Existing fallback HTML.
+ * @param array<string,mixed> $item Public-safe Activity feed item.
+ */
+function axismundi_op_actor_feed_missing_object_html( string $html, array $item ) : string {
+	if ( '' !== $html || ! function_exists( 'axismundi_op_resolve_source_by_uri' ) ) {
+		return $html;
+	}
+	$object_uri = isset( $item['object_uri'] ) && is_string( $item['object_uri'] ) ? trim( $item['object_uri'] ) : '';
+	$parts      = wp_parse_url( $object_uri );
+	if ( '' === $object_uri || ! is_array( $parts ) || empty( $parts['host'] ) || null !== axismundi_op_resolve_source_by_uri( $object_uri ) ) {
+		return '';
+	}
+	// Older ledger rows predate inbound observation. Let their first profile view
+	// self-heal through the same deferred path without fetching during render.
+	if ( 'Announce' === (string) ( $item['type'] ?? '' ) && function_exists( 'axismundi_op_schedule_announced_object_fetch' ) ) {
+		axismundi_op_schedule_announced_object_fetch( $object_uri );
+	}
+	$host = (string) $parts['host'];
+	return '<article class="axismundi-object-card axismundi-object-card--external-reference">'
+		. '<p class="axismundi-object-card__eyebrow">' . esc_html__( 'External object', 'axismundi-object-projections' ) . '</p>'
+		. '<a class="axismundi-object-card__external-link" href="' . esc_url( $object_uri ) . '" rel="nofollow noopener noreferrer" target="_blank">'
+		. '<span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>'
+		. esc_html( $host )
+		. '<span class="screen-reader-text"> ' . esc_html__( 'Open original object', 'axismundi-object-projections' ) . '</span>'
+		. '</a></article>';
+}
+add_filter( 'axismundi_act_actor_feed_missing_object_html', 'axismundi_op_actor_feed_missing_object_html', 20, 2 );
+
+/**
  * Add public cache-only Objects as observed fallback rows for an Actor profile.
  *
  * A direct fetch, such as an uncached remote inReplyTo parent, is not evidence

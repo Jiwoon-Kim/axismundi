@@ -50,6 +50,36 @@ function axismundi_op_discover_remote_actor( string $actor_uri ) : void {
 }
 add_action( 'axismundi_op_discover_remote_actor', 'axismundi_op_discover_remote_actor' );
 
+/**
+ * Queue one public Announce target for bounded background acquisition.
+ *
+ * This deliberately does not run while rendering a feed. A public Announce is
+ * evidence that we may retain the referenced Object, but its URI is commonly
+ * the only Object representation carried by the Activity.
+ */
+function axismundi_op_schedule_announced_object_fetch( string $object_uri ) : bool {
+	$object_uri = trim( $object_uri );
+	if ( 'https' !== strtolower( (string) wp_parse_url( $object_uri, PHP_URL_SCHEME ) ) || '' === (string) wp_parse_url( $object_uri, PHP_URL_HOST ) ) {
+		return false;
+	}
+	if ( is_array( axismundi_op_remote_object_get( $object_uri ) ) ) {
+		return false;
+	}
+	$args = array( $object_uri );
+	if ( false !== wp_next_scheduled( 'axismundi_op_fetch_announced_object', $args ) ) {
+		return true;
+	}
+	return false !== wp_schedule_single_event( time() + 5, 'axismundi_op_fetch_announced_object', $args );
+}
+
+/** Run one deferred Announce target acquisition. */
+function axismundi_op_fetch_announced_object( string $object_uri ) : void {
+	if ( ! is_array( axismundi_op_remote_object_get( $object_uri ) ) ) {
+		axismundi_op_remote_object_fetch( $object_uri );
+	}
+}
+add_action( 'axismundi_op_fetch_announced_object', 'axismundi_op_fetch_announced_object' );
+
 /** Emit the post-fetch integration event and queue the primary Actor when needed. */
 function axismundi_op_remote_object_fetched( array $stored ) : void {
 	$actor = null;

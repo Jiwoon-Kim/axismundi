@@ -11,6 +11,7 @@ $ax_inbox_results       = array();
 $ax_inbox_suffix        = strtolower( wp_generate_password( 8, false, false ) );
 $ax_inbox_activity_uris = array();
 $ax_inbox_object_uri    = 'https://remote.example/objects/inbox-' . $ax_inbox_suffix;
+$ax_inbox_announce_uri  = 'https://example.com/objects/announced-' . $ax_inbox_suffix;
 
 /** @param array<bool> $results Test results. */
 function ax_inbox_assert( array &$results, string $label, bool $condition ) : void {
@@ -35,6 +36,28 @@ function ax_inbox_remote_actor( string $suffix ) {
 	);
 }
 
+/** Mock the deferred fetch of a URI-only Announce target. */
+function ax_inbox_announce_fetch_mock( $preempt, array $args, string $url ) {
+	if ( $url !== $GLOBALS['ax_inbox_announce_uri'] ) {
+		return $preempt;
+	}
+	$payload = array(
+		'@context'     => 'https://www.w3.org/ns/activitystreams',
+		'id'           => $url,
+		'type'         => 'Article',
+		'attributedTo' => $GLOBALS['ax_inbox_author_uri'],
+		'content'      => '<p>Cached from a public Announce.</p>',
+		'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+	);
+	return array(
+		'headers'  => array( 'content-type' => 'application/activity+json' ),
+		'body'     => wp_json_encode( $payload ),
+		'response' => array( 'code' => 200, 'message' => 'OK' ),
+		'cookies'  => array(),
+		'filename' => null,
+	);
+}
+
 try {
 	axismundi_op_install();
 	axismundi_act_install();
@@ -42,6 +65,8 @@ try {
 	$other  = ax_inbox_remote_actor( 'other-' . $ax_inbox_suffix );
 	$author_uri = $author instanceof Axismundi_Actor ? $author->get_uri() : '';
 	$other_uri  = $other instanceof Axismundi_Actor ? $other->get_uri() : '';
+	$GLOBALS['ax_inbox_announce_uri'] = $ax_inbox_announce_uri;
+	$GLOBALS['ax_inbox_author_uri']   = $author_uri;
 	ax_inbox_assert( $ax_inbox_results, 'fixture registers verified remote Actors', '' !== $author_uri && '' !== $other_uri );
 
 	$create_uri = 'https://remote.example/activities/create-' . $ax_inbox_suffix;
@@ -103,12 +128,37 @@ try {
 	}
 	$after_spoof = axismundi_op_remote_object_get( $ax_inbox_object_uri );
 	ax_inbox_assert( $ax_inbox_results, 'a mismatched Update actor cannot overwrite the cached Object', $spoof instanceof Axismundi_Activity && is_array( $after_spoof ) && 'Note' === $after_spoof['object_type'] && false !== strpos( (string) $after_spoof['content'], 'Poll removed' ) );
+
+	$announce_uri = 'https://remote.example/activities/announce-' . $ax_inbox_suffix;
+	$announce     = axismundi_act_record_activity(
+		array(
+			'id'     => $announce_uri,
+			'type'   => 'Announce',
+			'actor'  => $author_uri,
+			'object' => $ax_inbox_announce_uri,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		),
+		'inbound'
+	);
+	if ( $announce instanceof Axismundi_Activity ) {
+		$ax_inbox_activity_uris[] = $announce->get_uri();
+	}
+	$announce_args = array( $ax_inbox_announce_uri );
+	ax_inbox_assert( $ax_inbox_results, 'a public inbound Announce schedules its URI-only Object for deferred acquisition', $announce instanceof Axismundi_Activity && false !== wp_next_scheduled( 'axismundi_op_fetch_announced_object', $announce_args ) );
+
+	add_filter( 'pre_http_request', 'ax_inbox_announce_fetch_mock', 10, 3 );
+	axismundi_op_fetch_announced_object( $ax_inbox_announce_uri );
+	remove_filter( 'pre_http_request', 'ax_inbox_announce_fetch_mock', 10 );
+	$announced_object = axismundi_op_remote_object_get( $ax_inbox_announce_uri );
+	ax_inbox_assert( $ax_inbox_results, 'the deferred Announce target fetch stores a renderable remote Object cache row', is_array( $announced_object ) && 'Article' === $announced_object['object_type'] && false !== strpos( (string) $announced_object['content'], 'Cached from a public Announce.' ) );
 } finally {
 	global $wpdb;
 	foreach ( $ax_inbox_activity_uris as $uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
 	axismundi_op_remote_object_delete( $ax_inbox_object_uri );
+	wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object', array( $ax_inbox_announce_uri ) );
+	axismundi_op_remote_object_delete( $ax_inbox_announce_uri );
 }
 
 $ax_inbox_failures = count( array_filter( $ax_inbox_results, static fn( bool $result ) : bool => ! $result ) );

@@ -15,6 +15,8 @@
 	var registerPlugin = wp.plugins.registerPlugin;
 	var useSelect = wp.data.useSelect;
 	var useDispatch = wp.data.useDispatch;
+	var useEffect = wp.element.useEffect;
+	var useRef = wp.element.useRef;
 	var POST_TYPE = 'ax_note';
 
 	wp.domReady( function () {
@@ -57,6 +59,7 @@
 		}, [] );
 
 		var editPost = useDispatch( 'core/editor' ).editPost;
+		var appliedLaunchTarget = useRef( false );
 
 		if ( ! Panel || POST_TYPE !== state.postType ) {
 			return null;
@@ -80,6 +83,23 @@
 			}
 			editPost( { axismundi_note_envelope: next } );
 		}
+
+		useEffect( function () {
+			if ( appliedLaunchTarget.current ) {
+				return;
+			}
+			appliedLaunchTarget.current = true;
+			var query = new URLSearchParams( window.location.search );
+			var quoteTarget = query.get( 'ax_quote_target' );
+			var replyTarget = query.get( 'ax_reply_to' );
+			if ( quoteTarget && ! envelope.quoteTarget && /^https?:\/\//i.test( quoteTarget ) ) {
+				update( { quoteTarget: quoteTarget } );
+				return;
+			}
+			if ( replyTarget && ! envelope.inReplyTo && /^https?:\/\//i.test( replyTarget ) ) {
+				update( { inReplyTo: replyTarget } );
+			}
+		}, [] );
 
 		function openAttachmentPicker() {
 			if ( ! wp.media ) {
@@ -203,12 +223,14 @@
 				__next40pxDefaultSize: true,
 				onChange: function ( value ) { update( { contentWarning: value } ); }
 			} ),
-			el( C.TextareaControl, {
-				label: __( 'Mentioned Actor URIs', 'axismundi-note' ),
-				help: __( 'One Actor URI per line. Body @-mention anchors merge automatically.', 'axismundi-note' ),
-				value: ( envelope.mentions || [] ).join( '\n' ),
-				onChange: function ( value ) { update( { mentions: window.axismundiNote.linesToList( value ) } ); }
-			} ),
+			window.axismundiMentionTokens && window.axismundiMentionTokens.MentionTokenField
+				? el( window.axismundiMentionTokens.MentionTokenField, {
+					label: __( 'Mentioned actors', 'axismundi-note' ),
+					help: __( 'Search for a handle, then select it. Body @-mention links merge automatically.', 'axismundi-note' ),
+					value: envelope.mentions || [],
+					onChange: function ( value ) { update( { mentions: value } ); }
+				} )
+				: null,
 			attachmentControls
 		);
 	}

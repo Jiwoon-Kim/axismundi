@@ -230,6 +230,21 @@ function axismundi_op_quote_relations_for_target( string $target_uri ) : array {
 	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE relation_type = 'quote' AND target_object_uri_hash = %s AND target_object_uri = %s", hash( 'sha256', $target ), $target ), ARRAY_A );
 }
 
+/** Exact, unambiguous quote target for one source Object, or ''. */
+function axismundi_op_quote_target_for_source( string $source_uri ) : string {
+	global $wpdb;
+	$source = axismundi_op_relation_uri( $source_uri );
+	if ( '' === $source ) {
+		return '';
+	}
+	$table = axismundi_op_object_relations_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed exact source lookup.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT target_object_uri, consent_status FROM {$table} WHERE relation_type = 'quote' AND source_object_uri_hash = %s AND source_object_uri = %s ORDER BY id ASC LIMIT 2", hash( 'sha256', $source ), $source ), ARRAY_A );
+	return 1 === count( $rows ) && 'ambiguous' !== (string) $rows[0]['consent_status']
+		? (string) $rows[0]['target_object_uri']
+		: '';
+}
+
 /** Count distinct public quote Objects, independent of consent state. */
 function axismundi_op_get_quote_count( string $target_uri ) : int {
 	$counted = array();

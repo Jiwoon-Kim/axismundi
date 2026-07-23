@@ -74,6 +74,12 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	if ( '' !== $header ) {
 		$object['image'] = array( 'type' => 'Image', 'url' => esc_url_raw( $header ) );
 	}
+	if ( function_exists( 'axismundi_actors_profile_field_attachments' ) ) {
+		$attachments = axismundi_actors_profile_field_attachments( $actor );
+		if ( ! empty( $attachments ) ) {
+			$object['attachment'] = $attachments;
+		}
+	}
 	if ( function_exists( 'axismundi_act_get_public_outbox' ) ) {
 		$object['outbox'] = axismundi_op_actor_outbox_url( $actor );
 	}

@@ -93,8 +93,11 @@ try {
 	ax_te_assert( $ax_te_results, 'a reply to an unknown parent is preserved as an unresolved edge, not dropped', is_array( $waiting_edge ) && $unknown_parent === $waiting_edge['parent_uri'] && 'unresolved' === $waiting_edge['resolution_state'] && null === $waiting_edge['root_uri'] );
 	ax_te_assert( $ax_te_results, 'an unresolved parent has no view model yet', null === axismundi_op_get_parent_view_model( $waiting_reply['uri'] ) );
 
-	$remote_actor_uri = 'https://remote.example/actors/' . strtolower( wp_generate_password( 6, false, false ) );
-	$stored_parent = axismundi_op_remote_object_store( array( 'id' => $unknown_parent, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Now cached remote parent.' ) );
+	$remote_actor_uri = 'https://example.com/actors/' . strtolower( wp_generate_password( 6, false, false ) );
+	// Thread fixtures declare the public audience they are meant to represent:
+	// a publicly rendered thread proves each remote member is public rather than
+	// trusting that observing it was enough.
+	$stored_parent = axismundi_op_remote_object_store( array( 'id' => $unknown_parent, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Now cached remote parent.' ) );
 	$ax_te_remote_uris[] = $unknown_parent;
 	$reconciled_edge = axismundi_op_get_thread_edge( $waiting_reply['uri'] );
 	ax_te_assert( $ax_te_results, 'caching the remote parent reconciles the waiting edge to resolved with root and depth', is_array( $stored_parent ) && is_array( $reconciled_edge ) && 'resolved' === $reconciled_edge['resolution_state'] && $unknown_parent === $reconciled_edge['root_uri'] && 1 === (int) $reconciled_edge['depth'] );
@@ -102,11 +105,52 @@ try {
 	$reconciled_parent_model = axismundi_op_get_parent_view_model( $waiting_reply['uri'] );
 	ax_te_assert( $ax_te_results, 'the reconciled remote parent resolves through the wrapped remote-cache view model', is_array( $reconciled_parent_model ) && $unknown_parent === ( $reconciled_parent_model['object_uri'] ?? '' ) && 'Note' === ( $reconciled_parent_model['type'] ?? '' ) );
 
+	// Cached remote Questions feed the same neutral Object Card contract as local
+	// Notes: identity, poll, media, and quote relations are normalized once here.
+	$remote_actor = axismundi_actors_upsert_remote(
+		array(
+			'uri'                => $remote_actor_uri,
+			'actor_type'         => 'Person',
+			'preferred_username' => 'remote_fixture',
+			'display_name'       => 'Remote Fixture',
+			'profile_url'        => 'https://example.com/@remote_fixture',
+			'endpoints'          => array(
+				'inbox'  => 'https://example.com/actors/remote_fixture/inbox',
+				'outbox' => 'https://example.com/actors/remote_fixture/outbox',
+			),
+			'payload'            => array( 'id' => $remote_actor_uri, 'type' => 'Person', 'preferredUsername' => 'remote_fixture', 'name' => 'Remote Fixture' ),
+		)
+	);
+	if ( $remote_actor instanceof Axismundi_Actor ) {
+		$ax_te_actor_ids[] = $remote_actor->get_identity_id();
+	}
+	$remote_question_uri = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
+	$remote_quote_uri    = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
+	$stored_question = axismundi_op_remote_object_store(
+		array(
+			'id'           => $remote_question_uri,
+			'type'         => 'Question',
+			'attributedTo' => $remote_actor_uri,
+			'content'      => '<p>Choose one.</p>',
+			'oneOf'        => array(
+				array( 'type' => 'Note', 'name' => 'Alpha', 'replies' => array( 'totalItems' => 2 ) ),
+				array( 'type' => 'Note', 'name' => 'Beta', 'replies' => array( 'totalItems' => 1 ) ),
+			),
+			'votersCount'  => 3,
+			'attachment'   => array( 'type' => 'Image', 'mediaType' => 'image/jpeg', 'url' => 'https://remote.example/media/question.jpg', 'name' => 'Question image' ),
+			'quoteUrl'     => $remote_quote_uri,
+		)
+	);
+	$ax_te_remote_uris[] = $remote_question_uri;
+	$question_source = axismundi_op_resolve_source_by_uri( $remote_question_uri );
+	$question_model  = null !== $question_source ? axismundi_op_object_view_model( $question_source ) : null;
+	ax_te_assert( $ax_te_results, 'a cached remote Question normalizes into the same identity, poll, attachment, and quote fields used by the Object Card', is_array( $stored_question ) && is_array( $question_model ) && 'Question' === ( $question_model['type'] ?? '' ) && 'Remote Fixture' === ( $question_model['author']['name'] ?? '' ) && 'remote_fixture' === ( $question_model['author']['preferred_username'] ?? '' ) && 3 === (int) ( $question_model['poll']['voters_count'] ?? 0 ) && 2 === (int) ( $question_model['poll']['options'][0]['votes'] ?? -1 ) && 'question.jpg' === basename( (string) ( $question_model['attachments'][0]['url'][0]['href'] ?? '' ) ) && $remote_quote_uri === ( $question_model['quote_uri'] ?? '' ) );
+
 	// A remote child replying to our local root: the unified reply lookup must
 	// surface it exactly like a local reply, and a tombstoned remote child must
 	// still appear (as a deleted placeholder), never silently vanish.
 	$remote_reply_uri = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
-	$stored_remote_reply = axismundi_op_remote_object_store( array( 'id' => $remote_reply_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $root['uri'], 'content' => 'Remote reply to our root.' ) );
+	$stored_remote_reply = axismundi_op_remote_object_store( array( 'id' => $remote_reply_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote reply to our root.' ) );
 	$ax_te_remote_uris[] = $remote_reply_uri;
 	$ax_te_edge_uris[]   = $remote_reply_uri;
 	$mixed_reply_uris = axismundi_op_get_thread_reply_uris( $root['uri'] );
@@ -120,6 +164,30 @@ try {
 		}
 	}
 	ax_te_assert( $ax_te_results, 'the unified reply view models mix local and remote replies to the same parent', is_array( $remote_reply_model ) && 'Note' === ( $remote_reply_model['type'] ?? '' ) );
+
+	// Observing a reply is not permission to republish it. A followers-only
+	// remote reply to a public parent must not surface in the anonymous thread,
+	// and it must not take the rendered branch down with it either.
+	$ax_te_private_reply = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
+	axismundi_op_remote_object_store( array( 'id' => $ax_te_private_reply, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $root['uri'], 'to' => array( $remote_actor_uri . '/followers' ), 'content' => 'AX-TE-FOLLOWERS-ONLY' ) );
+	$ax_te_remote_uris[] = $ax_te_private_reply;
+	$ax_te_edge_uris[]   = $ax_te_private_reply;
+	$ax_te_private_models = axismundi_op_get_reply_view_models( $root['uri'] );
+	$ax_te_private_leaked = false;
+	foreach ( $ax_te_private_models as $ax_te_candidate ) {
+		if ( false !== strpos( (string) ( $ax_te_candidate['content_html'] ?? '' ), 'AX-TE-FOLLOWERS-ONLY' ) ) {
+			$ax_te_private_leaked = true;
+		}
+	}
+	$ax_te_private_remaining = 50;
+	$ax_te_private_tree      = axismundi_op_render_reply_tree( $root['uri'], $ax_te_private_remaining, array( $root['uri'] ), true );
+	ax_te_assert(
+		$ax_te_results,
+		'a followers-only remote reply never reaches the anonymous thread while public siblings still render',
+		false === $ax_te_private_leaked
+			&& false === strpos( $ax_te_private_tree['html'], 'AX-TE-FOLLOWERS-ONLY' )
+			&& false !== strpos( $ax_te_private_tree['html'], 'Remote reply to our root.' )
+	);
 
 	$tombstoned_remote_reply = axismundi_op_remote_object_store( array( 'id' => $remote_reply_uri, 'type' => 'Tombstone', 'formerType' => 'Note' ) );
 	$tombstone_models = axismundi_op_get_reply_view_models( $root['uri'] );
@@ -135,17 +203,18 @@ try {
 	// This catches the classic comment-table failure mode where deleting a parent
 	// silently hides the entire lower branch.
 	$remote_grandchild_uri = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
-	$stored_remote_grandchild = axismundi_op_remote_object_store( array( 'id' => $remote_grandchild_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $remote_reply_uri, 'content' => 'Remote reply below a deleted parent.' ) );
+	$stored_remote_grandchild = axismundi_op_remote_object_store( array( 'id' => $remote_grandchild_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $remote_reply_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote reply below a deleted parent.' ) );
 	$ax_te_remote_uris[] = $remote_grandchild_uri;
 	$ax_te_edge_uris[]   = $remote_grandchild_uri;
 	$root_source = new Axismundi_Note_Source( axismundi_note_get( $root['post_id'] ), get_post( $root['post_id'] ) );
 	$root_model  = axismundi_op_object_view_model( $root_source );
 	$remaining   = 50;
 	$reply_tree  = axismundi_op_render_reply_tree( $root['uri'], $remaining, array( $root['uri'] ) );
+	$reply_count = axismundi_op_get_display_reply_tree_count( $root['uri'] );
 	axismundi_op_set_current_object_view_model( $root_model );
 	$nested_replies_html = axismundi_op_render_replies_block();
 	axismundi_op_set_current_object_view_model( null );
-	ax_te_assert( $ax_te_results, 'the replies block keeps a live descendant beneath its tombstoned parent and counts the complete visible tree', is_array( $stored_remote_grandchild ) && false !== strpos( $nested_replies_html, 'This reply has been deleted.' ) && false !== strpos( $nested_replies_html, 'Remote reply below a deleted parent.' ) && 3 === $reply_tree['count'] );
+	ax_te_assert( $ax_te_results, 'the replies block keeps a live descendant beneath its tombstoned parent and counts the complete visible tree', is_array( $stored_remote_grandchild ) && false !== strpos( $nested_replies_html, 'This reply has been deleted.' ) && false !== strpos( $nested_replies_html, 'Remote reply below a deleted parent.' ) && 3 === $reply_tree['count'] && $reply_tree['count'] === $reply_count['count'] && empty( $reply_count['truncated'] ) );
 
 	// A local Note that stops being a reply (edited to clear in_reply_to, then
 	// republished) drops its edge -- the envelope write alone does not, since the

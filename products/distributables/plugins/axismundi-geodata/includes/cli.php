@@ -56,14 +56,14 @@ class Axismundi_Geodata_CLI {
 		$geotag = array( 'name' => '광안리해수욕장', 'lat' => 35.1532, 'lng' => 129.1186, 'type' => 'beach', 'address' => '부산광역시 수영구 광안해변로 219', 'place_id' => 'manual:gwangalli-beach' );
 
 		if ( ! empty( $assoc_args['remove'] ) ) {
-			$gt = get_term_by( 'name', $geotag['name'], 'geotag' );
+			$gt = get_term_by( 'name', $geotag['name'], 'axismundi_geotag' );
 			if ( $gt ) {
-				wp_delete_term( $gt->term_id, 'geotag' );
+				wp_delete_term( $gt->term_id, 'axismundi_geotag' );
 			}
 			foreach ( array_reverse( $areas ) as $area ) {
-				$term = get_term_by( 'name', $area['name'], 'geo_area' );
+				$term = get_term_by( 'name', $area['name'], 'axismundi_geo_area' );
 				if ( $term ) {
-					wp_delete_term( $term->term_id, 'geo_area' );
+					wp_delete_term( $term->term_id, 'axismundi_geo_area' );
 				}
 			}
 			WP_CLI::success( 'Removed Axismundi Geodata demo terms.' );
@@ -73,7 +73,7 @@ class Axismundi_Geodata_CLI {
 		$ids = array();
 		foreach ( $areas as $area ) {
 			$parent_id = '' === $area['parent'] ? 0 : ( $ids[ $area['parent'] ] ?? 0 );
-			$term_id   = $this->upsert_term( $area['name'], 'geo_area', $parent_id );
+			$term_id   = $this->upsert_term( $area['name'], 'axismundi_geo_area', $parent_id );
 			if ( ! $term_id ) {
 				continue;
 			}
@@ -81,7 +81,7 @@ class Axismundi_Geodata_CLI {
 			$this->set_place_meta( $term_id, $area );
 		}
 
-		$gt_id = $this->upsert_term( $geotag['name'], 'geotag', 0 );
+		$gt_id = $this->upsert_term( $geotag['name'], 'axismundi_geotag', 0 );
 		if ( $gt_id ) {
 			$this->set_place_meta( $gt_id, $geotag );
 		}

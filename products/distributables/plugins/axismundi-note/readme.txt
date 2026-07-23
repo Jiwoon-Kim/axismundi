@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.20
+Stable tag: 0.0.25
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,25 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.25 =
+* Remove the Note-specific Actor-feed object renderer. Object Projections now
+  resolves and renders any feed object (local Note or cached remote) through the
+  shared view model, gated by the same visibility predicate this plugin already
+  registers, so a boosted object renders as well as an authored one. Note keeps
+  only its domain adapters and owns no feed rendering.
+
+= 0.0.24 =
+* Advertise the Object Projections-owned replies collection from active local Notes and Questions; direct public textual replies are available as canonical URI pages while private and unresolved replies remain undisclosed.
+
+= 0.0.23 =
+* Let a Note's author (or an administrator) preview their own not-yet-public document at its canonical route and from the private list's row action, instead of it 404ing even for its own author. Robots directives keep any such preview out of search indexes; public visibility for everyone else is unchanged.
+
+= 0.0.22 =
+* Route local 410 Tombstones through Object Projections' dedicated privacy-minimal Tombstone template.
+
+= 0.0.21 =
+* Reuse the Object Projections-owned editable single-Object template and expose local Actor identity, avatar, and Quote context through the neutral Object view model.
 
 = 0.0.20 =
 * Allow a federated Question to become a Note through the editor, emitting a same-URI Update with a Note snapshot.

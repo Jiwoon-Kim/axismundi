@@ -77,6 +77,16 @@ function axismundi_actors_mention_avatar_url( Axismundi_Actor $actor ) : string 
 	return $user_id ? (string) get_avatar_url( $user_id, array( 'size' => 48 ) ) : '';
 }
 
+/** Shape one resolved Actor for every editor mention control. */
+function axismundi_actors_mention_search_item( Axismundi_Actor $actor ) : array {
+	return array(
+		'uri'    => $actor->get_uri(),
+		'name'   => $actor->get_display_name() ?: $actor->get_preferred_username(),
+		'handle' => axismundi_actors_mention_handle( $actor ),
+		'avatar' => axismundi_actors_mention_avatar_url( $actor ),
+	);
+}
+
 /** Permission gate for the private editor endpoint. */
 function axismundi_actors_can_search_mentions() : bool {
 	return current_user_can( 'edit_posts' );
@@ -91,12 +101,20 @@ function axismundi_actors_rest_search_mentions( WP_REST_Request $request ) : WP_
 		if ( '' === $handle ) {
 			continue;
 		}
-		$items[] = array(
-			'uri'    => $actor->get_uri(),
-			'name'   => $actor->get_display_name() ?: $actor->get_preferred_username(),
-			'handle' => $handle,
-			'avatar' => axismundi_actors_mention_avatar_url( $actor ),
-		);
+		$items[] = axismundi_actors_mention_search_item( $actor );
+	}
+	return rest_ensure_response( $items );
+}
+
+/** Resolve stored canonical Actor URIs to editor-facing mention tokens. */
+function axismundi_actors_rest_resolve_mentions( WP_REST_Request $request ) : WP_REST_Response {
+	$items = array();
+	foreach ( array_slice( (array) $request->get_param( 'uris' ), 0, 50 ) as $uri ) {
+		$actor = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( (string) $uri ) : null;
+		if ( ! $actor instanceof Axismundi_Actor || 'public' !== $actor->get_status() || '' === axismundi_actors_mention_handle( $actor ) ) {
+			continue;
+		}
+		$items[] = axismundi_actors_mention_search_item( $actor );
 	}
 	return rest_ensure_response( $items );
 }
@@ -112,6 +130,18 @@ function axismundi_actors_register_mention_search_route() : void {
 			'permission_callback' => 'axismundi_actors_can_search_mentions',
 			'args'                => array(
 				'search' => array( 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_text_field' ),
+			),
+		)
+	);
+	register_rest_route(
+		'axismundi/v1',
+		'/actors/mention-resolve',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_actors_rest_resolve_mentions',
+			'permission_callback' => 'axismundi_actors_can_search_mentions',
+			'args'                => array(
+				'uris' => array( 'type' => 'array', 'default' => array(), 'items' => array( 'type' => 'string', 'format' => 'uri' ) ),
 			),
 		)
 	);

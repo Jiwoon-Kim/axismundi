@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '10.1';
+const AXISMUNDI_ACTORS_DB_VERSION = '12.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -29,6 +29,12 @@ function axismundi_actors_actors_table() : string {
 function axismundi_actors_texts_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_actor_texts';
+}
+
+/** @return string Local Actor PropertyValue profile fields. */
+function axismundi_actors_profile_fields_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_profile_fields';
 }
 
 /** @return string actor address (handle / acct) ledger table name. */
@@ -111,6 +117,7 @@ function axismundi_actors_install() : void {
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
 	$texts      = axismundi_actors_texts_table();
+	$profile_fields = axismundi_actors_profile_fields_table();
 
 	dbDelta(
 		"CREATE TABLE {$identities} (
@@ -173,6 +180,25 @@ function axismundi_actors_install() : void {
 			PRIMARY KEY  (id),
 			UNIQUE KEY identity_field_language (identity_id, field_name, language_tag),
 			KEY identity_language (identity_id, language_tag)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	dbDelta(
+		"CREATE TABLE {$profile_fields} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			identity_id bigint(20) unsigned NOT NULL,
+			field_name varchar(191) NOT NULL,
+			field_value text NOT NULL,
+			position smallint(5) unsigned NOT NULL,
+			verification_status varchar(16) NOT NULL DEFAULT 'unverified',
+			verified_at datetime DEFAULT NULL,
+			checked_at datetime DEFAULT NULL,
+			verification_error varchar(64) DEFAULT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity_position (identity_id, position),
+			KEY identity_id (identity_id)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -334,7 +360,7 @@ function axismundi_actors_install() : void {
 	// engine contract explicit so START TRANSACTION is not merely decorative on an
 	// older installation created under a different server default.
 	$transactional_engines = true;
-	foreach ( array( $identities, $actors, $endpoints, $keys, $identity_relations ) as $transactional_table ) {
+	foreach ( array( $identities, $actors, $endpoints, $keys, $identity_relations, $profile_fields ) as $transactional_table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name, schema inspection.
 		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
 		if ( 'InnoDB' !== $engine ) {
@@ -460,6 +486,10 @@ function axismundi_actors_install() : void {
 	$text_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$texts}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$text_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$texts} WHERE Key_name = 'identity_field_language'" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$profile_field_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$profile_fields} WHERE Key_name = 'identity_position'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$profile_field_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile_fields}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$address_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
@@ -494,6 +524,11 @@ function axismundi_actors_install() : void {
 		&& in_array( 'language_tag', $text_columns, true )
 		&& in_array( 'value', $text_columns, true )
 		&& ! empty( $text_indexes )
+		&& ! empty( $profile_field_indexes )
+		&& in_array( 'verification_status', $profile_field_columns, true )
+		&& in_array( 'verified_at', $profile_field_columns, true )
+		&& in_array( 'checked_at', $profile_field_columns, true )
+		&& in_array( 'verification_error', $profile_field_columns, true )
 		&& ! empty( $address_indexes )
 		&& ! empty( $instance_indexes )
 		&& ! empty( $endpoint_identity_indexes )

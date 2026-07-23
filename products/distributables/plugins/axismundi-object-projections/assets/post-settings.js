@@ -45,11 +45,14 @@
 				],
 				onChange: ( value ) => update( '_ax_op_visibility', value ),
 			} ),
-			el( wp.components.TextareaControl, {
-				label: wp.i18n.__( 'Mentioned Actor URLs', 'axismundi-object-projections' ),
-				value: mentions.join( '\n' ),
-				onChange: ( value ) => update( '_ax_op_mentions', value.split( /[\r\n,]+/ ).map( ( item ) => item.trim() ).filter( Boolean ) ),
-			} ),
+			window.axismundiMentionTokens && window.axismundiMentionTokens.MentionTokenField
+				? el( window.axismundiMentionTokens.MentionTokenField, {
+					label: wp.i18n.__( 'Mentioned actors', 'axismundi-object-projections' ),
+					help: wp.i18n.__( 'Search for a handle, then select it. Only resolved Actors are saved.', 'axismundi-object-projections' ),
+					value: mentions,
+					onChange: ( value ) => update( '_ax_op_mentions', value ),
+				} )
+				: null,
 			el( wp.components.SelectControl, {
 				label: wp.i18n.__( 'Who can quote this post?', 'axismundi-object-projections' ),
 				value: quotePolicy,

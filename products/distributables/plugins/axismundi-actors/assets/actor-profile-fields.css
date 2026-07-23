@@ -1,0 +1,36 @@
+.ax-actor-profile-fields__order {
+	width: 8.5rem;
+	white-space: nowrap;
+}
+
+.ax-actor-profile-fields__drag {
+	cursor: grab;
+	vertical-align: middle;
+}
+
+.ax-actor-profile-fields__drag .dashicons,
+.ax-actor-profile-fields__add .dashicons {
+	vertical-align: text-bottom;
+}
+
+.ax-actor-profile-fields__row.is-dragging {
+	opacity: 0.45;
+}
+
+.ax-actor-profile-fields__verification {
+	min-width: 8.5rem;
+}
+
+.ax-actor-profile-fields__verified {
+	color: #087443;
+	font-weight: 600;
+}
+
+.ax-actor-profile-fields__failed {
+	color: #8a2424;
+}
+
+.ax-actor-profile-fields__verify {
+	display: block;
+	margin-block-start: 0.35rem;
+}

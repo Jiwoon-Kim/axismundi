@@ -29,6 +29,7 @@ try {
 		$ax_vm_actor_ids[] = $actor->get_identity_id();
 		axismundi_actors_register_handle( $actor->get_identity_id(), $login );
 		axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
+		$actor = axismundi_actors_get_by_identity( $actor->get_identity_id() );
 	}
 
 	$post_id = (int) wp_insert_post(
@@ -61,6 +62,7 @@ try {
 	// The Note adapter answers through the deterministic, exception-isolated OP registry.
 	$vm = axismundi_op_object_view_model( $active );
 	ax_vm_assert( $ax_vm_results, 'the OP registry resolves a Note source deterministically after an earlier adapter fails', is_array( $vm ) && 'Note' === $vm['type'] && 'active' === $vm['status'] && axismundi_note_object_uri( $uuid ) === $vm['id'] && false !== strpos( (string) $vm['content_html'], 'Hello from a note.' ) && '' !== (string) $vm['author']['name'] );
+	ax_vm_assert( $ax_vm_results, 'the local Object model exposes Actor identity fields used by the shared Object Card', $actor instanceof Axismundi_Actor && $actor->get_uri() === ( $vm['author']['id'] ?? '' ) && $login === ( $vm['author']['preferred_username'] ?? '' ) && axismundi_actors_federated_mention_name( $actor ) === ( $vm['author']['handle'] ?? '' ) && '' !== (string) ( $vm['author']['url'] ?? '' ) );
 
 	// A non-Note source is passed through, not claimed.
 	ax_vm_assert( $ax_vm_results, 'the Note adapter passes on a source it does not own', null === axismundi_op_object_view_model( 'not-a-source' ) );
@@ -70,6 +72,39 @@ try {
 	$active_html = axismundi_op_render_object_view_block();
 	axismundi_op_set_current_object_view_model( null );
 	ax_vm_assert( $ax_vm_results, 'the object-view block renders an active Note with content and author but no deleted notice', false !== strpos( $active_html, 'axismundi-object--note' ) && false !== strpos( $active_html, 'Hello from a note.' ) && false !== strpos( $active_html, 'axismundi-object__author' ) && false === strpos( $active_html, 'has been deleted' ) );
+
+	// Single and archive templates stay independent. They share this editable
+	// pattern vocabulary rather than a single saved template or render callback.
+	$pattern_source = axismundi_op_object_card_pattern_content();
+	axismundi_op_set_current_object_view_model( $vm );
+	$pattern_html = axismundi_op_render_object_pattern();
+	axismundi_op_set_current_object_view_model( null );
+	// Identity presentation stays Actors-owned, but the display name and the
+	// federated handle are separate blocks so each can take its own typography.
+	// Reply context is the parent's, not this Object's body, so it sits outside
+	// the card; embedded Quote and Question follow the content they belong to,
+	// and attachments follow them.
+	ax_vm_assert(
+		$ax_vm_results,
+		'the reusable Object Card pattern composes Actors-owned avatar, name, and handle blocks with independently editable relation, content, poll, quote, hashtag, and interaction blocks',
+		str_contains( $pattern_source, 'wp:axismundi/actor-avatar' )
+			&& str_contains( $pattern_source, 'wp:axismundi/actor-name' )
+			&& str_contains( $pattern_source, 'wp:axismundi/actor-handle' )
+			&& ! str_contains( $pattern_source, 'wp:axismundi/object-avatar' )
+			&& ! str_contains( $pattern_source, 'wp:axismundi/object-identity' )
+			&& str_contains( $pattern_source, 'wp:axismundi/reply-context' )
+			&& strpos( $pattern_source, 'wp:axismundi/reply-context' ) < strpos( $pattern_source, 'axismundi-object-card' )
+			&& strpos( $pattern_source, 'wp:axismundi/object-content' ) < strpos( $pattern_source, 'wp:axismundi/quote-context' )
+			&& strpos( $pattern_source, 'wp:axismundi/question' ) < strpos( $pattern_source, 'wp:axismundi/object-attachments' )
+			&& str_contains( $pattern_source, 'wp:axismundi/object-summary' )
+			&& str_contains( $pattern_source, 'wp:axismundi/object-hashtags' )
+			&& str_contains( $pattern_source, 'wp:axismundi/object-actions' )
+			&& str_contains( $pattern_html, 'axismundi-object-card' )
+			&& str_contains( $pattern_html, 'wp-block-axismundi-actor-name' )
+			&& str_contains( $pattern_html, 'Hello from a note.' )
+	);
+	$single_template = axismundi_op_single_object_template_content();
+	ax_vm_assert( $ax_vm_results, 'the OP-owned single template composes the shared pattern and its own replies region without becoming the Activities archive template', str_contains( $single_template, 'wp:axismundi/actor-avatar' ) && str_contains( $single_template, 'wp:axismundi/object-content' ) && str_contains( $single_template, 'wp:axismundi/replies' ) && ! str_contains( $single_template, 'wp:query' ) );
 
 	// An embedded object caller can choose a smaller heading and suppress the
 	// personalized interaction slot without changing the source view model.
@@ -86,7 +121,18 @@ try {
 	$feed_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $feed_item );
 	$restored  = axismundi_op_current_object_view_model();
 	axismundi_op_set_current_object_view_model( null );
-	ax_vm_assert( $ax_vm_results, 'a matching public Create(Note) renders through the canonical compact Note view and restores request state', false !== strpos( $feed_html, 'axismundi-object--note' ) && false !== strpos( $feed_html, 'Hello from a note.' ) && false !== strpos( $feed_html, '<h3 class="axismundi-object__title">' ) && ! empty( $restored ) && 'fixture-previous' === ( $restored['id'] ?? '' ) );
+	ax_vm_assert(
+		$ax_vm_results,
+		'a matching public Create(Note) renders through the shared Object Card pattern in compact non-personalized mode and restores request state',
+		false !== strpos( $feed_html, 'axismundi-object-card' )
+			&& false !== strpos( $feed_html, 'wp-block-axismundi-actor-avatar' )
+			&& false !== strpos( $feed_html, 'Hello from a note.' )
+			&& false !== strpos( $feed_html, '<h3' )
+			&& false !== strpos( $feed_html, 'axismundi-object__title' )
+			&& false === strpos( $feed_html, 'axismundi-object__interactions' )
+			&& ! empty( $restored )
+			&& 'fixture-previous' === ( $restored['id'] ?? '' )
+	);
 	$wrong_feed_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', array_merge( $feed_item, array( 'actor_uri' => 'https://example.invalid/actors/not-the-author' ) ) );
 	ax_vm_assert( $ax_vm_results, 'an Actor feed Create with mismatched attribution cannot render a Note object', '' === $wrong_feed_html );
 

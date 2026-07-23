@@ -1,0 +1,14 @@
+.wp-block-axismundi-announce-button { display: inline-flex; gap: 0.25rem; align-items: center; }
+.axismundi-announce-button__button { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; box-sizing: border-box; block-size: 2.5rem; padding-inline: var(--wp--preset--spacing--200, 1rem); border: 0; border-radius: 9999px; background: transparent; color: inherit; font-family: var(--wp--preset--font-family--roboto-flex, inherit); font-size: var(--wp--preset--font-size--label-large, 0.875rem); font-weight: 500; letter-spacing: 0.1px; line-height: 1.429; cursor: pointer; transition: background-color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, ease), color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, ease); }
+.axismundi-announce-button__button .material-symbols-outlined { --md-icon-size: 1.25rem; transition: transform var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, ease); }
+.axismundi-announce-button__button:hover, .axismundi-announce-button__button:focus-visible, .axismundi-announce-button__button.is-announced { background-color: color-mix(in srgb, currentColor 8%, transparent); color: var(--wp--preset--color--primary, #6750a4); }
+.axismundi-announce-button__button:hover .material-symbols-outlined, .axismundi-announce-button__button:focus-visible .material-symbols-outlined, .axismundi-announce-button__button.is-announced .material-symbols-outlined { transform: rotate(-180deg); }
+.axismundi-announce-button__button:disabled { cursor: not-allowed; opacity: 0.55; }
+.axismundi-announce-button__count { min-inline-size: 1ch; font-variant-numeric: tabular-nums; color: inherit; }
+.axismundi-announce-button__status { flex-basis: 100%; font-size: 0.875rem; }
+.axismundi-announce-menu { display: grid; gap: 0.5rem; }
+.axismundi-announce-menu__action { display: inline-flex; align-items: center; gap: 0.5rem; inline-size: 100%; min-block-size: 2.5rem; text-align: start; }
+
+.axismundi-announce-button__label {
+	white-space: nowrap;
+}

@@ -203,24 +203,9 @@ function axismundi_op_get_object_shares( WP_REST_Request $request ) {
 	return $response;
 }
 
-/** Whether an observed remote object declares a public or quiet-public audience. */
+/** Back-compat name for the remote cache's public-listing predicate. */
 function axismundi_op_remote_object_is_announceable( array $row ) : bool {
-	if ( 'active' !== (string) ( $row['object_status'] ?? '' ) || empty( $row['attributed_to_uri'] ) ) {
-		return false;
-	}
-	$payload = (array) ( $row['payload'] ?? array() );
-	$public  = array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' );
-	foreach ( array( 'to', 'cc' ) as $property ) {
-		$members = $payload[ $property ] ?? array();
-		$members = is_array( $members ) && array_is_list( $members ) ? $members : array( $members );
-		foreach ( $members as $member ) {
-			$uri = function_exists( 'axismundi_op_remote_member_uri' ) ? axismundi_op_remote_member_uri( $member ) : '';
-			if ( in_array( is_scalar( $member ) ? (string) $member : $uri, $public, true ) ) {
-				return true;
-			}
-		}
-	}
-	return false;
+	return axismundi_op_remote_object_is_publicly_listable( $row );
 }
 
 /** Supply the fail-closed Announce visibility decision owned by the object layer. */

@@ -4,7 +4,7 @@ Tags: geo, geotag, location, taxonomy, rest-api
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.2
+Stable tag: 0.2.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -16,15 +16,18 @@ Axismundi Geodata is the data layer that lets posts and attachments carry a
 location, and lets the editor, map blocks, and federation serializers read it
 back through one shared model. It registers:
 
-* **geo_area** — a hierarchical taxonomy for address / administrative
+* **`axismundi_geo_area`** — a hierarchical taxonomy for address / administrative
   containment (대한민국 > 부산광역시 > 수영구 > 광안동). Answers "where is it?".
-* **geotag** — a flat taxonomy for place / content geo tags (광안리해수욕장,
+* **`axismundi_geotag`** — a flat taxonomy for place / content geo tags (광안리해수욕장,
   광안대교). Answers "what place is it about?".
 * **Coordinate meta** on posts, pages, and attachments — the observation /
   capture point, using the WordPress-convention `geo_latitude`, `geo_longitude`,
   `geo_public` keys plus `ax_geo_*` extensions.
 * **Place-fact term meta** — centroid, display bounds / zoom, and external place id on
-  each geo_area / geotag term.
+  each geo taxonomy term.
+
+The taxonomy identifiers are plugin-prefixed to avoid conflicts with other
+plugins. Their public permalink bases remain `/geo-area/` and `/geotag/`.
 
 Privacy is built into the model. The raw exact coordinate is stored, while
 `geo_public` decides whether an attachment coordinate may leave the site.
@@ -36,7 +39,7 @@ button that reads the original file's GPS, and a Leaflet mini map with a draggab
 marker (configure a tile provider under Settings → Geodata). Nothing is
 auto-imported or auto-published — the public toggle defaults off.
 
-Posts and pages express location through the geo_area / geotag taxonomies. The
+Posts and pages express location through the Geo Area / Geotag taxonomies. The
 separate Axismundi Map plugin consumes this data for front-end place, media,
 track, and geo-archive maps. Attachments carry coordinate meta only — they are
 never auto-tagged with place terms. A future ax_note post type can opt into the
@@ -48,6 +51,10 @@ feed, and geo navigation sidebar previously supplied by the Axismundi theme.
 Themes and site owners can still override them through the normal template
 hierarchy. The map remains optional; without Axismundi Map the archive feed and
 navigation continue to render.
+
+The theme does not hard-code Geo taxonomy blocks. Insert the plugin-provided
+**Post geo terms** pattern where a post template should expose its areas and
+places.
 
 A demo place hierarchy (대한민국 > 부산광역시 > 수영구 > 광안동, with the
 광안리해수욕장 geotag) ships with the plugin but is created only on request — it
@@ -143,6 +150,11 @@ shared renderer assets; Map owns the public block and Query Map View. See
 docs/map-strategy.md for the boundary.
 
 == Changelog ==
+
+= 0.2.3 =
+* Use unique `axismundi_geo_area` and `axismundi_geotag` taxonomy identifiers while preserving the established public archive URLs.
+* Migrate pre-release term assignments to the prefixed identifiers on upgrade.
+* Prefix the place-lookup transient key with the full plugin namespace.
 
 = 0.2.2 =
 * Document every optional external service, the information it receives, and its terms and privacy links.

@@ -1,15 +1,61 @@
+/**
+ * axismundi/like-button editor registration (no build step).
+ *
+ * The preview borrows Core's Button markup and the theme's Text button style so
+ * an author sees the control they will actually get. The count is rendered, not
+ * edited: it comes from the Activity ledger at render time, so there is nothing
+ * here for an author to type.
+ */
 ( function ( blocks, blockEditor, components, element, i18n ) {
 	'use strict';
-	const el = element.createElement;
+	var el = element.createElement;
+	var __ = i18n.__;
 	blocks.registerBlockType( 'axismundi/like-button', {
 		edit: function ( props ) {
+			var attributes = props.attributes || {};
+			var setAttributes = props.setAttributes;
+			var children = [ el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true', key: 'icon' }, 'favorite' ) ];
+			if ( attributes.showLabel ) {
+				children.push( el( 'span', { className: 'axismundi-like-button__label', key: 'label' }, __( 'Like', 'axismundi-activities' ) ) );
+			}
+			if ( false !== attributes.showCount ) {
+				children.push( el( 'span', { className: 'axismundi-like-button__count', key: 'count' }, '0' ) );
+			}
 			return el(
-				'div',
-				blockEditor.useBlockProps(),
-				el( components.Button, { icon: 'heart', variant: 'secondary', disabled: true }, i18n.__( 'Like', 'axismundi-activities' ) ),
-				props.context && props.context.postId ? null : el( components.Placeholder, { instructions: i18n.__( 'The front end resolves the current projected object.', 'axismundi-activities' ) } )
+				element.Fragment,
+				{},
+				el(
+					blockEditor.InspectorControls,
+					{},
+					el(
+						components.PanelBody,
+						{ title: __( 'Like button', 'axismundi-activities' ) },
+						el( components.ToggleControl, {
+							label: __( 'Show text label', 'axismundi-activities' ),
+							help: __( 'The icon already names the action; the label is optional.', 'axismundi-activities' ),
+							checked: !! attributes.showLabel,
+							onChange: function ( value ) { setAttributes( { showLabel: value } ); },
+							__nextHasNoMarginBottom: true
+						} ),
+						el( components.ToggleControl, {
+							label: __( 'Show count', 'axismundi-activities' ),
+							checked: false !== attributes.showCount,
+							onChange: function ( value ) { setAttributes( { showCount: value } ); },
+							__nextHasNoMarginBottom: true
+						} )
+					)
+				),
+				el(
+					'div',
+					blockEditor.useBlockProps( { className: 'wp-block-button is-style-text' } ),
+					el(
+						'span',
+						{ className: 'wp-block-button__link wp-element-button axismundi-like-button__button axismundi-interaction-button__editor-preview', 'aria-label': __( 'Like', 'axismundi-activities' ) },
+						children
+					)
+				)
 			);
 		},
-		save: function () { return null; },
+		save: function () { return null; }
 	} );
 } )( window.wp.blocks, window.wp.blockEditor, window.wp.components, window.wp.element, window.wp.i18n );

@@ -28,7 +28,7 @@ function axismundi_geodata_register_taxonomies() : void {
 	$object_types = axismundi_geodata_object_types();
 
 	register_taxonomy(
-		'geo_area',
+		AXISMUNDI_GEODATA_TAXONOMY_AREA,
 		$object_types,
 		array(
 			'hierarchical'      => true,
@@ -51,7 +51,7 @@ function axismundi_geodata_register_taxonomies() : void {
 	);
 
 	register_taxonomy(
-		'geotag',
+		AXISMUNDI_GEODATA_TAXONOMY_TAG,
 		$object_types,
 		array(
 			'hierarchical'      => false,

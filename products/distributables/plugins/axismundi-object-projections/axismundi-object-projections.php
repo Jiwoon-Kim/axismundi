@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Object Projections
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-object-projections
  * Description:       Projects WordPress objects, Actors, and collections into ActivityStreams JSON-LD through a transformer registry and a single renderer. It owns representation and public read routes, not Activity state, Inbox writes, signatures, or delivery.
- * Version:           0.0.43
+ * Version:           0.0.49
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -15,17 +15,21 @@
  * @package AxismundiObjectProjections
  *
  * Local object projection plus the URI-keyed remote observation repository are
- * implemented. Public representation routes may be exposed for collections, but there is
- * deliberately no Activity store, Inbox write handling, signature handling, or delivery.
+ * implemented. Public representation routes include collections and noindex cached Object
+ * views, but there is deliberately no Activity store, Inbox write handling, signature
+ * handling, or delivery.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_VERSION = '0.0.43';
+const AXISMUNDI_OP_VERSION = '0.0.49';
 
+require_once __DIR__ . '/includes/hashtags.php';
 require_once __DIR__ . '/includes/object-relations.php';
 require_once __DIR__ . '/includes/remote-objects.php';
+require_once __DIR__ . '/includes/mentions.php';
 require_once __DIR__ . '/includes/thread-edges.php';
+require_once __DIR__ . '/includes/replies-collection.php';
 require_once __DIR__ . '/includes/leases.php';
 require_once __DIR__ . '/includes/remote-fetch.php';
 require_once __DIR__ . '/includes/inbox-observations.php';
@@ -34,6 +38,9 @@ require_once __DIR__ . '/includes/registry.php';
 require_once __DIR__ . '/includes/sanitize.php';
 require_once __DIR__ . '/includes/renderer.php';
 require_once __DIR__ . '/includes/object-view-model.php';
+require_once __DIR__ . '/includes/object-blocks.php';
+require_once __DIR__ . '/includes/object-view-route.php';
+require_once __DIR__ . '/includes/hashtag-archive.php';
 require_once __DIR__ . '/includes/question-view.php';
 require_once __DIR__ . '/includes/post-settings.php';
 require_once __DIR__ . '/includes/post-article.php';
@@ -43,6 +50,7 @@ require_once __DIR__ . '/includes/integrations/actors.php';
 require_once __DIR__ . '/includes/integrations/media-library.php';
 require_once __DIR__ . '/includes/integrations/media-folders.php';
 require_once __DIR__ . '/includes/integrations/reactions.php';
+require_once __DIR__ . '/includes/integrations/activities.php';
 require_once __DIR__ . '/includes/router.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
@@ -51,6 +59,8 @@ if ( is_admin() ) {
 /** Install the remote-object observation and lease schema. */
 function axismundi_op_activate() : void {
 	axismundi_op_install();
+	axismundi_op_register_hashtag_taxonomy();
+	flush_rewrite_rules( false );
 	if ( ! wp_next_scheduled( 'axismundi_op_remote_objects_daily' ) ) {
 		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'axismundi_op_remote_objects_daily' );
 	}

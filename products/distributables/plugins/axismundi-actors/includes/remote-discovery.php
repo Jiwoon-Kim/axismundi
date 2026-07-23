@@ -44,6 +44,50 @@ function axismundi_actors_normalize_remote_acct( string $input ) {
 }
 
 /**
+ * Resolve the remote server's follow-intent template without creating an Actor.
+ *
+ * A visitor supplies their own acct address. We only read that server's bounded
+ * WebFinger JRD, then return its Follow/FEP intent template. This deliberately
+ * does not fetch, trust, or persist a remote Actor profile.
+ *
+ * @return string|WP_Error URL template containing the literal `{uri}` token.
+ */
+function axismundi_actors_remote_follow_template( string $acct ) {
+	$parsed = axismundi_actors_normalize_remote_acct( $acct );
+	if ( is_wp_error( $parsed ) ) {
+		return $parsed;
+	}
+
+	$webfinger_url = add_query_arg( 'resource', 'acct:' . $parsed['acct'], 'https://' . $parsed['authority'] . '/.well-known/webfinger' );
+	$jrd           = axismundi_actors_remote_get_json( $webfinger_url, array( 'application/jrd+json', 'application/json' ) );
+	if ( is_wp_error( $jrd ) ) {
+		return $jrd;
+	}
+	if ( strtolower( (string) ( $jrd['subject'] ?? '' ) ) !== 'acct:' . strtolower( $parsed['acct'] ) || ! isset( $jrd['links'] ) || ! is_array( $jrd['links'] ) ) {
+		return new WP_Error( 'ax_actors_remote_webfinger', __( 'The WebFinger response did not match the requested acct address.', 'axismundi-actors' ) );
+	}
+
+	$template = '';
+	foreach ( array( 'https://w3id.org/fep/3b86/follow', 'http://ostatus.org/schema/1.0/subscribe', 'https://w3id.org/fep/3b86/object' ) as $wanted_rel ) {
+		foreach ( $jrd['links'] as $link ) {
+			if ( is_array( $link ) && $wanted_rel === strtolower( (string) ( $link['rel'] ?? '' ) ) && is_string( $link['template'] ?? null ) ) {
+				$template = trim( $link['template'] );
+				break 2;
+			}
+		}
+	}
+	if ( '' === $template ) {
+		$template = 'https://' . $parsed['authority'] . '/authorize_interaction?uri={uri}';
+	}
+
+	$probe = str_replace( '{uri}', rawurlencode( 'https://example.invalid/actor' ), $template );
+	if ( ! str_contains( $template, '{uri}' ) || 'https' !== strtolower( (string) wp_parse_url( $probe, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $probe ) ) {
+		return new WP_Error( 'ax_actors_remote_follow_template', __( 'The remote server did not provide a valid follow endpoint.', 'axismundi-actors' ) );
+	}
+	return $template;
+}
+
+/**
  * Fetch one bounded HTTPS JSON document.
  *
  * @param string                    $url           URL.

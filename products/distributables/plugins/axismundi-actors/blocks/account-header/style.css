@@ -1,0 +1,27 @@
+.wp-block-axismundi-account-header {
+	margin-block: 0;
+	border-block-end: 1px solid var(--wp--preset--color--outline-variant, currentColor);
+}
+
+.wp-block-axismundi-account-header > .wp-block-axismundi-actor-biography {
+	margin-inline: clamp(1rem, 4vw, 2rem);
+	margin-block: var(--wp--preset--spacing--400, 1.5rem) var(--wp--preset--spacing--500, 2rem);
+}
+
+/*
+ * The head row (avatar + identity + actions) overlaps the cover above it via a
+ * negative top margin. Overlap only paints correctly if this row shares the
+ * cover's paint layer: the cover is `position: relative` for its own
+ * decorative pattern, and CSS always paints positioned elements after
+ * non-positioned siblings regardless of DOM order — so without this, the
+ * cover would paint over the row it's supposed to sit behind.
+ */
+.wp-block-axismundi-account-header .ax-account-header__head {
+	position: relative;
+}
+
+@media (max-width: 480px) {
+	.wp-block-axismundi-account-header > .wp-block-axismundi-actor-biography {
+		margin-inline: 1rem;
+	}
+}

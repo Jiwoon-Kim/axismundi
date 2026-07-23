@@ -152,10 +152,10 @@ function axismundi_geodata_geotag_feature( WP_Term $term ) : ?array {
 function axismundi_geodata_rest_geotags_geojson( WP_REST_Request $request ) : WP_REST_Response {
 	$single = (int) $request->get_param( 'geotag' );
 	if ( $single > 0 ) {
-		$term  = get_term( $single, 'geotag' );
+		$term  = get_term( $single, AXISMUNDI_GEODATA_TAXONOMY_TAG );
 		$terms = $term instanceof WP_Term ? array( $term ) : array();
 	} else {
-		$terms = get_terms( array( 'taxonomy' => 'geotag', 'hide_empty' => false ) );
+		$terms = get_terms( array( 'taxonomy' => AXISMUNDI_GEODATA_TAXONOMY_TAG, 'hide_empty' => false ) );
 		if ( is_wp_error( $terms ) ) {
 			$terms = array();
 		}

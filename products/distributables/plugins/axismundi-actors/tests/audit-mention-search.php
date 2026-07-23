@@ -61,6 +61,10 @@ try {
 	$response = axismundi_actors_rest_search_mentions( new WP_REST_Request( 'GET', '/axismundi/v1/actors/mention-search' ) );
 	$data     = $response->get_data();
 	ax_mention_assert( $ax_mention_results, 'the editor response exposes canonical URI, label, handle, and avatar fields only from repository Actors', is_array( $data ) && isset( $data[0]['uri'], $data[0]['name'], $data[0]['handle'], $data[0]['avatar'] ) );
+	$resolve_request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/mention-resolve' );
+	$resolve_request->set_param( 'uris', array( $remote_uri, 'https://missing.example/actor' ) );
+	$resolved = axismundi_actors_rest_resolve_mentions( $resolve_request )->get_data();
+	ax_mention_assert( $ax_mention_results, 'stored canonical URIs resolve back to handle tokens without remote discovery and unknown URIs remain absent', is_array( $resolved ) && 1 === count( $resolved ) && $remote_uri === $resolved[0]['uri'] && '@mention_remote@example.com' === $resolved[0]['handle'] );
 } finally {
 	foreach ( $ax_mention_actor_ids as $identity_id ) {
 		$wpdb->delete( axismundi_actors_addresses_table(), array( 'identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

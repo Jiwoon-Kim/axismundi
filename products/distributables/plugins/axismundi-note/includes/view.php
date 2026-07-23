@@ -10,33 +10,6 @@ defined( 'ABSPATH' ) || exit;
 /** @var array<string,mixed>|null Claimed HTML route state for this request. */
 $GLOBALS['axismundi_note_html_route'] = null;
 
-/** Read the canonical functional block template bundled with Note. */
-function axismundi_note_object_template_content() : string {
-	$path = dirname( __DIR__ ) . '/templates/axismundi-note-object.php';
-	if ( ! is_readable( $path ) ) {
-		return '';
-	}
-	ob_start();
-	include $path;
-	return (string) ob_get_clean();
-}
-
-/** Register the default template; a theme or saved template may override it. */
-function axismundi_note_register_object_template() : void {
-	if ( ! function_exists( 'register_block_template' ) ) {
-		return;
-	}
-	register_block_template(
-		'axismundi-note//axismundi-note-object',
-		array(
-			'title'       => __( 'Axismundi Note Object', 'axismundi-note' ),
-			'description' => __( 'The canonical human-readable view for a Note or deleted Note.', 'axismundi-note' ),
-			'content'     => axismundi_note_object_template_content(),
-		)
-	);
-}
-add_action( 'init', 'axismundi_note_register_object_template', 20 );
-
 /** Whether this request may be handled as a human-readable Note document. */
 function axismundi_note_is_html_document_request() : bool {
 	$method = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) );
@@ -86,8 +59,9 @@ function axismundi_note_html_route() : ?array {
  * Add the canonical object document to the private CPT's admin row actions.
  *
  * Core omits its usual View action because ax_note deliberately has no public
- * permalink. Reuse the same anonymous-read gate as the route itself so an
- * admin-list link cannot disclose a followers-only or mentioned-only Note.
+ * permalink. Reuse the route's combined public/owner-preview gate, so an
+ * admin-list link cannot disclose a private Note but can preview a draft for
+ * its author or an administrator.
  *
  * @param array<string,string> $actions Existing row actions.
  * @param WP_Post              $post    Listed post.
@@ -102,14 +76,17 @@ function axismundi_note_admin_view_row_action( array $actions, WP_Post $post ) :
 		return $actions;
 	}
 	$source = new Axismundi_Note_Source( $envelope, $post );
-	if ( ! $source->is_tombstone() && ! axismundi_note_source_visible( $source ) ) {
+	if ( ! axismundi_note_can_view( $source ) ) {
 		return $actions;
 	}
 	$uri = $source->get_uri();
 	if ( '' === $uri ) {
 		return $actions;
 	}
-	$actions['view'] = '<a href="' . esc_url( $uri ) . '">' . esc_html__( 'View', 'axismundi-note' ) . '</a>';
+	$label           = axismundi_note_source_visible( $source ) || $source->is_tombstone()
+		? __( 'View', 'axismundi-note' )
+		: __( 'Preview', 'axismundi-note' );
+	$actions['view'] = '<a href="' . esc_url( $uri ) . '">' . esc_html( $label ) . '</a>';
 	return $actions;
 }
 add_filter( 'post_row_actions', 'axismundi_note_admin_view_row_action', 10, 2 );
@@ -149,7 +126,7 @@ function axismundi_note_handle_html_request( bool $preempt, WP_Query $query ) : 
 	}
 	$post   = get_post( (int) $envelope['post_id'] );
 	$source = new Axismundi_Note_Source( $envelope, $post instanceof WP_Post ? $post : null );
-	if ( ! $source->is_tombstone() && ! axismundi_note_source_visible( $source ) ) {
+	if ( ! axismundi_note_can_view( $source ) ) {
 		axismundi_note_set_html_not_found( $query );
 		return true;
 	}
@@ -180,8 +157,9 @@ function axismundi_note_object_template_include( string $template ) : string {
 	if ( ! is_array( $route ) || ! in_array( (int) $route['status'], array( 200, 410 ), true ) ) {
 		return $template;
 	}
-	$templates = array( 'axismundi-note-object.php', 'index.php' );
-	return locate_block_template( locate_template( $templates ), 'axismundi-note-object', $templates );
+	$slug      = 410 === (int) $route['status'] ? 'object-tombstone' : 'single-object';
+	$templates = array( $slug . '.php', 'index.php' );
+	return locate_block_template( locate_template( $templates ), $slug, $templates );
 }
 add_filter( 'template_include', 'axismundi_note_object_template_include', 99 );
 
@@ -216,10 +194,20 @@ function axismundi_note_object_document_title( string $title ) : string {
 }
 add_filter( 'pre_get_document_title', 'axismundi_note_object_document_title' );
 
-/** Keep deleted objects out of indexes while preserving their 410 document. */
+/**
+ * Keep deleted objects, and an owner/administrator's preview of a not-yet-public
+ * source, out of indexes. A 200 response here is only ever a genuinely public
+ * document or a preview the visibility gate would otherwise have 404'd; the
+ * latter must never be indexable just because it currently returns 200.
+ */
 function axismundi_note_object_robots( array $robots ) : array {
 	$route = axismundi_note_html_route();
-	if ( is_array( $route ) && 410 === (int) $route['status'] ) {
+	if ( ! is_array( $route ) ) {
+		return $robots;
+	}
+	$source    = $route['source'] ?? null;
+	$is_preview = 200 === (int) $route['status'] && $source instanceof Axismundi_Note_Source && ! axismundi_note_source_visible( $source );
+	if ( 410 === (int) $route['status'] || $is_preview ) {
 		$robots['noindex']   = true;
 		$robots['nofollow']  = true;
 		$robots['noarchive'] = true;
@@ -228,47 +216,8 @@ function axismundi_note_object_robots( array $robots ) : array {
 }
 add_filter( 'wp_robots', 'axismundi_note_object_robots' );
 
-/**
- * Render a public Create(Note) ledger entry as the canonical compact Note view.
- *
- * Activities owns which public ledger entries appear in the Actor feed. Note
- * claims only its own active, public sources and deliberately suppresses the
- * personalized interaction slot: an Actor profile can be shared-cached.
- *
- * @param string              $html Existing product renderer output.
- * @param array<string,mixed> $item Public-safe Activity feed item.
- */
-function axismundi_note_actor_feed_object_html( string $html, array $item ) : string {
-	if ( '' !== $html || 'Create' !== (string) ( $item['type'] ?? '' ) ) {
-		return $html;
-	}
-	$object_uri = (string) ( $item['object_uri'] ?? '' );
-	$actor_uri  = (string) ( $item['actor_uri'] ?? '' );
-	if ( '' === $object_uri || '' === $actor_uri
-		|| ! function_exists( 'axismundi_op_resolve_source_by_uri' )
-		|| ! function_exists( 'axismundi_op_object_view_model' )
-		|| ! function_exists( 'axismundi_op_render_object_view_block' )
-	) {
-		return $html;
-	}
-	$source = axismundi_op_resolve_source_by_uri( $object_uri );
-	if ( ! $source instanceof Axismundi_Note_Source || $source->is_tombstone() || ! axismundi_note_source_visible( $source ) ) {
-		return $html;
-	}
-	$model = axismundi_op_object_view_model( $source );
-	if ( ! is_array( $model ) || $actor_uri !== (string) ( $model['author']['url'] ?? '' ) ) {
-		return $html;
-	}
-	$previous = function_exists( 'axismundi_op_current_object_view_model' ) ? axismundi_op_current_object_view_model() : null;
-	axismundi_op_set_current_object_view_model( $model );
-	try {
-		$view = axismundi_op_render_object_view_block( array( 'headingTag' => 'h3', 'interactions' => false ) );
-		if ( 'Question' === (string) ( $model['type'] ?? '' ) && function_exists( 'axismundi_op_render_question_block' ) ) {
-			$view .= axismundi_op_render_question_block();
-		}
-		return $view;
-	} finally {
-		axismundi_op_set_current_object_view_model( $previous );
-	}
-}
-add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_note_actor_feed_object_html', 10, 2 );
+// The Actor feed no longer needs a Note-specific object renderer: Object
+// Projections resolves any object URI (local Note via this plugin's registered
+// resolve/view-model adapters, or a cached remote object) and renders the same
+// compact card, gated by the shared `axismundi_op_source_publicly_visible()`
+// predicate. Note keeps only its domain adapters; it owns no feed rendering.

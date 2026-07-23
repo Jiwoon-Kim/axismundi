@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.36
+Stable tag: 0.0.44
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,42 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.44 =
+
+* Publish cached remote Actor profile hubs through the same editable Actor profile template while retaining the remote canonical Actor URI.
+* Add shared profile-hub and avatar URL helpers for neutral local/remote Object cards.
+
+= 0.0.43 =
+
+* Add opt-in reciprocal `rel="me"` verification for local Actor profile links: bounded HTTPS HTML checks, no redirect following or background crawling, persisted verification state, and a dynamic profile-fields block that marks only verified links.
+
+= 0.0.42 =
+
+* Add drag-and-drop plus keyboard-operable move controls to ordered Actor profile links, with row add/remove controls up to the existing eight-link limit.
+
+= 0.0.41 =
+
+* Fix `axismundi_actors_print_canonical()` emitting a literal `\n` (single-quoted PHP strings never interpret escape sequences) instead of a newline into `wp_head()`. The stray non-whitespace text broke HTML5 head-parsing on every Actor profile page, pushing subsequent head elements into the body.
+
+= 0.0.40 =
+
+* Remove the long-form About editor and website line from the Actor profile header; existing authored content is retained but no longer published through the profile UI.
+* Add ordered local profile links, stored separately and projected as safe ActivityStreams `PropertyValue` attachments for reciprocal-profile links.
+
+= 0.0.39 =
+
+* Add a bounded, non-persistent WebFinger helper for resolving an external
+  server's Follow/interaction template.
+
+= 0.0.38 =
+* Port the Account Header's default layout onto a `core/group` scaffold matching a hand-built editor prototype: a 200px cover with bottom-radius, a row overlapping it by -36px with the avatar, the identity block at display-medium/serif size, the Activities-owned Follow block, and biography full-width below.
+* Fix the avatar rendering behind the cover on the front end: the cover is `position: relative` for its own decorative pattern, and CSS always paints positioned elements after non-positioned siblings regardless of DOM order. The overlapping head row (and, previously, the avatar itself) now shares that paint layer.
+
+= 0.0.37 =
+* Replace the single `actor-profile` composite render with a nested substrate: `account-header` resolves one Actor and supplies it to `actor-cover`, `actor-avatar`, `actor-identity`, and `actor-biography`, each independently movable, removable, and restylable. `actor-profile` is kept registered as a legacy composite for existing saved templates.
+* Route context (the actor a profile URL resolved) is authoritative whenever one exists; an explicit `actorId` block context only resolves an Actor for editor previews or an Account Header embedded outside the profile route.
+* The default Actor profile template now composes the nested tree instead of the single legacy block.
 
 = 0.0.36 =
 * Refine the actor profile header into a durable cover, overlapping avatar, and identity layout that remains legible without profile media.

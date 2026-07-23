@@ -1,0 +1,113 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-featured-image",
+	"version": "0.2.0",
+	"title": "Object Featured Image",
+	"category": "theme",
+	"icon": "format-image",
+	"description": "The lead image of the ActivityStreams Object being rendered, or the header image of the Actor in context. The Object sibling of Core's Featured Image, with Cover's overlay and focal-point controls.",
+	"textdomain": "axismundi-object-projections",
+	"usesContext": [ "axismundi/actorId" ],
+	"attributes": {
+		"scale": {
+			"type": "string",
+			"default": "cover"
+		},
+		"isLink": {
+			"type": "boolean",
+			"default": false
+		},
+		"linkTarget": {
+			"type": "string",
+			"default": "_self"
+		},
+		"rel": {
+			"type": "string",
+			"attribute": "rel",
+			"default": ""
+		},
+		"dimRatio": {
+			"type": "number",
+			"default": 0
+		},
+		"overlayColor": {
+			"type": "string"
+		},
+		"customOverlayColor": {
+			"type": "string"
+		},
+		"gradient": {
+			"type": "string"
+		},
+		"customGradient": {
+			"type": "string"
+		},
+		"focalPoint": {
+			"type": "object"
+		},
+		"hasParallax": {
+			"type": "boolean",
+			"default": false
+		},
+		"isRepeated": {
+			"type": "boolean",
+			"default": false
+		},
+		"showPlaceholder": {
+			"type": "boolean",
+			"default": false
+		}
+	},
+	"example": {
+		"viewportWidth": 350
+	},
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"align": [ "left", "right", "center", "wide", "full" ],
+		"shadow": true,
+		"color": {
+			"text": true,
+			"background": false,
+			"enableContrastChecker": false
+		},
+		"dimensions": {
+			"aspectRatio": true,
+			"minHeight": true,
+			"__experimentalDefaultControls": {
+				"aspectRatio": true
+			}
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"filter": {
+			"duotone": true
+		},
+		"interactivity": {
+			"clientNavigation": true
+		},
+		"__experimentalBorder": {
+			"color": true,
+			"radius": true,
+			"style": true,
+			"width": true,
+			"__experimentalDefaultControls": {
+				"color": true,
+				"radius": true,
+				"width": true
+			}
+		}
+	},
+	"selectors": {
+		"filter": {
+			"duotone": ".wp-block-axismundi-object-featured-image .axismundi-object__featured-image-media"
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"style": "axismundi-op-object-view",
+	"editorStyle": "axismundi-op-object-view",
+	"render": "file:./render.php"
+}

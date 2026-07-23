@@ -1,0 +1,33 @@
+/*
+ * The default voice -- 20px serif -- lives on the outer wrapper, not on the
+ * inner summary text, so it is a real default rather than a lock: the
+ * typography support applies an author's font-size/family/line-height override
+ * as a class or inline style on this same wrapper, and CSS inheritance carries
+ * it down to the inner text. A default declared on the inner element instead
+ * would win over that inherited value regardless of the override's specificity,
+ * since an element's own explicit declaration always beats an inherited one.
+ */
+.wp-block-axismundi-actor-biography {
+	margin-block: 0;
+	max-inline-size: 46rem;
+	font-family: var(--wp--preset--font-family--roboto-serif, Georgia, serif);
+	font-size: 1.25rem;
+	line-height: 1.45;
+}
+
+.ax-actor-biography__summary,
+.ax-actor-biography__preview {
+	margin-block: 0;
+}
+
+.ax-actor-biography__summary {
+	margin-block-start: var(--wp--preset--spacing--400, 1.5rem);
+}
+
+.ax-actor-biography__preview {
+	margin-block-start: var(--wp--preset--spacing--300, 1rem);
+	padding: 0.75rem 1rem;
+	border-inline-start: 3px solid currentColor;
+	font-size: 1rem;
+	font-family: var(--wp--preset--font-family--roboto-flex, system-ui, sans-serif);
+}

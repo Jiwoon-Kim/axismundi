@@ -1,0 +1,257 @@
+.axismundi-object-card {
+	inline-size: 100%;
+}
+
+.axismundi-object-card__header {
+	min-inline-size: 0;
+}
+
+.wp-block-axismundi-actor-avatar.is-compact {
+	flex: 0 0 auto;
+}
+.axismundi-object__meta {
+	color: color-mix(in srgb, currentColor 66%, transparent);
+	font-family: var(--wp--preset--font-family--monospace, monospace);
+	font-size: 0.875rem;
+}
+
+.axismundi-object__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.75rem;
+}
+
+.axismundi-object__sensitive > summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.axismundi-object__attachments {
+	display: grid;
+	gap: var(--wp--preset--spacing--200, 0.75rem);
+}
+
+.axismundi-object__attachment img {
+	display: block;
+	max-inline-size: 100%;
+	block-size: auto;
+}
+
+.axismundi-object__quote {
+	margin-inline: 0;
+	padding: var(--wp--preset--spacing--300, 1rem);
+	border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+	border-radius: 4px;
+}
+
+.axismundi-object__quote a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.axismundi-object__interactions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--wp--preset--spacing--200, 0.75rem);
+}
+
+/*
+ * The interactions row's InnerBlocks wrapper carries WordPress's default
+ * `is-layout-flow` class (this block declares no explicit flex layout
+ * attribute), so Core's global blockGap-as-margin fallback
+ * (`:root :where(.is-layout-flow) > * { margin-block: <gap> 0 }`) still
+ * applies margin to every child even though this rule visually forces a
+ * flex row. That selector's un-:where()'d `:root` gives it specificity
+ * (0,1,0) -- identical to a single class selector -- and Core's global
+ * styles print after this stylesheet, so on an equal-specificity tie its
+ * later source position wins. The doubled class below is the standard way
+ * to out-specify that without `!important`; a single class selector here
+ * silently loses and every child but the first sits offset downward by
+ * the theme's blockGap value.
+ */
+.axismundi-object__interactions.axismundi-object__interactions > * {
+	margin-block: 0;
+}
+
+.wp-block-axismundi-object-interactions > .block-editor-inner-blocks > .block-editor-block-list__layout {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--wp--preset--spacing--200, 0.75rem);
+}
+
+.wp-block-axismundi-object-interactions > .block-editor-inner-blocks > .block-editor-block-list__layout > .wp-block {
+	margin-block: 0;
+}
+
+.axismundi-object-block-placeholder {
+	padding: 0.6rem 0.75rem;
+	border: 1px dashed currentColor;
+	font-size: 0.875rem;
+	opacity: 0.72;
+}
+
+.axismundi-object__summary {
+	margin-block: 0 var(--wp--preset--spacing--200, 0.75rem);
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+}
+
+.axismundi-object__hashtags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--50, 0.5rem);
+	margin-block-start: var(--wp--preset--spacing--200, 0.75rem);
+}
+
+/*
+ * Plugin-owned fallback only. The block carries Core's `wp-block-post-terms`
+ * base class, so a theme's Post Terms style variations own the chip geometry
+ * when one is selected; this keeps the block legible on a theme that ships none.
+ */
+.axismundi-object__hashtags:not([class*="is-style-"]) .axismundi-object__hashtag {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 28px;
+	padding-inline: var(--wp--preset--spacing--100, 0.75rem);
+	border-radius: 8px;
+	background-color: var(--wp--preset--color--surface-container, transparent);
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
+	line-height: 1.4;
+	text-decoration: none;
+}
+
+.axismundi-hashtag-archive__filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--200, 0.75rem);
+	margin-block-end: var(--wp--preset--spacing--400, 1.5rem);
+}
+
+.axismundi-hashtag-archive__filter.is-current {
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+.axismundi-hashtag-archive__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	gap: var(--wp--preset--spacing--400, 1.5rem);
+}
+
+/*
+ * Object Featured Image.
+ *
+ * A lead image is asked to behave like Core's Featured Image and like Cover at
+ * once, so the overlay and focal-point machinery lives here rather than being
+ * borrowed from `.wp-block-cover`: that class carries a minimum height this block
+ * has no reason to inherit.
+ */
+/*
+ * A grid with one cell, not a block box. The wrapper is what Core's `dimensions`
+ * support sizes, and a percentage height inside a box sized only by `min-height`
+ * does not resolve -- the image measured zero high. Stretching a grid item into a
+ * single cell sizes it from the cell in every case, while an unsized wrapper still
+ * takes its height from the image itself.
+ */
+.axismundi-object__featured-image {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	margin: 0;
+	overflow: hidden;
+	isolation: isolate;
+}
+
+/*
+ * Core's `dimensions` support sizes the wrapper, so the media fills it. Without an
+ * aspect ratio or minimum height the wrapper has no definite height, and the
+ * percentage resolves to the image's own size -- which is the wanted default.
+ */
+.axismundi-object__featured-image-media {
+	grid-area: 1 / 1;
+	display: block;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	block-size: 100%;
+	min-block-size: 0;
+}
+
+/* A fixed or tiled lead image is painted, not replaced, so it sizes itself. */
+div.axismundi-object__featured-image-media {
+	background-repeat: no-repeat;
+	background-size: cover;
+	min-height: 15rem;
+}
+
+div.axismundi-object__featured-image-media.has-parallax {
+	background-attachment: fixed;
+}
+
+div.axismundi-object__featured-image-media.is-repeated {
+	background-repeat: repeat;
+	background-size: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* A fixed background is motion the viewer did not ask for. */
+	div.axismundi-object__featured-image-media.has-parallax {
+		background-attachment: scroll;
+	}
+}
+
+/*
+ * The overlay defaults to black rather than `currentColor`: opacity is a dimming
+ * control, and an author who drags it before choosing a colour must see the image
+ * dim rather than nothing happen.
+ */
+.axismundi-object__featured-image-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	pointer-events: none;
+	background-color: #000;
+}
+
+.axismundi-object__featured-image-label {
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
+}
+
+/*
+ * The empty banner slot. Most Actors have no header image, and collapsing the
+ * slot would move every profile's layout, so an opted-in caller gets a calm
+ * pattern rather than nothing.
+ */
+.axismundi-object__featured-image-media.is-empty {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-block-size: 200px;
+	color: var(--wp--preset--color--on-tertiary-container, currentColor);
+	background-color: var(--wp--preset--color--tertiary-container, #d8e2f8);
+}
+
+.axismundi-object__featured-image-media.is-empty::before,
+.axismundi-object__featured-image-media.is-empty::after {
+	position: absolute;
+	content: "";
+	pointer-events: none;
+}
+
+.axismundi-object__featured-image-media.is-empty::before {
+	inset-inline: 8%;
+	inset-block-start: 50%;
+	block-size: 1px;
+	background: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container, currentColor) 28%, transparent);
+}
+
+.axismundi-object__featured-image-media.is-empty::after {
+	inset-inline-start: 26%;
+	inset-block: 0;
+	inline-size: 1px;
+	background: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container, currentColor) 18%, transparent);
+}

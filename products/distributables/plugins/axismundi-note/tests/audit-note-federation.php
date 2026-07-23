@@ -13,6 +13,8 @@ $ax_nf_post_ids  = array();
 $ax_nf_user_ids  = array();
 $ax_nf_actor_ids = array();
 $ax_nf_attachment_ids = array();
+$ax_nf_hashtag_term_id = 0;
+$ax_nf_hashtag_name = 'NoteAudit' . strtolower( wp_generate_password( 8, false, false ) );
 $ax_nf_get       = $_GET;
 $ax_nf_uri       = $_SERVER['REQUEST_URI'] ?? null;
 
@@ -76,14 +78,24 @@ try {
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
 	$post     = get_post( $post_id );
 	$envelope = axismundi_note_get( $post_id );
+	$hashtag  = function_exists( 'axismundi_op_ensure_hashtag_term' ) ? axismundi_op_ensure_hashtag_term( $ax_nf_hashtag_name ) : null;
+	if ( $hashtag instanceof WP_Term ) {
+		$ax_nf_hashtag_term_id = (int) $hashtag->term_id;
+		wp_set_object_terms( $post_id, array( (int) $hashtag->term_id ), AXISMUNDI_OP_HASHTAG_TAXONOMY );
+	}
 	ax_nf_assert(
 		$ax_nf_results,
 		'first publication snapshots language and locks a valid local Actor only after strict preparation',
 		is_array( $envelope ) && 'en' === $envelope['language_tag'] && ! empty( $envelope['attribution_locked_at'] ) && $author instanceof Axismundi_Actor && $author->get_uri() === $envelope['actor_uri']
 	);
-
 	$uuid = is_array( $envelope ) ? (string) $envelope['local_uuid'] : '';
 	$id   = axismundi_note_object_uri( $uuid );
+	$mention_edges = function_exists( 'axismundi_op_object_mentions_for_actor' ) ? axismundi_op_object_mentions_for_actor( $mention_uri ) : array();
+	ax_nf_assert(
+		$ax_nf_results,
+		'a committed Note indexes its inline Mention as a canonical Object-to-Actor edge',
+		1 === count( $mention_edges ) && $id === (string) $mention_edges[0]['source_object_uri'] && 'inline' === (string) $mention_edges[0]['origin']
+	);
 	$_GET = array( 'ax_note' => $uuid );
 	$_SERVER['REQUEST_URI'] = (string) wp_parse_url( $id, PHP_URL_PATH ) . '?' . (string) wp_parse_url( $id, PHP_URL_QUERY );
 	$preexisting_source = (object) array( 'kind' => 'static-front-page' );
@@ -120,6 +132,13 @@ try {
 		&& true === $object['sensitive']
 		&& axismundi_act_public_audience_uri() === $object['interactionPolicy']['canQuote']['automaticApproval']
 		&& ! isset( $object['dcterms:subject'] )
+	);
+	ax_nf_assert(
+		$ax_nf_results,
+		'an explicitly assigned shared hashtag serializes beside Mention tags without changing the Note audience',
+		is_array( $object )
+			&& $hashtag instanceof WP_Term
+			&& in_array( array( 'type' => 'Hashtag', 'name' => '#' . $ax_nf_hashtag_name, 'href' => get_term_link( $hashtag ) ), (array) ( $object['tag'] ?? array() ), true )
 	);
 	ax_nf_assert(
 		$ax_nf_results,
@@ -189,6 +208,9 @@ try {
 		if ( get_post( (int) $attachment_id ) instanceof WP_Post ) {
 			wp_delete_attachment( (int) $attachment_id, true );
 		}
+	}
+	if ( $ax_nf_hashtag_term_id > 0 ) {
+		wp_delete_term( $ax_nf_hashtag_term_id, AXISMUNDI_OP_HASHTAG_TAXONOMY );
 	}
 	foreach ( array_unique( $ax_nf_actor_ids ) as $identity_id ) {
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $table ) {

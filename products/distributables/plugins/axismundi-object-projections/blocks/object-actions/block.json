@@ -1,0 +1,54 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-actions",
+	"version": "0.1.0",
+	"title": "Object Actions",
+	"category": "theme",
+	"icon": "button",
+	"description": "What a viewer can do with the current Object: reply, like, repost. The Object sibling of Core's Buttons, so alignment, gap, and justification work the same way.",
+	"textdomain": "axismundi-object-projections",
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"align": [ "wide", "full" ],
+		"__experimentalExposeControlsToChildren": true,
+		"color": {
+			"gradients": true,
+			"text": true,
+			"background": true,
+			"__experimentalDefaultControls": { "text": true }
+		},
+		"spacing": {
+			"blockGap": [ "horizontal", "vertical" ],
+			"padding": true,
+			"margin": [ "top", "bottom" ],
+			"__experimentalDefaultControls": { "blockGap": true }
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalLetterSpacing": true,
+			"__experimentalDefaultControls": { "fontSize": true }
+		},
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true
+		},
+		"layout": {
+			"allowSwitching": false,
+			"allowInheriting": false,
+			"default": { "type": "flex" }
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"style": "axismundi-op-object-view",
+	"editorStyle": "axismundi-op-object-view",
+	"render": "file:./render.php"
+}

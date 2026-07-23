@@ -271,6 +271,9 @@ function axismundi_op_render_remote_payload( array $payload ) : void {
 /** Render one metadata-only cached object. */
 function axismundi_op_render_remote_object_detail( array $object ) : void {
 	$payload = isset( $object['payload'] ) && is_array( $object['payload'] ) ? $object['payload'] : array();
+	$view_url = function_exists( 'axismundi_op_cached_object_publicly_viewable' ) && axismundi_op_cached_object_publicly_viewable( $object )
+		? axismundi_op_cached_object_view_url( (string) $object['object_uri'] )
+		: '';
 	?>
 	<hr>
 	<h2><?php echo esc_html( '' !== (string) $object['name'] ? (string) $object['name'] : (string) $object['object_type'] ); ?></h2>
@@ -283,6 +286,7 @@ function axismundi_op_render_remote_object_detail( array $object ) : void {
 			<tr><th scope="row"><?php esc_html_e( 'Sensitive', 'axismundi-object-projections' ); ?></th><td><?php echo null === $object['is_sensitive'] ? esc_html__( 'Not declared', 'axismundi-object-projections' ) : ( (int) $object['is_sensitive'] ? esc_html__( 'Yes', 'axismundi-object-projections' ) : esc_html__( 'No', 'axismundi-object-projections' ) ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Fetched / expires', 'axismundi-object-projections' ); ?></th><td><?php echo esc_html( (string) $object['fetched_at'] . ' / ' . (string) $object['expires_at'] ); ?></td></tr>
 			<tr><th scope="row"><?php esc_html_e( 'Source page', 'axismundi-object-projections' ); ?></th><td><?php echo empty( $object['human_url'] ) ? '—' : '<a href="' . esc_url( (string) $object['human_url'] ) . '" rel="noopener noreferrer">' . esc_html__( 'Open remote page', 'axismundi-object-projections' ) . '</a>'; ?></td></tr>
+			<tr><th scope="row"><?php esc_html_e( 'Cached view', 'axismundi-object-projections' ); ?></th><td><?php echo '' === $view_url ? '—' : '<a href="' . esc_url( $view_url ) . '">' . esc_html__( 'View', 'axismundi-object-projections' ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Complete anchor escaped here. ?></td></tr>
 		</tbody>
 	</table>
 	<?php if ( ! empty( $object['summary'] ) ) : ?>
@@ -366,8 +370,12 @@ function axismundi_op_render_remote_admin_page() : void {
 				<tr><td colspan="5"><?php esc_html_e( 'No cached remote objects.', 'axismundi-object-projections' ); ?></td></tr>
 			<?php else : ?>
 				<?php foreach ( $objects as $object ) : ?>
+					<?php $view_url = function_exists( 'axismundi_op_cached_object_publicly_viewable' ) && axismundi_op_cached_object_publicly_viewable( $object ) ? axismundi_op_cached_object_view_url( (string) $object['object_uri'] ) : ''; ?>
 					<tr>
-						<td><a href="<?php echo esc_url( axismundi_op_remote_admin_url( (string) $object['object_uri'] ) ); ?>"><?php echo esc_html( '' !== (string) $object['name'] ? (string) $object['name'] : (string) $object['object_uri'] ); ?></a></td>
+						<td>
+							<strong><a href="<?php echo esc_url( axismundi_op_remote_admin_url( (string) $object['object_uri'] ) ); ?>"><?php echo esc_html( '' !== (string) $object['name'] ? (string) $object['name'] : (string) $object['object_uri'] ); ?></a></strong>
+							<?php if ( '' !== $view_url ) : ?><div class="row-actions"><span class="view"><a href="<?php echo esc_url( $view_url ); ?>"><?php esc_html_e( 'View', 'axismundi-object-projections' ); ?></a></span></div><?php endif; ?>
+						</td>
 						<td><?php echo esc_html( (string) $object['object_type'] ); ?></td>
 						<td><?php echo esc_html( (string) ( $object['attributed_to_uri'] ?? '—' ) ); ?></td>
 						<td><?php echo esc_html( (string) $object['fetched_at'] ); ?></td>

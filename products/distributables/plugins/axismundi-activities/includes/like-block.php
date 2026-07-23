@@ -152,6 +152,10 @@ function axismundi_act_like_block_object_uri( array $attributes, WP_Block $block
 			$uri    = is_array( $object ) && isset( $object['id'] ) ? axismundi_act_uri( (string) $object['id'] ) : '';
 		}
 	}
+	if ( '' === $uri && function_exists( 'axismundi_op_current_object_view_model' ) ) {
+		$model = axismundi_op_current_object_view_model();
+		$uri   = is_array( $model ) ? axismundi_act_uri( (string) ( $model['object_uri'] ?? '' ) ) : '';
+	}
 	/** @param string $uri Object URI or empty. @param array<string,mixed> $attributes Block attributes. @param WP_Block $block Block instance. */
 	return (string) apply_filters( 'axismundi_act_like_button_object_uri', $uri, $attributes, $block );
 }
@@ -177,15 +181,22 @@ function axismundi_act_render_like_button( array $attributes, string $content, W
 		'error'     => '',
 		'errorFallback' => __( 'The Like could not be saved.', 'axismundi-activities' ),
 	);
-	wp_enqueue_style( 'dashicons' );
 	$label = $can_like ? __( 'Like', 'axismundi-activities' ) : ( is_user_logged_in() ? __( 'Activate a public Actor profile to Like.', 'axismundi-activities' ) : __( 'Log in to Like.', 'axismundi-activities' ) );
+	// The icon carries the action, so the text label is opt-in while the count is
+	// on by default. The accessible name stays on the control either way.
+	$show_label = ! empty( $attributes['showLabel'] );
+	$show_count = ! isset( $attributes['showCount'] ) || (bool) $attributes['showCount'];
 	ob_start();
 	?>
 	<div <?php echo get_block_wrapper_attributes(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/like-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-		<button type="button" class="axismundi-like-button__button" data-wp-on--click="actions.toggleLike" data-wp-bind--aria-pressed="context.isLiked" data-wp-bind--disabled="state.isDisabled" data-wp-class--is-liked="context.isLiked" aria-label="<?php echo esc_attr( $label ); ?>"<?php disabled( ! $can_like ); ?>>
-			<span class="dashicons dashicons-heart" aria-hidden="true"></span>
-			<span><?php esc_html_e( 'Like', 'axismundi-activities' ); ?></span>
-			<span class="axismundi-like-button__count" data-wp-text="context.likes"><?php echo esc_html( number_format_i18n( $context['likes'] ) ); ?></span>
+		<button type="button" class="axismundi-like-button__button" data-wp-on--click="actions.toggleLike" data-wp-bind--aria-pressed="context.isLiked" data-wp-bind--disabled="state.isDisabled" data-wp-class--is-liked="context.isLiked" aria-label="<?php echo esc_attr( $label ); ?>" title="<?php echo esc_attr( $label ); ?>"<?php disabled( ! $can_like ); ?>>
+			<span class="material-symbols-outlined" aria-hidden="true">favorite</span>
+			<?php if ( $show_label ) : ?>
+				<span class="axismundi-like-button__label" aria-hidden="true"><?php esc_html_e( 'Like', 'axismundi-activities' ); ?></span>
+			<?php endif; ?>
+			<?php if ( $show_count ) : ?>
+				<span class="axismundi-like-button__count" data-wp-text="context.likes" aria-hidden="true"><?php echo esc_html( number_format_i18n( $context['likes'] ) ); ?></span>
+			<?php endif; ?>
 		</button>
 		<span class="axismundi-like-button__status" data-wp-text="context.error" aria-live="polite"></span>
 	</div>

@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/actor-profile-fields",
+	"version": "0.1.0",
+	"title": "Actor Profile Fields",
+	"category": "theme",
+	"icon": "admin-links",
+	"description": "Ordered profile links for the Actor resolved by the enclosing Account Header, with a verified reciprocal-link indicator.",
+	"textdomain": "axismundi-actors",
+	"usesContext": [ "axismundi/actorId" ],
+	"supports": {
+		"html": false,
+		"multiple": false,
+		"spacing": { "margin": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

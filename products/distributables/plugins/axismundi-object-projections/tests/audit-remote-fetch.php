@@ -139,6 +139,12 @@ try {
 	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) );
 	axismundi_op_remote_object_delete( $ax_fetch_url );
 	axismundi_op_remote_object_delete( $ax_fetch_signed );
+	// The mocked payload materializes a shared vocabulary term; leaving it behind
+	// would pollute a site-wide taxonomy and make repeat runs non-deterministic.
+	$ax_fetch_term = get_term_by( 'slug', 'remoteobjects', AXISMUNDI_OP_HASHTAG_TAXONOMY );
+	if ( $ax_fetch_term instanceof WP_Term ) {
+		wp_delete_term( $ax_fetch_term->term_id, AXISMUNDI_OP_HASHTAG_TAXONOMY );
+	}
 	wp_set_current_user( $ax_fetch_user );
 }
 

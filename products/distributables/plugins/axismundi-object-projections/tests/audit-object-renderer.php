@@ -207,6 +207,72 @@ $invalid_activity = axismundi_op_finalize_activity( array( 'id' => $activity_uri
 $activity_mismatch = axismundi_op_finalize_activity( array( 'id' => $activity_uri, 'type' => 'Follow', 'actor' => 'https://example.com/actors/alice' ), $activity_uri . 'different' );
 ax_rnd_assert( $ax_rnd_results, 'Activity finalization rejects a missing actor and a ledger id mismatch', is_wp_error( $invalid_activity ) && 'ax_op_invalid_activity' === $invalid_activity->get_error_code() && is_wp_error( $activity_mismatch ) && 'ax_op_id_mismatch' === $activity_mismatch->get_error_code() );
 
+// Every server-rendered Object block also needs a client-side registration or
+// the Site Editor reports it as unsupported. The editor list is derived from the
+// registry, so this guards the PHP and JavaScript sides from desynchronizing the
+// way a hardcoded copy did.
+axismundi_op_register_object_block_assets();
+axismundi_op_enqueue_object_block_editor_data();
+$ax_rnd_inline  = wp_scripts()->get_data( 'axismundi-op-object-blocks', 'before' );
+$ax_rnd_inline  = is_array( $ax_rnd_inline ) ? $ax_rnd_inline : array( (string) $ax_rnd_inline );
+$ax_rnd_payload = '';
+foreach ( $ax_rnd_inline as $ax_rnd_line ) {
+	if ( is_string( $ax_rnd_line ) && false !== strpos( $ax_rnd_line, 'axismundiOpObjectBlocks' ) ) {
+		$ax_rnd_payload = $ax_rnd_line;
+	}
+}
+$ax_rnd_decoded  = json_decode( trim( str_replace( array( 'window.axismundiOpObjectBlocks =', ';' ), '', $ax_rnd_payload ) ), true );
+$ax_rnd_actual   = is_array( $ax_rnd_decoded ) ? array_keys( $ax_rnd_decoded ) : array();
+$ax_rnd_expected = array();
+foreach ( WP_Block_Type_Registry::get_instance()->get_all_registered() as $ax_rnd_name => $ax_rnd_type ) {
+	if ( in_array( 'axismundi-op-object-blocks', (array) ( $ax_rnd_type->editor_script_handles ?? array() ), true ) ) {
+		$ax_rnd_expected[] = $ax_rnd_name;
+	}
+}
+sort( $ax_rnd_expected );
+sort( $ax_rnd_actual );
+$ax_rnd_editor_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/object-blocks.js' );
+
+// The invariant survives the block.json migration: a block reaches the editor
+// either through its own metadata-declared script or through the shared list,
+// and the shared list is always derived from the registry. A block registered
+// on the server with no editor script at all is what surfaces to an author as
+// "your site doesn't include support for this block".
+$ax_rnd_owned = array(
+	'axismundi/object-status',
+	'axismundi/object-meta',
+	'axismundi/object-title',
+	'axismundi/object-content',
+	'axismundi/object-summary',
+	'axismundi/object-hashtags',
+	'axismundi/object-attachments',
+	'axismundi/object-interactions',
+	'axismundi/object-actions',
+	'axismundi/quote-context',
+	'axismundi/reply-context',
+	'axismundi/replies',
+	'axismundi/question',
+	'axismundi/hashtag-archive',
+);
+$ax_rnd_object_blocks = array();
+foreach ( $ax_rnd_owned as $ax_rnd_name ) {
+	$ax_rnd_type = WP_Block_Type_Registry::get_instance()->get_registered( $ax_rnd_name );
+	if ( null === $ax_rnd_type ) {
+		continue;
+	}
+	$ax_rnd_object_blocks[ $ax_rnd_name ] = count( (array) ( $ax_rnd_type->editor_script_handles ?? array() ) );
+}
+$ax_rnd_without_editor = array_keys( array_filter( $ax_rnd_object_blocks, static fn( int $count ) : bool => 0 === $count ) );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'every server-rendered Object block reaches the editor, and the shared list stays derived from the registry',
+	array() !== $ax_rnd_object_blocks
+		&& array() === $ax_rnd_without_editor
+		&& array() !== $ax_rnd_expected
+		&& $ax_rnd_expected === $ax_rnd_actual
+		&& false !== strpos( $ax_rnd_editor_js, 'axismundiOpObjectBlocks' )
+);
+
 $ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_rnd_results ), $ax_rnd_failures );

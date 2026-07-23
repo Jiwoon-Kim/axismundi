@@ -41,8 +41,8 @@ function ax_nh_actor( array &$users, array &$actors ) : ?Axismundi_Actor {
 	return axismundi_actors_get_by_uri( $actor->get_uri() );
 }
 
-/** Create and publish one fixture Note. */
-function ax_nh_note( int $author_id, string $visibility, array &$posts ) : array {
+/** Create one fixture Note, optionally leaving its local Post as a draft. */
+function ax_nh_note( int $author_id, string $visibility, array &$posts, bool $publish = true ) : array {
 	$post_id = (int) wp_insert_post(
 		array(
 			'post_type'    => AXISMUNDI_NOTE_POST_TYPE,
@@ -54,7 +54,9 @@ function ax_nh_note( int $author_id, string $visibility, array &$posts ) : array
 	);
 	$posts[] = $post_id;
 	axismundi_note_save_envelope( $post_id, array( 'visibility' => $visibility ) );
-	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
+	if ( $publish ) {
+		wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
+	}
 	return (array) axismundi_note_get( $post_id );
 }
 
@@ -82,33 +84,81 @@ try {
 	$author_id = $actor instanceof Axismundi_Actor ? (int) $actor->get_local_user_id() : 0;
 	$public    = ax_nh_note( $author_id, 'public', $ax_nh_post_ids );
 	$private   = ax_nh_note( $author_id, 'followers', $ax_nh_post_ids );
+	$draft     = ax_nh_note( $author_id, 'public', $ax_nh_post_ids, false );
 	$public_id = axismundi_note_object_uri( (string) $public['local_uuid'] );
 	$private_id = axismundi_note_object_uri( (string) $private['local_uuid'] );
+	$draft_id  = axismundi_note_object_uri( (string) $draft['local_uuid'] );
 	$public_post = get_post( (int) $public['post_id'] );
 	$private_post = get_post( (int) $private['post_id'] );
+	$draft_post = get_post( (int) $draft['post_id'] );
 	$public_actions = $public_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $public_post ) : array();
 	$private_actions = $private_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $private_post ) : array();
-	ax_nh_assert( $ax_nh_results, 'the private Note list adds View only for canonical documents anonymous visitors may read', isset( $public_actions['view'] ) && false !== strpos( $public_actions['view'], esc_url( $public_id ) ) && ! isset( $private_actions['view'] ) );
+	$draft_actions = $draft_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $draft_post ) : array();
+	ax_nh_assert( $ax_nh_results, 'the private Note list adds View only for canonical documents anonymous visitors may read', isset( $public_actions['view'] ) && false !== strpos( $public_actions['view'], esc_url( $public_id ) ) && ! isset( $private_actions['view'] ) && ! isset( $draft_actions['view'] ) );
 
-	$template = function_exists( 'get_block_template' ) ? get_block_template( 'axismundi-note//axismundi-note-object', 'wp_template' ) : null;
-	$content  = axismundi_note_object_template_content();
-	ax_nh_assert( $ax_nh_results, 'Note registers one plugin-owned functional block template containing only the neutral object view', $template instanceof WP_Block_Template && false !== strpos( $content, 'wp:axismundi/object-view' ) && false === strpos( $content, 'wp:post-content' ) );
+	$template = function_exists( 'get_block_template' ) ? get_block_template( 'axismundi-object-projections//single-object', 'wp_template' ) : null;
+	$content  = function_exists( 'axismundi_op_single_object_template_content' ) ? axismundi_op_single_object_template_content() : '';
+	ax_nh_assert( $ax_nh_results, 'Object Projections registers the editable single-Object template that the Note route reuses', $template instanceof WP_Block_Template && 'plugin' === $template->source && false !== strpos( $content, 'wp:axismundi/object-content' ) && false !== strpos( $content, 'wp:axismundi/replies' ) && false === strpos( $content, 'wp:query' ) && false === strpos( $content, 'wp:post-content' ) );
+	$tombstone_content = function_exists( 'axismundi_op_tombstone_template_content' ) ? axismundi_op_tombstone_template_content() : '';
+	ax_nh_assert( $ax_nh_results, 'Object Projections owns a separate privacy-minimal Tombstone template for local and cached remote 410 routes', false !== strpos( $tombstone_content, 'wp:axismundi/object-status' ) && false === strpos( $tombstone_content, 'wp:axismundi/object-content' ) && false === strpos( $tombstone_content, 'wp:axismundi/replies' ) );
 
 	$public_route = ax_nh_route( $public_id, array( 'ax_note' => (string) $public['local_uuid'] ) );
 	$public_query = $public_route['query'];
 	ax_nh_assert( $ax_nh_results, 'an exact public Note route returns 200 and clears the fallback home loop without faking a singular Post', true === $public_route['handled'] && 200 === (int) $public_route['route']['status'] && is_array( $public_route['model'] ) && array() === $public_query->posts && ! $public_query->is_home && ! $public_query->is_singular && ! $public_query->is_404 );
 
-	$active_html = axismundi_op_render_object_view_block();
-	ax_nh_assert( $ax_nh_results, 'the active human view conditionally renders its title, content, Like and Boost but no Quote affordance', false !== strpos( $active_html, 'Optional Note title' ) && 'Optional Note title' === axismundi_note_object_document_title( 'fallback' ) && false !== strpos( $active_html, 'Human Note route.' ) && false !== strpos( $active_html, 'axismundi-like-button' ) && false !== strpos( $active_html, 'axismundi-boost-button' ) && false === stripos( $active_html, 'quote' ) );
+	$active_html    = axismundi_op_render_object_view_block();
+	$pattern_html   = axismundi_op_render_object_pattern();
+	ax_nh_assert( $ax_nh_results, 'the active human view renders title and content, while the editable Object pattern owns nested Reply, Like, and Repost controls', false !== strpos( $active_html, 'Optional Note title' ) && 'Optional Note title' === axismundi_note_object_document_title( 'fallback' ) && false !== strpos( $active_html, 'Human Note route.' ) && false !== strpos( $active_html, 'axismundi-reply-button' ) && false !== strpos( $active_html, 'axismundi-like-button' ) && false !== strpos( $active_html, 'axismundi-announce-button' ) && false !== strpos( $pattern_html, 'axismundi-object__interactions' ) && false !== strpos( $pattern_html, 'axismundi-reply-button' ) && false !== strpos( $pattern_html, 'axismundi-like-button' ) && false !== strpos( $pattern_html, 'axismundi-announce-button' ) );
 
 	$like_target = axismundi_act_resolve_like_target( $public_id );
 	$boost_target = axismundi_act_resolve_announce_target( $public_id );
 	ax_nh_assert( $ax_nh_results, 'Like and Announce resolve the same exact public Note and frozen recipient Actor without network access', is_array( $like_target ) && is_array( $boost_target ) && $public_id === $like_target['object_uri'] && $actor->get_uri() === $like_target['recipient_uri'] && $actor->get_uri() === $boost_target['recipient_uri'] );
+	wp_set_current_user( $author_id );
+	$reply_button = do_blocks( '<!-- wp:axismundi/reply-button {"objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
+	ax_nh_assert( $ax_nh_results, 'the authenticated Reply control opens the Note editor with the canonical parent URI prefilled', false !== strpos( $reply_button, 'axismundi-reply-button' ) && false !== strpos( $reply_button, 'ax_reply_to=' ) && false !== strpos( $reply_button, $public_id ) && false !== strpos( $reply_button, '>reply<' ) );
+	$announce_menu = do_blocks( '<!-- wp:axismundi/announce-button {"objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
+	ax_nh_assert( $ax_nh_results, 'the authenticated Announce control opens a Dialogs menu with distinct repost and Quote commands', false !== strpos( $announce_menu, 'data-wp-interactive="axismundi/announce-button"' ) && false !== strpos( $announce_menu, 'ax-interaction-dialog' ) && false !== strpos( $announce_menu, 'ax_quote_target' ) && false !== strpos( $announce_menu, 'Quote</a>' ) );
+	wp_set_current_user( 0 );
 
 	$private_route = ax_nh_route( $private_id, array( 'ax_note' => (string) $private['local_uuid'] ) );
 	$private_query = $private_route['query'];
 	$private_target = axismundi_note_reaction_target( $private_id );
 	ax_nh_assert( $ax_nh_results, 'followers-only Note HTML and reactions fail closed as an empty 404', 404 === (int) $private_route['route']['status'] && $private_query->is_404 && array() === $private_query->posts && null === $private_route['model'] && is_wp_error( $private_target ) );
+
+	wp_set_current_user( $author_id );
+	$owner_actions = axismundi_note_admin_view_row_action( array(), $private_post );
+	$owner_route   = ax_nh_route( $private_id, array( 'ax_note' => (string) $private['local_uuid'] ) );
+	$owner_robots  = axismundi_note_object_robots( array() );
+	ax_nh_assert(
+		$ax_nh_results,
+		'the author can preview their own not-yet-public Note: a row-action link is offered, the route returns 200 instead of 404, and the preview stays out of indexes',
+		isset( $owner_actions['view'] ) && false !== strpos( $owner_actions['view'], esc_url( $private_id ) )
+			&& 200 === (int) $owner_route['route']['status'] && is_array( $owner_route['model'] )
+			&& ! empty( $owner_robots['noindex'] ) && ! empty( $owner_robots['nofollow'] )
+	);
+
+	$other_actor = ax_nh_actor( $ax_nh_user_ids, $ax_nh_actor_ids );
+	$other_id    = $other_actor instanceof Axismundi_Actor ? (int) $other_actor->get_local_user_id() : 0;
+	wp_set_current_user( $other_id );
+	$stranger_actions = axismundi_note_admin_view_row_action( array(), $private_post );
+	$stranger_route   = ax_nh_route( $private_id, array( 'ax_note' => (string) $private['local_uuid'] ) );
+	ax_nh_assert(
+		$ax_nh_results,
+		'a different logged-in Author cannot preview someone else\'s not-yet-public Note',
+		! isset( $stranger_actions['view'] ) && 404 === (int) $stranger_route['route']['status']
+	);
+	wp_set_current_user( $author_id );
+	$draft_actions = $draft_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $draft_post ) : array();
+	$draft_route   = ax_nh_route( $draft_id, array( 'ax_note' => (string) $draft['local_uuid'] ) );
+	$draft_robots  = axismundi_note_object_robots( array() );
+	ax_nh_assert(
+		$ax_nh_results,
+		'the author gets a Preview action for an envelope-backed draft and the draft route renders only as a noindex owner preview',
+		isset( $draft_actions['view'] ) && false !== strpos( $draft_actions['view'], esc_url( $draft_id ) ) && false !== strpos( $draft_actions['view'], 'Preview' )
+			&& 200 === (int) $draft_route['route']['status'] && is_array( $draft_route['model'] )
+			&& ! empty( $draft_robots['noindex'] ) && ! empty( $draft_robots['nofollow'] )
+	);
+	wp_set_current_user( 0 );
 
 	$alias_route = ax_nh_route( $public_id . '&extra=1', array( 'ax_note' => (string) $public['local_uuid'], 'extra' => '1' ) );
 	$unknown_uuid = wp_generate_uuid4();

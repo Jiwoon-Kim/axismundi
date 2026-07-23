@@ -260,6 +260,14 @@ function axismundi_op_media_attachment_descriptor( WP_Post $attachment ) : ?arra
 	if ( '' === $descriptor['url'] ) {
 		return null;
 	}
+	// Collapsing the Link list to a scalar URL would otherwise drop the rendition's
+	// dimensions, and both a peer and our own card need them to reserve space before the
+	// image loads. Mastodon states them the same way on an embedded attachment.
+	foreach ( array( 'width', 'height' ) as $ax_dimension ) {
+		if ( (int) ( $selected[ $ax_dimension ] ?? 0 ) > 0 ) {
+			$descriptor[ $ax_dimension ] = (int) $selected[ $ax_dimension ];
+		}
+	}
 	$alt = trim( (string) get_post_meta( (int) $attachment->ID, '_wp_attachment_image_alt', true ) );
 	if ( '' !== $alt ) {
 		$descriptor['name'] = sanitize_text_field( wp_strip_all_tags( $alt ) );

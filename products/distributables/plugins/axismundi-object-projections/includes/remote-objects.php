@@ -2,8 +2,9 @@
 /**
  * Phase 4a - URI-keyed remote ActivityStreams object observations.
  *
- * This repository performs no network requests and exposes no public route. A row is a
- * rebuildable cache snapshot; the canonical remote URI remains the object's identity.
+ * This repository performs no network requests. A row is a rebuildable cache snapshot;
+ * public observations may receive a noindex local human view, while the canonical remote
+ * URI remains the object's identity.
  * See docs/REMOTE-OBJECTS.md.
  *
  * @package AxismundiObjectProjections
@@ -11,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '5';
+const AXISMUNDI_OP_DB_VERSION            = '7';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -97,6 +98,10 @@ function axismundi_op_install() : bool {
 		&& axismundi_op_install_lease_schema()
 		&& function_exists( 'axismundi_op_install_object_relations' )
 		&& axismundi_op_install_object_relations()
+		&& function_exists( 'axismundi_op_install_remote_object_hashtag_schema' )
+		&& axismundi_op_install_remote_object_hashtag_schema()
+		&& function_exists( 'axismundi_op_install_object_mentions' )
+		&& axismundi_op_install_object_mentions()
 		&& function_exists( 'axismundi_op_install_thread_edges' )
 		&& axismundi_op_install_thread_edges()
 		&& 'InnoDB' === $engine;
@@ -322,6 +327,12 @@ function axismundi_op_remote_object_store( array $payload, array $fetch = array(
 	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_thread_edge_from_remote_object' ) ) {
 		axismundi_op_index_thread_edge_from_remote_object( $stored );
 	}
+	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_remote_object_hashtags' ) ) {
+		axismundi_op_index_remote_object_hashtags( $stored );
+	}
+	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_remote_object_mentions' ) ) {
+		axismundi_op_index_remote_object_mentions( $stored );
+	}
 	return $stored;
 }
 
@@ -354,6 +365,109 @@ function axismundi_op_remote_object_get( string $uri, bool $touch = false ) : ?a
 	$payload        = json_decode( (string) $row['payload_json'], true );
 	$row['payload'] = is_array( $payload ) ? $payload : array();
 	return $row;
+}
+
+/** @return array<string,mixed>|null Exact SHA-256 identity row with decoded `payload`. */
+function axismundi_op_remote_object_get_by_hash( string $hash, bool $touch = false ) : ?array {
+	global $wpdb;
+	$hash = strtolower( trim( $hash ) );
+	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' )
+		|| 1 !== preg_match( '/\A[a-f0-9]{64}\z/', $hash )
+	) {
+		return null;
+	}
+	$table = axismundi_op_remote_objects_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- canonical custom repository lookup.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE object_uri_hash = %s", $hash ), ARRAY_A );
+	if ( ! is_array( $row ) || ! hash_equals( $hash, hash( 'sha256', (string) $row['object_uri'] ) ) ) {
+		return null;
+	}
+	if ( $touch ) {
+		$now = current_time( 'mysql', true );
+		$wpdb->update(
+			$table,
+			array( 'last_accessed_at' => $now, 'expires_at' => axismundi_op_remote_expiry( $now ) ),
+			array( 'id' => (int) $row['id'] )
+		);
+		$row['last_accessed_at'] = $now;
+		$row['expires_at']       = axismundi_op_remote_expiry( $now );
+	}
+	$payload        = json_decode( (string) $row['payload_json'], true );
+	$row['payload'] = is_array( $payload ) ? $payload : array();
+	return $row;
+}
+
+/** Whether an observed remote Object explicitly declares a public audience. */
+function axismundi_op_remote_object_is_publicly_listable( array $row ) : bool {
+	if ( 'active' !== (string) ( $row['object_status'] ?? '' ) || empty( $row['attributed_to_uri'] ) ) {
+		return false;
+	}
+	$payload = (array) ( $row['payload'] ?? array() );
+	$public  = array( 'https://www.w3.org/ns/activitystreams#Public', 'as:Public' );
+	foreach ( array( 'to', 'cc' ) as $property ) {
+		$members = $payload[ $property ] ?? array();
+		$members = is_array( $members ) && array_is_list( $members ) ? $members : array( $members );
+		foreach ( $members as $member ) {
+			$uri = axismundi_op_remote_member_uri( $member );
+			if ( in_array( is_scalar( $member ) ? (string) $member : $uri, $public, true ) ) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Return public remote Objects observed for one Actor but not anchored by a
+ * known Create Activity. These are observations, never synthesized Activities.
+ *
+ * @param string[] $create_object_uris Canonical Object URIs already represented by Create rows.
+ * @return array<int,array{id:string,kind:string,type:string,actor_uri:string,object_uri:string,published:string}>
+ */
+function axismundi_op_get_observed_actor_objects( string $actor_uri, array $create_object_uris = array(), int $limit = 20 ) : array {
+	global $wpdb;
+	$actor_uri = axismundi_op_remote_member_uri( $actor_uri );
+	if ( '' === $actor_uri || AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
+		return array();
+	}
+	$limit    = max( 1, min( 50, $limit ) );
+	$excluded = array_fill_keys( array_filter( array_map( 'strval', $create_object_uris ) ), true );
+	$table    = axismundi_op_remote_objects_table();
+	$items    = array();
+	$offset   = 0;
+	$batch    = 100;
+	// Publicness lives in payload_json, so scan bounded candidate batches rather
+	// than pretending every locally cached remote observation is public.
+	while ( count( $items ) < $limit && $offset < 1000 ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table with prepared values and bounded pagination.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE attributed_to_uri_hash = %s AND attributed_to_uri = %s AND object_status = 'active' ORDER BY COALESCE(published_at, remote_updated_at, created_at) DESC, id DESC LIMIT %d OFFSET %d", hash( 'sha256', $actor_uri ), $actor_uri, $batch, $offset ), ARRAY_A );
+		if ( empty( $rows ) ) {
+			break;
+		}
+		$offset += count( $rows );
+		foreach ( $rows as $row ) {
+			$payload        = json_decode( (string) ( $row['payload_json'] ?? '' ), true );
+			$row['payload'] = is_array( $payload ) ? $payload : array();
+			$object_uri     = (string) ( $row['object_uri'] ?? '' );
+			if ( '' === $object_uri || isset( $excluded[ $object_uri ] ) || ! axismundi_op_remote_object_is_publicly_listable( $row ) ) {
+				continue;
+			}
+			$published = (string) ( $row['published_at'] ?? $row['remote_updated_at'] ?? $row['created_at'] ?? '' );
+			$timestamp = '' !== $published ? strtotime( $published . ' UTC' ) : false;
+			$items[]   = array(
+				'id'         => 'observed:' . hash( 'sha256', $object_uri ),
+				'kind'       => 'observed_object',
+				'type'       => 'Object',
+				'actor_uri'  => $actor_uri,
+				'object_uri' => $object_uri,
+				'published'  => false === $timestamp ? '' : gmdate( 'c', $timestamp ),
+			);
+			if ( count( $items ) >= $limit ) {
+				break;
+			}
+		}
+	}
+	return $items;
 }
 
 /** Record a failed refresh without destroying the last successful payload. */
@@ -430,8 +544,13 @@ function axismundi_op_remote_objects_purge_expired( bool $dry_run = false ) : in
 	}
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache expiry maintenance.
 	$result = $wpdb->query( $wpdb->prepare( "DELETE o FROM {$table} o WHERE {$where}", $now, $now ) );
-	if ( false !== $result && function_exists( 'axismundi_op_purge_orphan_object_relations' ) ) {
-		axismundi_op_purge_orphan_object_relations();
+	if ( false !== $result ) {
+		if ( function_exists( 'axismundi_op_purge_orphan_object_relations' ) ) {
+			axismundi_op_purge_orphan_object_relations();
+		}
+		if ( function_exists( 'axismundi_op_purge_orphan_remote_object_hashtags' ) ) {
+			axismundi_op_purge_orphan_remote_object_hashtags();
+		}
 	}
 	return false === $result ? 0 : (int) $result;
 }
@@ -453,10 +572,17 @@ function axismundi_op_remote_object_delete( string $uri ) : bool {
 		return false;
 	}
 	$table = axismundi_op_remote_objects_table();
+	$existing = axismundi_op_remote_object_get( $valid );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache deletion.
 	$deleted = false !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s", hash( 'sha256', $valid ), $valid ) );
 	if ( $deleted && function_exists( 'axismundi_op_delete_object_relations_for_source' ) ) {
 		axismundi_op_delete_object_relations_for_source( $valid );
+	}
+	if ( $deleted && is_array( $existing ) && function_exists( 'axismundi_op_delete_remote_object_hashtags' ) ) {
+		axismundi_op_delete_remote_object_hashtags( (int) $existing['id'] );
+	}
+	if ( $deleted && is_array( $existing ) && function_exists( 'axismundi_op_replace_object_mentions' ) ) {
+		axismundi_op_replace_object_mentions( (string) $existing['object_uri'], array() );
 	}
 	return $deleted;
 }

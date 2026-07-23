@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 
 /** Read one bundled block-template file. */
 function axismundi_geodata_template_content( string $slug ) : string {
-	if ( ! in_array( $slug, array( 'taxonomy-geo_area', 'taxonomy-geotag' ), true ) ) {
+	if ( ! in_array( $slug, array( 'taxonomy-axismundi_geo_area', 'taxonomy-axismundi_geotag' ), true ) ) {
 		return '';
 	}
 	$path = dirname( __DIR__ ) . '/templates/' . $slug . '.html';
@@ -19,6 +19,17 @@ function axismundi_geodata_template_content( string $slug ) : string {
 /** Render the bundled PHP pattern so its strings use the Geodata text domain. */
 function axismundi_geodata_archive_pattern_content() : string {
 	$path = dirname( __DIR__ ) . '/patterns/geo-archive-results.php';
+	if ( ! is_readable( $path ) ) {
+		return '';
+	}
+	ob_start();
+	include $path;
+	return (string) ob_get_clean();
+}
+
+/** Render the reusable current-post geo-terms pattern. */
+function axismundi_geodata_post_terms_pattern_content() : string {
+	$path = dirname( __DIR__ ) . '/patterns/post-geo-terms.php';
 	if ( ! is_readable( $path ) ) {
 		return '';
 	}
@@ -46,6 +57,20 @@ function axismundi_geodata_register_archive_pattern() : void {
 			'content'     => $content,
 		)
 	);
+
+	$content = axismundi_geodata_post_terms_pattern_content();
+	if ( '' === trim( $content ) ) {
+		return;
+	}
+	register_block_pattern(
+		'axismundi-geodata/post-geo-terms',
+		array(
+			'title'       => __( 'Post geo terms', 'axismundi-geodata' ),
+			'description' => __( 'Displays the current post\'s geographic areas and places.', 'axismundi-geodata' ),
+			'categories'  => array( 'text' ),
+			'content'     => $content,
+		)
+	);
 }
 add_action( 'init', 'axismundi_geodata_register_archive_pattern', 19 );
 
@@ -57,11 +82,11 @@ function axismundi_geodata_register_archive_templates() : void {
 
 	foreach (
 		array(
-			'taxonomy-geo_area' => array(
+			'taxonomy-axismundi_geo_area' => array(
 				'title'       => __( 'Geo Area Archive', 'axismundi-geodata' ),
 				'description' => __( 'Displays posts assigned to one geographic area.', 'axismundi-geodata' ),
 			),
-			'taxonomy-geotag'   => array(
+			'taxonomy-axismundi_geotag'   => array(
 				'title'       => __( 'Geotag Archive', 'axismundi-geodata' ),
 				'description' => __( 'Displays posts assigned to one named place.', 'axismundi-geodata' ),
 			),

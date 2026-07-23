@@ -307,7 +307,7 @@ function axismundi_geodata_osm_reverse( float $lat, float $lng, string $taxonomy
 				'format'          => 'jsonv2',
 				'lat'             => $lat,
 				'lon'             => $lng,
-				'zoom'            => 'geo_area' === $taxonomy ? axismundi_geodata_osm_reverse_zoom( $place_type ) : 18,
+				'zoom'            => 'axismundi_geo_area' === $taxonomy ? axismundi_geodata_osm_reverse_zoom( $place_type ) : 18,
 				'addressdetails'  => 1,
 				'accept-language' => axismundi_geodata_lookup_language_code(),
 			)

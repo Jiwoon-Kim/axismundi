@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.43
+Stable tag: 0.0.49
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -33,7 +33,8 @@ The remote-object repository stores URI-keyed, rebuildable observations for late
 administrator inspection and Activities integration. A complete Object embedded in a
 verified inbound Create is cached after the Activity ledger commit when its identity and
 attribution exactly match the enclosing Activity. This path performs no network request and
-exposes no public mirror route. Administrators may fetch and inspect metadata-only remote
+exposes a noindex local human view only for publicly addressed cached Objects and retained
+Tombstones; the remote Object URI remains canonical. Administrators may fetch and inspect metadata-only remote
 objects under Tools > Remote Objects, including tags, mentions, audience declarations,
 attachment descriptors, extension properties, and the complete escaped JSON payload;
 remote media is never hotlinked or downloaded.
@@ -42,6 +43,30 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.49 =
+* Add a shared renderer that resolves one object URI (local product source or
+  cached remote observation) and renders the compact object card, reusing the
+  same public/unlisted-only visibility gate the thread and HTML routes enforce.
+  A default handler on the Activities Actor-feed seam uses it, so boosted and
+  authored feed objects render through one path; a Note-specific feed renderer is
+  no longer needed.
+
+= 0.0.48 =
+* Fix the Like/Repost row on the front end: its InnerBlocks wrapper carries Core's default `is-layout-flow` class, so Core's global blockGap-as-margin fallback still applied margin to every child but the first, even though this block's own CSS visually forces a flex row. That fallback selector's un-`:where()`'d `:root` gives it the same specificity as a single class, so the fix needed a doubled-class selector, not just a plain override.
+
+= 0.0.47 =
+* Add public, paginated ActivityStreams `replies` collections for locally authoritative Objects, derived from the URI thread graph without republishing cached remote reply bodies.
+
+= 0.0.46 =
+* Add public-gated local View links for cached remote Objects and a dedicated editable `object-tombstone` template shared by local and remote 410 responses.
+
+= 0.0.45 =
+* Add an Object Projections-owned editable single-Object template and reusable Object Card pattern for local and cached remote Notes, Questions, Quotes, media, thread context, and interactions.
+* Publish cached remote Actor profile links and normalize remote Question, attachment, quote, and Actor identity fields into the shared Object view model.
+
+= 0.0.44 =
+* Project local Actor profile links as ActivityStreams `PropertyValue` attachments without transferring their storage ownership from Axismundi Actors.
 
 = 0.0.43 =
 * Refresh cached remote Objects from verified inbound Update activities, including interoperable Question-to-Note type changes.

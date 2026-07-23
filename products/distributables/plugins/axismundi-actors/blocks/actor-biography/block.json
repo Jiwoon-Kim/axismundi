@@ -1,0 +1,61 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/actor-biography",
+	"version": "0.2.1",
+	"title": "Actor Biography",
+	"category": "theme",
+	"icon": "text-page",
+	"description": "The short summary for the Actor in context. The Actor sibling of Core's Author Biography, for identities -- remote and Group Actors included -- that carry no WordPress user ID. Defaults to a 20px serif voice.",
+	"textdomain": "axismundi-actors",
+	"usesContext": [ "axismundi/actorId" ],
+	"example": {
+		"viewportWidth": 350
+	},
+	"supports": {
+		"html": false,
+		"multiple": false,
+		"anchor": true,
+		"spacing": { "margin": true, "padding": true },
+		"color": {
+			"gradients": true,
+			"link": true,
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true
+			}
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"textAlign": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalTextDecoration": true,
+			"__experimentalLetterSpacing": true,
+			"__experimentalDefaultControls": {
+				"fontSize": true
+			}
+		},
+		"interactivity": {
+			"clientNavigation": true
+		},
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true,
+			"__experimentalDefaultControls": {
+				"radius": true,
+				"color": true,
+				"width": true,
+				"style": true
+			}
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

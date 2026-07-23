@@ -406,7 +406,12 @@ function axismundi_note_save( int $post_id, array $fields ) {
 	}
 
 	$saved = axismundi_note_get( $post_id );
-	return is_array( $saved ) ? $saved : new WP_Error( 'ax_note_write', __( 'The Note envelope could not be saved.', 'axismundi-note' ) );
+	if ( ! is_array( $saved ) ) {
+		return new WP_Error( 'ax_note_write', __( 'The Note envelope could not be saved.', 'axismundi-note' ) );
+	}
+	/** Fires after a Note envelope commits, for rebuildable local projections. */
+	do_action( 'axismundi_note_envelope_saved', $saved, $post );
+	return $saved;
 }
 
 /**

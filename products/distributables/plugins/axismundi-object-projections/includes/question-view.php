@@ -88,8 +88,10 @@ function axismundi_op_register_question_block() : void {
 			'api_version'     => 3,
 			'title'           => __( 'Axismundi Question', 'axismundi-object-projections' ),
 			'category'        => 'theme',
+			'editor_script'   => 'axismundi-op-object-blocks',
+			'style'           => 'axismundi-op-object-view',
 			'render_callback' => 'axismundi_op_render_question_block',
-			'supports'        => array( 'html' => false, 'inserter' => false ),
+			'supports'        => array( 'html' => false ),
 		)
 	);
 }

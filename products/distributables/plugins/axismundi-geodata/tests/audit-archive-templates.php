@@ -18,19 +18,28 @@ function ax_geo_tpl_assert( array &$results, string $label, bool $condition ) : 
 
 $registry         = WP_Block_Templates_Registry::get_instance();
 $pattern_registry = WP_Block_Patterns_Registry::get_instance();
-$area             = $registry->get_registered( 'axismundi-geodata//taxonomy-geo_area' );
-$tag              = $registry->get_registered( 'axismundi-geodata//taxonomy-geotag' );
+$area             = $registry->get_registered( 'axismundi-geodata//taxonomy-axismundi_geo_area' );
+$tag              = $registry->get_registered( 'axismundi-geodata//taxonomy-axismundi_geotag' );
 $pattern           = $pattern_registry->get_registered( 'axismundi-geodata/geo-archive-results' );
+$post_terms_pattern = $pattern_registry->get_registered( 'axismundi-geodata/post-geo-terms' );
 
 ax_geo_tpl_assert(
 	$ax_geo_tpl_results,
 	'Geodata registers both standard taxonomy hierarchy templates',
 	$area instanceof WP_Block_Template
 		&& $tag instanceof WP_Block_Template
-		&& 'taxonomy-geo_area' === $area->slug
-		&& 'taxonomy-geotag' === $tag->slug
+		&& 'taxonomy-axismundi_geo_area' === $area->slug
+		&& 'taxonomy-axismundi_geotag' === $tag->slug
 		&& 'axismundi-geodata' === $area->plugin
 		&& 'axismundi-geodata' === $tag->plugin
+);
+
+ax_geo_tpl_assert(
+	$ax_geo_tpl_results,
+	'Geodata owns the opt-in post geo-terms pattern with both prefixed taxonomies',
+	is_array( $post_terms_pattern )
+		&& str_contains( (string) $post_terms_pattern['content'], '"term":"axismundi_geo_area"' )
+		&& str_contains( (string) $post_terms_pattern['content'], '"term":"axismundi_geotag"' )
 );
 
 $content = $area instanceof WP_Block_Template ? (string) $area->content : '';
@@ -47,11 +56,11 @@ ax_geo_tpl_assert(
 	is_array( $pattern )
 		&& str_contains( (string) $pattern['content'], '<!-- wp:axismundi/map' )
 		&& str_contains( (string) $pattern['content'], '"inherit":true' )
-		&& str_contains( (string) $pattern['content'], '"taxonomy":"geo_area"' )
-		&& str_contains( (string) $pattern['content'], '"taxonomy":"geotag"' )
+		&& str_contains( (string) $pattern['content'], '"taxonomy":"axismundi_geo_area"' )
+		&& str_contains( (string) $pattern['content'], '"taxonomy":"axismundi_geotag"' )
 );
 
-$resolved = get_block_template( get_stylesheet() . '//taxonomy-geotag', 'wp_template' );
+$resolved = get_block_template( get_stylesheet() . '//taxonomy-axismundi_geotag', 'wp_template' );
 ax_geo_tpl_assert(
 	$ax_geo_tpl_results,
 	'without a theme override WordPress resolves the Geodata plugin template',

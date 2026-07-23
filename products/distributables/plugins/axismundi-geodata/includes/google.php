@@ -149,7 +149,7 @@ function axismundi_geodata_google_reverse( float $lat, float $lng, string $taxon
 				break;
 			}
 		}
-		if ( 'geo_area' === $taxonomy ) {
+		if ( 'axismundi_geo_area' === $taxonomy ) {
 			$is_area = 'country' === $type
 				|| str_starts_with( $type, 'administrative_area_level_' )
 				|| 'locality' === $type

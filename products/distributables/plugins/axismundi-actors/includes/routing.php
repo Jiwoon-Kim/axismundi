@@ -144,8 +144,10 @@ function axismundi_actors_can_preview( Axismundi_Actor $actor, ?int $user_id = n
  * @return bool
  */
 function axismundi_actors_is_public_profile( Axismundi_Actor $actor ) : bool {
-	return $actor->is_local()
-		&& 'public' === $actor->get_status()
+	if ( ! $actor->is_local() ) {
+		return 'public' === $actor->get_status() && '' !== $actor->get_uri();
+	}
+	return 'public' === $actor->get_status()
 		&& $actor->is_handle_locked()
 		&& '' !== $actor->get_preferred_username();
 }
@@ -185,6 +187,109 @@ function axismundi_actors_resolve_request_actor( string $uuid, string $handle ) 
 function axismundi_actors_current_actor() : ?Axismundi_Actor {
 	$actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
 	return $actor instanceof Axismundi_Actor ? $actor : null;
+}
+
+/** Local human profile hub for a local or cached remote Actor. */
+function axismundi_actors_profile_hub_url( Axismundi_Actor $actor ) : string {
+	if ( $actor->is_local() ) {
+		return $actor->get_profile_url();
+	}
+	return get_option( 'permalink_structure' )
+		? home_url( '/actors/' . rawurlencode( $actor->get_uuid() ) . '/' )
+		: add_query_arg( 'ax_actor', $actor->get_uuid(), home_url( '/' ) );
+}
+
+/** One display avatar URL suitable for neutral Object view models. */
+function axismundi_actors_avatar_url( Axismundi_Actor $actor, int $size = 96 ) : string {
+	$size = max( 24, min( 512, $size ) );
+	if ( ! $actor->is_local() ) {
+		return function_exists( 'axismundi_actors_get_cached_asset_url' )
+			? axismundi_actors_get_cached_asset_url( $actor->get_identity_id(), 'avatar', $size )
+			: '';
+	}
+	$attachment_id = $actor->get_avatar_attachment_id();
+	if ( $attachment_id > 0 ) {
+		return (string) wp_get_attachment_image_url( $attachment_id, array( $size, $size ) );
+	}
+	if ( 'site' === $actor->get_scope() ) {
+		return (string) get_site_icon_url( $size );
+	}
+	$user_id = $actor->get_local_user_id();
+	return $user_id ? (string) get_avatar_url( $user_id, array( 'size' => $size ) ) : '';
+}
+
+/**
+ * Resolve the Actor a nested Actor block should render.
+ *
+ * `providesContext`/`usesContext` only carries an editor-time attribute; it
+ * cannot know which Actor a route resolved. The current profile route is
+ * therefore always authoritative when one exists. The explicit block context
+ * (an `actorId` set on the enclosing Account Header) is a fallback for the
+ * cases route context can never cover: an editor preview, or an Account
+ * Header embedded in a document that is not the profile route itself.
+ *
+ * @param string $context_actor_id Explicit `axismundi/actorId` block context value.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_resolve_block_actor( string $context_actor_id ) : ?Axismundi_Actor {
+	$route_actor = axismundi_actors_current_actor();
+	if ( $route_actor instanceof Axismundi_Actor ) {
+		return $route_actor;
+	}
+	if ( 1 !== preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $context_actor_id ) ) {
+		return null;
+	}
+	$actor = axismundi_actors_get_by_uuid( strtolower( $context_actor_id ) );
+	return $actor instanceof Axismundi_Actor && axismundi_actors_can_view( $actor ) ? $actor : null;
+}
+
+/** Build the normalized presentation data for one canonical Actor. */
+function axismundi_actors_block_subject_from_actor( Axismundi_Actor $actor ) : array {
+	$data   = axismundi_actors_profile_data( $actor );
+	$handle = function_exists( 'axismundi_actors_federated_mention_name' )
+		? axismundi_actors_federated_mention_name( $actor )
+		: '@' . $actor->get_preferred_username();
+	return array(
+		'actor'              => $actor,
+		'name'               => (string) ( $data['name'] ?? $actor->get_display_name() ),
+		'preferred_username' => $actor->get_preferred_username(),
+		'handle'             => (string) $handle,
+		'url'                => function_exists( 'axismundi_actors_profile_hub_url' ) ? axismundi_actors_profile_hub_url( $actor ) : $actor->get_profile_url(),
+		'avatar_url'         => function_exists( 'axismundi_actors_avatar_url' ) ? axismundi_actors_avatar_url( $actor, 192 ) : '',
+		'type'               => $actor->get_type(),
+	);
+}
+
+/**
+ * Resolve the Actor-shaped subject a nested identity block should display.
+ *
+ * Profile routes and an explicit Account Header actorId still win. Other
+ * products may then supply a normalized author descriptor for a current Object
+ * through the filter, keeping Avatar and Identity as Actors-owned blocks even
+ * when an observed remote Object predates its cached Actor record.
+ *
+ * @return array<string,mixed>|null
+ */
+function axismundi_actors_resolve_block_subject( string $context_actor_id ) : ?array {
+	$actor = axismundi_actors_resolve_block_actor( $context_actor_id );
+	if ( $actor instanceof Axismundi_Actor ) {
+		return axismundi_actors_block_subject_from_actor( $actor );
+	}
+	/** @param array<string,mixed>|null $subject Normalized external Actor descriptor. */
+	$subject = apply_filters( 'axismundi_actors_block_subject', null, $context_actor_id );
+	if ( ! is_array( $subject ) ) {
+		return null;
+	}
+	$normalized = array(
+		'actor'              => null,
+		'name'               => sanitize_text_field( (string) ( $subject['name'] ?? '' ) ),
+		'preferred_username' => sanitize_text_field( (string) ( $subject['preferred_username'] ?? '' ) ),
+		'handle'             => sanitize_text_field( (string) ( $subject['handle'] ?? '' ) ),
+		'url'                => esc_url_raw( (string) ( $subject['url'] ?? '' ) ),
+		'avatar_url'         => esc_url_raw( (string) ( $subject['avatar_url'] ?? '' ) ),
+		'type'               => sanitize_text_field( (string) ( $subject['type'] ?? '' ) ),
+	);
+	return '' === $normalized['name'] && '' === $normalized['preferred_username'] && '' === $normalized['handle'] && '' === $normalized['avatar_url'] ? null : $normalized;
 }
 
 /**
@@ -296,6 +401,49 @@ function axismundi_actors_avatar_html( Axismundi_Actor $actor, int $size = 96 ) 
 }
 
 /**
+ * Border class/style for the Actor Avatar block's inner image, read directly from
+ * the block's own `style.border`/`borderColor` attributes.
+ *
+ * The block skips border support serialization on its own wrapper -- WordPress
+ * draws the editor's selection outline sized to that wrapper, so a wrapper that is
+ * itself round and clipped would clip the outline into a circle too -- so the
+ * round border belongs on the inner `<img>` instead, applied here with the same
+ * values `wp_apply_border_support()` reads.
+ *
+ * @param array<string,mixed> $attributes Block attributes.
+ * @return array{class:string,style:string}
+ */
+function axismundi_actors_avatar_border_attributes( array $attributes ) : array {
+	$border        = (array) ( $attributes['style']['border'] ?? array() );
+	$block_styles  = array(
+		'radius' => $border['radius'] ?? null,
+		'style'  => $border['style'] ?? null,
+		'width'  => $border['width'] ?? null,
+		'color'  => array_key_exists( 'borderColor', $attributes )
+			? 'var:preset|color|' . $attributes['borderColor']
+			: ( $border['color'] ?? null ),
+	);
+	$styles        = wp_style_engine_get_styles( array( 'border' => $block_styles ) );
+	return array(
+		'class' => (string) ( $styles['classnames'] ?? '' ),
+		'style' => (string) ( $styles['css'] ?? '' ),
+	);
+}
+
+/**
+ * Shadow style for the Actor Avatar block's inner image, for the same reason:
+ * the wrapper support is skipped, so this reads `style.shadow` and applies it to
+ * the image directly.
+ *
+ * @param array<string,mixed> $attributes Block attributes.
+ * @return string
+ */
+function axismundi_actors_avatar_shadow_style( array $attributes ) : string {
+	$styles = wp_style_engine_get_styles( array( 'shadow' => $attributes['style']['shadow'] ?? null ) );
+	return (string) ( $styles['css'] ?? '' );
+}
+
+/**
  * Header (cover) markup: the actor's header attachment, else '' (no fallback).
  *
  * @param Axismundi_Actor $actor Actor.
@@ -331,6 +479,15 @@ function axismundi_actors_profile_template_content() : string {
 /** @return void */
 function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-profile' );
+	register_block_type( __DIR__ . '/../blocks/account-header' );
+	register_block_type( __DIR__ . '/../blocks/actor-avatar' );
+	register_block_type( __DIR__ . '/../blocks/actor-identity' );
+	// Name and handle are separate blocks so each can carry its own typography.
+	// The composite above stays registered for simple profile layouts.
+	register_block_type( __DIR__ . '/../blocks/actor-name' );
+	register_block_type( __DIR__ . '/../blocks/actor-handle' );
+	register_block_type( __DIR__ . '/../blocks/actor-biography' );
+	register_block_type( __DIR__ . '/../blocks/actor-profile-fields' );
 	register_block_type( __DIR__ . '/../blocks/actor-projections' );
 	if ( function_exists( 'register_block_template' ) ) {
 		register_block_template(
@@ -358,10 +515,10 @@ function axismundi_actors_profile_template_include( string $template ) : string 
 }
 add_filter( 'template_include', 'axismundi_actors_profile_template_include', 99 );
 
-/** Prevent administrator-only remote cache previews from entering search indexes. */
+/** Keep private local Actor previews out of search indexes. */
 function axismundi_actors_remote_preview_robots( array $robots ) : array {
 	$actor = axismundi_actors_current_actor();
-	if ( $actor && ! $actor->is_local() ) {
+	if ( $actor && ! axismundi_actors_is_public_profile( $actor ) ) {
 		$robots['noindex']   = true;
 		$robots['nofollow']  = true;
 		$robots['noarchive'] = true;
@@ -374,7 +531,7 @@ add_filter( 'wp_robots', 'axismundi_actors_remote_preview_robots' );
 function axismundi_actors_print_canonical() : void {
 	$actor = axismundi_actors_current_actor();
 	if ( $actor ) {
-		printf( '<link rel="canonical" href="%s" />\n', esc_url( $actor->get_uri() ) );
+		printf( '<link rel="canonical" href="%s" />', esc_url( $actor->get_uri() ) );
 	}
 }
 add_action( 'wp_head', 'axismundi_actors_print_canonical', 1 );

@@ -244,6 +244,41 @@ function axismundi_note_source_visible( Axismundi_Note_Source $source ) : bool {
 	return in_array( (string) ( $status['state'] ?? '' ), array( 'none', 'self', 'accepted' ), true );
 }
 
+/**
+ * Whether the viewer owns or administrates the local post behind this source.
+ *
+ * A remote-cache source has no local post and is never previewable this way.
+ *
+ * @param Axismundi_Note_Source $source  Note source.
+ * @param int|null              $user_id Viewer; defaults to the current user.
+ * @return bool
+ */
+function axismundi_note_can_preview( Axismundi_Note_Source $source, ?int $user_id = null ) : bool {
+	$user_id = null === $user_id ? get_current_user_id() : $user_id;
+	if ( $user_id <= 0 ) {
+		return false;
+	}
+	if ( user_can( $user_id, 'manage_options' ) ) {
+		return true;
+	}
+	$post = $source->get_post();
+	return $post instanceof WP_Post && (int) $post->post_author === $user_id;
+}
+
+/**
+ * Whether a Note document may be shown to the current viewer at all: publicly
+ * visible, a Tombstone, or an owner/administrator preview of a not-yet-public
+ * source. This is the gate the admin-list row action and the HTML route both
+ * use, so a link is never offered to a document that would then 404.
+ *
+ * @param Axismundi_Note_Source $source  Note source.
+ * @param int|null              $user_id Viewer; defaults to the current user.
+ * @return bool
+ */
+function axismundi_note_can_view( Axismundi_Note_Source $source, ?int $user_id = null ) : bool {
+	return axismundi_note_source_visible( $source ) || axismundi_note_can_preview( $source, $user_id );
+}
+
 /** Project an explicitly authored Quote policy without inventing approval evidence. */
 function axismundi_note_quote_interaction_policy( array $envelope ) : ?array {
 	$policy = (string) ( $envelope['quote_policy'] ?? '' );
@@ -349,7 +384,10 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 			}
 		}
 	}
-	$tags = axismundi_note_mention_tags( $post, false );
+	$tags = array_merge(
+		axismundi_note_mention_tags( $post, false ),
+		function_exists( 'axismundi_op_post_hashtag_tags' ) ? axismundi_op_post_hashtag_tags( $post ) : array()
+	);
 	if ( ! empty( $tags ) ) {
 		$object['tag'] = $tags;
 	}
@@ -363,6 +401,9 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	}
 	if ( function_exists( 'axismundi_note_is_question' ) && axismundi_note_is_question( $post->ID ) ) {
 		$object = axismundi_note_apply_question_object( $object, $post->ID );
+	}
+	if ( function_exists( 'axismundi_op_add_replies_property' ) ) {
+		$object = axismundi_op_add_replies_property( $object );
 	}
 	$interaction_policy = axismundi_note_quote_interaction_policy( $envelope );
 	if ( is_array( $interaction_policy ) ) {
@@ -420,10 +461,16 @@ function axismundi_note_object_view_model( $source ) : ?array {
 		'language'        => (string) ( $envelope['language_tag'] ?? '' ),
 		'title'           => $post instanceof WP_Post ? trim( wp_strip_all_tags( (string) $post->post_title ) ) : '',
 		'author'          => array(
+			'id'     => (string) ( $envelope['actor_uri'] ?? '' ),
 			'name'   => '' !== $name ? $name : ( $handle ? ltrim( $handle, '@' ) : '' ),
+			'preferred_username' => $actor instanceof Axismundi_Actor ? $actor->get_preferred_username() : '',
 			'handle' => $handle,
-			'url'    => (string) ( $envelope['actor_uri'] ?? '' ),
+			'url'    => $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_profile_hub_url' ) ? axismundi_actors_profile_hub_url( $actor ) : (string) ( $envelope['actor_uri'] ?? '' ),
+			'avatar_url' => $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_avatar_url' ) ? axismundi_actors_avatar_url( $actor, 96 ) : '',
 		),
+		// Raw AS2 `image` from the Media Library featured relation; the shared
+		// normalizer in Object Projections derives media.featured from it.
+		'image'           => $media['image'] ?? null,
 		'content_html'    => wp_kses_post( $body ),
 		'published'       => $post instanceof WP_Post ? get_post_time( 'c', true, $post ) : '',
 		'updated'         => $post instanceof WP_Post ? get_post_modified_time( 'c', true, $post ) : '',
@@ -431,6 +478,7 @@ function axismundi_note_object_view_model( $source ) : ?array {
 		'content_warning' => (string) ( $envelope['content_warning'] ?? '' ),
 		'attachments'     => ! empty( $media['attachments'] ) ? array_values( $media['attachments'] ) : array(),
 		'poll'            => $poll,
+		'quote_uri'       => (string) ( $envelope['quote_target_uri'] ?? '' ),
 	);
 }
 

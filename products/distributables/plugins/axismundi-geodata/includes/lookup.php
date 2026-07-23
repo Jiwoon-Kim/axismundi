@@ -63,13 +63,13 @@ function axismundi_geodata_lookup_language_code() : string {
 function axismundi_geodata_lookup_area_context( WP_Term $term ) : array {
 	$ids = array();
 
-	if ( 'geo_area' === $term->taxonomy ) {
-		$ids = array_merge( array( $term->term_id ), get_ancestors( $term->term_id, 'geo_area', 'taxonomy' ) );
+	if ( 'axismundi_geo_area' === $term->taxonomy ) {
+		$ids = array_merge( array( $term->term_id ), get_ancestors( $term->term_id, 'axismundi_geo_area', 'taxonomy' ) );
 	}
 
 	$areas = array();
 	foreach ( $ids as $id ) {
-		$area = get_term( (int) $id, 'geo_area' );
+		$area = get_term( (int) $id, 'axismundi_geo_area' );
 		if ( $area instanceof WP_Term ) {
 			$areas[] = $area;
 		}
@@ -121,7 +121,7 @@ function axismundi_geodata_lookup_term_query( WP_Term $term ) : string {
  */
 function axismundi_geodata_lookup_get_term( int $term_id ) {
 	$term = get_term( $term_id );
-	if ( ! $term instanceof WP_Term || ! in_array( $term->taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+	if ( ! $term instanceof WP_Term || ! in_array( $term->taxonomy, array( 'axismundi_geo_area', 'axismundi_geotag' ), true ) ) {
 		return new WP_Error( 'axismundi_lookup_bad_term', __( 'Invalid geo term.', 'axismundi-geodata' ) );
 	}
 
@@ -163,7 +163,7 @@ function axismundi_geodata_ajax_lookup() : void {
 	$place_type   = isset( $_POST['place_type'] ) ? sanitize_key( wp_unslash( $_POST['place_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
 	$posted_query = isset( $_POST['query'] ) ? sanitize_text_field( wp_unslash( $_POST['query'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in context helper.
 
-	if ( ! in_array( $taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+	if ( ! in_array( $taxonomy, array( 'axismundi_geo_area', 'axismundi_geotag' ), true ) ) {
 		wp_send_json_error( array( 'message' => __( 'Invalid geo taxonomy.', 'axismundi-geodata' ) ), 400 );
 	}
 
@@ -203,7 +203,7 @@ function axismundi_geodata_ajax_lookup() : void {
 		};
 	}
 
-	$cache_key = 'axgeo_lk_v3_' . $provider . '_' . md5( $query . '|' . $country . '|' . axismundi_geodata_lookup_language_code() );
+	$cache_key = 'axismundi_geodata_lookup_v3_' . $provider . '_' . md5( $query . '|' . $country . '|' . axismundi_geodata_lookup_language_code() );
 	$cached    = get_transient( $cache_key );
 	if ( is_array( $cached ) ) {
 		wp_send_json_success( array( 'candidates' => $cached ) );

@@ -36,7 +36,7 @@ add_action( 'atom_ns', 'axismundi_geodata_georss_namespace' );
  * @return array<int,array{lat:float,lng:float}>
  */
 function axismundi_geodata_post_georss_points( int $post_id ) : array {
-	$terms = get_the_terms( $post_id, 'geotag' );
+	$terms = get_the_terms( $post_id, 'axismundi_geotag' );
 	if ( ! is_array( $terms ) ) {
 		return array();
 	}
@@ -126,11 +126,11 @@ function axismundi_geodata_georss_channel() : void {
 	}
 
 	$term = get_queried_object();
-	if ( ! $term instanceof WP_Term || ! in_array( $term->taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+	if ( ! $term instanceof WP_Term || ! in_array( $term->taxonomy, array( 'axismundi_geo_area', 'axismundi_geotag' ), true ) ) {
 		return;
 	}
 
-	if ( 'geo_area' === $term->taxonomy ) {
+	if ( 'axismundi_geo_area' === $term->taxonomy ) {
 		$bounds = axismundi_geodata_parse_bounds( (string) get_term_meta( $term->term_id, 'ax_geo_bounds', true ) );
 		if ( null !== $bounds ) {
 			axismundi_geodata_print_georss_geometry(

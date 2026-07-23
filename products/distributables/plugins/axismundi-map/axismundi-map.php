@@ -66,7 +66,7 @@ function axismundi_map_current_query_geotags() : array {
 
 	foreach ( $posts as $post ) {
 		$post_id = $post instanceof WP_Post ? $post->ID : (int) $post;
-		$terms   = get_the_terms( $post_id, 'geotag' );
+		$terms   = get_the_terms( $post_id, 'axismundi_geotag' );
 		if ( ! is_array( $terms ) ) {
 			continue;
 		}
@@ -137,10 +137,10 @@ function axismundi_map_render_block( array $attributes ) : void {
 		// page; a geotag archive remains focused on the single queried place.
 		$queried = get_queried_object();
 		if ( $queried instanceof WP_Term ) {
-			if ( 'geo_area' === $queried->taxonomy ) {
+			if ( 'axismundi_geo_area' === $queried->taxonomy ) {
 				$geojson_data = axismundi_map_current_query_geotags();
 				$sync_key     = 'geo-area-' . (int) $queried->term_id;
-			} elseif ( 'geotag' === $queried->taxonomy ) {
+			} elseif ( 'axismundi_geotag' === $queried->taxonomy ) {
 				$geojson = add_query_arg( 'geotag', (int) $queried->term_id, rest_url( 'axismundi-geodata/v1/geotags' ) );
 			}
 		}

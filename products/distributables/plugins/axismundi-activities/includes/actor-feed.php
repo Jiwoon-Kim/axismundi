@@ -1,6 +1,6 @@
 <?php
 /**
- * Human-facing Activity ledger feed for an Actor profile.
+ * Human-facing timeline for an Actor profile.
  *
  * The immutable Activity ledger remains authoritative. This is deliberately a
  * presentation adapter over its public-safe payloads, not a second object feed
@@ -11,48 +11,73 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Build one public-safe, human-facing feed item from a ledger row. */
+/**
+ * Build one public-safe feed item descriptor from a Create or Announce row.
+ *
+ * The card content is not read here: Activities owns selection and verb framing,
+ * and hands the object URI to whichever product renders it. The public audience
+ * gate stays here so followers-only and mentioned-only rows never surface.
+ */
 function axismundi_act_actor_feed_item( Axismundi_Activity $activity ) : ?array {
-	$payload = axismundi_act_public_payload( $activity );
-	if ( ! is_array( $payload ) ) {
+	if ( ! axismundi_act_is_publicly_renderable( $activity ) ) {
 		return null;
 	}
-	$type       = $activity->get_type();
-	$object     = $payload['object'] ?? null;
-	$object_uri = axismundi_act_member_uri( $object );
-	$object_map = is_array( $object ) && ! array_is_list( $object ) ? $object : array();
-	$content    = isset( $object_map['content'] ) ? wp_kses_post( (string) $object_map['content'] ) : '';
-	$title      = isset( $object_map['name'] ) ? trim( wp_strip_all_tags( (string) $object_map['name'] ) ) : '';
-	$url        = axismundi_act_member_uri( $object_map['url'] ?? $object_uri );
-	$published  = $activity->get_published_at();
-
-	$verbs = array(
-		'Create'   => __( 'Published a post', 'axismundi-activities' ),
-		'Update'   => __( 'Updated a post', 'axismundi-activities' ),
-		'Delete'   => __( 'Deleted a post', 'axismundi-activities' ),
-		'Announce' => __( 'Boosted a post', 'axismundi-activities' ),
-		'Like'     => __( 'Liked a post', 'axismundi-activities' ),
-		'Undo'     => __( 'Undid an activity', 'axismundi-activities' ),
-	);
+	$payload = $activity->get_payload();
+	unset( $payload['bto'], $payload['bcc'] );
+	$type = $activity->get_type();
+	if ( 'Create' !== $type && 'Announce' !== $type ) {
+		return null;
+	}
+	$object_uri = axismundi_act_member_uri( $payload['object'] ?? null );
+	if ( '' === $object_uri ) {
+		$object_uri = (string) ( $activity->get_object_uri() ?? '' );
+	}
+	if ( '' === $object_uri ) {
+		return null;
+	}
+	$published = $activity->get_published_at();
 
 	return array(
-		'id'          => $activity->get_uri(),
-		'type'        => $type,
-		'actor_uri'   => $activity->get_actor_uri(),
-		'label'       => $verbs[ $type ] ?? sprintf(
-			/* translators: %s: ActivityStreams activity type. */
-			__( 'Performed %s', 'axismundi-activities' ),
-			$type
-		),
-		'object_uri'  => $object_uri,
-		'url'         => $url,
-		'title'       => $title,
-		'content_html' => $content,
-		'published'   => is_string( $published ) ? $published : '',
+		'id'         => $activity->get_uri(),
+		'kind'       => 'activity',
+		'type'       => $type,
+		'actor_uri'  => $activity->get_actor_uri(),
+		'object_uri' => $object_uri,
+		'published'  => is_string( $published ) ? $published : '',
 	);
 }
 
-/** Public Activity feed items for one local public Actor. */
+/** Normalize one third-party observed Object fallback row. */
+function axismundi_act_actor_feed_observed_item( $item, Axismundi_Actor $actor ) : ?array {
+	if ( ! is_array( $item ) || 'observed_object' !== (string) ( $item['kind'] ?? '' ) || ! hash_equals( $actor->get_uri(), (string) ( $item['actor_uri'] ?? '' ) ) ) {
+		return null;
+	}
+	$object_uri = axismundi_act_uri( $item['object_uri'] ?? '' );
+	if ( '' === $object_uri ) {
+		return null;
+	}
+	$published = is_scalar( $item['published'] ?? null ) ? (string) $item['published'] : '';
+	return array(
+		'id'         => 'observed:' . hash( 'sha256', $object_uri ),
+		'kind'       => 'observed_object',
+		'type'       => 'Object',
+		'actor_uri'  => $actor->get_uri(),
+		'object_uri' => $object_uri,
+		'published'  => false === strtotime( $published ) ? '' : $published,
+	);
+}
+
+/** Descending feed chronology with a deterministic identity tie-breaker. */
+function axismundi_act_actor_feed_compare( array $left, array $right ) : int {
+	$left_time  = '' !== (string) ( $left['published'] ?? '' ) ? (int) strtotime( (string) $left['published'] ) : 0;
+	$right_time = '' !== (string) ( $right['published'] ?? '' ) ? (int) strtotime( (string) $right['published'] ) : 0;
+	if ( $left_time !== $right_time ) {
+		return $right_time <=> $left_time;
+	}
+	return strcmp( (string) ( $right['id'] ?? '' ), (string) ( $left['id'] ?? '' ) );
+}
+
+/** Public Activity feed items for one local or cached remote public Actor. */
 function axismundi_act_actor_feed_items( Axismundi_Actor $actor, int $limit = 20 ) : array {
 	// A profile may be rendered from a long-lived object in an admin preview.
 	// Re-resolve the identity before applying the public boundary so a status
@@ -64,14 +89,13 @@ function axismundi_act_actor_feed_items( Axismundi_Actor $actor, int $limit = 20
 		}
 		$actor = $current;
 	}
-	if ( ! $actor->is_local()
-		|| ! function_exists( 'axismundi_actors_is_public_profile' )
+	if ( ! function_exists( 'axismundi_actors_is_public_profile' )
 		|| ! axismundi_actors_is_public_profile( $actor )
 	) {
 		return array();
 	}
 	$items = array();
-	foreach ( axismundi_act_get_by_actor( $actor->get_uri(), max( 1, min( 50, $limit ) ) ) as $activity ) {
+	foreach ( axismundi_act_get_actor_feed( $actor->get_uri(), max( 1, min( 50, $limit ) ) ) as $activity ) {
 		if ( ! $activity instanceof Axismundi_Activity ) {
 			continue;
 		}
@@ -80,7 +104,32 @@ function axismundi_act_actor_feed_items( Axismundi_Actor $actor, int $limit = 20
 			$items[] = $item;
 		}
 	}
-	return $items;
+	$activity_object_uris = array_values(
+		array_unique(
+			array_filter(
+				array_map(
+					static fn( array $item ) : string => (string) ( $item['object_uri'] ?? '' ),
+					$items
+				)
+			)
+		)
+	);
+	/**
+	 * Allow Object Projections to include directly observed public Objects that
+	 * have no Activity anchor, such as an uncached remote inReplyTo parent.
+	 *
+	 * @param array<int,array<string,mixed>> $observed Existing observed rows.
+	 * @param string[]                       $activity_object_uris Object URIs already framed by an Activity.
+	 */
+	$observed = (array) apply_filters( 'axismundi_act_actor_feed_observed_items', array(), $actor, $activity_object_uris, $limit );
+	foreach ( $observed as $item ) {
+		$normalized = axismundi_act_actor_feed_observed_item( $item, $actor );
+		if ( is_array( $normalized ) ) {
+			$items[] = $normalized;
+		}
+	}
+	usort( $items, 'axismundi_act_actor_feed_compare' );
+	return array_slice( $items, 0, $limit );
 }
 
 /** Render the current Actor's public Activity feed. */
@@ -100,36 +149,33 @@ function axismundi_act_render_actor_activity_feed() : string {
 	foreach ( $items as $item ) {
 		/**
 		 * Let an object-owning product render a public activity's object through
-		 * its own view model. Activities deliberately owns only ledger selection,
-		 * so it never reaches into Note or Object Projections directly.
+		 * its own view model. Activities deliberately owns only ledger selection
+		 * and verb framing, so it never reaches into Note or Object Projections
+		 * directly. Object Projections registers the default handler.
 		 *
 		 * @param string               $html Empty by default.
 		 * @param array<string,mixed>  $item Public-safe Activity feed item.
 		 */
 		$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item );
-		if ( '' !== $object_html ) {
-			$cards[] = '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--object axismundi-activity-feed__item--' . esc_attr( strtolower( $item['type'] ) ) . '">'
-				. $object_html
-				. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The owning product owns and escapes its renderer output.
+		if ( '' === $object_html ) {
+			// A deleted, tombstoned, or otherwise unrenderable object hides its row.
 			continue;
 		}
-		$meta = '';
-		if ( '' !== $item['published'] ) {
-			$timestamp = strtotime( $item['published'] );
-			if ( false !== $timestamp ) {
-				$meta = '<time datetime="' . esc_attr( gmdate( 'c', $timestamp ) ) . '">' . esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp ) ) . '</time>';
-			}
+		$frame = '';
+		if ( 'Announce' === $item['type'] ) {
+			$frame = '<p class="axismundi-activity-feed__boost"><span class="material-symbols-outlined" aria-hidden="true">sync</span> '
+				. esc_html__( 'Boosted', 'axismundi-activities' ) . '</p>';
 		}
-		$target = '' !== $item['url'] ? '<a class="axismundi-activity-feed__target" href="' . esc_url( $item['url'] ) . '">' . esc_html__( 'View post', 'axismundi-activities' ) . '</a>' : '';
-		$title  = '' !== $item['title'] ? '<h3 class="axismundi-activity-feed__title">' . esc_html( $item['title'] ) . '</h3>' : '';
-		$body   = '' !== $item['content_html'] ? '<div class="axismundi-activity-feed__content">' . wp_kses_post( $item['content_html'] ) . '</div>' : '';
-		$cards[] = '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--' . esc_attr( strtolower( $item['type'] ) ) . '">'
-			. '<header class="axismundi-activity-feed__header"><span class="axismundi-activity-feed__verb">' . esc_html( $item['label'] ) . '</span>' . $meta . '</header>'
-			. $title . $body . $target
-			. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every interpolated component is escaped above.
+		$cards[] = '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--object axismundi-activity-feed__item--' . esc_attr( strtolower( $item['type'] ) ) . '">'
+			. $frame
+			. $object_html
+			. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Frame is escaped above; the owning product owns and escapes its renderer output.
+	}
+	if ( empty( $cards ) ) {
+		return '';
 	}
 	return '<section class="axismundi-activity-feed" aria-labelledby="axismundi-activity-feed-heading">'
-		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html__( 'Activity', 'axismundi-activities' ) . '</h2>'
+		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html__( 'Timeline', 'axismundi-activities' ) . '</h2>'
 		. '<ol class="axismundi-activity-feed__list">' . implode( '', $cards ) . '</ol>'
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards are escaped above.
 }

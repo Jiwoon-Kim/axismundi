@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
  * @return array<string,array{label:string,type:string,help:string}>
  */
 function axismundi_geodata_term_fields( string $taxonomy = '' ) : array {
-	$is_area = 'geo_area' === $taxonomy;
+	$is_area = 'axismundi_geo_area' === $taxonomy;
 
 	$fields = array(
 		'geo_latitude'      => array(
@@ -125,7 +125,7 @@ function axismundi_geodata_render_term_map( string $context, string $taxonomy = 
 		return;
 	}
 
-	$is_area = 'geo_area' === $taxonomy;
+	$is_area = 'axismundi_geo_area' === $taxonomy;
 	$label   = esc_html__( 'Map', 'axismundi-geodata' );
 	$help    = $is_area
 		? esc_html__( 'Click or drag the marker to set the centre. Zooming the map syncs Map zoom; the button captures Map bounds from the current view.', 'axismundi-geodata' )
@@ -152,7 +152,7 @@ function axismundi_geodata_render_term_map( string $context, string $taxonomy = 
  * @return void
  */
 function axismundi_geodata_render_place_lookup( ?WP_Term $term, string $taxonomy, string $context ) : void {
-	if ( ! in_array( $taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+	if ( ! in_array( $taxonomy, array( 'axismundi_geo_area', 'axismundi_geotag' ), true ) ) {
 		return;
 	}
 
@@ -326,7 +326,7 @@ function axismundi_geodata_term_save( int $term_id ) : void {
  * @return void
  */
 function axismundi_geodata_term_fields_init() : void {
-	foreach ( array( 'geo_area', 'geotag' ) as $taxonomy ) {
+	foreach ( array( 'axismundi_geo_area', 'axismundi_geotag' ) as $taxonomy ) {
 		add_action( "{$taxonomy}_add_form_fields", 'axismundi_geodata_term_add_fields' );
 		add_action( "{$taxonomy}_edit_form_fields", 'axismundi_geodata_term_edit_fields', 10, 2 );
 		add_action( "created_{$taxonomy}", 'axismundi_geodata_term_save' );
@@ -346,13 +346,13 @@ function axismundi_geodata_term_enqueue( string $hook ) : void {
 		return;
 	}
 	$screen = get_current_screen();
-	if ( ! $screen || ! in_array( $screen->taxonomy, array( 'geo_area', 'geotag' ), true ) ) {
+	if ( ! $screen || ! in_array( $screen->taxonomy, array( 'axismundi_geo_area', 'axismundi_geotag' ), true ) ) {
 		return;
 	}
 
 	// Country code is only meaningful on a Country term (descendants inherit it via
 	// the hierarchy), so show that row only while Administrative type = Country.
-	if ( 'geo_area' === $screen->taxonomy ) {
+	if ( 'axismundi_geo_area' === $screen->taxonomy ) {
 		wp_add_inline_script(
 			'common',
 			'(function(){function s(){var t=document.getElementById("ax_geo_place_type"),c=document.getElementById("ax_geo_country_code");if(!t||!c)return;var r=c.closest(".form-field");if(r){r.style.display=("country"===t.value)?"":"none";}}document.addEventListener("DOMContentLoaded",function(){var t=document.getElementById("ax_geo_place_type");if(t){t.addEventListener("change",s);s();}});})();'

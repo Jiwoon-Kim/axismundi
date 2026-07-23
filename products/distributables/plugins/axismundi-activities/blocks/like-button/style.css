@@ -1,25 +1,46 @@
 .wp-block-axismundi-like-button {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
+	display: inline-flex;
+	gap: 0.25rem;
 	align-items: center;
 }
 
 .axismundi-like-button__button {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.4rem;
-	min-height: 2.75rem;
-	padding: 0.5rem 0.75rem;
-	border: 1px solid currentColor;
-	border-radius: 4px;
+	justify-content: center;
+	gap: 0.375rem;
+	box-sizing: border-box;
+	block-size: 2.5rem;
+	padding-inline: var(--wp--preset--spacing--200, 1rem);
+	border: 0;
+	border-radius: 9999px;
 	background: transparent;
 	color: inherit;
+	font-family: var(--wp--preset--font-family--roboto-flex, inherit);
+	font-size: var(--wp--preset--font-size--label-large, 0.875rem);
+	font-weight: 500;
+	letter-spacing: 0.1px;
+	line-height: 1.429;
 	cursor: pointer;
+	transition: background-color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, ease), color var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, ease);
 }
 
-.axismundi-like-button__button.is-liked .dashicons {
-	color: #c62828;
+.axismundi-like-button__button .material-symbols-outlined {
+	--md-icon-size: 1.25rem;
+	transition: --md-icon-fill var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, ease);
+}
+
+.axismundi-like-button__button:hover,
+.axismundi-like-button__button:focus-visible,
+.axismundi-like-button__button.is-liked {
+	background-color: color-mix(in srgb, currentColor 8%, transparent);
+	color: var(--wp--preset--color--error, #b3261e);
+}
+
+.axismundi-like-button__button:hover .material-symbols-outlined,
+.axismundi-like-button__button:focus-visible .material-symbols-outlined,
+.axismundi-like-button__button.is-liked .material-symbols-outlined {
+	--md-icon-fill: 1;
 }
 
 .axismundi-like-button__button:disabled {
@@ -28,10 +49,20 @@
 }
 
 .axismundi-like-button__count {
-	min-width: 1ch;
+	min-inline-size: 1ch;
 	font-variant-numeric: tabular-nums;
+	color: inherit;
 }
 
 .axismundi-like-button__status {
+	flex-basis: 100%;
 	font-size: 0.875rem;
+}
+
+.axismundi-interaction-button__editor-preview {
+	pointer-events: none;
+}
+
+.axismundi-like-button__label {
+	white-space: nowrap;
 }

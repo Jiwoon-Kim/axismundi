@@ -321,16 +321,29 @@ function axismundi_op_save_quick_edit( int $post_id, WP_Post $post ) : void {
 }
 add_action( 'save_post_post', 'axismundi_op_save_quick_edit', 10, 2 );
 
+/** Register the shared resolved-Actor token control for dependent editors. */
+function axismundi_op_register_mention_token_field() : void {
+	wp_register_script(
+		'axismundi-op-mention-token-field',
+		plugins_url( 'assets/mention-token-field.js', dirname( __DIR__ ) . '/axismundi-object-projections.php' ),
+		array( 'wp-api-fetch', 'wp-components', 'wp-element', 'wp-url' ),
+		AXISMUNDI_OP_VERSION,
+		true
+	);
+}
+add_action( 'init', 'axismundi_op_register_mention_token_field' );
+
 /** Load the document-settings panel in the Core Post block editor. */
 function axismundi_op_enqueue_post_editor_settings() : void {
 	$screen = get_current_screen();
 	if ( ! $screen || 'post' !== $screen->post_type || ! $screen->is_block_editor() ) {
 		return;
 	}
+	wp_enqueue_script( 'axismundi-op-mention-token-field' );
 	wp_enqueue_script(
 		'axismundi-op-post-settings',
 		plugins_url( 'assets/post-settings.js', dirname( __DIR__ ) . '/axismundi-object-projections.php' ),
-		array( 'wp-components', 'wp-data', 'wp-edit-post', 'wp-element', 'wp-i18n', 'wp-plugins' ),
+		array( 'axismundi-op-mention-token-field', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-element', 'wp-i18n', 'wp-plugins' ),
 		AXISMUNDI_OP_VERSION,
 		true
 	);

@@ -48,7 +48,7 @@ defined( 'ABSPATH' ) || exit;
 
 <!-- wp:post-excerpt {"showMoreOnNewLine":false,"excerptLength":10,"fontSize":"body-medium"} /-->
 
-<!-- wp:post-terms {"term":"geotag","className":"is-style-tags","style":{"elements":{"link":{"color":{"text":"var:preset|color|secondary"}}},"typography":{"textAlign":"right"}},"textColor":"secondary"} /--></div>
+<!-- wp:post-terms {"term":"axismundi_geotag","className":"is-style-tags","style":{"elements":{"link":{"color":{"text":"var:preset|color|secondary"}}},"typography":{"textAlign":"right"}},"textColor":"secondary"} /--></div>
 <!-- /wp:group --></div>
 <!-- /wp:group -->
 <!-- /wp:post-template -->
@@ -85,7 +85,7 @@ defined( 'ABSPATH' ) || exit;
 <h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Geo areas', 'Geo archive sidebar heading.', 'axismundi-geodata' ); ?></h2>
 <!-- /wp:heading -->
 
-<!-- wp:categories {"taxonomy":"geo_area","showHierarchy":true,"showPostCounts":true,"showEmpty":true,"className":"is-style-row"} /--></div>
+<!-- wp:categories {"taxonomy":"axismundi_geo_area","showHierarchy":true,"showPostCounts":true,"showEmpty":true,"className":"is-style-row"} /--></div>
 <!-- /wp:group -->
 
 <!-- wp:group {"style":{"color":{"background":"var:preset|color|surface-container-low"},"border":{"radius":"12px"},"spacing":{"padding":"var:preset|spacing|200","blockGap":"var:preset|spacing|200"}},"layout":{"type":"default"}} -->
@@ -93,7 +93,7 @@ defined( 'ABSPATH' ) || exit;
 <h2 class="wp-block-heading has-title-medium-font-size"><?php echo esc_html_x( 'Geotags', 'Geo archive sidebar heading.', 'axismundi-geodata' ); ?></h2>
 <!-- /wp:heading -->
 
-<!-- wp:tag-cloud {"taxonomy":"geotag","showTagCounts":true,"className":"is-style-tags"} /--></div>
+<!-- wp:tag-cloud {"taxonomy":"axismundi_geotag","showTagCounts":true,"className":"is-style-tags"} /--></div>
 <!-- /wp:group -->
 
 <!-- wp:group {"style":{"color":{"background":"var:preset|color|surface-container-low"},"border":{"radius":"12px"},"spacing":{"padding":"var:preset|spacing|200","blockGap":"var:preset|spacing|200"}},"layout":{"type":"default"}} -->

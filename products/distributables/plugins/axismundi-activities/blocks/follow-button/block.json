@@ -1,0 +1,25 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/follow-button",
+	"version": "0.0.26",
+	"title": "Follow Button",
+	"category": "widgets",
+	"icon": "admin-users",
+	"description": "Follows the current Actor profile as the active Axismundi Actor.",
+	"textdomain": "axismundi-activities",
+	"attributes": {
+		"actorUri": { "type": "string", "default": "" }
+	},
+	"usesContext": [ "axismundi/actorId" ],
+	"supports": {
+		"html": false,
+		"interactivity": true,
+		"color": { "text": true, "background": true },
+		"spacing": { "margin": true, "padding": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php",
+	"viewScriptModule": "file:./view.js"
+}

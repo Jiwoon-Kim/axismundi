@@ -1,0 +1,26 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/account-header",
+	"version": "0.1.2",
+	"title": "Account Header",
+	"category": "theme",
+	"icon": "id",
+	"description": "A layout container that resolves one Actor and supplies it to nested Actor blocks (Cover, Avatar, Identity, Biography).",
+	"textdomain": "axismundi-actors",
+	"attributes": {
+		"actorId": { "type": "string", "default": "" }
+	},
+	"providesContext": {
+		"axismundi/actorId": "actorId"
+	},
+	"supports": {
+		"html": false,
+		"multiple": false,
+		"align": [ "wide", "full" ],
+		"spacing": { "margin": true, "padding": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

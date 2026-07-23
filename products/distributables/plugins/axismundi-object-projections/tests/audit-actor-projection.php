@@ -17,6 +17,12 @@ function ax_actor_projection_assert( array &$results, string $label, bool $condi
 }
 
 $actor = axismundi_actors_get_site_actor();
+$previous_fields = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_get_profile_fields' )
+	? axismundi_actors_get_profile_fields( $actor->get_identity_id() )
+	: array();
+if ( $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_save_profile_fields' ) ) {
+	axismundi_actors_save_profile_fields( $actor, array( array( 'name' => 'Mastodon', 'url' => 'https://mastodon.example/@axismundi' ) ) );
+}
 add_filter(
 	'axismundi_op_actor_transport_fields',
 	static fn() : array => array(
@@ -39,6 +45,10 @@ ax_actor_projection_assert( $ax_actor_projection_results, 'Actor projection owns
 ax_actor_projection_assert( $ax_actor_projection_results, 'Actor finalization does not require attributedTo', is_array( $finalized ) && ! isset( $finalized['attributedTo'] ) );
 ax_actor_projection_assert( $ax_actor_projection_results, 'transport fields may supply inbox, sharedInbox, and publicKey but cannot override the representation-owned outbox', is_array( $finalized ) && isset( $finalized['inbox'], $finalized['outbox'], $finalized['endpoints']['sharedInbox'], $finalized['publicKey'] ) && axismundi_op_actor_outbox_url( $actor ) === $finalized['outbox'] );
 ax_actor_projection_assert( $ax_actor_projection_results, 'transport fields cannot override followers or inject other representation-owned collections', is_array( $finalized ) && axismundi_op_actor_followers_url( $actor ) === $finalized['followers'] && ! isset( $finalized['following'], $finalized['featured'] ) );
+ax_actor_projection_assert( $ax_actor_projection_results, 'local profile links project as PropertyValue attachments', is_array( $finalized ) && isset( $finalized['attachment'][0] ) && 'PropertyValue' === $finalized['attachment'][0]['type'] && 'Mastodon' === $finalized['attachment'][0]['name'] && false !== strpos( $finalized['attachment'][0]['value'], 'rel="me nofollow noopener noreferrer"' ) );
+if ( $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_save_profile_fields' ) ) {
+	axismundi_actors_save_profile_fields( $actor, array_map( static fn( array $field ) : array => array( 'name' => $field['name'], 'url' => $field['url'] ), $previous_fields ) );
+}
 
 $failures = count( array_filter( $ax_actor_projection_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

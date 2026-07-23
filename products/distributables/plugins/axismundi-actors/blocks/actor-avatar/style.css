@@ -1,0 +1,57 @@
+/*
+ * The outer block element carries only the block's own identity and stays a
+ * plain, unrounded, unclipped box: WordPress draws the editor's selection
+ * outline as a pseudo-element sized to this element, so a wrapper that is itself
+ * round and clipped would clip that outline into a circle. The round avatar is
+ * the inner image (or the editor's placeholder), which also carries any border
+ * radius/width/color and shadow an author sets, applied on the server
+ * (render.php) and mirrored here in the editor (edit.js) -- neither hard-codes a
+ * ring or a background; both come from the block's border and shadow supports.
+ *
+ * The inner element sizes itself from the same custom property directly rather
+ * than at `100%` of the outer box, and never shrinks. A flex parent (Core's own
+ * Group in Row layout always offers this) lets an author set this block to
+ * "Grow", which resizes the OUTER box's width only, independent of its height. An
+ * inner circle sized at 100%/100% of that box would follow width and height
+ * separately and stretch into an ellipse; Core's own Avatar avoids exactly this
+ * by giving its `<img>` a fixed intrinsic size instead of stretching it to fill a
+ * flexible container, so this block does the same.
+ */
+.wp-block-axismundi-actor-avatar {
+	display: block;
+	box-sizing: border-box;
+	inline-size: var(--axismundi-actor-avatar-size, 8rem);
+	block-size: var(--axismundi-actor-avatar-size, 8rem);
+	max-inline-size: 100%;
+	flex-shrink: 0;
+}
+
+.wp-block-axismundi-actor-avatar .ax-actor-avatar__image,
+.wp-block-axismundi-actor-avatar .ax-actor-avatar__link {
+	display: block;
+	inline-size: var(--axismundi-actor-avatar-size, 8rem);
+	block-size: var(--axismundi-actor-avatar-size, 8rem);
+	max-inline-size: 100%;
+	flex-shrink: 0;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+/* The editor preview has no image to load, so it draws the shape and an initial. */
+.wp-block-axismundi-actor-avatar.is-editor-preview .ax-actor-avatar__preview {
+	display: grid;
+	place-items: center;
+	inline-size: var(--axismundi-actor-avatar-size, 8rem);
+	block-size: var(--axismundi-actor-avatar-size, 8rem);
+	max-inline-size: 100%;
+	flex-shrink: 0;
+	border-radius: 50%;
+	background-color: var(--wp--preset--color--surface-container-high, #ece6f0);
+}
+
+.ax-actor-avatar__editor-initial {
+	color: var(--wp--preset--color--on-surface-variant, currentColor);
+	font-family: var(--wp--preset--font-family--roboto-serif, Georgia, serif);
+	font-size: calc(var(--axismundi-actor-avatar-size, 8rem) * 0.45);
+	line-height: 1;
+}

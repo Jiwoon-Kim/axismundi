@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/actor-name",
+	"version": "0.1.0",
+	"title": "Actor Name",
+	"category": "theme",
+	"icon": "admin-users",
+	"description": "The display name of the Actor resolved by the enclosing Account Header or Object card. A sibling of Core's Post Title, so it carries its own typography.",
+	"textdomain": "axismundi-actors",
+	"usesContext": [ "axismundi/actorId" ],
+	"attributes": {
+		"level": { "type": "number", "default": 0 },
+		"isLink": { "type": "boolean", "default": true }
+	},
+	"supports": {
+		"html": false,
+		"anchor": true,
+		"color": { "gradients": true, "link": true, "text": true, "background": true },
+		"spacing": { "margin": true, "padding": true },
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalLetterSpacing": true,
+			"__experimentalDefaultControls": { "fontSize": true }
+		},
+		"__experimentalBorder": { "radius": true, "color": true, "width": true, "style": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

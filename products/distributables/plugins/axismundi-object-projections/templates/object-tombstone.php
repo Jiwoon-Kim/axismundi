@@ -5,12 +5,9 @@ defined( 'ABSPATH' ) || exit;
 
 <!-- wp:group {"tagName":"main","align":"full","layout":{"type":"constrained"}} -->
 <main class="wp-block-group alignfull">
-	<!-- wp:group {"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|500","bottom":"var:preset|spacing|500"}}},"layout":{"type":"default"}} -->
+	<!-- wp:group {"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|500","bottom":"var:preset|spacing|500"}}},"layout":{"type":"constrained"}} -->
 	<div class="wp-block-group alignwide" style="padding-top:var(--wp--preset--spacing--500);padding-bottom:var(--wp--preset--spacing--500)">
-		<!-- wp:axismundi/reply-context /-->
-		<!-- wp:axismundi/object-view /-->
-		<!-- wp:axismundi/question /-->
-		<!-- wp:axismundi/replies /-->
+		<!-- wp:axismundi/object-status /-->
 	</div>
 	<!-- /wp:group -->
 </main>

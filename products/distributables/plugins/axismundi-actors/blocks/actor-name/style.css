@@ -1,0 +1,14 @@
+.wp-block-axismundi-actor-name {
+	margin-block: 0;
+	display: inline-block;
+}
+
+.wp-block-axismundi-actor-name a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.wp-block-axismundi-actor-name a:hover,
+.wp-block-axismundi-actor-name a:focus-visible {
+	text-decoration: underline;
+}

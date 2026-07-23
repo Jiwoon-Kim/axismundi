@@ -1,0 +1,107 @@
+.wp-block-axismundi-follow-button,
+.axismundi-follow-button {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+.axismundi-follow-button__button,
+.axismundi-follow-button.is-anonymous a,
+.axismundi-follow-button.is-unavailable a {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-block-size: 2.5rem;
+	padding: 0.5rem 0.875rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-weight: 600;
+	line-height: 1;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.axismundi-follow-button__button.is-following {
+	background: var(--wp--preset--color--surface-container-high, #ece6f0);
+}
+
+.axismundi-follow-button__button.is-mutual {
+	border-style: dashed;
+}
+
+.axismundi-follow-button__button:disabled {
+	cursor: wait;
+	opacity: 0.65;
+}
+
+.axismundi-follow-button__remote {
+	border: 0 !important;
+	padding-inline: 0.25rem !important;
+	font-size: 0.875rem;
+	font-weight: 400 !important;
+	text-decoration: underline !important;
+	text-underline-offset: 0.2em;
+}
+
+.axismundi-follow-button__status {
+	inline-size: 100%;
+	font-size: 0.875rem;
+}
+
+.axismundi-remote-follow__target,
+.axismundi-remote-follow__form {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.axismundi-remote-follow__target {
+	grid-template-columns: minmax(0, 1fr) auto;
+	margin-block: 1rem;
+}
+
+.axismundi-remote-follow__target label,
+.axismundi-remote-follow__form label {
+	grid-column: 1 / -1;
+	font-weight: 600;
+}
+
+.axismundi-remote-follow__target input,
+.axismundi-remote-follow__form input {
+	box-sizing: border-box;
+	min-inline-size: 0;
+	min-block-size: 2.75rem;
+	padding-inline: 0.75rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+}
+
+.axismundi-remote-follow__copy {
+	min-block-size: 2.75rem;
+	padding-inline: 0.75rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.axismundi-remote-follow__help,
+.axismundi-remote-follow__local,
+.axismundi-remote-follow__about {
+	margin-block: 0.25rem 1rem;
+	font-size: 0.875rem;
+}
+
+.axismundi-remote-follow__error {
+	margin: 0;
+	color: var(--wp--preset--color--error, #b3261e);
+}

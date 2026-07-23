@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.24
+Stable tag: 0.0.29
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,47 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.29 =
+* Complete the Actor profile Activity feed. Selection is now a dedicated ledger
+  query for effective, public, outbound Create and Announce rows: an Update never
+  becomes its own row (the card reads the object's latest state), and an undone
+  Announce drops out. Each row's object is resolved and rendered by Object
+  Projections, so a boosted local or cached-remote object renders the same card as
+  an authored one, framed with a "Boosted" label; a Create still requires the
+  object's author to be the profile owner. Deleted, tombstoned, or unresolvable
+  objects hide their row.
+
+= 0.0.28 =
+* Restyle `like-button` and `announce-button` (and the unused `boost-button`) from a
+  40px circular icon to the theme's Material 3 text-button shape: transparent pill,
+  label-large type, and the count moved inside the button instead of a sibling span.
+  The count inherits the button's `color`, so it recolors with the icon together on
+  hover, focus, and the liked/announced state instead of staying a fixed neutral tone.
+* Reverse the Announce/Boost rotation to counter-clockwise (`rotate(-180deg)`) per
+  design feedback; the prior clockwise `rotate(180deg)` reached the same resting
+  orientation but animated the wrong direction.
+
+= 0.0.27 =
+* Bring the legacy `boost-button` block's markup and stylesheet in line with `like-button`/`announce-button`: Material Symbols instead of Dashicons, the count moved outside the button, and a matching 40px circular button so all three reaction controls share one visual contract.
+
+= 0.0.26 =
+
+* Open anonymous Follow requests in an accessible native dialog when Axismundi
+  Dialogs is active. Visitors can copy the target handle, enter their own
+  Fediverse handle, and continue on their home server through its WebFinger
+  Follow/intent endpoint; the local login path remains available.
+
+= 0.0.25 =
+* Add the Interactivity API `axismundi/follow-button` block. It derives Follow,
+  Follow back, Requested, Following, and Mutual directly from the activity-backed
+  relation ledger and exposes the same state shape to future notification views.
+* Add nonce-protected Follow REST mutations for an activated local Person Actor.
+  The existing local/remote Follow state machines, undo semantics, and Bridge
+  delivery remain authoritative; the block adds no parallel relationship store.
+* Anonymous profiles remain cacheable and show local-login plus Fediverse-server
+  guidance. Logged-in profile controls opt out of shared caching before a nonce or
+  personal relationship state is rendered.
 
 = 0.0.24 =
 * Let an object-owning product render a public ledger entry through its own

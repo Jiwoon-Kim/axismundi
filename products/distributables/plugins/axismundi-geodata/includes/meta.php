@@ -196,7 +196,7 @@ function axismundi_geodata_register_meta() : void {
 		'ax_geo_place_type' => array( 'type' => 'string', 'sanitize' => 'sanitize_key', 'schema' => $string ),
 	);
 
-	foreach ( array( 'geo_area', 'geotag' ) as $taxonomy ) {
+	foreach ( array( 'axismundi_geo_area', 'axismundi_geotag' ) as $taxonomy ) {
 		foreach ( $term_meta as $key => $def ) {
 			register_term_meta(
 				$taxonomy,
@@ -229,7 +229,7 @@ function axismundi_geodata_register_meta() : void {
 	foreach ( $geo_area_meta as $key => $sanitize ) {
 		$is_zoom = 'ax_geo_zoom' === $key;
 		register_term_meta(
-			'geo_area',
+			'axismundi_geo_area',
 			$key,
 			array(
 				'type'              => $is_zoom ? 'number' : 'string',

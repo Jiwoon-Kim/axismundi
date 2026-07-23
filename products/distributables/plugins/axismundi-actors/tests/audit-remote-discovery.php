@@ -42,7 +42,7 @@ $ax_remote_http = static function ( $preempt, array $args, string $url ) use ( &
 		if ( 'acct:remote_alice@example.com' === $acct ) {
 			return ax_remote_response(
 				'application/jrd+json',
-				wp_json_encode( array( 'subject' => $acct, 'links' => array( array( 'rel' => 'self', 'type' => 'application/activity+json', 'href' => 'https://example.com/users/alice' ) ) ) )
+				wp_json_encode( array( 'subject' => $acct, 'links' => array( array( 'rel' => 'self', 'type' => 'application/activity+json', 'href' => 'https://example.com/users/alice' ), array( 'rel' => 'http://ostatus.org/schema/1.0/subscribe', 'template' => 'https://example.com/authorize_interaction?uri={uri}' ) ) ) )
 			);
 		}
 		if ( 'acct:id_mismatch@example.com' === $acct ) {
@@ -99,6 +99,8 @@ try {
 	$unsafe_local = axismundi_actors_normalize_remote_acct( 'alice@127.0.0.1' );
 	$unsafe_http  = axismundi_actors_remote_get_json( 'http://example.com/actor', array( 'application/json' ) );
 	ax_remote_assert( $ax_remote_results, 'private/local authorities and non-HTTPS URLs are rejected before fetch', is_wp_error( $unsafe_local ) && is_wp_error( $unsafe_http ) );
+	$template = axismundi_actors_remote_follow_template( '@remote_alice@example.com' );
+	ax_remote_assert( $ax_remote_results, 'remote follow reads a verified WebFinger subscribe template without creating an Actor snapshot', is_string( $template ) && 'https://example.com/authorize_interaction?uri={uri}' === $template && null === axismundi_actors_get_by_uri( 'https://example.com/users/alice' ) );
 
 	$actor = axismundi_actors_discover_remote_actor( '@remote_alice@example.com' );
 	ax_remote_assert( $ax_remote_results, 'WebFinger discovers and persists one remote Person', $actor instanceof Axismundi_Actor && ! $actor->is_local() && null === $actor->get_scope() && 'Person' === $actor->get_type() && 'https://example.com/users/alice' === $actor->get_uri() );

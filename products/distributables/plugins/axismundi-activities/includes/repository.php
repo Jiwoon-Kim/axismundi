@@ -293,6 +293,20 @@ function axismundi_act_is_public( Axismundi_Activity $activity ) : bool {
 	return 'outbound' === $activity->get_direction() && $activity->is_effective() && axismundi_act_has_public_audience( $activity );
 }
 
+/**
+ * Whether a verified ledger row may appear in a human public feed.
+ *
+ * Outboxes only expose this site's outbound activities, while an Actor profile
+ * can also render a cached remote Actor's inbound activities. Both surfaces
+ * require an effective Activity explicitly addressed to Public; the profile
+ * renderer still strips blind recipients from its payload copy below.
+ */
+function axismundi_act_is_publicly_renderable( Axismundi_Activity $activity ) : bool {
+	return $activity->is_effective()
+		&& in_array( $activity->get_direction(), array( 'inbound', 'outbound', 'local' ), true )
+		&& axismundi_act_has_public_audience( $activity );
+}
+
 /** Public-safe payload copy; the lossless ledger payload remains unchanged. */
 function axismundi_act_public_payload( Axismundi_Activity $activity ) : ?array {
 	if ( ! axismundi_act_is_public( $activity ) ) {
@@ -334,6 +348,39 @@ function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_A
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact URI lifecycle lookup in the custom ledger.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s AND activity_type IN ('Create','Update','Delete') AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT 1", hash( 'sha256', $uri ), $uri ), ARRAY_A );
 	return is_array( $row ) ? axismundi_act_hydrate( $row ) : null;
+}
+
+/**
+ * Effective Create and Announce rows for an Actor's profile feed.
+ *
+ * The type allowlist collapses Update/Delete/Like/Undo out of the timeline: an
+ * Update never becomes its own row (the object card reads the latest source
+ * state), and `effective_status = 'active'` drops an undone Announce. Ordering by
+ * the published fallback keeps a boosted object at the Announce time. The public
+ * audience gate stays with `axismundi_act_is_publicly_renderable()` at the call site.
+ *
+ * @return Axismundi_Activity[]
+ */
+function axismundi_act_get_actor_feed( string $actor_uri, int $limit = 20 ) : array {
+	global $wpdb;
+	$uri = axismundi_act_uri( $actor_uri );
+	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		return array();
+	}
+	$actor = axismundi_actors_get_by_uri( $uri );
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return array();
+	}
+	$table = axismundi_act_activities_table();
+	$limit = max( 1, min( 50, $limit ) );
+	// Direction is a transport fact, not a feed policy. The repository rejects
+	// local Actors as inbound and remote Actors as outbound/local, so this keeps
+	// both profile kinds on the same API without mixing their activity origins.
+	$directions = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
+	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed feed selection in the custom ledger; direction placeholders and every value are allowlisted/prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d", array_merge( array( hash( 'sha256', $uri ), $uri ), $directions, array( $limit ) ) ), ARRAY_A );
+	return array_map( 'axismundi_act_hydrate', $rows );
 }
 
 /** Recent Activity ledger rows for administration and collection providers. */

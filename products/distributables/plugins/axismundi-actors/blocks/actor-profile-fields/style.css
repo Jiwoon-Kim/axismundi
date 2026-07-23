@@ -1,0 +1,23 @@
+.wp-block-axismundi-actor-profile-fields {
+	display: grid;
+	gap: 0.45rem;
+	margin-block: var(--wp--preset--spacing--300, 1rem) 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ax-actor-profile-fields-block__item {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	align-items: baseline;
+}
+
+.ax-actor-profile-fields-block__name {
+	font-weight: 600;
+}
+
+.ax-actor-profile-fields-block__verified {
+	color: #087443;
+	font-weight: 700;
+}

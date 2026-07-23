@@ -83,7 +83,7 @@ try {
 		axismundi_actors_install();
 	}
 	$backfilled = $actor instanceof Axismundi_Actor ? axismundi_actors_get_identity_relations( $actor->get_identity_id() ) : array();
-	ax_rel_assert( $ax_rel_results, 'v10b upgrade backfills claims from existing remote payload snapshots', 3 === count( $backfilled ) && '10.1' === (string) get_option( 'ax_actors_db_version' ) );
+	ax_rel_assert( $ax_rel_results, 'v10b upgrade backfills claims from existing remote payload snapshots', 3 === count( $backfilled ) && version_compare( (string) get_option( 'ax_actors_db_version' ), '10.1', '>=' ) );
 
 	$empty_record = ax_rel_record( 'ax_rel_a', null );
 	if ( ! is_wp_error( $empty_record ) ) {

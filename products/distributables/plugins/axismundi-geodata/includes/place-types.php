@@ -54,7 +54,7 @@ function axismundi_geodata_geotag_place_type_record( string $slug ) : ?array {
  * @return array<string,array<string,string>> group label => ( slug => label )
  */
 function axismundi_geodata_place_types( string $taxonomy ) : array {
-	if ( 'geo_area' === $taxonomy ) {
+	if ( 'axismundi_geo_area' === $taxonomy ) {
 		return array(
 			__( 'National', 'axismundi-geodata' ) => array(
 				'country' => __( 'Country', 'axismundi-geodata' ),
@@ -138,7 +138,7 @@ function axismundi_geodata_place_type_select( string $taxonomy, string $name, st
 				$matched = true;
 			}
 
-			$source        = 'geotag' === $taxonomy ? axismundi_geodata_place_type_source( $slug ) : '';
+			$source        = 'axismundi_geotag' === $taxonomy ? axismundi_geodata_place_type_source( $slug ) : '';
 			$display_label = 'custom' === $source
 				? $label . ' ' . _x( '(Custom)', 'place-type select option suffix', 'axismundi-geodata' )
 				: $label;
@@ -178,7 +178,7 @@ function axismundi_geodata_place_type_label( string $slug ) : string {
 		return $geotag_record['label'];
 	}
 
-	foreach ( axismundi_geodata_place_types( 'geo_area' ) as $types ) {
+	foreach ( axismundi_geodata_place_types( 'axismundi_geo_area' ) as $types ) {
 		if ( isset( $types[ $slug ] ) ) {
 			return $types[ $slug ];
 		}

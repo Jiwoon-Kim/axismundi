@@ -44,12 +44,6 @@ $axismundi_actor_allowed_image  = array(
 	<?php if ( '' !== $axismundi_actor_profile_data['summary'] ) : ?>
 		<div class="ax-actor-profile__summary"><?php echo wp_kses_post( wpautop( $axismundi_actor_profile_data['summary'] ) ); ?></div>
 	<?php endif; ?>
-	<?php if ( '' !== $axismundi_actor_profile_data['content'] ) : ?>
-		<div class="ax-actor-profile__content"><?php echo wp_kses_post( wpautop( $axismundi_actor_profile_data['content'] ) ); ?></div>
-	<?php endif; ?>
-	<?php if ( '' !== $axismundi_actor_profile_data['url'] ) : ?>
-		<p class="ax-actor-profile__website"><a href="<?php echo esc_url( $axismundi_actor_profile_data['url'] ); ?>" rel="me"><?php echo esc_html( preg_replace( '#^https?://#', '', untrailingslashit( $axismundi_actor_profile_data['url'] ) ) ); ?></a></p>
-	<?php endif; ?>
 	<?php if ( ! $axismundi_actor_profile_actor->is_local() ) : ?>
 		<p class="ax-actor-profile__preview"><?php esc_html_e( 'Administrator preview of a cached remote Actor. This is not a public local mirror.', 'axismundi-actors' ); ?></p>
 	<?php elseif ( 'public' !== $axismundi_actor_profile_actor->get_status() ) : ?>

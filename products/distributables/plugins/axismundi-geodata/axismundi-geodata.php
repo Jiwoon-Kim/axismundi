@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Geodata
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-geodata
  * Description:       Canonical geo store for Axismundi — geo_area / geotag taxonomies and privacy-aware coordinate metadata for posts and attachments, exposed over REST for the editor, map blocks, and federation serializers.
- * Version:           0.2.2
+ * Version:           0.2.3
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -17,8 +17,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'AXISMUNDI_GEODATA_VERSION', '0.2.2' );
+define( 'AXISMUNDI_GEODATA_VERSION', '0.2.3' );
 define( 'AXISMUNDI_GEODATA_FILE', __FILE__ );
+define( 'AXISMUNDI_GEODATA_TAXONOMY_AREA', 'axismundi_geo_area' );
+define( 'AXISMUNDI_GEODATA_TAXONOMY_TAG', 'axismundi_geotag' );
+define( 'AXISMUNDI_GEODATA_TAXONOMY_MIGRATION_VERSION', 1 );
 
 /**
  * Object types that can carry geo TERMS (geo_area / geotag).
@@ -54,6 +57,7 @@ function axismundi_geodata_coordinate_object_types() : array {
 require_once __DIR__ . '/includes/privacy.php';
 require_once __DIR__ . '/includes/coordinates.php';
 require_once __DIR__ . '/includes/taxonomy.php';
+require_once __DIR__ . '/includes/taxonomy-migration.php';
 require_once __DIR__ . '/includes/templates.php';
 require_once __DIR__ . '/includes/meta.php';
 require_once __DIR__ . '/includes/place-types.php';

@@ -88,6 +88,25 @@ function axismundi_op_post_object_uri( WP_Post $post ) : string {
 	return (string) apply_filters( 'axismundi_op_post_object_uri', $uri, $post );
 }
 
+/** Resolve this plugin's default local Post URI without relying on an optional integration. */
+function axismundi_op_resolve_local_post_source_by_uri( $source, string $uri ) {
+	if ( null !== $source ) {
+		return $source;
+	}
+	$parts = wp_parse_url( $uri );
+	if ( ! is_array( $parts ) || empty( $parts['query'] ) ) {
+		return $source;
+	}
+	parse_str( (string) $parts['query'], $query );
+	$post_id = isset( $query['p'] ) ? absint( $query['p'] ) : 0;
+	$post    = $post_id > 0 ? get_post( $post_id ) : null;
+	if ( ! $post instanceof WP_Post || ! axismundi_op_post_article_supports( $post ) ) {
+		return $source;
+	}
+	return hash_equals( $uri, axismundi_op_post_object_uri( $post ) ) ? $post : $source;
+}
+add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_op_resolve_local_post_source_by_uri', 10, 2 );
+
 /**
  * Public projection gate for a core post.
  *
@@ -310,6 +329,7 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	}
 	$mention_uris = axismundi_op_post_mentions( $post );
 	$mentions     = axismundi_op_post_article_mention_tags( $post, false );
+	$hashtags     = function_exists( 'axismundi_op_post_hashtag_tags' ) ? axismundi_op_post_hashtag_tags( $post ) : array();
 	$audience     = axismundi_op_post_article_audience( $post, $mention_uris );
 	if ( is_wp_error( $audience ) ) {
 		return $audience;
@@ -329,8 +349,9 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 		'to'           => $audience['to'],
 		'cc'           => $audience['cc'],
 	);
-	if ( ! empty( $mentions ) ) {
-		$article['tag'] = $mentions;
+	$tags = array_merge( $mentions, $hashtags );
+	if ( ! empty( $tags ) ) {
+		$article['tag'] = $tags;
 	}
 
 	if ( '' !== trim( (string) $post->post_excerpt ) ) {
@@ -366,6 +387,72 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	 */
 	return apply_filters( 'axismundi_op_post_article', $article, $post );
 }
+
+/** Normalize one locally projected WordPress object for the shared Object card. */
+function axismundi_op_local_post_object_view_model( $source ) : ?array {
+	if ( ! $source instanceof WP_Post || ! axismundi_op_source_publicly_visible( $source ) ) {
+		return null;
+	}
+	$object = axismundi_op_transform_object( $source );
+	if ( ! is_array( $object ) || empty( $object['id'] ) ) {
+		return null;
+	}
+	$actor_uri = (string) ( $object['attributedTo'] ?? '' );
+	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
+	$handle    = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_federated_mention_name' )
+		? axismundi_actors_federated_mention_name( $actor )
+		: '';
+	$attachments = isset( $object['attachment'] ) ? (array) $object['attachment'] : array();
+	if ( empty( $attachments ) && isset( $object['url'] ) && in_array( (string) ( $object['type'] ?? '' ), array( 'Image', 'Video', 'Audio', 'Document' ), true ) ) {
+		$attachments[] = array(
+			'type'      => (string) ( $object['type'] ?? 'Document' ),
+			'name'      => (string) ( $object['name'] ?? '' ),
+			'mediaType' => (string) ( $object['mediaType'] ?? '' ),
+			'url'       => $object['url'],
+			'sensitive' => ! empty( $object['sensitive'] ),
+			'summary'   => (string) ( $object['summary'] ?? '' ),
+		);
+	}
+	return array(
+		'id'              => (string) $object['id'],
+		'type'            => (string) ( $object['type'] ?? 'Object' ),
+		'status'          => 'active',
+		'object_uri'      => (string) $object['id'],
+		'title'           => (string) ( $object['name'] ?? '' ),
+		'author'          => array(
+			'id'                 => $actor_uri,
+			'name'               => $actor instanceof Axismundi_Actor ? $actor->get_display_name() : ( '' !== $handle ? ltrim( $handle, '@' ) : '' ),
+			'preferred_username' => $actor instanceof Axismundi_Actor ? $actor->get_preferred_username() : '',
+			'handle'             => $handle,
+			'url'                => $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_profile_hub_url' ) ? axismundi_actors_profile_hub_url( $actor ) : $actor_uri,
+			'avatar_url'         => $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_avatar_url' ) ? axismundi_actors_avatar_url( $actor, 96 ) : '',
+		),
+		// Raw AS2 `image`; the shared normalizer turns it into media.featured.
+		'image'           => $object['image'] ?? null,
+		'content_html'    => wp_kses_post( (string) ( $object['content'] ?? '' ) ),
+		'published'       => (string) ( $object['published'] ?? '' ),
+		'updated'         => (string) ( $object['updated'] ?? '' ),
+		'sensitive'       => ! empty( $object['sensitive'] ),
+		'content_warning' => (string) ( $object['summary'] ?? '' ),
+		'attachments'     => $attachments,
+	);
+}
+
+/** Register the shared local WordPress-object card adapter. */
+function axismundi_op_register_local_post_object_view_model() : void {
+	if ( ! function_exists( 'axismundi_op_register_object_view_model' ) ) {
+		return;
+	}
+	axismundi_op_register_object_view_model(
+		'local-post-object',
+		array(
+			'supports'  => static fn( $source ) : bool => $source instanceof WP_Post && null !== axismundi_op_resolve_object_transformer( $source ),
+			'transform' => 'axismundi_op_local_post_object_view_model',
+			'priority'  => 50,
+		)
+	);
+}
+add_action( 'init', 'axismundi_op_register_local_post_object_view_model', 5 );
 
 /**
  * Register the built-in Core Post transformer.

@@ -48,7 +48,7 @@ function axismundi_geodata_term_column_content( string $content, string $column,
  * @return void
  */
 function axismundi_geodata_admin_columns_init() : void {
-	foreach ( array( 'geo_area', 'geotag' ) as $taxonomy ) {
+	foreach ( array( 'axismundi_geo_area', 'axismundi_geotag' ) as $taxonomy ) {
 		add_filter( "manage_edit-{$taxonomy}_columns", 'axismundi_geodata_term_columns' );
 		add_filter( "manage_{$taxonomy}_custom_column", 'axismundi_geodata_term_column_content', 10, 3 );
 	}

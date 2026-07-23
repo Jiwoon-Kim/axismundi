@@ -1,6 +1,6 @@
 # Remote object projections
 
-> Status: **Phase 4b metadata-only discovery and full-payload inspection plus DB v4 leases and quote relations implemented**. Binary media caching is
+> Status: **Phase 4b metadata-only discovery and full-payload inspection plus DB v6 leases, object relations, and remote hashtag observations implemented**. Binary media caching is
 > deliberately deferred to the shared-blob/shadow-attachment design.
 
 ## 1. Purpose and ownership
@@ -22,7 +22,7 @@ an `attributedTo` URI, but neither plugin is required for storing the object sna
 Resolution is a deferred, deduplicated WP-Cron event for the primary Actor only; object
 fetch never waits on Actor discovery and never fans out through mentions or audience members.
 
-## 2. Tables (schema v4)
+## 2. Tables (schema v6)
 
 ```text
 wp_ax_remote_objects
@@ -67,6 +67,19 @@ lease_ref + lease_ref_hash
 expires_at       nullable; NULL means explicit release is required
 UNIQUE(object_uri_hash, lease_type, lease_ref_hash)
 ```
+
+`wp_ax_remote_object_hashtags` is a rebuildable index from one observed remote
+Object row to a shared local `ax_hashtag` term taxonomy row:
+
+```text
+remote_object_id + term_taxonomy_id  UNIQUE
+source_href                           nullable observed remote tag URL
+observed_name                         display spelling from the remote payload
+```
+
+It never changes the remote Object's canonical URI or makes the remote tag URL
+the local hashtag archive URL. Refresh replaces the rows from the current
+payload; tombstones and cache deletion remove the rows.
 
 Hash lookup always verifies both full URI/reference strings. An active lease prevents expiry
 maintenance from deleting the observation; releasing the final lease makes an already expired

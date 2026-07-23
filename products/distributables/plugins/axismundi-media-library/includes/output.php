@@ -44,7 +44,25 @@ function axismundi_media_content_warning_text( int $attachment_id ) : string {
  * @return string
  */
 function axismundi_media_sensitive_overlay( string $inner_html, int $attachment_id ) : string {
-	$warning = axismundi_media_content_warning_text( $attachment_id );
+	return axismundi_media_sensitive_overlay_with_warning( $inner_html, axismundi_media_content_warning_text( $attachment_id ) );
+}
+
+/**
+ * The same reveal overlay for media whose warning is not the attachment's own.
+ *
+ * An Object's lead image inherits the Object's sensitivity rather than carrying a
+ * second, separately-answerable flag, so its warning text comes from the Object.
+ * The markup, stylesheet, and reveal script stay shared: a viewer should not meet
+ * two different content warnings on one page.
+ *
+ * @param string $inner_html Rendered media HTML (already escaped by its renderer).
+ * @param string $warning    Content-warning text; empty falls back to the generic one.
+ * @return string
+ */
+function axismundi_media_sensitive_overlay_with_warning( string $inner_html, string $warning ) : string {
+	if ( '' === trim( $warning ) ) {
+		$warning = __( 'Sensitive content', 'axismundi-media-library' );
+	}
 	return sprintf(
 		'<div class="ax-media-sensitive is-hidden"><div class="ax-media-sensitive__content">%1$s</div>'
 			. '<div class="ax-media-sensitive__overlay"><p class="ax-media-sensitive__warning">%2$s</p>'

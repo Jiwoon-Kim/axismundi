@@ -1,0 +1,26 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/actor-identity",
+	"version": "0.1.2",
+	"title": "Actor Identity",
+	"category": "theme",
+	"icon": "id-alt",
+	"description": "The display name, federated handle, and optional Actor type badge for the Actor resolved by the enclosing Account Header.",
+	"textdomain": "axismundi-actors",
+	"usesContext": [ "axismundi/actorId" ],
+	"attributes": {
+		"showHandle": { "type": "boolean", "default": true },
+		"showUsername": { "type": "boolean", "default": false },
+		"variant": { "type": "string", "default": "profile" },
+		"showTypeBadge": { "type": "boolean", "default": false }
+	},
+	"supports": {
+		"html": false,
+		"multiple": false,
+		"spacing": { "margin": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

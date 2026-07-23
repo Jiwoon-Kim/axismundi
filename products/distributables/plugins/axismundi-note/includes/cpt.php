@@ -50,6 +50,19 @@ function axismundi_note_register_cpt() : void {
 }
 add_action( 'init', 'axismundi_note_register_cpt' );
 
+/** Opt Notes into Object Projections' shared social hashtag vocabulary. */
+function axismundi_note_hashtag_object_types( array $types ) : array {
+	$types[] = AXISMUNDI_NOTE_POST_TYPE;
+	return array_values( array_unique( $types ) );
+}
+add_filter( 'axismundi_op_hashtag_object_types', 'axismundi_note_hashtag_object_types' );
+
+/** Notes may serialize their explicitly assigned shared hashtags. */
+function axismundi_note_hashtags_are_federated( bool $federated, WP_Post $post ) : bool {
+	return AXISMUNDI_NOTE_POST_TYPE === $post->post_type ? true : $federated;
+}
+add_filter( 'axismundi_op_hashtag_is_federated', 'axismundi_note_hashtags_are_federated', 10, 2 );
+
 /**
  * Restrict the Note block editor to a short-form palette.
  *

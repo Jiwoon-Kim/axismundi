@@ -325,6 +325,73 @@ function axismundi_op_resolve_source_by_uri( string $uri ) {
 	return is_array( $cached ) ? new Axismundi_Op_Remote_Source( $cached ) : null;
 }
 
+/** Normalize remote ActivityStreams attachment values into the local descriptor shape. */
+function axismundi_op_remote_view_attachments( array $payload ) : array {
+	$items = $payload['attachment'] ?? array();
+	$items = is_array( $items ) && array_is_list( $items ) ? $items : array( $items );
+	$out   = array();
+	foreach ( $items as $item ) {
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+		$type = (string) ( $item['type'] ?? 'Document' );
+		$url_values = $item['url'] ?? '';
+		$url_values = is_array( $url_values ) && array_is_list( $url_values ) ? $url_values : array( $url_values );
+		$links = array();
+		foreach ( $url_values as $value ) {
+			$href       = is_string( $value ) ? $value : ( is_array( $value ) ? (string) ( $value['href'] ?? '' ) : '' );
+			$media_type = is_array( $value ) ? (string) ( $value['mediaType'] ?? '' ) : (string) ( $item['mediaType'] ?? '' );
+			if ( in_array( strtolower( (string) wp_parse_url( $href, PHP_URL_SCHEME ) ), array( 'http', 'https' ), true ) ) {
+				$links[] = array( 'type' => 'Link', 'href' => esc_url_raw( $href ), 'mediaType' => sanitize_mime_type( $media_type ) );
+			}
+		}
+		if ( ! empty( $links ) ) {
+			$out[] = array(
+				'type'      => $type,
+				'name'      => sanitize_text_field( wp_strip_all_tags( (string) ( $item['name'] ?? '' ) ) ),
+				'mediaType' => sanitize_mime_type( (string) ( $item['mediaType'] ?? '' ) ),
+				'url'       => $links,
+				'sensitive' => ! empty( $item['sensitive'] ),
+				'summary'   => sanitize_text_field( wp_strip_all_tags( (string) ( $item['summary'] ?? '' ) ) ),
+			);
+		}
+	}
+	return $out;
+}
+
+/** Normalize a remote Question payload into the shared read-only poll shape. */
+function axismundi_op_remote_question_view( array $payload ) : ?array {
+	$mode_key = isset( $payload['oneOf'] ) ? 'oneOf' : ( isset( $payload['anyOf'] ) ? 'anyOf' : '' );
+	if ( '' === $mode_key || ! is_array( $payload[ $mode_key ] ) ) {
+		return null;
+	}
+	$options = array();
+	foreach ( $payload[ $mode_key ] as $option ) {
+		if ( ! is_array( $option ) || '' === trim( (string) ( $option['name'] ?? '' ) ) ) {
+			continue;
+		}
+		$replies = $option['replies'] ?? array();
+		$votes   = is_array( $replies ) ? (int) ( $replies['totalItems'] ?? 0 ) : 0;
+		$options[] = array( 'name' => sanitize_text_field( wp_strip_all_tags( (string) $option['name'] ) ), 'votes' => max( 0, $votes ) );
+	}
+	if ( empty( $options ) ) {
+		return null;
+	}
+	$closed = false;
+	if ( is_bool( $payload['closed'] ?? null ) ) {
+		$closed = (bool) $payload['closed'];
+	} elseif ( is_string( $payload['closed'] ?? null ) ) {
+		$closed = false !== strtotime( $payload['closed'] );
+	}
+	return array(
+		'mode'         => $mode_key,
+		'options'      => $options,
+		'voters_count' => max( 0, (int) ( $payload['votersCount'] ?? 0 ) ),
+		'closed'       => $closed,
+		'closes_at'    => sanitize_text_field( (string) ( $payload['endTime'] ?? ( is_string( $payload['closed'] ?? null ) ? $payload['closed'] : '' ) ) ),
+	);
+}
+
 /** Normalize one cached remote-object row into the neutral OP view model. */
 function axismundi_op_remote_source_view_model( $source ) : ?array {
 	if ( ! $source instanceof Axismundi_Op_Remote_Source ) {
@@ -342,6 +409,7 @@ function axismundi_op_remote_source_view_model( $source ) : ?array {
 	$actor      = '' !== $author_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $author_uri ) : null;
 	$name       = $actor instanceof Axismundi_Actor ? $actor->get_display_name() : '';
 	$handle     = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_federated_mention_name' ) ? axismundi_actors_federated_mention_name( $actor ) : '';
+	$payload    = is_array( $row['payload'] ?? null ) ? $row['payload'] : array();
 	return array(
 		'id'              => $id,
 		'type'            => (string) ( $row['object_type'] ?? 'Object' ),
@@ -350,16 +418,23 @@ function axismundi_op_remote_source_view_model( $source ) : ?array {
 		'language'        => (string) ( $row['content_language'] ?? '' ),
 		'title'           => (string) ( $row['name'] ?? '' ),
 		'author'          => array(
+			'id'     => $author_uri,
 			'name'   => '' !== $name ? $name : ( '' !== $handle ? ltrim( $handle, '@' ) : '' ),
+			'preferred_username' => $actor instanceof Axismundi_Actor ? $actor->get_preferred_username() : '',
 			'handle' => $handle,
-			'url'    => $author_uri,
+			'url'    => $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_profile_hub_url' ) ? axismundi_actors_profile_hub_url( $actor ) : $author_uri,
+			'avatar_url' => $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_avatar_url' ) ? axismundi_actors_avatar_url( $actor, 96 ) : '',
 		),
+		// Raw AS2 `image` as observed; the shared normalizer derives media.featured.
+		'image'           => $payload['image'] ?? null,
 		'content_html'    => wp_kses_post( (string) ( $row['content'] ?? '' ) ),
 		'published'       => '' !== (string) ( $row['published_at'] ?? '' ) ? gmdate( 'c', strtotime( (string) $row['published_at'] . ' UTC' ) ) : '',
 		'updated'         => '' !== (string) ( $row['remote_updated_at'] ?? '' ) ? gmdate( 'c', strtotime( (string) $row['remote_updated_at'] . ' UTC' ) ) : '',
 		'sensitive'       => ! empty( $row['is_sensitive'] ),
 		'content_warning' => (string) ( $row['summary'] ?? '' ),
-		'attachments'     => array(),
+		'attachments'     => axismundi_op_remote_view_attachments( $payload ),
+		'poll'            => 'Question' === (string) ( $row['object_type'] ?? '' ) ? axismundi_op_remote_question_view( $payload ) : null,
+		'quote_uri'       => function_exists( 'axismundi_op_quote_target_for_source' ) ? axismundi_op_quote_target_for_source( $id ) : '',
 	);
 }
 
@@ -405,6 +480,32 @@ function axismundi_op_source_publicly_visible( $source ) : bool {
 }
 
 /**
+ * Whether one resolved source may have its full card body republished publicly.
+ *
+ * `axismundi_op_source_publicly_visible()` deliberately accepts any cached
+ * remote observation, because inside a thread this site already received it. A
+ * public card is a stronger claim: an Actor timeline, hashtag archive, quote
+ * preview, or thread reproduces the body for anonymous visitors. So a remote
+ * Object must additionally prove its own public audience -- a public Announce or
+ * quote never widens the audience of the Object it points at.
+ *
+ * This reuses the cached-object predicate the anonymous replies collection and
+ * HTML route already enforce, which keeps a Tombstone publicly renderable: a
+ * deletion notice carries no content, and a thread still has to show that a
+ * reply once existed.
+ */
+function axismundi_op_object_card_publicly_renderable( $source ) : bool {
+	if ( ! axismundi_op_source_publicly_visible( $source ) ) {
+		return false;
+	}
+	if ( $source instanceof Axismundi_Op_Remote_Source ) {
+		return function_exists( 'axismundi_op_cached_object_publicly_viewable' )
+			&& axismundi_op_cached_object_publicly_viewable( $source->get_row() );
+	}
+	return true;
+}
+
+/**
  * Reply view models for one parent URI, local or remote, tombstone-aware.
  *
  * @return array<int,array<string,mixed>>
@@ -414,7 +515,7 @@ function axismundi_op_get_reply_view_models( string $parent_uri, int $limit = 50
 	$display = axismundi_op_get_display_thread_reply_uris( $parent_uri, $limit );
 	foreach ( $display['uris'] as $child_uri ) {
 		$source = axismundi_op_resolve_source_by_uri( $child_uri );
-		if ( null === $source || ! axismundi_op_source_publicly_visible( $source ) ) {
+		if ( null === $source || ! axismundi_op_object_card_publicly_renderable( $source ) ) {
 			continue;
 		}
 		$model = axismundi_op_object_view_model( $source );
@@ -432,7 +533,7 @@ function axismundi_op_get_parent_view_model( string $child_uri ) : ?array {
 		return null;
 	}
 	$source = axismundi_op_resolve_source_by_uri( $parent_uri );
-	if ( null === $source || ! axismundi_op_source_publicly_visible( $source ) ) {
+	if ( null === $source || ! axismundi_op_object_card_publicly_renderable( $source ) ) {
 		return null;
 	}
 	return axismundi_op_object_view_model( $source );
@@ -462,9 +563,10 @@ function axismundi_op_render_thread_item( array $model, string $children_html = 
  * shared `remaining` counter bounds an entire tree rather than each level.
  *
  * @param string[] $ancestors Canonical URIs already on this branch.
+ * @param bool $render_html Whether to build list-item HTML as well as count the tree.
  * @return array{html:string,count:int,truncated:bool}
  */
-function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, array $ancestors = array() ) : array {
+function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, array $ancestors = array(), bool $render_html = true ) : array {
 	if ( $remaining <= 0 ) {
 		return array( 'html' => '', 'count' => 0, 'truncated' => false );
 	}
@@ -482,7 +584,7 @@ function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, ar
 			continue;
 		}
 		$source = axismundi_op_resolve_source_by_uri( $child_uri );
-		if ( null === $source || ! axismundi_op_source_publicly_visible( $source ) ) {
+		if ( null === $source || ! axismundi_op_object_card_publicly_renderable( $source ) ) {
 			continue;
 		}
 		$model = axismundi_op_object_view_model( $source );
@@ -491,7 +593,7 @@ function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, ar
 		}
 		--$remaining;
 		if ( $remaining > 0 ) {
-			$branch = axismundi_op_render_reply_tree( $child_uri, $remaining, array_merge( $ancestors, array( $child_uri ) ) );
+			$branch = axismundi_op_render_reply_tree( $child_uri, $remaining, array_merge( $ancestors, array( $child_uri ) ), $render_html );
 		} else {
 			$branch = array(
 				'html'      => '',
@@ -499,12 +601,33 @@ function axismundi_op_render_reply_tree( string $parent_uri, int &$remaining, ar
 				'truncated' => ! empty( axismundi_op_get_display_thread_reply_uris( $child_uri, 1 )['uris'] ),
 			);
 		}
-		$items[] = axismundi_op_render_thread_item( $model, $branch['html'] );
+		if ( $render_html ) {
+			$items[] = axismundi_op_render_thread_item( $model, $branch['html'] );
+		}
 		++$count;
 		$count += $branch['count'];
 		$truncated = $truncated || $branch['truncated'];
 	}
-	return array( 'html' => implode( '', $items ), 'count' => $count, 'truncated' => $truncated );
+	return array( 'html' => $render_html ? implode( '', $items ) : '', 'count' => $count, 'truncated' => $truncated );
+}
+
+/**
+ * Count the same bounded, visible reply tree that the Replies block renders.
+ *
+ * This is intentionally distinct from the ActivityStreams replies collection,
+ * whose members are direct children. Interaction controls use this display
+ * count so their number cannot disagree with the on-page thread heading.
+ *
+ * @return array{count:int,truncated:bool}
+ */
+function axismundi_op_get_display_reply_tree_count( string $parent_uri, int $limit = 50 ) : array {
+	$parent = axismundi_op_relation_uri( $parent_uri );
+	if ( '' === $parent ) {
+		return array( 'count' => 0, 'truncated' => false );
+	}
+	$remaining = max( 1, min( 50, $limit ) );
+	$tree      = axismundi_op_render_reply_tree( $parent, $remaining, array( $parent ), false );
+	return array( 'count' => (int) $tree['count'], 'truncated' => ! empty( $tree['truncated'] ) );
 }
 
 /** Render the "in reply to" context line for the request's current object view model. */
@@ -568,8 +691,10 @@ function axismundi_op_register_thread_blocks() : void {
 			'api_version'     => 3,
 			'title'           => __( 'Axismundi Reply Context', 'axismundi-object-projections' ),
 			'category'        => 'theme',
+			'editor_script'   => 'axismundi-op-object-blocks',
+			'style'           => 'axismundi-op-object-view',
 			'render_callback' => 'axismundi_op_render_reply_context_block',
-			'supports'        => array( 'html' => false, 'inserter' => false ),
+			'supports'        => array( 'html' => false ),
 		)
 	);
 	register_block_type(
@@ -578,8 +703,10 @@ function axismundi_op_register_thread_blocks() : void {
 			'api_version'     => 3,
 			'title'           => __( 'Axismundi Replies', 'axismundi-object-projections' ),
 			'category'        => 'theme',
+			'editor_script'   => 'axismundi-op-object-blocks',
+			'style'           => 'axismundi-op-object-view',
 			'render_callback' => 'axismundi_op_render_replies_block',
-			'supports'        => array( 'html' => false, 'inserter' => false ),
+			'supports'        => array( 'html' => false ),
 		)
 	);
 }

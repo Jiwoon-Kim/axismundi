@@ -393,7 +393,7 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 		</tbody>
 	</table>
 	<h3><?php esc_html_e( 'Avatar and header cache', 'axismundi-actors' ); ?></h3>
-	<p><a class="button" href="<?php echo esc_url( add_query_arg( 'ax_actor', $actor->get_uuid(), home_url( '/' ) ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Preview cached profile', 'axismundi-actors' ); ?></a></p>
+	<p><a class="button" href="<?php echo esc_url( axismundi_actors_profile_hub_url( $actor ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View cached profile', 'axismundi-actors' ); ?></a></p>
 	<?php do_action( 'axismundi_actors_remote_actor_actions', $actor ); ?>
 	<?php if ( empty( $assets ) ) : ?>
 		<p><?php esc_html_e( 'No remote image sources were reported.', 'axismundi-actors' ); ?></p>
@@ -568,6 +568,7 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 	</form>
 	<?php axismundi_actors_media_form( $actor ); ?>
 	<?php axismundi_actors_text_form( $actor ); ?>
+	<?php axismundi_actors_profile_fields_form( $actor ); ?>
 	<?php
 }
 
@@ -611,6 +612,7 @@ function axismundi_actors_render_site_page() : void {
 	</form>
 	<?php axismundi_actors_media_form( $actor ); ?>
 	<?php axismundi_actors_text_form( $actor ); ?>
+	<?php axismundi_actors_profile_fields_form( $actor ); ?>
 	</div>
 	<?php
 }
@@ -638,6 +640,21 @@ function axismundi_actors_enqueue_media_picker( string $hook ) : void {
 		array( 'jquery' ),
 		file_exists( $js ) ? (string) filemtime( $js ) : false,
 		true
+	);
+	$fields_js  = dirname( __DIR__ ) . '/assets/actor-profile-fields.js';
+	$fields_css = dirname( __DIR__ ) . '/assets/actor-profile-fields.css';
+	wp_enqueue_script(
+		'axismundi-actors-profile-fields',
+		plugins_url( 'assets/actor-profile-fields.js', $base ),
+		array(),
+		file_exists( $fields_js ) ? (string) filemtime( $fields_js ) : false,
+		true
+	);
+	wp_enqueue_style(
+		'axismundi-actors-profile-fields',
+		plugins_url( 'assets/actor-profile-fields.css', $base ),
+		array(),
+		file_exists( $fields_css ) ? (string) filemtime( $fields_css ) : false
 	);
 }
 add_action( 'admin_enqueue_scripts', 'axismundi_actors_enqueue_media_picker' );
@@ -753,15 +770,59 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 				<td><textarea id="ax-actor-summary" name="summary" rows="4" class="large-text"><?php echo esc_textarea( $map[ $language ]['summary'] ?? '' ); ?></textarea></td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="ax-actor-content"><?php esc_html_e( 'About', 'axismundi-actors' ); ?></label></th>
-				<td><textarea id="ax-actor-content" name="content" rows="8" class="large-text"><?php echo esc_textarea( $map[ $language ]['content'] ?? '' ); ?></textarea></td>
-			</tr>
-			<tr>
 				<th scope="row"><?php esc_html_e( 'Default language', 'axismundi-actors' ); ?></th>
 				<td><label><input type="checkbox" name="make_default" value="1" <?php checked( $actor->get_default_language(), $language ); ?>> <?php esc_html_e( 'Use this language for scalar profile fields sent to peers.', 'axismundi-actors' ); ?></label></td>
 			</tr>
 		</table>
 		<?php submit_button( __( 'Save profile language', 'axismundi-actors' ) ); ?>
+	</form>
+	<?php
+}
+
+/** Render local Actor links as ActivityStreams PropertyValue attachments. */
+function axismundi_actors_profile_fields_form( Axismundi_Actor $actor ) : void {
+	$fields = axismundi_actors_get_profile_fields( $actor->get_identity_id() );
+	while ( count( $fields ) < 3 ) {
+		$fields[] = array( 'name' => '', 'url' => '' );
+	}
+	?>
+	<h2><?php esc_html_e( 'Profile links', 'axismundi-actors' ); ?></h2>
+	<p class="description"><?php esc_html_e( 'These are published as ActivityStreams PropertyValue attachments. Use them for verified or reciprocal profile links.', 'axismundi-actors' ); ?></p>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="axismundi_actors_set_profile_fields">
+		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $actor->get_identity_id() ); ?>">
+		<?php wp_nonce_field( 'ax_actors_profile_fields_' . $actor->get_identity_id() ); ?>
+		<table class="widefat striped ax-actor-profile-fields" data-max-fields="8" data-label="<?php echo esc_attr__( 'Profile link', 'axismundi-actors' ); ?>" style="max-width: 900px">
+			<thead><tr><th class="ax-actor-profile-fields__order"><span class="screen-reader-text"><?php esc_html_e( 'Order', 'axismundi-actors' ); ?></span></th><th><?php esc_html_e( 'Label', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Web address', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Verification', 'axismundi-actors' ); ?></th><th><span class="screen-reader-text"><?php esc_html_e( 'Remove', 'axismundi-actors' ); ?></span></th></tr></thead>
+			<tbody class="ax-actor-profile-fields__rows">
+			<?php foreach ( $fields as $field ) : ?>
+				<tr class="ax-actor-profile-fields__row" draggable="true">
+					<td class="ax-actor-profile-fields__order">
+						<button type="button" class="button-link ax-actor-profile-fields__drag" aria-label="<?php esc_attr_e( 'Drag to reorder', 'axismundi-actors' ); ?>"><span class="dashicons dashicons-menu"></span></button>
+						<button type="button" class="button-link ax-actor-profile-fields__move-up" aria-label="<?php esc_attr_e( 'Move up', 'axismundi-actors' ); ?>">&#8593;</button>
+						<button type="button" class="button-link ax-actor-profile-fields__move-down" aria-label="<?php esc_attr_e( 'Move down', 'axismundi-actors' ); ?>">&#8595;</button>
+					</td>
+					<td><input class="regular-text" name="profile_field_name[]" value="<?php echo esc_attr( (string) $field['name'] ); ?>" maxlength="191"></td>
+					<td><input class="large-text" type="url" name="profile_field_url[]" value="<?php echo esc_attr( (string) $field['url'] ); ?>" placeholder="https://example.com/"></td>
+					<td class="ax-actor-profile-fields__verification">
+						<?php if ( ! empty( $field['id'] ) ) : ?>
+							<?php if ( 'verified' === ( $field['verification_status'] ?? '' ) ) : ?>
+								<span class="ax-actor-profile-fields__verified" aria-label="<?php esc_attr_e( 'Verified reciprocal link', 'axismundi-actors' ); ?>">&#10003; <?php esc_html_e( 'Verified', 'axismundi-actors' ); ?></span>
+							<?php elseif ( 'failed' === ( $field['verification_status'] ?? '' ) ) : ?>
+								<span class="ax-actor-profile-fields__failed"><?php esc_html_e( 'Not verified', 'axismundi-actors' ); ?></span>
+							<?php else : ?>
+								<span><?php esc_html_e( 'Not checked', 'axismundi-actors' ); ?></span>
+							<?php endif; ?>
+							<button type="submit" class="button-link ax-actor-profile-fields__verify" name="verify_profile_field_url" value="<?php echo esc_attr( (string) $field['url'] ); ?>"><?php esc_html_e( 'Verify', 'axismundi-actors' ); ?></button>
+						<?php endif; ?>
+					</td>
+					<td><button type="button" class="button-link-delete ax-actor-profile-fields__remove" aria-label="<?php esc_attr_e( 'Remove profile link', 'axismundi-actors' ); ?>">&times;</button></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<p><button type="button" class="button ax-actor-profile-fields__add"><span class="dashicons dashicons-plus-alt2"></span> <?php esc_html_e( 'Add link', 'axismundi-actors' ); ?></button></p>
+		<?php submit_button( __( 'Save profile links', 'axismundi-actors' ) ); ?>
 	</form>
 	<?php
 }
@@ -946,7 +1007,6 @@ function axismundi_actors_handle_set_texts() : void {
 	$values   = array(
 		'name'    => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
 		'summary' => isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '',
-		'content' => isset( $_POST['content'] ) ? wp_kses_post( wp_unslash( $_POST['content'] ) ) : '',
 	);
 	foreach ( $values as $field => $value ) {
 		$outcome = axismundi_actors_set_text( $identity_id, $field, $language, $value );
@@ -967,3 +1027,29 @@ function axismundi_actors_handle_set_texts() : void {
 	axismundi_actors_redirect_result( $back, $result );
 }
 add_action( 'admin_post_axismundi_actors_set_texts', 'axismundi_actors_handle_set_texts' );
+
+/** @return void */
+function axismundi_actors_handle_set_profile_fields() : void {
+	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_profile_fields_' . $identity_id );
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
+		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$names  = isset( $_POST['profile_field_name'] ) && is_array( $_POST['profile_field_name'] ) ? wp_unslash( $_POST['profile_field_name'] ) : array();
+	$urls   = isset( $_POST['profile_field_url'] ) && is_array( $_POST['profile_field_url'] ) ? wp_unslash( $_POST['profile_field_url'] ) : array();
+	$fields = array();
+	foreach ( array_values( $names ) as $position => $name ) {
+		$fields[] = array( 'name' => is_scalar( $name ) ? (string) $name : '', 'url' => isset( $urls[ $position ] ) && is_scalar( $urls[ $position ] ) ? (string) $urls[ $position ] : '' );
+	}
+	$result = axismundi_actors_save_profile_fields( $actor, $fields );
+	if ( ! is_wp_error( $result ) && isset( $_POST['verify_profile_field_url'] ) && is_scalar( $_POST['verify_profile_field_url'] ) ) {
+		$verify_url = esc_url_raw( trim( (string) wp_unslash( $_POST['verify_profile_field_url'] ) ) );
+		$result     = axismundi_actors_verify_profile_field( $actor, $verify_url );
+	}
+	$back = 'site' === $actor->get_scope()
+		? admin_url( 'options-general.php?page=axismundi-actor-site' )
+		: axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
+	axismundi_actors_redirect_result( $back, $result );
+}
+add_action( 'admin_post_axismundi_actors_set_profile_fields', 'axismundi_actors_handle_set_profile_fields' );

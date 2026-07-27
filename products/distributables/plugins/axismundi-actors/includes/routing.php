@@ -132,6 +132,11 @@ function axismundi_actors_can_preview( Axismundi_Actor $actor, ?int $user_id = n
 	if ( null !== $local_user_id && $local_user_id === $user_id ) {
 		return true;
 	}
+	// A managed actor (Group/Service/Organization) has no owning WP user; its
+	// preview/manage authority is the manager relation, not user identity.
+	if ( $actor->is_managed() && function_exists( 'axismundi_actors_managed_actor_can_manage' ) ) {
+		return axismundi_actors_managed_actor_can_manage( $actor->get_identity_id(), $user_id );
+	}
 	return 'site' === $actor->get_scope() && (int) get_option( 'ax_actors_site_owner_user_id', 0 ) === $user_id;
 }
 
@@ -263,20 +268,18 @@ function axismundi_actors_block_subject_from_actor( Axismundi_Actor $actor ) : a
 /**
  * Resolve the Actor-shaped subject a nested identity block should display.
  *
- * Profile routes and an explicit Account Header actorId still win. Other
- * products may then supply a normalized author descriptor for a current Object
- * through the filter, keeping Avatar and Identity as Actors-owned blocks even
- * when an observed remote Object predates its cached Actor record.
+ * A nested product can replace the route or explicit Account Header subject
+ * through the filter. This lets an Object Card on an Actor timeline display the
+ * Object's attributed author rather than the profile owner, while the profile
+ * header itself keeps using the routed Actor when no product context is active.
  *
  * @return array<string,mixed>|null
  */
 function axismundi_actors_resolve_block_subject( string $context_actor_id ) : ?array {
 	$actor = axismundi_actors_resolve_block_actor( $context_actor_id );
-	if ( $actor instanceof Axismundi_Actor ) {
-		return axismundi_actors_block_subject_from_actor( $actor );
-	}
+	$subject = $actor instanceof Axismundi_Actor ? axismundi_actors_block_subject_from_actor( $actor ) : null;
 	/** @param array<string,mixed>|null $subject Normalized external Actor descriptor. */
-	$subject = apply_filters( 'axismundi_actors_block_subject', null, $context_actor_id );
+	$subject = apply_filters( 'axismundi_actors_block_subject', $subject, $context_actor_id );
 	if ( ! is_array( $subject ) ) {
 		return null;
 	}

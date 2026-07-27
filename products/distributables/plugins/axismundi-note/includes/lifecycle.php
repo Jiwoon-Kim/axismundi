@@ -82,7 +82,7 @@ function axismundi_note_emit_saved_lifecycle( int $post_id, WP_Post $post, bool 
 		return;
 	}
 	$result = axismundi_note_record_commit( $post );
-	if ( is_wp_error( $result ) && ( ! function_exists( 'axismundi_note_quote_is_held_error' ) || ! axismundi_note_quote_is_held_error( $result ) ) ) {
+	if ( is_wp_error( $result ) ) {
 		axismundi_note_lifecycle_failed( $result, $post );
 	}
 }

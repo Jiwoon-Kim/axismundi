@@ -170,13 +170,22 @@ try {
 
 	$remote_actor = ax_nql_remote_actor( $ax_nql_actor_ids, 'quote-' . strtolower( wp_generate_password( 6, false, false ) ) );
 	$remote_target = $remote_actor instanceof Axismundi_Actor ? ax_nql_remote_target( $ax_nql_remote_objects, $remote_actor, strtolower( wp_generate_password( 6, false, false ) ) ) : '';
-	$remote_quote = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Remote held quote.', $remote_target );
+	$remote_quote = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Remote pending quote.', $remote_target );
 	ax_nql_publish( $remote_quote['post_id'] );
 	$remote_request = $remote_actor instanceof Axismundi_Actor ? axismundi_act_get_outbound_quote_request( $remote_quote['uri'], $remote_target, $actor_uri, $remote_actor->get_uri() ) : null;
 	$remote_instrument = $remote_request instanceof Axismundi_Activity ? $remote_request->get_payload()['instrument'] ?? array() : array();
 	$remote_pending_source = new Axismundi_Note_Source( axismundi_note_get( $remote_quote['post_id'] ), get_post( $remote_quote['post_id'] ) );
 	$remote_pending_status = axismundi_note_quote_status( get_post( $remote_quote['post_id'] ) );
-	ax_nql_assert( $ax_nql_results, 'a remote quote records one request and stays hidden while its finalized inline instrument awaits approval', $remote_request instanceof Axismundi_Activity && 'outbound' === $remote_request->get_direction() && is_array( $remote_instrument ) && ax_nql_has_quote_context( $remote_instrument ) && null === axismundi_act_get_object_lifecycle( $remote_quote['uri'] ) && 'pending' === $remote_pending_status['state'] && ! axismundi_note_source_visible( $remote_pending_source ) );
+	$remote_pending_lifecycle = axismundi_act_get_object_lifecycle( $remote_quote['uri'] );
+	$remote_pending_object = $remote_pending_lifecycle instanceof Axismundi_Activity ? $remote_pending_lifecycle->get_payload()['object'] ?? array() : array();
+	$remote_pending_model = axismundi_op_object_view_model( $remote_pending_source );
+	axismundi_op_set_current_object_view_model( is_array( $remote_pending_model ) ? $remote_pending_model : null );
+	$remote_pending_context = (array) ( axismundi_op_current_object_view_model()['quote_context'] ?? array() );
+	axismundi_op_set_current_object_view_model( null );
+	// Matches Mastodon: the quoting Note's own Create is never held for the quote
+	// decision. It publishes immediately with a bare quote link and no
+	// quoteAuthorization; only the quoted target's card is gated on `pending`.
+	ax_nql_assert( $ax_nql_results, 'a remote quote records one request, publishes its own Create immediately, and withholds only quoteAuthorization while pending', $remote_request instanceof Axismundi_Activity && 'outbound' === $remote_request->get_direction() && is_array( $remote_instrument ) && ax_nql_has_quote_context( $remote_instrument ) && $remote_pending_lifecycle instanceof Axismundi_Activity && 'Create' === $remote_pending_lifecycle->get_type() && $remote_target === ( $remote_pending_object['quote'] ?? '' ) && ! isset( $remote_pending_object['quoteAuthorization'] ) && 'pending' === $remote_pending_status['state'] && 'pending' === (string) ( $remote_pending_context['display_state'] ?? '' ) && null === ( $remote_pending_context['target'] ?? null ) && axismundi_note_source_visible( $remote_pending_source ) );
 
 	$remote_auth_uri = 'https://remote.example/authorizations/' . strtolower( wp_generate_password( 8, false, false ) );
 	$auth_cached = $remote_request instanceof Axismundi_Activity && $remote_actor instanceof Axismundi_Actor
@@ -204,7 +213,10 @@ try {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture diagnostic.
 		printf( "[INFO] remote lifecycle errors: %s\n", implode( ',', $GLOBALS['ax_nql_errors'] ) );
 	}
-	ax_nql_assert( $ax_nql_results, 'a signed remote Accept wakes one Create and the route re-projects the same verified evidence', $auth_cached && $accept instanceof Axismundi_Activity && $remote_lifecycle instanceof Axismundi_Activity && 'Create' === $remote_lifecycle->get_type() && $remote_auth_uri === ( $remote_object['quoteAuthorization'] ?? '' ) && ax_nql_has_quote_context( $remote_object, true ) && 'accepted' === $remote_accepted_status['state'] && is_array( $remote_projection ) && $remote_auth_uri === ( $remote_projection['quoteAuthorization'] ?? '' ) && axismundi_note_source_visible( $remote_accepted_source ) );
+	// The Create already exists from the initial pending publish; a signed Accept
+	// re-commits with the now-available authorization, which the Activity ledger
+	// records as an Update on the same Object -- never a second Create.
+	ax_nql_assert( $ax_nql_results, 'a signed remote Accept wakes an Update carrying the verified authorization, not a second Create', $auth_cached && $accept instanceof Axismundi_Activity && $remote_lifecycle instanceof Axismundi_Activity && 'Update' === $remote_lifecycle->get_type() && ! hash_equals( $remote_pending_lifecycle->get_uri(), $remote_lifecycle->get_uri() ) && $remote_auth_uri === ( $remote_object['quoteAuthorization'] ?? '' ) && ax_nql_has_quote_context( $remote_object, true ) && 'accepted' === $remote_accepted_status['state'] && is_array( $remote_projection ) && $remote_auth_uri === ( $remote_projection['quoteAuthorization'] ?? '' ) && axismundi_note_source_visible( $remote_accepted_source ) );
 
 	$rejected_target = $remote_actor instanceof Axismundi_Actor ? ax_nql_remote_target( $ax_nql_remote_objects, $remote_actor, 'rejected-' . strtolower( wp_generate_password( 6, false, false ) ) ) : '';
 	$rejected_quote  = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Rejected quote.', $rejected_target );
@@ -225,7 +237,13 @@ try {
 	$rejected_decision = $rejected_request instanceof Axismundi_Activity ? axismundi_act_outbound_quote_decision( $rejected_request->get_uri() ) : null;
 	$rejected_source = new Axismundi_Note_Source( axismundi_note_get( $rejected_quote['post_id'] ), get_post( $rejected_quote['post_id'] ) );
 	$rejected_status = axismundi_note_quote_status( get_post( $rejected_quote['post_id'] ) );
-	ax_nql_assert( $ax_nql_results, 'a remote Reject is durable and keeps both Create and the public route closed', $reject instanceof Axismundi_Activity && is_array( $rejected_decision ) && 'rejected' === $rejected_decision['decision'] && null === axismundi_act_get_object_lifecycle( $rejected_quote['uri'] ) && 'rejected' === $rejected_status['state'] && ! axismundi_note_source_visible( $rejected_source ) );
+	$rejected_lifecycle = axismundi_act_get_object_lifecycle( $rejected_quote['uri'] );
+	$rejected_object = $rejected_lifecycle instanceof Axismundi_Activity ? $rejected_lifecycle->get_payload()['object'] ?? array() : array();
+	// A Reject is durable but never closes the Note's own Create: it re-commits an
+	// unchanged (still unauthorized) snapshot, which the ledger recognizes as the
+	// same activity rather than minting an Update, and the Note's own commentary
+	// stays publicly visible -- only the quoted card is what a reader never sees.
+	ax_nql_assert( $ax_nql_results, 'a remote Reject is durable, never closes the Note\'s own Create, and withholds authorization permanently', $reject instanceof Axismundi_Activity && is_array( $rejected_decision ) && 'rejected' === $rejected_decision['decision'] && $rejected_lifecycle instanceof Axismundi_Activity && 'Create' === $rejected_lifecycle->get_type() && $rejected_target === ( $rejected_object['quote'] ?? '' ) && ! isset( $rejected_object['quoteAuthorization'] ) && 'rejected' === $rejected_status['state'] && axismundi_note_source_visible( $rejected_source ) );
 
 	// Removing and re-adding the same target is an explicit retry. It must mint a
 	// new request generation rather than resolving forever to the immutable Reject.
@@ -234,12 +252,17 @@ try {
 	$retry_result     = axismundi_note_reconcile_quote( $rejected_quote['post_id'] );
 	$retried_request  = $remote_actor instanceof Axismundi_Actor ? axismundi_act_get_outbound_quote_request( $rejected_quote['uri'], $rejected_target, $actor_uri, $remote_actor->get_uri(), (int) ( $retried_envelope['quote_generation'] ?? 0 ) ) : null;
 	$retried_status   = axismundi_note_quote_status( get_post( $rejected_quote['post_id'] ) );
-	ax_nql_assert( $ax_nql_results, 'removing and re-adding a rejected target records a fresh pending QuoteRequest generation', is_array( $retried_envelope ) && (int) $retried_envelope['quote_generation'] > 1 && is_wp_error( $retry_result ) && 'ax_note_quote_pending' === $retry_result->get_error_code() && $retried_request instanceof Axismundi_Activity && ! hash_equals( $rejected_request->get_uri(), $retried_request->get_uri() ) && null === axismundi_act_outbound_quote_decision( $retried_request->get_uri() ) && 'pending' === $retried_status['state'] );
+	// Reconcile always succeeds now (the Create is never held), and the committed
+	// snapshot is unchanged -- still the same unauthorized quote link -- so the
+	// ledger reuses the existing Create rather than minting anything new. What
+	// proves the retry took effect is the fresh QuoteRequest generation itself.
+	ax_nql_assert( $ax_nql_results, 'removing and re-adding a rejected target records a fresh pending QuoteRequest generation', is_array( $retried_envelope ) && (int) $retried_envelope['quote_generation'] > 1 && $retry_result instanceof Axismundi_Activity && $retried_request instanceof Axismundi_Activity && ! hash_equals( $rejected_request->get_uri(), $retried_request->get_uri() ) && null === axismundi_act_outbound_quote_decision( $retried_request->get_uri() ) && 'pending' === $retried_status['state'] );
 
 	$bad_auth_target = $remote_actor instanceof Axismundi_Actor ? ax_nql_remote_target( $ax_nql_remote_objects, $remote_actor, 'bad-auth-' . strtolower( wp_generate_password( 6, false, false ) ) ) : '';
 	$bad_auth_quote  = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Mismatched authorization quote.', $bad_auth_target );
 	ax_nql_publish( $bad_auth_quote['post_id'] );
 	$bad_auth_request = $remote_actor instanceof Axismundi_Actor ? axismundi_act_get_outbound_quote_request( $bad_auth_quote['uri'], $bad_auth_target, $actor_uri, $remote_actor->get_uri() ) : null;
+	$bad_auth_pending_lifecycle = axismundi_act_get_object_lifecycle( $bad_auth_quote['uri'] );
 	$bad_auth_uri = 'https://remote.example/authorizations/' . strtolower( wp_generate_password( 8, false, false ) );
 	$bad_auth_cached = $bad_auth_request instanceof Axismundi_Activity && $remote_actor instanceof Axismundi_Actor
 		? ax_nql_remote_authorization( $ax_nql_remote_objects, $bad_auth_uri, $bad_auth_request, $remote_actor->get_uri(), 'https://remote.example/notes/wrong-target' )
@@ -258,7 +281,15 @@ try {
 			'inbound'
 		)
 		: null;
-	ax_nql_assert( $ax_nql_results, 'an Accept whose authorization names a different target cannot open Create', $bad_auth_cached && $bad_accept instanceof Axismundi_Activity && null === axismundi_act_get_object_lifecycle( $bad_auth_quote['uri'] ) && in_array( 'ax_note_quote_authorization', $GLOBALS['ax_nql_errors'], true ) );
+	$bad_auth_lifecycle = axismundi_act_get_object_lifecycle( $bad_auth_quote['uri'] );
+	$bad_auth_object    = $bad_auth_lifecycle instanceof Axismundi_Activity ? $bad_auth_lifecycle->get_payload()['object'] ?? array() : array();
+	// The Note's Create already exists from the initial pending publish; a signed
+	// Accept whose authorization names a different target never upgrades it. It
+	// remains the same bare-quote Create; quote_context turns the invalid state
+	// into an unavailable card instead of turning the author's own post into a
+	// lifecycle failure.
+	$bad_auth_status = axismundi_note_quote_status( get_post( $bad_auth_quote['post_id'] ) );
+	ax_nql_assert( $ax_nql_results, 'an Accept whose authorization names a different target leaves the same Create unauthorized and unavailable', $bad_auth_cached && $bad_accept instanceof Axismundi_Activity && $bad_auth_pending_lifecycle instanceof Axismundi_Activity && $bad_auth_lifecycle instanceof Axismundi_Activity && hash_equals( $bad_auth_pending_lifecycle->get_uri(), $bad_auth_lifecycle->get_uri() ) && $bad_auth_target === ( $bad_auth_object['quote'] ?? '' ) && ! isset( $bad_auth_object['quoteAuthorization'] ) && 'invalid' === $bad_auth_status['state'] );
 
 	$recovery_target = $remote_actor instanceof Axismundi_Actor ? ax_nql_remote_target( $ax_nql_remote_objects, $remote_actor, 'recovery-' . strtolower( wp_generate_password( 6, false, false ) ) ) : '';
 	$recovery_quote  = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Recovery quote.', $recovery_target );
@@ -286,12 +317,22 @@ try {
 	add_action( 'axismundi_act_outbound_quote_decided', 'axismundi_note_quote_decided', 20, 3 );
 	$reconciled = axismundi_note_reconcile_quote( $recovery_quote['post_id'] );
 	$after_reconcile = axismundi_act_get_object_lifecycle( $recovery_quote['uri'] );
-	ax_nql_assert( $ax_nql_results, 'an accepted request survives a lost wake-up and reconcile records exactly one Create', $recovery_cached && $recovery_accept instanceof Axismundi_Activity && null === $before_reconcile && $reconciled instanceof Axismundi_Activity && $after_reconcile instanceof Axismundi_Activity && $reconciled->get_id() === $after_reconcile->get_id() );
+	// The Note's own Create already exists from its initial publish (a lost
+	// wake-up never held it back); it stays the unauthorized pending snapshot
+	// until an explicit reconcile independently recovers the authorization as
+	// an Update -- proving recovery does not depend on the decided-hook firing.
+	ax_nql_assert( $ax_nql_results, 'an accepted request survives a lost wake-up, and an independent reconcile still records the authorization as one Update', $recovery_cached && $recovery_accept instanceof Axismundi_Activity && $before_reconcile instanceof Axismundi_Activity && 'Create' === $before_reconcile->get_type() && $reconciled instanceof Axismundi_Activity && $after_reconcile instanceof Axismundi_Activity && 'Update' === $after_reconcile->get_type() && $reconciled->get_id() === $after_reconcile->get_id() && ! hash_equals( $before_reconcile->get_uri(), $after_reconcile->get_uri() ) );
 
 	$draft_target = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Unpublished target.' );
-	$bad_quote    = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Must remain held.', $draft_target['uri'] );
+	$bad_quote    = ax_nql_note( $ax_nql_post_ids, (int) $author->ID, 'Publishes without a quote link.', $draft_target['uri'] );
 	ax_nql_publish( $bad_quote['post_id'] );
-	ax_nql_assert( $ax_nql_results, 'a self-owned draft target cannot use the self exception to open Create', null === axismundi_act_get_object_lifecycle( $bad_quote['uri'] ) );
+	$bad_quote_lifecycle = axismundi_act_get_object_lifecycle( $bad_quote['uri'] );
+	$bad_quote_object    = $bad_quote_lifecycle instanceof Axismundi_Activity ? $bad_quote_lifecycle->get_payload()['object'] ?? array() : array();
+	// An unresolvable target -- even one the author owns -- is never enough to
+	// hold the quoting Note's own Create; the target is unavailable to classify
+	// (still a draft, no Note lifecycle to resolve), so the quote link is simply
+	// dropped rather than the whole Note.
+	ax_nql_assert( $ax_nql_results, 'a self-owned draft target cannot be classified, so its Create publishes with the quote link dropped entirely', $bad_quote_lifecycle instanceof Axismundi_Activity && 'Create' === $bad_quote_lifecycle->get_type() && ! isset( $bad_quote_object['quote'] ) && ! isset( $bad_quote_object['quoteAuthorization'] ) );
 } finally {
 	remove_action( 'axismundi_note_lifecycle_failed', 'ax_nql_capture_error', 10 );
 	add_action( 'axismundi_act_outbound_quote_decided', 'axismundi_note_quote_decided', 20, 3 );

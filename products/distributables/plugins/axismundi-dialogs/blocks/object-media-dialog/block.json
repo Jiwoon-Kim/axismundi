@@ -1,0 +1,30 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-media-dialog",
+	"version": "0.2.3",
+	"title": "Object Media Dialog",
+	"category": "media",
+	"icon": "format-gallery",
+	"description": "A single per-page dialog that shows an Object's attached media full size, with the post and the post it replies to beside it. Object Attachments blocks anywhere on the page open it, so a feed never renders one dialog per post. Place one per page (e.g. before the footer).",
+	"textdomain": "axismundi-dialogs",
+	"supports": {
+		"html": false,
+		"inserter": true,
+		"multiple": false
+	},
+	"editorScript": "file:./edit.js",
+	"viewScript": "file:./view.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php",
+	"attributes": {
+		"variant": {
+			"type": "string",
+			"default": "basic",
+			"enum": [
+				"basic",
+				"fullscreen"
+			]
+		}
+	}
+}

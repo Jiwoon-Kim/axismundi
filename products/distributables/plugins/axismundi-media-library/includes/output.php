@@ -63,14 +63,30 @@ function axismundi_media_sensitive_overlay_with_warning( string $inner_html, str
 	if ( '' === trim( $warning ) ) {
 		$warning = __( 'Sensitive content', 'axismundi-media-library' );
 	}
-	return sprintf(
-		'<div class="ax-media-sensitive is-hidden"><div class="ax-media-sensitive__content">%1$s</div>'
-			. '<div class="ax-media-sensitive__overlay"><p class="ax-media-sensitive__warning">%2$s</p>'
-			. '<button type="button" class="ax-media-sensitive__reveal">%3$s</button></div></div>',
-		$inner_html,
-		esc_html( $warning ),
-		esc_html__( 'Show', 'axismundi-media-library' )
-	);
+	// The reveal control is a button, not a link: it performs an action and navigates
+	// nowhere, and an `href="#"` scrolls the reader to the top of the page on click.
+	// Federated content drops it entirely (the FEP-b2b8 allowlist admits no `button`),
+	// which is correct — a remote client cannot drive our reveal script and renders its
+	// own content-warning affordance. The warning text and blur classes still survive.
+	$overlay = '<div class="ax-media-sensitive__overlay"><p class="ax-media-sensitive__warning">' . esc_html( $warning ) . '</p>'
+		. '<button type="button" class="ax-media-sensitive__reveal">' . esc_html__( 'Show', 'axismundi-media-library' ) . '</button></div>';
+
+	// Core Image renders a figure. Decorate that existing gallery item rather than
+	// wrapping it: Core Gallery owns direct-child geometry and a wrapper makes a
+	// sensitive item fall out of its grid. The fallback keeps video/third-party
+	// block output covered when it does not have a figure root.
+	if ( preg_match( '/^(\s*<figure\b)([^>]*)(>.*)(<\/figure>\s*)$/si', $inner_html, $matches ) ) {
+		$attributes = (string) $matches[2];
+		if ( preg_match( '/\bclass=("|\')(.*?)\1/i', $attributes, $class_match ) ) {
+			$replacement = 'class=' . $class_match[1] . trim( $class_match[2] . ' ax-media-sensitive is-hidden' ) . $class_match[1];
+			$attributes   = str_replace( $class_match[0], $replacement, $attributes );
+		} else {
+			$attributes .= ' class="ax-media-sensitive is-hidden"';
+		}
+		return $matches[1] . $attributes . $matches[3] . $overlay . $matches[4];
+	}
+
+	return '<div class="ax-media-sensitive is-hidden"><div class="ax-media-sensitive__content">' . $inner_html . '</div>' . $overlay . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Rendered block HTML is already escaped by Core.
 }
 
 /**
@@ -94,6 +110,25 @@ function axismundi_media_block_attachment_id( array $block, $instance ) : int {
 	return 0;
 }
 
+/** Whether a core Image carries an additional, post-local content warning. */
+function axismundi_media_block_has_sensitive_override( array $block ) : bool {
+	return 'core/image' === (string) ( $block['blockName'] ?? '' )
+		&& ! empty( $block['attrs']['axismundiSensitive'] );
+}
+
+/**
+ * Return the effective warning for one rendered visual block.
+ *
+ * Attachment sensitivity is authoritative. A post-local image override has no
+ * attachment-owned warning text, so it deliberately uses the neutral default.
+ */
+function axismundi_media_block_content_warning( array $block, int $attachment_id ) : string {
+	if ( $attachment_id > 0 && axismundi_media_is_sensitive( $attachment_id ) ) {
+		return axismundi_media_content_warning_text( $attachment_id );
+	}
+	return __( 'Sensitive content', 'axismundi-media-library' );
+}
+
 /**
  * Blur sensitive media on the front end. Editor / REST block-renderer previews are
  * left untouched so authors always see the real media while editing.
@@ -110,13 +145,58 @@ function axismundi_media_render_sensitive_block( string $block_content, array $b
 	if ( '' === trim( $block_content ) || ! axismundi_media_is_independent() ) {
 		return $block_content;
 	}
-	$attachment_id = axismundi_media_block_attachment_id( $block, $instance );
-	if ( $attachment_id <= 0 || ! axismundi_media_is_sensitive( $attachment_id ) ) {
+	$attachment_id        = axismundi_media_block_attachment_id( $block, $instance );
+	$attachment_sensitive = $attachment_id > 0 && axismundi_media_is_sensitive( $attachment_id );
+	if ( ! $attachment_sensitive && ! axismundi_media_block_has_sensitive_override( $block ) ) {
 		return $block_content;
 	}
-	return axismundi_media_sensitive_overlay( $block_content, $attachment_id );
+	return axismundi_media_sensitive_overlay_with_warning(
+		$block_content,
+		axismundi_media_block_content_warning( $block, $attachment_id )
+	);
 }
 add_filter( 'render_block', 'axismundi_media_render_sensitive_block', 15, 3 );
+
+/** Expose the effective attachment sensitivity to the Core editor media store. */
+function axismundi_media_register_sensitivity_rest_field() : void {
+	register_rest_field(
+		'attachment',
+		'axismundiSensitive',
+		array(
+			'get_callback' => static function ( array $attachment ) : bool {
+				return axismundi_media_is_sensitive( (int) ( $attachment['id'] ?? 0 ) );
+			},
+			'schema'       => array(
+				'description' => __( 'Whether this attachment is marked sensitive by Media Library.', 'axismundi-media-library' ),
+				'type'        => 'boolean',
+				'context'     => array( 'view', 'edit' ),
+				'readonly'    => true,
+			),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_media_register_sensitivity_rest_field' );
+
+/** Add the post-local sensitivity control to Core Image. */
+function axismundi_media_enqueue_sensitive_image_editor() : void {
+	if ( ! axismundi_media_is_independent() ) {
+		return;
+	}
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen || ! $screen->is_block_editor() ) {
+		return;
+	}
+	$base = dirname( __DIR__ ) . '/axismundi-media-library.php';
+	$js   = dirname( __DIR__ ) . '/assets/sensitive-image-editor.js';
+	wp_enqueue_script(
+		'axismundi-media-sensitive-image-editor',
+		plugins_url( 'assets/sensitive-image-editor.js', $base ),
+		array( 'wp-block-editor', 'wp-components', 'wp-compose', 'wp-data', 'wp-element', 'wp-hooks', 'wp-i18n' ),
+		file_exists( $js ) ? (string) filemtime( $js ) : false,
+		true
+	);
+}
+add_action( 'enqueue_block_editor_assets', 'axismundi_media_enqueue_sensitive_image_editor' );
 
 /**
  * Enqueue the reveal overlay assets on the front end in Independent mode.

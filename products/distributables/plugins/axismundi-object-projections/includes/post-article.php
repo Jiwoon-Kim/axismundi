@@ -219,29 +219,202 @@ function axismundi_op_render_post_content( WP_Post $post, ?string $content = nul
 	}
 }
 
+/**
+ * Render an Article summary without re-running third-party `the_content` additions.
+ *
+ * A summary is a second representation of one Article, not a second content
+ * surface. Core blocks and legacy paragraph markup still need rendering, but
+ * filters that append sharing controls, adverts, or related posts must only
+ * run once on the Article body.
+ */
+function axismundi_op_render_post_summary( WP_Post $post, string $content ) : string {
+	$content = trim( $content );
+	if ( '' === $content ) {
+		return '';
+	}
+
+	$postdata_keys = array( 'post', 'id', 'authordata', 'currentday', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages' );
+	$previous      = array();
+	foreach ( $postdata_keys as $key ) {
+		$previous[ $key ] = array(
+			'exists' => array_key_exists( $key, $GLOBALS ),
+			'value'  => $GLOBALS[ $key ] ?? null,
+		);
+	}
+
+	$GLOBALS['post'] = $post;
+	setup_postdata( $post );
+	try {
+		// This is the non-extensible subset of Core's default content pipeline:
+		// block rendering plus legacy text/paragraph normalization. Deliberately
+		// do not call `the_content` here; arbitrary plugins commonly append UI.
+		$content = do_blocks( $content );
+		$content = wptexturize( $content );
+		$content = wpautop( $content );
+		return shortcode_unautop( $content );
+	} finally {
+		foreach ( $previous as $key => $state ) {
+			if ( $state['exists'] ) {
+				$GLOBALS[ $key ] = $state['value'];
+			} else {
+				unset( $GLOBALS[ $key ] );
+			}
+		}
+	}
+}
+
 /** Backward-compatible Article wrapper around the shared post-content renderer. */
 function axismundi_op_post_article_content( WP_Post $post, ?string $content = null ) : string {
 	return axismundi_op_render_post_content( $post, $content );
 }
 
-/** Build the optional embedded Note preview without minting another object id. */
-function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to, string $published ) : ?array {
-	$excerpt = trim( (string) $post->post_excerpt );
-	$parts    = get_extended( (string) $post->post_content );
-	$has_more = false !== strpos( (string) $post->post_content, '<!--more' );
-	$content  = '';
-	if ( $has_more && '' !== trim( (string) ( $parts['main'] ?? '' ) ) ) {
-		$content = axismundi_op_post_article_content( $post, (string) $parts['main'] );
-	} elseif ( '' !== $excerpt ) {
-		$content = '<p><strong>' . esc_html( get_the_title( $post ) ) . '</strong></p>' . wpautop( $excerpt );
+/** Whether one parsed block is the authored More boundary. */
+function axismundi_op_post_article_is_more_block( array $block ) : bool {
+	return 'core/more' === (string) ( $block['blockName'] ?? '' );
+}
+
+/**
+ * Copy a parent block with one side of its original child block list.
+ *
+ * `innerContent` uses null placeholders for child blocks. Keeping only the
+ * matching placeholders preserves valid serialized parent markup after a More
+ * boundary inside Group, Columns, or another container block.
+ *
+ * @param array<string,mixed> $block Original parsed block.
+ * @param array<int,array<string,mixed>> $children Child blocks keyed by original position.
+ * @return array<string,mixed>
+ */
+function axismundi_op_post_article_block_with_children( array $block, array $children ) : array {
+	$copy                = $block;
+	$copy['innerBlocks'] = array_values( $children );
+	$inner_content       = array();
+	$child_index         = 0;
+	foreach ( (array) ( $block['innerContent'] ?? array() ) as $fragment ) {
+		if ( null === $fragment ) {
+			if ( array_key_exists( $child_index, $children ) ) {
+				$inner_content[] = null;
+			}
+			++$child_index;
+			continue;
+		}
+		$inner_content[] = $fragment;
 	}
-	if ( '' === trim( $content ) ) {
+	$copy['innerContent'] = $inner_content;
+	return $copy;
+}
+
+/**
+ * Partition a parsed block list at the first More block, retaining containers
+ * on both sides of a nested boundary.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed blocks.
+ * @param bool $after True once the boundary has been encountered.
+ * @param bool $found True once the boundary has been encountered.
+ * @return array{summary:array<int,array<string,mixed>>,content:array<int,array<string,mixed>>}
+ */
+function axismundi_op_post_article_partition_blocks( array $blocks, bool &$after, bool &$found ) : array {
+	$summary = array();
+	$content = array();
+	foreach ( $blocks as $index => $block ) {
+		if ( axismundi_op_post_article_is_more_block( $block ) ) {
+			$found = true;
+			$after = true;
+			continue;
+		}
+
+		$children = (array) ( $block['innerBlocks'] ?? array() );
+		if ( ! empty( $children ) ) {
+			$parts = axismundi_op_post_article_partition_blocks( $children, $after, $found );
+			if ( ! empty( $parts['summary'] ) ) {
+				$summary[ $index ] = axismundi_op_post_article_block_with_children( $block, $parts['summary'] );
+			}
+			if ( ! empty( $parts['content'] ) ) {
+				$content[ $index ] = axismundi_op_post_article_block_with_children( $block, $parts['content'] );
+			}
+			continue;
+		}
+
+		if ( $after ) {
+			$content[ $index ] = $block;
+		} else {
+			$summary[ $index ] = $block;
+		}
+	}
+	return array(
+		'summary' => $summary,
+		'content' => $content,
+	);
+}
+
+/**
+ * Split a local Article at its authored More boundary.
+ *
+ * The material above More is the Article summary. The material below it is the
+ * Article body. A manually edited WordPress excerpt has a different job: it is
+ * published as the content of the optional embedded Note preview.
+ *
+ * @return array{summary:string,content:string}
+ */
+function axismundi_op_post_article_sections( WP_Post $post ) : array {
+	$content  = (string) $post->post_content;
+	if ( has_block( 'core/more', $content ) ) {
+		$after = false;
+		$found = false;
+		$parts = axismundi_op_post_article_partition_blocks( parse_blocks( $content ), $after, $found );
+		if ( $found ) {
+			return array(
+				'summary' => serialize_blocks( array_values( $parts['summary'] ) ),
+				'content' => serialize_blocks( array_values( $parts['content'] ) ),
+			);
+		}
+	}
+
+	if ( false === strpos( $content, '<!--more' ) ) {
+		return array(
+			'summary' => '',
+			'content' => $content,
+		);
+	}
+
+	$parts = get_extended( $content );
+	return array(
+		'summary' => (string) ( $parts['main'] ?? '' ),
+		'content' => (string) ( $parts['extended'] ?? '' ),
+	);
+}
+
+/**
+ * Resolve the stream-facing Article summary using Core's authored boundaries.
+ *
+ * More makes its leading material the summary. Without More, the optional
+ * editor-managed excerpt fills that role instead. This is deliberately separate
+ * from `preview`: a timeline consumes summary directly, while preview is a
+ * compatibility representation for consumers that cannot render an Article.
+ */
+function axismundi_op_post_article_summary_source( WP_Post $post, ?array $sections = null ) : string {
+	$sections = is_array( $sections ) ? $sections : axismundi_op_post_article_sections( $post );
+	$lead     = trim( (string) ( $sections['summary'] ?? '' ) );
+	if ( '' !== $lead ) {
+		return $lead;
+	}
+	return trim( (string) $post->post_excerpt );
+}
+
+/** Build the optional embedded Note preview without minting another object id. */
+function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to, string $published, ?array $sections = null ) : ?array {
+	// The explicitly edited excerpt is the preferred compatibility preview. When
+	// it is absent, the stream summary is still a useful minimal Note fallback.
+	$content = trim( (string) $post->post_excerpt );
+	if ( '' === $content ) {
+		$content = axismundi_op_post_article_summary_source( $post, $sections );
+	}
+	if ( '' === $content ) {
 		return null;
 	}
 	return array(
 		'type'         => 'Note',
 		'attributedTo' => $attributed_to,
-		'content'      => $content,
+		'content'      => wpautop( wp_kses_post( $content ) ),
 		'published'    => $published,
 	);
 }
@@ -336,13 +509,14 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	}
 
 	$published = get_post_time( DATE_W3C, true, $post );
+	$sections  = axismundi_op_post_article_sections( $post );
 	$article   = array(
 		'id'           => $id,
 		'type'         => 'Article',
 		'attributedTo' => $attributed_to,
 		'url'          => array( 'type' => 'Link', 'href' => $url, 'mediaType' => 'text/html' ),
 		'name'         => get_the_title( $post ),
-		'content'      => axismundi_op_post_article_content( $post ),
+		'content'      => axismundi_op_post_article_content( $post, $sections['content'] ),
 		'mediaType'    => 'text/html',
 		'published'    => $published,
 		'updated'      => get_post_modified_time( DATE_W3C, true, $post ),
@@ -354,10 +528,11 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 		$article['tag'] = $tags;
 	}
 
-	if ( '' !== trim( (string) $post->post_excerpt ) ) {
-		$article['summary'] = wpautop( (string) $post->post_excerpt );
+	$summary_source = axismundi_op_post_article_summary_source( $post, $sections );
+	if ( '' !== $summary_source ) {
+		$article['summary'] = axismundi_op_render_post_summary( $post, $summary_source );
 	}
-	$preview = axismundi_op_post_article_preview( $post, $attributed_to, $published );
+	$preview = axismundi_op_post_article_preview( $post, $attributed_to, $published, $sections );
 	if ( null !== $preview ) {
 		$article['preview'] = $preview;
 	}
@@ -433,7 +608,11 @@ function axismundi_op_local_post_object_view_model( $source ) : ?array {
 		'published'       => (string) ( $object['published'] ?? '' ),
 		'updated'         => (string) ( $object['updated'] ?? '' ),
 		'sensitive'       => ! empty( $object['sensitive'] ),
-		'content_warning' => (string) ( $object['summary'] ?? '' ),
+		// Article summary and a content warning are distinct fields. A local
+		// Article's summary is the content above More; its warning is the
+		// sensitive-object subject, when one was authored.
+		'summary'         => (string) ( $object['summary'] ?? '' ),
+		'content_warning' => (string) ( $object['dcterms:subject'] ?? '' ),
 		'attachments'     => $attachments,
 	);
 }

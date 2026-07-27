@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '12.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '13.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -77,6 +77,12 @@ function axismundi_actors_fetch_state_table() : string {
 function axismundi_actors_identity_relations_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_identity_relations';
+}
+
+/** @return string managed-actor manager relation table name. */
+function axismundi_actors_managers_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_actor_managers';
 }
 
 /**
@@ -356,11 +362,29 @@ function axismundi_actors_install() : void {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	// DB v13 (DATA-MODEL §9.6.1): managed-actor authority. Who may operate a managed
+	// Group / Service / Organization actor -- NOT follow, membership, or moderation
+	// (those live in the Activity / social store). Active relations only: revoke is a
+	// row delete, so an authority read is a plain existence/role check. The composite
+	// primary key makes one (actor, user) pair unique on its own.
+	$managers = axismundi_actors_managers_table();
+	dbDelta(
+		"CREATE TABLE {$managers} (
+			identity_id bigint(20) unsigned NOT NULL,
+			user_id bigint(20) unsigned NOT NULL,
+			role varchar(8) NOT NULL,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (identity_id, user_id),
+			KEY user_role (user_id, role)
+		) ENGINE=InnoDB {$charset};"
+	);
+
 	// Remote snapshot + endpoint + key refresh spans these tables. Make the storage
 	// engine contract explicit so START TRANSACTION is not merely decorative on an
 	// older installation created under a different server default.
 	$transactional_engines = true;
-	foreach ( array( $identities, $actors, $endpoints, $keys, $identity_relations, $profile_fields ) as $transactional_table ) {
+	foreach ( array( $identities, $actors, $endpoints, $keys, $identity_relations, $profile_fields, $managers ) as $transactional_table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table name, schema inspection.
 		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$transactional_table}'" );
 		if ( 'InnoDB' !== $engine ) {
@@ -512,6 +536,8 @@ function axismundi_actors_install() : void {
 	$fetch_state_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$fetch_state}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- final legacy-column check.
 	$final_actor_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$actors}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$manager_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$managers}" );
 	if (
 		in_array( 'avatar_attachment_id', $columns, true )
 		&& in_array( 'header_attachment_id', $columns, true )
@@ -542,6 +568,8 @@ function axismundi_actors_install() : void {
 		&& in_array( 'next_refresh_at', $fetch_state_columns, true )
 		&& ! in_array( 'inbox_uri', $final_actor_columns, true )
 		&& ! in_array( 'outbox_uri', $final_actor_columns, true )
+		&& in_array( 'role', $manager_columns, true )
+		&& in_array( 'user_id', $manager_columns, true )
 		&& $transactional_engines
 		&& $migrated
 		&& $relations_migrated
@@ -662,6 +690,11 @@ final class Axismundi_Actor {
 
 	public function is_local() : bool {
 		return 'local' === (string) $this->row['origin'];
+	}
+
+	/** A managed actor (Group/Service/Organization) administered via wp_ax_actor_managers, not a WP user. */
+	public function is_managed() : bool {
+		return 'managed' === (string) $this->row['actor_scope'];
 	}
 
 	public function get_display_name() : string {

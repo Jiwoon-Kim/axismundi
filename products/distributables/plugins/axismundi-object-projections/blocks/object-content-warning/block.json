@@ -1,0 +1,62 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-content-warning",
+	"version": "0.1.0",
+	"title": "Object Content Warning",
+	"category": "theme",
+	"icon": "hidden",
+	"description": "Folds everything an authored content warning covers — body, quote, poll, and attachments — behind one disclosure, the way Mastodon and Misskey present a warned post. Without an authored warning it renders its blocks untouched.",
+	"textdomain": "axismundi-object-projections",
+	"attributes": {
+		"ownsDisclosure": {
+			"type": "boolean",
+			"default": true
+		}
+	},
+	"providesContext": {
+		"axismundi/objectDisclosure": "ownsDisclosure"
+	},
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"align": [ "wide", "full" ],
+		"layout": true,
+		"spacing": {
+			"blockGap": true,
+			"margin": true,
+			"padding": true,
+			"__experimentalDefaultControls": {
+				"blockGap": true
+			}
+		},
+		"color": {
+			"gradients": true,
+			"link": true,
+			"__experimentalDefaultControls": {
+				"background": false,
+				"text": false
+			}
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalDefaultControls": { "fontSize": false }
+		},
+		"interactivity": {
+			"clientNavigation": true
+		},
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"style": "axismundi-op-object-view",
+	"editorStyle": "axismundi-op-object-view",
+	"render": "file:./render.php"
+}

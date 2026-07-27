@@ -62,7 +62,14 @@ function axismundi_note_validate_attachment_ids( int $post_id, $value ) {
 			return new WP_Error( 'ax_note_attachment', __( 'A selected attachment is unavailable or cannot be used.', 'axismundi-note' ) );
 		}
 		if ( null === axismundi_op_media_attachment_descriptor( $attachment ) ) {
-			return new WP_Error( 'ax_note_attachment_rendition', __( 'Every Note attachment must have a federatable media rendition.', 'axismundi-note' ) );
+			return new WP_Error(
+				'ax_note_attachment_rendition',
+				sprintf(
+					/* translators: %s: attachment title. */
+					__( '“%s” cannot be attached to a Note because it has no federatable media rendition.', 'axismundi-note' ),
+					$attachment->post_title
+				)
+			);
 		}
 		$ids[ $id ] = $id;
 	}

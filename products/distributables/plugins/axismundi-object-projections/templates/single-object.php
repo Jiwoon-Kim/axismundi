@@ -14,4 +14,14 @@ defined( 'ABSPATH' ) || exit;
 </main>
 <!-- /wp:group -->
 
+<?php
+/*
+ * One media dialog for the whole page, owned by Axismundi Dialogs. Object Projections
+ * composes it here the same way the Actor profile composes the Activities feed: the
+ * template places another plugin's surface without owning it. If Dialogs is inactive the
+ * block is unregistered and renders nothing, and the attachments stay inline-only.
+ */
+?>
+<!-- wp:axismundi/object-media-dialog /-->
+
 <!-- wp:template-part {"slug":"footer","area":"footer","tagName":"footer"} /-->

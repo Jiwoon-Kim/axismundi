@@ -1,0 +1,51 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-date",
+	"version": "0.1.0",
+	"title": "Object Date",
+	"category": "theme",
+	"icon": "calendar",
+	"description": "The publication or modification date of the ActivityStreams Object being rendered. The Object sibling of Core's Post Date.",
+	"textdomain": "axismundi-object-projections",
+	"attributes": {
+		"textAlign": { "type": "string" },
+		"field": { "type": "string", "default": "published" },
+		"format": { "type": "string", "default": "" },
+		"isLink": { "type": "boolean", "default": false, "role": "content" }
+	},
+	"example": { "viewportWidth": 500 },
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"color": {
+			"gradients": true,
+			"link": true,
+			"__experimentalDefaultControls": { "background": true, "text": true, "link": true }
+		},
+		"spacing": { "margin": true, "padding": true },
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalTextDecoration": true,
+			"__experimentalLetterSpacing": true,
+			"__experimentalDefaultControls": { "fontSize": true }
+		},
+		"interactivity": { "clientNavigation": true },
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true,
+			"__experimentalDefaultControls": { "radius": true, "color": true, "width": true, "style": true }
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"style": [ "wp-block-post-date", "axismundi-op-object-view" ],
+	"editorStyle": [ "wp-block-post-date-editor", "axismundi-op-object-view" ],
+	"render": "file:./render.php"
+}

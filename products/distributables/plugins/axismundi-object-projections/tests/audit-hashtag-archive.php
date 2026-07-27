@@ -99,7 +99,12 @@ try {
 		$ax_hashtag_archive_results,
 		'the archive block renders both local and remote cards with its type filters',
 		false !== strpos( $in_context, 'axismundi-hashtag-archive__filters' )
-			&& false !== strpos( $in_context, 'Local archive content' )
+			// The local fixture is a post, so it projects as an Article and takes the
+			// Article card: title, summary, and a way through, with no body in the
+			// stream. Its title is therefore what proves the card rendered — asserting on
+			// its content would be asserting that Articles leak their body into feeds.
+			&& false !== strpos( $in_context, 'Hashtag archive local object' )
+			// The remote fixture is a Note, whose body is the post and does appear.
 			&& false !== strpos( $in_context, 'Public remote archive content' )
 	);
 

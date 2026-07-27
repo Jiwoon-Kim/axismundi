@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Dialogs
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-dialogs
  * Description:       Accessible Material Design 3 side / bottom sheet and dialog blocks for Axismundi. The blocks own native dialog behavior; theme template parts own default content and layout.
- * Version:           0.2.2
+ * Version:           0.2.3
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -29,7 +29,7 @@ require_once __DIR__ . '/includes/interaction-dialog.php';
  * @return void
  */
 function axismundi_dialogs_register_blocks() : void {
-	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'post-quick-view-trigger', 'post-quick-view' ) as $axismundi_dialogs_block ) {
+	foreach ( array( 'dialogs', 'sheet', 'dialog', 'dialog-close', 'dialog-title', 'dialog-icon', 'post-quick-view-trigger', 'post-quick-view', 'object-media-dialog' ) as $axismundi_dialogs_block ) {
 		$axismundi_dialogs_dir = __DIR__ . '/blocks/' . $axismundi_dialogs_block;
 		if ( file_exists( $axismundi_dialogs_dir . '/block.json' ) ) {
 			register_block_type( $axismundi_dialogs_dir );
@@ -47,6 +47,10 @@ function axismundi_dialogs_register_blocks() : void {
 	wp_enqueue_block_style( 'axismundi/sheet', $axismundi_dialogs_shared );
 	wp_enqueue_block_style( 'axismundi/dialog', $axismundi_dialogs_shared );
 	wp_enqueue_block_style( 'axismundi/post-quick-view', $axismundi_dialogs_shared );
+	// The media dialog uses the same `ax-dialog` surface, scrim, and scroll-lock contract,
+	// and its runtime toggles the shared `ax-dialog-scroll-locked` class — which does
+	// nothing unless this stylesheet is on the page.
+	wp_enqueue_block_style( 'axismundi/object-media-dialog', $axismundi_dialogs_shared );
 }
 add_action( 'init', 'axismundi_dialogs_register_blocks' );
 

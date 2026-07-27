@@ -17,6 +17,7 @@
 	var useDispatch = wp.data.useDispatch;
 	var useEffect = wp.element.useEffect;
 	var useRef = wp.element.useRef;
+	var useState = wp.element.useState;
 	var POST_TYPE = 'ax_note';
 
 	wp.domReady( function () {
@@ -53,6 +54,7 @@
 			var ids = envelope.attachments || [];
 			return {
 				postType: editor.getCurrentPostType(),
+				postId: editor.getCurrentPostId(),
 				envelope: envelope,
 				media: ids.map( function ( id ) { return select( 'core' ).getMedia( id ); } )
 			};
@@ -60,6 +62,7 @@
 
 		var editPost = useDispatch( 'core/editor' ).editPost;
 		var appliedLaunchTarget = useRef( false );
+		var attachmentError = useState( '' );
 
 		if ( ! Panel || POST_TYPE !== state.postType ) {
 			return null;
@@ -117,7 +120,21 @@
 				} );
 			} );
 			frame.on( 'select', function () {
-				update( { attachments: frame.state().get( 'selection' ).map( function ( item ) { return item.id; } ) } );
+				var ids = frame.state().get( 'selection' ).map( function ( item ) { return item.id; } );
+				if ( ! state.postId || ! wp.apiFetch ) {
+					attachmentError[ 1 ]( __( 'Save this Note once before selecting media.', 'axismundi-note' ) );
+					return;
+				}
+				wp.apiFetch( {
+					path: '/axismundi-note/v1/attachments/validate',
+					method: 'POST',
+					data: { post: state.postId, attachments: ids }
+				} ).then( function ( response ) {
+					attachmentError[ 1 ]( '' );
+					update( { attachments: response.attachments || ids } );
+				} ).catch( function ( error ) {
+					attachmentError[ 1 ]( error && error.message ? error.message : __( 'The selected media cannot be attached to this Note.', 'axismundi-note' ) );
+				} );
 			} );
 			frame.open();
 		}
@@ -144,6 +161,7 @@
 				'div',
 				{ className: 'axismundi-note-attachments' },
 				el( 'h3', {}, __( 'Attachments', 'axismundi-note' ) ),
+				attachmentError[ 0 ] ? el( C.Notice, { status: 'error', isDismissible: true, onRemove: function () { attachmentError[ 1 ]( '' ); } }, attachmentError[ 0 ] ) : null,
 				( envelope.attachments || [] ).length
 					? el( 'ul', { className: 'axismundi-note-attachments__list' }, ( envelope.attachments || [] ).map( function ( id, index ) {
 						var item = state.media[ index ];

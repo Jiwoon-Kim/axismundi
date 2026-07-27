@@ -64,10 +64,17 @@ try {
 	$img_block = array( 'blockName' => 'core/image', 'attrs' => array( 'id' => $att ) );
 	$html      = '<figure class="wp-block-image"><img src="x.jpg" alt=""/></figure>';
 	ax_out_assert( $ax_results, 'non-sensitive image is left untouched', $html === axismundi_media_render_sensitive_block( $html, $img_block, null ) );
+	$override_block = array( 'blockName' => 'core/image', 'attrs' => array( 'id' => $att, 'axismundiSensitive' => true ) );
+	$override_wrapped = axismundi_media_render_sensitive_block( $html, $override_block, null );
+	ax_out_assert( $ax_results, 'a post-local core/image override wraps an otherwise non-sensitive attachment with the neutral warning', axismundi_media_block_has_sensitive_override( $override_block ) && false !== strpos( $override_wrapped, 'ax-media-sensitive is-hidden' ) && false !== strpos( $override_wrapped, 'Sensitive content' ) );
 
 	update_post_meta( $att, '_ax_media_sensitive', '1' );
 	$wrapped = axismundi_media_render_sensitive_block( $html, $img_block, null );
-	ax_out_assert( $ax_results, 'sensitive image is wrapped, original preserved', false !== strpos( $wrapped, 'ax-media-sensitive is-hidden' ) && false !== strpos( $wrapped, $html ) && false !== strpos( $wrapped, 'ax-media-sensitive__reveal' ) );
+	ax_out_assert( $ax_results, 'sensitive image decorates the original figure so Gallery geometry is preserved', false !== strpos( $wrapped, 'wp-block-image ax-media-sensitive is-hidden' ) && false !== strpos( $wrapped, '<button type="button" class="ax-media-sensitive__reveal">' ) && false !== strpos( $wrapped, '<img src="x.jpg"' ) );
+	// The reveal control performs an action and navigates nowhere. An `href="#"` anchor
+	// scrolls the reader to the top of the page and leaves a stray `#` in the URL.
+	ax_out_assert( $ax_results, 'the reveal control is a button and never an href="#" anchor', false === strpos( $wrapped, '<a class="ax-media-sensitive__reveal"' ) && false === strpos( $wrapped, 'href="#"' ) );
+	ax_out_assert( $ax_results, 'attachment sensitivity remains authoritative even when the post-local override is absent', false !== strpos( axismundi_media_render_sensitive_block( $html, $img_block, null ), 'ax-media-sensitive is-hidden' ) );
 
 	ax_out_assert( $ax_results, 'empty content is never wrapped', '' === axismundi_media_render_sensitive_block( '', $img_block, null ) );
 	ax_out_assert( $ax_results, 'unknown block is never wrapped', 'x' === axismundi_media_render_sensitive_block( 'x', array( 'blockName' => 'core/paragraph', 'attrs' => array() ), null ) );

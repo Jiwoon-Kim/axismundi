@@ -44,14 +44,516 @@
 	gap: 0.25rem 0.75rem;
 }
 
+.axismundi-object-card__meta {
+	color: color-mix(in srgb, currentColor 66%, transparent);
+	gap: 0.25rem 0.75rem;
+}
+
+/* Theme global styles deliberately give Core Query Title headline sizing. The
+ * Object Type is header metadata instead, so this two-class selector outranks
+ * the later :root :where(.wp-block-query-title) rule. */
+.wp-block-query-title.axismundi-object__type {
+	font-family: var(--wp--preset--font-family--roboto-serif, serif);
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
+}
+
+/* Same protection for Core Post Date's theme-level body-small default. */
+.wp-block-post-date.axismundi-object__date {
+	font-family: var(--wp--preset--font-family--roboto-flex, sans-serif);
+	font-size: var(--wp--preset--font-size--label-small, 0.75rem);
+}
+
 .axismundi-object__sensitive > summary {
 	cursor: pointer;
 	font-weight: 600;
 }
 
-.axismundi-object__attachments {
+/*
+ * Question.
+ *
+ * Results use a non-interactive native range meter; the Note plugin supplies
+ * actual checkbox/radio choices only when the viewer may cast a local vote.
+ * The shared segmented-list variation owns the surface treatment.
+ */
+.axismundi-question {
 	display: grid;
 	gap: var(--wp--preset--spacing--200, 0.75rem);
+}
+
+.axismundi-question__options,
+.axismundi-question__choices {
+	margin: 0;
+}
+
+/*
+ * The Question's selectable list is the theme's `list-segmented` geometry,
+ * copied here under its semantic owner. Keeping the Core list classes in the
+ * markup preserves theme interoperability; these scoped declarations make the
+ * same surface available in the dynamic block preview and on themes that do
+ * not ship Axismundi's style variation.
+ */
+.axismundi-question__choices {
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--25, 0.125rem);
+	border-radius: 16px;
+}
+
+.axismundi-question__choices > li {
+	box-sizing: border-box;
+	min-block-size: 56px;
+	margin: 0;
+	padding-block: var(--wp--preset--spacing--125, 0.5rem);
+	padding-inline: var(--wp--preset--spacing--200, 1rem);
+	display: flex;
+	align-items: center;
+	background-color: var(--wp--preset--color--surface-container, transparent);
+	color: var(--wp--preset--color--on-surface, currentColor);
+	border-radius: 4px;
+	transition: border-radius 150ms cubic-bezier(0.2, 0, 0, 1), background-color 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.axismundi-question__choices > li:first-child {
+	border-start-start-radius: 16px;
+	border-start-end-radius: 16px;
+}
+
+.axismundi-question__choices > li:last-child {
+	border-end-start-radius: 16px;
+	border-end-end-radius: 16px;
+}
+
+.axismundi-question__choices > li:only-child,
+.axismundi-question__choices > li:has(.ax-radio__input:checked),
+.axismundi-question__choices > li:has(.ax-checkbox__input:checked) {
+	border-radius: 16px;
+}
+
+.axismundi-question__choices > li:has(.ax-checkbox__input:checked) {
+	background-color: var(--wp--preset--color--secondary-container);
+	color: var(--wp--preset--color--on-secondary-container);
+}
+
+.axismundi-question__option,
+.axismundi-question__choices > li {
+	min-inline-size: 0;
+}
+
+.axismundi-question__option-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--150, 0.625rem);
+}
+
+.axismundi-question__option-name {
+	min-inline-size: 0;
+}
+
+.axismundi-question__result.is-selected {
+	background-color: var(--wp--preset--color--secondary-container, transparent);
+	color: var(--wp--preset--color--on-secondary-container, currentColor);
+}
+
+.axismundi-question__selected-icon {
+	flex: 0 0 auto;
+	font-size: 1.125rem;
+}
+
+.axismundi-question__result.is-selected .axismundi-question__option-name {
+	flex: 1 1 auto;
+}
+
+.axismundi-question__option-percent {
+	flex: 0 0 auto;
+	font-family: var(--wp--preset--font-family--monospace, monospace);
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
+}
+
+.axismundi-question__result-meter {
+	overflow: hidden;
+	block-size: 8px;
+	border-radius: 999px;
+	background-color: var(--wp--preset--color--secondary-container, color-mix(in srgb, currentColor 15%, transparent));
+}
+
+.axismundi-question__result-meter-value {
+	display: block;
+	inline-size: var(--_value, 0%);
+	block-size: 100%;
+	border-radius: inherit;
+	background-color: var(--wp--preset--color--primary, currentColor);
+}
+
+.axismundi-question__meta {
+	margin: 0;
+	color: color-mix(in srgb, currentColor 68%, transparent);
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
+}
+
+.axismundi-question__vote {
+	display: grid;
+	gap: var(--wp--preset--spacing--200, 0.75rem);
+}
+
+.axismundi-question__vote-actions {
+	display: flex;
+	justify-content: flex-start;
+	margin: 0;
+}
+
+.axismundi-question__vote fieldset {
+	min-inline-size: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.axismundi-question__vote legend {
+	margin-block-end: var(--wp--preset--spacing--150, 0.625rem);
+	font-size: var(--wp--preset--font-size--label-large, 0.875rem);
+	font-weight: 600;
+}
+
+/* Checkbox primitive copied from axismundi-lab/modules/checkbox. */
+.ax-checkbox {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+
+	cursor: pointer;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Hide native input visually but keep it accessible */
+.ax-checkbox__input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	opacity: 0;
+	cursor: pointer;
+	z-index: 1; /* above visual so clicks register on the bigger area */
+}
+
+/* Visual container — also hosts the state layer + check icon */
+.ax-checkbox__visual {
+	/* The lab's base reset supplies this globally; the WP theme deliberately does not. */
+	box-sizing: border-box;
+	position: relative;
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	width: 18px; /* M3 §13.1 container size */
+	height: 18px;
+	border-radius: 2px; /* M3 §13.1 sub-xs literal */
+	border: 2px solid var(--md-sys-color-on-surface-variant); /* M3 §13.2 unselected outline */
+	background-color: transparent;
+
+	transition:
+		background-color
+			var(--md-sys-motion-curve-fast-effects-duration)
+			var(--md-sys-motion-curve-fast-effects),
+		border-color
+			var(--md-sys-motion-curve-fast-effects-duration)
+			var(--md-sys-motion-curve-fast-effects);
+}
+
+/* State layer — 40×40 circle, behind visual, currentColor-driven */
+.ax-checkbox__visual::before {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: 50%;
+	transform: translate(-50%, -50%);
+	width: 40px; /* M3 §13.1 state layer size */
+	height: 40px;
+	border-radius: 50%;
+	background-color: var(--md-sys-color-on-surface);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity
+		var(--md-sys-motion-curve-fast-effects-duration)
+		var(--md-sys-motion-curve-fast-effects),
+		background-color
+			var(--md-sys-motion-curve-fast-effects-duration)
+			var(--md-sys-motion-curve-fast-effects);
+}
+
+/* Check icon — hidden by default, shown when checked */
+.ax-checkbox__check {
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: var(--md-sys-color-on-primary);
+	stroke-width: 3;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	opacity: 0;
+	transition: opacity
+		var(--md-sys-motion-curve-fast-effects-duration)
+		var(--md-sys-motion-curve-fast-effects);
+}
+
+/* Hover / focus / pressed — state layer becomes visible.
+   :hover and :focus-visible drive on-surface color (unselected).
+   :active uses primary (M3 pressed quirk). */
+.ax-checkbox__input:hover ~ .ax-checkbox__visual::before {
+	opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+.ax-checkbox__input:focus-visible ~ .ax-checkbox__visual::before {
+	opacity: var(--md-sys-state-focus-state-layer-opacity);
+}
+.ax-checkbox__input:active ~ .ax-checkbox__visual::before {
+	opacity: var(--md-sys-state-pressed-state-layer-opacity);
+	background-color: var(--md-sys-color-primary); /* unselected pressed = primary */
+}
+
+/* Focus indicator — on the visual itself (not the hidden input) */
+.ax-checkbox__input:focus-visible ~ .ax-checkbox__visual {
+	outline: 2px solid var(--md-sys-color-secondary);
+	outline-offset: 2px;
+}
+
+/* --- Selected state (input:checked) --- */
+.ax-checkbox__input:checked ~ .ax-checkbox__visual {
+	background-color: var(--md-sys-color-primary);
+	border-color: var(--md-sys-color-primary);
+}
+.ax-checkbox__input:checked ~ .ax-checkbox__visual .ax-checkbox__check {
+	opacity: 1;
+}
+/* Selected hover/focus → primary state layer; pressed → on-surface */
+.ax-checkbox__input:checked:hover ~ .ax-checkbox__visual::before,
+.ax-checkbox__input:checked:focus-visible ~ .ax-checkbox__visual::before {
+	background-color: var(--md-sys-color-primary);
+}
+.ax-checkbox__input:checked:active ~ .ax-checkbox__visual::before {
+	background-color: var(--md-sys-color-on-surface);
+}
+
+/* --- Indeterminate state — horizontal bar instead of check --- */
+.ax-checkbox__input:indeterminate ~ .ax-checkbox__visual {
+	background-color: var(--md-sys-color-primary);
+	border-color: var(--md-sys-color-primary);
+}
+.ax-checkbox__input:indeterminate ~ .ax-checkbox__visual .ax-checkbox__check {
+	opacity: 0; /* hide check */
+}
+.ax-checkbox__input:indeterminate ~ .ax-checkbox__visual::after {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: 50%;
+	transform: translate(-50%, -50%);
+	width: 10px;
+	height: 2px;
+	background-color: var(--md-sys-color-on-primary);
+	border-radius: 1px;
+}
+
+/* --- Error state --- */
+.ax-checkbox.is-error .ax-checkbox__visual {
+	border-color: var(--md-sys-color-error);
+}
+.ax-checkbox.is-error .ax-checkbox__input:checked ~ .ax-checkbox__visual {
+	background-color: var(--md-sys-color-error);
+	border-color: var(--md-sys-color-error);
+}
+.ax-checkbox.is-error .ax-checkbox__input:checked ~ .ax-checkbox__visual .ax-checkbox__check {
+	stroke: var(--md-sys-color-on-error);
+}
+.ax-checkbox.is-error .ax-checkbox__visual::before {
+	background-color: var(--md-sys-color-error);
+}
+
+/* --- Disabled (Pattern C) --- */
+.ax-checkbox__input:disabled {
+	cursor: not-allowed;
+}
+.ax-checkbox__input:disabled ~ .ax-checkbox__visual {
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+}
+.ax-checkbox__input:disabled:checked ~ .ax-checkbox__visual,
+.ax-checkbox__input:disabled:indeterminate ~ .ax-checkbox__visual {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	border-color: transparent;
+}
+.ax-checkbox__input:disabled:checked ~ .ax-checkbox__visual .ax-checkbox__check {
+	/* Selected disabled icon stays full opacity, color = surface (M3 §13.4) */
+	stroke: var(--md-sys-color-surface);
+	opacity: 1;
+}
+.ax-checkbox__input:disabled ~ .ax-checkbox__visual::before {
+	display: none; /* no state layer when disabled */
+}
+
+/* Adjacent label */
+.ax-checkbox__label {
+	font-family: var(--md-sys-typescale-body-large-font);
+	font-size: var(--md-sys-typescale-body-large-size);
+	line-height: var(--md-sys-typescale-body-large-line-height);
+	font-weight: var(--md-sys-typescale-body-large-weight);
+	letter-spacing: var(--md-sys-typescale-body-large-tracking);
+	color: var(--md-sys-color-on-surface);
+}
+.ax-checkbox__input:disabled ~ .ax-checkbox__label {
+	color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+}
+
+/* Radio primitive copied from axismundi-lab/modules/radio. */
+.ax-radio {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+
+	cursor: pointer;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.ax-radio__input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	opacity: 0;
+	cursor: pointer;
+	z-index: 1;
+}
+
+.ax-radio__visual {
+	/* The lab's base reset supplies this globally; the WP theme deliberately does not. */
+	box-sizing: border-box;
+	position: relative;
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+
+	width: 20px; /* M3 §25.1 icon size */
+	height: 20px;
+	border-radius: 50%;
+	border: 2px solid var(--md-sys-color-on-surface-variant);
+	background-color: transparent;
+
+	transition: border-color
+		var(--md-sys-motion-curve-fast-effects-duration)
+		var(--md-sys-motion-curve-fast-effects);
+}
+
+/* State layer — 40×40 circle */
+.ax-radio__visual::before {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: 50%;
+	transform: translate(-50%, -50%);
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background-color: var(--md-sys-color-on-surface);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity
+		var(--md-sys-motion-curve-fast-effects-duration)
+		var(--md-sys-motion-curve-fast-effects),
+		background-color
+			var(--md-sys-motion-curve-fast-effects-duration)
+			var(--md-sys-motion-curve-fast-effects);
+}
+
+/* Inner dot — hidden by default, scales in on selected */
+.ax-radio__visual::after {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: 50%;
+	width: 10px; /* selected dot — 10/20 ratio per M3 baseline */
+	height: 10px;
+	border-radius: 50%;
+	background-color: var(--md-sys-color-primary);
+	transform: translate(-50%, -50%) scale(0);
+	transition: transform
+		var(--md-sys-motion-curve-fast-spatial-duration)
+		var(--md-sys-motion-curve-fast-spatial);
+}
+
+/* Hover/focus/pressed (M3 §25.3) */
+.ax-radio__input:hover ~ .ax-radio__visual::before {
+	opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+.ax-radio__input:focus-visible ~ .ax-radio__visual::before {
+	opacity: var(--md-sys-state-focus-state-layer-opacity);
+}
+.ax-radio__input:active ~ .ax-radio__visual::before {
+	opacity: var(--md-sys-state-pressed-state-layer-opacity);
+	background-color: var(--md-sys-color-primary); /* unselected pressed = primary */
+}
+
+.ax-radio__input:focus-visible ~ .ax-radio__visual {
+	outline: 2px solid var(--md-sys-color-secondary);
+	outline-offset: 2px;
+}
+
+/* --- Selected state --- */
+.ax-radio__input:checked ~ .ax-radio__visual {
+	border-color: var(--md-sys-color-primary);
+}
+.ax-radio__input:checked ~ .ax-radio__visual::after {
+	transform: translate(-50%, -50%) scale(1);
+}
+.ax-radio__input:checked:hover ~ .ax-radio__visual::before,
+.ax-radio__input:checked:focus-visible ~ .ax-radio__visual::before {
+	background-color: var(--md-sys-color-primary);
+}
+.ax-radio__input:checked:active ~ .ax-radio__visual::before {
+	background-color: var(--md-sys-color-on-surface);
+}
+
+/* --- Disabled (Pattern C — icon 38%, label kept) --- */
+.ax-radio__input:disabled {
+	cursor: not-allowed;
+}
+.ax-radio__input:disabled ~ .ax-radio__visual {
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+}
+.ax-radio__input:disabled:checked ~ .ax-radio__visual::after {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+}
+.ax-radio__input:disabled ~ .ax-radio__visual::before {
+	display: none;
+}
+
+/* Label */
+.ax-radio__label {
+	font-family: var(--md-sys-typescale-body-large-font);
+	font-size: var(--md-sys-typescale-body-large-size);
+	line-height: var(--md-sys-typescale-body-large-line-height);
+	font-weight: var(--md-sys-typescale-body-large-weight);
+	letter-spacing: var(--md-sys-typescale-body-large-tracking);
+	color: var(--md-sys-color-on-surface);
+}
+.ax-radio__input:disabled ~ .ax-radio__label {
+	/* Per M3 §25.4 — disabled radio's adjacent label keeps on-surface (full).
+	 * But for accessibility cue we still soften slightly. Author can override. */
+	color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+}
+
+.axismundi-question__choices > li:has(.ax-radio__input:checked) {
+	background-color: var(--wp--preset--color--secondary-container, transparent);
+	color: var(--wp--preset--color--on-secondary-container, currentColor);
 }
 
 .axismundi-object__attachment img {
@@ -69,7 +571,85 @@
 
 .axismundi-object__quote a {
 	color: inherit;
+}
+
+.axismundi-object__quote--embed {
+	display: grid;
+	gap: var(--wp--preset--spacing--150, 0.625rem);
+	background: color-mix(in srgb, currentColor 4%, transparent);
+}
+
+.axismundi-object__quote-author {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.5rem;
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
+}
+
+.axismundi-object__quote-author a {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.5rem;
 	text-decoration: none;
+}
+
+.axismundi-object__quote-handle {
+	color: color-mix(in srgb, currentColor 66%, transparent);
+}
+
+.axismundi-object__quote-title,
+.axismundi-object__quote-excerpt,
+.axismundi-object__quote-warning,
+.axismundi-object__quote--placeholder p {
+	margin: 0;
+}
+
+.axismundi-object__quote-title {
+	font-size: var(--wp--preset--font-size--title-small, 1rem);
+}
+
+.axismundi-object__quote-thumbnail {
+	inline-size: 100%;
+	max-block-size: 14rem;
+	object-fit: cover;
+	border-radius: inherit;
+}
+
+.axismundi-object__quote-warning {
+	font-weight: 600;
+}
+
+.axismundi-object__quote-read-more {
+	inline-size: fit-content;
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
+	font-weight: 600;
+}
+
+.axismundi-object__quote--placeholder,
+.axismundi-object__quote--reference,
+.axismundi-object__quote-reference {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--150, 0.625rem);
+}
+
+.axismundi-object__quote--placeholder > .material-symbols-outlined,
+.axismundi-object__quote--reference > .material-symbols-outlined,
+.axismundi-object__quote-reference > .material-symbols-outlined {
+	flex: 0 0 auto;
+	font-size: 1.25rem;
+}
+
+.axismundi-object__quote--placeholder > div {
+	display: grid;
+	gap: 0.25rem;
+}
+
+.axismundi-object__quote-reference {
+	margin-block-start: var(--wp--preset--spacing--150, 0.625rem);
+	padding-block-start: var(--wp--preset--spacing--150, 0.625rem);
+	border-block-start: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+	font-size: var(--wp--preset--font-size--label-medium, 0.875rem);
 }
 
 .axismundi-object__interactions {
@@ -184,6 +764,16 @@
 	position: relative;
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
+	/*
+	 * The row needs `minmax(0, …)` for the same reason the column does. An implicit `auto`
+	 * row cannot shrink below its content's min-content height, so a tall image kept the
+	 * row at its natural height even when this block was given an explicit one: the figure
+	 * measured the requested height, the row stayed at the image's, and `block-size: 100%`
+	 * on the media resolved against the row — leaving `object-fit: cover` nothing to crop
+	 * and the picture simply clipped. With a floor of 0 the row follows the figure, so a
+	 * height set on the block actually frames the image.
+	 */
+	grid-template-rows: minmax(0, 1fr);
 	margin: 0;
 	overflow: hidden;
 	isolation: isolate;
@@ -199,6 +789,27 @@
 	display: block;
 	inline-size: 100%;
 	max-inline-size: 100%;
+	block-size: 100%;
+	min-block-size: 0;
+}
+
+/*
+ * A sensitive lead image arrives wrapped by the Media Library's reveal overlay, which
+ * puts two divs between this figure and the picture. Those divs are auto-height, so the
+ * `block-size: 100%` above resolves against a box that is itself sized by the image —
+ * and a height set on the block stops framing anything. Passing the figure's height down
+ * the wrapper chain restores it, and is why the overlay's own `inline-block` fallback is
+ * overridden here: inside this grid the wrapper is a cell, not an inline box.
+ */
+.axismundi-object__featured-image > .ax-media-sensitive {
+	grid-area: 1 / 1;
+	display: block;
+	inline-size: 100%;
+	block-size: 100%;
+	min-block-size: 0;
+}
+
+.axismundi-object__featured-image .ax-media-sensitive__content {
 	block-size: 100%;
 	min-block-size: 0;
 }
@@ -277,4 +888,245 @@ div.axismundi-object__featured-image-media.is-repeated {
 	inset-block: 0;
 	inline-size: 1px;
 	background: color-mix(in srgb, var(--wp--preset--color--on-tertiary-container, currentColor) 18%, transparent);
+}
+
+/*
+ * Object attachments — carousel display mode.
+ *
+ * The grid mode borrows Core's Gallery stylesheet wholesale, so it needs nothing here.
+ * Carousel is this block's own presentation and owns its layout: a clipping viewport,
+ * a track translated one slide-width at a time, and controls positioned over it. Slide
+ * position lives in the DOM (a transform and `is-active`), never in the URL.
+ */
+.axismundi-object__attachments.is-mode-carousel {
+	display: block;
+	position: relative;
+	margin-block: var(--wp--preset--spacing--200, 0.75rem) 0;
+	padding: 0;
+}
+
+.axismundi-object__carousel {
+	position: relative;
+}
+
+.axismundi-object__carousel-viewport {
+	overflow: hidden;
+	border-radius: var(--md-sys-shape-corner-medium, 0.75rem);
+}
+
+.axismundi-object__carousel-track {
+	display: flex;
+	transition: transform var(--md-sys-motion-curve-fast-spatial-duration, 350ms)
+		var(--md-sys-motion-curve-fast-spatial, cubic-bezier(0.27, 0, 0.17, 1));
+	will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.axismundi-object__carousel-track {
+		transition: none;
+	}
+}
+
+/*
+ * A slide must never shrink to fit its neighbours: the track is as wide as every slide
+ * combined, and the viewport shows exactly one.
+ */
+.axismundi-object__carousel-slide {
+	flex: 0 0 100%;
+	min-width: 100%;
+}
+
+.axismundi-object__carousel-slide figure {
+	margin: 0;
+}
+
+.axismundi-object__carousel-slide img,
+.axismundi-object__carousel-slide video {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.axismundi-object__carousel-nav {
+	position: absolute;
+	top: 50%;
+	translate: 0 -50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 2.5rem;
+	block-size: 2.5rem;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	cursor: pointer;
+	color: var(--md-sys-color-on-surface, #1b1b1f);
+	background: color-mix(in srgb, var(--md-sys-color-surface, #fff) 78%, transparent);
+	backdrop-filter: blur(8px);
+	transition: opacity var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+		var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
+}
+
+.axismundi-object__carousel-nav:hover,
+.axismundi-object__carousel-nav:focus-visible {
+	background: var(--md-sys-color-surface, #fff);
+}
+
+.axismundi-object__carousel-nav--prev {
+	inset-inline-start: 0.5rem;
+}
+
+.axismundi-object__carousel-nav--next {
+	inset-inline-end: 0.5rem;
+}
+
+/* Chevrons are drawn from borders so the control needs no icon font or asset. */
+.axismundi-object__carousel-nav::before {
+	content: "";
+	inline-size: 0.6rem;
+	block-size: 0.6rem;
+	border-top: 2px solid currentColor;
+	border-right: 2px solid currentColor;
+}
+
+.axismundi-object__carousel-nav--prev::before {
+	rotate: -135deg;
+	margin-inline-start: 0.2rem;
+}
+
+.axismundi-object__carousel-nav--next::before {
+	rotate: 45deg;
+	margin-inline-end: 0.2rem;
+}
+
+.axismundi-object__carousel-dots {
+	display: flex;
+	justify-content: center;
+	gap: 0.5rem;
+	margin-block-start: 0.75rem;
+}
+
+.axismundi-object__carousel-dot {
+	inline-size: 0.5rem;
+	block-size: 0.5rem;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	cursor: pointer;
+	background: var(--md-sys-color-on-surface-variant, #46464f);
+	opacity: 0.35;
+	transition: opacity var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+		var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
+}
+
+.axismundi-object__carousel-dot.is-active {
+	opacity: 1;
+	background: var(--md-sys-color-primary, #4a5bab);
+}
+
+/*
+ * Media the carousel sequence excludes (audio) still renders, below it. Keeping it
+ * visible rather than dropping it means switching the view never loses a peer's media.
+ */
+.axismundi-object__attachments-aside {
+	display: grid;
+	gap: var(--wp--preset--spacing--200, 0.75rem);
+	margin-block-start: 0.75rem;
+}
+
+.axismundi-object__attachments-aside figure {
+	margin: 0;
+}
+
+.axismundi-object__attachments-aside audio {
+	inline-size: 100%;
+}
+
+/*
+ * Preview limit. Overflow tiles stay in the DOM — the media dialog clones them to build
+ * its carousel — so they are hidden visually rather than removed, and the last visible
+ * tile carries a "+N" badge.
+ *
+ * !important because Core Gallery sets `display` on its item figures through a selector
+ * carrying an `:not(#individual-image)` ID hack, which no class selector outranks.
+ */
+.axismundi-object__attachments .is-preview-overflow,
+.wp-block-axismundi-object-attachments .is-preview-overflow {
+	display: none !important;
+}
+
+.axismundi-object__attachment-more {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	background: rgba(0, 0, 0, 0.55);
+	font-size: clamp(1.25rem, 5cqi, 2rem);
+	font-weight: 600;
+	pointer-events: none;
+}
+
+/*
+ * The badge covers its tile, so the tile has to be the positioning context. Core already
+ * makes gallery item figures relative; this keeps a standalone item correct too.
+ */
+.wp-block-axismundi-object-attachments figure.wp-block-image {
+	position: relative;
+}
+
+/*
+ * Sensitive Article summary — spoiler.
+ *
+ * FEP-b2b8 asks for the in-stream summary to be *obscured*, not collapsed, so the text
+ * keeps its place and is made unreadable. The blur radius and scrim reuse the same
+ * visual language as the Media Library's media overlay so a reader meets one treatment
+ * across a page, but the markup is this block's own: that overlay wraps a figure.
+ */
+.axismundi-object__spoiler {
+	position: relative;
+}
+
+.axismundi-object__spoiler-warning {
+	margin: 0 0 0.5em;
+	font-weight: 600;
+	color: var(--md-sys-color-on-surface-variant, #46464f);
+}
+
+.axismundi-object__spoiler.is-obscured .axismundi-object__spoiler-text {
+	filter: blur(6px);
+	/* Covered text must not be selectable or copyable, or the blur is decorative only. */
+	pointer-events: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.axismundi-object__spoiler-text:focus {
+	outline: none;
+}
+
+.axismundi-object__spoiler-reveal {
+	margin-block-start: 0.5em;
+	padding: 0.4em 1em;
+	cursor: pointer;
+	color: inherit;
+	background: color-mix(in srgb, var(--md-sys-color-on-surface, #1b1b1f) 8%, transparent);
+	border: 1px solid var(--md-sys-color-outline, #777680);
+	border-radius: var(--md-sys-shape-corner-full, 999px);
+	font: inherit;
+}
+
+.axismundi-object__spoiler-reveal:hover,
+.axismundi-object__spoiler-reveal:focus-visible {
+	background: color-mix(in srgb, var(--md-sys-color-on-surface, #1b1b1f) 14%, transparent);
+}
+
+/* Reduced motion users still get the cover; only the transition is dropped. */
+@media (prefers-reduced-motion: no-preference) {
+	.axismundi-object__spoiler-text {
+		transition: filter var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+			var(--md-sys-motion-curve-fast-effects, cubic-bezier(0.31, 0.94, 0.34, 1));
+	}
 }

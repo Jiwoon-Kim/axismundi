@@ -62,6 +62,14 @@ function axismundi_op_object_view_model_defaults() : array {
 		'in_reply_to'  => '',
 		'hashtags'     => array(),
 		'mentions'     => array(),
+		// The raw quote target URI an adapter observed, if any. The renderable
+		// projection derived from it -- state, compact target, nested reference --
+		// is `quote_context`, built once at the full-card enrichment boundary.
+		'quote_uri'    => '',
+		'quote_context' => null,
+		// The single `inReplyTo` ancestor, projected for surfaces that show an Object
+		// in conversational context. One ancestor, never the thread.
+		'reply_context' => null,
 		// Raw ActivityStreams `image` exactly as the adapter received it. The
 		// renderable single descriptor derived from it is `media.image`.
 		'image'        => null,
@@ -105,6 +113,57 @@ function axismundi_op_attachment_href( array $descriptor ) : string {
 		}
 	}
 	return '';
+}
+
+/**
+ * Whether one attachment must be presented behind a content warning.
+ *
+ * The most specific claim wins: an attachment that declares `sensitive` decides its own
+ * presentation, and only an attachment that declares nothing inherits the Object's flag.
+ *
+ *     effective = attachment.sensitive ?? object.sensitive
+ *
+ * Combining the two with OR would be wrong, because the Object-level flag is usually an
+ * aggregate rather than an independent claim. Misskey publishes `sensitive: true` on a
+ * Note as soon as any one file is flagged, while each Document carries the real
+ * per-file value — and this project's own send side does exactly the same (a local Note
+ * is marked sensitive when any attachment is). OR-ing them therefore re-applies one
+ * flagged file to every sibling and gates media the author deliberately left open.
+ *
+ * Inheritance still covers the peers that have no per-attachment field at all: Mastodon
+ * sends only the Object flag, so its attachments arrive undeclared and are gated as a
+ * set. That distinction is why the descriptor keeps `sensitive` tri-state — an explicit
+ * `false` and an absent value mean different things here.
+ *
+ * @param array<string,mixed> $descriptor Normalized attachment descriptor.
+ * @param array<string,mixed> $model      Object view model.
+ * @return bool
+ */
+function axismundi_op_attachment_is_sensitive( array $descriptor, array $model ) : bool {
+	if ( array_key_exists( 'sensitive', $descriptor ) && is_bool( $descriptor['sensitive'] ) ) {
+		return $descriptor['sensitive'];
+	}
+	return ! empty( $model['sensitive'] );
+}
+
+/**
+ * The warning text shown for one gated attachment.
+ *
+ * The attachment's own `summary` is the most specific claim and wins; otherwise the
+ * Object's warning applies, because that is what made the attachment sensitive. An
+ * empty result lets the shared overlay fall back to its generic label. Do not use an
+ * Object summary as fallback: for local Articles that is normal content before More.
+ *
+ * @param array<string,mixed> $descriptor Normalized attachment descriptor.
+ * @param array<string,mixed> $model      Object view model.
+ * @return string
+ */
+function axismundi_op_attachment_warning_text( array $descriptor, array $model ) : string {
+	$attachment_warning = trim( (string) ( $descriptor['summary'] ?? '' ) );
+	if ( '' !== $attachment_warning ) {
+		return $attachment_warning;
+	}
+	return trim( (string) ( $model['content_warning'] ?? '' ) );
 }
 
 /**
@@ -256,10 +315,7 @@ function axismundi_op_normalize_object_view_model( array $model, $source = null 
 		$model['summary']         = trim( wp_strip_all_tags( (string) $model['content_warning'] ) );
 		$model['content_warning'] = '';
 	}
-	if ( '' === (string) $model['summary'] && $post instanceof WP_Post && '' !== trim( (string) $post->post_excerpt ) ) {
-		$model['summary'] = trim( wp_strip_all_tags( (string) $post->post_excerpt ) );
-	}
-
+	$model['summary'] = trim( wp_strip_all_tags( (string) $model['summary'] ) );
 	if ( '' === (string) $model['human_url'] ) {
 		if ( $post instanceof WP_Post ) {
 			$permalink            = get_permalink( $post );
@@ -336,6 +392,14 @@ function axismundi_op_enrich_object_view_model( array $model ) : array {
 	}
 	if ( empty( $model['mentions'] ) && function_exists( 'axismundi_op_mentions_for_object' ) ) {
 		$model['mentions'] = axismundi_op_mentions_for_object( $uri );
+	}
+	if ( null === $model['quote_context'] && function_exists( 'axismundi_op_build_quote_context' ) ) {
+		$model['quote_context'] = axismundi_op_build_quote_context( $model );
+	}
+	// Built after in_reply_to is resolved above, so a parent recorded only in the thread
+	// graph still produces a context.
+	if ( null === $model['reply_context'] && function_exists( 'axismundi_op_build_reply_context' ) ) {
+		$model['reply_context'] = axismundi_op_build_reply_context( $model );
 	}
 	$model['_enriched'] = true;
 	return $model;
@@ -560,6 +624,10 @@ function axismundi_op_render_object_by_uri( string $uri, array $opts = array() )
 	$options = array(
 		'headingTag'   => $opts['headingTag'] ?? 'h3',
 		'interactions' => isset( $opts['interactions'] ) ? (bool) $opts['interactions'] : false,
+		// Every caller of this helper is a stream of cards -- the Actor timeline, the
+		// hashtag archive, a feed. Blocks that show less in a stream than on the Object's
+		// own page read this rather than guessing from the heading level.
+		'surface'      => $opts['surface'] ?? 'feed',
 	);
 	$previous = axismundi_op_current_object_view_model();
 	axismundi_op_set_current_object_view_model( $model );

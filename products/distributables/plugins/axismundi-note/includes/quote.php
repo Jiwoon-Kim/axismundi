@@ -361,20 +361,41 @@ function axismundi_note_quote_status( WP_Post $post ) : array {
 	return $status;
 }
 
-/** Add the read-only Quote snapshot used by JSON-LD and lifecycle preparation. */
+/**
+ * Add the read-only Quote snapshot used by JSON-LD and lifecycle preparation.
+ *
+ * Matches {@see axismundi_note_quote_commit_object()}: the quoting Note's own
+ * projection is never blocked by its quote's state. An unclassifiable target
+ * (`invalid` -- unresolved, wrong claimed owner, or gone) simply carries no
+ * quote decoration, same as a Note authored with no quote target at all.
+ */
 function axismundi_note_quote_project_object( WP_Post $post, array $object ) {
 	$status = axismundi_note_quote_status( $post );
-	if ( 'none' === $status['state'] ) {
+	if ( 'none' === $status['state'] || 'invalid' === $status['state'] ) {
 		return $object;
-	}
-	if ( 'invalid' === $status['state'] ) {
-		$code = '' !== $status['error'] ? $status['error'] : 'ax_note_quote_projection';
-		return new WP_Error( $code, __( 'The authored Quote cannot be projected from verified state.', 'axismundi-note' ) );
 	}
 	return axismundi_note_quote_decorate_object( $object, $status['target'], 'accepted' === $status['state'] ? $status['authorization'] : '' );
 }
 
-/** Turn the current ledger decision into the Object that may be committed. */
+/**
+ * Turn the current ledger decision into the Object that gets committed.
+ *
+ * The quoting Note's own Create is never held for a consent decision -- matching
+ * Mastodon, publishing your own post is always yours to do. Only whether
+ * `quoteAuthorization` gets attached is conditional: it is added when an
+ * accepted, verified authorization already exists at commit time, and omitted
+ * otherwise (request not yet sent, still pending, rejected, or an authorization
+ * that failed verification). Those classified targets retain a bare
+ * `quote`/`quoteUrl`/`_misskey_quote` link, exactly like a legacy or
+ * Misskey-style quote with no consent layer at all. A target that cannot be
+ * classified is different: its link is dropped so a local draft or private
+ * identifier is not disclosed. What a reader is shown for a retained quote is
+ * a rendering decision (`quote_context`), made fresh from the same ledger this
+ * function reads, not something frozen into the federated payload. A later
+ * Accept re-commits through the same path (via
+ * {@see axismundi_note_reconcile_quote()}), which the Activity ledger records as
+ * an Update once it finds the Object was already committed.
+ */
 function axismundi_note_quote_commit_object( WP_Post $post, array $object ) {
 	$envelope = axismundi_note_get( $post->ID );
 	$target   = is_array( $envelope ) ? (string) ( $envelope['quote_target_uri'] ?? '' ) : '';
@@ -384,34 +405,28 @@ function axismundi_note_quote_commit_object( WP_Post $post, array $object ) {
 	$author = axismundi_act_member_uri( $object['attributedTo'] ?? '' );
 	$state  = axismundi_note_quote_target_state( $target, $author );
 	if ( is_wp_error( $state ) ) {
-		return $state;
+		// The target cannot even be classified (unresolved, wrong claimed owner, or
+		// gone): publish with no quote markup at all rather than an empty one.
+		return axismundi_note_quote_finalize_object( $object );
 	}
 	if ( AXISMUNDI_NOTE_QUOTE_SELF === $state['classification'] ) {
 		return axismundi_note_quote_finalize_object( axismundi_note_quote_decorate_object( $object, $target ) );
 	}
 	$request = axismundi_note_quote_ensure_request( $object, $state );
 	if ( is_wp_error( $request ) ) {
-		return $request;
+		return axismundi_note_quote_finalize_object( axismundi_note_quote_decorate_object( $object, $target ) );
 	}
 	$decision = axismundi_act_outbound_quote_decision( $request->get_uri() );
-	if ( null === $decision ) {
-		return new WP_Error( 'ax_note_quote_pending', __( 'The Note is waiting for quote approval.', 'axismundi-note' ) );
-	}
-	if ( 'accepted' !== (string) $decision['decision'] ) {
-		return new WP_Error( 'ax_note_quote_rejected', __( 'The quote request was rejected.', 'axismundi-note' ) );
+	if ( null === $decision || 'accepted' !== (string) $decision['decision'] ) {
+		return axismundi_note_quote_finalize_object( axismundi_note_quote_decorate_object( $object, $target ) );
 	}
 	$authorization_uri = (string) $decision['authorization_uri'];
 	$authorization = 'local' === $request->get_direction()
 		? axismundi_note_quote_local_authorization( $authorization_uri, $request, $state )
 		: axismundi_note_quote_remote_authorization( $authorization_uri, $request, $state );
-	return is_wp_error( $authorization )
-		? $authorization
-		: axismundi_note_quote_finalize_object( axismundi_note_quote_decorate_object( $object, $target, $authorization_uri ) );
-}
-
-/** Whether a lifecycle result is an intentional held state rather than a write failure. */
-function axismundi_note_quote_is_held_error( $result ) : bool {
-	return is_wp_error( $result ) && in_array( $result->get_error_code(), array( 'ax_note_quote_pending', 'ax_note_quote_rejected' ), true );
+	return axismundi_note_quote_finalize_object(
+		axismundi_note_quote_decorate_object( $object, $target, is_wp_error( $authorization ) ? '' : $authorization_uri )
+	);
 }
 
 /** Reconcile a published Note after an outbound decision signal or later retry. */
@@ -422,7 +437,41 @@ function axismundi_note_reconcile_quote( int $post_id ) {
 		: new WP_Error( 'ax_note_quote_post', __( 'The quoting Note is not published.', 'axismundi-note' ) );
 }
 
-/** Wake the held Note whose inlined Object belongs to this plugin. */
+/**
+ * Answer OP's `quote_context` resolver with this Note's own authored lifecycle
+ * state when the quoting Object is a local Note, deferring to OP's generic
+ * indexed state otherwise.
+ *
+ * Note's lifecycle is the richer, more precise source when it applies: it knows
+ * about a locally-authored request still `pending` or explicitly `rejected`,
+ * states the generic object_relations projection cannot see because they never
+ * needed to survive as an indexed relation of the target.
+ *
+ * @param string|null          $state Existing answer; returned unchanged if already set.
+ * @param array<string,mixed>  $model View model of the quoting (source) Object.
+ * @return string|null
+ */
+function axismundi_note_quote_state_for_object( $state, array $model ) {
+	if ( null !== $state ) {
+		return $state;
+	}
+	$uri      = (string) ( $model['object_uri'] ?? $model['id'] ?? '' );
+	$envelope = '' !== $uri ? axismundi_note_get_by_uri( $uri ) : null;
+	if ( ! is_array( $envelope ) ) {
+		return null;
+	}
+	$post = get_post( (int) $envelope['post_id'] );
+	if ( ! $post instanceof WP_Post ) {
+		return null;
+	}
+	$status = axismundi_note_quote_status( $post );
+	return 'none' === $status['state'] ? null : $status['state'];
+}
+add_filter( 'axismundi_op_quote_state_for_object', 'axismundi_note_quote_state_for_object', 10, 2 );
+
+/** Re-commit the quoting Note whose inlined Object belongs to this plugin, so an
+ * Accept that arrived after the Create already published lands as an Update
+ * carrying the now-available `quoteAuthorization`. */
 function axismundi_note_quote_decided( Axismundi_Activity $request, string $decision, string $authorization_uri ) : void {
 	unset( $decision, $authorization_uri );
 	$envelope = axismundi_note_get_by_uri( (string) $request->get_instrument_uri() );
@@ -431,7 +480,7 @@ function axismundi_note_quote_decided( Axismundi_Activity $request, string $deci
 	}
 	$post   = get_post( (int) $envelope['post_id'] );
 	$result = $post instanceof WP_Post ? axismundi_note_reconcile_quote( $post->ID ) : null;
-	if ( is_wp_error( $result ) && ! axismundi_note_quote_is_held_error( $result ) && $post instanceof WP_Post ) {
+	if ( is_wp_error( $result ) && $post instanceof WP_Post ) {
 		axismundi_note_lifecycle_failed( $result, $post );
 	}
 }

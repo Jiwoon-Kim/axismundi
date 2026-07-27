@@ -28,7 +28,10 @@ function axismundi_op_actor_feed_object_html( string $html, array $item ) : stri
 	if ( '' === $object_uri ) {
 		return $html;
 	}
-	$options = array( 'headingTag' => 'h3', 'interactions' => false );
+	// Actor timelines are viewer-specific action surfaces. The nested dynamic
+	// buttons set the no-cache policy when they bind a logged-in Actor's state;
+	// hashtag archives remain read-only through their separate renderer options.
+	$options = array( 'headingTag' => 'h3', 'interactions' => true );
 	if ( 'Create' === (string) ( $item['type'] ?? '' ) ) {
 		$options['expected_author'] = (string) ( $item['actor_uri'] ?? '' );
 	}
@@ -53,6 +56,13 @@ function axismundi_op_actor_feed_missing_object_html( string $html, array $item 
 	if ( '' !== $html || ! function_exists( 'axismundi_op_resolve_source_by_uri' ) ) {
 		return $html;
 	}
+	// Only an Announce is evidence of a deliberately shared Object whose body
+	// has not reached this site yet. A missing Create is a broken or stale
+	// ledger reference; rendering it as an external card turns local drafts,
+	// fixtures, and deleted posts into noisy timeline rows.
+	if ( 'Announce' !== (string) ( $item['type'] ?? '' ) ) {
+		return '';
+	}
 	$object_uri = isset( $item['object_uri'] ) && is_string( $item['object_uri'] ) ? trim( $item['object_uri'] ) : '';
 	$parts      = wp_parse_url( $object_uri );
 	if ( '' === $object_uri || ! is_array( $parts ) || empty( $parts['host'] ) || null !== axismundi_op_resolve_source_by_uri( $object_uri ) ) {
@@ -60,7 +70,7 @@ function axismundi_op_actor_feed_missing_object_html( string $html, array $item 
 	}
 	// Older ledger rows predate inbound observation. Let their first profile view
 	// self-heal through the same deferred path without fetching during render.
-	if ( 'Announce' === (string) ( $item['type'] ?? '' ) && function_exists( 'axismundi_op_schedule_announced_object_fetch' ) ) {
+	if ( function_exists( 'axismundi_op_schedule_announced_object_fetch' ) ) {
 		axismundi_op_schedule_announced_object_fetch( $object_uri );
 	}
 	$host = (string) $parts['host'];

@@ -33,7 +33,7 @@ function axismundi_note_enqueue_editor_assets() : void {
 	);
 	// PluginDocumentSettingPanel moved from wp-edit-post to wp-editor; declaring an
 	// unregistered handle would silently drop the panel, so depend on whichever exists.
-	$deps = array( 'axismundi-note-editor-helpers', 'wp-element', 'wp-plugins', 'wp-data', 'wp-core-data', 'wp-components', 'wp-dom-ready', 'wp-i18n' );
+	$deps = array( 'axismundi-note-editor-helpers', 'wp-element', 'wp-plugins', 'wp-data', 'wp-core-data', 'wp-components', 'wp-dom-ready', 'wp-i18n', 'wp-api-fetch' );
 	if ( wp_script_is( 'axismundi-op-mention-token-field', 'registered' ) ) {
 		wp_enqueue_script( 'axismundi-op-mention-token-field' );
 		$deps[] = 'axismundi-op-mention-token-field';

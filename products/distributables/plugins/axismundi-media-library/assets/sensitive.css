@@ -6,6 +6,14 @@
  */
 .ax-media-sensitive {
 	position: relative;
+}
+
+/*
+ * Core Image owns its figure's alignment and width. Only the legacy fallback
+ * wrapper needs its own box model; styling a figure here breaks alignwide and
+ * alignfull images.
+ */
+.ax-media-sensitive:not(figure) {
 	display: inline-block;
 	max-width: 100%;
 }
@@ -19,6 +27,32 @@
 	pointer-events: none;
 	-webkit-user-select: none;
 	user-select: none;
+}
+
+/* A Core Image keeps its figure as the direct Gallery child. */
+figure.ax-media-sensitive {
+	position: relative;
+}
+
+figure.ax-media-sensitive.is-hidden img {
+	filter: blur(24px);
+	pointer-events: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+/*
+ * The lightbox is only reachable after the viewer reveals the image — a hidden
+ * image sets pointer-events: none, so its click-to-enlarge never fires. Core copies
+ * the source figure's class list into the lightbox figure, which would otherwise
+ * re-blur an image the viewer has already chosen to see.
+ */
+.wp-lightbox-overlay .ax-media-sensitive.is-hidden img,
+.wp-lightbox-overlay .ax-media-sensitive.is-hidden .ax-media-sensitive__content {
+	filter: none;
+	pointer-events: auto;
+	-webkit-user-select: auto;
+	user-select: auto;
 }
 
 .ax-media-sensitive__overlay {
@@ -35,8 +69,14 @@
 	background: rgba(0, 0, 0, 0.55);
 }
 
+/*
+ * !important is required, not stylistic: inside a cropped Core Gallery the overlay is
+ * a direct `div` child of the item figure, and Core forces those to display: flex with
+ * an `:not(#individual-image)` ID-specificity hack that outranks any class selector we
+ * can write. Without this the warning stays over an image the viewer already revealed.
+ */
 .ax-media-sensitive:not(.is-hidden) .ax-media-sensitive__overlay {
-	display: none;
+	display: none !important;
 }
 
 .ax-media-sensitive__warning {
@@ -44,17 +84,41 @@
 	font-weight: 600;
 }
 
-.ax-media-sensitive__reveal {
+/*
+ * Selector is intentionally `.ax-media-sensitive .ax-media-sensitive__reveal` (0,2,0)
+ * rather than the single class (0,1,0). Core adds `wp-lightbox-container` to the very
+ * figure we decorate and then styles EVERY descendant button as its zoom trigger with
+ * `.wp-lightbox-container button` (0,1,1) — a 20px absolutely-positioned corner box at
+ * `opacity: 0`. That silently makes the reveal control invisible, so it has to be
+ * outranked and every hijacked property reset here.
+ */
+.ax-media-sensitive .ax-media-sensitive__reveal {
+	position: static;
+	inset: auto;
+	display: inline-block;
+	width: auto;
+	height: auto;
+	opacity: 1;
+	z-index: auto;
+	backdrop-filter: none;
 	cursor: pointer;
 	padding: 0.4em 1em;
 	color: inherit;
-	background: rgba(255, 255, 255, 0.16);
-	border: 1px solid currentColor;
 	border-radius: 4px;
 	font: inherit;
+	text-decoration: none;
+	/*
+	 * background-color and border need !important: Core neutralises theme button styles
+	 * with `.wp-lightbox-container button:not(:hover):not(:active):not(.has-background)`
+	 * (0,4,1) plus :hover/:focus twins, so every state is covered by a selector no
+	 * practical class chain outranks. These two properties are the only ones it sets.
+	 */
+	background: rgba(255, 255, 255, 0.16) !important;
+	border: 1px solid currentColor !important;
 }
 
-.ax-media-sensitive__reveal:hover,
-.ax-media-sensitive__reveal:focus-visible {
-	background: rgba(255, 255, 255, 0.28);
+/* !important again, so the hover state is not swallowed by the base rule's own. */
+.ax-media-sensitive .ax-media-sensitive__reveal:hover,
+.ax-media-sensitive .ax-media-sensitive__reveal:focus-visible {
+	background: rgba(255, 255, 255, 0.28) !important;
 }

@@ -133,10 +133,11 @@ wider-fediverse interoperability. See MEDIA-RENDITIONS.md for the full contract:
 - Media Links first (`mediaType` / `width` / `height` / `size`), the `text/html` page **last**,
   so a naive `url[0]` consumer of an `Image` reads media rather than the page. Resolve the HTML
   representation by `mediaType`, never by position.
-- Images advertise **only already-generated derivatives**, supplied by Media Library's
-  `axismundi_media_federation_renditions()`. **The original is never advertised**; an image with
-  no derivative emits the HTML Link alone. Video / audio / documents keep their existing
-  single-file policy while no transcoding substrate exists.
+- Images advertise already-generated derivatives supplied by Media Library's
+  `axismundi_media_federation_renditions()`. A standalone Attachment never advertises its
+  original; an embedded Article/Note may use a source only when it already fits the explicit
+  1024px, pixel, and byte caps. Video / audio / documents keep their existing single-file policy
+  while no transcoding substrate exists.
 - `id`, `type`, and `mediaType` form **one shared core** across the standalone Attachment,
   Article/Note `attachment[]`, and `preview.attachment`. URL cardinality is role-dependent:
   standalone keeps the ordered Link ladder; embedded uses its first eligible media URL as a

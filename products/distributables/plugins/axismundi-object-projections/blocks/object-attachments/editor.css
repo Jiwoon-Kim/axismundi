@@ -1,0 +1,4 @@
+/* BlockPreview otherwise caps a valid multi-row Gallery in the Site Editor. */
+.wp-block-axismundi-object-attachments.is-mode-gallery .block-editor-block-preview__content {
+	max-height: none !important;
+}

@@ -200,7 +200,12 @@ function axismundi_op_media_url_links( WP_Post $attachment, array $policy = arra
  * @return array<string,mixed>
  */
 function axismundi_op_media_embedded_rendition_policy() : array {
-	return array( 'max' => 1, 'max_dimension' => 1024, 'provider_source' => true );
+	return array(
+		'max'                     => 1,
+		'max_dimension'           => 1024,
+		'provider_source'         => true,
+		'allow_source_within_max' => true,
+	);
 }
 
 /**

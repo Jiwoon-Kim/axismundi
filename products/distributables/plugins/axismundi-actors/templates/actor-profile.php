@@ -31,4 +31,16 @@
 <!-- /wp:group --></main>
 <!-- /wp:group -->
 
+<?php
+/*
+ * One media dialog for the whole profile, owned by Axismundi Dialogs. The feed below
+ * renders Object cards whose attachments carry openers, and those openers do nothing
+ * without a hub on the page — a timeline needs one just as the single Object page does.
+ * One per page rather than one per card: a feed of twenty posts must not emit twenty
+ * dialogs. Composed here the same way this template already composes the Activities
+ * feed; if Dialogs is inactive the block is unregistered and renders nothing.
+ */
+?>
+<!-- wp:axismundi/object-media-dialog /-->
+
 <!-- wp:template-part {"slug":"footer","area":"footer","tagName":"footer"} /-->

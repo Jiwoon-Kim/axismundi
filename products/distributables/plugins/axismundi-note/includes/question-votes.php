@@ -213,6 +213,78 @@ function axismundi_note_poll_tally( int $question_id ) : array {
 	return array( 'voters_count' => $voters, 'options' => $options );
 }
 
+/** Resolve the authoritative local Question id for one canonical object URI. */
+function axismundi_note_poll_question_id_for_uri( string $uri ) : int {
+	$uuid = axismundi_note_local_uuid_from_uri( $uri );
+	if ( null === $uuid ) {
+		return 0;
+	}
+	$envelope = axismundi_note_get_by_uuid( $uuid );
+	if ( ! is_array( $envelope ) || 'active' !== (string) ( $envelope['object_status'] ?? '' ) ) {
+		return 0;
+	}
+	$question = axismundi_note_question_row( (int) ( $envelope['post_id'] ?? 0 ) );
+	return is_array( $question ) ? (int) $question['id'] : 0;
+}
+
+/** Return the active selections one local Actor has made on one local Question. */
+function axismundi_note_poll_viewer_selections( int $question_id, string $actor_uri ) : array {
+	global $wpdb;
+	if ( $question_id <= 0 || '' === $actor_uri ) {
+		return array();
+	}
+	$table = axismundi_note_poll_votes_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- indexed local viewer state lookup.
+	$rows = (array) $wpdb->get_col( $wpdb->prepare( "SELECT option_uuid FROM {$table} WHERE question_id = %d AND voter_actor_uri_hash = %s AND voter_actor_uri = %s AND vote_status = 'active'", $question_id, hash( 'sha256', $actor_uri ), $actor_uri ) );
+	return array_values( array_unique( array_filter( $rows, 'is_string' ) ) );
+}
+
+/** Return the effective vote Create Activity URIs for one viewer and Question. */
+function axismundi_note_poll_viewer_vote_activities( int $question_id, string $actor_uri ) : array {
+	global $wpdb;
+	if ( $question_id <= 0 || '' === $actor_uri ) {
+		return array();
+	}
+	$table = axismundi_note_poll_votes_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- indexed local viewer vote lookup.
+	$rows = (array) $wpdb->get_col( $wpdb->prepare( "SELECT vote_activity_uri FROM {$table} WHERE question_id = %d AND voter_actor_uri_hash = %s AND voter_actor_uri = %s AND vote_status = 'active' ORDER BY id ASC", $question_id, hash( 'sha256', $actor_uri ), $actor_uri ) );
+	return array_values( array_unique( array_filter( $rows, 'is_string' ) ) );
+}
+
+/** Add current-viewer selection state at render time, never to a shared object cache. */
+function axismundi_note_question_display_poll( array $poll, array $model ) : array {
+	$actor = function_exists( 'axismundi_act_current_local_actor' ) ? axismundi_act_current_local_actor() : null;
+	$question_id = axismundi_note_poll_question_id_for_uri( (string) ( $model['object_uri'] ?? '' ) );
+	if ( ! $actor instanceof Axismundi_Actor || $question_id <= 0 ) {
+		return $poll;
+	}
+	$selected = array_flip( axismundi_note_poll_viewer_selections( $question_id, $actor->get_uri() ) );
+	if ( empty( $selected ) ) {
+		return $poll;
+	}
+	foreach ( (array) ( $poll['options'] ?? array() ) as $index => $option ) {
+		if ( is_array( $option ) && isset( $option['uuid'] ) ) {
+			$poll['options'][ $index ]['is_selected'] = isset( $selected[ (string) $option['uuid'] ] );
+		}
+	}
+	return $poll;
+}
+add_filter( 'axismundi_op_question_display_poll', 'axismundi_note_question_display_poll', 10, 2 );
+
+/** Hide local open-poll results until the current local Actor has voted. */
+function axismundi_note_question_show_results( bool $show_results, array $model, array $poll ) : bool {
+	if ( ! empty( $poll['closed_at'] ) ) {
+		return true;
+	}
+	$actor = function_exists( 'axismundi_act_current_local_actor' ) ? axismundi_act_current_local_actor() : null;
+	$question_id = axismundi_note_poll_question_id_for_uri( (string) ( $model['object_uri'] ?? '' ) );
+	if ( ! $actor instanceof Axismundi_Actor || $question_id <= 0 ) {
+		return $show_results;
+	}
+	return ! empty( axismundi_note_poll_viewer_selections( $question_id, $actor->get_uri() ) );
+}
+add_filter( 'axismundi_op_question_show_results', 'axismundi_note_question_show_results', 10, 3 );
+
 /** Confirmed votes are poll interactions, not textual replies in a thread. */
 function axismundi_note_exclude_poll_vote_reply( bool $include, string $child_uri ) : bool {
 	global $wpdb;
@@ -263,19 +335,56 @@ function axismundi_note_cast_poll_vote( string $question_uri, array $names ) {
 	return $created;
 }
 
+/** Undo every active vote the current local Actor has cast on an open Question. */
+function axismundi_note_withdraw_poll_vote( string $question_uri ) {
+	$actor    = function_exists( 'axismundi_act_current_local_actor' ) ? axismundi_act_current_local_actor() : null;
+	$question = axismundi_note_poll_question_target( $question_uri );
+	if ( ! $actor instanceof Axismundi_Actor || ! is_array( $question ) ) {
+		return new WP_Error( 'ax_note_vote_target', __( 'This Question is not available for voting.', 'axismundi-note' ) );
+	}
+	$activities = axismundi_note_poll_viewer_vote_activities( (int) $question['id'], $actor->get_uri() );
+	if ( empty( $activities ) ) {
+		return new WP_Error( 'ax_note_vote_missing', __( 'There is no active vote to change.', 'axismundi-note' ) );
+	}
+	$undone = array();
+	foreach ( $activities as $activity_uri ) {
+		$vote = axismundi_act_get( $activity_uri );
+		if ( ! $vote instanceof Axismundi_Activity || ! $vote->is_effective() || ! hash_equals( $actor->get_uri(), $vote->get_actor_uri() ) ) {
+			return new WP_Error( 'ax_note_vote_missing', __( 'There is no active vote to change.', 'axismundi-note' ) );
+		}
+		$payload = array(
+			'type'   => 'Undo',
+			'actor'  => $actor->get_uri(),
+			'object' => $vote->get_uri(),
+		);
+		foreach ( array( 'to', 'cc', 'audience' ) as $property ) {
+			$recipients = (array) ( $vote->get_audience()[ $property ] ?? array() );
+			if ( ! empty( $recipients ) ) {
+				$payload[ $property ] = $recipients;
+			}
+		}
+		$undo = axismundi_act_record_source_activity( $payload, $vote->get_direction(), 'unvote:' . $vote->get_uri() );
+		if ( is_wp_error( $undo ) ) {
+			return $undo;
+		}
+		$undone[] = $undo;
+	}
+	return $undone;
+}
+
 /** Return the current user's one-time vote-notice key for one canonical Question. */
 function axismundi_note_poll_vote_notice_key( string $uri ) : string {
 	return 'ax_note_vote_' . get_current_user_id() . '_' . substr( hash( 'sha256', $uri ), 0, 24 );
 }
 
 /** Store a short-lived result without adding non-canonical query arguments to the object URI. */
-function axismundi_note_set_poll_vote_notice( string $uri, $result ) : void {
+function axismundi_note_set_poll_vote_notice( string $uri, $result, string $success_message = '' ) : void {
 	if ( get_current_user_id() <= 0 || '' === $uri ) {
 		return;
 	}
 	$message = is_wp_error( $result )
 		? $result->get_error_message()
-		: __( 'Your vote was recorded.', 'axismundi-note' );
+		: ( '' !== $success_message ? $success_message : __( 'Your vote was recorded.', 'axismundi-note' ) );
 	set_transient(
 		axismundi_note_poll_vote_notice_key( $uri ),
 		array(
@@ -298,16 +407,25 @@ function axismundi_note_take_poll_vote_notice( string $uri ) : ?array {
 }
 
 /** Record a one-time result and return the exact canonical Question URI. */
-function axismundi_note_poll_vote_redirect_uri( string $uri, $result ) : string {
-	axismundi_note_set_poll_vote_notice( $uri, $result );
+function axismundi_note_poll_vote_redirect_uri( string $uri, $result, string $success_message = '' ) : string {
+	axismundi_note_set_poll_vote_notice( $uri, $result, $success_message );
 	return $uri;
 }
 
 /** Render a nonce-protected local vote form in OP's neutral Question action slot. */
 function axismundi_note_question_actions( string $html, array $model, array $poll ) : string {
 	$uri = (string) ( $model['object_uri'] ?? '' );
-	if ( '' !== $html || ! empty( $poll['closed_at'] ) || ! function_exists( 'axismundi_act_current_local_actor' ) || ! ( axismundi_act_current_local_actor() instanceof Axismundi_Actor ) || ! is_array( axismundi_note_poll_question_target( $uri ) ) ) {
+	$actor = function_exists( 'axismundi_act_current_local_actor' ) ? axismundi_act_current_local_actor() : null;
+	$target = axismundi_note_poll_question_target( $uri );
+	if ( '' !== $html || ! empty( $poll['closed_at'] ) || ! $actor instanceof Axismundi_Actor || ! is_array( $target ) ) {
 		return $html;
+	}
+	if ( ! empty( axismundi_note_poll_viewer_selections( (int) $target['id'], $actor->get_uri() ) ) ) {
+		return '<form class="axismundi-question__vote-actions" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
+			. '<input type="hidden" name="action" value="axismundi_note_unvote">'
+			. '<input type="hidden" name="question" value="' . esc_attr( $uri ) . '">'
+			. wp_nonce_field( 'axismundi_note_unvote:' . $uri, '_axismundi_note_unvote_nonce', true, false )
+			. '<button class="wp-element-button is-style-text" type="submit">' . esc_html__( 'Change vote', 'axismundi-note' ) . '</button></form>';
 	}
 	$type  = 'anyOf' === (string) ( $poll['mode'] ?? '' ) ? 'checkbox' : 'radio';
 	$items = '';
@@ -315,7 +433,19 @@ function axismundi_note_question_actions( string $html, array $model, array $pol
 		$name = (string) ( $option['name'] ?? '' );
 		if ( '' !== $name ) {
 			$required = 'radio' === $type && 0 === (int) $index ? ' required' : '';
-			$items .= '<label><input type="' . esc_attr( $type ) . '" name="ax_note_vote[]" value="' . esc_attr( $name ) . '"' . $required . '> ' . esc_html( $name ) . '</label>';
+			if ( 'checkbox' === $type ) {
+				$items .= '<li><label class="ax-checkbox">'
+					. '<input class="ax-checkbox__input" type="checkbox" name="ax_note_vote[]" value="' . esc_attr( $name ) . '">'
+					. '<span class="ax-checkbox__visual" aria-hidden="true"><svg class="ax-checkbox__check" viewBox="0 0 18 18"><path d="M4 9.5 7.5 13 14 5.5" /></svg></span>'
+					. '<span class="ax-checkbox__label">' . esc_html( $name ) . '</span>'
+					. '</label></li>';
+			} else {
+				$items .= '<li><label class="ax-radio">'
+					. '<input class="ax-radio__input" type="radio" name="ax_note_vote[]" value="' . esc_attr( $name ) . '"' . $required . '>'
+					. '<span class="ax-radio__visual" aria-hidden="true"></span>'
+					. '<span class="ax-radio__label">' . esc_html( $name ) . '</span>'
+					. '</label></li>';
+			}
 		}
 	}
 	$notice = axismundi_note_take_poll_vote_notice( $uri );
@@ -324,8 +454,8 @@ function axismundi_note_question_actions( string $html, array $model, array $pol
 		. '<input type="hidden" name="action" value="axismundi_note_vote">'
 		. '<input type="hidden" name="question" value="' . esc_attr( $uri ) . '">'
 		. wp_nonce_field( 'axismundi_note_vote:' . $uri, '_axismundi_note_vote_nonce', true, false )
-		. $feedback . '<fieldset><legend>' . esc_html__( 'Cast your vote', 'axismundi-note' ) . '</legend>' . $items . '</fieldset>'
-		. '<button type="submit">' . esc_html__( 'Vote', 'axismundi-note' ) . '</button></form>';
+		. $feedback . '<fieldset><legend>' . esc_html__( 'Cast your vote', 'axismundi-note' ) . '</legend><ul class="wp-block-list is-style-list-segmented axismundi-question__choices">' . $items . '</ul></fieldset>'
+		. '<button class="wp-element-button" type="submit">' . esc_html__( 'Vote', 'axismundi-note' ) . '</button></form>';
 }
 add_filter( 'axismundi_op_question_actions', 'axismundi_note_question_actions', 10, 3 );
 
@@ -342,3 +472,15 @@ function axismundi_note_handle_poll_vote() : void {
 	exit;
 }
 add_action( 'admin_post_axismundi_note_vote', 'axismundi_note_handle_poll_vote' );
+
+/** Undo the current local Actor's active vote(s), then return to the choice form. */
+function axismundi_note_handle_poll_unvote() : void {
+	$uri = axismundi_act_uri( wp_unslash( $_POST['question'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce checked below.
+	if ( '' === $uri || ! isset( $_POST['_axismundi_note_unvote_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_axismundi_note_unvote_nonce'] ) ), 'axismundi_note_unvote:' . $uri ) ) {
+		wp_die( esc_html__( 'The vote change request could not be verified.', 'axismundi-note' ), 403 );
+	}
+	$result = axismundi_note_withdraw_poll_vote( $uri );
+	wp_safe_redirect( axismundi_note_poll_vote_redirect_uri( $uri, $result, __( 'Choose a new option.', 'axismundi-note' ) ) );
+	exit;
+}
+add_action( 'admin_post_axismundi_note_unvote', 'axismundi_note_handle_poll_unvote' );

@@ -90,10 +90,15 @@ try {
 		str_contains( $pattern_source, 'wp:axismundi/actor-avatar' )
 			&& str_contains( $pattern_source, 'wp:axismundi/actor-name' )
 			&& str_contains( $pattern_source, 'wp:axismundi/actor-handle' )
+			&& str_contains( $pattern_source, 'wp:axismundi/object-type' )
+			&& str_contains( $pattern_source, 'wp:axismundi/object-date' )
 			&& ! str_contains( $pattern_source, 'wp:axismundi/object-avatar' )
 			&& ! str_contains( $pattern_source, 'wp:axismundi/object-identity' )
 			&& str_contains( $pattern_source, 'wp:axismundi/reply-context' )
 			&& strpos( $pattern_source, 'wp:axismundi/reply-context' ) < strpos( $pattern_source, 'axismundi-object-card' )
+			&& strpos( $pattern_source, 'wp:axismundi/object-featured-image' ) < strpos( $pattern_source, 'wp:axismundi/object-title' )
+			&& strpos( $pattern_source, 'wp:axismundi/object-title' ) < strpos( $pattern_source, 'wp:axismundi/object-summary' )
+			&& strpos( $pattern_source, 'wp:axismundi/object-summary' ) < strpos( $pattern_source, 'wp:axismundi/object-content' )
 			&& strpos( $pattern_source, 'wp:axismundi/object-content' ) < strpos( $pattern_source, 'wp:axismundi/quote-context' )
 			&& strpos( $pattern_source, 'wp:axismundi/question' ) < strpos( $pattern_source, 'wp:axismundi/object-attachments' )
 			&& str_contains( $pattern_source, 'wp:axismundi/object-summary' )
@@ -123,13 +128,13 @@ try {
 	axismundi_op_set_current_object_view_model( null );
 	ax_vm_assert(
 		$ax_vm_results,
-		'a matching public Create(Note) renders through the shared Object Card pattern in compact non-personalized mode and restores request state',
+		'a matching public Create(Note) renders through the shared Object Card pattern with viewer-specific actions and restores request state',
 		false !== strpos( $feed_html, 'axismundi-object-card' )
 			&& false !== strpos( $feed_html, 'wp-block-axismundi-actor-avatar' )
 			&& false !== strpos( $feed_html, 'Hello from a note.' )
 			&& false !== strpos( $feed_html, '<h3' )
 			&& false !== strpos( $feed_html, 'axismundi-object__title' )
-			&& false === strpos( $feed_html, 'axismundi-object__interactions' )
+			&& false !== strpos( $feed_html, 'axismundi-object__interactions' )
 			&& ! empty( $restored )
 			&& 'fixture-previous' === ( $restored['id'] ?? '' )
 	);

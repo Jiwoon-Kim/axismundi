@@ -94,12 +94,22 @@ try {
 	wp_update_post( array( 'ID' => $post_id, 'post_title' => 'Create bridge edited' ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'draft' ) );
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
-	ax_create_assert( $ax_create_results, 'publish edits and publish-draft-publish do not mint a second Create before Delete exists', 1 === count( axismundi_act_get_by_object( $object_uri ) ) );
+	$after_republish = axismundi_act_get_by_object( $object_uri );
+	$after_republish_types = array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_type(), $after_republish );
+	ax_create_assert( $ax_create_results, 'an Article withdrawal records Delete and a later publication starts a new Create generation', 3 === count( $after_republish ) && 2 === count( array_filter( $after_republish_types, static fn( string $type ) : bool => 'Create' === $type ) ) && 1 === count( array_filter( $after_republish_types, static fn( string $type ) : bool => 'Delete' === $type ) ) );
 
 	$delete = axismundi_act_record_activity( array( 'type' => 'Delete', 'actor' => $actor_uri, 'object' => $object_uri ), 'outbound' );
 	wp_update_post( array( 'ID' => $post_id, 'post_title' => 'Create bridge resurrected' ) );
 	$after_delete = axismundi_act_get_by_object( $object_uri );
-	ax_create_assert( $ax_create_results, 'an effective Delete starts a new lifecycle generation and permits one resurrection Create', $delete instanceof Axismundi_Activity && 3 === count( $after_delete ) && 'Create' === $after_delete[0]->get_type() );
+	ax_create_assert( $ax_create_results, 'an effective Delete starts a new lifecycle generation and permits one resurrection Create', $delete instanceof Axismundi_Activity && 5 === count( $after_delete ) && 'Create' === $after_delete[0]->get_type() );
+
+	$permanent_id = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $author_id, 'post_title' => 'Permanent delete bridge' ) );
+	$permanent_post = $permanent_id > 0 ? get_post( $permanent_id ) : null;
+	$permanent_uri = $permanent_post instanceof WP_Post ? axismundi_op_post_object_uri( $permanent_post ) : '';
+	$ax_create_objects[] = $permanent_uri;
+	$permanently_deleted = $permanent_id > 0 && false !== wp_delete_post( $permanent_id, true );
+	$permanent_lifecycle = '' !== $permanent_uri ? axismundi_act_get_object_lifecycle( $permanent_uri ) : null;
+	ax_create_assert( $ax_create_results, 'permanent Article deletion records Delete before WordPress removes its source post', $permanently_deleted && $permanent_lifecycle instanceof Axismundi_Activity && 'Delete' === $permanent_lifecycle->get_type() );
 
 	$source_uri = 'https://example.com/objects/source-' . wp_generate_password( 8, false, false );
 	$ax_create_objects[] = $source_uri;

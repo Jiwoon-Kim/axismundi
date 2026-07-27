@@ -31,6 +31,88 @@ function axismundi_actors_get_profile_fields( int $identity_id ) : array {
 	);
 }
 
+/**
+ * Extract display-safe PropertyValue links from an already-cached remote Actor.
+ *
+ * Remote links are descriptive data only. They are neither locally verified nor
+ * projected with rel=me, which is reserved for a locally authored, explicitly
+ * verified reciprocal relationship.
+ *
+ * @param array<string,mixed> $payload Remote Actor payload snapshot.
+ * @return array<int,array{id:int,name:string,url:string,position:int,verification_status:string,verified_at:string,checked_at:string,verification_error:string,is_remote:bool}>
+ */
+function axismundi_actors_remote_profile_fields_from_payload( array $payload ) : array {
+	$attachments = $payload['attachment'] ?? array();
+	if ( ! is_array( $attachments ) ) {
+		return array();
+	}
+	$items = isset( $attachments['type'] ) || isset( $attachments['name'] ) || isset( $attachments['value'] )
+		? array( $attachments )
+		: $attachments;
+
+	$fields = array();
+	foreach ( $items as $item ) {
+		if ( ! is_array( $item ) || ! axismundi_actors_remote_profile_field_is_property_value( $item ) ) {
+			continue;
+		}
+		$name  = sanitize_text_field( (string) ( $item['name'] ?? '' ) );
+		$value = (string) ( $item['value'] ?? '' );
+		$url   = axismundi_actors_remote_profile_field_url( $value );
+		if ( '' === $name || '' === $url ) {
+			continue;
+		}
+		$fields[] = array(
+			'id'                  => 0,
+			'name'                => $name,
+			'url'                 => $url,
+			'position'            => count( $fields ),
+			'verification_status' => 'unverified',
+			'verified_at'         => '',
+			'checked_at'          => '',
+			'verification_error'  => '',
+			'is_remote'           => true,
+		);
+		if ( 8 === count( $fields ) ) {
+			break;
+		}
+	}
+	return $fields;
+}
+
+/** @param array<string,mixed> $item Whether a remote attachment is an AS2 PropertyValue. */
+function axismundi_actors_remote_profile_field_is_property_value( array $item ) : bool {
+	$type = $item['type'] ?? '';
+	if ( is_array( $type ) ) {
+		return in_array( 'PropertyValue', $type, true );
+	}
+	return 'PropertyValue' === $type;
+}
+
+/** Extract one safe web URL from a remote PropertyValue HTML value. */
+function axismundi_actors_remote_profile_field_url( string $html ) : string {
+	if ( '' === $html || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		return '';
+	}
+	$tags = new WP_HTML_Tag_Processor( $html );
+	if ( ! $tags->next_tag( 'a' ) ) {
+		return '';
+	}
+	$url = esc_url_raw( (string) $tags->get_attribute( 'href' ) );
+	return '' !== axismundi_actors_normalize_profile_field_url( $url ) ? $url : '';
+}
+
+/**
+ * Resolve profile fields for either a local Actor or a cached remote Actor.
+ *
+ * @return array<int,array{id:int,name:string,url:string,position:int,verification_status:string,verified_at:string,checked_at:string,verification_error:string,is_remote?:bool}>
+ */
+function axismundi_actors_actor_profile_fields( Axismundi_Actor $actor ) : array {
+	if ( $actor->is_local() ) {
+		return axismundi_actors_get_profile_fields( $actor->get_identity_id() );
+	}
+	return axismundi_actors_remote_profile_fields_from_payload( axismundi_actors_get_remote_payload( $actor->get_identity_id() ) );
+}
+
 /** @return string Stable key for one exact, validated profile-link URL. */
 function axismundi_actors_profile_field_url_hash( string $url ) : string {
 	return hash( 'sha256', $url );

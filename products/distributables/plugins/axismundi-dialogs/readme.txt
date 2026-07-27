@@ -4,7 +4,7 @@ Tags: sheet, drawer, dialog, offcanvas, block
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.2
+Stable tag: 0.2.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -34,9 +34,9 @@ Navigation overlay uses. An `axismundi/dialog-close` block lets a part place its
 dismiss control anywhere.
 
 WordPress core reserves the template-part area vocabulary. The plugin therefore
-does not register custom `sheet` or `dialog` areas: Axismundi Theme 0.1.10 or
-later supplies the default parts in the supported **General** area, where they
-remain editable in the Site Editor. The picker distinguishes them by their
+does not register custom `sheet` or `dialog` areas: Axismundi Theme 0.1.12 or
+later supplies the default parts in the supported **Uncategorized** area, where
+they remain editable in the Site Editor. The picker distinguishes them by their
 `sheet-` and `dialog-` slugs. This preserves the standard `theme//slug`
 template-part contract while keeping behavior with the plugin.
 
@@ -59,9 +59,14 @@ the WordPress Interactivity API.
 
 Yes. The sheet renders with its own token fallbacks, but it needs at least one
 template part to show as content. With Axismundi Theme, use a Sheet or Dialog
-part from the Site Editor's General area.
+part from the Site Editor's Uncategorized area.
 
 == Changelog ==
+
+= 0.2.3 =
+
+* Match the Theme's supported Uncategorized template-part area so Sheet and
+  Dialog pickers continue to list their default parts in the Site Editor.
 
 = 0.2.2 =
 

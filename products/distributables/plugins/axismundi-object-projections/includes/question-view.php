@@ -12,17 +12,34 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/** Render one option row with a proportional bar, tally-agnostic. */
-function axismundi_op_render_question_option( array $option, int $max_votes ) : string {
+/** Render one read-only option result as a static distribution bar. */
+function axismundi_op_render_question_option( array $option, int $voters_count ) : string {
 	$name    = trim( (string) ( $option['name'] ?? '' ) );
 	$votes   = max( 0, (int) ( $option['votes'] ?? 0 ) );
-	$percent = $max_votes > 0 ? (int) round( ( $votes / $max_votes ) * 100 ) : 0;
-	return '<li class="axismundi-question__option">'
+	$percent = $voters_count > 0 ? (int) round( ( $votes / $voters_count ) * 100 ) : 0;
+	$selected = ! empty( $option['is_selected'] );
+	$label   = sprintf(
+		/* translators: 1: option name, 2: vote count, 3: share of participating voters. */
+		__( '%1$s: %2$d votes, %3$d%%', 'axismundi-object-projections' ),
+		$name,
+		$votes,
+		$percent
+	);
+	$summary = sprintf(
+		/* translators: 1: vote count, 2: share of participating voters. */
+		__( '%1$d votes, %2$d%%', 'axismundi-object-projections' ),
+		$votes,
+		$percent
+	);
+	return '<li class="axismundi-question__option axismundi-question__result' . ( $selected ? ' is-selected' : '' ) . '">'
 		. '<div class="axismundi-question__option-row">'
+		. ( $selected ? '<span class="material-symbols-outlined axismundi-question__selected-icon" aria-hidden="true">check</span>' : '' )
 		. '<span class="axismundi-question__option-name">' . esc_html( $name ) . '</span>'
-		. '<span class="axismundi-question__option-percent">' . esc_html( $percent . '%' ) . '</span>'
+		. '<span class="axismundi-question__option-percent">' . esc_html( $summary ) . '</span>'
 		. '</div>'
-		. '<div class="axismundi-question__bar"><div class="axismundi-question__bar-fill" style="width:' . esc_attr( $percent ) . '%"></div></div>'
+		. '<div class="axismundi-question__result-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . esc_attr( (string) $percent ) . '" aria-label="' . esc_attr( $label ) . '">'
+		. '<span class="axismundi-question__result-meter-value" style="--_value:' . esc_attr( $percent . '%' ) . '"></span>'
+		. '</div>'
 		. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above.
 }
 
@@ -33,19 +50,11 @@ function axismundi_op_render_question_block() : string {
 	if ( ! is_array( $poll ) || 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
 		return '';
 	}
+	$poll = (array) apply_filters( 'axismundi_op_question_display_poll', $poll, $model );
 	$options = array_values( array_filter( (array) ( $poll['options'] ?? array() ), 'is_array' ) );
 	if ( empty( $options ) ) {
 		return '';
 	}
-	$max_votes = 1;
-	foreach ( $options as $option ) {
-		$max_votes = max( $max_votes, (int) ( $option['votes'] ?? 0 ) );
-	}
-	$items = array_map(
-		static fn( array $option ) : string => axismundi_op_render_question_option( $option, $max_votes ),
-		$options
-	);
-
 	$closed      = ! empty( $poll['closed_at'] );
 	$voters      = max( 0, (int) ( $poll['voters_count'] ?? 0 ) );
 	$meta_parts  = array();
@@ -69,30 +78,21 @@ function axismundi_op_render_question_block() : string {
 		$meta_parts[] = __( 'Open for voting', 'axismundi-object-projections' );
 	}
 
+	$show_results = (bool) apply_filters( 'axismundi_op_question_show_results', true, $model, $poll );
+	$items = $show_results
+		? array_map( static fn( array $option ) : string => axismundi_op_render_question_option( $option, $voters ), $options )
+		: array();
 	$actions = (string) apply_filters( 'axismundi_op_question_actions', '', $model, $poll );
-	return '<div class="axismundi-question axismundi-question--' . ( $closed ? 'closed' : 'open' ) . '">'
-		. '<ul class="axismundi-question__options">' . implode( '', $items ) . '</ul>'
-		. '<p class="axismundi-question__meta">' . esc_html( implode( ' | ', $meta_parts ) ) . '</p>'
+	$mode = 'anyOf' === (string) ( $poll['mode'] ?? '' ) ? 'any-of' : 'one-of';
+	return '<div class="axismundi-question axismundi-question--' . ( $closed ? 'closed' : 'open' ) . ' axismundi-question--' . $mode . '">'
+		. ( $show_results ? '<ul class="wp-block-list is-style-list-segmented axismundi-question__options">' . implode( '', $items ) . '</ul>' : '' )
 		. $actions
+		. '<p class="axismundi-question__meta">' . esc_html( implode( ' | ', $meta_parts ) ) . '</p>'
 		. '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Items escaped by axismundi_op_render_question_option(); meta escaped above.
 }
 
-/** Register the server-rendered Question/Poll block (no editor script). */
+/** Register the server-rendered Question/Poll block and its editor preview. */
 function axismundi_op_register_question_block() : void {
-	if ( ! function_exists( 'register_block_type' ) ) {
-		return;
-	}
-	register_block_type(
-		'axismundi/question',
-		array(
-			'api_version'     => 3,
-			'title'           => __( 'Axismundi Question', 'axismundi-object-projections' ),
-			'category'        => 'theme',
-			'editor_script'   => 'axismundi-op-object-blocks',
-			'style'           => 'axismundi-op-object-view',
-			'render_callback' => 'axismundi_op_render_question_block',
-			'supports'        => array( 'html' => false ),
-		)
-	);
+	register_block_type( dirname( __DIR__ ) . '/blocks/question' );
 }
 add_action( 'init', 'axismundi_op_register_question_block' );

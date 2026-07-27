@@ -51,10 +51,19 @@ try {
 			'post_excerpt' => 'Editorial excerpt.',
 		)
 	);
+	$nested_more_id = wp_insert_post(
+		array(
+			'post_type'    => 'post',
+			'post_status'  => 'publish',
+			'post_author'  => $author_id,
+			'post_title'   => 'Nested More boundary',
+			'post_content' => '<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph --><p>Nested lead.</p><!-- /wp:paragraph --><!-- wp:more --><!--more--><!-- /wp:more --><!-- wp:paragraph --><p>Nested tail.</p><!-- /wp:paragraph --></div><!-- /wp:group -->',
+		)
+	);
 	$page_id = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Not an Article provider' ) );
 	$draft_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_author' => $author_id, 'post_title' => 'Draft' ) );
 	$locked_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => $author_id, 'post_title' => 'Locked', 'post_password' => 'secret' ) );
-	$ax_article_posts = array_filter( array( $post_id, $fallback_id, $page_id, $draft_id, $locked_id ), 'is_int' );
+	$ax_article_posts = array_filter( array( $post_id, $fallback_id, $nested_more_id, $page_id, $draft_id, $locked_id ), 'is_int' );
 
 	$post   = get_post( $post_id );
 	$page   = get_post( $page_id );
@@ -100,10 +109,10 @@ try {
 			&& is_array( $article['@context'] )
 			&& 'https://www.w3.org/ns/activitystreams' === $article['@context'][0]
 			&& array( 'sensitive' => 'as:sensitive' ) === $article['@context'][1]
-			&& false !== strpos( (string) $article['summary'], '<em>A short summary.</em>' )
+			&& false !== strpos( (string) $article['summary'], 'Hello <strong>world</strong>.' )
 			&& ! isset( $article['interactionPolicy'], $article['quoteAuthorization'] )
 	);
-	$content_contract = is_array( $article ) && false !== strpos( (string) $article['content'], '<p' ) && ! empty( $article['published'] ) && ! empty( $article['updated'] );
+	$content_contract = is_array( $article ) && false !== strpos( (string) $article['content'], 'Extended body.' ) && false === strpos( (string) $article['content'], 'Hello <strong>world</strong>.' ) && ! empty( $article['published'] ) && ! empty( $article['updated'] );
 	if ( ! $content_contract && is_array( $article ) ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI diagnostic.
 		printf( "[DEBUG] content=%s published=%s updated=%s\n", (string) $article['content'], (string) $article['published'], (string) $article['updated'] );
@@ -131,23 +140,51 @@ try {
 	}
 	ax_article_assert(
 		$ax_article_results,
-		'a More block creates an embedded Note preview with no independent id/url or read-more link',
+		'a manually edited Excerpt creates an embedded Note preview with no independent id/url or read-more link',
 		is_array( $article ) && isset( $article['preview'] )
 			&& 'Note' === $article['preview']['type']
 			&& $fixture_actor_uri === $article['preview']['attributedTo']
 			&& ! empty( $article['preview']['published'] )
 			&& ! isset( $article['preview']['id'], $article['preview']['url'] )
-			&& false !== strpos( (string) $article['preview']['content'], 'Hello' )
+			&& false !== strpos( (string) $article['preview']['content'], 'A short summary.' )
+			&& false === strpos( (string) $article['preview']['content'], 'Hello' )
 			&& false === strpos( (string) $article['preview']['content'], 'Extended body' )
 			&& false === stripos( (string) $article['preview']['content'], 'read more' )
 	);
 	$fallback = axismundi_op_transform_object( get_post( $fallback_id ) );
 	ax_article_assert(
 		$ax_article_results,
-		'a manual Excerpt remains the Article summary and supplies the Note preview when no More block exists',
+		'without More the full body stays Article content, while the manual Excerpt supplies both the stream summary and Note preview',
 		is_array( $fallback ) && false !== strpos( (string) $fallback['summary'], 'Editorial excerpt.' )
-			&& false !== strpos( (string) $fallback['preview']['content'], '<strong>Excerpt Preview</strong>' )
+			&& false !== strpos( (string) $fallback['content'], 'Full body without a More block.' )
 			&& false !== strpos( (string) $fallback['preview']['content'], 'Editorial excerpt.' )
+			&& false === strpos( (string) $fallback['preview']['content'], 'Excerpt Preview' )
+	);
+	$nested_more = axismundi_op_transform_object( get_post( $nested_more_id ) );
+	ax_article_assert(
+		$ax_article_results,
+		'a More block nested in a container preserves valid parent block markup on both Article sides',
+		is_array( $nested_more )
+			&& false !== strpos( (string) $nested_more['summary'], 'wp-block-group' )
+			&& false !== strpos( (string) $nested_more['summary'], 'Nested lead.' )
+			&& false === strpos( (string) $nested_more['summary'], 'Nested tail.' )
+			&& false !== strpos( (string) $nested_more['content'], 'wp-block-group' )
+			&& false !== strpos( (string) $nested_more['content'], 'Nested tail.' )
+			&& false === strpos( (string) $nested_more['content'], 'Nested lead.' )
+	);
+	$append_marker = '<aside class="fixture-content-append">Append once</aside>';
+	$append_filter = static function ( string $content ) use ( $append_marker ) : string {
+		return $content . $append_marker;
+	};
+	add_filter( 'the_content', $append_filter, 999 );
+	$append_projection = axismundi_op_post_to_article( $post );
+	remove_filter( 'the_content', $append_filter, 999 );
+	ax_article_assert(
+		$ax_article_results,
+		'Article summary renders blocks without a second pass through third-party the_content appenders',
+		is_array( $append_projection )
+			&& false !== strpos( (string) $append_projection['content'], 'fixture-content-append' )
+			&& false === strpos( (string) $append_projection['summary'], 'fixture-content-append' )
 	);
 
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_SENSITIVE_META, '1' );
@@ -155,11 +192,11 @@ try {
 	$sensitive = axismundi_op_transform_object( get_post( $post_id ) );
 	ax_article_assert(
 		$ax_article_results,
-		'sensitive Post metadata emits the boolean and dcterms subject without replacing the Excerpt summary',
+		'sensitive Post metadata emits the boolean and dcterms subject without replacing the More summary',
 		is_array( $sensitive )
 			&& true === $sensitive['sensitive']
 			&& 'Spoilers & distressing imagery' === $sensitive['dcterms:subject']
-			&& false !== strpos( (string) $sensitive['summary'], 'A short summary.' )
+			&& false !== strpos( (string) $sensitive['summary'], 'Hello <strong>world</strong>.' )
 			&& in_array( array( 'dcterms' => 'http://purl.org/dc/terms/' ), $sensitive['@context'], true )
 	);
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_SENSITIVE_META, '0' );

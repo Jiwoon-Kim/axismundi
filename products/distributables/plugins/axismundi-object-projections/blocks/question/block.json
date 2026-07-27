@@ -1,0 +1,57 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/question",
+	"version": "0.2.1",
+	"title": "Axismundi Question",
+	"category": "theme",
+	"icon": "forms",
+	"description": "A Question's local voting controls or read-only results.",
+	"textdomain": "axismundi-object-projections",
+	"attributes": {
+		"previewVariant": {
+			"type": "string",
+			"default": "oneOf"
+		}
+	},
+	"example": {
+		"attributes": {
+			"previewVariant": "oneOf"
+		},
+		"viewportWidth": 420
+	},
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"color": {
+			"text": true,
+			"background": true,
+			"link": true,
+			"gradients": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalTextDecoration": true,
+			"__experimentalLetterSpacing": true
+		},
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"style": "axismundi-op-object-view",
+	"editorStyle": "axismundi-op-object-view",
+	"render": "file:./render.php"
+}

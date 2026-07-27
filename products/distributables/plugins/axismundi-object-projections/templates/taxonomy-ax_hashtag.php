@@ -15,4 +15,13 @@ defined( 'ABSPATH' ) || exit;
 </main>
 <!-- /wp:group -->
 
+<?php
+/*
+ * The archive is a stream of the same Object cards, so its attachments carry the same
+ * openers and need the same single hub. Without one the openers are inert here while
+ * working everywhere else.
+ */
+?>
+<!-- wp:axismundi/object-media-dialog /-->
+
 <!-- wp:template-part {"slug":"footer","area":"footer","tagName":"footer"} /-->

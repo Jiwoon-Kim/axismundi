@@ -143,6 +143,12 @@ function axismundi_act_rest_unlike_object( WP_REST_Request $request ) {
 /** Resolve the object URI represented by one Like block instance. */
 function axismundi_act_like_block_object_uri( array $attributes, WP_Block $block ) : string {
 	$uri = isset( $attributes['objectUri'] ) ? axismundi_act_uri( (string) $attributes['objectUri'] ) : '';
+	// Object cards rendered inside an archive or Actor timeline inherit the outer
+	// template's postId. The active view model identifies the card itself.
+	if ( '' === $uri && function_exists( 'axismundi_op_current_object_view_model' ) ) {
+		$model = axismundi_op_current_object_view_model();
+		$uri   = is_array( $model ) ? axismundi_act_uri( (string) ( $model['object_uri'] ?? '' ) ) : '';
+	}
 	if ( '' === $uri && ! empty( $block->context['postId'] ) && function_exists( 'axismundi_op_transform_object' ) ) {
 		$post = get_post( (int) $block->context['postId'] );
 		if ( $post instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && function_exists( 'axismundi_op_post_article_visible' ) && function_exists( 'axismundi_op_post_object_uri' ) && axismundi_op_post_article_supports( $post ) && axismundi_op_post_article_visible( $post ) ) {
@@ -151,10 +157,6 @@ function axismundi_act_like_block_object_uri( array $attributes, WP_Block $block
 			$object = $post instanceof WP_Post ? axismundi_op_transform_object( $post ) : null;
 			$uri    = is_array( $object ) && isset( $object['id'] ) ? axismundi_act_uri( (string) $object['id'] ) : '';
 		}
-	}
-	if ( '' === $uri && function_exists( 'axismundi_op_current_object_view_model' ) ) {
-		$model = axismundi_op_current_object_view_model();
-		$uri   = is_array( $model ) ? axismundi_act_uri( (string) ( $model['object_uri'] ?? '' ) ) : '';
 	}
 	/** @param string $uri Object URI or empty. @param array<string,mixed> $attributes Block attributes. @param WP_Block $block Block instance. */
 	return (string) apply_filters( 'axismundi_act_like_button_object_uri', $uri, $attributes, $block );

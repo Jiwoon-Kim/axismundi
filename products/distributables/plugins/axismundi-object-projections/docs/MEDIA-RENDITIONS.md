@@ -4,7 +4,7 @@
 > its available media versions. The Media Library rendition API, the Object Projections
 > representation transition, and the shared-folder consumer are separate increments.
 >
-> Bilingual note (EN/KO): 첨부는 **이미 생성되었거나 신뢰된 서비스가 주소화한** 파생본만 광고한다. 원본은 광고하지 않는다.
+> Bilingual note (EN/KO): standalone 첨부는 **이미 생성되었거나 신뢰된 서비스가 주소화한** 파생본만 광고한다. Embedded Article/Note는 원본 자체가 1024px 이하의 모든 hard cap을 통과할 때에만 그 bounded source를 하나의 표시 rendition으로 쓸 수 있다.
 
 ## 1. Why adopt a "not yet supported" FEP
 
@@ -56,12 +56,14 @@ Satisfied simultaneously:
 2. **Media Links first; the `text/html` page last.** An `Image` object's naive `url[0]`
    consumer expects media — an HTML page in that slot would be read as the image. FEP-b2b8's
    `text/html` SHOULD is satisfied regardless of position, so ordering costs nothing.
-3. **The original is never advertised.** This is the same *bounded derivative, never the
-   original by default* rule as REMOTE-ASSET-CACHE.md. **If no derivative exists, emit only
-   the HTML Link — never fall back to the original.** (This closes the existing fallback
-   where a missing intermediate size silently served the full-size file.)
+3. **Standalone original files are never advertised.** This is the same *bounded derivative,
+   never the original by default* rule as REMOTE-ASSET-CACHE.md. **If no derivative exists,
+   emit only the HTML Link — never fall back to the original.** An embedded Article/Note may
+   opt into its source only when that complete image already satisfies its hard dimension,
+   pixel, and byte caps; it is not a fallback for an oversized original.
 4. **At most 4 versions**, largest first, deduplicated by URL **and** by dimensions.
-5. **Only already-generated or provider-addressed trusted virtual derivatives.** Projection
+5. **Only already-generated, provider-addressed trusted virtual derivatives, or a cap-fitting
+   embedded source.** Projection
    never generates or fetches an image. A virtual derivative must use the exact HTTPS URL
    recorded by the rendition provider or resolved by WordPress image downsize for metadata
    that explicitly marks the size virtual, and must use an allowlisted image-service host.
@@ -79,10 +81,10 @@ Satisfied simultaneously:
    | Role | Policy | Why |
    |---|---|---|
    | Standalone Attachment Single | the full ladder (max 4) | its consumer is an Axismundi peer choosing a size it can afford — the reason §1 exists |
-   | Article/Note `attachment[]` / `preview.attachment` | **one scalar media URL, capped at 1024** | Misskey requires a string URL for embedded files and Mastodon needs one directly fetchable representation; 1024 is also WordPress's own `large` default |
+   | Article/Note `attachment[]` / `preview.attachment` | **one scalar media URL, capped at 1024**; may use the local source only when it already fits every cap | Misskey requires a string URL for embedded files and Mastodon needs one directly fetchable representation; 1024 is also WordPress's own `large` default |
 
-   A policy may only **narrow**. It can never introduce the original, which is excluded
-   structurally (§3.3), so a role policy cannot widen what is federated.
+   A policy may only **narrow**. The embedded source exception is explicit and bounded by the
+   role's caps; it cannot expose a larger original.
 
 ## 4. Ownership
 
@@ -96,7 +98,7 @@ axismundi_media_federation_renditions( int $attachment_id, array $policy = array
 - enumerates policy-selected names that exist in provider metadata; it does not require the
   same size to remain registered in the current request
 - applies pixel / byte / dimension caps; max 4; dedupes
-- excludes the original
+- excludes the original except for an explicit embedded policy whose source already fits every cap
 - honors public / locked / sensitive policy (fail-closed)
 - returns `url`, `mediaType`, `width`, `height`, and an accurate `size` when known
 - omits an ordinary entry whose file is missing or whose `filesize` cannot be read
@@ -138,7 +140,9 @@ until the shared-folder consumer and binary substrate establish a demonstrated n
 
 ## 6. Per-MIME policy
 
-- **Image** — derivatives only. No derivative → HTML Link only (never the original).
+- **Image** — standalone objects are derivatives only. Embedded Article/Note media may use a
+  complete source that already fits its explicit 1024px, pixel, and byte caps; otherwise no
+  derivative → HTML Link only.
 - **Video / Audio** — there is no transcoding substrate, so **no multiple versions are
   invented**. Whether the original is publicly downloadable is a *separate download policy*,
   not a rendition question.

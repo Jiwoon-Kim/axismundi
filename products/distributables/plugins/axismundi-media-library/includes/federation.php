@@ -46,6 +46,7 @@ function axismundi_media_federation_rendition_policy( array $policy = array() ) 
 		'max_dimension'   => 4096,
 		'max_pixels'      => 16000000,
 		'provider_source' => false,
+		'allow_source_within_max' => false,
 	);
 	$policy = array_merge( $defaults, $policy );
 	/**
@@ -257,6 +258,47 @@ function axismundi_media_federation_rendition_entry( int $attachment_id, $size, 
 }
 
 /**
+ * Expose a source image only when it already fits the caller's hard bounds.
+ *
+ * This is deliberately opt-in. The general rendition service remains
+ * derivative-only, but an embedded Object cannot be usefully represented by a
+ * 212px thumbnail when its complete source is itself only 724px wide. Callers
+ * that opt in still receive no source larger than their max dimension, pixel,
+ * or byte budget.
+ *
+ * @param int                 $attachment_id Attachment.
+ * @param array<string,mixed> $policy        Resolved policy.
+ * @return array{url:string,mediaType:string,width:int,height:int,size:int}|null
+ */
+function axismundi_media_federation_source_within_policy( int $attachment_id, array $policy ) : ?array {
+	if ( empty( $policy['allow_source_within_max'] ) ) {
+		return null;
+	}
+	$meta   = wp_get_attachment_metadata( $attachment_id );
+	$width  = (int) ( is_array( $meta ) ? ( $meta['width'] ?? 0 ) : 0 );
+	$height = (int) ( is_array( $meta ) ? ( $meta['height'] ?? 0 ) : 0 );
+	$bytes  = axismundi_media_federation_source_bytes( $attachment_id );
+	$url    = (string) wp_get_attachment_url( $attachment_id );
+	if ( '' === $url || $width < 1 || $height < 1 || $bytes < 1 ) {
+		return null;
+	}
+	if ( $width > (int) $policy['max_dimension']
+		|| $height > (int) $policy['max_dimension']
+		|| $width * $height > (int) $policy['max_pixels']
+		|| $bytes > (int) $policy['max_bytes']
+	) {
+		return null;
+	}
+	return array(
+		'url'       => $url,
+		'mediaType' => (string) get_post_mime_type( $attachment_id ),
+		'width'     => $width,
+		'height'    => $height,
+		'size'      => $bytes,
+	);
+}
+
+/**
  * Every already-generated derivative this attachment may advertise, largest first.
  *
  * Returns an empty array — never the original — when nothing qualifies. A caller with no
@@ -313,6 +355,19 @@ function axismundi_media_federation_renditions( int $attachment_id, array $polic
 		$entry = axismundi_media_federation_rendition_entry( $attachment_id, $dimensions, $provider_info, $policy );
 		if ( null !== $entry ) {
 			$entries[] = $entry;
+		}
+	}
+	$source = axismundi_media_federation_source_within_policy( $attachment_id, $policy );
+	if ( is_array( $source ) ) {
+		$already_represented = false;
+		foreach ( $entries as $entry ) {
+			if ( (int) $source['width'] === (int) $entry['width'] && (int) $source['height'] === (int) $entry['height'] ) {
+				$already_represented = true;
+				break;
+			}
+		}
+		if ( ! $already_represented ) {
+			$entries[] = $source;
 		}
 	}
 

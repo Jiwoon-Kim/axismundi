@@ -64,6 +64,157 @@ try {
 	);
 	ax_vmc_assert( $ax_vmc_results, 'a sensitive summary stays a content warning and never becomes an excerpt', 'Spoiler' === (string) ( $warned['content_warning'] ?? '' ) && '' === (string) ( $warned['summary'] ?? '' ) );
 
+	// Mastodon exposes a CW as `summary` plus Object-level `sensitive`, but does
+	// not declare sensitivity on each attachment. The omitted attachment claim must
+	// inherit the Object warning rather than being normalized to explicit false.
+	$mastodon_cw = ax_vmc_remote_model(
+		array(
+			'id'           => 'https://mastodon.example/users/alice/statuses/' . wp_generate_uuid4(),
+			'type'         => 'Question',
+			'attributedTo' => $ax_vmc_actor,
+			'to'           => array( $ax_vmc_public ),
+			'summary'      => 'cw',
+			'sensitive'    => true,
+			'content'      => '<p>Mastodon CW body.</p>',
+			'attachment'   => array( array( 'type' => 'Document', 'mediaType' => 'image/png', 'url' => $ax_vmc_media( 101 ) ) ),
+		),
+		$ax_vmc_remote
+	);
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'a Mastodon CW Question keeps summary as its body warning and lets an undeclared attachment inherit it',
+		'cw' === (string) ( $mastodon_cw['content_warning'] ?? '' )
+			&& '' === (string) ( $mastodon_cw['summary'] ?? '' )
+			&& array_key_exists( 'sensitive', (array) ( $mastodon_cw['attachments'][0] ?? array() ) )
+			&& null === $mastodon_cw['attachments'][0]['sensitive']
+			&& axismundi_op_attachment_is_sensitive( (array) ( $mastodon_cw['attachments'][0] ?? array() ), $mastodon_cw )
+	);
+	axismundi_op_set_current_object_view_model( $mastodon_cw );
+	$mastodon_cw_content = do_blocks( '<!-- wp:axismundi/object-content /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'a Mastodon CW Question renders its received warning as a closed content gate',
+		false !== strpos( $mastodon_cw_content, '<details' )
+			&& false !== strpos( $mastodon_cw_content, '>cw</summary>' )
+			&& false !== strpos( $mastodon_cw_content, 'Mastodon CW body.' )
+	);
+
+	// Misskey sends the same Object-level CW but can explicitly mark an individual
+	// file non-sensitive. That precise file stays visible; otherwise one sensitive
+	// sibling would accidentally hide every attachment in the Note.
+	$misskey_cw = ax_vmc_remote_model(
+		array(
+			'id'           => 'https://misskey.example/notes/' . wp_generate_uuid4(),
+			'type'         => 'Note',
+			'attributedTo' => $ax_vmc_actor,
+			'to'           => array( $ax_vmc_public ),
+			'summary'      => 'sdf',
+			'sensitive'    => true,
+			'content'      => '<p>Misskey CW body.</p>',
+			'attachment'   => array( array( 'type' => 'Document', 'mediaType' => 'image/jpeg', 'url' => $ax_vmc_media( 102 ), 'sensitive' => false ) ),
+		),
+		$ax_vmc_remote
+	);
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'a Misskey CW Note keeps its summary as a body warning but honors an explicit non-sensitive file',
+		'sdf' === (string) ( $misskey_cw['content_warning'] ?? '' )
+			&& '' === (string) ( $misskey_cw['summary'] ?? '' )
+			&& false === ( $misskey_cw['attachments'][0]['sensitive'] ?? true )
+			&& ! axismundi_op_attachment_is_sensitive( (array) ( $misskey_cw['attachments'][0] ?? array() ), $misskey_cw )
+	);
+	axismundi_op_set_current_object_view_model( $misskey_cw );
+	$misskey_cw_content = do_blocks( '<!-- wp:axismundi/object-content /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'a Misskey CW Note renders the Object body behind its received warning even when its file stays visible',
+		false !== strpos( $misskey_cw_content, '<details' )
+			&& false !== strpos( $misskey_cw_content, '>sdf</summary>' )
+			&& false !== strpos( $misskey_cw_content, 'Misskey CW body.' )
+	);
+
+	$ax_vmc_sensitive_summary = array_merge(
+		axismundi_op_object_view_model_defaults(),
+		array(
+			'id'              => 'https://example.com/articles/' . wp_generate_uuid4(),
+			'object_uri'      => 'https://example.com/articles/' . wp_generate_uuid4(),
+			'type'            => 'Article',
+			'title'           => 'A title that must not outrank the warning',
+			'summary'         => 'The sensitive Article lead.',
+			'sensitive'       => true,
+			'content_warning' => 'Citizen Kane',
+		)
+	);
+	axismundi_op_set_current_object_view_model( $ax_vmc_sensitive_summary );
+	$ax_vmc_sensitive_summary_html = do_blocks( '<!-- wp:axismundi/object-summary /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'a sensitive Article covers its stream summary and labels it with dcterms subject before title or summary',
+		false !== strpos( $ax_vmc_sensitive_summary_html, 'axismundi-object__summary-gate' )
+			// An Article obscures its summary in place rather than collapsing it, so the
+			// label is the spoiler's own line and not a `<details>` summary element.
+			&& false !== strpos( $ax_vmc_sensitive_summary_html, 'Content warning: Citizen Kane' )
+			&& false === strpos( $ax_vmc_sensitive_summary_html, 'A title that must not outrank the warning' )
+			&& false !== strpos( $ax_vmc_sensitive_summary_html, 'is-obscured' )
+			&& false !== strpos( $ax_vmc_sensitive_summary_html, 'The sensitive Article lead.' )
+	);
+
+	$ax_vmc_excerpt_model = array_merge(
+		axismundi_op_object_view_model_defaults(),
+		array(
+			'id'         => 'https://example.com/articles/' . wp_generate_uuid4(),
+			'object_uri' => 'https://example.com/articles/' . wp_generate_uuid4(),
+			'summary'    => 'One two three four five.',
+			'human_url'  => 'https://example.com/articles/full-text',
+		)
+	);
+	axismundi_op_set_current_object_view_model( $ax_vmc_excerpt_model );
+	$ax_vmc_excerpt_newline = do_blocks( '<!-- wp:axismundi/object-summary {"excerptLength":3,"moreText":"Read article","showMoreOnNewLine":true} /-->' );
+	$ax_vmc_excerpt_inline  = do_blocks( '<!-- wp:axismundi/object-summary {"excerptLength":3,"moreText":"Read article","showMoreOnNewLine":false} /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'Object Summary follows Core Post Excerpt controls for maximum words and a new-line Read more link',
+		false !== strpos( $ax_vmc_excerpt_newline, 'One two three…' )
+			&& false === strpos( $ax_vmc_excerpt_newline, 'four five' )
+			&& false !== strpos( $ax_vmc_excerpt_newline, '<p class="wp-block-post-excerpt__more-text">' )
+			&& false !== strpos( $ax_vmc_excerpt_newline, 'href="https://example.com/articles/full-text"' )
+	);
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'Object Summary can keep its Read more link inline with the excerpt',
+		false !== strpos( $ax_vmc_excerpt_inline, '<p class="wp-block-post-excerpt__excerpt is-inline">' )
+			&& false !== strpos( $ax_vmc_excerpt_inline, '</p> <a class="wp-block-post-excerpt__more-link"' )
+	);
+
+	$ax_vmc_metadata_model = array_merge(
+		axismundi_op_object_view_model_defaults(),
+		array(
+			'id'         => 'https://example.com/articles/' . wp_generate_uuid4(),
+			'object_uri' => 'https://example.com/articles/' . wp_generate_uuid4(),
+			'type'       => 'Article',
+			'published'  => '2026-07-20T10:00:00+00:00',
+			'updated'    => '2026-07-21T11:30:00+00:00',
+			'human_url'  => 'https://example.com/articles/metadata',
+		)
+	);
+	axismundi_op_set_current_object_view_model( $ax_vmc_metadata_model );
+	$ax_vmc_metadata_html = do_blocks( '<!-- wp:axismundi/object-type /--><!-- wp:axismundi/object-date /--><!-- wp:axismundi/object-date {"field":"updated","format":"Y-m-d H:i","isLink":true} /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'Object Type and Object Date split the legacy meta surface into dynamic Core siblings for type, publication, and modification time',
+		false !== strpos( $ax_vmc_metadata_html, 'wp-block-query-title' )
+			&& false !== strpos( $ax_vmc_metadata_html, '>Article</span>' )
+			&& false !== strpos( $ax_vmc_metadata_html, 'datetime="2026-07-20T10:00:00+00:00"' )
+			&& false !== strpos( $ax_vmc_metadata_html, 'wp-block-post-date__modified-date' )
+			&& false !== strpos( $ax_vmc_metadata_html, '2026-07-21 11:30' )
+			&& false !== strpos( $ax_vmc_metadata_html, 'href="https://example.com/articles/metadata"' )
+	);
+
 	ax_vmc_assert( $ax_vmc_results, 'a cached remote Object reports public visibility and its human URL slot', 'public' === (string) ( $plain['visibility']['level'] ?? '' ) && array_key_exists( 'human_url', $plain ) );
 
 	$limited = ax_vmc_remote_model(
@@ -217,7 +368,7 @@ try {
 
 	// Local Post adapter: editing capability and index-backed enrichment.
 	wp_set_current_user( 1 );
-	$ax_vmc_post = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => 1, 'post_title' => 'Contract local post', 'post_excerpt' => 'Editorial excerpt', 'post_content' => '<p>Local body.</p>' ), true );
+	$ax_vmc_post = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => 1, 'post_title' => 'Contract local post', 'post_excerpt' => 'Editorial excerpt', 'post_content' => '<p>Lead body.</p><!-- wp:more --><!--more--><!-- /wp:more --><p>Local body.</p>' ), true );
 	if ( $ax_vmc_post > 0 ) {
 		$ax_vmc_posts[] = $ax_vmc_post;
 	}
@@ -228,7 +379,7 @@ try {
 	}
 	$local_source = axismundi_op_resolve_source_by_uri( axismundi_op_post_object_uri( get_post( $ax_vmc_post ) ) );
 	$local        = null === $local_source ? array() : (array) axismundi_op_object_view_model( $local_source );
-	ax_vmc_assert( $ax_vmc_results, 'a local Post an editor may edit reports can_edit and keeps its editorial excerpt', true === (bool) ( $local['capabilities']['can_edit'] ?? false ) && 'Editorial excerpt' === (string) ( $local['summary'] ?? '' ) );
+	ax_vmc_assert( $ax_vmc_results, 'a local Post an editor may edit reports can_edit and exposes the More lead without promoting its separate editorial excerpt to Article summary', true === (bool) ( $local['capabilities']['can_edit'] ?? false ) && 'Lead body.' === (string) ( $local['summary'] ?? '' ) && 'Editorial excerpt' !== (string) ( $local['summary'] ?? '' ) );
 	ax_vmc_assert( $ax_vmc_results, 'a local Post exposes a human URL distinct from its canonical id slot', '' !== (string) ( $local['human_url'] ?? '' ) );
 
 	// Relation lookups are index-backed, so a reply tree resolving a model per

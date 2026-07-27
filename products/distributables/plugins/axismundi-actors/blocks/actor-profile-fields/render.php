@@ -8,10 +8,10 @@
 defined( 'ABSPATH' ) || exit;
 
 $axismundi_actor_fields_actor = axismundi_actors_resolve_block_actor( (string) ( $block->context['axismundi/actorId'] ?? '' ) );
-if ( ! $axismundi_actor_fields_actor || ! $axismundi_actor_fields_actor->is_local() ) {
+if ( ! $axismundi_actor_fields_actor ) {
 	return;
 }
-$axismundi_actor_fields = axismundi_actors_get_profile_fields( $axismundi_actor_fields_actor->get_identity_id() );
+$axismundi_actor_fields = axismundi_actors_actor_profile_fields( $axismundi_actor_fields_actor );
 if ( empty( $axismundi_actor_fields ) ) {
 	return;
 }
@@ -33,7 +33,7 @@ $axismundi_actor_fields_wrapper = get_block_wrapper_attributes( array( 'class' =
 	<?php foreach ( $axismundi_actor_fields as $axismundi_actor_field ) : ?>
 		<li class="ax-actor-profile-fields-block__item">
 			<span class="ax-actor-profile-fields-block__name"><?php echo esc_html( $axismundi_actor_field['name'] ); ?></span>
-			<a class="ax-actor-profile-fields-block__url" href="<?php echo esc_url( $axismundi_actor_field['url'] ); ?>" rel="me nofollow noopener noreferrer" target="_blank">
+			<a class="ax-actor-profile-fields-block__url" href="<?php echo esc_url( $axismundi_actor_field['url'] ); ?>" rel="<?php echo esc_attr( ! empty( $axismundi_actor_field['is_remote'] ) ? 'nofollow noopener noreferrer' : 'me nofollow noopener noreferrer' ); ?>" target="_blank">
 				<?php echo esc_html( preg_replace( '#^https?://#', '', untrailingslashit( $axismundi_actor_field['url'] ) ) ); ?>
 			</a>
 			<?php if ( 'verified' === $axismundi_actor_field['verification_status'] ) : ?>

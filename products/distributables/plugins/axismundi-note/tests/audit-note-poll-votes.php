@@ -104,8 +104,15 @@ try {
 	$many_view = axismundi_note_question_view( $many['post_id'] );
 	ax_npv_assert( $ax_npv_results, 'anyOf accepts distinct options from one actor but ignores the same option twice', 1 === $many_view['voters_count'] && array( 1, 1 ) === array_column( $many_view['options'], 'votes' ) );
 
+	$form_question = ax_npv_question( $ax_npv_posts, (int) $owner->ID, 'oneOf', array( 'Tea', 'Coffee' ) );
+	$any_form_question = ax_npv_question( $ax_npv_posts, (int) $owner->ID, 'anyOf', array( 'Red', 'Blue' ) );
 	$cast_question = ax_npv_question( $ax_npv_posts, (int) $owner->ID, 'oneOf', array( 'Tea', 'Coffee' ) );
 	wp_set_current_user( (int) $voter->ID );
+	$form = axismundi_note_question_actions( '', array( 'object_uri' => $form_question['uri'] ), axismundi_note_question_view( $form_question['post_id'] ) );
+	$any_form = axismundi_note_question_actions( '', array( 'object_uri' => $any_form_question['uri'] ), axismundi_note_question_view( $any_form_question['post_id'] ) );
+	axismundi_op_set_current_object_view_model( array( 'object_uri' => $form_question['uri'], 'status' => 'active', 'poll' => axismundi_note_question_view( $form_question['post_id'] ) ) );
+	$before_vote_html = do_blocks( '<!-- wp:axismundi/question /-->' );
+	axismundi_op_set_current_object_view_model( null );
 	$cast = axismundi_note_cast_poll_vote( $cast_question['uri'], array( 'Tea' ) );
 	if ( is_array( $cast ) ) {
 		$ax_npv_posts = array_merge( $ax_npv_posts, $cast );
@@ -115,8 +122,23 @@ try {
 	$redirect_uri = axismundi_note_poll_vote_redirect_uri( $cast_question['uri'], new WP_Error( 'ax_note_vote_choice', 'Choose a valid option.' ) );
 	$notice = axismundi_note_take_poll_vote_notice( $cast_question['uri'] );
 	$notice_consumed = axismundi_note_take_poll_vote_notice( $cast_question['uri'] );
-	$form = axismundi_note_question_actions( '', array( 'object_uri' => $cast_question['uri'] ), array( 'mode' => 'oneOf', 'options' => array( array( 'name' => 'Tea' ), array( 'name' => 'Coffee' ) ) ) );
-	ax_npv_assert( $ax_npv_results, 'vote redirects keep the exact canonical Question URI and pass one-time feedback without a route-breaking query key', $cast_question['uri'] === $redirect_uri && false === strpos( $redirect_uri, 'ax_vote' ) && is_array( $notice ) && 'error' === $notice['type'] && 'Choose a valid option.' === $notice['message'] && null === $notice_consumed && false !== strpos( $form, 'required' ) );
+	axismundi_op_set_current_object_view_model( array( 'object_uri' => $cast_question['uri'], 'status' => 'active', 'poll' => $cast_view ) );
+	$after_vote_html = do_blocks( '<!-- wp:axismundi/question /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	$change_actions = axismundi_note_question_actions( '', array( 'object_uri' => $cast_question['uri'] ), $cast_view );
+	ax_npv_assert( $ax_npv_results, 'unvoted local Questions render a Poll form with native radio and checkbox controls, then show selected results and a change-vote action', $cast_question['uri'] === $redirect_uri && false === strpos( $redirect_uri, 'ax_vote' ) && is_array( $notice ) && 'error' === $notice['type'] && 'Choose a valid option.' === $notice['message'] && null === $notice_consumed && false !== strpos( $form, 'required' ) && false !== strpos( $form, 'class="ax-radio"' ) && false !== strpos( $form, 'class="ax-radio__visual"' ) && false !== strpos( $form, 'is-style-list-segmented' ) && false !== strpos( $any_form, 'class="ax-checkbox"' ) && false !== strpos( $any_form, 'class="ax-checkbox__visual"' ) && false !== strpos( $any_form, 'class="ax-checkbox__check"' ) && false !== strpos( $before_vote_html, '<form class="axismundi-question__vote"' ) && false === strpos( $before_vote_html, 'axismundi-question__result-meter' ) && false !== strpos( $after_vote_html, 'axismundi-question__result-meter' ) && false !== strpos( $after_vote_html, 'axismundi-question__result is-selected' ) && false === strpos( $after_vote_html, '<form class="axismundi-question__vote"' ) && false !== strpos( $change_actions, 'Change vote' ) && false !== strpos( $change_actions, 'axismundi_note_unvote' ) );
+	$withdrawn = axismundi_note_withdraw_poll_vote( $cast_question['uri'] );
+	$withdrawn_view = axismundi_note_question_view( $cast_question['post_id'] );
+	axismundi_op_set_current_object_view_model( array( 'object_uri' => $cast_question['uri'], 'status' => 'active', 'poll' => $withdrawn_view ) );
+	$after_withdraw_html = do_blocks( '<!-- wp:axismundi/question /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_npv_assert( $ax_npv_results, 'changing a vote records Undo for the active vote and restores the choice form', is_array( $withdrawn ) && 1 === count( $withdrawn ) && $withdrawn[0] instanceof Axismundi_Activity && 'Undo' === $withdrawn[0]->get_type() && 0 === $withdrawn_view['voters_count'] && array( 0, 0 ) === array_column( $withdrawn_view['options'], 'votes' ) && false !== strpos( $after_withdraw_html, 'axismundi-question__vote' ) && false === strpos( $after_withdraw_html, 'axismundi-question__result-meter' ) );
+	$recast = axismundi_note_cast_poll_vote( $cast_question['uri'], array( 'Coffee' ) );
+	if ( is_array( $recast ) ) {
+		$ax_npv_posts = array_merge( $ax_npv_posts, $recast );
+	}
+	$recast_view = axismundi_note_question_view( $cast_question['post_id'] );
+	ax_npv_assert( $ax_npv_results, 'an Actor can cast a different fresh vote after Undo', is_array( $recast ) && 1 === count( $recast ) && 1 === $recast_view['voters_count'] && array( 0, 1 ) === array_column( $recast_view['options'], 'votes' ) );
 	wp_set_current_user( 0 );
 
 	$dedupe_question = ax_npv_question( $ax_npv_posts, (int) $owner->ID, 'anyOf', array( 'Spring', 'Autumn' ) );

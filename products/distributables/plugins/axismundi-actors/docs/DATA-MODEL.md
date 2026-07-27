@@ -479,10 +479,19 @@ Federation) promotes or rejects them. Missing claims on a later/partial fetch do
 erase evidence, and another inbound snapshot cannot downgrade a verified decision.
 
 #### 9.6.1 DB v11 — managed actors
-`wp_ax_actor_managers(identity_id, user_id, role owner|manager|editor,
-UNIQUE(identity_id, user_id))`, added **only when** Group / Service / Organization
-actors are actually created; `actor_scope='managed'` activates then (SPEC §4.1). The
-current Site/User actors do not need it. **Version numbers are implementation order,
+`wp_ax_actor_managers(identity_id, user_id, role owner|manager|editor, created_at,
+updated_at, PRIMARY KEY (identity_id, user_id), KEY (user_id, role))`, added **only
+when** Group / Service / Organization actors are actually created; `actor_scope=
+'managed'` activates then (SPEC §4.1). The current Site/User actors do not need it.
+
+The table holds **only active** management relations: `revoke = row delete`, so every
+authority read is a plain existence/role check — no `revoked_at IS NULL` to remember,
+no re-grant collision. `granted_by` and grant/revoke history are deliberately **not**
+columns here; that audit belongs to a later Forum moderation/admin event log, never
+half-carried on the relation row. `created_at` / `updated_at` alone keep "manager
+since" and role-change recency. Invariants (locked at F0): every managed `Group`
+always has **≥1 `owner`**; an owner may not remove or demote the last owner; owner
+transfer UI is out of F0 scope. **Version numbers are implementation order,
 not schema dependencies** — if a Lemmy-style community (`Group`) ships before
 federation, pull this forward to just before that managed-Group work; nothing in
 v5–v10 depends on it. (A `Group` community is `Application` site actor's sibling: its

@@ -131,6 +131,14 @@ try {
 	$unsupported    = axismundi_note_save_envelope( $post_id, array( 'attachments' => array( $svg_id ) ) );
 	ax_na_assert( $ax_na_results, 'an HTML-only media object is neither projected nor saved as a Note attachment', null === $svg_descriptor && is_wp_error( $unsupported ) && 'ax_note_attachment_rendition' === $unsupported->get_error_code() && array( $two, $one ) === axismundi_note_attachment_ids( $post_id ) );
 
+	$preflight_ok = new WP_REST_Request( 'POST', '/axismundi-note/v1/attachments/validate' );
+	$preflight_ok->set_body_params( array( 'post' => $post_id, 'attachments' => array( $one, $two ) ) );
+	$preflight_ok_response = rest_do_request( $preflight_ok );
+	$preflight_bad = new WP_REST_Request( 'POST', '/axismundi-note/v1/attachments/validate' );
+	$preflight_bad->set_body_params( array( 'post' => $post_id, 'attachments' => array( $svg_id ) ) );
+	$preflight_bad_response = rest_do_request( $preflight_bad );
+	ax_na_assert( $ax_na_results, 'the picker preflight accepts valid media and rejects a non-federatable selection before the editor queues a save', 200 === $preflight_ok_response->get_status() && array( $one, $two ) === $preflight_ok_response->get_data()['attachments'] && 400 === $preflight_bad_response->get_status() && 'ax_note_attachment_rendition' === $preflight_bad_response->get_data()['code'] );
+
 	$too_many = array_fill( 0, AXISMUNDI_NOTE_ATTACHMENT_MAX_COUNT + 1, $one );
 	$bounded  = axismundi_note_save_envelope( $post_id, array( 'attachments' => $too_many ) );
 	ax_na_assert( $ax_na_results, 'an over-limit picker list fails closed without truncating or replacing prior rows', is_wp_error( $bounded ) && array( $two, $one ) === axismundi_note_attachment_ids( $post_id ) );

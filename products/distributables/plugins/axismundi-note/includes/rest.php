@@ -142,3 +142,37 @@ function axismundi_note_register_rest_field() : void {
 	);
 }
 add_action( 'rest_api_init', 'axismundi_note_register_rest_field' );
+
+/** Register the preflight endpoint used by the Note attachment picker. */
+function axismundi_note_register_attachment_validation_route() : void {
+	register_rest_route(
+		'axismundi-note/v1',
+		'/attachments/validate',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => static function ( WP_REST_Request $request ) {
+				$post_id = (int) $request->get_param( 'post' );
+				$post    = get_post( $post_id );
+				if ( ! $post instanceof WP_Post || AXISMUNDI_NOTE_POST_TYPE !== $post->post_type ) {
+					return new WP_Error( 'ax_note_post', __( 'The attachment subject is not a Note.', 'axismundi-note' ), array( 'status' => 404 ) );
+				}
+				$attachments = axismundi_note_validate_attachment_ids( $post_id, $request->get_param( 'attachments' ) );
+				if ( is_wp_error( $attachments ) ) {
+					if ( ! is_array( $attachments->get_error_data() ) || ! isset( $attachments->get_error_data()['status'] ) ) {
+						$attachments->add_data( array( 'status' => 400 ) );
+					}
+					return $attachments;
+				}
+				return rest_ensure_response( array( 'attachments' => $attachments ) );
+			},
+			'permission_callback' => static function ( WP_REST_Request $request ) : bool {
+				return current_user_can( 'edit_post', (int) $request->get_param( 'post' ) );
+			},
+			'args'                => array(
+				'post'        => array( 'type' => 'integer', 'required' => true, 'minimum' => 1 ),
+				'attachments' => array( 'type' => 'array', 'required' => true, 'maxItems' => AXISMUNDI_NOTE_ATTACHMENT_MAX_COUNT, 'uniqueItems' => true, 'items' => array( 'type' => 'integer', 'minimum' => 1 ) ),
+			),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_note_register_attachment_validation_route' );

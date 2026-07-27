@@ -18,6 +18,7 @@ $ax_feed_identity   = 0;
 $ax_feed_identities = array();
 $ax_feed_activities = array();
 $ax_feed_remote     = array();
+$ax_feed_post_id    = 0;
 
 /** @param bool[] $results Results. */
 function ax_feed_assert( array &$results, string $label, bool $condition ) : void {
@@ -75,13 +76,35 @@ try {
 	$stored_tomb      = axismundi_op_remote_object_store( array( 'id' => $tomb_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Tombstoned remote note.', 'to' => array( $public_uri ) ) );
 	ax_feed_assert( $ax_feed_results, 'fixture caches public and followers-only remote Objects for one Actor', is_array( $stored_active ) && is_array( $stored_observed ) && is_array( $stored_unanchored ) && is_array( $stored_private ) && is_array( $stored_tomb ) && $remote_actor instanceof Axismundi_Actor );
 
+	$ax_feed_post_id = (int) wp_insert_post(
+		array(
+			'post_title'   => 'Actor feed button context fixture',
+			'post_content' => 'Outer template post context.',
+			'post_status'  => 'publish',
+			'post_type'    => 'post',
+			'post_author'  => $ax_feed_user_id,
+		)
+	);
+	$previous_model = function_exists( 'axismundi_op_current_object_view_model' ) ? axismundi_op_current_object_view_model() : null;
+	if ( function_exists( 'axismundi_op_set_current_object_view_model' ) ) {
+		axismundi_op_set_current_object_view_model( array( 'object_uri' => $remote_note_uri ) );
+	}
+	$context_block = new WP_Block( array( 'blockName' => 'axismundi/announce-button', 'attrs' => array() ), array( 'postId' => $ax_feed_post_id ) );
+	$resolved_button_uri = axismundi_act_like_block_object_uri( array(), $context_block );
+	if ( function_exists( 'axismundi_op_set_current_object_view_model' ) ) {
+		axismundi_op_set_current_object_view_model( $previous_model );
+	}
+	ax_feed_assert( $ax_feed_results, 'an Object card action uses its active model instead of the outer Actor template post context', $remote_note_uri === $resolved_button_uri );
+
 	// --- Object rendering (Object Projections integration on the feed filter) ---
 	$announce_item = array( 'type' => 'Announce', 'actor_uri' => $actor_uri, 'object_uri' => $remote_note_uri );
 	$announce_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $announce_item );
-	ax_feed_assert( $ax_feed_results, 'a boosted cached remote Object renders its object card', '' !== $announce_html && false !== strpos( $announce_html, 'Boosted remote note body.' ) && false !== strpos( $announce_html, 'axismundi-object' ) );
+	ax_feed_assert( $ax_feed_results, 'a boosted cached remote Object renders its object card with the original author rather than the profile Actor', '' !== $announce_html && false !== strpos( $announce_html, 'Boosted remote note body.' ) && false !== strpos( $announce_html, 'axismundi-object' ) && false !== strpos( $announce_html, 'Remote owner' ) && false === strpos( $announce_html, esc_html( $actor->get_display_name() ) ) );
 
 	$spoof_item = array( 'type' => 'Create', 'actor_uri' => $actor_uri, 'object_uri' => $remote_note_uri );
 	ax_feed_assert( $ax_feed_results, 'a Create whose object author is not the acting Actor renders nothing', '' === (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $spoof_item ) );
+	$missing_create_item = array( 'type' => 'Create', 'actor_uri' => $actor_uri, 'object_uri' => 'https://example.com/notes/' . wp_generate_uuid4() );
+	ax_feed_assert( $ax_feed_results, 'a missing Create stays hidden instead of becoming an external-object row', '' === (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $missing_create_item ) );
 
 	$missing_item = array( 'type' => 'Announce', 'actor_uri' => $actor_uri, 'object_uri' => 'https://example.com/notes/' . wp_generate_uuid4() );
 	$missing_object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $missing_item );
@@ -147,6 +170,11 @@ try {
 	$remote_feed_markup = axismundi_act_render_actor_activity_feed();
 	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
 	ax_feed_assert( $ax_feed_results, 'a public remote Actor profile renders an uncached Announce as a Boosted external-object row', false !== strpos( $remote_feed_markup, 'axismundi-activity-feed__boost' ) && false !== strpos( $remote_feed_markup, 'axismundi-object-card--external-reference' ) && false !== strpos( $remote_feed_markup, 'unresolved.example' ) );
+	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$local_feed_markup = axismundi_act_render_actor_activity_feed();
+	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
+	ax_feed_assert( $ax_feed_results, 'an Actor timeline exposes Reply, Like, and Repost controls while archive renderers remain independently configurable', false !== strpos( $local_feed_markup, 'axismundi-reply-button__button' ) && false !== strpos( $local_feed_markup, 'axismundi-like-button__button' ) && false !== strpos( $local_feed_markup, 'axismundi-announce-button__button' ) );
 
 	$undo = axismundi_act_unannounce_object( $actor, $remote_note_uri );
 	if ( $undo instanceof Axismundi_Activity ) {
@@ -178,6 +206,9 @@ try {
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $iid ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fixture cleanup.
 	}
 	if ( $ax_feed_user_id > 0 && get_userdata( $ax_feed_user_id ) ) {
+		if ( $ax_feed_post_id > 0 ) {
+			wp_delete_post( $ax_feed_post_id, true );
+		}
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 		wp_delete_user( $ax_feed_user_id );
 	}

@@ -148,7 +148,14 @@ function axismundi_op_object_view_template_include( string $template ) : string 
 	if ( ! is_array( $route ) || ! in_array( (int) $route['status'], array( 200, 410 ), true ) ) {
 		return $template;
 	}
-	$slug      = 410 === (int) $route['status'] ? 'object-tombstone' : 'single-object';
+	// An Article's canonical page is its own template: the reader followed "Read more",
+	// so it shows the full text rather than the stream lead-in the default page carries.
+	$slug = 'single-object';
+	if ( 410 === (int) $route['status'] ) {
+		$slug = 'object-tombstone';
+	} elseif ( 'Article' === (string) ( $route['model']['type'] ?? '' ) ) {
+		$slug = 'single-object-article';
+	}
 	$templates = array( $slug . '.php', 'index.php' );
 	return locate_block_template( locate_template( $templates ), $slug, $templates );
 }

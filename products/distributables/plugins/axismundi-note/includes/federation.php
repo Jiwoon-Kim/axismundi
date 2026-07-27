@@ -230,18 +230,20 @@ function axismundi_note_source_audience( Axismundi_Note_Source $source ) {
 	return axismundi_act_resolve_audience( $actor, (string) $envelope['visibility'], axismundi_note_mentions( $post ) );
 }
 
-/** Whether anonymous negotiation may disclose this Note source. */
+/**
+ * Whether anonymous negotiation may disclose this Note source.
+ *
+ * A Note's own commentary is never held for its quote's consent decision --
+ * matching Mastodon, publishing your own post is always yours to do. Only the
+ * quoted target's card is gated by decision state, and that gate is a rendering
+ * concern (`quote_context`), not a visibility one.
+ */
 function axismundi_note_source_visible( Axismundi_Note_Source $source ) : bool {
 	if ( $source->is_tombstone() ) {
 		return true;
 	}
 	$audience = axismundi_note_source_audience( $source );
-	if ( ! is_array( $audience ) || true !== $audience['public'] ) {
-		return false;
-	}
-	$post = $source->get_post();
-	$status = $post instanceof WP_Post && function_exists( 'axismundi_note_quote_status' ) ? axismundi_note_quote_status( $post ) : array( 'state' => 'none' );
-	return in_array( (string) ( $status['state'] ?? '' ), array( 'none', 'self', 'accepted' ), true );
+	return is_array( $audience ) && true === $audience['public'];
 }
 
 /**

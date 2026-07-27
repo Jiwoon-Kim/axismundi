@@ -159,7 +159,10 @@ DB v9  wp_ax_actor_asset_cache (remote avatar/header cache)     — shipped; con
 Remote preview      /actors/{local-cache-uuid} admin-only       — shipped; same actor-profile template, noindex/no-cache, never hotlinks
 DB v10a wp_ax_actor_keys + wp_ax_actor_fetch_state             — shipped; keyring (rotation history) + fetch validators/backoff, publicKey captured at discovery
 DB v10b wp_ax_identity_relations                               — shipped; alsoKnownAs/movedTo stored observed/unverified (Move verify = Federation)
-DB v11 wp_ax_actor_managers                                     — only when Group/Service/Org actors ship
+DB v11 wp_ax_actor_managers                                     — shipped (as DB 13.0), pulled forward for the Forum managed-Group work;
+                                                                  managed-actor authority kernel: create_managed_group / managed_actor_can_manage /
+                                                                  group_managers / list_manageable_groups + one-owner invariant + routing
+                                                                  preview gate (schema + F0 invariants in DATA-MODEL §9.6.1)
 Instance availability axis (§9.10.1)                            — contract locked, deliberately NOT built; add an
                                                                   availability state + last success/failure evidence to
                                                                   wp_ax_instances only when a real shutdown case appears.

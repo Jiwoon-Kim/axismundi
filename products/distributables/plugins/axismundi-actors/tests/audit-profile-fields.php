@@ -49,6 +49,18 @@ try {
 	$attachments = $actor instanceof Axismundi_Actor ? axismundi_actors_profile_field_attachments( $actor ) : array();
 	ax_profile_field_assert( $ax_profile_field_results, 'profile links serialize as safe PropertyValue rel-me attachments', 2 === count( $attachments ) && 'PropertyValue' === $attachments[0]['type'] && 'Website' === $attachments[0]['name'] && false !== strpos( $attachments[0]['value'], 'href="https://example.com/me/"' ) && false !== strpos( $attachments[0]['value'], 'rel="me nofollow noopener noreferrer"' ) );
 
+	$remote_fields = axismundi_actors_remote_profile_fields_from_payload(
+		array(
+			'attachment' => array(
+				array( 'type' => 'PropertyValue', 'name' => 'Website', 'value' => '<a href="https://remote.example/about">Remote site</a>' ),
+				array( 'type' => array( 'Link', 'PropertyValue' ), 'name' => 'Social', 'value' => '<a href="https://social.example/@remote" rel="me">Social</a>' ),
+				array( 'type' => 'Document', 'name' => 'Ignore', 'value' => '<a href="https://ignored.example/">Ignore</a>' ),
+				array( 'type' => 'PropertyValue', 'name' => 'Unsafe', 'value' => '<a href="javascript:alert(1)">Unsafe</a>' ),
+			),
+		)
+	);
+	ax_profile_field_assert( $ax_profile_field_results, 'cached remote PropertyValue links preserve order, reject unsafe data, and never inherit rel-me verification', 2 === count( $remote_fields ) && 'Website' === $remote_fields[0]['name'] && 'Social' === $remote_fields[1]['name'] && 'unverified' === $remote_fields[0]['verification_status'] && ! empty( $remote_fields[0]['is_remote'] ) );
+
 	ob_start();
 	if ( $actor instanceof Axismundi_Actor ) {
 		axismundi_actors_text_form( $actor );

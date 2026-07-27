@@ -351,7 +351,12 @@ function axismundi_op_remote_view_attachments( array $payload ) : array {
 				'name'      => sanitize_text_field( wp_strip_all_tags( (string) ( $item['name'] ?? '' ) ) ),
 				'mediaType' => sanitize_mime_type( (string) ( $item['mediaType'] ?? '' ) ),
 				'url'       => $links,
-				'sensitive' => ! empty( $item['sensitive'] ),
+				// Tri-state, deliberately: a peer that never declared per-attachment
+				// sensitivity (Mastodon has no such field) must not be recorded as an
+				// explicit `false`, because that claim is what decides whether the
+				// attachment inherits the Object's flag. Same rule the Actor policy
+				// axes already follow -- unreported is NULL, never conflated with false.
+				'sensitive' => array_key_exists( 'sensitive', $item ) && is_bool( $item['sensitive'] ) ? $item['sensitive'] : null,
 				'summary'   => sanitize_text_field( wp_strip_all_tags( (string) ( $item['summary'] ?? '' ) ) ),
 			);
 		}

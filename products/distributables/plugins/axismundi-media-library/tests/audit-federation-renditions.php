@@ -166,6 +166,17 @@ try {
 		1 === count( $provider_without_sizes ) && $provider_url === $provider_without_sizes[0]['url']
 	);
 	remove_filter( 'image_downsize', $provider_downsize, 10 );
+	$embedded_source = axismundi_media_federation_renditions(
+		$provider_source,
+		array( 'max' => 1, 'max_dimension' => 1024, 'allow_source_within_max' => true )
+	);
+	ax_fed_assert(
+		$ax_fed_results,
+		'an embedded policy may use its local source when the complete image already fits the 1024px cap',
+		1 === count( $embedded_source )
+			&& wp_get_attachment_url( $provider_source ) === $embedded_source[0]['url']
+			&& 724 === $embedded_source[0]['width'] && 1023 === $embedded_source[0]['height']
+	);
 
 	$untrusted_url = 'https://cdn.example.test/probe.webp?width=1024';
 	$untrusted_downsize = static function ( $downsize, int $attachment_id, $size ) use ( $virtual, $untrusted_url ) {

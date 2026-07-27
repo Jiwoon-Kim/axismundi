@@ -1,0 +1,97 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-attachments",
+	"version": "0.2.15",
+	"title": "Object Attachments",
+	"category": "theme",
+	"icon": "format-gallery",
+	"description": "The media attachments of the ActivityStreams Object being rendered. The Object sibling of Core's Gallery: same nested-image markup, columns, and crop behaviour, but the items come from a local or cached remote Object instead of the Media Library.",
+	"textdomain": "axismundi-object-projections",
+	"attributes": {
+		"displayMode": {
+			"type": "string",
+			"default": "gallery",
+			"enum": [ "gallery", "carousel" ]
+		},
+		"columns": {
+			"type": "number",
+			"default": 2,
+			"minimum": 1,
+			"maximum": 8
+		},
+		"previewCount": {
+			"type": "number",
+			"default": 4,
+			"minimum": 0,
+			"maximum": 20
+		},
+		"imageCrop": {
+			"type": "boolean",
+			"default": true
+		},
+		"aspectRatio": {
+			"type": "string",
+			"default": "5/3"
+		},
+		"linkTo": {
+			"type": "string",
+			"default": "none"
+		},
+		"linkTarget": {
+			"type": "string",
+			"default": "_blank"
+		}
+	},
+	"example": {
+		"viewportWidth": 500
+	},
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"align": [ "left", "right", "center", "wide", "full" ],
+		"units": [ "px", "em", "rem", "vh", "vw" ],
+		"spacing": {
+			"margin": true,
+			"padding": true,
+			"blockGap": [ "horizontal", "vertical" ],
+			"__experimentalSkipSerialization": [ "blockGap" ],
+			"__experimentalDefaultControls": {
+				"blockGap": true,
+				"margin": false,
+				"padding": false
+			}
+		},
+		"color": {
+			"text": false,
+			"background": true,
+			"gradients": true
+		},
+		"interactivity": {
+			"clientNavigation": true
+		},
+		"layout": {
+			"allowSwitching": false,
+			"allowInheriting": false,
+			"allowEditing": false,
+			"default": {
+				"type": "flex"
+			}
+		},
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true,
+			"__experimentalDefaultControls": {
+				"color": true,
+				"radius": true
+			}
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"viewScript": "file:./view.js",
+	"style": [ "wp-block-gallery", "wp-block-image", "axismundi-op-object-view" ],
+	"editorStyle": [ "wp-block-gallery", "wp-block-image", "axismundi-op-object-view", "file:./editor.css" ],
+	"render": "file:./render.php"
+}

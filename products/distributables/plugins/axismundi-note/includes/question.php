@@ -256,7 +256,7 @@ function axismundi_note_question_iso( ?string $sql_datetime ) : string {
  * member and every display of this shape agree with the wire's own `endTime`
  * semantics instead of only the locally-known explicit-close flag.
  *
- * @return array{mode:string,options:array<int,array{name:string,votes:int}>,voters_count:int,closes_at:string,closed_at:string}|null
+ * @return array{mode:string,options:array<int,array{uuid:string,name:string,votes:int}>,voters_count:int,closes_at:string,closed_at:string}|null
  */
 function axismundi_note_question_view( int $post_id ) : ?array {
 	$question = axismundi_note_question_get( $post_id );
@@ -277,7 +277,7 @@ function axismundi_note_question_view( int $post_id ) : ?array {
 		: array( 'voters_count' => 0, 'options' => array() );
 	return array(
 		'mode'         => $question['mode'],
-		'options'      => array_map( static fn( array $option ) : array => array( 'name' => $option['name'], 'votes' => (int) ( $tally['options'][ $option['uuid'] ] ?? 0 ) ), $question['options'] ),
+		'options'      => array_map( static fn( array $option ) : array => array( 'uuid' => (string) $option['uuid'], 'name' => $option['name'], 'votes' => (int) ( $tally['options'][ $option['uuid'] ] ?? 0 ) ), $question['options'] ),
 		'voters_count' => (int) ( $tally['voters_count'] ?? 0 ),
 		'closes_at'    => $closes_at_iso,
 		'closed_at'    => $closed_at_iso,

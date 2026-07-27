@@ -1,0 +1,53 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-summary",
+	"version": "0.3.0",
+	"title": "Object Summary",
+	"category": "theme",
+	"icon": "excerpt-view",
+	"description": "The explicit summary of the ActivityStreams Object being rendered. The Object sibling of Core's Post Excerpt: local Articles use content before the More block, or their authored excerpt when no More block exists; remote Objects use their authored summary.",
+	"textdomain": "axismundi-object-projections",
+	"attributes": {
+		"textAlign": { "type": "string" },
+		"moreText": { "type": "string", "role": "content" },
+		"showMoreOnNewLine": { "type": "boolean", "default": true },
+		"excerptLength": { "type": "number", "default": 55 }
+	},
+	"example": { "viewportWidth": 500 },
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"color": {
+			"gradients": true,
+			"link": true,
+			"__experimentalDefaultControls": { "background": true, "text": true, "link": true }
+		},
+		"spacing": { "margin": true, "padding": true },
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"textColumns": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalTextDecoration": true,
+			"__experimentalLetterSpacing": true,
+			"__experimentalDefaultControls": { "fontSize": true }
+		},
+		"interactivity": { "clientNavigation": true },
+		"__experimentalBorder": {
+			"radius": true,
+			"color": true,
+			"width": true,
+			"style": true,
+			"__experimentalDefaultControls": { "radius": true, "color": true, "width": true, "style": true }
+		}
+	},
+	"editorScript": "file:./edit.js",
+	"viewScript": "file:./view.js",
+	"style": [ "wp-block-post-excerpt", "axismundi-op-object-view" ],
+	"editorStyle": [ "wp-block-post-excerpt-editor", "axismundi-op-object-view" ],
+	"render": "file:./render.php"
+}

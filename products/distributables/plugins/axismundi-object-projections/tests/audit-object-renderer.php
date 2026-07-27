@@ -241,6 +241,8 @@ $ax_rnd_editor_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/ob
 $ax_rnd_owned = array(
 	'axismundi/object-status',
 	'axismundi/object-meta',
+	'axismundi/object-date',
+	'axismundi/object-type',
 	'axismundi/object-title',
 	'axismundi/object-content',
 	'axismundi/object-summary',
@@ -272,6 +274,315 @@ ax_rnd_assert(
 		&& $ax_rnd_expected === $ax_rnd_actual
 		&& false !== strpos( $ax_rnd_editor_js, 'axismundiOpObjectBlocks' )
 );
+
+/*
+ * `object-content` may stand down in a stream when a summary already speaks there.
+ *
+ * One Object Card pattern assembles the single page, the Actor timeline, and the
+ * hashtag archive, so this is a per-surface decision the block has to ask about rather
+ * than a second template. The Note case is the one that matters: a Note has no summary
+ * and its body IS the post, so the toggle must not empty its card.
+ */
+function ax_rnd_content_on_surface( array $model, array $attributes, string $surface ) : string {
+	// `get_block_wrapper_attributes()` reads the block being rendered; calling the
+	// renderer directly leaves that unset and Core emits a null-offset notice.
+	WP_Block_Supports::$block_to_render = array( 'blockName' => 'axismundi/object-content', 'attrs' => array() );
+	$previous = $GLOBALS['axismundi_op_object_template_options'] ?? array();
+	$GLOBALS['axismundi_op_object_template_options'] = array( 'surface' => $surface );
+	axismundi_op_set_current_object_view_model( $model );
+	try {
+		return axismundi_op_render_object_content_block( $attributes );
+	} finally {
+		axismundi_op_set_current_object_view_model( null );
+		$GLOBALS['axismundi_op_object_template_options'] = $previous;
+	}
+}
+
+$ax_rnd_article                 = axismundi_op_object_view_model_defaults();
+$ax_rnd_article['status']       = 'active';
+$ax_rnd_article['type']         = 'Article';
+$ax_rnd_article['content_html'] = '<p>Full article body.</p>';
+$ax_rnd_article['summary']      = '<p>The teaser.</p>';
+
+$ax_rnd_note                 = axismundi_op_object_view_model_defaults();
+$ax_rnd_note['status']       = 'active';
+$ax_rnd_note['type']         = 'Note';
+$ax_rnd_note['content_html'] = '<p>A note body.</p>';
+$ax_rnd_note['summary']      = '';
+
+$ax_rnd_results[] = ( static function () use ( $ax_rnd_article ) : bool {
+	$hidden = ax_rnd_content_on_surface( $ax_rnd_article, array( 'hideInFeed' => true ), 'feed' );
+	$shown  = ax_rnd_content_on_surface( $ax_rnd_article, array( 'hideInFeed' => true ), 'single' );
+	$pass   = '' === trim( $hidden ) && false !== strpos( $shown, 'Full article body' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] a summarized Article hides its body in a stream and keeps it on its own page\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () use ( $ax_rnd_note ) : bool {
+	$pass = false !== strpos(
+		ax_rnd_content_on_surface( $ax_rnd_note, array( 'hideInFeed' => true ), 'feed' ),
+		'A note body'
+	);
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] an Object with no summary keeps its body in a stream, so a card is never empty\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () use ( $ax_rnd_note ) : bool {
+	// A Note's summary is a preview or a warning, not a teaser for a separate page, so
+	// the body must survive even once Notes can carry one. Without the type check this
+	// starts silently emptying Note cards the day Note excerpts ship.
+	$summarised            = $ax_rnd_note;
+	$summarised['summary'] = 'A note preview.';
+	$pass = false !== strpos(
+		ax_rnd_content_on_surface( $summarised, array( 'hideInFeed' => true ), 'feed' ),
+		'A note body'
+	);
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] a summarised Note keeps its body in a stream; only an Article stands down\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () use ( $ax_rnd_article ) : bool {
+	$pass = false !== strpos(
+		ax_rnd_content_on_surface( $ax_rnd_article, array(), 'feed' ),
+		'Full article body'
+	);
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] the body stays in a stream unless the block opts out\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// The single Object template emits the pattern markup without wrapping it, so an
+	// unset option must read as `single` -- otherwise the body would vanish there.
+	$previous = $GLOBALS['axismundi_op_object_template_options'] ?? array();
+	$GLOBALS['axismundi_op_object_template_options'] = array();
+	$pass = 'single' === axismundi_op_object_template_option( 'surface', 'single' );
+	$GLOBALS['axismundi_op_object_template_options'] = $previous;
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] an unwrapped render reads as the single surface\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+/*
+ * Post-level content warning.
+ *
+ * `sensitive` and "fold the post" are different questions. Mastodon and Misskey fold a
+ * post only when the author wrote warning text; `sensitive: true` on its own blurs media
+ * and leaves the writing readable. When a warning does exist it covers the body, the
+ * poll, the quote, and the attachments as one unit.
+ */
+function ax_rnd_cw_model( bool $sensitive, string $warning, string $body = '<p>The body.</p>' ) : array {
+	$model                  = axismundi_op_object_view_model_defaults();
+	$model['status']        = 'active';
+	$model['type']          = 'Note';
+	$model['sensitive']     = $sensitive;
+	$model['content_warning'] = $warning;
+	$model['content_html']  = $body;
+	return $model;
+}
+
+/** Render a fragment against one model. */
+function ax_rnd_cw_render( array $model, string $markup ) : string {
+	axismundi_op_set_current_object_view_model( $model );
+	try {
+		return do_blocks( $markup );
+	} finally {
+		axismundi_op_set_current_object_view_model( null );
+	}
+}
+
+$ax_rnd_wrapped = '<!-- wp:axismundi/object-content-warning --><!-- wp:axismundi/object-content /--><!-- /wp:axismundi/object-content-warning -->';
+
+$ax_rnd_results[] = ( static function () use ( $ax_rnd_wrapped ) : bool {
+	$html = ax_rnd_cw_render( ax_rnd_cw_model( true, 'nsfw' ), $ax_rnd_wrapped );
+	// Exactly one gate: the wrapper's. A second would mean the body gated itself too and
+	// the reader would face two "Show more" controls for one warning.
+	$pass = 1 === substr_count( $html, '<details' )
+		&& false !== strpos( $html, '<summary>nsfw</summary>' )
+		&& false !== strpos( $html, 'The body.' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] an authored warning folds the post once, and the body does not gate itself again\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () use ( $ax_rnd_wrapped ) : bool {
+	// The behaviour change: sensitive media with no warning text must not hide writing.
+	$html = ax_rnd_cw_render( ax_rnd_cw_model( true, '' ), $ax_rnd_wrapped );
+	$pass = false === strpos( $html, '<details' ) && false !== strpos( $html, 'The body.' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] sensitive with no authored warning leaves the post unfolded\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () use ( $ax_rnd_wrapped ) : bool {
+	$html = ax_rnd_cw_render( ax_rnd_cw_model( false, '' ), $ax_rnd_wrapped );
+	$pass = false === strpos( $html, '<details' ) && false !== strpos( $html, 'The body.' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] the wrapper is invisible when nothing is warned\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// Backward compatibility: a template that places the body without the wrapper must
+	// still gate it, or an existing card would leak a warned post.
+	$html = ax_rnd_cw_render( ax_rnd_cw_model( true, 'nsfw' ), '<!-- wp:axismundi/object-content /-->' );
+	$pass = 1 === substr_count( $html, '<details' ) && false !== strpos( $html, '<summary>nsfw</summary>' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] the body still gates itself when no wrapper owns the disclosure\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// An inferred label (hashtag/title) exists so a gate always has something to show,
+	// but it must never be what decides to fold.
+	$model              = ax_rnd_cw_model( true, '' );
+	$model['hashtags']  = array( array( 'name' => 'art' ) );
+	$pass = ! axismundi_op_object_has_content_warning( $model )
+		&& '#art' === axismundi_op_sensitive_content_label( $model );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] an inferred label can title a gate but never creates one\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+/*
+ * A warned Article in a stream, per FEP-b2b8's in-stream guidance:
+ *
+ *   Content Warning: Citizen Kane   the authored `dcterms:subject`
+ *   click to view                   the summary, obscured
+ *   read more                       the route to the full representation
+ *
+ * An Article obscures its *summary* — its body is not in the stream at all — which is
+ * the mirror image of a Note, where the body is the post. The read-more link must stay
+ * outside the disclosure, or a warned Article offers no way to reach itself.
+ */
+function ax_rnd_article_summary( bool $sensitive, string $warning ) : string {
+	$model                    = axismundi_op_object_view_model_defaults();
+	$model['status']          = 'active';
+	$model['type']            = 'Article';
+	$model['summary']         = 'The film is a masterpiece of framing.';
+	$model['sensitive']       = $sensitive;
+	$model['content_warning'] = $warning;
+	$model['human_url']       = 'https://example.test/kane';
+	axismundi_op_set_current_object_view_model( $model );
+	try {
+		return do_blocks( '<!-- wp:axismundi/object-summary {"moreText":"Read more"} /-->' );
+	} finally {
+		axismundi_op_set_current_object_view_model( null );
+	}
+}
+
+$ax_rnd_results[] = ( static function () : bool {
+	$html    = ax_rnd_article_summary( true, 'CW: Citizen Kane' );
+	$spoiler = strpos( $html, 'data-ax-spoiler' );
+	$link    = strpos( $html, 'more-link' );
+	$pass    = false !== $spoiler
+		// Obscured in place, not collapsed: the text is present and covered.
+		&& false === strpos( $html, '<details' )
+		&& false !== strpos( $html, 'masterpiece' )
+		&& false !== strpos( $html, 'is-obscured' )
+		&& false !== strpos( $html, 'Content warning: CW: Citizen Kane' )
+		// The route to the full Article must not be covered with the summary.
+		&& false !== $link && $link > strpos( $html, 'spoiler-reveal' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] a sensitive Article obscures its summary in place and keeps read-more outside the cover\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// The Note rule does not transfer: FEP supplies a label fallback chain exactly so a
+	// missing `dcterms:subject` never switches an Article's protection off.
+	$html = ax_rnd_article_summary( true, '' );
+	$pass = false !== strpos( $html, 'data-ax-spoiler' ) && false !== strpos( $html, 'is-obscured' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] a sensitive Article stays covered even with no authored subject\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	$html = ax_rnd_article_summary( false, '' );
+	$pass = false === strpos( $html, 'data-ax-spoiler' ) && false !== strpos( $html, 'masterpiece' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] a plain Article summary is not covered\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// The two shapes must not borrow each other's treatment.
+	$article = ax_rnd_article_summary( true, 'CW: Citizen Kane' );
+	$note    = ax_rnd_cw_render( ax_rnd_cw_model( true, 'nsfw' ), '<!-- wp:axismundi/object-content-warning --><!-- wp:axismundi/object-content /--><!-- /wp:axismundi/object-content-warning -->' );
+	$pass    = false === strpos( $article, '<details' )
+		&& false === strpos( $note, 'data-ax-spoiler' )
+		&& false !== strpos( $note, '<details' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] an Article uses the spoiler and a Note uses the fold, never the reverse\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// The fold belongs to the Note/Question composition. An Article can never fold, so a
+	// wrapper on an Article surface could only ever render transparently — scenery that
+	// implies a disclosure the page does not perform. Guard the compositions rather than
+	// the behaviour, because the behaviour of a dead wrapper is indistinguishable from
+	// correct and would let it sit there unnoticed.
+	$article_single = axismundi_op_single_object_template_content( 'single-object-article' );
+	$article_card   = axismundi_op_object_card_pattern_content( 'object-card-article' );
+	$default_card   = axismundi_op_object_card_pattern_content( 'object-card-default' );
+	$pass = false === strpos( $article_single, '<!-- wp:axismundi/object-content-warning' )
+		&& false === strpos( $article_card, '<!-- wp:axismundi/object-content-warning' )
+		// The Article card carries no body at all, so there is nothing for it to hide.
+		&& false === strpos( $article_card, '<!-- wp:axismundi/object-content ' )
+		&& false === strpos( $article_card, '<!-- wp:axismundi/object-content /' )
+		// The default card keeps both the fold and the body it exists to cover.
+		&& false !== strpos( $default_card, '<!-- wp:axismundi/object-content-warning' )
+		&& false !== strpos( $default_card, '<!-- wp:axismundi/object-content /' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] the fold lives only where a body can be folded, never on an Article surface\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// The Article card is the stream lead-in and the Article page is the piece, so the
+	// summary belongs to one and the body to the other. Swapping either would either
+	// leak an Article's body into a feed or repeat its teaser above its own text.
+	$article_card   = axismundi_op_object_card_pattern_content( 'object-card-article' );
+	$article_single = axismundi_op_single_object_template_content( 'single-object-article' );
+	$pass = false !== strpos( $article_card, '<!-- wp:axismundi/object-summary ' )
+		&& false === strpos( $article_single, '<!-- wp:axismundi/object-summary' )
+		&& false !== strpos( $article_single, '<!-- wp:axismundi/object-content /' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] an Article leads with its summary in a stream and with its body on its own page\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_rnd_results[] = ( static function () : bool {
+	// Most federated Objects are never edited and carry no `updated` time, so a card
+	// header asking for that field renders an empty string and the timestamp disappears
+	// — visibly on remote Objects and not on local ones, which reads as the surfaces
+	// disagreeing when it is really the data.
+	$model              = axismundi_op_object_view_model_defaults();
+	$model['status']    = 'active';
+	$model['type']      = 'Note';
+	$model['published'] = '2026-07-26T16:43:41+00:00';
+	$model['updated']   = '';
+
+	axismundi_op_set_current_object_view_model( $model );
+	$published = axismundi_op_render_object_date_block( array() );
+	$updated   = axismundi_op_render_object_date_block( array( 'field' => 'updated' ) );
+	axismundi_op_set_current_object_view_model( null );
+
+	$header = (string) file_get_contents( dirname( __DIR__ ) . '/templates/parts/object-card-header.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local bundled template read.
+	$pass   = '' !== trim( $published )
+		// An absent `updated` correctly renders nothing rather than a wrong date.
+		&& '' === trim( $updated )
+		// So the shared header must ask for the field every Object actually has.
+		&& false === strpos( $header, '"field":"updated"' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] the card header dates every Object, including one that was never edited\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
 
 $ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

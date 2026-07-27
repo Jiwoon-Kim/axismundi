@@ -83,10 +83,12 @@ try {
 	$q_model = axismundi_note_object_view_model( $q_source );
 	ax_nqv_assert( $ax_nqv_results, 'the HTML view model carries the same poll shape (mode, options, zero tallies, ISO closes_at)', is_array( $q_model ) && 'Question' === $q_model['type'] && is_array( $q_model['poll'] ) && 'oneOf' === $q_model['poll']['mode'] && array( 'Cats', 'Dogs' ) === array_column( $q_model['poll']['options'], 'name' ) && 0 === $q_model['poll']['voters_count'] && '2030-06-01T00:00:00+00:00' === $q_model['poll']['closes_at'] && '' === $q_model['poll']['closed_at'] );
 
+	// Anonymous and remote readers remain on the read-only results surface.
+	wp_set_current_user( 0 );
 	axismundi_op_set_current_object_view_model( $q_model );
 	$q_block_html = axismundi_op_render_question_block();
 	axismundi_op_set_current_object_view_model( null );
-	ax_nqv_assert( $ax_nqv_results, 'the Question block renders both options, a 0% bar for each, and an open-voting meta line', false !== strpos( $q_block_html, 'axismundi-question--open' ) && 2 === substr_count( $q_block_html, 'axismundi-question__option-name' ) && false !== strpos( $q_block_html, 'Cats' ) && false !== strpos( $q_block_html, 'Dogs' ) && false !== strpos( $q_block_html, 'width:0%' ) );
+	ax_nqv_assert( $ax_nqv_results, 'the Question block renders both options, static zero-value bars, and an open-voting meta line', false !== strpos( $q_block_html, 'axismundi-question--open' ) && 2 === substr_count( $q_block_html, 'axismundi-question__option-name' ) && false !== strpos( $q_block_html, 'Cats' ) && false !== strpos( $q_block_html, 'Dogs' ) && false !== strpos( $q_block_html, '--_value:0%' ) );
 
 	// An anyOf Question that is already closed.
 	$multi = ax_nqv_publish( $ax_nqv_post_ids, (int) $author->ID, 'Pick any.' );

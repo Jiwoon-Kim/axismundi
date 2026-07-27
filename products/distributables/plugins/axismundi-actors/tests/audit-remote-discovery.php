@@ -111,6 +111,8 @@ try {
 	$rows = $actor instanceof Axismundi_Actor ? axismundi_actors_get_addresses( $actor->get_identity_id() ) : array();
 	$acct_rows = array_values( array_filter( $rows, static fn( array $row ) : bool => 'acct' === $row['address_type'] ) );
 	ax_remote_assert( $ax_remote_results, 'the requested acct is recorded only after successful Actor validation', 1 === count( $acct_rows ) && 'remote_alice@example.com' === $acct_rows[0]['address'] && ! empty( $acct_rows[0]['verified_at'] ) );
+	$by_acct = axismundi_actors_get_by_remote_acct( '@remote_alice@example.com' );
+	ax_remote_assert( $ax_remote_results, 'a cached remote Actor resolves only by its exact verified acct address', $actor instanceof Axismundi_Actor && $by_acct instanceof Axismundi_Actor && $actor->get_identity_id() === $by_acct->get_identity_id() && null === axismundi_actors_get_by_remote_acct( '@remote_alice@other.example' ) );
 
 	$stored = $actor instanceof Axismundi_Actor ? axismundi_actors_get_by_uri( $actor->get_uri() ) : null;
 	ax_remote_assert( $ax_remote_results, 'remote snapshot fields are normalized while the bounded payload remains available', $stored instanceof Axismundi_Actor && 'alice-example' === $stored->get_preferred_username() && 'Remote Alice' === $stored->get_display_name() && str_contains( (string) $wpdb->get_var( $wpdb->prepare( 'SELECT payload_json FROM ' . axismundi_actors_actors_table() . ' WHERE identity_id = %d', $stored->get_identity_id() ) ), 'alice.png' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture assertion on custom table.

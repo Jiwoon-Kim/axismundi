@@ -83,7 +83,7 @@ try {
 	update_option( 'permalink_structure', '' );
 	ax_profile_assert( $ax_profile_results, 'plain profile fallback works without pretty permalinks', false !== strpos( $actor->get_profile_url(), 'ax_actor_handle=' ) );
 	update_option( 'permalink_structure', '/%postname%/' );
-	ax_profile_assert( $ax_profile_results, 'pretty profile alias uses the mutable handle', home_url( '/@' . rawurlencode( $actor->get_preferred_username() ) . '/' ) === $actor->get_profile_url() );
+	ax_profile_assert( $ax_profile_results, 'pretty profile alias uses the mutable handle without a trailing slash', home_url( '/@' . rawurlencode( $actor->get_preferred_username() ) ) === $actor->get_profile_url() );
 
 	// The handle is immutable once registered: re-registration is refused and the alias holds.
 	$old_handle = $actor->get_preferred_username();
@@ -121,6 +121,14 @@ try {
 
 	$rules = axismundi_actors_rewrite_rules();
 	ax_profile_assert( $ax_profile_results, 'canonical and human alias rewrite rules are both registered', isset( $rules['^actors/([0-9a-fA-F-]{36})/?$'], $rules['^@([^/]+)/?$'] ) );
+	$ax_previous_current_actor = $GLOBALS['axismundi_actors_current_actor'];
+	$ax_previous_query        = $GLOBALS['wp_query'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = $public_actor;
+	$GLOBALS['wp_query'] = new WP_Query();
+	$GLOBALS['wp_query']->set( 'ax_actor_handle', $public_actor instanceof Axismundi_Actor ? $public_actor->get_preferred_username() : '' );
+	ax_profile_assert( $ax_profile_results, 'the local handle alias opts out of Core trailing-slash canonicalization', false === axismundi_actors_handle_alias_canonical_redirect( 'https://example.test/@alice_profile/' ) );
+	$GLOBALS['axismundi_actors_current_actor'] = $ax_previous_current_actor;
+	$GLOBALS['wp_query'] = $ax_previous_query;
 } finally {
 	$GLOBALS['axismundi_actors_current_actor'] = null;
 	update_option( 'permalink_structure', $ax_old_permalink );
@@ -135,6 +143,63 @@ try {
 		}
 	}
 }
+
+/*
+ * One slash policy across both Actor routes.
+ *
+ * An Actor has exactly two addresses — the identity URI it publishes and the human hub —
+ * and each should have exactly one canonical form. Before this, `@handle` was slashless
+ * while `/actors/{uuid}` answered the browser with a redirect to a slashed variant, which
+ * meant the very URL the JSON publishes as `id`, and WebFinger points `rel=self` at, was
+ * not the one that served the page.
+ */
+$ax_profile_results[] = ( static function () : bool {
+	$actor = axismundi_actors_get_by_handle( 'admin2' );
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+		printf( "[FAIL] a slash policy fixture Actor exists\n" );
+		return false;
+	}
+	$identity = $actor->get_uri();
+	$hub      = axismundi_actors_profile_hub_url( $actor );
+
+	// Both opt-outs read the routed request, so the route has to be simulated the way
+	// the handle-alias check above does; without it they simply see no Actor.
+	$previous_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+	$previous_query = $GLOBALS['wp_query'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+
+	$GLOBALS['wp_query'] = new WP_Query();
+	$GLOBALS['wp_query']->set( 'ax_actor', $actor->get_uuid() );
+	$identity_opts_out = false === axismundi_actors_identity_canonical_redirect( $identity . '/' );
+
+	$GLOBALS['wp_query'] = new WP_Query();
+	$GLOBALS['wp_query']->set( 'ax_actor_handle', $actor->get_preferred_username() );
+	$hub_opts_out = false === axismundi_actors_handle_alias_canonical_redirect( $hub . '/' );
+
+	$GLOBALS['axismundi_actors_current_actor'] = $previous_actor;
+	$GLOBALS['wp_query'] = $previous_query;
+
+	$pass = $identity === untrailingslashit( $identity )
+		&& $hub === untrailingslashit( $hub )
+		// The identity route opts out of Core's canonicalisation the same way the handle
+		// alias does, so the published URI is the one that answers.
+		&& $identity_opts_out
+		&& $hub_opts_out;
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] both Actor addresses are slashless and neither is canonicalised away\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
+
+$ax_profile_results[] = ( static function () : bool {
+	// The hub fallback for a cached remote Actor with no verified acct must not mint the
+	// slashed variant, or a link would be handed out that only ever redirects.
+	$source = (string) file_get_contents( dirname( __DIR__ ) . '/includes/routing.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local bundled source read.
+	$pass   = false === strpos( $source, "'/actors/' . rawurlencode( \$actor->get_uuid() ) . '/'" );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "[%s] the UUID hub fallback builds the canonical slashless form\n", $pass ? 'PASS' : 'FAIL' );
+	return $pass;
+} )();
 
 $ax_profile_failures = count( array_filter( $ax_profile_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

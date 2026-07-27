@@ -666,7 +666,7 @@ final class Axismundi_Actor {
 				return ''; // A handle-less (not-yet-registered) local actor has no /@ alias.
 			}
 			return get_option( 'permalink_structure' )
-				? home_url( '/@' . rawurlencode( $handle ) . '/' )
+				? home_url( '/@' . rawurlencode( $handle ) )
 				: add_query_arg( 'ax_actor_handle', $handle, home_url( '/' ) );
 		}
 		return (string) ( $this->row['profile_url'] ?? '' );
@@ -909,6 +909,31 @@ function axismundi_actors_get_by_handle( string $handle ) : ?Axismundi_Actor {
 	return '' !== $key
 		? axismundi_actors_query_one( 'a.local_handle_key = %s AND i.origin = %s', $key, 'local' )
 		: null;
+}
+
+/**
+ * Resolve one cached remote Actor by an exact, previously WebFinger-verified acct.
+ *
+ * This is deliberately a lookup only: a public profile route must never use an
+ * incoming URL to trigger remote discovery or network I/O.
+ *
+ * @param string $acct Bare or `@`-prefixed acct address.
+ * @return Axismundi_Actor|null
+ */
+function axismundi_actors_get_by_remote_acct( string $acct ) : ?Axismundi_Actor {
+	$acct = strtolower( ltrim( trim( $acct ), '@' ) );
+	if ( '' === $acct || ! str_contains( $acct, '@' ) ) {
+		return null;
+	}
+	$addresses = axismundi_actors_addresses_table();
+	$hash      = axismundi_actors_address_hash( 'acct', $acct );
+	return axismundi_actors_query_one(
+		"i.origin = %s AND EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address_type = %s AND ad.address_hash = %s AND ad.status = %s)",
+		'remote',
+		'acct',
+		$hash,
+		'primary'
+	);
 }
 
 /**
@@ -1853,6 +1878,16 @@ function axismundi_actors_get_addresses( int $identity_id ) : array {
 	$addresses = axismundi_actors_addresses_table();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
 	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$addresses} WHERE identity_id = %d", $identity_id ), ARRAY_A );
+}
+
+/** @return string Primary verified acct address, or ''. */
+function axismundi_actors_primary_acct_address( Axismundi_Actor $actor ) : string {
+	foreach ( axismundi_actors_get_addresses( $actor->get_identity_id() ) as $address ) {
+		if ( 'acct' === (string) ( $address['address_type'] ?? '' ) && 'primary' === (string) ( $address['status'] ?? '' ) ) {
+			return strtolower( trim( (string) ( $address['address'] ?? '' ) ) );
+		}
+	}
+	return '';
 }
 
 /**

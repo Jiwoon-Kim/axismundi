@@ -497,6 +497,37 @@ function axismundi_actors_admin_notice() : void {
 }
 
 /**
+ * Warn before plain permalinks strand already-issued Actor identity URLs.
+ *
+ * `/@handle` and `/actors/{uuid}` are deliberately independent of the chosen
+ * pretty permalink structure. Plain permalinks are different: Apache does not
+ * pass either path to WordPress, while immutable Actor IDs may already have
+ * been published through WebFinger and ActivityPub.
+ *
+ * @return void
+ */
+function axismundi_actors_plain_permalink_notice() : void {
+	if ( ! current_user_can( 'manage_options' ) || '' !== (string) get_option( 'permalink_structure', '' ) ) {
+		return;
+	}
+	$screen = get_current_screen();
+	if ( ! $screen || 'options-permalink' !== $screen->id ) {
+		return;
+	}
+	global $wpdb;
+	$identities = axismundi_actors_identities_table();
+	$issued     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$identities}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bundled custom table, a settings-screen warning, and no user input.
+	if ( $issued <= 0 ) {
+		return;
+	}
+	printf(
+		'<div class="notice notice-warning"><p>%s</p></div>',
+		esc_html__( 'Axismundi Actor profiles require a non-plain permalink structure. Changing this site to Plain would make already-issued /@handle and /actors/{uuid} URLs unreachable.', 'axismundi-actors' )
+	);
+}
+add_action( 'admin_notices', 'axismundi_actors_plain_permalink_notice' );
+
+/**
  * @param Axismundi_Actor $actor   Handle-less actor.
  * @param int             $user_id Target user.
  * @return void

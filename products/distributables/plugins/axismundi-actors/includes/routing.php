@@ -181,7 +181,13 @@ function axismundi_actors_resolve_request_actor( string $uuid, string $handle ) 
 		}
 		return axismundi_actors_get_by_uuid( strtolower( $uuid ) );
 	}
-	return '' !== $handle ? axismundi_actors_get_by_handle( rawurldecode( $handle ) ) : null;
+	$handle = rawurldecode( $handle );
+	if ( '' === $handle ) {
+		return null;
+	}
+	return str_contains( $handle, '@' )
+		? axismundi_actors_get_by_remote_acct( $handle )
+		: axismundi_actors_get_by_handle( $handle );
 }
 
 /**
@@ -199,10 +205,128 @@ function axismundi_actors_profile_hub_url( Axismundi_Actor $actor ) : string {
 	if ( $actor->is_local() ) {
 		return $actor->get_profile_url();
 	}
+	$acct = function_exists( 'axismundi_actors_primary_acct_address' ) ? axismundi_actors_primary_acct_address( $actor ) : '';
+	if ( '' !== $acct ) {
+		// Keep the acct separator readable while safely encoding any other path bytes.
+		return home_url( '/@' . str_replace( '%40', '@', rawurlencode( $acct ) ) );
+	}
+	// Slashless, matching both the published identity URI and the `@handle` hub. Minting
+	// the trailing-slash variant here would hand out a link that only redirects.
 	return get_option( 'permalink_structure' )
-		? home_url( '/actors/' . rawurlencode( $actor->get_uuid() ) . '/' )
+		? home_url( '/actors/' . rawurlencode( $actor->get_uuid() ) )
 		: add_query_arg( 'ax_actor', $actor->get_uuid(), home_url( '/' ) );
 }
+
+/**
+ * Keep `@handle` and `@handle@domain` hubs slashless without changing Actor URIs.
+ *
+ * WordPress normally appends a trailing slash to a pretty permalink. The profile
+ * alias is a compact human address, so it deliberately opts out while its
+ * immutable ActivityPub identity stays at `/actors/{uuid}`. The rewrite rule
+ * accepts both forms, and the explicit redirect below consolidates old links.
+ *
+ * @return Axismundi_Actor|null Actor addressed through a local or cached remote alias.
+ */
+function axismundi_actors_current_handle_alias_actor() : ?Axismundi_Actor {
+	$actor = axismundi_actors_current_actor();
+	return '' !== (string) get_query_var( 'ax_actor_handle' ) && $actor instanceof Axismundi_Actor
+		? $actor
+		: null;
+}
+
+/**
+ * Prevent Core from redirecting the slashless local handle alias to `/@handle/`.
+ *
+ * @param string|false $redirect_url Core redirect target.
+ * @return string|false
+ */
+function axismundi_actors_handle_alias_canonical_redirect( $redirect_url ) {
+	return axismundi_actors_current_handle_alias_actor() instanceof Axismundi_Actor ? false : $redirect_url;
+}
+add_filter( 'redirect_canonical', 'axismundi_actors_handle_alias_canonical_redirect' );
+
+/**
+ * The local Actor identity route, when this request is one.
+ *
+ * @return Axismundi_Actor|null Local Actor addressed by its own `/actors/{uuid}`.
+ */
+function axismundi_actors_current_identity_route_actor() : ?Axismundi_Actor {
+	$actor = axismundi_actors_current_actor();
+	return '' !== (string) get_query_var( 'ax_actor' ) && $actor instanceof Axismundi_Actor && $actor->is_local()
+		? $actor
+		: null;
+}
+
+/**
+ * Serve the published identity URI itself, rather than redirecting away from it.
+ *
+ * `/actors/{uuid}` is the Actor's `id`: it is what the JSON publishes, what WebFinger
+ * points `rel=self` at, and what remote servers store forever. WordPress would append a
+ * trailing slash to the browser request, so the one address the whole network is told to
+ * use answered 301 while a variant answered 200 — the reverse of the `@handle` rule
+ * beside it. Suppressing that keeps a single slashless policy across both routes: one
+ * canonical URL each, with the slashed form redirecting to it.
+ *
+ * Only the HTML view was ever affected; the ActivityStreams representation already
+ * answered 200 on both forms, so federation behaviour is unchanged either way.
+ *
+ * @param string|false $redirect_url Core redirect target.
+ * @return string|false
+ */
+function axismundi_actors_identity_canonical_redirect( $redirect_url ) {
+	return axismundi_actors_current_identity_route_actor() instanceof Axismundi_Actor ? false : $redirect_url;
+}
+add_filter( 'redirect_canonical', 'axismundi_actors_identity_canonical_redirect' );
+
+/** Redirect the tolerated `/actors/{uuid}/` form to the published identity URI. */
+function axismundi_actors_redirect_identity_trailing_slash() : void {
+	$actor = axismundi_actors_current_identity_route_actor();
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return;
+	}
+	$request_path  = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$identity_path = wp_parse_url( $actor->get_uri(), PHP_URL_PATH );
+	if ( ! is_string( $request_path ) || ! is_string( $identity_path ) || '/' !== substr( $request_path, -1 )
+		|| untrailingslashit( rawurldecode( $request_path ) ) !== $identity_path
+	) {
+		return;
+	}
+	wp_safe_redirect( $actor->get_uri(), 301 );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_actors_redirect_identity_trailing_slash', 1 );
+
+/** Redirect the tolerated trailing-slash alias to the compact canonical hub. */
+function axismundi_actors_redirect_handle_alias_trailing_slash() : void {
+	$actor = axismundi_actors_current_handle_alias_actor();
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return;
+	}
+	$request_path = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	$profile_url  = axismundi_actors_profile_hub_url( $actor );
+	$profile_path = wp_parse_url( $profile_url, PHP_URL_PATH );
+	if ( ! is_string( $request_path ) || ! is_string( $profile_path ) || '/' !== substr( $request_path, -1 ) || untrailingslashit( rawurldecode( $request_path ) ) !== $profile_path ) {
+		return;
+	}
+	wp_safe_redirect( $profile_url, 301 );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_actors_redirect_handle_alias_trailing_slash', 1 );
+
+/** Redirect cached remote UUID profile hubs to their verified local acct alias. */
+function axismundi_actors_redirect_remote_uuid_profile_alias() : void {
+	$actor = axismundi_actors_current_actor();
+	if ( ! $actor instanceof Axismundi_Actor || $actor->is_local() || '' === (string) get_query_var( 'ax_actor' ) ) {
+		return;
+	}
+	$alias = axismundi_actors_profile_hub_url( $actor );
+	if ( false === strpos( $alias, '/@' ) ) {
+		return;
+	}
+	wp_safe_redirect( $alias, 301 );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_actors_redirect_remote_uuid_profile_alias', 1 );
 
 /** One display avatar URL suitable for neutral Object view models. */
 function axismundi_actors_avatar_url( Axismundi_Actor $actor, int $size = 96 ) : string {

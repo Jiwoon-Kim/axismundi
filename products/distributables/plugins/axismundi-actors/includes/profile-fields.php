@@ -300,7 +300,11 @@ function axismundi_actors_profile_field_has_reciprocal_link( string $html, strin
 		return false;
 	}
 	$tags = new WP_HTML_Tag_Processor( $html );
-	while ( $tags->next_tag( 'a' ) ) {
+	while ( $tags->next_tag() ) {
+		$tag = strtolower( (string) $tags->get_tag() );
+		if ( ! in_array( $tag, array( 'a', 'link' ), true ) ) {
+			continue;
+		}
 		$rel = strtolower( trim( (string) $tags->get_attribute( 'rel' ) ) );
 		if ( ! in_array( 'me', preg_split( '/\s+/', $rel ) ?: array(), true ) ) {
 			continue;

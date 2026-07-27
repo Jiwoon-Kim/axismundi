@@ -92,6 +92,8 @@ try {
 		remove_filter( 'pre_http_request', $mock, 10 );
 		$after_verified = axismundi_actors_get_profile_fields( $actor->get_identity_id() );
 		ax_profile_field_assert( $ax_profile_field_results, 'explicit bounded HTML verification recognizes reciprocal rel-me and stores status', true === $verified && 'verified' === $after_verified[0]['verification_status'] );
+		$link_tag_html = '<!doctype html><head><link href="' . esc_url( $actor->get_profile_url() ) . '" rel="me" type="text/html"></head>';
+		ax_profile_field_assert( $ax_profile_field_results, 'reciprocal verification accepts a Mastodon-style link rel-me declaration', axismundi_actors_profile_field_has_reciprocal_link( $link_tag_html, $target, $actor->get_profile_url() ) );
 
 		$reordered = axismundi_actors_save_profile_fields( $actor, array( array( 'name' => 'Mastodon', 'url' => 'https://mastodon.example/@alice' ), array( 'name' => 'Renamed Website', 'url' => $target ) ) );
 		$after_reordered = axismundi_actors_get_profile_fields( $actor->get_identity_id() );

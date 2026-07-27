@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.31
+Stable tag: 0.0.32
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,9 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.32 =
+* Add accepted Following counts and stable Followers/Following page queries for Actor profile collections.
 
 = 0.0.30 =
 * Keep a public Create or Announce visible in an Actor timeline when its remote Object has not been cached, delegating a safe external-reference fallback to Object Projections while its bounded background acquisition is pending.

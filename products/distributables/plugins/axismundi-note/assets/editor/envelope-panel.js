@@ -11,6 +11,7 @@
 
 	var el = wp.element.createElement;
 	var __ = wp.i18n.__;
+	var sprintf = wp.i18n.sprintf;
 	var C = wp.components;
 	var registerPlugin = wp.plugins.registerPlugin;
 	var useSelect = wp.data.useSelect;
@@ -44,6 +45,30 @@
 		{ label: __( 'Followers', 'axismundi-note' ), value: 'followers' },
 		{ label: __( 'Only me', 'axismundi-note' ), value: 'me' }
 	];
+	var LANGUAGE_SOURCE = {
+		actor: __( 'Actor default', 'axismundi-note' ),
+		user: __( 'User language', 'axismundi-note' ),
+		site: __( 'Site default', 'axismundi-note' )
+	};
+
+	function languageOptions( explicitLanguage ) {
+		var config = window.axismundiNoteEditor || {};
+		var fallback = config.defaultLanguage || { language: 'und', source: 'site' };
+		var options = Array.isArray( config.languageOptions ) ? config.languageOptions.slice() : [];
+		[ explicitLanguage, fallback.language ].forEach( function ( language ) {
+			if ( language && ! options.some( function ( option ) { return option.value === language; } ) ) {
+				options.push( { value: language, label: language } );
+			}
+		} );
+		return [ {
+			value: '',
+			label: sprintf(
+				__( 'Automatic (%1$s: %2$s)', 'axismundi-note' ),
+				LANGUAGE_SOURCE[ fallback.source ] || LANGUAGE_SOURCE.site,
+				fallback.language || 'und'
+			)
+		} ].concat( options );
+	}
 
 	function EnvelopePanel() {
 		var Panel = window.axismundiNote.documentPanel();
@@ -210,11 +235,13 @@
 				el( 'strong', {}, __( 'Quote status:', 'axismundi-note' ) + ' ' ),
 				quoteStatusLabels[ quoteStatus.state ] || quoteStatus.state
 			),
-			el( C.TextControl, {
-				label: __( 'Language (BCP-47)', 'axismundi-note' ),
+			el( C.ComboboxControl, {
+				label: __( 'Language', 'axismundi-note' ),
 				value: envelope.language || '',
+				options: languageOptions( envelope.language || '' ),
+				help: __( 'Search for a BCP-47 language. Automatic follows the Actor default, then the WordPress user language, then the site default.', 'axismundi-note' ),
 				__next40pxDefaultSize: true,
-				onChange: function ( value ) { update( { language: value } ); }
+				onChange: function ( value ) { update( { language: value || '' } ); }
 			} ),
 			el( C.TextControl, {
 				label: __( 'In reply to (URI)', 'axismundi-note' ),

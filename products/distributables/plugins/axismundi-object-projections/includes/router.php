@@ -100,7 +100,7 @@ function axismundi_op_current_source() {
 	}
 	if ( null === $source ) {
 		$queried = get_queried_object();
-		$source  = $queried instanceof WP_Post ? $queried : null;
+		$source  = $queried instanceof WP_Post || ( $queried instanceof WP_Term && AXISMUNDI_OP_HASHTAG_TAXONOMY === $queried->taxonomy ) ? $queried : null;
 	}
 	/**
 	 * Let a product resolve an explicitly claimed namespace after Core resolution.
@@ -175,7 +175,8 @@ function axismundi_op_template_redirect() : void {
 		axismundi_op_emit_error( 404 );
 	}
 
-	$object = axismundi_op_transform_object( $source );
+	$collection = axismundi_op_transform_collection( $source );
+	$object     = is_array( $collection ) ? $collection : axismundi_op_transform_object( $source );
 	if ( is_wp_error( $object ) ) {
 		if ( 'ax_op_no_transformer' === $object->get_error_code() ) {
 			return;
@@ -221,7 +222,7 @@ function axismundi_op_html_headers( array $headers ) : array {
 	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && axismundi_op_post_article_supports( $source ) && ! axismundi_op_post_article_publicly_readable( $source ) ) {
 		return $headers;
 	}
-	$transformer = axismundi_op_resolve_object_transformer( $source );
+	$transformer = axismundi_op_resolve_collection_transformer( $source ) ?? axismundi_op_resolve_object_transformer( $source );
 	if ( null === $transformer ) {
 		return $headers;
 	}
@@ -256,7 +257,7 @@ function axismundi_op_html_alternate_link() : void {
 	if ( $source instanceof WP_Post && function_exists( 'axismundi_op_post_article_supports' ) && axismundi_op_post_article_supports( $source ) && ! axismundi_op_post_article_publicly_readable( $source ) ) {
 		return;
 	}
-	$transformer = axismundi_op_resolve_object_transformer( $source );
+	$transformer = axismundi_op_resolve_collection_transformer( $source ) ?? axismundi_op_resolve_object_transformer( $source );
 	if ( null === $transformer ) {
 		return;
 	}

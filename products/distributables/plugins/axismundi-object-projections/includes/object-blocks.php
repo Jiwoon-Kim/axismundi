@@ -181,7 +181,7 @@ add_filter( 'axismundi_actors_block_subject', 'axismundi_op_current_object_autho
 /** Render the legacy Object avatar alias through the Actors-owned block. */
 function axismundi_op_render_object_avatar_block( array $attributes = array() ) : string {
 	$size = max( 24, min( 192, (int) ( $attributes['size'] ?? 48 ) ) );
-	return do_blocks( '<!-- wp:axismundi/actor-avatar {"size":' . $size . ',"variant":"compact"} /-->' );
+	return do_blocks( '<!-- wp:axismundi/actor-avatar {"size":' . $size . '} /-->' );
 }
 
 /** Render the legacy Object identity alias through the Actors-owned block. */

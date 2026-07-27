@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.48
+Stable tag: 0.0.55
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,32 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.55 =
+* Prevent a missing-rewrite fallback from looping between `/@handle` and `/@handle/`: canonicalization now resolves the routed handle directly before the front-end handler has populated its current-Actor global.
+
+= 0.0.54 =
+* Route `/@handle` and `/actors/{uuid}` addresses in `parse_request` when the stored rewrite table is missing them, instead of redirecting. The 0.0.53 fallback 301ed a trailing-slash alias to a slashless URL that was equally unrouted, so Core canonicalization restored the slash and the two looped until the browser aborted.
+
+= 0.0.53 =
+
+* Redirect a public `/@handle/` alias even on hosted installs where that path falls through to the front-page query before Actor rewrites run.
+
+= 0.0.52 =
+
+* Route the tolerated `/@handle/` form explicitly before redirecting it to the canonical slashless profile hub.
+
+= 0.0.51 =
+
+* Fix a fatal type mismatch when a newly refreshed remote Actor queues its cached Followers/Following totals.
+
+= 0.0.50 =
+
+* Route UUID Followers/Following URLs and make cached Actor refreshes re-run WebFinger through the remote profile URL when an older cache row has no verified acct address.
+
+= 0.0.49 =
+
+* Add policy-aware Followers and Following totals, collections, and profile list blocks for local and cached remote Actors.
 
 = 0.0.45 =
 

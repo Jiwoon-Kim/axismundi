@@ -66,6 +66,22 @@ or remote Objects. The default mixed result is Post/Note plus remote Objects;
 media remains available through its explicit filter so attachment volume cannot
 overwhelm the primary discovery feed.
 
+The same canonical archive URL negotiates a minimal ActivityStreams surface:
+
+```json
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "https://example.test/hashtag/busan/",
+  "type": "OrderedCollection"
+}
+```
+
+This deliberately mirrors Mastodon's tag endpoint. A hashtag is not an Actor,
+and this server's mixed archive is an indexed discovery view rather than an
+authoritative timeline, so it publishes neither a count nor collection members.
+HTML remains the normal archive; `Accept: application/activity+json` or
+`?activitypub` selects the JSON-LD representation of the same URL.
+
 ## Archive template integration
 
 The archive participates in the normal WordPress template hierarchy

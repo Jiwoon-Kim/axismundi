@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 <!-- wp:axismundi/object-status /-->
 <!-- wp:group {"className":"axismundi-object-card__header","style":{"spacing":{"blockGap":"var:preset|spacing|150"}},"layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center","justifyContent":"space-between"}} -->
 <div class="wp-block-group axismundi-object-card__header">
-	<!-- wp:axismundi/actor-avatar {"size":48,"variant":"compact"} /-->
+	<!-- wp:axismundi/actor-avatar {"size":48} /-->
 	<!-- wp:group {"style":{"layout":{"selfStretch":"fill","flexSize":null}},"layout":{"type":"flex","flexWrap":"nowrap"}} -->
 	<div class="wp-block-group">
 		<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|0"},"layout":{"selfStretch":"fill","flexSize":null}},"layout":{"type":"flex","orientation":"vertical"}} -->

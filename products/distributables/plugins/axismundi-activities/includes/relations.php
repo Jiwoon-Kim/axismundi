@@ -344,6 +344,29 @@ function axismundi_act_get_followers( string $actor_uri, int $limit = 100 ) : ar
 	return axismundi_act_relation_actor_list( 'object', $actor_uri, $limit );
 }
 
+/** One stable page of accepted followers or following Actors. */
+function axismundi_act_get_follow_collection_page( string $side, string $actor_uri, int $page = 1, int $per_page = 20 ) : array {
+	global $wpdb;
+	$actor_uri = axismundi_act_uri( $actor_uri );
+	if ( ! axismundi_act_relations_ready() || ! in_array( $side, array( 'subject', 'object' ), true ) || '' === $actor_uri ) {
+		return array( 'items' => array(), 'total' => 0, 'has_more' => false );
+	}
+	$page          = max( 1, $page );
+	$per_page      = max( 1, min( 100, $per_page ) );
+	$offset        = ( $page - 1 ) * $per_page;
+	$table         = axismundi_act_relations_table();
+	$match_column  = $side . '_actor_uri';
+	$hash_column   = $side . '_actor_uri_hash';
+	$return_column = 'subject' === $side ? 'object_actor_uri' : 'subject_actor_uri';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Allowlisted column names and repository-owned relation table.
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE relation_type = 'follow' AND state = 'accepted' AND {$hash_column} = %s AND {$match_column} = %s", hash( 'sha256', $actor_uri ), $actor_uri ) );
+	// Fetch one extra row so callers never need a second count query to discover next.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Allowlisted column names and repository-owned relation table.
+	$rows = (array) $wpdb->get_col( $wpdb->prepare( "SELECT {$return_column} FROM {$table} WHERE relation_type = 'follow' AND state = 'accepted' AND {$hash_column} = %s AND {$match_column} = %s ORDER BY id DESC LIMIT %d OFFSET %d", hash( 'sha256', $actor_uri ), $actor_uri, $per_page + 1, $offset ) );
+	$items = array_values( array_unique( array_map( 'strval', array_slice( $rows, 0, $per_page ) ) ) );
+	return array( 'items' => $items, 'total' => $total, 'has_more' => count( $rows ) > $per_page );
+}
+
 /** Count accepted follower edges without exposing their Actor URIs. */
 function axismundi_act_get_follower_count( string $actor_uri ) : int {
 	global $wpdb;
@@ -354,6 +377,18 @@ function axismundi_act_get_follower_count( string $actor_uri ) : int {
 	$table = axismundi_act_relations_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table; values prepared and exact URI checked alongside its hash.
 	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE relation_type = 'follow' AND state = 'accepted' AND object_actor_uri_hash = %s AND object_actor_uri = %s", hash( 'sha256', $actor_uri ), $actor_uri ) );
+}
+
+/** Count accepted Actors followed by one Actor. */
+function axismundi_act_get_following_count( string $actor_uri ) : int {
+	global $wpdb;
+	$actor_uri = axismundi_act_uri( $actor_uri );
+	if ( ! axismundi_act_relations_ready() || '' === $actor_uri ) {
+		return 0;
+	}
+	$table = axismundi_act_relations_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table; values prepared and exact URI checked alongside its hash.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE relation_type = 'follow' AND state = 'accepted' AND subject_actor_uri_hash = %s AND subject_actor_uri = %s", hash( 'sha256', $actor_uri ), $actor_uri ) );
 }
 
 /** Accepted followed Actor URIs for one Actor. */

@@ -12,6 +12,119 @@ const AXISMUNDI_OP_POST_WARNING_META      = '_ax_op_content_warning';
 const AXISMUNDI_OP_POST_QUOTE_POLICY_META = '_ax_op_quote_policy';
 const AXISMUNDI_OP_POST_VISIBILITY_META   = '_ax_op_visibility';
 const AXISMUNDI_OP_POST_MENTIONS_META     = '_ax_op_mentions';
+const AXISMUNDI_OP_POST_LANGUAGE_META     = '_ax_op_language';
+
+/** Return the searchable BCP-47 language choices shared by local-object editors. */
+function axismundi_op_language_options() : array {
+	$choices = array(
+		'ar'    => __( 'Arabic', 'axismundi-object-projections' ),
+		'bn'    => __( 'Bengali', 'axismundi-object-projections' ),
+		'zh'    => __( 'Chinese', 'axismundi-object-projections' ),
+		'zh-CN' => __( 'Chinese (Simplified)', 'axismundi-object-projections' ),
+		'zh-TW' => __( 'Chinese (Traditional)', 'axismundi-object-projections' ),
+		'cs'    => __( 'Czech', 'axismundi-object-projections' ),
+		'da'    => __( 'Danish', 'axismundi-object-projections' ),
+		'nl'    => __( 'Dutch', 'axismundi-object-projections' ),
+		'en'    => __( 'English', 'axismundi-object-projections' ),
+		'en-GB' => __( 'English (United Kingdom)', 'axismundi-object-projections' ),
+		'en-US' => __( 'English (United States)', 'axismundi-object-projections' ),
+		'fi'    => __( 'Finnish', 'axismundi-object-projections' ),
+		'fr'    => __( 'French', 'axismundi-object-projections' ),
+		'de'    => __( 'German', 'axismundi-object-projections' ),
+		'el'    => __( 'Greek', 'axismundi-object-projections' ),
+		'hi'    => __( 'Hindi', 'axismundi-object-projections' ),
+		'id'    => __( 'Indonesian', 'axismundi-object-projections' ),
+		'it'    => __( 'Italian', 'axismundi-object-projections' ),
+		'ja'    => __( 'Japanese', 'axismundi-object-projections' ),
+		'ko'    => __( 'Korean', 'axismundi-object-projections' ),
+		'ko-KR' => __( 'Korean (Korea)', 'axismundi-object-projections' ),
+		'nb'    => __( 'Norwegian Bokmal', 'axismundi-object-projections' ),
+		'pl'    => __( 'Polish', 'axismundi-object-projections' ),
+		'pt'    => __( 'Portuguese', 'axismundi-object-projections' ),
+		'pt-BR' => __( 'Portuguese (Brazil)', 'axismundi-object-projections' ),
+		'ro'    => __( 'Romanian', 'axismundi-object-projections' ),
+		'ru'    => __( 'Russian', 'axismundi-object-projections' ),
+		'es'    => __( 'Spanish', 'axismundi-object-projections' ),
+		'sv'    => __( 'Swedish', 'axismundi-object-projections' ),
+		'th'    => __( 'Thai', 'axismundi-object-projections' ),
+		'tr'    => __( 'Turkish', 'axismundi-object-projections' ),
+		'uk'    => __( 'Ukrainian', 'axismundi-object-projections' ),
+		'vi'    => __( 'Vietnamese', 'axismundi-object-projections' ),
+		'und'   => __( 'Undetermined', 'axismundi-object-projections' ),
+	);
+	$options = array();
+	foreach ( $choices as $value => $label ) {
+		$options[] = array( 'value' => $value, 'label' => $label . ' (' . $value . ')' );
+	}
+	return $options;
+}
+
+/** Normalize one BCP-47 tag, or return an empty string for invalid input. */
+function axismundi_op_normalize_language( string $language ) : string {
+	if ( function_exists( 'axismundi_actors_normalize_language_tag' ) ) {
+		return axismundi_actors_normalize_language_tag( $language );
+	}
+	$language = trim( str_replace( '_', '-', $language ) );
+	if ( '' === $language || 1 !== preg_match( '/^(?:[A-Za-z]{2,8})(?:-[A-Za-z0-9]{1,8})*$|^und$/i', $language ) ) {
+		return '';
+	}
+	$parts    = explode( '-', $language );
+	$parts[0] = strtolower( $parts[0] );
+	foreach ( $parts as $index => $part ) {
+		if ( 0 === $index ) {
+			continue;
+		}
+		$parts[ $index ] = 2 === strlen( $part ) && ctype_alpha( $part ) ? strtoupper( $part ) : $part;
+	}
+	return implode( '-', $parts );
+}
+
+/** Resolve the inherited language and its source for an authored local user. */
+function axismundi_op_default_language_for_user( int $user_id ) : array {
+	if ( $user_id > 0 && function_exists( 'axismundi_actors_get_for_user' ) ) {
+		$actor = axismundi_actors_get_for_user( $user_id );
+		if ( $actor instanceof Axismundi_Actor ) {
+			$language = axismundi_op_normalize_language( (string) $actor->get_default_language() );
+			if ( '' !== $language ) {
+				return array( 'language' => $language, 'source' => 'actor' );
+			}
+		}
+	}
+	if ( $user_id > 0 ) {
+		$language = axismundi_op_normalize_language( get_user_locale( $user_id ) );
+		if ( '' !== $language ) {
+			return array( 'language' => $language, 'source' => 'user' );
+		}
+	}
+	$site_language = function_exists( 'axismundi_actors_site_language' ) ? axismundi_actors_site_language() : get_locale();
+	$site_language = axismundi_op_normalize_language( $site_language );
+	return array( 'language' => '' !== $site_language ? $site_language : 'und', 'source' => 'site' );
+}
+
+/** Resolve the existing editor post author, or the current user for a new post. */
+function axismundi_op_editor_language_user_id( string $post_type ) : int {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only editor route hint; no state changes occur here.
+	$post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
+	$post    = $post_id > 0 ? get_post( $post_id ) : null;
+	return $post instanceof WP_Post && $post_type === $post->post_type
+		? (int) $post->post_author
+		: get_current_user_id();
+}
+
+/** Sanitize a stored Article language override. */
+function axismundi_op_sanitize_post_language( $value ) : string {
+	return is_scalar( $value ) ? axismundi_op_normalize_language( (string) $value ) : '';
+}
+
+/** Resolve the effective Article language without materializing an inherited override. */
+function axismundi_op_post_effective_language( WP_Post $post ) : string {
+	$stored = axismundi_op_sanitize_post_language( get_post_meta( $post->ID, AXISMUNDI_OP_POST_LANGUAGE_META, true ) );
+	if ( '' !== $stored ) {
+		return $stored;
+	}
+	$resolved = axismundi_op_default_language_for_user( (int) $post->post_author );
+	return $resolved['language'];
+}
 
 /** Sanitize a REST or form boolean. */
 function axismundi_op_sanitize_post_sensitive( $value ) : bool {
@@ -132,6 +245,18 @@ function axismundi_op_register_post_settings_meta() : void {
 			'default'           => array(),
 			'show_in_rest'      => array( 'schema' => array( 'type' => 'array', 'items' => array( 'type' => 'string', 'format' => 'uri' ) ) ),
 			'sanitize_callback' => 'axismundi_op_sanitize_post_mentions',
+			'auth_callback'     => 'axismundi_op_auth_post_setting',
+		)
+	);
+	register_post_meta(
+		'post',
+		AXISMUNDI_OP_POST_LANGUAGE_META,
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'default'           => '',
+			'show_in_rest'      => array( 'schema' => array( 'type' => 'string', 'maxLength' => 35 ) ),
+			'sanitize_callback' => 'axismundi_op_sanitize_post_language',
 			'auth_callback'     => 'axismundi_op_auth_post_setting',
 		)
 	);
@@ -344,8 +469,17 @@ function axismundi_op_enqueue_post_editor_settings() : void {
 		'axismundi-op-post-settings',
 		plugins_url( 'assets/post-settings.js', dirname( __DIR__ ) . '/axismundi-object-projections.php' ),
 		array( 'axismundi-op-mention-token-field', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-element', 'wp-i18n', 'wp-plugins' ),
-		AXISMUNDI_OP_VERSION,
+		AXISMUNDI_OP_VERSION . '-' . (string) filemtime( dirname( __DIR__ ) . '/assets/post-settings.js' ),
 		true
+	);
+	$default_language = axismundi_op_default_language_for_user( axismundi_op_editor_language_user_id( 'post' ) );
+	wp_localize_script(
+		'axismundi-op-post-settings',
+		'axismundiPostLanguage',
+		array(
+			'options' => axismundi_op_language_options(),
+			'default' => $default_language,
+		)
 	);
 	wp_enqueue_script(
 		'axismundi-op-mention-autocomplete',

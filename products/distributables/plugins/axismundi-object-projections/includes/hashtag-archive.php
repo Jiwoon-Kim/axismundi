@@ -7,6 +7,45 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/** Whether a taxonomy term is one public Axismundi hashtag archive. */
+function axismundi_op_is_hashtag_archive_term( $source ) : bool {
+	return $source instanceof WP_Term && AXISMUNDI_OP_HASHTAG_TAXONOMY === $source->taxonomy;
+}
+
+/** Stable canonical URI for one hashtag archive collection. */
+function axismundi_op_hashtag_archive_uri( WP_Term $term ) : string {
+	$url = get_term_link( $term );
+	return is_wp_error( $url ) ? '' : (string) $url;
+}
+
+/**
+ * Project a hashtag archive as Mastodon-compatible collection metadata.
+ *
+ * The archive is a locally indexed discovery surface, not an Actor-owned
+ * timeline. Deliberately omit members, count, and paging rather than advertise
+ * a partial feed assembled from this server's local and cached observations.
+ */
+function axismundi_op_hashtag_archive_transform( WP_Term $term ) : array {
+	return array(
+		'id'   => axismundi_op_hashtag_archive_uri( $term ),
+		'type' => 'OrderedCollection',
+	);
+}
+
+/** Register the negotiated ActivityStreams representation for hashtag archives. */
+function axismundi_op_register_hashtag_archive_transformer() : void {
+	axismundi_op_register_collection_transformer(
+		'axismundi-hashtag-archive',
+		array(
+			'supports'       => 'axismundi_op_is_hashtag_archive_term',
+			'collection_uri' => 'axismundi_op_hashtag_archive_uri',
+			'transform'      => 'axismundi_op_hashtag_archive_transform',
+			'priority'       => 5,
+		)
+	);
+}
+add_action( 'axismundi_op_register_transformers', 'axismundi_op_register_hashtag_archive_transformer' );
+
 /** Normalize an allowed hashtag archive object-type filter. */
 function axismundi_op_hashtag_archive_type( $value ) : string {
 	$value = sanitize_key( (string) $value );

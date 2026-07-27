@@ -23,6 +23,8 @@
 <!-- wp:axismundi/actor-biography /-->
 
 <!-- wp:axismundi/actor-profile-fields {"display":"grid"} /-->
+
+<!-- wp:axismundi/actor-social-counts /-->
 <!-- /wp:axismundi/account-header -->
 
 <!-- wp:axismundi/actor-activity-feed /-->

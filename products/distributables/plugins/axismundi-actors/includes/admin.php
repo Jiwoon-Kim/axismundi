@@ -342,6 +342,26 @@ function axismundi_actors_policy_flag_label( ?bool $flag ) : string {
 	return $flag ? __( 'yes', 'axismundi-actors' ) : __( 'no', 'axismundi-actors' );
 }
 
+/**
+ * Refresh input that re-verifies a cached remote Actor's human acct address.
+ *
+ * A canonical Actor URI can refresh its payload, but it cannot prove the
+ * WebFinger acct address that owns the profile hub. Prefer that profile URL
+ * when the address was never recorded, so a refresh repairs older cache rows
+ * and makes their `/@name@host` alias routable.
+ *
+ * @param Axismundi_Actor $actor Cached remote Actor.
+ * @return string Acct, profile URL, or canonical URI.
+ */
+function axismundi_actors_remote_refresh_input( Axismundi_Actor $actor ) : string {
+	$acct = axismundi_actors_primary_acct_address( $actor );
+	if ( '' !== $acct ) {
+		return '@' . $acct;
+	}
+	$profile_url = $actor->get_profile_url();
+	return '' !== $profile_url ? $profile_url : $actor->get_uri();
+}
+
 /** @param Axismundi_Actor $actor Remote actor. @return void */
 function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) : void {
 	$payload   = axismundi_actors_get_remote_payload( $actor->get_identity_id() );
@@ -413,7 +433,7 @@ function axismundi_actors_render_remote_actor_detail( Axismundi_Actor $actor ) :
 	<?php endif; ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="axismundi_actors_discover_remote">
-		<input type="hidden" name="remote_actor" value="<?php echo esc_attr( (string) ( $addresses[0]['address'] ?? $actor->get_uri() ) ); ?>">
+		<input type="hidden" name="remote_actor" value="<?php echo esc_attr( axismundi_actors_remote_refresh_input( $actor ) ); ?>">
 		<?php wp_nonce_field( 'ax_actors_discover_remote' ); ?>
 		<?php submit_button( __( 'Refresh cached Actor', 'axismundi-actors' ), 'secondary', 'submit', false ); ?>
 	</form>
@@ -444,10 +464,14 @@ function axismundi_actors_render_instance_table( array $instances ) : void {
 		echo '<p>' . esc_html__( 'No remote instances cached.', 'axismundi-actors' ) . '</p>';
 		return;
 	}
-	echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Host', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Software', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Registrations', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Fetched', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Status', 'axismundi-actors' ) . '</th></tr></thead><tbody>';
+	$has_emoji = function_exists( 'axismundi_emoji_count_authority' );
+	echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Host', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Software', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Registrations', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Fetched', 'axismundi-actors' ) . '</th><th>' . esc_html__( 'Status', 'axismundi-actors' ) . '</th>' . ( $has_emoji ? '<th>' . esc_html__( 'Emojis', 'axismundi-actors' ) . '</th>' : '' ) . '</tr></thead><tbody>';
 	foreach ( $instances as $instance ) {
 		$registrations = null === $instance['open_registrations'] ? '—' : ( (int) $instance['open_registrations'] ? __( 'Open', 'axismundi-actors' ) : __( 'Closed', 'axismundi-actors' ) );
-		echo '<tr><td><code>' . esc_html( (string) $instance['host'] ) . '</code></td><td>' . esc_html( trim( (string) $instance['software_name'] . ' ' . (string) $instance['software_version'] ) ) . '</td><td>' . esc_html( $registrations ) . '</td><td>' . esc_html( (string) $instance['fetched_at'] ) . '</td><td>' . esc_html( (string) $instance['fetch_status'] ) . '</td></tr>';
+		$host          = (string) $instance['host'];
+		$emoji         = $has_emoji ? axismundi_emoji_count_authority( $host ) : 0;
+		$emoji_cell    = $has_emoji ? ( 0 === $emoji ? '—' : '<a href="' . esc_url( add_query_arg( 'authority', $host, admin_url( 'admin.php?page=axismundi-emoji' ) ) ) . '">' . esc_html( number_format_i18n( $emoji ) ) . '</a>' ) : '';
+		echo '<tr id="ax-instance-' . esc_attr( substr( hash( 'sha256', $host ), 0, 12 ) ) . '"><td><code>' . esc_html( $host ) . '</code></td><td>' . esc_html( trim( (string) $instance['software_name'] . ' ' . (string) $instance['software_version'] ) ) . '</td><td>' . esc_html( $registrations ) . '</td><td>' . esc_html( (string) $instance['fetched_at'] ) . '</td><td>' . esc_html( (string) $instance['fetch_status'] ) . '</td>' . ( $has_emoji ? '<td>' . $emoji_cell . '</td>' : '' ) . '</tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- constructed escaped HTML.
 	}
 	echo '</tbody></table>';
 }
@@ -600,6 +624,7 @@ function axismundi_actors_render_management( Axismundi_Actor $actor, int $user_i
 	<?php axismundi_actors_media_form( $actor ); ?>
 	<?php axismundi_actors_text_form( $actor ); ?>
 	<?php axismundi_actors_profile_fields_form( $actor ); ?>
+	<?php axismundi_actors_follow_collections_form( $actor ); ?>
 	<?php
 }
 
@@ -858,6 +883,33 @@ function axismundi_actors_profile_fields_form( Axismundi_Actor $actor ) : void {
 	<?php
 }
 
+/** Default-public disclosure toggle for local follower/following lists. */
+function axismundi_actors_follow_collections_form( Axismundi_Actor $actor ) : void {
+	if ( ! $actor->is_local() ) {
+		return;
+	}
+	?>
+	$current = axismundi_actors_follow_collections_policy( $actor );
+	$choices = array(
+		'public'     => __( 'Show counts and lists', 'axismundi-actors' ),
+		'count-only' => __( 'Show counts only, hide the lists', 'axismundi-actors' ),
+		'private'    => __( 'Hide counts and lists', 'axismundi-actors' ),
+	);
+	?>
+	<h2><?php esc_html_e( 'Follower and following lists', 'axismundi-actors' ); ?></h2>
+	<p class="description"><?php esc_html_e( 'How many accounts follow you and who they are can be disclosed separately. This applies to profile pages and to ActivityPub collections alike.', 'axismundi-actors' ); ?></p>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="axismundi_actors_set_follow_collections_visibility">
+		<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $actor->get_identity_id() ); ?>">
+		<?php wp_nonce_field( 'ax_actors_follow_collections_' . $actor->get_identity_id() ); ?>
+		<?php foreach ( $choices as $value => $label ) : ?>
+			<p><label><input type="radio" name="visibility" value="<?php echo esc_attr( $value ); ?>" <?php checked( $current, $value ); ?>> <?php echo esc_html( $label ); ?></label></p>
+		<?php endforeach; ?>
+		<?php submit_button( __( 'Save follow list visibility', 'axismundi-actors' ), 'secondary', 'submit', false ); ?>
+	</form>
+	<?php
+}
+
 /* -------------------------------------------------------------------------- *
  * Dedicated POST actions (nonce + capability; never the profile.php save).
  * -------------------------------------------------------------------------- */
@@ -1084,3 +1136,19 @@ function axismundi_actors_handle_set_profile_fields() : void {
 	axismundi_actors_redirect_result( $back, $result );
 }
 add_action( 'admin_post_axismundi_actors_set_profile_fields', 'axismundi_actors_handle_set_profile_fields' );
+
+/** @return void */
+function axismundi_actors_handle_set_follow_collections_visibility() : void {
+	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_follow_collections_' . $identity_id );
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_manage( $actor ) ) {
+		wp_die( esc_html__( 'You cannot manage this actor profile.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$visibility = isset( $_POST['visibility'] ) ? sanitize_key( wp_unslash( $_POST['visibility'] ) ) : '';
+	$visibility = in_array( $visibility, array( 'public', 'count-only', 'private' ), true ) ? $visibility : 'public';
+	$result     = axismundi_actors_set_follow_collections_visibility( $actor, $visibility );
+	$back = 'site' === $actor->get_scope() ? admin_url( 'options-general.php?page=axismundi-actor-site' ) : axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
+	axismundi_actors_redirect_result( $back, $result );
+}
+add_action( 'admin_post_axismundi_actors_set_follow_collections_visibility', 'axismundi_actors_handle_set_follow_collections_visibility' );

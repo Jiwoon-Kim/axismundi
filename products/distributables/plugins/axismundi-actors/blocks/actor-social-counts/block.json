@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "axismundi/actor-social-counts",
+  "version": "0.1.0",
+  "title": "Actor Social Counts",
+  "category": "theme",
+  "icon": "groups",
+  "description": "Links to an Actor's public followers and following lists.",
+  "textdomain": "axismundi-actors",
+  "usesContext": ["axismundi/actorId"],
+  "supports": { "html": false, "spacing": { "margin": true } },
+  "editorScript": "file:./edit.js",
+  "style": "file:./style.css",
+  "render": "file:./render.php"
+}

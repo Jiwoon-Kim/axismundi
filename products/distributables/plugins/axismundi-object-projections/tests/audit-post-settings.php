@@ -25,8 +25,8 @@ try {
 	$registered = get_registered_meta_keys( 'post', 'post' );
 	ax_settings_assert(
 		$ax_settings_results,
-		'sensitive, warning, Quote policy, visibility, and mention metadata are registered for REST-backed Core Post editing',
-		isset( $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ], $registered[ AXISMUNDI_OP_POST_WARNING_META ], $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ], $registered[ AXISMUNDI_OP_POST_VISIBILITY_META ], $registered[ AXISMUNDI_OP_POST_MENTIONS_META ] )
+		'sensitive, warning, Quote policy, visibility, mentions, and language metadata are registered for REST-backed Core Post editing',
+		isset( $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ], $registered[ AXISMUNDI_OP_POST_WARNING_META ], $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ], $registered[ AXISMUNDI_OP_POST_VISIBILITY_META ], $registered[ AXISMUNDI_OP_POST_MENTIONS_META ], $registered[ AXISMUNDI_OP_POST_LANGUAGE_META ] )
 			&& 'boolean' === $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ]['type']
 			&& true === $registered[ AXISMUNDI_OP_POST_SENSITIVE_META ]['show_in_rest']
 			&& 'string' === $registered[ AXISMUNDI_OP_POST_WARNING_META ]['type']
@@ -34,6 +34,7 @@ try {
 			&& array( '', 'anyone', 'followers', 'me' ) === $registered[ AXISMUNDI_OP_POST_QUOTE_POLICY_META ]['show_in_rest']['schema']['enum']
 			&& array( 'public', 'unlisted', 'followers', 'mentioned' ) === $registered[ AXISMUNDI_OP_POST_VISIBILITY_META ]['show_in_rest']['schema']['enum']
 			&& 'array' === $registered[ AXISMUNDI_OP_POST_MENTIONS_META ]['type']
+			&& 'string' === $registered[ AXISMUNDI_OP_POST_LANGUAGE_META ]['type']
 	);
 
 	$columns = axismundi_op_post_columns( array( 'title' => 'Title' ) );
@@ -51,7 +52,7 @@ try {
 			&& false !== strpos( $quick_edit, 'name="axismundi_op_mentions"' )
 	);
 	$editor_script = file_get_contents( dirname( __DIR__ ) . '/assets/post-settings.js' );
-	ax_settings_assert( $ax_settings_results, 'the block-editor Federation panel exposes the same audience and Quote-policy controls', is_string( $editor_script ) && false !== strpos( $editor_script, 'SelectControl' ) && false !== strpos( $editor_script, "'_ax_op_quote_policy'" ) && false !== strpos( $editor_script, "'_ax_op_visibility'" ) && false !== strpos( $editor_script, "'_ax_op_mentions'" ) && false !== strpos( $editor_script, "value: 'mentioned'" ) );
+	ax_settings_assert( $ax_settings_results, 'the block-editor Federation panel exposes searchable BCP-47 language, audience, and Quote-policy controls', is_string( $editor_script ) && false !== strpos( $editor_script, 'ComboboxControl' ) && false !== strpos( $editor_script, "'_ax_op_language'" ) && false !== strpos( $editor_script, "'_ax_op_quote_policy'" ) && false !== strpos( $editor_script, "'_ax_op_visibility'" ) && false !== strpos( $editor_script, "'_ax_op_mentions'" ) && false !== strpos( $editor_script, "value: 'mentioned'" ) );
 	$mention_script = file_get_contents( dirname( __DIR__ ) . '/assets/mention-autocomplete.js' );
 	ax_settings_assert(
 		$ax_settings_results,
@@ -80,6 +81,11 @@ try {
 	);
 	$post = get_post( $ax_settings_post_id );
 	ax_settings_assert( $ax_settings_results, 'a new Article defaults to public audience and anyone Quote approval', $post instanceof WP_Post && 'public' === axismundi_op_post_visibility( $post ) && 'anyone' === axismundi_op_post_quote_policy( $post ) );
+	$inherited_language = axismundi_op_default_language_for_user( $user_id );
+	ax_settings_assert( $ax_settings_results, 'an empty Article language remains inherited from the Actor, WordPress user, or site', $post instanceof WP_Post && '' === get_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_LANGUAGE_META, true ) && $inherited_language['language'] === axismundi_op_post_effective_language( $post ) );
+	update_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_LANGUAGE_META, 'ko_kr' );
+	$post = get_post( $ax_settings_post_id );
+	ax_settings_assert( $ax_settings_results, 'an explicit Article language is normalized as BCP-47', $post instanceof WP_Post && 'ko-KR' === axismundi_op_post_effective_language( $post ) && '' === axismundi_op_sanitize_post_language( '' ) );
 	delete_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META );
 	ax_settings_assert( $ax_settings_results, 'removing the stored policy restores fail-closed unset semantics', '' === axismundi_op_post_quote_policy( $post ) );
 	update_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_QUOTE_POLICY_META, 'anyone' );

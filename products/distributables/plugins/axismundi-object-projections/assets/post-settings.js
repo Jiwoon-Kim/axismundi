@@ -6,6 +6,29 @@
 	if ( ! Panel ) {
 		return;
 	}
+	const languageConfig = window.axismundiPostLanguage || { options: [], default: { language: 'und', source: 'site' } };
+	const languageSource = {
+		actor: wp.i18n.__( 'Actor default', 'axismundi-object-projections' ),
+		user: wp.i18n.__( 'User language', 'axismundi-object-projections' ),
+		site: wp.i18n.__( 'Site default', 'axismundi-object-projections' )
+	};
+	function languageOptions( explicitLanguage ) {
+		const fallback = languageConfig.default || { language: 'und', source: 'site' };
+		const options = Array.isArray( languageConfig.options ) ? languageConfig.options.slice() : [];
+		[ explicitLanguage, fallback.language ].forEach( ( language ) => {
+			if ( language && ! options.some( ( option ) => option.value === language ) ) {
+				options.push( { value: language, label: language } );
+			}
+		} );
+		return [ {
+			value: '',
+			label: wp.i18n.sprintf(
+				wp.i18n.__( 'Automatic (%1$s: %2$s)', 'axismundi-object-projections' ),
+				languageSource[ fallback.source ] || languageSource.site,
+				fallback.language || 'und'
+			)
+		} ].concat( options );
+	}
 
 	function FederationSettings() {
 		const meta = wp.data.useSelect(
@@ -18,6 +41,7 @@
 		const quotePolicy = meta._ax_op_quote_policy || '';
 		const visibility = meta._ax_op_visibility || 'public';
 		const mentions = Array.isArray( meta._ax_op_mentions ) ? meta._ax_op_mentions : [];
+		const language = meta._ax_op_language || '';
 		const update = ( key, value ) => editPost( { meta: { ...meta, [ key ]: value } } );
 
 		return el(
@@ -44,6 +68,13 @@
 					{ label: wp.i18n.__( 'Mentioned only', 'axismundi-object-projections' ), value: 'mentioned' },
 				],
 				onChange: ( value ) => update( '_ax_op_visibility', value ),
+			} ),
+			el( wp.components.ComboboxControl, {
+				label: wp.i18n.__( 'Language', 'axismundi-object-projections' ),
+				value: language,
+				options: languageOptions( language ),
+				help: wp.i18n.__( 'Search for a BCP-47 language. Automatic follows the Actor default, then the WordPress user language, then the site default.', 'axismundi-object-projections' ),
+				onChange: ( value ) => update( '_ax_op_language', value || '' ),
 			} ),
 			window.axismundiMentionTokens && window.axismundiMentionTokens.MentionTokenField
 				? el( window.axismundiMentionTokens.MentionTokenField, {

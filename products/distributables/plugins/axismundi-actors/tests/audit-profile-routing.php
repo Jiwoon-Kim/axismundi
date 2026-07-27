@@ -98,6 +98,60 @@ try {
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	$public_actor = axismundi_actors_get_by_uuid( $original_uuid );
 	ax_profile_assert( $ax_profile_results, 'a public actor with a registered handle is visible anonymously', $public_actor instanceof Axismundi_Actor && axismundi_actors_can_view( $public_actor, 0 ) );
+	/*
+	 * The fallback for a rewrite table that lost these rules *routes*; it must never
+	 * redirect. An earlier release answered `/@handle/` with a 301 to `/@handle`, which
+	 * on such an install is equally unrouted, so Core's `redirect_canonical` restored the
+	 * slash and the two bounced until the browser gave up — fifty hops in production.
+	 * Setting the query vars instead puts the request exactly where the rewrite rule
+	 * would have, so the canonical guard and the trailing-slash normaliser downstream
+	 * cooperate rather than fight.
+	 */
+	$ax_profile_route = static function ( string $path ) : array {
+		$_SERVER['REQUEST_URI'] = $path;
+		$wp                     = new WP();
+		$wp->query_vars         = array();
+		axismundi_actors_resolve_unrouted_actor_request( $wp );
+		return $wp->query_vars;
+	};
+	$ax_profile_slashed   = $ax_profile_route( '/@alice_profile/' );
+	$ax_profile_slashless = $ax_profile_route( '/@alice_profile' );
+	$ax_profile_stranger  = $ax_profile_route( '/@not_an_actor/' );
+	$ax_profile_following = $ax_profile_route( '/@alice_profile/following' );
+
+	ax_profile_assert(
+		$ax_profile_results,
+		'an unrouted alias is resolved into the same query vars the rewrite rule would have set',
+		'alice_profile' === ( $ax_profile_slashed['ax_actor_handle'] ?? '' )
+			&& 'alice_profile' === ( $ax_profile_slashless['ax_actor_handle'] ?? '' )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'both slash forms resolve, so neither can bounce off the other into a redirect loop',
+		( $ax_profile_slashed['ax_actor_handle'] ?? '' ) === ( $ax_profile_slashless['ax_actor_handle'] ?? '' )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'an unrouted collection address keeps its collection',
+		'following' === ( $ax_profile_following['ax_actor_collection'] ?? '' )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'the fallback claims nothing that does not name an existing viewable Actor',
+		array() === $ax_profile_stranger
+	);
+	$ax_previous_current_actor = $GLOBALS['axismundi_actors_current_actor'];
+	$ax_previous_query         = $GLOBALS['wp_query'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = null;
+	$GLOBALS['wp_query'] = new WP_Query();
+	$GLOBALS['wp_query']->set( 'ax_actor_handle', 'alice_profile' );
+	ax_profile_assert(
+		$ax_profile_results,
+		'the canonical guard resolves a fallback-routed alias before pre_handle_404 sets the current Actor',
+		false === axismundi_actors_handle_alias_canonical_redirect( 'https://example.test/@alice_profile/' )
+	);
+	$GLOBALS['axismundi_actors_current_actor'] = $ax_previous_current_actor;
+	$GLOBALS['wp_query'] = $ax_previous_query;
 
 	// A public status without a registered handle stays hidden from the public.
 	$nohandle = axismundi_actors_ensure_for_user( $admin_id );
@@ -120,7 +174,7 @@ try {
 	ax_profile_assert( $ax_profile_results, 'canonical link always uses the UUID identity URI', false !== strpos( $canonical, esc_url( $original_uri ) ) && false === strpos( $canonical, '/@' ) );
 
 	$rules = axismundi_actors_rewrite_rules();
-	ax_profile_assert( $ax_profile_results, 'canonical and human alias rewrite rules are both registered', isset( $rules['^actors/([0-9a-fA-F-]{36})/?$'], $rules['^@([^/]+)/?$'] ) );
+	ax_profile_assert( $ax_profile_results, 'canonical, follow-collection, and both slash forms of the human alias rewrite rules are all registered', isset( $rules['^actors/([0-9a-fA-F-]{36})/?$'], $rules['^actors/([0-9a-fA-F-]{36})/(followers|following)/?$'], $rules['^@([^/]+)$'], $rules['^@([^/]+)/$'], $rules['^@([^/]+)/(followers|following)/?$'] ) );
 	$ax_previous_current_actor = $GLOBALS['axismundi_actors_current_actor'];
 	$ax_previous_query        = $GLOBALS['wp_query'] ?? null;
 	$GLOBALS['axismundi_actors_current_actor'] = $public_actor;

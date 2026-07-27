@@ -29,9 +29,6 @@
 	min-inline-size: 0;
 }
 
-.wp-block-axismundi-actor-avatar.is-compact {
-	flex: 0 0 auto;
-}
 .axismundi-object__meta {
 	color: color-mix(in srgb, currentColor 66%, transparent);
 	font-family: var(--wp--preset--font-family--monospace, monospace);

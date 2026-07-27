@@ -15,8 +15,10 @@ final class Axismundi_OP_Actor_Outbox {
 
 /** Read-only source for one Actor's follower-count projection. */
 final class Axismundi_OP_Actor_Followers {
-	public function __construct( private Axismundi_Actor $actor ) {}
+	public function __construct( private Axismundi_Actor $actor, private string $collection = 'followers', private int $page = 0 ) {}
 	public function get_actor() : Axismundi_Actor { return $this->actor; }
+	public function get_collection() : string { return 'following' === $this->collection ? 'following' : 'followers'; }
+	public function get_page() : int { return $this->page; }
 }
 
 /** Stable public Outbox URI owned by the representation layer. */
@@ -26,7 +28,14 @@ function axismundi_op_actor_outbox_url( Axismundi_Actor $actor ) : string {
 
 /** Stable Followers URI owned by the representation layer. */
 function axismundi_op_actor_followers_url( Axismundi_Actor $actor ) : string {
-	return rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/followers' );
+	return axismundi_op_actor_follow_collection_url( $actor, 'followers' );
+}
+
+/** Stable Followers/Following URI owned by the representation layer. */
+function axismundi_op_actor_follow_collection_url( Axismundi_Actor $actor, string $collection, int $page = 0 ) : string {
+	$collection = 'following' === $collection ? 'following' : 'followers';
+	$url = rest_url( 'axismundi/v1/actors/' . rawurlencode( $actor->get_uuid() ) . '/' . $collection );
+	return $page > 0 ? add_query_arg( 'page', $page, $url ) : $url;
 }
 
 /** Supply Activities with the representation-owned Followers address. */
@@ -86,6 +95,9 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	if ( function_exists( 'axismundi_act_get_follower_count' ) ) {
 		$object['followers'] = axismundi_op_actor_followers_url( $actor );
 	}
+	if ( function_exists( 'axismundi_act_get_following_count' ) ) {
+		$object['following'] = axismundi_op_actor_follow_collection_url( $actor, 'following' );
+	}
 
 	/**
 	 * Supply protocol transport properties without transferring representation ownership.
@@ -119,21 +131,70 @@ function axismundi_op_actor_outbox_transform( Axismundi_OP_Actor_Outbox $source 
 /** Public disclosure gate for an Actor Followers collection. */
 function axismundi_op_actor_followers_visible( Axismundi_OP_Actor_Followers $source ) : bool {
 	$actor = $source->get_actor();
-	return axismundi_op_actor_visible( $actor )
-		&& 'public' === $actor->get_follow_collections_visibility()
-		&& function_exists( 'axismundi_act_get_follower_count' );
+	return axismundi_op_actor_visible( $actor ) && function_exists( 'axismundi_act_get_follow_collection_page' );
 }
 
-/** Project a count-only Followers Collection without exposing member Actors. */
+/**
+ * Project Follow collections as OrderedCollection roots and pages.
+ *
+ * The root is always served, whatever the policy, because the Actor document advertises
+ * its address and an advertised URI that 404s is a broken document. What varies is how
+ * much of it is filled in:
+ *
+ *   public     - `totalItems` and `first`.
+ *   count-only - `totalItems`, no `first`. The absence of `first` is the machine-readable
+ *                way to say "do not enumerate this", and it is the same signal we honour
+ *                when reading somebody else's collection.
+ *   private    - neither. `totalItems` is omitted rather than sent as 0: zero is a claim
+ *                that the account has no followers, which is not what was asked for.
+ *
+ * @param Axismundi_OP_Actor_Followers $source Collection source.
+ * @return array<string,mixed>
+ */
 function axismundi_op_actor_followers_transform( Axismundi_OP_Actor_Followers $source ) : array {
-	$actor = $source->get_actor();
-	return array(
-		'id'           => axismundi_op_actor_followers_url( $actor ),
-		'type'         => 'Collection',
+	$actor  = $source->get_actor();
+	$kind   = $source->get_collection();
+	$page   = $source->get_page();
+	$policy = function_exists( 'axismundi_actors_follow_collections_policy' )
+		? axismundi_actors_follow_collections_policy( $actor )
+		: 'private';
+	$public = 'public' === $policy;
+	$url    = axismundi_op_actor_follow_collection_url( $actor, $kind );
+	$data   = $public || 'count-only' === $policy
+		? axismundi_act_get_follow_collection_page( 'followers' === $kind ? 'object' : 'subject', $actor->get_uri(), max( 1, $page ), 20 )
+		: array( 'items' => array(), 'total' => 0, 'has_more' => false );
+
+	if ( $page > 0 ) {
+		// Pages are route-gated to `public` already; this stays defensive rather than
+		// trusting that the only caller will always be the one that exists today.
+		$out = array(
+			'id'           => axismundi_op_actor_follow_collection_url( $actor, $kind, $page ),
+			'type'         => 'OrderedCollectionPage',
+			'attributedTo' => $actor->get_uri(),
+			'url'          => $actor->get_profile_url(),
+			'partOf'       => $url,
+			'totalItems'   => $data['total'],
+			'orderedItems' => $public ? $data['items'] : array(),
+		);
+		if ( $public && ! empty( $data['has_more'] ) ) {
+			$out['next'] = axismundi_op_actor_follow_collection_url( $actor, $kind, $page + 1 );
+		}
+		return $out;
+	}
+
+	$out = array(
+		'id'           => $url,
+		'type'         => 'OrderedCollection',
 		'attributedTo' => $actor->get_uri(),
 		'url'          => $actor->get_profile_url(),
-		'totalItems'   => axismundi_act_get_follower_count( $actor->get_uri() ),
 	);
+	if ( 'private' !== $policy ) {
+		$out['totalItems'] = $data['total'];
+	}
+	if ( $public && $data['total'] > 0 ) {
+		$out['first'] = axismundi_op_actor_follow_collection_url( $actor, $kind, 1 );
+	}
+	return $out;
 }
 
 /** Register the Actor transformer when the Actors plugin is available. */
@@ -165,7 +226,7 @@ function axismundi_op_register_actor_transformers() : void {
 		'axismundi-actor-followers',
 		array(
 			'supports'       => static fn( $source ) : bool => $source instanceof Axismundi_OP_Actor_Followers,
-			'collection_uri' => static fn( Axismundi_OP_Actor_Followers $source ) : string => axismundi_op_actor_followers_url( $source->get_actor() ),
+			'collection_uri' => static fn( Axismundi_OP_Actor_Followers $source ) : string => axismundi_op_actor_follow_collection_url( $source->get_actor(), $source->get_collection(), $source->get_page() ),
 			'transform'      => 'axismundi_op_actor_followers_transform',
 			'visible'        => 'axismundi_op_actor_followers_visible',
 			'priority'       => 5,
@@ -196,18 +257,20 @@ add_action( 'rest_api_init', 'axismundi_op_register_actor_outbox_route' );
 
 /** Register the representation-owned Followers route. */
 function axismundi_op_register_actor_followers_route() : void {
-	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) || ! function_exists( 'axismundi_act_get_follower_count' ) ) {
+	if ( ! class_exists( 'Axismundi_Actor' ) || ! function_exists( 'axismundi_actors_get_by_uuid' ) || ! function_exists( 'axismundi_act_get_follow_collection_page' ) ) {
 		return;
 	}
 	register_rest_route(
 		'axismundi/v1',
-		'/actors/(?P<uuid>[0-9a-f-]{36})/followers',
+		'/actors/(?P<uuid>[0-9a-f-]{36})/(?P<collection>followers|following)',
 		array(
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => 'axismundi_op_get_actor_followers',
 			'permission_callback' => '__return_true',
 			'args'                => array(
 				'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ),
+				'collection' => array( 'required' => true, 'type' => 'string', 'enum' => array( 'followers', 'following' ) ),
+				'page' => array( 'required' => false, 'type' => 'integer', 'minimum' => 1 ),
 			),
 		)
 	);
@@ -233,8 +296,16 @@ function axismundi_op_get_actor_outbox( WP_REST_Request $request ) {
 /** Serve one public count-only Followers collection. */
 function axismundi_op_get_actor_followers( WP_REST_Request $request ) {
 	$actor  = axismundi_actors_get_by_uuid( strtolower( (string) $request['uuid'] ) );
-	$source = $actor instanceof Axismundi_Actor ? new Axismundi_OP_Actor_Followers( $actor ) : null;
-	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $source instanceof Axismundi_OP_Actor_Followers || ! axismundi_op_actor_followers_visible( $source ) ) {
+	$kind = 'following' === (string) $request['collection'] ? 'following' : 'followers';
+	$page = max( 0, absint( $request['page'] ) );
+	$source = $actor instanceof Axismundi_Actor ? new Axismundi_OP_Actor_Followers( $actor, $kind, $page ) : null;
+	// `function_exists` matters here and not only in the transform: this endpoint is
+	// public, so an Actors plugin older than this policy would turn a version skew into a
+	// fatal error on an anonymous request rather than a missing feature.
+	$pages_allowed = $actor instanceof Axismundi_Actor
+		&& function_exists( 'axismundi_actors_follow_collections_are_public' )
+		&& axismundi_actors_follow_collections_are_public( $actor );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $source instanceof Axismundi_OP_Actor_Followers || ! axismundi_op_actor_followers_visible( $source ) || ( $page > 0 && ! $pages_allowed ) ) {
 		return new WP_Error( 'ax_op_followers_not_found', __( 'The Actor followers collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
 	$collection = axismundi_op_transform_collection( $source );

@@ -65,9 +65,10 @@ try {
 	$stored = (array) get_option( 'rewrite_rules' );
 	ax_rewrite_install_assert(
 		$ax_results,
-		'the identity and handle routes are stored against their query vars',
+		'the identity and both handle-slash routes are stored against their query vars',
 		'index.php?ax_actor=$matches[1]' === ( $stored['^actors/([0-9a-fA-F-]{36})/?$'] ?? '' )
-			&& 'index.php?ax_actor_handle=$matches[1]' === ( $stored['^@([^/]+)/?$'] ?? '' )
+			&& 'index.php?ax_actor_handle=$matches[1]' === ( $stored['^@([^/]+)$'] ?? '' )
+			&& 'index.php?ax_actor_handle=$matches[1]' === ( $stored['^@([^/]+)/$'] ?? '' )
 	);
 
 	ax_rewrite_install_break_table();

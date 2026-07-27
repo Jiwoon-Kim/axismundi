@@ -73,6 +73,15 @@ try {
 	$uris  = array_column( $all, 'object_uri' );
 	$post  = $ax_hashtag_archive_post_id > 0 ? get_post( $ax_hashtag_archive_post_id ) : null;
 	$local = $post instanceof WP_Post ? axismundi_op_post_object_uri( $post ) : '';
+	$collection = $term instanceof WP_Term ? axismundi_op_transform_collection( $term ) : null;
+	ax_hashtag_archive_assert(
+		$ax_hashtag_archive_results,
+		'the canonical hashtag archive URL projects as a minimal anonymous OrderedCollection',
+		is_array( $collection )
+			&& axismundi_op_hashtag_archive_uri( $term ) === $collection['id']
+			&& 'OrderedCollection' === $collection['type']
+			&& ! isset( $collection['attributedTo'], $collection['url'], $collection['totalItems'], $collection['first'], $collection['orderedItems'] )
+	);
 	ax_hashtag_archive_assert( $ax_hashtag_archive_results, 'all mode merges public local and public remote Objects by canonical URI', '' !== $local && in_array( $local, $uris, true ) && in_array( $ax_hashtag_archive_public, $uris, true ) );
 	ax_hashtag_archive_assert( $ax_hashtag_archive_results, 'a remote Object without an explicit public audience never enters the archive', ! in_array( $ax_hashtag_archive_private, $uris, true ) );
 	$remote = $term instanceof WP_Term ? axismundi_op_get_hashtag_archive_items( $term, 'remote' ) : array();

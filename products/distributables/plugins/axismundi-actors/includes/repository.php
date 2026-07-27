@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '13.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '14.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -164,6 +164,9 @@ function axismundi_actors_install() : void {
 			discoverable tinyint(1) DEFAULT NULL,
 			indexable tinyint(1) DEFAULT NULL,
 			follow_collections_visibility varchar(16) DEFAULT NULL,
+			followers_total bigint(20) unsigned DEFAULT NULL,
+			following_total bigint(20) unsigned DEFAULT NULL,
+			follow_counts_fetched_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (identity_id),
@@ -547,6 +550,9 @@ function axismundi_actors_install() : void {
 		&& in_array( 'discoverable', $columns, true )
 		&& in_array( 'indexable', $columns, true )
 		&& in_array( 'follow_collections_visibility', $columns, true )
+		&& in_array( 'followers_total', $columns, true )
+		&& in_array( 'following_total', $columns, true )
+		&& in_array( 'follow_counts_fetched_at', $columns, true )
 		&& in_array( 'language_tag', $text_columns, true )
 		&& in_array( 'value', $text_columns, true )
 		&& ! empty( $text_indexes )
@@ -653,10 +659,44 @@ final class Axismundi_Actor {
 		return (bool) (int) $this->row[ $axis ];
 	}
 
-	/** @return string|null public|followers|private, or null if unreported. */
+	/**
+	 * Two vocabularies share this column, and `is_local()` decides which one applies.
+	 *
+	 * For a LOCAL Actor it is our own disclosure policy: `public`, `count-only`, or
+	 * `private`, with `null` meaning "never set" and reading as `public`
+	 * ({@see axismundi_actors_follow_collections_policy()}).
+	 *
+	 * For a REMOTE Actor it is whatever that server reported about itself --
+	 * `public|followers|private` per {@see axismundi_actors_normalize_policy_fields()} --
+	 * and `null` means unreported, not permitted. Never route a local decision through a
+	 * remote value or the reverse; the strings overlap but the meanings do not.
+	 *
+	 * @return string|null
+	 */
 	public function get_follow_collections_visibility() : ?string {
 		$value = $this->row['follow_collections_visibility'] ?? null;
 		return null !== $value && '' !== $value ? (string) $value : null;
+	}
+
+	/**
+	 * Cached `totalItems` from a remote Actor's own Follow collection.
+	 *
+	 * Null is "we do not know" -- never fetched, unreachable, or a server that omits the
+	 * count -- and callers must render that as absence rather than as zero. A remote
+	 * account with hidden counts and one with 0 followers are different claims.
+	 *
+	 * @param string $kind followers|following.
+	 * @return int|null
+	 */
+	public function get_remote_follow_total( string $kind ) : ?int {
+		$column = 'following' === $kind ? 'following_total' : 'followers_total';
+		$value  = $this->row[ $column ] ?? null;
+		return null === $value || '' === $value ? null : max( 0, (int) $value );
+	}
+
+	/** @return string UTC datetime of the last Follow-count fetch, '' if never. */
+	public function get_follow_counts_fetched_at() : string {
+		return (string) ( $this->row['follow_counts_fetched_at'] ?? '' );
 	}
 
 	public function get_profile_url() : string {
@@ -2139,14 +2179,19 @@ function axismundi_actors_set_local_policy( Axismundi_Actor $actor, string $axis
  * The collection URI remains a stable address regardless of this policy; this
  * value controls dereference-time disclosure only.
  *
+ * `count-only` is a local-only value: it discloses how many without disclosing who.
+ * `followers` is accepted for backward compatibility with rows written before the
+ * three-level policy existed and is read as `count-only`
+ * ({@see axismundi_actors_follow_collections_policy()}).
+ *
  * @param Axismundi_Actor $actor      Local Actor.
- * @param string|null     $visibility public|followers|private, or null for unreported.
+ * @param string|null     $visibility public|count-only|private (or legacy `followers`), null to clear.
  * @param int|null        $viewer     Acting user id; defaults to the current user.
  * @return bool|WP_Error
  */
 function axismundi_actors_set_follow_collections_visibility( Axismundi_Actor $actor, ?string $visibility, ?int $viewer = null ) {
 	global $wpdb;
-	if ( ! $actor->is_local() || ( null !== $visibility && ! in_array( $visibility, array( 'public', 'followers', 'private' ), true ) ) ) {
+	if ( ! $actor->is_local() || ( null !== $visibility && ! in_array( $visibility, array( 'public', 'count-only', 'followers', 'private' ), true ) ) ) {
 		return new WP_Error( 'ax_actors_follow_collections_visibility', __( 'That Follow collection visibility is invalid.', 'axismundi-actors' ) );
 	}
 	$viewer = null === $viewer ? get_current_user_id() : $viewer;
@@ -2164,6 +2209,41 @@ function axismundi_actors_set_follow_collections_visibility( Axismundi_Actor $ac
 	return false === $done
 		? new WP_Error( 'ax_actors_policy_write', __( 'The Actor policy could not be saved.', 'axismundi-actors' ) )
 		: true;
+}
+
+/**
+ * Record what a remote server says its own Follow collections contain.
+ *
+ * This is an observation, not a policy: the numbers belong to the other server and we
+ * only cache what it published. Passing null for a side stores "unknown" rather than
+ * zero, so a server that hides or omits its counts never reads back as an empty
+ * account. The timestamp is written either way -- knowing that a fetch happened and
+ * came back empty-handed is what stops a refresh loop from retrying every request.
+ *
+ * @param int      $identity_id Remote identity.
+ * @param int|null $followers   totalItems from the followers collection, or null.
+ * @param int|null $following   totalItems from the following collection, or null.
+ * @return bool
+ */
+function axismundi_actors_set_remote_follow_totals( int $identity_id, ?int $followers, ?int $following ) : bool {
+	global $wpdb;
+	if ( $identity_id <= 0 ) {
+		return false;
+	}
+	$now  = current_time( 'mysql', true );
+	$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Actors repository owns this custom table.
+		axismundi_actors_actors_table(),
+		array(
+			'followers_total'          => null === $followers ? null : max( 0, $followers ),
+			'following_total'          => null === $following ? null : max( 0, $following ),
+			'follow_counts_fetched_at' => $now,
+			'updated_at'               => $now,
+		),
+		array( 'identity_id' => $identity_id ),
+		array( '%d', '%d', '%s', '%s' ),
+		array( '%d' )
+	);
+	return false !== $done;
 }
 
 /**

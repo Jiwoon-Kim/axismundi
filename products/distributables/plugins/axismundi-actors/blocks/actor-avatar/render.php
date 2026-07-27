@@ -25,9 +25,8 @@ $axismundi_actor_avatar_subject = axismundi_actors_resolve_block_subject( (strin
 if ( ! is_array( $axismundi_actor_avatar_subject ) ) {
 	return;
 }
-$axismundi_actor_avatar_size    = isset( $attributes['size'] ) ? max( 24, min( 256, (int) $attributes['size'] ) ) : 128;
-$axismundi_actor_avatar_variant = 'compact' === (string) ( $attributes['variant'] ?? '' ) ? 'compact' : 'profile';
-$axismundi_actor_avatar_actor   = $axismundi_actor_avatar_subject['actor'] ?? null;
+$axismundi_actor_avatar_size  = isset( $attributes['size'] ) ? max( 24, min( 256, (int) $attributes['size'] ) ) : 128;
+$axismundi_actor_avatar_actor = $axismundi_actor_avatar_subject['actor'] ?? null;
 $axismundi_actor_avatar_html    = $axismundi_actor_avatar_actor instanceof Axismundi_Actor
 	? axismundi_actors_avatar_html( $axismundi_actor_avatar_actor, $axismundi_actor_avatar_size )
 	: ( '' !== (string) $axismundi_actor_avatar_subject['avatar_url']
@@ -48,13 +47,13 @@ $axismundi_actor_avatar_image_style = trim(
 	';'
 );
 
-// The size drives every variant through one custom property, so the size control
-// is authoritative in the profile header, in a compact feed row, and in the editor
-// preview alike. It lives on the outer wrapper; the inner image reads its own
-// dimensions from it via CSS.
+// The size drives the block through one custom property, so the size control is
+// authoritative in the profile header, in a feed row, and in the editor preview
+// alike -- there is no separate "compact" mode to keep in step with it. It lives on
+// the outer wrapper; the inner image reads its own dimensions from it via CSS.
 $axismundi_actor_avatar_wrapper = get_block_wrapper_attributes(
 	array(
-		'class' => 'ax-actor-avatar is-' . $axismundi_actor_avatar_variant,
+		'class' => 'ax-actor-avatar',
 		'style' => '--axismundi-actor-avatar-size:' . (int) $axismundi_actor_avatar_size . 'px',
 	)
 );

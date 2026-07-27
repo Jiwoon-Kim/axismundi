@@ -11,7 +11,6 @@
 	"usesContext": [ "axismundi/actorId" ],
 	"attributes": {
 		"size": { "type": "number", "default": 128 },
-		"variant": { "type": "string", "default": "profile" },
 		"isLink": { "type": "boolean", "default": false },
 		"linkTarget": { "type": "string", "default": "_self" },
 		"rel": { "type": "string", "attribute": "rel", "default": "" }

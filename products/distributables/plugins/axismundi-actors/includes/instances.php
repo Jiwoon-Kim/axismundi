@@ -80,7 +80,21 @@ function axismundi_actors_ensure_remote_instance_cached( Axismundi_Actor $actor 
 		return false;
 	}
 	$host = axismundi_actors_webfinger_authority_from_url( $actor->get_uri() );
-	if ( '' === $host ) {
+	return axismundi_actors_ensure_remote_instance_host_cached( $host );
+}
+
+/**
+ * Queue one first-time NodeInfo cache fill for a remote host.
+ *
+ * This is shared with optional consumers such as Emoji. NodeInfo remains a host
+ * ledger only: callers must not treat its presence as validation of their own data.
+ *
+ * @param string $host Remote host authority.
+ * @return bool Whether the host is already cached or a fill is scheduled.
+ */
+function axismundi_actors_ensure_remote_instance_host_cached( string $host ) : bool {
+	$host = strtolower( rtrim( trim( $host ), '.' ) );
+	if ( '' === $host || $host === axismundi_actors_webfinger_authority() || ! wp_http_validate_url( 'https://' . $host . '/' ) ) {
 		return false;
 	}
 	if ( axismundi_actors_get_instance( $host ) ) {
@@ -92,6 +106,12 @@ function axismundi_actors_ensure_remote_instance_cached( Axismundi_Actor $actor 
 	}
 	return true;
 }
+
+/** Queue NodeInfo when Emoji observes a new authority, if both plugins are active. */
+function axismundi_actors_ensure_emoji_authority_cached( string $authority ) : void {
+	axismundi_actors_ensure_remote_instance_host_cached( $authority );
+}
+add_action( 'axismundi_emoji_authority_observed', 'axismundi_actors_ensure_emoji_authority_cached' );
 
 /** Execute one queued first-time NodeInfo cache fill. */
 function axismundi_actors_cache_remote_instance( string $host ) : void {

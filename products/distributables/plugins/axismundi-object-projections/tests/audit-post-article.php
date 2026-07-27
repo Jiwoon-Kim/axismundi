@@ -69,6 +69,8 @@ try {
 	$page   = get_post( $page_id );
 	$draft  = get_post( $draft_id );
 	$locked = get_post( $locked_id );
+	update_post_meta( $post_id, AXISMUNDI_OP_POST_LANGUAGE_META, 'ko_kr' );
+	$post = get_post( $post_id );
 
 	ax_article_assert( $ax_article_results, 'the built-in transformer supports core posts but not pages', $post instanceof WP_Post && $page instanceof WP_Post && axismundi_op_post_article_supports( $post ) && ! axismundi_op_post_article_supports( $page ) );
 
@@ -118,6 +120,7 @@ try {
 		printf( "[DEBUG] content=%s published=%s updated=%s\n", (string) $article['content'], (string) $article['published'], (string) $article['updated'] );
 	}
 	ax_article_assert( $ax_article_results, 'Article content is rendered HTML and has published/updated timestamps', $content_contract );
+	ax_article_assert( $ax_article_results, 'Article and embedded preview carry the selected BCP-47 language in name, summary, and content maps', is_array( $article ) && array( 'ko-KR' => 'Projection Article' ) === $article['nameMap'] && isset( $article['summaryMap']['ko-KR'], $article['contentMap']['ko-KR'], $article['preview']['contentMap']['ko-KR'] ) && $article['summary'] === $article['summaryMap']['ko-KR'] && $article['content'] === $article['contentMap']['ko-KR'] && $article['preview']['content'] === $article['preview']['contentMap']['ko-KR'] );
 	$previous_global_post = $GLOBALS['post'] ?? null;
 	$GLOBALS['post']      = $page;
 	$context_post_id      = 0;

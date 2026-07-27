@@ -17,8 +17,8 @@
  * the round shape lives one level in, on the placeholder.
  *
  * Sizing is a private attribute rather than a support: one custom property drives
- * every variant, so the size control is authoritative in the profile header, in a
- * compact feed row, and in the editor preview alike.
+ * the block everywhere, so the size control is authoritative in the profile header,
+ * in a feed row, and in the editor preview alike.
  */
 ( function ( blocks, blockEditor, components, element, i18n ) {
 	'use strict';
@@ -31,10 +31,9 @@
 		edit: function ( props ) {
 			var attributes = props.attributes;
 			var setAttributes = props.setAttributes;
-			var compact = 'compact' === attributes.variant;
 
 			var blockProps = blockEditor.useBlockProps( {
-				className: 'ax-actor-avatar is-editor-preview' + ( compact ? ' is-compact' : '' ),
+				className: 'ax-actor-avatar is-editor-preview',
 				style: { '--axismundi-actor-avatar-size': ( attributes.size || 128 ) + 'px' },
 			} );
 

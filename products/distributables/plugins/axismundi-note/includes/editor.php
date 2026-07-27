@@ -19,6 +19,7 @@ function axismundi_note_enqueue_editor_assets() : void {
 		return;
 	}
 	$plugin = dirname( __DIR__ ) . '/axismundi-note.php';
+	$assets = dirname( __DIR__ ) . '/assets/editor/';
 	$attachments_enabled = function_exists( 'axismundi_note_attachments_available' ) && axismundi_note_attachments_available();
 	if ( $attachments_enabled ) {
 		wp_enqueue_media();
@@ -28,7 +29,7 @@ function axismundi_note_enqueue_editor_assets() : void {
 		'axismundi-note-editor-helpers',
 		plugins_url( 'assets/editor/editor-helpers.js', $plugin ),
 		array( 'wp-element' ),
-		AXISMUNDI_NOTE_VERSION,
+		AXISMUNDI_NOTE_VERSION . '-' . (string) filemtime( $assets . 'editor-helpers.js' ),
 		true
 	);
 	// PluginDocumentSettingPanel moved from wp-edit-post to wp-editor; declaring an
@@ -50,14 +51,24 @@ function axismundi_note_enqueue_editor_assets() : void {
 		'axismundi-note-envelope-panel',
 		plugins_url( 'assets/editor/envelope-panel.js', $plugin ),
 		$deps,
-		AXISMUNDI_NOTE_VERSION,
+		AXISMUNDI_NOTE_VERSION . '-' . (string) filemtime( $assets . 'envelope-panel.js' ),
 		true
 	);
 	wp_set_script_translations( 'axismundi-note-envelope-panel', 'axismundi-note' );
+	$editor_user_id   = function_exists( 'axismundi_op_editor_language_user_id' )
+		? axismundi_op_editor_language_user_id( AXISMUNDI_NOTE_POST_TYPE )
+		: get_current_user_id();
+	$default_language = function_exists( 'axismundi_op_default_language_for_user' )
+		? axismundi_op_default_language_for_user( $editor_user_id )
+		: array( 'language' => function_exists( 'axismundi_actors_site_language' ) ? axismundi_actors_site_language() : get_locale(), 'source' => 'site' );
 	wp_localize_script(
 		'axismundi-note-envelope-panel',
 		'axismundiNoteEditor',
-		array( 'attachmentsEnabled' => $attachments_enabled )
+		array(
+			'attachmentsEnabled' => $attachments_enabled,
+			'languageOptions'    => function_exists( 'axismundi_op_language_options' ) ? axismundi_op_language_options() : array(),
+			'defaultLanguage'    => $default_language,
+		)
 	);
 }
 add_action( 'enqueue_block_editor_assets', 'axismundi_note_enqueue_editor_assets' );

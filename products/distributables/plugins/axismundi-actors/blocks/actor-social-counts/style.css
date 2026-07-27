@@ -1,0 +1,7 @@
+.wp-block-axismundi-actor-social-counts { display:flex; gap:var(--wp--preset--spacing--200, .75rem); margin-block:var(--wp--preset--spacing--300, 1rem); padding:0; list-style:none; }
+/* The `count-only` policy prints the same label and number with no link around them,
+   so the item itself carries the layout and the anchor only adds link behaviour. */
+.ax-actor-social-counts__item { display:inline-flex; gap:.35rem; }
+.wp-block-axismundi-actor-social-counts a { display:inline-flex; gap:.35rem; color:inherit; text-decoration:none; }
+.wp-block-axismundi-actor-social-counts a:hover, .wp-block-axismundi-actor-social-counts a:focus-visible { text-decoration:underline; text-underline-offset:.15em; }
+.wp-block-axismundi-actor-social-counts strong { font-variant-numeric:tabular-nums; }

@@ -401,7 +401,7 @@ function axismundi_op_post_article_summary_source( WP_Post $post, ?array $sectio
 }
 
 /** Build the optional embedded Note preview without minting another object id. */
-function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to, string $published, ?array $sections = null ) : ?array {
+function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to, string $published, string $language, ?array $sections = null ) : ?array {
 	// The explicitly edited excerpt is the preferred compatibility preview. When
 	// it is absent, the stream summary is still a useful minimal Note fallback.
 	$content = trim( (string) $post->post_excerpt );
@@ -411,10 +411,12 @@ function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to
 	if ( '' === $content ) {
 		return null;
 	}
+	$content = wpautop( wp_kses_post( $content ) );
 	return array(
 		'type'         => 'Note',
 		'attributedTo' => $attributed_to,
-		'content'      => wpautop( wp_kses_post( $content ) ),
+		'content'      => $content,
+		'contentMap'   => array( $language => $content ),
 		'published'    => $published,
 	);
 }
@@ -510,13 +512,18 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 
 	$published = get_post_time( DATE_W3C, true, $post );
 	$sections  = axismundi_op_post_article_sections( $post );
+	$language  = axismundi_op_post_effective_language( $post );
+	$name      = get_the_title( $post );
+	$content   = axismundi_op_post_article_content( $post, $sections['content'] );
 	$article   = array(
 		'id'           => $id,
 		'type'         => 'Article',
 		'attributedTo' => $attributed_to,
 		'url'          => array( 'type' => 'Link', 'href' => $url, 'mediaType' => 'text/html' ),
-		'name'         => get_the_title( $post ),
-		'content'      => axismundi_op_post_article_content( $post, $sections['content'] ),
+		'name'         => $name,
+		'nameMap'      => array( $language => $name ),
+		'content'      => $content,
+		'contentMap'   => array( $language => $content ),
 		'mediaType'    => 'text/html',
 		'published'    => $published,
 		'updated'      => get_post_modified_time( DATE_W3C, true, $post ),
@@ -530,9 +537,11 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 
 	$summary_source = axismundi_op_post_article_summary_source( $post, $sections );
 	if ( '' !== $summary_source ) {
-		$article['summary'] = axismundi_op_render_post_summary( $post, $summary_source );
+		$summary                = axismundi_op_render_post_summary( $post, $summary_source );
+		$article['summary']     = $summary;
+		$article['summaryMap']  = array( $language => $summary );
 	}
-	$preview = axismundi_op_post_article_preview( $post, $attributed_to, $published, $sections );
+	$preview = axismundi_op_post_article_preview( $post, $attributed_to, $published, $language, $sections );
 	if ( null !== $preview ) {
 		$article['preview'] = $preview;
 	}

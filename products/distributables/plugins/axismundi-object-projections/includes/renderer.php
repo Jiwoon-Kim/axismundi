@@ -78,6 +78,23 @@ function axismundi_op_html_members() : array {
 	return array( 'content', 'summary' );
 }
 
+/** Sanitize one BCP-47 language map while preserving only scalar values. */
+function axismundi_op_clean_language_map( $map, bool $html ) : array {
+	if ( ! is_array( $map ) ) {
+		return array();
+	}
+	$clean = array();
+	foreach ( $map as $language => $value ) {
+		if ( ! is_string( $language ) || ! is_scalar( $value ) ) {
+			continue;
+		}
+		$clean[ $language ] = $html
+			? axismundi_op_clean_html( (string) $value )
+			: sanitize_text_field( wp_strip_all_tags( (string) $value ) );
+	}
+	return $clean;
+}
+
 /**
  * Resolve the HTML representation URL from a string or Link-valued `url`.
  *
@@ -151,14 +168,10 @@ function axismundi_op_finalize_object( array $object, string $expected_id ) {
 			$object[ $member ] = axismundi_op_clean_html( (string) $object[ $member ] );
 		}
 	}
-	if ( isset( $object['contentMap'] ) && is_array( $object['contentMap'] ) ) {
-		$content_map = array();
-		foreach ( $object['contentMap'] as $language => $content ) {
-			if ( is_string( $language ) && is_scalar( $content ) ) {
-				$content_map[ $language ] = axismundi_op_clean_html( (string) $content );
-			}
+	foreach ( array( 'nameMap' => false, 'summaryMap' => true, 'contentMap' => true ) as $member => $html ) {
+		if ( isset( $object[ $member ] ) ) {
+			$object[ $member ] = axismundi_op_clean_language_map( $object[ $member ], $html );
 		}
-		$object['contentMap'] = $content_map;
 	}
 	// A preview is an embedded fallback object, not an independently identified object.
 	if ( isset( $object['preview'] ) && is_array( $object['preview'] ) ) {
@@ -168,6 +181,11 @@ function axismundi_op_finalize_object( array $object, string $expected_id ) {
 		foreach ( axismundi_op_html_members() as $member ) {
 			if ( isset( $object['preview'][ $member ] ) ) {
 				$object['preview'][ $member ] = axismundi_op_clean_html( (string) $object['preview'][ $member ] );
+			}
+		}
+		foreach ( array( 'nameMap' => false, 'summaryMap' => true, 'contentMap' => true ) as $member => $html ) {
+			if ( isset( $object['preview'][ $member ] ) ) {
+				$object['preview'][ $member ] = axismundi_op_clean_language_map( $object['preview'][ $member ], $html );
 			}
 		}
 		unset( $object['preview']['@context'] );
@@ -229,7 +247,48 @@ function axismundi_op_transform_collection( $source ) {
 	if ( null === $transformer ) {
 		return new WP_Error( 'ax_op_no_transformer', __( 'No transformer supports this source.', 'axismundi-object-projections' ) );
 	}
-	return axismundi_op_run_transformer( $transformer, $source );
+	return axismundi_op_run_collection_transformer( $transformer, $source );
+}
+
+/**
+ * Run one collection transformer with collection-specific minimum members.
+ *
+ * A collection is not necessarily owned by an Actor. Hashtag archives, for
+ * example, deliberately mirror Mastodon's anonymous OrderedCollection surface.
+ *
+ * @param array<string,mixed> $transformer Normalized collection transformer.
+ * @param mixed               $source      Source.
+ * @return array<string,mixed>|WP_Error
+ */
+function axismundi_op_run_collection_transformer( array $transformer, $source ) {
+	try {
+		if ( null !== $transformer['visible'] && true !== call_user_func( $transformer['visible'], $source ) ) {
+			return new WP_Error( 'ax_op_not_public', __( 'This source is not publicly projectable.', 'axismundi-object-projections' ) );
+		}
+		$expected_id = (string) call_user_func( $transformer['uri'], $source );
+		if ( '' === $expected_id ) {
+			return new WP_Error( 'ax_op_no_uri', __( 'The transformer produced no collection URI.', 'axismundi-object-projections' ) );
+		}
+		$result = call_user_func( $transformer['transform'], $source );
+	} catch ( Throwable $error ) {
+		return new WP_Error( 'ax_op_transform_threw', __( 'The transformer raised an error.', 'axismundi-object-projections' ) );
+	}
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+	if ( ! is_array( $result ) ) {
+		return new WP_Error( 'ax_op_transform_result', __( 'A transformer must return an array or WP_Error.', 'axismundi-object-projections' ) );
+	}
+	foreach ( array( 'id', 'type' ) as $member ) {
+		if ( ! isset( $result[ $member ] ) || '' === $result[ $member ] ) {
+			return new WP_Error( 'ax_op_invalid_collection', __( 'The projected collection is missing a required member.', 'axismundi-object-projections' ) );
+		}
+	}
+	if ( (string) $result['id'] !== $expected_id || ! in_array( (string) $result['type'], array( 'Collection', 'CollectionPage', 'OrderedCollection', 'OrderedCollectionPage' ), true ) ) {
+		return new WP_Error( 'ax_op_invalid_collection', __( 'The projected collection is invalid.', 'axismundi-object-projections' ) );
+	}
+	unset( $result['@context'] );
+	return array_merge( array( '@context' => axismundi_op_jsonld_context( $result ) ), $result );
 }
 
 /**

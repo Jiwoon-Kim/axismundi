@@ -20,8 +20,14 @@ function axismundi_actors_rewrite_rules() : array {
 		'^\.well-known/webfinger/?$'      => 'index.php?ax_webfinger=1',
 		'^\.well-known/nodeinfo/?$'       => 'index.php?ax_nodeinfo=discovery',
 		'^nodeinfo/2\.1/?$'               => 'index.php?ax_nodeinfo=2.1',
-		'^actors/([0-9a-fA-F-]{36})/?$' => 'index.php?ax_actor=$matches[1]',
-		'^@([^/]+)/?$'                  => 'index.php?ax_actor_handle=$matches[1]',
+		'^@([^/]+)/(followers|following)/?$' => 'index.php?ax_actor_handle=$matches[1]&ax_actor_collection=$matches[2]',
+		'^actors/([0-9a-fA-F-]{36})/(followers|following)/?$' => 'index.php?ax_actor=$matches[1]&ax_actor_collection=$matches[2]',
+		'^actors/([0-9a-fA-F-]{36})/?$'                       => 'index.php?ax_actor=$matches[1]',
+		// Keep the tolerated trailing-slash alias explicit. Some hosted rewrite tables
+		// retain the older slashless-only rule across an upgrade, which lets `/@name/`
+		// fall through to the home query instead of reaching our 301 normalizer.
+		'^@([^/]+)/$'                   => 'index.php?ax_actor_handle=$matches[1]',
+		'^@([^/]+)$'                    => 'index.php?ax_actor_handle=$matches[1]',
 	);
 }
 
@@ -107,6 +113,7 @@ add_action( 'init', 'axismundi_actors_maybe_upgrade_rewrite_rules', 11 );
 function axismundi_actors_query_vars( array $vars ) : array {
 	$vars[] = 'ax_actor';
 	$vars[] = 'ax_actor_handle';
+	$vars[] = 'ax_actor_collection';
 	$vars[] = 'ax_webfinger';
 	$vars[] = 'ax_nodeinfo';
 	return array_values( array_unique( $vars ) );
@@ -217,6 +224,102 @@ function axismundi_actors_profile_hub_url( Axismundi_Actor $actor ) : string {
 		: add_query_arg( 'ax_actor', $actor->get_uuid(), home_url( '/' ) );
 }
 
+/** Human-facing Followers or Following list URL. */
+function axismundi_actors_follow_collection_url( Axismundi_Actor $actor, string $collection, int $page = 1 ) : string {
+	$collection = in_array( $collection, array( 'followers', 'following' ), true ) ? $collection : 'followers';
+	$url        = trailingslashit( axismundi_actors_profile_hub_url( $actor ) ) . $collection;
+	return $page > 1 ? add_query_arg( 'page', $page, $url ) : $url;
+}
+
+/**
+ * Where to send a human who wants a remote Actor's Follow lists.
+ *
+ * Deliberately the profile page and not a deep link. The obvious-looking address --
+ * the `followers`/`following` URI the remote Actor publishes -- is an ActivityPub
+ * endpoint, and only Mastodon content-negotiates it back to a readable page; Misskey
+ * and the WordPress ActivityPub plugin both answer `text/html` with raw
+ * `application/activity+json`. Guessing `{profile}/followers` instead is worse than
+ * useless: that plugin serves its collections from `/wp-api/activitypub/1.0/actors/N/`,
+ * so the guess resolves to an unrelated page on the same site and the visitor never
+ * learns they were sent somewhere wrong.
+ *
+ * The profile page is the one address every implementation renders for people, and
+ * every one of them links its own lists from there.
+ *
+ * Note this is `get_profile_url()` and not `axismundi_actors_profile_hub_url()`: the hub
+ * is our own `/@user@host` page for a cached remote Actor, so linking to it would send a
+ * reader back to the page they are already standing on.
+ *
+ * @param Axismundi_Actor $actor Remote Actor.
+ * @return string Empty for a local Actor or one with no known profile page.
+ */
+function axismundi_actors_remote_follow_collection_url( Axismundi_Actor $actor ) : string {
+	return $actor->is_local() ? '' : $actor->get_profile_url();
+}
+
+/**
+ * Disclosure policy for one local Actor's Follow collections.
+ *
+ * Three levels, because "how many" and "who" are separate disclosures:
+ *   public     - counts and lists.
+ *   count-only - counts, no lists. `totalItems` without `first`.
+ *   private    - neither. `totalItems` is omitted rather than sent as 0, because a
+ *                zeroed count reads as an empty account instead of a withheld one.
+ *
+ * A null column means the policy was never set and reads as `public`, which is what
+ * makes disclosure the default without a migration. `followers` is a legacy value from
+ * before this policy existed and maps to `count-only`.
+ *
+ * Only local Actors have a policy here. A remote Actor's disclosure is decided by its
+ * own server, so this returns `private` for one -- not as a judgement, but because we
+ * have no authority to publish anything about it under our own name.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return string public|count-only|private
+ */
+function axismundi_actors_follow_collections_policy( Axismundi_Actor $actor ) : string {
+	if ( ! $actor->is_local() || ! axismundi_actors_is_public_profile( $actor ) ) {
+		return 'private';
+	}
+	$value = $actor->get_follow_collections_visibility();
+	if ( null === $value || 'public' === $value ) {
+		return 'public';
+	}
+	return in_array( $value, array( 'count-only', 'followers' ), true ) ? 'count-only' : 'private';
+}
+
+/** Whether the member Actors themselves may be disclosed. */
+function axismundi_actors_follow_collections_are_public( Axismundi_Actor $actor ) : bool {
+	return 'public' === axismundi_actors_follow_collections_policy( $actor );
+}
+
+/** Whether the size of the collections may be disclosed, without their members. */
+function axismundi_actors_follow_counts_are_public( Axismundi_Actor $actor ) : bool {
+	return 'private' !== axismundi_actors_follow_collections_policy( $actor );
+}
+
+/**
+ * Whether we will render a human Follow list page for this Actor.
+ *
+ * The two cases answer different questions. For a LOCAL Actor the page publishes our
+ * own collection under our own name, so it obeys that Actor's disclosure policy.
+ *
+ * For a REMOTE Actor the page publishes nothing of theirs: every row is an edge this
+ * server observed while federating, which is our own record of our own traffic. That is
+ * the same thing Mastodon and Misskey show on a remote profile -- Misskey lists 4 of
+ * pfefferle's 4,870 followers -- and the honesty problem there is not that they show
+ * their fragment, it is that they present it as the whole. We show the remote's own
+ * published total beside it, so the fragment is never mistaken for the collection.
+ *
+ * @param Axismundi_Actor $actor Actor.
+ * @return bool
+ */
+function axismundi_actors_follow_collection_page_is_available( Axismundi_Actor $actor ) : bool {
+	return $actor->is_local()
+		? axismundi_actors_follow_collections_are_public( $actor )
+		: axismundi_actors_is_public_profile( $actor );
+}
+
 /**
  * Keep `@handle` and `@handle@domain` hubs slashless without changing Actor URIs.
  *
@@ -235,13 +338,33 @@ function axismundi_actors_current_handle_alias_actor() : ?Axismundi_Actor {
 }
 
 /**
+ * Resolve the routed handle alias before the front-end request handler has set globals.
+ *
+ * `redirect_canonical` runs before `pre_handle_404`, where the normal request path sets
+ * `axismundi_actors_current_actor`. A parse-request fallback can therefore have the
+ * correct query var while the global is still null. Core must see the routed alias at
+ * this earlier point or it appends a slash, which then bounces off our slashless
+ * normaliser.
+ *
+ * @return Axismundi_Actor|null Viewable Actor addressed through a handle alias.
+ */
+function axismundi_actors_routed_handle_alias_actor() : ?Axismundi_Actor {
+	$handle = (string) get_query_var( 'ax_actor_handle' );
+	if ( '' === $handle ) {
+		return null;
+	}
+	$actor = axismundi_actors_resolve_request_actor( '', $handle );
+	return $actor instanceof Axismundi_Actor && axismundi_actors_can_view( $actor ) ? $actor : null;
+}
+
+/**
  * Prevent Core from redirecting the slashless local handle alias to `/@handle/`.
  *
  * @param string|false $redirect_url Core redirect target.
  * @return string|false
  */
 function axismundi_actors_handle_alias_canonical_redirect( $redirect_url ) {
-	return axismundi_actors_current_handle_alias_actor() instanceof Axismundi_Actor ? false : $redirect_url;
+	return axismundi_actors_routed_handle_alias_actor() instanceof Axismundi_Actor ? false : $redirect_url;
 }
 add_filter( 'redirect_canonical', 'axismundi_actors_handle_alias_canonical_redirect' );
 
@@ -313,6 +436,84 @@ function axismundi_actors_redirect_handle_alias_trailing_slash() : void {
 }
 add_action( 'template_redirect', 'axismundi_actors_redirect_handle_alias_trailing_slash', 1 );
 
+/**
+ * Route an Actor address the stored rewrite table failed to match.
+ *
+ * Some hosted installs end up without these rules even though the plugin registered
+ * them, and the request then falls through to the front-page query. Redirecting from
+ * there cannot work and actively makes things worse: an earlier release answered
+ * `/@handle/` with a 301 to `/@handle`, which was itself unrouted, so Core's
+ * `redirect_canonical` put the slash back and the two bounced forever. Production
+ * served fifty redirects before the browser gave up.
+ *
+ * The request does reach PHP — the front page proves it — so the fix is to finish the
+ * routing here rather than to bounce the browser. Setting the query vars puts the
+ * request on exactly the path the rewrite rule would have produced, which means the
+ * canonical-redirect guard and the trailing-slash normaliser downstream both behave
+ * normally instead of fighting each other.
+ *
+ * This is a fallback and stays deliberately narrow: it claims a path only when it names
+ * an Actor that already exists and is viewable, so an ordinary page called `/@notes/`
+ * is untouched.
+ *
+ * @param WP $wp Request object.
+ * @return void
+ */
+function axismundi_actors_resolve_unrouted_actor_request( WP $wp ) : void {
+	if ( ! empty( $wp->query_vars['ax_actor_handle'] ) || ! empty( $wp->query_vars['ax_actor'] ) ) {
+		return; // The rewrite table did its job.
+	}
+	$path = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+	if ( ! is_string( $path ) || '' === $path ) {
+		return;
+	}
+	$path = rawurldecode( $path );
+
+	$collection = '';
+	$handle     = '';
+	$uuid       = '';
+	if ( 1 === preg_match( '#^/@([^/]+?)(?:/(followers|following))?/?$#', $path, $matches ) ) {
+		$handle     = $matches[1];
+		$collection = $matches[2] ?? '';
+	} elseif ( 1 === preg_match( '#^/actors/([0-9a-fA-F-]{36})(?:/(followers|following))?/?$#', $path, $matches ) ) {
+		$uuid       = $matches[1];
+		$collection = $matches[2] ?? '';
+	} else {
+		return;
+	}
+
+	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle );
+	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_view( $actor ) ) {
+		return;
+	}
+
+	if ( '' !== $uuid ) {
+		$wp->query_vars['ax_actor'] = $uuid;
+	} else {
+		$wp->query_vars['ax_actor_handle'] = $handle;
+	}
+	if ( '' !== $collection ) {
+		$wp->query_vars['ax_actor_collection'] = $collection;
+	}
+}
+add_action( 'parse_request', 'axismundi_actors_resolve_unrouted_actor_request' );
+
+/** Keep human Follow collection pages slashless like their profile hub. */
+function axismundi_actors_redirect_follow_collection_trailing_slash() : void {
+	$actor      = axismundi_actors_current_handle_alias_actor();
+	$collection = (string) get_query_var( 'ax_actor_collection' );
+	if ( ! $actor instanceof Axismundi_Actor || ! in_array( $collection, array( 'followers', 'following' ), true ) || ! isset( $_SERVER['REQUEST_URI'] ) ) {
+		return;
+	}
+	$request_path = wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH );
+	$target_path  = wp_parse_url( axismundi_actors_follow_collection_url( $actor, $collection ), PHP_URL_PATH );
+	if ( is_string( $request_path ) && is_string( $target_path ) && '/' === substr( $request_path, -1 ) && untrailingslashit( rawurldecode( $request_path ) ) === $target_path ) {
+		wp_safe_redirect( axismundi_actors_follow_collection_url( $actor, $collection ), 301 );
+		exit;
+	}
+}
+add_action( 'template_redirect', 'axismundi_actors_redirect_follow_collection_trailing_slash', 2 );
+
 /** Redirect cached remote UUID profile hubs to their verified local acct alias. */
 function axismundi_actors_redirect_remote_uuid_profile_alias() : void {
 	$actor = axismundi_actors_current_actor();
@@ -323,7 +524,11 @@ function axismundi_actors_redirect_remote_uuid_profile_alias() : void {
 	if ( false === strpos( $alias, '/@' ) ) {
 		return;
 	}
-	wp_safe_redirect( $alias, 301 );
+	$collection = (string) get_query_var( 'ax_actor_collection' );
+	$target     = in_array( $collection, array( 'followers', 'following' ), true )
+		? axismundi_actors_follow_collection_url( $actor, $collection )
+		: $alias;
+	wp_safe_redirect( $target, 301 );
 	exit;
 }
 add_action( 'template_redirect', 'axismundi_actors_redirect_remote_uuid_profile_alias', 1 );
@@ -407,8 +612,21 @@ function axismundi_actors_resolve_block_subject( string $context_actor_id ) : ?a
 	if ( ! is_array( $subject ) ) {
 		return null;
 	}
+	/*
+	 * Carry the Actor through when it survived the filter, because an Actor can be
+	 * rendered better than a descriptor can: `axismundi_actors_avatar_html()` picks the
+	 * closest registered image size and emits a `srcset`, while a descriptor only ever
+	 * carries one already-chosen URL. Dropping it here unconditionally is what made
+	 * every Actor Avatar fall back to that single URL -- minted at a fixed 192px by
+	 * `axismundi_actors_block_subject_from_actor()`, so a 48px slot downloaded the
+	 * full-size original with no `srcset` at all.
+	 *
+	 * The instanceof check is the whole safety story: a product that replaces the
+	 * subject through the filter returns its own array, which carries no `actor` key,
+	 * so its descriptor stays authoritative and no stale identity leaks past it.
+	 */
 	$normalized = array(
-		'actor'              => null,
+		'actor'              => ( $subject['actor'] ?? null ) instanceof Axismundi_Actor ? $subject['actor'] : null,
 		'name'               => sanitize_text_field( (string) ( $subject['name'] ?? '' ) ),
 		'preferred_username' => sanitize_text_field( (string) ( $subject['preferred_username'] ?? '' ) ),
 		'handle'             => sanitize_text_field( (string) ( $subject['handle'] ?? '' ) ),
@@ -435,7 +653,8 @@ function axismundi_actors_handle_profile_request( bool $preempt, WP_Query $query
 	}
 
 	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle );
-	if ( ! $actor || ! axismundi_actors_can_view( $actor ) ) {
+	$collection = (string) $query->get( 'ax_actor_collection' );
+	if ( ! $actor || ! axismundi_actors_can_view( $actor ) || ( '' !== $collection && ! axismundi_actors_follow_collection_page_is_available( $actor ) ) ) {
 		$GLOBALS['axismundi_actors_current_actor'] = null;
 		$query->set_404();
 		status_header( 404 );
@@ -603,6 +822,17 @@ function axismundi_actors_profile_template_content() : string {
 	return (string) ob_get_clean();
 }
 
+/** @return string */
+function axismundi_actors_follow_collection_template_content() : string {
+	$path = __DIR__ . '/../templates/actor-follow-collection.php';
+	if ( ! is_readable( $path ) ) {
+		return '';
+	}
+	ob_start();
+	include $path;
+	return (string) ob_get_clean();
+}
+
 /** @return void */
 function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-profile' );
@@ -616,6 +846,8 @@ function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-biography' );
 	register_block_type( __DIR__ . '/../blocks/actor-profile-fields' );
 	register_block_type( __DIR__ . '/../blocks/actor-projections' );
+	register_block_type( __DIR__ . '/../blocks/actor-social-counts' );
+	register_block_type( __DIR__ . '/../blocks/actor-follow-list' );
 	if ( function_exists( 'register_block_template' ) ) {
 		register_block_template(
 			'axismundi-actors//actor-profile',
@@ -623,6 +855,14 @@ function axismundi_actors_register_profile_block_and_template() : void {
 				'title'       => __( 'Actor Profile', 'axismundi-actors' ),
 				'description' => __( 'A public or owner-preview actor identity hub.', 'axismundi-actors' ),
 				'content'     => axismundi_actors_profile_template_content(),
+			)
+		);
+		register_block_template(
+			'axismundi-actors//actor-follow-collection',
+			array(
+				'title'       => __( 'Actor Follow Collection', 'axismundi-actors' ),
+				'description' => __( 'A public Followers or Following list for the current Actor.', 'axismundi-actors' ),
+				'content'     => axismundi_actors_follow_collection_template_content(),
 			)
 		);
 	}
@@ -637,8 +877,10 @@ function axismundi_actors_profile_template_include( string $template ) : string 
 	if ( ! axismundi_actors_current_actor() || is_404() ) {
 		return $template;
 	}
-	$templates = array( 'actor-profile.php', 'index.php' );
-	return locate_block_template( locate_template( $templates ), 'actor-profile', $templates );
+	$is_collection = '' !== (string) get_query_var( 'ax_actor_collection' );
+	$slug = $is_collection ? 'actor-follow-collection' : 'actor-profile';
+	$templates = array( $slug . '.php', 'index.php' );
+	return locate_block_template( locate_template( $templates ), $slug, $templates );
 }
 add_filter( 'template_include', 'axismundi_actors_profile_template_include', 99 );
 
@@ -658,7 +900,9 @@ add_filter( 'wp_robots', 'axismundi_actors_remote_preview_robots' );
 function axismundi_actors_print_canonical() : void {
 	$actor = axismundi_actors_current_actor();
 	if ( $actor ) {
-		printf( '<link rel="canonical" href="%s" />', esc_url( $actor->get_uri() ) );
+		$collection = (string) get_query_var( 'ax_actor_collection' );
+		$url = '' !== $collection ? axismundi_actors_follow_collection_url( $actor, $collection, max( 1, absint( get_query_var( 'page' ) ) ) ) : $actor->get_uri();
+		printf( '<link rel="canonical" href="%s" />', esc_url( $url ) );
 	}
 }
 add_action( 'wp_head', 'axismundi_actors_print_canonical', 1 );
@@ -672,7 +916,8 @@ add_action( 'wp_head', 'axismundi_actors_print_canonical', 1 );
 function axismundi_actors_document_title_parts( array $parts ) : array {
 	$actor = axismundi_actors_current_actor();
 	if ( $actor ) {
-		$parts['title'] = $actor->get_display_name();
+		$collection = (string) get_query_var( 'ax_actor_collection' );
+		$parts['title'] = '' !== $collection ? sprintf( '%s - %s', $actor->get_display_name(), ucfirst( $collection ) ) : $actor->get_display_name();
 	}
 	return $parts;
 }

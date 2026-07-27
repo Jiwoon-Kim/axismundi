@@ -1,0 +1,14 @@
+.wp-block-axismundi-actor-follow-list > ul { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap:var(--wp--preset--spacing--200,.75rem); margin:0; padding:0; list-style:none; }
+.wp-block-axismundi-actor-follow-list li a { display:flex; align-items:center; gap:.75rem; padding:var(--wp--preset--spacing--200,.75rem); border-radius:8px; background:var(--wp--preset--color--surface-container); color:inherit; text-decoration:none; }
+.wp-block-axismundi-actor-follow-list li a:hover, .wp-block-axismundi-actor-follow-list li a:focus-visible { text-decoration:underline; text-underline-offset:.15em; }
+.wp-block-axismundi-actor-follow-list img { inline-size:48px; block-size:48px; border-radius:50%; object-fit:cover; }
+.wp-block-axismundi-actor-follow-list span { display:grid; gap:.1rem; min-inline-size:0; }.wp-block-axismundi-actor-follow-list small { color:var(--wp--preset--color--on-surface-variant); overflow-wrap:anywhere; }.ax-actor-follow-list__pagination { display:flex; gap:1rem; margin-block-start:var(--wp--preset--spacing--300,1rem); }
+
+/* The caveat for a remote Actor: what the origin reports, next to what we hold. It sits
+   above the list and stays legible rather than decorative -- a reader who misses it
+   reads a partial list as a complete one, which is the failure this line exists to
+   prevent. The link out is separated onto its own line so it is not skimmed as part of
+   the sentence. */
+.ax-actor-follow-list__scope { display:grid; gap:.35rem; justify-items:start; margin-block-end:var(--wp--preset--spacing--300,1rem); color:var(--wp--preset--color--on-surface-variant); font-size:.875rem; }
+.ax-actor-follow-list__scope strong { color:var(--wp--preset--color--on-surface,inherit); font-variant-numeric:tabular-nums; }
+.ax-actor-follow-list__origin { color:inherit; text-underline-offset:.15em; }

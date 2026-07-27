@@ -79,12 +79,16 @@ ax_rnd_register(
 			'attributedTo' => 'https://example.com/actors/uuid',
 			'url'          => 'https://example.com/hello/',
 			'content'      => '<p>Safe</p>',
+			'nameMap'      => array( 'en' => '<strong>Safe title</strong>' ),
+			'summaryMap'   => array( 'en' => '<p>Safe summary</p><iframe src="https://evil.example/"></iframe>' ),
 			'contentMap'   => array( 'en' => '<p>Safe</p><iframe src="https://evil.example/"></iframe>' ),
 		),
 	)
 );
 $mapped = axismundi_op_transform_object( 'x' );
 ax_rnd_assert( $ax_rnd_results, 'contentMap scalar values use the federation HTML allowlist', is_array( $mapped ) && '<p>Safe</p>' === $mapped['contentMap']['en'] );
+ax_rnd_assert( $ax_rnd_results, 'nameMap scalar values use plain-text normalization', is_array( $mapped ) && 'Safe title' === $mapped['nameMap']['en'] );
+ax_rnd_assert( $ax_rnd_results, 'summaryMap scalar values use the federation HTML allowlist', is_array( $mapped ) && '<p>Safe summary</p>' === $mapped['summaryMap']['en'] );
 
 // Quote declaration and approval evidence map only the FEP terms actually emitted.
 $quote_context = axismundi_op_jsonld_context( array( 'quote' => 'https://remote.example/notes/1' ) );

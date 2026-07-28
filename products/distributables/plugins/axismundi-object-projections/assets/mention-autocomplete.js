@@ -43,7 +43,14 @@
 			return [ options ];
 		},
 		getOptionCompletion: function ( actor ) {
-			return actor.token;
+			/*
+			 * Gutenberg replaces the active `@query` but leaves the caret immediately
+			 * after this value. Without a separator, choosing a second person starts
+			 * `@first@second`, which is one invalid plaintext token and therefore emits
+			 * neither Mention declaration. Keep the authored representation plain text,
+			 * but make consecutive choices compose as separate tokens.
+			 */
+			return actor.token + ' ';
 		},
 	};
 

@@ -61,7 +61,7 @@ try {
 			&& false !== strpos( $mention_script, 'editor.Autocomplete.completers' )
 			&& false !== strpos( $mention_script, "'users' !== completer.name" )
 			&& false !== strpos( $mention_script, '/actors/mention-search' )
-			&& false !== strpos( $mention_script, 'return actor.token;' )
+			&& false !== strpos( $mention_script, "return actor.token + ' ';" )
 			&& false === strpos( $mention_script, "className: 'mention'" )
 	);
 	axismundi_op_register_mention_autocomplete();

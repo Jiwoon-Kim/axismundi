@@ -45,9 +45,10 @@ add_action( 'axismundi_op_remote_object_fetched', 'axismundi_emoji_observe_remot
 /**
  * The declarations belonging to one Object view model.
  *
- * Read from the Object's own stored payload, which is what keeps substitution scoped:
- * `:misskey:` in a hoto.moe post means hoto.moe's emoji, and the only way to know that
- * is to ask what that post declared.
+ * Remote Objects read their own stored payload. Local Objects reconstruct that same
+ * payload through the source transformer, so the document's current outbound `tag[]`
+ * is also the declaration that governs its home rendering. This keeps local rendering
+ * and federation in lockstep without treating every locally-known shortcode as used.
  *
  * @param array<string,mixed> $model Object view model.
  * @return array<string,array<string,array<string,mixed>>>
@@ -58,14 +59,23 @@ function axismundi_emoji_object_declarations( array $model ) : array {
 		return array();
 	}
 	$row = axismundi_op_remote_object_get( $uri );
-	if ( ! is_array( $row ) ) {
+	if ( is_array( $row ) ) {
+		$payload = $row['payload'] ?? $row['payload_json'] ?? null;
+		if ( is_string( $payload ) ) {
+			$payload = json_decode( $payload, true );
+		}
+		return is_array( $payload ) ? axismundi_emoji_declaration_map( $payload, $uri ) : array();
+	}
+
+	if ( ! function_exists( 'axismundi_op_resolve_source_by_uri' ) || ! function_exists( 'axismundi_op_transform_object' ) ) {
 		return array();
 	}
-	$payload = $row['payload'] ?? $row['payload_json'] ?? null;
-	if ( is_string( $payload ) ) {
-		$payload = json_decode( $payload, true );
+	$source = axismundi_op_resolve_source_by_uri( $uri );
+	if ( null === $source ) {
+		return array();
 	}
-	return is_array( $payload ) ? axismundi_emoji_declaration_map( $payload, $uri ) : array();
+	$payload = axismundi_op_transform_object( $source );
+	return is_array( $payload ) ? axismundi_emoji_local_declaration_map( $payload ) : array();
 }
 
 /**

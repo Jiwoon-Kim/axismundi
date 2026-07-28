@@ -58,8 +58,9 @@ function axismundi_emoji_subject_declarations( array $subject ) : array {
  * The declarations belonging to one Actor.
  *
  * Both Actor seams answer the same question — what did *this* Actor declare — so they
- * ask it in one place. A local Actor returns nothing: it has no `tag[]` yet, and until
- * a local registry exists there is nothing a lookup could honestly resolve against.
+ * ask it in one place. A local Actor rebuilds its own projected `tag[]`, exactly like a
+ * local Object does. That makes profile rendering follow the same current-text gate as
+ * its outbound representation instead of globally decorating local shortcodes.
  *
  * @param mixed $actor Actor, or anything else.
  * @return array<string,array<string,array<string,mixed>>>
@@ -68,7 +69,17 @@ function axismundi_emoji_actor_declarations( $actor ) : array {
 	if ( ! class_exists( 'Axismundi_Actor' ) || ! ( $actor instanceof Axismundi_Actor ) ) {
 		return array();
 	}
-	if ( $actor->is_local() || ! function_exists( 'axismundi_actors_get_remote_payload' ) || ! axismundi_emoji_ready() ) {
+	if ( ! axismundi_emoji_ready() ) {
+		return array();
+	}
+	if ( $actor->is_local() ) {
+		if ( ! function_exists( 'axismundi_op_actor_transform' ) ) {
+			return array();
+		}
+		$payload = axismundi_op_actor_transform( $actor );
+		return axismundi_emoji_local_declaration_map( $payload );
+	}
+	if ( ! function_exists( 'axismundi_actors_get_remote_payload' ) ) {
 		return array();
 	}
 	$payload = axismundi_actors_get_remote_payload( $actor->get_identity_id() );

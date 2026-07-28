@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.30
+Stable tag: 0.0.31
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,11 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.31 =
+* Add the shared block-editor custom-emoji picker and derive Mention recipients from
+  authored plaintext `@handle` tokens while preserving the writer's text in the
+  federated Note body.
 
 = 0.0.30 =
 * Let an editor's Automatic language value preserve a federated Note's locked language snapshot, so content-only updates do not attempt to clear or recompute it.

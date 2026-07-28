@@ -56,13 +56,21 @@ try {
 	$mention_script = file_get_contents( dirname( __DIR__ ) . '/assets/mention-autocomplete.js' );
 	ax_settings_assert(
 		$ax_settings_results,
-		'the editor replaces the Core user completer with canonical Actor mention anchors',
+		'the editor replaces the Core user completer with a canonical plaintext Actor token',
 		is_string( $mention_script )
 			&& false !== strpos( $mention_script, 'editor.Autocomplete.completers' )
 			&& false !== strpos( $mention_script, "'users' !== completer.name" )
 			&& false !== strpos( $mention_script, '/actors/mention-search' )
-			&& false !== strpos( $mention_script, "className: 'mention'" )
-			&& false !== strpos( $mention_script, 'href: actor.uri' )
+			&& false !== strpos( $mention_script, 'return actor.token;' )
+			&& false === strpos( $mention_script, "className: 'mention'" )
+	);
+	axismundi_op_register_mention_autocomplete();
+	ax_settings_assert(
+		$ax_settings_results,
+		'the shared inline-mention completer is registered independently of the Article editor, so Note can opt into the same plaintext-token contract',
+		wp_script_is( 'axismundi-op-mention-autocomplete', 'registered' )
+			&& axismundi_op_enqueue_mention_autocomplete()
+			&& wp_script_is( 'axismundi-op-mention-autocomplete', 'enqueued' )
 	);
 
 	$user_id = get_current_user_id();
@@ -113,7 +121,7 @@ try {
 	wp_update_post(
 		array(
 			'ID'           => $ax_settings_post_id,
-			'post_content' => '<!-- wp:paragraph --><p>Hello <a class="mention" href="https://remote.example/users/bob">@bob@example</a> and <a href="https://remote.example/users/not-mentioned">a normal link</a>.</p><!-- /wp:paragraph -->',
+		'post_content' => '<!-- wp:paragraph --><p>Hello <a class="mention" href="https://remote.example/users/bob">@bob@example</a> and <a href="https://remote.example/users/not-mentioned">a normal link</a>.</p><!-- /wp:paragraph -->',
 		)
 	);
 	$post = get_post( $ax_settings_post_id );

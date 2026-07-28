@@ -153,12 +153,12 @@ try {
 	ax_emoji_actors_assert( $ax_emoji_actors_results, 'a shortcode inside <code> stays text, because a biography may quote one as an example', str_contains( $ax_bio_html, '<code>:declared:</code>' ) );
 
 	/*
-	 * A local Actor has no `tag[]`, so a bare shortcode in its biography must stay text.
-	 * Rendering it from the registry would be the namespace bug in a new place: whose
-	 * `:declared:` would it be?
+	 * Decoration still needs an actual Actor declaration. Passing no subject must not
+	 * turn an arbitrary local-looking shortcode into an image; local Actors now supply
+	 * their declarations through their own projected outbound `tag[]`.
 	 */
 	$ax_bio_local = axismundi_emoji_decorate_summary( '<p>a local :declared: b</p>', null );
-	ax_emoji_actors_assert( $ax_emoji_actors_results, 'a local Actor biography is untouched, because it declares nothing to resolve against', ! str_contains( $ax_bio_local, 'alt=' ) );
+	ax_emoji_actors_assert( $ax_emoji_actors_results, 'a biography without an Actor declaration remains text rather than globally claiming a shortcode', ! str_contains( $ax_bio_local, 'alt=' ) );
 
 	$ax_bio_renderer = file_get_contents( WP_PLUGIN_DIR . '/axismundi-actors/blocks/actor-biography/render.php' );
 	ax_emoji_actors_assert(

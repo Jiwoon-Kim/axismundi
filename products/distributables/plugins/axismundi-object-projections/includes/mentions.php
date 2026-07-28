@@ -242,3 +242,85 @@ function axismundi_op_index_local_note_mentions( array $envelope, WP_Post $post 
 	);
 }
 add_action( 'axismundi_note_envelope_saved', 'axismundi_op_index_local_note_mentions', 10, 2 );
+
+/**
+ * Point a received Object's mention links at this site's view of the person.
+ *
+ * The same argument as hashtags, with a harder matching problem. A remote body links a
+ * mention at the origin's profile page; following it leaves this site to see an account
+ * we already hold. Every implementation rewrites these — a Misskey note federated to
+ * Mastodon shows Mastodon's own account pages.
+ *
+ * Matching cannot use the href the way hashtags do. For a hashtag the anchor href and
+ * `tag[].href` are the same string; for a mention they are deliberately different:
+ *
+ *   anchor href    https://example.org/@someone            the human profile page
+ *   tag[].href     https://example.org/actors/{uuid}       the Actor URI
+ *
+ * So the Actor is resolved from the declaration and *its* known addresses are what the
+ * anchors are matched against. Both are checked because which one a sender used varies:
+ * Misskey writes the profile URL, and some implementations write the Actor URI itself.
+ *
+ * An Actor this site has never cached is left alone. Rewriting it would point a reader
+ * at a profile page we cannot render, which is worse than the original link.
+ *
+ * @param string              $html  Sanitized Object body.
+ * @param array<string,mixed> $model Object view model.
+ * @return string
+ */
+function axismundi_op_localize_object_mention_links( string $html, array $model ) : string {
+	if ( '' === $html || false === strpos( $html, 'href=' ) || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		return $html;
+	}
+	if ( ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_actors_profile_hub_url' ) ) {
+		return $html;
+	}
+	$uri = (string) ( $model['object_uri'] ?? $model['id'] ?? '' );
+	if ( '' === $uri || ! function_exists( 'axismundi_op_remote_object_get' ) ) {
+		return $html;
+	}
+	$row = axismundi_op_remote_object_get( $uri );
+	if ( ! is_array( $row ) ) {
+		return $html;
+	}
+	$payload = $row['payload'] ?? $row['payload_json'] ?? null;
+	if ( is_string( $payload ) ) {
+		$payload = json_decode( $payload, true );
+	}
+	if ( ! is_array( $payload ) ) {
+		return $html;
+	}
+
+	$replacements = array();
+	foreach ( axismundi_op_remote_object_mention_uris( $payload ) as $actor_uri ) {
+		$actor = axismundi_actors_get_by_uri( $actor_uri );
+		if ( ! $actor instanceof Axismundi_Actor ) {
+			continue;
+		}
+		$hub = axismundi_actors_profile_hub_url( $actor );
+		if ( '' === $hub ) {
+			continue;
+		}
+		foreach ( array( $actor_uri, $actor->get_uri(), $actor->get_profile_url() ) as $candidate ) {
+			$candidate = (string) $candidate;
+			if ( '' !== $candidate && $candidate !== $hub ) {
+				$replacements[ $candidate ] = $hub;
+			}
+		}
+	}
+	if ( empty( $replacements ) ) {
+		return $html;
+	}
+
+	$processor = new WP_HTML_Tag_Processor( $html );
+	while ( $processor->next_tag( 'A' ) ) {
+		$href = (string) $processor->get_attribute( 'href' );
+		if ( isset( $replacements[ $href ] ) ) {
+			$processor->set_attribute( 'href', $replacements[ $href ] );
+		}
+	}
+	return $processor->get_updated_html();
+}
+// Priority 8, alongside the hashtag rewrite: both edit anchor hrefs and neither can see
+// the other's links, so they compose in either order.
+add_filter( 'axismundi_op_object_content_html', 'axismundi_op_localize_object_mention_links', 8, 2 );

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.56
+Stable tag: 0.0.57
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,12 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.57 =
+* Localize declared remote hashtag and Mention anchors to this site's archive and cached
+  Actor profile surfaces without creating cache state while rendering.
+* Use canonical plaintext Actor tokens in the shared editor completer while rebuilding
+  Mention tags and audience edges from the authored content.
 
 = 0.0.56 =
 * Make an Automatic Article or Note language follow the WordPress author profile language, then the site language, rather than the Actor serialization default.

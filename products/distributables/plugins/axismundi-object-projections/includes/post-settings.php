@@ -288,34 +288,94 @@ function axismundi_op_post_visibility( WP_Post $post ) : string {
 	return axismundi_op_sanitize_post_visibility( get_post_meta( $post->ID, AXISMUNDI_OP_POST_VISIBILITY_META, true ) );
 }
 
-/**
- * Derive validated Actor mention URIs from `a.mention[href]` anchors in one HTML body.
- *
- * The neutral parser is shared by every local object type (Core Post Article and
- * the Note CPT) so both derive mentions with one `WP_HTML_Tag_Processor` contract
- * and cannot drift. Only URL-shaped hrefs survive; Actor identity is verified at
- * the publish boundary, not here.
- */
-function axismundi_op_content_mention_uris( string $html ) : array {
-	if ( '' === trim( $html ) || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
-		return array();
+/** Resolve one plaintext `@handle` or `@handle@domain` token from the Actor registry. */
+function axismundi_op_plaintext_mention_actor( string $token ) : ?Axismundi_Actor {
+	$token = ltrim( trim( $token ), '@' );
+	if ( '' === $token ) {
+		return null;
 	}
-	$processor = new WP_HTML_Tag_Processor( $html );
-	$uris      = array();
-	while ( $processor->next_tag( 'A' ) ) {
-		$classes = preg_split( '/\s+/', trim( (string) $processor->get_attribute( 'class' ) ) );
-		if ( ! in_array( 'mention', (array) $classes, true ) ) {
-			continue;
+	$actor = str_contains( $token, '@' )
+		? ( function_exists( 'axismundi_actors_get_by_remote_acct' ) ? axismundi_actors_get_by_remote_acct( $token ) : null )
+		: ( function_exists( 'axismundi_actors_get_by_handle' ) ? axismundi_actors_get_by_handle( $token ) : null );
+	return $actor instanceof Axismundi_Actor && 'public' === $actor->get_status() ? $actor : null;
+}
+
+/** Return canonical Actor URIs named by plaintext mention tokens in one text node. */
+function axismundi_op_plaintext_mention_uris( string $text ) : array {
+	$matches = array();
+	/*
+	 * A token cannot begin within a word, email, URL, or another mention. The resolver is
+	 * stricter still: it accepts only a local immutable handle or a previously verified
+	 * remote acct. This makes arbitrary text harmless even when it resembles a mention.
+	 */
+	preg_match_all( '/(?<![A-Za-z0-9_@.\/:-])@([A-Za-z0-9_]+(?:@[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9](?::[0-9]{1,5})?)?)/', $text, $matches, PREG_OFFSET_CAPTURE );
+	$uris = array();
+	foreach ( (array) ( $matches[0] ?? array() ) as $match ) {
+		$token  = (string) ( $match[0] ?? '' );
+		$offset = (int) ( $match[1] ?? 0 );
+		$next   = substr( $text, $offset + strlen( $token ), 1 );
+		// A bare local handle cannot be the leading fragment of a hostname or email.
+		if ( ! str_contains( ltrim( $token, '@' ), '@' ) ) {
+			$after_dot = '.' === $next ? substr( $text, $offset + strlen( $token ) + 1, 1 ) : '';
+			if ( ( '' !== $next && 1 === preg_match( '/[A-Za-z0-9_@-]/', $next ) ) || ( '.' === $next && '' !== $after_dot && 1 === preg_match( '/[A-Za-z0-9]/', $after_dot ) ) ) {
+				continue;
+			}
 		}
-		$valid = axismundi_op_sanitize_post_mentions( array( (string) $processor->get_attribute( 'href' ) ) );
-		if ( isset( $valid[0] ) ) {
-			$uris[] = $valid[0];
+		$actor = axismundi_op_plaintext_mention_actor( $token );
+		if ( $actor instanceof Axismundi_Actor ) {
+			$uris[] = $actor->get_uri();
 		}
 	}
 	return array_values( array_unique( $uris ) );
 }
 
-/** Derive Actor URIs from explicit mention anchors in saved block HTML. */
+/**
+ * Derive canonical Actor mention URIs from authored body HTML.
+ *
+ * New editor selections are literal `@handle` / `@handle@domain` text. The parser walks
+ * text nodes only and excludes links and code-like elements, so an email, URL, or example
+ * never becomes a recipient. Old `a.mention[href]` markup remains readable so previously
+ * authored posts do not lose their delivery metadata when the editor moves to plaintext.
+ */
+function axismundi_op_content_mention_uris( string $html ) : array {
+	if ( '' === trim( $html ) ) {
+		return array();
+	}
+	$uris = array();
+	if ( class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		$processor = new WP_HTML_Tag_Processor( $html );
+		while ( $processor->next_tag( 'A' ) ) {
+			$classes = preg_split( '/\s+/', trim( (string) $processor->get_attribute( 'class' ) ) );
+			if ( ! in_array( 'mention', (array) $classes, true ) ) {
+				continue;
+			}
+			$valid = axismundi_op_sanitize_post_mentions( array( (string) $processor->get_attribute( 'href' ) ) );
+			if ( isset( $valid[0] ) ) {
+				$uris[] = $valid[0];
+			}
+		}
+	}
+
+	$parts  = wp_html_split( $html );
+	$opaque = 0;
+	foreach ( $parts as $part ) {
+		if ( '' === $part ) {
+			continue;
+		}
+		if ( '<' === $part[0] ) {
+			if ( 1 === preg_match( '#^<\s*(/)?\s*(a|pre|code|script|style|textarea)\b#i', $part, $tag ) ) {
+				$opaque = '' === ( $tag[1] ?? '' ) ? $opaque + 1 : max( 0, $opaque - 1 );
+			}
+			continue;
+		}
+		if ( 0 === $opaque ) {
+			$uris = array_merge( $uris, axismundi_op_plaintext_mention_uris( $part ) );
+		}
+	}
+	return array_values( array_unique( $uris ) );
+}
+
+/** Derive Actor URIs from plaintext tokens and legacy mention anchors in saved block HTML. */
 function axismundi_op_post_content_mentions( WP_Post $post ) : array {
 	return axismundi_op_content_mention_uris( $post->post_content );
 }
@@ -449,6 +509,28 @@ function axismundi_op_register_mention_token_field() : void {
 }
 add_action( 'init', 'axismundi_op_register_mention_token_field' );
 
+/** Register the shared inline-mention completer for dependent block editors. */
+function axismundi_op_register_mention_autocomplete() : void {
+	wp_register_script(
+		'axismundi-op-mention-autocomplete',
+		plugins_url( 'assets/mention-autocomplete.js', dirname( __DIR__ ) . '/axismundi-object-projections.php' ),
+		array( 'wp-api-fetch', 'wp-element', 'wp-hooks', 'wp-i18n', 'wp-url' ),
+		AXISMUNDI_OP_VERSION . '-mentions-' . (string) filemtime( dirname( __DIR__ ) . '/assets/mention-autocomplete.js' ),
+		true
+	);
+}
+add_action( 'init', 'axismundi_op_register_mention_autocomplete' );
+
+/** Enqueue the shared inline-mention completer for one block-editor consumer. */
+function axismundi_op_enqueue_mention_autocomplete() : bool {
+	if ( ! wp_script_is( 'axismundi-op-mention-autocomplete', 'registered' ) ) {
+		return false;
+	}
+	wp_enqueue_script( 'axismundi-op-mention-autocomplete' );
+	wp_set_script_translations( 'axismundi-op-mention-autocomplete', 'axismundi-object-projections' );
+	return true;
+}
+
 /** Load the document-settings panel in the Core Post block editor. */
 function axismundi_op_enqueue_post_editor_settings() : void {
 	$screen = get_current_screen();
@@ -472,15 +554,8 @@ function axismundi_op_enqueue_post_editor_settings() : void {
 			'default' => $default_language,
 		)
 	);
-	wp_enqueue_script(
-		'axismundi-op-mention-autocomplete',
-		plugins_url( 'assets/mention-autocomplete.js', dirname( __DIR__ ) . '/axismundi-object-projections.php' ),
-		array( 'wp-api-fetch', 'wp-element', 'wp-hooks', 'wp-i18n', 'wp-url' ),
-		AXISMUNDI_OP_VERSION . '-mentions',
-		true
-	);
 	wp_set_script_translations( 'axismundi-op-post-settings', 'axismundi-object-projections' );
-	wp_set_script_translations( 'axismundi-op-mention-autocomplete', 'axismundi-object-projections' );
+	axismundi_op_enqueue_mention_autocomplete();
 	/*
 	 * The custom emoji picker, when Emoji is active. It contributes a button to the inline
 	 * RichText toolbar and inserts `:shortcode:` as text; the Article's outbound `tag[]` is

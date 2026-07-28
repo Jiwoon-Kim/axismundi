@@ -211,11 +211,11 @@ function axismundi_note_get_by_uri( string $uri ) : ?array {
 }
 
 /**
- * Ordered union of the stored explicit mentions and body-derived anchor mentions.
+ * Ordered union of stored explicit mentions and body-derived plaintext or legacy anchors.
  *
  * The body-derived set is never copied into the envelope: it is re-derived from
- * post_content through the neutral Object Projections parser so deleting an
- * anchor removes the recipient, exactly as Core Post Article mentions behave.
+ * post_content through the neutral Object Projections parser so deleting the token
+ * removes the recipient, exactly as Core Post Article mentions behave.
  *
  * @return string[]
  */

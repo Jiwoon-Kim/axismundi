@@ -96,6 +96,36 @@ function axismundi_op_normalize_hashtag( $value ) : array {
 	return array( 'name' => $name, 'key' => $key );
 }
 
+/**
+ * Look up an existing shared hashtag term without creating one.
+ *
+ * Separate from {@see axismundi_op_ensure_hashtag_term()} because rendering must not
+ * write. A remote Object's hashtags are indexed when it is observed, so by the time
+ * anything is displayed the term already exists; if it somehow does not, the honest
+ * answer is to leave the received markup alone rather than mint a taxonomy row during
+ * a page view.
+ *
+ * @param mixed $value Hashtag name, with or without its leading `#`.
+ * @return WP_Term|null
+ */
+function axismundi_op_find_hashtag_term( $value ) : ?WP_Term {
+	$hashtag = axismundi_op_normalize_hashtag( $value );
+	if ( empty( $hashtag ) ) {
+		return null;
+	}
+	$terms = get_terms(
+		array(
+			'taxonomy'   => AXISMUNDI_OP_HASHTAG_TAXONOMY,
+			'hide_empty' => false,
+			'meta_query' => array(
+				array( 'key' => AXISMUNDI_OP_HASHTAG_KEY_META, 'value' => $hashtag['key'] ),
+			),
+			'number'     => 1,
+		)
+	);
+	return ! is_wp_error( $terms ) && ! empty( $terms[0] ) && $terms[0] instanceof WP_Term ? $terms[0] : null;
+}
+
 /** Find or create one normalized shared hashtag term. */
 function axismundi_op_ensure_hashtag_term( $value ) {
 	$hashtag = axismundi_op_normalize_hashtag( $value );
@@ -311,3 +341,87 @@ function axismundi_op_purge_orphan_remote_object_hashtags() : void {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded orphan index cleanup.
 	$wpdb->query( "DELETE h FROM {$table} h LEFT JOIN {$objects} o ON o.id = h.remote_object_id WHERE o.id IS NULL" );
 }
+
+/**
+ * Point a received Object's hashtag links at this site's own archive.
+ *
+ * A received `#hashtag` arrives as an anchor to the origin's tag page. Following it
+ * takes a reader off this site to see posts they may not be able to read, while the
+ * archive here already collects every local and remote Object carrying that tag. Every
+ * major implementation rewrites this: a Misskey note federated to Mastodon shows
+ * `mastodon.social/tags/…` even though the payload says `misskey.io/tags/…`. The anchor
+ * href is presentation; `tag[]` is the authority.
+ *
+ * Rewritten only where the Object itself declared the tag, and only to a term that
+ * already exists — the same "declared, not guessed" rule the emoji renderer follows. An
+ * anchor that merely looks like a hashtag, or one whose tag this site has never indexed,
+ * is left exactly as its author wrote it.
+ *
+ * The link text is never touched. `#HashTag` and `#hashtag` are the same tag for
+ * matching and two different spellings for reading, which is why normalization keeps
+ * both a display `name` and a lowercased `key`.
+ *
+ * @param string              $html  Sanitized Object body.
+ * @param array<string,mixed> $model Object view model.
+ * @return string
+ */
+function axismundi_op_localize_object_hashtag_links( string $html, array $model ) : string {
+	if ( '' === $html || false === strpos( $html, 'href=' ) || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		return $html;
+	}
+	$uri = (string) ( $model['object_uri'] ?? $model['id'] ?? '' );
+	if ( '' === $uri || ! function_exists( 'axismundi_op_remote_object_get' ) ) {
+		return $html;
+	}
+	$row = axismundi_op_remote_object_get( $uri );
+	if ( ! is_array( $row ) ) {
+		return $html;
+	}
+	$payload = $row['payload'] ?? $row['payload_json'] ?? null;
+	if ( is_string( $payload ) ) {
+		$payload = json_decode( $payload, true );
+	}
+	if ( ! is_array( $payload ) ) {
+		return $html;
+	}
+
+	$replacements = array();
+	foreach ( axismundi_op_remote_object_hashtag_descriptors( $payload ) as $descriptor ) {
+		$href = (string) ( $descriptor['href'] ?? '' );
+		if ( '' === $href ) {
+			continue;
+		}
+		$term = axismundi_op_find_hashtag_term( $descriptor['name'] ?? '' );
+		if ( ! $term instanceof WP_Term ) {
+			continue;
+		}
+		$local = axismundi_op_hashtag_archive_uri( $term );
+		if ( '' === $local || $local === $href ) {
+			continue;
+		}
+		$replacements[ $href ] = $local;
+	}
+	if ( empty( $replacements ) ) {
+		return $html;
+	}
+
+	/*
+	 * The declaration authorizes a replacement only in a body anchor, never in an
+	 * arbitrary attribute that happens to contain the origin URL. Tag Processor keeps
+	 * the received markup intact apart from that one href.
+	 */
+	$processor = new WP_HTML_Tag_Processor( $html );
+	while ( $processor->next_tag( 'A' ) ) {
+		$href = (string) $processor->get_attribute( 'href' );
+		if ( isset( $replacements[ $href ] ) ) {
+			$processor->set_attribute( 'href', $replacements[ $href ] );
+		}
+	}
+	return $processor->get_updated_html();
+}
+/*
+ * Priority 8: before the emoji decorator at 9, though the two cannot collide — this
+ * rewrites attributes and that one walks text nodes. Ordering is stated so the next
+ * person does not have to work out whether it matters.
+ */
+add_filter( 'axismundi_op_object_content_html', 'axismundi_op_localize_object_hashtag_links', 8, 2 );

@@ -47,6 +47,22 @@ function axismundi_actors_mention_handle( Axismundi_Actor $actor ) : string {
 	return '@' . $username . ( '' !== $host ? '@' . $host : '' );
 }
 
+/** Return a plaintext editor token that this site's outbound resolver can verify. */
+function axismundi_actors_mention_token( Axismundi_Actor $actor ) : string {
+	if ( 'public' !== $actor->get_status() ) {
+		return '';
+	}
+	$username = $actor->get_preferred_username();
+	if ( '' === $username ) {
+		return '';
+	}
+	if ( $actor->is_local() ) {
+		return '@' . $username;
+	}
+	$acct = function_exists( 'axismundi_actors_primary_acct_address' ) ? axismundi_actors_primary_acct_address( $actor ) : '';
+	return '' !== $acct ? '@' . ltrim( $acct, '@' ) : '';
+}
+
 /** Fully-qualified ActivityStreams Mention name for remote consumers. */
 function axismundi_actors_federated_mention_name( Axismundi_Actor $actor ) : string {
 	$username = $actor->get_preferred_username();
@@ -83,6 +99,7 @@ function axismundi_actors_mention_search_item( Axismundi_Actor $actor ) : array 
 		'uri'    => $actor->get_uri(),
 		'name'   => $actor->get_display_name() ?: $actor->get_preferred_username(),
 		'handle' => axismundi_actors_mention_handle( $actor ),
+		'token'  => axismundi_actors_mention_token( $actor ),
 		'avatar' => axismundi_actors_mention_avatar_url( $actor ),
 	);
 }
@@ -97,8 +114,7 @@ function axismundi_actors_rest_search_mentions( WP_REST_Request $request ) : WP_
 	$search = sanitize_text_field( (string) $request->get_param( 'search' ) );
 	$items  = array();
 	foreach ( axismundi_actors_search_mentionable( $search, 10 ) as $actor ) {
-		$handle = axismundi_actors_mention_handle( $actor );
-		if ( '' === $handle ) {
+		if ( '' === axismundi_actors_mention_token( $actor ) ) {
 			continue;
 		}
 		$items[] = axismundi_actors_mention_search_item( $actor );
@@ -111,7 +127,7 @@ function axismundi_actors_rest_resolve_mentions( WP_REST_Request $request ) : WP
 	$items = array();
 	foreach ( array_slice( (array) $request->get_param( 'uris' ), 0, 50 ) as $uri ) {
 		$actor = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( (string) $uri ) : null;
-		if ( ! $actor instanceof Axismundi_Actor || 'public' !== $actor->get_status() || '' === axismundi_actors_mention_handle( $actor ) ) {
+		if ( ! $actor instanceof Axismundi_Actor || '' === axismundi_actors_mention_token( $actor ) ) {
 			continue;
 		}
 		$items[] = axismundi_actors_mention_search_item( $actor );

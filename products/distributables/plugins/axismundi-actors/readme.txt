@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.56
+Stable tag: 0.0.57
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,11 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.57 =
+* Let the shared editor mention search return a canonical plaintext `@handle` or
+  `@handle@domain` token alongside the stable Actor URI, without discovering remote
+  accounts while a writer types.
 
 = 0.0.56 =
 * Notify representation and transport integrations after successful local profile text, visibility, media, link, or site-actor edits.

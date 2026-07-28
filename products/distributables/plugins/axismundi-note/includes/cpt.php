@@ -68,9 +68,9 @@ add_filter( 'axismundi_op_hashtag_is_federated', 'axismundi_note_hashtags_are_fe
  *
  * A Note is a short, linear body: a paragraph plus optional embeds. Media is
  * managed through the Media Library attachment relationship, never a body block,
- * so no media blocks are offered. The reused block-editor mention completer
- * (owned by Object Projections and enqueued globally) provides the `a.mention`
- * anchor contract inside `core/paragraph`.
+ * so no media blocks are offered. The reused block-editor mention completer,
+ * owned by Object Projections and explicitly enqueued by the Note editor,
+ * provides the `a.mention` anchor contract inside `core/paragraph`.
  */
 function axismundi_note_allowed_block_types( $allowed, $context ) {
 	if ( ! isset( $context->post ) || ! $context->post instanceof WP_Post || AXISMUNDI_NOTE_POST_TYPE !== $context->post->post_type ) {

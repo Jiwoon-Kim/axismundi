@@ -127,6 +127,25 @@ function axismundi_activitypub_bridge_unregister_mailer_handlers() : void {
 add_action( 'init', 'axismundi_activitypub_bridge_unregister_mailer_handlers', 100 );
 
 /**
+ * Keep Axismundi mention text under Axismundi ownership.
+ *
+ * The official plugin's presentation helper rewrites plain `@acct` text into an
+ * anchor and shortens a qualified acct to its local part. Axismundi deliberately
+ * publishes the authored token unchanged and derives the AS2 Mention from that
+ * text at projection time, so this bridge owns the conflict only while all of its
+ * dependencies are active. Remote Object rendering has its own declared-tag
+ * localization path; ordinary WordPress content is covered here as well.
+ */
+function axismundi_activitypub_bridge_unregister_mention_presentation() : void {
+	if ( ! axismundi_activitypub_bridge_ready() ) {
+		return;
+	}
+
+	axismundi_activitypub_bridge_remove_callback( 'the_content', 'Activitypub\\Mention', 'the_content', 99 );
+}
+add_action( 'wp_loaded', 'axismundi_activitypub_bridge_unregister_mention_presentation', 0 );
+
+/**
  * Yield the public presentation routes to Object Projections.
  *
  * This runs after Router::init() but before its priority-11 rewrite callback.

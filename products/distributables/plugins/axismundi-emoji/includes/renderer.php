@@ -52,6 +52,46 @@ function axismundi_emoji_declaration_map( array $payload, string $subject_uri ) 
 }
 
 /**
+ * Index this site's own projected Emoji declarations.
+ *
+ * Local documents have already passed the outbound gate, so their `tag[]` is trusted
+ * application output rather than a remote claim. Do not feed it through the remote
+ * descriptor parser: that parser correctly requires an HTTPS icon, while a local
+ * development site legitimately projects an `http://localhost` icon. Matching the
+ * emitted id back to the local registry keeps this narrow: an arbitrary Emoji tag a
+ * transformer adds cannot claim a local image just by borrowing its shortcode.
+ *
+ * @param array<string,mixed> $payload Projected local Object or Actor.
+ * @return array<string,array<string,array<string,mixed>>>
+ */
+function axismundi_emoji_local_declaration_map( array $payload ) : array {
+	$tags = $payload['tag'] ?? array();
+	if ( ! is_array( $tags ) ) {
+		return array();
+	}
+	if ( ! array_is_list( $tags ) ) {
+		$tags = array( $tags );
+	}
+
+	$map = array();
+	foreach ( $tags as $tag ) {
+		if ( ! is_array( $tag ) || ! in_array( 'Emoji', (array) ( $tag['type'] ?? array() ), true ) ) {
+			continue;
+		}
+		$parsed = axismundi_emoji_parse_shortcode( (string) ( $tag['name'] ?? '' ) );
+		if ( ! is_array( $parsed ) || '' !== $parsed['authority'] ) {
+			continue;
+		}
+		$row = axismundi_emoji_local_get( $parsed['key'] );
+		if ( ! is_array( $row ) || ! hash_equals( axismundi_emoji_object_id( $row ), (string) ( $tag['id'] ?? '' ) ) ) {
+			continue;
+		}
+		$map[ $parsed['key'] ][ (string) $row['emoji_authority'] ] = $row;
+	}
+	return $map;
+}
+
+/**
  * Whether one row may stand in for another server's same-named emoji.
  *
  * A substitution is a guess about meaning, so it is only made where nothing marks the

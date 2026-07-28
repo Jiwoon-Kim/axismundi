@@ -130,6 +130,14 @@ try {
 
 	$ax_op_after = apply_filters( 'axismundi_op_object_content_html', wp_kses_post( $ax_op_payload['content'] ), $ax_op_model );
 	ax_op_assert( $ax_op_results, 'an unreviewed emoji renders as its shortcode in the body', str_contains( $ax_op_after, ':partyparrot:' ) && ! str_contains( $ax_op_after, 'alt=":partyparrot:"' ) );
+
+	$ax_op_local = axismundi_emoji_local_get( 'axismundi' );
+	$ax_op_local_payload = is_array( $ax_op_local )
+		? array( 'tag' => array( axismundi_emoji_as2_object( $ax_op_local ) ) )
+		: array();
+	$ax_op_local_map = axismundi_emoji_local_declaration_map( $ax_op_local_payload );
+	ax_op_assert( $ax_op_results, 'a local Object trusts its emitted Emoji declaration without applying the remote HTTPS receiver gate', isset( $ax_op_local_map['axismundi'] ) );
+	ax_op_assert( $ax_op_results, 'a local declaration must name this registry row\'s exact AS2 id, not merely borrow its shortcode', array() === axismundi_emoji_local_declaration_map( array( 'tag' => array( array_merge( $ax_op_local_payload['tag'][0] ?? array(), array( 'id' => home_url( '/emojis/not-axismundi' ) ) ) ) ) ) );
 } catch ( Throwable $ax_op_error ) {
 	ax_op_assert( $ax_op_results, 'the Object Projections suite ran to completion: ' . $ax_op_error->getMessage(), false );
 } finally {

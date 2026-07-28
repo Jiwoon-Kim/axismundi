@@ -43,7 +43,7 @@
 			return [ options ];
 		},
 		getOptionCompletion: function ( actor ) {
-			return el( 'a', { className: 'mention', href: actor.uri }, actor.handle );
+			return actor.token;
 		},
 	};
 

@@ -64,6 +64,10 @@ function axismundi_note_enqueue_editor_assets() : void {
 	if ( function_exists( 'axismundi_emoji_enqueue_picker' ) ) {
 		axismundi_emoji_enqueue_picker();
 	}
+	// Object Projections owns the inline `@` completer; Note owns choosing this editor.
+	if ( function_exists( 'axismundi_op_enqueue_mention_autocomplete' ) ) {
+		axismundi_op_enqueue_mention_autocomplete();
+	}
 	$editor_user_id   = function_exists( 'axismundi_op_editor_language_user_id' )
 		? axismundi_op_editor_language_user_id( AXISMUNDI_NOTE_POST_TYPE )
 		: get_current_user_id();

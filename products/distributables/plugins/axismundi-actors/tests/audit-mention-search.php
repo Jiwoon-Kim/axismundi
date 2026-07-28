@@ -60,7 +60,7 @@ try {
 	wp_set_current_user( (int) ( $admins[0] ?? 0 ) );
 	$response = axismundi_actors_rest_search_mentions( new WP_REST_Request( 'GET', '/axismundi/v1/actors/mention-search' ) );
 	$data     = $response->get_data();
-	ax_mention_assert( $ax_mention_results, 'the editor response exposes canonical URI, label, handle, and avatar fields only from repository Actors', is_array( $data ) && isset( $data[0]['uri'], $data[0]['name'], $data[0]['handle'], $data[0]['avatar'] ) );
+	ax_mention_assert( $ax_mention_results, 'the editor response exposes a registry-resolvable plaintext token beside canonical URI, label, handle, and avatar fields', is_array( $data ) && isset( $data[0]['uri'], $data[0]['name'], $data[0]['handle'], $data[0]['token'], $data[0]['avatar'] ) && str_starts_with( (string) $data[0]['token'], '@' ) );
 	$resolve_request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/mention-resolve' );
 	$resolve_request->set_param( 'uris', array( $remote_uri, 'https://missing.example/actor' ) );
 	$resolved = axismundi_actors_rest_resolve_mentions( $resolve_request )->get_data();

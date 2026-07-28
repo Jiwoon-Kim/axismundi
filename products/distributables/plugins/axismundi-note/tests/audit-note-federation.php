@@ -51,6 +51,11 @@ try {
 	$mentioned = ax_nf_actor( $ax_nf_user_ids, $ax_nf_actor_ids );
 	$author_id = $author instanceof Axismundi_Actor ? (int) $author->get_local_user_id() : 0;
 	$mention_uri = $mentioned instanceof Axismundi_Actor ? $mentioned->get_uri() : '';
+	$mention_token = $mentioned instanceof Axismundi_Actor && function_exists( 'axismundi_actors_mention_token' ) ? axismundi_actors_mention_token( $mentioned ) : '';
+	$plain_mentions = function_exists( 'axismundi_op_content_mention_uris' )
+		? axismundi_op_content_mention_uris( '<p>' . esc_html( $mention_token ) . ' <code>' . esc_html( $mention_token ) . '</code> mail' . esc_html( $mention_token ) . '@example.test <a href="https://example.test/' . rawurlencode( $mention_token ) . '">link</a></p>' )
+		: array();
+	ax_nf_assert( $ax_nf_results, 'plaintext mention parsing reads ordinary text but not code, email-like text, or link attributes', '' !== $mention_token && array( $mention_uri ) === $plain_mentions );
 	$attachment_id = (int) wp_insert_attachment(
 		array(
 			'post_title'     => 'Federated document',
@@ -71,7 +76,7 @@ try {
 			'post_status'   => 'draft',
 			'post_author'   => $author_id,
 			'post_title'    => 'Federated Note',
-			'post_content'  => '<p>Hello <a class="mention" href="' . esc_url( $mention_uri ) . '">@friend</a>.</p><iframe src="https://evil.example/embed"></iframe>',
+			'post_content'  => '<p>Hello ' . esc_html( $mention_token ) . '.</p><iframe src="https://evil.example/embed"></iframe>',
 		)
 	);
 	$ax_nf_post_ids[] = $post_id;
@@ -95,8 +100,8 @@ try {
 	$mention_edges = function_exists( 'axismundi_op_object_mentions_for_actor' ) ? axismundi_op_object_mentions_for_actor( $mention_uri ) : array();
 	ax_nf_assert(
 		$ax_nf_results,
-		'a committed Note indexes its inline Mention as a canonical Object-to-Actor edge',
-		1 === count( $mention_edges ) && $id === (string) $mention_edges[0]['source_object_uri'] && 'inline' === (string) $mention_edges[0]['origin']
+		'a committed Note indexes its plaintext inline Mention as a canonical Object-to-Actor edge',
+		'' !== $mention_token && 1 === count( $mention_edges ) && $id === (string) $mention_edges[0]['source_object_uri'] && 'inline' === (string) $mention_edges[0]['origin']
 	);
 	$_GET = array( 'ax_note' => $uuid );
 	$_SERVER['REQUEST_URI'] = (string) wp_parse_url( $id, PHP_URL_PATH ) . '?' . (string) wp_parse_url( $id, PHP_URL_QUERY );
@@ -124,6 +129,8 @@ try {
 		&& 'Federated Note' === $object['nameMap']['en']
 		&& 'en' === array_key_first( $object['contentMap'] )
 		&& (string) $object['content'] === (string) $object['contentMap']['en']
+		&& false === stripos( (string) $object['content'], '<a class="mention"' )
+		&& false !== strpos( (string) $object['content'], $mention_token )
 		&& false === stripos( (string) $object['content'], '<iframe' )
 		&& isset( $object['attachment'][0] )
 		&& 'Document' === $object['attachment'][0]['type']

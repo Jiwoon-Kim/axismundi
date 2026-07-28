@@ -131,6 +131,12 @@ shortcode sits between two characters that are not unicode alphanumerics,
   colons, or line endings
 ```
 
+That last line is the spec's wording and we do **not** implement it literally: a
+line ending is treated as a perfectly good boundary, as is the start or end of the
+text. Mastodon's formatter agrees, and a shortcode alone on its own line is the
+ordinary case in a written post. Read the rule as "not alphanumeric, not a colon";
+§8 states the exact character set the tokenizer uses.
+
 These bind **our outbound emoji** (§8) as hard rules. They cannot bind ingestion,
 because reality already violates them:
 
@@ -776,8 +782,20 @@ orphan-sweeping are therefore ours to implement, and the directory needs its own
   `image/png`/`image/gif`/`image/webp`, **≤ 256 KB**, square. Being lenient about
   what we accept is interoperability; being lenient about what we publish is just
   making other implementations render us badly.
-- When tokenizing local text, surround the emitted shortcode with characters that
-  are neither alphanumeric, colon, nor line ending, as the same section advises.
+- A shortcode is recognised only when neither neighbour is in `[a-zA-Z0-9_:]`.
+  This is what separates an emoji from punctuation that resembles one: `10:30:00`
+  and `https://x/a:bb:c` both contain colon-delimited runs that are not emoji, and
+  a match without the boundary check declares `:30:` as one.
+
+  **A line ending is a valid boundary, and so is the start or end of the text.**
+  §2 paraphrases FEP-9098 as excluding line endings; measured against both our
+  tokenizer and Mastodon's, that reading is wrong — a shortcode alone on its line
+  is declared by both. The paraphrase is corrected there.
+
+  Note the `_`. It is a legal shortcode character, so it cannot also be a boundary,
+  and any surface that inserts a shortcode has to use *this* set rather than a
+  simplified `[A-Za-z0-9:]` — otherwise a picker declines to add a space after
+  `foo_`, and the tokenizer then declines to declare what it inserted.
 
 ### Admin surface
 

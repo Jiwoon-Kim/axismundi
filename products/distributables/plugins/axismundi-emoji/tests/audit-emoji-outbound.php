@@ -73,6 +73,38 @@ try {
 	ax_out_assert( $ax_out_results, 'a clock time is not three emoji', array() === axismundi_emoji_tokenize( 'at 10:30:00 today' ) );
 	ax_out_assert( $ax_out_results, 'a colon-delimited path is not an emoji', array() === axismundi_emoji_tokenize( 'see http://example.com/a:bb:c' ) );
 	ax_out_assert( $ax_out_results, 'a name glued to a word is not one either', array() === axismundi_emoji_tokenize( 'x:notone:y' ) );
+
+	/*
+	 * The exact boundary set, pinned because a picker has to reproduce it.
+	 *
+	 * Any surface that inserts a shortcode must decide whether to add a separating space,
+	 * and it can only decide that correctly by asking the same question this tokenizer
+	 * asks. A simplified `[A-Za-z0-9:]` looks equivalent and is not: `_` is a legal
+	 * shortcode character, so it cannot also be a boundary, and a picker using the shorter
+	 * set would decline to add a space after `foo_` and then watch the tokenizer decline to
+	 * declare what it just inserted — visible nowhere, with no error.
+	 *
+	 * A line ending is a boundary, and so is the start or end of the text. FEP-9098's
+	 * Compatibility wording reads as excluding line endings; neither we nor Mastodon
+	 * implement it that way, and a shortcode alone on its line is an ordinary thing to
+	 * write. §2 of the architecture document records the divergence.
+	 */
+	foreach ( array( 'a', 'Z', '0', '_', ':' ) as $ax_out_bad ) {
+		ax_out_assert(
+			$ax_out_results,
+			sprintf( 'a shortcode touching "%s" is not declared, so an inserter must separate it', $ax_out_bad ),
+			array() === axismundi_emoji_tokenize( $ax_out_bad . ':bounded: x' ) && array() === axismundi_emoji_tokenize( 'x :bounded:' . $ax_out_bad )
+		);
+	}
+	foreach ( array( '-' => 'a hyphen', '(' => 'an opening bracket', '가' => 'a Korean syllable', '.' => 'a full stop' ) as $ax_out_ok => $ax_out_label ) {
+		ax_out_assert(
+			$ax_out_results,
+			sprintf( '%s is a boundary, so no separator is needed there', $ax_out_label ),
+			array( 'bounded' ) === axismundi_emoji_tokenize( $ax_out_ok . ':bounded:' . $ax_out_ok )
+		);
+	}
+	ax_out_assert( $ax_out_results, 'a line ending is a boundary, contrary to a literal reading of the spec text', array( 'bounded' ) === axismundi_emoji_tokenize( "before\n:bounded:\nafter" ) );
+	ax_out_assert( $ax_out_results, 'and so is the start or end of the text', array( 'bounded' ) === axismundi_emoji_tokenize( ':bounded:' ) );
 	ax_out_assert( $ax_out_results, 'a single character is too short to be one', array() === axismundi_emoji_tokenize( 'a :x: b' ) );
 
 	/*

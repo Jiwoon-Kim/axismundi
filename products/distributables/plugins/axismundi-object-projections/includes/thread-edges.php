@@ -415,13 +415,17 @@ function axismundi_op_remote_source_view_model( $source ) : ?array {
 	$name       = $actor instanceof Axismundi_Actor ? $actor->get_display_name() : '';
 	$handle     = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_federated_mention_name' ) ? axismundi_actors_federated_mention_name( $actor ) : '';
 	$payload    = is_array( $row['payload'] ?? null ) ? $row['payload'] : array();
+	$title      = function_exists( 'axismundi_op_remote_natural_language_value' ) ? axismundi_op_remote_natural_language_value( $payload, 'name' ) : '';
+	$content    = function_exists( 'axismundi_op_remote_natural_language_value' ) ? axismundi_op_remote_natural_language_value( $payload, 'content' ) : '';
+	$summary    = function_exists( 'axismundi_op_remote_natural_language_value' ) ? axismundi_op_remote_natural_language_value( $payload, 'summary' ) : '';
+	$language   = function_exists( 'axismundi_op_remote_natural_language_language' ) ? axismundi_op_remote_natural_language_language( $payload, 'content' ) : null;
 	return array(
 		'id'              => $id,
 		'type'            => (string) ( $row['object_type'] ?? 'Object' ),
 		'status'          => 'active',
 		'object_uri'      => $id,
-		'language'        => (string) ( $row['content_language'] ?? '' ),
-		'title'           => (string) ( $row['name'] ?? '' ),
+		'language'        => null !== $language ? $language : (string) ( $row['content_language'] ?? '' ),
+		'title'           => '' !== $title ? sanitize_text_field( $title ) : (string) ( $row['name'] ?? '' ),
 		'author'          => array(
 			'id'     => $author_uri,
 			'name'   => '' !== $name ? $name : ( '' !== $handle ? ltrim( $handle, '@' ) : '' ),
@@ -432,11 +436,11 @@ function axismundi_op_remote_source_view_model( $source ) : ?array {
 		),
 		// Raw AS2 `image` as observed; the shared normalizer derives media.featured.
 		'image'           => $payload['image'] ?? null,
-		'content_html'    => wp_kses_post( (string) ( $row['content'] ?? '' ) ),
+		'content_html'    => wp_kses_post( '' !== $content ? $content : (string) ( $row['content'] ?? '' ) ),
 		'published'       => '' !== (string) ( $row['published_at'] ?? '' ) ? gmdate( 'c', strtotime( (string) $row['published_at'] . ' UTC' ) ) : '',
 		'updated'         => '' !== (string) ( $row['remote_updated_at'] ?? '' ) ? gmdate( 'c', strtotime( (string) $row['remote_updated_at'] . ' UTC' ) ) : '',
 		'sensitive'       => ! empty( $row['is_sensitive'] ),
-		'content_warning' => (string) ( $row['summary'] ?? '' ),
+		'content_warning' => wp_kses_post( '' !== $summary ? $summary : (string) ( $row['summary'] ?? '' ) ),
 		'attachments'     => axismundi_op_remote_view_attachments( $payload ),
 		'poll'            => 'Question' === (string) ( $row['object_type'] ?? '' ) ? axismundi_op_remote_question_view( $payload ) : null,
 		'quote_uri'       => function_exists( 'axismundi_op_quote_target_for_source' ) ? axismundi_op_quote_target_for_source( $id ) : '',

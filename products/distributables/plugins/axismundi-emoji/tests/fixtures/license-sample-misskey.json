@@ -1,0 +1,68 @@
+[
+ {
+  "name": "ai_acid_misskeyio",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": "©Misskey.io 2022 This emoji is exclusive to Misskey.io; us"
+ },
+ {
+  "name": "ai_embarrassed_misskeyio",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": "©Misskey.io 2022 This emoji is exclusive to Misskey.io; us"
+ },
+ {
+  "name": "blob_cockroach_guee",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": "Public Domain"
+ },
+ {
+  "name": "love_pan",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": null
+ },
+ {
+  "name": "game_over",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": null
+ },
+ {
+  "name": "fairy_tikubi",
+  "localOnly": false,
+  "isSensitive": true,
+  "license": "Public Domain"
+ },
+ {
+  "name": "oinori_mail",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": "CC BY 4.0 Emoji by https://misskey.io/@tetekubo"
+ },
+ {
+  "name": "sanso_ga_tannnexe_yo",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": "Public Domain. https://misskey.io/notes/9fmg1fjv1j Generat"
+ },
+ {
+  "name": "sinya_tension",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": "Public Domain. https://misskey.io/notes/9iujovkwvn Generat"
+ },
+ {
+  "name": "3f",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": null
+ },
+ {
+  "name": "verify",
+  "localOnly": false,
+  "isSensitive": false,
+  "license": null
+ }
+]

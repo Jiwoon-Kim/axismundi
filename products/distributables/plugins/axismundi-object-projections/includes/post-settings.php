@@ -81,15 +81,6 @@ function axismundi_op_normalize_language( string $language ) : string {
 
 /** Resolve the inherited language and its source for an authored local user. */
 function axismundi_op_default_language_for_user( int $user_id ) : array {
-	if ( $user_id > 0 && function_exists( 'axismundi_actors_get_for_user' ) ) {
-		$actor = axismundi_actors_get_for_user( $user_id );
-		if ( $actor instanceof Axismundi_Actor ) {
-			$language = axismundi_op_normalize_language( (string) $actor->get_default_language() );
-			if ( '' !== $language ) {
-				return array( 'language' => $language, 'source' => 'actor' );
-			}
-		}
-	}
 	if ( $user_id > 0 ) {
 		$language = axismundi_op_normalize_language( get_user_locale( $user_id ) );
 		if ( '' !== $language ) {

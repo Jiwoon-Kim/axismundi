@@ -1020,6 +1020,20 @@ function axismundi_actors_handle_asset_settings() : void {
 }
 add_action( 'admin_post_axismundi_actors_asset_settings', 'axismundi_actors_handle_asset_settings' );
 
+/** Notify representation and transport plugins after a durable local profile edit. */
+function axismundi_actors_profile_updated( int $identity_id ) : void {
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( $actor instanceof Axismundi_Actor && $actor->is_local() ) {
+		/**
+		 * Actors owns the durable profile state, not its Activity representation or delivery.
+		 * Consumers record only a public, changed representation and may safely ignore this.
+		 *
+		 * @param Axismundi_Actor $actor Fresh local Actor after a successful edit.
+		 */
+		do_action( 'axismundi_actors_local_actor_profile_updated', $actor );
+	}
+}
+
 /** @return void */
 function axismundi_actors_handle_set_visibility() : void {
 	$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
@@ -1030,6 +1044,9 @@ function axismundi_actors_handle_set_visibility() : void {
 	}
 	$status = isset( $_POST['status'] ) && 'public' === $_POST['status'] ? 'public' : 'internal';
 	$ok     = axismundi_actors_set_status( $actor->get_identity_id(), $status );
+	if ( $ok ) {
+		axismundi_actors_profile_updated( $actor->get_identity_id() );
+	}
 	axismundi_actors_redirect_result( axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : $user_id ), $ok ? true : new WP_Error( 'ax_actors_status', __( 'Could not update visibility.', 'axismundi-actors' ) ) );
 }
 add_action( 'admin_post_axismundi_actors_set_visibility', 'axismundi_actors_handle_set_visibility' );
@@ -1047,10 +1064,13 @@ function axismundi_actors_handle_site_settings() : void {
 	}
 	$type = isset( $_POST['actor_type'] ) && 'Organization' === $_POST['actor_type'] ? 'Organization' : 'Application';
 	update_option( 'ax_actors_site_actor_type', $type );
-	axismundi_actors_set_actor_type( $actor->get_identity_id(), $type );
+	$ok = axismundi_actors_set_actor_type( $actor->get_identity_id(), $type );
 	$status = isset( $_POST['status'] ) && 'public' === $_POST['status'] ? 'public' : 'internal';
-	axismundi_actors_set_status( $actor->get_identity_id(), $status );
-	axismundi_actors_redirect_result( $back, true );
+	$ok = axismundi_actors_set_status( $actor->get_identity_id(), $status ) && $ok;
+	if ( $ok ) {
+		axismundi_actors_profile_updated( $actor->get_identity_id() );
+	}
+	axismundi_actors_redirect_result( $back, $ok ? true : new WP_Error( 'ax_actors_site_settings', __( 'Could not update the site actor.', 'axismundi-actors' ) ) );
 }
 add_action( 'admin_post_axismundi_actors_site_settings', 'axismundi_actors_handle_site_settings' );
 
@@ -1069,6 +1089,9 @@ function axismundi_actors_handle_set_media() : void {
 		if ( is_wp_error( $outcome ) && ! is_wp_error( $result ) ) {
 			$result = $outcome;
 		}
+	}
+	if ( ! is_wp_error( $result ) ) {
+		axismundi_actors_profile_updated( $identity_id );
 	}
 	$back = 'site' === $actor->get_scope()
 		? admin_url( 'options-general.php?page=axismundi-actor-site' )
@@ -1100,6 +1123,9 @@ function axismundi_actors_handle_set_texts() : void {
 	if ( ! is_wp_error( $result ) && ! empty( $_POST['make_default'] ) ) {
 		$result = axismundi_actors_set_default_language( $identity_id, $language );
 	}
+	if ( ! is_wp_error( $result ) ) {
+		axismundi_actors_profile_updated( $identity_id );
+	}
 	$back = 'site' === $actor->get_scope()
 		? admin_url( 'options-general.php?page=axismundi-actor-site' )
 		: axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
@@ -1126,9 +1152,13 @@ function axismundi_actors_handle_set_profile_fields() : void {
 		$fields[] = array( 'name' => is_scalar( $name ) ? (string) $name : '', 'url' => isset( $urls[ $position ] ) && is_scalar( $urls[ $position ] ) ? (string) $urls[ $position ] : '' );
 	}
 	$result = axismundi_actors_save_profile_fields( $actor, $fields );
-	if ( ! is_wp_error( $result ) && isset( $_POST['verify_profile_field_url'] ) && is_scalar( $_POST['verify_profile_field_url'] ) ) {
+	$saved  = ! is_wp_error( $result );
+	if ( $saved && isset( $_POST['verify_profile_field_url'] ) && is_scalar( $_POST['verify_profile_field_url'] ) ) {
 		$verify_url = esc_url_raw( trim( (string) wp_unslash( $_POST['verify_profile_field_url'] ) ) );
 		$result     = axismundi_actors_verify_profile_field( $actor, $verify_url );
+	}
+	if ( $saved ) {
+		axismundi_actors_profile_updated( $identity_id );
 	}
 	$back = 'site' === $actor->get_scope()
 		? admin_url( 'options-general.php?page=axismundi-actor-site' )

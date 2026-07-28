@@ -412,13 +412,17 @@ function axismundi_op_post_article_preview( WP_Post $post, string $attributed_to
 		return null;
 	}
 	$content = wpautop( wp_kses_post( $content ) );
-	return array(
+	$preview = array(
 		'type'         => 'Note',
 		'attributedTo' => $attributed_to,
-		'content'      => $content,
-		'contentMap'   => array( $language => $content ),
 		'published'    => $published,
 	);
+	if ( 'und' === $language ) {
+		$preview['content'] = $content;
+	} else {
+		$preview['contentMap'] = array( $language => $content );
+	}
+	return $preview;
 }
 
 /** Resolve the site Application used as the Article generator, when public. */
@@ -520,26 +524,41 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 		'type'         => 'Article',
 		'attributedTo' => $attributed_to,
 		'url'          => array( 'type' => 'Link', 'href' => $url, 'mediaType' => 'text/html' ),
-		'name'         => $name,
-		'nameMap'      => array( $language => $name ),
-		'content'      => $content,
-		'contentMap'   => array( $language => $content ),
 		'mediaType'    => 'text/html',
 		'published'    => $published,
 		'updated'      => get_post_modified_time( DATE_W3C, true, $post ),
 		'to'           => $audience['to'],
 		'cc'           => $audience['cc'],
 	);
-	$tags = array_merge( $mentions, $hashtags );
+	if ( 'und' === $language ) {
+		$article['name']    = $name;
+		$article['content'] = $content;
+	} else {
+		$article['nameMap']    = array( $language => $name );
+		$article['contentMap'] = array( $language => $content );
+	}
+	/*
+	 * The emoji this Article actually uses, declared alongside its mentions and hashtags.
+	 * Taken over the title as well as the body, since a shortcode in a heading needs the
+	 * same declaration as one in a paragraph. Guarded, so Object Projections keeps working
+	 * with Emoji absent.
+	 */
+	$emoji = function_exists( 'axismundi_emoji_outbound_tags' )
+		? axismundi_emoji_outbound_tags( array( $content, $name ) )
+		: array();
+	$tags  = array_merge( $mentions, $hashtags, $emoji );
 	if ( ! empty( $tags ) ) {
 		$article['tag'] = $tags;
 	}
 
 	$summary_source = axismundi_op_post_article_summary_source( $post, $sections );
 	if ( '' !== $summary_source ) {
-		$summary                = axismundi_op_render_post_summary( $post, $summary_source );
-		$article['summary']     = $summary;
-		$article['summaryMap']  = array( $language => $summary );
+		$summary = axismundi_op_render_post_summary( $post, $summary_source );
+		if ( 'und' === $language ) {
+			$article['summary'] = $summary;
+		} else {
+			$article['summaryMap'] = array( $language => $summary );
+		}
 	}
 	$preview = axismundi_op_post_article_preview( $post, $attributed_to, $published, $language, $sections );
 	if ( null !== $preview ) {
@@ -572,6 +591,33 @@ function axismundi_op_post_to_article( WP_Post $post ) {
 	return apply_filters( 'axismundi_op_post_article', $article, $post );
 }
 
+/**
+ * Read one natural-language value, preferring its language map when available.
+ *
+ * Local Articles intentionally publish name and summary only as maps. The local
+ * HTML adapter still needs a scalar for its view model, so it resolves the post's
+ * own language first and then takes the only remaining map value as a safe fallback.
+ *
+ * @param array<string,mixed> $object   ActivityStreams object.
+ * @param string              $member   name | summary | content.
+ * @param string              $language Preferred BCP-47 language tag.
+ * @return string
+ */
+function axismundi_op_object_natural_language_value( array $object, string $member, string $language = '' ) : string {
+	$map = $object[ $member . 'Map' ] ?? array();
+	if ( is_array( $map ) && '' !== $language && isset( $map[ $language ] ) && is_scalar( $map[ $language ] ) ) {
+		return (string) $map[ $language ];
+	}
+	if ( is_array( $map ) ) {
+		foreach ( $map as $value ) {
+			if ( is_scalar( $value ) && '' !== (string) $value ) {
+				return (string) $value;
+			}
+		}
+	}
+	return isset( $object[ $member ] ) && is_scalar( $object[ $member ] ) ? (string) $object[ $member ] : '';
+}
+
 /** Normalize one locally projected WordPress object for the shared Object card. */
 function axismundi_op_local_post_object_view_model( $source ) : ?array {
 	if ( ! $source instanceof WP_Post || ! axismundi_op_source_publicly_visible( $source ) ) {
@@ -581,6 +627,10 @@ function axismundi_op_local_post_object_view_model( $source ) : ?array {
 	if ( ! is_array( $object ) || empty( $object['id'] ) ) {
 		return null;
 	}
+	$language  = axismundi_op_post_effective_language( $source );
+	$title     = axismundi_op_object_natural_language_value( $object, 'name', $language );
+	$summary   = axismundi_op_object_natural_language_value( $object, 'summary', $language );
+	$content   = axismundi_op_object_natural_language_value( $object, 'content', $language );
 	$actor_uri = (string) ( $object['attributedTo'] ?? '' );
 	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
 	$handle    = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_federated_mention_name' )
@@ -602,7 +652,7 @@ function axismundi_op_local_post_object_view_model( $source ) : ?array {
 		'type'            => (string) ( $object['type'] ?? 'Object' ),
 		'status'          => 'active',
 		'object_uri'      => (string) $object['id'],
-		'title'           => (string) ( $object['name'] ?? '' ),
+		'title'           => $title,
 		'author'          => array(
 			'id'                 => $actor_uri,
 			'name'               => $actor instanceof Axismundi_Actor ? $actor->get_display_name() : ( '' !== $handle ? ltrim( $handle, '@' ) : '' ),
@@ -613,14 +663,14 @@ function axismundi_op_local_post_object_view_model( $source ) : ?array {
 		),
 		// Raw AS2 `image`; the shared normalizer turns it into media.featured.
 		'image'           => $object['image'] ?? null,
-		'content_html'    => wp_kses_post( (string) ( $object['content'] ?? '' ) ),
+		'content_html'    => wp_kses_post( $content ),
 		'published'       => (string) ( $object['published'] ?? '' ),
 		'updated'         => (string) ( $object['updated'] ?? '' ),
 		'sensitive'       => ! empty( $object['sensitive'] ),
 		// Article summary and a content warning are distinct fields. A local
 		// Article's summary is the content above More; its warning is the
 		// sensitive-object subject, when one was authored.
-		'summary'         => (string) ( $object['summary'] ?? '' ),
+		'summary'         => $summary,
 		'content_warning' => (string) ( $object['dcterms:subject'] ?? '' ),
 		'attachments'     => $attachments,
 	);

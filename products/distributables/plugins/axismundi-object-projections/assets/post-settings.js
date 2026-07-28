@@ -73,7 +73,7 @@
 				label: wp.i18n.__( 'Language', 'axismundi-object-projections' ),
 				value: language,
 				options: languageOptions( language ),
-				help: wp.i18n.__( 'Search for a BCP-47 language. Automatic follows the Actor default, then the WordPress user language, then the site default.', 'axismundi-object-projections' ),
+				help: wp.i18n.__( 'Search for a BCP-47 language. Automatic follows your WordPress profile language, then the site default.', 'axismundi-object-projections' ),
 				onChange: ( value ) => update( '_ax_op_language', value || '' ),
 			} ),
 			window.axismundiMentionTokens && window.axismundiMentionTokens.MentionTokenField

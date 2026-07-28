@@ -1,0 +1,33 @@
+[
+    {
+        "observed_in": "https://mastodon.social/users/thaumiel999",
+        "tag": {
+            "id": "https://mastodon.social/emojis/1099845",
+            "type": "Emoji",
+            "name": ":mastodon:",
+            "updated": "2025-01-22T12:57:33Z",
+            "icon": {
+                "type": "Image",
+                "mediaType": "image/png",
+                "url": "https://files.mastodon.social/custom_emojis/images/001/099/845/original/629dc18288be6387.png"
+            }
+        }
+    },
+    {
+        "observed_in": "https://misskey.io/users/a3so37xb4zl80o1w",
+        "tag": {
+            "id": "https://misskey.io/emojis/misskey",
+            "type": "Emoji",
+            "name": ":misskey:",
+            "updated": "2023-11-05T00:11:48.702Z",
+            "icon": {
+                "type": "Image",
+                "mediaType": "image/png",
+                "url": "https://media.misskeyusercontent.com/emoji/misskey.png"
+            },
+            "_misskey_license": {
+                "freeText": null
+            }
+        }
+    }
+]

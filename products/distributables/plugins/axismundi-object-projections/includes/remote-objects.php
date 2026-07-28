@@ -220,6 +220,44 @@ function axismundi_op_remote_datetime( $value ) : ?string {
 }
 
 /**
+ * Resolve one natural-language member from a remote AS2 payload.
+ *
+ * Scalar members remain the compatibility preference. Map-only documents use
+ * their first scalar map value until the object view has a visitor-language
+ * negotiation layer. The original map always remains in `payload_json`.
+ */
+function axismundi_op_remote_natural_language_value( array $payload, string $member ) : string {
+	if ( array_key_exists( $member, $payload ) && is_scalar( $payload[ $member ] ) ) {
+		return (string) $payload[ $member ];
+	}
+	$map = $payload[ $member . 'Map' ] ?? null;
+	if ( ! is_array( $map ) ) {
+		return '';
+	}
+	foreach ( $map as $value ) {
+		if ( is_scalar( $value ) ) {
+			return (string) $value;
+		}
+	}
+	return '';
+}
+
+/** Return the first declared language key for one remote natural-language map. */
+function axismundi_op_remote_natural_language_language( array $payload, string $member ) : ?string {
+	$map = $payload[ $member . 'Map' ] ?? null;
+	if ( ! is_array( $map ) ) {
+		return null;
+	}
+	foreach ( $map as $language => $value ) {
+		if ( is_scalar( $value ) ) {
+			$language = substr( sanitize_text_field( (string) $language ), 0, 35 );
+			return '' !== $language ? $language : null;
+		}
+	}
+	return null;
+}
+
+/**
  * Validate and normalize a remote payload before any database mutation.
  *
  * @param array<string,mixed> $payload Decoded remote object.
@@ -249,6 +287,10 @@ function axismundi_op_remote_object_normalize( array $payload, array $fetch = ar
 		$next = gmdate( 'Y-m-d H:i:s', strtotime( $fetched . ' UTC +1 day' ) );
 	}
 
+	$name    = axismundi_op_remote_natural_language_value( $payload, 'name' );
+	$summary = axismundi_op_remote_natural_language_value( $payload, 'summary' );
+	$content = axismundi_op_remote_natural_language_value( $payload, 'content' );
+
 	return array(
 		'object_uri'             => $uri,
 		'object_uri_hash'        => hash( 'sha256', $uri ),
@@ -259,10 +301,10 @@ function axismundi_op_remote_object_normalize( array $payload, array $fetch = ar
 		'in_reply_to_uri'        => '' !== $reply_uri ? $reply_uri : null,
 		'in_reply_to_uri_hash'   => '' !== $reply_uri ? hash( 'sha256', $reply_uri ) : null,
 		'human_url'              => '' !== $human_url ? $human_url : null,
-		'name'                   => isset( $payload['name'] ) && is_scalar( $payload['name'] ) ? sanitize_text_field( (string) $payload['name'] ) : null,
-		'summary'                => isset( $payload['summary'] ) && is_scalar( $payload['summary'] ) ? wp_kses_post( (string) $payload['summary'] ) : null,
-		'content'                => isset( $payload['content'] ) && is_scalar( $payload['content'] ) ? wp_kses_post( (string) $payload['content'] ) : null,
-		'content_language'       => ! empty( $payload['contentMap'] ) && is_array( $payload['contentMap'] ) ? substr( sanitize_text_field( (string) array_key_first( $payload['contentMap'] ) ), 0, 35 ) : null,
+		'name'                   => '' !== $name ? sanitize_text_field( $name ) : null,
+		'summary'                => '' !== $summary ? wp_kses_post( $summary ) : null,
+		'content'                => '' !== $content ? wp_kses_post( $content ) : null,
+		'content_language'       => axismundi_op_remote_natural_language_language( $payload, 'content' ),
 		'media_type'             => isset( $payload['mediaType'] ) ? substr( sanitize_mime_type( (string) $payload['mediaType'] ), 0, 127 ) : null,
 		'is_sensitive'           => array_key_exists( 'sensitive', $payload ) && is_bool( $payload['sensitive'] ) ? (int) $payload['sensitive'] : null,
 		'published_at'           => axismundi_op_remote_datetime( $payload['published'] ?? '' ),

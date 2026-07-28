@@ -23,6 +23,16 @@ function ax_article_assert( array &$results, string $label, bool $condition ) : 
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
+/** @param array<string,mixed> $article */
+function ax_article_summary( array $article ) : string {
+	return (string) ( $article['summaryMap'][ array_key_first( (array) ( $article['summaryMap'] ?? array() ) ) ] ?? '' );
+}
+
+/** @param array<string,mixed> $object */
+function ax_article_content( array $object ) : string {
+	return (string) ( $object['contentMap'][ array_key_first( (array) ( $object['contentMap'] ?? array() ) ) ] ?? $object['content'] ?? '' );
+}
+
 try {
 	add_filter( 'axismundi_op_post_lifecycle_owner', static fn() : string => 'fixture' );
 	$author_id = get_current_user_id();
@@ -111,16 +121,18 @@ try {
 			&& is_array( $article['@context'] )
 			&& 'https://www.w3.org/ns/activitystreams' === $article['@context'][0]
 			&& array( 'sensitive' => 'as:sensitive' ) === $article['@context'][1]
-			&& false !== strpos( (string) $article['summary'], 'Hello <strong>world</strong>.' )
+			&& false !== strpos( ax_article_summary( $article ), 'Hello <strong>world</strong>.' )
 			&& ! isset( $article['interactionPolicy'], $article['quoteAuthorization'] )
 	);
-	$content_contract = is_array( $article ) && false !== strpos( (string) $article['content'], 'Extended body.' ) && false === strpos( (string) $article['content'], 'Hello <strong>world</strong>.' ) && ! empty( $article['published'] ) && ! empty( $article['updated'] );
+	$content_contract = is_array( $article ) && false !== strpos( ax_article_content( $article ), 'Extended body.' ) && false === strpos( ax_article_content( $article ), 'Hello <strong>world</strong>.' ) && ! empty( $article['published'] ) && ! empty( $article['updated'] );
 	if ( ! $content_contract && is_array( $article ) ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI diagnostic.
-		printf( "[DEBUG] content=%s published=%s updated=%s\n", (string) $article['content'], (string) $article['published'], (string) $article['updated'] );
+		printf( "[DEBUG] content=%s published=%s updated=%s\n", ax_article_content( $article ), (string) $article['published'], (string) $article['updated'] );
 	}
 	ax_article_assert( $ax_article_results, 'Article content is rendered HTML and has published/updated timestamps', $content_contract );
-	ax_article_assert( $ax_article_results, 'Article and embedded preview carry the selected BCP-47 language in name, summary, and content maps', is_array( $article ) && array( 'ko-KR' => 'Projection Article' ) === $article['nameMap'] && isset( $article['summaryMap']['ko-KR'], $article['contentMap']['ko-KR'], $article['preview']['contentMap']['ko-KR'] ) && $article['summary'] === $article['summaryMap']['ko-KR'] && $article['content'] === $article['contentMap']['ko-KR'] && $article['preview']['content'] === $article['preview']['contentMap']['ko-KR'] );
+	ax_article_assert( $ax_article_results, 'Article name, summary, content, and its embedded Note preview content are emitted only as selected BCP-47 maps', is_array( $article ) && ! isset( $article['name'], $article['summary'], $article['content'], $article['preview']['content'] ) && array( 'ko-KR' => 'Projection Article' ) === $article['nameMap'] && isset( $article['summaryMap']['ko-KR'], $article['contentMap']['ko-KR'], $article['preview']['contentMap']['ko-KR'] ) && ax_article_content( $article ) === $article['contentMap']['ko-KR'] && ax_article_content( $article['preview'] ) === $article['preview']['contentMap']['ko-KR'] );
+	$article_model = function_exists( 'axismundi_op_local_post_object_view_model' ) ? axismundi_op_local_post_object_view_model( $post ) : null;
+	ax_article_assert( $ax_article_results, 'the local Article view resolves its title and summary from those maps rather than rendering empty scalar fields', is_array( $article_model ) && 'Projection Article' === $article_model['title'] && false !== strpos( wp_strip_all_tags( (string) $article_model['summary'] ), 'Hello world.' ) );
 	$previous_global_post = $GLOBALS['post'] ?? null;
 	$GLOBALS['post']      = $page;
 	$context_post_id      = 0;
@@ -149,31 +161,43 @@ try {
 			&& $fixture_actor_uri === $article['preview']['attributedTo']
 			&& ! empty( $article['preview']['published'] )
 			&& ! isset( $article['preview']['id'], $article['preview']['url'] )
-			&& false !== strpos( (string) $article['preview']['content'], 'A short summary.' )
-			&& false === strpos( (string) $article['preview']['content'], 'Hello' )
-			&& false === strpos( (string) $article['preview']['content'], 'Extended body' )
-			&& false === stripos( (string) $article['preview']['content'], 'read more' )
+			&& false !== strpos( ax_article_content( $article['preview'] ), 'A short summary.' )
+			&& false === strpos( ax_article_content( $article['preview'] ), 'Hello' )
+			&& false === strpos( ax_article_content( $article['preview'] ), 'Extended body' )
+			&& false === stripos( ax_article_content( $article['preview'] ), 'read more' )
 	);
 	$fallback = axismundi_op_transform_object( get_post( $fallback_id ) );
 	ax_article_assert(
 		$ax_article_results,
 		'without More the full body stays Article content, while the manual Excerpt supplies both the stream summary and Note preview',
-		is_array( $fallback ) && false !== strpos( (string) $fallback['summary'], 'Editorial excerpt.' )
-			&& false !== strpos( (string) $fallback['content'], 'Full body without a More block.' )
-			&& false !== strpos( (string) $fallback['preview']['content'], 'Editorial excerpt.' )
-			&& false === strpos( (string) $fallback['preview']['content'], 'Excerpt Preview' )
+		is_array( $fallback ) && false !== strpos( ax_article_summary( $fallback ), 'Editorial excerpt.' )
+			&& false !== strpos( ax_article_content( $fallback ), 'Full body without a More block.' )
+			&& false !== strpos( ax_article_content( $fallback['preview'] ), 'Editorial excerpt.' )
+			&& false === strpos( ax_article_content( $fallback['preview'] ), 'Excerpt Preview' )
+	);
+	update_post_meta( $fallback_id, AXISMUNDI_OP_POST_LANGUAGE_META, 'und' );
+	$und_article = axismundi_op_transform_object( get_post( $fallback_id ) );
+	delete_post_meta( $fallback_id, AXISMUNDI_OP_POST_LANGUAGE_META );
+	ax_article_assert(
+		$ax_article_results,
+		'an undetermined-language Article uses scalar natural-language fields rather than an und map',
+		is_array( $und_article )
+			&& false !== strpos( (string) ( $und_article['content'] ?? '' ), 'Full body without a More block.' )
+			&& false !== strpos( (string) ( $und_article['summary'] ?? '' ), 'Editorial excerpt.' )
+			&& false !== strpos( (string) ( $und_article['preview']['content'] ?? '' ), 'Editorial excerpt.' )
+			&& ! isset( $und_article['nameMap'], $und_article['summaryMap'], $und_article['contentMap'], $und_article['preview']['contentMap'] )
 	);
 	$nested_more = axismundi_op_transform_object( get_post( $nested_more_id ) );
 	ax_article_assert(
 		$ax_article_results,
 		'a More block nested in a container preserves valid parent block markup on both Article sides',
 		is_array( $nested_more )
-			&& false !== strpos( (string) $nested_more['summary'], 'wp-block-group' )
-			&& false !== strpos( (string) $nested_more['summary'], 'Nested lead.' )
-			&& false === strpos( (string) $nested_more['summary'], 'Nested tail.' )
-			&& false !== strpos( (string) $nested_more['content'], 'wp-block-group' )
-			&& false !== strpos( (string) $nested_more['content'], 'Nested tail.' )
-			&& false === strpos( (string) $nested_more['content'], 'Nested lead.' )
+			&& false !== strpos( ax_article_summary( $nested_more ), 'wp-block-group' )
+			&& false !== strpos( ax_article_summary( $nested_more ), 'Nested lead.' )
+			&& false === strpos( ax_article_summary( $nested_more ), 'Nested tail.' )
+			&& false !== strpos( ax_article_content( $nested_more ), 'wp-block-group' )
+			&& false !== strpos( ax_article_content( $nested_more ), 'Nested tail.' )
+			&& false === strpos( ax_article_content( $nested_more ), 'Nested lead.' )
 	);
 	$append_marker = '<aside class="fixture-content-append">Append once</aside>';
 	$append_filter = static function ( string $content ) use ( $append_marker ) : string {
@@ -186,8 +210,8 @@ try {
 		$ax_article_results,
 		'Article summary renders blocks without a second pass through third-party the_content appenders',
 		is_array( $append_projection )
-			&& false !== strpos( (string) $append_projection['content'], 'fixture-content-append' )
-			&& false === strpos( (string) $append_projection['summary'], 'fixture-content-append' )
+			&& false !== strpos( ax_article_content( $append_projection ), 'fixture-content-append' )
+			&& false === strpos( ax_article_summary( $append_projection ), 'fixture-content-append' )
 	);
 
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_SENSITIVE_META, '1' );
@@ -199,7 +223,7 @@ try {
 		is_array( $sensitive )
 			&& true === $sensitive['sensitive']
 			&& 'Spoilers & distressing imagery' === $sensitive['dcterms:subject']
-			&& false !== strpos( (string) $sensitive['summary'], 'Hello <strong>world</strong>.' )
+			&& false !== strpos( ax_article_summary( $sensitive ), 'Hello <strong>world</strong>.' )
 			&& in_array( array( 'dcterms' => 'http://purl.org/dc/terms/' ), $sensitive['@context'], true )
 	);
 	update_post_meta( $post_id, AXISMUNDI_OP_POST_SENSITIVE_META, '0' );

@@ -1,0 +1,30 @@
+/*
+ * A custom emoji is inline typography, not a content image. The em square inherits
+ * its dimensions from the surrounding text, including large profile names and compact
+ * account headers. The optical baseline adjustment matches the visual center of text.
+ */
+img.ax-emoji {
+	display: inline-block;
+	inline-size: 1em;
+	block-size: 1em;
+	max-inline-size: 1em;
+	max-block-size: 1em;
+	object-fit: contain;
+	vertical-align: -0.125em;
+}
+
+picture.ax-emoji-picture {
+	display: inline-block;
+	inline-size: 1em;
+	block-size: 1em;
+	vertical-align: -0.125em;
+}
+
+picture.ax-emoji-picture > img.ax-emoji {
+	display: block;
+	inline-size: 100%;
+	block-size: 100%;
+	max-inline-size: none;
+	max-block-size: none;
+	vertical-align: baseline;
+}

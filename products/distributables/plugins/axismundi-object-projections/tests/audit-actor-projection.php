@@ -7,6 +7,7 @@
 
 defined( 'ABSPATH' ) || exit( 1 );
 
+global $wpdb;
 $ax_actor_projection_results = array();
 
 /** @param bool[] $results Results. */
@@ -48,6 +49,55 @@ ax_actor_projection_assert( $ax_actor_projection_results, 'transport fields cann
 ax_actor_projection_assert( $ax_actor_projection_results, 'local profile links project as PropertyValue attachments', is_array( $finalized ) && isset( $finalized['attachment'][0] ) && 'PropertyValue' === $finalized['attachment'][0]['type'] && 'Mastodon' === $finalized['attachment'][0]['name'] && false !== strpos( $finalized['attachment'][0]['value'], 'rel="me nofollow noopener noreferrer"' ) );
 if ( $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_save_profile_fields' ) ) {
 	axismundi_actors_save_profile_fields( $actor, array_map( static fn( array $field ) : array => array( 'name' => $field['name'], 'url' => $field['url'] ), $previous_fields ) );
+}
+
+/*
+ * Language maps, and the reason an Actor keeps its scalars when an Article drops them.
+ *
+ * An Object is fetched by a server that already decided to talk to us; an Actor is the
+ * first thing anyone resolves, so a profile that renders blank on a follower's instance
+ * is an invisible account rather than a stylistic loss. Mastodon publishes both for the
+ * same reason — its `content` and `contentMap` were measured carrying identical values.
+ */
+if ( $actor instanceof Axismundi_Actor && function_exists( 'axismundi_actors_set_text' ) ) {
+	$ax_actor_identity = $actor->get_identity_id();
+	$ax_actor_texts    = axismundi_actors_get_text_map( $ax_actor_identity );
+	$ax_actor_default  = $actor->get_default_language();
+
+	$wpdb->delete( axismundi_actors_texts_table(), array( 'identity_id' => $ax_actor_identity ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture; restored below.
+	axismundi_actors_set_text( $ax_actor_identity, 'name', 'en', 'English Name' );
+	axismundi_actors_set_text( $ax_actor_identity, 'name', 'ko', '한국어 이름' );
+	axismundi_actors_set_text( $ax_actor_identity, 'summary', 'en', '<p>English bio</p>' );
+	axismundi_actors_set_text( $ax_actor_identity, 'summary', 'ko', '<p>한국어 소개</p>' );
+	axismundi_actors_set_default_language( $ax_actor_identity, 'en' );
+	$ax_actor_multi = axismundi_op_actor_transform( axismundi_actors_get_by_uri( $actor->get_uri() ) );
+
+	ax_actor_projection_assert( $ax_actor_projection_results, 'a multilingual Actor publishes a language map for its name and summary', isset( $ax_actor_multi['nameMap']['ko'], $ax_actor_multi['summaryMap']['ko'] ) && '한국어 이름' === $ax_actor_multi['nameMap']['ko'] );
+	ax_actor_projection_assert( $ax_actor_projection_results, 'and keeps the scalars beside them, so an implementation that ignores maps still shows a profile', '' !== (string) ( $ax_actor_multi['name'] ?? '' ) && '' !== (string) ( $ax_actor_multi['summary'] ?? '' ) );
+	ax_actor_projection_assert( $ax_actor_projection_results, 'the scalars use the Actor default language, not the viewing user locale', 'English Name' === (string) $ax_actor_multi['name'] && '<p>English bio</p>' === (string) $ax_actor_multi['summary'] );
+
+	// One language says nothing the scalar does not, and every receiver would store it.
+	$wpdb->delete( axismundi_actors_texts_table(), array( 'identity_id' => $ax_actor_identity, 'language_tag' => 'ko' ), array( '%d', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture.
+	$ax_actor_single = axismundi_op_actor_transform( axismundi_actors_get_by_uri( $actor->get_uri() ) );
+	ax_actor_projection_assert( $ax_actor_projection_results, 'a single-language Actor publishes no map, because it would only repeat the scalar', ! isset( $ax_actor_single['nameMap'] ) && ! isset( $ax_actor_single['summaryMap'] ) );
+
+	/*
+	 * `und` is a valid tag and a publishable language, but it is not one to key a map by:
+	 * "undetermined" tags text with a claim nobody made. It belongs in the scalar, which
+	 * claims nothing — the same rule Note and Article settled on.
+	 */
+	axismundi_actors_set_text( $ax_actor_identity, 'name', 'und', 'Undetermined Name' );
+	$ax_actor_und = axismundi_op_actor_transform( axismundi_actors_get_by_uri( $actor->get_uri() ) );
+	ax_actor_projection_assert( $ax_actor_projection_results, 'an undetermined language never becomes a map key', ! isset( $ax_actor_und['nameMap']['und'] ) );
+
+	$wpdb->delete( axismundi_actors_texts_table(), array( 'identity_id' => $ax_actor_identity ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+	foreach ( $ax_actor_texts as $ax_actor_lang => $ax_actor_fields ) {
+		foreach ( (array) $ax_actor_fields as $ax_actor_field => $ax_actor_value ) {
+			axismundi_actors_set_text( $ax_actor_identity, (string) $ax_actor_field, (string) $ax_actor_lang, (string) $ax_actor_value );
+		}
+	}
+	axismundi_actors_set_default_language( $ax_actor_identity, $ax_actor_default );
+	ax_actor_projection_assert( $ax_actor_projection_results, 'and the fixture restored the profile texts it borrowed', axismundi_actors_get_text_map( $ax_actor_identity ) === $ax_actor_texts );
 }
 
 $failures = count( array_filter( $ax_actor_projection_results, static fn( bool $result ) : bool => ! $result ) );

@@ -82,7 +82,7 @@ try {
 	$post = get_post( $ax_settings_post_id );
 	ax_settings_assert( $ax_settings_results, 'a new Article defaults to public audience and anyone Quote approval', $post instanceof WP_Post && 'public' === axismundi_op_post_visibility( $post ) && 'anyone' === axismundi_op_post_quote_policy( $post ) );
 	$inherited_language = axismundi_op_default_language_for_user( $user_id );
-	ax_settings_assert( $ax_settings_results, 'an empty Article language remains inherited from the Actor, WordPress user, or site', $post instanceof WP_Post && '' === get_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_LANGUAGE_META, true ) && $inherited_language['language'] === axismundi_op_post_effective_language( $post ) );
+	ax_settings_assert( $ax_settings_results, 'an empty Article language remains inherited from the WordPress user profile or site', $post instanceof WP_Post && '' === get_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_LANGUAGE_META, true ) && $inherited_language['language'] === axismundi_op_post_effective_language( $post ) );
 	update_post_meta( $ax_settings_post_id, AXISMUNDI_OP_POST_LANGUAGE_META, 'ko_kr' );
 	$post = get_post( $ax_settings_post_id );
 	ax_settings_assert( $ax_settings_results, 'an explicit Article language is normalized as BCP-47', $post instanceof WP_Post && 'ko-KR' === axismundi_op_post_effective_language( $post ) && '' === axismundi_op_sanitize_post_language( '' ) );

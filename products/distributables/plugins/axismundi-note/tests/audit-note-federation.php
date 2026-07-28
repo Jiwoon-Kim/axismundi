@@ -33,6 +33,8 @@ function ax_nf_actor( array &$users, array &$actors ) : ?Axismundi_Actor {
 		return null;
 	}
 	$users[] = $uid;
+	// Automatic language follows the WordPress author profile, not the Actor default.
+	update_user_meta( $uid, 'locale', 'en' );
 	$actor   = axismundi_actors_ensure_for_user( $uid );
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return null;
@@ -114,7 +116,7 @@ try {
 	remove_filter( 'axismundi_op_use_the_content', '__return_false' );
 	ax_nf_assert(
 		$ax_nf_results,
-		'a public Note projects one sanitized scalar/contentMap snapshot with matching audience and Mention',
+		'a public Note projects matching sanitized scalar and contentMap snapshots with matching audience and Mention',
 		is_array( $object )
 		&& 'Note' === $object['type']
 		&& $id === $object['id']
@@ -150,6 +152,15 @@ try {
 	$warning_object = axismundi_op_transform_object( $warning_source );
 	ax_nf_assert( $ax_nf_results, 'an authored Note warning remains the top-level sensitive subject', is_array( $warning_object ) && true === $warning_object['sensitive'] && 'CW' === $warning_object['dcterms:subject'] );
 	ax_nf_assert( $ax_nf_results, 'a public Note appears in anonymous Media Library reverse provenance through the custom-route visibility seam', 1 === count( axismundi_media_relations_used_in( $attachment_id, 0 ) ) );
+
+	$und_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $author_id, 'post_title' => 'Undetermined Note', 'post_content' => '<p>Language has not been determined.</p>' ) );
+	$ax_nf_post_ids[] = $und_id;
+	axismundi_note_save( $und_id, array( 'visibility' => 'public', 'language_tag' => 'und' ) );
+	wp_update_post( array( 'ID' => $und_id, 'post_status' => 'publish' ) );
+	$und_envelope = axismundi_note_get( $und_id );
+	$und_source   = new Axismundi_Note_Source( $und_envelope, get_post( $und_id ) );
+	$und_object   = axismundi_op_transform_object( $und_source );
+	ax_nf_assert( $ax_nf_results, 'an undetermined-language Note federates with scalar natural-language fields instead of an und map or a readiness failure', is_array( $und_envelope ) && 'und' === (string) $und_envelope['language_tag'] && ! empty( $und_envelope['attribution_locked_at'] ) && is_array( $und_object ) && false !== strpos( (string) ( $und_object['content'] ?? '' ), 'Language has not been determined.' ) && 'Undetermined Note' === (string) ( $und_object['name'] ?? '' ) && ! isset( $und_object['contentMap'], $und_object['nameMap'] ) );
 
 	// An addressed-only audience remains a valid stored object but is not anonymously projectable.
 	axismundi_note_save( $post_id, array( 'visibility' => 'followers' ) );

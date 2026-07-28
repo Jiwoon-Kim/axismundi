@@ -70,12 +70,12 @@ function axismundi_note_sanitize_language( $value ) : string {
 	return preg_match( '/^[A-Za-z0-9-]{1,35}$/', $tag ) ? $tag : '';
 }
 
-/** Normalize one candidate to a usable BCP-47 tag, or '' for empty/undetermined. */
+/** Normalize one candidate to a valid BCP-47 tag, or '' only when empty or invalid. */
 function axismundi_note_normalize_language( string $language ) : string {
 	$tag = function_exists( 'axismundi_actors_normalize_language_tag' )
 		? axismundi_actors_normalize_language_tag( $language )
 		: axismundi_note_sanitize_language( str_replace( '_', '-', $language ) );
-	return 'und' === $tag ? '' : $tag;
+	return $tag;
 }
 
 /**
@@ -83,8 +83,8 @@ function axismundi_note_normalize_language( string $language ) : string {
  *
  * The stored envelope value wins outright — it is the authored (and, after the
  * first Create, frozen) snapshot. Only when a draft has none does the read-time
- * chain apply: the author Actor's default language, then the author's WordPress
- * locale, then the site locale. Increment 5 writes the resolved value into the
+ * chain applies the author's WordPress profile locale, then the site locale.
+ * Increment 5 writes the resolved value into the
  * envelope at the first Create; this resolver never stores anything.
  */
 function axismundi_note_effective_language( WP_Post $post ) : string {
@@ -93,24 +93,15 @@ function axismundi_note_effective_language( WP_Post $post ) : string {
 	if ( '' !== $stored ) {
 		return $stored;
 	}
-	$candidates = array();
-	if ( function_exists( 'axismundi_actors_get_for_user' ) ) {
-		$actor = axismundi_actors_get_for_user( (int) $post->post_author );
-		if ( $actor instanceof Axismundi_Actor ) {
-			$candidates[] = $actor->get_default_language();
+	if ( function_exists( 'axismundi_op_default_language_for_user' ) ) {
+		$resolved = axismundi_op_default_language_for_user( (int) $post->post_author );
+		$language = axismundi_note_normalize_language( (string) ( $resolved['language'] ?? '' ) );
+		if ( '' !== $language ) {
+			return $language;
 		}
 	}
-	if ( (int) $post->post_author > 0 ) {
-		$candidates[] = get_user_locale( (int) $post->post_author );
-	}
-	$candidates[] = function_exists( 'axismundi_actors_site_language' ) ? axismundi_actors_site_language() : get_locale();
-	foreach ( $candidates as $candidate ) {
-		$normalized = axismundi_note_normalize_language( (string) $candidate );
-		if ( '' !== $normalized ) {
-			return $normalized;
-		}
-	}
-	return 'und';
+	$site = function_exists( 'axismundi_actors_site_language' ) ? axismundi_actors_site_language() : get_locale();
+	return axismundi_note_normalize_language( (string) $site ) ?: 'und';
 }
 
 /**
@@ -305,6 +296,10 @@ function axismundi_note_save( int $post_id, array $fields ) {
 		$language     = '' === $raw_language ? '' : axismundi_note_normalize_language( $raw_language );
 		if ( '' !== $raw_language && '' === $language ) {
 			return new WP_Error( 'ax_note_language', __( 'Enter a valid BCP-47 language tag.', 'axismundi-note' ) );
+		}
+		if ( is_array( $existing ) && ! empty( $existing['attribution_locked_at'] ) && '' === $raw_language ) {
+			// The editor's Automatic value must preserve, never recompute, a federated snapshot.
+			$language = axismundi_note_normalize_language( (string) $existing['language_tag'] );
 		}
 	} else {
 		$language = is_array( $existing ) ? axismundi_note_normalize_language( (string) $existing['language_tag'] ) : '';

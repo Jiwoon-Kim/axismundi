@@ -239,7 +239,7 @@
 				label: __( 'Language', 'axismundi-note' ),
 				value: envelope.language || '',
 				options: languageOptions( envelope.language || '' ),
-				help: __( 'Search for a BCP-47 language. Automatic follows the Actor default, then the WordPress user language, then the site default.', 'axismundi-note' ),
+				help: __( 'Search for a BCP-47 language. Automatic follows your WordPress profile language, then the site default.', 'axismundi-note' ),
 				__next40pxDefaultSize: true,
 				onChange: function ( value ) { update( { language: value || '' } ); }
 			} ),

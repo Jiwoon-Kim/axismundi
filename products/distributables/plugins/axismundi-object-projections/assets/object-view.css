@@ -1120,6 +1120,30 @@ div.axismundi-object__featured-image-media.is-repeated {
 	background: color-mix(in srgb, var(--md-sys-color-on-surface, #1b1b1f) 14%, transparent);
 }
 
+/*
+ * Remote servers commonly render custom emoji larger than a body glyph: Mastodon uses
+ * 24px in its default body treatment. Keep the Emoji plugin's 1em inline contract for
+ * headings and compact labels, but give Object bodies a legible 1.5em treatment.
+ * The media dialog repeats the same body, so it must use the same scale.
+ */
+.axismundi-object__content img.ax-emoji,
+.axismundi-object__media-panel-body img.ax-emoji,
+.axismundi-object__content picture.ax-emoji-picture,
+.axismundi-object__media-panel-body picture.ax-emoji-picture {
+	inline-size: 1.5em;
+	block-size: 1.5em;
+	max-inline-size: 1.5em;
+	max-block-size: 1.5em;
+}
+
+.axismundi-object__content picture.ax-emoji-picture > img.ax-emoji,
+.axismundi-object__media-panel-body picture.ax-emoji-picture > img.ax-emoji {
+	inline-size: 100%;
+	block-size: 100%;
+	max-inline-size: none;
+	max-block-size: none;
+}
+
 /* Reduced motion users still get the cover; only the transition is dropped. */
 @media (prefers-reduced-motion: no-preference) {
 	.axismundi-object__spoiler-text {

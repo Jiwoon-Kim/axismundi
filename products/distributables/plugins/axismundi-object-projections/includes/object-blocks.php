@@ -394,6 +394,33 @@ function axismundi_op_object_folds_behind_warning( array $model ) : bool {
  *                                        post-level warning for this card.
  * @return string
  */
+/**
+ * The Object body, sanitized and then decorated.
+ *
+ * One function because the body appears in more than one place — the card and the media
+ * dialog — and those must not drift apart: a decoration applied to only one of them
+ * would make the same post read differently depending on where a reader met it.
+ *
+ * The order is fixed. Sanitizing first and decorating after is the only arrangement
+ * that is safe, because a decorator emits markup: run it before `wp_kses_post()` and
+ * that markup is either stripped or the sanitizer has to be widened to admit it, which
+ * would admit the same tags from the remote author too.
+ *
+ * @param array<string,mixed> $model Object view model.
+ * @return string
+ */
+function axismundi_op_object_body_html( array $model ) : string {
+	$body = wp_kses_post( (string) ( $model['content_html'] ?? '' ) );
+
+	/**
+	 * Decorate the sanitized Object body. Hooked code must touch text nodes only.
+	 *
+	 * @param string              $body  Sanitized body HTML.
+	 * @param array<string,mixed> $model Object view model.
+	 */
+	return (string) apply_filters( 'axismundi_op_object_content_html', $body, $model );
+}
+
 function axismundi_op_render_object_content_block( array $attributes = array(), bool $delegated = false ) : string {
 	$model = axismundi_op_active_object_view_model();
 	if ( ! is_array( $model ) ) {
@@ -417,7 +444,7 @@ function axismundi_op_render_object_content_block( array $attributes = array(), 
 		return '';
 	}
 
-	$body = wp_kses_post( (string) ( $model['content_html'] ?? '' ) );
+	$body = axismundi_op_object_body_html( $model );
 
 	// A post-level warning covers the body, the poll, the quote, and the attachments
 	// together, so `axismundi/object-content-warning` owns it whenever the card uses that
@@ -478,7 +505,7 @@ function axismundi_op_render_object_media_panel( array $model ) : string {
 
 	// The Object's own content warning still governs its body here: the dialog is
 	// another place the body is displayed, not a way around the warning.
-	$body = wp_kses_post( (string) ( $model['content_html'] ?? '' ) );
+	$body = axismundi_op_object_body_html( $model );
 	if ( '' !== trim( wp_strip_all_tags( $body ) ) ) {
 		if ( ! empty( $model['sensitive'] ) ) {
 			$parts[] = '<details class="axismundi-object__media-panel-body axismundi-object__sensitive"><summary>'

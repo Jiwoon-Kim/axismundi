@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.27
+Stable tag: 0.0.30
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,17 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.30 =
+* Let an editor's Automatic language value preserve a federated Note's locked language snapshot, so content-only updates do not attempt to clear or recompute it.
+
+= 0.0.29 =
+* Use the WordPress author profile language for an Automatic Note language and publish known-language Note content in both `content` and `contentMap` for peers that do not consume language maps.
+
+= 0.0.28 =
+* Declare the custom emoji a Note's content uses in its outbound `tag` array, so a
+  `:shortcode:` renders as its image elsewhere instead of arriving as a bare word.
+  Guarded: with Axismundi Emoji inactive nothing changes.
 
 = 0.0.27 =
 * Replace the free-form Note language field with the inherited, searchable BCP-47 selector used for Articles.

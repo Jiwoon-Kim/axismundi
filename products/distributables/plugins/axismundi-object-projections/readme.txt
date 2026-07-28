@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.53
+Stable tag: 0.0.56
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,17 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.56 =
+* Make an Automatic Article or Note language follow the WordPress author profile language, then the site language, rather than the Actor serialization default.
+
+= 0.0.55 =
+* Serialize Actor scalar name and summary from its configured default language while retaining explicit language maps for peers that support them.
+
+= 0.0.54 =
+* Declare the custom emoji an Article or an Actor profile uses in its outbound `tag`
+  array, covering the title and the biography as well as the body. Guarded: with
+  Axismundi Emoji inactive nothing changes.
 
 = 0.0.53 =
 * Add inherited searchable BCP-47 language controls for Articles and Notes, public Followers/Following collection projections, and minimal negotiated JSON-LD for hashtag archives.

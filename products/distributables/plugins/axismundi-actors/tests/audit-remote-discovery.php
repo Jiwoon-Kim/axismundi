@@ -81,6 +81,23 @@ $ax_remote_http = static function ( $preempt, array $args, string $url ) use ( &
 			wp_json_encode( array( 'id' => 'https://evil.example/users/substitute', 'type' => 'Person', 'preferredUsername' => 'mallory', 'inbox' => 'https://evil.example/inbox', 'outbox' => 'https://evil.example/outbox' ) )
 		);
 	}
+	if ( 'https://example.com/category/2/general-discussion' === $url ) {
+		return ax_remote_response(
+			'application/activity+json',
+			wp_json_encode(
+				array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => 'https://example.com/category/2',
+					'type'              => 'Group',
+					'preferredUsername' => 'general',
+					'name'              => 'General Discussion',
+					'url'               => $url,
+					'inbox'             => 'https://example.com/category/2/inbox',
+					'outbox'            => 'https://example.com/category/2/outbox',
+				)
+			)
+		);
+	}
 	if ( 'https://example.com/bad-type' === $url ) {
 		return ax_remote_response( 'text/html', '{}' );
 	}
@@ -126,6 +143,11 @@ try {
 	$from_profile = axismundi_actors_discover_remote_input( 'https://example.com/@remote_alice' );
 	$from_id      = axismundi_actors_discover_remote_input( 'https://example.com/users/alice' );
 	ax_remote_assert( $ax_remote_results, 'admin input accepts /@handle profile aliases through WebFinger and exact canonical Actor URLs', $from_profile instanceof Axismundi_Actor && $from_id instanceof Axismundi_Actor && $first_id === $from_profile->get_identity_id() && $first_id === $from_id->get_identity_id() );
+	$from_group_profile = axismundi_actors_discover_remote_input( 'https://example.com/category/2/general-discussion' );
+	if ( $from_group_profile instanceof Axismundi_Actor ) {
+		$ax_remote_ids[] = $from_group_profile->get_identity_id();
+	}
+	ax_remote_assert( $ax_remote_results, 'a direct human Group URL may resolve to a different immutable id only when the Actor echoes that exact URL', $from_group_profile instanceof Axismundi_Actor && 'Group' === $from_group_profile->get_type() && 'https://example.com/category/2' === $from_group_profile->get_uri() && 'https://example.com/category/2/general-discussion' === $from_group_profile->get_profile_url() );
 
 	$update_payload = array(
 		'id'                => 'https://example.com/users/alice',

@@ -25,7 +25,11 @@ $axismundi_actor_name_tag   = $axismundi_actor_name_level >= 1 && $axismundi_act
 $axismundi_actor_name_url   = (string) $axismundi_actor_name_subject['url'];
 $axismundi_actor_name_link  = ! isset( $attributes['isLink'] ) || (bool) $attributes['isLink'];
 $axismundi_actor_name_class = 'ax-actor-name' . ( 'span' === $axismundi_actor_name_tag ? '' : ' wp-block-heading' );
-$axismundi_actor_name_inner = esc_html( $axismundi_actor_name_value );
+$axismundi_actor_name_inner = (string) apply_filters(
+	'axismundi_actors_display_name_html',
+	esc_html( $axismundi_actor_name_value ),
+	$axismundi_actor_name_subject
+);
 if ( $axismundi_actor_name_link && '' !== $axismundi_actor_name_url ) {
 	$axismundi_actor_name_inner = '<a href="' . esc_url( $axismundi_actor_name_url ) . '" rel="author">' . $axismundi_actor_name_inner . '</a>';
 }
@@ -33,5 +37,5 @@ printf(
 	'<%1$s %2$s>%3$s</%1$s>',
 	esc_attr( $axismundi_actor_name_tag ),
 	get_block_wrapper_attributes( array( 'class' => $axismundi_actor_name_class ) ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes.
-	$axismundi_actor_name_inner // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+	$axismundi_actor_name_inner // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above, then decorated with emoji markup.
 );

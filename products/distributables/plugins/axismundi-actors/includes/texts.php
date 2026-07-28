@@ -65,6 +65,12 @@ function axismundi_actors_profile_language( Axismundi_Actor $actor ) : string {
 	return '' !== $filtered ? $filtered : ( $actor->get_default_language() ?: axismundi_actors_site_language() );
 }
 
+/** Resolve the language used for scalar fields in an outbound Actor document. */
+function axismundi_actors_serialization_language( Axismundi_Actor $actor ) : string {
+	$language = axismundi_actors_normalize_language_tag( $actor->get_default_language() );
+	return '' !== $language ? $language : axismundi_actors_site_language();
+}
+
 /**
  * Set the language used for scalar Actor fields during serialization.
  *

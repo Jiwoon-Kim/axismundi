@@ -21,6 +21,8 @@
     "./products/distributables/plugins/axismundi-media-library",
     "./products/distributables/plugins/axismundi-note",
     "./products/distributables/plugins/axismundi-actors",
+    "./products/distributables/plugins/axismundi-forum",
+    "./products/distributables/plugins/axismundi-emoji",
     "./products/distributables/plugins/axismundi-object-projections",
     "./products/distributables/plugins/axismundi-activities",
     "C:/Users/thaum/dev/activitypub",

@@ -1,0 +1,18 @@
+[
+ {
+  "shortcode": "aaaa",
+  "url": "https://files.mastodon.social/custom_emojis/images/000/007/118/original/aaaa.png",
+  "static_url": "https://files.mastodon.social/custom_emojis/images/000/007/118/static/aaaa.png",
+  "visible_in_picker": true,
+  "category": "Cats",
+  "featured": false
+ },
+ {
+  "shortcode": "AAAAAA",
+  "url": "https://files.mastodon.social/custom_emojis/images/000/071/387/original/AAAAAA.png",
+  "static_url": "https://files.mastodon.social/custom_emojis/images/000/071/387/static/AAAAAA.png",
+  "visible_in_picker": true,
+  "category": "Cats",
+  "featured": false
+ }
+]

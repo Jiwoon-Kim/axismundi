@@ -55,15 +55,60 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	$profile = function_exists( 'axismundi_actors_profile_data' )
 		? axismundi_actors_profile_data( $actor )
 		: array();
+	$language = function_exists( 'axismundi_actors_serialization_language' )
+		? axismundi_actors_serialization_language( $actor )
+		: $actor->get_default_language();
+	$name = function_exists( 'axismundi_actors_resolve_text' )
+		? axismundi_actors_resolve_text( $actor, 'name', $language )
+		: (string) ( $profile['name'] ?? $actor->get_display_name() );
+	$summary = function_exists( 'axismundi_actors_resolve_text' )
+		? axismundi_actors_resolve_text( $actor, 'summary', $language )
+		: (string) ( $profile['summary'] ?? '' );
 	$object  = array(
 		'id'                      => $actor->get_uri(),
 		'type'                    => $actor->get_type(),
 		'url'                     => $actor->get_profile_url(),
 		'preferredUsername'       => $actor->get_preferred_username(),
-		'name'                    => (string) ( $profile['name'] ?? $actor->get_display_name() ),
-		'summary'                 => (string) ( $profile['summary'] ?? '' ),
+		'name'                    => $name,
+		'summary'                 => $summary,
 		'manuallyApprovesFollowers' => true === $actor->get_policy_flag( 'manually_approves_followers' ),
 	);
+	/*
+	 * Language maps beside the scalars, not instead of them.
+	 *
+	 * This is deliberately the opposite of the Article and Note decision, and the reason is
+	 * the audience. An Object is fetched by a server that already decided to talk to us; an
+	 * Actor is the first thing anyone resolves, and a profile that renders blank on a
+	 * follower's instance is not a purity problem, it is an invisible account. Mastodon
+	 * publishes both for exactly this reason — measured on the wire, its `content` and
+	 * `contentMap` carry byte-identical values.
+	 *
+	 * `und` never enters a map. "Undetermined" is not a language to tag text with; a value
+	 * whose language nobody established belongs in the scalar, where it makes no claim.
+	 */
+	if ( function_exists( 'axismundi_actors_get_text_map' ) ) {
+		$maps = array( 'name' => array(), 'summary' => array() );
+		foreach ( axismundi_actors_get_text_map( $actor->get_identity_id() ) as $language => $by_field ) {
+			$language = (string) $language;
+			if ( '' === $language || 'und' === strtolower( $language ) ) {
+				continue;
+			}
+			foreach ( array( 'name', 'summary' ) as $field ) {
+				$value = (string) ( $by_field[ $field ] ?? '' );
+				if ( '' !== $value ) {
+					$maps[ $field ][ $language ] = $value;
+				}
+			}
+		}
+		foreach ( array( 'name' => 'nameMap', 'summary' => 'summaryMap' ) as $field => $member ) {
+			// Only when it says something the scalar does not: a map with one entry equal to
+			// the scalar is bytes every receiver stores to learn nothing.
+			if ( array() !== $maps[ $field ] && array( (string) $object[ $field ] ) !== array_values( $maps[ $field ] ) ) {
+				$object[ $member ] = $maps[ $field ];
+			}
+		}
+	}
+
 	if ( null !== $actor->get_policy_flag( 'discoverable' ) ) {
 		$object['discoverable'] = $actor->get_policy_flag( 'discoverable' );
 	}
@@ -87,6 +132,44 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 		$attachments = axismundi_actors_profile_field_attachments( $actor );
 		if ( ! empty( $attachments ) ) {
 			$object['attachment'] = $attachments;
+		}
+	}
+
+	/*
+	 * The custom emoji this profile uses, declared for the document as a whole.
+	 *
+	 * A display name and a biography are published text like any other, so a `:shortcode:`
+	 * in either needs the same declaration a Note's body does — without it the name arrives
+	 * elsewhere as a bare word. Profile field labels count too: Mastodon renders emoji in
+	 * them, and a receiver can only do that if we say what they are.
+	 *
+	 * Read from the stored texts rather than only from the projected scalars, because those
+	 * are not the same set. This document currently publishes one `name` and one `summary`,
+	 * resolved for a single language, while the store holds a row per language. Gathering
+	 * only what is projected would be correct today and quietly wrong the moment
+	 * `nameMap`/`summaryMap` ship: a Korean biography's emoji would go undeclared because
+	 * the English one happened to win the resolution.
+	 *
+	 * There is no language axis to reconcile — `tag[]` has none and needs none, since the
+	 * same `:axismundi:` in a Korean and an English biography is one emoji. So the union
+	 * over every stored variant is both the answer now and the answer later.
+	 */
+	if ( function_exists( 'axismundi_emoji_outbound_tags' ) ) {
+		$emoji_texts = array( (string) $object['name'], (string) $object['summary'] );
+		if ( function_exists( 'axismundi_actors_get_text_map' ) ) {
+			// Keyed language => field => value; every value is published text somewhere.
+			foreach ( axismundi_actors_get_text_map( $actor->get_identity_id() ) as $by_field ) {
+				foreach ( (array) $by_field as $value ) {
+					$emoji_texts[] = (string) $value;
+				}
+			}
+		}
+		foreach ( (array) ( $object['attachment'] ?? array() ) as $field ) {
+			$emoji_texts[] = (string) ( $field['name'] ?? '' );
+		}
+		$emoji_tags = axismundi_emoji_outbound_tags( $emoji_texts );
+		if ( ! empty( $emoji_tags ) ) {
+			$object['tag'] = array_merge( (array) ( $object['tag'] ?? array() ), $emoji_tags );
 		}
 	}
 	if ( function_exists( 'axismundi_act_get_public_outbox' ) ) {

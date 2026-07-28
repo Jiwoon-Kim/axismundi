@@ -64,6 +64,38 @@ try {
 	);
 	ax_vmc_assert( $ax_vmc_results, 'a sensitive summary stays a content warning and never becomes an excerpt', 'Spoiler' === (string) ( $warned['content_warning'] ?? '' ) && '' === (string) ( $warned['summary'] ?? '' ) );
 
+	$map_only = ax_vmc_remote_model(
+		array(
+			'id'           => 'https://example.com/articles/' . wp_generate_uuid4(),
+			'type'         => 'Article',
+			'attributedTo' => $ax_vmc_actor,
+			'to'           => array( $ax_vmc_public ),
+			'nameMap'      => array( 'ko-KR' => 'Map-only title' ),
+			'summaryMap'   => array( 'ko-KR' => '<p>Map-only excerpt.</p>' ),
+			'contentMap'   => array( 'ko-KR' => '<p>Map-only body.</p>' ),
+		),
+		$ax_vmc_remote
+	);
+	ax_vmc_assert( $ax_vmc_results, 'a map-only remote Object is normalized and rendered from its maps without scalar name, summary, or content', 'Map-only title' === (string) ( $map_only['title'] ?? '' ) && false !== strpos( (string) ( $map_only['summary'] ?? '' ), 'Map-only excerpt.' ) && false !== strpos( (string) ( $map_only['content_html'] ?? '' ), 'Map-only body.' ) && 'ko-KR' === (string) ( $map_only['language'] ?? '' ) );
+
+	$legacy_map_row = array(
+		'object_uri'       => 'https://example.com/articles/legacy-map-only-' . wp_generate_uuid4(),
+		'object_type'      => 'Article',
+		'object_status'    => 'active',
+		'attributed_to_uri' => $ax_vmc_actor,
+		'name'             => null,
+		'summary'          => null,
+		'content'          => null,
+		'content_language' => null,
+		'payload'          => array(
+			'nameMap'    => array( 'en' => 'Legacy map title' ),
+			'summaryMap' => array( 'en' => '<p>Legacy map excerpt.</p>' ),
+			'contentMap' => array( 'en' => '<p>Legacy map body.</p>' ),
+		),
+	);
+	$legacy_map_model = axismundi_op_remote_source_view_model( new Axismundi_Op_Remote_Source( $legacy_map_row ) );
+	ax_vmc_assert( $ax_vmc_results, 'a pre-map-only-cache row still renders from its retained raw payload instead of requiring a refetch', is_array( $legacy_map_model ) && 'Legacy map title' === (string) ( $legacy_map_model['title'] ?? '' ) && false !== strpos( (string) ( $legacy_map_model['content_html'] ?? '' ), 'Legacy map body.' ) && false !== strpos( (string) ( $legacy_map_model['content_warning'] ?? '' ), 'Legacy map excerpt.' ) && 'en' === (string) ( $legacy_map_model['language'] ?? '' ) );
+
 	// Mastodon exposes a CW as `summary` plus Object-level `sensitive`, but does
 	// not declare sensitivity on each attachment. The omitted attachment claim must
 	// inherit the Object warning rather than being normalized to explicit false.

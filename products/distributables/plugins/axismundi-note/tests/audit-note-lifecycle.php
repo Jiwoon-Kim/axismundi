@@ -113,7 +113,7 @@ try {
 		&& 2 === count( $activities )
 		&& $update instanceof Axismundi_Activity
 		&& 'Update' === $update->get_type()
-		&& false !== strpos( (string) ( $update_payload['object']['content'] ?? '' ), 'Lifecycle two.' )
+		&& false !== strpos( (string) ( $update_payload['object']['contentMap']['en'] ?? '' ), 'Lifecycle two.' )
 		&& array() === ( $update_payload['cc'] ?? null )
 		&& ! empty( $update_payload['to'] )
 	);
@@ -127,6 +127,10 @@ try {
 
 	$language_change = axismundi_note_save_envelope( $post_id, array_merge( axismundi_note_get_envelope( $post_id ), array( 'language' => 'fr' ) ) );
 	ax_nl_assert( $ax_nl_results, 'the first federation exposure keeps its BCP-47 snapshot immutable', is_wp_error( $language_change ) && 'ax_note_language_locked' === $language_change->get_error_code() );
+
+	$automatic_save     = axismundi_note_save_envelope( $post_id, array_merge( axismundi_note_get_envelope( $post_id ), array( 'language' => '' ) ) );
+	$automatic_envelope = axismundi_note_get( $post_id );
+	ax_nl_assert( $ax_nl_results, 'Automatic preserves a federated Note language snapshot so content-only editor updates remain possible', is_array( $automatic_save ) && is_array( $automatic_envelope ) && 'en' === $automatic_envelope['language_tag'] );
 
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'draft' ) );
 	$withdrawn = axismundi_act_get_by_object( $object_uri );

@@ -101,7 +101,7 @@ try {
 	}
 	$update_job = $update instanceof Axismundi_Activity ? axismundi_activitypub_bridge_get_delivery( axismundi_activitypub_bridge_find_delivery( $update->get_uri() ) ) : null;
 	$update_payload = is_object( $update_job ) ? json_decode( (string) $update_job->payload_json, true ) : array();
-	ax_bnd_assert( $ax_bnd_results, 'a later Note snapshot queues one Update with the edited embedded representation', $update instanceof Axismundi_Activity && 'Update' === $update->get_type() && is_object( $update_job ) && false !== strpos( (string) ( $update_payload['object']['content'] ?? '' ), 'Direct Note two.' ) );
+	ax_bnd_assert( $ax_bnd_results, 'a later Note snapshot queues one Update with the edited contentMap representation', $update instanceof Axismundi_Activity && 'Update' === $update->get_type() && is_object( $update_job ) && false !== strpos( (string) ( $update_payload['object']['contentMap']['en'] ?? '' ), 'Direct Note two.' ) );
 
 	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'draft' ) );
 	$delete = axismundi_act_get_object_lifecycle( $object_uri );

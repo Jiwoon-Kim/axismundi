@@ -44,19 +44,20 @@ try {
 	$bad_language = axismundi_note_save( $post_id, array( 'language_tag' => 'x_invalid' ) );
 	ax_lang_assert( $ax_lang_results, 'an explicitly invalid language fails closed without replacing the stored value', is_wp_error( $bad_language ) && 'ax_note_language' === $bad_language->get_error_code() && 'ko-KR' === axismundi_note_get( $post_id )['language_tag'] );
 
-	// With no stored value, the author Actor default language is next.
+	$undetermined = axismundi_note_save( $post_id, array( 'language_tag' => 'und' ) );
+	ax_lang_assert( $ax_lang_results, 'the valid BCP-47 undetermined tag is stored and resolved instead of being mistaken for invalid input', is_array( $undetermined ) && 'und' === (string) $undetermined['language_tag'] && 'und' === axismundi_note_effective_language( $post ) );
+
+	// With no stored value, the author WordPress profile language is first.
 	axismundi_note_save( $post_id, array( 'language_tag' => '' ) );
-	ax_lang_assert( $ax_lang_results, 'a draft with no language inherits the author Actor default language', 'ja' === axismundi_note_effective_language( $post ) );
-
-	// With no Actor default, the author WordPress locale is next.
-	$wpdb->update( axismundi_actors_actors_table(), array( 'default_language' => null ), array( 'identity_id' => $identity_id ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	update_user_meta( $uid, 'locale', 'de_DE' );
-	ax_lang_assert( $ax_lang_results, 'without an Actor default the author WordPress locale is normalized to BCP-47', 'de-DE' === axismundi_note_effective_language( $post ) );
+	ax_lang_assert( $ax_lang_results, 'a draft with no language inherits the author WordPress profile language', 'de-DE' === axismundi_note_effective_language( $post ) );
 
-	// With neither, the site locale terminates the chain.
+	// Without a WordPress profile language, the site language is next.
 	delete_user_meta( $uid, 'locale' );
 	$site = axismundi_actors_site_language();
-	ax_lang_assert( $ax_lang_results, 'the site locale terminates the inheritance chain', '' !== $site && $site === axismundi_note_effective_language( $post ) );
+	ax_lang_assert( $ax_lang_results, 'without a WordPress profile language the site language is next rather than the Actor default', $site === axismundi_note_effective_language( $post ) );
+
+	ax_lang_assert( $ax_lang_results, 'the site locale terminates the inheritance chain', '' !== $site );
 
 	// The resolver stores nothing: the envelope language stays empty until a Create.
 	$envelope = axismundi_note_get( $post_id );

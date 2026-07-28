@@ -161,14 +161,17 @@ function axismundi_actors_remote_profile_url( $value, string $fallback ) : strin
 /**
  * Validate and normalize an ActivityStreams Actor document.
  *
- * @param array<string,mixed> $payload  Decoded Actor JSON.
- * @param string              $expected_uri WebFinger self URI.
+ * @param array<string,mixed> $payload       Decoded Actor JSON.
+ * @param string              $expected_uri  WebFinger self URI or direct fetch URI.
+ * @param string              $profile_alias Direct human profile URL, if one was supplied.
  * @return array<string,mixed>|WP_Error
  */
-function axismundi_actors_normalize_remote_actor_payload( array $payload, string $expected_uri ) {
+function axismundi_actors_normalize_remote_actor_payload( array $payload, string $expected_uri, string $profile_alias = '' ) {
 	$uri  = (string) ( $payload['id'] ?? '' );
 	$type = (string) ( $payload['type'] ?? '' );
-	if ( $uri !== $expected_uri || 'https' !== strtolower( (string) wp_parse_url( $uri, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $uri ) ) {
+	$matches_expected = $uri === $expected_uri;
+	$matches_alias    = '' !== $profile_alias && isset( $payload['url'] ) && is_string( $payload['url'] ) && $profile_alias === $payload['url'];
+	if ( ( ! $matches_expected && ! $matches_alias ) || 'https' !== strtolower( (string) wp_parse_url( $uri, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $uri ) ) {
 		return new WP_Error( 'ax_actors_remote_identity', __( 'The remote Actor identity did not match WebFinger.', 'axismundi-actors' ) );
 	}
 	if ( ! in_array( $type, array( 'Person', 'Organization', 'Application', 'Service', 'Group' ), true ) ) {
@@ -350,9 +353,10 @@ function axismundi_actors_extract_policy_from_payload( array $payload ) : array 
  *
  * @param string $self          Expected canonical ActivityStreams Actor URI.
  * @param string $verified_acct Optional already-verified bare acct address.
+ * @param string $profile_alias Optional direct human URL that the Actor document must echo in `url`.
  * @return Axismundi_Actor|WP_Error
  */
-function axismundi_actors_discover_remote_actor_uri( string $self, string $verified_acct = '' ) {
+function axismundi_actors_discover_remote_actor_uri( string $self, string $verified_acct = '', string $profile_alias = '' ) {
 	if ( 'https' !== strtolower( (string) wp_parse_url( $self, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $self ) ) {
 		return new WP_Error( 'ax_actors_remote_self', __( 'Unsafe ActivityStreams Actor URL.', 'axismundi-actors' ) );
 	}
@@ -361,7 +365,7 @@ function axismundi_actors_discover_remote_actor_uri( string $self, string $verif
 	if ( is_wp_error( $payload ) ) {
 		return $payload;
 	}
-	$record = axismundi_actors_normalize_remote_actor_payload( $payload, $self );
+	$record = axismundi_actors_normalize_remote_actor_payload( $payload, $self, $profile_alias );
 	if ( is_wp_error( $record ) ) {
 		return $record;
 	}
@@ -441,5 +445,9 @@ function axismundi_actors_discover_remote_input( string $input ) {
 	if ( '' !== $host && str_starts_with( $path, '@' ) && ! str_contains( $path, '/' ) ) {
 		return axismundi_actors_discover_remote_actor( rawurldecode( substr( $path, 1 ) ) . '@' . $host );
 	}
-	return axismundi_actors_discover_remote_actor_uri( $input );
+	// A direct profile URL may negotiate an Actor document whose immutable `id` is
+	// different (for example, a NodeBB category Group). It is an alias only when the
+	// document itself echoes this exact scalar `url`; the canonical `id` remains the
+	// identity key we persist and publish.
+	return axismundi_actors_discover_remote_actor_uri( $input, '', $input );
 }

@@ -87,7 +87,7 @@ function axismundi_note_prepare_for_federation( WP_Post $post ) {
 	if ( ! empty( $envelope['attribution_locked_at'] ) ) {
 		$language = axismundi_note_normalize_language( (string) $envelope['language_tag'] );
 		$question_ready = ! function_exists( 'axismundi_note_is_question' ) || ! axismundi_note_is_question( $post->ID ) || axismundi_note_question_ready( $post->ID );
-		return '' !== $language && 'und' !== $language && axismundi_note_envelope_actor( $envelope ) instanceof Axismundi_Actor && $question_ready
+		return '' !== $language && axismundi_note_envelope_actor( $envelope ) instanceof Axismundi_Actor && $question_ready
 			? true
 			: new WP_Error( 'ax_note_readiness', __( 'The frozen Note identity is incomplete.', 'axismundi-note' ) );
 	}
@@ -102,7 +102,7 @@ function axismundi_note_prepare_for_federation( WP_Post $post ) {
 	}
 
 	$language = axismundi_note_effective_language( $post );
-	if ( '' === $language || 'und' === $language ) {
+	if ( '' === $language ) {
 		return new WP_Error( 'ax_note_language', __( 'The Note language could not be resolved.', 'axismundi-note' ) );
 	}
 	$saved = axismundi_note_save( $post->ID, array( 'language_tag' => $language ) );
@@ -222,7 +222,7 @@ function axismundi_note_source_audience( Axismundi_Note_Source $source ) {
 		|| '' !== (string) $post->post_password
 		|| empty( $envelope['attribution_locked_at'] )
 		|| ! $actor instanceof Axismundi_Actor
-		|| '' === $language || 'und' === $language
+		|| '' === $language
 		|| ! function_exists( 'axismundi_act_resolve_audience' )
 	) {
 		return new WP_Error( 'ax_note_not_ready', __( 'The Note is not ready for public projection.', 'axismundi-note' ) );
@@ -362,8 +362,6 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 		'type'         => 'Note',
 		'attributedTo' => (string) $envelope['actor_uri'],
 		'url'          => array( 'type' => 'Link', 'href' => $id, 'mediaType' => 'text/html' ),
-		'content'      => $content,
-		'contentMap'   => array( $language => $content ),
 		'mediaType'    => 'text/html',
 		'published'    => get_post_time( DATE_W3C, true, $post ),
 		'updated'      => get_post_modified_time( DATE_W3C, true, $post ),
@@ -371,10 +369,18 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 		'cc'           => $audience['cc'],
 		'sensitive'    => ! empty( $envelope['is_sensitive'] ),
 	);
+	// `content` remains the interoperable baseline. Some peers, including Misskey,
+	// do not read contentMap-only Notes; the map adds language precision beside it.
+	$object['content'] = $content;
+	if ( 'und' !== $language ) {
+		$object['contentMap'] = array( $language => $content );
+	}
 	$title = trim( wp_strip_all_tags( (string) $post->post_title ) );
 	if ( '' !== $title ) {
-		$object['name']    = $title;
-		$object['nameMap'] = array( $language => $title );
+		$object['name'] = $title;
+		if ( 'und' !== $language ) {
+			$object['nameMap'] = array( $language => $title );
+		}
 	}
 	$media = function_exists( 'axismundi_op_media_subject_descriptors' ) ? axismundi_op_media_subject_descriptors( $post ) : array();
 	if ( ! empty( $media['attachments'] ) ) {
@@ -386,9 +392,19 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 			}
 		}
 	}
+	/*
+	 * Custom emoji are declared here for the same reason mentions and hashtags are: the
+	 * shortcode in the content is meaningless to a receiver without the declaration that
+	 * explains it. Guarded like the others, so Note works with Emoji absent — the text
+	 * simply travels as a shortcode, which is what a receiver shows anyway when it has no
+	 * declaration to resolve.
+	 */
 	$tags = array_merge(
 		axismundi_note_mention_tags( $post, false ),
-		function_exists( 'axismundi_op_post_hashtag_tags' ) ? axismundi_op_post_hashtag_tags( $post ) : array()
+		function_exists( 'axismundi_op_post_hashtag_tags' ) ? axismundi_op_post_hashtag_tags( $post ) : array(),
+		function_exists( 'axismundi_emoji_outbound_tags' )
+			? axismundi_emoji_outbound_tags( array( $content, $object['name'] ?? '', $object['summary'] ?? '' ) )
+			: array()
 	);
 	if ( ! empty( $tags ) ) {
 		$object['tag'] = $tags;

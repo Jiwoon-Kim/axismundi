@@ -415,15 +415,19 @@ function axismundi_note_save( int $post_id, array $fields ) {
  * @return array<string,mixed>
  */
 function axismundi_note_get_envelope( int $post_id ) : array {
-	$row      = axismundi_note_get( $post_id );
-	$mentions = array();
-	$post     = get_post( $post_id );
+	$row           = axismundi_note_get( $post_id );
+	$mentions      = array();
+	$body_mentions = array();
+	$post          = get_post( $post_id );
 	$quote_status = $post instanceof WP_Post && function_exists( 'axismundi_note_quote_status' )
 		? axismundi_note_quote_status( $post )
 		: array( 'state' => 'none', 'target' => '', 'request' => '', 'authorization' => '', 'error' => '' );
 	if ( is_array( $row ) ) {
 		$decoded  = json_decode( (string) $row['mention_actor_uris_json'], true );
 		$mentions = is_array( $decoded ) ? array_values( array_filter( array_map( 'strval', $decoded ) ) ) : array();
+	}
+	if ( $post instanceof WP_Post && function_exists( 'axismundi_op_content_mention_uris' ) ) {
+		$body_mentions = axismundi_op_content_mention_uris( $post->post_content );
 	}
 	return array(
 		'visibility'     => is_array( $row ) ? (string) $row['visibility'] : 'public',
@@ -436,6 +440,7 @@ function axismundi_note_get_envelope( int $post_id ) : array {
 		'sensitive'      => is_array( $row ) && ! empty( $row['is_sensitive'] ),
 		'contentWarning' => is_array( $row ) ? (string) $row['content_warning'] : '',
 		'mentions'       => $mentions,
+		'bodyMentions'   => $body_mentions,
 		'attachments'    => function_exists( 'axismundi_note_attachment_ids' ) ? axismundi_note_attachment_ids( $post_id ) : array(),
 	);
 }

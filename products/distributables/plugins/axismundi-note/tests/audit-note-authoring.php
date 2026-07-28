@@ -48,7 +48,7 @@ try {
 
 	// The structured read exposes envelope defaults for a fresh Note.
 	$default = axismundi_note_get_envelope( $post_id );
-	ax_auth_assert( $ax_auth_results, 'a fresh Note defaults to public audience and anyone Quote approval', 'public' === $default['visibility'] && '' === $default['language'] && 'anyone' === $default['quotePolicy'] && false === $default['sensitive'] && array() === $default['mentions'] );
+	ax_auth_assert( $ax_auth_results, 'a fresh Note defaults to public audience and anyone Quote approval', 'public' === $default['visibility'] && '' === $default['language'] && 'anyone' === $default['quotePolicy'] && false === $default['sensitive'] && array() === $default['mentions'] && array() === $default['bodyMentions'] );
 
 	// The structured save round-trips through the fail-closed field contract.
 	$mention = 'https://example.com/users/authoring-' . strtolower( wp_generate_password( 6, false, false ) );

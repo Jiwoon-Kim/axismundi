@@ -127,6 +127,8 @@ try {
 
 	$mentions = axismundi_note_mentions( get_post( $post_id ) );
 	ax_note_assert( $ax_note_results, 'the read API returns the ordered union of explicit and body-derived mentions', in_array( $explicit_mention, $mentions, true ) && in_array( $derived_mention, $mentions, true ) && count( $mentions ) === count( array_unique( $mentions ) ) );
+	$envelope_view = axismundi_note_get_envelope( $post_id );
+	ax_note_assert( $ax_note_results, 'the editor view exposes body mentions separately, so deleting a body token cannot leave it stored as an explicit recipient', array( $explicit_mention ) === $envelope_view['mentions'] && array( $derived_mention ) === $envelope_view['bodyMentions'] );
 
 	// P1: an explicitly invalid visibility fails closed instead of widening to public.
 	$bad_visibility = axismundi_note_save( $post_id, array( 'visibility' => 'followerss' ) );

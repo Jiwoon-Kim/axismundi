@@ -62,8 +62,12 @@
 			help: props.help,
 			value: display,
 			suggestions: suggestions,
-			onInputChange: search,
+			disabled: !! props.readOnly,
+			onInputChange: props.readOnly ? undefined : search,
 			onChange: function ( tokens ) {
+				if ( props.readOnly ) {
+					return;
+				}
 				var uris = tokens.map( function ( token ) { return tokenActors[ token ] ? tokenActors[ token ].uri : ''; } ).filter( Boolean );
 				props.onChange( Array.from( new Set( uris ) ) );
 			},

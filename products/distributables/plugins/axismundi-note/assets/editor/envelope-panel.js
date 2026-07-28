@@ -271,9 +271,17 @@
 			window.axismundiMentionTokens && window.axismundiMentionTokens.MentionTokenField
 				? el( window.axismundiMentionTokens.MentionTokenField, {
 					label: __( 'Mentioned actors', 'axismundi-note' ),
-					help: __( 'Search for a handle, then select it. Body @-mention links merge automatically.', 'axismundi-note' ),
+					help: __( 'Search for a handle, then select it. These are additional recipients beyond body mentions.', 'axismundi-note' ),
 					value: envelope.mentions || [],
 					onChange: function ( value ) { update( { mentions: value } ); }
+				} )
+				: null,
+			( envelope.bodyMentions || [] ).length && window.axismundiMentionTokens && window.axismundiMentionTokens.MentionTokenField
+				? el( window.axismundiMentionTokens.MentionTokenField, {
+					label: __( 'Detected in body', 'axismundi-note' ),
+					help: __( 'Read-only. Remove a plaintext @mention from the body to remove its recipient.', 'axismundi-note' ),
+					value: envelope.bodyMentions,
+					readOnly: true
 				} )
 				: null,
 			attachmentControls

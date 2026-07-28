@@ -54,6 +54,7 @@ try {
 	$editor_script = file_get_contents( dirname( __DIR__ ) . '/assets/post-settings.js' );
 	ax_settings_assert( $ax_settings_results, 'the block-editor Federation panel exposes searchable BCP-47 language, audience, and Quote-policy controls', is_string( $editor_script ) && false !== strpos( $editor_script, 'ComboboxControl' ) && false !== strpos( $editor_script, "'_ax_op_language'" ) && false !== strpos( $editor_script, "'_ax_op_quote_policy'" ) && false !== strpos( $editor_script, "'_ax_op_visibility'" ) && false !== strpos( $editor_script, "'_ax_op_mentions'" ) && false !== strpos( $editor_script, "value: 'mentioned'" ) );
 	$mention_script = file_get_contents( dirname( __DIR__ ) . '/assets/mention-autocomplete.js' );
+	$token_script   = file_get_contents( dirname( __DIR__ ) . '/assets/mention-token-field.js' );
 	ax_settings_assert(
 		$ax_settings_results,
 		'the editor replaces the Core user completer with a canonical plaintext Actor token',
@@ -63,6 +64,8 @@ try {
 			&& false !== strpos( $mention_script, '/actors/mention-search' )
 			&& false !== strpos( $mention_script, "return actor.token + ' ';" )
 			&& false === strpos( $mention_script, "className: 'mention'" )
+			&& false !== strpos( $token_script, 'disabled: !! props.readOnly' )
+			&& false !== strpos( $token_script, 'if ( props.readOnly )' )
 	);
 	axismundi_op_register_mention_autocomplete();
 	ax_settings_assert(

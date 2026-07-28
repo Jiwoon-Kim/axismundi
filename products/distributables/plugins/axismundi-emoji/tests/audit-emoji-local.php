@@ -321,6 +321,19 @@ try {
 	$ax_local_bundled_marker = get_option( 'ax_emoji_bundled_registered', array() );
 	ax_local_assert( $ax_local_results, 'each bundled emoji is marked done independently, so a deliberate deletion is not undone', is_array( $ax_local_bundled_marker ) && isset( $ax_local_bundled_marker['axismundi'], $ax_local_bundled_marker['wordpress'] ) );
 	ax_local_assert( $ax_local_results, 'the old scalar marker means only the original bundle was registered, so a new bundled emoji can still be provisioned', array( 'axismundi' => '0.1.0' ) === axismundi_emoji_bundled_registration_marker( '0.1.0' ) );
+	ax_local_assert( $ax_local_results, 'bundle provisioning runs after a no-op schema check, so a new asset reaches existing installations', 6 === has_action( 'init', 'axismundi_emoji_bootstrap_bundled' ) );
+	$ax_local_wordpress = axismundi_emoji_local_get( 'wordpress' );
+	if ( is_array( $ax_local_wordpress ) ) {
+		axismundi_emoji_delete_local( (int) $ax_local_wordpress['id'] );
+		update_option( 'ax_emoji_bundled_registered', '0.1.0', false );
+		axismundi_emoji_maybe_upgrade();
+		ax_local_assert( $ax_local_results, 'a current schema does not hide the legacy-marker condition by rerunning install', null === axismundi_emoji_local_get( 'wordpress' ) );
+		axismundi_emoji_bootstrap_bundled();
+		ax_local_assert( $ax_local_results, 'the post-schema bootstrap registers a bundle added after the old marker was written', is_array( axismundi_emoji_local_get( 'wordpress' ) ) );
+	} else {
+		ax_local_assert( $ax_local_results, 'the bundle-upgrade regression setup has its WordPress emoji row', false );
+		ax_local_assert( $ax_local_results, 'the post-schema bootstrap registers a bundle added after the old marker was written', false );
+	}
 	axismundi_emoji_register_bundled();
 	ax_local_assert( $ax_local_results, 'and calling the installer again does not create a second copy', 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_emoji_table() . ' WHERE scope = %s AND shortcode_key = %s', 'local', 'axismundi' ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table.
 

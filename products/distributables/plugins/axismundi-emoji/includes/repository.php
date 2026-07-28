@@ -215,6 +215,18 @@ function axismundi_emoji_maybe_upgrade() : void {
 add_action( 'init', 'axismundi_emoji_maybe_upgrade', 5 );
 
 /**
+ * Provision a newly shipped bundled emoji even when the database schema is unchanged.
+ *
+ * @return void
+ */
+function axismundi_emoji_bootstrap_bundled() : void {
+	if ( axismundi_emoji_ready() && function_exists( 'axismundi_emoji_register_bundled' ) ) {
+		axismundi_emoji_register_bundled();
+	}
+}
+add_action( 'init', 'axismundi_emoji_bootstrap_bundled', 6 );
+
+/**
  * One registry row by identity.
  *
  * @param string $authority Declaring authority.

@@ -481,6 +481,15 @@ function axismundi_op_enqueue_post_editor_settings() : void {
 	);
 	wp_set_script_translations( 'axismundi-op-post-settings', 'axismundi-object-projections' );
 	wp_set_script_translations( 'axismundi-op-mention-autocomplete', 'axismundi-object-projections' );
+	/*
+	 * The custom emoji picker, when Emoji is active. It contributes a button to the inline
+	 * RichText toolbar and inserts `:shortcode:` as text; the Article's outbound `tag[]` is
+	 * rebuilt from the title and body at publish time, so a shortcode typed by hand behaves
+	 * exactly the same and nothing needs keeping in sync.
+	 */
+	if ( function_exists( 'axismundi_emoji_enqueue_picker' ) ) {
+		axismundi_emoji_enqueue_picker();
+	}
 }
 add_action( 'enqueue_block_editor_assets', 'axismundi_op_enqueue_post_editor_settings' );
 

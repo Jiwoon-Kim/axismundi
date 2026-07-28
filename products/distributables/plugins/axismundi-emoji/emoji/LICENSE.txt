@@ -1,0 +1,50 @@
+Bundled emoji assets
+====================
+
+Two files ship with this plugin and they do NOT travel under the same terms. One is
+ours to license; the other is somebody else's trademark, included under a policy
+rather than a copyright grant. Those are different kinds of right, and collapsing
+them would misstate both.
+
+
+axismundi.webp  —  :axismundi:
+------------------------------
+Copyright (C) 2026 Jiwoon Kim
+Licensed under GPL-3.0-or-later.
+
+A 200x200 WebP derived from the Axismundi project brand symbol. The copyright holder
+releases this bundled derivative under GPL-3.0-or-later so it may be distributed with
+the plugin, including through the WordPress Plugin Directory.
+
+This grant applies to axismundi.webp only. It does not relicense the other source
+assets in the Axismundi brand directory:
+https://github.com/Jiwoon-Kim/axismundi/tree/main/assets/brand
+
+
+wordpress.webp  —  :wordpress:
+------------------------------
+WordPress W Mark. Trademark of the WordPress Foundation.
+NOT licensed under the GPL.
+
+Included so that people writing here can refer to WordPress the software, which is the
+use the Foundation's trademark policy permits without written permission:
+
+  "All other WordPress-related businesses or projects can use the WordPress name and
+   logo to refer to and explain their services, but they cannot use them as part of a
+   product, project, service, domain name, or company name."
+
+It is not part of this plugin's name, branding, or identity, and no endorsement by the
+WordPress Foundation or Automattic is claimed or implied. Mastodon and Misskey bundle
+each other's marks as custom emoji for the same reason.
+
+Derived from the official white W Mark, recoloured to the WordPress brand's own
+#32373c and scaled to 200x200 on a transparent background.
+
+  Source:     https://wordpress.org/about/logos/
+  Subject to: https://wordpressfoundation.org/trademark-policy/
+
+Trademark permission is not a copyright licence. If the Plugin Directory review treats
+this file as incompatible with its GPL requirement for bundled images, the correct
+resolution is to drop it from the distributed package -- not to relabel it. Nothing
+depends on it: an operator who wants :wordpress: can upload it from the official page
+through Emojis > Local in three clicks.

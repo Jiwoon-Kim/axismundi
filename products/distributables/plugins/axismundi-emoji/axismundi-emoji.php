@@ -19,7 +19,7 @@
  * the outbound `tag[]` of Notes, Articles, and Actors. The contract, fixtures, and
  * harness under tests/ keep all of it grounded in captured wire evidence.
  *
- * Still deliberately absent: the block-editor picker (E3) and emoji reactions (E4).
+ * Still deliberately absent: emoji reactions (E4).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -93,6 +93,27 @@ const AXISMUNDI_EMOJI_OUTBOUND_MEDIA_TYPES = array( 'image/png', 'image/gif', 'i
 const AXISMUNDI_EMOJI_BUNDLED_SHORTCODE = ':axismundi:';
 const AXISMUNDI_EMOJI_BUNDLED_FILE      = 'emoji/axismundi.webp';
 
+/**
+ * Every emoji this plugin ships, and the terms each one travels under.
+ *
+ * Not one licence for the directory. `:axismundi:` is ours and is released under the
+ * plugin's own GPL; `:wordpress:` is the WordPress Foundation's trademark, included to
+ * *refer to* WordPress the way Mastodon and Misskey bundle each other's marks. Trademark
+ * permission is not a copyright licence, so that file is never described as GPL — the
+ * distinction is recorded in `emoji/LICENSE.txt` beside the files themselves, where
+ * anyone unpacking the ZIP will find it.
+ */
+const AXISMUNDI_EMOJI_BUNDLED = array(
+	'axismundi' => array(
+		'file'     => 'emoji/axismundi.webp',
+		'category' => 'Axismundi',
+	),
+	'wordpress' => array(
+		'file'     => 'emoji/wordpress.webp',
+		'category' => 'WordPress',
+	),
+);
+
 /** Absolute path to the bundled emoji, or '' when it is missing. */
 function axismundi_emoji_bundled_path() : string {
 	$path = __DIR__ . '/' . AXISMUNDI_EMOJI_BUNDLED_FILE;
@@ -112,6 +133,7 @@ require_once __DIR__ . '/includes/renderer.php';
 require_once __DIR__ . '/includes/integrations/actors.php';
 require_once __DIR__ . '/includes/integrations/object-projections.php';
 require_once __DIR__ . '/includes/admin.php';
+require_once __DIR__ . '/includes/editor.php';
 
 /**
  * Load the inline emoji typography contract wherever custom emoji can render.

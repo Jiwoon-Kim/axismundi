@@ -28,4 +28,9 @@ WordPress.org assets
 
 Brand assets in this folder are original project assets by Jiwoon Kim.
 
+`products/distributables/plugins/axismundi-emoji/emoji/axismundi.webp` is a 200x200
+custom-emoji derivative of `axismundi-logo.png`. Its copyright holder releases that
+specific bundled derivative under GPL-3.0-or-later; its adjacent `LICENSE.txt` records
+the narrow grant. That does not relicense the rest of this brand directory.
+
 See `../LICENSES.md` for the repository asset license table.

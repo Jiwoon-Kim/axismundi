@@ -59,6 +59,9 @@ function axismundi_op_object_view_model_defaults() : array {
 	return array(
 		'summary'      => '',
 		'human_url'    => '',
+		// A public remote Object's local, opaque cache-view route. This is separate
+		// from `human_url`, which remains the author's original page.
+		'cached_view_url' => '',
 		'in_reply_to'  => '',
 		'hashtags'     => array(),
 		'mentions'     => array(),
@@ -323,6 +326,15 @@ function axismundi_op_normalize_object_view_model( array $model, $source = null 
 		} elseif ( $source instanceof Axismundi_Op_Remote_Source ) {
 			$row                = $source->get_row();
 			$model['human_url'] = (string) ( $row['human_url'] ?? '' );
+		}
+	}
+	if ( $source instanceof Axismundi_Op_Remote_Source ) {
+		$row = $source->get_row();
+		if ( function_exists( 'axismundi_op_cached_object_publicly_viewable' )
+			&& axismundi_op_cached_object_publicly_viewable( $row )
+			&& function_exists( 'axismundi_op_cached_object_view_url' )
+		) {
+			$model['cached_view_url'] = axismundi_op_cached_object_view_url( (string) ( $row['object_uri'] ?? '' ) );
 		}
 	}
 

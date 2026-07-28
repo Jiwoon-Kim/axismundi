@@ -151,6 +151,7 @@ Open Font License 1.1. Each font subdirectory includes a verbatim `OFL.txt`.
 | Path | `assets/brand/`, `assets/media/` |
 | License file | `assets/LICENSES.md` |
 | Brand assets | Original project identity assets by Jiwoon Kim; reserved for Axismundi project/theme/plugin identity use |
+| Bundled emoji derivative | `axismundi-emoji/emoji/axismundi.webp`, derived from `assets/brand/axismundi-logo.png`; released by its copyright holder under GPL-3.0-or-later for plugin distribution, recorded in the adjacent `LICENSE.txt` |
 | Image placeholder | WordPress Photo Directory CC0 photo by Jiwoon Kim |
 | Audio placeholder | Project-author supplied AI-generated Suno demo audio; MP3 source/reference plus Opus derivative included |
 | Video placeholder | Pixabay Content License video by Evgeniy__Mironov; not project-owned |

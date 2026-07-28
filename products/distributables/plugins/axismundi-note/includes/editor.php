@@ -55,6 +55,15 @@ function axismundi_note_enqueue_editor_assets() : void {
 		true
 	);
 	wp_set_script_translations( 'axismundi-note-envelope-panel', 'axismundi-note' );
+	/*
+	 * The custom emoji picker, if this site has one. It adds a button to the inline
+	 * RichText toolbar and inserts `:shortcode:` as text; the outbound declaration is
+	 * assembled from the body at publish time, so nothing here has to be kept in sync and
+	 * typing a shortcode by hand works identically.
+	 */
+	if ( function_exists( 'axismundi_emoji_enqueue_picker' ) ) {
+		axismundi_emoji_enqueue_picker();
+	}
 	$editor_user_id   = function_exists( 'axismundi_op_editor_language_user_id' )
 		? axismundi_op_editor_language_user_id( AXISMUNDI_NOTE_POST_TYPE )
 		: get_current_user_id();

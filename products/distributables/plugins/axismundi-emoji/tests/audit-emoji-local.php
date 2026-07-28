@@ -277,6 +277,38 @@ try {
 	);
 	wp_delete_file( $ax_local_tmp3 );
 
+	// -- What the bundle ships, and under what terms ------------------------------------
+
+	/*
+	 * Two bundled files, two different kinds of right, and the difference is load-bearing.
+	 *
+	 * `:axismundi:` is ours and the copyright holder released it under the plugin's GPL.
+	 * `:wordpress:` is the WordPress Foundation's trademark, included under a policy that
+	 * permits referring to WordPress — which is permission to *use the mark*, not a
+	 * copyright licence. Describing it as GPL would be a false statement about somebody
+	 * else's property, and it is exactly the sort of thing a later tidy-up flattens.
+	 */
+	$ax_local_notice = (string) file_get_contents( dirname( __DIR__ ) . '/emoji/LICENSE.txt' );
+	ax_local_assert( $ax_local_results, 'each bundled emoji has a file beside it stating its terms', str_contains( $ax_local_notice, 'axismundi.webp' ) && str_contains( $ax_local_notice, 'wordpress.webp' ) );
+	ax_local_assert( $ax_local_results, 'our own asset is released under the plugin\'s licence', str_contains( $ax_local_notice, 'GPL-3.0-or-later' ) );
+	ax_local_assert(
+		$ax_local_results,
+		'and the WordPress mark is not described as GPL, because a trademark permission is not a copyright licence',
+		str_contains( $ax_local_notice, 'NOT licensed under the GPL' )
+			&& str_contains( $ax_local_notice, 'wordpressfoundation.org/trademark-policy' )
+	);
+	foreach ( AXISMUNDI_EMOJI_BUNDLED as $ax_local_key => $ax_local_spec ) {
+		$ax_local_row = axismundi_emoji_local_get( (string) $ax_local_key );
+		ax_local_assert(
+			$ax_local_results,
+			sprintf( ':%s: ships registered and within the rules we enforce on anyone else', $ax_local_key ),
+			is_array( $ax_local_row )
+				&& (int) $ax_local_row['width'] === (int) $ax_local_row['height']
+				&& (int) $ax_local_row['byte_size'] <= AXISMUNDI_EMOJI_OUTBOUND_MAX_BYTES
+				&& in_array( (string) $ax_local_row['media_type'], AXISMUNDI_EMOJI_OUTBOUND_MEDIA_TYPES, true )
+		);
+	}
+
 	// -- The bundled emoji ------------------------------------------------------------
 
 	$ax_local_bundled = axismundi_emoji_local_get( 'axismundi' );

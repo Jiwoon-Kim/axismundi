@@ -1,0 +1,79 @@
+/*
+ * Custom emoji picker.
+ *
+ * Sized so a tile is comfortably clickable without the popover growing taller than the
+ * editor viewport; the grid scrolls rather than the page.
+ */
+.axismundi-emoji-picker {
+	inline-size: 20rem;
+	max-block-size: 24rem;
+	overflow-y: auto;
+	padding: 8px;
+}
+
+.axismundi-emoji-picker__status {
+	margin: 12px 0;
+	text-align: center;
+	color: var(--wp-admin-theme-color, #3858e9);
+}
+
+.axismundi-emoji-picker__heading {
+	margin: 12px 0 4px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #757575;
+}
+
+.axismundi-emoji-picker__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+	gap: 2px;
+}
+
+.axismundi-emoji-picker__tile {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 40px;
+	block-size: 40px;
+	padding: 0;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	cursor: pointer;
+}
+
+.axismundi-emoji-picker__tile:hover,
+.axismundi-emoji-picker__tile:focus-visible {
+	background: rgba(0, 0, 0, 0.06);
+}
+
+.axismundi-emoji-picker__tile:focus-visible {
+	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+	outline-offset: -2px;
+}
+
+/* Emoji are square by contract (§8), so this never distorts one. */
+.axismundi-emoji-picker__tile img {
+	inline-size: 28px;
+	block-size: 28px;
+	object-fit: contain;
+}
+
+@media (prefers-color-scheme: dark) {
+	.axismundi-emoji-picker__tile:hover,
+	.axismundi-emoji-picker__tile:focus-visible {
+		background: rgba(255, 255, 255, 0.1);
+	}
+}
+
+/*
+ * The popover renders through a portal, outside the block it belongs to, so the sizing
+ * above cannot reach it by inheritance. Anchoring is handled by `useAnchor` in the
+ * script; this only keeps the panel from collapsing to its content width.
+ */
+.axismundi-emoji-picker__popover .components-popover__content {
+	min-inline-size: 20rem;
+}

@@ -1,7 +1,7 @@
 # Axismundi Emoji Architecture
 
-> Status: **E1 and E2 closed — receiving and sending both work end to end.**
-> Plugin: `axismundi-emoji` v0.1.0. E3 (block-editor picker) and E4 (reactions) remain.
+> Status: **E1–E3 closed — receiving, sending, and block-editor insertion work end to end.**
+> Plugin: `axismundi-emoji` v0.1.0. E4 (reactions) remains.
 >
 > Two findings from implementation are recorded inline below rather than only here,
 > because both changed a decision: `sensitive` is **not** on the ActivityPub wire at all
@@ -812,31 +812,27 @@ orphan-sweeping are therefore ours to implement, and the directory needs its own
 
 ## 9. Picker (E3)
 
-Inserts **plain `:shortcode:` text**, never image HTML — and for Unicode, the literal
-character.
+Inserts **plain `:shortcode:` text**, never image HTML. The image is a reader-side
+rendering result; keeping the authored document as text lets direct typing, paste, and
+picker insertion all rebuild the same outbound `tag[]` declaration.
 
-**Unicode is the default tab, not an afterthought.** It needs no approval, no cache,
-and no registry row, and it is the only kind a reaction can carry without an asset
-(§10). Custom emoji are the addition to it:
+**Unicode is deliberately outside this picker.** The operating system already provides
+it (`Win + .`, macOS palette, mobile keyboards), and a Unicode grapheme needs neither a
+registry entry nor an ActivityPub `Emoji` tag. Reaction UI can offer a Unicode quick set
+later under Activities (§10) without making the block editor ship or maintain a second
+general-purpose Unicode catalogue.
 
-```text
-[Unicode]  Recent · Smileys & people · Nature · Food · Activities ·
-           Travel · Objects · Symbols · Flags
-[Custom]   Local · Imported
-```
-
-The picker does not reimplement Core's Twemoji fallback. It inserts the Unicode
-character and lets the browser and `wp-emoji` render it; only custom emoji go through
-this plugin's markup.
-
-Offers **Unicode plus locally registered emoji only.** Observed remote emoji are
+Offers **locally registered, federatable emoji only.** Observed remote emoji are
 evidence for faithfully rendering received content, not assets to reuse in new
 outbound objects — their provenance, licensing, and availability are somebody
 else's. A later explicit "copy this remote emoji into our local registry" flow is
 the correct way to want one.
 
 Server-side REST search; the catalogue is never bulk-localized into the page.
-Shared component and endpoint across Post and Note.
+The shared component is registered by Emoji and enqueued by each owning editor surface.
+It stays open after insertion, groups results by category, searches aliases, remembers
+recent custom emoji in local storage, and pads a shortcode only when its neighbours
+would violate the outbound token boundary (§8).
 
 ## 10. Reactions (E4, deferred)
 
@@ -895,7 +891,7 @@ E1  a received remote emoji renders, end to end:
     E1d  download worker — approved rows only; original bytes + static rendition
     E1e  HTML renderer — substitute only when approved AND cached; else shortcode  ← done
 E2  local upload, registry editing, outbound tag publication, picker groundwork  ← done
-E3  block-editor picker (Unicode + local only)
+E3  block-editor custom-emoji picker  ← done
 E4  emoji reactions (Activities)
 ```
 

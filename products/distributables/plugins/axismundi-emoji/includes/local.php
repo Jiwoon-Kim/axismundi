@@ -669,23 +669,22 @@ function axismundi_emoji_register_bundled() : void {
 		axismundi_emoji_restore_bundled_blob();
 		return;
 	}
-	$path = axismundi_emoji_bundled_path();
-	if ( '' === $path ) {
-		return;
+	foreach ( AXISMUNDI_EMOJI_BUNDLED as $key => $spec ) {
+		$path = dirname( __DIR__ ) . '/' . $spec['file'];
+		if ( ! is_readable( $path ) ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- plugin-owned bundled asset.
+		$bytes = (string) file_get_contents( $path );
+		/*
+		 * A failure here is not retried. A duplicate means somebody already registered that
+		 * name themselves, and their emoji is the one they meant; overwriting it because we
+		 * happen to ship the same shortcode would be the plugin outranking its operator.
+		 */
+		axismundi_emoji_register_local( $bytes, ':' . $key . ':', array( 'category' => $spec['category'] ) );
 	}
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- plugin-owned bundled asset.
-	$bytes = (string) file_get_contents( $path );
-	$result = axismundi_emoji_register_local(
-		$bytes,
-		AXISMUNDI_EMOJI_BUNDLED_SHORTCODE,
-		array( 'category' => __( 'Axismundi', 'axismundi-emoji' ) )
-	);
-	// Recorded even when registration failed, so a permanent failure is not retried on
-	// every request; a duplicate means somebody already registered the name themselves.
+	// Recorded whatever happened, so a permanent failure is not retried on every request.
 	update_option( 'ax_emoji_bundled_registered', AXISMUNDI_EMOJI_VERSION, false );
-	if ( is_wp_error( $result ) ) {
-		return;
-	}
 }
 
 /**
@@ -704,43 +703,46 @@ function axismundi_emoji_register_bundled() : void {
  * @return bool Whether a repair was made.
  */
 function axismundi_emoji_restore_bundled_blob() : bool {
-	$parsed = axismundi_emoji_parse_shortcode( AXISMUNDI_EMOJI_BUNDLED_SHORTCODE );
-	$row    = null === $parsed ? null : axismundi_emoji_local_get( $parsed['key'] );
-	if ( ! is_array( $row ) ) {
-		return false;
+	$repaired = false;
+	foreach ( AXISMUNDI_EMOJI_BUNDLED as $key => $spec ) {
+		$row = axismundi_emoji_local_get( (string) $key );
+		if ( ! is_array( $row ) ) {
+			continue;
+		}
+		$relative = (string) ( $row['cached_path'] ?? '' );
+		$hash     = (string) ( $row['content_hash'] ?? '' );
+		if ( '' === $relative || '' === $hash ) {
+			continue;
+		}
+		$absolute = axismundi_emoji_blob_dir() . '/' . $relative;
+		if ( file_exists( $absolute ) ) {
+			continue;
+		}
+		$path = dirname( __DIR__ ) . '/' . $spec['file'];
+		if ( ! is_readable( $path ) ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- plugin-owned bundled asset.
+		$bytes = (string) file_get_contents( $path );
+		if ( hash( 'sha256', $bytes ) !== $hash ) {
+			// The shipped asset changed between releases. Rewriting here would put bytes at a
+			// path that contradicts the hash naming them, so the row needs re-registering
+			// rather than repairing, and that is not this function's decision to make.
+			continue;
+		}
+		if ( ! axismundi_emoji_ensure_blob_dir() || ! wp_mkdir_p( dirname( $absolute ) ) ) {
+			continue;
+		}
+		$staging = $absolute . '.staging' . wp_generate_password( 8, false );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- plugin-owned store.
+		if ( false === file_put_contents( $staging, $bytes ) ) {
+			continue;
+		}
+		if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename -- atomic publish within one directory.
+			wp_delete_file( $staging );
+			continue;
+		}
+		$repaired = true;
 	}
-	$relative = (string) ( $row['cached_path'] ?? '' );
-	$hash     = (string) ( $row['content_hash'] ?? '' );
-	if ( '' === $relative || '' === $hash ) {
-		return false;
-	}
-	$absolute = axismundi_emoji_blob_dir() . '/' . $relative;
-	if ( file_exists( $absolute ) ) {
-		return false;
-	}
-	$path = axismundi_emoji_bundled_path();
-	if ( '' === $path ) {
-		return false;
-	}
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- plugin-owned bundled asset.
-	$bytes = (string) file_get_contents( $path );
-	if ( hash( 'sha256', $bytes ) !== $hash ) {
-		// The shipped asset changed between releases. Rewriting here would put bytes at a
-		// path that contradicts the hash naming them, so the row needs re-registering
-		// rather than repairing, and that is not this function's decision to make.
-		return false;
-	}
-	if ( ! axismundi_emoji_ensure_blob_dir() || ! wp_mkdir_p( dirname( $absolute ) ) ) {
-		return false;
-	}
-	$staging = $absolute . '.staging' . wp_generate_password( 8, false );
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- plugin-owned store.
-	if ( false === file_put_contents( $staging, $bytes ) ) {
-		return false;
-	}
-	if ( ! rename( $staging, $absolute ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename -- atomic publish within one directory.
-		wp_delete_file( $staging );
-		return false;
-	}
-	return true;
+	return $repaired;
 }

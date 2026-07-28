@@ -1053,7 +1053,15 @@ function axismundi_op_render_object_summary_block( array $attributes = array() )
 	$length  = max( 1, (int) ( $attributes['excerptLength'] ?? 55 ) );
 	$excerpt = wp_trim_words( $summary, $length, '…' );
 	$more    = trim( (string) ( $attributes['moreText'] ?? '' ) );
-	$url     = is_array( $model ) ? trim( (string) ( $model['human_url'] ?? '' ) ) : '';
+	// An Article's stream lead is a route into the full cached representation. The
+	// original page remains available as "Open the original post" in the detail panel.
+	$url     = '';
+	if ( is_array( $model ) ) {
+		$url = trim( (string) ( $model['cached_view_url'] ?? '' ) );
+		if ( '' === $url ) {
+			$url = trim( (string) ( $model['human_url'] ?? '' ) );
+		}
+	}
 	$newline = ! array_key_exists( 'showMoreOnNewLine', $attributes ) || (bool) $attributes['showMoreOnNewLine'];
 	$excerpt_class = 'wp-block-post-excerpt__excerpt' . ( ! $newline && '' !== $more && '' !== $url ? ' is-inline' : '' );
 	$link    = '';

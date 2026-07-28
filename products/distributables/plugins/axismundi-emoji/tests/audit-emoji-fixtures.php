@@ -214,6 +214,13 @@ ax_emo_assert(
  */
 
 $ax_emo_own = axismundi_emoji_bundled_path();
+$ax_emo_own_license = dirname( $ax_emo_own ) . '/LICENSE.txt';
+ax_emo_assert(
+	$ax_emo_results,
+	'the bundled emoji carries its own provenance and licence record in the distributable',
+	'' !== $ax_emo_own && is_readable( $ax_emo_own_license )
+		&& str_contains( (string) file_get_contents( $ax_emo_own_license ), 'GPL-3.0-or-later' )
+);
 if ( '' === $ax_emo_own ) {
 	ax_emo_assert( $ax_emo_results, 'the bundled :axismundi: emoji ships with the plugin, so nothing depends on a third party\'s restricted asset', false );
 } else {

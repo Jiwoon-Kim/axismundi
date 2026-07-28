@@ -10,10 +10,15 @@ This file records provenance and license treatment for assets staged under
 | `brand/axismundi-symbol.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Canonical draft symbol; not release-locked |
 | `brand/axismundi-symbol-fallback.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Fallback variant |
 | `brand/axismundi-symbol-glow.svg` | Original project asset by Jiwoon Kim | Project-owned brand asset | Glow / presentation variant |
+| `brand/axismundi-logo.png` | Original project asset by Jiwoon Kim | Project-owned brand asset | Raster logo export; source for the bundled `:axismundi:` emoji derivative |
 
 Brand assets are reserved as Axismundi identity assets. They may be used inside
 this repository, the Axismundi WordPress theme, and related Axismundi plugins.
 Do not treat them as generic GPL clip art unless a later release note says so.
+The `axismundi-emoji/emoji/axismundi.webp` derivative is a deliberate exception:
+its copyright holder releases that one bundled file under GPL-3.0-or-later, recorded
+in its adjacent `LICENSE.txt`, so the Emoji plugin can be distributed through the
+WordPress Plugin Directory.
 
 ## Image
 

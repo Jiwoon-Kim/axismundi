@@ -49,6 +49,8 @@ Deliberately out of scope: Unicode emoji and their Twemoji-style image substitut
 
 The plugin ships one emoji of its own, `:axismundi:` at `emoji/axismundi.webp` — a
 200x200 WebP derived from the project's brand symbol, 5.6 KB, transparency intact.
+Its project-owned brand-asset provenance and GPL-3.0-or-later release are recorded beside
+the file in `emoji/LICENSE.txt`.
 
 One size, because FEP-9098 gives an Emoji exactly one `icon.url`: there is no srcset
 in the emoji contract, so a second file would federate nothing. 200px is generous

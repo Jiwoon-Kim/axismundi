@@ -57,6 +57,7 @@ try {
 		$ax_vmc_remote
 	);
 	ax_vmc_assert( $ax_vmc_results, 'a non-sensitive summary becomes an excerpt and clears the content warning', 'A plain summary' === (string) ( $plain['summary'] ?? '' ) && '' === (string) ( $plain['content_warning'] ?? '' ) );
+	ax_vmc_assert( $ax_vmc_results, 'a publicly cached remote Object carries its opaque local view route separately from the author page', axismundi_op_cached_object_view_url( (string) $plain['object_uri'] ) === (string) ( $plain['cached_view_url'] ?? '' ) && '' === (string) ( $plain['human_url'] ?? '' ) );
 
 	$warned = ax_vmc_remote_model(
 		array( 'id' => 'https://example.com/notes/' . wp_generate_uuid4(), 'type' => 'Note', 'attributedTo' => $ax_vmc_actor, 'to' => array( $ax_vmc_public ), 'summary' => 'Spoiler', 'sensitive' => true, 'content' => '<p>Body.</p>' ),
@@ -220,6 +221,20 @@ try {
 		'Object Summary can keep its Read more link inline with the excerpt',
 		false !== strpos( $ax_vmc_excerpt_inline, '<p class="wp-block-post-excerpt__excerpt is-inline">' )
 			&& false !== strpos( $ax_vmc_excerpt_inline, '</p> <a class="wp-block-post-excerpt__more-link"' )
+	);
+
+	$ax_vmc_cached_article = ax_vmc_remote_model(
+		array( 'id' => 'https://example.com/articles/' . wp_generate_uuid4(), 'type' => 'Article', 'attributedTo' => $ax_vmc_actor, 'to' => array( $ax_vmc_public ), 'url' => 'https://example.com/articles/original-page', 'summary' => 'Cached article summary.', 'content' => '<p>Full cached Article body.</p>' ),
+		$ax_vmc_remote
+	);
+	axismundi_op_set_current_object_view_model( $ax_vmc_cached_article );
+	$ax_vmc_cached_article_summary = do_blocks( '<!-- wp:axismundi/object-summary {"moreText":"Read article"} /-->' );
+	axismundi_op_set_current_object_view_model( null );
+	ax_vmc_assert(
+		$ax_vmc_results,
+		'a cached Article Read more link opens this site\'s full cached view, not the author\'s original page',
+		false !== strpos( $ax_vmc_cached_article_summary, 'href="' . esc_url( (string) $ax_vmc_cached_article['cached_view_url'] ) . '"' )
+			&& false === strpos( $ax_vmc_cached_article_summary, 'https://example.com/articles/original-page' )
 	);
 
 	$ax_vmc_metadata_model = array_merge(

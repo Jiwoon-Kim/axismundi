@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -27,6 +27,9 @@ The design is recorded in `docs/AXISMUNDI-EMOJI-ARCHITECTURE.md` at the reposito
 Deliberately out of scope: Unicode emoji and their Twemoji-style image substitutions, which WordPress core, Mastodon, and Misskey each already handle separately; and emoji reactions (FEP-c0e0), which belong to Axismundi Activities.
 
 == Changelog ==
+
+= 0.1.2 =
+* Register newly added bundled emoji on existing installations without restoring an emoji an operator deliberately removed.
 
 = 0.1.1 =
 * Render a local Note or Actor's emoji only from its own current outbound `tag` array,

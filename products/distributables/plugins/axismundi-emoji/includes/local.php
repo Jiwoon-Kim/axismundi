@@ -655,9 +655,10 @@ function axismundi_emoji_stale_imports() : array {
 /**
  * Register the emoji this plugin ships with.
  *
- * Runs once. The marker is what makes deletion mean something: without it every
- * activation, update, or schema check would put `:axismundi:` back, and an operator
- * who removed it on purpose would have to keep removing it.
+ * Each bundled shortcode is registered at most once. The per-shortcode marker is what
+ * makes deletion mean something: without it every activation, update, or schema check
+ * would put a removed emoji back. It also lets a later plugin release add a new bundled
+ * emoji without treating every existing installation as already provisioned.
  *
  * @return void
  */
@@ -665,26 +666,44 @@ function axismundi_emoji_register_bundled() : void {
 	if ( ! axismundi_emoji_ready() ) {
 		return;
 	}
-	if ( '' !== (string) get_option( 'ax_emoji_bundled_registered', '' ) ) {
-		axismundi_emoji_restore_bundled_blob();
-		return;
-	}
+	$registered = axismundi_emoji_bundled_registration_marker( get_option( 'ax_emoji_bundled_registered', array() ) );
 	foreach ( AXISMUNDI_EMOJI_BUNDLED as $key => $spec ) {
-		$path = dirname( __DIR__ ) . '/' . $spec['file'];
-		if ( ! is_readable( $path ) ) {
+		if ( array_key_exists( $key, $registered ) ) {
 			continue;
 		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- plugin-owned bundled asset.
-		$bytes = (string) file_get_contents( $path );
-		/*
-		 * A failure here is not retried. A duplicate means somebody already registered that
-		 * name themselves, and their emoji is the one they meant; overwriting it because we
-		 * happen to ship the same shortcode would be the plugin outranking its operator.
-		 */
-		axismundi_emoji_register_local( $bytes, ':' . $key . ':', array( 'category' => $spec['category'] ) );
+		$path = dirname( __DIR__ ) . '/' . $spec['file'];
+		if ( is_readable( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- plugin-owned bundled asset.
+			$bytes = (string) file_get_contents( $path );
+			/*
+			 * A failure here is not retried. A duplicate means somebody already registered that
+			 * name themselves, and their emoji is the one they meant; overwriting it because we
+			 * happen to ship the same shortcode would be the plugin outranking its operator.
+			 */
+			axismundi_emoji_register_local( $bytes, ':' . $key . ':', array( 'category' => $spec['category'] ) );
+		}
+		// Record even an unreadable or duplicate asset: retrying it on every request helps nobody.
+		$registered[ $key ] = AXISMUNDI_EMOJI_VERSION;
 	}
-	// Recorded whatever happened, so a permanent failure is not retried on every request.
-	update_option( 'ax_emoji_bundled_registered', AXISMUNDI_EMOJI_VERSION, false );
+	update_option( 'ax_emoji_bundled_registered', $registered, false );
+	axismundi_emoji_restore_bundled_blob();
+}
+
+/**
+ * Normalize the bundled-registration marker introduced before more than one asset shipped.
+ *
+ * @param mixed $marker Stored marker.
+ * @return array<string, string> Registered bundled shortcodes keyed without colons.
+ */
+function axismundi_emoji_bundled_registration_marker( $marker ) : array {
+	if ( is_array( $marker ) ) {
+		return $marker;
+	}
+	if ( '' === (string) $marker ) {
+		return array();
+	}
+	// The old scalar could only have meant the original bundled `:axismundi:` asset.
+	return array( 'axismundi' => (string) $marker );
 }
 
 /**

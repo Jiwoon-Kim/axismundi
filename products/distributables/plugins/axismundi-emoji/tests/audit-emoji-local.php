@@ -318,7 +318,9 @@ try {
 	 * Deleting it has to stick. Re-registering on every activation or schema check would
 	 * mean an operator who removed it on purpose has to keep removing it.
 	 */
-	ax_local_assert( $ax_local_results, 'registering the bundled emoji is marked done, so a deliberate deletion is not undone', '' !== (string) get_option( 'ax_emoji_bundled_registered', '' ) );
+	$ax_local_bundled_marker = get_option( 'ax_emoji_bundled_registered', array() );
+	ax_local_assert( $ax_local_results, 'each bundled emoji is marked done independently, so a deliberate deletion is not undone', is_array( $ax_local_bundled_marker ) && isset( $ax_local_bundled_marker['axismundi'], $ax_local_bundled_marker['wordpress'] ) );
+	ax_local_assert( $ax_local_results, 'the old scalar marker means only the original bundle was registered, so a new bundled emoji can still be provisioned', array( 'axismundi' => '0.1.0' ) === axismundi_emoji_bundled_registration_marker( '0.1.0' ) );
 	axismundi_emoji_register_bundled();
 	ax_local_assert( $ax_local_results, 'and calling the installer again does not create a second copy', 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_emoji_table() . ' WHERE scope = %s AND shortcode_key = %s', 'local', 'axismundi' ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table.
 

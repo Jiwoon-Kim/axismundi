@@ -247,19 +247,28 @@ function axismundi_emoji_add_reference( int $emoji_id, string $subject_kind, str
 /**
  * Observe every emoji one payload declares, and record what declared them.
  *
- * @param array<string,mixed> $payload      Object or Actor document.
- * @param string              $subject_uri  Declaring subject URI.
- * @param string              $subject_kind object|actor.
+ * `reference_uri` answers what keeps the emoji relevant for local retention. Usually
+ * that is also the document that declared it, but a reaction is the important
+ * exception: its tag belongs to the Activity Actor while its visible surface is the
+ * Object being reacted to. Keep those questions separate so a local target does not
+ * turn a remote first-party declaration into hearsay.
+ *
+ * @param array<string,mixed> $payload         Object, Actor, or Activity document.
+ * @param string              $reference_uri   Subject retained for this emoji.
+ * @param string              $subject_kind    object|actor.
+ * @param string              $declaration_uri URI whose host made the declaration; defaults to reference.
  * @return int Number of emoji recorded.
  */
-function axismundi_emoji_observe_payload( array $payload, string $subject_uri, string $subject_kind = 'object' ) : int {
+function axismundi_emoji_observe_payload( array $payload, string $reference_uri, string $subject_kind = 'object', string $declaration_uri = '' ) : int {
+	$reference_uri   = trim( $reference_uri );
+	$declaration_uri = '' !== trim( $declaration_uri ) ? trim( $declaration_uri ) : $reference_uri;
 	$recorded = 0;
-	foreach ( axismundi_emoji_descriptors_from_payload( $payload, $subject_uri ) as $descriptor ) {
+	foreach ( axismundi_emoji_descriptors_from_payload( $payload, $declaration_uri ) as $descriptor ) {
 		$emoji_id = axismundi_emoji_observe( $descriptor );
 		if ( null === $emoji_id ) {
 			continue;
 		}
-		axismundi_emoji_add_reference( $emoji_id, $subject_kind, $subject_uri );
+		axismundi_emoji_add_reference( $emoji_id, $subject_kind, $reference_uri );
 		/*
 		 * Optional integration point: Actors may cache NodeInfo for this authority, but
 		 * Emoji neither requires that plugin nor uses its record as emoji verification.

@@ -29,11 +29,12 @@ function axismundi_emoji_observe_inbound_reaction( $activity ) : void {
 	if ( ! in_array( $activity->get_type(), array( 'Like', 'EmojiReact' ), true ) || ! axismundi_emoji_ready() ) {
 		return;
 	}
-	$object_uri = $activity->get_object_uri();
-	$payload    = $activity->get_payload();
+	$object_uri       = $activity->get_object_uri();
+	$payload          = $activity->get_payload();
+	$declaration_uri  = $activity->get_actor_uri();
 	if ( null === $object_uri || '' === $object_uri || ! is_array( $payload ) || empty( $payload['tag'] ) ) {
 		return;
 	}
-	axismundi_emoji_observe_payload( $payload, $object_uri, 'object' );
+	axismundi_emoji_observe_payload( $payload, $object_uri, 'object', $declaration_uri );
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_emoji_observe_inbound_reaction', 40 );

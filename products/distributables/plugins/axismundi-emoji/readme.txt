@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -30,6 +30,10 @@ observes their declared custom emoji so the existing review and cache pipeline c
 render approved reaction chips.
 
 == Changelog ==
+
+= 0.1.6 =
+* Keep an inbound reaction's retention reference on the reacted Object while deriving
+  FEP-9098 first-party provenance from the remote Actor that declared its emoji.
 
 = 0.1.5 =
 * Observe FEP-9098 declarations carried by inbound Like and EmojiReact Activities, so

@@ -19,7 +19,8 @@ $ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uui
 $ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_mention_object = 'https://example.com/notes/' . wp_generate_uuid4();
 $ax_bridge_reaction_activity = 'https://example.com/activities/' . wp_generate_uuid4();
-$ax_bridge_reaction_emoji_authority = 'reaction-fixture-' . strtolower( wp_generate_password( 8, false, false ) ) . '.example.com';
+$ax_bridge_reaction_shortcode_key = 'bridge_reaction_' . strtolower( wp_generate_password( 8, false, false ) );
+$ax_bridge_reaction_shortcode = ':' . $ax_bridge_reaction_shortcode_key . ':';
 $ax_bridge_reaction_emoji_id = 0;
 $ax_bridge_fallback_activity = '';
 $ax_bridge_accept_activity = '';
@@ -181,14 +182,14 @@ try {
 		'type'               => 'Like',
 		'actor'              => $remote_uri,
 		'object'             => $note_uri,
-		'content'            => ':misskey:',
-		'_misskey_reaction'  => ':misskey:',
+		'content'            => $ax_bridge_reaction_shortcode,
+		'_misskey_reaction'  => $ax_bridge_reaction_shortcode,
 		'tag'                => array(
 			array(
-				'id'   => 'https://' . $ax_bridge_reaction_emoji_authority . '/emojis/misskey',
+				'id'   => 'https://example.com/emojis/' . $ax_bridge_reaction_shortcode_key,
 				'type' => 'Emoji',
-				'name' => ':misskey:',
-				'icon' => array( 'type' => 'Image', 'url' => 'https://' . $ax_bridge_reaction_emoji_authority . '/media/misskey.png', 'mediaType' => 'image/png' ),
+				'name' => $ax_bridge_reaction_shortcode,
+				'icon' => array( 'type' => 'Image', 'url' => 'https://example.com/media/' . $ax_bridge_reaction_shortcode_key . '.png', 'mediaType' => 'image/png' ),
 			)
 		),
 	);
@@ -198,10 +199,10 @@ try {
 	$reaction_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $reaction_request );
 	$reaction_stored   = axismundi_act_get( $ax_bridge_reaction_activity );
 	$reaction_row      = $wpdb->get_row( $wpdb->prepare( 'SELECT direction, reaction_key FROM ' . axismundi_act_activities_table() . ' WHERE activity_uri = %s', $ax_bridge_reaction_activity ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assert the repository column that owns reaction identity.
-	$reaction_emoji = function_exists( 'axismundi_emoji_get' ) ? axismundi_emoji_get( $ax_bridge_reaction_emoji_authority, 'misskey' ) : null;
+	$reaction_emoji = function_exists( 'axismundi_emoji_get' ) ? axismundi_emoji_get( $ax_bridge_inbox_host, $ax_bridge_reaction_shortcode_key ) : null;
 	$ax_bridge_reaction_emoji_id = is_array( $reaction_emoji ) ? (int) ( $reaction_emoji['id'] ?? 0 ) : 0;
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a Misskey Like with matching content and _misskey_reaction resolves a local Note target and reaches the ledger as a custom reaction', '' !== $note_uri && $local instanceof Axismundi_Actor && $local->get_uri() === ( axismundi_activitypub_bridge_object_actor( $note_uri )?->get_uri() ?? '' ) && $reaction_response instanceof WP_REST_Response && 202 === $reaction_response->get_status() && $reaction_stored instanceof Axismundi_Activity && is_array( $reaction_row ) && 'inbound' === (string) $reaction_row['direction'] && 'custom:' . $ax_bridge_reaction_emoji_authority . ':misskey' === (string) $reaction_row['reaction_key'] );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an inbound reaction observes its declared custom emoji into the review queue and ties it to the reacted Object', is_array( $reaction_emoji ) && 'remote' === (string) $reaction_emoji['scope'] && 0 < $ax_bridge_reaction_emoji_id && 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_emoji_references_table() . ' WHERE emoji_id = %d AND subject_kind = %s AND subject_uri_hash = %s', $ax_bridge_reaction_emoji_id, 'object', hash( 'sha256', $note_uri ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verify the reaction-observation seam end to end.
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a Misskey Like with matching content and _misskey_reaction resolves a local Note target and reaches the ledger as a custom reaction', '' !== $note_uri && $local instanceof Axismundi_Actor && $local->get_uri() === ( axismundi_activitypub_bridge_object_actor( $note_uri )?->get_uri() ?? '' ) && $reaction_response instanceof WP_REST_Response && 202 === $reaction_response->get_status() && $reaction_stored instanceof Axismundi_Activity && is_array( $reaction_row ) && 'inbound' === (string) $reaction_row['direction'] && 'custom:' . $ax_bridge_inbox_host . ':' . $ax_bridge_reaction_shortcode_key === (string) $reaction_row['reaction_key'] );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an inbound first-party reaction observes its declared emoji with the authority policy while retaining it against the reacted Object', is_array( $reaction_emoji ) && 'remote' === (string) $reaction_emoji['scope'] && 0 < $ax_bridge_reaction_emoji_id && null !== $reaction_emoji['verified_at'] && 'unverified' !== (string) $reaction_emoji['review_reason'] && 'https://example.com/media/' . $ax_bridge_reaction_shortcode_key . '.png' === (string) $reaction_emoji['source_url'] && 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_emoji_references_table() . ' WHERE emoji_id = %d AND subject_kind = %s AND subject_uri_hash = %s', $ax_bridge_reaction_emoji_id, 'object', hash( 'sha256', $note_uri ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verify provenance and reference lifetimes independently through the Inbox.
 	$quote_revoked = '' !== $ax_bridge_quote_auth ? axismundi_act_revoke_quote_authorization( $ax_bridge_quote_auth, 'fixture' ) : null;
 	$quote_deletes = '' !== $ax_bridge_quote_auth ? array_values( array_filter( axismundi_act_get_by_object( $ax_bridge_quote_auth, 50 ), static fn( Axismundi_Activity $item ) : bool => 'Delete' === $item->get_type() && 'outbound' === $item->get_direction() ) ) : array();
 	$ax_bridge_quote_delete = isset( $quote_deletes[0] ) ? $quote_deletes[0]->get_uri() : '';

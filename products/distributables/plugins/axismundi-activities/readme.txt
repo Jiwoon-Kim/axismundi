@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.34
+Stable tag: 0.0.35
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,13 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.35 =
+* Allow a local Person to follow a local managed Group, which membership in a Group is
+  expressed as, and leave the Accept to whichever product governs that Group rather than
+  auto-accepting on its behalf.
+* Add a paged, read-only reader for every relation aimed at one Actor, so a consumer can
+  rebuild a projection from the ledger without truncating it.
 
 = 0.0.34 =
 * Add FEP-c0e0 EmojiReact storage, normalized Unicode and custom-emoji reaction keys,

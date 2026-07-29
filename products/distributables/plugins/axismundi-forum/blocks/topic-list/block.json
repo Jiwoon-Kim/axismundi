@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/forum-topic-list",
+	"version": "0.1.0",
+	"title": "Forum Topic List",
+	"category": "theme",
+	"icon": "list-view",
+	"description": "The admitted local Topics for the current Forum.",
+	"textdomain": "axismundi-forum",
+	"attributes": {
+		"perPage": { "type": "number", "default": 20 }
+	},
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"color": { "text": true, "background": true, "link": true },
+		"spacing": { "margin": true, "padding": true },
+		"typography": { "fontSize": true, "lineHeight": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

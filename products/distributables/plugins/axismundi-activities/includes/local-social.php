@@ -35,10 +35,30 @@ function axismundi_act_local_follow_requires_approval( Axismundi_Actor $target )
 	return (bool) apply_filters( 'axismundi_act_local_follow_requires_approval', $required, $target );
 }
 
-/** Validate one local Person-to-Person social edge. */
+/**
+ * Whether a local Follow target is a joinable community rather than a person.
+ *
+ * A managed Group is the one non-Person thing a local Actor may follow, because following a
+ * Group is how membership is expressed — Lemmy has no `Join` at all, so an accepted
+ * `Follow(Group)` *is* the membership. Unmanaged and remote Groups are excluded: this is only
+ * about Groups this site runs and can decide for.
+ */
+function axismundi_act_local_follow_target_is_group( Axismundi_Actor $object ) : bool {
+	return 'Group' === $object->get_type() && $object->is_local() && $object->is_managed();
+}
+
+/**
+ * Validate one local social edge: Person → Person, or Person → local managed Group.
+ *
+ * Requiring both ends to be a Person meant a site's own users could not join their own site's
+ * Group, so a local Group could only ever have remote members. The subject stays a Person —
+ * a Group does not follow on its own behalf — and both ends must still be local, activated,
+ * and public.
+ */
 function axismundi_act_validate_local_people( Axismundi_Actor $subject, Axismundi_Actor $object ) {
-	if ( ! $subject->is_local() || ! $object->is_local() || 'Person' !== $subject->get_type() || 'Person' !== $object->get_type() ) {
-		return new WP_Error( 'ax_act_local_only', __( 'Local social actions require two local Person actors.', 'axismundi-activities' ) );
+	if ( ! $subject->is_local() || ! $object->is_local() || 'Person' !== $subject->get_type()
+		|| ( 'Person' !== $object->get_type() && ! axismundi_act_local_follow_target_is_group( $object ) ) ) {
+		return new WP_Error( 'ax_act_local_only', __( 'Local social actions require a local Person and a local Person or managed Group.', 'axismundi-activities' ) );
 	}
 	if ( $subject->get_uri() === $object->get_uri() ) {
 		return new WP_Error( 'ax_act_self_follow', __( 'An Actor cannot follow itself.', 'axismundi-activities' ) );
@@ -164,7 +184,13 @@ function axismundi_act_follow_local_actor( Axismundi_Actor $subject, Axismundi_A
 	if ( is_wp_error( $follow ) ) {
 		return $follow;
 	}
-	if ( ! axismundi_act_local_follow_requires_approval( $object ) ) {
+	/*
+	 * A Group's admission rule is not Activities' to guess. Whatever product bound the Group —
+	 * a Forum, in practice — reads the committed relation on axismundi_act_relation_changed and
+	 * decides there, exactly as it already does for an inbound remote Follow. Auto-accepting
+	 * here would admit a local member to an approval-gated community before anyone approved.
+	 */
+	if ( ! axismundi_act_local_follow_target_is_group( $object ) && ! axismundi_act_local_follow_requires_approval( $object ) ) {
 		$accept = axismundi_act_record_activity(
 			array( 'type' => 'Accept', 'actor' => $object->get_uri(), 'object' => $follow->get_uri() ),
 			'local'

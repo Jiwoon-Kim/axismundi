@@ -396,6 +396,49 @@ function axismundi_act_get_following( string $actor_uri, int $limit = 100 ) : ar
 	return axismundi_act_relation_actor_list( 'subject', $actor_uri, $limit );
 }
 
+/**
+ * One page of relation rows pointing at an Actor, whatever their state.
+ *
+ * The existing readers each answer one question — who follows me, who is waiting — which is
+ * what a page needs. A consumer rebuilding a projection needs the opposite: the whole
+ * relation set for an Actor, including the rejected and undone rows, because a projection
+ * that only replayed live states would leave a withdrawn member looking like one who never
+ * asked.
+ *
+ * Paged by ascending id rather than capped, because a cap here is a silent truncation the
+ * caller cannot detect: a rebuild that stopped at row 500 would delete every member past it
+ * and report success. Callers page with `$after_id` until a short page comes back. Both the
+ * type filter and the exact URI comparison are done in SQL so that a full page always means
+ * a full page — filtering in PHP after LIMIT would make the page boundary a lie.
+ *
+ * Read-only and state-blind on purpose. The caller decides what each state means to it; this
+ * only reports what the ledger holds, which is the boundary that keeps site policy out of the
+ * federation record.
+ *
+ * @param string   $object_uri Actor being followed or joined.
+ * @param string[] $types      Relation types to include; empty means all.
+ * @param int      $limit      Page size.
+ * @param int      $after_id   Exclusive lower bound on `id`; 0 starts at the beginning.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_act_get_relations_for_object( string $object_uri, array $types = array(), int $limit = 200, int $after_id = 0 ) : array {
+	global $wpdb;
+	if ( ! axismundi_act_relations_ready() || '' === axismundi_act_uri( $object_uri ) ) {
+		return array();
+	}
+	$table  = axismundi_act_relations_table();
+	$types  = array_values( array_unique( array_filter( array_map( 'sanitize_key', $types ) ) ) );
+	$where  = 'object_actor_uri_hash = %s AND object_actor_uri = %s AND id > %d';
+	$values = array( hash( 'sha256', $object_uri ), $object_uri, max( 0, $after_id ) );
+	if ( array() !== $types ) {
+		$where   .= ' AND relation_type IN (' . implode( ',', array_fill( 0, count( $types ), '%s' ) ) . ')';
+		$values   = array_merge( $values, $types );
+	}
+	$values[] = max( 1, min( 1000, $limit ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table; every value is prepared.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$where} ORDER BY id ASC LIMIT %d", $values ), ARRAY_A );
+}
+
 /** Pending Follow relation rows addressed to one local Actor. */
 function axismundi_act_get_pending_follow_requests( string $actor_uri, int $limit = 100 ) : array {
 	global $wpdb;

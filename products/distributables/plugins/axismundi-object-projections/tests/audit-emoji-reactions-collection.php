@@ -29,6 +29,8 @@ defined( 'ABSPATH' ) || exit( 1 );
 global $wpdb;
 $ax_rx_results    = array();
 $ax_rx_posts      = array();
+$ax_rx_note_posts = array();
+$ax_rx_note_uris  = array();
 $ax_rx_actors     = array();
 $ax_rx_users      = array();
 $ax_rx_identities = array();
@@ -87,6 +89,26 @@ function ax_rx_local_author( array &$users, array &$identities ) : int {
 	return $id;
 }
 
+/** Create and publish one Note through its own envelope lifecycle. */
+function ax_rx_note( array &$posts, array &$uris, int $author_id ) : string {
+	$post_id = (int) wp_insert_post(
+		array(
+			'post_type'    => AXISMUNDI_NOTE_POST_TYPE,
+			'post_status'  => 'draft',
+			'post_author'  => $author_id,
+			'post_title'   => 'Emoji reaction collection Note fixture',
+			'post_content' => 'Fixture Note body.',
+		)
+	);
+	$posts[] = $post_id;
+	axismundi_note_save( $post_id, array( 'visibility' => 'public' ) );
+	wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
+	$envelope = axismundi_note_get( $post_id );
+	$uri      = is_array( $envelope ) ? axismundi_note_object_uri( (string) $envelope['local_uuid'] ) : '';
+	$uris[]   = $uri;
+	return $uri;
+}
+
 try {
 	axismundi_op_install();
 
@@ -104,6 +126,10 @@ try {
 	ax_rx_assert( $ax_rx_results, 'the fixture post projects to a public Object', is_array( $ax_rx_object ) && ! empty( $ax_rx_object['id'] ) );
 
 	$ax_rx_uri = (string) $ax_rx_object['id'];
+	$ax_rx_note_uri = ax_rx_note( $ax_rx_note_posts, $ax_rx_note_uris, (int) get_post_field( 'post_author', $ax_rx_post ) );
+	$ax_rx_note_source = axismundi_op_authoritative_source_from_object_uri( $ax_rx_note_uri );
+	$ax_rx_note_object = null !== $ax_rx_note_source ? axismundi_op_transform_object( $ax_rx_note_source ) : null;
+	ax_rx_assert( $ax_rx_results, 'a public Note resolves through the authoritative source path and advertises all three interaction collections', is_array( $ax_rx_note_object ) && isset( $ax_rx_note_object['likes'], $ax_rx_note_object['shares'], $ax_rx_note_object['http://fedibird.com/ns#emojiReactions'] ) );
 
 	// -- The property is an IRI, and only one spelling is the right one -----------------
 
@@ -142,6 +168,29 @@ try {
 		array( 'id' => 'https://example.com/a/' . wp_generate_uuid4(), 'type' => 'Like', 'actor' => $ax_rx_alice, 'object' => $ax_rx_uri, 'to' => array( $ax_rx_author ) ),
 		'inbound'
 	);
+	$ax_rx_note_author = is_array( $ax_rx_note_object ) ? (string) $ax_rx_note_object['attributedTo'] : '';
+	axismundi_act_record_activity(
+		array( 'id' => 'https://example.com/a/' . wp_generate_uuid4(), 'type' => 'Like', 'actor' => $ax_rx_alice, 'object' => $ax_rx_note_uri, 'to' => array( $ax_rx_note_author ) ),
+		'inbound'
+	);
+	axismundi_act_record_activity(
+		$ax_rx_react( $ax_rx_bob, $ax_rx_note_uri, '👍', $ax_rx_note_author ),
+		'inbound'
+	);
+	$ax_rx_note_likes_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/likes' );
+	$ax_rx_note_likes_request->set_param( 'object', $ax_rx_note_uri );
+	$ax_rx_note_reactions_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/emoji-reactions' );
+	$ax_rx_note_reactions_request->set_param( 'object', $ax_rx_note_uri );
+	$ax_rx_note_shares_request = new WP_REST_Request( 'GET', '/axismundi/v1/objects/shares' );
+	$ax_rx_note_shares_request->set_param( 'object', $ax_rx_note_uri );
+	$ax_rx_note_likes_response = axismundi_op_get_object_likes( $ax_rx_note_likes_request );
+	$ax_rx_note_reactions_response = axismundi_op_get_object_emoji_reactions( $ax_rx_note_reactions_request );
+	$ax_rx_note_shares_response = axismundi_op_get_object_shares( $ax_rx_note_shares_request );
+	ax_rx_assert( $ax_rx_results, 'a Note\'s advertised likes, shares, and emojiReactions URLs all resolve instead of returning a Post-only 404', $ax_rx_note_likes_response instanceof WP_REST_Response && $ax_rx_note_reactions_response instanceof WP_REST_Response && $ax_rx_note_shares_response instanceof WP_REST_Response && 200 === $ax_rx_note_likes_response->get_status() && 200 === $ax_rx_note_reactions_response->get_status() && 200 === $ax_rx_note_shares_response->get_status() );
+	$ax_rx_note_likes_data = $ax_rx_note_likes_response instanceof WP_REST_Response ? $ax_rx_note_likes_response->get_data() : array();
+	$ax_rx_note_reactions_data = $ax_rx_note_reactions_response instanceof WP_REST_Response ? $ax_rx_note_reactions_response->get_data() : array();
+	$ax_rx_note_shares_data = $ax_rx_note_shares_response instanceof WP_REST_Response ? $ax_rx_note_shares_response->get_data() : array();
+	ax_rx_assert( $ax_rx_results, 'each Note collection reports the ledger count for its own interaction kind', 1 === (int) ( $ax_rx_note_likes_data['totalItems'] ?? -1 ) && 1 === (int) ( $ax_rx_note_reactions_data['totalItems'] ?? -1 ) && 0 === (int) ( $ax_rx_note_shares_data['totalItems'] ?? -1 ) );
 
 	$ax_rx_source = new Axismundi_OP_Object_Emoji_Reactions( $ax_rx_uri, get_post( $ax_rx_post ) );
 	$ax_rx_coll   = axismundi_op_object_emoji_reactions_transform( $ax_rx_source );
@@ -214,6 +263,9 @@ try {
 	ax_rx_assert( $ax_rx_results, 'the collection is attributed to the Object\'s author', (string) $ax_rx_after['attributedTo'] === $ax_rx_author );
 	ax_rx_assert( $ax_rx_results, 'and it is visible only while the Object itself projects publicly', axismundi_op_object_emoji_reactions_visible( $ax_rx_source ) );
 } finally {
+	foreach ( array_filter( array_unique( $ax_rx_note_uris ) ) as $ax_rx_note_uri ) {
+		$wpdb->delete( axismundi_act_activities_table(), array( 'object_uri_hash' => hash( 'sha256', (string) $ax_rx_note_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
 	foreach ( array_unique( $ax_rx_actors ) as $ax_rx_actor_uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => hash( 'sha256', (string) $ax_rx_actor_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$ax_rx_cached = axismundi_actors_get_by_uri( (string) $ax_rx_actor_uri );
@@ -223,6 +275,10 @@ try {
 	}
 	foreach ( array_unique( $ax_rx_posts ) as $ax_rx_post_id ) {
 		wp_delete_post( (int) $ax_rx_post_id, true );
+	}
+	foreach ( array_unique( $ax_rx_note_posts ) as $ax_rx_note_post_id ) {
+		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $ax_rx_note_post_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		wp_delete_post( (int) $ax_rx_note_post_id, true );
 	}
 	foreach ( array_unique( $ax_rx_identities ) as $ax_rx_identity ) {
 		ax_rx_forget_identity( (int) $ax_rx_identity );

@@ -262,7 +262,7 @@ add_action( 'rest_api_init', 'axismundi_op_register_object_likes_route' );
 /** Serve one public local Object likes collection. */
 function axismundi_op_get_object_likes( WP_REST_Request $request ) {
 	$uri    = trim( (string) $request['object'] );
-	$source = axismundi_op_local_source_from_object_uri( $uri );
+	$source = axismundi_op_authoritative_source_from_object_uri( $uri );
 	if ( null === $source ) {
 		return new WP_Error( 'ax_op_likes_not_found', __( 'The Object likes collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
@@ -279,7 +279,7 @@ function axismundi_op_get_object_likes( WP_REST_Request $request ) {
 /** Serve one public local Object's FEP-c0e0 emoji reaction collection. */
 function axismundi_op_get_object_emoji_reactions( WP_REST_Request $request ) {
 	$uri    = trim( (string) $request['object'] );
-	$source = axismundi_op_local_source_from_object_uri( $uri );
+	$source = axismundi_op_authoritative_source_from_object_uri( $uri );
 	if ( null === $source ) {
 		return new WP_Error( 'ax_op_emoji_reactions_not_found', __( 'The Object emoji reaction collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
@@ -296,7 +296,7 @@ function axismundi_op_get_object_emoji_reactions( WP_REST_Request $request ) {
 /** Serve one public local Object shares collection. */
 function axismundi_op_get_object_shares( WP_REST_Request $request ) {
 	$uri    = trim( (string) $request['object'] );
-	$source = axismundi_op_local_source_from_object_uri( $uri );
+	$source = axismundi_op_authoritative_source_from_object_uri( $uri );
 	if ( null === $source ) {
 		return new WP_Error( 'ax_op_shares_not_found', __( 'The Object shares collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}

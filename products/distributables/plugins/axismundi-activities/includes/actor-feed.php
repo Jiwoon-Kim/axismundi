@@ -141,6 +141,25 @@ function axismundi_act_render_actor_activity_feed() : string {
 	if ( ! $actor instanceof Axismundi_Actor ) {
 		return '';
 	}
+	/**
+	 * Let a product that owns this Actor's community replace the timeline entirely.
+	 *
+	 * Some Actors are not people posting: a Group's profile *is* its community, the way a
+	 * Lemmy community page is, and what belongs under it is that community's threads rather
+	 * than a chronology of the Group's own Activities. The Actor profile stays the one public
+	 * surface — there is no second page to send anyone to — so the product holding those
+	 * threads answers here and Activities steps aside.
+	 *
+	 * Activities does not know what a Forum is, and must not: it offers the slot and takes
+	 * whatever comes back, exactly as it does for the object cards below.
+	 *
+	 * @param string          $html  Empty by default, which keeps the Activity timeline.
+	 * @param Axismundi_Actor $actor Actor whose profile is being rendered.
+	 */
+	$claimed = (string) apply_filters( 'axismundi_act_actor_feed_html', '', $actor );
+	if ( '' !== $claimed ) {
+		return $claimed;
+	}
 	$items = axismundi_act_actor_feed_items( $actor );
 	if ( empty( $items ) ) {
 		return '';

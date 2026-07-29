@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -35,6 +35,15 @@ activity ledger and social relations (Axismundi Activities); object rendering
 (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.4.0 =
+* The bound Group Actor's profile is now the community page: it lists the Forum's Topics
+  where an ordinary Actor lists an Activity timeline, so the federated address and the
+  place people read are one surface rather than two. The avatar, header, name, summary,
+  and Follow control above it remain the Actor's own and are never copied into the Forum.
+* The Topic list resolves its Forum from either context — the `ax_forum` page or a bound
+  Group profile — instead of one URL shape.
+* Corrects `AXISMUNDI_FORUM_VERSION`, which had been left at `0.2.0`.
 
 = 0.3.0 =
 * Adds Forum membership as a projection of the Activities relation ledger. A Follow aimed

@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.35
+Stable tag: 0.0.36
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,11 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.36 =
+* Let a product that owns an Actor's community replace that Actor's profile feed. A Group's
+  profile is its community rather than a chronology of the Group's own Activities, and
+  Activities offers the slot without knowing what fills it.
 
 = 0.0.35 =
 * Allow a local Person to follow a local managed Group, which membership in a Group is

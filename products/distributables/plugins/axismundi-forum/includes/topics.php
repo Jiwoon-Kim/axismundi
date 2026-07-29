@@ -263,10 +263,32 @@ function axismundi_forum_visible_topic_entries( int $forum_post_id, int $limit =
 	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE forum_post_id = %d AND entry_type = 'topic' AND admission_state = 'visible' AND moderation_state = 'visible' ORDER BY sticky_position IS NULL, sticky_position DESC, created_at DESC, id DESC LIMIT %d", $forum_post_id, $limit ), ARRAY_A );
 }
 
+/**
+ * The Forum the page being rendered is about.
+ *
+ * A Forum is reachable two ways and they are not the same kind of address. `/forum/{slug}/`
+ * is the WordPress record; the bound Group Actor's profile is the community's federated
+ * identity, and for a reader that profile *is* the community. Both must list the same Topics,
+ * so the list resolves its Forum from whichever context it finds rather than from one URL
+ * shape, and the Group binding is what connects them.
+ *
+ * @return int Forum post id, or 0 when this page is about no Forum.
+ */
+function axismundi_forum_context_forum_id() : int {
+	if ( is_singular( 'ax_forum' ) ) {
+		return (int) get_queried_object_id();
+	}
+	$actor = function_exists( 'axismundi_actors_current_actor' ) ? axismundi_actors_current_actor() : null;
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+		return 0;
+	}
+	return axismundi_forum_get_forum_for_group( $actor->get_identity_id() );
+}
+
 /** Render the Forum-owned Topic index; this intentionally is not a Core Query Loop. */
 function axismundi_forum_render_topic_list_block( array $attributes = array(), string $content = '' ) : string {
 	unset( $content );
-	$forum_id = is_singular( 'ax_forum' ) ? get_queried_object_id() : 0;
+	$forum_id = axismundi_forum_context_forum_id();
 	if ( $forum_id <= 0 ) {
 		return '';
 	}
@@ -292,8 +314,43 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	$body = empty( $items )
 		? '<p class="axismundi-forum-topic-list__empty">' . esc_html__( 'No topics yet.', 'axismundi-forum' ) . '</p>'
 		: '<ol class="axismundi-forum-topic-list__items">' . implode( '', $items ) . '</ol>';
-	return '<section ' . get_block_wrapper_attributes( array( 'class' => 'axismundi-forum-topic-list' ) ) . '><h2>' . esc_html__( 'Topics', 'axismundi-forum' ) . '</h2>' . $body . '</section>';
+	/*
+	 * This renderer answers to two callers: the block, and the Group profile feed, which has
+	 * no block being rendered around it. get_block_wrapper_attributes() reads the block
+	 * currently on the stack and warns when there is none, so the plain class attribute is
+	 * used in that case rather than asking core for supports that no block declared.
+	 */
+	$wrapper = null === WP_Block_Supports::$block_to_render
+		? 'class="axismundi-forum-topic-list"'
+		: get_block_wrapper_attributes( array( 'class' => 'axismundi-forum-topic-list' ) );
+	return '<section ' . $wrapper . '><h2>' . esc_html__( 'Topics', 'axismundi-forum' ) . '</h2>' . $body . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wrapper is a fixed literal or core-escaped.
 }
+
+/**
+ * A bound Group's profile shows its community's Topics instead of an Activity timeline.
+ *
+ * This is the whole point of binding a Group to a Forum. A Group does not post; people post
+ * to it, and a chronology of the Group's own Create and Announce rows is a record of
+ * plumbing, not a community. Claiming the profile feed here means the federated address and
+ * the community page are one surface, as they are everywhere else in the fediverse, instead
+ * of a profile that sends readers to a second URL to find the actual conversation.
+ *
+ * Only the feed slot is claimed. The avatar, header, name, summary, and Follow control above
+ * it stay Actors' and stay the Actor's own data: nothing here copies them into the Forum.
+ *
+ * @param string          $html  Whatever an earlier product returned.
+ * @param Axismundi_Actor $actor Actor whose profile is being rendered.
+ * @return string
+ */
+function axismundi_forum_actor_feed_html( string $html, Axismundi_Actor $actor ) : string {
+	if ( '' !== $html || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+		return $html;
+	}
+	return axismundi_forum_get_forum_for_group( $actor->get_identity_id() ) > 0
+		? axismundi_forum_render_topic_list_block()
+		: $html;
+}
+add_filter( 'axismundi_act_actor_feed_html', 'axismundi_forum_actor_feed_html', 10, 2 );
 
 /** Register the Forum Topic List block from its server-owned metadata. */
 function axismundi_forum_register_topic_list_block() : void {

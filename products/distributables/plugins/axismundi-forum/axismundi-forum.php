@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Forum
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-forum
  * Description:       Federated community surface for Axismundi. A Forum is an ax_forum CPT bound one-to-one to a managed Group Actor administered by Axismundi Actors, with local Topic Page projection and contextual Forum entries.
- * Version:           0.3.0
+ * Version:           0.4.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -23,7 +23,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_VERSION = '0.2.0';
+const AXISMUNDI_FORUM_VERSION = '0.4.0';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/cpt.php';

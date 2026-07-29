@@ -16,8 +16,9 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * May the viewer manage this actor? Own Person actor with content-writing access,
- * or `manage_options`.
+ * May the viewer manage this actor? Managed Groups use their explicit Actors
+ * owner/manager/editor relation; Person and Site actors retain their existing
+ * own-profile / site-administrator rules.
  *
  * @param Axismundi_Actor $actor   Actor.
  * @param int|null        $viewer  Viewer; defaults to current user.
@@ -27,6 +28,9 @@ function axismundi_actors_can_manage( Axismundi_Actor $actor, ?int $viewer = nul
 	$viewer = null === $viewer ? get_current_user_id() : $viewer;
 	if ( $viewer <= 0 ) {
 		return false;
+	}
+	if ( $actor->is_managed() ) {
+		return axismundi_actors_managed_actor_can_manage( $actor->get_identity_id(), $viewer );
 	}
 	if ( user_can( $viewer, 'manage_options' ) ) {
 		return true;
@@ -48,6 +52,28 @@ function axismundi_actors_admin_url( int $user_id = 0 ) : string {
 /** @return string Remote Actor lookup/cache screen URL. */
 function axismundi_actors_remote_admin_url() : string {
 	return add_query_arg( 'page', 'axismundi-remote-actors', admin_url( 'users.php' ) );
+}
+
+/** @return string Managed Group administration URL, optionally selecting one Group. */
+function axismundi_actors_managed_groups_admin_url( int $identity_id = 0 ) : string {
+	$args = array( 'page' => 'axismundi-managed-groups' );
+	if ( $identity_id > 0 ) {
+		$args['group_id'] = $identity_id;
+	}
+	$parent = current_user_can( 'list_users' ) ? 'users.php' : 'profile.php';
+	return add_query_arg( $args, admin_url( $parent ) );
+}
+
+/** @return string The appropriate editor return URL for any local Actor scope. */
+function axismundi_actors_management_back_url( Axismundi_Actor $actor ) : string {
+	if ( $actor->is_managed() ) {
+		return axismundi_actors_managed_groups_admin_url( $actor->get_identity_id() );
+	}
+	if ( 'site' === $actor->get_scope() ) {
+		return admin_url( 'options-general.php?page=axismundi-actor-site' );
+	}
+	$user_id = $actor->get_local_user_id();
+	return axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : (int) $user_id );
 }
 
 /**
@@ -182,6 +208,13 @@ function axismundi_actors_register_admin_pages() : void {
 		'axismundi-remote-actors',
 		'axismundi_actors_render_remote_admin_page'
 	);
+	add_users_page(
+		__( 'Managed Groups', 'axismundi-actors' ),
+		__( 'Managed Groups', 'axismundi-actors' ),
+		'edit_posts',
+		'axismundi-managed-groups',
+		'axismundi_actors_render_managed_groups_page'
+	);
 	add_options_page(
 		__( 'Actor Profile', 'axismundi-actors' ),
 		__( 'Actor Profile', 'axismundi-actors' ),
@@ -191,6 +224,63 @@ function axismundi_actors_register_admin_pages() : void {
 	);
 }
 add_action( 'admin_menu', 'axismundi_actors_register_admin_pages' );
+
+/** Render the managed Group creation and profile-management surface. */
+function axismundi_actors_render_managed_groups_page() : void {
+	if ( ! current_user_can( 'edit_posts' ) ) {
+		wp_die( esc_html__( 'You cannot manage Groups.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$user_id = get_current_user_id();
+	$groups  = axismundi_actors_list_manageable_groups( $user_id );
+	$selected_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
+	$selected = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;
+	if ( ! $selected instanceof Axismundi_Actor || ! $selected->is_managed() || ! axismundi_actors_can_manage( $selected, $user_id ) ) {
+		$selected = null;
+	}
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'Managed Groups', 'axismundi-actors' ); ?></h1>
+		<?php axismundi_actors_admin_notice(); ?>
+		<?php if ( $selected instanceof Axismundi_Actor ) : ?>
+			<p><a href="<?php echo esc_url( axismundi_actors_managed_groups_admin_url() ); ?>">&larr; <?php esc_html_e( 'All managed Groups', 'axismundi-actors' ); ?></a></p>
+			<h2><?php echo esc_html( $selected->get_display_name() ?: '@' . $selected->get_preferred_username() ); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $selected->get_preferred_username() ); ?></code></td></tr>
+				<tr><th scope="row"><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th><td><strong><?php echo esc_html( axismundi_actors_status_label( $selected ) ); ?></strong><?php if ( axismundi_actors_is_public_profile( $selected ) ) : ?> · <a href="<?php echo esc_url( $selected->get_profile_url() ); ?>"><?php esc_html_e( 'View public profile', 'axismundi-actors' ); ?></a><?php endif; ?></td></tr>
+			</table>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="axismundi_actors_set_managed_group_visibility">
+				<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $selected->get_identity_id() ); ?>">
+				<?php wp_nonce_field( 'ax_actors_managed_visibility_' . $selected->get_identity_id() ); ?>
+				<input type="hidden" name="status" value="<?php echo $selected->is_public() ? 'internal' : 'public'; ?>">
+				<?php submit_button( $selected->is_public() ? __( 'Make internal (unpublish)', 'axismundi-actors' ) : __( 'Publish (make public)', 'axismundi-actors' ), 'secondary' ); ?>
+			</form>
+			<?php axismundi_actors_media_form( $selected ); ?>
+			<?php axismundi_actors_text_form( $selected ); ?>
+			<?php axismundi_actors_profile_fields_form( $selected ); ?>
+		<?php else : ?>
+			<h2><?php esc_html_e( 'Create Group', 'axismundi-actors' ); ?></h2>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="axismundi_actors_create_managed_group">
+				<?php wp_nonce_field( 'ax_actors_create_managed_group' ); ?>
+				<table class="form-table" role="presentation">
+					<tr><th scope="row"><label for="ax-managed-group-handle"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></label></th><td><span>@</span><input id="ax-managed-group-handle" name="handle" type="text" class="regular-text" required><p class="description"><?php esc_html_e( 'Permanent federated address. Lowercase letters, numbers, and underscores only.', 'axismundi-actors' ); ?></p></td></tr>
+					<tr><th scope="row"><label for="ax-managed-group-name"><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></label></th><td><input id="ax-managed-group-name" name="name" type="text" class="regular-text" required></td></tr>
+					<tr><th scope="row"><label for="ax-managed-group-summary"><?php esc_html_e( 'Summary', 'axismundi-actors' ); ?></label></th><td><textarea id="ax-managed-group-summary" name="summary" rows="4" class="large-text"></textarea></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Visibility', 'axismundi-actors' ); ?></th><td><label><input type="radio" name="visibility" value="public" checked> <?php esc_html_e( 'Public', 'axismundi-actors' ); ?></label><br><label><input type="radio" name="visibility" value="internal"> <?php esc_html_e( 'Internal', 'axismundi-actors' ); ?></label></td></tr>
+				</table>
+				<?php submit_button( __( 'Create Group', 'axismundi-actors' ) ); ?>
+			</form>
+			<?php if ( ! empty( $groups ) ) : ?>
+				<h2><?php esc_html_e( 'Groups you manage', 'axismundi-actors' ); ?></h2>
+				<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Name', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><th><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th></tr></thead><tbody>
+				<?php foreach ( $groups as $group ) : ?><tr><td><a href="<?php echo esc_url( axismundi_actors_managed_groups_admin_url( $group->get_identity_id() ) ); ?>"><?php echo esc_html( $group->get_display_name() ?: __( 'Untitled Group', 'axismundi-actors' ) ); ?></a></td><td><code>@<?php echo esc_html( $group->get_preferred_username() ); ?></code></td><td><?php echo esc_html( axismundi_actors_status_label( $group ) ); ?></td></tr><?php endforeach; ?>
+				</tbody></table>
+			<?php endif; ?>
+		<?php endif; ?>
+	</div>
+	<?php
+}
 
 /**
  * Remote Actor lookup and cache inspector. Network writes happen only through the
@@ -684,7 +774,7 @@ function axismundi_actors_render_site_page() : void {
  * @return void
  */
 function axismundi_actors_enqueue_media_picker( string $hook ) : void {
-	if ( 'users_page_axismundi-actor-profile' !== $hook && 'settings_page_axismundi-actor-site' !== $hook ) {
+	if ( ! in_array( $hook, array( 'users_page_axismundi-actor-profile', 'users_page_axismundi-managed-groups', 'settings_page_axismundi-actor-site' ), true ) ) {
 		return;
 	}
 	wp_enqueue_media();
@@ -797,9 +887,7 @@ function axismundi_actors_text_form( Axismundi_Actor $actor ) : void {
 		$languages[] = axismundi_actors_normalize_language_tag( get_user_locale( $user_id ) );
 	}
 	$languages = array_values( array_unique( array_filter( $languages ) ) );
-	$back      = 'site' === $actor->get_scope()
-		? admin_url( 'options-general.php?page=axismundi-actor-site' )
-		: axismundi_actors_admin_url( get_current_user_id() === $user_id ? 0 : (int) $user_id );
+	$back      = axismundi_actors_management_back_url( $actor );
 	?>
 	<h2><?php esc_html_e( 'Profile languages', 'axismundi-actors' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Translations are optional. Empty fields continue to use the live WordPress profile or site value.', 'axismundi-actors' ); ?></p>
@@ -1051,6 +1139,60 @@ function axismundi_actors_handle_set_visibility() : void {
 }
 add_action( 'admin_post_axismundi_actors_set_visibility', 'axismundi_actors_handle_set_visibility' );
 
+/** Create a managed Group owned by the current user. */
+function axismundi_actors_handle_create_managed_group() : void {
+	if ( ! current_user_can( 'edit_posts' ) ) {
+		wp_die( esc_html__( 'You cannot create Groups.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'ax_actors_create_managed_group' );
+	$handle = isset( $_POST['handle'] ) ? sanitize_text_field( wp_unslash( $_POST['handle'] ) ) : '';
+	$name = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
+	$summary = isset( $_POST['summary'] ) ? wp_kses_post( wp_unslash( $_POST['summary'] ) ) : '';
+	$status = isset( $_POST['visibility'] ) && 'internal' === $_POST['visibility'] ? 'internal' : 'public';
+	$actor = axismundi_actors_create_managed_group(
+		array(
+			'owner_user_id'      => get_current_user_id(),
+			'preferred_username' => $handle,
+			'status'             => $status,
+		)
+	);
+	$back = axismundi_actors_managed_groups_admin_url();
+	if ( is_wp_error( $actor ) ) {
+		axismundi_actors_redirect_result( $back, $actor );
+	}
+	$language = axismundi_actors_site_language();
+	$results = array(
+		axismundi_actors_set_text( $actor->get_identity_id(), 'name', $language, $name ),
+		axismundi_actors_set_text( $actor->get_identity_id(), 'summary', $language, $summary ),
+		axismundi_actors_set_default_language( $actor->get_identity_id(), $language ),
+	);
+	foreach ( $results as $result ) {
+		if ( is_wp_error( $result ) ) {
+			axismundi_actors_redirect_result( $back, $result );
+		}
+	}
+	axismundi_actors_profile_updated( $actor->get_identity_id() );
+	axismundi_actors_redirect_result( axismundi_actors_managed_groups_admin_url( $actor->get_identity_id() ), true );
+}
+add_action( 'admin_post_axismundi_actors_create_managed_group', 'axismundi_actors_handle_create_managed_group' );
+
+/** Change a managed Group's public lifecycle state through its manager relation. */
+function axismundi_actors_handle_set_managed_group_visibility() : void {
+	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_managed_visibility_' . $identity_id );
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_managed() || ! axismundi_actors_can_manage( $actor ) ) {
+		wp_die( esc_html__( 'You cannot manage this Group.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	$status = isset( $_POST['status'] ) && 'internal' === $_POST['status'] ? 'internal' : 'public';
+	$ok = axismundi_actors_set_status( $identity_id, $status );
+	if ( $ok ) {
+		axismundi_actors_profile_updated( $identity_id );
+	}
+	axismundi_actors_redirect_result( axismundi_actors_managed_groups_admin_url( $identity_id ), $ok ? true : new WP_Error( 'ax_actors_status', __( 'Could not update visibility.', 'axismundi-actors' ) ) );
+}
+add_action( 'admin_post_axismundi_actors_set_managed_group_visibility', 'axismundi_actors_handle_set_managed_group_visibility' );
+
 /** @return void */
 function axismundi_actors_handle_site_settings() : void {
 	if ( ! current_user_can( 'manage_options' ) ) {
@@ -1093,9 +1235,7 @@ function axismundi_actors_handle_set_media() : void {
 	if ( ! is_wp_error( $result ) ) {
 		axismundi_actors_profile_updated( $identity_id );
 	}
-	$back = 'site' === $actor->get_scope()
-		? admin_url( 'options-general.php?page=axismundi-actor-site' )
-		: axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
+	$back = axismundi_actors_management_back_url( $actor );
 	axismundi_actors_redirect_result( $back, $result );
 }
 add_action( 'admin_post_axismundi_actors_set_media', 'axismundi_actors_handle_set_media' );
@@ -1126,9 +1266,7 @@ function axismundi_actors_handle_set_texts() : void {
 	if ( ! is_wp_error( $result ) ) {
 		axismundi_actors_profile_updated( $identity_id );
 	}
-	$back = 'site' === $actor->get_scope()
-		? admin_url( 'options-general.php?page=axismundi-actor-site' )
-		: axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
+	$back = axismundi_actors_management_back_url( $actor );
 	$normalized = axismundi_actors_normalize_language_tag( $language );
 	if ( '' !== $normalized ) {
 		$back = add_query_arg( 'ax_actor_lang', $normalized, $back );
@@ -1160,9 +1298,7 @@ function axismundi_actors_handle_set_profile_fields() : void {
 	if ( $saved ) {
 		axismundi_actors_profile_updated( $identity_id );
 	}
-	$back = 'site' === $actor->get_scope()
-		? admin_url( 'options-general.php?page=axismundi-actor-site' )
-		: axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
+	$back = axismundi_actors_management_back_url( $actor );
 	axismundi_actors_redirect_result( $back, $result );
 }
 add_action( 'admin_post_axismundi_actors_set_profile_fields', 'axismundi_actors_handle_set_profile_fields' );
@@ -1178,7 +1314,7 @@ function axismundi_actors_handle_set_follow_collections_visibility() : void {
 	$visibility = isset( $_POST['visibility'] ) ? sanitize_key( wp_unslash( $_POST['visibility'] ) ) : '';
 	$visibility = in_array( $visibility, array( 'public', 'count-only', 'private' ), true ) ? $visibility : 'public';
 	$result     = axismundi_actors_set_follow_collections_visibility( $actor, $visibility );
-	$back = 'site' === $actor->get_scope() ? admin_url( 'options-general.php?page=axismundi-actor-site' ) : axismundi_actors_admin_url( get_current_user_id() === $actor->get_local_user_id() ? 0 : (int) $actor->get_local_user_id() );
+	$back = axismundi_actors_management_back_url( $actor );
 	axismundi_actors_redirect_result( $back, $result );
 }
 add_action( 'admin_post_axismundi_actors_set_follow_collections_visibility', 'axismundi_actors_handle_set_follow_collections_visibility' );

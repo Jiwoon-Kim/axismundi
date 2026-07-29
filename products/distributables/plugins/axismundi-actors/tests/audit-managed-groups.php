@@ -18,6 +18,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 require_once dirname( __DIR__ ) . '/includes/repository.php';
 require_once dirname( __DIR__ ) . '/includes/managed-groups.php';
 require_once dirname( __DIR__ ) . '/includes/routing.php';
+require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 global $wpdb;
 $ax_mg_results     = array();
@@ -110,6 +111,16 @@ try {
 			&& ! axismundi_actors_managed_actor_can_manage( $identity_id, $editor, 'manager' )
 			&& ! axismundi_actors_managed_actor_can_manage( $identity_id, $stranger )
 			&& ! axismundi_actors_managed_actor_can_manage( $identity_id, $admin )
+	);
+
+	// The admin surface delegates managed-Group editing to the same authority
+	// relation; it must not accidentally treat a Group like a user-owned Person.
+	ax_mg_assert(
+		$ax_mg_results,
+		'the shared profile-management gate grants Group managers and excludes a site admin without a manager relation',
+		axismundi_actors_can_manage( $group, $manager )
+			&& ! axismundi_actors_can_manage( $group, $stranger )
+			&& ! axismundi_actors_can_manage( $group, $admin )
 	);
 
 	// The last owner is protected from both demotion and removal.

@@ -237,6 +237,7 @@ function axismundi_actors_render_managed_groups_page() : void {
 	if ( ! $selected instanceof Axismundi_Actor || ! $selected->is_managed() || ! axismundi_actors_can_manage( $selected, $user_id ) ) {
 		$selected = null;
 	}
+	$is_selected_public = $selected instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $selected );
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Managed Groups', 'axismundi-actors' ); ?></h1>
@@ -252,8 +253,8 @@ function axismundi_actors_render_managed_groups_page() : void {
 				<input type="hidden" name="action" value="axismundi_actors_set_managed_group_visibility">
 				<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $selected->get_identity_id() ); ?>">
 				<?php wp_nonce_field( 'ax_actors_managed_visibility_' . $selected->get_identity_id() ); ?>
-				<input type="hidden" name="status" value="<?php echo $selected->is_public() ? 'internal' : 'public'; ?>">
-				<?php submit_button( $selected->is_public() ? __( 'Make internal (unpublish)', 'axismundi-actors' ) : __( 'Publish (make public)', 'axismundi-actors' ), 'secondary' ); ?>
+				<input type="hidden" name="status" value="<?php echo $is_selected_public ? 'internal' : 'public'; ?>">
+				<?php submit_button( $is_selected_public ? __( 'Make internal (unpublish)', 'axismundi-actors' ) : __( 'Publish (make public)', 'axismundi-actors' ), 'secondary' ); ?>
 			</form>
 			<?php axismundi_actors_media_form( $selected ); ?>
 			<?php axismundi_actors_text_form( $selected ); ?>

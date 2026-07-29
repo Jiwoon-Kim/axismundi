@@ -10,7 +10,9 @@ defined( 'ABSPATH' ) || exit;
 /** The current user's activated public Person Actor, if available. */
 function axismundi_act_current_local_actor() : ?Axismundi_Actor {
 	$user_id = get_current_user_id();
-	if ( $user_id <= 0 || ! current_user_can( 'edit_posts' ) ) {
+	// Social Activities belong to an activated public Person, not to the WordPress
+	// editorial role. Article authoring retains its own post capability checks.
+	if ( $user_id <= 0 ) {
 		return null;
 	}
 	$actor   = $user_id > 0 ? axismundi_actors_get_for_user( $user_id ) : null;

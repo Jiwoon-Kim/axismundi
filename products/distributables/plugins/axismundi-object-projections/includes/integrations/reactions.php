@@ -16,6 +16,15 @@ final class Axismundi_OP_Object_Likes {
 	public function get_source() { return $this->source; }
 }
 
+/** Read-only source for one publicly projectable object's FEP-c0e0 reactions. */
+final class Axismundi_OP_Object_Emoji_Reactions {
+	/** @param mixed $source Local object source. */
+	public function __construct( private string $object_uri, private $source ) {}
+	public function get_object_uri() : string { return $this->object_uri; }
+	/** @return mixed */
+	public function get_source() { return $this->source; }
+}
+
 /** Read-only source for one publicly projectable object's shares collection. */
 final class Axismundi_OP_Object_Shares {
 	/** @param mixed $source Local object source. */
@@ -30,6 +39,11 @@ function axismundi_op_object_likes_url( string $object_uri ) : string {
 	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/v1/objects/likes' ) );
 }
 
+/** Stable representation URI for an Object's FEP-c0e0 emoji reaction collection. */
+function axismundi_op_object_emoji_reactions_url( string $object_uri ) : string {
+	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/v1/objects/emoji-reactions' ) );
+}
+
 /** Stable representation URI for an Object's shares collection. */
 function axismundi_op_object_shares_url( string $object_uri ) : string {
 	return add_query_arg( 'object', $object_uri, rest_url( 'axismundi/v1/objects/shares' ) );
@@ -39,6 +53,16 @@ function axismundi_op_object_shares_url( string $object_uri ) : string {
 function axismundi_op_add_likes_property( array $object ) : array {
 	if ( function_exists( 'axismundi_act_get_like_count' ) && ! empty( $object['id'] ) ) {
 		$object['likes'] = axismundi_op_object_likes_url( (string) $object['id'] );
+	}
+	if ( function_exists( 'axismundi_act_get_effective_reactions' ) && ! empty( $object['id'] ) ) {
+		// FEP-c0e0 assigns this property the Fedibird IRI. Keep the full key so this
+		// document remains valid even for peers that do not compact that context term.
+		//
+		// `http`, not `https`, because in JSON-LD the IRI *is* the property name and the two
+		// spell different terms. The FEP writes it this way, as do the sibling namespaces it
+		// uses -- `http://litepub.social/ns#`, `http://joinmastodon.org/ns#` -- so `https`
+		// here would publish a property no peer is looking for.
+		$object['http://fedibird.com/ns#emojiReactions'] = axismundi_op_object_emoji_reactions_url( (string) $object['id'] );
 	}
 	if ( function_exists( 'axismundi_act_get_announce_count' ) && ! empty( $object['id'] ) ) {
 		$object['shares'] = axismundi_op_object_shares_url( (string) $object['id'] );
@@ -77,6 +101,12 @@ function axismundi_op_object_likes_visible( Axismundi_OP_Object_Likes $source ) 
 		&& ! is_wp_error( axismundi_op_transform_object( $source->get_source() ) );
 }
 
+/** Public visibility gate for an Object emoji-reaction collection. */
+function axismundi_op_object_emoji_reactions_visible( Axismundi_OP_Object_Emoji_Reactions $source ) : bool {
+	return function_exists( 'axismundi_act_get_effective_reactions' )
+		&& ! is_wp_error( axismundi_op_transform_object( $source->get_source() ) );
+}
+
 /** Project a count-only collection without disclosing liker identities. */
 function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source ) : array {
 	$object = axismundi_op_transform_object( $source->get_source() );
@@ -89,6 +119,42 @@ function axismundi_op_object_likes_transform( Axismundi_OP_Object_Likes $source 
 		'attributedTo' => (string) $object['attributedTo'],
 		'url'          => axismundi_op_object_html_url( $object ),
 		'totalItems'   => axismundi_act_get_like_count( $source->get_object_uri() ),
+	);
+}
+
+/** Project FEP-c0e0's public collection without fabricating a count-only substitute. */
+function axismundi_op_object_emoji_reactions_transform( Axismundi_OP_Object_Emoji_Reactions $source ) : array {
+	$object = axismundi_op_transform_object( $source->get_source() );
+	if ( is_wp_error( $object ) ) {
+		return $object;
+	}
+	/*
+	 * No `as:Public` gate here, deliberately. FEP-c0e0's own examples address a reaction to
+	 * the sender's followers and the object's author and nothing else, so requiring public
+	 * addressing would empty this collection for exactly the implementations it exists to
+	 * interoperate with. Publishing it is the point: the FEP says this URL "MUST resolve to
+	 * a collection containing `Like` (with `content`) and `EmojiReact` activities".
+	 *
+	 * `bto`/`bcc` are the exception and are removed. A blind-copy list is addressed to
+	 * people the other recipients are not meant to know about; forwarding it verbatim would
+	 * disclose them to everyone who reads the collection.
+	 */
+	$items = array_map(
+		static function ( Axismundi_Activity $activity ) : array {
+			$payload = $activity->get_payload();
+			unset( $payload['bto'], $payload['bcc'] );
+			return $payload;
+		},
+		axismundi_act_get_effective_reactions( $source->get_object_uri() )
+	);
+	return array(
+		'id'           => axismundi_op_object_emoji_reactions_url( $source->get_object_uri() ),
+		'type'         => 'OrderedCollection',
+		'attributedTo' => (string) $object['attributedTo'],
+		'url'          => axismundi_op_object_html_url( $object ),
+		// The ledger's true count, not the size of this bounded page.
+		'totalItems'   => axismundi_act_get_reaction_activity_count( $source->get_object_uri() ),
+		'orderedItems' => $items,
 	);
 }
 
@@ -125,6 +191,18 @@ function axismundi_op_register_reaction_transformer() : void {
 			)
 		);
 	}
+	if ( function_exists( 'axismundi_act_get_effective_reactions' ) ) {
+		axismundi_op_register_collection_transformer(
+			'axismundi-object-emoji-reactions',
+			array(
+				'supports'       => static fn( $source ) : bool => $source instanceof Axismundi_OP_Object_Emoji_Reactions,
+				'collection_uri' => static fn( Axismundi_OP_Object_Emoji_Reactions $source ) : string => axismundi_op_object_emoji_reactions_url( $source->get_object_uri() ),
+				'transform'      => 'axismundi_op_object_emoji_reactions_transform',
+				'visible'        => 'axismundi_op_object_emoji_reactions_visible',
+				'priority'       => 5,
+			)
+		);
+	}
 	if ( function_exists( 'axismundi_act_get_announce_count' ) ) {
 		axismundi_op_register_collection_transformer(
 			'axismundi-object-shares',
@@ -134,6 +212,18 @@ function axismundi_op_register_reaction_transformer() : void {
 				'transform'      => 'axismundi_op_object_shares_transform',
 				'visible'        => static fn( Axismundi_OP_Object_Shares $source ) : bool => function_exists( 'axismundi_act_get_announce_count' ) && ! is_wp_error( axismundi_op_transform_object( $source->get_source() ) ),
 				'priority'       => 5,
+			)
+		);
+	}
+	if ( function_exists( 'axismundi_act_get_effective_reactions' ) ) {
+		register_rest_route(
+			'axismundi/v1',
+			'/objects/emoji-reactions',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => 'axismundi_op_get_object_emoji_reactions',
+				'permission_callback' => '__return_true',
+				'args'                => array( 'object' => array( 'required' => true, 'type' => 'string', 'format' => 'uri' ) ),
 			)
 		);
 	}
@@ -177,6 +267,23 @@ function axismundi_op_get_object_likes( WP_REST_Request $request ) {
 		return new WP_Error( 'ax_op_likes_not_found', __( 'The Object likes collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
 	}
 	$collection = axismundi_op_transform_collection( new Axismundi_OP_Object_Likes( $uri, $source ) );
+	if ( is_wp_error( $collection ) ) {
+		return $collection;
+	}
+	$response = rest_ensure_response( $collection );
+	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+	$response->header( 'Cache-Control', 'public, max-age=60' );
+	return $response;
+}
+
+/** Serve one public local Object's FEP-c0e0 emoji reaction collection. */
+function axismundi_op_get_object_emoji_reactions( WP_REST_Request $request ) {
+	$uri    = trim( (string) $request['object'] );
+	$source = axismundi_op_local_source_from_object_uri( $uri );
+	if ( null === $source ) {
+		return new WP_Error( 'ax_op_emoji_reactions_not_found', __( 'The Object emoji reaction collection was not found.', 'axismundi-object-projections' ), array( 'status' => 404 ) );
+	}
+	$collection = axismundi_op_transform_collection( new Axismundi_OP_Object_Emoji_Reactions( $uri, $source ) );
 	if ( is_wp_error( $collection ) ) {
 		return $collection;
 	}

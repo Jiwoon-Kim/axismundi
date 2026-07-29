@@ -38,9 +38,9 @@ function axismundi_emoji_local_authority() : string {
 			return $authority;
 		}
 	}
-	$host = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
-	$port = wp_parse_url( home_url( '/' ), PHP_URL_PORT );
-	return strtolower( $host . ( $port ? ':' . (int) $port : '' ) );
+	// The same rule every referring path now uses, so a local emoji is found by the
+	// documents and reactions that name it rather than only by the code that stored it.
+	return axismundi_emoji_url_authority( home_url( '/' ) );
 }
 
 /**

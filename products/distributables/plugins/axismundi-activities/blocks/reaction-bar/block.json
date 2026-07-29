@@ -1,0 +1,37 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/reaction-bar",
+	"version": "0.1.0",
+	"title": "Reaction Bar",
+	"category": "widgets",
+	"icon": "smiley",
+	"description": "The emoji reactions already on the current Object, each with the number of people behind it. Place it above Object Actions; the Reaction Button block adds new ones.",
+	"textdomain": "axismundi-activities",
+	"attributes": {
+		"objectUri": { "type": "string", "default": "" }
+	},
+	"usesContext": [ "postId", "postType" ],
+	"supports": {
+		"html": false,
+		"anchor": true,
+		"interactivity": true,
+		"align": [ "wide", "full" ],
+		"color": {
+			"text": true,
+			"background": true,
+			"__experimentalDefaultControls": { "text": true }
+		},
+		"spacing": { "margin": true, "padding": true, "blockGap": true },
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalDefaultControls": { "fontSize": true }
+		},
+		"__experimentalBorder": { "radius": true, "color": true, "width": true, "style": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "axismundi-activities-reactions",
+	"editorStyle": "axismundi-activities-reactions",
+	"render": "file:./render.php"
+}

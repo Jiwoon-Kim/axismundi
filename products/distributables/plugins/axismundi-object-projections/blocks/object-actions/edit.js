@@ -10,7 +10,7 @@
 	var el = element.createElement;
 	var InnerBlocks = blockEditor.InnerBlocks;
 	var useInnerBlocksProps = blockEditor.useInnerBlocksProps || blockEditor.__experimentalUseInnerBlocksProps;
-	var TEMPLATE = [ [ 'axismundi/reply-button' ], [ 'axismundi/like-button' ], [ 'axismundi/announce-button' ] ];
+	var TEMPLATE = [ [ 'axismundi/reply-button' ], [ 'axismundi/like-button' ], [ 'axismundi/announce-button' ], [ 'axismundi/reaction-button' ] ];
 	blocks.registerBlockType( 'axismundi/object-actions', {
 		edit: function () {
 			var blockProps = blockEditor.useBlockProps( { className: 'axismundi-object__interactions' } );

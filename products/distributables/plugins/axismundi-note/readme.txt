@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.32
+Stable tag: 0.0.33
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,13 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.33 =
+* Separate federated authorship from site moderation: a public Actor may author only its
+  own Notes, while administrators can list, read private, and delete another Actor's Note
+  without ever emitting an impersonating edit.
+* Make the Note editor's direct publication capability follow public-Actor authorship, and
+  grant the plural WordPress primitives required by published-Note and bulk-trash screens.
 
 = 0.0.32 =
 * Show plaintext body mentions as read-only recipients in the editor without copying them into the explicit recipient list.

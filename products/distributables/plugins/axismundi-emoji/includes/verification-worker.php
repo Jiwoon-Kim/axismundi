@@ -136,7 +136,7 @@ function axismundi_emoji_verify_queued_row( array $row ) : bool {
 	$authority = strtolower( (string) ( $row['emoji_authority'] ?? '' ) );
 	$key       = (string) ( $row['shortcode_key'] ?? '' );
 	$uri       = (string) ( $row['verification_uri'] ?? '' );
-	$host      = strtolower( (string) wp_parse_url( $uri, PHP_URL_HOST ) );
+	$host      = axismundi_emoji_url_authority( $uri );
 	if ( $emoji_id <= 0 || '' === $authority || '' === $key || $authority !== $host || '' === $uri ) {
 		axismundi_emoji_mark_verification_failure( $emoji_id );
 		return false;

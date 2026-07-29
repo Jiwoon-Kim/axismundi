@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '6';
+const AXISMUNDI_ACT_DB_VERSION        = '7';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -43,6 +43,9 @@ function axismundi_act_install() : bool {
 			source_event_hash char(64) DEFAULT NULL,
 			direction varchar(8) NOT NULL,
 			effective_status varchar(8) NOT NULL DEFAULT 'active',
+			reaction_key varchar(191) DEFAULT NULL,
+			reaction_key_hash char(64) DEFAULT NULL,
+			reaction_raw varchar(191) DEFAULT NULL,
 			audience_json longtext NOT NULL,
 			payload_json longtext NOT NULL,
 			payload_hash char(64) NOT NULL,
@@ -58,7 +61,8 @@ function axismundi_act_install() : bool {
 			KEY object_uri_hash (object_uri_hash),
 			KEY target_uri_hash (target_uri_hash),
 			KEY instrument_uri_hash (instrument_uri_hash),
-			KEY direction_status (direction, effective_status)
+			KEY direction_status (direction, effective_status),
+			KEY reaction_chip (object_uri_hash, effective_status, reaction_key_hash, actor_uri_hash)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -72,6 +76,8 @@ function axismundi_act_install() : bool {
 	$source_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'source_event_hash'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom index verification.
 	$instrument_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'instrument_uri_hash'", ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom index verification.
+	$reaction_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'reaction_chip'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table engine verification.
 	$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table ) );
 	if ( 'InnoDB' !== $engine && ! empty( $columns ) ) {
@@ -92,6 +98,16 @@ function axismundi_act_install() : bool {
 		&& in_array( 'instrument_uri', $columns, true )
 		&& in_array( 'instrument_uri_hash', $columns, true )
 		&& ! empty( $instrument_index )
+		// v7, verified for the same reason. Without the column every `Like` reads as a plain
+		// Like, so a site that stored v7 on a failed migration would count every emoji
+		// reaction as a favourite and never try again.
+		&& in_array( 'reaction_key', $columns, true )
+		&& in_array( 'reaction_key_hash', $columns, true )
+		&& in_array( 'reaction_raw', $columns, true )
+		// The chip aggregate's covering index, verified for a quieter reason: without it
+		// every chip query still returns the right answer, by scanning. Nothing looks broken
+		// until an object collects thousands of reactions, and by then the version is stored.
+		&& ! empty( $reaction_index )
 		&& ! in_array( 'blog_id', $columns, true )
 		&& ! empty( $uri_index )
 		&& 0 === (int) $uri_index[0]['Non_unique']
@@ -188,20 +204,68 @@ function axismundi_act_member_uri( $value ) : string {
 
 /** Supported Activity types. */
 function axismundi_act_types() : array {
-	$types = array( 'Follow', 'Accept', 'Reject', 'Undo', 'Like', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Block', 'Flag' );
+	$types = array( 'Follow', 'Accept', 'Reject', 'Undo', 'Like', 'EmojiReact', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Block', 'Flag' );
 	/** @param string[] $types Supported ActivityStreams activity types. */
 	return array_values( array_unique( array_filter( array_map( 'sanitize_text_field', (array) apply_filters( 'axismundi_act_types', $types ) ) ) ) );
 }
 
-/** First supported Activity type from a scalar/list. */
+/**
+ * First supported Activity type from a scalar/list, canonicalized.
+ *
+ * `EmojiReact` reaches us in two spellings: the bare term FEP-c0e0 uses, and the LitePub
+ * IRI Akkoma sends. Matching exact strings would accept one and silently drop the other,
+ * with no error anywhere — a whole implementation's reactions would simply not exist. The
+ * fragment of a known extension IRI is the term it names, so the two converge before the
+ * vocabulary is consulted.
+ *
+ * @param mixed $value Type term, IRI, or list of either.
+ * @return string
+ */
 function axismundi_act_type( $value ) : string {
+	$supported = axismundi_act_types();
 	foreach ( is_array( $value ) ? $value : array( $value ) as $type ) {
-		$type = is_scalar( $type ) ? substr( sanitize_text_field( (string) $type ), 0, 32 ) : '';
-		if ( in_array( $type, axismundi_act_types(), true ) ) {
+		$type = is_scalar( $type ) ? substr( sanitize_text_field( (string) $type ), 0, 128 ) : '';
+		if ( '' === $type ) {
+			continue;
+		}
+		if ( in_array( $type, $supported, true ) ) {
 			return $type;
+		}
+		// Only the fragment of an absolute IRI, so a term is never invented from arbitrary text.
+		if ( 1 === preg_match( '~^https?://\S+#([A-Za-z]+)$~', $type, $matches ) && in_array( $matches[1], $supported, true ) ) {
+			return $matches[1];
 		}
 	}
 	return '';
+}
+
+/**
+ * The single `Emoji` tag a custom reaction declares, if it carries one.
+ *
+ * A custom reaction's `content` is a shortcode, which names nothing on its own: two
+ * servers both ship `:misskey:`. The accompanying declaration is what says whose.
+ *
+ * @param array<string,mixed> $payload Activity payload.
+ * @return array<string,mixed>
+ */
+function axismundi_act_reaction_emoji_tag( array $payload ) : array {
+	$tags = $payload['tag'] ?? array();
+	$tags = is_array( $tags ) && array_is_list( $tags ) ? $tags : array( $tags );
+	$emoji_tags = array();
+	foreach ( $tags as $tag ) {
+		if ( ! is_array( $tag ) ) {
+			continue;
+		}
+		foreach ( (array) ( $tag['type'] ?? array() ) as $type ) {
+			if ( is_string( $type ) && str_contains( $type, 'Emoji' ) ) {
+				$emoji_tags[] = $tag;
+				break;
+			}
+		}
+	}
+	// FEP-c0e0 names one declaration. Selecting the first of several would let an
+	// unrelated second declaration silently change which asset the reaction means.
+	return 1 === count( $emoji_tags ) ? $emoji_tags[0] : array();
 }
 
 /** UTC SQL datetime from an ISO value. */
@@ -473,6 +537,45 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 	if ( ! isset( $payload['published'] ) && 'inbound' !== $direction ) {
 		$payload['published'] = gmdate( 'c', strtotime( $now . ' UTC' ) );
 	}
+	/*
+	 * Reaction classification, decided once and stored, because every later query would
+	 * otherwise have to re-parse `content` to know whether a `Like` is a like.
+	 *
+	 * FEP-c0e0: "Implementations MUST process `Like` with `content` in the same way as
+	 * `EmojiReact`." So the two spellings converge here, and a `Like` that carries a real
+	 * reaction stops being a plain Like — `reaction_key IS NULL` is what the like count
+	 * means from now on.
+	 */
+	$reaction = null;
+	if ( in_array( $type, array( 'Like', 'EmojiReact' ), true ) && isset( $payload['content'] ) && function_exists( 'axismundi_act_normalize_reaction' ) ) {
+		/*
+		 * Misskey states the reaction twice, in `content` and `_misskey_reaction`. Agreeing,
+		 * that is one fact said twice. Disagreeing, there is no principled way to choose, and
+		 * picking one silently would record a reaction nobody sent.
+		 */
+		$vendor = $payload['_misskey_reaction'] ?? null;
+		if ( is_scalar( $vendor ) && trim( (string) $vendor ) !== trim( (string) $payload['content'] ) ) {
+			return new WP_Error( 'ax_act_reaction_conflict', __( 'The Activity states two different reactions.', 'axismundi-activities' ) );
+		}
+		$tag = axismundi_act_reaction_emoji_tag( $payload );
+		/*
+		 * Only an Activity we authored may key a bare custom shortcode to this site. It is
+		 * how an emoji withheld from publication is reacted with: the declaration is dropped
+		 * from the payload so it does not travel, which leaves nothing here to read the
+		 * authority back from. Inbound keeps requiring the declaration, because there the
+		 * shortcode alone could name any server's emoji.
+		 */
+		$self_authority = 'inbound' !== $direction && function_exists( 'axismundi_emoji_local_authority' ) ? axismundi_emoji_local_authority() : '';
+		$reaction       = axismundi_act_normalize_reaction( $payload['content'], $tag, $self_authority );
+		$looks_custom = is_scalar( $payload['content'] ) && str_starts_with( trim( (string) $payload['content'] ), ':' ) && str_ends_with( trim( (string) $payload['content'] ), ':' );
+		if ( null === $reaction && ( 'EmojiReact' === $type || $looks_custom ) ) {
+			// A Like whose content is prose is still a Like; an EmojiReact whose content is
+			// not a reaction is nothing at all. A colon-wrapped custom name is likewise not
+			// a plain Like: without its matching Emoji declaration, it has no identity.
+			return new WP_Error( 'ax_act_reaction_content', __( 'An EmojiReact requires a single emoji as its content.', 'axismundi-activities' ) );
+		}
+	}
+
 	$payload['id'] = $activity_uri;
 	$json          = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	$audience_json = wp_json_encode( axismundi_act_audience( $payload ), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
@@ -494,6 +597,11 @@ function axismundi_act_normalize( array $payload, string $direction = 'local' ) 
 		'instrument_uri_hash' => '' !== $instrument_uri ? hash( 'sha256', $instrument_uri ) : null,
 		'direction'         => $direction,
 		'effective_status'  => 'active',
+		'reaction_key'      => null === $reaction ? null : $reaction['key'],
+		'reaction_key_hash' => null === $reaction ? null : hash( 'sha256', $reaction['key'] ),
+		// Stored verbatim so a chip can be labelled without re-parsing the payload; the
+		// audit asserts it never drifts from the `content` it came out of.
+		'reaction_raw'      => null === $reaction ? null : $reaction['raw'],
 		'audience_json'     => $audience_json,
 		'payload_json'      => $json,
 		'payload_hash'      => hash( 'sha256', $json ),

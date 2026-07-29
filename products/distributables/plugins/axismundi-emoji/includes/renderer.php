@@ -190,6 +190,53 @@ function axismundi_emoji_bare_presentation_row( string $key, array $declared ) :
 	return null;
 }
 
+/**
+ * The image a reaction chip may show for one authority-qualified emoji.
+ *
+ * A reaction key is always qualified — `custom:hoto.moe:misskey` — and inline text
+ * deliberately refuses to substitute for a qualified name, because there the author wrote
+ * the authority into the message and swapping the picture would change what the sentence
+ * says. A chip is not a sentence. Its identity, count, and label stay with the declaring
+ * authority no matter what is drawn on it, so borrowing a picture changes the appearance
+ * and nothing else.
+ *
+ * That distinction is the whole point of the exception, and it is why this is a separate
+ * entry point rather than a flag on the inline path: the two surfaces must not be able to
+ * drift into sharing an answer.
+ *
+ * The saving is the reason it exists. `hoto.moe/:misskey:` can stay `pending` with no
+ * bytes of its own and still show something, as long as one designated authority's copy
+ * of that name is reviewed and cached. Candidate selection is delegated rather than
+ * rewritten, so a chip and a line of text agree about which fallback is eligible, what a
+ * rejection means, and that a tie between two equally ranked sources is no answer at all.
+ *
+ * @param string $authority Declaring authority of the reacted-with emoji.
+ * @param string $key       Normalized shortcode key.
+ * @return array<string,mixed>|null Registry row to draw, or null to show the shortcode.
+ */
+function axismundi_emoji_reaction_presentation_row( string $authority, string $key ) : ?array {
+	if ( '' === $authority || '' === $key ) {
+		return null;
+	}
+	$declared = axismundi_emoji_get( $authority, $key );
+	/*
+	 * A restrictive licence never blocked *rendering* the original — showing a message the
+	 * way its author wrote it is not re-using their asset as ours (§3). Standing a
+	 * different file in its place is a different act, and one the declaring authority's
+	 * terms give us no standing to perform, so restriction stops the substitution while
+	 * leaving the original's own bytes usable.
+	 */
+	if ( is_array( $declared ) && 'restricted' === (string) ( $declared['license_state'] ?? '' ) ) {
+		return axismundi_emoji_is_renderable( $declared ) ? $declared : null;
+	}
+	// A declaration we never observed is not evidence of anything, and is passed through as
+	// a placeholder so the shared resolver has an authority and a name to reason about.
+	return axismundi_emoji_bare_presentation_row(
+		$key,
+		is_array( $declared ) ? $declared : array( 'emoji_authority' => $authority, 'shortcode_key' => $key )
+	);
+}
+
 /** @param array<string,mixed> $row Registry row. @return string Public URL of the original. */
 function axismundi_emoji_file_url( array $row ) : string {
 	$path = (string) ( $row['cached_path'] ?? '' );

@@ -47,6 +47,32 @@ function axismundi_emoji_parse_shortcode( string $name ) : ?array {
 }
 
 /**
+ * The authority a URL belongs to: host, plus port when it is not the scheme's default.
+ *
+ * One function for this because an authority is an identity, and two spellings of it are
+ * two different emoji. The registry has always stored this site's own authority with its
+ * port — that is what WebFinger addresses it as — while every path that *referred* to an
+ * emoji derived a bare host, so on any site not served from 443 the two never met and a
+ * local emoji could not be found by the reactions and documents that named it.
+ *
+ * An explicitly written default port is dropped, since `https://a.example:443/x` and
+ * `https://a.example/x` are the same origin and must not become two authorities.
+ *
+ * @param string $url Absolute URL.
+ * @return string Lowercased `host` or `host:port`, or '' when there is no host.
+ */
+function axismundi_emoji_url_authority( string $url ) : string {
+	$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+	if ( '' === $host ) {
+		return '';
+	}
+	$port    = (int) wp_parse_url( $url, PHP_URL_PORT );
+	$scheme  = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+	$default = 'https' === $scheme ? 443 : ( 'http' === $scheme ? 80 : 0 );
+	return strtolower( $host . ( $port > 0 && $port !== $default ? ':' . $port : '' ) );
+}
+
+/**
  * Resolve which host owns an emoji.
  *
  * Order matters and the last resort is not the obvious one. `icon.url` is never
@@ -66,7 +92,7 @@ function axismundi_emoji_resolve_authority( array $tag, string $declared_by_host
 	if ( is_array( $parsed ) && '' !== $parsed['authority'] ) {
 		return $parsed['authority'];
 	}
-	$id_host = (string) wp_parse_url( (string) ( $tag['id'] ?? '' ), PHP_URL_HOST );
+	$id_host = axismundi_emoji_url_authority( (string) ( $tag['id'] ?? '' ) );
 	if ( '' !== $id_host ) {
 		return strtolower( $id_host );
 	}
@@ -207,7 +233,7 @@ function axismundi_emoji_descriptor_from_tag( $tag, string $declared_by_host ) :
  * @return array<int,array<string,mixed>>
  */
 function axismundi_emoji_descriptors_from_payload( array $payload, string $subject_uri ) : array {
-	$host = strtolower( (string) wp_parse_url( '' !== $subject_uri ? $subject_uri : (string) ( $payload['id'] ?? '' ), PHP_URL_HOST ) );
+	$host = axismundi_emoji_url_authority( '' !== $subject_uri ? $subject_uri : (string) ( $payload['id'] ?? '' ) );
 	$tags = $payload['tag'] ?? array();
 	if ( ! is_array( $tags ) ) {
 		return array();

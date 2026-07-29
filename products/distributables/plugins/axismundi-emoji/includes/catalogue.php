@@ -141,14 +141,19 @@ function axismundi_emoji_catalogue_item( array $row ) : array {
 }
 
 /** @return string[] Every category in use, for grouping a picker. */
-function axismundi_emoji_local_categories() : array {
+function axismundi_emoji_local_categories( bool $federated = true ) : array {
 	global $wpdb;
 	if ( ! axismundi_emoji_ready() ) {
 		return array();
 	}
 	$table = axismundi_emoji_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table.
-	$found = (array) $wpdb->get_col( "SELECT DISTINCT category FROM {$table} WHERE scope = 'local' AND picker_visible = 1 AND COALESCE(category, '') <> '' ORDER BY category ASC" );
+	$where = "scope = 'local' AND picker_visible = 1 AND COALESCE(cached_path, '') <> '' AND COALESCE(category, '') <> ''";
+	if ( $federated ) {
+		$where .= ' AND outbound_allowed = 1';
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed local catalogue predicate.
+	$found = (array) $wpdb->get_col( "SELECT DISTINCT category FROM {$table} WHERE {$where} ORDER BY category ASC" );
 	return array_values( array_map( 'strval', $found ) );
 }
 
@@ -156,15 +161,27 @@ function axismundi_emoji_local_categories() : array {
  * Who may read the catalogue.
  *
  * These images are already public — they are published in federated content and served
- * from the uploads directory. What is not public is the *catalogue*: the list of what a
- * site has, including emoji marked local-only, which is editorial information rather
- * than something a reader needs. So this follows the editor, not the asset.
+ * from the uploads directory. The *catalogue* is the list of what a site has, which is
+ * editorial information, so it follows the editor.
+ *
+ * A reacting Actor is admitted alongside the editor, and admitted to the whole list rather
+ * than only the federating part of it. `local_only` withholds an emoji from *publication*,
+ * not from existence: it already renders inline in local content, so a reader has seen it.
+ * Hiding it from the picker would only stop them naming a thing they can point at. The
+ * picker offers it and the surface that would federate it declines instead
+ * ({@see axismundi_act_react_to_object()}), which is where the constraint actually lives.
  *
  * @return bool
  */
 function axismundi_emoji_can_read_catalogue() : bool {
 	/** Filter who may browse the local emoji catalogue. @param bool $allowed Default. */
-	return (bool) apply_filters( 'axismundi_emoji_can_read_catalogue', current_user_can( 'edit_posts' ) );
+	return (bool) apply_filters( 'axismundi_emoji_can_read_catalogue', current_user_can( 'edit_posts' ) || axismundi_emoji_reader_is_reacting_actor() );
+}
+
+/** Whether the reader is here to react rather than to edit. */
+function axismundi_emoji_reader_is_reacting_actor() : bool {
+	return function_exists( 'axismundi_act_current_reaction_actor' )
+		&& axismundi_act_current_reaction_actor() instanceof Axismundi_Actor;
 }
 
 /**
@@ -180,6 +197,7 @@ function axismundi_emoji_rest_search_local( WP_REST_Request $request ) : WP_REST
 		array(
 			'search'    => (string) $request->get_param( 'search' ),
 			'category'  => (string) $request->get_param( 'category' ),
+			// A reader who is only an Actor never sees the withheld rows, whatever they ask for.
 			'federated' => (bool) $request->get_param( 'federated' ),
 			'per_page'  => $per_page,
 			'page'      => $page,
@@ -192,8 +210,8 @@ function axismundi_emoji_rest_search_local( WP_REST_Request $request ) : WP_REST
 }
 
 /** @return WP_REST_Response Categories in use. */
-function axismundi_emoji_rest_local_categories() : WP_REST_Response {
-	return rest_ensure_response( axismundi_emoji_local_categories() );
+function axismundi_emoji_rest_local_categories( WP_REST_Request $request ) : WP_REST_Response {
+	return rest_ensure_response( axismundi_emoji_local_categories( (bool) $request->get_param( 'federated' ) ) );
 }
 
 /** Register the catalogue routes. @return void */
@@ -222,6 +240,7 @@ function axismundi_emoji_register_catalogue_routes() : void {
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => 'axismundi_emoji_rest_local_categories',
 			'permission_callback' => 'axismundi_emoji_can_read_catalogue',
+			'args'                => array( 'federated' => array( 'type' => 'boolean', 'default' => true ) ),
 		)
 	);
 }

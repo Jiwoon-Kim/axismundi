@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -27,6 +27,12 @@ The design is recorded in `docs/AXISMUNDI-EMOJI-ARCHITECTURE.md` at the reposito
 Deliberately out of scope: Unicode emoji and their Twemoji-style image substitutions, which WordPress core, Mastodon, and Misskey each already handle separately; and emoji reactions (FEP-c0e0), which belong to Axismundi Activities.
 
 == Changelog ==
+
+= 0.1.4 =
+* Preserve non-default ports in emoji authority identity, including local custom emoji
+  reactions and registry lookups.
+* Let approved cached emoji provide an explicit, policy-gated presentation fallback for
+  reaction chips without changing the reaction's authority-qualified identity or payload.
 
 = 0.1.3 =
 * Provision newly bundled emoji after the schema check, so the upgrade path also runs when no database migration is needed.

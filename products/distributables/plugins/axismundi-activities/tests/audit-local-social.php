@@ -75,7 +75,7 @@ try {
 	$subscriber->set_role( 'subscriber' );
 	wp_set_current_user( 0 );
 	wp_set_current_user( (int) $follower->get_local_user_id() );
-	ax_local_assert( $ax_local_results, 'Subscriber cannot use local social actions even with an existing Actor', null === axismundi_act_current_local_actor() );
+	ax_local_assert( $ax_local_results, 'Subscriber with an activated public Actor may use local social actions', axismundi_act_current_local_actor() instanceof Axismundi_Actor );
 	$subscriber->set_role( 'contributor' );
 	wp_set_current_user( 0 );
 	wp_set_current_user( (int) $follower->get_local_user_id() );

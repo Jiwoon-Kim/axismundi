@@ -1,0 +1,605 @@
+/*
+ * Reaction button and reaction bar.
+ *
+ * One stylesheet for two blocks, because they are one control split across two places and
+ * a chip has to look the same whether it was just added from the picker or rendered by the
+ * server. Sizes are in `em` so a template that sets a font size on either block scales the
+ * whole thing, the way the emoji contract does inline.
+ */
+
+.axismundi-reaction-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375em;
+	align-items: center;
+}
+
+.axismundi-reaction-bar__item {
+	display: inline-block;
+}
+
+/*
+ * The button surface deliberately belongs to the active theme's core/button contract:
+ * `.wp-block-button.is-style-tonal > .wp-block-button__link.wp-element-button`.
+ * Do not recreate its dimensions, state layers, focus ring, or pressed geometry here.
+ */
+.axismundi-reaction-button__trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375em;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	padding: 0.25em 0.625em;
+	min-block-size: 2em;
+	background: color-mix( in srgb, currentColor 8%, transparent );
+	color: inherit;
+	font: inherit;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.axismundi-reaction-button__trigger:hover {
+	background: color-mix( in srgb, currentColor 14%, transparent );
+}
+
+/*
+ * Size only. The theme's button element is a 40dp Small button with label-large type,
+ * which is right for a call to action and far too heavy for a row of them: a post with six
+ * reactions would be mostly buttons. This trims it to the M3 extra-small step and changes
+ * nothing else, so colour, state layers, the focus ring, and the pressed shape morph all
+ * keep coming from the theme.
+ *
+ * The corner radius is left alone deliberately. At 32dp a 20px radius is already past half
+ * the height, so it renders as the same pill — and overriding it would break the `:active`
+ * morph to 8px that the button contract performs.
+ *
+ * Two classes deep on purpose. `theme.json` emits its button element styles as
+ * `:root :where(.wp-element-button, .wp-block-button__link)`, which `:where()` reduces to
+ * the specificity of `:root` alone — the same weight as a single class here, so source
+ * order decided it and the theme won. This is the smallest selector that outranks it
+ * without `!important`, and it still touches nothing but geometry.
+ */
+.axismundi-reaction-bar .axismundi-reaction-bar__chip {
+	block-size: 2rem;
+	min-block-size: 2rem;
+	gap: 0.375rem;
+	padding-inline: 0.75rem;
+	font-size: var( --wp--preset--font-size--label-medium, 0.75rem );
+}
+
+/*
+ * The unselected chip, which is the theme's own outline variation restated.
+ *
+ * Not a second palette: every value here is the same preset the theme's
+ * `core/button.variations.outline` uses. It is restated because that variation lives in
+ * `theme.json` block styles, and WordPress emits those only for blocks actually present on
+ * the page — on an Actor profile there is no `core/button`, so `is-style-outline` resolved
+ * to nothing and the chip fell back to *filled primary*, shouting louder than the selected
+ * state beside it. The selected state can keep using the class because the theme ships
+ * tonal in a stylesheet that always loads.
+ */
+.axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip {
+	background-color: transparent;
+	background-image: none;
+	color: var( --wp--preset--color--on-surface-variant );
+	border: 1px solid var( --wp--preset--color--outline-variant );
+}
+
+/* The same state layers the variation defines, over a transparent container. */
+.axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip:hover {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+}
+
+.axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip:focus {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
+}
+
+.axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip:active {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
+}
+
+/* A chip nobody here can join — somebody else's custom emoji — is still readable, and
+   still shows its count. It simply is not a control. */
+.axismundi-reaction-bar__chip[ disabled ] {
+	cursor: not-allowed;
+}
+
+.axismundi-reaction-bar__image,
+.axismundi-reaction-button__emoji img {
+	inline-size: 1.25rem;
+	block-size: 1.25rem;
+	object-fit: contain;
+}
+
+/*
+ * A shortcode stands in for a picture that is not ours to show, so it is set as code: the
+ * colons are part of the name and a proportional face runs them into the letters.
+ */
+.axismundi-reaction-bar__shortcode {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.9em;
+}
+
+.axismundi-reaction-bar__count {
+	font-variant-numeric: tabular-nums;
+}
+
+.axismundi-reaction-button {
+	position: relative;
+	display: inline-flex;
+}
+
+.axismundi-reaction-button__emoji {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.375em;
+	border: 0;
+	border-radius: 0.5em;
+	background: none;
+	cursor: pointer;
+}
+
+.axismundi-reaction-button__emoji:hover:not( [disabled] ) {
+	background: color-mix( in srgb, currentColor 12%, transparent );
+}
+
+/* Withheld from publication, and this object is not ours: offered, visibly unavailable,
+   with the reason in the title. Hiding it would leave the reader wondering where an emoji
+   they have seen on this site went. */
+.axismundi-reaction-button__emoji[ disabled ] {
+	cursor: not-allowed;
+	opacity: 0.35;
+}
+
+.axismundi-reaction-button__status:empty {
+	display: none;
+}
+
+.axismundi-reaction-button__status {
+	position: absolute;
+	inset-block-start: calc( 100% + 0.25em );
+	inset-inline-start: 0;
+	font-size: 0.875em;
+}
+
+/* Editor previews stand in for live data and must not look interactive. */
+.axismundi-reaction-bar.is-editor-preview,
+.axismundi-reaction-button.is-editor-preview {
+	pointer-events: none;
+	opacity: 0.85;
+}
+
+.axismundi-reaction-bar__hint {
+	font-size: 0.875em;
+	opacity: 0.7;
+}
+
+/* ----------------------------------------------------------------
+ * Picker internals
+ *
+ * The popover borrows the lab module's lifecycle and placement only —
+ * `position: fixed`, trailing-corner anchor, viewport clamp. What it holds is a
+ * search field, a tab strip, and a grid, so it is a dialog rather than a menu:
+ * `role="menu"` would promise an up/down command model this does not have.
+ * ---------------------------------------------------------------- */
+
+/*
+ * Elevated, not outlined — the same treatment the theme gives its navigation submenu:
+ * `surface-container-low`, no border, `elevation-3`. A popover floats above the page, and
+ * an outline says "this is a region of the page" while a shadow says "this is on top of
+ * it". The outline belongs one level in, around the list that actually scrolls.
+ *
+ * These are the theme's own presets rather than system colours. `Canvas`/`CanvasText` are
+ * the browser's idea of a page, which on this theme is neither the right surface tone nor
+ * dark-mode aware.
+ */
+.axismundi-reaction-button__picker {
+	position: fixed;
+	z-index: var( --md-sys-z-popover, 50 );
+	inline-size: min( 24rem, calc( 100vw - 2rem ) );
+	max-block-size: min( 26rem, calc( 100vh - 2rem ) );
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: var( --wp--preset--spacing--50, 0.5rem );
+	border: 0;
+	border-radius: 16px;
+	background-color: var( --wp--preset--color--surface-container-low );
+	color: var( --wp--preset--color--on-surface );
+	/*
+	 * The elevation preset resolves to `none` in dark mode: the theme suppresses physical
+	 * shadows there and carries elevation as surface tone instead, which is the M3 rule for
+	 * dark surfaces. A popover is the documented exception — the theme's own select menu
+	 * keeps a level-2 shadow locally for exactly this reason, because a thing floating over
+	 * the page needs to read as floating whichever mode it is in. Same formula, same reason.
+	 */
+	box-shadow:
+		0 1px 2px color-mix( in srgb, var( --md-sys-color-shadow ), transparent 70% ),
+		0 2px 6px 2px color-mix( in srgb, var( --md-sys-color-shadow ), transparent 85% );
+}
+
+/*
+ * `display: flex` above is a class rule and outranks the user agent's
+ * `[hidden] { display: none }`, so the closed picker stayed on screen covering its own
+ * trigger even though the attribute was set correctly. Any component that sets `display`
+ * has to restate this.
+ */
+.axismundi-reaction-button__picker[ hidden ] {
+	display: none;
+}
+
+/* Out of layout when closed, so it leaves no stray pointer or focus target. */
+.axismundi-reaction-button__picker:not( .is-open ) {
+	pointer-events: none;
+}
+
+/*
+ * Neither the theme's text field nor a search component fits this: it is a filter inside a
+ * popover, not a form control on a page. So it keeps its own quiet treatment and only
+ * borrows the container's geometry — the top corners match the popover's 16px radius so the
+ * field reads as part of the same surface rather than a box floating inside it, and the
+ * bottom stays square where it meets the tab strip.
+ *
+ * `position: relative` because the progress bar lives on its bottom edge.
+ */
+.axismundi-reaction-picker__search {
+	position: relative;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.75rem;
+	margin: calc( -1 * var( --wp--preset--spacing--50, 0.5rem ) );
+	margin-block-end: 0;
+	border-start-start-radius: 16px;
+	border-start-end-radius: 16px;
+	background: color-mix( in srgb, currentColor 6%, transparent );
+}
+
+/*
+ * On the field's own bottom edge, not between components. Absolutely positioned so its
+ * appearing and disappearing never changes the layout — a 4dp bar that pushed the tab strip
+ * down on every keystroke would be worse than no indicator at all.
+ */
+.axismundi-reaction-picker__loading {
+	position: absolute;
+	inset-inline: 0;
+	inset-block-end: 0;
+}
+
+.axismundi-reaction-picker__input {
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	padding-block: 0.25rem;
+}
+
+.axismundi-reaction-picker__input:focus {
+	outline: none;
+}
+
+.axismundi-reaction-picker__panel {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding-block-start: 0.5rem;
+}
+
+.axismundi-reaction-picker__panel[ hidden ] {
+	display: none;
+}
+
+.axismundi-reaction-picker__group + .axismundi-reaction-picker__group {
+	margin-block-start: 0.75rem;
+}
+
+/* The category name carries the grouping. A divider as well would be a second
+   statement of the same thing. */
+.axismundi-reaction-picker__category-toggle,
+.axismundi-reaction-picker__subcategory-toggle {
+	inline-size: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+/*
+ * A nudge, not a real indent. The smaller type already carries the nesting; a full step in
+ * only pulled the label away from the chevron that stays pinned at the right edge, so the
+ * row read as lopsided rather than nested.
+ */
+.axismundi-reaction-picker__subcategory-toggle {
+	padding-inline-start: 8px;
+}
+
+.axismundi-reaction-picker__category-toggle .material-symbols-outlined,
+.axismundi-reaction-picker__subcategory-toggle .material-symbols-outlined {
+	font-size: 1rem;
+	transition: transform 120ms ease;
+}
+
+.axismundi-reaction-picker__category-toggle[aria-expanded="true"] .material-symbols-outlined,
+.axismundi-reaction-picker__subcategory-toggle[aria-expanded="true"] .material-symbols-outlined {
+	transform: rotate(180deg);
+}
+
+.axismundi-reaction-picker__grid {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 2.5rem, 1fr ) );
+	gap: 0.125rem;
+}
+
+/* Fixed-size native buttons, not cards: a picker tile is a control, and the card
+   pattern reserves whole-card anchors for navigation. */
+.axismundi-reaction-button__emoji {
+	inline-size: 2.5rem;
+	block-size: 2.5rem;
+	padding: 0.375rem;
+}
+
+.axismundi-reaction-button__glyph {
+	font-size: 1.375rem;
+	line-height: 1;
+}
+
+.axismundi-reaction-picker__empty {
+	margin: 0.5rem 0;
+	font-size: 0.875rem;
+	opacity: 0.7;
+}
+
+.axismundi-reaction-picker__empty[ hidden ] {
+	display: none;
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.axismundi-reaction-button__picker {
+		transition: none !important;
+	}
+}
+
+/* ----------------------------------------------------------------
+ * One scrolling page
+ *
+ * Every picker a reader already knows — the Windows panel, Mastodon, Misskey —
+ * puts everything on one page and uses the category strip to move within it. So
+ * the strip is sticky navigation, not a tab bar, and nothing it does hides
+ * content: switching panels would take away the thing a reader was comparing
+ * against, which is exactly what browsing for a reaction consists of.
+ * ---------------------------------------------------------------- */
+
+/*
+ * The jump strip is an M3 Primary navigation tab row.
+ *
+ * Built here from the design tokens rather than borrowed from a class: the lab's `.tabs`
+ * module is a reference implementation and ships nothing to the front end, so naming a
+ * class after it would style nothing at all — the same way `ax-button` did before this.
+ * The theme's own vocabulary is `--wp--preset--color--*` and `--md-sys-state-*`, and those
+ * are what this uses.
+ *
+ * Icon-only tabs, so the 48dp label row height applies rather than the 64dp icon-and-label
+ * one. The divider under the row and the 3dp active indicator are both part of the
+ * component, not decoration: the indicator is what says which tab is current without
+ * relying on colour, which matters because the active and inactive colours differ only in
+ * hue.
+ */
+.axismundi-reaction-picker__strip {
+	display: flex;
+	flex: 0 0 auto;
+	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var( --wp--preset--color--outline-variant ) transparent;
+	border-block-end: 1px solid var( --wp--preset--color--outline-variant );
+}
+
+.axismundi-reaction-picker__strip[ hidden ] {
+	display: none;
+}
+
+/*
+ * `flex: 1 1 0` with no minimum, so eleven tabs divide the strip instead of each claiming
+ * its content width and pushing the row into a horizontal scroll. `1 0 auto` was what put
+ * the overflow back: it let every tab grow but never shrink, so 11 x 40dp demanded 440px
+ * of a 384px row.
+ */
+.axismundi-reaction-picker__jump {
+	position: relative;
+	flex: 1 1 0;
+	min-inline-size: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	block-size: 48px;
+	padding-inline: 0.25rem;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	color: var( --wp--preset--color--on-surface-variant );
+	cursor: pointer;
+}
+
+.axismundi-reaction-picker__jump .material-symbols-outlined {
+	font-size: 24px;
+}
+
+/*
+ * The active indicator: 3dp tall, rounded at the top only, spanning the tab. Drawn with a
+ * pseudo-element rather than a border so it can keep that shape and so the inactive tab
+ * reserves no space for it and nothing shifts when the selection moves.
+ */
+.axismundi-reaction-picker__jump::after {
+	content: "";
+	position: absolute;
+	inset-inline: 0;
+	inset-block-end: 0;
+	block-size: 3px;
+	border-start-start-radius: 3px;
+	border-start-end-radius: 3px;
+	background-color: transparent;
+}
+
+.axismundi-reaction-picker__jump.is-active {
+	color: var( --wp--preset--color--primary );
+}
+
+.axismundi-reaction-picker__jump.is-active::after {
+	background-color: var( --wp--preset--color--primary );
+}
+
+/* State layers take the colour of the tab's own role, per the component's states. */
+.axismundi-reaction-picker__jump:hover {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+	color: var( --wp--preset--color--on-surface );
+}
+
+.axismundi-reaction-picker__jump.is-active:hover {
+	background-color: color-mix( in srgb, var( --wp--preset--color--primary ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+	color: var( --wp--preset--color--primary );
+}
+
+.axismundi-reaction-picker__jump:focus-visible {
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
+	outline: 3px solid var( --wp--preset--color--secondary );
+	outline-offset: -3px;
+}
+
+.axismundi-reaction-picker__jump:active {
+	background-color: color-mix( in srgb, var( --wp--preset--color--primary ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
+}
+
+/*
+ * Outlined, because this is the part that is a region rather than a floating thing. The
+ * outline draws the boundary the scroll actually has, which the popover's own edge cannot
+ * do once the list runs past it.
+ *
+ * No top padding. Padding inside a scroll container scrolls away with the content, so a
+ * sticky heading pinned at `inset-block-start: 0` slid under it and left a strip of grid
+ * showing above the heading. Sections carry their own spacing instead.
+ */
+.axismundi-reaction-picker__scroll {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	/* The theme's scrollbar treatment, taken from its select popover. */
+	scrollbar-width: thin;
+	scrollbar-color: var( --wp--preset--color--outline-variant ) transparent;
+	border: 1px solid var( --wp--preset--color--outline-variant );
+	border-radius: 12px;
+	background-color: var( --wp--preset--color--surface );
+	padding-inline: var( --wp--preset--spacing--25, 0.375rem );
+}
+
+.axismundi-reaction-picker__section[ hidden ] {
+	display: none;
+}
+
+.axismundi-reaction-picker__section + .axismundi-reaction-picker__section {
+	margin-block-start: 0.75rem;
+}
+
+/* A heading has to stay visible while its own grid scrolls past, or a reader
+   dropped into the middle of four thousand emoji cannot tell what they are in. */
+/*
+ * A heading stays put while its own grid scrolls past it, so a reader dropped into the
+ * middle of four thousand emoji can always tell what they are looking at.
+ *
+ * Opaque on the scroll region's own surface, not `Canvas` and not translucent: a sticky
+ * element with a see-through background shows the grid sliding underneath the words. The
+ * hairline appears only once it is actually stuck, which is what tells the reader the list
+ * continues above.
+ */
+.axismundi-reaction-picker__category {
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 1;
+	margin: 0;
+	padding-block: 0.375rem;
+	padding-inline-start: 0.5rem;
+	/*
+	 * Translucent over a blur rather than opaque. A stuck heading with a solid fill looks
+	 * like a lid dropped on the list; frosting it keeps the grid legible underneath as a
+	 * hint that the section continues, which is the whole reason the heading is sticky.
+	 *
+	 * `backdrop-filter` is progressive: where it is unsupported the colour is still 88%
+	 * opaque, so the words stay readable and only the texture is lost.
+	 */
+	background-color: color-mix( in srgb, var( --wp--preset--color--surface ) 70%, transparent );
+	backdrop-filter: blur( 12px );
+	box-shadow: 0 1px 0 0 var( --wp--preset--color--outline-variant );
+	color: var( --wp--preset--color--on-surface-variant );
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.axismundi-reaction-picker__subcategory {
+	margin: 0.5rem 0 0.25rem;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	opacity: 0.55;
+}
+
+.axismundi-reaction-picker__subgroup + .axismundi-reaction-picker__subgroup {
+	margin-block-start: 0.5rem;
+}
+
+/*
+ * The search progress indicator.
+ *
+ * `.ax-progress-linear` is a lab module class and ships nothing to the front end, so the
+ * markup that named it was drawing an empty box — searching showed no sign of working at
+ * all. This is the same linear indeterminate shape, expressed in the theme's tokens: a
+ * 4dp track in `surface-container-highest` with a `primary` bar sweeping across it.
+ */
+.axismundi-reaction-picker__loading {
+	block-size: 4px;
+	overflow: hidden;
+	background-color: var( --wp--preset--color--surface-container-highest );
+}
+
+.axismundi-reaction-picker__loading[ hidden ] {
+	display: none;
+}
+
+.ax-progress-linear.is-indeterminate {
+	block-size: 100%;
+	background-color: var( --wp--preset--color--primary );
+	transform-origin: 0 50%;
+	animation: axismundi-reaction-progress 1.2s var( --md-sys-motion-easing-standard, cubic-bezier( 0.2, 0, 0, 1 ) ) infinite;
+}
+
+@keyframes axismundi-reaction-progress {
+	0%   { transform: translateX( -100% ) scaleX( 0.4 ); }
+	50%  { transform: translateX( 20% ) scaleX( 0.6 ); }
+	100% { transform: translateX( 100% ) scaleX( 0.4 ); }
+}
+
+/* An indeterminate bar that cannot animate is a solid block of colour, which reads as
+   "finished" rather than "working". Hold it still and dim instead. */
+@media ( prefers-reduced-motion: reduce ) {
+	.ax-progress-linear.is-indeterminate {
+		animation: none;
+		opacity: 0.6;
+	}
+}
+
+/*
+ * A Unicode chip is a character, not a label: it has to match the 20px a custom emoji's
+ * image occupies or the row looks like two different components. It shared the shortcode
+ * style until now and rendered at 10.8px — half the size of the picture beside it.
+ */
+.axismundi-reaction-bar__shortcode.is-glyph {
+	font-family: inherit;
+	font-size: 20px;
+	line-height: 1;
+}

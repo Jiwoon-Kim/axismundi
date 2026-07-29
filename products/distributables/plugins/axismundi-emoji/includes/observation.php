@@ -26,7 +26,7 @@ defined( 'ABSPATH' ) || exit;
 function axismundi_emoji_verification_uri( array $descriptor ) : string {
 	$uri       = esc_url_raw( trim( (string) ( $descriptor['declared_id'] ?? '' ) ) );
 	$authority = strtolower( trim( (string) ( $descriptor['emoji_authority'] ?? '' ) ) );
-	$host      = strtolower( (string) wp_parse_url( $uri, PHP_URL_HOST ) );
+	$host      = axismundi_emoji_url_authority( $uri );
 	$scheme    = strtolower( (string) wp_parse_url( $uri, PHP_URL_SCHEME ) );
 	return '' !== $authority && $authority === $host && 'https' === $scheme ? $uri : '';
 }

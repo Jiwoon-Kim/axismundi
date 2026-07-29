@@ -84,6 +84,19 @@ try {
 	}
 	ax_react_assert( $ax_react_results, 'a later Like starts a distinct Activity cycle and restores state and lease', $relike instanceof Axismundi_Activity && $like instanceof Axismundi_Activity && $relike->get_uri() !== $like->get_uri() && axismundi_act_get_like_state( $local->get_uri(), $ax_react_object_uri ) && 1 === axismundi_op_active_lease_count( $ax_react_object_uri ) );
 
+	$self_object = 'https://example.com/objects/self-' . $ax_react_suffix;
+	$self_like   = axismundi_act_like_object( $local, $self_object, $local instanceof Axismundi_Actor ? $local->get_uri() : '' );
+	if ( $self_like instanceof Axismundi_Activity ) {
+		$ax_react_activity_uris[] = $self_like->get_uri();
+	}
+	$self_followers = $local instanceof Axismundi_Actor && function_exists( 'axismundi_op_actor_followers_url' ) ? axismundi_op_actor_followers_url( $local ) : '';
+	ax_react_assert( $ax_react_results, 'a self-Like is outbound to the Actor followers audience, so remote copies can update their count', $self_like instanceof Axismundi_Activity && 'outbound' === $self_like->get_direction() && in_array( $self_followers, (array) ( $self_like->get_audience()['cc'] ?? array() ), true ) );
+	$self_undo = $local instanceof Axismundi_Actor ? axismundi_act_unlike_object( $local, $self_object ) : null;
+	if ( $self_undo instanceof Axismundi_Activity ) {
+		$ax_react_activity_uris[] = $self_undo->get_uri();
+	}
+	ax_react_assert( $ax_react_results, 'Undo(self-Like) keeps the followers audience, so remote counts can decrement too', $self_undo instanceof Axismundi_Activity && $self_like instanceof Axismundi_Activity && 'outbound' === $self_undo->get_direction() && in_array( $self_followers, (array) ( $self_undo->get_audience()['cc'] ?? array() ), true ) );
+
 	$inbound_one = axismundi_act_record_activity( array( 'id' => $remote_uri . '/likes/1-' . $ax_react_suffix, 'type' => 'Like', 'actor' => $remote_uri, 'object' => $ax_react_object_uri ), 'inbound' );
 	$inbound_two = axismundi_act_record_activity( array( 'id' => $remote_uri . '/likes/2-' . $ax_react_suffix, 'type' => 'Like', 'actor' => $remote_uri, 'object' => $ax_react_object_uri ), 'inbound' );
 	foreach ( array( $inbound_one, $inbound_two ) as $inbound ) {

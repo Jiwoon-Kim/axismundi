@@ -35,10 +35,12 @@ defined( 'ABSPATH' ) || exit;
 			<!-- wp:axismundi/question /-->
 			<!-- wp:axismundi/object-attachments /-->
 			<!-- wp:axismundi/object-hashtags {"className":"is-style-tags"} /-->
+			<!-- wp:axismundi/reaction-bar /-->
 			<!-- wp:axismundi/object-actions -->
 				<!-- wp:axismundi/reply-button /-->
 				<!-- wp:axismundi/like-button /-->
 				<!-- wp:axismundi/announce-button /-->
+				<!-- wp:axismundi/reaction-button /-->
 			<!-- /wp:axismundi/object-actions -->
 		</article>
 		<!-- /wp:group -->

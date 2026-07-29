@@ -1,0 +1,9 @@
+Unicode Emoji 17.0 RGI catalogue data
+
+Source: https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt
+Copyright: Copyright 2025 Unicode, Inc.
+Terms: https://www.unicode.org/terms_of_use.html
+
+This derived catalogue retains fully-qualified RGI sequences, group, subgroup,
+Emoji version, and English CLDR short name from Unicode Emoji 17.0 test data.
+It is picker metadata only. It does not include Twemoji image assets.

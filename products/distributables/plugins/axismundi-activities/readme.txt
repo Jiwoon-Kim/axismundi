@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.33
+Stable tag: 0.0.34
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,13 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.34 =
+* Add FEP-c0e0 EmojiReact storage, normalized Unicode and custom-emoji reaction keys,
+  idempotent Like/Undo handling, public reaction collections, and authenticated reaction
+  summary and mutation endpoints.
+* Add the Reaction Bar and Add Reaction blocks with a custom-emoji picker, an RGI Unicode
+  catalogue for the later Unicode UI, and immediate client-side reaction feedback.
 
 = 0.0.33 =
 * Record a public local Actor profile edit as an outbound Update with the complete Actor document, deduplicated until its representation changes.

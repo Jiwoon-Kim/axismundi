@@ -51,7 +51,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_EMOJI_DB_VERSION = '1.8';
+const AXISMUNDI_EMOJI_DB_VERSION = '1.9';
 
 /** @return string Registry table name. */
 function axismundi_emoji_table() : string {
@@ -177,6 +177,8 @@ function axismundi_emoji_install() : void {
 		) ENGINE=InnoDB {$charset};"
 	);
 
+	axismundi_emoji_migrate_ported_authorities();
+
 	update_option( 'ax_emoji_db_version', AXISMUNDI_EMOJI_DB_VERSION, false );
 
 	/*
@@ -189,6 +191,69 @@ function axismundi_emoji_install() : void {
 	}
 	if ( function_exists( 'axismundi_emoji_register_bundled' ) ) {
 		axismundi_emoji_register_bundled();
+	}
+}
+
+/**
+ * Refile rows stored under a bare host that a port belongs to.
+ *
+ * An authority is an identity: `(name, domain)` is what FEP-9098 keys an emoji by, so
+ * `localhost` and `localhost:8884` are two emoji, not two spellings of one. Until now the
+ * registry filed this site's own emoji with the port WebFinger addresses it by, while
+ * every path that referred to one derived a bare host — so on a site not served from 443,
+ * an emoji could be stored and then never found again by the reactions and documents
+ * naming it.
+ *
+ * Deliberately narrow. A row moves only when its stored authority is exactly the host of
+ * the URL that declared it and that URL carries a non-default port: that is the shape of
+ * the drift and nothing else. In particular a row whose authority came from a qualified
+ * shortcode (`:name@other.example:`) is left alone, because there the declaring URL is
+ * not the authority and rewriting from it would reassign the emoji to the wrong owner.
+ *
+ * A row already sitting at the destination wins; the stale duplicate is left in place
+ * rather than merged, because merging two rows means choosing whose cached bytes and
+ * review decision survive, and that is a question for an operator and not for an
+ * upgrade path that runs unattended.
+ */
+function axismundi_emoji_migrate_ported_authorities() : void {
+	global $wpdb;
+	$table = axismundi_emoji_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; one-off upgrade scan.
+	$rows = (array) $wpdb->get_results( "SELECT id, emoji_authority, shortcode, shortcode_key, declared_id FROM {$table} WHERE declared_id IS NOT NULL AND declared_id <> ''", ARRAY_A );
+	$moved_authorities = array();
+	foreach ( $rows as $row ) {
+		$declared = (string) $row['declared_id'];
+		$stored   = strtolower( (string) $row['emoji_authority'] );
+		$target   = axismundi_emoji_url_authority( $declared );
+		$bare     = strtolower( (string) wp_parse_url( $declared, PHP_URL_HOST ) );
+		// The authority came from a qualified shortcode, not from this URL.
+		$parsed = axismundi_emoji_parse_shortcode( (string) $row['shortcode'] );
+		if ( is_array( $parsed ) && '' !== $parsed['authority'] ) {
+			continue;
+		}
+		if ( '' === $target || $target === $stored || $bare !== $stored ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; collision check.
+		$occupied = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE emoji_authority = %s AND shortcode_key = %s", $target, (string) $row['shortcode_key'] ) );
+		if ( $occupied > 0 ) {
+			continue;
+		}
+		$wpdb->update( $table, array( 'emoji_authority' => $target ), array( 'id' => (int) $row['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$moved_authorities[ $stored ] = $target;
+	}
+
+	// The per-authority review policy follows its emoji, or an operator's approval of a
+	// host would silently stop applying to it.
+	$authorities = axismundi_emoji_authorities_table();
+	foreach ( $moved_authorities as $stored => $target ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; collision check.
+		$exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$authorities} WHERE emoji_authority = %s", $target ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table; only the emoji that actually moved.
+		$remaining = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE emoji_authority = %s", $stored ) );
+		if ( 0 === $exists && 0 === $remaining ) {
+			$wpdb->update( $authorities, array( 'emoji_authority' => $target ), array( 'emoji_authority' => $stored ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		}
 	}
 }
 

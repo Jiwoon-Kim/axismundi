@@ -50,6 +50,20 @@ function ax_import_delete_actor( int $identity_id ) : void {
 	$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- exact fixture cleanup.
 }
 
+/** @return int Legacy rows the importer reports as already verified, across every bucket. */
+function ax_import_verified_total( array $summary ) : int {
+	return array_sum( array_map( static fn( array $counts ) : int => (int) ( $counts['verified_existing'] ?? 0 ), $summary ) );
+}
+
+/*
+ * `verified_existing` counts every legacy row on the site, not only the ones this audit
+ * creates, so any real official-ActivityPub content in the database is counted too. Asserting
+ * a fixed total made the audit pass or fail on what happened to be installed; the baseline is
+ * measured instead, and only the delta belongs to the fixtures. The import is idempotent, so
+ * taking the baseline this way costs nothing and writes nothing.
+ */
+$ax_import_baseline = ax_import_verified_total( (array) axismundi_activitypub_bridge_import_legacy_data()['summary'] );
+
 try {
 	add_filter( 'pre_http_request', 'ax_import_http_probe', 99, 3 );
 	$ax_import_user = (int) wp_insert_user( array( 'user_login' => 'ax_import_local', 'user_pass' => wp_generate_password(), 'role' => 'contributor' ) );
@@ -115,7 +129,7 @@ try {
 	ax_import_assert( $ax_import_results, 'all official source rows remain after import', $source_before === count( array_filter( array_map( 'get_post', $ax_import_posts ) ) ) );
 
 	$again = axismundi_activitypub_bridge_import_legacy_data();
-	ax_import_assert( $ax_import_results, 'a second import is idempotent and reports verified existing rows', ! empty( $again['complete'] ) && 0 === $again['writes'] && 7 === array_sum( array_map( static fn( array $counts ) : int => (int) ( $counts['verified_existing'] ?? 0 ), $again['summary'] ) ) );
+	ax_import_assert( $ax_import_results, 'a second import is idempotent and reports verified existing rows', ! empty( $again['complete'] ) && 0 === $again['writes'] && 7 === ax_import_verified_total( (array) $again['summary'] ) - $ax_import_baseline );
 	ax_import_assert( $ax_import_results, 'import remains offline across repeated runs', 0 === $ax_import_http && 0 === $again['network_requests'] );
 
 	ob_start();

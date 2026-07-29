@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -24,9 +24,17 @@ their shortcode and never as an image.
 
 The design is recorded in `docs/AXISMUNDI-EMOJI-ARCHITECTURE.md` at the repository root.
 
-Deliberately out of scope: Unicode emoji and their Twemoji-style image substitutions, which WordPress core, Mastodon, and Misskey each already handle separately; and emoji reactions (FEP-c0e0), which belong to Axismundi Activities.
+Unicode emoji and their Twemoji-style image substitutions remain WordPress core's
+domain. Emoji reactions (FEP-c0e0) belong to Axismundi Activities, while this plugin
+observes their declared custom emoji so the existing review and cache pipeline can
+render approved reaction chips.
 
 == Changelog ==
+
+= 0.1.5 =
+* Observe FEP-9098 declarations carried by inbound Like and EmojiReact Activities, so
+  custom reaction chips enter the same authority-gated review and cache pipeline as
+  Object and Actor emoji.
 
 = 0.1.4 =
 * Preserve non-default ports in emoji authority identity, including local custom emoji

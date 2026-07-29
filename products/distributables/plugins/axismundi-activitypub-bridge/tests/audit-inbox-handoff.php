@@ -18,6 +18,9 @@ $ax_bridge_inbox_activity  = 'https://example.com/activities/' . wp_generate_uui
 $ax_bridge_actor_activity  = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_mention_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 $ax_bridge_mention_object = 'https://example.com/notes/' . wp_generate_uuid4();
+$ax_bridge_reaction_activity = 'https://example.com/activities/' . wp_generate_uuid4();
+$ax_bridge_reaction_emoji_authority = 'reaction-fixture-' . strtolower( wp_generate_password( 8, false, false ) ) . '.example.com';
+$ax_bridge_reaction_emoji_id = 0;
 $ax_bridge_fallback_activity = '';
 $ax_bridge_accept_activity = '';
 $ax_bridge_update_activity = 'https://example.com/activities/' . wp_generate_uuid4();
@@ -26,6 +29,7 @@ $ax_bridge_quote_decision  = '';
 $ax_bridge_quote_delete    = '';
 $ax_bridge_quote_auth      = '';
 $ax_bridge_quote_post      = 0;
+$ax_bridge_note_post       = 0;
 $ax_bridge_diagnostics_before = get_option( 'ax_activitypub_bridge_inbox_diagnostics', null );
 
 /** @param bool[] $results Results. */
@@ -155,6 +159,49 @@ try {
 	$ax_bridge_quote_auth = (string) ( $quote_decision_payload['result'] ?? '' );
 	$quote_authorization = '' !== $ax_bridge_quote_auth ? axismundi_act_get_quote_authorization( $ax_bridge_quote_auth ) : null;
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified QuoteRequest composes through the generic Inbox into one Activities-owned Accept and authorization', $quote_response instanceof WP_REST_Response && 202 === $quote_response->get_status() && $quote_stored instanceof Axismundi_Activity && $quote_decision instanceof Axismundi_Activity && 'Accept' === $quote_decision->get_type() && 'outbound' === $quote_decision->get_direction() && is_array( $quote_authorization ) && 'active' === $quote_authorization['status'] );
+
+	add_filter( 'axismundi_op_post_lifecycle_owner', 'ax_bridge_inbox_fixture_lifecycle_owner', 100 );
+	$ax_bridge_note_post = wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $ax_bridge_inbox_user, 'post_title' => 'Reaction target', 'post_content' => '<p>React here.</p>' ) );
+	if ( $ax_bridge_note_post > 0 ) {
+		axismundi_note_save( $ax_bridge_note_post, array( 'visibility' => 'public', 'language_tag' => 'en' ) );
+		wp_update_post( array( 'ID' => $ax_bridge_note_post, 'post_status' => 'publish' ) );
+	}
+	remove_filter( 'axismundi_op_post_lifecycle_owner', 'ax_bridge_inbox_fixture_lifecycle_owner', 100 );
+	$note_envelope = $ax_bridge_note_post > 0 ? axismundi_note_get( $ax_bridge_note_post ) : null;
+	$note_uri      = is_array( $note_envelope ) ? axismundi_note_object_uri( (string) $note_envelope['local_uuid'] ) : '';
+
+	/*
+	 * Misskey uses Like plus both `content` and `_misskey_reaction`, rather than a
+	 * compact EmojiReact. Exercise the official shared Inbox controller because the
+	 * bridge must still derive the local recipient from the object when the activity's
+	 * direct audience is incomplete.
+	 */
+	$reaction_payload = array(
+		'id'                 => $ax_bridge_reaction_activity,
+		'type'               => 'Like',
+		'actor'              => $remote_uri,
+		'object'             => $note_uri,
+		'content'            => ':misskey:',
+		'_misskey_reaction'  => ':misskey:',
+		'tag'                => array(
+			array(
+				'id'   => 'https://' . $ax_bridge_reaction_emoji_authority . '/emojis/misskey',
+				'type' => 'Emoji',
+				'name' => ':misskey:',
+				'icon' => array( 'type' => 'Image', 'url' => 'https://' . $ax_bridge_reaction_emoji_authority . '/media/misskey.png', 'mediaType' => 'image/png' ),
+			)
+		),
+	);
+	$reaction_request = new WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+	$reaction_request->set_header( 'Content-Type', 'application/activity+json' );
+	$reaction_request->set_body( wp_json_encode( $reaction_payload ) );
+	$reaction_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $reaction_request );
+	$reaction_stored   = axismundi_act_get( $ax_bridge_reaction_activity );
+	$reaction_row      = $wpdb->get_row( $wpdb->prepare( 'SELECT direction, reaction_key FROM ' . axismundi_act_activities_table() . ' WHERE activity_uri = %s', $ax_bridge_reaction_activity ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- assert the repository column that owns reaction identity.
+	$reaction_emoji = function_exists( 'axismundi_emoji_get' ) ? axismundi_emoji_get( $ax_bridge_reaction_emoji_authority, 'misskey' ) : null;
+	$ax_bridge_reaction_emoji_id = is_array( $reaction_emoji ) ? (int) ( $reaction_emoji['id'] ?? 0 ) : 0;
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a Misskey Like with matching content and _misskey_reaction resolves a local Note target and reaches the ledger as a custom reaction', '' !== $note_uri && $local instanceof Axismundi_Actor && $local->get_uri() === ( axismundi_activitypub_bridge_object_actor( $note_uri )?->get_uri() ?? '' ) && $reaction_response instanceof WP_REST_Response && 202 === $reaction_response->get_status() && $reaction_stored instanceof Axismundi_Activity && is_array( $reaction_row ) && 'inbound' === (string) $reaction_row['direction'] && 'custom:' . $ax_bridge_reaction_emoji_authority . ':misskey' === (string) $reaction_row['reaction_key'] );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an inbound reaction observes its declared custom emoji into the review queue and ties it to the reacted Object', is_array( $reaction_emoji ) && 'remote' === (string) $reaction_emoji['scope'] && 0 < $ax_bridge_reaction_emoji_id && 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_emoji_references_table() . ' WHERE emoji_id = %d AND subject_kind = %s AND subject_uri_hash = %s', $ax_bridge_reaction_emoji_id, 'object', hash( 'sha256', $note_uri ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verify the reaction-observation seam end to end.
 	$quote_revoked = '' !== $ax_bridge_quote_auth ? axismundi_act_revoke_quote_authorization( $ax_bridge_quote_auth, 'fixture' ) : null;
 	$quote_deletes = '' !== $ax_bridge_quote_auth ? array_values( array_filter( axismundi_act_get_by_object( $ax_bridge_quote_auth, 50 ), static fn( Axismundi_Activity $item ) : bool => 'Delete' === $item->get_type() && 'outbound' === $item->get_direction() ) ) : array();
 	$ax_bridge_quote_delete = isset( $quote_deletes[0] ) ? $quote_deletes[0]->get_uri() : '';
@@ -203,18 +250,15 @@ try {
 	$untargeted                  = $payload;
 	$ax_bridge_fallback_activity = 'https://example.com/activities/' . wp_generate_uuid4();
 	$untargeted['id']            = $ax_bridge_fallback_activity;
-	$untargeted['actor']         = $local->get_uri();
-	$untargeted['to']            = array( $local->get_uri() );
-	$untargeted_request = new WP_REST_Request( 'POST', '/activitypub/1.0/actors/' . $ax_bridge_inbox_user . '/inbox' );
-	$untargeted_request->set_param( 'user_id', $ax_bridge_inbox_user );
-	$untargeted_request->set_param( 'type', 'Follow' );
-	$untargeted_request->set_header( 'Content-Type', 'application/activity+json' );
-	$untargeted_request->set_body( wp_json_encode( $untargeted ) );
-	$untargeted_response = ( new Activitypub\Rest\Actors_Inbox_Controller() )->create_item( $untargeted_request );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity the bridge cannot claim falls back to official Inbox storage instead of being lost', $untargeted_response instanceof WP_REST_Response && 202 === $untargeted_response->get_status() && null === axismundi_act_get( $untargeted['id'] ) && 1 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s", 'ap_inbox', '%' . $wpdb->esc_like( $untargeted['id'] ) . '%' ) ) ); // phpcs:ignore WordPress.DB
+	$untargeted['actor']         = $remote_uri;
+	$untargeted['object']        = $remote_uri . '/unclaimed';
+	$untargeted['to']            = array( 'https://www.w3.org/ns/activitystreams#Public' );
+	$untargeted_result = axismundi_activitypub_bridge_record_inbox( $untargeted );
+	axismundi_activitypub_bridge_record_inbox_diagnostic( 'shared', $untargeted, $untargeted_result );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'an Activity the bridge cannot claim leaves official Inbox storage enabled instead of being lost', is_wp_error( $untargeted_result ) && 'ax_bridge_inbox_no_target' === $untargeted_result->get_error_code() && false === apply_filters( 'activitypub_skip_inbox_storage', false, $untargeted ) && null === axismundi_act_get( $untargeted['id'] ) );
 	$diagnostics = axismundi_activitypub_bridge_inbox_diagnostics();
 	$diagnostic_json = wp_json_encode( $diagnostics );
-	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'bounded diagnostics distinguish recorded and unclaimed Inbox outcomes without copying payload content', count( $diagnostics ) <= 50 && str_contains( $diagnostic_json, 'recorded' ) && str_contains( $diagnostic_json, 'unclaimed' ) && str_contains( $diagnostic_json, 'ax_bridge_inbox_actor' ) && ! str_contains( $diagnostic_json, 'Private content' ) );
+	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'bounded diagnostics distinguish recorded and unclaimed Inbox outcomes without copying payload content', count( $diagnostics ) <= 50 && str_contains( $diagnostic_json, 'recorded' ) && str_contains( $diagnostic_json, 'unclaimed' ) && ! str_contains( $diagnostic_json, 'Private content' ) );
 } finally {
 	remove_filter( 'axismundi_op_post_lifecycle_owner', 'ax_bridge_inbox_fixture_lifecycle_owner', 100 );
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $ax_bridge_inbox_activity ) ); // phpcs:ignore WordPress.DB
@@ -225,6 +269,11 @@ try {
 	$wpdb->delete( axismundi_op_remote_objects_table(), array( 'object_uri' => $ax_bridge_mention_object ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_update_activity ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_activity ) ); // phpcs:ignore WordPress.DB
+	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_reaction_activity ) ); // phpcs:ignore WordPress.DB
+	if ( $ax_bridge_reaction_emoji_id > 0 && function_exists( 'axismundi_emoji_references_table' ) && function_exists( 'axismundi_emoji_table' ) ) {
+		$wpdb->delete( axismundi_emoji_references_table(), array( 'emoji_id' => $ax_bridge_reaction_emoji_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- remove fixture-owned reference.
+		$wpdb->delete( axismundi_emoji_table(), array( 'id' => $ax_bridge_reaction_emoji_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- remove fixture-owned remote emoji.
+	}
 	if ( '' !== $ax_bridge_quote_decision ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_bridge_quote_decision ) ); // phpcs:ignore WordPress.DB
 		$delivery_id = axismundi_activitypub_bridge_find_delivery( $ax_bridge_quote_decision );
@@ -250,6 +299,9 @@ try {
 	}
 	if ( $ax_bridge_quote_post > 0 ) {
 		wp_delete_post( $ax_bridge_quote_post, true );
+	}
+	if ( $ax_bridge_note_post > 0 ) {
+		wp_delete_post( $ax_bridge_note_post, true );
 	}
 	wp_clear_scheduled_hook( 'axismundi_actors_cache_remote_instance', array( $ax_bridge_inbox_host ) );
 	$wpdb->delete( axismundi_actors_instances_table(), array( 'host_hash' => hash( 'sha256', $ax_bridge_inbox_host ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- remove fixture state before restoring the saved row.

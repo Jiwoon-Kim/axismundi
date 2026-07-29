@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi ActivityPub Bridge
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-activitypub-bridge
  * Description:       Compatibility boundary between Axismundi's URI-keyed domain stores and the official ActivityPub plugin's S2S transport.
- * Version:           0.0.23
+ * Version:           0.0.24
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Requires Plugins:  activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.23';
+const AXISMUNDI_ACTIVITYPUB_BRIDGE_VERSION = '0.0.24';
 const AXISMUNDI_ACTIVITYPUB_BRIDGE_REWRITE_VERSION = 1;
 
 require_once __DIR__ . '/includes/transport.php';
@@ -120,13 +120,19 @@ function axismundi_activitypub_bridge_object_actor( string $uri ) : ?Axismundi_A
 	if ( '' === $home_host || $home_host !== $uri_host ) {
 		return null;
 	}
-	parse_str( (string) wp_parse_url( $uri, PHP_URL_QUERY ), $query );
-	$post_id = (int) ( $query['p'] ?? $query['attachment_id'] ?? 0 );
-	$post    = $post_id > 0 ? get_post( $post_id ) : null;
-	if ( ! $post instanceof WP_Post ) {
+
+	// Products own their stable Object URI shapes. Asking the projection resolver
+	// first covers Notes (`?ax_note=`) as well as the default Post projection.
+	$source = function_exists( 'axismundi_op_resolve_source_by_uri' ) ? axismundi_op_resolve_source_by_uri( $uri ) : null;
+	if ( null === $source ) {
+		parse_str( (string) wp_parse_url( $uri, PHP_URL_QUERY ), $query );
+		$post_id = (int) ( $query['p'] ?? $query['attachment_id'] ?? 0 );
+		$source  = $post_id > 0 ? get_post( $post_id ) : null;
+	}
+	if ( null === $source ) {
 		return null;
 	}
-	$object = axismundi_op_transform_object( $post );
+	$object = axismundi_op_transform_object( $source );
 	if ( is_wp_error( $object ) || ! hash_equals( (string) ( $object['id'] ?? '' ), $uri ) ) {
 		return null;
 	}

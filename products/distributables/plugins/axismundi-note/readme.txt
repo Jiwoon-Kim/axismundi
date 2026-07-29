@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.33
+Stable tag: 0.0.34
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,9 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.34 =
+* Advertise the FEP-c0e0 emoji reaction collection on federated Notes.
 
 = 0.0.33 =
 * Separate federated authorship from site moderation: a public Actor may author only its

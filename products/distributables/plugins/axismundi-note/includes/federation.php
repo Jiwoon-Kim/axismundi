@@ -423,6 +423,12 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	if ( function_exists( 'axismundi_op_add_replies_property' ) ) {
 		$object = axismundi_op_add_replies_property( $object );
 	}
+	// Activities owns the state; Object Projections owns the public collection URLs.
+	// Notes are local Objects too, so they advertise the same likes/reactions/shares
+	// collections as Articles without duplicating that projection logic here.
+	if ( function_exists( 'axismundi_op_add_likes_property' ) ) {
+		$object = axismundi_op_add_likes_property( $object );
+	}
 	$interaction_policy = axismundi_note_quote_interaction_policy( $envelope );
 	if ( is_array( $interaction_policy ) ) {
 		$object['interactionPolicy'] = $interaction_policy;

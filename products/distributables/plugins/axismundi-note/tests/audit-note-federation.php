@@ -151,6 +151,14 @@ try {
 	);
 	ax_nf_assert(
 		$ax_nf_results,
+		'a Note advertises the FEP-c0e0 reaction collection under the exact Fedibird IRI',
+		is_array( $object )
+			&& isset( $object['http://fedibird.com/ns#emojiReactions'] )
+			&& str_contains( (string) $object['http://fedibird.com/ns#emojiReactions'], '/objects/emoji-reactions' )
+			&& ! isset( $object['https://fedibird.com/ns#emojiReactions'] )
+	);
+	ax_nf_assert(
+		$ax_nf_results,
 		'a sensitive attachment elevates the federated Note flag without mutating the authored envelope',
 		is_array( $envelope ) && empty( $envelope['is_sensitive'] ) && true === ( $object['sensitive'] ?? false )
 	);

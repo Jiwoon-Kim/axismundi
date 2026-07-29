@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Axismundi Emoji
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-emoji
- * Description:       Custom emoji for Axismundi. Registry, admission review, and per-authority binary cache for FEP-9098 emoji observed in federated tags, plus local emoji registration and a block-editor picker. Unicode emoji and emoji reactions are deliberately out of scope.
- * Version:           0.1.4
+ * Description:       Custom emoji for Axismundi. Registry, admission review, and per-authority binary cache for FEP-9098 emoji observed in federated Objects, Actors, and reactions, plus local emoji registration and a block-editor picker.
+ * Version:           0.1.5
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -19,12 +19,13 @@
  * the outbound `tag[]` of Notes, Articles, and Actors. The contract, fixtures, and
  * harness under tests/ keep all of it grounded in captured wire evidence.
  *
- * Still deliberately absent: emoji reactions (E4).
+ * Emoji reactions are owned by Activities; this plugin observes their FEP-9098
+ * declarations so approved custom reaction chips can render through the same cache.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_EMOJI_VERSION = '0.1.4';
+const AXISMUNDI_EMOJI_VERSION = '0.1.5';
 
 /**
  * Cap on emoji declared by a single Object or Actor.
@@ -131,6 +132,7 @@ require_once __DIR__ . '/includes/catalogue.php';
 require_once __DIR__ . '/includes/outbound.php';
 require_once __DIR__ . '/includes/renderer.php';
 require_once __DIR__ . '/includes/integrations/actors.php';
+require_once __DIR__ . '/includes/integrations/activities.php';
 require_once __DIR__ . '/includes/integrations/object-projections.php';
 require_once __DIR__ . '/includes/admin.php';
 require_once __DIR__ . '/includes/editor.php';

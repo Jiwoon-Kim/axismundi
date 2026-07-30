@@ -50,6 +50,7 @@ try {
 	list( $alice_user, $alice ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $bob_user, $bob ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $editor_user, $editor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
+	list( $site_editor_user, $site_editor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $contributor_user, $contributor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities, 'contributor' );
 	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $group instanceof Axismundi_Actor ) { $ax_fmod_identities[] = $group->get_identity_id(); }
@@ -286,17 +287,20 @@ try {
 			&& ( $contributor_source = get_post( $contributor_topic_id ) ) instanceof WP_Post
 			&& 'publish' === $contributor_source->post_status
 	);
-	$contributor_withdrawn = is_array( $contributor_visible )
-		? axismundi_forum_withdraw_announced_entry( (int) $contributor_visible['id'], $alice_user )
+	wp_set_current_user( $site_editor_user );
+	$contributor_withdrawn = $contributor_topic_id > 0
+		? wp_update_post( array( 'ID' => $contributor_topic_id, 'post_status' => 'pending' ), true )
 		: new WP_Error( 'fixture' );
+	wp_set_current_user( 0 );
 	$contributor_pending_again = axismundi_forum_get_topic_entry( $contributor_topic_id );
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'withdrawing a contributor Topic returns both the Group entry and WordPress source to pending for later review',
-		true === $contributor_withdrawn && is_array( $contributor_pending_again)
+		'a site editor who is not a Group moderator moving another author Topic to pending also undoes the Group Announce and returns both states to review',
+		! is_wp_error( $contributor_withdrawn) && is_array( $contributor_pending_again)
 			&& 'pending' === (string) $contributor_pending_again['admission_state']
 			&& ( $contributor_source = get_post( $contributor_topic_id ) ) instanceof WP_Post
 			&& 'pending' === $contributor_source->post_status
+			&& ! axismundi_forum_user_can_moderate( $group_id, $site_editor_user )
 	);
 	$editor_topic_id = (int) wp_insert_post(
 		array(

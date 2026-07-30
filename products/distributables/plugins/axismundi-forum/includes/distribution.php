@@ -149,12 +149,15 @@ function axismundi_forum_is_internal_topic_status_sync( int $topic_post_id ) : b
 	return ! empty( $GLOBALS['axismundi_forum_internal_topic_status_sync'][ $topic_post_id ] );
 }
 
-/** A Group moderator or the local source author may withdraw that source from its community. */
+/** A Group moderator, the local source author, or a site editor may withdraw a local source. */
 function axismundi_forum_user_can_withdraw_announced_entry( array $entry, int $user_id ) : bool {
 	if ( $user_id <= 0 ) {
 		return false;
 	}
 	if ( function_exists( 'axismundi_forum_user_can_moderate' ) && axismundi_forum_user_can_moderate( (int) $entry['group_identity_id'], $user_id ) ) {
+		return true;
+	}
+	if ( user_can( $user_id, 'edit_others_posts' ) ) {
 		return true;
 	}
 	$source_post_id = (int) ( $entry['source_post_id'] ?? 0 );
@@ -253,20 +256,21 @@ function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id )
 }
 
 /**
- * Turn an author's direct publish-to-pending transition into a Group withdrawal.
+ * Turn a local author or site editor's publish-to-pending transition into a Group withdrawal.
  *
  * WordPress owns the editor's status control. The Group still owns its Announce, so this hook
  * records the matching Undo and restores publish if that federated transition cannot be made.
  */
 function axismundi_forum_handle_author_topic_pending_transition( string $new_status, string $old_status, WP_Post $topic ) : void {
-	if ( 'publish' !== $old_status || 'pending' !== $new_status || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || axismundi_forum_is_internal_topic_status_sync( $topic->ID ) || get_current_user_id() !== (int) $topic->post_author ) {
+	$user_id = get_current_user_id();
+	if ( 'publish' !== $old_status || 'pending' !== $new_status || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || axismundi_forum_is_internal_topic_status_sync( $topic->ID ) || ( $user_id !== (int) $topic->post_author && ! user_can( $user_id, 'edit_others_posts' ) ) ) {
 		return;
 	}
 	$entry = axismundi_forum_get_topic_entry( $topic->ID );
 	if ( ! is_array( $entry ) || 'visible' !== (string) $entry['admission_state'] ) {
 		return;
 	}
-	$result = axismundi_forum_withdraw_announced_entry( (int) $entry['id'], (int) $topic->post_author );
+	$result = axismundi_forum_withdraw_announced_entry( (int) $entry['id'], $user_id );
 	if ( ! is_wp_error( $result ) ) {
 		return;
 	}

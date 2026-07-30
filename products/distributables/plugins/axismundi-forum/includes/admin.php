@@ -134,7 +134,15 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 				continue;
 			}
 			$label = '@' . $member->get_preferred_username();
-			echo '<li><a href="' . esc_url( $member->get_profile_url() ) . '">' . esc_html( $label ) . '</a></li>';
+			echo '<li><a href="' . esc_url( $member->get_profile_url() ) . '">' . esc_html( $label ) . '</a>';
+			if ( $can_manage ) {
+				$is_moderator = 'moderator' === (string) ( $membership['membership_role'] ?? 'member' );
+				echo ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+				echo '<input type="hidden" name="action" value="axismundi_forum_moderator_decision"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="actor_identity_id" value="' . esc_attr( (string) $membership['actor_identity_id'] ) . '">';
+				wp_nonce_field( 'axismundi_forum_moderator_' . $group_id . '_' . $membership['actor_identity_id'] );
+				echo '<button class="button button-small" name="decision" value="' . esc_attr( $is_moderator ? 'remove' : 'add' ) . '">' . esc_html( $is_moderator ? __( 'Remove moderator', 'axismundi-forum' ) : __( 'Make moderator', 'axismundi-forum' ) ) . '</button></form>';
+			}
+			echo '</li>';
 		}
 		echo '</ul>';
 		$pages = max( 1, (int) ceil( (int) $members['total'] / 50 ) );
@@ -222,3 +230,16 @@ function axismundi_forum_handle_topic_decision() : void {
 	axismundi_forum_group_admin_redirect( $group_id, $result );
 }
 add_action( 'admin_post_axismundi_forum_topic_decision', 'axismundi_forum_handle_topic_decision' );
+
+/** Promote or demote an accepted member through the FEP-1b12 moderator activity path. */
+function axismundi_forum_handle_moderator_decision() : void {
+	$group_id = isset( $_POST['group_identity_id'] ) ? absint( $_POST['group_identity_id'] ) : 0;
+	$actor_id = isset( $_POST['actor_identity_id'] ) ? absint( $_POST['actor_identity_id'] ) : 0;
+	check_admin_referer( 'axismundi_forum_moderator_' . $group_id . '_' . $actor_id );
+	$decision = sanitize_key( (string) ( $_POST['decision'] ?? '' ) );
+	$result = in_array( $decision, array( 'add', 'remove' ), true )
+		? axismundi_forum_set_actor_moderator( $group_id, $actor_id, get_current_user_id(), 'add' === $decision )
+		: new WP_Error( 'ax_forum_moderator_decision', __( 'The moderator decision is invalid.', 'axismundi-forum' ) );
+	axismundi_forum_group_admin_redirect( $group_id, $result );
+}
+add_action( 'admin_post_axismundi_forum_moderator_decision', 'axismundi_forum_handle_moderator_decision' );

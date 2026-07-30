@@ -50,6 +50,34 @@ function axismundi_forum_actor_is_moderator( int $group_identity_id, Axismundi_A
 	return null !== $user_id && axismundi_forum_user_can_manage( $group_identity_id, $user_id );
 }
 
+/** Record the actor-authored moderation activity and Group wrapper for one role transition. */
+function axismundi_forum_record_moderator_change( Axismundi_Actor $group, Axismundi_Actor $subject, int $user_id, bool $moderator ) {
+	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	if ( ! axismundi_forum_public_local_person( $actor ) || ! axismundi_forum_actor_is_moderator( $group->get_identity_id(), $actor )
+		|| ! function_exists( 'axismundi_act_record_source_activity' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
+		return new WP_Error( 'ax_forum_moderator_actor', __( 'A public community moderator Actor is required for this change.', 'axismundi-forum' ) );
+	}
+	$followers = axismundi_op_actor_followers_url( $group );
+	$target = axismundi_forum_moderator_collection_url( $group );
+	if ( '' === $followers || '' === $target ) {
+		return new WP_Error( 'ax_forum_moderator_collection', __( 'The community moderator collection is unavailable.', 'axismundi-forum' ) );
+	}
+	$type = $moderator ? 'Add' : 'Remove';
+	$inner = axismundi_act_record_source_activity(
+		array( 'type' => $type, 'actor' => $actor->get_uri(), 'object' => $subject->get_uri(), 'target' => $target, 'audience' => $group->get_uri() ),
+		'outbound',
+		'forum-moderator-' . strtolower( $type ) . ':group:' . $group->get_identity_id() . ':subject:' . $subject->get_identity_id()
+	);
+	if ( is_wp_error( $inner ) ) {
+		return $inner;
+	}
+	return axismundi_act_record_source_activity(
+		array( 'type' => 'Announce', 'actor' => $group->get_uri(), 'object' => $inner->get_payload(), 'to' => array( $followers ) ),
+		'outbound',
+		'forum-moderator-announce:' . strtolower( $type ) . ':group:' . $group->get_identity_id() . ':inner:' . $inner->get_uri()
+	);
+}
+
 /**
  * Grant or revoke an explicit Actor moderator role.
  *
@@ -67,6 +95,15 @@ function axismundi_forum_set_actor_moderator( int $group_identity_id, int $actor
 	$role = $moderator ? 'moderator' : 'member';
 	if ( $role === (string) $membership['membership_role'] ) {
 		return true;
+	}
+	$group = axismundi_forum_get_community_group( $group_identity_id );
+	$subject = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( $actor_identity_id ) : null;
+	if ( ! $group instanceof Axismundi_Actor || ! $subject instanceof Axismundi_Actor ) {
+		return new WP_Error( 'ax_forum_moderator_actor', __( 'The community or member Actor is unavailable.', 'axismundi-forum' ) );
+	}
+	$activity = axismundi_forum_record_moderator_change( $group, $subject, $user_id, $moderator );
+	if ( is_wp_error( $activity ) ) {
+		return $activity;
 	}
 	global $wpdb;
 	$updated = $wpdb->update(
@@ -110,3 +147,53 @@ function axismundi_forum_effective_moderators( int $group_identity_id ) : array 
 	}
 	return $moderators;
 }
+
+/** @return string Stable public moderator collection URI for one local Group. */
+function axismundi_forum_moderator_collection_url( Axismundi_Actor $group ) : string {
+	return rest_url( 'axismundi/v1/forum/groups/' . rawurlencode( $group->get_uuid() ) . '/moderators' );
+}
+
+/** Add FEP-1b12 attributedTo only to local public community Groups. */
+function axismundi_forum_project_group_moderators( array $object, Axismundi_Actor $actor ) : array {
+	if ( axismundi_forum_public_community_group( $actor ) ) {
+		$object['attributedTo'] = axismundi_forum_moderator_collection_url( $actor );
+	}
+	return $object;
+}
+add_filter( 'axismundi_op_actor_projection_fields', 'axismundi_forum_project_group_moderators', 20, 2 );
+
+/** Serve the public Actor collection FEP-1b12 uses to identify Group moderators. */
+function axismundi_forum_get_moderator_collection( WP_REST_Request $request ) {
+	$group = function_exists( 'axismundi_actors_get_by_uuid' ) ? axismundi_actors_get_by_uuid( strtolower( (string) $request['uuid'] ) ) : null;
+	if ( ! axismundi_forum_public_community_group( $group ) ) {
+		return new WP_Error( 'ax_forum_moderators_not_found', __( 'The community moderators collection was not found.', 'axismundi-forum' ), array( 'status' => 404 ) );
+	}
+	$items = array_map( static fn( Axismundi_Actor $actor ) : string => $actor->get_uri(), axismundi_forum_effective_moderators( $group->get_identity_id() ) );
+	$response = rest_ensure_response(
+		array(
+			'id'           => axismundi_forum_moderator_collection_url( $group ),
+			'type'         => 'OrderedCollection',
+			'attributedTo' => $group->get_uri(),
+			'totalItems'   => count( $items ),
+			'orderedItems' => array_values( $items ),
+		)
+	);
+	$response->header( 'Content-Type', 'application/activity+json; charset=' . get_option( 'blog_charset' ) );
+	$response->header( 'Cache-Control', 'public, max-age=60' );
+	return $response;
+}
+
+/** Register the Forum-owned collection route alongside the Actor projection routes. */
+function axismundi_forum_register_moderator_collection_route() : void {
+	register_rest_route(
+		'axismundi/v1',
+		'/forum/groups/(?P<uuid>[0-9a-f-]{36})/moderators',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_forum_get_moderator_collection',
+			'permission_callback' => '__return_true',
+			'args'                => array( 'uuid' => array( 'required' => true, 'type' => 'string', 'pattern' => '^[0-9a-f-]{36}$' ) ),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_forum_register_moderator_collection_route' );

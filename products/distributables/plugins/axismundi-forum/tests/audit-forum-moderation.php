@@ -56,14 +56,33 @@ try {
 	if ( $bob instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $bob, $group ); }
 
 	$promoted = $alice instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $alice->get_identity_id(), $owner_user, true ) : new WP_Error( 'fixture' );
+	$add = $alice instanceof Axismundi_Actor ? array_values( array_filter( axismundi_act_get_by_object( $alice->get_uri(), 20 ), static fn( Axismundi_Activity $activity ) : bool => 'Add' === $activity->get_type() ) ) : array();
+	$add = empty( $add ) ? null : reset( $add );
+	$add_wrapper = $add instanceof Axismundi_Activity ? array_values( array_filter( axismundi_act_get_by_object( $add->get_uri(), 20 ), static fn( Axismundi_Activity $activity ) : bool => 'Announce' === $activity->get_type() ) ) : array();
+	$add_wrapper = empty( $add_wrapper ) ? null : reset( $add_wrapper );
+	$group_projection = function_exists( 'axismundi_op_transform_object' ) ? axismundi_op_transform_object( $group ) : null;
+	$moderator_url = $group instanceof Axismundi_Actor ? axismundi_forum_moderator_collection_url( $group ) : '';
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a Group manager is an effective moderator and can promote an accepted Actor member independently of WordPress delegation',
+		'a Group manager is an effective moderator and promotes an accepted Actor member through Announce(Add) to the attributedTo collection',
 		true === $promoted
 			&& axismundi_forum_user_can_moderate( $group_id, $owner_user )
 			&& $alice instanceof Axismundi_Actor
 			&& axismundi_forum_actor_is_moderator( $group_id, $alice )
+			&& $add instanceof Axismundi_Activity && $owner instanceof Axismundi_Actor && $owner->get_uri() === $add->get_actor_uri()
+			&& $moderator_url === $add->get_target_uri() && $add_wrapper instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
+			&& $group->get_uri() === $add_wrapper->get_actor_uri() && is_array( $group_projection) && $moderator_url === (string) ( $group_projection['attributedTo'] ?? '' )
 	);
+	wp_set_current_user( $owner_user );
+	ob_start();
+	axismundi_forum_render_group_admin_section( $group );
+	$manager_screen = (string) ob_get_clean();
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a Group manager sees the explicit moderator control beside an accepted member',
+		str_contains( $manager_screen, 'Remove moderator' ) && str_contains( $manager_screen, 'axismundi_forum_moderator_decision' )
+	);
+	wp_set_current_user( 0 );
 
 	$topic_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $bob_user, 'post_title' => 'Pending Topic' ) );
 	if ( $topic_id > 0 ) { $ax_fmod_posts[] = $topic_id; }
@@ -143,6 +162,20 @@ try {
 		$ax_fmod_results,
 		'a site editor can place a remote-only entry with no WordPress post into the internal moderation queue',
 		true === $held && is_array( $remote_entry) && 'pending' === (string) $remote_entry['moderation_state'] && empty( $remote_entry['source_post_id'] )
+	);
+	$demoted = $alice instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $alice->get_identity_id(), $owner_user, false ) : new WP_Error( 'fixture' );
+	$remove = $alice instanceof Axismundi_Actor ? array_values( array_filter( axismundi_act_get_by_object( $alice->get_uri(), 20 ), static fn( Axismundi_Activity $activity ) : bool => 'Remove' === $activity->get_type() ) ) : array();
+	$remove = empty( $remove ) ? null : reset( $remove );
+	$remove_wrapper = $remove instanceof Axismundi_Activity ? array_values( array_filter( axismundi_act_get_by_object( $remove->get_uri(), 20 ), static fn( Axismundi_Activity $activity ) : bool => 'Announce' === $activity->get_type() ) ) : array();
+	$remove_wrapper = empty( $remove_wrapper ) ? null : reset( $remove_wrapper );
+	$effective = axismundi_forum_effective_moderators( $group_id );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'demoting an explicit moderator records Announce(Remove) and removes that Actor from attributedTo without changing local manager delegation',
+		true === $demoted && $alice instanceof Axismundi_Actor && ! isset( $effective[ $alice->get_identity_id() ] )
+			&& $remove instanceof Axismundi_Activity && $moderator_url === $remove->get_target_uri()
+			&& $remove_wrapper instanceof Axismundi_Activity && $group instanceof Axismundi_Actor && $group->get_uri() === $remove_wrapper->get_actor_uri()
+			&& axismundi_forum_user_can_manage( $group_id, $owner_user )
 	);
 } finally {
 	foreach ( $ax_fmod_posts as $post_id ) { wp_delete_post( $post_id, true ); }

@@ -181,6 +181,16 @@ function axismundi_op_actor_transform( Axismundi_Actor $actor ) : array {
 	if ( function_exists( 'axismundi_act_get_following_count' ) ) {
 		$object['following'] = axismundi_op_actor_follow_collection_url( $actor, 'following' );
 	}
+	/**
+	 * Let an Actor domain add public representation fields without owning the Actor document.
+	 *
+	 * Forum uses this for a Group's FEP-1b12 attributedTo moderator collection. The projection
+	 * layer still owns visibility, base identifiers, JSON-LD context, and transport fields.
+	 *
+	 * @param array<string,mixed> $object Public Actor representation so far.
+	 * @param Axismundi_Actor     $actor  Projected Actor.
+	 */
+	$object = (array) apply_filters( 'axismundi_op_actor_projection_fields', $object, $actor );
 
 	/**
 	 * Supply protocol transport properties without transferring representation ownership.

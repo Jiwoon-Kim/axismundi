@@ -11,13 +11,16 @@
 defined( 'ABSPATH' ) || exit( 1 );
 
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/repository.php';
+require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/object-lifecycle.php';
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
+require_once __DIR__ . '/../includes/memberships.php';
 require_once __DIR__ . '/../includes/outbound-topics.php';
+require_once __DIR__ . '/../includes/admin.php';
 
 axismundi_forum_install();
 axismundi_forum_register_topic_post_type();
@@ -69,6 +72,31 @@ try {
 		$author = axismundi_actors_get_by_identity( $author->get_identity_id() );
 	}
 	$group = ax_fot_remote_group( $ax_fot_identity_ids, 'community_' . strtolower( wp_generate_password( 7, false, false ) ) );
+	$local_group = axismundi_actors_create_managed_group(
+		array(
+			'owner_user_id'      => $author_user,
+			'preferred_username' => 'local_' . strtolower( wp_generate_password( 7, false, false ) ),
+			'status'             => 'public',
+		)
+	);
+	if ( $local_group instanceof Axismundi_Actor ) {
+		$ax_fot_identity_ids[] = $local_group->get_identity_id();
+	}
+	$joined_owner = ax_fot_user( $ax_fot_user_ids );
+	$joined_group = axismundi_actors_create_managed_group(
+		array(
+			'owner_user_id'      => $joined_owner,
+			'preferred_username' => 'joined_' . strtolower( wp_generate_password( 7, false, false ) ),
+			'status'             => 'public',
+		)
+	);
+	if ( $joined_group instanceof Axismundi_Actor ) {
+		$ax_fot_identity_ids[] = $joined_group->get_identity_id();
+		axismundi_forum_set_posting_policy( $joined_group->get_identity_id(), $joined_owner, 'members' );
+		if ( $author instanceof Axismundi_Actor ) {
+			axismundi_forum_write_membership( $joined_group->get_identity_id(), $author->get_identity_id(), 'accepted', 'https://example.com/activities/follow-' . wp_generate_uuid4() );
+		}
+	}
 	$follow = $author instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ? axismundi_act_follow_remote_actor( $author, $group ) : new WP_Error( 'fixture' );
 	if ( is_array( $follow ) && ! empty( $follow['initiating_activity_uri'] ) ) {
 		$ax_fot_activity_uris[] = (string) $follow['initiating_activity_uri'];
@@ -88,6 +116,77 @@ try {
 		$ax_fot_results,
 		'a public local Person follows a cached remote Group before an outbound Topic can be created',
 		$author instanceof Axismundi_Actor && $group instanceof Axismundi_Actor && is_array( $follow ) && in_array( (string) $follow['state'], array( 'pending', 'accepted', 'legacy_pending' ), true )
+	);
+	if ( $author instanceof Axismundi_Actor && $group instanceof Axismundi_Actor && is_array( $follow ) && 'accepted' !== (string) $follow['state'] ) {
+		$accept_uri = 'https://example.com/activities/accept-' . wp_generate_uuid4();
+		$accepted   = axismundi_act_record_activity(
+			array( 'id' => $accept_uri, 'type' => 'Accept', 'actor' => $group->get_uri(), 'object' => (string) $follow['initiating_activity_uri'] ),
+			'inbound'
+		);
+		if ( $accepted instanceof Axismundi_Activity ) {
+			$ax_fot_activity_uris[] = $accept_uri;
+		}
+	}
+	$followed_groups = axismundi_forum_followed_remote_groups_for_user( $author_user );
+	ax_fot_assert(
+		$ax_fot_results,
+		'the Topic picker source lists an accepted remote Group only through the author Follow projection',
+		$group instanceof Axismundi_Actor && isset( $followed_groups[ $group->get_identity_id() ] ) && $group->get_uri() === $followed_groups[ $group->get_identity_id() ]->get_uri()
+	);
+	$picker_topic_id = (int) wp_insert_post(
+		array(
+			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,
+			'post_status' => 'draft',
+			'post_author' => $author_user,
+			'post_title'  => 'Community picker audit',
+		)
+	);
+	if ( $picker_topic_id > 0 ) {
+		$ax_fot_post_ids[] = $picker_topic_id;
+	}
+	$manager_topic_id = (int) wp_insert_post(
+		array(
+			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,
+			'post_status' => 'draft',
+			'post_author' => $joined_owner,
+			'post_title'  => 'Manager membership boundary audit',
+		)
+	);
+	if ( $manager_topic_id > 0 ) {
+		$ax_fot_post_ids[] = $manager_topic_id;
+	}
+	$joined_blocked = $joined_group instanceof Axismundi_Actor
+		&& true === axismundi_forum_set_posting_policy( $joined_group->get_identity_id(), $joined_owner, 'managers' )
+		&& ! axismundi_forum_can_admit_local_topic( $joined_group->get_identity_id(), $picker_topic_id, $author_user );
+	$joined_can_post = $joined_group instanceof Axismundi_Actor
+		&& true === axismundi_forum_set_posting_policy( $joined_group->get_identity_id(), $joined_owner, 'members' )
+		&& axismundi_forum_can_admit_local_topic( $joined_group->get_identity_id(), $picker_topic_id, $author_user );
+	$manager_not_member = $joined_group instanceof Axismundi_Actor
+		&& ! axismundi_forum_can_admit_local_topic( $joined_group->get_identity_id(), $manager_topic_id, $joined_owner );
+	$joined_memberships = axismundi_forum_joined_local_communities_for_user( $author_user );
+	ax_fot_assert(
+		$ax_fot_results,
+		'an accepted local member may submit only under members policy to a community they do not manage',
+		$joined_group instanceof Axismundi_Actor && $joined_blocked && $joined_can_post && $manager_not_member && isset( $joined_memberships[ $joined_group->get_identity_id() ] )
+	);
+	wp_set_current_user( $author_user );
+	ob_start();
+	$picker_topic = get_post( $picker_topic_id );
+	if ( $picker_topic instanceof WP_Post ) {
+		axismundi_forum_render_topic_meta_box( $picker_topic );
+	}
+	$picker_markup = (string) ob_get_clean();
+	$picker_text   = html_entity_decode( $picker_markup, ENT_QUOTES, get_bloginfo( 'charset' ) );
+	ax_fot_assert(
+		$ax_fot_results,
+		'the Topic editor presents manageable, joined local, and accepted followed remote Groups as distinct community targets',
+		$local_group instanceof Axismundi_Actor && $joined_group instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
+			&& str_contains( $picker_markup, 'value="local:' . $local_group->get_identity_id() . '"' )
+			&& str_contains( $picker_markup, 'value="local:' . $joined_group->get_identity_id() . '"' )
+			&& str_contains( $picker_markup, 'value="remote:' . $group->get_identity_id() . '"' )
+			&& str_contains( $picker_markup, 'My communities' )
+			&& str_contains( $picker_text, 'Communities I\'ve joined' )
+			&& str_contains( $picker_markup, 'Followed remote communities' )
 	);
 	ax_fot_assert(
 		$ax_fot_results,
@@ -145,6 +244,8 @@ try {
 		}
 		$wpdb->delete( $endpoints, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $addresses, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_forum_settings_table(), array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $actors, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $identities, array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}

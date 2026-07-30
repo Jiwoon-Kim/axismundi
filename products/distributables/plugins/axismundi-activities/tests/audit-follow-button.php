@@ -62,7 +62,35 @@ try {
 	if ( ! $follower instanceof Axismundi_Actor || ! $target instanceof Axismundi_Actor ) {
 		throw new RuntimeException( 'Fixture Actors could not be created.' );
 	}
+	$group = axismundi_actors_create_managed_group(
+		array(
+			'owner_user_id'      => (int) $follower->get_local_user_id(),
+			'preferred_username' => 'axgroup_' . $ax_follow_button_suffix,
+		)
+	);
+	if ( $group instanceof Axismundi_Actor ) {
+		$ax_follow_button_identities[] = $group->get_identity_id();
+		axismundi_actors_register_handle( $group->get_identity_id(), 'axgroup_' . $ax_follow_button_suffix );
+		axismundi_actors_set_status( $group->get_identity_id(), 'public' );
+		$group = axismundi_actors_get_by_identity( $group->get_identity_id() );
+	}
+	ax_follow_button_assert( $ax_follow_button_results, 'fixture creates an activated public local managed Group', $group instanceof Axismundi_Actor && $group->is_managed() );
 	wp_set_current_user( (int) $follower->get_local_user_id() );
+	$group_markup = $group instanceof Axismundi_Actor ? axismundi_act_follow_control_html( $follower, $group ) : '';
+	$group_request = new WP_REST_Request( 'POST', '/axismundi/v1/follows' );
+	if ( $group instanceof Axismundi_Actor ) {
+		$group_request->set_param( 'target_uri', $group->get_uri() );
+	}
+	$group_response = axismundi_act_rest_follow_actor( $group_request );
+	$group_data     = $group_response instanceof WP_REST_Response ? $group_response->get_data() : array();
+	$group_follow   = $group instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $follower->get_uri(), $group->get_uri() ) : null;
+	if ( is_array( $group_follow ) && ! empty( $group_follow['initiating_activity_uri'] ) ) {
+		$ax_follow_button_activity_uris[] = (string) $group_follow['initiating_activity_uri'];
+	}
+	// Activities owns the Follow mutation, while Forum may admit a public managed Group's owner
+	// immediately. Both pending (Activities alone) and accepted (Forum installed) are valid
+	// authoritative outcomes; this audit locks the UI and REST boundary rather than Forum policy.
+	ax_follow_button_assert( $ax_follow_button_results, 'a local managed Group renders a Follow control and accepts the same REST mutation as a Person', $group instanceof Axismundi_Actor && '' !== $group_markup && $group_response instanceof WP_REST_Response && in_array( (string) ( $group_data['state'] ?? '' ), array( 'pending', 'accepted' ), true ) && is_array( $group_follow ) && in_array( (string) $group_follow['state'], array( 'pending', 'accepted' ), true ) );
 	$initial = axismundi_act_follow_button_state( $follower, $target );
 	ax_follow_button_assert( $ax_follow_button_results, 'an unrelated Actor receives the Follow state', 'none' === $initial['state'] && false === $initial['follows_you'] && 'Follow' === $initial['label'] );
 
@@ -140,6 +168,7 @@ try {
 			$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		}
 		$wpdb->delete( axismundi_actors_endpoints_table(), array( 'identity_id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}

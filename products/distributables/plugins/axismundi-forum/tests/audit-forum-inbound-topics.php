@@ -87,7 +87,7 @@ try {
 		$ax_fit_identity_ids[] = $group->get_identity_id();
 	}
 	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
-	$bound = $community > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
+	$bound = $community > 0 && axismundi_forum_is_community( $community );
 	$member = ax_fit_remote_person( $ax_fit_identity_ids, 'member_' . strtolower( wp_generate_password( 7, false, false ) ) );
 	$outsider = ax_fit_remote_person( $ax_fit_identity_ids, 'outsider_' . strtolower( wp_generate_password( 7, false, false ) ) );
 	$membership = $member instanceof Axismundi_Actor ? axismundi_forum_write_membership( $community, $member->get_identity_id(), 'accepted', 'https://example.com/activities/follow-' . wp_generate_uuid4() ) : new WP_Error( 'fixture' );

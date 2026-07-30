@@ -19,6 +19,53 @@ function axismundi_forum_membership_policies() : array {
 	);
 }
 
+/**
+ * Join the creator's public Person to a newly published local community.
+ *
+ * This is deliberately tied to publishing the Group, not to a manager assignment. The latter
+ * is local login delegation; this is a Person-to-Group Follow that Forum will project under its
+ * membership policy. An inactive profile leaves no fake edge.
+ */
+function axismundi_forum_auto_join_published_community( Axismundi_Actor $group, int $user_id ) : void {
+	$person = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	if ( ! $person instanceof Axismundi_Actor || ! $person->is_local() || 'Person' !== $person->get_type()
+		|| 'public' !== $person->get_status() || ! $person->is_handle_locked()
+		|| ! function_exists( 'axismundi_act_follow_actor' ) ) {
+		return;
+	}
+	axismundi_act_follow_actor( $person, $group );
+}
+add_action( 'axismundi_forum_public_community_initialized', 'axismundi_forum_auto_join_published_community', 10, 2 );
+
+/**
+ * Replay pre-existing local and inbound Follow relations when Forum first observes a public
+ * Group as a community.
+ *
+ * A managed Group can exist before Forum is installed. Those earlier Follows were correctly
+ * left pending because no product owned admission yet; once Forum observes the Group they must pass
+ * through the same live admission path as a newly received Follow, including an outward Accept
+ * where applicable. Rebuilding the projection alone is insufficient because it cannot send the
+ * Accept which changes the ledger from pending to accepted.
+ */
+function axismundi_forum_admit_existing_follows_after_community_initialization( Axismundi_Actor $group, int $user_id ) : void {
+	unset( $user_id );
+	if ( ! function_exists( 'axismundi_act_get_relations_for_object' ) ) {
+		return;
+	}
+	$after_id = 0;
+	while ( true ) {
+		$relations = (array) axismundi_act_get_relations_for_object( $group->get_uri(), array( 'follow' ), 200, $after_id );
+		foreach ( $relations as $relation ) {
+			$after_id = max( $after_id, (int) ( $relation['id'] ?? 0 ) );
+			axismundi_forum_sync_membership_from_follow( $relation );
+		}
+		if ( count( $relations ) < 200 ) {
+			break;
+		}
+	}
+}
+add_action( 'axismundi_forum_public_community_initialized', 'axismundi_forum_admit_existing_follows_after_community_initialization', 20, 2 );
+
 /** Read one Forum's membership policy; public Forums default to automatic join. */
 function axismundi_forum_get_membership_policy( int $group_identity_id ) : string {
 	$community = axismundi_forum_get_community( $group_identity_id );
@@ -128,6 +175,39 @@ function axismundi_forum_get_membership( int $group_identity_id, int $actor_iden
 	return is_array( $row ) ? $row : null;
 }
 
+/**
+ * Local communities this user's public Person has joined.
+ *
+ * This is a Forum projection query, not a managed-group lookup: being delegated to operate
+ * a Group and having accepted membership in someone else's community are separate facts.
+ * Managed communities are omitted so a Topic picker can show each destination once.
+ *
+ * @return array<int,Axismundi_Actor> Community Groups keyed by identity id.
+ */
+function axismundi_forum_joined_local_communities_for_user( int $user_id ) : array {
+	$member = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	if ( ! $member instanceof Axismundi_Actor || ! $member->is_local() || 'Person' !== $member->get_type() ) {
+		return array();
+	}
+	global $wpdb;
+	$table = axismundi_forum_memberships_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- accepted membership projection lookup using its actor_state index.
+	$group_ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT group_identity_id FROM {$table} WHERE actor_identity_id = %d AND membership_state = 'accepted' ORDER BY group_identity_id ASC", $member->get_identity_id() ) );
+	$managed = axismundi_forum_manageable_communities( $user_id );
+	$groups  = array();
+	foreach ( $group_ids as $group_id ) {
+		$group_id = (int) $group_id;
+		if ( $group_id <= 0 || isset( $managed[ $group_id ] ) || ! axismundi_forum_is_community( $group_id ) ) {
+			continue;
+		}
+		$group = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( $group_id ) : null;
+		if ( $group instanceof Axismundi_Actor && $group->is_local() && $group->is_managed() && 'Group' === $group->get_type() ) {
+			$groups[ $group_id ] = $group;
+		}
+	}
+	return $groups;
+}
+
 /** @return array<int,array<string,mixed>> Pending membership requests for one Forum. */
 function axismundi_forum_pending_memberships( int $group_identity_id, int $limit = 100 ) : array {
 	if ( $group_identity_id <= 0 ) {
@@ -138,6 +218,35 @@ function axismundi_forum_pending_memberships( int $group_identity_id, int $limit
 	$limit = max( 1, min( 200, $limit ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Forum membership-request list.
 	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND membership_state = 'pending' ORDER BY created_at ASC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
+}
+
+/**
+ * One paged membership-projection view for a Group manager.
+ *
+ * Membership is Forum policy projected from the Follow ledger, so this is intentionally
+ * separate from Actors' generic follower list: it answers who is admitted to this Community.
+ *
+ * @return array{items:array<int,array<string,mixed>>,total:int,has_more:bool}
+ */
+function axismundi_forum_get_membership_page( int $group_identity_id, string $state = 'accepted', int $page = 1, int $per_page = 50 ) : array {
+	if ( $group_identity_id <= 0 || ! in_array( $state, array( 'pending', 'accepted', 'rejected', 'undone' ), true ) ) {
+		return array( 'items' => array(), 'total' => 0, 'has_more' => false );
+	}
+	$page     = max( 1, $page );
+	$per_page = max( 1, min( 100, $per_page ) );
+	$offset   = ( $page - 1 ) * $per_page;
+	global $wpdb;
+	$table = axismundi_forum_memberships_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Group/state is indexed on Forum's membership projection.
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE group_identity_id = %d AND membership_state = %s", $group_identity_id, $state ) );
+	// Fetch one extra row so the UI can paginate without lying about a full page.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- manager-only paged projection view.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND membership_state = %s ORDER BY created_at ASC, actor_identity_id ASC LIMIT %d OFFSET %d", $group_identity_id, $state, $per_page + 1, $offset ), ARRAY_A );
+	return array(
+		'items'    => array_slice( $rows, 0, $per_page ),
+		'total'    => $total,
+		'has_more' => count( $rows ) > $per_page,
+	);
 }
 
 /** @return int Count Forum membership projections for lifecycle guards. */

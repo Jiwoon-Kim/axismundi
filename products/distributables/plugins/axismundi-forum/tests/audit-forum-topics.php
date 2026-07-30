@@ -98,8 +98,8 @@ try {
 			&& ! post_type_exists( 'ax_forum' )
 	);
 
-	$bound = $group_id > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
-	$manager_policy = true === $bound ? axismundi_forum_set_posting_policy( $community, $owner, 'managers' ) : $bound;
+	$community_ready = $group_id > 0 && axismundi_forum_is_community( $community );
+	$manager_policy = $community_ready ? axismundi_forum_set_posting_policy( $community, $owner, 'managers' ) : new WP_Error( 'fixture' );
 	ax_ft_assert(
 		$ax_ft_results,
 		'posting policy is manager-owned: a manager can restrict admission and an outsider cannot submit',
@@ -198,12 +198,6 @@ try {
 		$ax_ft_results,
 		'a Topic cannot silently acquire a second Forum context',
 		ax_ft_err( axismundi_forum_admit_local_topic( $community, $topic, $owner ), 'ax_forum_topic_context' )
-	);
-
-	ax_ft_assert(
-		$ax_ft_results,
-		'a community carrying entries cannot be disabled out from under them',
-		ax_ft_err( axismundi_forum_disable_community( $community, $owner ), 'ax_forum_has_entries' )
 	);
 
 	wp_delete_post( $topic, true );

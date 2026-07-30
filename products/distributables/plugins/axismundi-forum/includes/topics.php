@@ -87,6 +87,7 @@ add_action( 'before_delete_post', 'axismundi_forum_delete_entries_for_topic' );
 function axismundi_forum_posting_policies() : array {
 	return array(
 		'open'     => __( 'Anyone who can edit a Topic', 'axismundi-forum' ),
+		'members'  => __( 'Accepted community members', 'axismundi-forum' ),
 		'managers' => __( 'Group managers only', 'axismundi-forum' ),
 	);
 }
@@ -124,8 +125,21 @@ function axismundi_forum_can_admit_local_topic( int $group_identity_id, int $top
 	if ( $user_id <= 0 || ! user_can( $user_id, 'edit_post', $topic_post_id ) || ! axismundi_forum_is_community( $group_identity_id ) ) {
 		return false;
 	}
-	return 'open' === axismundi_forum_get_posting_policy( $group_identity_id )
-		|| axismundi_forum_user_can_manage( $group_identity_id, $user_id );
+	$policy = axismundi_forum_get_posting_policy( $group_identity_id );
+	if ( 'open' === $policy ) {
+		return true;
+	}
+	if ( 'managers' === $policy ) {
+		return axismundi_forum_user_can_manage( $group_identity_id, $user_id );
+	}
+	if ( 'members' !== $policy || ! function_exists( 'axismundi_actors_get_for_user' ) || ! function_exists( 'axismundi_forum_get_membership' ) ) {
+		return false;
+	}
+	$actor      = axismundi_actors_get_for_user( $user_id );
+	$membership = $actor instanceof Axismundi_Actor && 'Person' === $actor->get_type()
+		? axismundi_forum_get_membership( $group_identity_id, $actor->get_identity_id() )
+		: null;
+	return is_array( $membership ) && 'accepted' === (string) $membership['membership_state'];
 }
 
 /** Update one entry field after verifying the caller manages its bound Group. */

@@ -47,7 +47,7 @@ try {
 	$group       = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtcg' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
 	$ax_tc_ids[] = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
-	$bound = $community > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
+	$bound = $community > 0 && axismundi_forum_is_community( $community );
 
 	$topic         = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $owner, 'post_title' => 'Thread Context Topic', 'post_content' => 'body' ) );
 	$ax_tc_posts[] = $topic;

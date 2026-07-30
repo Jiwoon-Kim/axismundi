@@ -113,7 +113,7 @@ try {
 	}
 	// The Group identity *is* the community; there is no second record to create and bind.
 	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
-	$bound     = $community > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
+	$bound     = $community > 0 && axismundi_forum_is_community( $community );
 	$remote_open = ax_fm_remote_person( $ax_fm_identity_ids, 'open_' . strtolower( wp_generate_password( 7, false, false ) ) );
 	$follow_open_uri = 'https://example.com/activities/follow-' . wp_generate_uuid4();
 	$follow_open = $group instanceof Axismundi_Actor && $remote_open instanceof Axismundi_Actor

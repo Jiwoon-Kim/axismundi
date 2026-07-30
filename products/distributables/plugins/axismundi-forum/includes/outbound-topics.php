@@ -33,6 +33,36 @@ function axismundi_forum_user_can_submit_to_remote_group( int $user_id, Axismund
 		&& null !== axismundi_forum_remote_group_follow( $author, $group );
 }
 
+/**
+ * Cached remote Groups this user's public Person currently follows and may address.
+ *
+ * Activities owns the following projection. Forum only filters it down to Group Actors that
+ * pass its own submission gate; it does not query the relation table or infer a relationship
+ * from a cached Group record.
+ *
+ * @return array<int,Axismundi_Actor> Remote Groups keyed by identity id.
+ */
+function axismundi_forum_followed_remote_groups_for_user( int $user_id ) : array {
+	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	if ( ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_act_get_follow_collection_page' ) ) {
+		return array();
+	}
+	$groups = array();
+	for ( $page = 1; ; ++$page ) {
+		$following = axismundi_act_get_follow_collection_page( 'subject', $author->get_uri(), $page, 100 );
+		foreach ( (array) ( $following['items'] ?? array() ) as $uri ) {
+			$group = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( (string) $uri ) : null;
+			if ( $group instanceof Axismundi_Actor && ! $group->is_local() && 'Group' === $group->get_type() && 'tombstone' !== $group->get_status() && axismundi_forum_user_can_submit_to_remote_group( $user_id, $group ) ) {
+				$groups[ $group->get_identity_id() ] = $group;
+			}
+		}
+		if ( empty( $following['has_more'] ) ) {
+			break;
+		}
+	}
+	return $groups;
+}
+
 /** Bind an unadmitted local Topic source to exactly one eligible remote Group. */
 function axismundi_forum_bind_remote_topic_group( int $topic_post_id, int $user_id, int $group_identity_id ) {
 	$topic = get_post( $topic_post_id );

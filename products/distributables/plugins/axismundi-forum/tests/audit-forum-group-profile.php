@@ -2,9 +2,9 @@
 /**
  * Forum Group-profile surface regression (dev-only; dist-excluded).
  *
- * A Group Actor's profile is its community page, so a bound Group shows the Forum's Topics
- * where an ordinary Actor shows an Activity timeline. Locks that claim to Groups that are
- * actually bound, and locks Forum out of every other Actor's profile.
+ * A public managed Group Actor's profile is its community page, so it shows Forum Topics where
+ * an ordinary Actor shows an Activity timeline. Locks that claim to public managed Groups and
+ * locks Forum out of every other Actor's profile.
  *
  * @package AxismundiForum
  */
@@ -47,11 +47,13 @@ function ax_gp_group( int $owner, array &$identity_ids ) {
 		array(
 			'owner_user_id'      => $owner,
 			'preferred_username' => 'axgp' . strtolower( wp_generate_password( 7, false, false ) ),
-			'status'             => 'public',
+			'status'             => 'internal',
 		)
 	);
 	if ( $group instanceof Axismundi_Actor ) {
 		$identity_ids[] = $group->get_identity_id();
+		axismundi_actors_set_status( $group->get_identity_id(), 'public' );
+		$group = axismundi_actors_get_by_identity( $group->get_identity_id() );
 	}
 	return $group;
 }
@@ -63,7 +65,7 @@ try {
 
 	$group = ax_gp_group( $owner, $ax_gp_ids );
 	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
-	$bound = $community > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
+	$bound = $community > 0 && axismundi_forum_is_community( $community );
 
 	$topic = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $owner, 'post_title' => 'Group Profile Topic Alpha', 'post_content' => 'body' ) );
 	$ax_gp_posts[] = $topic;
@@ -72,20 +74,34 @@ try {
 	$group_feed = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
 	ax_gp_assert(
 		$ax_gp_results,
-		'a bound Group profile shows the Forum Topics in place of an Activity timeline',
-		true === $bound
+		'a public managed Group profile shows Forum Topics in place of an Activity timeline',
+		$bound
 			&& ! is_wp_error( $admitted )
 			&& false !== strpos( $group_feed, 'axismundi-forum-topic-list' )
 			&& false !== strpos( $group_feed, 'Group Profile Topic Alpha' )
 			&& false === strpos( $group_feed, 'axismundi-activity-feed' )
+	);
+	$activities_before = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_activities_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit baseline.
+	$relations_before  = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_relations_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit baseline.
+	if ( $group instanceof Axismundi_Actor ) {
+		$wpdb->delete( axismundi_forum_settings_table(), array( 'group_identity_id' => $group->get_identity_id() ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- force the unconfigured first-observation case.
+	}
+	$read_only_feed    = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
+	$activities_after  = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_activities_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit comparison.
+	$relations_after   = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_relations_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit comparison.
+	$group_settings_after = $group instanceof Axismundi_Actor ? (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_forum_settings_table() . ' WHERE group_identity_id = %d', $group->get_identity_id() ) ) : -1; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact audit fixture lookup.
+	ax_gp_assert(
+		$ax_gp_results,
+		'an unconfigured public Group renders as a community without writing settings, Activities, or Follows',
+		'' !== $read_only_feed && $activities_before === $activities_after && $relations_before === $relations_after && 0 === $group_settings_after
 	);
 
 	$solo      = ax_gp_group( $owner, $ax_gp_ids );
 	$solo_feed = $solo instanceof Axismundi_Actor ? ax_gp_profile_feed( $solo ) : 'x';
 	ax_gp_assert(
 		$ax_gp_results,
-		'a managed Group with no Forum binding keeps the ordinary profile feed',
-		$solo instanceof Axismundi_Actor && false === strpos( $solo_feed, 'axismundi-forum-topic-list' )
+		'every public managed Group shows an empty Forum Topic feed before its first Topic',
+		$solo instanceof Axismundi_Actor && false !== strpos( $solo_feed, 'axismundi-forum-topic-list' )
 	);
 
 	$person = axismundi_actors_ensure_for_user( $owner );

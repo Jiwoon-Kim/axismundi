@@ -76,9 +76,13 @@ function axismundi_act_follow_target_available( Axismundi_Actor $subject, Axismu
 	if ( $subject->get_uri() === $target->get_uri() || 'tombstone' === $target->get_status() ) {
 		return false;
 	}
-	return $target->is_local()
-		? 'Person' === $target->get_type() && 'public' === $target->get_status() && $target->is_handle_locked()
-		: true;
+	if ( ! $target->is_local() ) {
+		return true;
+	}
+	return ( 'Person' === $target->get_type()
+			|| ( function_exists( 'axismundi_act_local_follow_target_is_group' ) && axismundi_act_local_follow_target_is_group( $target ) ) )
+		&& 'public' === $target->get_status()
+		&& $target->is_handle_locked();
 }
 
 /** Render one reusable nonce-protected Follow control. */

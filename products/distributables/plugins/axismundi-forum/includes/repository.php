@@ -13,8 +13,8 @@
  *
  * This file owns the community settings record and nothing else. It never creates, renames,
  * publishes, or tombstones an Actor: identity, authority, and Group lifecycle belong to
- * Axismundi Actors, whose APIs Forum consumes. Disabling a community removes only its Forum
- * rows; the Group Actor is untouched.
+ * Axismundi Actors, whose APIs Forum consumes. Every public managed Group is a community;
+ * its settings row is created automatically and only stores Forum policy.
  *
  * @package AxismundiForum
  */
@@ -62,8 +62,8 @@ function axismundi_forum_install() : void {
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	$charset = $wpdb->get_charset_collate();
 
-	// One settings row per Group is what makes that Group a community. Its presence is the
-	// enabled flag; there is no separate boolean to disagree with it.
+	// A row stores policy for a public Group. Publishing the Group, not this row, makes it a
+	// community.
 	$settings = axismundi_forum_settings_table();
 	dbDelta(
 		"CREATE TABLE {$settings} (
@@ -194,40 +194,70 @@ function axismundi_forum_actors_available() : bool {
 		&& function_exists( 'axismundi_actors_managed_actor_can_manage' );
 }
 
-/**
- * Validate that an identity can host a community: a local, managed Group Actor.
- *
- * A Person, the site actor, a Service/Organization, or a remote Group is rejected — a
- * community is a Group this site runs.
- *
- * @param int $group_identity_id Candidate Group identity.
- * @return Axismundi_Actor|WP_Error The resolved actor, or a typed rejection.
- */
-function axismundi_forum_eligible_group( int $group_identity_id ) {
-	if ( ! axismundi_forum_actors_available() ) {
-		return new WP_Error( 'ax_forum_no_actors', __( 'Axismundi Actors is not available.', 'axismundi-forum' ) );
+/** @return bool Whether an Actor is a public managed Group and therefore a community. */
+function axismundi_forum_public_community_group( $actor ) : bool {
+	return $actor instanceof Axismundi_Actor
+		&& $actor->is_local()
+		&& $actor->is_managed()
+		&& 'Group' === $actor->get_type()
+		&& 'public' === $actor->get_status();
+}
+
+/** @return int The first local owner, used only for the initial explicit self-Follow. */
+function axismundi_forum_community_owner_user_id( int $group_identity_id ) : int {
+	if ( ! function_exists( 'axismundi_actors_group_managers' ) ) {
+		return 0;
 	}
-	$actor = axismundi_actors_get_by_identity( $group_identity_id );
-	if ( ! $actor instanceof Axismundi_Actor ) {
-		return new WP_Error( 'ax_forum_group_missing', __( 'The selected Group Actor does not exist.', 'axismundi-forum' ) );
+	foreach ( (array) axismundi_actors_group_managers( $group_identity_id ) as $manager ) {
+		if ( 'owner' === (string) ( $manager['role'] ?? '' ) ) {
+			return (int) ( $manager['user_id'] ?? 0 );
+		}
 	}
-	if ( ! $actor->is_local() ) {
-		return new WP_Error( 'ax_forum_group_remote', __( 'Only a local Group Actor can host a community.', 'axismundi-forum' ) );
-	}
-	if ( ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
-		return new WP_Error( 'ax_forum_group_type', __( 'Only a managed Group Actor can host a community.', 'axismundi-forum' ) );
-	}
-	return $actor;
+	return 0;
 }
 
 /**
- * The community settings row for one Group, or null when that Group is not a community.
+ * Initialize Forum side effects for an already-public managed Group.
+ *
+ * Community identity comes from the Actor, not from a policy row. This deliberately does not
+ * write settings: default open policies are read virtually until a manager changes one.
+ */
+function axismundi_forum_ensure_public_community( Axismundi_Actor $actor ) : bool {
+	if ( ! axismundi_forum_public_community_group( $actor ) ) {
+		return false;
+	}
+	do_action( 'axismundi_forum_public_community_initialized', $actor, axismundi_forum_community_owner_user_id( $actor->get_identity_id() ) );
+	return true;
+}
+
+/** Create Forum policy when Actors publishes or updates a managed Group profile. */
+function axismundi_forum_sync_published_group( $actor ) : void {
+	if ( $actor instanceof Axismundi_Actor ) {
+		axismundi_forum_ensure_public_community( $actor );
+	}
+}
+add_action( 'axismundi_actors_local_actor_profile_updated', 'axismundi_forum_sync_published_group', 20 );
+
+/** Create Forum policy when an existing managed Group becomes public. */
+function axismundi_forum_sync_group_status( int $identity_id, string $status ) : void {
+	if ( 'public' === $status && function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		axismundi_forum_sync_published_group( axismundi_actors_get_by_identity( $identity_id ) );
+	}
+}
+add_action( 'axismundi_actors_status_changed', 'axismundi_forum_sync_group_status', 20, 2 );
+
+/**
+ * The policy settings for one public managed Group, or null otherwise.
  *
  * @param int $group_identity_id Group identity.
  * @return array{group_identity_id:int,posting_policy:string,membership_policy:string,created_at:string,updated_at:string}|null
  */
 function axismundi_forum_get_community( int $group_identity_id ) : ?array {
-	if ( $group_identity_id <= 0 ) {
+	if ( $group_identity_id <= 0 || ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		return null;
+	}
+	$actor = axismundi_actors_get_by_identity( $group_identity_id );
+	if ( ! axismundi_forum_public_community_group( $actor ) ) {
 		return null;
 	}
 	global $wpdb;
@@ -235,7 +265,7 @@ function axismundi_forum_get_community( int $group_identity_id ) : ?array {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- PK lookup on a custom table.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d", $group_identity_id ), ARRAY_A );
 	if ( null === $row ) {
-		return null;
+		return array( 'group_identity_id' => $group_identity_id, 'posting_policy' => 'open', 'membership_policy' => 'open', 'created_at' => '', 'updated_at' => '' );
 	}
 	return array(
 		'group_identity_id' => (int) $row['group_identity_id'],
@@ -246,47 +276,9 @@ function axismundi_forum_get_community( int $group_identity_id ) : ?array {
 	);
 }
 
-/** @return bool Whether this Group has discussion enabled. */
+/** @return bool Whether this public managed Group is a community. */
 function axismundi_forum_is_community( int $group_identity_id ) : bool {
 	return null !== axismundi_forum_get_community( $group_identity_id );
-}
-
-/**
- * Turn a managed Group into a community, checking manager authority through Actors.
- *
- * @param int $group_identity_id Managed Group identity.
- * @param int $user_id           WP user performing the change (authority is theirs).
- * @return true|WP_Error
- */
-function axismundi_forum_enable_community( int $group_identity_id, int $user_id ) {
-	$actor = axismundi_forum_eligible_group( $group_identity_id );
-	if ( is_wp_error( $actor ) ) {
-		return $actor;
-	}
-	// Authority comes from the Actors manager relation, never from a copied flag or a
-	// WordPress role: only a manager of this Group may give it a community.
-	if ( ! axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id ) ) {
-		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Group Actor.', 'axismundi-forum' ) );
-	}
-	if ( axismundi_forum_is_community( $group_identity_id ) ) {
-		return true;
-	}
-	global $wpdb;
-	$now = current_time( 'mysql', true );
-	$ok  = $wpdb->insert(
-		axismundi_forum_settings_table(),
-		array(
-			'group_identity_id' => $group_identity_id,
-			'posting_policy'    => 'open',
-			'membership_policy' => 'open',
-			'created_at'        => $now,
-			'updated_at'        => $now,
-		),
-		array( '%d', '%s', '%s', '%s', '%s' )
-	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- insert on a Forum-owned table; the PK enforces one community per Group.
-	return false === $ok
-		? new WP_Error( 'ax_forum_enable_failed', __( 'The community could not be created.', 'axismundi-forum' ) )
-		: true;
 }
 
 /** Update one community policy after verifying Group-manager authority. */
@@ -296,41 +288,14 @@ function axismundi_forum_update_community_policy( int $group_identity_id, int $u
 		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this community.', 'axismundi-forum' ) );
 	}
 	global $wpdb;
-	$updated = $wpdb->update(
-		axismundi_forum_settings_table(),
-		array( $column => $value, 'updated_at' => current_time( 'mysql', true ) ),
-		array( 'group_identity_id' => $group_identity_id ),
-		array( '%s', '%s' ),
-		array( '%d' )
-	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact Group-keyed settings update.
-	return false === $updated ? new WP_Error( 'ax_forum_settings_write', __( 'The community settings could not be saved.', 'axismundi-forum' ) ) : true;
-}
-
-/**
- * Remove a Group's community. This never touches the Group Actor.
- *
- * @param int $group_identity_id Group identity.
- * @param int $user_id           WP user requesting the change.
- * @return true|WP_Error
- */
-function axismundi_forum_disable_community( int $group_identity_id, int $user_id ) {
-	if ( ! axismundi_forum_is_community( $group_identity_id ) ) {
-		return true;
-	}
-	if ( ! axismundi_forum_actors_available() || ! axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id ) ) {
-		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Group Actor.', 'axismundi-forum' ) );
-	}
-	if ( function_exists( 'axismundi_forum_count_entries' ) && axismundi_forum_count_entries( $group_identity_id ) > 0 ) {
-		return new WP_Error( 'ax_forum_has_entries', __( 'A community with Topic entries cannot be removed.', 'axismundi-forum' ) );
-	}
-	if ( function_exists( 'axismundi_forum_count_memberships' ) && axismundi_forum_count_memberships( $group_identity_id ) > 0 ) {
-		return new WP_Error( 'ax_forum_has_memberships', __( 'A community with membership records cannot be removed.', 'axismundi-forum' ) );
-	}
-	global $wpdb;
-	$deleted = $wpdb->delete( axismundi_forum_settings_table(), array( 'group_identity_id' => $group_identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- settings delete on a Forum-owned table.
-	return false === $deleted
-		? new WP_Error( 'ax_forum_disable_failed', __( 'The community could not be removed.', 'axismundi-forum' ) )
-		: true;
+	$now = current_time( 'mysql', true );
+	$table = axismundi_forum_settings_table();
+	$sql = 'INSERT INTO ' . $table . ' (group_identity_id, posting_policy, membership_policy, created_at, updated_at) VALUES (%d, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE ' . $column . ' = VALUES(' . $column . '), updated_at = VALUES(updated_at)';
+	$existing = axismundi_forum_get_community( $group_identity_id );
+	$posted = 'posting_policy' === $column ? $value : (string) $existing['posting_policy'];
+	$membership = 'membership_policy' === $column ? $value : (string) $existing['membership_policy'];
+	$written = $wpdb->query( $wpdb->prepare( $sql, $group_identity_id, $posted, $membership, $now, $now ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- allowlisted policy column and Group-keyed upsert.
+	return false === $written ? new WP_Error( 'ax_forum_settings_write', __( 'The community settings could not be saved.', 'axismundi-forum' ) ) : true;
 }
 
 /**

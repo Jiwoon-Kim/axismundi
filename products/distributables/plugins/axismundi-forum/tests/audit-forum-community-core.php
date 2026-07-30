@@ -3,7 +3,7 @@
  * Managed-Group community core regression (dev-only; dist-excluded).
  *
  * The Group identity is the only community key. This locks the replacement for the retired
- * ax_forum CPT: manager authority enables a community, policies live on that Group, Topic
+ * ax_forum CPT: publishing a managed Group creates a community, policies live on that Group, Topic
  * admission writes the Group key, and neither an unrelated user nor an unrelated Actor gains
  * authority through Forum.
  *
@@ -14,8 +14,13 @@ defined( 'ABSPATH' ) || exit( 1 );
 
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
+require_once __DIR__ . '/../includes/memberships.php';
+require_once __DIR__ . '/../includes/admin.php';
 
 axismundi_forum_install();
 axismundi_forum_register_topic_post_type();
@@ -50,29 +55,56 @@ function ax_fc_user() : int {
 try {
 	$owner    = ax_fc_user();
 	$stranger = ax_fc_user();
+	$owner_actor = axismundi_actors_ensure_for_user( $owner );
+	if ( $owner_actor instanceof Axismundi_Actor ) {
+		$ax_fc_identities[] = $owner_actor->get_identity_id();
+		axismundi_actors_register_handle( $owner_actor->get_identity_id(), 'axfcowner' . strtolower( wp_generate_password( 7, false, false ) ) );
+		axismundi_actors_set_status( $owner_actor->get_identity_id(), 'public' );
+		$owner_actor = axismundi_actors_get_by_identity( $owner_actor->get_identity_id() );
+	}
 	$group    = axismundi_actors_create_managed_group(
 		array(
 			'owner_user_id'     => $owner,
 			'preferred_username' => 'axfc' . strtolower( wp_generate_password( 8, false, false ) ),
+			'status'             => 'internal',
 		)
 	);
 	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 	if ( $group_id > 0 ) {
 		$ax_fc_identities[] = $group_id;
+		if ( $group instanceof Axismundi_Actor && ! $group->is_handle_locked() ) {
+			axismundi_actors_register_handle( $group_id, $group->get_preferred_username() );
+			$group = axismundi_actors_get_by_identity( $group_id );
+		}
 	}
 
 	ax_fc_assert(
-		'a managed Group has no community until a manager enables it',
+		'an internal managed Group is not a public community',
 		$group instanceof Axismundi_Actor && ! axismundi_forum_is_community( $group_id )
 	);
+	axismundi_actors_set_status( $group_id, 'public' );
+	$group = axismundi_actors_get_by_identity( $group_id );
 	ax_fc_assert(
-		'a non-manager cannot enable a Group community',
-		is_wp_error( axismundi_forum_enable_community( $group_id, $stranger ) ) && ! axismundi_forum_is_community( $group_id )
+		'publishing a managed Group immediately creates its community policy row',
+		$group instanceof Axismundi_Actor && is_array( axismundi_forum_get_community( $group_id ) )
 	);
+	$auto_follow = $owner_actor instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
+		? axismundi_act_get_relation( 'follow', $owner_actor->get_uri(), $group->get_uri() )
+		: null;
+	$auto_membership = $owner_actor instanceof Axismundi_Actor ? axismundi_forum_get_membership( $group_id, $owner_actor->get_identity_id() ) : null;
 	ax_fc_assert(
-		'a Group manager enables the community without a second post or binding record',
-		true === axismundi_forum_enable_community( $group_id, $owner )
-			&& is_array( axismundi_forum_get_community( $group_id ) )
+		'publishing a community joins its owner and creates the matching membership projection',
+		is_array( $auto_follow ) && 'accepted' === (string) $auto_follow['state'] && is_array( $auto_membership ) && 'accepted' === (string) $auto_membership['membership_state']
+	);
+	wp_set_current_user( $owner );
+	ob_start();
+	if ( $group instanceof Axismundi_Actor ) {
+		axismundi_forum_render_group_admin_section( $group );
+	}
+	$community_admin = (string) ob_get_clean();
+	ax_fc_assert(
+		'the managed Group community screen exposes its accepted member list and membership approval control',
+		$owner_actor instanceof Axismundi_Actor && str_contains( $community_admin, 'Members' ) && str_contains( $community_admin, 'Membership approval' ) && str_contains( $community_admin, '@' . $owner_actor->get_preferred_username() )
 	);
 
 	$policy = axismundi_forum_set_posting_policy( $group_id, $owner, 'managers' );
@@ -102,10 +134,6 @@ try {
 		'a Topic admission stores the Group identity directly',
 		true === $admitted && is_array( $entry ) && $group_id === (int) $entry['group_identity_id']
 	);
-	ax_fc_assert(
-		'a community with Topic entries cannot be disabled',
-		is_wp_error( axismundi_forum_disable_community( $group_id, $owner ) )
-	);
 } finally {
 	foreach ( array_unique( $ax_fc_topics ) as $topic_id ) {
 		$wpdb->delete( axismundi_forum_entries_table(), array( 'source_post_id' => (int) $topic_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
@@ -114,7 +142,14 @@ try {
 		}
 	}
 	foreach ( array_unique( $ax_fc_identities ) as $identity_id ) {
+		$actor = axismundi_actors_get_by_identity( (int) $identity_id );
+		if ( $actor instanceof Axismundi_Actor ) {
+			$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
+			$wpdb->delete( axismundi_act_relations_table(), array( 'object_actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
+			$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
+		}
 		$wpdb->delete( axismundi_forum_settings_table(), array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
+		$wpdb->delete( axismundi_forum_memberships_table(), array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
 		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.
 		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture cleanup.

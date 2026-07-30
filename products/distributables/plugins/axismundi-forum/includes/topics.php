@@ -168,9 +168,9 @@ function axismundi_forum_set_topic_approval_policy( int $group_identity_id, int 
 	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'topic_approval_policy', $policy );
 }
 
-/** Whether this user may admit this local Topic under the Forum's current F1 policy. */
-function axismundi_forum_can_admit_local_topic( int $group_identity_id, int $topic_post_id, int $user_id ) : bool {
-	if ( $user_id <= 0 || ! user_can( $user_id, 'edit_post', $topic_post_id ) || ! axismundi_forum_is_community( $group_identity_id ) ) {
+/** Whether this local Person may submit any authored content to one community. */
+function axismundi_forum_user_can_post_to_community( int $group_identity_id, int $user_id ) : bool {
+	if ( $user_id <= 0 || ! axismundi_forum_is_community( $group_identity_id ) ) {
 		return false;
 	}
 	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
@@ -189,6 +189,11 @@ function axismundi_forum_can_admit_local_topic( int $group_identity_id, int $top
 	}
 	$membership = axismundi_forum_get_membership( $group_identity_id, $author->get_identity_id() );
 	return is_array( $membership ) && 'accepted' === (string) $membership['membership_state'];
+}
+
+/** Whether this user may admit this local Topic under the Forum's current F1 policy. */
+function axismundi_forum_can_admit_local_topic( int $group_identity_id, int $topic_post_id, int $user_id ) : bool {
+	return $user_id > 0 && user_can( $user_id, 'edit_post', $topic_post_id ) && axismundi_forum_user_can_post_to_community( $group_identity_id, $user_id );
 }
 
 /** Update one entry field after verifying the caller manages its bound Group. */

@@ -337,7 +337,13 @@ function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Ax
 /** Address a Note reply to its parent Topic's Group instead of the author's personal audience. */
 function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_Source $source ) : array {
 	$group = axismundi_forum_note_reply_group( $source );
-	return $group instanceof Axismundi_Actor ? array( 'public' => false, 'to' => array( $group->get_uri() ), 'cc' => array() ) : $audience;
+	$post = $source->get_post();
+	$user_id = $post instanceof WP_Post ? (int) $post->post_author : 0;
+	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! axismundi_forum_user_can_post_to_community( $group->get_identity_id(), $user_id ) ) {
+		return $audience;
+	}
+	$mentions = $post instanceof WP_Post && function_exists( 'axismundi_note_mentions' ) ? axismundi_note_mentions( $post ) : array();
+	return array( 'public' => false, 'to' => array( $group->get_uri() ), 'cc' => $mentions );
 }
 add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audience', 10, 2 );
 
@@ -371,7 +377,8 @@ function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $ac
 		$note_source = is_array( $envelope ) ? new Axismundi_Note_Source( $envelope, $post instanceof WP_Post ? $post : null ) : null;
 	}
 	$group = $note_source instanceof Axismundi_Note_Source ? axismundi_forum_note_reply_group( $note_source ) : null;
-	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() ) {
+	$note_post = $note_source instanceof Axismundi_Note_Source ? $note_source->get_post() : null;
+	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! $note_post instanceof WP_Post || ! axismundi_forum_user_can_post_to_community( $group->get_identity_id(), (int) $note_post->post_author ) ) {
 		return;
 	}
 	$audience = axismundi_forum_distribution_audience( $group );

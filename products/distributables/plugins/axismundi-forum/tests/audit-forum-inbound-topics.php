@@ -16,13 +16,11 @@ require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-object-projections/includes/remote-objects.php';
 require_once WP_PLUGIN_DIR . '/axismundi-object-projections/includes/inbox-observations.php';
 require_once __DIR__ . '/../includes/repository.php';
-require_once __DIR__ . '/../includes/cpt.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/memberships.php';
 require_once __DIR__ . '/../includes/inbound-topics.php';
 
 axismundi_forum_install();
-axismundi_forum_register_post_type();
 
 global $wpdb;
 $ax_fit_results       = array();
@@ -47,13 +45,6 @@ function ax_fit_user( array &$user_ids ) : int {
 	return $user_id;
 }
 
-function ax_fit_forum( array &$post_ids, int $author ) : int {
-	$post_id = (int) wp_insert_post( array( 'post_type' => 'ax_forum', 'post_status' => 'publish', 'post_author' => $author, 'post_title' => 'Inbound Page Audit ' . wp_generate_password( 6, false, false ) ) );
-	if ( $post_id > 0 ) {
-		$post_ids[] = $post_id;
-	}
-	return $post_id;
-}
 
 function ax_fit_remote_person( array &$identity_ids, string $suffix ) {
 	$uri = 'https://example.com/users/' . $suffix;
@@ -95,11 +86,11 @@ try {
 	if ( $group instanceof Axismundi_Actor ) {
 		$ax_fit_identity_ids[] = $group->get_identity_id();
 	}
-	$forum = ax_fit_forum( $ax_fit_post_ids, $owner );
-	$bound = $group instanceof Axismundi_Actor ? axismundi_forum_bind_group( $forum, $group->get_identity_id(), $owner ) : new WP_Error( 'fixture' );
+	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	$bound = $community > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
 	$member = ax_fit_remote_person( $ax_fit_identity_ids, 'member_' . strtolower( wp_generate_password( 7, false, false ) ) );
 	$outsider = ax_fit_remote_person( $ax_fit_identity_ids, 'outsider_' . strtolower( wp_generate_password( 7, false, false ) ) );
-	$membership = $member instanceof Axismundi_Actor ? axismundi_forum_write_membership( $forum, $member->get_identity_id(), 'accepted', 'https://example.com/activities/follow-' . wp_generate_uuid4() ) : new WP_Error( 'fixture' );
+	$membership = $member instanceof Axismundi_Actor ? axismundi_forum_write_membership( $community, $member->get_identity_id(), 'accepted', 'https://example.com/activities/follow-' . wp_generate_uuid4() ) : new WP_Error( 'fixture' );
 
 	$accepted_uri = 'https://example.com/pages/accepted-' . wp_generate_uuid4();
 	$accepted = $member instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
@@ -107,7 +98,7 @@ try {
 		: new WP_Error( 'fixture' );
 	$ax_fit_activity_uris[] = $accepted_uri . '/activity';
 	$ax_fit_object_uris[] = $accepted_uri;
-	$accepted_entry = axismundi_forum_get_remote_entry( $forum, $accepted_uri );
+	$accepted_entry = axismundi_forum_get_remote_entry( $community, $accepted_uri );
 	ax_fit_assert(
 		$ax_fit_results,
 		'an accepted remote Group follower creates one public addressed Page that is cached and admitted as a Forum Topic entry',
@@ -120,7 +111,7 @@ try {
 	ax_fit_assert(
 		$ax_fit_results,
 		'the Forum mixed Topic query includes the admitted remote Page without inventing a local Topic post',
-		1 === count( axismundi_forum_visible_topic_entries( $forum ) ) && $accepted_uri === (string) axismundi_forum_visible_topic_entries( $forum )[0]['object_uri']
+		1 === count( axismundi_forum_visible_topic_entries( $community ) ) && $accepted_uri === (string) axismundi_forum_visible_topic_entries( $community )[0]['object_uri']
 	);
 	$card = function_exists( 'axismundi_op_render_object_by_uri' ) && $member instanceof Axismundi_Actor
 		? axismundi_op_render_object_by_uri( $accepted_uri, array( 'headingTag' => 'h3', 'interactions' => false, 'expected_author' => $member->get_uri() ) )
@@ -140,7 +131,7 @@ try {
 	ax_fit_assert(
 		$ax_fit_results,
 		'a public Page from a non-member is cached but never becomes a Forum entry',
-		$outsider_create instanceof Axismundi_Activity && is_array( axismundi_op_remote_object_get( $outsider_uri ) ) && null === axismundi_forum_get_remote_entry( $forum, $outsider_uri )
+		$outsider_create instanceof Axismundi_Activity && is_array( axismundi_op_remote_object_get( $outsider_uri ) ) && null === axismundi_forum_get_remote_entry( $community, $outsider_uri )
 	);
 
 	$elsewhere_uri = 'https://example.com/pages/elsewhere-' . wp_generate_uuid4();
@@ -150,12 +141,12 @@ try {
 	ax_fit_assert(
 		$ax_fit_results,
 		'an accepted member cannot inject a Page that omits this Group from its audience or context',
-		$elsewhere_create instanceof Axismundi_Activity && null === axismundi_forum_get_remote_entry( $forum, $elsewhere_uri )
+		$elsewhere_create instanceof Axismundi_Activity && null === axismundi_forum_get_remote_entry( $community, $elsewhere_uri )
 	);
 } finally {
 	$entries = axismundi_forum_entries_table();
 	$memberships = axismundi_forum_memberships_table();
-	$bindings = axismundi_forum_bindings_table();
+	$settings = axismundi_forum_settings_table();
 	$activities = axismundi_act_activities_table();
 	$remote_objects = axismundi_op_remote_objects_table();
 	$identities = axismundi_actors_identities_table();
@@ -163,9 +154,6 @@ try {
 	$endpoints = axismundi_actors_endpoints_table();
 	$managers = axismundi_actors_managers_table();
 	foreach ( array_unique( $ax_fit_post_ids ) as $post_id ) {
-		$wpdb->delete( $entries, array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( $memberships, array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( $bindings, array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		if ( get_post( (int) $post_id ) ) {
 			wp_delete_post( (int) $post_id, true );
 		}
@@ -177,6 +165,10 @@ try {
 		$wpdb->delete( $remote_objects, array( 'object_uri_hash' => hash( 'sha256', $object_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
 	foreach ( array_unique( $ax_fit_identity_ids ) as $identity_id ) {
+		// Forum projections are keyed by the Group identity, so they belong in this loop.
+		$wpdb->delete( $entries, array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( $memberships, array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( $settings, array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $endpoints, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $managers, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $actors, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

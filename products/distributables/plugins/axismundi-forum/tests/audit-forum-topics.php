@@ -15,11 +15,9 @@ defined( 'ABSPATH' ) || exit( 1 );
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
 require_once __DIR__ . '/../includes/repository.php';
-require_once __DIR__ . '/../includes/cpt.php';
 require_once __DIR__ . '/../includes/topics.php';
 
 axismundi_forum_install();
-axismundi_forum_register_post_type();
 axismundi_forum_register_topic_post_type();
 
 global $wpdb;
@@ -55,22 +53,6 @@ function ax_ft_user( array &$user_ids ) : int {
 	return $user_id;
 }
 
-/** Create and remember a Forum post. */
-function ax_ft_forum( array &$post_ids, int $author ) : int {
-	$post_id = (int) wp_insert_post(
-		array(
-			'post_type'   => 'ax_forum',
-			'post_status' => 'publish',
-			'post_author' => $author,
-			'post_title'  => 'Audit Forum ' . wp_generate_password( 6, false, false ),
-		)
-	);
-	if ( $post_id > 0 ) {
-		$post_ids[] = $post_id;
-	}
-	return $post_id;
-}
-
 /** Create and remember a published local Topic. */
 function ax_ft_topic( array &$post_ids, int $author, string $title ) : int {
 	$post_id = (int) wp_insert_post(
@@ -103,38 +85,39 @@ try {
 		$ax_ft_identity_ids[] = $group_id;
 	}
 
-	$forum          = ax_ft_forum( $ax_ft_post_ids, $owner );
+	$community      = $group_id;
 	$topic          = ax_ft_topic( $ax_ft_post_ids, $owner, 'Audit Topic One' );
 	$topic2         = ax_ft_topic( $ax_ft_post_ids, $owner, 'Audit Topic Two' );
 	$outsider_topic = ax_ft_topic( $ax_ft_post_ids, $stranger, 'Audit Restricted Topic' );
 
 	ax_ft_assert(
 		$ax_ft_results,
-		'F1 registers a REST-visible Topic CPT independently of the Forum CPT',
+		'Topic remains a REST-visible CPT and no ax_forum post type exists to stand in for a community',
 		post_type_exists( AXISMUNDI_FORUM_TOPIC_POST_TYPE )
 			&& (bool) get_post_type_object( AXISMUNDI_FORUM_TOPIC_POST_TYPE )->show_in_rest
-			&& 'ax_forum' === get_post_type( $forum )
+			&& ! post_type_exists( 'ax_forum' )
 	);
 
-	$bound = $group_id > 0 ? axismundi_forum_bind_group( $forum, $group_id, $owner ) : new WP_Error( 'fixture' );
-	$manager_policy = true === $bound ? axismundi_forum_set_posting_policy( $forum, $owner, 'managers' ) : $bound;
+	$bound = $group_id > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
+	$manager_policy = true === $bound ? axismundi_forum_set_posting_policy( $community, $owner, 'managers' ) : $bound;
 	ax_ft_assert(
 		$ax_ft_results,
 		'posting policy is manager-owned: a manager can restrict admission and an outsider cannot submit',
 		true === $manager_policy
-			&& 'managers' === axismundi_forum_get_posting_policy( $forum )
-			&& ax_ft_err( axismundi_forum_set_posting_policy( $forum, $stranger, 'open' ), 'ax_forum_forbidden' )
-			&& ax_ft_err( axismundi_forum_admit_local_topic( $forum, $outsider_topic, $stranger ), 'ax_forum_topic_forbidden' )
+			&& 'managers' === axismundi_forum_get_posting_policy( $community )
+			&& ax_ft_err( axismundi_forum_set_posting_policy( $community, $stranger, 'open' ), 'ax_forum_forbidden' )
+			&& ax_ft_err( axismundi_forum_admit_local_topic( $community, $outsider_topic, $stranger ), 'ax_forum_topic_forbidden' )
 	);
-	$open_policy = axismundi_forum_set_posting_policy( $forum, $owner, 'open' );
-	$admit       = true === $open_policy ? axismundi_forum_admit_local_topic( $forum, $topic, $owner ) : $open_policy;
+	$open_policy = axismundi_forum_set_posting_policy( $community, $owner, 'open' );
+	$admit       = true === $open_policy ? axismundi_forum_admit_local_topic( $community, $topic, $owner ) : $open_policy;
 	$entry = axismundi_forum_get_topic_entry( $topic );
 	ax_ft_assert(
 		$ax_ft_results,
 		'admission creates exactly one contextual Topic entry with a nullable submission Actor',
 		true === $admit
 			&& is_array( $entry )
-			&& $forum === (int) $entry['forum_post_id']
+			// One key now, and it is the community itself.
+			&& ! array_key_exists( 'forum_post_id', $entry )
 			&& $group_id === (int) $entry['group_identity_id']
 			&& 'topic' === $entry['entry_type']
 			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === $entry['object_uri']
@@ -144,7 +127,7 @@ try {
 	ax_ft_assert(
 		$ax_ft_results,
 		'the Forum Topic query reads its contextual projection rather than the Group activity feed',
-		array( $topic ) === axismundi_forum_topic_ids( $forum )
+		array( $topic ) === axismundi_forum_topic_ids( $community )
 	);
 
 	// Admission can precede public author activation; a Page remains fail-closed until
@@ -178,8 +161,8 @@ try {
 	$locked         = axismundi_forum_set_topic_locked( $topic, $owner, true );
 	$locked_page    = function_exists( 'axismundi_op_transform_object' ) ? axismundi_op_transform_object( get_post( $topic ) ) : null;
 	$sticky         = axismundi_forum_set_topic_sticky( $topic, $owner, true );
-	$admit_second   = axismundi_forum_admit_local_topic( $forum, $topic2, $owner );
-	$sticky_order   = axismundi_forum_topic_ids( $forum );
+	$admit_second   = axismundi_forum_admit_local_topic( $community, $topic2, $owner );
+	$sticky_order   = axismundi_forum_topic_ids( $community );
 	$state_after    = axismundi_forum_get_topic_entry( $topic );
 	$unlocked       = axismundi_forum_set_topic_locked( $topic, $owner, false );
 	$unsticky       = axismundi_forum_set_topic_sticky( $topic, $owner, false );
@@ -214,45 +197,48 @@ try {
 	ax_ft_assert(
 		$ax_ft_results,
 		'a Topic cannot silently acquire a second Forum context',
-		ax_ft_err( axismundi_forum_admit_local_topic( $forum, $topic, $owner ), 'ax_forum_topic_context' )
+		ax_ft_err( axismundi_forum_admit_local_topic( $community, $topic, $owner ), 'ax_forum_topic_context' )
 	);
 
 	ax_ft_assert(
 		$ax_ft_results,
-		'a Forum carrying entries cannot be unbound and rebound into a different Group context',
-		ax_ft_err( axismundi_forum_unbind_group( $forum, $owner ), 'ax_forum_has_entries' )
+		'a community carrying entries cannot be disabled out from under them',
+		ax_ft_err( axismundi_forum_disable_community( $community, $owner ), 'ax_forum_has_entries' )
 	);
 
 	wp_delete_post( $topic, true );
 	ax_ft_assert(
 		$ax_ft_results,
-		'deleting a Topic removes only its contextual entry and leaves the Forum binding intact',
-		null === axismundi_forum_get_topic_entry( $topic ) && null !== axismundi_forum_get_binding( $forum )
+		'deleting a Topic removes only its contextual entry and leaves the community intact',
+		null === axismundi_forum_get_topic_entry( $topic ) && axismundi_forum_is_community( $community )
 	);
 
-	wp_delete_post( $forum, true );
+	// Removing a community's entries is the closest thing left to deleting the old Forum post.
+	// What must survive is everything Forum does not own: the Topic source and the Group Actor.
+	axismundi_forum_delete_entries_for_community( $community );
 	ax_ft_assert(
 		$ax_ft_results,
-		'deleting a Forum removes its Topic entries but leaves the Topic source and Group Actor intact',
+		'clearing a community removes its Topic entries but leaves the Topic source and Group Actor intact',
 		null === axismundi_forum_get_topic_entry( $topic2 )
 			&& get_post( $topic2 ) instanceof WP_Post
 			&& axismundi_actors_get_by_identity( $group_id ) instanceof Axismundi_Actor
 	);
 } finally {
 	$entries    = axismundi_forum_entries_table();
-	$bindings   = axismundi_forum_bindings_table();
+	$settings   = axismundi_forum_settings_table();
 	$identities = axismundi_actors_identities_table();
 	$actors     = axismundi_actors_actors_table();
 	$addresses  = axismundi_actors_addresses_table();
 	$managers   = axismundi_actors_managers_table();
 	foreach ( array_unique( $ax_ft_post_ids ) as $post_id ) {
 		$wpdb->delete( $entries, array( 'source_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( $bindings, array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		if ( get_post( (int) $post_id ) ) {
 			wp_delete_post( (int) $post_id, true );
 		}
 	}
 	foreach ( array_unique( $ax_ft_identity_ids ) as $identity_id ) {
+		$wpdb->delete( $entries, array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( $settings, array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $addresses, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $managers, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$wpdb->delete( $actors, array( 'identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

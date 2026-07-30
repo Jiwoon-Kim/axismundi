@@ -11,8 +11,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_MEMBERSHIP_POLICY_META = '_axismundi_forum_membership_policy';
-
 /** @return array<string,string> Stable membership-policy labels. */
 function axismundi_forum_membership_policies() : array {
 	return array(
@@ -22,8 +20,9 @@ function axismundi_forum_membership_policies() : array {
 }
 
 /** Read one Forum's membership policy; public Forums default to automatic join. */
-function axismundi_forum_get_membership_policy( int $forum_post_id ) : string {
-	$policy = (string) get_post_meta( $forum_post_id, AXISMUNDI_FORUM_MEMBERSHIP_POLICY_META, true );
+function axismundi_forum_get_membership_policy( int $group_identity_id ) : string {
+	$community = axismundi_forum_get_community( $group_identity_id );
+	$policy = is_array( $community ) ? (string) $community['membership_policy'] : '';
 	return array_key_exists( $policy, axismundi_forum_membership_policies() ) ? $policy : 'open';
 }
 
@@ -35,21 +34,19 @@ function axismundi_forum_get_membership_policy( int $forum_post_id ) : string {
  * already federated. Loosening to `open` is retroactive, and deliberately so — see
  * axismundi_forum_admit_pending_memberships().
  */
-function axismundi_forum_set_membership_policy( int $forum_post_id, int $user_id, string $policy ) {
-	if ( 'ax_forum' !== get_post_type( $forum_post_id ) || ! array_key_exists( $policy, axismundi_forum_membership_policies() ) ) {
+function axismundi_forum_set_membership_policy( int $group_identity_id, int $user_id, string $policy ) {
+	if ( ! array_key_exists( $policy, axismundi_forum_membership_policies() ) ) {
 		return new WP_Error( 'ax_forum_membership_policy', __( 'The Forum membership policy is invalid.', 'axismundi-forum' ) );
 	}
-	if ( ! function_exists( 'axismundi_forum_user_can_manage' ) || ! axismundi_forum_user_can_manage( $forum_post_id, $user_id ) ) {
-		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Forum Group.', 'axismundi-forum' ) );
-	}
-	if ( $policy === axismundi_forum_get_membership_policy( $forum_post_id ) ) {
+	if ( $policy === axismundi_forum_get_membership_policy( $group_identity_id ) ) {
 		return true;
 	}
-	if ( false === update_post_meta( $forum_post_id, AXISMUNDI_FORUM_MEMBERSHIP_POLICY_META, $policy ) ) {
-		return new WP_Error( 'ax_forum_membership_policy_write', __( 'The Forum membership policy could not be saved.', 'axismundi-forum' ) );
+	$result = axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'membership_policy', $policy );
+	if ( is_wp_error( $result ) ) {
+		return $result;
 	}
 	if ( 'open' === $policy ) {
-		axismundi_forum_admit_pending_memberships( $forum_post_id );
+		axismundi_forum_admit_pending_memberships( $group_identity_id );
 	}
 	return true;
 }
@@ -74,14 +71,14 @@ function axismundi_forum_set_membership_policy( int $forum_post_id, int $user_id
  * is a page of rows that cannot be admitted at all, and that ends the loop instead of spinning
  * on it. Whatever remains is reported, never silently dropped.
  *
- * @param int $forum_post_id Forum that just became open.
+ * @param int $group_identity_id Forum that just became open.
  * @return array{admitted:int,remaining:int} Members admitted, and requests still waiting.
  */
-function axismundi_forum_admit_pending_memberships( int $forum_post_id ) : array {
-	$group    = axismundi_forum_get_bound_group( $forum_post_id );
+function axismundi_forum_admit_pending_memberships( int $group_identity_id ) : array {
+	$group    = axismundi_forum_get_community_group( $group_identity_id );
 	$admitted = 0;
 	while ( true ) {
-		$batch = axismundi_forum_pending_memberships( $forum_post_id, 100 );
+		$batch = axismundi_forum_pending_memberships( $group_identity_id, 100 );
 		if ( array() === $batch ) {
 			break;
 		}
@@ -97,7 +94,7 @@ function axismundi_forum_admit_pending_memberships( int $forum_post_id ) : array
 			// admitted only once the ledger says so, so a failed Accept leaves them queued
 			// rather than admitted-here-and-pending-there.
 			if ( is_wp_error( axismundi_act_respond_to_local_follow( $group, $evidence, 'accept' ) )
-				|| true !== axismundi_forum_write_membership( $forum_post_id, (int) $membership['actor_identity_id'], 'accepted', $evidence ) ) {
+				|| true !== axismundi_forum_write_membership( $group_identity_id, (int) $membership['actor_identity_id'], 'accepted', $evidence ) ) {
 				continue;
 			}
 			++$progress;
@@ -107,62 +104,62 @@ function axismundi_forum_admit_pending_memberships( int $forum_post_id ) : array
 			break;
 		}
 	}
-	$remaining = count( axismundi_forum_pending_memberships( $forum_post_id, 200 ) );
+	$remaining = count( axismundi_forum_pending_memberships( $group_identity_id, 200 ) );
 	/**
 	 * Fires after an open-policy admission sweep, including one that could not finish.
 	 *
-	 * @param int $forum_post_id Forum swept.
+	 * @param int $group_identity_id Forum swept.
 	 * @param int $admitted      Members admitted.
 	 * @param int $remaining     Requests still pending, capped at the reporting page size.
 	 */
-	do_action( 'axismundi_forum_memberships_admitted', $forum_post_id, $admitted, $remaining );
+	do_action( 'axismundi_forum_memberships_admitted', $group_identity_id, $admitted, $remaining );
 	return array( 'admitted' => $admitted, 'remaining' => $remaining );
 }
 
 /** @return array<string,mixed>|null One Forum membership projection row. */
-function axismundi_forum_get_membership( int $forum_post_id, int $actor_identity_id ) : ?array {
-	if ( $forum_post_id <= 0 || $actor_identity_id <= 0 ) {
+function axismundi_forum_get_membership( int $group_identity_id, int $actor_identity_id ) : ?array {
+	if ( $group_identity_id <= 0 || $actor_identity_id <= 0 ) {
 		return null;
 	}
 	global $wpdb;
 	$table = axismundi_forum_memberships_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- composite-primary-key lookup on a Forum-owned custom table.
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE forum_post_id = %d AND actor_identity_id = %d", $forum_post_id, $actor_identity_id ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND actor_identity_id = %d", $group_identity_id, $actor_identity_id ), ARRAY_A );
 	return is_array( $row ) ? $row : null;
 }
 
 /** @return array<int,array<string,mixed>> Pending membership requests for one Forum. */
-function axismundi_forum_pending_memberships( int $forum_post_id, int $limit = 100 ) : array {
-	if ( $forum_post_id <= 0 ) {
+function axismundi_forum_pending_memberships( int $group_identity_id, int $limit = 100 ) : array {
+	if ( $group_identity_id <= 0 ) {
 		return array();
 	}
 	global $wpdb;
 	$table = axismundi_forum_memberships_table();
 	$limit = max( 1, min( 200, $limit ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Forum membership-request list.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE forum_post_id = %d AND membership_state = 'pending' ORDER BY created_at ASC LIMIT %d", $forum_post_id, $limit ), ARRAY_A );
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND membership_state = 'pending' ORDER BY created_at ASC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
 }
 
 /** @return int Count Forum membership projections for lifecycle guards. */
-function axismundi_forum_count_memberships( int $forum_post_id ) : int {
+function axismundi_forum_count_memberships( int $group_identity_id ) : int {
 	global $wpdb;
 	$table = axismundi_forum_memberships_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Forum membership count.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE forum_post_id = %d", $forum_post_id ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE group_identity_id = %d", $group_identity_id ) );
 }
 
 /** Delete contextual membership projections when a Forum itself is permanently deleted. */
-function axismundi_forum_delete_memberships_for_forum( int $forum_post_id ) : void {
+function axismundi_forum_delete_memberships_for_forum( int $group_identity_id ) : void {
 	global $wpdb;
-	$wpdb->delete( axismundi_forum_memberships_table(), array( 'forum_post_id' => $forum_post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Forum deletion removes only its local admission projection.
+	$wpdb->delete( axismundi_forum_memberships_table(), array( 'group_identity_id' => $group_identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Forum deletion removes only its local admission projection.
 }
 
 /** Upsert one state transition projected from the Activities Follow ledger. */
-function axismundi_forum_write_membership( int $forum_post_id, int $actor_identity_id, string $state, string $membership_evidence_activity_uri ) {
+function axismundi_forum_write_membership( int $group_identity_id, int $actor_identity_id, string $state, string $membership_evidence_activity_uri ) {
 	if ( ! in_array( $state, array( 'pending', 'accepted', 'rejected', 'undone' ), true ) ) {
 		return new WP_Error( 'ax_forum_membership_state', __( 'The Forum membership state is invalid.', 'axismundi-forum' ) );
 	}
-	$existing = axismundi_forum_get_membership( $forum_post_id, $actor_identity_id );
+	$existing = axismundi_forum_get_membership( $group_identity_id, $actor_identity_id );
 	$now      = current_time( 'mysql', true );
 	global $wpdb;
 	$table = axismundi_forum_memberships_table();
@@ -174,7 +171,7 @@ function axismundi_forum_write_membership( int $forum_post_id, int $actor_identi
 				'membership_state'                 => $state,
 				'updated_at'                       => $now,
 			),
-			array( 'forum_post_id' => $forum_post_id, 'actor_identity_id' => $actor_identity_id ),
+			array( 'group_identity_id' => $group_identity_id, 'actor_identity_id' => $actor_identity_id ),
 			array( '%s', '%s', '%s' ),
 			array( '%d', '%d' )
 		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact update of a Forum-owned projection.
@@ -183,7 +180,7 @@ function axismundi_forum_write_membership( int $forum_post_id, int $actor_identi
 	$inserted = $wpdb->insert(
 		$table,
 		array(
-			'forum_post_id'                    => $forum_post_id,
+			'group_identity_id'                    => $group_identity_id,
 			'actor_identity_id'                => $actor_identity_id,
 			'membership_evidence_activity_uri' => $membership_evidence_activity_uri,
 			'membership_state'                 => $state,
@@ -266,12 +263,12 @@ function axismundi_forum_sync_membership_from_follow( array $relation ) : void {
 	if ( ! $group instanceof Axismundi_Actor || ! $member instanceof Axismundi_Actor || ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type() ) {
 		return;
 	}
-	$forum_post_id = axismundi_forum_get_forum_for_group( $group->get_identity_id() );
-	if ( $forum_post_id <= 0 ) {
+	$group_identity_id = $group->get_identity_id();
+	if ( ! axismundi_forum_is_community( $group_identity_id ) ) {
 		return;
 	}
 	$evidence_uri   = (string) ( $relation['initiating_activity_uri'] ?? '' );
-	$policy         = axismundi_forum_get_membership_policy( $forum_post_id );
+	$policy         = axismundi_forum_get_membership_policy( $group_identity_id );
 	$relation_state = (string) ( $relation['state'] ?? '' );
 	$state          = axismundi_forum_project_membership_state( $relation_state, $policy );
 	if ( '' === $state || '' === $evidence_uri ) {
@@ -294,7 +291,7 @@ function axismundi_forum_sync_membership_from_follow( array $relation ) : void {
 		&& is_wp_error( axismundi_act_respond_to_local_follow( $group, $evidence_uri, 'accept' ) ) ) {
 		$state = 'pending';
 	}
-	axismundi_forum_write_membership( $forum_post_id, $member->get_identity_id(), $state, $evidence_uri );
+	axismundi_forum_write_membership( $group_identity_id, $member->get_identity_id(), $state, $evidence_uri );
 }
 
 /**
@@ -317,23 +314,23 @@ function axismundi_forum_sync_membership_from_follow( array $relation ) : void {
  * rewritten inside one transaction, so a reader never sees a half-built membership list and a
  * failure part-way through leaves the previous one intact.
  *
- * @param int $forum_post_id Forum to rebuild.
+ * @param int $group_identity_id Forum to rebuild.
  * @return array{members:int,relations:int}|WP_Error Rows written and relations read.
  */
-function axismundi_forum_rebuild_memberships( int $forum_post_id ) {
-	$group = function_exists( 'axismundi_forum_get_bound_group' ) ? axismundi_forum_get_bound_group( $forum_post_id ) : null;
+function axismundi_forum_rebuild_memberships( int $group_identity_id ) {
+	$group = axismundi_forum_get_community_group( $group_identity_id );
 	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_get_relations_for_object' ) ) {
 		return new WP_Error( 'ax_forum_rebuild_unbound', __( 'That Forum is not bound to a managed Group.', 'axismundi-forum' ) );
 	}
 	global $wpdb;
-	$policy    = axismundi_forum_get_membership_policy( $forum_post_id );
+	$policy    = axismundi_forum_get_membership_policy( $group_identity_id );
 	$evidence  = (array) apply_filters( 'axismundi_forum_membership_evidence_types', array( 'follow', 'join' ) );
 	$page      = 200;
 	$after_id  = 0;
 	$members   = 0;
 	$relations = 0;
 	$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the delete and the rewrite are one replacement.
-	$wpdb->delete( axismundi_forum_memberships_table(), array( 'forum_post_id' => $forum_post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- replaced in full below.
+	$wpdb->delete( axismundi_forum_memberships_table(), array( 'group_identity_id' => $group_identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- replaced in full below.
 	while ( true ) {
 		// The evidence types are pushed into the query rather than filtered out afterwards: a
 		// Block aimed at this Group is a relation too, and letting those rows occupy the page
@@ -352,7 +349,7 @@ function axismundi_forum_rebuild_memberships( int $forum_post_id ) {
 			if ( ! $member instanceof Axismundi_Actor || '' === $state || '' === $uri ) {
 				continue;
 			}
-			if ( true !== axismundi_forum_write_membership( $forum_post_id, $member->get_identity_id(), $state, $uri ) ) {
+			if ( true !== axismundi_forum_write_membership( $group_identity_id, $member->get_identity_id(), $state, $uri ) ) {
 				$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- a partial rebuild is worse than none.
 				return new WP_Error( 'ax_forum_rebuild_write', __( 'The Forum membership projection could not be rebuilt.', 'axismundi-forum' ) );
 			}
@@ -368,15 +365,15 @@ function axismundi_forum_rebuild_memberships( int $forum_post_id ) {
 add_action( 'axismundi_act_relation_changed', 'axismundi_forum_sync_membership_from_follow', 20 );
 
 /** Accept or reject a pending Forum membership request as a manager of its Group. */
-function axismundi_forum_respond_to_membership_request( int $forum_post_id, int $actor_identity_id, int $user_id, string $decision ) {
+function axismundi_forum_respond_to_membership_request( int $group_identity_id, int $actor_identity_id, int $user_id, string $decision ) {
 	if ( ! in_array( $decision, array( 'accept', 'reject' ), true ) ) {
 		return new WP_Error( 'ax_forum_membership_decision', __( 'The membership decision is invalid.', 'axismundi-forum' ) );
 	}
-	if ( ! function_exists( 'axismundi_forum_user_can_manage' ) || ! axismundi_forum_user_can_manage( $forum_post_id, $user_id ) ) {
+	if ( ! function_exists( 'axismundi_forum_user_can_manage' ) || ! axismundi_forum_user_can_manage( $group_identity_id, $user_id ) ) {
 		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Forum Group.', 'axismundi-forum' ) );
 	}
-	$membership = axismundi_forum_get_membership( $forum_post_id, $actor_identity_id );
-	$group      = axismundi_forum_get_bound_group( $forum_post_id );
+	$membership = axismundi_forum_get_membership( $group_identity_id, $actor_identity_id );
+	$group      = axismundi_forum_get_community_group( $group_identity_id );
 	if ( ! is_array( $membership ) || 'pending' !== (string) $membership['membership_state'] || ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_respond_to_local_follow' ) ) {
 		return new WP_Error( 'ax_forum_membership_request', __( 'That membership request is no longer pending.', 'axismundi-forum' ) );
 	}

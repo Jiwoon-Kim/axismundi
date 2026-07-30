@@ -69,23 +69,23 @@ function axismundi_forum_remote_root_addresses_group( array $payload, Axismundi_
 }
 
 /** One remote Forum entry by its contextual object URI, if it already exists. */
-function axismundi_forum_get_remote_entry( int $forum_post_id, string $object_uri ) : ?array {
-	if ( $forum_post_id <= 0 || '' === $object_uri ) {
+function axismundi_forum_get_remote_entry( int $group_identity_id, string $object_uri ) : ?array {
+	if ( $group_identity_id <= 0 || '' === $object_uri ) {
 		return null;
 	}
 	global $wpdb;
 	$table = axismundi_forum_entries_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact contextual URI lookup on a Forum-owned projection.
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE forum_post_id = %d AND object_uri_hash = %s", $forum_post_id, hash( 'sha256', $object_uri ) ), ARRAY_A );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND object_uri_hash = %s", $group_identity_id, hash( 'sha256', $object_uri ) ), ARRAY_A );
 	return is_array( $row ) && hash_equals( (string) $row['object_uri'], $object_uri ) ? $row : null;
 }
 
 /** Whether this remote Actor has an accepted membership in the Forum. */
-function axismundi_forum_remote_actor_can_post( int $forum_post_id, Axismundi_Actor $actor ) : bool {
+function axismundi_forum_remote_actor_can_post( int $group_identity_id, Axismundi_Actor $actor ) : bool {
 	if ( $actor->is_local() ) {
 		return false;
 	}
-	$membership = axismundi_forum_get_membership( $forum_post_id, $actor->get_identity_id() );
+	$membership = axismundi_forum_get_membership( $group_identity_id, $actor->get_identity_id() );
 	return is_array( $membership ) && 'accepted' === (string) $membership['membership_state'];
 }
 
@@ -122,11 +122,11 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 		if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! $group->is_managed() || 'Group' !== $group->get_type() ) {
 			continue;
 		}
-		$forum_post_id = axismundi_forum_get_forum_for_group( $group->get_identity_id() );
-		if ( $forum_post_id <= 0 || ! axismundi_forum_remote_root_addresses_group( $payload, $activity, $group ) || ! axismundi_forum_remote_actor_can_post( $forum_post_id, $author ) ) {
+		$group_identity_id = $group->get_identity_id();
+		if ( ! axismundi_forum_is_community( $group_identity_id ) || ! axismundi_forum_remote_root_addresses_group( $payload, $activity, $group ) || ! axismundi_forum_remote_actor_can_post( $group_identity_id, $author ) ) {
 			continue;
 		}
-		$existing = axismundi_forum_get_remote_entry( $forum_post_id, $object_uri );
+		$existing = axismundi_forum_get_remote_entry( $group_identity_id, $object_uri );
 		if ( is_array( $existing ) ) {
 			return (int) $existing['submission_actor_identity_id'] === $author->get_identity_id()
 				? true
@@ -137,8 +137,7 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 		$inserted = $wpdb->insert(
 			axismundi_forum_entries_table(),
 			array(
-				'forum_post_id'                => $forum_post_id,
-				'group_identity_id'             => $group->get_identity_id(),
+				'group_identity_id'             => $group_identity_id,
 				'object_uri'                    => $object_uri,
 				'object_uri_hash'               => hash( 'sha256', $object_uri ),
 				'entry_type'                    => 'topic',
@@ -149,7 +148,7 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 				'created_at'                    => $now,
 				'updated_at'                    => $now,
 			),
-			array( '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' )
 		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- membership-authorized contextual projection; source Object remains remote-cache owned.
 		return false === $inserted ? new WP_Error( 'ax_forum_remote_page_write', __( 'The remote Page could not be admitted to this Forum.', 'axismundi-forum' ) ) : true;
 	}

@@ -16,7 +16,6 @@ require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/object-lifecycle.php';
 require_once __DIR__ . '/../includes/repository.php';
-require_once __DIR__ . '/../includes/cpt.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/outbound-topics.php';
 

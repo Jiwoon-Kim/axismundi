@@ -8,7 +8,6 @@
 defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_FORUM_TOPIC_POST_TYPE = 'ax_topic';
-const AXISMUNDI_FORUM_POSTING_POLICY_META = '_axismundi_forum_posting_policy';
 const AXISMUNDI_FORUM_REMOTE_GROUP_META = '_axismundi_forum_remote_group_identity_id';
 
 /** Register the local Topic authoring container. */
@@ -61,17 +60,17 @@ function axismundi_forum_get_topic_entry( int $topic_post_id ) : ?array {
 }
 
 /** Count entries in one Forum without conflating them with its activity feed. */
-function axismundi_forum_count_entries( int $forum_post_id ) : int {
+function axismundi_forum_count_entries( int $group_identity_id ) : int {
 	global $wpdb;
 	$table = axismundi_forum_entries_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Forum-context count on a custom table.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE forum_post_id = %d", $forum_post_id ) );
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE group_identity_id = %d", $group_identity_id ) );
 }
 
-/** Remove contextual entries when a Forum is permanently deleted; source objects remain. */
-function axismundi_forum_delete_entries_for_forum( int $forum_post_id ) : void {
+/** Remove one community's contextual entries; source objects remain. */
+function axismundi_forum_delete_entries_for_community( int $group_identity_id ) : void {
 	global $wpdb;
-	$wpdb->delete( axismundi_forum_entries_table(), array( 'forum_post_id' => $forum_post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- contextual projection cleanup; never deletes source objects.
+	$wpdb->delete( axismundi_forum_entries_table(), array( 'group_identity_id' => $group_identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- contextual projection cleanup; never deletes source objects.
 }
 
 /** Remove a local Topic's Forum context when its source post is deleted. */
@@ -93,42 +92,40 @@ function axismundi_forum_posting_policies() : array {
 }
 
 /** Read one Forum's local Topic-admission policy, defaulting new Forums to F1 open posting. */
-function axismundi_forum_get_posting_policy( int $forum_post_id ) : string {
-	$policy = (string) get_post_meta( $forum_post_id, AXISMUNDI_FORUM_POSTING_POLICY_META, true );
+function axismundi_forum_get_posting_policy( int $group_identity_id ) : string {
+	$community = axismundi_forum_get_community( $group_identity_id );
+	$policy = is_array( $community ) ? (string) $community['posting_policy'] : '';
 	return array_key_exists( $policy, axismundi_forum_posting_policies() ) ? $policy : 'open';
 }
 
-/** Whether a WP user manages the Group bound to this Forum. */
-function axismundi_forum_user_can_manage( int $forum_post_id, int $user_id ) : bool {
-	$binding = axismundi_forum_get_binding( $forum_post_id );
-	return is_array( $binding )
+/** Whether a WP user manages this community's Group. */
+function axismundi_forum_user_can_manage( int $group_identity_id, int $user_id ) : bool {
+	return axismundi_forum_is_community( $group_identity_id )
 		&& axismundi_forum_actors_available()
-		&& axismundi_actors_managed_actor_can_manage( (int) $binding['group_identity_id'], $user_id );
+		&& axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id );
 }
 
 /** Persist a Forum's policy; only a manager of its bound Group may change it. */
-function axismundi_forum_set_posting_policy( int $forum_post_id, int $user_id, string $policy ) {
-	if ( 'ax_forum' !== get_post_type( $forum_post_id ) || ! array_key_exists( $policy, axismundi_forum_posting_policies() ) ) {
+function axismundi_forum_set_posting_policy( int $group_identity_id, int $user_id, string $policy ) {
+	if ( ! array_key_exists( $policy, axismundi_forum_posting_policies() ) ) {
 		return new WP_Error( 'ax_forum_posting_policy', __( 'The Forum posting policy is invalid.', 'axismundi-forum' ) );
 	}
-	if ( ! axismundi_forum_user_can_manage( $forum_post_id, $user_id ) ) {
+	if ( ! axismundi_forum_user_can_manage( $group_identity_id, $user_id ) ) {
 		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Forum Group.', 'axismundi-forum' ) );
 	}
-	if ( $policy === axismundi_forum_get_posting_policy( $forum_post_id ) ) {
+	if ( $policy === axismundi_forum_get_posting_policy( $group_identity_id ) ) {
 		return true;
 	}
-	return false === update_post_meta( $forum_post_id, AXISMUNDI_FORUM_POSTING_POLICY_META, $policy )
-		? new WP_Error( 'ax_forum_posting_policy_write', __( 'The Forum posting policy could not be saved.', 'axismundi-forum' ) )
-		: true;
+	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'posting_policy', $policy );
 }
 
 /** Whether this user may admit this local Topic under the Forum's current F1 policy. */
-function axismundi_forum_can_admit_local_topic( int $forum_post_id, int $topic_post_id, int $user_id ) : bool {
-	if ( $user_id <= 0 || ! user_can( $user_id, 'edit_post', $topic_post_id ) || null === axismundi_forum_get_binding( $forum_post_id ) ) {
+function axismundi_forum_can_admit_local_topic( int $group_identity_id, int $topic_post_id, int $user_id ) : bool {
+	if ( $user_id <= 0 || ! user_can( $user_id, 'edit_post', $topic_post_id ) || ! axismundi_forum_is_community( $group_identity_id ) ) {
 		return false;
 	}
-	return 'open' === axismundi_forum_get_posting_policy( $forum_post_id )
-		|| axismundi_forum_user_can_manage( $forum_post_id, $user_id );
+	return 'open' === axismundi_forum_get_posting_policy( $group_identity_id )
+		|| axismundi_forum_user_can_manage( $group_identity_id, $user_id );
 }
 
 /** Update one entry field after verifying the caller manages its bound Group. */
@@ -137,7 +134,7 @@ function axismundi_forum_update_topic_entry( int $topic_post_id, int $user_id, a
 	if ( ! is_array( $entry ) ) {
 		return new WP_Error( 'ax_forum_topic_context', __( 'This Topic has no Forum context.', 'axismundi-forum' ) );
 	}
-	if ( ! axismundi_forum_user_can_manage( (int) $entry['forum_post_id'], $user_id ) ) {
+	if ( ! axismundi_forum_user_can_manage( (int) $entry['group_identity_id'], $user_id ) ) {
 		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Forum Group.', 'axismundi-forum' ) );
 	}
 	$fields['updated_at'] = current_time( 'mysql', true );
@@ -161,7 +158,7 @@ function axismundi_forum_set_topic_locked( int $topic_post_id, int $user_id, boo
 		return new WP_Error( 'ax_forum_topic_context', __( 'This Topic has no Forum context.', 'axismundi-forum' ) );
 	}
 	if ( $locked === ! empty( $entry['locked_at'] ) ) {
-		return axismundi_forum_user_can_manage( (int) $entry['forum_post_id'], $user_id )
+		return axismundi_forum_user_can_manage( (int) $entry['group_identity_id'], $user_id )
 			? true
 			: new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Forum Group.', 'axismundi-forum' ) );
 	}
@@ -179,7 +176,7 @@ function axismundi_forum_set_topic_sticky( int $topic_post_id, int $user_id, boo
 		return new WP_Error( 'ax_forum_topic_context', __( 'This Topic has no Forum context.', 'axismundi-forum' ) );
 	}
 	if ( $sticky === ! empty( $entry['sticky_position'] ) ) {
-		return axismundi_forum_user_can_manage( (int) $entry['forum_post_id'], $user_id )
+		return axismundi_forum_user_can_manage( (int) $entry['group_identity_id'], $user_id )
 			? true
 			: new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Forum Group.', 'axismundi-forum' ) );
 	}
@@ -188,7 +185,7 @@ function axismundi_forum_set_topic_sticky( int $topic_post_id, int $user_id, boo
 		global $wpdb;
 		$table    = axismundi_forum_entries_table();
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed per-Forum sticky sequence on a custom table.
-		$position = 1 + (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE( MAX( sticky_position ), 0 ) FROM {$table} WHERE forum_post_id = %d", (int) $entry['forum_post_id'] ) );
+		$position = 1 + (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE( MAX( sticky_position ), 0 ) FROM {$table} WHERE group_identity_id = %d", (int) $entry['group_identity_id'] ) );
 	}
 	return axismundi_forum_update_topic_entry( $topic_post_id, $user_id, array( 'sticky_position' => $position ) );
 }
@@ -196,13 +193,9 @@ function axismundi_forum_set_topic_sticky( int $topic_post_id, int $user_id, boo
 /**
  * Admit a local Topic into one bound Forum under the explicit F1 local policy.
  */
-function axismundi_forum_admit_local_topic( int $forum_post_id, int $topic_post_id, int $user_id ) {
-	if ( 'ax_forum' !== get_post_type( $forum_post_id ) || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== get_post_type( $topic_post_id ) ) {
-		return new WP_Error( 'ax_forum_topic_target', __( 'A Forum and Topic are required.', 'axismundi-forum' ) );
-	}
-	$binding = axismundi_forum_get_binding( $forum_post_id );
-	if ( null === $binding ) {
-		return new WP_Error( 'ax_forum_topic_unbound', __( 'Bind a Group Actor before adding Topics.', 'axismundi-forum' ) );
+function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_post_id, int $user_id ) {
+	if ( AXISMUNDI_FORUM_TOPIC_POST_TYPE !== get_post_type( $topic_post_id ) || ! axismundi_forum_is_community( $group_identity_id ) ) {
+		return new WP_Error( 'ax_forum_topic_target', __( 'An enabled community and Topic are required.', 'axismundi-forum' ) );
 	}
 	if ( null !== axismundi_forum_get_topic_entry( $topic_post_id ) ) {
 		return new WP_Error( 'ax_forum_topic_context', __( 'This Topic already belongs to a Forum.', 'axismundi-forum' ) );
@@ -211,15 +204,14 @@ function axismundi_forum_admit_local_topic( int $forum_post_id, int $topic_post_
 	if ( ! $topic instanceof WP_Post ) {
 		return new WP_Error( 'ax_forum_topic_missing', __( 'The Topic does not exist.', 'axismundi-forum' ) );
 	}
-	if ( ! axismundi_forum_can_admit_local_topic( $forum_post_id, $topic_post_id, $user_id ) ) {
+	if ( ! axismundi_forum_can_admit_local_topic( $group_identity_id, $topic_post_id, $user_id ) ) {
 		return new WP_Error( 'ax_forum_topic_forbidden', __( 'You may not add this Topic to the selected Forum.', 'axismundi-forum' ) );
 	}
 	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( (int) $topic->post_author ) : null;
 	$now   = current_time( 'mysql', true );
 	global $wpdb;
 	$fields = array(
-			'forum_post_id'                => $forum_post_id,
-			'group_identity_id'             => (int) $binding['group_identity_id'],
+			'group_identity_id'             => $group_identity_id,
 			'object_uri'                    => axismundi_forum_topic_object_uri( $topic ),
 			'object_uri_hash'               => hash( 'sha256', axismundi_forum_topic_object_uri( $topic ) ),
 			'entry_type'                    => 'topic',
@@ -229,7 +221,7 @@ function axismundi_forum_admit_local_topic( int $forum_post_id, int $topic_post_
 			'created_at'                    => $now,
 			'updated_at'                    => $now,
 	);
-	$formats = array( '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' );
+	$formats = array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' );
 	if ( $actor instanceof Axismundi_Actor ) {
 		$fields['submission_actor_identity_id'] = $actor->get_identity_id();
 		$formats[]                              = '%d';
@@ -243,58 +235,49 @@ function axismundi_forum_admit_local_topic( int $forum_post_id, int $topic_post_
 }
 
 /** Get public visible Topic post ids for the Forum Topic list. */
-function axismundi_forum_topic_ids( int $forum_post_id, int $limit = 20 ) : array {
+function axismundi_forum_topic_ids( int $group_identity_id, int $limit = 20 ) : array {
 	global $wpdb;
 	$table = axismundi_forum_entries_table();
 	$limit = max( 1, min( 100, $limit ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed WordPress posts + Forum-entry table names; values prepared.
-	return array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT e.source_post_id FROM {$table} e INNER JOIN {$wpdb->posts} p ON p.ID = e.source_post_id WHERE e.forum_post_id = %d AND e.entry_type = 'topic' AND e.admission_state = 'visible' AND e.moderation_state = 'visible' AND p.post_status = 'publish' ORDER BY e.sticky_position IS NULL, e.sticky_position DESC, p.post_date_gmt DESC LIMIT %d", $forum_post_id, $limit ) ) );
+	return array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT e.source_post_id FROM {$table} e INNER JOIN {$wpdb->posts} p ON p.ID = e.source_post_id WHERE e.group_identity_id = %d AND e.entry_type = 'topic' AND e.admission_state = 'visible' AND e.moderation_state = 'visible' AND p.post_status = 'publish' ORDER BY e.sticky_position IS NULL, e.sticky_position DESC, p.post_date_gmt DESC LIMIT %d", $group_identity_id, $limit ) ) );
 }
 
 /** @return array<int,array<string,mixed>> Local and remote visible Topic entries for one Forum. */
-function axismundi_forum_visible_topic_entries( int $forum_post_id, int $limit = 20 ) : array {
-	if ( $forum_post_id <= 0 ) {
+function axismundi_forum_visible_topic_entries( int $group_identity_id, int $limit = 20 ) : array {
+	if ( $group_identity_id <= 0 ) {
 		return array();
 	}
 	global $wpdb;
 	$table = axismundi_forum_entries_table();
 	$limit = max( 1, min( 100, $limit ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Forum-context query; remote entries intentionally have no WordPress post row.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE forum_post_id = %d AND entry_type = 'topic' AND admission_state = 'visible' AND moderation_state = 'visible' ORDER BY sticky_position IS NULL, sticky_position DESC, created_at DESC, id DESC LIMIT %d", $forum_post_id, $limit ), ARRAY_A );
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND admission_state = 'visible' AND moderation_state = 'visible' ORDER BY sticky_position IS NULL, sticky_position DESC, created_at DESC, id DESC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
 }
 
 /**
- * The Forum the page being rendered is about.
+ * The Group identity the page being rendered is about.
  *
- * A Forum is reachable two ways and they are not the same kind of address. `/forum/{slug}/`
- * is the WordPress record; the bound Group Actor's profile is the community's federated
- * identity, and for a reader that profile *is* the community. Both must list the same Topics,
- * so the list resolves its Forum from whichever context it finds rather than from one URL
- * shape, and the Group binding is what connects them.
- *
- * @return int Forum post id, or 0 when this page is about no Forum.
+ * @return int Group identity, or 0 when this page is about no community.
  */
-function axismundi_forum_context_forum_id() : int {
-	if ( is_singular( 'ax_forum' ) ) {
-		return (int) get_queried_object_id();
-	}
+function axismundi_forum_context_group_id() : int {
 	$actor = function_exists( 'axismundi_actors_current_actor' ) ? axismundi_actors_current_actor() : null;
 	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
 		return 0;
 	}
-	return axismundi_forum_get_forum_for_group( $actor->get_identity_id() );
+	return axismundi_forum_is_community( $actor->get_identity_id() ) ? $actor->get_identity_id() : 0;
 }
 
 /** Render the Forum-owned Topic index; this intentionally is not a Core Query Loop. */
 function axismundi_forum_render_topic_list_block( array $attributes = array(), string $content = '' ) : string {
 	unset( $content );
-	$forum_id = axismundi_forum_context_forum_id();
-	if ( $forum_id <= 0 ) {
+	$group_identity_id = axismundi_forum_context_group_id();
+	if ( $group_identity_id <= 0 ) {
 		return '';
 	}
 	$limit = isset( $attributes['perPage'] ) ? (int) $attributes['perPage'] : 20;
 	$items = array();
-	foreach ( axismundi_forum_visible_topic_entries( $forum_id, $limit ) as $entry ) {
+	foreach ( axismundi_forum_visible_topic_entries( $group_identity_id, $limit ) as $entry ) {
 		$source_post_id = (int) ( $entry['source_post_id'] ?? 0 );
 		if ( $source_post_id > 0 ) {
 			$topic = get_post( $source_post_id );
@@ -346,7 +329,7 @@ function axismundi_forum_actor_feed_html( string $html, Axismundi_Actor $actor )
 	if ( '' !== $html || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
 		return $html;
 	}
-	return axismundi_forum_get_forum_for_group( $actor->get_identity_id() ) > 0
+	return axismundi_forum_is_community( $actor->get_identity_id() )
 		? axismundi_forum_render_topic_list_block()
 		: $html;
 }

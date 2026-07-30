@@ -15,11 +15,9 @@ require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/actor-feed.php';
 require_once __DIR__ . '/../includes/repository.php';
-require_once __DIR__ . '/../includes/cpt.php';
 require_once __DIR__ . '/../includes/topics.php';
 
 axismundi_forum_install();
-axismundi_forum_register_post_type();
 axismundi_forum_register_topic_post_type();
 
 global $wpdb;
@@ -64,13 +62,12 @@ try {
 	wp_set_current_user( $owner );
 
 	$group = ax_gp_group( $owner, $ax_gp_ids );
-	$forum = (int) wp_insert_post( array( 'post_type' => 'ax_forum', 'post_status' => 'publish', 'post_author' => $owner, 'post_title' => 'Group Profile Audit' ) );
-	$ax_gp_posts[] = $forum;
-	$bound = $group instanceof Axismundi_Actor ? axismundi_forum_bind_group( $forum, $group->get_identity_id(), $owner ) : new WP_Error( 'fixture' );
+	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	$bound = $community > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
 
 	$topic = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $owner, 'post_title' => 'Group Profile Topic Alpha', 'post_content' => 'body' ) );
 	$ax_gp_posts[] = $topic;
-	$admitted = axismundi_forum_admit_local_topic( $forum, $topic, $owner );
+	$admitted = axismundi_forum_admit_local_topic( $community, $topic, $owner );
 
 	$group_feed = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
 	ax_gp_assert(
@@ -104,23 +101,24 @@ try {
 		$group instanceof Axismundi_Actor && '<p>claimed</p>' === axismundi_forum_actor_feed_html( '<p>claimed</p>', $group )
 	);
 
-	// The Forum post itself still lists its Topics; the Group profile is an added surface.
-	$forum_feed = axismundi_forum_context_forum_id();
+	// Off any community surface there is no community to resolve, and the Topic list must
+	// stay empty rather than fall back to some other Group's Topics.
 	ax_gp_assert(
 		$ax_gp_results,
-		'Forum context resolves to nothing when the page is about neither a Forum nor a bound Group',
-		0 === $forum_feed
+		'community context resolves to nothing when the page is about no community',
+		0 === axismundi_forum_context_group_id()
 	);
 } finally {
 	foreach ( array_unique( $ax_gp_posts ) as $post_id ) {
-		$wpdb->delete( axismundi_forum_entries_table(), array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( axismundi_forum_memberships_table(), array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( axismundi_forum_bindings_table(), array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		if ( get_post( (int) $post_id ) ) {
 			wp_delete_post( (int) $post_id, true );
 		}
 	}
 	foreach ( array_unique( $ax_gp_ids ) as $identity_id ) {
+		// Forum projections are keyed by the Group identity, so they belong in this loop.
+		$wpdb->delete( axismundi_forum_entries_table(), array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_forum_memberships_table(), array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( axismundi_forum_settings_table(), array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$actor = axismundi_actors_get_by_identity( (int) $identity_id );
 		if ( $actor instanceof Axismundi_Actor && function_exists( 'axismundi_act_activities_table' ) ) {
 			$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

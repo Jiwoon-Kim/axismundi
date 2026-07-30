@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.57
+Stable tag: 0.0.60
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,10 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.60 =
+* Adds a managed-Group administration section hook so domain plugins can place
+  Group-scoped controls beside the Actor profile without creating a duplicate screen.
 
 = 0.0.57 =
 * Let the shared editor mention search return a canonical plaintext `@handle` or

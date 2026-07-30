@@ -16,12 +16,10 @@ require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
 require_once __DIR__ . '/../includes/repository.php';
-require_once __DIR__ . '/../includes/cpt.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/memberships.php';
 
 axismundi_forum_install();
-axismundi_forum_register_post_type();
 
 global $wpdb;
 $ax_fm_results       = array();
@@ -50,22 +48,6 @@ function ax_fm_user( array &$user_ids ) : int {
 		$user_ids[] = $user_id;
 	}
 	return $user_id;
-}
-
-/** @return int Throwaway published Forum id. */
-function ax_fm_forum( array &$post_ids, int $author ) : int {
-	$post_id = (int) wp_insert_post(
-		array(
-			'post_type'   => 'ax_forum',
-			'post_status' => 'publish',
-			'post_author' => $author,
-			'post_title'  => 'Membership Audit ' . wp_generate_password( 6, false, false ),
-		)
-	);
-	if ( $post_id > 0 ) {
-		$post_ids[] = $post_id;
-	}
-	return $post_id;
 }
 
 /** @return Axismundi_Actor|null Activated public local Person fixture for one throwaway user. */
@@ -129,15 +111,16 @@ try {
 	if ( $group instanceof Axismundi_Actor ) {
 		$ax_fm_identity_ids[] = $group->get_identity_id();
 	}
-	$forum = ax_fm_forum( $ax_fm_post_ids, $owner );
-	$bound = $group instanceof Axismundi_Actor ? axismundi_forum_bind_group( $forum, $group->get_identity_id(), $owner ) : new WP_Error( 'fixture' );
+	// The Group identity *is* the community; there is no second record to create and bind.
+	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	$bound     = $community > 0 ? axismundi_forum_enable_community( $community, $owner ) : new WP_Error( 'fixture' );
 	$remote_open = ax_fm_remote_person( $ax_fm_identity_ids, 'open_' . strtolower( wp_generate_password( 7, false, false ) ) );
 	$follow_open_uri = 'https://example.com/activities/follow-' . wp_generate_uuid4();
 	$follow_open = $group instanceof Axismundi_Actor && $remote_open instanceof Axismundi_Actor
 		? axismundi_act_record_activity( array( 'id' => $follow_open_uri, 'type' => 'Follow', 'actor' => $remote_open->get_uri(), 'object' => $group->get_uri(), 'to' => array( $group->get_uri() ) ), 'inbound' )
 		: new WP_Error( 'fixture' );
 	$ax_fm_activity_uris[] = $follow_open_uri;
-	$open_membership = $remote_open instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $remote_open->get_identity_id() ) : null;
+	$open_membership = $remote_open instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $remote_open->get_identity_id() ) : null;
 	$open_relation = $group instanceof Axismundi_Actor && $remote_open instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $remote_open->get_uri(), $group->get_uri() ) : null;
 	ax_fm_assert(
 		$ax_fm_results,
@@ -151,14 +134,14 @@ try {
 			&& $follow_open_uri === (string) $open_membership['membership_evidence_activity_uri']
 	);
 
-	$policy = axismundi_forum_set_membership_policy( $forum, $owner, 'approval' );
+	$policy = axismundi_forum_set_membership_policy( $community, $owner, 'approval' );
 	$remote_pending = ax_fm_remote_person( $ax_fm_identity_ids, 'pending_' . strtolower( wp_generate_password( 7, false, false ) ) );
 	$follow_pending_uri = 'https://example.com/activities/follow-' . wp_generate_uuid4();
 	$follow_pending = $group instanceof Axismundi_Actor && $remote_pending instanceof Axismundi_Actor
 		? axismundi_act_record_activity( array( 'id' => $follow_pending_uri, 'type' => 'Follow', 'actor' => $remote_pending->get_uri(), 'object' => $group->get_uri(), 'to' => array( $group->get_uri() ) ), 'inbound' )
 		: new WP_Error( 'fixture' );
 	$ax_fm_activity_uris[] = $follow_pending_uri;
-	$pending_membership = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $remote_pending->get_identity_id() ) : null;
+	$pending_membership = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $remote_pending->get_identity_id() ) : null;
 	$pending_relation = $group instanceof Axismundi_Actor && $remote_pending instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $remote_pending->get_uri(), $group->get_uri() ) : null;
 	ax_fm_assert(
 		$ax_fm_results,
@@ -169,12 +152,12 @@ try {
 			&& 'pending' === (string) $pending_relation['state']
 			&& is_array( $pending_membership)
 			&& 'pending' === (string) $pending_membership['membership_state']
-			&& 1 === count( axismundi_forum_pending_memberships( $forum ) )
+			&& 1 === count( axismundi_forum_pending_memberships( $community ) )
 	);
 
-	$forbidden = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_respond_to_membership_request( $forum, $remote_pending->get_identity_id(), $stranger, 'accept' ) : new WP_Error( 'fixture' );
-	$accepted = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_respond_to_membership_request( $forum, $remote_pending->get_identity_id(), $owner, 'accept' ) : new WP_Error( 'fixture' );
-	$accepted_membership = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $remote_pending->get_identity_id() ) : null;
+	$forbidden = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_respond_to_membership_request( $community, $remote_pending->get_identity_id(), $stranger, 'accept' ) : new WP_Error( 'fixture' );
+	$accepted = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_respond_to_membership_request( $community, $remote_pending->get_identity_id(), $owner, 'accept' ) : new WP_Error( 'fixture' );
+	$accepted_membership = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $remote_pending->get_identity_id() ) : null;
 	ax_fm_assert(
 		$ax_fm_results,
 		'only the bound Group manager may accept a pending membership request',
@@ -189,7 +172,7 @@ try {
 	$undo = $group instanceof Axismundi_Actor && $remote_pending instanceof Axismundi_Actor
 		? axismundi_act_record_activity( array( 'id' => 'https://example.com/activities/undo-' . wp_generate_uuid4(), 'type' => 'Undo', 'actor' => $remote_pending->get_uri(), 'object' => $follow_pending_uri, 'to' => array( $group->get_uri() ) ), 'inbound' )
 		: new WP_Error( 'fixture' );
-	$undone_membership = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $remote_pending->get_identity_id() ) : null;
+	$undone_membership = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $remote_pending->get_identity_id() ) : null;
 	ax_fm_assert(
 		$ax_fm_results,
 		'an inbound Undo(Follow) revokes the Forum membership projection without deleting either Actor',
@@ -205,7 +188,7 @@ try {
 	$local_relation = $group instanceof Axismundi_Actor && $local_member instanceof Axismundi_Actor
 		? axismundi_act_follow_actor( $local_member, $group )
 		: new WP_Error( 'fixture' );
-	$local_membership = $local_member instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $local_member->get_identity_id() ) : null;
+	$local_membership = $local_member instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $local_member->get_identity_id() ) : null;
 	ax_fm_assert(
 		$ax_fm_results,
 		'a local Person may follow its own site managed Group and an approval Forum holds them pending',
@@ -218,11 +201,11 @@ try {
 
 	// F1 seal 3 + 4: rebuild restores the projection from the ledger and sends nothing.
 	$accepts_before = $group instanceof Axismundi_Actor ? ax_fm_accept_count( $group->get_uri() ) : -1;
-	$wpdb->delete( axismundi_forum_memberships_table(), array( 'forum_post_id' => $forum ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit wipes the projection to prove it is derivable.
-	$emptied  = axismundi_forum_count_memberships( $forum );
-	$rebuilt  = axismundi_forum_rebuild_memberships( $forum );
-	$rebuilt_local  = $local_member instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $local_member->get_identity_id() ) : null;
-	$rebuilt_undone = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $remote_pending->get_identity_id() ) : null;
+	$wpdb->delete( axismundi_forum_memberships_table(), array( 'group_identity_id' => $community ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit wipes the projection to prove it is derivable.
+	$emptied  = axismundi_forum_count_memberships( $community );
+	$rebuilt  = axismundi_forum_rebuild_memberships( $community );
+	$rebuilt_local  = $local_member instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $local_member->get_identity_id() ) : null;
+	$rebuilt_undone = $remote_pending instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $remote_pending->get_identity_id() ) : null;
 	$accepts_after  = $group instanceof Axismundi_Actor ? ax_fm_accept_count( $group->get_uri() ) : -2;
 	ax_fm_assert(
 		$ax_fm_results,
@@ -242,7 +225,7 @@ try {
 	$orphan_ok = false !== $wpdb->insert(
 		axismundi_forum_memberships_table(),
 		array(
-			'forum_post_id'                    => $forum,
+			'group_identity_id'                => $community,
 			'actor_identity_id'                => 99999901,
 			'membership_evidence_activity_uri' => 'https://example.com/activities/vanished',
 			'membership_state'                 => 'accepted',
@@ -251,15 +234,15 @@ try {
 		),
 		array( '%d', '%d', '%s', '%s', '%s', '%s' )
 	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit fixture for a stale projection row.
-	$with_orphan = axismundi_forum_count_memberships( $forum );
-	axismundi_forum_rebuild_memberships( $forum );
+	$with_orphan = axismundi_forum_count_memberships( $community );
+	axismundi_forum_rebuild_memberships( $community );
 	ax_fm_assert(
 		$ax_fm_results,
 		'rebuild replaces the projection and drops a membership the ledger no longer yields',
 		$orphan_ok
 			&& 4 === $with_orphan
-			&& 3 === axismundi_forum_count_memberships( $forum )
-			&& null === axismundi_forum_get_membership( $forum, 99999901 )
+			&& 3 === axismundi_forum_count_memberships( $community )
+			&& null === axismundi_forum_get_membership( $community, 99999901 )
 	);
 
 	// A Block aimed at the Group is a relation, but never evidence of membership.
@@ -269,7 +252,7 @@ try {
 	$block = $group instanceof Axismundi_Actor && $blocker instanceof Axismundi_Actor
 		? axismundi_act_record_activity( array( 'id' => $block_uri, 'type' => 'Block', 'actor' => $blocker->get_uri(), 'object' => $group->get_uri() ), 'inbound' )
 		: new WP_Error( 'fixture' );
-	$after_block = axismundi_forum_rebuild_memberships( $forum );
+	$after_block = axismundi_forum_rebuild_memberships( $community );
 	ax_fm_assert(
 		$ax_fm_results,
 		'a Block relation aimed at the Group is excluded from the ledger read and never becomes membership',
@@ -278,7 +261,7 @@ try {
 			&& 3 === $after_block['relations']
 			&& 3 === $after_block['members']
 			&& $blocker instanceof Axismundi_Actor
-			&& null === axismundi_forum_get_membership( $forum, $blocker->get_identity_id() )
+			&& null === axismundi_forum_get_membership( $community, $blocker->get_identity_id() )
 	);
 
 	// The ledger read must page rather than truncate at its default page size.
@@ -306,20 +289,20 @@ try {
 			axismundi_act_record_activity( array( 'id' => $bulk_follow, 'type' => 'Follow', 'actor' => $bulk_uri, 'object' => $group->get_uri(), 'to' => array( $group->get_uri() ) ), 'inbound' );
 		}
 	}
-	$bulk_rebuild = axismundi_forum_rebuild_memberships( $forum );
+	$bulk_rebuild = axismundi_forum_rebuild_memberships( $community );
 	ax_fm_assert(
 		$ax_fm_results,
 		'rebuild pages past the ledger read size instead of truncating at it',
 		is_array( $bulk_rebuild )
 			&& 208 === $bulk_rebuild['relations']
 			&& 208 === $bulk_rebuild['members']
-			&& 208 === axismundi_forum_count_memberships( $forum )
+			&& 208 === axismundi_forum_count_memberships( $community )
 	);
 
 	// F1 seal 5: opening the Forum admits the whole queue, past any one page of it.
-	$queued          = count( axismundi_forum_pending_memberships( $forum, 200 ) );
-	$opened          = axismundi_forum_set_membership_policy( $forum, $owner, 'open' );
-	$opened_local    = $local_member instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $local_member->get_identity_id() ) : null;
+	$queued          = count( axismundi_forum_pending_memberships( $community, 200 ) );
+	$opened          = axismundi_forum_set_membership_policy( $community, $owner, 'open' );
+	$opened_local    = $local_member instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $local_member->get_identity_id() ) : null;
 	$opened_relation = $group instanceof Axismundi_Actor && $local_member instanceof Axismundi_Actor
 		? axismundi_act_get_relation( 'follow', $local_member->get_uri(), $group->get_uri() )
 		: null;
@@ -332,7 +315,7 @@ try {
 			&& 'accepted' === (string) $opened_local['membership_state']
 			&& is_array( $opened_relation )
 			&& 'accepted' === (string) $opened_relation['state']
-			&& 0 === count( axismundi_forum_pending_memberships( $forum ) )
+			&& 0 === count( axismundi_forum_pending_memberships( $community ) )
 	);
 
 	/*
@@ -342,15 +325,15 @@ try {
 	 * act on.
 	 */
 	$stuck   = ax_fm_remote_person( $ax_fm_identity_ids, 'stuck_' . strtolower( wp_generate_password( 7, false, false ) ) );
-	$blocked = axismundi_forum_set_membership_policy( $forum, $owner, 'approval' );
+	$blocked = axismundi_forum_set_membership_policy( $community, $owner, 'approval' );
 	$stuck_follow_uri = 'https://example.com/activities/follow-' . wp_generate_uuid4();
 	$ax_fm_activity_uris[] = $stuck_follow_uri;
 	if ( $group instanceof Axismundi_Actor && $stuck instanceof Axismundi_Actor ) {
 		axismundi_act_record_activity( array( 'id' => $stuck_follow_uri, 'type' => 'Follow', 'actor' => $stuck->get_uri(), 'object' => $group->get_uri(), 'to' => array( $group->get_uri() ) ), 'inbound' );
 	}
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $stuck_follow_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit forces the Accept to fail.
-	$refused = axismundi_forum_set_membership_policy( $forum, $owner, 'open' );
-	$stuck_membership = $stuck instanceof Axismundi_Actor ? axismundi_forum_get_membership( $forum, $stuck->get_identity_id() ) : null;
+	$refused = axismundi_forum_set_membership_policy( $community, $owner, 'open' );
+	$stuck_membership = $stuck instanceof Axismundi_Actor ? axismundi_forum_get_membership( $community, $stuck->get_identity_id() ) : null;
 	$stuck_relation   = $group instanceof Axismundi_Actor && $stuck instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $stuck->get_uri(), $group->get_uri() ) : null;
 	ax_fm_assert(
 		$ax_fm_results,
@@ -364,7 +347,7 @@ try {
 	);
 } finally {
 	$memberships = axismundi_forum_memberships_table();
-	$bindings    = axismundi_forum_bindings_table();
+	$settings    = axismundi_forum_settings_table();
 	$activities  = axismundi_act_activities_table();
 	$relations   = axismundi_act_relations_table();
 	$identities  = axismundi_actors_identities_table();
@@ -372,8 +355,6 @@ try {
 	$endpoints   = axismundi_actors_endpoints_table();
 	$managers    = axismundi_actors_managers_table();
 	foreach ( array_unique( $ax_fm_post_ids ) as $post_id ) {
-		$wpdb->delete( $memberships, array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
-		$wpdb->delete( $bindings, array( 'forum_post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		if ( get_post( (int) $post_id ) ) {
 			wp_delete_post( (int) $post_id, true );
 		}
@@ -382,6 +363,9 @@ try {
 		$wpdb->delete( $activities, array( 'activity_uri_hash' => hash( 'sha256', $activity_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
 	foreach ( array_unique( $ax_fm_identity_ids ) as $identity_id ) {
+		// Forum rows are keyed by the Group identity now, so they are cleaned up here.
+		$wpdb->delete( $memberships, array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+		$wpdb->delete( $settings, array( 'group_identity_id' => (int) $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 		$actor = axismundi_actors_get_by_identity( (int) $identity_id );
 		if ( $actor instanceof Axismundi_Actor ) {
 			$wpdb->delete( $relations, array( 'subject_actor_uri_hash' => hash( 'sha256', $actor->get_uri() ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.

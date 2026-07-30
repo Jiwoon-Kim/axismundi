@@ -259,6 +259,7 @@ function axismundi_actors_render_managed_groups_page() : void {
 			<?php axismundi_actors_media_form( $selected ); ?>
 			<?php axismundi_actors_text_form( $selected ); ?>
 			<?php axismundi_actors_profile_fields_form( $selected ); ?>
+			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
 		<?php else : ?>
 			<h2><?php esc_html_e( 'Create Group', 'axismundi-actors' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

@@ -12,6 +12,7 @@ $ax_op_outbox_results  = array();
 $ax_op_outbox_user     = 0;
 $ax_op_outbox_identity = 0;
 $ax_op_outbox_activity = '';
+$ax_op_outbox_private_activity = '';
 
 /** @param bool[] $results Results. */
 function ax_op_outbox_assert( array &$results, string $label, bool $condition ) : void {
@@ -47,11 +48,22 @@ try {
 		),
 		'outbound'
 	);
+	$ax_op_outbox_private_activity = home_url( '/activities/' . wp_generate_uuid4() . '/' );
+	$private_recorded = axismundi_act_record_activity(
+		array(
+			'id'     => $ax_op_outbox_private_activity,
+			'type'   => 'Announce',
+			'actor'  => $actor->get_uri(),
+			'object' => 'https://example.com/objects/private-outbox-projection',
+			'to'     => array( 'https://example.com/actors/followers' ),
+		),
+		'outbound'
+	);
 	$source     = new Axismundi_OP_Actor_Outbox( $actor );
 	$collection = axismundi_op_transform_collection( $source );
 	ax_op_outbox_assert( $ax_op_outbox_results, 'Object Projections resolves the Actor Outbox collection transformer', $recorded instanceof Axismundi_Activity && is_array( $collection ) && 'OrderedCollection' === $collection['type'] );
 	ax_op_outbox_assert( $ax_op_outbox_results, 'the collection URI uses the representation-owned neutral namespace', is_array( $collection ) && axismundi_op_actor_outbox_url( $actor ) === $collection['id'] && false !== strpos( $collection['id'], '/axismundi/v1/' ) );
-	ax_op_outbox_assert( $ax_op_outbox_results, 'the collection is attributed to its Actor and strips blind recipients', is_array( $collection ) && $actor->get_uri() === $collection['attributedTo'] && 1 === count( $collection['orderedItems'] ) && ! isset( $collection['orderedItems'][0]['bcc'] ) );
+	ax_op_outbox_assert( $ax_op_outbox_results, 'the collection is attributed to its Actor, strips blind recipients, and keeps an ordinary followers-only Announce private', $private_recorded instanceof Axismundi_Activity && is_array( $collection ) && $actor->get_uri() === $collection['attributedTo'] && 1 === count( $collection['orderedItems'] ) && ! isset( $collection['orderedItems'][0]['bcc'] ) && ! in_array( $ax_op_outbox_private_activity, array_map( static fn( array $payload ) : string => (string) ( $payload['id'] ?? '' ), $collection['orderedItems'] ), true ) );
 
 	$request = new WP_REST_Request( 'GET', '/axismundi/v1/actors/' . $actor->get_uuid() . '/outbox' );
 	$request->set_param( 'uuid', $actor->get_uuid() );
@@ -81,6 +93,9 @@ try {
 } finally {
 	if ( '' !== $ax_op_outbox_activity ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_op_outbox_activity ) ); // phpcs:ignore WordPress.DB
+	}
+	if ( '' !== $ax_op_outbox_private_activity ) {
+		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $ax_op_outbox_private_activity ) ); // phpcs:ignore WordPress.DB
 	}
 	if ( $ax_op_outbox_identity > 0 ) {
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $table ) {

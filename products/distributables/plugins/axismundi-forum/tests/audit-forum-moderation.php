@@ -148,6 +148,15 @@ try {
 			&& $group->get_uri() === $outer->get_actor_uri() && 'Create' === (string) ( $outer->get_payload()['object']['type'] ?? '' )
 			&& in_array( $followers, (array) ( $outer->get_audience()['to'] ?? array() ), true )
 	);
+	$group_outbox = function_exists( 'axismundi_act_get_public_outbox' ) && $group instanceof Axismundi_Actor
+		? axismundi_act_get_public_outbox( $group->get_uri() )
+		: array();
+	$group_outbox_ids = array_map( static fn( array $payload ) : string => (string) ( $payload['id'] ?? '' ), $group_outbox );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'the public community Group outbox includes its followers-addressed approval Announce without making ordinary followers-only delivery public',
+		$outer instanceof Axismundi_Activity && in_array( $outer->get_uri(), $group_outbox_ids, true )
+	);
 	$withdrawn = is_array( $approved_entry ) ? axismundi_forum_withdraw_announced_entry( (int) $approved_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
 	$withdrawn_entry = axismundi_forum_get_topic_entry( $topic_id );
 	$withdrawn_announce = $outer instanceof Axismundi_Activity ? axismundi_act_get( $outer->get_uri() ) : null;

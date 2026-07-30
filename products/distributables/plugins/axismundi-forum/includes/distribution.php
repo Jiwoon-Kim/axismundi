@@ -12,6 +12,36 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Expose approved public-community Group Announce records in the Group's public Outbox.
+ *
+ * FEP-1b12 says a Group's Announce SHOULD appear in its outbox. The delivery audience is the
+ * followers collection rather than Public, but a public local community already exposes the
+ * approved Topic on its canonical Group profile. This narrow opt-in does not alter the default
+ * privacy rule for Person or non-community Actor activities.
+ *
+ * @param array<string,mixed>|null $payload Existing public-safe payload.
+ * @return array<string,mixed>|null
+ */
+function axismundi_forum_public_group_outbox_payload( $payload, Axismundi_Activity $activity ) {
+	if ( is_array( $payload ) || 'outbound' !== $activity->get_direction() || ! $activity->is_effective() || 'Announce' !== $activity->get_type()
+		|| ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
+		return $payload;
+	}
+	$group = axismundi_actors_get_by_uri( $activity->get_actor_uri() );
+	if ( ! axismundi_forum_public_community_group( $group ) ) {
+		return $payload;
+	}
+	$followers = axismundi_op_actor_followers_url( $group );
+	if ( '' === $followers || ! in_array( $followers, (array) ( $activity->get_audience()['to'] ?? array() ), true ) ) {
+		return $payload;
+	}
+	$payload = $activity->get_payload();
+	unset( $payload['bto'], $payload['bcc'] );
+	return $payload;
+}
+add_filter( 'axismundi_act_public_outbox_payload', 'axismundi_forum_public_group_outbox_payload', 10, 2 );
+
 /** @return Axismundi_Activity|WP_Error The immutable Create or Update the Group may wrap unchanged. */
 function axismundi_forum_entry_submission_activity( array $entry ) {
 	$submission_uri = (string) ( $entry['accepted_activity_uri'] ?? '' );

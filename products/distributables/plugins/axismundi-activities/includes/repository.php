@@ -389,6 +389,17 @@ function axismundi_act_get_public_outbox( string $actor_uri, int $limit = 200 ) 
 			continue;
 		}
 		$payload = axismundi_act_public_payload( $activity );
+		/*
+		 * An Actor-domain product may opt a non-Public activity into its public Outbox only
+		 * when that Actor's public representation makes the activity public by definition.
+		 * Forum uses this for FEP-1b12 Group Announce records: public community pages already
+		 * disclose their approved Topics, while ordinary followers-only delivery stays private.
+		 * The default remains strict; no recipient-addressed Activity leaks without its owner.
+		 *
+		 * @param array<string,mixed>|null $payload Public-safe payload, or null when not Public.
+		 * @param Axismundi_Activity        $activity Candidate outbound Activity.
+		 */
+		$payload = apply_filters( 'axismundi_act_public_outbox_payload', $payload, $activity );
 		if ( is_array( $payload ) ) {
 			$items[] = $payload;
 		}

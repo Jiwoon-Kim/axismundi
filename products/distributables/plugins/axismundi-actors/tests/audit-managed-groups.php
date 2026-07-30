@@ -123,6 +123,16 @@ try {
 			&& ! axismundi_actors_can_manage( $group, $admin )
 	);
 
+	$claimed = axismundi_actors_claim_managed_group( $identity_id, $admin );
+	$all_groups = axismundi_actors_list_all_managed_groups();
+	ax_mg_assert(
+		$ax_mg_results,
+		'a site administrator explicitly claims any local managed Group as a manager without changing ordinary can_manage rules',
+		true === $claimed
+			&& axismundi_actors_managed_actor_can_manage( $identity_id, $admin, 'manager' )
+			&& in_array( $identity_id, array_map( static fn( Axismundi_Actor $actor ) : int => $actor->get_identity_id(), $all_groups ), true )
+	);
+
 	// The last owner is protected from both demotion and removal.
 	$demote_last = axismundi_actors_add_manager( $identity_id, $owner, 'editor' );
 	$remove_last = axismundi_actors_remove_manager( $identity_id, $owner );

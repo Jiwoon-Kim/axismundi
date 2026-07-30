@@ -231,12 +231,14 @@ function axismundi_actors_render_managed_groups_page() : void {
 		wp_die( esc_html__( 'You cannot manage Groups.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
 	}
 	$user_id = get_current_user_id();
-	$groups  = axismundi_actors_list_manageable_groups( $user_id );
+	$is_site_admin = current_user_can( 'manage_options' );
+	$groups  = $is_site_admin ? axismundi_actors_list_all_managed_groups() : axismundi_actors_list_manageable_groups( $user_id );
 	$selected_id = isset( $_GET['group_id'] ) ? absint( $_GET['group_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
 	$selected = $selected_id > 0 ? axismundi_actors_get_by_identity( $selected_id ) : null;
-	if ( ! $selected instanceof Axismundi_Actor || ! $selected->is_managed() || ! axismundi_actors_can_manage( $selected, $user_id ) ) {
+	if ( ! $selected instanceof Axismundi_Actor || ! $selected->is_managed() || ( ! $is_site_admin && ! axismundi_actors_can_manage( $selected, $user_id ) ) ) {
 		$selected = null;
 	}
+	$selected_is_manager = $selected instanceof Axismundi_Actor && axismundi_actors_can_manage( $selected, $user_id );
 	$is_selected_public = $selected instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $selected );
 	?>
 	<div class="wrap">
@@ -249,6 +251,13 @@ function axismundi_actors_render_managed_groups_page() : void {
 				<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $selected->get_preferred_username() ); ?></code></td></tr>
 				<tr><th scope="row"><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th><td><strong><?php echo esc_html( axismundi_actors_status_label( $selected ) ); ?></strong><?php if ( axismundi_actors_is_public_profile( $selected ) ) : ?> · <a href="<?php echo esc_url( $selected->get_profile_url() ); ?>"><?php esc_html_e( 'View public profile', 'axismundi-actors' ); ?></a><?php endif; ?></td></tr>
 			</table>
+			<?php if ( ! $selected_is_manager && $is_site_admin ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="axismundi_actors_claim_managed_group"><input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $selected->get_identity_id() ); ?>">
+					<?php wp_nonce_field( 'ax_actors_claim_managed_group_' . $selected->get_identity_id() ); ?>
+					<?php submit_button( __( 'Register myself as manager', 'axismundi-actors' ), 'secondary' ); ?>
+				</form>
+			<?php else : ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="axismundi_actors_set_managed_group_visibility">
 				<input type="hidden" name="identity_id" value="<?php echo esc_attr( (string) $selected->get_identity_id() ); ?>">
@@ -260,6 +269,7 @@ function axismundi_actors_render_managed_groups_page() : void {
 			<?php axismundi_actors_text_form( $selected ); ?>
 			<?php axismundi_actors_profile_fields_form( $selected ); ?>
 			<?php do_action( 'axismundi_actors_managed_group_admin_sections', $selected ); ?>
+			<?php endif; ?>
 		<?php else : ?>
 			<h2><?php esc_html_e( 'Create Group', 'axismundi-actors' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -1194,6 +1204,17 @@ function axismundi_actors_handle_set_managed_group_visibility() : void {
 	axismundi_actors_redirect_result( axismundi_actors_managed_groups_admin_url( $identity_id ), $ok ? true : new WP_Error( 'ax_actors_status', __( 'Could not update visibility.', 'axismundi-actors' ) ) );
 }
 add_action( 'admin_post_axismundi_actors_set_managed_group_visibility', 'axismundi_actors_handle_set_managed_group_visibility' );
+
+/** Explicit site-administrator recovery registration for one managed Group. */
+function axismundi_actors_handle_claim_managed_group() : void {
+	$identity_id = isset( $_POST['identity_id'] ) ? absint( $_POST['identity_id'] ) : 0;
+	check_admin_referer( 'ax_actors_claim_managed_group_' . $identity_id );
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You cannot claim this Group.', 'axismundi-actors' ), '', array( 'response' => 403 ) );
+	}
+	axismundi_actors_redirect_result( axismundi_actors_managed_groups_admin_url( $identity_id ), axismundi_actors_claim_managed_group( $identity_id, get_current_user_id() ) );
+}
+add_action( 'admin_post_axismundi_actors_claim_managed_group', 'axismundi_actors_handle_claim_managed_group' );
 
 /** @return void */
 function axismundi_actors_handle_site_settings() : void {

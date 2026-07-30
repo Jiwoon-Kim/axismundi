@@ -171,6 +171,22 @@ function axismundi_actors_list_manageable_groups( int $user_id, ?string $min_rol
 	return $actors;
 }
 
+/** @return Axismundi_Actor[] Every local managed Group, for site-administrator recovery only. */
+function axismundi_actors_list_all_managed_groups() : array {
+	global $wpdb;
+	$table = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- site-admin recovery list of local managed identities.
+	$ids = (array) $wpdb->get_col( "SELECT identity_id FROM {$table} WHERE actor_scope = 'managed' ORDER BY identity_id ASC" );
+	$groups = array();
+	foreach ( $ids as $identity_id ) {
+		$actor = axismundi_actors_get_by_identity( (int) $identity_id );
+		if ( $actor instanceof Axismundi_Actor && $actor->is_local() && $actor->is_managed() && 'Group' === $actor->get_type() ) {
+			$groups[] = $actor;
+		}
+	}
+	return $groups;
+}
+
 /** Count the owners of one managed actor. */
 function axismundi_actors_managed_owner_count( int $identity_id ) : int {
 	global $wpdb;
@@ -241,4 +257,21 @@ function axismundi_actors_remove_manager( int $identity_id, int $user_id ) {
 	return false === $deleted
 		? new WP_Error( 'ax_actors_manager_remove', __( 'Could not remove the manager relation.', 'axismundi-actors' ) )
 		: true;
+}
+
+/**
+ * Let a site administrator explicitly register themselves as a managed Group manager.
+ *
+ * This is recovery authority, not an implicit `can_manage()` exception. The relation remains
+ * visible and auditable just like one granted by an existing manager.
+ */
+function axismundi_actors_claim_managed_group( int $identity_id, int $user_id ) {
+	if ( $user_id <= 0 || ! user_can( $user_id, 'manage_options' ) ) {
+		return new WP_Error( 'ax_actors_manager_forbidden', __( 'Only a site administrator may claim this managed Group.', 'axismundi-actors' ) );
+	}
+	$actor = axismundi_actors_get_by_identity( $identity_id );
+	if ( ! $actor instanceof Axismundi_Actor || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+		return new WP_Error( 'ax_actors_manager_target', __( 'Only a local managed Group may be claimed.', 'axismundi-actors' ) );
+	}
+	return axismundi_actors_add_manager( $identity_id, $user_id, 'manager' );
 }

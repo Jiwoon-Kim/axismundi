@@ -85,8 +85,8 @@ function axismundi_forum_record_moderator_change( Axismundi_Actor $group, Axismu
  * does not silently admit someone, and the membership projection stays the membership source.
  */
 function axismundi_forum_set_actor_moderator( int $group_identity_id, int $actor_identity_id, int $user_id, bool $moderator ) {
-	if ( ! axismundi_forum_user_can_manage( $group_identity_id, $user_id ) ) {
-		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this Forum Group.', 'axismundi-forum' ) );
+	if ( ! function_exists( 'axismundi_actors_managed_actor_can_manage' ) || ! axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id, 'manager' ) ) {
+		return new WP_Error( 'ax_forum_forbidden', __( 'You may not change community moderators.', 'axismundi-forum' ) );
 	}
 	$membership = axismundi_forum_get_membership( $group_identity_id, $actor_identity_id );
 	if ( ! is_array( $membership ) || 'accepted' !== (string) $membership['membership_state'] ) {
@@ -114,6 +114,42 @@ function axismundi_forum_set_actor_moderator( int $group_identity_id, int $actor
 		array( '%d', '%d' )
 	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- manager-authorized Group role transition.
 	return false === $updated ? new WP_Error( 'ax_forum_moderator_write', __( 'The moderator role could not be saved.', 'axismundi-forum' ) ) : true;
+}
+
+/** Promote an explicit local Actor moderator into the local managed-Group manager relation. */
+function axismundi_forum_promote_moderator_to_manager( int $group_identity_id, int $actor_identity_id, int $user_id ) {
+	if ( ! function_exists( 'axismundi_actors_managed_actor_can_manage' ) || ! axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id, 'manager' ) ) {
+		return new WP_Error( 'ax_forum_forbidden', __( 'You may not delegate community management.', 'axismundi-forum' ) );
+	}
+	$actor = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( $actor_identity_id ) : null;
+	$user_id_to_add = $actor instanceof Axismundi_Actor ? $actor->get_local_user_id() : null;
+	if ( ! axismundi_forum_public_local_person( $actor ) || null === $user_id_to_add || ! axismundi_forum_actor_is_moderator( $group_identity_id, $actor ) ) {
+		return new WP_Error( 'ax_forum_manager_moderator', __( 'Only a local public community moderator may become a manager.', 'axismundi-forum' ) );
+	}
+	return axismundi_actors_add_manager( $group_identity_id, $user_id_to_add, 'manager' );
+}
+
+/** Remove a non-owner local manager while preserving Actor moderation separately. */
+function axismundi_forum_remove_moderator_manager( int $group_identity_id, int $actor_identity_id, int $user_id ) {
+	if ( ! function_exists( 'axismundi_actors_managed_actor_can_manage' ) || ! axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id, 'manager' ) ) {
+		return new WP_Error( 'ax_forum_forbidden', __( 'You may not delegate community management.', 'axismundi-forum' ) );
+	}
+	$actor = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( $actor_identity_id ) : null;
+	$target_user_id = $actor instanceof Axismundi_Actor ? $actor->get_local_user_id() : null;
+	if ( ! axismundi_forum_public_local_person( $actor ) || null === $target_user_id || ! axismundi_forum_actor_is_moderator( $group_identity_id, $actor ) ) {
+		return new WP_Error( 'ax_forum_manager_moderator', __( 'Only a local public community moderator may be removed as a manager.', 'axismundi-forum' ) );
+	}
+	$role = '';
+	foreach ( (array) axismundi_actors_group_managers( $group_identity_id ) as $manager ) {
+		if ( $target_user_id === (int) ( $manager['user_id'] ?? 0 ) ) {
+			$role = (string) ( $manager['role'] ?? '' );
+			break;
+		}
+	}
+	if ( 'manager' !== $role ) {
+		return new WP_Error( 'ax_forum_manager_role', __( 'Only a non-owner manager may be removed here.', 'axismundi-forum' ) );
+	}
+	return axismundi_actors_remove_manager( $group_identity_id, $target_user_id );
 }
 
 /**

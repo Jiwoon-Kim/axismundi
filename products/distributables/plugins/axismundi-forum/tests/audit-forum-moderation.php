@@ -46,12 +46,14 @@ function ax_fmod_person( array &$users, array &$identities, string $role = 'edit
 
 try {
 	list( $owner_user, $owner ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
+	list( $admin2_user, $admin2 ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $alice_user, $alice ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $bob_user, $bob ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $editor_user, $editor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $group instanceof Axismundi_Actor ) { $ax_fmod_identities[] = $group->get_identity_id(); }
 	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	if ( $admin2 instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $admin2, $group ); }
 	if ( $alice instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $alice, $group ); }
 	if ( $bob instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $bob, $group ); }
 
@@ -72,6 +74,27 @@ try {
 			&& $add instanceof Axismundi_Activity && $owner instanceof Axismundi_Actor && $owner->get_uri() === $add->get_actor_uri()
 			&& $moderator_url === $add->get_target_uri() && $add_wrapper instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
 			&& $group->get_uri() === $add_wrapper->get_actor_uri() && is_array( $group_projection) && $moderator_url === (string) ( $group_projection['attributedTo'] ?? '' )
+		);
+	axismundi_actors_add_manager( $group_id, $editor_user, 'editor' );
+	$editor_denied = $bob instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $bob->get_identity_id(), $editor_user, true ) : new WP_Error( 'fixture' );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a delegated editor cannot change the public moderator collection',
+		is_wp_error( $editor_denied ) && 'ax_forum_forbidden' === $editor_denied->get_error_code()
+	);
+	$admin2_moderator = $admin2 instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $admin2->get_identity_id(), $owner_user, true ) : new WP_Error( 'fixture' );
+	$admin2_manager = $admin2 instanceof Axismundi_Actor ? axismundi_forum_promote_moderator_to_manager( $group_id, $admin2->get_identity_id(), $owner_user ) : new WP_Error( 'fixture' );
+	$alice_manager = $alice instanceof Axismundi_Actor ? axismundi_forum_promote_moderator_to_manager( $group_id, $alice->get_identity_id(), $admin2_user ) : new WP_Error( 'fixture' );
+	$admin2_removed = $admin2 instanceof Axismundi_Actor ? axismundi_forum_remove_moderator_manager( $group_id, $admin2->get_identity_id(), $alice_user ) : new WP_Error( 'fixture' );
+	$alice_manager_removed = $alice instanceof Axismundi_Actor ? axismundi_forum_remove_moderator_manager( $group_id, $alice->get_identity_id(), $owner_user ) : new WP_Error( 'fixture' );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a manager moderator delegates manager access to Alice, who can revoke admin2 without changing either Actor moderator role',
+		true === $admin2_moderator && true === $admin2_manager && true === $alice_manager && true === $admin2_removed && true === $alice_manager_removed
+			&& $alice instanceof Axismundi_Actor && $admin2 instanceof Axismundi_Actor
+			&& axismundi_forum_actor_is_moderator( $group_id, $alice ) && axismundi_forum_actor_is_moderator( $group_id, $admin2 )
+			&& ! axismundi_actors_managed_actor_can_manage( $group_id, $admin2_user )
+			&& ! axismundi_actors_managed_actor_can_manage( $group_id, $alice_user )
 	);
 	wp_set_current_user( $owner_user );
 	ob_start();

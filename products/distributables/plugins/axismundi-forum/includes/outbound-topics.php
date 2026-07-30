@@ -64,7 +64,7 @@ function axismundi_forum_record_remote_topic_commit( WP_Post $topic ) {
 	if ( ! axismundi_forum_user_can_submit_to_remote_group( (int) $topic->post_author, $group ) ) {
 		return new WP_Error( 'ax_forum_remote_topic_follow', __( 'The author does not have an active remote Group Follow.', 'axismundi-forum' ) );
 	}
-	$object = axismundi_forum_topic_to_page( $topic );
+	$object = axismundi_forum_topic_to_article( $topic );
 	if ( is_wp_error( $object ) ) {
 		return $object;
 	}

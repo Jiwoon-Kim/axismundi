@@ -99,10 +99,12 @@ try {
 	);
 	ax_fot_assert(
 		$ax_fot_results,
-		'the committed outbound Create embeds a Page attributed to the Person with remote Group context, audience, and cc delivery address',
+		'the committed outbound Create embeds an Article attributed to the Person with remote Group audience, thread context, and cc delivery address',
 		$lifecycle instanceof Axismundi_Activity && 'Create' === $lifecycle->get_type() && 'outbound' === $lifecycle->get_direction()
 			&& $author instanceof Axismundi_Actor && $group instanceof Axismundi_Actor && $author->get_uri() === (string) ( $object['attributedTo'] ?? '' )
-			&& 'Page' === (string) ( $object['type'] ?? '' ) && $group->get_uri() === (string) ( $object['context'] ?? '' )
+			&& 'Article' === (string) ( $object['type'] ?? '' )
+			// The remote Group is the delivery target, not the conversation identity.
+			&& $group->get_uri() !== (string) ( $object['context'] ?? '' ) && '' !== (string) ( $object['context'] ?? '' )
 			&& $group->get_uri() === (string) ( $object['audience'] ?? '' ) && in_array( $group->get_uri(), (array) ( $object['cc'] ?? array() ), true )
 			&& in_array( 'https://www.w3.org/ns/activitystreams#Public', (array) ( $object['to'] ?? array() ), true )
 	);

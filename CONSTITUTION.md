@@ -4,7 +4,7 @@
 
 **Author**: KIM Ji-woon. See [AUTHORSHIP.md](AUTHORSHIP.md) for decision territory and the relationship between this Constitution and tools (GPT, Claude) used during its drafting. The articles below are the author's design judgments codified into governing structure; LLMs assisted drafting and challenge-testing but did not author them.
 
-**Constitution version**: v3.3.0 (12 articles; Article 1 amended from 4-layer to 6-layer canonical mapping)
+**Constitution version**: v3.4.0 (13 articles; Article 13 added — federation object types are chosen by our own ontology)
 
 ---
 
@@ -219,3 +219,21 @@ Future publishing surfaces:
 5. **Source authority migrates as the project evolves.** v3.1.0 set prototype as authority; v3.3.0 moved authority to lab after prototype was demoted to legacy. The publish script reflects the current authority; the Constitution records each migration.
 
 This rule prevents the worst failure mode of a monorepo: edits made directly to derived artifacts that then drift from their source, creating two contradictory truths and no way to know which is canonical.
+
+---
+
+## Article 13 — Federation object types are ours to choose; a peer's wire format is not our ontology
+
+Interoperating with an implementation does not mean adopting its type choices. ActivityStreams offers no forum-post type, so every forum implementation picked one: Lemmy sends `Page`, NodeBB sends `Note`, Discourse lets the operator choose, Mobilizon sends `Article`. Those are four answers to the same gap, which is proof that none of them is *the* answer — each one is a local decision, and so is ours.
+
+Ours is decided by our own object ontology, in the same way that `core/wordpress/` never bends to a design system (Article 3). The test is not "what does the peer emit?" but "what does this type mean in the rest of our system?"
+
+**Locked decisions** (detail: `docs/AXISMUNDI-FORUM-ARCHITECTURE.md`):
+
+- **A forum root post is an `Article`.** `Page` is rejected: it is a subtype of `Document`, and `Document` is already how Media Library publishes every non-image/audio/video attachment. Using `Page` for discussion would put a PDF and a forum thread in one branch of our own ontology, and the resulting `Document` collection would answer two unrelated questions at once.
+- **A reply is a `Note` with `inReplyTo`.** Replies are messages, not documents. Titles are not repeated onto them.
+- **The Group is `audience` and delivery**, never the content's identity. A Group is who a post is addressed to and who redistributes it, which is what FEP-1b12 describes.
+- **Thread context is a per-topic resolvable URI**, not the Group URI. FEP-7888 permits a forum or channel as `context`, so `context = Group` is not invalid — but it makes every reply in the Group share one context, which is exactly the thing that cannot then express an individual thread. A per-topic context is what FEP-11dd's ownership and inheritance rules need something to be *about*.
+- **Lenient on receive.** A peer's choice is accepted as-is: an inbound root post may be `Article` or `Page`, and a `context` naming the Group is honoured as a compatibility input. Strictness applies to what we emit.
+
+The general rule this article states: **when a protocol leaves a gap, fill it from our own type system and translate at the edge.** Reaching for a peer's type because the peer is popular imports their ontology into ours, and their ontology was never designed around our other objects.

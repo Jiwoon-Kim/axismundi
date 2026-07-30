@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.34
+Stable tag: 0.0.35
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,12 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.35 =
+* A reply now inherits its parent's `context` when none is authored (FEP-11dd). An author
+  writing a reply knows what they are replying to and nothing about a thread URI, so without
+  this every reply in a threaded discussion carried no context while its root carried one.
+  An explicitly supplied `context` is never overwritten.
 
 = 0.0.34 =
 * Advertise the FEP-c0e0 emoji reaction collection on federated Notes.

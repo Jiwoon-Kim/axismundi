@@ -184,18 +184,32 @@ be designed later once ownership of name, summary, icon, and header is explicit.
 
 ### 3.2 Topic
 
-A Forum Topic is a titled ActivityStreams `Page`, with a Forum-owned `ax_topic`
+A Forum Topic is a titled ActivityStreams `Article`, with a Forum-owned `ax_topic`
 CPT as its intended local authoring container.
 
 ```text
-Page
+Article
 ├─ attributedTo      Person Actor
-├─ audience/context  Group Actor
+├─ audience          Group Actor        — addressed to, redistributed by (FEP-1b12)
+├─ context           thread URI         — which discussion (FEP-7888/11dd)
 ├─ name              required topic title
 ├─ content           topic body
 ├─ attachment        normal media relationships
 └─ commentsEnabled   projected Forum lock policy
 ```
+
+`Article`, not the `Page` Lemmy publishes. `Page` is a `Document` subtype and
+`Document` is already how Media Library publishes every non-image/audio/video
+attachment, so `Page` would file a discussion thread beside a PDF in our own
+ontology. See CONSTITUTION.md Article 13. Inbound stays lenient: a remote root
+post may be `Article` or `Page`.
+
+`audience` and `context` answer different questions and are no longer the same
+URI. They were both the Group URI through F1, which FEP-7888 permits — a forum or
+channel is a legitimate `context` — but that made every reply in the Forum share
+one context and left nothing able to name an individual thread. Each Topic now has
+a resolvable per-thread `context` that dereferences to an `OrderedCollection`
+attributed to the Group; replies inherit it from their parent per FEP-11dd.
 
 Topics must not be folded into editorial `post` or short-form `ax_note`, which
 have different authoring and lifecycle contracts.

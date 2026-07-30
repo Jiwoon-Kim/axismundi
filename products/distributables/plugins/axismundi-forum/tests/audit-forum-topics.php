@@ -160,14 +160,17 @@ try {
 	$projected = function_exists( 'axismundi_op_transform_object' ) ? axismundi_op_transform_object( get_post( $topic ) ) : null;
 	ax_ft_assert(
 		$ax_ft_results,
-		'an admitted public Topic projects as a Page with Group audience/context and open comments',
+		'an admitted public Topic projects as an Article with Group audience, thread context, and open comments',
 		is_array( $projected )
 			&& $author_public
-			&& 'Page' === $projected['type']
+			&& 'Article' === $projected['type']
 			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === $projected['id']
 			&& $group instanceof Axismundi_Actor
 			&& $group->get_uri() === $projected['audience']
-			&& $group->get_uri() === $projected['context']
+			// context is the thread, audience is the Group; conflating them left no way to
+			// name one discussion (Constitution Article 13).
+			&& axismundi_forum_topic_context_uri( get_post( $topic ) ) === $projected['context']
+			&& $group->get_uri() !== $projected['context']
 			&& true === $projected['commentsEnabled']
 	);
 

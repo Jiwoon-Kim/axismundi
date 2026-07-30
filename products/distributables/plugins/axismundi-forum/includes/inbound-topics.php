@@ -31,8 +31,29 @@ function axismundi_forum_member_uris( $value ) : array {
 	return axismundi_forum_member_uris( $value['id'] ?? $value['href'] ?? '' );
 }
 
-/** Whether a remote Page explicitly addresses or contextualizes this Group. */
-function axismundi_forum_remote_page_addresses_group( array $payload, Axismundi_Activity $activity, Axismundi_Actor $group ) : bool {
+/**
+ * Whether an inbound object type is an acceptable Forum root post.
+ *
+ * We publish `Article` (Constitution Article 13), but ActivityStreams never gave forums a
+ * root-post type, so every implementation picked its own: Lemmy sends `Page`, NodeBB sends
+ * `Note`, Mobilizon sends `Article`. Refusing a peer's choice would refuse the peer. Strict
+ * on send, lenient on receive — the type a Forum admits says nothing about the type it emits.
+ *
+ * `Note` is deliberately absent. A `Note` with no `inReplyTo` addressed to a Group is
+ * ambiguous between a NodeBB topic and an ordinary microblog post that merely mentioned the
+ * Group, and admitting the second as a Topic would let any passing mention open a thread.
+ * NodeBB interop needs a signal beyond the type, and that is its own piece of work.
+ *
+ * @param string $object_type Stored remote object type.
+ * @return bool
+ */
+function axismundi_forum_is_root_object_type( string $object_type ) : bool {
+	/** Filter the inbound object types admitted as Forum root posts. @param string[] $types Defaults. */
+	return in_array( $object_type, (array) apply_filters( 'axismundi_forum_root_object_types', array( 'Article', 'Page' ) ), true );
+}
+
+/** Whether a remote root post explicitly addresses or contextualizes this Group. */
+function axismundi_forum_remote_root_addresses_group( array $payload, Axismundi_Activity $activity, Axismundi_Actor $group ) : bool {
 	$group_uri = $group->get_uri();
 	foreach ( array( 'context', 'audience', 'to', 'cc' ) as $property ) {
 		if ( in_array( $group_uri, axismundi_forum_member_uris( $payload[ $property ] ?? array() ), true ) ) {
@@ -73,16 +94,16 @@ function axismundi_forum_remote_actor_can_post( int $forum_post_id, Axismundi_Ac
  *
  * @return true|WP_Error
  */
-function axismundi_forum_admit_remote_page( array $stored, Axismundi_Activity $activity ) {
+function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $activity ) {
 	if ( 'Create' !== $activity->get_type() || 'inbound' !== $activity->get_direction() || ! $activity->is_effective()
 		|| ! function_exists( 'axismundi_act_is_publicly_renderable' ) || ! axismundi_act_is_publicly_renderable( $activity )
 		|| ! function_exists( 'axismundi_op_remote_object_is_publicly_listable' ) || ! axismundi_op_remote_object_is_publicly_listable( $stored )
-		|| 'Page' !== (string) ( $stored['object_type'] ?? '' ) || ! empty( $stored['in_reply_to_uri'] ) ) {
-		return new WP_Error( 'ax_forum_remote_page_ineligible', __( 'The remote Object is not an eligible public top-level Page.', 'axismundi-forum' ) );
+		|| ! axismundi_forum_is_root_object_type( (string) ( $stored['object_type'] ?? '' ) ) || ! empty( $stored['in_reply_to_uri'] ) ) {
+		return new WP_Error( 'ax_forum_remote_root_ineligible', __( 'The remote Object is not an eligible public top-level Forum root post.', 'axismundi-forum' ) );
 	}
 	$author = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $activity->get_actor_uri() ) : null;
 	if ( ! $author instanceof Axismundi_Actor || $author->is_local() || ! hash_equals( $author->get_uri(), (string) ( $stored['attributed_to_uri'] ?? '' ) ) ) {
-		return new WP_Error( 'ax_forum_remote_page_author', __( 'The remote Page author does not match its Create Actor.', 'axismundi-forum' ) );
+		return new WP_Error( 'ax_forum_remote_root_author', __( 'The remote Page author does not match its Create Actor.', 'axismundi-forum' ) );
 	}
 
 	$payload = (array) ( $stored['payload'] ?? array() );
@@ -102,7 +123,7 @@ function axismundi_forum_admit_remote_page( array $stored, Axismundi_Activity $a
 			continue;
 		}
 		$forum_post_id = axismundi_forum_get_forum_for_group( $group->get_identity_id() );
-		if ( $forum_post_id <= 0 || ! axismundi_forum_remote_page_addresses_group( $payload, $activity, $group ) || ! axismundi_forum_remote_actor_can_post( $forum_post_id, $author ) ) {
+		if ( $forum_post_id <= 0 || ! axismundi_forum_remote_root_addresses_group( $payload, $activity, $group ) || ! axismundi_forum_remote_actor_can_post( $forum_post_id, $author ) ) {
 			continue;
 		}
 		$existing = axismundi_forum_get_remote_entry( $forum_post_id, $object_uri );
@@ -136,7 +157,7 @@ function axismundi_forum_admit_remote_page( array $stored, Axismundi_Activity $a
 }
 
 /** Observe verified remote Objects after Object Projections has stored the source. */
-function axismundi_forum_observe_remote_page( array $stored, Axismundi_Activity $activity ) : void {
-	axismundi_forum_admit_remote_page( $stored, $activity );
+function axismundi_forum_observe_remote_root( array $stored, Axismundi_Activity $activity ) : void {
+	axismundi_forum_admit_remote_root( $stored, $activity );
 }
-add_action( 'axismundi_op_remote_object_observed', 'axismundi_forum_observe_remote_page', 20, 2 );
+add_action( 'axismundi_op_remote_object_observed', 'axismundi_forum_observe_remote_root', 20, 2 );

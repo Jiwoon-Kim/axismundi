@@ -359,19 +359,31 @@ function axismundi_forum_register_topic_list_block() : void {
 add_action( 'init', 'axismundi_forum_register_topic_list_block', 20 );
 
 /** A Topic becomes an AS2 Page only after it has Forum context. */
-function axismundi_forum_topic_page_supports( $source ) : bool {
+function axismundi_forum_topic_article_supports( $source ) : bool {
 	return $source instanceof WP_Post
 		&& AXISMUNDI_FORUM_TOPIC_POST_TYPE === $source->post_type
 		&& ( null !== axismundi_forum_get_topic_entry( $source->ID ) || axismundi_forum_get_remote_topic_group( $source ) instanceof Axismundi_Actor );
 }
 
 /** F1 permits only public, unprotected local Topic Pages to project. */
-function axismundi_forum_topic_page_visible( WP_Post $topic ) : bool {
-	return axismundi_forum_topic_page_supports( $topic ) && 'publish' === $topic->post_status && '' === (string) $topic->post_password && is_post_publicly_viewable( $topic ) && '' !== axismundi_op_local_author_actor_uri( (int) $topic->post_author );
+function axismundi_forum_topic_article_visible( WP_Post $topic ) : bool {
+	return axismundi_forum_topic_article_supports( $topic ) && 'publish' === $topic->post_status && '' === (string) $topic->post_password && is_post_publicly_viewable( $topic ) && '' !== axismundi_op_local_author_actor_uri( (int) $topic->post_author );
 }
 
-/** Transform an admitted Topic into a Page without starting an activity lifecycle. */
-function axismundi_forum_topic_to_page( WP_Post $topic ) {
+/**
+ * Transform an admitted Topic into an Article without starting an activity lifecycle.
+ *
+ * `Article` rather than the `Page` Lemmy publishes: `Page` is a `Document` subtype, and
+ * `Document` is already how this site publishes every non-image/audio/video attachment, so
+ * `Page` would file a forum thread beside a PDF in our own ontology (Constitution Article 13).
+ *
+ * `audience` carries the Group, which is who the post is addressed to and who redistributes
+ * it. `context` carries the thread, which is a different question — what conversation this
+ * belongs to — and previously carried the Group as well. FEP-7888 permits a forum as
+ * `context`, so that was not invalid, but it made every reply in the Group share one context
+ * and left nothing able to name an individual thread.
+ */
+function axismundi_forum_topic_to_article( WP_Post $topic ) {
 	$entry = axismundi_forum_get_topic_entry( $topic->ID );
 	$group = is_array( $entry ) && function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( (int) $entry['group_identity_id'] ) : axismundi_forum_get_remote_topic_group( $topic );
 	$author_uri = axismundi_op_local_author_actor_uri( (int) $topic->post_author );
@@ -381,10 +393,10 @@ function axismundi_forum_topic_to_page( WP_Post $topic ) {
 	$object_uri = axismundi_forum_topic_object_uri( $topic );
 	return array(
 		'id'              => $object_uri,
-		'type'            => 'Page',
+		'type'            => 'Article',
 		'attributedTo'    => $author_uri,
 		'audience'        => $group->get_uri(),
-		'context'         => $group->get_uri(),
+		'context'         => axismundi_forum_topic_context_uri( $topic ),
 		'url'             => array( 'type' => 'Link', 'href' => get_permalink( $topic ), 'mediaType' => 'text/html' ),
 		'name'            => get_the_title( $topic ),
 		'content'         => axismundi_op_render_post_content( $topic ),
@@ -408,7 +420,7 @@ function axismundi_forum_resolve_topic_source( $source, string $uri ) {
 	}
 	parse_str( (string) $parts['query'], $args );
 	$topic = isset( $args['p'] ) ? get_post( absint( $args['p'] ) ) : null;
-	return $topic instanceof WP_Post && axismundi_forum_topic_page_supports( $topic ) && hash_equals( $uri, axismundi_forum_topic_object_uri( $topic ) ) ? $topic : null;
+	return $topic instanceof WP_Post && axismundi_forum_topic_article_supports( $topic ) && hash_equals( $uri, axismundi_forum_topic_object_uri( $topic ) ) ? $topic : null;
 }
 add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_forum_resolve_topic_source', 11, 2 );
 
@@ -418,12 +430,12 @@ function axismundi_forum_register_topic_page_transformer() : void {
 		return;
 	}
 	axismundi_op_register_object_transformer(
-		'forum-topic-page',
+		'forum-topic-article',
 		array(
-			'supports'   => 'axismundi_forum_topic_page_supports',
+			'supports'   => 'axismundi_forum_topic_article_supports',
 			'object_uri' => 'axismundi_forum_topic_object_uri',
-			'transform'  => 'axismundi_forum_topic_to_page',
-			'visible'    => 'axismundi_forum_topic_page_visible',
+			'transform'  => 'axismundi_forum_topic_to_article',
+			'visible'    => 'axismundi_forum_topic_article_visible',
 			'priority'   => 20,
 		)
 	);

@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Axismundi Forum
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-forum
- * Description:       Federated community surface for Axismundi. A Forum is an ax_forum CPT bound one-to-one to a managed Group Actor administered by Axismundi Actors, with local Topic Page projection and contextual Forum entries.
- * Version:           0.4.0
+ * Description:       Federated community surface for Axismundi. A Forum is an ax_forum CPT bound one-to-one to a managed Group Actor administered by Axismundi Actors, with local Topic Article projection and contextual Forum entries.
+ * Version:           0.5.0
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -16,18 +16,19 @@
  *
  * F1 baseline (docs/AXISMUNDI-FORUM-ARCHITECTURE.md §6): the ax_forum CPT, a
  * dedicated 1:1 binding to a previously created managed Group Actor, local ax_topic
- * Page projection, and contextual Forum entries. Identity, authority, and Group
+ * Article projection, and contextual Forum entries. Identity, authority, and Group
  * lifecycle stay in Axismundi Actors; Forum consumes its APIs and never writes Actor
  * tables.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_VERSION = '0.4.0';
+const AXISMUNDI_FORUM_VERSION = '0.5.0';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/cpt.php';
 require_once __DIR__ . '/includes/topics.php';
+require_once __DIR__ . '/includes/thread-context.php';
 require_once __DIR__ . '/includes/memberships.php';
 require_once __DIR__ . '/includes/inbound-topics.php';
 require_once __DIR__ . '/includes/outbound-topics.php';

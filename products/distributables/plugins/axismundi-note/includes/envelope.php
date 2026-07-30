@@ -44,6 +44,55 @@ function axismundi_note_local_uuid_from_uri( string $uri ) : ?string {
 	return axismundi_note_object_uri( $uuid ) === $uri ? $uuid : null;
 }
 
+/**
+ * The context a reply inherits from what it replies to (FEP-11dd).
+ *
+ * A reply belongs to the conversation its parent belongs to. Nobody types that in — an author
+ * writing a reply knows what they are replying to and nothing about a thread URI — so the reply
+ * has to take the parent's context, and without this every reply in a Forum thread would carry
+ * no context at all while its root carried one. FEP-11dd calls this inheritance and makes the
+ * parent's context the child's.
+ *
+ * Only an explicitly authored context wins over this; the caller passing `context_uri` is
+ * stating the conversation deliberately, and a stated context is never overwritten.
+ *
+ * The parent is read through Object Projections rather than the Note table, because a reply's
+ * parent is often not a Note: a Forum reply answers an `Article`, and a federated reply answers
+ * a cached remote object. Local and remote are read differently on purpose — a local parent is
+ * transformed to its authoritative representation, while a remote parent's context is whatever
+ * its own server said it was, and neither one is guessed from the other.
+ *
+ * @param string $parent_uri URI this Note replies to.
+ * @return string Inherited context URI, or '' when the parent has none or cannot be read.
+ */
+function axismundi_note_inherited_context_uri( string $parent_uri ) : string {
+	if ( '' === $parent_uri || ! function_exists( 'axismundi_op_resolve_source_by_uri' ) ) {
+		return '';
+	}
+	$parent = array();
+	$source = axismundi_op_resolve_source_by_uri( $parent_uri );
+	if ( null !== $source && ! $source instanceof Axismundi_Op_Remote_Source && function_exists( 'axismundi_op_resolve_object_transformer' ) ) {
+		$transformer = axismundi_op_resolve_object_transformer( $source );
+		try {
+			$transformed = null === $transformer ? null : call_user_func( $transformer['transform'], $source );
+			$parent      = is_array( $transformed ) ? $transformed : array();
+		} catch ( \Throwable $error ) {
+			// A parent that cannot be represented simply contributes no context.
+			$parent = array();
+		}
+	}
+	if ( array() === $parent && function_exists( 'axismundi_op_remote_object_get' ) ) {
+		$stored = axismundi_op_remote_object_get( $parent_uri, false );
+		$parent = is_array( $stored ) ? (array) ( $stored['payload'] ?? array() ) : array();
+	}
+	$context = $parent['context'] ?? '';
+	if ( is_array( $context ) ) {
+		// A context may arrive as a link object rather than a bare string.
+		$context = $context['id'] ?? ( $context['href'] ?? '' );
+	}
+	return axismundi_note_sanitize_uri( $context );
+}
+
 /** Normalize one absolute HTTP(S) URI, or '' when it is not a valid address. */
 function axismundi_note_sanitize_uri( $value ) : string {
 	$uri   = is_scalar( $value ) ? trim( (string) $value ) : '';
@@ -340,6 +389,9 @@ function axismundi_note_save( int $post_id, array $fields ) {
 	$sensitive   = array_key_exists( 'sensitive', $fields ) ? ( empty( $fields['sensitive'] ) ? 0 : 1 ) : (int) ( $existing['is_sensitive'] ?? 0 );
 	$in_reply_to = axismundi_note_sanitize_uri( $fields['in_reply_to_uri'] ?? ( $existing['in_reply_to_uri'] ?? '' ) );
 	$context     = axismundi_note_sanitize_uri( $fields['context_uri'] ?? ( $existing['context_uri'] ?? '' ) );
+	if ( '' === $context && '' !== $in_reply_to ) {
+		$context = axismundi_note_inherited_context_uri( $in_reply_to );
+	}
 	$warning     = mb_substr( sanitize_text_field( (string) ( $fields['content_warning'] ?? ( $existing['content_warning'] ?? '' ) ) ), 0, 500 );
 	$now         = current_time( 'mysql', true );
 

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -23,7 +23,7 @@ authority kernel) may bind it, and unbinding or deleting a Forum removes the lin
 only — the Group Actor is never deleted.
 
 This release includes the F1 local Topic baseline. An admitted `ax_topic` projects
-as an ActivityStreams `Page` with the bound Group as its audience/context, and a
+as an ActivityStreams `Article` addressed to the bound Group, and a
 Forum-owned entry table supplies the Topic index without duplicating object bodies.
 The local policy is deliberately small: a Group manager selects either `open`
 (anyone with Topic edit permission) or `managers` (Group managers only). Managers
@@ -35,6 +35,20 @@ activity ledger and social relations (Axismundi Activities); object rendering
 (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.5.0 =
+* A Forum root post is now published as an ActivityStreams `Article` rather than the `Page`
+  Lemmy publishes. `Page` is a `Document` subtype, and `Document` is already how this site
+  publishes every non-image/audio/video attachment, so `Page` filed a discussion thread
+  beside a PDF in our own object model. See CONSTITUTION.md Article 13.
+* Inbound admission stays lenient: a remote root post may be `Article` or `Page`, filterable
+  via `axismundi_forum_root_object_types`. A bare `Note` is still refused, because a Note
+  addressed to a Group is indistinguishable from a post that merely mentioned it.
+* `audience` and `context` no longer carry the same URI. The Group is the audience — who the
+  post is addressed to and who redistributes it — while `context` now names the thread and
+  dereferences to an `OrderedCollection` attributed to the Group. Sharing one context across
+  a whole Forum left nothing able to name an individual discussion.
+* Replies inherit their parent's thread context (FEP-11dd) instead of carrying none.
 
 = 0.4.0 =
 * The bound Group Actor's profile is now the community page: it lists the Forum's Topics
@@ -58,7 +72,7 @@ activity ledger and social relations (Axismundi Activities); object rendering
 * Moderation, replies, announce, and federation of Forum entries remain unimplemented.
 
 = 0.2.0 =
-* F1 baseline — adds the `ax_topic` CPT, local ActivityStreams `Page` projection,
+* F1 baseline — adds the `ax_topic` CPT, local ActivityStreams root-post projection,
   `wp_ax_forum_entries`, a Forum Topic List dynamic block, and plugin-owned single
   Topic template.
 * A Topic has one immutable Forum context once admitted. Removing a Topic removes

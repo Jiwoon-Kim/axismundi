@@ -350,7 +350,8 @@ add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audien
 /** Name the community on a threaded Note so peers can navigate reply → Topic → Group. */
 function axismundi_forum_note_reply_object( array $object, Axismundi_Note_Source $source ) : array {
 	$group = axismundi_forum_note_reply_group( $source );
-	if ( $group instanceof Axismundi_Actor ) {
+	$post = $source->get_post();
+	if ( $group instanceof Axismundi_Actor && $group->is_local() && $post instanceof WP_Post && axismundi_forum_user_can_post_to_community( $group->get_identity_id(), (int) $post->post_author ) ) {
 		$object['audience'] = $group->get_uri();
 	}
 	return $object;

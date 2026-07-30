@@ -249,6 +249,7 @@ function axismundi_actors_render_managed_groups_page() : void {
 			<h2><?php echo esc_html( $selected->get_display_name() ?: '@' . $selected->get_preferred_username() ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><?php esc_html_e( 'Handle', 'axismundi-actors' ); ?></th><td><code>@<?php echo esc_html( $selected->get_preferred_username() ); ?></code></td></tr>
+				<tr><th scope="row"><?php esc_html_e( 'Identity URI', 'axismundi-actors' ); ?></th><td><code><?php echo esc_html( $selected->get_uri() ); ?></code></td></tr>
 				<tr><th scope="row"><?php esc_html_e( 'Status', 'axismundi-actors' ); ?></th><td><strong><?php echo esc_html( axismundi_actors_status_label( $selected ) ); ?></strong><?php if ( axismundi_actors_is_public_profile( $selected ) ) : ?> · <a href="<?php echo esc_url( $selected->get_profile_url() ); ?>"><?php esc_html_e( 'View public profile', 'axismundi-actors' ); ?></a><?php endif; ?></td></tr>
 			</table>
 			<?php if ( ! $selected_is_manager && $is_site_admin ) : ?>

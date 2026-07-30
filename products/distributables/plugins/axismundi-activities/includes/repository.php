@@ -496,7 +496,7 @@ function axismundi_act_get_object_audience_members( string $object_uri, string $
  *
  * @return Axismundi_Activity[]
  */
-function axismundi_act_get_actor_feed( string $actor_uri, int $limit = 20 ) : array {
+function axismundi_act_get_actor_feed( string $actor_uri, int $limit = 20, int $offset = 0 ) : array {
 	global $wpdb;
 	$uri = axismundi_act_uri( $actor_uri );
 	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
@@ -508,13 +508,14 @@ function axismundi_act_get_actor_feed( string $actor_uri, int $limit = 20 ) : ar
 	}
 	$table = axismundi_act_activities_table();
 	$limit = max( 1, min( 50, $limit ) );
+	$offset = max( 0, $offset );
 	// Direction is a transport fact, not a feed policy. The repository rejects
 	// local Actors as inbound and remote Actors as outbound/local, so this keeps
 	// both profile kinds on the same API without mixing their activity origins.
 	$directions = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
 	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed feed selection in the custom ledger; direction placeholders and every value are allowlisted/prepared.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d", array_merge( array( hash( 'sha256', $uri ), $uri ), $directions, array( $limit ) ) ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d OFFSET %d", array_merge( array( hash( 'sha256', $uri ), $uri ), $directions, array( $limit, $offset ) ) ), ARRAY_A );
 	return array_map( 'axismundi_act_hydrate', $rows );
 }
 

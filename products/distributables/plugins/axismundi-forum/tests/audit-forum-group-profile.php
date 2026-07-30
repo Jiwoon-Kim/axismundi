@@ -109,6 +109,31 @@ try {
 		'an unconfigured public Group renders as a community without writing settings, Activities, or Follows',
 		'' !== $read_only_feed && $activities_before === $activities_after && $relations_before === $relations_after && 0 === $group_settings_after
 	);
+	$pagination_topics = array();
+	foreach ( array( 'Beta', 'Gamma' ) as $suffix ) {
+		$pagination_topic = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $owner, 'post_title' => 'Group Profile Topic ' . $suffix, 'post_content' => 'body' ) );
+		$ax_gp_posts[] = $pagination_topic;
+		$pagination_topics[] = $pagination_topic;
+		axismundi_forum_admit_local_topic( $community, $pagination_topic, $owner );
+	}
+	$page_one_entries = axismundi_forum_visible_topic_entries( $community, 1, 1 );
+	$page_two_entries = axismundi_forum_visible_topic_entries( $community, 1, 2 );
+	$ax_gp_old_get    = $_GET;
+	$_GET['topic_page'] = '2';
+	$GLOBALS['axismundi_actors_current_actor'] = $group;
+	$page_two_html = axismundi_forum_render_topic_list_block( array( 'perPage' => 1 ) );
+	unset( $GLOBALS['axismundi_actors_current_actor'] );
+	$_GET = $ax_gp_old_get;
+	ax_gp_assert(
+		$ax_gp_results,
+		'a Group community feed uses reproducible topic_page URLs without repeating the first entry',
+		3 === axismundi_forum_visible_topic_entry_count( $community )
+			&& 1 === count( $page_one_entries ) && 1 === count( $page_two_entries )
+			&& (int) $page_one_entries[0]['id'] !== (int) $page_two_entries[0]['id']
+			&& false !== strpos( $page_two_html, 'Page 2 of 3' )
+			&& false !== strpos( $page_two_html, 'topic_page=1' )
+			&& false !== strpos( $page_two_html, 'topic_page=3' )
+	);
 
 	$solo      = ax_gp_group( $owner, $ax_gp_ids );
 	$solo_feed = $solo instanceof Axismundi_Actor ? ax_gp_profile_feed( $solo ) : 'x';

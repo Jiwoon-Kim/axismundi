@@ -369,16 +369,29 @@ function axismundi_forum_topic_ids( int $group_identity_id, int $limit = 20 ) : 
 	return array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT e.source_post_id FROM {$table} e INNER JOIN {$wpdb->posts} p ON p.ID = e.source_post_id WHERE e.group_identity_id = %d AND e.entry_type = 'topic' AND e.admission_state = 'visible' AND e.moderation_state = 'visible' AND p.post_status = 'publish' ORDER BY e.sticky_position IS NULL, e.sticky_position DESC, p.post_date_gmt DESC LIMIT %d", $group_identity_id, $limit ) ) );
 }
 
-/** @return array<int,array<string,mixed>> Local and remote visible Topic entries for one Forum. */
-function axismundi_forum_visible_topic_entries( int $group_identity_id, int $limit = 20 ) : array {
+/** Count local and remote visible Topic entries for one community. */
+function axismundi_forum_visible_topic_entry_count( int $group_identity_id ) : int {
+	if ( $group_identity_id <= 0 ) {
+		return 0;
+	}
+	global $wpdb;
+	$table = axismundi_forum_entries_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed community-context query; value prepared.
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND admission_state = 'visible' AND moderation_state = 'visible'", $group_identity_id ) );
+}
+
+/** @return array<int,array<string,mixed>> Local and remote visible Topic entries for one community page. */
+function axismundi_forum_visible_topic_entries( int $group_identity_id, int $limit = 20, int $page = 1 ) : array {
 	if ( $group_identity_id <= 0 ) {
 		return array();
 	}
 	global $wpdb;
 	$table = axismundi_forum_entries_table();
 	$limit = max( 1, min( 100, $limit ) );
+	$page  = max( 1, $page );
+	$offset = ( $page - 1 ) * $limit;
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Forum-context query; remote entries intentionally have no WordPress post row.
-	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND admission_state = 'visible' AND moderation_state = 'visible' ORDER BY sticky_position IS NULL, sticky_position DESC, created_at DESC, id DESC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND admission_state = 'visible' AND moderation_state = 'visible' ORDER BY sticky_position IS NULL, sticky_position DESC, created_at DESC, id DESC LIMIT %d OFFSET %d", $group_identity_id, $limit, $offset ), ARRAY_A );
 }
 
 /** Whether the current local account may read this community's profile Topic feed. */
@@ -426,8 +439,15 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 		return '<section class="axismundi-forum-topic-list" hidden aria-hidden="true"></section>';
 	}
 	$limit = isset( $attributes['perPage'] ) ? (int) $attributes['perPage'] : 20;
+	$limit = max( 1, min( 100, $limit ) );
+	$page  = isset( $_GET['topic_page'] ) ? max( 1, absint( wp_unslash( $_GET['topic_page'] ) ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read pagination.
+	$total = axismundi_forum_visible_topic_entry_count( $group_identity_id );
+	$pages = max( 1, (int) ceil( $total / $limit ) );
+	if ( $page > $pages ) {
+		$page = $pages;
+	}
 	$items = array();
-	foreach ( axismundi_forum_visible_topic_entries( $group_identity_id, $limit ) as $entry ) {
+	foreach ( axismundi_forum_visible_topic_entries( $group_identity_id, $limit, $page ) as $entry ) {
 		$source_post_id = (int) ( $entry['source_post_id'] ?? 0 );
 		if ( $source_post_id > 0 ) {
 			$topic = get_post( $source_post_id );
@@ -447,6 +467,17 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	$body = empty( $items )
 		? '<p class="axismundi-forum-topic-list__empty">' . esc_html__( 'No topics yet.', 'axismundi-forum' ) . '</p>'
 		: '<ol class="axismundi-forum-topic-list__items">' . implode( '', $items ) . '</ol>';
+	$pagination = '';
+	if ( $pages > 1 ) {
+		$base_url = remove_query_arg( 'topic_page' );
+		$previous = $page > 1 ? add_query_arg( 'topic_page', $page - 1, $base_url ) : '';
+		$next     = $page < $pages ? add_query_arg( 'topic_page', $page + 1, $base_url ) : '';
+		$pagination = '<nav class="axismundi-forum-topic-list__pagination" aria-label="' . esc_attr__( 'Topic pages', 'axismundi-forum' ) . '">'
+			. ( '' !== $previous ? '<a class="axismundi-forum-topic-list__previous" href="' . esc_url( $previous ) . '">' . esc_html__( 'Newer topics', 'axismundi-forum' ) . '</a>' : '<span class="axismundi-forum-topic-list__previous" aria-hidden="true"></span>' )
+			. '<span class="axismundi-forum-topic-list__page">' . esc_html( sprintf( __( 'Page %1$d of %2$d', 'axismundi-forum' ), $page, $pages ) ) . '</span>'
+			. ( '' !== $next ? '<a class="axismundi-forum-topic-list__next" href="' . esc_url( $next ) . '">' . esc_html__( 'Older topics', 'axismundi-forum' ) . '</a>' : '<span class="axismundi-forum-topic-list__next" aria-hidden="true"></span>' )
+			. '</nav>';
+	}
 	/*
 	 * This renderer answers to two callers: the block, and the Group profile feed, which has
 	 * no block being rendered around it. get_block_wrapper_attributes() reads the block
@@ -456,7 +487,7 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	$wrapper = null === WP_Block_Supports::$block_to_render
 		? 'class="axismundi-forum-topic-list"'
 		: get_block_wrapper_attributes( array( 'class' => 'axismundi-forum-topic-list' ) );
-	return '<section ' . $wrapper . '><h2>' . esc_html__( 'Topics', 'axismundi-forum' ) . '</h2>' . $body . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wrapper is a fixed literal or core-escaped.
+	return '<section ' . $wrapper . '><h2>' . esc_html__( 'Topics', 'axismundi-forum' ) . '</h2>' . $body . $pagination . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wrapper is a fixed literal or core-escaped.
 }
 
 /**

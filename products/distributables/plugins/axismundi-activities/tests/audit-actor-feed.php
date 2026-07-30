@@ -136,6 +136,13 @@ try {
 	axismundi_act_record_activity( array( 'id' => $remote_create_uri, 'type' => 'Create', 'actor' => $remote_actor_uri, 'object' => $remote_note_uri, 'to' => array( $public_uri ) ), 'inbound' );
 	axismundi_act_record_activity( array( 'id' => $remote_announce_uri, 'type' => 'Announce', 'actor' => $remote_actor_uri, 'object' => $observed_note_uri, 'to' => array( $public_uri ) ), 'inbound' );
 	axismundi_act_record_activity( array( 'id' => $remote_uncached_announce_uri, 'type' => 'Announce', 'actor' => $remote_actor_uri, 'object' => $remote_uncached_object_uri, 'to' => array( $public_uri ) ), 'inbound' );
+	$hidden_run = array();
+	for ( $index = 0; $index < 25; $index++ ) {
+		$hidden_uri = home_url( '/activities/' . wp_generate_uuid4() . '/' );
+		$hidden_run[] = $hidden_uri;
+		$ax_feed_activities[] = $hidden_uri;
+		axismundi_act_record_activity( array( 'id' => $hidden_uri, 'type' => 'Create', 'actor' => $actor_uri, 'object' => array( 'id' => home_url( '/notes/' . wp_generate_uuid4() . '/' ), 'type' => 'Note', 'content' => '<p>Hidden run.</p>' ), 'to' => array( $actor_uri . '/followers' ) ), 'outbound' );
+	}
 
 	$announce = axismundi_act_announce_object( $actor, $remote_note_uri, $remote_actor_uri );
 	$announce_uri = $announce instanceof Axismundi_Activity ? $announce->get_uri() : '';
@@ -156,6 +163,11 @@ try {
 			&& ! in_array( $private_uri, $ids, true )
 			&& ! in_array( $like_uri, $ids, true )
 			&& ! in_array( $update_uri, $ids, true )
+	);
+	ax_feed_assert(
+		$ax_feed_results,
+		'a bounded private run does not truncate an older public timeline card before the scan limit',
+		in_array( $create_uri, $ids, true ) && array() === array_intersect( $hidden_run, $ids )
 	);
 	$remote_items    = axismundi_act_actor_feed_items( $remote_actor, 20 );
 	$remote_ids      = array_column( $remote_items, 'id' );

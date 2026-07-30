@@ -104,14 +104,35 @@ function axismundi_act_actor_feed_items( Axismundi_Actor $actor, int $limit = 20
 	) {
 		return array();
 	}
-	$items = array();
-	foreach ( axismundi_act_get_actor_feed( $actor->get_uri(), max( 1, min( 50, $limit ) ) ) as $activity ) {
-		if ( ! $activity instanceof Axismundi_Activity ) {
-			continue;
+	$items      = array();
+	$offset     = 0;
+	$batch_size = min( 50, max( 20, $limit ) );
+	// A visibility filter can exclude a run of otherwise valid ledger rows. Scan a bounded
+	// window until the rendered page is full, rather than letting a private recent run make a
+	// public profile appear truncated. Cursor pagination owns the unbounded continuation.
+	$scan_limit = (int) apply_filters( 'axismundi_act_actor_feed_scan_limit', max( 50, min( 200, $limit * 10 ) ), $actor, $limit );
+	$scan_limit = max( $batch_size, min( 200, $scan_limit ) );
+	while ( count( $items ) < $limit && $offset < $scan_limit ) {
+		$batch_limit = min( $batch_size, $scan_limit - $offset );
+		$activities  = axismundi_act_get_actor_feed( $actor->get_uri(), $batch_limit, $offset );
+		if ( empty( $activities ) ) {
+			break;
 		}
-		$item = axismundi_act_actor_feed_item( $activity );
-		if ( is_array( $item ) ) {
-			$items[] = $item;
+		foreach ( $activities as $activity ) {
+			if ( ! $activity instanceof Axismundi_Activity ) {
+				continue;
+			}
+			$item = axismundi_act_actor_feed_item( $activity );
+			if ( is_array( $item ) ) {
+				$items[] = $item;
+				if ( count( $items ) >= $limit ) {
+					break;
+				}
+			}
+		}
+		$offset += count( $activities );
+		if ( count( $activities ) < $batch_limit ) {
+			break;
 		}
 	}
 	$activity_object_uris = array_values(

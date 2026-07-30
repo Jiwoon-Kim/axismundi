@@ -192,10 +192,21 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		foreach ( $pending_topics as $entry ) {
 			$author = axismundi_actors_get_by_identity( (int) ( $entry['submission_actor_identity_id'] ?? 0 ) );
 			$label = $author instanceof Axismundi_Actor ? '@' . $author->get_preferred_username() : __( 'Unknown author', 'axismundi-forum' );
-			echo '<li>' . esc_html( $label ) . ' <code>' . esc_html( (string) $entry['object_uri'] ) . '</code> <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+			echo '<li>' . esc_html( $label ) . ' ';
+			$source_post = ! empty( $entry['source_post_id'] ) ? get_post( (int) $entry['source_post_id'] ) : null;
+			if ( $source_post instanceof WP_Post ) {
+				echo '<a href="' . esc_url( get_edit_post_link( $source_post->ID, 'raw' ) ) . '">' . esc_html( get_the_title( $source_post ) ?: __( 'Untitled Topic', 'axismundi-forum' ) ) . '</a>';
+			} elseif ( function_exists( 'axismundi_op_render_object_by_uri' ) ) {
+				$preview = axismundi_op_render_object_by_uri( (string) $entry['object_uri'], array( 'headingTag' => 'h4', 'interactions' => false, 'expected_author' => $author instanceof Axismundi_Actor ? $author->get_uri() : '' ) );
+				echo '' !== $preview ? $preview : '<code>' . esc_html( (string) $entry['object_uri'] ) . '</code>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Object Projections owns its escaped card renderer.
+			} else {
+				echo '<code>' . esc_html( (string) $entry['object_uri'] ) . '</code>';
+			}
+			echo ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
 			echo '<input type="hidden" name="action" value="axismundi_forum_topic_decision"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="entry_id" value="' . esc_attr( (string) $entry['id'] ) . '">';
 			wp_nonce_field( 'axismundi_forum_topic_' . $group_id . '_' . $entry['id'] );
-			echo '<button class="button button-small" name="decision" value="approve">' . esc_html__( 'Approve and announce', 'axismundi-forum' ) . '</button> <button class="button button-small" name="decision" value="pending">' . esc_html__( 'Keep pending', 'axismundi-forum' ) . '</button></form></li>';
+			echo '<label class="screen-reader-text" for="axismundi-forum-reason-' . esc_attr( (string) $entry['id'] ) . '">' . esc_html__( 'Rejection reason', 'axismundi-forum' ) . '</label><textarea id="axismundi-forum-reason-' . esc_attr( (string) $entry['id'] ) . '" name="reason" rows="2" placeholder="' . esc_attr__( 'Reason required when rejecting', 'axismundi-forum' ) . '"></textarea> ';
+			echo '<button class="button button-small" name="decision" value="approve">' . esc_html__( 'Approve and announce', 'axismundi-forum' ) . '</button> <button class="button button-small" name="decision" value="reject">' . esc_html__( 'Reject submission', 'axismundi-forum' ) . '</button></form></li>';
 		}
 		echo '</ul>';
 	}
@@ -247,9 +258,13 @@ function axismundi_forum_handle_topic_decision() : void {
 	$group_id = isset( $_POST['group_identity_id'] ) ? absint( $_POST['group_identity_id'] ) : 0;
 	$entry_id = isset( $_POST['entry_id'] ) ? absint( $_POST['entry_id'] ) : 0;
 	check_admin_referer( 'axismundi_forum_topic_' . $group_id . '_' . $entry_id );
-	$result = 'approve' === sanitize_key( (string) ( $_POST['decision'] ?? '' ) ) && function_exists( 'axismundi_forum_approve_pending_entry' )
+	$decision = sanitize_key( (string) ( $_POST['decision'] ?? '' ) );
+	$reason = isset( $_POST['reason'] ) ? wp_kses_post( wp_unslash( $_POST['reason'] ) ) : '';
+	$result = 'approve' === $decision && function_exists( 'axismundi_forum_approve_pending_entry' )
 		? axismundi_forum_approve_pending_entry( $entry_id, get_current_user_id() )
-		: new WP_Error( 'ax_forum_topic_decision', __( 'The Topic submission remains pending.', 'axismundi-forum' ) );
+		: ( 'reject' === $decision && function_exists( 'axismundi_forum_reject_pending_entry' )
+			? axismundi_forum_reject_pending_entry( $entry_id, get_current_user_id(), $reason )
+			: new WP_Error( 'ax_forum_topic_decision', __( 'The Topic decision is invalid.', 'axismundi-forum' ) ) );
 	axismundi_forum_group_admin_redirect( $group_id, $result );
 }
 add_action( 'admin_post_axismundi_forum_topic_decision', 'axismundi_forum_handle_topic_decision' );

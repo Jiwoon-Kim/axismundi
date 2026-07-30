@@ -222,3 +222,59 @@ function axismundi_forum_approve_pending_entry( int $entry_id, int $user_id ) {
 	$entry = axismundi_forum_refresh_local_entry_submission( $entry );
 	return is_wp_error( $entry ) ? $entry : axismundi_forum_publish_validated_pending_entry( $entry );
 }
+
+/**
+ * Reject one pending Topic submission back to its original Person Actor.
+ *
+ * A rejection answers the submitted Create or Update, never the Topic Object. The Group's
+ * ledger record is committed first; if the projection write fails, a later retry reuses that
+ * immutable Reject and can finish moving the entry out of the review queue.
+ */
+function axismundi_forum_reject_pending_entry( int $entry_id, int $user_id, string $reason = '' ) {
+	$reason = wp_kses_post( $reason );
+	if ( '' === trim( wp_strip_all_tags( $reason ) ) ) {
+		return new WP_Error( 'ax_forum_reject_reason', __( 'A rejection reason is required.', 'axismundi-forum' ) );
+	}
+	$entry = axismundi_forum_get_entry( $entry_id );
+	if ( ! is_array( $entry ) || 'pending' !== (string) $entry['admission_state'] ) {
+		return new WP_Error( 'ax_forum_pending_entry', __( 'The Topic is not awaiting community approval.', 'axismundi-forum' ) );
+	}
+	if ( ! function_exists( 'axismundi_forum_user_can_moderate' ) || ! axismundi_forum_user_can_moderate( (int) $entry['group_identity_id'], $user_id ) ) {
+		return new WP_Error( 'ax_forum_forbidden', __( 'You may not reject this community Topic.', 'axismundi-forum' ) );
+	}
+	$group = axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
+	$submission = axismundi_forum_entry_submission_activity( $entry );
+	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_record_source_activity' ) || is_wp_error( $submission ) ) {
+		return is_wp_error( $submission ) ? $submission : new WP_Error( 'ax_forum_reject_group', __( 'The community Group cannot reject this Topic.', 'axismundi-forum' ) );
+	}
+	$author_uri = $submission->get_actor_uri();
+	if ( '' === $author_uri ) {
+		return new WP_Error( 'ax_forum_reject_author', __( 'The submitting Actor is unavailable.', 'axismundi-forum' ) );
+	}
+	$rejection = axismundi_act_record_source_activity(
+		array(
+			'type'     => 'Reject',
+			'actor'    => $group->get_uri(),
+			'object'   => $submission->get_uri(),
+			// The Activity Vocabulary's Reject example uses summary for the human-readable
+			// explanation; `object` remains the precise Create or Update the Group rejected.
+			'summary'  => $reason,
+			'to'       => array( $author_uri ),
+			'audience' => $group->get_uri(),
+		),
+		'outbound',
+		'forum-group-reject:entry:' . $entry_id . ':submission:' . $submission->get_uri()
+	);
+	if ( is_wp_error( $rejection ) ) {
+		return $rejection;
+	}
+	global $wpdb;
+	$updated = $wpdb->update(
+		axismundi_forum_entries_table(),
+		array( 'admission_state' => 'rejected', 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => $entry_id ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ledger-first decision projection.
+	return false === $updated ? new WP_Error( 'ax_forum_reject_write', __( 'The rejected Topic could not leave the review queue.', 'axismundi-forum' ) ) : true;
+}

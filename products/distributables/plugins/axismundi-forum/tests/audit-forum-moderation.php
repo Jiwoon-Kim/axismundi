@@ -131,8 +131,8 @@ try {
 	$moderator_screen = (string) ob_get_clean();
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'an Actor moderator may review Topic submissions in the Group record without receiving manager-only policy controls',
-		str_contains( $moderator_screen, 'Topic submissions' ) && ! str_contains( $moderator_screen, 'Save community settings' )
+		'an Actor moderator may review a Group Topic queue with an explicit rejection reason and approve or reject controls without receiving manager-only policy controls',
+		str_contains( $moderator_screen, 'Topic submissions' ) && str_contains( $moderator_screen, 'Reason required when rejecting' ) && str_contains( $moderator_screen, 'Approve and announce' ) && str_contains( $moderator_screen, 'Reject submission' ) && ! str_contains( $moderator_screen, 'Save community settings' )
 	);
 	wp_set_current_user( 0 );
 

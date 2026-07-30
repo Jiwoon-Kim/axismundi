@@ -147,6 +147,43 @@ try {
 		'an accepted member cannot inject a Page that omits this Group from its audience or context',
 		$elsewhere_create instanceof Axismundi_Activity && null === axismundi_forum_get_remote_entry( $community, $elsewhere_uri )
 	);
+
+	$approval_policy = axismundi_forum_set_topic_approval_policy( $community, $owner, 'approval' );
+	$pending_uri = 'https://example.com/pages/pending-' . wp_generate_uuid4();
+	$pending = $member instanceof Axismundi_Actor && $group instanceof Axismundi_Actor && true === $approval_policy
+		? ax_fit_create( $member, $pending_uri, array( 'audience' => $group->get_uri(), 'context' => $group->get_uri() ) )
+		: new WP_Error( 'fixture' );
+	$ax_fit_activity_uris[] = $pending_uri . '/activity';
+	$ax_fit_object_uris[] = $pending_uri;
+	$pending_entry = axismundi_forum_get_remote_entry( $community, $pending_uri );
+	$missing_reason = is_array( $pending_entry ) && function_exists( 'axismundi_forum_reject_pending_entry' )
+		? axismundi_forum_reject_pending_entry( (int) $pending_entry['id'], $owner )
+		: new WP_Error( 'fixture' );
+	$rejected = is_array( $pending_entry ) && function_exists( 'axismundi_forum_reject_pending_entry' )
+		? axismundi_forum_reject_pending_entry( (int) $pending_entry['id'], $owner, 'Off-topic for this community.' )
+		: new WP_Error( 'fixture' );
+	$rejected_entry = axismundi_forum_get_remote_entry( $community, $pending_uri );
+	$rejects = $pending instanceof Axismundi_Activity ? axismundi_act_get_by_object( $pending->get_uri(), 10 ) : array();
+	$reject = null;
+	foreach ( $rejects as $candidate ) {
+		if ( $candidate instanceof Axismundi_Activity && 'Reject' === $candidate->get_type() && $candidate->is_effective() ) {
+			$reject = $candidate;
+			$ax_fit_activity_uris[] = $candidate->get_uri();
+			break;
+		}
+	}
+	ax_fit_assert(
+		$ax_fit_results,
+		'a moderator must state a reason, then rejects a pending remote Topic by answering its original Create, removes it from review, and never announces it to followers',
+		$pending instanceof Axismundi_Activity && is_array( $pending_entry ) && 'pending' === (string) $pending_entry['admission_state']
+			&& is_wp_error( $missing_reason ) && 'ax_forum_reject_reason' === $missing_reason->get_error_code()
+			&& true === $rejected && is_array( $rejected_entry ) && 'rejected' === (string) $rejected_entry['admission_state']
+			&& $reject instanceof Axismundi_Activity && $group instanceof Axismundi_Actor && $member instanceof Axismundi_Actor
+			&& $group->get_uri() === $reject->get_actor_uri() && $pending->get_uri() === $reject->get_object_uri()
+			&& in_array( $member->get_uri(), (array) ( $reject->get_audience()['to'] ?? array() ), true )
+			&& 'Off-topic for this community.' === (string) ( $reject->get_payload()['summary'] ?? '' )
+			&& empty( $rejected_entry['announced_activity_uri'] ) && empty( axismundi_forum_pending_topic_entries( $community ) )
+	);
 } finally {
 	$entries = axismundi_forum_entries_table();
 	$memberships = axismundi_forum_memberships_table();

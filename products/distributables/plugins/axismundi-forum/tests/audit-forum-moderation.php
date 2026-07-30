@@ -75,6 +75,14 @@ try {
 			&& $moderator_url === $add->get_target_uri() && $add_wrapper instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
 			&& $group->get_uri() === $add_wrapper->get_actor_uri() && is_array( $group_projection) && $moderator_url === (string) ( $group_projection['attributedTo'] ?? '' )
 		);
+	$alice_communities = axismundi_forum_moderated_communities( $alice_user );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'an explicit Actor moderator appears in their moderated community list without local manager delegation',
+		$alice instanceof Axismundi_Actor
+			&& isset( $alice_communities[ $group_id ] )
+			&& ! axismundi_actors_managed_actor_can_manage( $group_id, $alice_user )
+	);
 	axismundi_actors_add_manager( $group_id, $editor_user, 'editor' );
 	$editor_denied = $bob instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $bob->get_identity_id(), $editor_user, true ) : new WP_Error( 'fixture' );
 	ax_fmod_assert(

@@ -187,6 +187,51 @@ function axismundi_actors_list_all_managed_groups() : array {
 	return $groups;
 }
 
+/**
+ * Public Group Actors known to this server, for the human-facing directory.
+ *
+ * Local entries must be published managed Groups with locked handles. Remote entries
+ * are limited to cached Actors that declared themselves public; this is a directory of
+ * what this server knows, not a claim to enumerate every Group on the fediverse.
+ *
+ * @param int $limit  Maximum rows.
+ * @param int $offset Result offset.
+ * @return Axismundi_Actor[]
+ */
+function axismundi_actors_get_public_groups( int $limit = 50, int $offset = 0 ) : array {
+	global $wpdb;
+	$limit      = max( 1, min( 100, $limit ) );
+	$offset     = max( 0, $offset );
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table names; pagination values prepared.
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id
+			 WHERE a.actor_type = 'Group' AND i.status = 'public'
+			 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )
+			 ORDER BY COALESCE( NULLIF( a.display_name, '' ), a.preferred_username, i.canonical_uri ) ASC, i.id ASC LIMIT %d OFFSET %d",
+			$limit,
+			$offset
+		),
+		ARRAY_A
+	);
+	return array_map( static fn( array $row ) : Axismundi_Actor => Axismundi_Actor::from_row( $row ), $rows );
+}
+
+/** Count the bounded public Group directory. */
+function axismundi_actors_count_public_groups() : int {
+	global $wpdb;
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table names and constant predicates.
+	return (int) $wpdb->get_var(
+		"SELECT COUNT(*) FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id
+		 WHERE a.actor_type = 'Group' AND i.status = 'public'
+		 AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )"
+	);
+}
+
 /** Count the owners of one managed actor. */
 function axismundi_actors_managed_owner_count( int $identity_id ) : int {
 	global $wpdb;

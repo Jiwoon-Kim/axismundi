@@ -17,6 +17,7 @@ $GLOBALS['axismundi_actors_current_actor'] = null;
  */
 function axismundi_actors_rewrite_rules() : array {
 	return array(
+		'^groups/?$'                       => 'index.php?ax_group_directory=1',
 		'^\.well-known/webfinger/?$'      => 'index.php?ax_webfinger=1',
 		'^\.well-known/nodeinfo/?$'       => 'index.php?ax_nodeinfo=discovery',
 		'^nodeinfo/2\.1/?$'               => 'index.php?ax_nodeinfo=2.1',
@@ -114,6 +115,7 @@ function axismundi_actors_query_vars( array $vars ) : array {
 	$vars[] = 'ax_actor';
 	$vars[] = 'ax_actor_handle';
 	$vars[] = 'ax_actor_collection';
+	$vars[] = 'ax_group_directory';
 	$vars[] = 'ax_webfinger';
 	$vars[] = 'ax_nodeinfo';
 	return array_values( array_unique( $vars ) );
@@ -675,6 +677,20 @@ function axismundi_actors_handle_profile_request( bool $preempt, WP_Query $query
 }
 add_filter( 'pre_handle_404', 'axismundi_actors_handle_profile_request', 10, 2 );
 
+/** Serve the public Group directory without manufacturing a WordPress post. */
+function axismundi_actors_handle_group_directory_request( bool $preempt, WP_Query $query ) : bool {
+	if ( ! $query->get( 'ax_group_directory' ) ) {
+		return $preempt;
+	}
+	$query->is_404      = false;
+	$query->is_home     = false;
+	$query->is_archive  = true;
+	$query->is_singular = false;
+	status_header( 200 );
+	return true;
+}
+add_filter( 'pre_handle_404', 'axismundi_actors_handle_group_directory_request', 9, 2 );
+
 /**
  * Actor profile data resolved live for local identities.
  *
@@ -833,6 +849,17 @@ function axismundi_actors_follow_collection_template_content() : string {
 	return (string) ob_get_clean();
 }
 
+/** @return string */
+function axismundi_actors_group_directory_template_content() : string {
+	$path = __DIR__ . '/../templates/group-directory.php';
+	if ( ! is_readable( $path ) ) {
+		return '';
+	}
+	ob_start();
+	include $path;
+	return (string) ob_get_clean();
+}
+
 /** @return void */
 function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-profile' );
@@ -848,6 +875,7 @@ function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-projections' );
 	register_block_type( __DIR__ . '/../blocks/actor-social-counts' );
 	register_block_type( __DIR__ . '/../blocks/actor-follow-list' );
+	register_block_type( __DIR__ . '/../blocks/group-directory' );
 	if ( function_exists( 'register_block_template' ) ) {
 		register_block_template(
 			'axismundi-actors//actor-profile',
@@ -865,6 +893,14 @@ function axismundi_actors_register_profile_block_and_template() : void {
 				'content'     => axismundi_actors_follow_collection_template_content(),
 			)
 		);
+		register_block_template(
+			'axismundi-actors//group-directory',
+			array(
+				'title'       => __( 'Group Directory', 'axismundi-actors' ),
+				'description' => __( 'Public Group Actors known to this server.', 'axismundi-actors' ),
+				'content'     => axismundi_actors_group_directory_template_content(),
+			)
+		);
 	}
 }
 add_action( 'init', 'axismundi_actors_register_profile_block_and_template', 20 );
@@ -874,7 +910,14 @@ add_action( 'init', 'axismundi_actors_register_profile_block_and_template', 20 )
  * @return string
  */
 function axismundi_actors_profile_template_include( string $template ) : string {
-	if ( ! axismundi_actors_current_actor() || is_404() ) {
+	if ( is_404() ) {
+		return $template;
+	}
+	if ( get_query_var( 'ax_group_directory' ) ) {
+		$templates = array( 'group-directory.php', 'index.php' );
+		return locate_block_template( locate_template( $templates ), 'group-directory', $templates );
+	}
+	if ( ! axismundi_actors_current_actor() ) {
 		return $template;
 	}
 	$is_collection = '' !== (string) get_query_var( 'ax_actor_collection' );
@@ -914,6 +957,10 @@ add_action( 'wp_head', 'axismundi_actors_print_canonical', 1 );
  * @return array<string,string>
  */
 function axismundi_actors_document_title_parts( array $parts ) : array {
+	if ( get_query_var( 'ax_group_directory' ) ) {
+		$parts['title'] = __( 'Groups', 'axismundi-actors' );
+		return $parts;
+	}
 	$actor = axismundi_actors_current_actor();
 	if ( $actor ) {
 		$collection = (string) get_query_var( 'ax_actor_collection' );

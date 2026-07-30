@@ -337,3 +337,38 @@ function axismundi_forum_manageable_communities( int $user_id ) : array {
 	}
 	return $communities;
 }
+
+/**
+ * Communities a local user can moderate through either local manager delegation or
+ * their Person Actor's accepted moderator membership.
+ *
+ * Remote Group moderator grants are not observed yet. The filter is deliberately at
+ * this seam so that future FEP-1b12 Add observation can contribute them without
+ * teaching Actors about Forum storage.
+ *
+ * @param int $user_id WordPress user.
+ * @return array<int,Axismundi_Actor> Group Actors keyed by identity.
+ */
+function axismundi_forum_moderated_communities( int $user_id ) : array {
+	if ( $user_id <= 0 ) {
+		return array();
+	}
+	$communities = axismundi_forum_manageable_communities( $user_id );
+	$person = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	if ( $person instanceof Axismundi_Actor ) {
+		global $wpdb;
+		$table = axismundi_forum_memberships_table();
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed actor/state/role lookup on Forum's projection table.
+		$group_ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT group_identity_id FROM {$table} WHERE actor_identity_id = %d AND membership_state = 'accepted' AND membership_role = 'moderator'", $person->get_identity_id() ) );
+		foreach ( $group_ids as $group_id ) {
+			$group = axismundi_forum_get_community_group( (int) $group_id );
+			if ( $group instanceof Axismundi_Actor ) {
+				$communities[ $group->get_identity_id() ] = $group;
+			}
+		}
+	}
+	/** @param array<int,Axismundi_Actor> $communities Effective local and observed remote moderator communities. */
+	$communities = (array) apply_filters( 'axismundi_forum_moderated_communities', $communities, $user_id );
+	ksort( $communities, SORT_NUMERIC );
+	return $communities;
+}

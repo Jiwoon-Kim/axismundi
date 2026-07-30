@@ -74,6 +74,20 @@ try {
 			&& axismundi_actors_get_by_uuid( $group->get_uuid() ) instanceof Axismundi_Actor
 	);
 
+	$public_group = axismundi_actors_create_managed_group(
+		array( 'owner_user_id' => $owner, 'preferred_username' => 'axmgpub' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' )
+	);
+	if ( $public_group instanceof Axismundi_Actor ) {
+		$ax_mg_identity_ids[] = $public_group->get_identity_id();
+	}
+	ax_mg_assert(
+		$ax_mg_results,
+		'the public Group directory includes published managed Groups and excludes internal ones',
+		$public_group instanceof Axismundi_Actor
+			&& in_array( $public_group->get_identity_id(), array_map( static fn( Axismundi_Actor $actor ) : int => $actor->get_identity_id(), axismundi_actors_get_public_groups( 100 ) ), true )
+			&& ! in_array( $identity_id, array_map( static fn( Axismundi_Actor $actor ) : int => $actor->get_identity_id(), axismundi_actors_get_public_groups( 100 ) ), true )
+	);
+
 	// Creation seeds exactly one owner -- there is never an observable ownerless
 	// managed actor.
 	ax_mg_assert(

@@ -34,6 +34,10 @@ object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
 
+= 0.8.6 =
+* Keeps discovery reasons in the Community result list rather than copying them
+  into the selected Community field.
+
 = 0.8.5 =
 * Makes direct submissions to remote threadiverse Groups compatible with Lemmy's
   public-object validation while retaining Group-only transport delivery.

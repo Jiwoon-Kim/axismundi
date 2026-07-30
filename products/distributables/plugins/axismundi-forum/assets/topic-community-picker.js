@@ -25,7 +25,7 @@
 			option.textContent = `${ item.name } (${ item.handle })${ reasons }`;
 			option.addEventListener( 'click', () => {
 				value.value = item.value;
-				input.value = option.textContent;
+				input.value = `${ item.name } (${ item.handle })`;
 				clear();
 			} );
 			const row = document.createElement( 'li' );

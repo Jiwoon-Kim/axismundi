@@ -119,6 +119,28 @@ try {
 		'a reply to a Topic inherits that Topic thread context from its parent',
 		$inherited === axismundi_forum_topic_context_uri( get_post( $topic ) )
 	);
+
+	$reply = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $owner, 'post_content' => '<p>Thread reply.</p>' ) );
+	$ax_tc_posts[] = $reply;
+	$reply_saved = $reply > 0 && function_exists( 'axismundi_note_save' )
+		? axismundi_note_save( $reply, array( 'in_reply_to_uri' => axismundi_forum_topic_object_uri( get_post( $topic ) ), 'visibility' => 'public' ) )
+		: new WP_Error( 'fixture' );
+	if ( ! is_wp_error( $reply_saved ) ) { wp_update_post( array( 'ID' => $reply, 'post_status' => 'publish' ) ); }
+	$reply_envelope = function_exists( 'axismundi_note_get' ) ? axismundi_note_get( $reply ) : null;
+	$reply_uri = is_array( $reply_envelope ) ? axismundi_note_object_uri( (string) $reply_envelope['local_uuid'] ) : '';
+	$reply_create = '' !== $reply_uri ? axismundi_act_get_object_lifecycle( $reply_uri ) : null;
+	$reply_announces = $reply_create instanceof Axismundi_Activity ? axismundi_act_get_by_object( $reply_create->get_uri(), 10 ) : array();
+	$reply_announce = empty( $reply_announces ) ? null : reset( $reply_announces );
+	ax_tc_assert(
+		$ax_tc_results,
+		'a local Note reply addresses its Topic Group and is redistributed as Group Announce(Create(Note))',
+		! is_wp_error( $reply_saved ) && $reply_create instanceof Axismundi_Activity && 'Create' === $reply_create->get_type()
+			&& $group instanceof Axismundi_Actor && in_array( $group->get_uri(), (array) ( $reply_create->get_audience()['to'] ?? array() ), true )
+			&& $group->get_uri() === (string) ( $reply_create->get_payload()['object']['audience'] ?? '' )
+			&& $reply_announce instanceof Axismundi_Activity && 'Announce' === $reply_announce->get_type()
+			&& 'Create' === (string) ( $reply_announce->get_payload()['object']['type'] ?? '' )
+			&& $group->get_uri() === $reply_announce->get_actor_uri()
+	);
 } finally {
 	foreach ( array_unique( $ax_tc_posts ) as $post_id ) {
 		if ( get_post( (int) $post_id ) ) {

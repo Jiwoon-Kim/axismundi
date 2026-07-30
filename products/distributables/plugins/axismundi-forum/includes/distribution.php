@@ -308,6 +308,84 @@ function axismundi_forum_pre_delete_topic_distribution( $delete, WP_Post $topic 
 }
 add_filter( 'pre_delete_post', 'axismundi_forum_pre_delete_topic_distribution', 30, 2 );
 
+/** Resolve the addressed community Group from a Note reply's parent Object. */
+function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Axismundi_Actor {
+	$envelope = $source->get_envelope();
+	$parent_uri = (string) ( $envelope['in_reply_to_uri'] ?? '' );
+	if ( '' === $parent_uri || ! function_exists( 'axismundi_op_resolve_source_by_uri' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		return null;
+	}
+	$parent = array();
+	$parent_source = axismundi_op_resolve_source_by_uri( $parent_uri );
+	if ( null !== $parent_source && ! $parent_source instanceof Axismundi_Op_Remote_Source && function_exists( 'axismundi_op_resolve_object_transformer' ) ) {
+		$transformer = axismundi_op_resolve_object_transformer( $parent_source );
+		$parent = is_array( $transformer ) ? (array) call_user_func( $transformer['transform'], $parent_source ) : array();
+	}
+	if ( empty( $parent ) && function_exists( 'axismundi_op_remote_object_get' ) ) {
+		$stored = axismundi_op_remote_object_get( $parent_uri, false );
+		$parent = is_array( $stored ) ? (array) ( $stored['payload'] ?? array() ) : array();
+	}
+	foreach ( axismundi_forum_member_uris( $parent['audience'] ?? array() ) as $uri ) {
+		$group = axismundi_actors_get_by_uri( $uri );
+		if ( $group instanceof Axismundi_Actor && 'Group' === $group->get_type() && 'public' === $group->get_status() && ( ! $group->is_local() || axismundi_forum_is_community( $group->get_identity_id() ) ) ) {
+			return $group;
+		}
+	}
+	return null;
+}
+
+/** Address a Note reply to its parent Topic's Group instead of the author's personal audience. */
+function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_Source $source ) : array {
+	$group = axismundi_forum_note_reply_group( $source );
+	return $group instanceof Axismundi_Actor ? array( 'public' => false, 'to' => array( $group->get_uri() ), 'cc' => array() ) : $audience;
+}
+add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audience', 10, 2 );
+
+/** Name the community on a threaded Note so peers can navigate reply → Topic → Group. */
+function axismundi_forum_note_reply_object( array $object, Axismundi_Note_Source $source ) : array {
+	$group = axismundi_forum_note_reply_group( $source );
+	if ( $group instanceof Axismundi_Actor ) {
+		$object['audience'] = $group->get_uri();
+	}
+	return $object;
+}
+add_filter( 'axismundi_note_project_object', 'axismundi_forum_note_reply_object', 10, 2 );
+
+/** Redistribute a local Group-addressed Note lifecycle through that Group's followers. */
+function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $activity ) : void {
+	if ( 'outbound' !== $activity->get_direction() || ! $activity->is_effective() || ! in_array( $activity->get_type(), array( 'Create', 'Update', 'Delete' ), true ) ) {
+		return;
+	}
+	$payload = $activity->get_payload();
+	$object = $payload['object'] ?? null;
+	$note_source = null;
+	if ( is_array( $object ) && 'Note' === (string) ( $object['type'] ?? '' ) && ! empty( $object['inReplyTo'] ) && function_exists( 'axismundi_note_local_uuid_from_uri' ) && function_exists( 'axismundi_note_get_by_uuid' ) ) {
+		$uuid = axismundi_note_local_uuid_from_uri( (string) ( $object['id'] ?? '' ) );
+		$envelope = null === $uuid ? null : axismundi_note_get_by_uuid( $uuid );
+		$post = is_array( $envelope ) ? get_post( (int) $envelope['post_id'] ) : null;
+		$note_source = is_array( $envelope ) ? new Axismundi_Note_Source( $envelope, $post instanceof WP_Post ? $post : null ) : null;
+	} elseif ( is_string( $object ) && function_exists( 'axismundi_note_local_uuid_from_uri' ) && function_exists( 'axismundi_note_get_by_uuid' ) ) {
+		$uuid = axismundi_note_local_uuid_from_uri( $object );
+		$envelope = null === $uuid ? null : axismundi_note_get_by_uuid( $uuid );
+		$post = is_array( $envelope ) ? get_post( (int) $envelope['post_id'] ) : null;
+		$note_source = is_array( $envelope ) ? new Axismundi_Note_Source( $envelope, $post instanceof WP_Post ? $post : null ) : null;
+	}
+	$group = $note_source instanceof Axismundi_Note_Source ? axismundi_forum_note_reply_group( $note_source ) : null;
+	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() ) {
+		return;
+	}
+	$audience = axismundi_forum_distribution_audience( $group );
+	if ( is_wp_error( $audience ) || ! function_exists( 'axismundi_act_record_source_activity' ) ) {
+		return;
+	}
+	axismundi_act_record_source_activity(
+		array( 'type' => 'Announce', 'actor' => $group->get_uri(), 'object' => $payload, 'to' => $audience['to'], 'cc' => $audience['cc'] ),
+		'outbound',
+		'forum-group-reply-announce:' . $group->get_identity_id() . ':' . $activity->get_uri()
+	);
+}
+add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_group_reply_activity', 30 );
+
 /**
  * Withdraw an approved Topic from this community without deleting the author's Object.
  *

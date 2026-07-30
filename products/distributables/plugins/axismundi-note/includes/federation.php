@@ -227,7 +227,21 @@ function axismundi_note_source_audience( Axismundi_Note_Source $source ) {
 	) {
 		return new WP_Error( 'ax_note_not_ready', __( 'The Note is not ready for public projection.', 'axismundi-note' ) );
 	}
-	return axismundi_act_resolve_audience( $actor, (string) $envelope['visibility'], axismundi_note_mentions( $post ) );
+	$audience = axismundi_act_resolve_audience( $actor, (string) $envelope['visibility'], axismundi_note_mentions( $post ) );
+	if ( ! is_array( $audience ) ) {
+		return $audience;
+	}
+	/**
+	 * A domain product may replace the delivery audience of a Note it owns context for.
+	 *
+	 * Forum uses this for a reply addressed to a Group: its Person Create goes directly to
+	 * that Group, whose Announce is the only community distribution. The Note plugin remains
+	 * unaware of Group semantics and ordinary Notes retain their authored visibility mapping.
+	 *
+	 * @param array<string,mixed> $audience Resolved Note delivery audience.
+	 * @param Axismundi_Note_Source $source Active Note source.
+	 */
+	return apply_filters( 'axismundi_note_source_audience', $audience, $source );
 }
 
 /**
@@ -505,7 +519,18 @@ function axismundi_note_transform_source( Axismundi_Note_Source $source ) {
 	if ( is_array( $interaction_policy ) ) {
 		$object['interactionPolicy'] = $interaction_policy;
 	}
-	return function_exists( 'axismundi_note_quote_project_object' ) ? axismundi_note_quote_project_object( $post, $object ) : $object;
+	$object = function_exists( 'axismundi_note_quote_project_object' ) ? axismundi_note_quote_project_object( $post, $object ) : $object;
+	/**
+	 * Add domain-owned Object members after Note has finalized its own projection.
+	 *
+	 * Forum adds the Group `audience` member to threaded replies. This is separate from
+	 * `to`/`cc`: it names the community the reply belongs to as it travels through a
+	 * Person Create and a Group Announce.
+	 *
+	 * @param array<string,mixed> $object Projected Note Object.
+	 * @param Axismundi_Note_Source $source Active Note source.
+	 */
+	return apply_filters( 'axismundi_note_project_object', $object, $source );
 }
 
 /**

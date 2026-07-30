@@ -1,0 +1,133 @@
+<?php
+/** Forum moderation and FEP-1b12 distribution regression (dev-only). */
+
+defined( 'ABSPATH' ) || exit( 1 );
+
+require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/repository.php';
+require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
+require_once __DIR__ . '/../includes/repository.php';
+require_once __DIR__ . '/../includes/topics.php';
+require_once __DIR__ . '/../includes/memberships.php';
+require_once __DIR__ . '/../includes/moderators.php';
+require_once __DIR__ . '/../includes/distribution.php';
+require_once __DIR__ . '/../includes/admin.php';
+
+axismundi_forum_install();
+axismundi_forum_register_topic_post_type();
+
+global $wpdb;
+$ax_fmod_results = array();
+$ax_fmod_users = array();
+$ax_fmod_identities = array();
+$ax_fmod_posts = array();
+
+function ax_fmod_assert( array &$results, string $label, bool $condition ) : void {
+	$results[] = $condition;
+	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+}
+
+/** @return array{0:int,1:Axismundi_Actor|null} */
+function ax_fmod_person( array &$users, array &$identities, string $role = 'editor' ) : array {
+	$login = 'axfmod' . strtolower( wp_generate_password( 8, false, false ) );
+	$user_id = (int) wp_insert_user( array( 'user_login' => $login, 'user_pass' => wp_generate_password(), 'role' => $role ) );
+	if ( $user_id <= 0 ) { return array( 0, null ); }
+	$users[] = $user_id;
+	$actor = axismundi_actors_ensure_for_user( $user_id );
+	if ( ! $actor instanceof Axismundi_Actor || is_wp_error( axismundi_actors_register_handle( $actor->get_identity_id(), $login ) ) || ! axismundi_actors_set_status( $actor->get_identity_id(), 'public' ) ) {
+		return array( $user_id, null );
+	}
+	$actor = axismundi_actors_get_for_user( $user_id );
+	if ( $actor instanceof Axismundi_Actor ) { $identities[] = $actor->get_identity_id(); }
+	return array( $user_id, $actor instanceof Axismundi_Actor ? $actor : null );
+}
+
+try {
+	list( $owner_user, $owner ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
+	list( $alice_user, $alice ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
+	list( $bob_user, $bob ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
+	list( $editor_user, $editor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
+	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
+	if ( $group instanceof Axismundi_Actor ) { $ax_fmod_identities[] = $group->get_identity_id(); }
+	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	if ( $alice instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $alice, $group ); }
+	if ( $bob instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $bob, $group ); }
+
+	$promoted = $alice instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $alice->get_identity_id(), $owner_user, true ) : new WP_Error( 'fixture' );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a Group manager is an effective moderator and can promote an accepted Actor member independently of WordPress delegation',
+		true === $promoted
+			&& axismundi_forum_user_can_moderate( $group_id, $owner_user )
+			&& $alice instanceof Axismundi_Actor
+			&& axismundi_forum_actor_is_moderator( $group_id, $alice )
+	);
+
+	$topic_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $bob_user, 'post_title' => 'Pending Topic' ) );
+	if ( $topic_id > 0 ) { $ax_fmod_posts[] = $topic_id; }
+	$topic = get_post( $topic_id );
+	$object_uri = $topic instanceof WP_Post ? axismundi_forum_topic_object_uri( $topic ) : '';
+	$create = $bob instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'type' => 'Create', 'actor' => $bob->get_uri(), 'object' => array( 'id' => $object_uri, 'type' => 'Article', 'attributedTo' => $bob->get_uri(), 'name' => 'Pending Topic', 'audience' => $group->get_uri() ), 'to' => array( $group->get_uri() ) ), 'outbound' )
+		: new WP_Error( 'fixture' );
+	$approval_policy = axismundi_forum_set_topic_approval_policy( $group_id, $owner_user, 'approval' );
+	$admitted = true === $approval_policy ? axismundi_forum_admit_local_topic( $group_id, $topic_id, $bob_user ) : $approval_policy;
+	$pending_entry = axismundi_forum_get_topic_entry( $topic_id );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a valid Topic submission waits in the Group pending queue until a moderator approves distribution',
+		$create instanceof Axismundi_Activity && true === $admitted && is_array( $pending_entry)
+			&& 'pending' === (string) $pending_entry['admission_state']
+			&& 1 === count( axismundi_forum_pending_topic_entries( $group_id ) )
+	);
+	wp_set_current_user( $alice_user );
+	ob_start();
+	axismundi_forum_render_group_admin_section( $group );
+	$moderator_screen = (string) ob_get_clean();
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'an Actor moderator may review Topic submissions in the Group record without receiving manager-only policy controls',
+		str_contains( $moderator_screen, 'Topic submissions' ) && ! str_contains( $moderator_screen, 'Save community settings' )
+	);
+	wp_set_current_user( 0 );
+
+	$approved = is_array( $pending_entry ) ? axismundi_forum_approve_pending_entry( (int) $pending_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$approved_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$outer = is_array( $approved_entry ) ? axismundi_act_get( (string) $approved_entry['announced_activity_uri'] ) : null;
+	$followers = function_exists( 'axismundi_op_actor_followers_url' ) && $group instanceof Axismundi_Actor ? axismundi_op_actor_followers_url( $group ) : '';
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a moderator approval records Group Announce(Create) to followers before making the entry visible',
+		true === $approved && is_array( $approved_entry) && 'visible' === (string) $approved_entry['admission_state']
+			&& $outer instanceof Axismundi_Activity && 'Announce' === $outer->get_type() && $group instanceof Axismundi_Actor
+			&& $group->get_uri() === $outer->get_actor_uri() && 'Create' === (string) ( $outer->get_payload()['object']['type'] ?? '' )
+			&& in_array( $followers, (array) ( $outer->get_audience()['to'] ?? array() ), true )
+	);
+
+	$remote_uri = 'https://remote.example/topics/' . wp_generate_uuid4();
+	$wpdb->insert( axismundi_forum_entries_table(), array( 'group_identity_id' => $group_id, 'object_uri' => $remote_uri, 'object_uri_hash' => hash( 'sha256', $remote_uri ), 'entry_type' => 'topic', 'admission_state' => 'visible', 'moderation_state' => 'visible', 'created_at' => current_time( 'mysql', true ), 'updated_at' => current_time( 'mysql', true ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$remote_entry_id = (int) $wpdb->insert_id;
+	$held = axismundi_forum_set_entry_moderation_state( $remote_entry_id, $editor_user, 'pending' );
+	$remote_entry = axismundi_forum_get_entry( $remote_entry_id );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a site editor can place a remote-only entry with no WordPress post into the internal moderation queue',
+		true === $held && is_array( $remote_entry) && 'pending' === (string) $remote_entry['moderation_state'] && empty( $remote_entry['source_post_id'] )
+	);
+} finally {
+	foreach ( $ax_fmod_posts as $post_id ) { wp_delete_post( $post_id, true ); }
+	foreach ( $ax_fmod_identities as $identity_id ) {
+		$wpdb->delete( axismundi_forum_memberships_table(), array( 'group_identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( axismundi_forum_memberships_table(), array( 'actor_identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => $identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	}
+	foreach ( $ax_fmod_users as $user_id ) { wp_delete_user( $user_id ); }
+}
+
+$failed = count( array_filter( $ax_fmod_results, static fn( $value ) : bool => ! $value ) );
+printf( "\n%d/%d passed\n", count( $ax_fmod_results ) - $failed, count( $ax_fmod_results ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+exit( $failed > 0 ? 1 : 0 );

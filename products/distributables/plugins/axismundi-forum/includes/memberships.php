@@ -275,10 +275,11 @@ function axismundi_forum_write_membership( int $group_identity_id, int $actor_id
 	if ( is_array( $existing ) ) {
 		$updated = $wpdb->update(
 			$table,
-			array(
-				'membership_evidence_activity_uri' => $membership_evidence_activity_uri,
-				'membership_state'                 => $state,
-				'updated_at'                       => $now,
+		array(
+			'membership_evidence_activity_uri' => $membership_evidence_activity_uri,
+			'membership_state'                 => $state,
+			'membership_role'                  => (string) ( $existing['membership_role'] ?? 'member' ),
+			'updated_at'                       => $now,
 			),
 			array( 'group_identity_id' => $group_identity_id, 'actor_identity_id' => $actor_identity_id ),
 			array( '%s', '%s', '%s' ),
@@ -293,6 +294,7 @@ function axismundi_forum_write_membership( int $group_identity_id, int $actor_id
 			'actor_identity_id'                => $actor_identity_id,
 			'membership_evidence_activity_uri' => $membership_evidence_activity_uri,
 			'membership_state'                 => $state,
+			'membership_role'                  => 'member',
 			'created_at'                       => $now,
 			'updated_at'                       => $now,
 		),

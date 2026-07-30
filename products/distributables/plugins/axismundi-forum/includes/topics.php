@@ -59,6 +59,18 @@ function axismundi_forum_get_topic_entry( int $topic_post_id ) : ?array {
 	return is_array( $row ) ? $row : null;
 }
 
+/** One contextual Topic entry, including remote entries with no WordPress post. */
+function axismundi_forum_get_entry( int $entry_id ) : ?array {
+	if ( $entry_id <= 0 ) {
+		return null;
+	}
+	global $wpdb;
+	$table = axismundi_forum_entries_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- primary-key lookup on a Forum-owned entry projection.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $entry_id ), ARRAY_A );
+	return is_array( $row ) ? $row : null;
+}
+
 /** Count entries in one Forum without conflating them with its activity feed. */
 function axismundi_forum_count_entries( int $group_identity_id ) : int {
 	global $wpdb;
@@ -92,6 +104,14 @@ function axismundi_forum_posting_policies() : array {
 	);
 }
 
+/** @return array<string,string> Stable Group validation choices for submitted Topics. */
+function axismundi_forum_topic_approval_policies() : array {
+	return array(
+		'open'     => __( 'Announce accepted Topics automatically', 'axismundi-forum' ),
+		'approval' => __( 'Require moderator approval before Announce', 'axismundi-forum' ),
+	);
+}
+
 /** Read one Forum's local Topic-admission policy, defaulting new Forums to F1 open posting. */
 function axismundi_forum_get_posting_policy( int $group_identity_id ) : string {
 	$community = axismundi_forum_get_community( $group_identity_id );
@@ -118,6 +138,24 @@ function axismundi_forum_set_posting_policy( int $group_identity_id, int $user_i
 		return true;
 	}
 	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'posting_policy', $policy );
+}
+
+/** Read one community's Topic validation policy. */
+function axismundi_forum_get_topic_approval_policy( int $group_identity_id ) : string {
+	$community = axismundi_forum_get_community( $group_identity_id );
+	$policy = is_array( $community ) ? (string) $community['topic_approval_policy'] : '';
+	return array_key_exists( $policy, axismundi_forum_topic_approval_policies() ) ? $policy : 'open';
+}
+
+/** Change whether valid Topic submissions await a Group moderator. */
+function axismundi_forum_set_topic_approval_policy( int $group_identity_id, int $user_id, string $policy ) {
+	if ( ! array_key_exists( $policy, axismundi_forum_topic_approval_policies() ) ) {
+		return new WP_Error( 'ax_forum_topic_approval_policy', __( 'The Topic approval policy is invalid.', 'axismundi-forum' ) );
+	}
+	if ( $policy === axismundi_forum_get_topic_approval_policy( $group_identity_id ) ) {
+		return true;
+	}
+	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'topic_approval_policy', $policy );
 }
 
 /** Whether this user may admit this local Topic under the Forum's current F1 policy. */
@@ -163,6 +201,52 @@ function axismundi_forum_update_topic_entry( int $topic_post_id, int $user_id, a
 	return false === $updated
 		? new WP_Error( 'ax_forum_topic_state_write', __( 'The Topic state could not be saved.', 'axismundi-forum' ) )
 		: true;
+}
+
+/**
+ * Change the local visibility decision for a contextual Topic entry.
+ *
+ * `pending` is deliberately an internal moderation queue state. It neither deletes the source
+ * object nor makes a federation claim. With Group distribution enabled, withdrawing a prior
+ * Announce is a separate `Undo(Announce(Create))` operation.
+ */
+function axismundi_forum_set_entry_moderation_state( int $entry_id, int $user_id, string $state ) {
+	if ( ! in_array( $state, array( 'visible', 'pending' ), true ) ) {
+		return new WP_Error( 'ax_forum_moderation_state', __( 'The moderation state is invalid.', 'axismundi-forum' ) );
+	}
+	$entry = axismundi_forum_get_entry( $entry_id );
+	if ( ! is_array( $entry ) ) {
+		return new WP_Error( 'ax_forum_entry_missing', __( 'The Forum entry does not exist.', 'axismundi-forum' ) );
+	}
+	$site_moderator = $user_id > 0 && user_can( $user_id, 'edit_others_posts' );
+	if ( ! $site_moderator && ! function_exists( 'axismundi_forum_user_can_moderate' )
+		|| ( ! $site_moderator && ! axismundi_forum_user_can_moderate( (int) $entry['group_identity_id'], $user_id ) ) ) {
+		return new WP_Error( 'ax_forum_forbidden', __( 'You may not moderate this community entry.', 'axismundi-forum' ) );
+	}
+	if ( $state === (string) $entry['moderation_state'] ) {
+		return true;
+	}
+	global $wpdb;
+	$updated = $wpdb->update(
+		axismundi_forum_entries_table(),
+		array( 'moderation_state' => $state, 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => $entry_id ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- entry-scoped moderation state, including remote entries.
+	return false === $updated ? new WP_Error( 'ax_forum_moderation_write', __( 'The moderation state could not be saved.', 'axismundi-forum' ) ) : true;
+}
+
+/** @return array<int,array<string,mixed>> Topic submissions awaiting Group Announce approval. */
+function axismundi_forum_pending_topic_entries( int $group_identity_id, int $limit = 100 ) : array {
+	if ( $group_identity_id <= 0 ) {
+		return array();
+	}
+	global $wpdb;
+	$table = axismundi_forum_entries_table();
+	$limit = max( 1, min( 100, $limit ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed Group-scoped pending Topic queue.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND admission_state = 'pending' ORDER BY created_at ASC, id ASC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
 }
 
 /** Lock or reopen a Topic for replies; source object content remains unchanged. */
@@ -230,7 +314,7 @@ function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_p
 			'object_uri_hash'               => hash( 'sha256', axismundi_forum_topic_object_uri( $topic ) ),
 			'entry_type'                    => 'topic',
 			'source_post_id'                => $topic_post_id,
-			'admission_state'               => 'visible',
+			'admission_state'               => 'approval' === axismundi_forum_get_topic_approval_policy( $group_identity_id ) ? 'pending' : 'visible',
 			'moderation_state'              => 'visible',
 			'created_at'                    => $now,
 			'updated_at'                    => $now,

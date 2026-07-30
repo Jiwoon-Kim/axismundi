@@ -142,7 +142,7 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 				'object_uri_hash'               => hash( 'sha256', $object_uri ),
 				'entry_type'                    => 'topic',
 				'submission_actor_identity_id' => $author->get_identity_id(),
-				'admission_state'               => 'visible',
+				'admission_state'               => 'approval' === axismundi_forum_get_topic_approval_policy( $group_identity_id ) ? 'pending' : 'visible',
 				'moderation_state'              => 'visible',
 				'accepted_activity_uri'          => $activity->get_uri(),
 				'created_at'                    => $now,

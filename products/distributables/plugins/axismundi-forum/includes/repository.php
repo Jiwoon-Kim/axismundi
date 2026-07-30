@@ -21,7 +21,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_DB_VERSION = '5.0';
+const AXISMUNDI_FORUM_DB_VERSION = '5.2';
 
 /** @return string Fully-qualified Forum-entry projection table name. */
 function axismundi_forum_entries_table() : string {
@@ -70,6 +70,7 @@ function axismundi_forum_install() : void {
 			group_identity_id bigint(20) unsigned NOT NULL,
 			posting_policy varchar(12) NOT NULL DEFAULT 'open',
 			membership_policy varchar(12) NOT NULL DEFAULT 'open',
+			topic_approval_policy varchar(12) NOT NULL DEFAULT 'open',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (group_identity_id)
@@ -110,11 +111,13 @@ function axismundi_forum_install() : void {
 			actor_identity_id bigint(20) unsigned NOT NULL,
 			membership_evidence_activity_uri text DEFAULT NULL,
 			membership_state varchar(12) NOT NULL DEFAULT 'pending',
+			membership_role varchar(12) NOT NULL DEFAULT 'member',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (group_identity_id, actor_identity_id),
 			KEY actor_state (actor_identity_id, membership_state),
-			KEY group_state (group_identity_id, membership_state)
+			KEY group_state (group_identity_id, membership_state),
+			KEY group_role (group_identity_id, membership_role, membership_state)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -141,7 +144,9 @@ function axismundi_forum_install() : void {
 		&& ! empty( $entry_unique )
 		&& in_array( 'entry_type', $entry_columns, true )
 		&& in_array( 'membership_evidence_activity_uri', $membership_columns, true )
+		&& in_array( 'membership_role', $membership_columns, true )
 		&& in_array( 'membership_policy', $settings_columns, true )
+		&& in_array( 'topic_approval_policy', $settings_columns, true )
 		&& 'InnoDB' === $engine ) {
 		update_option( 'ax_forum_db_version', AXISMUNDI_FORUM_DB_VERSION, false );
 	}
@@ -250,7 +255,7 @@ add_action( 'axismundi_actors_status_changed', 'axismundi_forum_sync_group_statu
  * The policy settings for one public managed Group, or null otherwise.
  *
  * @param int $group_identity_id Group identity.
- * @return array{group_identity_id:int,posting_policy:string,membership_policy:string,created_at:string,updated_at:string}|null
+ * @return array{group_identity_id:int,posting_policy:string,membership_policy:string,topic_approval_policy:string,created_at:string,updated_at:string}|null
  */
 function axismundi_forum_get_community( int $group_identity_id ) : ?array {
 	if ( $group_identity_id <= 0 || ! function_exists( 'axismundi_actors_get_by_identity' ) ) {
@@ -265,12 +270,13 @@ function axismundi_forum_get_community( int $group_identity_id ) : ?array {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- PK lookup on a custom table.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d", $group_identity_id ), ARRAY_A );
 	if ( null === $row ) {
-		return array( 'group_identity_id' => $group_identity_id, 'posting_policy' => 'open', 'membership_policy' => 'open', 'created_at' => '', 'updated_at' => '' );
+		return array( 'group_identity_id' => $group_identity_id, 'posting_policy' => 'open', 'membership_policy' => 'open', 'topic_approval_policy' => 'open', 'created_at' => '', 'updated_at' => '' );
 	}
 	return array(
 		'group_identity_id' => (int) $row['group_identity_id'],
 		'posting_policy'    => (string) $row['posting_policy'],
 		'membership_policy' => (string) $row['membership_policy'],
+		'topic_approval_policy' => (string) $row['topic_approval_policy'],
 		'created_at'        => (string) $row['created_at'],
 		'updated_at'        => (string) $row['updated_at'],
 	);
@@ -283,18 +289,19 @@ function axismundi_forum_is_community( int $group_identity_id ) : bool {
 
 /** Update one community policy after verifying Group-manager authority. */
 function axismundi_forum_update_community_policy( int $group_identity_id, int $user_id, string $column, string $value ) {
-	if ( ! in_array( $column, array( 'posting_policy', 'membership_policy' ), true ) || ! axismundi_forum_is_community( $group_identity_id )
+	if ( ! in_array( $column, array( 'posting_policy', 'membership_policy', 'topic_approval_policy' ), true ) || ! axismundi_forum_is_community( $group_identity_id )
 		|| ! axismundi_forum_actors_available() || ! axismundi_actors_managed_actor_can_manage( $group_identity_id, $user_id ) ) {
 		return new WP_Error( 'ax_forum_forbidden', __( 'You do not manage this community.', 'axismundi-forum' ) );
 	}
 	global $wpdb;
 	$now = current_time( 'mysql', true );
 	$table = axismundi_forum_settings_table();
-	$sql = 'INSERT INTO ' . $table . ' (group_identity_id, posting_policy, membership_policy, created_at, updated_at) VALUES (%d, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE ' . $column . ' = VALUES(' . $column . '), updated_at = VALUES(updated_at)';
+	$sql = 'INSERT INTO ' . $table . ' (group_identity_id, posting_policy, membership_policy, topic_approval_policy, created_at, updated_at) VALUES (%d, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE ' . $column . ' = VALUES(' . $column . '), updated_at = VALUES(updated_at)';
 	$existing = axismundi_forum_get_community( $group_identity_id );
 	$posted = 'posting_policy' === $column ? $value : (string) $existing['posting_policy'];
 	$membership = 'membership_policy' === $column ? $value : (string) $existing['membership_policy'];
-	$written = $wpdb->query( $wpdb->prepare( $sql, $group_identity_id, $posted, $membership, $now, $now ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- allowlisted policy column and Group-keyed upsert.
+	$topic_approval = 'topic_approval_policy' === $column ? $value : (string) $existing['topic_approval_policy'];
+	$written = $wpdb->query( $wpdb->prepare( $sql, $group_identity_id, $posted, $membership, $topic_approval, $now, $now ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- allowlisted policy column and Group-keyed upsert.
 	return false === $written ? new WP_Error( 'ax_forum_settings_write', __( 'The community settings could not be saved.', 'axismundi-forum' ) ) : true;
 }
 

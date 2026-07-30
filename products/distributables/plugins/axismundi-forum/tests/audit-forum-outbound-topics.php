@@ -39,8 +39,8 @@ function ax_fot_assert( array &$results, string $label, bool $condition ) : void
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
-function ax_fot_user( array &$user_ids ) : int {
-	$user_id = (int) wp_insert_user( array( 'user_login' => 'ax_fot_' . strtolower( wp_generate_password( 10, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'editor' ) );
+function ax_fot_user( array &$user_ids, string $role = 'editor' ) : int {
+	$user_id = (int) wp_insert_user( array( 'user_login' => 'ax_fot_' . strtolower( wp_generate_password( 10, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => $role ) );
 	if ( $user_id > 0 ) {
 		$user_ids[] = $user_id;
 	}
@@ -127,12 +127,6 @@ try {
 			$ax_fot_activity_uris[] = $accept_uri;
 		}
 	}
-	$followed_groups = axismundi_forum_followed_remote_groups_for_user( $author_user );
-	ax_fot_assert(
-		$ax_fot_results,
-		'the Topic picker source lists an accepted remote Group only through the author Follow projection',
-		$group instanceof Axismundi_Actor && isset( $followed_groups[ $group->get_identity_id() ] ) && $group->get_uri() === $followed_groups[ $group->get_identity_id() ]->get_uri()
-	);
 	$picker_topic_id = (int) wp_insert_post(
 		array(
 			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,
@@ -144,6 +138,12 @@ try {
 	if ( $picker_topic_id > 0 ) {
 		$ax_fot_post_ids[] = $picker_topic_id;
 	}
+	$search_results = axismundi_forum_search_topic_communities( (string) $group->get_preferred_username(), $picker_topic_id, $author_user );
+	ax_fot_assert(
+		$ax_fot_results,
+		'a bounded Community search returns a cached remote Group without discovering anything remotely',
+		$group instanceof Axismundi_Actor && 1 === count( $search_results ) && 'remote:' . $group->get_identity_id() === (string) ( $search_results[0]['value'] ?? '' )
+	);
 	$manager_topic_id = (int) wp_insert_post(
 		array(
 			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,
@@ -169,6 +169,21 @@ try {
 		'an accepted local member may submit only under members policy to a community they do not manage',
 		$joined_group instanceof Axismundi_Actor && $joined_blocked && $joined_can_post && $manager_not_member && isset( $joined_memberships[ $joined_group->get_identity_id() ] )
 	);
+	$suggestions = axismundi_forum_suggest_topic_communities( $picker_topic_id, $author_user );
+	$suggested   = array();
+	foreach ( $suggestions as $suggestion ) {
+		$suggested[ (string) ( $suggestion['value'] ?? '' ) ] = (array) ( $suggestion['reasons'] ?? array() );
+	}
+	ax_fot_assert(
+		$ax_fot_results,
+		'the empty Community picker suggests followed, moderated, and recently used destinations without loading a directory',
+		$group instanceof Axismundi_Actor && $local_group instanceof Axismundi_Actor && $joined_group instanceof Axismundi_Actor
+			&& in_array( 'Following', $suggested[ 'remote:' . $group->get_identity_id() ] ?? array(), true )
+			&& in_array( 'Recent', $suggested[ 'remote:' . $group->get_identity_id() ] ?? array(), true )
+			&& in_array( 'Moderating', $suggested[ 'local:' . $local_group->get_identity_id() ] ?? array(), true )
+			&& in_array( 'Following', $suggested[ 'local:' . $joined_group->get_identity_id() ] ?? array(), true )
+			&& count( $suggestions ) <= 20
+	);
 	wp_set_current_user( $author_user );
 	ob_start();
 	$picker_topic = get_post( $picker_topic_id );
@@ -179,14 +194,10 @@ try {
 	$picker_text   = html_entity_decode( $picker_markup, ENT_QUOTES, get_bloginfo( 'charset' ) );
 	ax_fot_assert(
 		$ax_fot_results,
-		'the Topic editor presents manageable, joined local, and accepted followed remote Groups as distinct community targets',
-		$local_group instanceof Axismundi_Actor && $joined_group instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
-			&& str_contains( $picker_markup, 'value="local:' . $local_group->get_identity_id() . '"' )
-			&& str_contains( $picker_markup, 'value="local:' . $joined_group->get_identity_id() . '"' )
-			&& str_contains( $picker_markup, 'value="remote:' . $group->get_identity_id() . '"' )
-			&& str_contains( $picker_markup, 'My communities' )
-			&& str_contains( $picker_text, 'Communities I\'ve joined' )
-			&& str_contains( $picker_markup, 'Followed remote communities' )
+		'the Topic editor renders a search-only Community picker rather than a full Group directory',
+		str_contains( $picker_markup, 'axismundi-forum-topic-community-search' )
+			&& str_contains( $picker_markup, 'data-post-id="' . $picker_topic_id . '"' )
+			&& ! str_contains( $picker_markup, 'Followed remote communities' )
 	);
 	ax_fot_assert(
 		$ax_fot_results,
@@ -213,11 +224,35 @@ try {
 	);
 
 	$unfollowed_group = ax_fot_remote_group( $ax_fot_identity_ids, 'unfollowed_' . strtolower( wp_generate_password( 7, false, false ) ) );
-	$blocked = $unfollowed_group instanceof Axismundi_Actor ? axismundi_forum_create_remote_topic( $author_user, $unfollowed_group->get_identity_id(), array( 'title' => 'Must not publish' ) ) : new WP_Error( 'fixture' );
+	$unfollowed = $unfollowed_group instanceof Axismundi_Actor ? axismundi_forum_create_remote_topic( $author_user, $unfollowed_group->get_identity_id(), array( 'title' => 'May publish without joining' ) ) : new WP_Error( 'fixture' );
+	if ( $unfollowed instanceof WP_Post ) {
+		$ax_fot_post_ids[] = $unfollowed->ID;
+	}
 	ax_fot_assert(
 		$ax_fot_results,
-		'a cached remote Group without the author Follow relation cannot receive an outbound Topic',
-		is_wp_error( $blocked ) && 'ax_forum_remote_topic_forbidden' === $blocked->get_error_code()
+		'a cached remote Group may receive an outbound Topic without an author Follow relation',
+		$unfollowed instanceof WP_Post
+	);
+	$profileless_user = ax_fot_user( $ax_fot_user_ids );
+	$subscriber_user  = ax_fot_user( $ax_fot_user_ids, 'subscriber' );
+	$subscriber_actor = $subscriber_user > 0 ? axismundi_actors_ensure_for_user( $subscriber_user ) : null;
+	if ( $subscriber_actor instanceof Axismundi_Actor ) {
+		$ax_fot_identity_ids[] = $subscriber_actor->get_identity_id();
+		axismundi_actors_register_handle( $subscriber_actor->get_identity_id(), 'axfot' . strtolower( wp_generate_password( 8, false, false ) ) );
+		axismundi_actors_set_status( $subscriber_actor->get_identity_id(), 'public' );
+	}
+	$disabled_group = ax_fot_remote_group( $ax_fot_identity_ids, 'disabled_' . strtolower( wp_generate_password( 7, false, false ) ) );
+	if ( $disabled_group instanceof Axismundi_Actor ) {
+		axismundi_actors_set_status( $disabled_group->get_identity_id(), 'disabled' );
+		$disabled_group = axismundi_actors_get_by_identity( $disabled_group->get_identity_id() );
+	}
+	ax_fot_assert(
+		$ax_fot_results,
+		'remote Topic submission still requires an editor-capable public Person and a public cached Group',
+		$group instanceof Axismundi_Actor && $disabled_group instanceof Axismundi_Actor
+			&& ! axismundi_forum_user_can_submit_to_remote_group( $profileless_user, $group )
+			&& ! axismundi_forum_user_can_submit_to_remote_group( $subscriber_user, $group )
+			&& ! axismundi_forum_user_can_submit_to_remote_group( $author_user, $disabled_group )
 	);
 } finally {
 	$entries = axismundi_forum_entries_table();

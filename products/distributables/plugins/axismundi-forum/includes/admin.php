@@ -13,6 +13,22 @@ function axismundi_forum_add_topic_meta_box() : void {
 }
 add_action( 'add_meta_boxes_ax_topic', 'axismundi_forum_add_topic_meta_box' );
 
+/** Load the bounded Community search picker only in the Topic editor. */
+function axismundi_forum_enqueue_topic_community_picker( string $hook ) : void {
+	$screen = get_current_screen();
+	if ( ! $screen || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $screen->post_type || ! in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
+		return;
+	}
+	wp_enqueue_script(
+		'axismundi-forum-topic-community-picker',
+		plugins_url( 'assets/topic-community-picker.js', dirname( __DIR__ ) . '/axismundi-forum.php' ),
+		array( 'wp-api-fetch', 'wp-url' ),
+		AXISMUNDI_FORUM_VERSION,
+		true
+	);
+}
+add_action( 'admin_enqueue_scripts', 'axismundi_forum_enqueue_topic_community_picker' );
+
 /** Render community selection before admission, then the immutable Group context. */
 function axismundi_forum_render_topic_meta_box( WP_Post $post ) : void {
 	wp_nonce_field( 'axismundi_forum_topic_' . $post->ID, 'axismundi_forum_topic_nonce' );
@@ -29,36 +45,11 @@ function axismundi_forum_render_topic_meta_box( WP_Post $post ) : void {
 		echo '<p class="description">' . esc_html__( 'A Topic keeps its remote community after selection.', 'axismundi-forum' ) . '</p>';
 		return;
 	}
-	$user_id      = get_current_user_id();
-	$communities  = axismundi_forum_manageable_communities( $user_id );
-	$joined       = function_exists( 'axismundi_forum_joined_local_communities_for_user' ) ? axismundi_forum_joined_local_communities_for_user( $user_id ) : array();
-	$joined       = array_filter( $joined, static fn( Axismundi_Actor $group ) : bool => axismundi_forum_can_admit_local_topic( $group->get_identity_id(), $post->ID, $user_id ) );
-	$remote_groups = function_exists( 'axismundi_forum_followed_remote_groups_for_user' ) ? axismundi_forum_followed_remote_groups_for_user( $user_id ) : array();
-	echo '<p><label for="axismundi-forum-topic-group">' . esc_html__( 'Community', 'axismundi-forum' ) . '</label></p><select id="axismundi-forum-topic-group" name="community_target" style="width:100%"><option value="">' . esc_html__( '— Select a community —', 'axismundi-forum' ) . '</option>';
-	if ( ! empty( $communities ) ) {
-		echo '<optgroup label="' . esc_attr__( 'My communities', 'axismundi-forum' ) . '">';
-		foreach ( $communities as $group ) {
-			if ( axismundi_forum_can_admit_local_topic( $group->get_identity_id(), $post->ID, get_current_user_id() ) ) {
-				printf( '<option value="local:%d">%s (@%s)</option>', $group->get_identity_id(), esc_html( $group->get_display_name() ), esc_html( $group->get_preferred_username() ) );
-			}
-		}
-		echo '</optgroup>';
-	}
-	if ( ! empty( $joined ) ) {
-		echo '<optgroup label="' . esc_attr__( 'Communities I\'ve joined', 'axismundi-forum' ) . '">';
-		foreach ( $joined as $group ) {
-			printf( '<option value="local:%d">%s (@%s)</option>', $group->get_identity_id(), esc_html( $group->get_display_name() ), esc_html( $group->get_preferred_username() ) );
-		}
-		echo '</optgroup>';
-	}
-	if ( ! empty( $remote_groups ) ) {
-		echo '<optgroup label="' . esc_attr__( 'Followed remote communities', 'axismundi-forum' ) . '">';
-		foreach ( $remote_groups as $group ) {
-			printf( '<option value="remote:%d">%s (@%s)</option>', $group->get_identity_id(), esc_html( $group->get_display_name() ), esc_html( $group->get_preferred_username() ) );
-		}
-		echo '</optgroup>';
-	}
-	echo '</select>';
+	echo '<p><label for="axismundi-forum-topic-community-search">' . esc_html__( 'Community', 'axismundi-forum' ) . '</label></p>';
+	echo '<input id="axismundi-forum-topic-community-search" type="search" class="widefat" autocomplete="off" placeholder="' . esc_attr__( 'Search known communities', 'axismundi-forum' ) . '" aria-controls="axismundi-forum-topic-community-results" aria-expanded="false">';
+	echo '<input id="axismundi-forum-topic-group" type="hidden" name="community_target" value="">';
+	echo '<ul id="axismundi-forum-topic-community-results" class="axismundi-forum-topic-community-results" role="listbox" hidden data-post-id="' . esc_attr( (string) $post->ID ) . '"></ul>';
+	echo '<p class="description">' . esc_html__( 'Search local communities and already-cached federated Groups. Joining is not required to submit where a community accepts posts.', 'axismundi-forum' ) . '</p>';
 }
 
 /** Persist the selected community on the first Topic save. */
@@ -119,6 +110,11 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		printf( '<option value="%s" %s>%s</option>', esc_attr( $value ), selected( $community['topic_approval_policy'], $value, false ), esc_html( $label ) );
 	}
 	echo '</select><p class="description">' . esc_html__( 'When approval is required, valid Topic submissions wait here until a moderator approves the Group Announce.', 'axismundi-forum' ) . '</p></td></tr></table>';
+	echo '<table class="form-table" role="presentation"><tr><th><label for="ax-forum-distribution">' . esc_html__( 'Topic distribution', 'axismundi-forum' ) . '</label></th><td><select id="ax-forum-distribution" name="distribution_scope">';
+	foreach ( axismundi_forum_distribution_scopes() as $value => $label ) {
+		printf( '<option value="%s" %s>%s</option>', esc_attr( $value ), selected( $community['distribution_scope'], $value, false ), esc_html( $label ) );
+	}
+	echo '</select><p class="description">' . esc_html__( 'Public Topics appear in the Group profile and public outbox. Community-member Topics are delivered to followers and stay off public Group surfaces.', 'axismundi-forum' ) . '</p></td></tr></table>';
 	submit_button( __( 'Save community settings', 'axismundi-forum' ), 'secondary' );
 	echo '</form>';
 	}
@@ -245,6 +241,9 @@ function axismundi_forum_handle_save_community() : void {
 	}
 	if ( ! is_wp_error( $result ) ) {
 		$result = axismundi_forum_set_topic_approval_policy( $group_id, get_current_user_id(), sanitize_key( (string) ( $_POST['topic_approval_policy'] ?? '' ) ) );
+	}
+	if ( ! is_wp_error( $result ) ) {
+		$result = axismundi_forum_set_distribution_scope( $group_id, get_current_user_id(), sanitize_key( (string) ( $_POST['distribution_scope'] ?? '' ) ) );
 	}
 	axismundi_forum_group_admin_redirect( $group_id, $result );
 }

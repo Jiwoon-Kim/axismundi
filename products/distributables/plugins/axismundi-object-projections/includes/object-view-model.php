@@ -601,10 +601,11 @@ function axismundi_op_render_object_view_block( array $attributes = array(), str
  *
  * OP owns turning an object URI into a card: a local product claims the URI
  * through the resolve filter, a cached remote observation is the fallback.
- * Visibility reuses the same public/unlisted-only gate the thread, JSON-LD, and
- * HTML routes enforce, so a followers-only or draft local object never leaks
- * through a feed. Tombstones, hidden sources, and unresolvable URIs render
- * nothing, so the caller can simply drop the row. When `expected_author` is a
+ * Visibility defaults to the same public/unlisted-only gate the thread, JSON-LD,
+ * and HTML routes enforce. A product may additionally admit an addressed source
+ * for the current viewer in an explicitly viewer-scoped surface such as an Actor
+ * profile feed. Tombstones, hidden sources, and unresolvable URIs render nothing,
+ * so the caller can simply drop the row. When `expected_author` is a
  * non-empty URI the resolved object's author must equal it (an authored Create
  * belongs to the acting Actor); a boosted Announce passes '' because its object
  * is authored by someone else.
@@ -619,10 +620,18 @@ function axismundi_op_render_object_by_uri( string $uri, array $opts = array() )
 		return '';
 	}
 	$source = axismundi_op_resolve_source_by_uri( $uri );
-	if ( null === $source
-		|| ! function_exists( 'axismundi_op_object_card_publicly_renderable' )
-		|| ! axismundi_op_object_card_publicly_renderable( $source )
-	) {
+	$public = null !== $source && function_exists( 'axismundi_op_object_card_publicly_renderable' ) && axismundi_op_object_card_publicly_renderable( $source );
+	/**
+	 * A renderer's caller is responsible for selecting a viewer-scoped surface.
+	 * Archive and route callers retain the public default because no filter opens
+	 * a source without its owning product's positive authorization decision.
+	 *
+	 * @param bool  $public Whether the source is publicly card-renderable.
+	 * @param mixed $source Resolved source, or null.
+	 * @param array $opts   Renderer options supplied by the caller.
+	 */
+	$renderable = (bool) apply_filters( 'axismundi_op_object_card_renderable', $public, $source, $opts );
+	if ( ! $renderable ) {
 		return '';
 	}
 	$model = axismundi_op_object_view_model( $source );

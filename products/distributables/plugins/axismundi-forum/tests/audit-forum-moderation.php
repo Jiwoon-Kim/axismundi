@@ -150,11 +150,12 @@ try {
 	$followers = function_exists( 'axismundi_op_actor_followers_url' ) && $group instanceof Axismundi_Actor ? axismundi_op_actor_followers_url( $group ) : '';
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a moderator approval records Group Announce(Create) to followers before making the entry visible',
+		'a public-scope moderator approval records Group Announce(Create) to Public and followers before making the entry visible',
 		true === $approved && is_array( $approved_entry) && 'visible' === (string) $approved_entry['admission_state']
 			&& $outer instanceof Axismundi_Activity && 'Announce' === $outer->get_type() && $group instanceof Axismundi_Actor
 			&& $group->get_uri() === $outer->get_actor_uri() && 'Create' === (string) ( $outer->get_payload()['object']['type'] ?? '' )
-			&& in_array( $followers, (array) ( $outer->get_audience()['to'] ?? array() ), true )
+			&& function_exists( 'axismundi_act_public_audience_uri' ) && in_array( axismundi_act_public_audience_uri(), (array) ( $outer->get_audience()['to'] ?? array() ), true )
+			&& in_array( $followers, (array) ( $outer->get_audience()['cc'] ?? array() ), true )
 	);
 	$group_outbox = function_exists( 'axismundi_act_get_public_outbox' ) && $group instanceof Axismundi_Actor
 		? axismundi_act_get_public_outbox( $group->get_uri() )
@@ -162,7 +163,7 @@ try {
 	$group_outbox_ids = array_map( static fn( array $payload ) : string => (string) ( $payload['id'] ?? '' ), $group_outbox );
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'the public community Group outbox includes its followers-addressed approval Announce without making ordinary followers-only delivery public',
+		'the public community Group outbox includes its Public approval Announce without opening ordinary followers-only delivery',
 		$outer instanceof Axismundi_Activity && in_array( $outer->get_uri(), $group_outbox_ids, true )
 	);
 	$withdrawn = is_array( $approved_entry ) ? axismundi_forum_withdraw_announced_entry( (int) $approved_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
@@ -183,7 +184,8 @@ try {
 			&& $withdrawn_announce instanceof Axismundi_Activity && ! $withdrawn_announce->is_effective() && $withdrawal instanceof Axismundi_Activity
 			&& $group instanceof Axismundi_Actor && $group->get_uri() === $withdrawal->get_actor_uri()
 			&& $outer instanceof Axismundi_Activity && $outer->get_uri() === $withdrawal->get_object_uri()
-			&& in_array( $followers, (array) ( $withdrawal->get_audience()['to'] ?? array() ), true ) && $topic instanceof WP_Post && 'publish' === $topic->post_status
+			&& function_exists( 'axismundi_act_public_audience_uri' ) && in_array( axismundi_act_public_audience_uri(), (array) ( $withdrawal->get_audience()['to'] ?? array() ), true )
+			&& in_array( $followers, (array) ( $withdrawal->get_audience()['cc'] ?? array() ), true ) && $topic instanceof WP_Post && 'publish' === $topic->post_status
 	);
 	$edited = $topic instanceof WP_Post ? wp_update_post( array( 'ID' => $topic->ID, 'post_content' => 'Revised pending Topic body.' ), true ) : new WP_Error( 'fixture' );
 	$reapproved = ! is_wp_error( $edited ) && is_array( $withdrawn_entry ) ? axismundi_forum_approve_pending_entry( (int) $withdrawn_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
@@ -209,6 +211,22 @@ try {
 			&& $reannounce->get_uri() !== $unchanged_reannounce->get_uri()
 			&& (string) ( $reannounce->get_payload()['object']['id'] ?? '' ) === (string) ( $unchanged_reannounce->get_payload()['object']['id'] ?? '' )
 			&& 'Update' === (string) ( $unchanged_reannounce->get_payload()['object']['type'] ?? '' )
+	);
+	$members_scope = axismundi_forum_set_distribution_scope( $group_id, $owner_user, 'members' );
+	$members_withdrawn = is_array( $unchanged_reapproved_entry ) ? axismundi_forum_withdraw_announced_entry( (int) $unchanged_reapproved_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$members_pending = axismundi_forum_get_topic_entry( $topic_id );
+	$members_reapproved = is_array( $members_pending ) ? axismundi_forum_approve_pending_entry( (int) $members_pending['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$members_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$members_announce = is_array( $members_entry ) ? axismundi_act_get( (string) $members_entry['announced_activity_uri'] ) : null;
+	$members_outbox = function_exists( 'axismundi_act_get_public_outbox' ) && $group instanceof Axismundi_Actor ? axismundi_act_get_public_outbox( $group->get_uri() ) : array();
+	$members_outbox_ids = array_map( static fn( array $payload ) : string => (string) ( $payload['id'] ?? '' ), $members_outbox );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a members-scope re-approval addresses only followers and stays out of the public Group outbox',
+		true === $members_scope && true === $members_withdrawn && true === $members_reapproved && $members_announce instanceof Axismundi_Activity
+			&& in_array( $followers, (array) ( $members_announce->get_audience()['to'] ?? array() ), true )
+			&& empty( (array) ( $members_announce->get_audience()['cc'] ?? array() ) )
+			&& ! axismundi_act_has_public_audience( $members_announce ) && ! in_array( $members_announce->get_uri(), $members_outbox_ids, true )
 	);
 
 	$remote_uri = 'https://remote.example/topics/' . wp_generate_uuid4();

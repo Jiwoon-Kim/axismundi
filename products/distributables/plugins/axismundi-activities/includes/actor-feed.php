@@ -12,14 +12,24 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Build one public-safe feed item descriptor from a Create or Announce row.
+ * Build one viewer-safe feed item descriptor from a Create or Announce row.
  *
  * The card content is not read here: Activities owns selection and verb framing,
- * and hands the object URI to whichever product renders it. The public audience
- * gate stays here so followers-only and mentioned-only rows never surface.
+ * and hands the object URI to whichever product renders it. Public entries are
+ * always eligible; a product may additionally admit an addressed private entry
+ * for the current local viewer without changing the public outbox contract.
  */
 function axismundi_act_actor_feed_item( Axismundi_Activity $activity ) : ?array {
-	if ( ! axismundi_act_is_publicly_renderable( $activity ) ) {
+	$visible = axismundi_act_is_publicly_renderable( $activity );
+	/**
+	 * Viewer-specific Actor-feed admission. This is presentation-only: Activity
+	 * collections and public outboxes continue to use their public audience gate.
+	 *
+	 * @param bool                $visible  Whether the activity is publicly renderable.
+	 * @param Axismundi_Activity  $activity Candidate ledger row.
+	 */
+	$visible = (bool) apply_filters( 'axismundi_act_actor_feed_activity_visible', $visible, $activity );
+	if ( ! $visible ) {
 		return null;
 	}
 	$payload = $activity->get_payload();

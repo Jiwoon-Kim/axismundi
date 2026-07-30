@@ -16,6 +16,8 @@ require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/actor-feed.php';
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
+require_once __DIR__ . '/../includes/memberships.php';
+require_once __DIR__ . '/../includes/distribution.php';
 
 axismundi_forum_install();
 axismundi_forum_register_topic_post_type();
@@ -88,6 +90,11 @@ try {
 			&& false !== strpos( $group_feed, 'Group Profile Topic Alpha' )
 			&& false === strpos( $group_feed, 'axismundi-activity-feed' )
 	);
+	ax_gp_assert(
+		$ax_gp_results,
+		'a Group route selects the dedicated community profile template',
+		$group instanceof Axismundi_Actor && 'actor-group-profile' === axismundi_actors_profile_template_slug( $group )
+	);
 	$activities_before = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_activities_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit baseline.
 	$relations_before  = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . axismundi_act_relations_table() ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- audit baseline.
 	if ( $group instanceof Axismundi_Actor ) {
@@ -110,6 +117,37 @@ try {
 		'every public managed Group shows an empty Forum Topic feed before its first Topic',
 		$solo instanceof Axismundi_Actor && false !== strpos( $solo_feed, 'axismundi-forum-topic-list' )
 	);
+	$member_user = (int) wp_insert_user( array( 'user_login' => 'axgp_member_' . strtolower( wp_generate_password( 7, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+	$ax_gp_users[] = $member_user;
+	$member = $member_user > 0 ? axismundi_actors_ensure_for_user( $member_user ) : null;
+	if ( $member instanceof Axismundi_Actor ) {
+		$ax_gp_ids[] = $member->get_identity_id();
+		axismundi_actors_register_handle( $member->get_identity_id(), 'axgpm' . strtolower( wp_generate_password( 7, false, false ) ) );
+		axismundi_actors_set_status( $member->get_identity_id(), 'public' );
+		$member = axismundi_actors_get_for_user( $member_user );
+	}
+	$members_scope = axismundi_forum_set_distribution_scope( $community, $owner, 'members' );
+	wp_set_current_user( 0 );
+	$anonymous_member_scope_feed = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
+	if ( $member instanceof Axismundi_Actor ) {
+		axismundi_forum_write_membership( $community, $member->get_identity_id(), 'accepted', 'https://example.invalid/follows/' . wp_generate_uuid4() );
+	}
+	wp_set_current_user( $member_user );
+	$member_scope_feed = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
+	ax_gp_assert(
+		$ax_gp_results,
+		'a members-scope Group hides Topics from anonymous profile visitors and shows them to an accepted signed-in member',
+		true === $members_scope && false === strpos( $anonymous_member_scope_feed, 'Group Profile Topic Alpha') && false !== strpos( $member_scope_feed, 'Group Profile Topic Alpha' )
+	);
+	ax_gp_assert(
+	$ax_gp_results,
+	'members-scope Group profiles disable shared caching while public-scope Group profiles remain cacheable',
+	$group instanceof Axismundi_Actor
+		&& axismundi_actors_profile_requires_nocache( $group )
+		&& true === axismundi_forum_set_distribution_scope( $community, $owner, 'public' )
+		&& ! axismundi_actors_profile_requires_nocache( $group )
+);
+	wp_set_current_user( 0 );
 
 	ax_gp_assert(
 		$ax_gp_results,

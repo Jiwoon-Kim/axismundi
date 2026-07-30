@@ -12,35 +12,49 @@
 
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Expose approved public-community Group Announce records in the Group's public Outbox.
- *
- * FEP-1b12 says a Group's Announce SHOULD appear in its outbox. The delivery audience is the
- * followers collection rather than Public, but a public local community already exposes the
- * approved Topic on its canonical Group profile. This narrow opt-in does not alter the default
- * privacy rule for Person or non-community Actor activities.
- *
- * @param array<string,mixed>|null $payload Existing public-safe payload.
- * @return array<string,mixed>|null
- */
-function axismundi_forum_public_group_outbox_payload( $payload, Axismundi_Activity $activity ) {
-	if ( is_array( $payload ) || 'outbound' !== $activity->get_direction() || ! $activity->is_effective() || 'Announce' !== $activity->get_type()
-		|| ! function_exists( 'axismundi_actors_get_by_uri' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
-		return $payload;
+/** @return array<string,string> Group Announce delivery scopes. */
+function axismundi_forum_distribution_scopes() : array {
+	return array(
+		'public'  => __( 'Public', 'axismundi-forum' ),
+		'members' => __( 'Community members', 'axismundi-forum' ),
+	);
+}
+
+/** Read one Group's distribution scope, defaulting all newly public Groups to public. */
+function axismundi_forum_get_distribution_scope( int $group_identity_id ) : string {
+	$community = axismundi_forum_get_community( $group_identity_id );
+	$scope = is_array( $community ) ? (string) ( $community['distribution_scope'] ?? '' ) : '';
+	return array_key_exists( $scope, axismundi_forum_distribution_scopes() ) ? $scope : 'public';
+}
+
+/** Update one Group's distribution scope after its manager authorizes the policy change. */
+function axismundi_forum_set_distribution_scope( int $group_identity_id, int $user_id, string $scope ) {
+	if ( ! array_key_exists( $scope, axismundi_forum_distribution_scopes() ) ) {
+		return new WP_Error( 'ax_forum_distribution_scope', __( 'The community distribution scope is invalid.', 'axismundi-forum' ) );
 	}
-	$group = axismundi_actors_get_by_uri( $activity->get_actor_uri() );
-	if ( ! axismundi_forum_public_community_group( $group ) ) {
-		return $payload;
+	if ( $scope === axismundi_forum_get_distribution_scope( $group_identity_id ) ) {
+		return true;
+	}
+	return axismundi_forum_update_community_policy( $group_identity_id, $user_id, 'distribution_scope', $scope );
+}
+
+/** Return the exact Group Announce audience for one configured community. */
+function axismundi_forum_distribution_audience( Axismundi_Actor $group ) {
+	if ( ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
+		return new WP_Error( 'ax_forum_announce_followers', __( 'The community followers collection is unavailable.', 'axismundi-forum' ) );
 	}
 	$followers = axismundi_op_actor_followers_url( $group );
-	if ( '' === $followers || ! in_array( $followers, (array) ( $activity->get_audience()['to'] ?? array() ), true ) ) {
-		return $payload;
+	if ( '' === $followers ) {
+		return new WP_Error( 'ax_forum_announce_followers', __( 'The community followers collection is unavailable.', 'axismundi-forum' ) );
 	}
-	$payload = $activity->get_payload();
-	unset( $payload['bto'], $payload['bcc'] );
-	return $payload;
+	if ( 'members' === axismundi_forum_get_distribution_scope( $group->get_identity_id() ) ) {
+		return array( 'to' => array( $followers ), 'cc' => array() );
+	}
+	$public = function_exists( 'axismundi_act_public_audience_uri' )
+		? axismundi_act_public_audience_uri()
+		: 'https://www.w3.org/ns/activitystreams#Public';
+	return array( 'to' => array( $public ), 'cc' => array( $followers ) );
 }
-add_filter( 'axismundi_act_public_outbox_payload', 'axismundi_forum_public_group_outbox_payload', 10, 2 );
 
 /** @return Axismundi_Activity|WP_Error The immutable Create or Update the Group may wrap unchanged. */
 function axismundi_forum_entry_submission_activity( array $entry ) {
@@ -113,9 +127,9 @@ function axismundi_forum_record_group_announce( array $entry ) {
 	if ( is_wp_error( $submission ) ) {
 		return $submission;
 	}
-	$followers = axismundi_op_actor_followers_url( $group );
-	if ( '' === $followers ) {
-		return new WP_Error( 'ax_forum_announce_followers', __( 'The community followers collection is unavailable.', 'axismundi-forum' ) );
+	$audience = axismundi_forum_distribution_audience( $group );
+	if ( is_wp_error( $audience ) ) {
+		return $audience;
 	}
 	/*
 	 * An undone Announce must be replaceable by a fresh Announce of the same submission. The source
@@ -132,7 +146,8 @@ function axismundi_forum_record_group_announce( array $entry ) {
 			'actor'  => $group->get_uri(),
 			// FEP-1b12 requires the original incoming or local Activity as received, not its Object URI.
 			'object' => $submission->get_payload(),
-			'to'     => array( $followers ),
+			'to'     => $audience['to'],
+			'cc'     => $audience['cc'],
 		),
 		'outbound',
 		'forum-group-announce:' . (int) $entry['id'] . ':submission:' . $submission->get_uri() . ':cycle:' . $cycle

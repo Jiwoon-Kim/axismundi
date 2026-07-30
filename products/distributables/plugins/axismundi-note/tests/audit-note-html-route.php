@@ -23,9 +23,9 @@ function ax_nh_assert( array &$results, string $label, bool $condition ) : void 
 }
 
 /** Create one public local Actor with a locked handle. */
-function ax_nh_actor( array &$users, array &$actors ) : ?Axismundi_Actor {
+function ax_nh_actor( array &$users, array &$actors, string $role = 'author' ) : ?Axismundi_Actor {
 	$login = 'ax_nh_' . strtolower( wp_generate_password( 8, false, false ) );
-	$uid   = (int) wp_insert_user( array( 'user_login' => $login, 'user_pass' => wp_generate_password(), 'role' => 'author' ) );
+	$uid   = (int) wp_insert_user( array( 'user_login' => $login, 'user_pass' => wp_generate_password(), 'role' => $role ) );
 	if ( $uid <= 0 ) {
 		return null;
 	}
@@ -42,7 +42,7 @@ function ax_nh_actor( array &$users, array &$actors ) : ?Axismundi_Actor {
 }
 
 /** Create one fixture Note, optionally leaving its local Post as a draft. */
-function ax_nh_note( int $author_id, string $visibility, array &$posts, bool $publish = true ) : array {
+function ax_nh_note( int $author_id, string $visibility, array &$posts, bool $publish = true, array $mentions = array() ) : array {
 	$post_id = (int) wp_insert_post(
 		array(
 			'post_type'    => AXISMUNDI_NOTE_POST_TYPE,
@@ -53,7 +53,11 @@ function ax_nh_note( int $author_id, string $visibility, array &$posts, bool $pu
 		)
 	);
 	$posts[] = $post_id;
-	axismundi_note_save_envelope( $post_id, array( 'visibility' => $visibility ) );
+	$envelope = array( 'visibility' => $visibility );
+	if ( ! empty( $mentions ) ) {
+		$envelope['mentions'] = $mentions;
+	}
+	axismundi_note_save_envelope( $post_id, $envelope );
 	if ( $publish ) {
 		wp_update_post( array( 'ID' => $post_id, 'post_status' => 'publish' ) );
 	}
@@ -147,6 +151,89 @@ try {
 		'a different logged-in Author cannot preview someone else\'s not-yet-public Note',
 		! isset( $stranger_actions['view'] ) && 404 === (int) $stranger_route['route']['status']
 	);
+	$follower_actor = ax_nh_actor( $ax_nh_user_ids, $ax_nh_actor_ids );
+	$follower_id    = $follower_actor instanceof Axismundi_Actor ? (int) $follower_actor->get_local_user_id() : 0;
+	$follower_edge  = $follower_actor instanceof Axismundi_Actor ? axismundi_act_follow_local_actor( $follower_actor, $actor ) : null;
+	wp_set_current_user( $follower_id );
+	$follower_route = ax_nh_route( $private_id, array( 'ax_note' => (string) $private['local_uuid'] ) );
+	ax_nh_assert(
+		$ax_nh_results,
+		'an accepted local follower can read a followers-only Note while an unrelated signed-in Actor cannot',
+		is_array( $follower_edge ) && 'accepted' === (string) ( $follower_edge['state'] ?? '' ) && 200 === (int) $follower_route['route']['status'] && is_array( $follower_route['model'] )
+	);
+	$private_activity = function_exists( 'axismundi_act_get_object_lifecycle' ) ? axismundi_act_get_object_lifecycle( $private_id ) : null;
+	wp_set_current_user( 0 );
+	$anonymous_feed_ids = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_act_actor_feed_items' ) ? array_column( axismundi_act_actor_feed_items( $actor, 20 ), 'id' ) : array();
+	wp_set_current_user( $other_id );
+	$stranger_feed_ids = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_act_actor_feed_items' ) ? array_column( axismundi_act_actor_feed_items( $actor, 20 ), 'id' ) : array();
+	wp_set_current_user( $follower_id );
+	$follower_feed = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_act_actor_feed_items' ) ? axismundi_act_actor_feed_items( $actor, 20 ) : array();
+	$follower_item = $private_activity instanceof Axismundi_Activity ? array_values( array_filter( $follower_feed, static fn( array $item ) : bool => $private_activity->get_uri() === (string) ( $item['id'] ?? '' ) ) )[0] ?? array() : array();
+	$follower_card = ! empty( $follower_item ) ? (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $follower_item ) : '';
+	ax_nh_assert(
+		$ax_nh_results,
+		'a followers-only Note stays on its author profile feed for an accepted follower, but is filtered for anonymous and unrelated visitors',
+		$private_activity instanceof Axismundi_Activity
+			&& ! in_array( $private_activity->get_uri(), $anonymous_feed_ids, true )
+			&& ! in_array( $private_activity->get_uri(), $stranger_feed_ids, true )
+			&& $private_activity->get_uri() === (string) ( $follower_item['id'] ?? '' )
+			&& false !== strpos( $follower_card, 'Human Note route.' )
+	);
+	$recipient_actor = ax_nh_actor( $ax_nh_user_ids, $ax_nh_actor_ids );
+	$recipient_id    = $recipient_actor instanceof Axismundi_Actor ? (int) $recipient_actor->get_local_user_id() : 0;
+	$mentioned       = ax_nh_note( $author_id, 'mentioned', $ax_nh_post_ids, true, $recipient_actor instanceof Axismundi_Actor ? array( $recipient_actor->get_uri() ) : array() );
+	$mentioned_id = axismundi_note_object_uri( (string) $mentioned['local_uuid'] );
+	wp_set_current_user( $recipient_id );
+	$recipient_route = ax_nh_route( $mentioned_id, array( 'ax_note' => (string) $mentioned['local_uuid'] ) );
+	wp_set_current_user( $other_id );
+	$nonrecipient_route = ax_nh_route( $mentioned_id, array( 'ax_note' => (string) $mentioned['local_uuid'] ) );
+	wp_set_current_user( 0 );
+	$anonymous_mentioned_route = ax_nh_route( $mentioned_id, array( 'ax_note' => (string) $mentioned['local_uuid'] ) );
+	ax_nh_assert(
+		$ax_nh_results,
+		'a mentioned local recipient can read a mentioned-only Note while another signed-in Actor and an anonymous request receive the same empty 404',
+		200 === (int) $recipient_route['route']['status'] && is_array( $recipient_route['model'] )
+			&& 404 === (int) $nonrecipient_route['route']['status'] && null === $nonrecipient_route['model']
+			&& 404 === (int) $anonymous_mentioned_route['route']['status'] && null === $anonymous_mentioned_route['model']
+	);
+	$revised_recipient = ax_nh_actor( $ax_nh_user_ids, $ax_nh_actor_ids );
+	$revised_id        = $revised_recipient instanceof Axismundi_Actor ? (int) $revised_recipient->get_local_user_id() : 0;
+	$revision          = ax_nh_note( $author_id, 'mentioned', $ax_nh_post_ids, true, $recipient_actor instanceof Axismundi_Actor ? array( $recipient_actor->get_uri() ) : array() );
+	$revision_id       = axismundi_note_object_uri( (string) $revision['local_uuid'] );
+	$revision_post     = get_post( (int) $revision['post_id'] );
+	if ( $revision_post instanceof WP_Post && $revised_recipient instanceof Axismundi_Actor ) {
+		axismundi_note_save_envelope( $revision_post->ID, array( 'mentions' => array() ) );
+		wp_update_post(
+			array(
+				'ID'           => $revision_post->ID,
+				'post_content' => '<!-- wp:paragraph --><p>Revised for ' . esc_html( axismundi_actors_mention_token( $revised_recipient ) ) . '.</p><!-- /wp:paragraph -->',
+			)
+		);
+	}
+	wp_set_current_user( $recipient_id );
+	$original_after_edit = ax_nh_route( $revision_id, array( 'ax_note' => (string) $revision['local_uuid'] ) );
+	wp_set_current_user( $revised_id );
+	$revised_after_edit = ax_nh_route( $revision_id, array( 'ax_note' => (string) $revision['local_uuid'] ) );
+	ax_nh_assert(
+		$ax_nh_results,
+		'editing a direct Note never revokes its original Create recipient, while a recipient added by the later Update gains access from that Update snapshot',
+		$revision_post instanceof WP_Post && $revised_recipient instanceof Axismundi_Actor
+			&& 200 === (int) $original_after_edit['route']['status']
+			&& 200 === (int) $revised_after_edit['route']['status']
+	);
+	$operator_actor = ax_nh_actor( $ax_nh_user_ids, $ax_nh_actor_ids, 'administrator' );
+	$operator_id    = $operator_actor instanceof Axismundi_Actor ? (int) $operator_actor->get_local_user_id() : 0;
+	wp_set_current_user( $operator_id );
+	$operator_follower_route = ax_nh_route( $private_id, array( 'ax_note' => (string) $private['local_uuid'] ) );
+	$operator_mentioned_route = ax_nh_route( $mentioned_id, array( 'ax_note' => (string) $mentioned['local_uuid'] ) );
+	ax_nh_assert(
+		$ax_nh_results,
+		'a site administrator can inspect followers-only and mentioned-only Notes for server responsibility without becoming a recipient',
+		$operator_id > 0 && user_can( $operator_id, 'manage_options' )
+			&& 200 === (int) $operator_follower_route['route']['status']
+			&& 200 === (int) $operator_mentioned_route['route']['status']
+	);
+	wp_set_current_user( 0 );
 	wp_set_current_user( $author_id );
 	$draft_actions = $draft_post instanceof WP_Post ? axismundi_note_admin_view_row_action( array(), $draft_post ) : array();
 	$draft_route   = ax_nh_route( $draft_id, array( 'ax_note' => (string) $draft['local_uuid'] ) );
@@ -188,6 +275,13 @@ try {
 		}
 	}
 	foreach ( array_unique( $ax_nh_actor_ids ) as $identity_id ) {
+		$fixture_actor = axismundi_actors_get_by_identity( (int) $identity_id );
+		if ( $fixture_actor instanceof Axismundi_Actor ) {
+			$uri = $fixture_actor->get_uri();
+			$wpdb->delete( axismundi_act_relations_table(), array( 'subject_actor_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned relation cleanup.
+			$wpdb->delete( axismundi_act_relations_table(), array( 'object_actor_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned relation cleanup.
+			$wpdb->delete( axismundi_act_activities_table(), array( 'actor_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Activity cleanup.
+		}
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $actor_table ) {
 			$wpdb->delete( $actor_table, array( 'identity_id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		}

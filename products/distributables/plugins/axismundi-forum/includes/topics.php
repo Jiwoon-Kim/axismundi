@@ -381,6 +381,26 @@ function axismundi_forum_visible_topic_entries( int $group_identity_id, int $lim
 	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE group_identity_id = %d AND entry_type = 'topic' AND admission_state = 'visible' AND moderation_state = 'visible' ORDER BY sticky_position IS NULL, sticky_position DESC, created_at DESC, id DESC LIMIT %d", $group_identity_id, $limit ), ARRAY_A );
 }
 
+/** Whether the current local account may read this community's profile Topic feed. */
+function axismundi_forum_can_view_community_topics( int $group_identity_id, ?int $user_id = null ) : bool {
+	if ( 'members' !== axismundi_forum_get_distribution_scope( $group_identity_id ) ) {
+		return true;
+	}
+	$user_id = null === $user_id ? get_current_user_id() : $user_id;
+	if ( $user_id <= 0 || ! user_can( $user_id, 'read' ) ) {
+		return false;
+	}
+	// A site operator remains responsible for local content even when it is member-distributed.
+	if ( user_can( $user_id, 'manage_options' ) || ( function_exists( 'axismundi_forum_user_can_moderate' ) && axismundi_forum_user_can_moderate( $group_identity_id, $user_id ) ) ) {
+		return true;
+	}
+	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	$membership = $actor instanceof Axismundi_Actor && function_exists( 'axismundi_forum_get_membership' )
+		? axismundi_forum_get_membership( $group_identity_id, $actor->get_identity_id() )
+		: null;
+	return is_array( $membership ) && 'accepted' === (string) ( $membership['membership_state'] ?? '' );
+}
+
 /**
  * The Group identity the page being rendered is about.
  *
@@ -400,6 +420,10 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	$group_identity_id = axismundi_forum_context_group_id();
 	if ( $group_identity_id <= 0 ) {
 		return '';
+	}
+	if ( ! axismundi_forum_can_view_community_topics( $group_identity_id ) ) {
+		// Claim the Group feed without falling back to its Activity timeline.
+		return '<section class="axismundi-forum-topic-list" hidden aria-hidden="true"></section>';
 	}
 	$limit = isset( $attributes['perPage'] ) ? (int) $attributes['perPage'] : 20;
 	$items = array();
@@ -461,6 +485,16 @@ function axismundi_forum_actor_feed_html( string $html, Axismundi_Actor $actor )
 }
 add_filter( 'axismundi_act_actor_feed_html', 'axismundi_forum_actor_feed_html', 10, 2 );
 
+/** A member-distributed community feed varies by the logged-in viewer. */
+function axismundi_forum_group_profile_requires_nocache( bool $requires_nocache, Axismundi_Actor $actor ) : bool {
+	if ( $requires_nocache || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+		return $requires_nocache;
+	}
+	return axismundi_forum_is_community( $actor->get_identity_id() )
+		&& 'members' === axismundi_forum_get_distribution_scope( $actor->get_identity_id() );
+}
+add_filter( 'axismundi_actors_profile_requires_nocache', 'axismundi_forum_group_profile_requires_nocache', 10, 2 );
+
 /** Register the Forum Topic List block from its server-owned metadata. */
 function axismundi_forum_register_topic_list_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/topic-list' );
@@ -476,7 +510,9 @@ function axismundi_forum_topic_article_supports( $source ) : bool {
 
 /** F1 permits only public, unprotected local Topic Pages to project. */
 function axismundi_forum_topic_article_visible( WP_Post $topic ) : bool {
-	return axismundi_forum_topic_article_supports( $topic ) && 'publish' === $topic->post_status && '' === (string) $topic->post_password && is_post_publicly_viewable( $topic ) && '' !== axismundi_op_local_author_actor_uri( (int) $topic->post_author );
+	$entry = axismundi_forum_get_topic_entry( $topic->ID );
+	return axismundi_forum_topic_article_supports( $topic ) && 'publish' === $topic->post_status && '' === (string) $topic->post_password && is_post_publicly_viewable( $topic ) && '' !== axismundi_op_local_author_actor_uri( (int) $topic->post_author )
+		&& ( ! is_array( $entry ) || 'members' !== axismundi_forum_get_distribution_scope( (int) $entry['group_identity_id'] ) );
 }
 
 /**

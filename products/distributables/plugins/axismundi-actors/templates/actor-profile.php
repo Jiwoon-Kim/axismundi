@@ -1,4 +1,13 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
+<?php
+defined( 'ABSPATH' ) || exit;
+
+// The legacy Actor Profile template remains a Person-compatible shell. Dedicated Person and
+// Group templates set this before including it, so their feed surfaces can evolve independently.
+$axismundi_actor_profile_kind = isset( $axismundi_actor_profile_kind ) && 'group' === $axismundi_actor_profile_kind ? 'group' : 'person';
+$axismundi_actor_feed_class   = 'group' === $axismundi_actor_profile_kind
+	? 'ax-group-profile__community'
+	: 'ax-person-profile__timeline';
+?>
 <!-- wp:template-part {"slug":"header","area":"header","tagName":"header"} /-->
 
 <!-- wp:group {"tagName":"main","align":"full","style":{"spacing":{"margin":{"top":"var:preset|spacing|0","bottom":"var:preset|spacing|0"}}},"layout":{"type":"constrained"}} -->
@@ -27,7 +36,9 @@
 <!-- wp:axismundi/actor-social-counts /-->
 <!-- /wp:axismundi/account-header -->
 
-<!-- wp:axismundi/actor-activity-feed /-->
+<!-- wp:group {"className":"<?php echo esc_attr( $axismundi_actor_feed_class ); ?>"} -->
+<div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/actor-activity-feed /--></div>
+<!-- /wp:group -->
 
 <!-- wp:axismundi/actor-projections {"style":{"spacing":{"margin":{"top":"var:preset|spacing|400"}}}} /--></div>
 <!-- /wp:group --></main>

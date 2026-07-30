@@ -31,7 +31,7 @@ function axismundi_op_actor_feed_object_html( string $html, array $item ) : stri
 	// Actor timelines are viewer-specific action surfaces. The nested dynamic
 	// buttons set the no-cache policy when they bind a logged-in Actor's state;
 	// hashtag archives remain read-only through their separate renderer options.
-	$options = array( 'headingTag' => 'h3', 'interactions' => true );
+	$options = array( 'headingTag' => 'h3', 'interactions' => true, 'viewerScoped' => true );
 	if ( 'Create' === (string) ( $item['type'] ?? '' ) ) {
 		$options['expected_author'] = (string) ( $item['actor_uri'] ?? '' );
 	}

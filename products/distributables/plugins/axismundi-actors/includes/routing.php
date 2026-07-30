@@ -670,12 +670,25 @@ function axismundi_actors_handle_profile_request( bool $preempt, WP_Query $query
 	$query->is_archive = false;
 	$query->is_singular = false;
 	status_header( 200 );
-	if ( ! $actor->is_local() || 'public' !== $actor->get_status() ) {
+	if ( axismundi_actors_profile_requires_nocache( $actor ) ) {
 		nocache_headers();
 	}
 	return true;
 }
 add_filter( 'pre_handle_404', 'axismundi_actors_handle_profile_request', 10, 2 );
+
+/**
+ * Whether an Actor profile response can vary by the viewer and must avoid shared caches.
+ *
+ * A Person feed can contain followers-only or mentioned content. Forum extends this for a
+ * Group whose Topic feed is distributed to members. Public Group community pages stay cacheable.
+ */
+function axismundi_actors_profile_requires_nocache( Axismundi_Actor $actor ) : bool {
+	$requires_nocache = ! $actor->is_local()
+		|| 'public' !== $actor->get_status()
+		|| 'Person' === $actor->get_type();
+	return (bool) apply_filters( 'axismundi_actors_profile_requires_nocache', $requires_nocache, $actor );
+}
 
 /** Serve the public Group directory without manufacturing a WordPress post. */
 function axismundi_actors_handle_group_directory_request( bool $preempt, WP_Query $query ) : bool {
@@ -828,8 +841,8 @@ function axismundi_actors_header_html( Axismundi_Actor $actor ) : string {
 }
 
 /** @return string */
-function axismundi_actors_profile_template_content() : string {
-	$path = __DIR__ . '/../templates/actor-profile.php';
+function axismundi_actors_profile_template_content( string $template = 'actor-profile' ) : string {
+	$path = __DIR__ . '/../templates/' . sanitize_file_name( $template ) . '.php';
 	if ( ! is_readable( $path ) ) {
 		return '';
 	}
@@ -886,6 +899,22 @@ function axismundi_actors_register_profile_block_and_template() : void {
 			)
 		);
 		register_block_template(
+			'axismundi-actors//actor-person-profile',
+			array(
+				'title'       => __( 'Person Actor Profile', 'axismundi-actors' ),
+				'description' => __( 'A Person identity hub with a viewer-filtered timeline.', 'axismundi-actors' ),
+				'content'     => axismundi_actors_profile_template_content( 'actor-person-profile' ),
+			)
+		);
+		register_block_template(
+			'axismundi-actors//actor-group-profile',
+			array(
+				'title'       => __( 'Group Actor Profile', 'axismundi-actors' ),
+				'description' => __( 'A Group identity hub whose feed can be claimed by a community product.', 'axismundi-actors' ),
+				'content'     => axismundi_actors_profile_template_content( 'actor-group-profile' ),
+			)
+		);
+		register_block_template(
 			'axismundi-actors//actor-follow-collection',
 			array(
 				'title'       => __( 'Actor Follow Collection', 'axismundi-actors' ),
@@ -905,6 +934,14 @@ function axismundi_actors_register_profile_block_and_template() : void {
 }
 add_action( 'init', 'axismundi_actors_register_profile_block_and_template', 20 );
 
+/** Choose the block-template surface for an Actor route. */
+function axismundi_actors_profile_template_slug( Axismundi_Actor $actor, bool $is_collection = false ) : string {
+	if ( $is_collection ) {
+		return 'actor-follow-collection';
+	}
+	return 'Group' === $actor->get_type() ? 'actor-group-profile' : 'actor-person-profile';
+}
+
 /**
  * @param string $template Located PHP template.
  * @return string
@@ -921,7 +958,10 @@ function axismundi_actors_profile_template_include( string $template ) : string 
 		return $template;
 	}
 	$is_collection = '' !== (string) get_query_var( 'ax_actor_collection' );
-	$slug = $is_collection ? 'actor-follow-collection' : 'actor-profile';
+	$actor = axismundi_actors_current_actor();
+	$slug = $actor instanceof Axismundi_Actor
+		? axismundi_actors_profile_template_slug( $actor, $is_collection )
+		: 'actor-person-profile';
 	$templates = array( $slug . '.php', 'index.php' );
 	return locate_block_template( locate_template( $templates ), $slug, $templates );
 }

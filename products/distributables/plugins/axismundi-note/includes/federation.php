@@ -247,7 +247,7 @@ function axismundi_note_source_visible( Axismundi_Note_Source $source ) : bool {
 }
 
 /**
- * Whether the viewer owns or administrates the local post behind this source.
+ * Whether the viewer owns or operates the local post behind this source.
  *
  * A remote-cache source has no local post and is never previewable this way.
  *
@@ -260,6 +260,12 @@ function axismundi_note_can_preview( Axismundi_Note_Source $source, ?int $user_i
 	if ( $user_id <= 0 ) {
 		return false;
 	}
+	/*
+	 * Server operators need an incident-response and recovery path for every
+	 * local Note, including recipient-addressed delivery. This is a local
+	 * presentation override only; it neither changes the Activity audience nor
+	 * grants any federated recipient access.
+	 */
 	if ( user_can( $user_id, 'manage_options' ) ) {
 		return true;
 	}
@@ -268,18 +274,84 @@ function axismundi_note_can_preview( Axismundi_Note_Source $source, ?int $user_i
 }
 
 /**
+ * Whether a signed-in local Person is addressed by one non-public local Note.
+ *
+ * This is a read-only local presentation gate. Federation delivery remains the
+ * Bridge's responsibility: a remote recipient already receives the addressed
+ * Create or Update through its inbox. Direct recipients come from immutable
+ * lifecycle snapshots, not the editable current body: a later edit must not
+ * revoke an earlier delivery or retroactively reinterpret its Create.
+ */
+function axismundi_note_viewer_is_addressed( Axismundi_Note_Source $source, ?int $user_id = null ) : bool {
+	$user_id = null === $user_id ? get_current_user_id() : $user_id;
+	if ( $user_id <= 0 || ! user_can( $user_id, 'read' ) || ! function_exists( 'axismundi_actors_get_for_user' ) ) {
+		return false;
+	}
+	$viewer = axismundi_actors_get_for_user( $user_id );
+	$author = axismundi_note_envelope_actor( $source->get_envelope() );
+	if ( ! $viewer instanceof Axismundi_Actor
+		|| ! $viewer->is_local()
+		|| 'Person' !== $viewer->get_type()
+		|| 'public' !== $viewer->get_status()
+		|| ! $viewer->is_handle_locked()
+		|| ! $author instanceof Axismundi_Actor
+	) {
+		return false;
+	}
+
+	$visibility = function_exists( 'axismundi_act_canonical_visibility' )
+		? axismundi_act_canonical_visibility( (string) ( $source->get_envelope()['visibility'] ?? '' ) )
+		: '';
+	$addressed = function_exists( 'axismundi_act_get_object_audience_members' )
+		? axismundi_act_get_object_audience_members( $source->get_uri(), $author->get_uri() )
+		: array();
+	if ( in_array( $viewer->get_uri(), $addressed, true ) ) {
+		return in_array( $visibility, array( 'followers', 'mentioned' ), true );
+	}
+	if ( 'followers' !== $visibility || ! function_exists( 'axismundi_act_get_relation' ) ) {
+		return false;
+	}
+	$relation = axismundi_act_get_relation( 'follow', $viewer->get_uri(), $author->get_uri() );
+	return is_array( $relation ) && 'accepted' === (string) ( $relation['state'] ?? '' );
+}
+
+/**
  * Whether a Note document may be shown to the current viewer at all: publicly
- * visible, a Tombstone, or an owner/administrator preview of a not-yet-public
- * source. This is the gate the admin-list row action and the HTML route both
- * use, so a link is never offered to a document that would then 404.
+ * visible, addressed to the signed-in local viewer, or an owner/administrator
+ * preview of a not-yet-public source. This is the gate the admin-list row
+ * action and the HTML route both use, so a link is never offered to a document
+ * that would then 404.
  *
  * @param Axismundi_Note_Source $source  Note source.
  * @param int|null              $user_id Viewer; defaults to the current user.
  * @return bool
  */
 function axismundi_note_can_view( Axismundi_Note_Source $source, ?int $user_id = null ) : bool {
-	return axismundi_note_source_visible( $source ) || axismundi_note_can_preview( $source, $user_id );
+	return axismundi_note_source_visible( $source )
+		|| axismundi_note_viewer_is_addressed( $source, $user_id )
+		|| axismundi_note_can_preview( $source, $user_id );
 }
+
+/** Admit an addressed local Note into its author's HTML Actor profile feed. */
+function axismundi_note_actor_feed_activity_visible( bool $visible, Axismundi_Activity $activity ) : bool {
+	if ( $visible || ! in_array( $activity->get_type(), array( 'Create', 'Announce' ), true ) || ! function_exists( 'axismundi_op_resolve_source_by_uri' ) ) {
+		return $visible;
+	}
+	$payload    = $activity->get_payload();
+	$object_uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $payload['object'] ?? null ) : '';
+	if ( '' === $object_uri ) {
+		$object_uri = (string) ( $activity->get_object_uri() ?? '' );
+	}
+	$source = '' !== $object_uri ? axismundi_op_resolve_source_by_uri( $object_uri ) : null;
+	return $source instanceof Axismundi_Note_Source && axismundi_note_can_view( $source );
+}
+add_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_note_actor_feed_activity_visible', 20, 2 );
+
+/** Render an addressed Note card only on a viewer-scoped Actor profile feed. */
+function axismundi_note_actor_feed_card_renderable( bool $renderable, $source, array $opts = array() ) : bool {
+	return $renderable || ( ! empty( $opts['viewerScoped'] ) && $source instanceof Axismundi_Note_Source && axismundi_note_can_view( $source ) );
+}
+add_filter( 'axismundi_op_object_card_renderable', 'axismundi_note_actor_feed_card_renderable', 20, 3 );
 
 /** Project an explicitly authored Quote policy without inventing approval evidence. */
 function axismundi_note_quote_interaction_policy( array $envelope ) : ?array {

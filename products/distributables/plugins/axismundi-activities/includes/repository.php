@@ -392,8 +392,6 @@ function axismundi_act_get_public_outbox( string $actor_uri, int $limit = 200 ) 
 		/*
 		 * An Actor-domain product may opt a non-Public activity into its public Outbox only
 		 * when that Actor's public representation makes the activity public by definition.
-		 * Forum uses this for FEP-1b12 Group Announce records: public community pages already
-		 * disclose their approved Topics, while ordinary followers-only delivery stays private.
 		 * The default remains strict; no recipient-addressed Activity leaks without its owner.
 		 *
 		 * @param array<string,mixed>|null $payload Public-safe payload, or null when not Public.
@@ -423,6 +421,68 @@ function axismundi_act_get_object_lifecycle( string $object_uri ) : ?Axismundi_A
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact URI lifecycle lookup in the custom ledger.
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s AND activity_type IN ('Create','Update','Delete') AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT 1", hash( 'sha256', $uri ), $uri ), ARRAY_A );
 	return is_array( $row ) ? axismundi_act_hydrate( $row ) : null;
+}
+
+/**
+ * Return the immutable recipient snapshots emitted by one local Object lifecycle.
+ *
+ * Each Create or Update keeps its own address list. Consumers that need to
+ * answer whether a local account was ever addressed must use this ledger view,
+ * not re-parse the current editable Object body. The cursor is internal so an
+ * object with more than one page of revisions cannot silently lose recipients.
+ *
+ * @param string   $object_uri Canonical Object URI.
+ * @param string   $actor_uri  Canonical owning Actor URI.
+ * @param string[] $types      Lifecycle Activity types to include.
+ * @return string[] Unique addressed URIs from effective local lifecycle rows.
+ */
+function axismundi_act_get_object_audience_members( string $object_uri, string $actor_uri, array $types = array( 'Create', 'Update' ) ) : array {
+	global $wpdb;
+	$object_uri = axismundi_act_uri( $object_uri );
+	$actor_uri  = axismundi_act_uri( $actor_uri );
+	$types      = array_values( array_intersect( array( 'Create', 'Update', 'Delete' ), $types ) );
+	if ( '' === $object_uri || '' === $actor_uri || empty( $types ) || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return array();
+	}
+
+	$table        = axismundi_act_activities_table();
+	$type_sql     = implode( ',', array_fill( 0, count( $types ), '%s' ) );
+	$after_id     = 0;
+	$recipients   = array();
+	$per_page     = 200;
+	do {
+		$sql = "SELECT id, audience_json FROM {$table}
+			WHERE id > %d
+				AND object_uri_hash = %s AND object_uri = %s
+				AND actor_uri_hash = %s AND actor_uri = %s
+				AND direction = 'outbound' AND effective_status = 'active'
+				AND activity_type IN ({$type_sql})
+			ORDER BY id ASC LIMIT %d";
+		$args = array_merge(
+			array( $after_id, hash( 'sha256', $object_uri ), $object_uri, hash( 'sha256', $actor_uri ), $actor_uri ),
+			$types,
+			array( $per_page )
+		);
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table and placeholder count; exact local lifecycle lookup.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$after_id = (int) $row['id'];
+			$audience = json_decode( (string) $row['audience_json'], true );
+			if ( ! is_array( $audience ) ) {
+				continue;
+			}
+			foreach ( array( 'to', 'cc', 'bto', 'bcc', 'audience' ) as $field ) {
+				foreach ( (array) ( $audience[ $field ] ?? array() ) as $member ) {
+					$member = axismundi_act_member_uri( $member );
+					if ( '' !== $member ) {
+						$recipients[ $member ] = true;
+					}
+				}
+			}
+		}
+	} while ( count( $rows ) === $per_page );
+
+	return array_keys( $recipients );
 }
 
 /**

@@ -219,6 +219,35 @@ function axismundi_actors_get_public_groups( int $limit = 50, int $offset = 0 ) 
 	return array_map( static fn( array $row ) : Axismundi_Actor => Axismundi_Actor::from_row( $row ), $rows );
 }
 
+/**
+ * Search public Group Actors already known to this server.
+ *
+ * This deliberately searches the local registry only. It never performs remote
+ * discovery from an editor keystroke.
+ *
+ * @return Axismundi_Actor[]
+ */
+function axismundi_actors_search_public_groups( string $search, int $limit = 20 ) : array {
+	global $wpdb;
+	$search     = trim( $search );
+	$limit      = max( 1, min( 20, $limit ) );
+	$identities = axismundi_actors_identities_table();
+	$actors     = axismundi_actors_actors_table();
+	$addresses  = axismundi_actors_addresses_table();
+	$where      = "a.actor_type = 'Group' AND i.status = 'public' AND ( i.origin = 'remote' OR ( i.origin = 'local' AND a.actor_scope = 'managed' AND a.handle_locked_at IS NOT NULL ) )";
+	$args       = array();
+	if ( '' !== $search ) {
+		$like   = '%' . $wpdb->esc_like( ltrim( $search, '@' ) ) . '%';
+		$where .= " AND ( a.preferred_username LIKE %s OR a.display_name LIKE %s OR i.canonical_uri LIKE %s OR EXISTS ( SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address LIKE %s ) )";
+		$args   = array( $like, $like, $like, $like );
+	}
+	$sql    = "SELECT i.*, a.* FROM {$identities} i INNER JOIN {$actors} a ON a.identity_id = i.id WHERE {$where} ORDER BY CASE WHEN i.origin = 'local' THEN 0 ELSE 1 END, COALESCE( NULLIF( a.display_name, '' ), a.preferred_username, i.canonical_uri ) ASC, i.id ASC LIMIT %d";
+	$args[] = $limit;
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom tables and prepared search values.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, ...$args ), ARRAY_A );
+	return array_map( static fn( array $row ) : Axismundi_Actor => Axismundi_Actor::from_row( $row ), $rows );
+}
+
 /** Count the bounded public Group directory. */
 function axismundi_actors_count_public_groups() : int {
 	global $wpdb;

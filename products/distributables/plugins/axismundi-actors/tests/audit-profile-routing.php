@@ -98,6 +98,23 @@ try {
 	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
 	$public_actor = axismundi_actors_get_by_uuid( $original_uuid );
 	ax_profile_assert( $ax_profile_results, 'a public actor with a registered handle is visible anonymously', $public_actor instanceof Axismundi_Actor && axismundi_actors_can_view( $public_actor, 0 ) );
+	ax_profile_assert(
+		$ax_profile_results,
+		'a public Person profile disables shared caching because its feed can vary by viewer',
+		$public_actor instanceof Axismundi_Actor && axismundi_actors_profile_requires_nocache( $public_actor )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'Person and Group profile templates expose separate feed surfaces while retaining the legacy Person template',
+		false !== strpos( axismundi_actors_profile_template_content(), 'ax-person-profile__timeline' )
+			&& false !== strpos( axismundi_actors_profile_template_content( 'actor-person-profile' ), 'ax-person-profile__timeline' )
+			&& false !== strpos( axismundi_actors_profile_template_content( 'actor-group-profile' ), 'ax-group-profile__community' )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'a Person route selects the Person profile template rather than the community surface',
+		$public_actor instanceof Axismundi_Actor && 'actor-person-profile' === axismundi_actors_profile_template_slug( $public_actor )
+	);
 	/*
 	 * The fallback for a rewrite table that lost these rules *routes*; it must never
 	 * redirect. An earlier release answered `/@handle/` with a 301 to `/@handle`, which

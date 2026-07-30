@@ -207,16 +207,17 @@ function axismundi_forum_announce_submission_uri( Axismundi_Activity $announce )
 	return (string) ( $announce->get_payload()['object']['id'] ?? '' );
 }
 
-/** Record the Group Announce for one validated entry, returning an existing effective row. */
-function axismundi_forum_record_group_announce( array $entry ) {
+/**
+ * Record the Group Announce for one exact submission Activity, returning an existing effective row.
+ *
+ * Create and Update are approval or edit submissions. Delete is different: the author addresses it
+ * directly to the Group, and the Group redistributes it only when this entry has a prior delivery.
+ */
+function axismundi_forum_record_group_submission_announce( array $entry, Axismundi_Activity $submission ) {
 	$group = axismundi_forum_get_community_group( (int) ( $entry['group_identity_id'] ?? 0 ) );
 	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || 'public' !== $group->get_status()
 		|| ! function_exists( 'axismundi_act_record_source_activity' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
 		return new WP_Error( 'ax_forum_announce_group', __( 'The local community Group cannot distribute this Topic.', 'axismundi-forum' ) );
-	}
-	$submission = axismundi_forum_entry_submission_activity( $entry );
-	if ( is_wp_error( $submission ) ) {
-		return $submission;
 	}
 	foreach ( axismundi_forum_entry_distributions( (int) $entry['id'] ) as $distribution ) {
 		$existing = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) $distribution['announce_activity_uri'] ) : null;
@@ -251,6 +252,61 @@ function axismundi_forum_record_group_announce( array $entry ) {
 	);
 	return is_wp_error( $announce ) ? $announce : ( is_wp_error( axismundi_forum_record_entry_distribution( (int) $entry['id'], $submission, $announce ) ) ? new WP_Error( 'ax_forum_distribution_write', __( 'The community distribution could not be recorded.', 'axismundi-forum' ) ) : $announce );
 }
+
+/** Record the Group Announce for one validated Create or Update entry submission. */
+function axismundi_forum_record_group_announce( array $entry ) {
+	$submission = axismundi_forum_entry_submission_activity( $entry );
+	return is_wp_error( $submission ) ? $submission : axismundi_forum_record_group_submission_announce( $entry, $submission );
+}
+
+/** Whether a Topic has ever been distributed by its Group, including pre-ledger entries. */
+function axismundi_forum_entry_has_distribution_history( array $entry ) : bool {
+	if ( ! empty( axismundi_forum_entry_distributions( (int) ( $entry['id'] ?? 0 ) ) ) ) {
+		return true;
+	}
+	$legacy = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) ( $entry['announced_activity_uri'] ?? '' ) ) : null;
+	return $legacy instanceof Axismundi_Activity && 'Announce' === $legacy->get_type();
+}
+
+/** Record the author's direct, Group-addressed Delete for one admitted local Topic. */
+function axismundi_forum_record_topic_delete( WP_Post $topic ) {
+	$entry = axismundi_forum_get_topic_entry( $topic->ID );
+	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( (int) $topic->post_author ) : null;
+	if ( ! is_array( $entry ) || ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_act_record_object_delete' ) ) {
+		return null;
+	}
+	return axismundi_act_record_object_delete( axismundi_forum_topic_object_uri( $topic ), $author->get_uri() );
+}
+
+/**
+ * Permanently deleting a Topic records its direct Delete before its Forum entry disappears.
+ *
+ * A pending Topic without Group delivery only tells the Group that its submitted Object ended.
+ * Once any Group Announce exists, the Group also Announce(Delete)s it to the same followers so
+ * a withdrawn-but-cached Topic cannot remain a community ghost on remote servers.
+ *
+ * @param WP_Post|false|null $delete Short-circuit value.
+ * @return WP_Post|false|null
+ */
+function axismundi_forum_pre_delete_topic_distribution( $delete, WP_Post $topic ) {
+	if ( false === $delete || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type ) {
+		return $delete;
+	}
+	$entry = axismundi_forum_get_topic_entry( $topic->ID );
+	if ( ! is_array( $entry ) ) {
+		return $delete;
+	}
+	$source_delete = axismundi_forum_record_topic_delete( $topic );
+	if ( is_wp_error( $source_delete ) ) {
+		return false;
+	}
+	if ( ! $source_delete instanceof Axismundi_Activity || ! axismundi_forum_entry_has_distribution_history( $entry ) ) {
+		return $delete;
+	}
+	$announce = axismundi_forum_record_group_submission_announce( $entry, $source_delete );
+	return is_wp_error( $announce ) ? false : $delete;
+}
+add_filter( 'pre_delete_post', 'axismundi_forum_pre_delete_topic_distribution', 30, 2 );
 
 /**
  * Withdraw an approved Topic from this community without deleting the author's Object.

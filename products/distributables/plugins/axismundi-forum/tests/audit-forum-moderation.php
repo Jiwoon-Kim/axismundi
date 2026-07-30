@@ -269,6 +269,53 @@ try {
 			&& $author_withdrawal instanceof Axismundi_Activity
 			&& ( $author_source = get_post( $topic_id ) ) instanceof WP_Post && 'pending' === $author_source->post_status
 	);
+	$topic_object_uri = $topic instanceof WP_Post ? axismundi_forum_topic_object_uri( $topic ) : '';
+	$distributed_entry_id = is_array( $author_withdrawn_entry ) ? (int) $author_withdrawn_entry['id'] : 0;
+	wp_set_current_user( $bob_user );
+	$distributed_deleted = $topic_id > 0 ? wp_delete_post( $topic_id, true ) : false;
+	wp_set_current_user( 0 );
+	$distributed_delete = '' !== $topic_object_uri ? axismundi_act_get_object_lifecycle( $topic_object_uri ) : null;
+	$delete_announces = $distributed_delete instanceof Axismundi_Activity ? axismundi_act_get_by_object( $distributed_delete->get_uri(), 10 ) : array();
+	$delete_announce = null;
+	foreach ( $delete_announces as $candidate ) {
+		if ( $candidate instanceof Axismundi_Activity && 'Announce' === $candidate->get_type() && $group instanceof Axismundi_Actor && $group->get_uri() === $candidate->get_actor_uri() ) {
+			$delete_announce = $candidate;
+			break;
+		}
+	}
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'permanently deleting a once-distributed pending Topic records Person Delete to its Group and Group Announce(Delete) to prior followers',
+		$distributed_deleted instanceof WP_Post && $distributed_delete instanceof Axismundi_Activity && 'Delete' === $distributed_delete->get_type()
+			&& $group instanceof Axismundi_Actor && in_array( $group->get_uri(), (array) ( $distributed_delete->get_audience()['to'] ?? array() ), true )
+			&& $delete_announce instanceof Axismundi_Activity && 'Delete' === (string) ( $delete_announce->get_payload()['object']['type'] ?? '' )
+			&& in_array( $followers, (array) ( $delete_announce->get_audience()['to'] ?? array() ), true )
+			&& $distributed_entry_id > 0 && count( axismundi_forum_entry_distributions( $distributed_entry_id ) ) >= 1
+			&& null === get_post( $topic_id )
+	);
+
+	$unannounced_topic_id = (int) wp_insert_post(
+		array(
+			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,
+			'post_status' => 'pending',
+			'post_author' => $bob_user,
+			'post_title'  => 'Unannounced pending Topic',
+		)
+	);
+	if ( $unannounced_topic_id > 0 ) { $ax_fmod_posts[] = $unannounced_topic_id; }
+	$unannounced_admitted = $unannounced_topic_id > 0 ? axismundi_forum_admit_local_topic( $group_id, $unannounced_topic_id, $bob_user ) : new WP_Error( 'fixture' );
+	$unannounced_uri = $unannounced_topic_id > 0 && ( $unannounced_topic = get_post( $unannounced_topic_id ) ) instanceof WP_Post ? axismundi_forum_topic_object_uri( $unannounced_topic ) : '';
+	wp_set_current_user( $bob_user );
+	$unannounced_deleted = $unannounced_topic_id > 0 ? wp_delete_post( $unannounced_topic_id, true ) : false;
+	wp_set_current_user( 0 );
+	$unannounced_delete = '' !== $unannounced_uri ? axismundi_act_get_object_lifecycle( $unannounced_uri ) : null;
+	$unannounced_announces = $unannounced_delete instanceof Axismundi_Activity ? axismundi_act_get_by_object( $unannounced_delete->get_uri(), 10 ) : array();
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'permanently deleting a never-announced pending Topic records its direct Delete but does not fabricate a Group Announce',
+		true === $unannounced_admitted && $unannounced_deleted instanceof WP_Post && $unannounced_delete instanceof Axismundi_Activity && 'Delete' === $unannounced_delete->get_type()
+			&& empty( array_filter( $unannounced_announces, static fn( Axismundi_Activity $activity ) : bool => 'Announce' === $activity->get_type() ) )
+	);
 
 	$contributor_topic_id = (int) wp_insert_post(
 		array(

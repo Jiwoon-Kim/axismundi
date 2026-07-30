@@ -52,6 +52,15 @@ function axismundi_forum_record_group_announce( array $entry ) {
 	if ( '' === $followers ) {
 		return new WP_Error( 'ax_forum_announce_followers', __( 'The community followers collection is unavailable.', 'axismundi-forum' ) );
 	}
+	/*
+	 * An undone Announce must be replaceable by a fresh Announce of the same Create. The source
+	 * key therefore names a distribution cycle, not just the entry/Create pair. Reusing the old
+	 * key would return the ineffective historical row and falsely make a re-approved entry look
+	 * distributed again.
+	 */
+	$cycle = function_exists( 'axismundi_act_announce_cycle_count' )
+		? 1 + axismundi_act_announce_cycle_count( $group->get_uri(), $create->get_uri() )
+		: 1;
 	return axismundi_act_record_source_activity(
 		array(
 			'type'   => 'Announce',
@@ -61,8 +70,61 @@ function axismundi_forum_record_group_announce( array $entry ) {
 			'to'     => array( $followers ),
 		),
 		'outbound',
-		'forum-group-announce:' . (int) $entry['id'] . ':create:' . $create->get_uri()
+		'forum-group-announce:' . (int) $entry['id'] . ':create:' . $create->get_uri() . ':cycle:' . $cycle
 	);
+}
+
+/**
+ * Withdraw an approved Topic from this community without deleting the author's Object.
+ *
+ * FEP-1b12 distribution still applies to the withdrawal: followers receive a Group Announce
+ * whose preserved inner activity is Undo(the prior Group Announce). The entry returns to the
+ * same pending queue used before its first approval, so a later moderator decision can publish
+ * a new Announce cycle of the original Create.
+ */
+function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id ) {
+	$entry = axismundi_forum_get_entry( $entry_id );
+	if ( ! is_array( $entry ) || 'visible' !== (string) $entry['admission_state'] ) {
+		return new WP_Error( 'ax_forum_announced_entry', __( 'The Topic is not currently published by this community.', 'axismundi-forum' ) );
+	}
+	if ( ! function_exists( 'axismundi_forum_user_can_moderate' ) || ! axismundi_forum_user_can_moderate( (int) $entry['group_identity_id'], $user_id ) ) {
+		return new WP_Error( 'ax_forum_forbidden', __( 'You may not withdraw this community Topic.', 'axismundi-forum' ) );
+	}
+	$group = axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
+	$announce = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) ( $entry['announced_activity_uri'] ?? '' ) ) : null;
+	if ( ! $group instanceof Axismundi_Actor || ! $announce instanceof Axismundi_Activity || 'Announce' !== $announce->get_type() || ! $announce->is_effective() || ! hash_equals( $group->get_uri(), $announce->get_actor_uri() )
+		|| ! function_exists( 'axismundi_act_record_source_activity' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
+		return new WP_Error( 'ax_forum_announce_missing', __( 'The active community Announce is unavailable.', 'axismundi-forum' ) );
+	}
+	$followers = axismundi_op_actor_followers_url( $group );
+	if ( '' === $followers ) {
+		return new WP_Error( 'ax_forum_announce_followers', __( 'The community followers collection is unavailable.', 'axismundi-forum' ) );
+	}
+	$undo = axismundi_act_record_source_activity(
+		array( 'type' => 'Undo', 'actor' => $group->get_uri(), 'object' => $announce->get_uri(), 'to' => array( $followers ) ),
+		'outbound',
+		'forum-group-withdraw-undo:' . $entry_id . ':announce:' . $announce->get_uri()
+	);
+	if ( is_wp_error( $undo ) ) {
+		return $undo;
+	}
+	$withdrawal = axismundi_act_record_source_activity(
+		array( 'type' => 'Announce', 'actor' => $group->get_uri(), 'object' => $undo->get_payload(), 'to' => array( $followers ) ),
+		'outbound',
+		'forum-group-withdraw-announce:' . $entry_id . ':undo:' . $undo->get_uri()
+	);
+	if ( is_wp_error( $withdrawal ) ) {
+		return $withdrawal;
+	}
+	global $wpdb;
+	$updated = $wpdb->update(
+		axismundi_forum_entries_table(),
+		array( 'admission_state' => 'pending', 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => $entry_id ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ledger-first Group distribution withdrawal.
+	return false === $updated ? new WP_Error( 'ax_forum_withdraw_write', __( 'The withdrawn Topic could not return to pending review.', 'axismundi-forum' ) ) : true;
 }
 
 /**

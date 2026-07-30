@@ -105,6 +105,34 @@ try {
 			&& $group->get_uri() === $outer->get_actor_uri() && 'Create' === (string) ( $outer->get_payload()['object']['type'] ?? '' )
 			&& in_array( $followers, (array) ( $outer->get_audience()['to'] ?? array() ), true )
 	);
+	$withdrawn = is_array( $approved_entry ) ? axismundi_forum_withdraw_announced_entry( (int) $approved_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$withdrawn_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$withdrawn_announce = $outer instanceof Axismundi_Activity ? axismundi_act_get( $outer->get_uri() ) : null;
+	$undo = $outer instanceof Axismundi_Activity ? axismundi_act_get_by_object( $outer->get_uri(), 10 ) : array();
+	$withdrawal_outer = null;
+	foreach ( $undo as $candidate ) {
+		if ( $candidate instanceof Axismundi_Activity && 'Undo' === $candidate->get_type() ) {
+			foreach ( axismundi_act_get_by_object( $candidate->get_uri(), 10 ) as $wrapper ) {
+				if ( $wrapper instanceof Axismundi_Activity && 'Announce' === $wrapper->get_type() ) { $withdrawal_outer = $wrapper; break 2; }
+			}
+		}
+	}
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'withdrawing an approved Topic wraps Undo(the prior Announce) and returns the entry to pending without deleting its source',
+		true === $withdrawn && is_array( $withdrawn_entry) && 'pending' === (string) $withdrawn_entry['admission_state']
+			&& $withdrawn_announce instanceof Axismundi_Activity && ! $withdrawn_announce->is_effective() && $withdrawal_outer instanceof Axismundi_Activity
+			&& 'Undo' === (string) ( $withdrawal_outer->get_payload()['object']['type'] ?? '' ) && $topic instanceof WP_Post && 'publish' === $topic->post_status
+	);
+	$reapproved = is_array( $withdrawn_entry ) ? axismundi_forum_approve_pending_entry( (int) $withdrawn_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$reapproved_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$reannounce = is_array( $reapproved_entry ) ? axismundi_act_get( (string) $reapproved_entry['announced_activity_uri'] ) : null;
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a withdrawn Topic can be re-approved with a fresh effective Group Announce of the same Create',
+		true === $reapproved && $reannounce instanceof Axismundi_Activity && $reannounce->is_effective()
+			&& $outer instanceof Axismundi_Activity && $reannounce->get_uri() !== $outer->get_uri()
+	);
 
 	$remote_uri = 'https://remote.example/topics/' . wp_generate_uuid4();
 	$wpdb->insert( axismundi_forum_entries_table(), array( 'group_identity_id' => $group_id, 'object_uri' => $remote_uri, 'object_uri_hash' => hash( 'sha256', $remote_uri ), 'entry_type' => 'topic', 'admission_state' => 'visible', 'moderation_state' => 'visible', 'created_at' => current_time( 'mysql', true ), 'updated_at' => current_time( 'mysql', true ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

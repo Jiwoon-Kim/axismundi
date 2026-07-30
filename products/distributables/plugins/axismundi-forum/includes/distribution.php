@@ -3,9 +3,9 @@
  * FEP-1b12 Group distribution of approved Topic submissions.
  *
  * This is intentionally separate from personal boosts. A Group Announce wraps the original
- * Activity, addresses the Group followers collection, and has no shares or interaction lease
- * semantics. Its withdrawal is an Undo of this outer Announce, not a Delete of the author's
- * Object and not a moderator-collection Remove.
+ * Activity and addresses the Group followers collection. Its withdrawal is the Group's direct
+ * Undo of that Announce, not a Delete of the author's Object and not a moderator-collection
+ * Remove.
  *
  * @package AxismundiForum
  */
@@ -77,10 +77,9 @@ function axismundi_forum_record_group_announce( array $entry ) {
 /**
  * Withdraw an approved Topic from this community without deleting the author's Object.
  *
- * FEP-1b12 distribution still applies to the withdrawal: followers receive a Group Announce
- * whose preserved inner activity is Undo(the prior Group Announce). The entry returns to the
- * same pending queue used before its first approval, so a later moderator decision can publish
- * a new Announce cycle of the original Create.
+ * The Group itself owns the prior Announce, so it sends Undo(Announce) directly to the same
+ * followers collection. The entry returns to the same pending queue used before its first
+ * approval, so a later moderator decision can publish a new Announce cycle of the original Create.
  */
 function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id ) {
 	$entry = axismundi_forum_get_entry( $entry_id );
@@ -93,28 +92,16 @@ function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id )
 	$group = axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
 	$announce = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) ( $entry['announced_activity_uri'] ?? '' ) ) : null;
 	if ( ! $group instanceof Axismundi_Actor || ! $announce instanceof Axismundi_Activity || 'Announce' !== $announce->get_type() || ! $announce->is_effective() || ! hash_equals( $group->get_uri(), $announce->get_actor_uri() )
-		|| ! function_exists( 'axismundi_act_record_source_activity' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
+		|| ! function_exists( 'axismundi_act_record_source_activity' ) ) {
 		return new WP_Error( 'ax_forum_announce_missing', __( 'The active community Announce is unavailable.', 'axismundi-forum' ) );
 	}
-	$followers = axismundi_op_actor_followers_url( $group );
-	if ( '' === $followers ) {
-		return new WP_Error( 'ax_forum_announce_followers', __( 'The community followers collection is unavailable.', 'axismundi-forum' ) );
-	}
 	$undo = axismundi_act_record_source_activity(
-		array( 'type' => 'Undo', 'actor' => $group->get_uri(), 'object' => $announce->get_uri(), 'to' => array( $followers ) ),
+		array( 'type' => 'Undo', 'actor' => $group->get_uri(), 'object' => $announce->get_uri(), 'to' => (array) ( $announce->get_audience()['to'] ?? array() ), 'cc' => (array) ( $announce->get_audience()['cc'] ?? array() ) ),
 		'outbound',
 		'forum-group-withdraw-undo:' . $entry_id . ':announce:' . $announce->get_uri()
 	);
 	if ( is_wp_error( $undo ) ) {
 		return $undo;
-	}
-	$withdrawal = axismundi_act_record_source_activity(
-		array( 'type' => 'Announce', 'actor' => $group->get_uri(), 'object' => $undo->get_payload(), 'to' => array( $followers ) ),
-		'outbound',
-		'forum-group-withdraw-announce:' . $entry_id . ':undo:' . $undo->get_uri()
-	);
-	if ( is_wp_error( $withdrawal ) ) {
-		return $withdrawal;
 	}
 	global $wpdb;
 	$updated = $wpdb->update(

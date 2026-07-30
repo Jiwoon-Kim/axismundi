@@ -84,6 +84,14 @@ try {
 	if ( $group_id > 0 ) {
 		$ax_ft_identity_ids[] = $group_id;
 	}
+	$author_actor = axismundi_actors_ensure_for_user( $owner );
+	$author_id    = $author_actor instanceof Axismundi_Actor ? $author_actor->get_identity_id() : 0;
+	if ( $author_id > 0 ) {
+		$ax_ft_identity_ids[] = $author_id;
+	}
+	$author_public = $author_id > 0
+		&& true === axismundi_actors_register_handle( $author_id, 'axft' . strtolower( wp_generate_password( 8, false, false ) ) )
+		&& axismundi_actors_set_status( $author_id, 'public' );
 
 	$community      = $group_id;
 	$topic          = ax_ft_topic( $ax_ft_post_ids, $owner, 'Audit Topic One' );
@@ -113,7 +121,7 @@ try {
 	$entry = axismundi_forum_get_topic_entry( $topic );
 	ax_ft_assert(
 		$ax_ft_results,
-		'admission creates exactly one contextual Topic entry with a nullable submission Actor',
+		'admission records one contextual Topic entry with its public submitting Person',
 		true === $admit
 			&& is_array( $entry )
 			// One key now, and it is the community itself.
@@ -121,7 +129,7 @@ try {
 			&& $group_id === (int) $entry['group_identity_id']
 			&& 'topic' === $entry['entry_type']
 			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === $entry['object_uri']
-			&& null === $entry['submission_actor_identity_id']
+			&& $author_id === (int) $entry['submission_actor_identity_id']
 	);
 
 	ax_ft_assert(
@@ -130,16 +138,6 @@ try {
 		array( $topic ) === axismundi_forum_topic_ids( $community )
 	);
 
-	// Admission can precede public author activation; a Page remains fail-closed until
-	// the Topic author's Person Actor has a public handle.
-	$author_actor = axismundi_actors_ensure_for_user( $owner );
-	$author_id    = $author_actor instanceof Axismundi_Actor ? $author_actor->get_identity_id() : 0;
-	if ( $author_id > 0 ) {
-		$ax_ft_identity_ids[] = $author_id;
-	}
-	$author_public = $author_id > 0
-		&& true === axismundi_actors_register_handle( $author_id, 'axft' . strtolower( wp_generate_password( 8, false, false ) ) )
-		&& axismundi_actors_set_status( $author_id, 'public' );
 	$projected = function_exists( 'axismundi_op_transform_object' ) ? axismundi_op_transform_object( get_post( $topic ) ) : null;
 	ax_ft_assert(
 		$ax_ft_results,
@@ -150,6 +148,8 @@ try {
 			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === $projected['id']
 			&& $group instanceof Axismundi_Actor
 			&& $group->get_uri() === $projected['audience']
+			&& array( $group->get_uri() ) === (array) $projected['to']
+			&& array() === (array) $projected['cc']
 			// context is the thread, audience is the Group; conflating them left no way to
 			// name one discussion (Constitution Article 13).
 			&& axismundi_forum_topic_context_uri( get_post( $topic ) ) === $projected['context']

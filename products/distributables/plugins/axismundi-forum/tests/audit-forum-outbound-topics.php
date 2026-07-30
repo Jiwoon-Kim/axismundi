@@ -3,7 +3,7 @@
  * Forum F3 outbound remote-Group Topic regression (dev-only; dist-excluded).
  *
  * Locks the portable path: local public Person Follow -> remote Group -> Page
- * Create addressed to Public and cc'd to the Group inbox.
+ * Create addressed directly to the Group inbox; only the Group redistributes it.
  *
  * @package AxismundiForum
  */
@@ -197,18 +197,18 @@ try {
 	);
 	ax_fot_assert(
 		$ax_fot_results,
-		'the committed outbound Create embeds an Article attributed to the Person with remote Group audience, thread context, and cc delivery address',
+		'the committed outbound Create embeds an Article attributed to the Person and addresses only the remote Group',
 		$lifecycle instanceof Axismundi_Activity && 'Create' === $lifecycle->get_type() && 'outbound' === $lifecycle->get_direction()
 			&& $author instanceof Axismundi_Actor && $group instanceof Axismundi_Actor && $author->get_uri() === (string) ( $object['attributedTo'] ?? '' )
 			&& 'Article' === (string) ( $object['type'] ?? '' )
 			// The remote Group is the delivery target, not the conversation identity.
 			&& $group->get_uri() !== (string) ( $object['context'] ?? '' ) && '' !== (string) ( $object['context'] ?? '' )
-			&& $group->get_uri() === (string) ( $object['audience'] ?? '' ) && in_array( $group->get_uri(), (array) ( $object['cc'] ?? array() ), true )
-			&& in_array( 'https://www.w3.org/ns/activitystreams#Public', (array) ( $object['to'] ?? array() ), true )
+			&& $group->get_uri() === (string) ( $object['audience'] ?? '' ) && array( $group->get_uri() ) === (array) ( $object['to'] ?? array() )
+			&& array() === (array) ( $object['cc'] ?? array() ) && ! axismundi_act_has_public_audience( $lifecycle )
 	);
 	ax_fot_assert(
 		$ax_fot_results,
-		'the Bridge resolves the remote Group inbox from the cc address for actual delivery',
+		'the Bridge resolves the remote Group inbox from the direct to address for actual delivery',
 		$group instanceof Axismundi_Actor && in_array( $group->get_uri() . '/inbox', $inboxes, true )
 	);
 

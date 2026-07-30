@@ -62,6 +62,13 @@ try {
 	$owner         = (int) wp_insert_user( array( 'user_login' => 'axgp_' . strtolower( wp_generate_password( 9, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'administrator' ) );
 	$ax_gp_users[] = $owner;
 	wp_set_current_user( $owner );
+	$person = axismundi_actors_ensure_for_user( $owner );
+	if ( $person instanceof Axismundi_Actor ) {
+		$ax_gp_ids[] = $person->get_identity_id();
+		axismundi_actors_register_handle( $person->get_identity_id(), 'axgp' . strtolower( wp_generate_password( 8, false, false ) ) );
+		axismundi_actors_set_status( $person->get_identity_id(), 'public' );
+		$person = axismundi_actors_get_for_user( $owner );
+	}
 
 	$group = ax_gp_group( $owner, $ax_gp_ids );
 	$community = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
@@ -104,7 +111,6 @@ try {
 		$solo instanceof Axismundi_Actor && false !== strpos( $solo_feed, 'axismundi-forum-topic-list' )
 	);
 
-	$person = axismundi_actors_ensure_for_user( $owner );
 	ax_gp_assert(
 		$ax_gp_results,
 		'Forum does not claim a Person profile feed',

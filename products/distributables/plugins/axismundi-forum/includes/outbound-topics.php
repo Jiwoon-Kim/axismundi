@@ -85,13 +85,23 @@ function axismundi_forum_bind_remote_topic_group( int $topic_post_id, int $user_
 		: true;
 }
 
-/** Record a finalized remote-community Page as a Create or Update. */
-function axismundi_forum_record_remote_topic_commit( WP_Post $topic ) {
-	$group = axismundi_forum_get_remote_topic_group( $topic );
-	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_record_object_commit' ) || ! function_exists( 'axismundi_op_finalize_object' ) ) {
-		return new WP_Error( 'ax_forum_remote_topic_context', __( 'The Topic has no eligible remote Group context.', 'axismundi-forum' ) );
+/** Resolve the one Group a submitted local Topic addresses. */
+function axismundi_forum_get_topic_destination_group( WP_Post $topic ) : ?Axismundi_Actor {
+	$entry = axismundi_forum_get_topic_entry( $topic->ID );
+	if ( is_array( $entry ) ) {
+		$group = axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
+		return $group instanceof Axismundi_Actor ? $group : null;
 	}
-	if ( ! axismundi_forum_user_can_submit_to_remote_group( (int) $topic->post_author, $group ) ) {
+	return axismundi_forum_get_remote_topic_group( $topic );
+}
+
+/** Record the direct Create or Update submitted by a Person Actor to one Group Actor. */
+function axismundi_forum_record_topic_commit( WP_Post $topic ) {
+	$group = axismundi_forum_get_topic_destination_group( $topic );
+	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_record_object_commit' ) || ! function_exists( 'axismundi_op_finalize_object' ) ) {
+		return new WP_Error( 'ax_forum_topic_context', __( 'The Topic has no eligible Group context.', 'axismundi-forum' ) );
+	}
+	if ( ! $group->is_local() && ! axismundi_forum_user_can_submit_to_remote_group( (int) $topic->post_author, $group ) ) {
 		return new WP_Error( 'ax_forum_remote_topic_follow', __( 'The author does not have an active remote Group Follow.', 'axismundi-forum' ) );
 	}
 	$object = axismundi_forum_topic_to_article( $topic );
@@ -100,6 +110,11 @@ function axismundi_forum_record_remote_topic_commit( WP_Post $topic ) {
 	}
 	$object = axismundi_op_finalize_object( $object, axismundi_forum_topic_object_uri( $topic ) );
 	return is_wp_error( $object ) ? $object : axismundi_act_record_object_commit( $object );
+}
+
+/** Backward-compatible name for the remote-only caller. */
+function axismundi_forum_record_remote_topic_commit( WP_Post $topic ) {
+	return axismundi_forum_record_topic_commit( $topic );
 }
 
 /** Create and publish one remote-community Topic through the only supported authoring API. */

@@ -110,18 +110,19 @@ try {
 	$topic_id = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $bob_user, 'post_title' => 'Pending Topic' ) );
 	if ( $topic_id > 0 ) { $ax_fmod_posts[] = $topic_id; }
 	$topic = get_post( $topic_id );
-	$object_uri = $topic instanceof WP_Post ? axismundi_forum_topic_object_uri( $topic ) : '';
-	$create = $bob instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
-		? axismundi_act_record_activity( array( 'type' => 'Create', 'actor' => $bob->get_uri(), 'object' => array( 'id' => $object_uri, 'type' => 'Article', 'attributedTo' => $bob->get_uri(), 'name' => 'Pending Topic', 'audience' => $group->get_uri() ), 'to' => array( $group->get_uri() ) ), 'outbound' )
-		: new WP_Error( 'fixture' );
 	$approval_policy = axismundi_forum_set_topic_approval_policy( $group_id, $owner_user, 'approval' );
 	$admitted = true === $approval_policy ? axismundi_forum_admit_local_topic( $group_id, $topic_id, $bob_user ) : $approval_policy;
 	$pending_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$create = is_array( $pending_entry ) ? axismundi_act_get( (string) ( $pending_entry['accepted_activity_uri'] ?? '' ) ) : null;
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a valid Topic submission waits in the Group pending queue until a moderator approves distribution',
-		$create instanceof Axismundi_Activity && true === $admitted && is_array( $pending_entry)
+		'a local Topic records one direct Create to its Group before it waits in the pending queue, never the author public feed',
+		$create instanceof Axismundi_Activity && true === $admitted && is_array( $pending_entry) && $group instanceof Axismundi_Actor
 			&& 'pending' === (string) $pending_entry['admission_state']
+			&& $create->get_uri() === (string) $pending_entry['accepted_activity_uri']
+			&& in_array( $group->get_uri(), (array) ( $create->get_audience()['to'] ?? array() ), true )
+			&& ! axismundi_act_has_public_audience( $create )
+			&& function_exists( 'axismundi_act_actor_feed_item' ) && null === axismundi_act_actor_feed_item( $create )
 			&& 1 === count( axismundi_forum_pending_topic_entries( $group_id ) )
 	);
 	wp_set_current_user( $alice_user );
@@ -151,20 +152,21 @@ try {
 	$withdrawn_entry = axismundi_forum_get_topic_entry( $topic_id );
 	$withdrawn_announce = $outer instanceof Axismundi_Activity ? axismundi_act_get( $outer->get_uri() ) : null;
 	$undo = $outer instanceof Axismundi_Activity ? axismundi_act_get_by_object( $outer->get_uri(), 10 ) : array();
-	$withdrawal_outer = null;
+	$withdrawal = null;
 	foreach ( $undo as $candidate ) {
-		if ( $candidate instanceof Axismundi_Activity && 'Undo' === $candidate->get_type() ) {
-			foreach ( axismundi_act_get_by_object( $candidate->get_uri(), 10 ) as $wrapper ) {
-				if ( $wrapper instanceof Axismundi_Activity && 'Announce' === $wrapper->get_type() ) { $withdrawal_outer = $wrapper; break 2; }
-			}
+		if ( $candidate instanceof Axismundi_Activity && 'Undo' === $candidate->get_type() && $candidate->is_effective() ) {
+			$withdrawal = $candidate;
+			break;
 		}
 	}
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'withdrawing an approved Topic wraps Undo(the prior Announce) and returns the entry to pending without deleting its source',
+		'withdrawing an approved Topic sends the Group direct Undo of its Announce and returns the entry to pending without deleting its source',
 		true === $withdrawn && is_array( $withdrawn_entry) && 'pending' === (string) $withdrawn_entry['admission_state']
-			&& $withdrawn_announce instanceof Axismundi_Activity && ! $withdrawn_announce->is_effective() && $withdrawal_outer instanceof Axismundi_Activity
-			&& 'Undo' === (string) ( $withdrawal_outer->get_payload()['object']['type'] ?? '' ) && $topic instanceof WP_Post && 'publish' === $topic->post_status
+			&& $withdrawn_announce instanceof Axismundi_Activity && ! $withdrawn_announce->is_effective() && $withdrawal instanceof Axismundi_Activity
+			&& $group instanceof Axismundi_Actor && $group->get_uri() === $withdrawal->get_actor_uri()
+			&& $outer instanceof Axismundi_Activity && $outer->get_uri() === $withdrawal->get_object_uri()
+			&& in_array( $followers, (array) ( $withdrawal->get_audience()['to'] ?? array() ), true ) && $topic instanceof WP_Post && 'publish' === $topic->post_status
 	);
 	$reapproved = is_array( $withdrawn_entry ) ? axismundi_forum_approve_pending_entry( (int) $withdrawn_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
 	$reapproved_entry = axismundi_forum_get_topic_entry( $topic_id );

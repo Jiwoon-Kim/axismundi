@@ -163,6 +163,10 @@ function axismundi_forum_can_admit_local_topic( int $group_identity_id, int $top
 	if ( $user_id <= 0 || ! user_can( $user_id, 'edit_post', $topic_post_id ) || ! axismundi_forum_is_community( $group_identity_id ) ) {
 		return false;
 	}
+	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( $user_id ) : null;
+	if ( ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $author ) ) {
+		return false;
+	}
 	$policy = axismundi_forum_get_posting_policy( $group_identity_id );
 	if ( 'open' === $policy ) {
 		return true;
@@ -173,10 +177,7 @@ function axismundi_forum_can_admit_local_topic( int $group_identity_id, int $top
 	if ( 'members' !== $policy || ! function_exists( 'axismundi_actors_get_for_user' ) || ! function_exists( 'axismundi_forum_get_membership' ) ) {
 		return false;
 	}
-	$actor      = axismundi_actors_get_for_user( $user_id );
-	$membership = $actor instanceof Axismundi_Actor && 'Person' === $actor->get_type()
-		? axismundi_forum_get_membership( $group_identity_id, $actor->get_identity_id() )
-		: null;
+	$membership = axismundi_forum_get_membership( $group_identity_id, $author->get_identity_id() );
 	return is_array( $membership ) && 'accepted' === (string) $membership['membership_state'];
 }
 
@@ -329,7 +330,26 @@ function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_p
 		$fields,
 		$formats
 	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Forum-owned contextual projection.
-	return false === $ok ? new WP_Error( 'ax_forum_topic_write', __( 'The Topic could not be added to this Forum.', 'axismundi-forum' ) ) : true;
+	if ( false === $ok ) {
+		return new WP_Error( 'ax_forum_topic_write', __( 'The Topic could not be added to this Forum.', 'axismundi-forum' ) );
+	}
+	$create = function_exists( 'axismundi_forum_record_topic_commit' ) ? axismundi_forum_record_topic_commit( $topic ) : new WP_Error( 'ax_forum_topic_create', __( 'The Topic Create recorder is unavailable.', 'axismundi-forum' ) );
+	if ( is_wp_error( $create ) ) {
+		$wpdb->delete( axismundi_forum_entries_table(), array( 'source_post_id' => $topic_post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- do not leave a pending entry that lacks the immutable submitted Create.
+		return $create;
+	}
+	$updated = $wpdb->update(
+		axismundi_forum_entries_table(),
+		array( 'accepted_activity_uri' => $create->get_uri(), 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'source_post_id' => $topic_post_id ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- entry points to the immutable submitted Create that Group approval will wrap.
+	if ( false === $updated ) {
+		$wpdb->delete( axismundi_forum_entries_table(), array( 'source_post_id' => $topic_post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the entry is unusable unless it retains its submitted Create URI.
+		return new WP_Error( 'ax_forum_topic_create_link', __( 'The Topic Create could not be linked to its community entry.', 'axismundi-forum' ) );
+	}
+	return true;
 }
 
 /** Get public visible Topic post ids for the Forum Topic list. */
@@ -467,10 +487,11 @@ function axismundi_forum_topic_article_visible( WP_Post $topic ) : bool {
 function axismundi_forum_topic_to_article( WP_Post $topic ) {
 	$entry = axismundi_forum_get_topic_entry( $topic->ID );
 	$group = is_array( $entry ) && function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( (int) $entry['group_identity_id'] ) : axismundi_forum_get_remote_topic_group( $topic );
-	$author_uri = axismundi_op_local_author_actor_uri( (int) $topic->post_author );
-	if ( ! $group instanceof Axismundi_Actor || '' === $author_uri ) {
+	$author = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( (int) $topic->post_author ) : null;
+	if ( ! $group instanceof Axismundi_Actor || ! $author instanceof Axismundi_Actor || ! $author->is_local() || 'Person' !== $author->get_type() || ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $author ) ) {
 		return new WP_Error( 'ax_forum_topic_projection', __( 'The Topic lacks a valid Forum context or author.', 'axismundi-forum' ) );
 	}
+	$author_uri = $author->get_uri();
 	$object_uri = axismundi_forum_topic_object_uri( $topic );
 	return array(
 		'id'              => $object_uri,
@@ -484,8 +505,10 @@ function axismundi_forum_topic_to_article( WP_Post $topic ) {
 		'mediaType'       => 'text/html',
 		'published'       => get_post_time( DATE_W3C, true, $topic ),
 		'updated'         => get_post_modified_time( DATE_W3C, true, $topic ),
-		'to'              => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-		'cc'              => $group->is_local() ? array() : array( $group->get_uri() ),
+		// A Topic is submitted to its Group. The Group's Announce, not the author's Create,
+		// is the public distribution event, so this never addresses the author's followers.
+		'to'              => array( $group->get_uri() ),
+		'cc'              => array(),
 		'commentsEnabled' => ! is_array( $entry ) || empty( $entry['locked_at'] ),
 	);
 }

@@ -205,11 +205,13 @@ ontology. See CONSTITUTION.md Article 13. Inbound stays lenient: a remote root
 post may be `Article` or `Page`.
 
 `audience` and `context` answer different questions and are no longer the same
-URI. They were both the Group URI through F1, which FEP-7888 permits — a forum or
-channel is a legitimate `context` — but that made every reply in the Forum share
-one context and left nothing able to name an individual thread. Each Topic now has
-a resolvable per-thread `context` that dereferences to an `OrderedCollection`
-attributed to the Group; replies inherit it from their parent per FEP-11dd.
+URI. They were both the Group URI through F1, which FEP-7888 explicitly permits —
+a forum, channel, or group is a legitimate `context` — so that was a valid reading,
+not a defect. What forces the change is FEP-11dd inheritance: a reply takes its
+parent's context, so if the context is the Group then every reply in the Forum
+inherits one value and no individual thread can be named. Each Topic now has a
+resolvable per-thread `context` that dereferences to an `OrderedCollection`
+attributed to the Group; replies inherit that per FEP-11dd.
 
 Topics must not be folded into editorial `post` or short-form `ax_note`, which
 have different authoring and lifecycle contracts.

@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_DB_VERSION = '3.1';
+const AXISMUNDI_FORUM_DB_VERSION = '4.0';
 
 /** @return string Fully-qualified binding table name. */
 function axismundi_forum_bindings_table() : string {
@@ -36,6 +36,103 @@ function axismundi_forum_entries_table() : string {
 function axismundi_forum_memberships_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_forum_memberships';
+}
+
+/** @return string Fully-qualified per-Group community settings table name. */
+function axismundi_forum_settings_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_forum_settings';
+}
+
+/**
+ * Move one Group's community policies out of `ax_forum` post meta and into Forum's own table.
+ *
+ * The `ax_forum` post was a stand-in for a community, and it was the wrong one: a Group Actor
+ * already *is* the community, so the post only existed to hold policies and to be the thing
+ * other rows pointed at. Keeping policy in its post meta meant a community's admission rules
+ * lived in a WordPress post that had no reason to exist, and every projection was keyed to that
+ * post rather than to the identity it stood for.
+ *
+ * Policy stays Forum-owned rather than moving into Actor meta. Actors owns identity; who may
+ * post and who may join is a community function, and mixing it into the identity record would
+ * put Forum's concerns inside the plugin that must not know about them.
+ *
+ * Idempotent: a Group already carrying settings is left alone, so a partial run resumes.
+ *
+ * @return int Groups migrated on this pass.
+ */
+function axismundi_forum_migrate_bindings_to_settings() : int {
+	global $wpdb;
+	$bindings = axismundi_forum_bindings_table();
+	$settings = axismundi_forum_settings_table();
+	// The policy meta keys live with the features that own them, so a partial include order
+	// must not silently migrate every community to a default policy it never chose.
+	if ( ! defined( 'AXISMUNDI_FORUM_POSTING_POLICY_META' ) || ! defined( 'AXISMUNDI_FORUM_MEMBERSHIP_POLICY_META' ) ) {
+		return 0;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off migration over a fixed custom table.
+	if ( (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $bindings ) ) !== $bindings ) {
+		return 0;
+	}
+	$now     = current_time( 'mysql', true );
+	$moved   = 0;
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded one-off migration read.
+	foreach ( (array) $wpdb->get_results( "SELECT forum_post_id, group_identity_id, created_at FROM {$bindings}", ARRAY_A ) as $binding ) {
+		$group_identity_id = (int) $binding['group_identity_id'];
+		$forum_post_id     = (int) $binding['forum_post_id'];
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- existence check before insert.
+		if ( $group_identity_id <= 0 || (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$settings} WHERE group_identity_id = %d", $group_identity_id ) ) > 0 ) {
+			continue;
+		}
+		$posting    = (string) get_post_meta( $forum_post_id, AXISMUNDI_FORUM_POSTING_POLICY_META, true );
+		$membership = (string) get_post_meta( $forum_post_id, AXISMUNDI_FORUM_MEMBERSHIP_POLICY_META, true );
+		$inserted   = $wpdb->insert(
+			$settings,
+			array(
+				'group_identity_id' => $group_identity_id,
+				'posting_policy'    => in_array( $posting, array( 'open', 'managers' ), true ) ? $posting : 'open',
+				'membership_policy' => in_array( $membership, array( 'open', 'approval' ), true ) ? $membership : 'open',
+				// The community is as old as its binding was, not as old as this migration.
+				'created_at'        => (string) ( $binding['created_at'] ?? $now ),
+				'updated_at'        => $now,
+			),
+			array( '%d', '%s', '%s', '%s', '%s' )
+		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off migration insert.
+		if ( false !== $inserted ) {
+			++$moved;
+		}
+	}
+	return $moved;
+}
+
+/**
+ * Rekey the entry and membership projections from the `ax_forum` post to the Group identity.
+ *
+ * Entries already carried `group_identity_id` alongside `forum_post_id`, so for them this is
+ * only an index change. Memberships did not, and are backfilled through the binding table
+ * while it still exists — which is why this must run before the binding table is dropped, and
+ * why the drop is a later, separately verified step rather than part of the same pass.
+ *
+ * The legacy `forum_post_id` columns are deliberately left in place. A migration that deletes
+ * its own evidence cannot be checked afterwards, and there is no way to prove the rekey was
+ * correct once the old key is gone.
+ *
+ * @return array{entries:int,memberships:int} Rows given a Group identity on this pass.
+ */
+function axismundi_forum_migrate_projections_to_group() : array {
+	global $wpdb;
+	$bindings    = axismundi_forum_bindings_table();
+	$memberships = axismundi_forum_memberships_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration guard.
+	if ( (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $bindings ) ) !== $bindings ) {
+		return array( 'entries' => 0, 'memberships' => 0 );
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- backfill from the still-present binding table.
+	$members = (int) $wpdb->query( "UPDATE {$memberships} m JOIN {$bindings} b ON b.forum_post_id = m.forum_post_id SET m.group_identity_id = b.group_identity_id WHERE m.group_identity_id = 0 OR m.group_identity_id IS NULL" );
+	$entries = axismundi_forum_entries_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- entries already carry the Group; repair only rows that do not.
+	$rows = (int) $wpdb->query( "UPDATE {$entries} e JOIN {$bindings} b ON b.forum_post_id = e.forum_post_id SET e.group_identity_id = b.group_identity_id WHERE e.group_identity_id = 0 OR e.group_identity_id IS NULL" );
+	return array( 'entries' => max( 0, $rows ), 'memberships' => max( 0, $members ) );
 }
 
 /**
@@ -94,14 +191,35 @@ function axismundi_forum_install() : void {
 	dbDelta(
 		"CREATE TABLE {$memberships} (
 			forum_post_id bigint(20) unsigned NOT NULL,
+			group_identity_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			actor_identity_id bigint(20) unsigned NOT NULL,
 			membership_evidence_activity_uri text DEFAULT NULL,
 			membership_state varchar(12) NOT NULL DEFAULT 'pending',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (forum_post_id, actor_identity_id),
+			UNIQUE KEY group_member (group_identity_id, actor_identity_id),
 			KEY actor_state (actor_identity_id, membership_state),
-			KEY forum_state (forum_post_id, membership_state)
+			KEY forum_state (forum_post_id, membership_state),
+			KEY group_state (group_identity_id, membership_state)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	/*
+	 * Community policy, keyed by the Group identity that is the community. The `ax_forum` post
+	 * held this in post meta while it stood in for a community it was never needed for; the
+	 * Group Actor already is one, so the policy belongs to the identity, not to a post that
+	 * exists only to be pointed at.
+	 */
+	$settings = axismundi_forum_settings_table();
+	dbDelta(
+		"CREATE TABLE {$settings} (
+			group_identity_id bigint(20) unsigned NOT NULL,
+			posting_policy varchar(12) NOT NULL DEFAULT 'open',
+			membership_policy varchar(12) NOT NULL DEFAULT 'open',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (group_identity_id)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -132,8 +250,20 @@ function axismundi_forum_install() : void {
 	$membership_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$memberships}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$membership_index = (array) $wpdb->get_col( "SHOW INDEX FROM {$memberships} WHERE Key_name = 'forum_state'" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$settings_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$settings}" );
 
-	if ( ! empty( $group_unique ) && ! empty( $entry_indexes ) && in_array( 'entry_type', $entry_columns, true ) && in_array( 'membership_evidence_activity_uri', $membership_columns, true ) && ! in_array( 'follow_activity_uri', $membership_columns, true ) && ! empty( $membership_index ) && 'InnoDB' === $engine ) {
+	/*
+	 * Carry the community across before anything reads the new key. The binding table and the
+	 * `ax_forum` posts are still the only place the old association exists, so this runs while
+	 * they are present and is verified before either is removed.
+	 */
+	if ( in_array( 'group_identity_id', $membership_columns, true ) && in_array( 'group_identity_id', $settings_columns, true ) ) {
+		axismundi_forum_migrate_bindings_to_settings();
+		axismundi_forum_migrate_projections_to_group();
+	}
+
+	if ( ! empty( $group_unique ) && ! empty( $entry_indexes ) && in_array( 'entry_type', $entry_columns, true ) && in_array( 'membership_evidence_activity_uri', $membership_columns, true ) && ! in_array( 'follow_activity_uri', $membership_columns, true ) && in_array( 'group_identity_id', $membership_columns, true ) && in_array( 'membership_policy', $settings_columns, true ) && ! empty( $membership_index ) && 'InnoDB' === $engine ) {
 		update_option( 'ax_forum_db_version', AXISMUNDI_FORUM_DB_VERSION, false );
 	}
 }

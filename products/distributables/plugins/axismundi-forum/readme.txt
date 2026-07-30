@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.5.0
+Stable tag: 0.6.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -35,6 +35,19 @@ activity ledger and social relations (Axismundi Activities); object rendering
 (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.6.0 =
+* Begins moving the community from the `ax_forum` post to the Group Actor that already is
+  one. Adds `wp_ax_forum_settings`, keyed by Group identity, and migrates each bound Forum's
+  posting and membership policy out of post meta into it. Adds `group_identity_id` to the
+  membership projection and backfills it through the binding table.
+* Nothing reads the new key yet, and no legacy column, table, post, or route is removed. The
+  binding table and the `ax_forum` posts are what the migration is checked against, so they
+  stay until the rekey is verified. DB schema 4.0.
+* Still to come in this move: the API rekey from `$forum_post_id` to `$group_identity_id`,
+  the Topic editor's "Forum" selector becoming a "Community" selector over manageable Groups,
+  the Community settings UI moving into the Managed Group screen, and only then the removal
+  of the CPT, the `/forum/` rewrite, and the binding table.
 
 = 0.5.0 =
 * A Forum root post is now published as an ActivityStreams `Article` rather than the `Page`

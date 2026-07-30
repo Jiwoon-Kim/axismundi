@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.35
+Stable tag: 0.0.36
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,16 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.36 =
+* A followers-only or mentioned-only Note is now readable by the people it was actually
+  addressed to. The gate reads the recipients recorded on the emitted `Create`/`Update`,
+  not the current post body, so editing the text afterwards cannot grant or revoke access
+  to a document that was already delivered. Anonymous and unrelated visitors still get 404.
+* Site administrators may read an addressed Note as an explicit server-operation policy.
+* Lets a community claim a threaded reply's audience so a reply to a Group Topic is
+  addressed to that Group rather than to the author's own followers. Which replies qualify
+  is the community's decision, not Note's.
 
 = 0.0.35 =
 * A reply now inherits its parent's `context` when none is authored (FEP-11dd). An author

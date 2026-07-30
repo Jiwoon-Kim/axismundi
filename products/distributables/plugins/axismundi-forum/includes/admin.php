@@ -187,8 +187,13 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		echo '</ul>';
 	}
 	$pending_topics = axismundi_forum_pending_topic_entries( $group_id );
-	if ( ! empty( $pending_topics ) ) {
-		echo '<h3>' . esc_html__( 'Topic submissions', 'axismundi-forum' ) . ' <span class="count">(' . esc_html( number_format_i18n( count( $pending_topics ) ) ) . ')</span></h3><ul>';
+	if ( $can_moderate ) {
+		echo '<h3>' . esc_html__( 'Topic submissions', 'axismundi-forum' ) . ' <span class="count">(' . esc_html( number_format_i18n( count( $pending_topics ) ) ) . ')</span></h3>';
+		if ( empty( $pending_topics ) ) {
+			echo '<p class="description">' . esc_html__( 'No Topic submissions are awaiting review.', 'axismundi-forum' ) . '</p>';
+			return;
+		}
+		echo '<ul>';
 		foreach ( $pending_topics as $entry ) {
 			$author = axismundi_actors_get_by_identity( (int) ( $entry['submission_actor_identity_id'] ?? 0 ) );
 			$label = $author instanceof Axismundi_Actor ? '@' . $author->get_preferred_username() : __( 'Unknown author', 'axismundi-forum' );

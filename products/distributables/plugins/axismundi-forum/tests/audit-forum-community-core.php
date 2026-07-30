@@ -103,8 +103,8 @@ try {
 	}
 	$community_admin = (string) ob_get_clean();
 	ax_fc_assert(
-		'the managed Group community screen exposes its accepted member list and membership approval control',
-		$owner_actor instanceof Axismundi_Actor && str_contains( $community_admin, 'Members' ) && str_contains( $community_admin, 'Membership approval' ) && str_contains( $community_admin, '@' . $owner_actor->get_preferred_username() )
+		'the managed Group community screen exposes its member list, membership controls, and an empty Topic review queue',
+		$owner_actor instanceof Axismundi_Actor && str_contains( $community_admin, 'Members' ) && str_contains( $community_admin, 'Membership approval' ) && str_contains( $community_admin, 'Topic submissions' ) && str_contains( $community_admin, 'No Topic submissions are awaiting review.' ) && str_contains( $community_admin, '@' . $owner_actor->get_preferred_username() )
 	);
 
 	$policy = axismundi_forum_set_posting_policy( $group_id, $owner, 'managers' );

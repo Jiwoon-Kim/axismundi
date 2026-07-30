@@ -9,7 +9,7 @@
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 global $wpdb;
-foreach ( array( 'ax_forum_settings', 'ax_forum_entries', 'ax_forum_memberships', 'ax_forum_bindings' ) as $suffix ) {
+foreach ( array( 'ax_forum_settings', 'ax_forum_entries', 'ax_forum_memberships', 'ax_forum_entry_distributions', 'ax_forum_bindings' ) as $suffix ) {
 	$table = $wpdb->prefix . $suffix;
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange -- plugin uninstall removes only its own tables.
 	$wpdb->query( "DROP TABLE IF EXISTS {$table}" );

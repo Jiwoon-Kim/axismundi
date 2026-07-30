@@ -169,9 +169,25 @@ try {
 		'the public community Group outbox includes its Public approval Announce without opening ordinary followers-only delivery',
 		$outer instanceof Axismundi_Activity && in_array( $outer->get_uri(), $group_outbox_ids, true )
 	);
+	wp_set_current_user( $bob_user );
+	$visible_edit = $topic instanceof WP_Post ? wp_update_post( array( 'ID' => $topic->ID, 'post_content' => 'Visible Topic revision.' ), true ) : new WP_Error( 'fixture' );
+	wp_set_current_user( 0 );
+	$edited_visible_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$visible_update_announce = is_array( $edited_visible_entry ) ? axismundi_act_get( (string) $edited_visible_entry['announced_activity_uri'] ) : null;
+	$distributions = is_array( $edited_visible_entry ) ? axismundi_forum_entry_distributions( (int) $edited_visible_entry['id'] ) : array();
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'editing a visible local Topic records its Person Update and a fresh Group Announce(Update) while retaining the Create distribution',
+		! is_wp_error( $visible_edit) && $outer instanceof Axismundi_Activity && $outer->is_effective()
+			&& $visible_update_announce instanceof Axismundi_Activity && $visible_update_announce->is_effective()
+			&& $visible_update_announce->get_uri() !== $outer->get_uri()
+			&& 'Update' === (string) ( $visible_update_announce->get_payload()['object']['type'] ?? '' )
+			&& 2 === count( $distributions )
+	);
 	$withdrawn = is_array( $approved_entry ) ? axismundi_forum_withdraw_announced_entry( (int) $approved_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
 	$withdrawn_entry = axismundi_forum_get_topic_entry( $topic_id );
 	$withdrawn_announce = $outer instanceof Axismundi_Activity ? axismundi_act_get( $outer->get_uri() ) : null;
+	$withdrawn_update_announce = $visible_update_announce instanceof Axismundi_Activity ? axismundi_act_get( $visible_update_announce->get_uri() ) : null;
 	$undo = $outer instanceof Axismundi_Activity ? axismundi_act_get_by_object( $outer->get_uri(), 10 ) : array();
 	$withdrawal = null;
 	foreach ( $undo as $candidate ) {
@@ -185,6 +201,7 @@ try {
 		'withdrawing an approved Topic sends the Group direct Undo of its Announce and returns the entry to pending without deleting its source',
 		true === $withdrawn && is_array( $withdrawn_entry) && 'pending' === (string) $withdrawn_entry['admission_state']
 			&& $withdrawn_announce instanceof Axismundi_Activity && ! $withdrawn_announce->is_effective() && $withdrawal instanceof Axismundi_Activity
+			&& $withdrawn_update_announce instanceof Axismundi_Activity && ! $withdrawn_update_announce->is_effective()
 			&& $group instanceof Axismundi_Actor && $group->get_uri() === $withdrawal->get_actor_uri()
 			&& $outer instanceof Axismundi_Activity && $outer->get_uri() === $withdrawal->get_object_uri()
 			&& function_exists( 'axismundi_act_public_audience_uri' ) && in_array( axismundi_act_public_audience_uri(), (array) ( $withdrawal->get_audience()['to'] ?? array() ), true )

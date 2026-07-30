@@ -21,7 +21,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_DB_VERSION = '5.3';
+const AXISMUNDI_FORUM_DB_VERSION = '5.4';
 
 /** @return string Fully-qualified Forum-entry projection table name. */
 function axismundi_forum_entries_table() : string {
@@ -41,12 +41,19 @@ function axismundi_forum_settings_table() : string {
 	return $wpdb->prefix . 'ax_forum_settings';
 }
 
+/** @return string Fully-qualified immutable Group-distribution ledger table. */
+function axismundi_forum_entry_distributions_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_forum_entry_distributions';
+}
+
 /** @return string[] Every table this plugin owns, for install and reset. */
 function axismundi_forum_owned_tables() : array {
 	return array(
 		axismundi_forum_settings_table(),
 		axismundi_forum_entries_table(),
 		axismundi_forum_memberships_table(),
+		axismundi_forum_entry_distributions_table(),
 	);
 }
 
@@ -75,6 +82,21 @@ function axismundi_forum_install() : void {
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (group_identity_id)
+		) ENGINE=InnoDB {$charset};"
+	);
+
+	$distributions = axismundi_forum_entry_distributions_table();
+	dbDelta(
+		"CREATE TABLE {$distributions} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			entry_id bigint(20) unsigned NOT NULL,
+			submission_activity_uri text NOT NULL,
+			announce_activity_uri text NOT NULL,
+			announce_activity_uri_hash char(64) NOT NULL,
+			created_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY entry_announce (entry_id, announce_activity_uri_hash),
+			KEY entry_created (entry_id, created_at)
 		) ENGINE=InnoDB {$charset};"
 	);
 
@@ -130,6 +152,7 @@ function axismundi_forum_install() : void {
 	$membership_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$memberships}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$settings_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$settings}" );
+	$distribution_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$distributions}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- storage-engine verification.
 	$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s', DB_NAME, $entries ) );
 
@@ -149,6 +172,8 @@ function axismundi_forum_install() : void {
 		&& in_array( 'membership_policy', $settings_columns, true )
 		&& in_array( 'topic_approval_policy', $settings_columns, true )
 		&& in_array( 'distribution_scope', $settings_columns, true )
+		&& in_array( 'submission_activity_uri', $distribution_columns, true )
+		&& in_array( 'announce_activity_uri', $distribution_columns, true )
 		&& 'InnoDB' === $engine ) {
 		update_option( 'ax_forum_db_version', AXISMUNDI_FORUM_DB_VERSION, false );
 	}

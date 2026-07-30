@@ -165,6 +165,48 @@ function axismundi_forum_user_can_withdraw_announced_entry( array $entry, int $u
 	return $topic instanceof WP_Post && $user_id === (int) $topic->post_author;
 }
 
+/** @return array<int,array<string,mixed>> Every recorded Group distribution for one entry. */
+function axismundi_forum_entry_distributions( int $entry_id ) : array {
+	if ( $entry_id <= 0 ) {
+		return array();
+	}
+	global $wpdb;
+	$table = axismundi_forum_entry_distributions_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Forum owns this per-entry distribution ledger.
+	return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE entry_id = %d ORDER BY id ASC", $entry_id ), ARRAY_A );
+}
+
+/** Record the immutable Group Announce that distributed one submission Activity. */
+function axismundi_forum_record_entry_distribution( int $entry_id, Axismundi_Activity $submission, Axismundi_Activity $announce ) {
+	global $wpdb;
+	$table = axismundi_forum_entry_distributions_table();
+	$hash = hash( 'sha256', $announce->get_uri() );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- collision-safe idempotent lookup in the Forum-owned ledger.
+	$existing = $wpdb->get_var( $wpdb->prepare( "SELECT announce_activity_uri FROM {$table} WHERE entry_id = %d AND announce_activity_uri_hash = %s", $entry_id, $hash ) );
+	if ( is_string( $existing ) && '' !== $existing ) {
+		return hash_equals( $existing, $announce->get_uri() )
+			? true
+			: new WP_Error( 'ax_forum_distribution_collision', __( 'A community distribution identity collision was detected.', 'axismundi-forum' ) );
+	}
+	$inserted = $wpdb->insert(
+		$table,
+		array(
+			'entry_id'                   => $entry_id,
+			'submission_activity_uri'    => $submission->get_uri(),
+			'announce_activity_uri'      => $announce->get_uri(),
+			'announce_activity_uri_hash' => $hash,
+			'created_at'                 => current_time( 'mysql', true ),
+		),
+		array( '%d', '%s', '%s', '%s', '%s' )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- immutable Forum distribution record.
+	return false === $inserted ? new WP_Error( 'ax_forum_distribution_write', __( 'The community distribution could not be recorded.', 'axismundi-forum' ) ) : true;
+}
+
+/** Read the submission Activity wrapped by a Group Announce. */
+function axismundi_forum_announce_submission_uri( Axismundi_Activity $announce ) : string {
+	return (string) ( $announce->get_payload()['object']['id'] ?? '' );
+}
+
 /** Record the Group Announce for one validated entry, returning an existing effective row. */
 function axismundi_forum_record_group_announce( array $entry ) {
 	$group = axismundi_forum_get_community_group( (int) ( $entry['group_identity_id'] ?? 0 ) );
@@ -172,14 +214,15 @@ function axismundi_forum_record_group_announce( array $entry ) {
 		|| ! function_exists( 'axismundi_act_record_source_activity' ) || ! function_exists( 'axismundi_op_actor_followers_url' ) ) {
 		return new WP_Error( 'ax_forum_announce_group', __( 'The local community Group cannot distribute this Topic.', 'axismundi-forum' ) );
 	}
-	$existing_uri = (string) ( $entry['announced_activity_uri'] ?? '' );
-	$existing = '' !== $existing_uri && function_exists( 'axismundi_act_get' ) ? axismundi_act_get( $existing_uri ) : null;
-	if ( $existing instanceof Axismundi_Activity && 'Announce' === $existing->get_type() && $existing->is_effective() && hash_equals( $group->get_uri(), $existing->get_actor_uri() ) ) {
-		return $existing;
-	}
 	$submission = axismundi_forum_entry_submission_activity( $entry );
 	if ( is_wp_error( $submission ) ) {
 		return $submission;
+	}
+	foreach ( axismundi_forum_entry_distributions( (int) $entry['id'] ) as $distribution ) {
+		$existing = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) $distribution['announce_activity_uri'] ) : null;
+		if ( $existing instanceof Axismundi_Activity && 'Announce' === $existing->get_type() && $existing->is_effective() && hash_equals( $group->get_uri(), $existing->get_actor_uri() ) && hash_equals( $submission->get_uri(), axismundi_forum_announce_submission_uri( $existing ) ) ) {
+			return $existing;
+		}
 	}
 	$audience = axismundi_forum_distribution_audience( $group );
 	if ( is_wp_error( $audience ) ) {
@@ -194,7 +237,7 @@ function axismundi_forum_record_group_announce( array $entry ) {
 	$cycle = function_exists( 'axismundi_act_announce_cycle_count' )
 		? 1 + axismundi_act_announce_cycle_count( $group->get_uri(), $submission->get_uri() )
 		: 1;
-	return axismundi_act_record_source_activity(
+	$announce = axismundi_act_record_source_activity(
 		array(
 			'type'   => 'Announce',
 			'actor'  => $group->get_uri(),
@@ -206,6 +249,7 @@ function axismundi_forum_record_group_announce( array $entry ) {
 		'outbound',
 		'forum-group-announce:' . (int) $entry['id'] . ':submission:' . $submission->get_uri() . ':cycle:' . $cycle
 	);
+	return is_wp_error( $announce ) ? $announce : ( is_wp_error( axismundi_forum_record_entry_distribution( (int) $entry['id'], $submission, $announce ) ) ? new WP_Error( 'ax_forum_distribution_write', __( 'The community distribution could not be recorded.', 'axismundi-forum' ) ) : $announce );
 }
 
 /**
@@ -225,24 +269,39 @@ function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id )
 		return new WP_Error( 'ax_forum_forbidden', __( 'You may not withdraw this community Topic.', 'axismundi-forum' ) );
 	}
 	$group = axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
-	$announce = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) ( $entry['announced_activity_uri'] ?? '' ) ) : null;
-	if ( ! $group instanceof Axismundi_Actor || ! $announce instanceof Axismundi_Activity || 'Announce' !== $announce->get_type() || ! $announce->is_effective() || ! hash_equals( $group->get_uri(), $announce->get_actor_uri() )
-		|| ! function_exists( 'axismundi_act_record_source_activity' ) ) {
+	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_record_source_activity' ) ) {
+		return new WP_Error( 'ax_forum_announce_missing', __( 'The active community Announce is unavailable.', 'axismundi-forum' ) );
+	}
+	$announces = array();
+	foreach ( axismundi_forum_entry_distributions( (int) $entry['id'] ) as $distribution ) {
+		$announce = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) $distribution['announce_activity_uri'] ) : null;
+		if ( $announce instanceof Axismundi_Activity && 'Announce' === $announce->get_type() && $announce->is_effective() && hash_equals( $group->get_uri(), $announce->get_actor_uri() ) ) {
+			$announces[ $announce->get_uri() ] = $announce;
+		}
+	}
+	// Retain compatibility with entries distributed before the ledger existed.
+	$legacy = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) ( $entry['announced_activity_uri'] ?? '' ) ) : null;
+	if ( $legacy instanceof Axismundi_Activity && 'Announce' === $legacy->get_type() && $legacy->is_effective() && hash_equals( $group->get_uri(), $legacy->get_actor_uri() ) ) {
+		$announces[ $legacy->get_uri() ] = $legacy;
+	}
+	if ( empty( $announces ) ) {
 		return new WP_Error( 'ax_forum_announce_missing', __( 'The active community Announce is unavailable.', 'axismundi-forum' ) );
 	}
 	$status = axismundi_forum_set_local_topic_review_status( $entry, 'pending' );
 	if ( is_wp_error( $status ) ) {
 		return $status;
 	}
-	$undo = axismundi_act_record_source_activity(
-		array( 'type' => 'Undo', 'actor' => $group->get_uri(), 'object' => $announce->get_uri(), 'to' => (array) ( $announce->get_audience()['to'] ?? array() ), 'cc' => (array) ( $announce->get_audience()['cc'] ?? array() ) ),
-		'outbound',
-		'forum-group-withdraw-undo:' . $entry_id . ':announce:' . $announce->get_uri()
-	);
-	if ( is_wp_error( $undo ) ) {
-		// Restore the Core source when the Group's withdrawal could not be recorded.
-		axismundi_forum_set_local_topic_review_status( $entry, 'publish' );
-		return $undo;
+	foreach ( $announces as $announce ) {
+		$undo = axismundi_act_record_source_activity(
+			array( 'type' => 'Undo', 'actor' => $group->get_uri(), 'object' => $announce->get_uri(), 'to' => (array) ( $announce->get_audience()['to'] ?? array() ), 'cc' => (array) ( $announce->get_audience()['cc'] ?? array() ) ),
+			'outbound',
+			'forum-group-withdraw-undo:' . $entry_id . ':announce:' . $announce->get_uri()
+		);
+		if ( is_wp_error( $undo ) ) {
+			// Restore the Core source when the Group's withdrawal could not be recorded.
+			axismundi_forum_set_local_topic_review_status( $entry, 'publish' );
+			return $undo;
+		}
 	}
 	global $wpdb;
 	$updated = $wpdb->update(
@@ -261,7 +320,7 @@ function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id )
  * WordPress owns the editor's status control. The Group still owns its Announce, so this hook
  * records the matching Undo and restores publish if that federated transition cannot be made.
  */
-function axismundi_forum_handle_author_topic_pending_transition( string $new_status, string $old_status, WP_Post $topic ) : void {
+function axismundi_forum_handle_topic_withdrawal_transition( string $new_status, string $old_status, WP_Post $topic ) : void {
 	$user_id = get_current_user_id();
 	if ( 'publish' !== $old_status || 'pending' !== $new_status || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || axismundi_forum_is_internal_topic_status_sync( $topic->ID ) || ( $user_id !== (int) $topic->post_author && ! user_can( $user_id, 'edit_others_posts' ) ) ) {
 		return;
@@ -277,7 +336,52 @@ function axismundi_forum_handle_author_topic_pending_transition( string $new_sta
 	// The editor's requested status cannot claim a withdrawal that the Group failed to record.
 	axismundi_forum_set_local_topic_review_status( $entry, 'publish' );
 }
-add_action( 'transition_post_status', 'axismundi_forum_handle_author_topic_pending_transition', 20, 3 );
+add_action( 'transition_post_status', 'axismundi_forum_handle_topic_withdrawal_transition', 20, 3 );
+
+/**
+ * Redistribute a material edit of an already-approved local Topic as Announce(Update).
+ *
+ * The lifecycle recorder deduplicates autosaves, status-only changes, and identical content;
+ * only its immutable Update is eligible for another Group distribution cycle.
+ */
+function axismundi_forum_distribute_visible_topic_update( int $post_id, WP_Post $after, WP_Post $before ) : void {
+	unset( $before );
+	if ( AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $after->post_type || 'publish' !== $after->post_status || axismundi_forum_is_internal_topic_status_sync( $post_id ) ) {
+		return;
+	}
+	$entry = axismundi_forum_get_topic_entry( $post_id );
+	if ( ! is_array( $entry ) || 'visible' !== (string) $entry['admission_state'] || $post_id !== (int) $entry['source_post_id'] ) {
+		return;
+	}
+	$submission = axismundi_forum_record_topic_commit( $after );
+	if ( ! $submission instanceof Axismundi_Activity || 'Update' !== $submission->get_type() || hash_equals( (string) ( $entry['accepted_activity_uri'] ?? '' ), $submission->get_uri() ) ) {
+		return;
+	}
+	global $wpdb;
+	$updated = $wpdb->update(
+		axismundi_forum_entries_table(),
+		array( 'accepted_activity_uri' => $submission->get_uri(), 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => (int) $entry['id'] ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- link the visible entry to the exact Update the Group will distribute.
+	if ( false === $updated ) {
+		return;
+	}
+	$entry['accepted_activity_uri'] = $submission->get_uri();
+	$announce = axismundi_forum_record_group_announce( $entry );
+	if ( ! $announce instanceof Axismundi_Activity ) {
+		return;
+	}
+	$wpdb->update(
+		axismundi_forum_entries_table(),
+		array( 'announced_activity_uri' => $announce->get_uri(), 'updated_at' => current_time( 'mysql', true ) ),
+		array( 'id' => (int) $entry['id'] ),
+		array( '%s', '%s' ),
+		array( '%d' )
+	); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- latest convenience pointer; the distribution ledger retains all cycles.
+}
+add_action( 'post_updated', 'axismundi_forum_distribute_visible_topic_update', 30, 3 );
 
 /**
  * Publish one already-validated pending entry through its Group Announce.

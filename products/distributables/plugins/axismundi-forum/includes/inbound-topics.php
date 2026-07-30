@@ -142,7 +142,9 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 				'object_uri_hash'               => hash( 'sha256', $object_uri ),
 				'entry_type'                    => 'topic',
 				'submission_actor_identity_id' => $author->get_identity_id(),
-				'admission_state'               => 'approval' === axismundi_forum_get_topic_approval_policy( $group_identity_id ) ? 'pending' : 'visible',
+				// A remote submission is no more visible than a local one until the Group has
+				// durably recorded its own Announce of the preserved incoming Create.
+				'admission_state'               => 'pending',
 				'moderation_state'              => 'visible',
 				'accepted_activity_uri'          => $activity->get_uri(),
 				'created_at'                    => $now,
@@ -150,7 +152,16 @@ function axismundi_forum_admit_remote_root( array $stored, Axismundi_Activity $a
 			),
 			array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' )
 		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- membership-authorized contextual projection; source Object remains remote-cache owned.
-		return false === $inserted ? new WP_Error( 'ax_forum_remote_page_write', __( 'The remote Page could not be admitted to this Forum.', 'axismundi-forum' ) ) : true;
+		if ( false === $inserted ) {
+			return new WP_Error( 'ax_forum_remote_page_write', __( 'The remote Page could not be admitted to this Forum.', 'axismundi-forum' ) );
+		}
+		$entry = axismundi_forum_get_remote_entry( $group_identity_id, $object_uri );
+		if ( 'open' !== axismundi_forum_get_topic_approval_policy( $group_identity_id ) || ! is_array( $entry ) ) {
+			return true;
+		}
+		return function_exists( 'axismundi_forum_publish_validated_pending_entry' )
+			? axismundi_forum_publish_validated_pending_entry( $entry )
+			: new WP_Error( 'ax_forum_remote_page_publish', __( 'The Group publication recorder is unavailable.', 'axismundi-forum' ) );
 	}
 	return new WP_Error( 'ax_forum_remote_page_target', __( 'The remote Page does not target an eligible local Forum Group.', 'axismundi-forum' ) );
 }

@@ -119,9 +119,10 @@ try {
 	$open_policy = axismundi_forum_set_posting_policy( $community, $owner, 'open' );
 	$admit       = true === $open_policy ? axismundi_forum_admit_local_topic( $community, $topic, $owner ) : $open_policy;
 	$entry = axismundi_forum_get_topic_entry( $topic );
+	$announce = is_array( $entry ) ? axismundi_act_get( (string) ( $entry['announced_activity_uri'] ?? '' ) ) : null;
 	ax_ft_assert(
 		$ax_ft_results,
-		'admission records one contextual Topic entry with its public submitting Person',
+		'an open-policy admission records its Person Create and makes the entry visible only through Group Announce(Create)',
 		true === $admit
 			&& is_array( $entry )
 			// One key now, and it is the community itself.
@@ -130,6 +131,10 @@ try {
 			&& 'topic' === $entry['entry_type']
 			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === $entry['object_uri']
 			&& $author_id === (int) $entry['submission_actor_identity_id']
+			&& 'visible' === (string) $entry['admission_state']
+			&& $announce instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
+			&& $group->get_uri() === $announce->get_actor_uri()
+			&& 'Create' === (string) ( $announce->get_payload()['object']['type'] ?? '' )
 	);
 
 	ax_ft_assert(

@@ -315,7 +315,9 @@ function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_p
 			'object_uri_hash'               => hash( 'sha256', axismundi_forum_topic_object_uri( $topic ) ),
 			'entry_type'                    => 'topic',
 			'source_post_id'                => $topic_post_id,
-			'admission_state'               => 'approval' === axismundi_forum_get_topic_approval_policy( $group_identity_id ) ? 'pending' : 'visible',
+			// Every accepted submission passes through Group publication. Even an open policy is
+			// pending until its Announce is durably recorded.
+			'admission_state'               => 'pending',
 			'moderation_state'              => 'visible',
 			'created_at'                    => $now,
 			'updated_at'                    => $now,
@@ -349,7 +351,13 @@ function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_p
 		$wpdb->delete( axismundi_forum_entries_table(), array( 'source_post_id' => $topic_post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the entry is unusable unless it retains its submitted Create URI.
 		return new WP_Error( 'ax_forum_topic_create_link', __( 'The Topic Create could not be linked to its community entry.', 'axismundi-forum' ) );
 	}
-	return true;
+	$entry = axismundi_forum_get_topic_entry( $topic_post_id );
+	if ( 'open' !== axismundi_forum_get_topic_approval_policy( $group_identity_id ) || ! is_array( $entry ) ) {
+		return true;
+	}
+	return function_exists( 'axismundi_forum_publish_validated_pending_entry' )
+		? axismundi_forum_publish_validated_pending_entry( $entry )
+		: new WP_Error( 'ax_forum_topic_publish', __( 'The Group publication recorder is unavailable.', 'axismundi-forum' ) );
 }
 
 /** Get public visible Topic post ids for the Forum Topic list. */

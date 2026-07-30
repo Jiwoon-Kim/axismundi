@@ -168,14 +168,30 @@ try {
 			&& $outer instanceof Axismundi_Activity && $outer->get_uri() === $withdrawal->get_object_uri()
 			&& in_array( $followers, (array) ( $withdrawal->get_audience()['to'] ?? array() ), true ) && $topic instanceof WP_Post && 'publish' === $topic->post_status
 	);
-	$reapproved = is_array( $withdrawn_entry ) ? axismundi_forum_approve_pending_entry( (int) $withdrawn_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$edited = $topic instanceof WP_Post ? wp_update_post( array( 'ID' => $topic->ID, 'post_content' => 'Revised pending Topic body.' ), true ) : new WP_Error( 'fixture' );
+	$reapproved = ! is_wp_error( $edited ) && is_array( $withdrawn_entry ) ? axismundi_forum_approve_pending_entry( (int) $withdrawn_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
 	$reapproved_entry = axismundi_forum_get_topic_entry( $topic_id );
 	$reannounce = is_array( $reapproved_entry ) ? axismundi_act_get( (string) $reapproved_entry['announced_activity_uri'] ) : null;
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a withdrawn Topic can be re-approved with a fresh effective Group Announce of the same Create',
+		'a withdrawn and edited Topic is re-approved through a fresh Group Announce(Update), never a mutated Create',
 		true === $reapproved && $reannounce instanceof Axismundi_Activity && $reannounce->is_effective()
 			&& $outer instanceof Axismundi_Activity && $reannounce->get_uri() !== $outer->get_uri()
+			&& 'Update' === (string) ( $reannounce->get_payload()['object']['type'] ?? '' )
+			&& is_array( $reapproved_entry ) && $reapproved_entry['accepted_activity_uri'] !== $pending_entry['accepted_activity_uri']
+	);
+	$withdrawn_unchanged = is_array( $reapproved_entry ) ? axismundi_forum_withdraw_announced_entry( (int) $reapproved_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$unchanged_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$reapproved_unchanged = is_array( $unchanged_entry ) ? axismundi_forum_approve_pending_entry( (int) $unchanged_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
+	$unchanged_reapproved_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$unchanged_reannounce = is_array( $unchanged_reapproved_entry ) ? axismundi_act_get( (string) $unchanged_reapproved_entry['announced_activity_uri'] ) : null;
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'an unchanged re-approval reuses its immutable Update while issuing only a fresh Group Announce cycle',
+		true === $withdrawn_unchanged && true === $reapproved_unchanged && $reannounce instanceof Axismundi_Activity && $unchanged_reannounce instanceof Axismundi_Activity
+			&& $reannounce->get_uri() !== $unchanged_reannounce->get_uri()
+			&& (string) ( $reannounce->get_payload()['object']['id'] ?? '' ) === (string) ( $unchanged_reannounce->get_payload()['object']['id'] ?? '' )
+			&& 'Update' === (string) ( $unchanged_reannounce->get_payload()['object']['type'] ?? '' )
 	);
 
 	$remote_uri = 'https://remote.example/topics/' . wp_generate_uuid4();

@@ -99,14 +99,18 @@ try {
 	$ax_fit_activity_uris[] = $accepted_uri . '/activity';
 	$ax_fit_object_uris[] = $accepted_uri;
 	$accepted_entry = axismundi_forum_get_remote_entry( $community, $accepted_uri );
+	$accepted_announce = is_array( $accepted_entry ) ? axismundi_act_get( (string) ( $accepted_entry['announced_activity_uri'] ?? '' ) ) : null;
 	ax_fit_assert(
 		$ax_fit_results,
-		'an accepted remote Group follower creates one public addressed Page that is cached and admitted as a Forum Topic entry',
+		'an accepted remote Group follower is admitted only through a local Group Announce preserving the inbound Create',
 		true === $bound && true === $membership && $accepted instanceof Axismundi_Activity
 			&& is_array( axismundi_op_remote_object_get( $accepted_uri ) ) && is_array( $accepted_entry )
 			&& 'topic' === (string) $accepted_entry['entry_type'] && null === $accepted_entry['source_post_id']
 			&& $member instanceof Axismundi_Actor && $member->get_identity_id() === (int) $accepted_entry['submission_actor_identity_id']
 			&& $accepted_uri === (string) $accepted_entry['object_uri']
+			&& 'visible' === (string) $accepted_entry['admission_state'] && $accepted_announce instanceof Axismundi_Activity
+			&& $group instanceof Axismundi_Actor && $group->get_uri() === $accepted_announce->get_actor_uri()
+			&& $accepted->get_payload() === (array) ( $accepted_announce->get_payload()['object'] ?? array() )
 	);
 	ax_fit_assert(
 		$ax_fit_results,

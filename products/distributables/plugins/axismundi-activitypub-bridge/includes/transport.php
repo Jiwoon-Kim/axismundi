@@ -162,6 +162,24 @@ function axismundi_activitypub_bridge_remote_inbox( string $actor_uri ) : string
 	return '' !== $shared ? $shared : axismundi_actors_get_endpoint( $actor, 'inbox' );
 }
 
+/** Whether a public Create or Update is submitted directly to a cached remote Group. */
+function axismundi_activitypub_bridge_is_direct_remote_group_submission( Axismundi_Activity $activity ) : bool {
+	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
+		return false;
+	}
+	$payload = $activity->get_payload();
+	$object  = $payload['object'] ?? null;
+	if ( ! is_array( $object ) ) {
+		return false;
+	}
+	$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
+	if ( '' === $group_uri || ! in_array( $group_uri, (array) ( $activity->get_audience()['to'] ?? array() ), true ) ) {
+		return false;
+	}
+	$group = axismundi_actors_get_by_uri( $group_uri );
+	return $group instanceof Axismundi_Actor && ! $group->is_local() && 'Group' === $group->get_type() && 'public' === $group->get_status();
+}
+
 /** Derive explicit remote Inbox recipients from one outbound Activity. */
 function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $activity ) : array {
 	$candidates = array();
@@ -178,7 +196,12 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 	$addresses_followers = in_array( 'https://www.w3.org/ns/activitystreams#Public', $candidates, true )
 		|| in_array( 'as:Public', $candidates, true )
 		|| ( '' !== $followers_uri && in_array( $followers_uri, $candidates, true ) );
-	if ( $addresses_followers ) {
+	/*
+	 * A remote Group submission carries Public for strict threadiverse object
+	 * validation, but remains a direct inbox delivery. Its Group decides whether
+	 * and how to redistribute it; the author's followers must not receive it.
+	 */
+	if ( $addresses_followers && ! axismundi_activitypub_bridge_is_direct_remote_group_submission( $activity ) ) {
 		$candidates = array_merge( $candidates, axismundi_act_get_followers( $activity->get_actor_uri(), 1000 ) );
 	}
 	$inboxes = array();

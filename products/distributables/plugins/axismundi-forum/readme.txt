@@ -34,6 +34,10 @@ object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
 
+= 0.8.5 =
+* Makes direct submissions to remote threadiverse Groups compatible with Lemmy's
+  public-object validation while retaining Group-only transport delivery.
+
 = 0.8.4 =
 * Fixes the Community picker on a new Topic: it can search known Group Actors before
   WordPress has assigned the draft a post ID.

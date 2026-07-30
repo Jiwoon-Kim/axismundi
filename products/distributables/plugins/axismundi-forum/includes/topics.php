@@ -597,6 +597,20 @@ function axismundi_forum_topic_to_article( WP_Post $topic ) {
 	}
 	$author_uri = $author->get_uri();
 	$object_uri = axismundi_forum_topic_object_uri( $topic );
+	$cc         = array();
+	/*
+	 * Threadiverse peers, including Lemmy, validate that a submitted thread Object is
+	 * public even though its Create is delivered directly to the Group. The Group is
+	 * still the only transport recipient: Bridge recognises this direct submission and
+	 * does not fan it out through the author's followers.
+	 */
+	if ( ! $group->is_local() ) {
+		$cc[] = axismundi_act_public_audience_uri();
+		$followers = function_exists( 'axismundi_actors_get_endpoint' ) ? axismundi_actors_get_endpoint( $group, 'followers' ) : '';
+		if ( '' !== $followers ) {
+			$cc[] = $followers;
+		}
+	}
 	return array(
 		'id'              => $object_uri,
 		'type'            => 'Article',
@@ -610,9 +624,9 @@ function axismundi_forum_topic_to_article( WP_Post $topic ) {
 		'published'       => get_post_time( DATE_W3C, true, $topic ),
 		'updated'         => axismundi_forum_topic_content_modified_time( $topic ),
 		// A Topic is submitted to its Group. The Group's Announce, not the author's Create,
-		// is the public distribution event, so this never addresses the author's followers.
+		// is the distribution event, so this never addresses the author's followers.
 		'to'              => array( $group->get_uri() ),
-		'cc'              => array(),
+		'cc'              => $cc,
 		'commentsEnabled' => ! is_array( $entry ) || empty( $entry['locked_at'] ),
 	);
 }

@@ -27,6 +27,10 @@ remains the authoritative ledger.
 
 == Changelog ==
 
+= 0.0.25 =
+* Keeps public direct submissions to cached remote Group Actors on the Group inbox
+  only; their `Public` address is for peer validation, not author-follower fan-out.
+
 = 0.0.24 =
 * Resolve product-owned local Object URIs, including Notes, before deriving an Inbox target Actor.
 * Record Misskey-style custom emoji reactions addressed to Notes through the URI-keyed Activities ledger.

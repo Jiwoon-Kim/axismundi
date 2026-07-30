@@ -52,8 +52,8 @@ function ax_fot_remote_group( array &$identity_ids, string $suffix ) {
 	$group = axismundi_actors_upsert_remote(
 		array(
 			'uri' => $uri, 'actor_type' => 'Group', 'preferred_username' => $suffix, 'display_name' => $suffix, 'profile_url' => $uri,
-			'endpoints' => array( 'inbox' => $uri . '/inbox', 'outbox' => $uri . '/outbox' ),
-			'payload' => array( 'id' => $uri, 'type' => 'Group', 'preferredUsername' => $suffix, 'inbox' => $uri . '/inbox', 'outbox' => $uri . '/outbox' ),
+			'endpoints' => array( 'inbox' => $uri . '/inbox', 'outbox' => $uri . '/outbox', 'followers' => $uri . '/followers' ),
+			'payload' => array( 'id' => $uri, 'type' => 'Group', 'preferredUsername' => $suffix, 'inbox' => $uri . '/inbox', 'outbox' => $uri . '/outbox', 'followers' => $uri . '/followers' ),
 		)
 	);
 	if ( $group instanceof Axismundi_Actor ) {
@@ -214,19 +214,20 @@ try {
 	);
 	ax_fot_assert(
 		$ax_fot_results,
-		'the committed outbound Create embeds an Article attributed to the Person and addresses only the remote Group',
+		'the committed outbound Create uses the public threadiverse envelope while keeping the remote Group as its direct destination',
 		$lifecycle instanceof Axismundi_Activity && 'Create' === $lifecycle->get_type() && 'outbound' === $lifecycle->get_direction()
 			&& $author instanceof Axismundi_Actor && $group instanceof Axismundi_Actor && $author->get_uri() === (string) ( $object['attributedTo'] ?? '' )
 			&& 'Article' === (string) ( $object['type'] ?? '' )
 			// The remote Group is the delivery target, not the conversation identity.
 			&& $group->get_uri() !== (string) ( $object['context'] ?? '' ) && '' !== (string) ( $object['context'] ?? '' )
 			&& $group->get_uri() === (string) ( $object['audience'] ?? '' ) && array( $group->get_uri() ) === (array) ( $object['to'] ?? array() )
-			&& array() === (array) ( $object['cc'] ?? array() ) && ! axismundi_act_has_public_audience( $lifecycle )
+			&& in_array( axismundi_act_public_audience_uri(), (array) ( $object['cc'] ?? array() ), true )
+			&& in_array( $group->get_uri() . '/followers', (array) ( $object['cc'] ?? array() ), true ) && axismundi_act_has_public_audience( $lifecycle )
 	);
 	ax_fot_assert(
 		$ax_fot_results,
-		'the Bridge resolves the remote Group inbox from the direct to address for actual delivery',
-		$group instanceof Axismundi_Actor && in_array( $group->get_uri() . '/inbox', $inboxes, true )
+		'the Bridge resolves only the remote Group inbox for a public direct submission, leaving author-follower fan-out to the Group',
+		$group instanceof Axismundi_Actor && array( $group->get_uri() . '/inbox' ) === $inboxes
 	);
 
 	$unfollowed_group = ax_fot_remote_group( $ax_fot_identity_ids, 'unfollowed_' . strtolower( wp_generate_password( 7, false, false ) ) );

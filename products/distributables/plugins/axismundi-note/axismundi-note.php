@@ -21,7 +21,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_NOTE_VERSION = '0.0.34';
+const AXISMUNDI_NOTE_VERSION = '0.0.36';
 
 require_once __DIR__ . '/includes/schema.php';
 require_once __DIR__ . '/includes/cpt.php';

@@ -144,6 +144,12 @@ try {
 		'a bounded Community search returns a cached remote Group without discovering anything remotely',
 		$group instanceof Axismundi_Actor && 1 === count( $search_results ) && 'remote:' . $group->get_identity_id() === (string) ( $search_results[0]['value'] ?? '' )
 	);
+	$new_topic_results = axismundi_forum_search_topic_communities( (string) $group->get_preferred_username(), 0, $author_user );
+	ax_fot_assert(
+		$ax_fot_results,
+		'the post-new Community picker searches known remote Groups before WordPress assigns a Topic post ID',
+		$group instanceof Axismundi_Actor && 1 === count( $new_topic_results ) && 'remote:' . $group->get_identity_id() === (string) ( $new_topic_results[0]['value'] ?? '' )
+	);
 	$manager_topic_id = (int) wp_insert_post(
 		array(
 			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,

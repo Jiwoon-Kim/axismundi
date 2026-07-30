@@ -97,7 +97,9 @@ function axismundi_forum_recent_topic_communities_for_user( int $user_id ) : arr
 function axismundi_forum_add_topic_community_candidate( array &$items, Axismundi_Actor $group, int $topic_post_id, int $user_id, string $reason = '' ) : void {
 	$is_local = $group->is_local();
 	$allowed  = $is_local
-		? axismundi_forum_can_admit_local_topic( $group->get_identity_id(), $topic_post_id, $user_id )
+		? ( $topic_post_id > 0
+			? axismundi_forum_can_admit_local_topic( $group->get_identity_id(), $topic_post_id, $user_id )
+			: axismundi_forum_user_can_post_to_community( $group->get_identity_id(), $user_id ) )
 		: axismundi_forum_user_can_submit_to_remote_group( $user_id, $group );
 	if ( ! $allowed ) {
 		return;
@@ -216,7 +218,13 @@ function axismundi_forum_record_remote_topic_commit( WP_Post $topic ) {
 /** Return bounded, eligible Community search results for one Topic editor. */
 function axismundi_forum_search_topic_communities( string $search, int $topic_post_id, int $user_id ) : array {
 	$topic = get_post( $topic_post_id );
-	if ( ! $topic instanceof WP_Post || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || ! user_can( $user_id, 'edit_post', $topic_post_id ) || ! function_exists( 'axismundi_actors_search_public_groups' ) ) {
+	if ( $topic_post_id > 0 && ( ! $topic instanceof WP_Post || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || ! user_can( $user_id, 'edit_post', $topic_post_id ) ) ) {
+		return array();
+	}
+	if ( $topic_post_id <= 0 && ! user_can( $user_id, 'edit_posts' ) ) {
+		return array();
+	}
+	if ( ! function_exists( 'axismundi_actors_search_public_groups' ) ) {
 		return array();
 	}
 	if ( '' === trim( $search ) ) {
@@ -231,7 +239,8 @@ function axismundi_forum_search_topic_communities( string $search, int $topic_po
 
 /** REST permission for the Topic Community picker. */
 function axismundi_forum_can_search_topic_communities( WP_REST_Request $request ) : bool {
-	return current_user_can( 'edit_post', (int) $request->get_param( 'post_id' ) );
+	$post_id = (int) $request->get_param( 'post_id' );
+	return $post_id > 0 ? current_user_can( 'edit_post', $post_id ) : current_user_can( 'edit_posts' );
 }
 
 /** REST endpoint for the bounded Topic Community picker. */

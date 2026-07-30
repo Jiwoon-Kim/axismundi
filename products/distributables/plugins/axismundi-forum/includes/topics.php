@@ -9,6 +9,16 @@ defined( 'ABSPATH' ) || exit;
 
 const AXISMUNDI_FORUM_TOPIC_POST_TYPE = 'ax_topic';
 const AXISMUNDI_FORUM_REMOTE_GROUP_META = '_axismundi_forum_remote_group_identity_id';
+const AXISMUNDI_FORUM_TOPIC_CONTENT_MODIFIED_META = '_axismundi_forum_topic_content_modified_gmt';
+
+/** Return the last material Topic submission time, excluding Core review-status transitions. */
+function axismundi_forum_topic_content_modified_time( WP_Post $topic ) : string {
+	$modified = (string) get_post_meta( $topic->ID, AXISMUNDI_FORUM_TOPIC_CONTENT_MODIFIED_META, true );
+	if ( '' !== $modified && false !== strtotime( $modified . ' UTC' ) ) {
+		return get_date_from_gmt( $modified, DATE_W3C );
+	}
+	return get_post_modified_time( DATE_W3C, true, $topic );
+}
 
 /** Register the local Topic authoring container. */
 function axismundi_forum_register_topic_post_type() : void {
@@ -306,6 +316,20 @@ function axismundi_forum_admit_local_topic( int $group_identity_id, int $topic_p
 	if ( ! axismundi_forum_can_admit_local_topic( $group_identity_id, $topic_post_id, $user_id ) ) {
 		return new WP_Error( 'ax_forum_topic_forbidden', __( 'You may not add this Topic to the selected Forum.', 'axismundi-forum' ) );
 	}
+	/*
+	 * A Group submission is a Core review item until that Group has recorded an effective
+	 * Announce. This also lets WordPress contributors use their native Submit for Review path.
+	 */
+	if ( 'pending' !== $topic->post_status ) {
+		$pending = wp_update_post( array( 'ID' => $topic->ID, 'post_status' => 'pending' ), true );
+		if ( is_wp_error( $pending ) ) {
+			return new WP_Error( 'ax_forum_topic_status_write', __( 'The Topic could not enter community review.', 'axismundi-forum' ) );
+		}
+		$topic = get_post( $topic_post_id );
+		if ( ! $topic instanceof WP_Post || 'pending' !== $topic->post_status ) {
+			return new WP_Error( 'ax_forum_topic_status_write', __( 'The Topic could not enter community review.', 'axismundi-forum' ) );
+		}
+	}
 	$actor = function_exists( 'axismundi_actors_get_for_user' ) ? axismundi_actors_get_for_user( (int) $topic->post_author ) : null;
 	$now   = current_time( 'mysql', true );
 	global $wpdb;
@@ -579,7 +603,7 @@ function axismundi_forum_topic_to_article( WP_Post $topic ) {
 		'content'         => axismundi_op_render_post_content( $topic ),
 		'mediaType'       => 'text/html',
 		'published'       => get_post_time( DATE_W3C, true, $topic ),
-		'updated'         => get_post_modified_time( DATE_W3C, true, $topic ),
+		'updated'         => axismundi_forum_topic_content_modified_time( $topic ),
 		// A Topic is submitted to its Group. The Group's Announce, not the author's Create,
 		// is the public distribution event, so this never addresses the author's followers.
 		'to'              => array( $group->get_uri() ),

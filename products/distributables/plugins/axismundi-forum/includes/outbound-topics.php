@@ -180,7 +180,31 @@ function axismundi_forum_record_topic_commit( WP_Post $topic ) {
 	if ( is_wp_error( $object ) ) {
 		return $object;
 	}
-	$object = axismundi_op_finalize_object( $object, axismundi_forum_topic_object_uri( $topic ) );
+	$object_uri = axismundi_forum_topic_object_uri( $topic );
+	$object = axismundi_op_finalize_object( $object, $object_uri );
+	if ( is_wp_error( $object ) ) {
+		return $object;
+	}
+	$latest = function_exists( 'axismundi_act_get_object_lifecycle' ) ? axismundi_act_get_object_lifecycle( $object_uri ) : null;
+	$previous = $latest instanceof Axismundi_Activity ? ( $latest->get_payload()['object'] ?? null ) : null;
+	$candidate = $object;
+	if ( is_array( $previous ) ) {
+		unset( $candidate['updated'], $previous['updated'] );
+	}
+	/*
+	 * Core changes post_modified for pending/publish transitions. Those are local review
+	 * changes, not new Topic content. Freeze the Article updated value until a material
+	 * submission differs, so withdrawing and re-approving an unchanged Topic reuses its
+	 * immutable Create or Update Activity.
+	 */
+	if ( ! is_array( $previous ) || ! function_exists( 'axismundi_act_lifecycle_fingerprint' ) || ! hash_equals( axismundi_act_lifecycle_fingerprint( $previous ), axismundi_act_lifecycle_fingerprint( $candidate ) ) ) {
+		update_post_meta( $topic->ID, AXISMUNDI_FORUM_TOPIC_CONTENT_MODIFIED_META, get_post_modified_time( 'Y-m-d H:i:s', true, $topic ) );
+		$object = axismundi_forum_topic_to_article( $topic );
+		if ( is_wp_error( $object ) ) {
+			return $object;
+		}
+		$object = axismundi_op_finalize_object( $object, $object_uri );
+	}
 	return is_wp_error( $object ) ? $object : axismundi_act_record_object_commit( $object );
 }
 

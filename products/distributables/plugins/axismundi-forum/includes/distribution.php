@@ -111,6 +111,57 @@ function axismundi_forum_refresh_local_entry_submission( array $entry ) {
 	return $entry;
 }
 
+/**
+ * Keep a local Topic's Core review state aligned with its community admission state.
+ *
+ * Remote submissions have no local post and retain Forum's projection-only state. This helper
+ * is deliberately private to the local-source lifecycle: WordPress remains the authoring
+ * workflow, while the Group decides whether a submitted Topic is distributed.
+ */
+function axismundi_forum_set_local_topic_review_status( array $entry, string $status ) {
+	if ( ! in_array( $status, array( 'pending', 'publish' ), true ) ) {
+		return new WP_Error( 'ax_forum_topic_status', __( 'The Topic review status is invalid.', 'axismundi-forum' ) );
+	}
+	$source_post_id = (int) ( $entry['source_post_id'] ?? 0 );
+	if ( $source_post_id <= 0 ) {
+		return true;
+	}
+	$topic = get_post( $source_post_id );
+	if ( ! $topic instanceof WP_Post || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type ) {
+		return new WP_Error( 'ax_forum_topic_missing', __( 'The local Topic submission is unavailable.', 'axismundi-forum' ) );
+	}
+	if ( $status === $topic->post_status ) {
+		return true;
+	}
+	$GLOBALS['axismundi_forum_internal_topic_status_sync'][ $topic->ID ] = true;
+	try {
+		$updated = wp_update_post( array( 'ID' => $topic->ID, 'post_status' => $status ), true );
+	} finally {
+		unset( $GLOBALS['axismundi_forum_internal_topic_status_sync'][ $topic->ID ] );
+	}
+	return is_wp_error( $updated )
+		? new WP_Error( 'ax_forum_topic_status_write', __( 'The Topic review status could not be updated.', 'axismundi-forum' ) )
+		: true;
+}
+
+/** Whether an internal Forum transition currently owns this Topic's Core status update. */
+function axismundi_forum_is_internal_topic_status_sync( int $topic_post_id ) : bool {
+	return ! empty( $GLOBALS['axismundi_forum_internal_topic_status_sync'][ $topic_post_id ] );
+}
+
+/** A Group moderator or the local source author may withdraw that source from its community. */
+function axismundi_forum_user_can_withdraw_announced_entry( array $entry, int $user_id ) : bool {
+	if ( $user_id <= 0 ) {
+		return false;
+	}
+	if ( function_exists( 'axismundi_forum_user_can_moderate' ) && axismundi_forum_user_can_moderate( (int) $entry['group_identity_id'], $user_id ) ) {
+		return true;
+	}
+	$source_post_id = (int) ( $entry['source_post_id'] ?? 0 );
+	$topic = $source_post_id > 0 ? get_post( $source_post_id ) : null;
+	return $topic instanceof WP_Post && $user_id === (int) $topic->post_author;
+}
+
 /** Record the Group Announce for one validated entry, returning an existing effective row. */
 function axismundi_forum_record_group_announce( array $entry ) {
 	$group = axismundi_forum_get_community_group( (int) ( $entry['group_identity_id'] ?? 0 ) );
@@ -167,7 +218,7 @@ function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id )
 	if ( ! is_array( $entry ) || 'visible' !== (string) $entry['admission_state'] ) {
 		return new WP_Error( 'ax_forum_announced_entry', __( 'The Topic is not currently published by this community.', 'axismundi-forum' ) );
 	}
-	if ( ! function_exists( 'axismundi_forum_user_can_moderate' ) || ! axismundi_forum_user_can_moderate( (int) $entry['group_identity_id'], $user_id ) ) {
+	if ( ! axismundi_forum_user_can_withdraw_announced_entry( $entry, $user_id ) ) {
 		return new WP_Error( 'ax_forum_forbidden', __( 'You may not withdraw this community Topic.', 'axismundi-forum' ) );
 	}
 	$group = axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
@@ -176,12 +227,18 @@ function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id )
 		|| ! function_exists( 'axismundi_act_record_source_activity' ) ) {
 		return new WP_Error( 'ax_forum_announce_missing', __( 'The active community Announce is unavailable.', 'axismundi-forum' ) );
 	}
+	$status = axismundi_forum_set_local_topic_review_status( $entry, 'pending' );
+	if ( is_wp_error( $status ) ) {
+		return $status;
+	}
 	$undo = axismundi_act_record_source_activity(
 		array( 'type' => 'Undo', 'actor' => $group->get_uri(), 'object' => $announce->get_uri(), 'to' => (array) ( $announce->get_audience()['to'] ?? array() ), 'cc' => (array) ( $announce->get_audience()['cc'] ?? array() ) ),
 		'outbound',
 		'forum-group-withdraw-undo:' . $entry_id . ':announce:' . $announce->get_uri()
 	);
 	if ( is_wp_error( $undo ) ) {
+		// Restore the Core source when the Group's withdrawal could not be recorded.
+		axismundi_forum_set_local_topic_review_status( $entry, 'publish' );
 		return $undo;
 	}
 	global $wpdb;
@@ -196,6 +253,29 @@ function axismundi_forum_withdraw_announced_entry( int $entry_id, int $user_id )
 }
 
 /**
+ * Turn an author's direct publish-to-pending transition into a Group withdrawal.
+ *
+ * WordPress owns the editor's status control. The Group still owns its Announce, so this hook
+ * records the matching Undo and restores publish if that federated transition cannot be made.
+ */
+function axismundi_forum_handle_author_topic_pending_transition( string $new_status, string $old_status, WP_Post $topic ) : void {
+	if ( 'publish' !== $old_status || 'pending' !== $new_status || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== $topic->post_type || axismundi_forum_is_internal_topic_status_sync( $topic->ID ) || get_current_user_id() !== (int) $topic->post_author ) {
+		return;
+	}
+	$entry = axismundi_forum_get_topic_entry( $topic->ID );
+	if ( ! is_array( $entry ) || 'visible' !== (string) $entry['admission_state'] ) {
+		return;
+	}
+	$result = axismundi_forum_withdraw_announced_entry( (int) $entry['id'], (int) $topic->post_author );
+	if ( ! is_wp_error( $result ) ) {
+		return;
+	}
+	// The editor's requested status cannot claim a withdrawal that the Group failed to record.
+	axismundi_forum_set_local_topic_review_status( $entry, 'publish' );
+}
+add_action( 'transition_post_status', 'axismundi_forum_handle_author_topic_pending_transition', 20, 3 );
+
+/**
  * Publish one already-validated pending entry through its Group Announce.
  *
  * Callers own validation and authorization. This function owns the atomic semantic transition:
@@ -208,6 +288,10 @@ function axismundi_forum_publish_validated_pending_entry( array $entry ) {
 	$announce = axismundi_forum_record_group_announce( $entry );
 	if ( is_wp_error( $announce ) ) {
 		return $announce;
+	}
+	$status = axismundi_forum_set_local_topic_review_status( $entry, 'publish' );
+	if ( is_wp_error( $status ) ) {
+		return $status;
 	}
 	global $wpdb;
 	$updated = $wpdb->update(
@@ -256,6 +340,10 @@ function axismundi_forum_reject_pending_entry( int $entry_id, int $user_id, stri
 	}
 	if ( ! function_exists( 'axismundi_forum_user_can_moderate' ) || ! axismundi_forum_user_can_moderate( (int) $entry['group_identity_id'], $user_id ) ) {
 		return new WP_Error( 'ax_forum_forbidden', __( 'You may not reject this community Topic.', 'axismundi-forum' ) );
+	}
+	$status = axismundi_forum_set_local_topic_review_status( $entry, 'pending' );
+	if ( is_wp_error( $status ) ) {
+		return $status;
 	}
 	$group = axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
 	$submission = axismundi_forum_entry_submission_activity( $entry );

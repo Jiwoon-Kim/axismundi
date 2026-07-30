@@ -50,12 +50,14 @@ try {
 	list( $alice_user, $alice ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $bob_user, $bob ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
 	list( $editor_user, $editor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities );
+	list( $contributor_user, $contributor ) = ax_fmod_person( $ax_fmod_users, $ax_fmod_identities, 'contributor' );
 	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $group instanceof Axismundi_Actor ) { $ax_fmod_identities[] = $group->get_identity_id(); }
 	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
 	if ( $admin2 instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $admin2, $group ); }
 	if ( $alice instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $alice, $group ); }
 	if ( $bob instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $bob, $group ); }
+	if ( $contributor instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $contributor, $group ); }
 
 	$promoted = $alice instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $alice->get_identity_id(), $owner_user, true ) : new WP_Error( 'fixture' );
 	$add = $alice instanceof Axismundi_Actor ? array_values( array_filter( axismundi_act_get_by_object( $alice->get_uri(), 20 ), static fn( Axismundi_Activity $activity ) : bool => 'Add' === $activity->get_type() ) ) : array();
@@ -185,7 +187,8 @@ try {
 			&& $group instanceof Axismundi_Actor && $group->get_uri() === $withdrawal->get_actor_uri()
 			&& $outer instanceof Axismundi_Activity && $outer->get_uri() === $withdrawal->get_object_uri()
 			&& function_exists( 'axismundi_act_public_audience_uri' ) && in_array( axismundi_act_public_audience_uri(), (array) ( $withdrawal->get_audience()['to'] ?? array() ), true )
-			&& in_array( $followers, (array) ( $withdrawal->get_audience()['cc'] ?? array() ), true ) && $topic instanceof WP_Post && 'publish' === $topic->post_status
+			&& in_array( $followers, (array) ( $withdrawal->get_audience()['cc'] ?? array() ), true )
+			&& ( $withdrawn_source = get_post( $topic_id ) ) instanceof WP_Post && 'pending' === $withdrawn_source->post_status
 	);
 	$edited = $topic instanceof WP_Post ? wp_update_post( array( 'ID' => $topic->ID, 'post_content' => 'Revised pending Topic body.' ), true ) : new WP_Error( 'fixture' );
 	$reapproved = ! is_wp_error( $edited ) && is_array( $withdrawn_entry ) ? axismundi_forum_approve_pending_entry( (int) $withdrawn_entry['id'], $alice_user ) : new WP_Error( 'fixture' );
@@ -227,6 +230,100 @@ try {
 			&& in_array( $followers, (array) ( $members_announce->get_audience()['to'] ?? array() ), true )
 			&& empty( (array) ( $members_announce->get_audience()['cc'] ?? array() ) )
 			&& ! axismundi_act_has_public_audience( $members_announce ) && ! in_array( $members_announce->get_uri(), $members_outbox_ids, true )
+	);
+	wp_set_current_user( $bob_user );
+	$author_pending = wp_update_post( array( 'ID' => $topic_id, 'post_status' => 'pending' ), true );
+	wp_set_current_user( 0 );
+	$author_withdrawn_entry = axismundi_forum_get_topic_entry( $topic_id );
+	$author_undo = $members_announce instanceof Axismundi_Activity ? axismundi_act_get_by_object( $members_announce->get_uri(), 10 ) : array();
+	$author_withdrawal = null;
+	foreach ( $author_undo as $candidate ) {
+		if ( $candidate instanceof Axismundi_Activity && 'Undo' === $candidate->get_type() && $candidate->is_effective() ) {
+			$author_withdrawal = $candidate;
+			break;
+		}
+	}
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'an author moving their published local Topic to pending withdraws the Group Announce and returns it to Topic submissions',
+		! is_wp_error( $author_pending) && is_array( $author_withdrawn_entry)
+			&& 'pending' === (string) $author_withdrawn_entry['admission_state']
+			&& $author_withdrawal instanceof Axismundi_Activity
+			&& ( $author_source = get_post( $topic_id ) ) instanceof WP_Post && 'pending' === $author_source->post_status
+	);
+
+	$contributor_topic_id = (int) wp_insert_post(
+		array(
+			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,
+			'post_status' => 'pending',
+			'post_author' => $contributor_user,
+			'post_title'  => 'Contributor review Topic',
+		)
+	);
+	if ( $contributor_topic_id > 0 ) { $ax_fmod_posts[] = $contributor_topic_id; }
+	$contributor_admitted = $contributor_topic_id > 0
+		? axismundi_forum_admit_local_topic( $group_id, $contributor_topic_id, $contributor_user )
+		: new WP_Error( 'fixture' );
+	$contributor_pending = axismundi_forum_get_topic_entry( $contributor_topic_id );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a contributor native pending Topic enters the same Group approval queue without becoming a public source post',
+		true === $contributor_admitted && is_array( $contributor_pending)
+			&& 'pending' === (string) $contributor_pending['admission_state']
+			&& ( $contributor_source = get_post( $contributor_topic_id ) ) instanceof WP_Post
+			&& 'pending' === $contributor_source->post_status
+	);
+	$contributor_approved = is_array( $contributor_pending )
+		? axismundi_forum_approve_pending_entry( (int) $contributor_pending['id'], $alice_user )
+		: new WP_Error( 'fixture' );
+	$contributor_visible = axismundi_forum_get_topic_entry( $contributor_topic_id );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'Group approval publishes the contributor source and its Forum entry together only after the Announce exists',
+		true === $contributor_approved && is_array( $contributor_visible)
+			&& 'visible' === (string) $contributor_visible['admission_state']
+			&& '' !== (string) $contributor_visible['announced_activity_uri']
+			&& ( $contributor_source = get_post( $contributor_topic_id ) ) instanceof WP_Post
+			&& 'publish' === $contributor_source->post_status
+	);
+	$contributor_withdrawn = is_array( $contributor_visible )
+		? axismundi_forum_withdraw_announced_entry( (int) $contributor_visible['id'], $alice_user )
+		: new WP_Error( 'fixture' );
+	$contributor_pending_again = axismundi_forum_get_topic_entry( $contributor_topic_id );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'withdrawing a contributor Topic returns both the Group entry and WordPress source to pending for later review',
+		true === $contributor_withdrawn && is_array( $contributor_pending_again)
+			&& 'pending' === (string) $contributor_pending_again['admission_state']
+			&& ( $contributor_source = get_post( $contributor_topic_id ) ) instanceof WP_Post
+			&& 'pending' === $contributor_source->post_status
+	);
+	$editor_topic_id = (int) wp_insert_post(
+		array(
+			'post_type'   => AXISMUNDI_FORUM_TOPIC_POST_TYPE,
+			'post_status' => 'publish',
+			'post_author' => $editor_user,
+			'post_title'  => 'Editor review Topic',
+		)
+	);
+	if ( $editor_topic_id > 0 ) { $ax_fmod_posts[] = $editor_topic_id; }
+	$previous_post = $_POST;
+	wp_set_current_user( $editor_user );
+	$_POST = array(
+		'axismundi_forum_topic_nonce' => wp_create_nonce( 'axismundi_forum_topic_' . $editor_topic_id ),
+		'community_target'            => 'local:' . $group_id,
+	);
+	axismundi_forum_save_topic_context( $editor_topic_id );
+	$_POST = $previous_post;
+	wp_set_current_user( 0 );
+	$editor_entry = axismundi_forum_get_topic_entry( $editor_topic_id );
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'the editor save path enters community review once when it changes a published Topic to pending',
+		is_array( $editor_entry) && 'pending' === (string) $editor_entry['admission_state']
+			&& ( $editor_source = get_post( $editor_topic_id ) ) instanceof WP_Post
+			&& 'pending' === $editor_source->post_status
+			&& 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . axismundi_forum_entries_table() . ' WHERE source_post_id = %d', $editor_topic_id ) )
 	);
 
 	$remote_uri = 'https://remote.example/topics/' . wp_generate_uuid4();

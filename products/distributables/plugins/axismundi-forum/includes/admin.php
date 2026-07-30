@@ -54,21 +54,30 @@ function axismundi_forum_render_topic_meta_box( WP_Post $post ) : void {
 
 /** Persist the selected community on the first Topic save. */
 function axismundi_forum_save_topic_context( int $post_id ) : void {
+	static $saving = array();
+	if ( isset( $saving[ $post_id ] ) ) {
+		return;
+	}
 	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || AXISMUNDI_FORUM_TOPIC_POST_TYPE !== get_post_type( $post_id ) ) { return; }
 	$nonce = isset( $_POST['axismundi_forum_topic_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['axismundi_forum_topic_nonce'] ) ) : '';
 	if ( '' === $nonce || ! wp_verify_nonce( $nonce, 'axismundi_forum_topic_' . $post_id ) || ! current_user_can( 'edit_post', $post_id ) || null !== axismundi_forum_get_topic_entry( $post_id ) ) { return; }
-	$target = isset( $_POST['community_target'] ) ? sanitize_text_field( wp_unslash( $_POST['community_target'] ) ) : '';
-	if ( preg_match( '/^(local|remote):(\d+)$/', $target, $matches ) ) {
-		$group_id = (int) $matches[2];
-		$result = 'local' === $matches[1]
-			? axismundi_forum_admit_local_topic( $group_id, $post_id, get_current_user_id() )
-			: axismundi_forum_bind_remote_topic_group( $post_id, get_current_user_id(), $group_id );
-		if ( ! is_wp_error( $result ) && 'publish' === get_post_status( $post_id ) && 'remote' === $matches[1] ) {
-			$topic = get_post( $post_id );
-			if ( $topic instanceof WP_Post ) {
-				axismundi_forum_record_remote_topic_commit( $topic );
+	$saving[ $post_id ] = true;
+	try {
+		$target = isset( $_POST['community_target'] ) ? sanitize_text_field( wp_unslash( $_POST['community_target'] ) ) : '';
+		if ( preg_match( '/^(local|remote):(\d+)$/', $target, $matches ) ) {
+			$group_id = (int) $matches[2];
+			$result = 'local' === $matches[1]
+				? axismundi_forum_admit_local_topic( $group_id, $post_id, get_current_user_id() )
+				: axismundi_forum_bind_remote_topic_group( $post_id, get_current_user_id(), $group_id );
+			if ( ! is_wp_error( $result ) && 'publish' === get_post_status( $post_id ) && 'remote' === $matches[1] ) {
+				$topic = get_post( $post_id );
+				if ( $topic instanceof WP_Post ) {
+					axismundi_forum_record_remote_topic_commit( $topic );
+				}
 			}
 		}
+	} finally {
+		unset( $saving[ $post_id ] );
 	}
 }
 add_action( 'save_post', 'axismundi_forum_save_topic_context' );

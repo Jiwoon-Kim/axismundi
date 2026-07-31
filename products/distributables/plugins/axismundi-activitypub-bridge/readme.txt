@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.27
+Stable tag: 0.0.28
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -26,6 +26,11 @@ The official plugin's existing request-signing filter signs those requests; Axis
 remains the authoritative ledger.
 
 == Changelog ==
+
+= 0.0.28 =
+* Include published managed Group Actors in the Bridge endpoint inspector so
+  their Inbox, Outbox, and signing-key records are visible alongside site and
+  Person Actors.
 
 = 0.0.27 =
 * Recognizes a Group addressed in either `to` or `cc` as a direct public

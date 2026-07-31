@@ -7,6 +7,12 @@
 
 defined( 'ABSPATH' ) || exit( 1 );
 
+// The inspected endpoint enumeration is admin-only in the plugin bootstrap;
+// load that read-only surface explicitly for this CLI audit.
+if ( ! function_exists( 'axismundi_activitypub_bridge_public_actors' ) ) {
+	require_once dirname( __DIR__ ) . '/includes/admin.php';
+}
+
 global $wpdb;
 $ax_bridge_delivery_results     = array();
 $ax_bridge_delivery_user        = 0;
@@ -49,6 +55,18 @@ try {
 		axismundi_actors_set_status( $local->get_identity_id(), 'public' );
 		$local = axismundi_actors_get_for_user( $ax_bridge_delivery_user );
 	}
+	$managed_group = axismundi_actors_create_managed_group(
+		array(
+			'owner_user_id'      => $ax_bridge_delivery_user,
+			'preferred_username' => 'bridge_group_' . strtolower( wp_generate_password( 8, false, false ) ),
+			'status'             => 'public',
+		)
+	);
+	if ( $managed_group instanceof Axismundi_Actor ) {
+		$ax_bridge_delivery_actor_ids[] = $managed_group->get_identity_id();
+	}
+	$bridge_public_uris = array_map( static fn( Axismundi_Actor $actor ) : string => $actor->get_uri(), axismundi_activitypub_bridge_public_actors() );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'the transport inspector includes a published managed Group alongside site and Person Actors', $managed_group instanceof Axismundi_Actor && in_array( $managed_group->get_uri(), $bridge_public_uris, true ) );
 
 	$fields = $local instanceof Axismundi_Actor ? axismundi_activitypub_bridge_actor_transport_fields( array(), $local ) : array();
 	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'Bridge supplies Inbox, sharedInbox, and publicKey but does not own Outbox representation', isset( $fields['inbox'], $fields['endpoints']['sharedInbox'], $fields['publicKey']['publicKeyPem'] ) && ! isset( $fields['outbox'] ) );
@@ -287,6 +305,7 @@ try {
 	$wpdb->delete( axismundi_act_relations_table(), array( 'initiating_activity_uri' => $activity_uri ?? '' ) ); // phpcs:ignore WordPress.DB
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $activity_uri ?? '' ) ); // phpcs:ignore WordPress.DB
 	foreach ( array_unique( $ax_bridge_delivery_actor_ids ) as $identity_id ) {
+		$wpdb->delete( axismundi_actors_managers_table(), array( 'identity_id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $actor_table ) {
 			$wpdb->delete( $actor_table, array( 'identity_id' => (int) $identity_id ) ); // phpcs:ignore WordPress.DB
 		}

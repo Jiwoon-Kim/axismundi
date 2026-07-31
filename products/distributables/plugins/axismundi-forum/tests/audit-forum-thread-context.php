@@ -169,6 +169,9 @@ try {
 	$remote_envelope = function_exists( 'axismundi_note_get' ) ? axismundi_note_get( $remote_reply ) : null;
 	$remote_reply_uri = is_array( $remote_envelope ) ? axismundi_note_object_uri( (string) $remote_envelope['local_uuid'] ) : '';
 	$remote_create = '' !== $remote_reply_uri ? axismundi_act_get_object_lifecycle( $remote_reply_uri ) : null;
+	$remote_reply_count = function_exists( 'axismundi_op_get_display_reply_tree_count' )
+		? axismundi_op_get_display_reply_tree_count( $remote_topic_uri )
+		: array( 'count' => 0 );
 	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
 	ax_tc_assert(
 		$ax_tc_results,
@@ -179,6 +182,11 @@ try {
 			&& $remote_group->get_uri() === (string) ( $remote_create->get_payload()['object']['audience'] ?? '' )
 			&& false === axismundi_forum_group_reply_actor_feed_visible( true, $remote_create )
 			&& null === axismundi_forum_group_reply_public_outbox_payload( $remote_create->get_payload(), $remote_create )
+	);
+	ax_tc_assert(
+		$ax_tc_results,
+		'a public direct reply to a remote Lemmy comment creates the visible local thread edge used by the Reply count',
+		'' !== $remote_reply_uri && 1 === (int) ( $remote_reply_count['count'] ?? 0 )
 	);
 } finally {
 	foreach ( array_unique( $ax_tc_objects ) as $object_uri ) {

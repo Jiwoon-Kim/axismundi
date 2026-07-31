@@ -130,6 +130,28 @@ try {
 			&& $group instanceof Axismundi_Actor
 			&& $group->get_uri() === (string) ( reset( $vote_announces )->get_actor_uri() ?? '' )
 	);
+	$undo_uri = 'https://example.com/activities/undo/' . wp_generate_uuid4();
+	$undo     = $remote instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'id' => $undo_uri, 'type' => 'Undo', 'actor' => $remote->get_uri(), 'object' => $vote_uri ), 'inbound' )
+		: new WP_Error( 'fixture' );
+	$undo_announces = $group instanceof Axismundi_Actor
+		? array_filter(
+			axismundi_act_get_by_actor( $group->get_uri(), 50 ),
+			static fn( $candidate ) => $candidate instanceof Axismundi_Activity
+				&& 'Announce' === $candidate->get_type()
+				&& $undo_uri === (string) ( $candidate->get_payload()['object']['id'] ?? '' )
+		)
+		: array();
+	$undone_vote = axismundi_act_get( $vote_uri );
+	ax_ts_assert(
+		$ax_ts_results,
+		'a local community redistributes Undo(Dislike), preserving the vote withdrawal instead of undoing its own Announce',
+		$undo instanceof Axismundi_Activity
+			&& $undone_vote instanceof Axismundi_Activity
+			&& ! $undone_vote->is_effective()
+			&& 1 === count( $undo_announces )
+			&& $vote_uri === (string) ( reset( $undo_announces )->get_payload()['object']['object'] ?? '' )
+	);
 	$before_unrelated = count( $vote_announces );
 	$unrelated = $remote instanceof Axismundi_Actor
 		? axismundi_act_record_activity( array( 'id' => 'https://example.com/activities/dislike/' . wp_generate_uuid4(), 'type' => 'Dislike', 'actor' => $remote->get_uri(), 'object' => 'https://example.com/objects/unrelated-' . wp_generate_uuid4(), 'audience' => $group instanceof Axismundi_Actor ? $group->get_uri() : '' ), 'inbound' )

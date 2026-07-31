@@ -484,15 +484,26 @@ function axismundi_forum_local_community_for_submitted_object( string $object_ur
  * Redistribute an interaction received for an existing local community Object.
  *
  * FEP-1b12 makes the Group, rather than the original remote voter, responsible for
- * distributing community interaction to its followers. Like and Dislike stay generic ledger
- * facts in Activities; Forum is only claiming the subset whose target has recorded Group
- * submission evidence. The immutable source key also makes an inbox replay harmless.
+ * distributing community interaction to its followers. That includes `Undo(Like)` and
+ * `Undo(Dislike)`: undoing the Group's Announce would retract the distribution itself, not
+ * report that the voter withdrew. Like and Dislike stay generic ledger facts in Activities;
+ * Forum is only claiming the subset whose target has recorded Group submission evidence. The
+ * immutable source key also makes an inbox replay harmless. This hook is intentionally inbound
+ * only until Forum owns its local up/down mutation path; that path must apply the same Group
+ * redistribution semantics rather than bypassing this boundary.
  */
 function axismundi_forum_distribute_inbound_group_vote( Axismundi_Activity $activity ) : void {
-	if ( 'inbound' !== $activity->get_direction() || ! $activity->is_effective() || ! in_array( $activity->get_type(), array( 'Like', 'Dislike' ), true ) ) {
+	if ( 'inbound' !== $activity->get_direction() || ! $activity->is_effective() ) {
 		return;
 	}
-	$object_uri = axismundi_act_member_uri( $activity->get_payload()['object'] ?? '' );
+	$vote = $activity;
+	if ( 'Undo' === $activity->get_type() ) {
+		$vote = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) $activity->get_object_uri() ) : null;
+	}
+	if ( ! $vote instanceof Axismundi_Activity || ! in_array( $vote->get_type(), array( 'Like', 'Dislike' ), true ) ) {
+		return;
+	}
+	$object_uri = (string) $vote->get_object_uri();
 	$group = axismundi_forum_local_community_for_submitted_object( $object_uri );
 	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_record_source_activity' ) ) {
 		return;

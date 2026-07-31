@@ -178,10 +178,11 @@ try {
 	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
 	ax_tc_assert(
 		$ax_tc_results,
-		'a local Note reply is delivered directly to a remote Topic Group with public routing, Group audience, and no Person-profile projection',
+		'a local Note reply uses Lemmy public routing while keeping the remote Topic Group and parent author as direct recipients',
 		! is_wp_error( $remote_parent ) && ! is_wp_error( $remote_saved ) && $remote_group instanceof Axismundi_Actor && $remote_create instanceof Axismundi_Activity
-			&& in_array( $remote_group->get_uri(), (array) ( $remote_create->get_audience()['to'] ?? array() ), true )
-			&& in_array( $public_uri, (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
+			&& in_array( $public_uri, (array) ( $remote_create->get_audience()['to'] ?? array() ), true )
+			&& in_array( $remote_group->get_uri(), (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
+			&& in_array( 'https://example.com/u/axtc-parent', (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
 			&& $remote_group->get_uri() === (string) ( $remote_create->get_payload()['object']['audience'] ?? '' )
 			&& false === axismundi_forum_group_reply_actor_feed_visible( true, $remote_create )
 			&& null === axismundi_forum_group_reply_public_outbox_payload( $remote_create->get_payload(), $remote_create )

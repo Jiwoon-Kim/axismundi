@@ -308,12 +308,12 @@ function axismundi_forum_pre_delete_topic_distribution( $delete, WP_Post $topic 
 }
 add_filter( 'pre_delete_post', 'axismundi_forum_pre_delete_topic_distribution', 30, 2 );
 
-/** Resolve the addressed community Group from a Note reply's parent Object. */
-function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Axismundi_Actor {
+/** Resolve a Note reply's parent Object from its authoritative local or cached remote source. */
+function axismundi_forum_note_reply_parent_object( Axismundi_Note_Source $source ) : array {
 	$envelope = $source->get_envelope();
 	$parent_uri = (string) ( $envelope['in_reply_to_uri'] ?? '' );
 	if ( '' === $parent_uri || ! function_exists( 'axismundi_op_resolve_source_by_uri' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
-		return null;
+		return array();
 	}
 	$parent = array();
 	$parent_source = axismundi_op_resolve_source_by_uri( $parent_uri );
@@ -324,6 +324,15 @@ function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Ax
 	if ( empty( $parent ) && function_exists( 'axismundi_op_remote_object_get' ) ) {
 		$stored = axismundi_op_remote_object_get( $parent_uri, false );
 		$parent = is_array( $stored ) ? (array) ( $stored['payload'] ?? array() ) : array();
+	}
+	return $parent;
+}
+
+/** Resolve the addressed community Group from a Note reply's parent Object. */
+function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Axismundi_Actor {
+	$parent = axismundi_forum_note_reply_parent_object( $source );
+	if ( empty( $parent ) ) {
+		return null;
 	}
 	/*
 	 * A root Topic names its Group in `audience`, while Lemmy comments place the
@@ -345,6 +354,12 @@ function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Ax
 	return null;
 }
 
+/** Return the parent author as an explicit Reply recipient when it has a URI. */
+function axismundi_forum_note_reply_parent_actor_uri( Axismundi_Note_Source $source ) : string {
+	$parent = axismundi_forum_note_reply_parent_object( $source );
+	return axismundi_act_member_uri( $parent['attributedTo'] ?? '' );
+}
+
 /** Whether this user may submit a threaded Note directly to this local or remote Group. */
 function axismundi_forum_user_can_submit_reply_to_group( Axismundi_Actor $group, int $user_id ) : bool {
 	if ( $group->is_local() ) {
@@ -363,11 +378,21 @@ function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_So
 		return $audience;
 	}
 	$mentions = $post instanceof WP_Post && function_exists( 'axismundi_note_mentions' ) ? axismundi_note_mentions( $post ) : array();
-	// Lemmy validates a remote-community submission as public even though only the Group receives it directly.
-	if ( ! $group->is_local() ) {
-		$mentions[] = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
+	if ( $group->is_local() ) {
+		return array( 'public' => false, 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $mentions ) ) );
 	}
-	return array( 'public' => ! $group->is_local(), 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $mentions ) ) );
+	/*
+	 * Lemmy validates a reply as public only when Public is a primary recipient.
+	 * The Group and parent author remain explicit secondary recipients, while the
+	 * Bridge still delivers this Create directly to the Group inbox.
+	 */
+	$recipients = array_merge( array( $group->get_uri() ), $mentions );
+	$parent_actor_uri = axismundi_forum_note_reply_parent_actor_uri( $source );
+	if ( '' !== $parent_actor_uri ) {
+		$recipients[] = $parent_actor_uri;
+	}
+	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
+	return array( 'public' => true, 'to' => array( $public_uri ), 'cc' => array_values( array_unique( $recipients ) ) );
 }
 add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audience', 10, 2 );
 
@@ -433,9 +458,10 @@ function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $act
 	$post = is_array( $envelope ) ? get_post( (int) $envelope['post_id'] ) : null;
 	$source = is_array( $envelope ) && $post instanceof WP_Post ? new Axismundi_Note_Source( $envelope, $post ) : null;
 	$group = $source instanceof Axismundi_Note_Source ? axismundi_forum_note_reply_group( $source ) : null;
+	$recipients = array_merge( (array) ( $activity->get_audience()['to'] ?? array() ), (array) ( $activity->get_audience()['cc'] ?? array() ) );
 	return $group instanceof Axismundi_Actor
 		&& hash_equals( $group->get_uri(), $group_uri )
-		&& in_array( $group_uri, (array) ( $activity->get_audience()['to'] ?? array() ), true )
+		&& in_array( $group_uri, $recipients, true )
 		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
 }
 

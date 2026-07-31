@@ -172,6 +172,9 @@ try {
 	$remote_reply_count = function_exists( 'axismundi_op_get_display_reply_tree_count' )
 		? axismundi_op_get_display_reply_tree_count( $remote_topic_uri )
 		: array( 'count' => 0 );
+	$remote_inboxes = $remote_create instanceof Axismundi_Activity && function_exists( 'axismundi_activitypub_bridge_activity_inboxes' )
+		? axismundi_activitypub_bridge_activity_inboxes( $remote_create )
+		: array();
 	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
 	ax_tc_assert(
 		$ax_tc_results,
@@ -187,6 +190,11 @@ try {
 		$ax_tc_results,
 		'a public direct reply to a remote Lemmy comment creates the visible local thread edge used by the Reply count',
 		'' !== $remote_reply_uri && 1 === (int) ( $remote_reply_count['count'] ?? 0 )
+	);
+	ax_tc_assert(
+		$ax_tc_results,
+		'a direct reply to a remote Lemmy comment queues only its community inbox for transport',
+		$remote_group instanceof Axismundi_Actor && in_array( $remote_group->get_uri() . '/inbox', $remote_inboxes, true ) && 1 === count( $remote_inboxes )
 	);
 } finally {
 	foreach ( array_unique( $ax_tc_objects ) as $object_uri ) {

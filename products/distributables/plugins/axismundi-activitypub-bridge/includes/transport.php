@@ -162,8 +162,8 @@ function axismundi_activitypub_bridge_remote_inbox( string $actor_uri ) : string
 	return '' !== $shared ? $shared : axismundi_actors_get_endpoint( $actor, 'inbox' );
 }
 
-/** Whether a public Create or Update is submitted directly to a cached remote Group. */
-function axismundi_activitypub_bridge_is_direct_remote_group_submission( Axismundi_Activity $activity ) : bool {
+/** Whether a public Create or Update is submitted directly to a known public Group. */
+function axismundi_activitypub_bridge_is_direct_group_submission( Axismundi_Activity $activity ) : bool {
 	if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
 		return false;
 	}
@@ -173,11 +173,23 @@ function axismundi_activitypub_bridge_is_direct_remote_group_submission( Axismun
 		return false;
 	}
 	$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
-	if ( '' === $group_uri || ! in_array( $group_uri, (array) ( $activity->get_audience()['to'] ?? array() ), true ) ) {
+	$recipients = array_merge( (array) ( $activity->get_audience()['to'] ?? array() ), (array) ( $activity->get_audience()['cc'] ?? array() ) );
+	if ( '' === $group_uri || ! in_array( $group_uri, $recipients, true ) ) {
 		return false;
 	}
 	$group = axismundi_actors_get_by_uri( $group_uri );
-	return $group instanceof Axismundi_Actor && ! $group->is_local() && 'Group' === $group->get_type() && 'public' === $group->get_status();
+	return $group instanceof Axismundi_Actor && 'Group' === $group->get_type() && 'public' === $group->get_status();
+}
+
+/** Backward-compatible remote-only predicate. */
+function axismundi_activitypub_bridge_is_direct_remote_group_submission( Axismundi_Activity $activity ) : bool {
+	if ( ! axismundi_activitypub_bridge_is_direct_group_submission( $activity ) ) {
+		return false;
+	}
+	$object    = $activity->get_payload()['object'] ?? array();
+	$group_uri = is_array( $object ) ? axismundi_act_member_uri( $object['audience'] ?? '' ) : '';
+	$group     = '' !== $group_uri ? axismundi_actors_get_by_uri( $group_uri ) : null;
+	return $group instanceof Axismundi_Actor && ! $group->is_local();
 }
 
 /** Derive explicit remote Inbox recipients from one outbound Activity. */
@@ -197,11 +209,11 @@ function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $acti
 		|| in_array( 'as:Public', $candidates, true )
 		|| ( '' !== $followers_uri && in_array( $followers_uri, $candidates, true ) );
 	/*
-	 * A remote Group submission carries Public for strict threadiverse object
+	 * A Group submission carries Public for strict threadiverse object
 	 * validation, but remains a direct inbox delivery. Its Group decides whether
 	 * and how to redistribute it; the author's followers must not receive it.
 	 */
-	if ( $addresses_followers && ! axismundi_activitypub_bridge_is_direct_remote_group_submission( $activity ) ) {
+	if ( $addresses_followers && ! axismundi_activitypub_bridge_is_direct_group_submission( $activity ) ) {
 		$candidates = array_merge( $candidates, axismundi_act_get_followers( $activity->get_actor_uri(), 1000 ) );
 	}
 	$inboxes = array();

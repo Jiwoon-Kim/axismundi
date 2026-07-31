@@ -131,7 +131,7 @@ try {
 		$ax_bridge_delivery_ids[] = $accept_id;
 	}
 	$ax_bridge_delivery_social_uris = array_merge( $ax_bridge_delivery_social_uris, array( $inbound_follow_uri, $accept_uri ) );
-	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'auto-accepting an inbound Follow queues one JSON-LD Accept back to that Actor', $inbound_follow instanceof Axismundi_Activity && $accept_id > 0 && 'Accept' === ( $accept_payload['type'] ?? '' ) && $inbound_follow_uri === ( $accept_payload['object'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
+	ax_bridge_delivery_assert( $ax_bridge_delivery_results, 'auto-accepting an inbound Follow queues one JSON-LD Accept carrying the original Follow back to that Actor', $inbound_follow instanceof Axismundi_Activity && $accept_id > 0 && 'Accept' === ( $accept_payload['type'] ?? '' ) && is_array( $accept_payload['object'] ?? null ) && $inbound_follow_uri === (string) ( $accept_payload['object']['id'] ?? '' ) && in_array( $remote_uri, (array) ( $accept_payload['to'] ?? array() ), true ) );
 	$followers_address = $local instanceof Axismundi_Actor ? axismundi_op_actor_followers_url( $local ) : '';
 	$followers_activity = $local instanceof Axismundi_Actor ? axismundi_act_record_activity( array( 'type' => 'Announce', 'actor' => $local->get_uri(), 'object' => 'https://example.com/objects/followers-only', 'to' => array( $followers_address ) ), 'outbound' ) : null;
 	$followers_inboxes = $followers_activity instanceof Axismundi_Activity ? axismundi_activitypub_bridge_activity_inboxes( $followers_activity ) : array();

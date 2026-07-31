@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: activitypub, axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.24
+Stable tag: 0.0.27
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, compatibility, adapter
@@ -26,6 +26,16 @@ The official plugin's existing request-signing filter signs those requests; Axis
 remains the authoritative ledger.
 
 == Changelog ==
+
+= 0.0.27 =
+* Recognizes a Group addressed in either `to` or `cc` as a direct public
+  submission destination, so Lemmy-compatible Replies reach only the Group
+  inbox and never fan out through the author's followers.
+
+= 0.0.26 =
+* Extends direct-Group submission delivery to local public Groups. A Topic's
+  `Public` routing address now satisfies strict threadiverse validation without
+  fanning the author Create or Update out to Person followers.
 
 = 0.0.25 =
 * Keeps public direct submissions to cached remote Group Actors on the Group inbox

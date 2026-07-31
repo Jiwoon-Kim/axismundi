@@ -439,6 +439,37 @@ function axismundi_actors_redirect_handle_alias_trailing_slash() : void {
 add_action( 'template_redirect', 'axismundi_actors_redirect_handle_alias_trailing_slash', 1 );
 
 /**
+ * Resolve a legacy WordPress author archive to its public Actor profile hub.
+ *
+ * Older ActivityPub peers may have cached the official plugin's author-archive
+ * `url`. Keep that human link useful while the canonical Actor identity remains
+ * the Axismundi URI.
+ *
+ * @param int $user_id WordPress user ID from an author archive query.
+ * @return string Empty when the archive must retain its Core behaviour.
+ */
+function axismundi_actors_legacy_author_profile_redirect_url( int $user_id ) : string {
+	$actor = $user_id > 0 ? axismundi_actors_get_for_user( $user_id ) : null;
+	return $actor instanceof Axismundi_Actor && axismundi_actors_is_public_profile( $actor )
+		? axismundi_actors_profile_hub_url( $actor )
+		: '';
+}
+
+/** Redirect a legacy local author archive to the Actor-owned public profile. */
+function axismundi_actors_redirect_legacy_author_profile() : void {
+	if ( ! is_author() || is_feed() ) {
+		return;
+	}
+	$target = axismundi_actors_legacy_author_profile_redirect_url( (int) get_queried_object_id() );
+	if ( '' === $target ) {
+		return;
+	}
+	wp_safe_redirect( $target, 301 );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_actors_redirect_legacy_author_profile', 1 );
+
+/**
  * Route an Actor address the stored rewrite table failed to match.
  *
  * Some hosted installs end up without these rules even though the plugin registered

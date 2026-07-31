@@ -100,6 +100,16 @@ try {
 	ax_profile_assert( $ax_profile_results, 'a public actor with a registered handle is visible anonymously', $public_actor instanceof Axismundi_Actor && axismundi_actors_can_view( $public_actor, 0 ) );
 	ax_profile_assert(
 		$ax_profile_results,
+		'a legacy WordPress author archive redirects a public Person to the Actor profile hub',
+		$public_actor instanceof Axismundi_Actor && axismundi_actors_profile_hub_url( $public_actor ) === axismundi_actors_legacy_author_profile_redirect_url( $user_id )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'a legacy author archive does not claim an internal Person',
+		'' === axismundi_actors_legacy_author_profile_redirect_url( $admin_id )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
 		'a public Person profile disables shared caching because its feed can vary by viewer',
 		$public_actor instanceof Axismundi_Actor && axismundi_actors_profile_requires_nocache( $public_actor )
 	);

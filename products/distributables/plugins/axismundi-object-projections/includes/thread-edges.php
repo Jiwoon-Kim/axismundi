@@ -663,10 +663,19 @@ function axismundi_op_render_reply_context_block() : string {
 	return '<p class="axismundi-thread__context">' . $link . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $link escaped above.
 }
 
-/** Render the direct-replies list for the request's current object view model. */
+/** Render the bounded nested reply tree for the current Object. */
 function axismundi_op_render_replies_block() : string {
 	$model = axismundi_op_current_object_view_model();
 	$uri   = is_array( $model ) ? (string) ( $model['object_uri'] ?? '' ) : '';
+	/*
+	 * Cached Object routes bind a view model, while a local Topic is a normal
+	 * WordPress singular post. Use the same registry-backed request URI fallback
+	 * as the collection renderer so both reply implementations can be compared
+	 * on that page without naming any product post type here.
+	 */
+	if ( '' === $uri && function_exists( 'axismundi_op_request_object_uri' ) ) {
+		$uri = axismundi_op_request_object_uri();
+	}
 	if ( '' === $uri || 'tombstone' === (string) ( $model['status'] ?? '' ) ) {
 		return '';
 	}

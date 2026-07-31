@@ -69,6 +69,7 @@ try {
 		$ax_ts_results,
 		'Forum registers its own single-Topic template instead of leaving Topics on the theme post template',
 		null !== $plugin_template
+			&& false !== strpos( (string) $plugin_template->content, 'axismundi/replies' )
 			&& false !== strpos( (string) $plugin_template->content, 'axismundi/object-replies' )
 			&& false !== strpos( (string) $plugin_template->content, 'axismundi/community-card' )
 	);
@@ -106,11 +107,14 @@ try {
 			'content' => '<p>Remote reply body.</p>', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 		)
 	);
-	$replies_html = axismundi_op_render_object_replies_block( array( 'perPage' => 20 ) );
+	$tree_replies_html = axismundi_op_render_replies_block();
+	$replies_html      = axismundi_op_render_object_replies_block( array( 'perPage' => 20 ) );
 	ax_ts_assert(
 		$ax_ts_results,
-		'a reply received from another server is rendered on the Topic page it answers',
+		'a reply received from another server is rendered by both the nested-tree and collection-list blocks on the Topic it answers',
 		! is_wp_error( $stored )
+			&& false !== strpos( $tree_replies_html, 'axismundi-thread--replies' )
+			&& false !== strpos( $tree_replies_html, 'Remote reply body.' )
 			&& false !== strpos( $replies_html, 'axismundi-object-replies' )
 			&& false !== strpos( $replies_html, 'Remote reply body.' )
 	);

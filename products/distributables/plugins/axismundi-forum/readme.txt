@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.8
+Stable tag: 0.9.9
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,11 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.9 =
+* Treat a direct Topic submission as Group-addressed when the Group is in
+  either `to` or `cc`, matching Reply handling and keeping future address
+  changes out of the author's profile feed and public outbox.
 
 = 0.9.8 =
 * Makes a public local-community Reply's embedded Create Lemmy-valid before the

@@ -215,6 +215,16 @@ function axismundi_forum_record_remote_topic_commit( WP_Post $topic ) {
 	return axismundi_forum_record_topic_commit( $topic );
 }
 
+/** Whether an Activity directly addresses one Actor in either public recipient field. */
+function axismundi_forum_activity_addresses_actor( Axismundi_Activity $activity, string $actor_uri ) : bool {
+	$actor_uri = axismundi_act_uri( $actor_uri );
+	if ( '' === $actor_uri ) {
+		return false;
+	}
+	$audience = $activity->get_audience();
+	return in_array( $actor_uri, array_merge( (array) ( $audience['to'] ?? array() ), (array) ( $audience['cc'] ?? array() ) ), true );
+}
+
 /**
  * Whether an outbound lifecycle Activity is a Person's direct Topic submission
  * to a Group, rather than a Person-profile post.
@@ -242,7 +252,7 @@ function axismundi_forum_is_direct_topic_submission_activity( Axismundi_Activity
 	return $group instanceof Axismundi_Actor
 		&& 'Group' === $group->get_type()
 		&& $group_uri === $group->get_uri()
-		&& in_array( $group_uri, (array) ( $activity->get_audience()['to'] ?? array() ), true )
+		&& axismundi_forum_activity_addresses_actor( $activity, $group_uri )
 		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
 }
 

@@ -151,6 +151,33 @@ try {
 			&& function_exists( 'axismundi_activitypub_bridge_is_direct_group_submission' ) && axismundi_activitypub_bridge_is_direct_group_submission( $create )
 			&& 1 === count( axismundi_forum_pending_topic_entries( $group_id ) )
 	);
+	$cc_addressed_create = $create instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
+		? Axismundi_Activity::from_row(
+			array(
+				'id'               => 0,
+				'activity_uri'     => home_url( '/activities/fixture-topic-cc-addressed/' ),
+				'local_uuid'       => null,
+				'activity_type'    => 'Create',
+				'actor_uri'        => $create->get_actor_uri(),
+				'object_uri'       => $create->get_object_uri(),
+				'target_uri'       => null,
+				'instrument_uri'   => null,
+				'direction'        => 'outbound',
+				'effective_status' => 'active',
+				'audience'         => array( 'to' => array( axismundi_act_public_audience_uri() ), 'cc' => array( $group->get_uri() ) ),
+				'payload'          => $create->get_payload(),
+				'published_at'     => null,
+			)
+		)
+		: null;
+	ax_fmod_assert(
+		$ax_fmod_results,
+		'a direct Topic submission remains out of the Person feed and public outbox when its Group address is carried in cc',
+		$cc_addressed_create instanceof Axismundi_Activity
+			&& axismundi_forum_is_direct_topic_submission_activity( $cc_addressed_create )
+			&& null === axismundi_forum_topic_submission_public_outbox_payload( array(), $cc_addressed_create )
+			&& ! axismundi_forum_topic_submission_actor_feed_visible( true, $cc_addressed_create )
+	);
 	wp_set_current_user( $alice_user );
 	ob_start();
 	axismundi_forum_render_group_admin_section( $group );

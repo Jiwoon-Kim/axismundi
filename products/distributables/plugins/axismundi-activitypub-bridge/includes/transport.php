@@ -181,17 +181,6 @@ function axismundi_activitypub_bridge_is_direct_group_submission( Axismundi_Acti
 	return $group instanceof Axismundi_Actor && 'Group' === $group->get_type() && 'public' === $group->get_status();
 }
 
-/** Backward-compatible remote-only predicate. */
-function axismundi_activitypub_bridge_is_direct_remote_group_submission( Axismundi_Activity $activity ) : bool {
-	if ( ! axismundi_activitypub_bridge_is_direct_group_submission( $activity ) ) {
-		return false;
-	}
-	$object    = $activity->get_payload()['object'] ?? array();
-	$group_uri = is_array( $object ) ? axismundi_act_member_uri( $object['audience'] ?? '' ) : '';
-	$group     = '' !== $group_uri ? axismundi_actors_get_by_uri( $group_uri ) : null;
-	return $group instanceof Axismundi_Actor && ! $group->is_local();
-}
-
 /** Derive explicit remote Inbox recipients from one outbound Activity. */
 function axismundi_activitypub_bridge_activity_inboxes( Axismundi_Activity $activity ) : array {
 	$candidates = array();

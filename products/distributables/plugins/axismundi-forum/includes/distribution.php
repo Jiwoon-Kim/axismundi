@@ -461,10 +461,9 @@ function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $act
 	$post = is_array( $envelope ) ? get_post( (int) $envelope['post_id'] ) : null;
 	$source = is_array( $envelope ) && $post instanceof WP_Post ? new Axismundi_Note_Source( $envelope, $post ) : null;
 	$group = $source instanceof Axismundi_Note_Source ? axismundi_forum_note_reply_group( $source ) : null;
-	$recipients = array_merge( (array) ( $activity->get_audience()['to'] ?? array() ), (array) ( $activity->get_audience()['cc'] ?? array() ) );
 	return $group instanceof Axismundi_Actor
 		&& hash_equals( $group->get_uri(), $group_uri )
-		&& in_array( $group_uri, $recipients, true )
+		&& axismundi_forum_activity_addresses_actor( $activity, $group_uri )
 		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
 }
 

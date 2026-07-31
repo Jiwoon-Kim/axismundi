@@ -600,9 +600,11 @@ function axismundi_forum_topic_to_article( WP_Post $topic ) {
 	$cc         = array();
 	/*
 	 * Threadiverse peers, including Lemmy, validate that a submitted thread Object is
-	 * public even though its Create is delivered directly to the Group. The Group is
-	 * still the only transport recipient: Bridge recognises this direct submission and
-	 * does not fan it out through the author's followers.
+	 * public even though its Create is delivered directly to the Group. `cc` preserves
+	 * that public-routing signal without making the Person's direct submission their
+	 * profile delivery; the Group Announce remains the public community surface.
+	 * Bridge recognises the direct Group submission and does not fan it out through the
+	 * author's followers.
 	 */
 	$public_submission = ! $group->is_local()
 		|| ( is_array( $entry ) && 'public' === axismundi_forum_get_distribution_scope( (int) $entry['group_identity_id'] ) );

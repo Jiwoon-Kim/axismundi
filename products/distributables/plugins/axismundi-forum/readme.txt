@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.11
+Stable tag: 0.9.12
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,11 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.12 =
+* Redistributes inbound Like and Dislike activities for Objects whose direct
+  Group submission is already proven in the local ledger. The Group, not the
+  remote voter, distributes those community interactions to its followers.
 
 = 0.9.11 =
 * Places the existing nested reply tree and the collection-backed reply list on

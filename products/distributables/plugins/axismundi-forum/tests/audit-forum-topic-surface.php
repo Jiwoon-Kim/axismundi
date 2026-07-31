@@ -14,9 +14,13 @@ defined( 'ABSPATH' ) || exit( 1 );
 
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/object-lifecycle.php';
 require_once WP_PLUGIN_DIR . '/axismundi-object-projections/includes/remote-objects.php';
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
+require_once __DIR__ . '/../includes/outbound-topics.php';
+require_once __DIR__ . '/../includes/distribution.php';
 require_once __DIR__ . '/../includes/templates.php';
 require_once __DIR__ . '/../includes/community-card.php';
 
@@ -99,6 +103,50 @@ try {
 	if ( $remote instanceof Axismundi_Actor ) {
 		$ax_ts_ids[] = $remote->get_identity_id();
 	}
+	/*
+	 * A remote vote is distributed by the local Group only after the ledger proves the target
+	 * was submitted directly to that Group. The incoming Activity's `audience` is advisory,
+	 * not sufficient evidence on its own.
+	 */
+	$submission = $topic > 0 ? axismundi_forum_record_topic_commit( get_post( $topic ) ) : null;
+	$vote_uri   = 'https://example.com/activities/dislike/' . wp_generate_uuid4();
+	$vote       = $remote instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'id' => $vote_uri, 'type' => 'Dislike', 'actor' => $remote->get_uri(), 'object' => $topic_uri, 'audience' => $group instanceof Axismundi_Actor ? $group->get_uri() : '' ), 'inbound' )
+		: new WP_Error( 'fixture' );
+	$vote_announces = $group instanceof Axismundi_Actor
+		? array_filter(
+			axismundi_act_get_by_actor( $group->get_uri(), 50 ),
+			static fn( $candidate ) => $candidate instanceof Axismundi_Activity
+				&& 'Announce' === $candidate->get_type()
+				&& $vote_uri === (string) ( $candidate->get_payload()['object']['id'] ?? '' )
+		)
+		: array();
+	ax_ts_assert(
+		$ax_ts_results,
+		'a local community redistributes an inbound Dislike only when its target has recorded direct Group-submission evidence',
+		$submission instanceof Axismundi_Activity
+			&& $vote instanceof Axismundi_Activity
+			&& 1 === count( $vote_announces )
+			&& $group instanceof Axismundi_Actor
+			&& $group->get_uri() === (string) ( reset( $vote_announces )->get_actor_uri() ?? '' )
+	);
+	$before_unrelated = count( $vote_announces );
+	$unrelated = $remote instanceof Axismundi_Actor
+		? axismundi_act_record_activity( array( 'id' => 'https://example.com/activities/dislike/' . wp_generate_uuid4(), 'type' => 'Dislike', 'actor' => $remote->get_uri(), 'object' => 'https://example.com/objects/unrelated-' . wp_generate_uuid4(), 'audience' => $group instanceof Axismundi_Actor ? $group->get_uri() : '' ), 'inbound' )
+		: new WP_Error( 'fixture' );
+	$after_unrelated = $group instanceof Axismundi_Actor
+		? array_filter(
+			axismundi_act_get_by_actor( $group->get_uri(), 50 ),
+			static fn( $candidate ) => $candidate instanceof Axismundi_Activity
+				&& 'Announce' === $candidate->get_type()
+				&& $vote_uri === (string) ( $candidate->get_payload()['object']['id'] ?? '' )
+		)
+		: array();
+	ax_ts_assert(
+		$ax_ts_results,
+		'a remote Dislike cannot make a Group announce an arbitrary object by merely claiming that Group as audience',
+		$unrelated instanceof Axismundi_Activity && $before_unrelated === count( $after_unrelated )
+	);
 	$reply_uri       = 'https://example.com/comment/' . wp_generate_uuid4();
 	$ax_ts_objects[] = $reply_uri;
 	$stored = axismundi_op_remote_object_store(

@@ -448,6 +448,73 @@ function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $ac
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_group_reply_activity', 30 );
 
+/**
+ * Resolve the local community that has already accepted one exact Object submission.
+ *
+ * An inbound vote's own `audience` is not authority to redistribute it: any remote Actor
+ * can claim a Group there. The immutable Create or Update that introduced the Object must
+ * instead prove both that the Object names this Group and that it was directly addressed to
+ * this local community. This covers Topic Articles and Note replies without giving the
+ * per-Topic approval-distribution ledger responsibility for every threaded interaction.
+ */
+function axismundi_forum_local_community_for_submitted_object( string $object_uri ) : ?Axismundi_Actor {
+	$object_uri = trim( $object_uri );
+	if ( '' === $object_uri || ! function_exists( 'axismundi_act_get_by_object' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		return null;
+	}
+	foreach ( axismundi_act_get_by_object( $object_uri, 50 ) as $submission ) {
+		if ( ! $submission instanceof Axismundi_Activity || ! $submission->is_effective() || ! in_array( $submission->get_type(), array( 'Create', 'Update' ), true ) ) {
+			continue;
+		}
+		$object = $submission->get_payload()['object'] ?? null;
+		if ( ! is_array( $object ) || ! hash_equals( $object_uri, (string) ( $object['id'] ?? '' ) ) || (string) ( $object['attributedTo'] ?? '' ) !== $submission->get_actor_uri() ) {
+			continue;
+		}
+		$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
+		$group = '' !== $group_uri ? axismundi_actors_get_by_uri( $group_uri ) : null;
+		if ( $group instanceof Axismundi_Actor && $group->is_local() && 'Group' === $group->get_type() && 'public' === $group->get_status()
+			&& axismundi_forum_is_community( $group->get_identity_id() ) && axismundi_forum_activity_addresses_actor( $submission, $group_uri ) ) {
+			return $group;
+		}
+	}
+	return null;
+}
+
+/**
+ * Redistribute an interaction received for an existing local community Object.
+ *
+ * FEP-1b12 makes the Group, rather than the original remote voter, responsible for
+ * distributing community interaction to its followers. Like and Dislike stay generic ledger
+ * facts in Activities; Forum is only claiming the subset whose target has recorded Group
+ * submission evidence. The immutable source key also makes an inbox replay harmless.
+ */
+function axismundi_forum_distribute_inbound_group_vote( Axismundi_Activity $activity ) : void {
+	if ( 'inbound' !== $activity->get_direction() || ! $activity->is_effective() || ! in_array( $activity->get_type(), array( 'Like', 'Dislike' ), true ) ) {
+		return;
+	}
+	$object_uri = axismundi_act_member_uri( $activity->get_payload()['object'] ?? '' );
+	$group = axismundi_forum_local_community_for_submitted_object( $object_uri );
+	if ( ! $group instanceof Axismundi_Actor || ! function_exists( 'axismundi_act_record_source_activity' ) ) {
+		return;
+	}
+	$audience = axismundi_forum_distribution_audience( $group );
+	if ( is_wp_error( $audience ) ) {
+		return;
+	}
+	axismundi_act_record_source_activity(
+		array(
+			'type'   => 'Announce',
+			'actor'  => $group->get_uri(),
+			'object' => $activity->get_payload(),
+			'to'     => $audience['to'],
+			'cc'     => $audience['cc'],
+		),
+		'outbound',
+		'forum-group-vote-announce:' . $group->get_identity_id() . ':' . $activity->get_uri()
+	);
+}
+add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_inbound_group_vote', 30 );
+
 /** Whether an outbound Note lifecycle is a direct threaded submission to a Group. */
 function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $activity ) : bool {
 	if ( 'outbound' !== $activity->get_direction() || ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {

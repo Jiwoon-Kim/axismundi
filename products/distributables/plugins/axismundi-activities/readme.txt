@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.37
+Stable tag: 0.0.38
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,18 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.38 =
+* Records `Dislike` and its `Undo`. A community downvote arrives whether or not any
+  discussion feature is installed, and `Dislike` was not a supported Activity type at all,
+  so those votes were dropped at the ledger boundary and the record of them was lost.
+* Like and Dislike now share one implementation rather than two copies of the same queries,
+  so a later fix to convergence, cycle keys, or the guard that keeps emoji reactions out of
+  vote counts cannot be applied to one verb and missed on the other. The Like API is
+  unchanged for callers.
+* The ledger does not make the two verbs cancel each other. ActivityStreams does not define
+  them as opposites, and "one vote per person" is a community rule, so exclusive voting
+  belongs to whichever product owns that community.
 
 = 0.0.37 =
 * Embed the original Follow Activity in outbound Accept and Reject decisions so peers can

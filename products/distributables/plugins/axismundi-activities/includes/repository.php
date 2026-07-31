@@ -204,7 +204,19 @@ function axismundi_act_member_uri( $value ) : string {
 
 /** Supported Activity types. */
 function axismundi_act_types() : array {
-	$types = array( 'Follow', 'Accept', 'Reject', 'Undo', 'Like', 'EmojiReact', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Block', 'Flag' );
+	/*
+	 * `Dislike` is accepted for the same reason `Block` and `Flag` are: the ledger records what
+	 * happened, and what any product chooses to display is a separate question. A Lemmy
+	 * downvote on one of our Topics arrives whether or not a community feature is installed,
+	 * and refusing it here would not stop the vote — it would only lose the record of it, so
+	 * the same object's score would depend on which plugins happened to be active when the
+	 * Activity landed.
+	 *
+	 * Recording is not endorsement, and it is not a score. ActivityStreams does not make Like
+	 * and Dislike cancel each other; "one vote per person" is a community rule, so the mutual
+	 * exclusion and the tally belong to whichever product owns that community.
+	 */
+	$types = array( 'Follow', 'Accept', 'Reject', 'Undo', 'Like', 'Dislike', 'EmojiReact', 'Announce', 'QuoteRequest', 'Create', 'Update', 'Delete', 'Add', 'Remove', 'Move', 'Join', 'Leave', 'Block', 'Flag' );
 	/** @param string[] $types Supported ActivityStreams activity types. */
 	return array_values( array_unique( array_filter( array_map( 'sanitize_text_field', (array) apply_filters( 'axismundi_act_types', $types ) ) ) ) );
 }

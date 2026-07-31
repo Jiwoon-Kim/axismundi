@@ -17,151 +17,49 @@ function axismundi_act_validate_reaction_actor( Axismundi_Actor $actor ) {
 		: new WP_Error( 'ax_act_reaction_actor', __( 'An activated public local Person actor is required.', 'axismundi-activities' ) );
 }
 
+/*
+ * Like is one of the two plain vote verbs. Its queries live in votes.php so that Like and
+ * Dislike cannot drift apart; these names stay because other products call them.
+ */
+
 /** @return Axismundi_Activity[] Effective Likes for one exact object, newest first and unique by Actor. */
 function axismundi_act_get_effective_likes( string $object_uri, int $limit = 100 ) : array {
-	global $wpdb;
-	$uri = axismundi_act_uri( $object_uri );
-	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
-		return array();
-	}
-	$table = axismundi_act_activities_table();
-	$limit = max( 1, min( 200, $limit ) );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact URI reaction query in the custom ledger.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE activity_type = 'Like' AND reaction_key IS NULL AND object_uri_hash = %s AND object_uri = %s AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d", hash( 'sha256', $uri ), $uri, $limit ), ARRAY_A );
-	$seen = array();
-	$out  = array();
-	foreach ( $rows as $row ) {
-		$actor_hash = (string) $row['actor_uri_hash'];
-		if ( isset( $seen[ $actor_hash ] ) ) {
-			continue;
-		}
-		$seen[ $actor_hash ] = true;
-		$out[] = axismundi_act_hydrate( $row );
-	}
-	return $out;
+	return axismundi_act_get_effective_votes( 'Like', $object_uri, $limit );
 }
 
 /** Count distinct Actors with an effective Like for one object URI. */
 function axismundi_act_get_like_count( string $object_uri ) : int {
-	global $wpdb;
-	$uri = axismundi_act_uri( $object_uri );
-	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
-		return 0;
-	}
-	$table = axismundi_act_activities_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed aggregate derived from the authoritative ledger.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT actor_uri_hash) FROM {$table} WHERE activity_type = 'Like' AND reaction_key IS NULL AND object_uri_hash = %s AND object_uri = %s AND effective_status = 'active'", hash( 'sha256', $uri ), $uri ) );
+	return axismundi_act_get_vote_count( 'Like', $object_uri );
 }
 
 /** Latest Like by one Actor for one object, optionally requiring effective state. */
 function axismundi_act_get_actor_like( string $actor_uri, string $object_uri, bool $effective_only = true ) : ?Axismundi_Activity {
-	global $wpdb;
-	$actor  = axismundi_act_uri( $actor_uri );
-	$object = axismundi_act_uri( $object_uri );
-	if ( '' === $actor || '' === $object || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
-		return null;
-	}
-	$table  = axismundi_act_activities_table();
-	$active = $effective_only ? "AND effective_status = 'active'" : '';
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- allowlisted fixed status clause and exact URI lookup.
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE activity_type = 'Like' AND reaction_key IS NULL AND actor_uri_hash = %s AND actor_uri = %s AND object_uri_hash = %s AND object_uri = %s {$active} ORDER BY id DESC LIMIT 1", hash( 'sha256', $actor ), $actor, hash( 'sha256', $object ), $object ), ARRAY_A );
-	return is_array( $row ) ? axismundi_act_hydrate( $row ) : null;
+	return axismundi_act_get_actor_vote( 'Like', $actor_uri, $object_uri, $effective_only );
 }
 
 /** Whether one Actor currently likes an object. */
 function axismundi_act_get_like_state( string $actor_uri, string $object_uri ) : bool {
-	return axismundi_act_get_actor_like( $actor_uri, $object_uri, true ) instanceof Axismundi_Activity;
+	return axismundi_act_get_vote_state( 'Like', $actor_uri, $object_uri );
 }
 
 /** @return string[] Distinct object URIs currently liked by one Actor. */
 function axismundi_act_get_liked_object_uris( string $actor_uri, int $limit = 100 ) : array {
-	global $wpdb;
-	$actor = axismundi_act_uri( $actor_uri );
-	if ( '' === $actor || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
-		return array();
-	}
-	$table = axismundi_act_activities_table();
-	$limit = max( 1, min( 200, $limit ) );
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor's effective Like projection query.
-	$rows = (array) $wpdb->get_col( $wpdb->prepare( "SELECT object_uri FROM {$table} WHERE activity_type = 'Like' AND reaction_key IS NULL AND actor_uri_hash = %s AND actor_uri = %s AND effective_status = 'active' AND object_uri IS NOT NULL ORDER BY id DESC LIMIT %d", hash( 'sha256', $actor ), $actor, $limit ) );
-	return array_values( array_unique( array_map( 'strval', $rows ) ) );
+	return axismundi_act_get_voted_object_uris( 'Like', $actor_uri, $limit );
 }
 
 /** Number of historical Like cycles for an Actor/object pair. */
 function axismundi_act_like_cycle_count( string $actor_uri, string $object_uri ) : int {
-	global $wpdb;
-	$table = axismundi_act_activities_table();
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- exact pair count used for a stable source-event key.
-	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE activity_type = 'Like' AND reaction_key IS NULL AND actor_uri_hash = %s AND actor_uri = %s AND object_uri_hash = %s AND object_uri = %s", hash( 'sha256', $actor_uri ), $actor_uri, hash( 'sha256', $object_uri ), $object_uri ) );
+	return axismundi_act_vote_cycle_count( 'Like', $actor_uri, $object_uri );
 }
 
 /** Record or return the effective Like for one object. */
 function axismundi_act_like_object( Axismundi_Actor $actor, string $object_uri, string $recipient_actor_uri = '' ) {
-	$valid  = axismundi_act_validate_reaction_actor( $actor );
-	$object = axismundi_act_uri( $object_uri );
-	if ( is_wp_error( $valid ) ) {
-		return $valid;
-	}
-	if ( '' === $object ) {
-		return new WP_Error( 'ax_act_reaction_object', __( 'A Like requires a canonical object URI.', 'axismundi-activities' ) );
-	}
-	$existing = axismundi_act_get_actor_like( $actor->get_uri(), $object, true );
-	if ( $existing instanceof Axismundi_Activity ) {
-		return $existing;
-	}
-	$recipient = '' !== $recipient_actor_uri ? axismundi_actors_get_by_uri( $recipient_actor_uri ) : null;
-	if ( '' !== $recipient_actor_uri && ! $recipient instanceof Axismundi_Actor ) {
-		return new WP_Error( 'ax_act_reaction_recipient', __( 'The object owner Actor is unavailable.', 'axismundi-activities' ) );
-	}
-	$payload = array( 'type' => 'Like', 'actor' => $actor->get_uri(), 'object' => $object );
-	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() !== $actor->get_uri() ) {
-		$payload['to'] = array( $recipient->get_uri() );
-	}
-	$direction = $recipient instanceof Axismundi_Actor && ! $recipient->is_local() ? 'outbound' : 'local';
-	if ( $recipient instanceof Axismundi_Actor && $recipient->get_uri() === $actor->get_uri() ) {
-		/*
-		 * A self-Like still changes the public representation cached by the Actor's
-		 * remote followers. Addressing only the object owner would address ourselves
-		 * and leave those peers at their old count, so send this narrow self-case to
-		 * the existing followers audience just like a public authored Activity.
-		 */
-		$followers = (string) apply_filters( 'axismundi_act_actor_followers_uri', '', $actor );
-		if ( '' !== $followers ) {
-			$payload['cc'] = array( $followers );
-			$direction     = 'outbound';
-		}
-	}
-	$cycle     = axismundi_act_like_cycle_count( $actor->get_uri(), $object ) + 1;
-	$source    = 'like:' . hash( 'sha256', $actor->get_uri() ) . ':' . hash( 'sha256', $object ) . ':' . $cycle;
-	return axismundi_act_record_source_activity( $payload, $direction, $source );
+	return axismundi_act_vote_on_object( 'Like', $actor, $object_uri, $recipient_actor_uri );
 }
 
 /** Undo the current Like by referring to the Like Activity URI, never the liked object URI. */
 function axismundi_act_unlike_object( Axismundi_Actor $actor, string $object_uri ) {
-	$valid  = axismundi_act_validate_reaction_actor( $actor );
-	$object = axismundi_act_uri( $object_uri );
-	if ( is_wp_error( $valid ) ) {
-		return $valid;
-	}
-	$like = axismundi_act_get_actor_like( $actor->get_uri(), $object, true );
-	if ( ! $like instanceof Axismundi_Activity ) {
-		$latest = axismundi_act_get_actor_like( $actor->get_uri(), $object, false );
-		if ( $latest instanceof Axismundi_Activity && ! $latest->is_effective() ) {
-			$undos = array_filter( axismundi_act_get_by_object( $latest->get_uri(), 20 ), static fn( Axismundi_Activity $item ) : bool => 'Undo' === $item->get_type() && $item->is_effective() && $item->get_actor_uri() === $actor->get_uri() );
-			return ! empty( $undos ) ? reset( $undos ) : new WP_Error( 'ax_act_like_missing', __( 'There is no active Like to undo.', 'axismundi-activities' ) );
-		}
-		return new WP_Error( 'ax_act_like_missing', __( 'There is no active Like to undo.', 'axismundi-activities' ) );
-	}
-	$payload = array( 'type' => 'Undo', 'actor' => $actor->get_uri(), 'object' => $like->get_uri() );
-	$to      = (array) ( $like->get_audience()['to'] ?? array() );
-	$cc      = (array) ( $like->get_audience()['cc'] ?? array() );
-	if ( ! empty( $to ) ) {
-		$payload['to'] = $to;
-	}
-	if ( ! empty( $cc ) ) {
-		$payload['cc'] = $cc;
-	}
-	return axismundi_act_record_source_activity( $payload, $like->get_direction(), 'unlike:' . $like->get_uri() );
+	return axismundi_act_undo_vote_on_object( 'Like', $actor, $object_uri );
 }
 
 /**

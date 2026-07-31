@@ -132,11 +132,13 @@ try {
 	$reply_create = '' !== $reply_uri ? axismundi_act_get_object_lifecycle( $reply_uri ) : null;
 	$reply_announces = $reply_create instanceof Axismundi_Activity ? axismundi_act_get_by_object( $reply_create->get_uri(), 10 ) : array();
 	$reply_announce = empty( $reply_announces ) ? null : reset( $reply_announces );
+	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
 	ax_tc_assert(
 		$ax_tc_results,
-		'a local Note reply addresses its Topic Group and is redistributed as Group Announce(Create(Note))',
+		'a public local Note reply uses a Lemmy-valid primary Public address, retains its Topic Group audience, and is redistributed as Group Announce(Create(Note))',
 		! is_wp_error( $reply_saved ) && $reply_create instanceof Axismundi_Activity && 'Create' === $reply_create->get_type()
-			&& $group instanceof Axismundi_Actor && in_array( $group->get_uri(), (array) ( $reply_create->get_audience()['to'] ?? array() ), true )
+			&& $group instanceof Axismundi_Actor && in_array( $public_uri, (array) ( $reply_create->get_audience()['to'] ?? array() ), true )
+			&& in_array( $group->get_uri(), (array) ( $reply_create->get_audience()['cc'] ?? array() ), true )
 			&& $group->get_uri() === (string) ( $reply_create->get_payload()['object']['audience'] ?? '' )
 			&& $reply_announce instanceof Axismundi_Activity && 'Announce' === $reply_announce->get_type()
 			&& 'Create' === (string) ( $reply_announce->get_payload()['object']['type'] ?? '' )
@@ -175,7 +177,6 @@ try {
 	$remote_inboxes = $remote_create instanceof Axismundi_Activity && function_exists( 'axismundi_activitypub_bridge_activity_inboxes' )
 		? axismundi_activitypub_bridge_activity_inboxes( $remote_create )
 		: array();
-	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
 	ax_tc_assert(
 		$ax_tc_results,
 		'a local Note reply uses Lemmy public routing while keeping the remote Topic Group and parent author as direct recipients',

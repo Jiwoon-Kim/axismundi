@@ -378,13 +378,16 @@ function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_So
 		return $audience;
 	}
 	$mentions = $post instanceof WP_Post && function_exists( 'axismundi_note_mentions' ) ? axismundi_note_mentions( $post ) : array();
-	if ( $group->is_local() ) {
+	$public_submission = ! $group->is_local()
+		|| 'public' === axismundi_forum_get_distribution_scope( $group->get_identity_id() );
+	if ( ! $public_submission ) {
 		return array( 'public' => false, 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $mentions ) ) );
 	}
 	/*
 	 * Lemmy validates a reply as public only when Public is a primary recipient.
-	 * The Group and parent author remain explicit secondary recipients, while the
-	 * Bridge still delivers this Create directly to the Group inbox.
+	 * The Group and parent author remain explicit secondary recipients. Bridge
+	 * recognises this as a direct Group submission, so it never fans the Create
+	 * out through the author's followers before the Group Announce exists.
 	 */
 	$recipients = array_merge( array( $group->get_uri() ), $mentions );
 	$parent_actor_uri = axismundi_forum_note_reply_parent_actor_uri( $source );

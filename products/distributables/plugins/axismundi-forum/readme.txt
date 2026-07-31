@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.7
+Stable tag: 0.9.8
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,11 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.8 =
+* Makes a public local-community Reply's embedded Create Lemmy-valid before the
+  Group Announce redistributes it: `Public` is primary, with the Group and
+  parent author in `cc`. Member-only communities remain Group-addressed.
 
 = 0.9.7 =
 * Sends a Reply to a remote Lemmy community with `Public` in `to` and the

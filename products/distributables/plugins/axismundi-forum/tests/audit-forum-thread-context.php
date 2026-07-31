@@ -25,6 +25,7 @@ $ax_tc_results = array();
 $ax_tc_users   = array();
 $ax_tc_ids     = array();
 $ax_tc_posts   = array();
+$ax_tc_objects = array();
 
 /** @param bool[] $results Results. */
 function ax_tc_assert( array &$results, string $label, bool $condition ) : void {
@@ -141,7 +142,47 @@ try {
 			&& 'Create' === (string) ( $reply_announce->get_payload()['object']['type'] ?? '' )
 			&& $group->get_uri() === $reply_announce->get_actor_uri()
 	);
+
+	// A reply to a remote community is its own direct submission. The remote Group, not this
+	// site's Group, decides whether to Announce it to that community's followers.
+	$remote_group_uri = 'https://example.com/c/axtc-' . wp_generate_uuid4();
+	$remote_group = axismundi_actors_upsert_remote(
+		array(
+			'uri' => $remote_group_uri, 'actor_type' => 'Group', 'preferred_username' => 'axtcremote', 'display_name' => 'Remote Community', 'profile_url' => $remote_group_uri,
+			'endpoints' => array( 'inbox' => $remote_group_uri . '/inbox', 'outbox' => $remote_group_uri . '/outbox' ),
+			'payload' => array( 'id' => $remote_group_uri, 'type' => 'Group', 'preferredUsername' => 'axtcremote', 'inbox' => $remote_group_uri . '/inbox', 'outbox' => $remote_group_uri . '/outbox' ),
+		)
+	);
+	$ax_tc_ids[] = $remote_group instanceof Axismundi_Actor ? $remote_group->get_identity_id() : 0;
+	$remote_topic_uri = 'https://example.com/post/' . wp_generate_uuid4();
+	$ax_tc_objects[] = $remote_topic_uri;
+	$remote_parent = function_exists( 'axismundi_op_remote_object_store' ) ? axismundi_op_remote_object_store(
+		array( 'id' => $remote_topic_uri, 'type' => 'Article', 'attributedTo' => $remote_group_uri, 'audience' => $remote_group_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => '<p>Remote Topic</p>' )
+	) : new WP_Error( 'fixture' );
+	$remote_reply = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $owner, 'post_content' => '<p>Reply to remote community.</p>' ) );
+	$ax_tc_posts[] = $remote_reply;
+	$remote_saved = $remote_reply > 0 && function_exists( 'axismundi_note_save' )
+		? axismundi_note_save( $remote_reply, array( 'in_reply_to_uri' => $remote_topic_uri, 'visibility' => 'public' ) )
+		: new WP_Error( 'fixture' );
+	if ( ! is_wp_error( $remote_saved ) ) { wp_update_post( array( 'ID' => $remote_reply, 'post_status' => 'publish' ) ); }
+	$remote_envelope = function_exists( 'axismundi_note_get' ) ? axismundi_note_get( $remote_reply ) : null;
+	$remote_reply_uri = is_array( $remote_envelope ) ? axismundi_note_object_uri( (string) $remote_envelope['local_uuid'] ) : '';
+	$remote_create = '' !== $remote_reply_uri ? axismundi_act_get_object_lifecycle( $remote_reply_uri ) : null;
+	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
+	ax_tc_assert(
+		$ax_tc_results,
+		'a local Note reply is delivered directly to a remote Topic Group with public routing, Group audience, and no Person-profile projection',
+		! is_wp_error( $remote_parent ) && ! is_wp_error( $remote_saved ) && $remote_group instanceof Axismundi_Actor && $remote_create instanceof Axismundi_Activity
+			&& in_array( $remote_group->get_uri(), (array) ( $remote_create->get_audience()['to'] ?? array() ), true )
+			&& in_array( $public_uri, (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
+			&& $remote_group->get_uri() === (string) ( $remote_create->get_payload()['object']['audience'] ?? '' )
+			&& false === axismundi_forum_group_reply_actor_feed_visible( true, $remote_create )
+			&& null === axismundi_forum_group_reply_public_outbox_payload( $remote_create->get_payload(), $remote_create )
+	);
 } finally {
+	foreach ( array_unique( $ax_tc_objects ) as $object_uri ) {
+		$wpdb->delete( $wpdb->prefix . 'ax_remote_objects', array( 'object_uri_hash' => hash( 'sha256', $object_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
+	}
 	foreach ( array_unique( $ax_tc_posts ) as $post_id ) {
 		if ( get_post( (int) $post_id ) ) {
 			wp_delete_post( (int) $post_id, true );

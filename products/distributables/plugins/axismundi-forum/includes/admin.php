@@ -139,10 +139,19 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 			if ( ! $member instanceof Axismundi_Actor ) {
 				continue;
 			}
-			$label = '@' . $member->get_preferred_username();
+			$label = function_exists( 'axismundi_actors_federated_mention_name' )
+				? axismundi_actors_federated_mention_name( $member )
+				: '@' . $member->get_preferred_username();
 			echo '<li><a href="' . esc_url( $member->get_profile_url() ) . '">' . esc_html( $label ) . '</a>';
-			if ( $can_delegate ) {
-				$is_moderator = 'moderator' === (string) ( $membership['membership_role'] ?? 'member' );
+			$is_explicit_moderator = 'moderator' === (string) ( $membership['membership_role'] ?? 'member' );
+			$manager_moderator = $member->is_local()
+				&& null !== $member->get_local_user_id()
+				&& axismundi_forum_user_can_manage( $group_id, (int) $member->get_local_user_id() );
+			if ( $is_explicit_moderator || $manager_moderator ) {
+				echo ' <span class="description">' . esc_html( $manager_moderator ? __( 'Moderator (manager)', 'axismundi-forum' ) : __( 'Moderator', 'axismundi-forum' ) ) . '</span>';
+			}
+			if ( $can_delegate && ! $manager_moderator ) {
+				$is_moderator = $is_explicit_moderator;
 				echo ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
 				echo '<input type="hidden" name="action" value="axismundi_forum_moderator_decision"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="actor_identity_id" value="' . esc_attr( (string) $membership['actor_identity_id'] ) . '">';
 				wp_nonce_field( 'axismundi_forum_moderator_' . $group_id . '_' . $membership['actor_identity_id'] );
@@ -184,7 +193,10 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 		foreach ( $pending as $membership ) {
 			$member = axismundi_actors_get_by_identity( (int) $membership['actor_identity_id'] );
 			if ( ! $member instanceof Axismundi_Actor ) { continue; }
-			echo '<li>@' . esc_html( $member->get_preferred_username() ) . ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+			$label = function_exists( 'axismundi_actors_federated_mention_name' )
+				? axismundi_actors_federated_mention_name( $member )
+				: '@' . $member->get_preferred_username();
+			echo '<li>' . esc_html( $label ) . ' <form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
 			echo '<input type="hidden" name="action" value="axismundi_forum_membership_decision"><input type="hidden" name="group_identity_id" value="' . esc_attr( (string) $group_id ) . '"><input type="hidden" name="actor_identity_id" value="' . esc_attr( (string) $membership['actor_identity_id'] ) . '">';
 			wp_nonce_field( 'axismundi_forum_membership_' . $group_id . '_' . $membership['actor_identity_id'] );
 			echo '<button class="button button-small" name="decision" value="accept">' . esc_html__( 'Accept', 'axismundi-forum' ) . '</button> <button class="button button-small" name="decision" value="reject">' . esc_html__( 'Reject', 'axismundi-forum' ) . '</button></form></li>';

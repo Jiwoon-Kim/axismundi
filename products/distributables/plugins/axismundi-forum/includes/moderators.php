@@ -63,8 +63,19 @@ function axismundi_forum_record_moderator_change( Axismundi_Actor $group, Axismu
 		return new WP_Error( 'ax_forum_moderator_collection', __( 'The community moderator collection is unavailable.', 'axismundi-forum' ) );
 	}
 	$type = $moderator ? 'Add' : 'Remove';
+	$public = function_exists( 'axismundi_act_public_audience_uri' )
+		? axismundi_act_public_audience_uri()
+		: 'https://www.w3.org/ns/activitystreams#Public';
 	$inner = axismundi_act_record_source_activity(
-		array( 'type' => $type, 'actor' => $actor->get_uri(), 'object' => $subject->get_uri(), 'target' => $target, 'audience' => $group->get_uri() ),
+		array(
+			'type'     => $type,
+			'actor'    => $actor->get_uri(),
+			'object'   => $subject->get_uri(),
+			'target'   => $target,
+			'to'       => array( $public ),
+			'cc'       => array( $group->get_uri() ),
+			'audience' => $group->get_uri(),
+		),
 		'outbound',
 		'forum-moderator-' . strtolower( $type ) . ':group:' . $group->get_identity_id() . ':subject:' . $subject->get_identity_id()
 	);
@@ -92,14 +103,20 @@ function axismundi_forum_set_actor_moderator( int $group_identity_id, int $actor
 	if ( ! is_array( $membership ) || 'accepted' !== (string) $membership['membership_state'] ) {
 		return new WP_Error( 'ax_forum_moderator_member', __( 'Only an accepted community member may become a moderator.', 'axismundi-forum' ) );
 	}
-	$role = $moderator ? 'moderator' : 'member';
-	if ( $role === (string) $membership['membership_role'] ) {
-		return true;
-	}
 	$group = axismundi_forum_get_community_group( $group_identity_id );
 	$subject = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( $actor_identity_id ) : null;
 	if ( ! $group instanceof Axismundi_Actor || ! $subject instanceof Axismundi_Actor ) {
 		return new WP_Error( 'ax_forum_moderator_actor', __( 'The community or member Actor is unavailable.', 'axismundi-forum' ) );
+	}
+	$subject_user_id = $subject->get_local_user_id();
+	if ( null !== $subject_user_id && axismundi_forum_user_can_manage( $group_identity_id, $subject_user_id ) ) {
+		return $moderator
+			? true
+			: new WP_Error( 'ax_forum_moderator_manager', __( 'A community manager is always a moderator. Remove their manager delegation instead.', 'axismundi-forum' ) );
+	}
+	$role = $moderator ? 'moderator' : 'member';
+	if ( $role === (string) $membership['membership_role'] ) {
+		return true;
 	}
 	$activity = axismundi_forum_record_moderator_change( $group, $subject, $user_id, $moderator );
 	if ( is_wp_error( $activity ) ) {

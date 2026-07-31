@@ -146,7 +146,7 @@ try {
 	$projected = function_exists( 'axismundi_op_transform_object' ) ? axismundi_op_transform_object( get_post( $topic ) ) : null;
 	ax_ft_assert(
 		$ax_ft_results,
-		'an admitted public Topic projects as an Article with Group audience, thread context, and open comments',
+		'an admitted public Topic projects as an Article with Group audience, Public routing, thread context, and open comments',
 		is_array( $projected )
 			&& $author_public
 			&& 'Article' === $projected['type']
@@ -154,7 +154,7 @@ try {
 			&& $group instanceof Axismundi_Actor
 			&& $group->get_uri() === $projected['audience']
 			&& array( $group->get_uri() ) === (array) $projected['to']
-			&& array() === (array) $projected['cc']
+			&& function_exists( 'axismundi_act_public_audience_uri' ) && array( axismundi_act_public_audience_uri() ) === (array) $projected['cc']
 			// context is the thread, audience is the Group; conflating them left no way to
 			// name one discussion (Constitution Article 13).
 			&& axismundi_forum_topic_context_uri( get_post( $topic ) ) === $projected['context']

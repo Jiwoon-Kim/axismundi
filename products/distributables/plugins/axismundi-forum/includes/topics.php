@@ -604,8 +604,12 @@ function axismundi_forum_topic_to_article( WP_Post $topic ) {
 	 * still the only transport recipient: Bridge recognises this direct submission and
 	 * does not fan it out through the author's followers.
 	 */
-	if ( ! $group->is_local() ) {
+	$public_submission = ! $group->is_local()
+		|| ( is_array( $entry ) && 'public' === axismundi_forum_get_distribution_scope( (int) $entry['group_identity_id'] ) );
+	if ( $public_submission ) {
 		$cc[] = axismundi_act_public_audience_uri();
+	}
+	if ( ! $group->is_local() ) {
 		$followers = function_exists( 'axismundi_actors_get_endpoint' ) ? axismundi_actors_get_endpoint( $group, 'followers' ) : '';
 		if ( '' !== $followers ) {
 			$cc[] = $followers;

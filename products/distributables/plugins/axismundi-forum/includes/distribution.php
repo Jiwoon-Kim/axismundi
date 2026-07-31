@@ -334,16 +334,29 @@ function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Ax
 	return null;
 }
 
+/** Whether this user may submit a threaded Note directly to this local or remote Group. */
+function axismundi_forum_user_can_submit_reply_to_group( Axismundi_Actor $group, int $user_id ) : bool {
+	if ( $group->is_local() ) {
+		return axismundi_forum_user_can_post_to_community( $group->get_identity_id(), $user_id );
+	}
+	return function_exists( 'axismundi_forum_user_can_submit_to_remote_group' )
+		&& axismundi_forum_user_can_submit_to_remote_group( $user_id, $group );
+}
+
 /** Address a Note reply to its parent Topic's Group instead of the author's personal audience. */
 function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_Source $source ) : array {
 	$group = axismundi_forum_note_reply_group( $source );
 	$post = $source->get_post();
 	$user_id = $post instanceof WP_Post ? (int) $post->post_author : 0;
-	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! axismundi_forum_user_can_post_to_community( $group->get_identity_id(), $user_id ) ) {
+	if ( ! $group instanceof Axismundi_Actor || ! axismundi_forum_user_can_submit_reply_to_group( $group, $user_id ) ) {
 		return $audience;
 	}
 	$mentions = $post instanceof WP_Post && function_exists( 'axismundi_note_mentions' ) ? axismundi_note_mentions( $post ) : array();
-	return array( 'public' => false, 'to' => array( $group->get_uri() ), 'cc' => $mentions );
+	// Lemmy validates a remote-community submission as public even though only the Group receives it directly.
+	if ( ! $group->is_local() ) {
+		$mentions[] = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
+	}
+	return array( 'public' => ! $group->is_local(), 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $mentions ) ) );
 }
 add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audience', 10, 2 );
 
@@ -351,7 +364,7 @@ add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audien
 function axismundi_forum_note_reply_object( array $object, Axismundi_Note_Source $source ) : array {
 	$group = axismundi_forum_note_reply_group( $source );
 	$post = $source->get_post();
-	if ( $group instanceof Axismundi_Actor && $group->is_local() && $post instanceof WP_Post && axismundi_forum_user_can_post_to_community( $group->get_identity_id(), (int) $post->post_author ) ) {
+	if ( $group instanceof Axismundi_Actor && $post instanceof WP_Post && axismundi_forum_user_can_submit_reply_to_group( $group, (int) $post->post_author ) ) {
 		$object['audience'] = $group->get_uri();
 	}
 	return $object;
@@ -379,7 +392,7 @@ function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $ac
 	}
 	$group = $note_source instanceof Axismundi_Note_Source ? axismundi_forum_note_reply_group( $note_source ) : null;
 	$note_post = $note_source instanceof Axismundi_Note_Source ? $note_source->get_post() : null;
-	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! $note_post instanceof WP_Post || ! axismundi_forum_user_can_post_to_community( $group->get_identity_id(), (int) $note_post->post_author ) ) {
+	if ( ! $group instanceof Axismundi_Actor || ! $group->is_local() || ! $note_post instanceof WP_Post || ! axismundi_forum_user_can_submit_reply_to_group( $group, (int) $note_post->post_author ) ) {
 		return;
 	}
 	$audience = axismundi_forum_distribution_audience( $group );
@@ -393,6 +406,39 @@ function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $ac
 	);
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_group_reply_activity', 30 );
+
+/** Whether an outbound Note lifecycle is a direct threaded submission to a Group. */
+function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $activity ) : bool {
+	if ( 'outbound' !== $activity->get_direction() || ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
+		return false;
+	}
+	$object = $activity->get_payload()['object'] ?? null;
+	if ( ! is_array( $object ) || 'Note' !== (string) ( $object['type'] ?? '' ) || empty( $object['inReplyTo'] ) || ! function_exists( 'axismundi_note_local_uuid_from_uri' ) || ! function_exists( 'axismundi_note_get_by_uuid' ) ) {
+		return false;
+	}
+	$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
+	$uuid = axismundi_note_local_uuid_from_uri( (string) ( $object['id'] ?? '' ) );
+	$envelope = null === $uuid ? null : axismundi_note_get_by_uuid( $uuid );
+	$post = is_array( $envelope ) ? get_post( (int) $envelope['post_id'] ) : null;
+	$source = is_array( $envelope ) && $post instanceof WP_Post ? new Axismundi_Note_Source( $envelope, $post ) : null;
+	$group = $source instanceof Axismundi_Note_Source ? axismundi_forum_note_reply_group( $source ) : null;
+	return $group instanceof Axismundi_Actor
+		&& hash_equals( $group->get_uri(), $group_uri )
+		&& in_array( $group_uri, (array) ( $activity->get_audience()['to'] ?? array() ), true )
+		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
+}
+
+/** The Group's distribution, not the author's profile, is the public surface of a threaded reply. */
+function axismundi_forum_group_reply_actor_feed_visible( bool $visible, Axismundi_Activity $activity ) : bool {
+	return axismundi_forum_is_direct_group_reply_activity( $activity ) ? false : $visible;
+}
+add_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_group_reply_actor_feed_visible', 30, 2 );
+
+/** Keep public routing for remote Group replies out of the author's public outbox. */
+function axismundi_forum_group_reply_public_outbox_payload( $payload, Axismundi_Activity $activity ) {
+	return axismundi_forum_is_direct_group_reply_activity( $activity ) ? null : $payload;
+}
+add_filter( 'axismundi_act_public_outbox_payload', 'axismundi_forum_group_reply_public_outbox_payload', 30, 2 );
 
 /**
  * Withdraw an approved Topic from this community without deleting the author's Object.

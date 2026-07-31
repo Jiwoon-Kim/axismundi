@@ -215,6 +215,49 @@ function axismundi_forum_record_remote_topic_commit( WP_Post $topic ) {
 	return axismundi_forum_record_topic_commit( $topic );
 }
 
+/**
+ * Whether an outbound lifecycle Activity is a Person's direct Topic submission
+ * to a Group, rather than a Person-profile post.
+ *
+ * Public Group submissions carry Public for threadiverse interoperability, but
+ * their public representation is the Group Announce. Keeping that routing
+ * address from turning into a second Person-profile projection is deliberate.
+ */
+function axismundi_forum_is_direct_topic_submission_activity( Axismundi_Activity $activity ) : bool {
+	if ( 'outbound' !== $activity->get_direction() || ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
+		return false;
+	}
+	$payload = $activity->get_payload();
+	$object  = $payload['object'] ?? null;
+	if ( ! is_array( $object ) ) {
+		return false;
+	}
+	$topic_uri = (string) ( $object['id'] ?? '' );
+	$topic     = '' !== $topic_uri ? axismundi_forum_resolve_topic_source( null, $topic_uri ) : null;
+	if ( ! $topic instanceof WP_Post ) {
+		return false;
+	}
+	$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
+	$group     = '' !== $group_uri ? axismundi_forum_get_topic_destination_group( $topic ) : null;
+	return $group instanceof Axismundi_Actor
+		&& 'Group' === $group->get_type()
+		&& $group_uri === $group->get_uri()
+		&& in_array( $group_uri, (array) ( $activity->get_audience()['to'] ?? array() ), true )
+		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
+}
+
+/** Hide a Group-directed Topic commit from the author's human profile feed. */
+function axismundi_forum_topic_submission_actor_feed_visible( bool $visible, Axismundi_Activity $activity ) : bool {
+	return axismundi_forum_is_direct_topic_submission_activity( $activity ) ? false : $visible;
+}
+add_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_topic_submission_actor_feed_visible', 30, 2 );
+
+/** Keep public-routing metadata from adding a direct Topic commit to a Person outbox. */
+function axismundi_forum_topic_submission_public_outbox_payload( $payload, Axismundi_Activity $activity ) {
+	return axismundi_forum_is_direct_topic_submission_activity( $activity ) ? null : $payload;
+}
+add_filter( 'axismundi_act_public_outbox_payload', 'axismundi_forum_topic_submission_public_outbox_payload', 30, 2 );
+
 /** Return bounded, eligible Community search results for one Topic editor. */
 function axismundi_forum_search_topic_communities( string $search, int $topic_post_id, int $user_id ) : array {
 	$topic = get_post( $topic_post_id );

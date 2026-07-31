@@ -8,6 +8,7 @@ require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activitypub-bridge/includes/transport.php';
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/memberships.php';
@@ -55,6 +56,7 @@ try {
 	$group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodg' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
 	if ( $group instanceof Axismundi_Actor ) { $ax_fmod_identities[] = $group->get_identity_id(); }
 	$group_id = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
+	if ( $owner instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $owner, $group ); }
 	if ( $admin2 instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $admin2, $group ); }
 	if ( $alice instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $alice, $group ); }
 	if ( $bob instanceof Axismundi_Actor && $group instanceof Axismundi_Actor ) { axismundi_act_follow_actor( $bob, $group ); }
@@ -76,6 +78,8 @@ try {
 			&& axismundi_forum_actor_is_moderator( $group_id, $alice )
 			&& $add instanceof Axismundi_Activity && $owner instanceof Axismundi_Actor && $owner->get_uri() === $add->get_actor_uri()
 			&& $moderator_url === $add->get_target_uri() && $add_wrapper instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
+			&& function_exists( 'axismundi_act_public_audience_uri' ) && in_array( axismundi_act_public_audience_uri(), (array) ( $add->get_audience()['to'] ?? array() ), true )
+			&& in_array( $group->get_uri(), (array) ( $add->get_audience()['cc'] ?? array() ), true )
 			&& $group->get_uri() === $add_wrapper->get_actor_uri() && is_array( $group_projection) && $moderator_url === (string) ( $group_projection['attributedTo'] ?? '' )
 		);
 	$alice_communities = axismundi_forum_moderated_communities( $alice_user );
@@ -108,13 +112,20 @@ try {
 			&& ! axismundi_actors_managed_actor_can_manage( $group_id, $alice_user )
 	);
 	wp_set_current_user( $owner_user );
+	$owner_explicit = $owner instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $owner->get_identity_id(), $owner_user, true ) : new WP_Error( 'fixture' );
+	$owner_demote = $owner instanceof Axismundi_Actor ? axismundi_forum_set_actor_moderator( $group_id, $owner->get_identity_id(), $owner_user, false ) : new WP_Error( 'fixture' );
+	$owner_membership = $owner instanceof Axismundi_Actor ? axismundi_forum_get_membership( $group_id, $owner->get_identity_id() ) : null;
 	ob_start();
 	axismundi_forum_render_group_admin_section( $group );
 	$manager_screen = (string) ob_get_clean();
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a Group manager sees the explicit moderator control beside an accepted member',
-		str_contains( $manager_screen, 'Remove moderator' ) && str_contains( $manager_screen, 'axismundi_forum_moderator_decision' )
+		'a Group manager is labelled as a derived moderator rather than being offered a redundant explicit moderator transition',
+		true === $owner_explicit && is_wp_error( $owner_demote ) && 'ax_forum_moderator_manager' === $owner_demote->get_error_code() && $owner instanceof Axismundi_Actor
+			&& is_array( $owner_membership ) && 'member' === (string) $owner_membership['membership_role']
+			&& str_contains( $manager_screen, 'Moderator (manager)' )
+			&& ! str_contains( $manager_screen, 'axismundi_forum_moderator_' . $group_id . '_' . $owner->get_identity_id() )
+			&& str_contains( $manager_screen, 'Remove moderator' ) && str_contains( $manager_screen, 'axismundi_forum_moderator_decision' )
 	);
 	wp_set_current_user( 0 );
 
@@ -125,15 +136,19 @@ try {
 	$admitted = true === $approval_policy ? axismundi_forum_admit_local_topic( $group_id, $topic_id, $bob_user ) : $approval_policy;
 	$pending_entry = axismundi_forum_get_topic_entry( $topic_id );
 	$create = is_array( $pending_entry ) ? axismundi_act_get( (string) ( $pending_entry['accepted_activity_uri'] ?? '' ) ) : null;
+	$author_outbox = $bob instanceof Axismundi_Actor && function_exists( 'axismundi_act_get_public_outbox' ) ? axismundi_act_get_public_outbox( $bob->get_uri() ) : array();
+	$author_outbox_ids = array_map( static fn( array $payload ) : string => (string) ( $payload['id'] ?? '' ), $author_outbox );
 	ax_fmod_assert(
 		$ax_fmod_results,
-		'a local Topic records one direct Create to its Group before it waits in the pending queue, never the author public feed',
+		'a public local Topic records one Public-routable direct Create to its Group before it waits in the pending queue, never the author profile feed or outbox',
 		$create instanceof Axismundi_Activity && true === $admitted && is_array( $pending_entry) && $group instanceof Axismundi_Actor
 			&& 'pending' === (string) $pending_entry['admission_state']
 			&& $create->get_uri() === (string) $pending_entry['accepted_activity_uri']
 			&& in_array( $group->get_uri(), (array) ( $create->get_audience()['to'] ?? array() ), true )
-			&& ! axismundi_act_has_public_audience( $create )
+			&& axismundi_act_has_public_audience( $create )
 			&& function_exists( 'axismundi_act_actor_feed_item' ) && null === axismundi_act_actor_feed_item( $create )
+			&& ! in_array( $create->get_uri(), $author_outbox_ids, true )
+			&& function_exists( 'axismundi_activitypub_bridge_is_direct_group_submission' ) && axismundi_activitypub_bridge_is_direct_group_submission( $create )
 			&& 1 === count( axismundi_forum_pending_topic_entries( $group_id ) )
 	);
 	wp_set_current_user( $alice_user );
@@ -239,6 +254,7 @@ try {
 	$members_reapproved = is_array( $members_pending ) ? axismundi_forum_approve_pending_entry( (int) $members_pending['id'], $alice_user ) : new WP_Error( 'fixture' );
 	$members_entry = axismundi_forum_get_topic_entry( $topic_id );
 	$members_announce = is_array( $members_entry ) ? axismundi_act_get( (string) $members_entry['announced_activity_uri'] ) : null;
+	$members_article = $topic instanceof WP_Post ? axismundi_forum_topic_to_article( $topic ) : null;
 	$members_outbox = function_exists( 'axismundi_act_get_public_outbox' ) && $group instanceof Axismundi_Actor ? axismundi_act_get_public_outbox( $group->get_uri() ) : array();
 	$members_outbox_ids = array_map( static fn( array $payload ) : string => (string) ( $payload['id'] ?? '' ), $members_outbox );
 	ax_fmod_assert(
@@ -248,6 +264,7 @@ try {
 			&& in_array( $followers, (array) ( $members_announce->get_audience()['to'] ?? array() ), true )
 			&& empty( (array) ( $members_announce->get_audience()['cc'] ?? array() ) )
 			&& ! axismundi_act_has_public_audience( $members_announce ) && ! in_array( $members_announce->get_uri(), $members_outbox_ids, true )
+			&& is_array( $members_article ) && ! in_array( axismundi_act_public_audience_uri(), (array) ( $members_article['cc'] ?? array() ), true )
 	);
 	wp_set_current_user( $bob_user );
 	$author_pending = wp_update_post( array( 'ID' => $topic_id, 'post_status' => 'pending' ), true );
@@ -415,6 +432,8 @@ try {
 		'demoting an explicit moderator records Announce(Remove) and removes that Actor from attributedTo without changing local manager delegation',
 		true === $demoted && $alice instanceof Axismundi_Actor && ! isset( $effective[ $alice->get_identity_id() ] )
 			&& $remove instanceof Axismundi_Activity && $moderator_url === $remove->get_target_uri()
+			&& function_exists( 'axismundi_act_public_audience_uri' ) && in_array( axismundi_act_public_audience_uri(), (array) ( $remove->get_audience()['to'] ?? array() ), true )
+			&& $group instanceof Axismundi_Actor && in_array( $group->get_uri(), (array) ( $remove->get_audience()['cc'] ?? array() ), true )
 			&& $remove_wrapper instanceof Axismundi_Activity && $group instanceof Axismundi_Actor && $group->get_uri() === $remove_wrapper->get_actor_uri()
 			&& axismundi_forum_user_can_manage( $group_id, $owner_user )
 	);

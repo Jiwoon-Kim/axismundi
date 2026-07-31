@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.8.4
+Stable tag: 0.9.5
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,42 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.5 =
+* Sends a local Note reply to a cached remote Group directly to that Group, with
+  the Group as `audience` and public routing required by Lemmy. The remote Group
+  remains responsible for its own community Announce; the direct submission does
+  not leak into the author's profile feed or public outbox.
+
+= 0.9.4 =
+* Makes public local Group Topic submissions compatible with Lemmy's public-object
+  validation without placing the direct Person Create or Update in the author's
+  profile feed, public outbox, or follower delivery. The Group Announce remains
+  the community's public representation.
+
+= 0.9.3 =
+* Treats a managed-Group manager as an invariant derived moderator throughout
+  the API as well as the Members screen; it cannot acquire or lose a redundant
+  explicit moderator row.
+
+= 0.9.2 =
+* Labels local managed-Group delegates as `Moderator (manager)` in Members and
+  does not offer a redundant explicit moderator Add/Remove transition for them.
+
+= 0.9.1 =
+* Addresses federated moderator `Add` and `Remove` activities to `Public` and
+  the community, as required by Lemmy's collection-moderation protocol.
+
+= 0.9.0 =
+* Gives a Topic its own page. Forum's single-Topic template had lost its loader when the
+  `ax_forum` post type was removed, so every Topic silently rendered through the theme's
+  ordinary post template — Core comments instead of federated replies, and no sign of the
+  community. The template is registered again and now lays out the Topic beside its community.
+* Adds the Community Card block: the Group a Topic belongs to, with its identity and Follow
+  control. Every value is read from Actors at render time; Forum stores the Group identity
+  and nothing about the Group.
+* Replies received from other servers now appear on the Topic they answer, through Object
+  Projections' new replies block.
 
 = 0.8.6 =
 * Keeps discovery reasons in the Community result list rather than copying them

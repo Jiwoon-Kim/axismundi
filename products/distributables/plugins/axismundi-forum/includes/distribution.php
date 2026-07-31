@@ -449,15 +449,15 @@ function axismundi_forum_distribute_group_reply_activity( Axismundi_Activity $ac
 add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_group_reply_activity', 30 );
 
 /**
- * Resolve the local community that has already accepted one exact Object submission.
+ * Resolve the exact local or remote Group one local Object submission directly addressed.
  *
  * An inbound vote's own `audience` is not authority to redistribute it: any remote Actor
  * can claim a Group there. The immutable Create or Update that introduced the Object must
  * instead prove both that the Object names this Group and that it was directly addressed to
- * this local community. This covers Topic Articles and Note replies without giving the
+ * that Group. This covers Topic Articles and Note replies without giving the
  * per-Topic approval-distribution ledger responsibility for every threaded interaction.
  */
-function axismundi_forum_local_community_for_submitted_object( string $object_uri ) : ?Axismundi_Actor {
+function axismundi_forum_submitted_object_community_group( string $object_uri, bool $local ) : ?Axismundi_Actor {
 	$object_uri = trim( $object_uri );
 	if ( '' === $object_uri || ! function_exists( 'axismundi_act_get_by_object' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		return null;
@@ -472,12 +472,26 @@ function axismundi_forum_local_community_for_submitted_object( string $object_ur
 		}
 		$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
 		$group = '' !== $group_uri ? axismundi_actors_get_by_uri( $group_uri ) : null;
-		if ( $group instanceof Axismundi_Actor && $group->is_local() && 'Group' === $group->get_type() && 'public' === $group->get_status()
-			&& axismundi_forum_is_community( $group->get_identity_id() ) && axismundi_forum_activity_addresses_actor( $submission, $group_uri ) ) {
-			return $group;
+		if ( ! $group instanceof Axismundi_Actor || $local !== $group->is_local() || 'Group' !== $group->get_type() || 'public' !== $group->get_status()
+			|| ! axismundi_forum_activity_addresses_actor( $submission, $group_uri ) ) {
+			continue;
 		}
+		if ( $local && ! axismundi_forum_is_community( $group->get_identity_id() ) ) {
+			continue;
+		}
+		return $group;
 	}
 	return null;
+}
+
+/** Resolve the local community that has already accepted one exact Object submission. */
+function axismundi_forum_local_community_for_submitted_object( string $object_uri ) : ?Axismundi_Actor {
+	return axismundi_forum_submitted_object_community_group( $object_uri, true );
+}
+
+/** Resolve the remote community that an exact local Object submission directly addressed. */
+function axismundi_forum_remote_community_for_submitted_object( string $object_uri ) : ?Axismundi_Actor {
+	return axismundi_forum_submitted_object_community_group( $object_uri, false );
 }
 
 /**

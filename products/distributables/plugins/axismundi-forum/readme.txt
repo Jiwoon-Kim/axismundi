@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.16
+Stable tag: 0.9.17
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,11 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.17 =
+* Keeps locally authored Topics submitted to a remote Group in that Group's
+  immutable context, so Like and Dislike activities are addressed to the
+  community inbox instead of incorrectly falling back to the author's followers.
 
 = 0.9.16 =
 * Redistributes locally cast votes through their local community Group, just as

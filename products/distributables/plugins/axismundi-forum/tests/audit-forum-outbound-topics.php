@@ -229,6 +229,12 @@ try {
 		'the Bridge resolves only the remote Group inbox for a public direct submission, leaving author-follower fan-out to the Group',
 		$group instanceof Axismundi_Actor && array( $group->get_uri() . '/inbox' ) === $inboxes
 	);
+	ax_fot_assert(
+		$ax_fot_results,
+		'an outbound Topic keeps its remote Group context for later community interactions',
+		$group instanceof Axismundi_Actor
+			&& $group->get_uri() === axismundi_forum_vote_recipient_uri( (string) ( $object['id'] ?? '' ) )
+	);
 
 	$unfollowed_group = ax_fot_remote_group( $ax_fot_identity_ids, 'unfollowed_' . strtolower( wp_generate_password( 7, false, false ) ) );
 	$unfollowed = $unfollowed_group instanceof Axismundi_Actor ? axismundi_forum_create_remote_topic( $author_user, $unfollowed_group->get_identity_id(), array( 'title' => 'May publish without joining' ) ) : new WP_Error( 'fixture' );

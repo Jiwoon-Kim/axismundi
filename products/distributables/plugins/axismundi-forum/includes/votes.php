@@ -181,42 +181,6 @@ function axismundi_forum_vote_recipient_uri( string $object_uri ) : string {
 }
 
 /**
- * The community Group a local Note was submitted to, when it is one of our own replies.
- *
- * The Group is read from the reply's immutable lifecycle evidence, not from the current parent
- * or membership state. A reply that was accepted yesterday stays in that conversation after its
- * author leaves; conversely, an ordinary reply must not acquire community context later just
- * because its author joins. The submission permission is enforced while Note creates the
- * lifecycle Activity, and this read path preserves that fact.
- *
- * @param string $object_uri Canonical object URI.
- * @return Axismundi_Actor|null
- */
-function axismundi_forum_local_note_community_group( string $object_uri ) : ?Axismundi_Actor {
-	if ( ! function_exists( 'axismundi_note_local_uuid_from_uri' ) || ! function_exists( 'axismundi_act_get_by_object' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
-		return null;
-	}
-	if ( null === axismundi_note_local_uuid_from_uri( $object_uri ) ) {
-		return null;
-	}
-	foreach ( axismundi_act_get_by_object( $object_uri, 50 ) as $submission ) {
-		if ( ! $submission instanceof Axismundi_Activity || ! $submission->is_effective() || ! in_array( $submission->get_type(), array( 'Create', 'Update' ), true ) ) {
-			continue;
-		}
-		$object = $submission->get_payload()['object'] ?? null;
-		if ( ! is_array( $object ) || ! hash_equals( $object_uri, (string) ( $object['id'] ?? '' ) ) || (string) ( $object['attributedTo'] ?? '' ) !== $submission->get_actor_uri() ) {
-			continue;
-		}
-		$group_uri = axismundi_act_member_uri( $object['audience'] ?? '' );
-		$group     = '' !== $group_uri ? axismundi_actors_get_by_uri( $group_uri ) : null;
-		if ( $group instanceof Axismundi_Actor && ! $group->is_local() && 'Group' === $group->get_type() && 'public' === $group->get_status() && axismundi_forum_activity_addresses_actor( $submission, $group_uri ) ) {
-			return $group;
-		}
-	}
-	return null;
-}
-
-/**
  * The community Group an object belongs to, local or remote.
  *
  * A local object's community is proved from the ledger, exactly as the inbound redistribution
@@ -235,15 +199,15 @@ function axismundi_forum_object_community_group( string $object_uri ) : ?Axismun
 		return $local;
 	}
 	/*
-	 * The ledger proof above only recognises a *local* Group, because that is the only case
-	 * where the submission and the community live on the same server. Our own reply into a
-	 * remote community is just as much a community post, and without this branch it would be
-	 * treated as an ordinary Note — rendered without community context, and worse, voted on by
-	 * addressing only the author, which a threadiverse peer does not count.
+	 * The same immutable submission evidence proves a local Topic or Note addressed to a remote
+	 * Group. Restricting this to Notes made remote Topics fall back to their author when voting,
+	 * so Lemmy never received their Like or Dislike.
 	 */
-	$reply_group = axismundi_forum_local_note_community_group( $object_uri );
-	if ( $reply_group instanceof Axismundi_Actor ) {
-		return $reply_group;
+	$remote_submission_group = function_exists( 'axismundi_forum_remote_community_for_submitted_object' )
+		? axismundi_forum_remote_community_for_submitted_object( $object_uri )
+		: null;
+	if ( $remote_submission_group instanceof Axismundi_Actor ) {
+		return $remote_submission_group;
 	}
 	if ( ! function_exists( 'axismundi_op_remote_object_get' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		return null;

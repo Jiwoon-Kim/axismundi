@@ -325,7 +325,18 @@ function axismundi_forum_note_reply_group( Axismundi_Note_Source $source ) : ?Ax
 		$stored = axismundi_op_remote_object_get( $parent_uri, false );
 		$parent = is_array( $stored ) ? (array) ( $stored['payload'] ?? array() ) : array();
 	}
-	foreach ( axismundi_forum_member_uris( $parent['audience'] ?? array() ) as $uri ) {
+	/*
+	 * A root Topic names its Group in `audience`, while Lemmy comments place the
+	 * community in `cc` beside the parent author. Accept either representation:
+	 * the Group is the destination to continue the thread in, not necessarily
+	 * the parent Note's visibility owner.
+	 */
+	$group_members = array_merge(
+		axismundi_forum_member_uris( $parent['audience'] ?? array() ),
+		axismundi_forum_member_uris( $parent['to'] ?? array() ),
+		axismundi_forum_member_uris( $parent['cc'] ?? array() )
+	);
+	foreach ( array_values( array_unique( $group_members ) ) as $uri ) {
 		$group = axismundi_actors_get_by_uri( $uri );
 		if ( $group instanceof Axismundi_Actor && 'Group' === $group->get_type() && 'public' === $group->get_status() && ( ! $group->is_local() || axismundi_forum_is_community( $group->get_identity_id() ) ) ) {
 			return $group;

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.5
+Stable tag: 0.9.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,11 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.6 =
+* Recognizes a remote Group named in a parent Lemmy comment's `cc` as the reply
+  destination, so a local reply is addressed back to that community instead of
+  falling back to an unrelated public reply.
 
 = 0.9.5 =
 * Sends a local Note reply to a cached remote Group directly to that Group, with

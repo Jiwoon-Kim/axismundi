@@ -157,7 +157,8 @@ try {
 	$remote_topic_uri = 'https://example.com/post/' . wp_generate_uuid4();
 	$ax_tc_objects[] = $remote_topic_uri;
 	$remote_parent = function_exists( 'axismundi_op_remote_object_store' ) ? axismundi_op_remote_object_store(
-		array( 'id' => $remote_topic_uri, 'type' => 'Article', 'attributedTo' => $remote_group_uri, 'audience' => $remote_group_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => '<p>Remote Topic</p>' )
+		// Lemmy comments make their parent author the audience and place the community in cc.
+		array( 'id' => $remote_topic_uri, 'type' => 'Note', 'attributedTo' => 'https://example.com/u/axtc-parent', 'inReplyTo' => 'https://example.com/post/' . wp_generate_uuid4(), 'audience' => 'https://example.com/u/axtc-parent', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'cc' => array( $remote_group_uri, 'https://example.com/u/axtc-parent' ), 'content' => '<p>Remote Comment</p>' )
 	) : new WP_Error( 'fixture' );
 	$remote_reply = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $owner, 'post_content' => '<p>Reply to remote community.</p>' ) );
 	$ax_tc_posts[] = $remote_reply;

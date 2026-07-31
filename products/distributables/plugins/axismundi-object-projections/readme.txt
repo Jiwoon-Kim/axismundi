@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.60
+Stable tag: 0.0.62
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,15 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.62 =
+* Adds the Object Replies block, which renders the reply collection this plugin already
+  served over ActivityStreams. Replies received from other servers were cached, indexed,
+  and returned by the API while remaining invisible on the page they belong to, because
+  nothing drew them. The block and the collection share one visibility rule, so a page and
+  its API can never disagree about who is in a conversation.
+* Resolves the Object a request is about through the transformer registry, so any product
+  that registers an object type gets this without naming its post type here.
 
 = 0.0.60 =
 * Project FEP-c0e0 `emojiReactions` collections from the immutable Activities ledger,

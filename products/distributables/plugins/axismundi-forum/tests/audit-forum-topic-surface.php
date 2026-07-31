@@ -23,6 +23,7 @@ require_once __DIR__ . '/../includes/outbound-topics.php';
 require_once __DIR__ . '/../includes/distribution.php';
 require_once __DIR__ . '/../includes/templates.php';
 require_once __DIR__ . '/../includes/community-card.php';
+require_once __DIR__ . '/../includes/votes.php';
 
 axismundi_forum_install();
 axismundi_forum_register_topic_post_type();
@@ -50,6 +51,7 @@ try {
 	if ( $person instanceof Axismundi_Actor ) {
 		axismundi_actors_register_handle( $person->get_identity_id(), 'axts' . strtolower( wp_generate_password( 8, false, false ) ) );
 		axismundi_actors_set_status( $person->get_identity_id(), 'public' );
+		$person = axismundi_actors_get_by_identity( $person->get_identity_id() );
 	}
 	$group       = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner, 'preferred_username' => 'axtsg' . strtolower( wp_generate_password( 7, false, false ) ), 'status' => 'public' ) );
 	$ax_ts_ids[] = $group instanceof Axismundi_Actor ? $group->get_identity_id() : 0;
@@ -151,6 +153,21 @@ try {
 			&& ! $undone_vote->is_effective()
 			&& 1 === count( $undo_announces )
 			&& $vote_uri === (string) ( reset( $undo_announces )->get_payload()['object']['object'] ?? '' )
+	);
+	$local_cast = $person instanceof Axismundi_Actor ? axismundi_forum_cast_vote( $person, $topic_uri, 'down' ) : new WP_Error( 'fixture' );
+	$local_vote = $person instanceof Axismundi_Actor ? axismundi_act_get_actor_vote( 'Dislike', $person->get_uri(), $topic_uri, true ) : null;
+	$local_announces = $group instanceof Axismundi_Actor && $local_vote instanceof Axismundi_Activity
+		? array_filter(
+			axismundi_act_get_by_actor( $group->get_uri(), 50 ),
+			static fn( $candidate ) => $candidate instanceof Axismundi_Activity
+				&& 'Announce' === $candidate->get_type()
+				&& $local_vote->get_uri() === (string) ( $candidate->get_payload()['object']['id'] ?? '' )
+		)
+		: array();
+	ax_ts_assert(
+		$ax_ts_results,
+		'a local community vote is also redistributed by its Group instead of remaining a local-only score change',
+		is_array( $local_cast ) && $local_vote instanceof Axismundi_Activity && 1 === count( $local_announces )
 	);
 	$before_unrelated = count( $vote_announces );
 	$unrelated = $remote instanceof Axismundi_Actor

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.63
+Stable tag: 0.0.64
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,15 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.64 =
+* Splits the reply page from the root Object page. An Object that replies to
+  another now renders through its own `single-object-reply` template, so the
+  two can diverge in the Site Editor without either carrying conditionals for
+  the other.
+* Moves the Object template choice into one filterable decision that every
+  Object route asks, instead of each route deciding separately. A product that
+  owns an Object's context can route it to its own template from there.
 
 = 0.0.63 =
 * Lets the existing nested `axismundi/replies` block resolve the current

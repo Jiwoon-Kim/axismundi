@@ -142,22 +142,66 @@ function axismundi_op_handle_object_html_request( bool $preempt, WP_Query $query
 }
 add_filter( 'pre_handle_404', 'axismundi_op_handle_object_html_request', 9, 2 );
 
+/**
+ * The block template slug one Object document is rendered through.
+ *
+ * Every Object route resolves its template here — the cached-remote route below and the local
+ * routes owned by domain products alike — because the choice is a property of the Object, not of
+ * which plugin happens to serve the request. Two routes making the same decision separately is
+ * how a reply ends up looking like a root post on one path and not the other.
+ *
+ * A reply is split from a root post because the two pages answer different questions. A root
+ * post's page is about itself; a reply's page is about a conversation it is a part of, and it
+ * needs room to say where it came from. Splitting the templates is what lets those diverge in
+ * the Site Editor without one of them growing conditionals for the other.
+ *
+ * A domain product that owns the Object's context may take over from here through the filter —
+ * Forum does this for an Object bound to a community Group. This module deliberately knows
+ * nothing about Groups.
+ *
+ * @param array<string,mixed> $model  Object view model.
+ * @param int                 $status HTTP status the route resolved to.
+ * @return string Template slug.
+ */
+function axismundi_op_object_template_slug( array $model, int $status ) : string {
+	if ( 410 === $status ) {
+		// A Tombstone says as little as possible; there is no reply or article variant of
+		// "this was deleted", and building one would leak what it used to be.
+		return 'object-tombstone';
+	}
+	// An Article's canonical page is its own template: the reader followed "Read more",
+	// so it shows the full text rather than the stream lead-in the default page carries.
+	if ( 'Article' === (string) ( $model['type'] ?? '' ) ) {
+		$slug = 'single-object-article';
+	} elseif ( '' !== trim( (string) ( $model['in_reply_to'] ?? '' ) ) ) {
+		$slug = 'single-object-reply';
+	} else {
+		$slug = 'single-object';
+	}
+	/**
+	 * Let the product that owns an Object's context route it to its own template.
+	 *
+	 * @param string              $slug   Template slug chosen from the Object alone.
+	 * @param array<string,mixed> $model  Object view model.
+	 * @param int                 $status HTTP status the route resolved to.
+	 */
+	return (string) apply_filters( 'axismundi_op_object_template_slug', $slug, $model, $status );
+}
+
+/** Resolve one Object template slug to a block template file. */
+function axismundi_op_object_template_for_slug( string $slug ) : string {
+	$templates = array( $slug . '.php', 'index.php' );
+	return locate_block_template( locate_template( $templates ), $slug, $templates );
+}
+
 /** Select the editable active or Tombstone block template for a claimed route. */
 function axismundi_op_object_view_template_include( string $template ) : string {
 	$route = axismundi_op_object_html_route();
 	if ( ! is_array( $route ) || ! in_array( (int) $route['status'], array( 200, 410 ), true ) ) {
 		return $template;
 	}
-	// An Article's canonical page is its own template: the reader followed "Read more",
-	// so it shows the full text rather than the stream lead-in the default page carries.
-	$slug = 'single-object';
-	if ( 410 === (int) $route['status'] ) {
-		$slug = 'object-tombstone';
-	} elseif ( 'Article' === (string) ( $route['model']['type'] ?? '' ) ) {
-		$slug = 'single-object-article';
-	}
-	$templates = array( $slug . '.php', 'index.php' );
-	return locate_block_template( locate_template( $templates ), $slug, $templates );
+	$model = is_array( $route['model'] ?? null ) ? (array) $route['model'] : array();
+	return axismundi_op_object_template_for_slug( axismundi_op_object_template_slug( $model, (int) $route['status'] ) );
 }
 add_filter( 'template_include', 'axismundi_op_object_view_template_include', 98 );
 

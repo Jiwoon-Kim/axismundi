@@ -16,6 +16,7 @@ require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/thread-context.php';
 require_once __DIR__ . '/../includes/inbound-topics.php';
+require_once __DIR__ . '/../includes/votes.php';
 
 axismundi_forum_install();
 axismundi_forum_register_topic_post_type();
@@ -177,6 +178,12 @@ try {
 	$remote_inboxes = $remote_create instanceof Axismundi_Activity && function_exists( 'axismundi_activitypub_bridge_activity_inboxes' )
 		? axismundi_activitypub_bridge_activity_inboxes( $remote_create )
 		: array();
+	// The direct Create already records its Group destination. Losing permission later cannot
+	// reinterpret that immutable submission as an ordinary Person reply.
+	wp_update_user( array( 'ID' => $owner, 'role' => 'subscriber' ) );
+	$remote_context_group = function_exists( 'axismundi_forum_object_community_group' )
+		? axismundi_forum_object_community_group( $remote_reply_uri )
+		: null;
 	ax_tc_assert(
 		$ax_tc_results,
 		'a local Note reply directly addresses the remote Topic Group while carrying public routing and its parent author in cc',
@@ -187,6 +194,7 @@ try {
 			&& $remote_group->get_uri() === (string) ( $remote_create->get_payload()['object']['audience'] ?? '' )
 			&& false === axismundi_forum_group_reply_actor_feed_visible( true, $remote_create )
 			&& null === axismundi_forum_group_reply_public_outbox_payload( $remote_create->get_payload(), $remote_create )
+			&& $remote_context_group instanceof Axismundi_Actor && $remote_group->get_uri() === $remote_context_group->get_uri()
 	);
 	ax_tc_assert(
 		$ax_tc_results,

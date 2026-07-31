@@ -157,6 +157,16 @@ function axismundi_note_object_template_include( string $template ) : string {
 	if ( ! is_array( $route ) || ! in_array( (int) $route['status'], array( 200, 410 ), true ) ) {
 		return $template;
 	}
+	/*
+	 * Which Object template a document is rendered through is Object Projections' decision,
+	 * not this plugin's: a Note reply and a cached remote reply are the same kind of page, and
+	 * choosing separately here is how the two paths drift apart. Notes keep their own route and
+	 * their own access rules; only the template choice is delegated.
+	 */
+	$model = is_array( $route['model'] ?? null ) ? (array) $route['model'] : array();
+	if ( function_exists( 'axismundi_op_object_template_slug' ) && function_exists( 'axismundi_op_object_template_for_slug' ) ) {
+		return axismundi_op_object_template_for_slug( axismundi_op_object_template_slug( $model, (int) $route['status'] ) );
+	}
 	$slug      = 410 === (int) $route['status'] ? 'object-tombstone' : 'single-object';
 	$templates = array( $slug . '.php', 'index.php' );
 	return locate_block_template( locate_template( $templates ), $slug, $templates );

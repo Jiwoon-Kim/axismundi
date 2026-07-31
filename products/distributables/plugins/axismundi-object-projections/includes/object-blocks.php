@@ -56,7 +56,7 @@ function axismundi_op_object_card_slug( ?array $model = null ) : string {
 
 /** Read the canonical standalone Object template bundled with OP. */
 function axismundi_op_single_object_template_content( string $slug = 'single-object' ) : string {
-	$slug = in_array( $slug, array( 'single-object', 'single-object-article' ), true ) ? $slug : 'single-object';
+	$slug = in_array( $slug, array( 'single-object', 'single-object-article', 'single-object-reply' ), true ) ? $slug : 'single-object';
 	$path = dirname( __DIR__ ) . '/templates/' . $slug . '.php';
 	if ( ! is_readable( $path ) ) {
 		return '';
@@ -1379,6 +1379,14 @@ function axismundi_op_register_object_blocks() : void {
 				'title'       => __( 'Axismundi Single Object: Article', 'axismundi-object-projections' ),
 				'description' => __( 'The canonical full-text view for a cached remote Article, shown without the stream lead-in.', 'axismundi-object-projections' ),
 				'content'     => axismundi_op_single_object_template_content( 'single-object-article' ),
+			)
+		);
+		register_block_template(
+			'axismundi-object-projections//single-object-reply',
+			array(
+				'title'       => __( 'Axismundi Single Object: Reply', 'axismundi-object-projections' ),
+				'description' => __( 'The canonical view for an Object that replies to another, shown with the conversation it continues.', 'axismundi-object-projections' ),
+				'content'     => axismundi_op_single_object_template_content( 'single-object-reply' ),
 			)
 		);
 		register_block_template(

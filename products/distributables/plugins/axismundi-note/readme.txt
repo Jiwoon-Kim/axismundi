@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors, axismundi-object-projections, axismundi-activities
-Stable tag: 0.0.36
+Stable tag: 0.0.37
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, federation, note, fediverse
@@ -45,6 +45,12 @@ dropping it, so the canonical object UUID and author attribution survive for a
 later Delete Activity and Tombstone projection.
 
 == Changelog ==
+
+= 0.0.37 =
+* Delegates the Note document's block-template choice to Object Projections. A
+  Note reply and a cached remote reply are the same kind of page, and deciding
+  separately here is what let the two paths drift apart. Notes keep their own
+  route and their own access rules.
 
 = 0.0.36 =
 * A followers-only or mentioned-only Note is now readable by the people it was actually

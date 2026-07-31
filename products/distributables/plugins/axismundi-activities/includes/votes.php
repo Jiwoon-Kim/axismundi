@@ -65,6 +65,52 @@ function axismundi_act_get_effective_votes( string $type, string $object_uri, in
 	return $out;
 }
 
+/**
+ * Latest effective vote Activity for each Actor across one or more vote verbs.
+ *
+ * The ledger does not make the verbs mutually exclusive. Consumers that do — such as a Forum
+ * score — need one deterministic Activity per Actor without changing the underlying facts. This
+ * intentionally has no display-page limit: a tally must not silently stop changing after an
+ * arbitrary number of voters.
+ *
+ * @param string[] $types      Allowed vote verbs.
+ * @param string   $object_uri Canonical object URI.
+ * @return array<string,Axismundi_Activity> Actor URI keyed current vote Activities.
+ */
+function axismundi_act_get_latest_effective_votes( array $types, string $object_uri ) : array {
+	global $wpdb;
+	$types = array_values( array_unique( array_filter( $types, 'axismundi_act_is_vote_type' ) ) );
+	$uri   = axismundi_act_uri( $object_uri );
+	if ( empty( $types ) || '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return array();
+	}
+	$table        = axismundi_act_activities_table();
+	$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+	$args         = array_merge( $types, array( hash( 'sha256', $uri ), $uri ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- vote verbs are allowlisted and all values are prepared; a complete ledger read is required for an exact tally.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE activity_type IN ({$placeholders}) AND reaction_key IS NULL AND object_uri_hash = %s AND object_uri = %s AND effective_status = 'active'", ...$args ), ARRAY_A );
+	$out  = array();
+	foreach ( $rows as $row ) {
+		$activity = axismundi_act_hydrate( $row );
+		$actor_uri = $activity->get_actor_uri();
+		$existing  = $out[ $actor_uri ] ?? null;
+		if ( ! $existing instanceof Axismundi_Activity || axismundi_act_vote_activity_is_newer( $activity, $existing ) ) {
+			$out[ $actor_uri ] = $activity;
+		}
+	}
+	return $out;
+}
+
+/** Whether the first vote Activity wins a latest-state tie over the second. */
+function axismundi_act_vote_activity_is_newer( Axismundi_Activity $left, Axismundi_Activity $right ) : bool {
+	$left_time  = (int) strtotime( (string) ( $left->get_published_at() ?? '' ) );
+	$right_time = (int) strtotime( (string) ( $right->get_published_at() ?? '' ) );
+	if ( $left_time !== $right_time ) {
+		return $left_time > $right_time;
+	}
+	return strcmp( $left->get_uri(), $right->get_uri() ) > 0;
+}
+
 /** Count distinct Actors with an effective vote of one verb for one object URI. */
 function axismundi_act_get_vote_count( string $type, string $object_uri ) : int {
 	global $wpdb;

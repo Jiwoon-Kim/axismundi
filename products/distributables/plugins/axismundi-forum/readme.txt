@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.13
+Stable tag: 0.9.15
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,35 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.16 =
+* Redistributes locally cast votes through their local community Group, just as
+  inbound votes are redistributed. A local vote no longer changes only this
+  site's score while leaving community followers stale.
+* Keeps a submitted local reply in its original community context by reading
+  immutable lifecycle evidence, rather than changing its template or vote
+  recipient when the author's later membership changes.
+* Counts one deterministic current vote per Actor in the Forum score when a
+  peer has recorded both Like and Dislike for the same object.
+
+= 0.9.15 =
+* Routes an Object that belongs to a community through a community template,
+  with its community card and vote. A reply submitted to a community used to
+  render as a plain Note with no sign of where it was posted.
+* Recognises our own reply into a *remote* community as a community post. It
+  was previously treated as an ordinary Note, which also meant a vote on it was
+  addressed only to the author -- which a threadiverse peer does not count.
+
+= 0.9.14 =
+* Adds exclusive community voting: an Actor holds at most one vote per object,
+  switching sides withdraws the previous vote before recording the new one, and
+  pressing the held side again clears it. Votes are addressed to the community
+  Group rather than only the author, which is where a threadiverse peer keeps
+  the score.
+* Adds the Community Vote block and its `axismundi/v1/community-votes`
+  endpoint. The control sends the direction a reader asked for rather than a
+  verb, so a stale page cannot contradict the server, and it is rendered into
+  the Topic template above the replies.
 
 = 0.9.13 =
 * Redistributes inbound `Undo(Like)` and `Undo(Dislike)` as Group Announce

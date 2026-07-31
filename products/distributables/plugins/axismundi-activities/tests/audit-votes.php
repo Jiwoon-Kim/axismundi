@@ -82,6 +82,13 @@ try {
 			&& 1 === axismundi_act_get_like_count( $object )
 			&& 1 === axismundi_act_get_dislike_count( $object )
 	);
+	$latest = axismundi_act_get_latest_effective_votes( array( 'Like', 'Dislike' ), $object );
+	$expected_latest = $like instanceof Axismundi_Activity && $dislike instanceof Axismundi_Activity && axismundi_act_vote_activity_is_newer( $like, $dislike ) ? $like : $dislike;
+	ax_v_assert(
+		$ax_v_results,
+		'a consumer that needs one vote per Actor can read one deterministic latest verb without changing ledger facts',
+		$actor instanceof Axismundi_Actor && $expected_latest instanceof Axismundi_Activity && 1 === count( $latest ) && isset( $latest[ $actor->get_uri() ] ) && $expected_latest->get_uri() === $latest[ $actor->get_uri() ]->get_uri()
+	);
 
 	$undo   = $actor instanceof Axismundi_Actor ? axismundi_act_undislike_object( $actor, $object ) : new WP_Error( 'fixture' );
 	if ( $undo instanceof Axismundi_Activity ) {

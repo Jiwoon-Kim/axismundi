@@ -34,6 +34,11 @@ excluded from public projections.
 
 == Changelog ==
 
+= 0.0.39 =
+* Adds a complete per-Actor latest-vote projection for consumers that impose
+  mutually exclusive votes. The immutable ledger still records Like and Dislike
+  independently; a Forum score can now count one deterministic current verb per Actor.
+
 = 0.0.38 =
 * Records `Dislike` and its `Undo`. A community downvote arrives whether or not any
   discussion feature is installed, and `Dislike` was not a supported Activity type at all,

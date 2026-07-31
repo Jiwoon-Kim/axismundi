@@ -488,12 +488,13 @@ function axismundi_forum_local_community_for_submitted_object( string $object_ur
  * `Undo(Dislike)`: undoing the Group's Announce would retract the distribution itself, not
  * report that the voter withdrew. Like and Dislike stay generic ledger facts in Activities;
  * Forum is only claiming the subset whose target has recorded Group submission evidence. The
- * immutable source key also makes an inbox replay harmless. This hook is intentionally inbound
- * only until Forum owns its local up/down mutation path; that path must apply the same Group
- * redistribution semantics rather than bypassing this boundary.
+ * immutable source key also makes an inbox replay harmless. A local vote addressed to one of
+ * our own Groups takes this same path: it is locally recorded first, then the Group distributes
+ * it to its followers. Outbound votes to a remote Group stay direct, because that Group owns
+ * their redistribution.
  */
-function axismundi_forum_distribute_inbound_group_vote( Axismundi_Activity $activity ) : void {
-	if ( 'inbound' !== $activity->get_direction() || ! $activity->is_effective() ) {
+function axismundi_forum_distribute_community_vote( Axismundi_Activity $activity ) : void {
+	if ( ! in_array( $activity->get_direction(), array( 'inbound', 'local' ), true ) || ! $activity->is_effective() ) {
 		return;
 	}
 	$vote = $activity;
@@ -524,7 +525,7 @@ function axismundi_forum_distribute_inbound_group_vote( Axismundi_Activity $acti
 		'forum-group-vote-announce:' . $group->get_identity_id() . ':' . $activity->get_uri()
 	);
 }
-add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_inbound_group_vote', 30 );
+add_action( 'axismundi_act_activity_recorded', 'axismundi_forum_distribute_community_vote', 30 );
 
 /** Whether an outbound Note lifecycle is a direct threaded submission to a Group. */
 function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $activity ) : bool {

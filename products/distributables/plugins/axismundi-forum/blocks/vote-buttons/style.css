@@ -1,0 +1,60 @@
+/**
+ * The two halves read as one control, so they share a single bordered group with the score
+ * between them rather than sitting as separate buttons that happen to be adjacent.
+ */
+.wp-block-axismundi-vote-buttons {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.axismundi-vote-buttons__group {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.125em;
+	border-radius: var(--axismundi-vote-buttons-radius, 9999px);
+	background: var(--axismundi-vote-buttons-background, color-mix(in srgb, currentColor 8%, transparent));
+	padding: 0.125em;
+}
+
+.axismundi-vote-buttons__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	padding: 0.25em;
+	line-height: 1;
+}
+
+.axismundi-vote-buttons__button:hover:not([disabled]) {
+	background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.axismundi-vote-buttons__button[disabled] {
+	cursor: default;
+	opacity: 0.6;
+}
+
+/* The pressed side is carried by fill and colour together, so the state survives a display
+   where the accent colour is not distinguishable. */
+.axismundi-vote-buttons__button--up.is-active {
+	color: var(--axismundi-vote-buttons-up-color, var(--wp--preset--color--primary, currentColor));
+}
+
+.axismundi-vote-buttons__button--down.is-active {
+	color: var(--axismundi-vote-buttons-down-color, var(--wp--preset--color--tertiary, currentColor));
+}
+
+.axismundi-vote-buttons__score {
+	min-width: 2ch;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+.axismundi-vote-buttons__status:empty {
+	display: none;
+}

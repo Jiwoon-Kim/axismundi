@@ -237,7 +237,12 @@ function axismundi_act_respond_to_local_follow( Axismundi_Actor $target, string 
 		return new WP_Error( 'ax_act_follow_request_state', __( 'That Follow request is no longer pending.', 'axismundi-activities' ) );
 	}
 	$remote   = 'inbound' === (string) $relation['direction'];
-	$payload  = array( 'type' => 'accept' === $decision ? 'Accept' : 'Reject', 'actor' => $target->get_uri(), 'object' => $follow_activity_uri );
+	/*
+	 * A remote server must be able to correlate this decision without fetching a
+	 * possibly transient Follow URL. Lemmy in particular requires the original
+	 * Follow Activity here, rather than its id alone.
+	 */
+	$payload  = array( 'type' => 'accept' === $decision ? 'Accept' : 'Reject', 'actor' => $target->get_uri(), 'object' => $follow->get_payload() );
 	if ( $remote ) {
 		$payload['to'] = array( $follow->get_actor_uri() );
 	}

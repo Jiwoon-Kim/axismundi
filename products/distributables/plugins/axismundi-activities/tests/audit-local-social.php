@@ -164,7 +164,7 @@ try {
 	);
 	$remote_accept_relation = $inbound_follow instanceof Axismundi_Activity ? axismundi_act_respond_to_local_follow( $target, $inbound_follow_uri, 'accept' ) : null;
 	$remote_accept = is_array( $remote_accept_relation ) && ! empty( $remote_accept_relation['state_activity_uri'] ) ? axismundi_act_get( (string) $remote_accept_relation['state_activity_uri'] ) : null;
-	ax_local_assert( $ax_local_results, 'accepting an inbound remote Follow records an outbound Accept addressed to its Actor', is_array( $remote_accept_relation ) && 'accepted' === $remote_accept_relation['state'] && $remote_accept instanceof Axismundi_Activity && 'Accept' === $remote_accept->get_type() && 'outbound' === $remote_accept->get_direction() && in_array( $remote->get_uri(), (array) $remote_accept->get_audience()['to'], true ) );
+	ax_local_assert( $ax_local_results, 'accepting an inbound remote Follow records an outbound Accept addressed to its Actor with the original Follow embedded', is_array( $remote_accept_relation ) && 'accepted' === $remote_accept_relation['state'] && $remote_accept instanceof Axismundi_Activity && 'Accept' === $remote_accept->get_type() && 'outbound' === $remote_accept->get_direction() && in_array( $remote->get_uri(), (array) $remote_accept->get_audience()['to'], true ) && $inbound_follow_uri === (string) ( $remote_accept->get_payload()['object']['id'] ?? '' ) );
 
 	wp_set_current_user( (int) $target->get_local_user_id() );
 	ob_start();
@@ -173,7 +173,7 @@ try {
 	ax_local_assert( $ax_local_results, 'Followers exposes follow-back and Remove controls for an Activity-backed remote relationship', str_contains( $remote_follower_html, '@remote_' . $ax_local_suffix . '@example.com' ) && str_contains( $remote_follower_html, '>Follow<' ) && str_contains( $remote_follower_html, '>Remove<' ) );
 	$removed_relation = axismundi_act_respond_to_local_follow( $target, $inbound_follow_uri, 'reject' );
 	$remove_activity  = is_array( $removed_relation ) && ! empty( $removed_relation['state_activity_uri'] ) ? axismundi_act_get( (string) $removed_relation['state_activity_uri'] ) : null;
-	ax_local_assert( $ax_local_results, 'Remove rejects the Activity-backed original Follow and addresses the remote follower', is_array( $removed_relation ) && 'rejected' === $removed_relation['state'] && $remove_activity instanceof Axismundi_Activity && 'Reject' === $remove_activity->get_type() && $inbound_follow_uri === $remove_activity->get_object_uri() && in_array( $remote->get_uri(), (array) $remove_activity->get_audience()['to'], true ) );
+	ax_local_assert( $ax_local_results, 'Remove rejects the Activity-backed original Follow and addresses the remote follower', is_array( $removed_relation ) && 'rejected' === $removed_relation['state'] && $remove_activity instanceof Axismundi_Activity && 'Reject' === $remove_activity->get_type() && $inbound_follow_uri === $remove_activity->get_object_uri() && $inbound_follow_uri === (string) ( $remove_activity->get_payload()['object']['id'] ?? '' ) && in_array( $remote->get_uri(), (array) $remove_activity->get_audience()['to'], true ) );
 
 	$remote_legacy = axismundi_actors_upsert_remote(
 		array(

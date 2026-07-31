@@ -135,10 +135,10 @@ try {
 	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
 	ax_tc_assert(
 		$ax_tc_results,
-		'a public local Note reply uses a Lemmy-valid primary Public address, retains its Topic Group audience, and is redistributed as Group Announce(Create(Note))',
+		'a public local Note reply directly addresses its Topic Group, carries public routing in cc, and is redistributed as Group Announce(Create(Note))',
 		! is_wp_error( $reply_saved ) && $reply_create instanceof Axismundi_Activity && 'Create' === $reply_create->get_type()
-			&& $group instanceof Axismundi_Actor && in_array( $public_uri, (array) ( $reply_create->get_audience()['to'] ?? array() ), true )
-			&& in_array( $group->get_uri(), (array) ( $reply_create->get_audience()['cc'] ?? array() ), true )
+			&& $group instanceof Axismundi_Actor && in_array( $group->get_uri(), (array) ( $reply_create->get_audience()['to'] ?? array() ), true )
+			&& in_array( $public_uri, (array) ( $reply_create->get_audience()['cc'] ?? array() ), true )
 			&& $group->get_uri() === (string) ( $reply_create->get_payload()['object']['audience'] ?? '' )
 			&& $reply_announce instanceof Axismundi_Activity && 'Announce' === $reply_announce->get_type()
 			&& 'Create' === (string) ( $reply_announce->get_payload()['object']['type'] ?? '' )
@@ -179,10 +179,10 @@ try {
 		: array();
 	ax_tc_assert(
 		$ax_tc_results,
-		'a local Note reply uses Lemmy public routing while keeping the remote Topic Group and parent author as direct recipients',
+		'a local Note reply directly addresses the remote Topic Group while carrying public routing and its parent author in cc',
 		! is_wp_error( $remote_parent ) && ! is_wp_error( $remote_saved ) && $remote_group instanceof Axismundi_Actor && $remote_create instanceof Axismundi_Activity
-			&& in_array( $public_uri, (array) ( $remote_create->get_audience()['to'] ?? array() ), true )
-			&& in_array( $remote_group->get_uri(), (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
+			&& in_array( $remote_group->get_uri(), (array) ( $remote_create->get_audience()['to'] ?? array() ), true )
+			&& in_array( $public_uri, (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
 			&& in_array( 'https://example.com/u/axtc-parent', (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
 			&& $remote_group->get_uri() === (string) ( $remote_create->get_payload()['object']['audience'] ?? '' )
 			&& false === axismundi_forum_group_reply_actor_feed_visible( true, $remote_create )

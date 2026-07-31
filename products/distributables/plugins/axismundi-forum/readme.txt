@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.9
+Stable tag: 0.9.10
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,11 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.10 =
+* Keeps every Group-directed Reply addressed primarily to that Group, carrying
+  `Public` in `cc` for threadiverse validation. The Group Announce, not the
+  author Reply, is the public community representation.
 
 = 0.9.9 =
 * Treat a direct Topic submission as Group-addressed when the Group is in

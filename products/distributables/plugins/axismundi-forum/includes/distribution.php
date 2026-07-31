@@ -383,19 +383,21 @@ function axismundi_forum_note_reply_audience( array $audience, Axismundi_Note_So
 	if ( ! $public_submission ) {
 		return array( 'public' => false, 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $mentions ) ) );
 	}
+	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
 	/*
-	 * Lemmy validates a reply as public only when Public is a primary recipient.
-	 * The Group and parent author remain explicit secondary recipients. Bridge
-	 * recognises this as a direct Group submission, so it never fans the Create
+	 * Threadiverse peers require public routing for a reply submitted to a public
+	 * Group. Keep the Group as the primary destination, and carry Public in `cc`:
+	 * the Group Announce is the community's public surface, not the Person's
+	 * public profile delivery. Parent-author and mention recipients remain in `cc`.
+	 * Bridge recognises this as a direct Group submission and never fans the Create
 	 * out through the author's followers before the Group Announce exists.
 	 */
-	$recipients = array_merge( array( $group->get_uri() ), $mentions );
+	$recipients = array_merge( array( $public_uri ), $mentions );
 	$parent_actor_uri = axismundi_forum_note_reply_parent_actor_uri( $source );
 	if ( '' !== $parent_actor_uri ) {
 		$recipients[] = $parent_actor_uri;
 	}
-	$public_uri = function_exists( 'axismundi_act_public_audience_uri' ) ? axismundi_act_public_audience_uri() : 'https://www.w3.org/ns/activitystreams#Public';
-	return array( 'public' => true, 'to' => array( $public_uri ), 'cc' => array_values( array_unique( $recipients ) ) );
+	return array( 'public' => true, 'to' => array( $group->get_uri() ), 'cc' => array_values( array_unique( $recipients ) ) );
 }
 add_filter( 'axismundi_note_source_audience', 'axismundi_forum_note_reply_audience', 10, 2 );
 

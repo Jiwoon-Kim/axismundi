@@ -74,7 +74,7 @@
 						'button',
 						{
 							type: 'button',
-							className: 'omphalos-theme-switcher__button omphalos-theme-switcher__cycle ax-icon-button is-standard has-state-layer t-theme-cycle',
+							className: 'omphalos-theme-switcher__button omphalos-theme-switcher__cycle',
 							'data-theme-cycle': 'true',
 							'aria-label': 'Color scheme: ' + currentMode.label + '. Activate to cycle.',
 							onClick: function ( event ) {

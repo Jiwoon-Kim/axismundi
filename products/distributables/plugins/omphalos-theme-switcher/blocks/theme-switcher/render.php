@@ -43,7 +43,7 @@ $omphalos_wrapper = get_block_wrapper_attributes(
 	<?php if ( $omphalos_is_cycle ) : ?>
 		<button
 			type="button"
-			class="omphalos-theme-switcher__button omphalos-theme-switcher__cycle ax-icon-button is-standard has-state-layer t-theme-cycle"
+			class="omphalos-theme-switcher__button omphalos-theme-switcher__cycle"
 			data-theme-cycle="true"
 			data-wp-on--click="actions.cycleScheme"
 			data-wp-bind--aria-label="state.cycleAriaLabel"

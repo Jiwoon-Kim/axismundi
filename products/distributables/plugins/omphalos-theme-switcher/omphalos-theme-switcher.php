@@ -3,7 +3,7 @@
  * Plugin Name:       Omphalos Theme Switcher
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi
  * Description:       Companion block for the Omphalos light / dark / auto theme switcher.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON

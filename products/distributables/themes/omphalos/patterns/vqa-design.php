@@ -302,7 +302,7 @@
 <!-- wp:omphalos/theme-switcher /-->
 
 <!-- wp:paragraph {"fontSize":"label-small"} -->
-<p class="has-label-small-font-size">Theme-cycle variation — a single standard icon button (<code>ax-icon-button is-standard has-state-layer t-theme-cycle</code>) that cycles Auto → Light → Dark where a full segmented control is too heavy.</p>
+<p class="has-label-small-font-size">Theme-cycle variation — a single standard icon button (<code>omphalos-theme-switcher__cycle</code>) that cycles Auto → Light → Dark where a full segmented control is too heavy.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:omphalos/theme-switcher {"className":"is-style-theme-cycle"} /-->

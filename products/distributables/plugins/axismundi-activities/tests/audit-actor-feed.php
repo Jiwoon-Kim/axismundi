@@ -599,6 +599,85 @@ try {
 		array() === $lab_leak
 	);
 
+	/*
+	 * The card a feed repeats is edited once and rendered twice.
+	 *
+	 * The first page is built while the profile template is being rendered; every page after it comes
+	 * from a REST request that has no template, no block instance and no inner blocks. Both go through
+	 * one resolver so they cannot answer differently — and the resolver prefers the Site Editor's saved
+	 * template, because reading the bundled file would serve continuation cards that ignore every edit
+	 * an author made.
+	 *
+	 * Byte equality is not the contract. The picker and the repost menu mint a unique id per control,
+	 * which is what stops one click from opening every picker on the page; those ids are normalised
+	 * away here rather than removed from the product.
+	 */
+	$ax_feed_tpl_actor = $actor;
+	if ( $ax_feed_tpl_actor instanceof Axismundi_Actor ) {
+		$ax_feed_tpl_source = axismundi_act_actor_feed_template_source( $ax_feed_tpl_actor );
+		$ax_feed_tpl_filter = axismundi_act_actor_feed_default_filter();
+		$ax_feed_tpl_items  = (array) ( axismundi_act_actor_feed_page( $ax_feed_tpl_actor, 20, '', $ax_feed_tpl_filter, 'activity' )['items'] ?? array() );
+		/*
+		 * The first entry is not necessarily one that renders: by this point the fixture has
+		 * deliberately tombstoned and hidden objects, and a row whose object is gone correctly
+		 * produces nothing. Comparing two blank cards would pass while proving nothing, so a row
+		 * that actually draws is selected — and that one exists is itself asserted below.
+		 */
+		$ax_feed_tpl_item = array();
+		foreach ( $ax_feed_tpl_items as $ax_feed_tpl_candidate ) {
+			if ( is_array( $ax_feed_tpl_candidate ) && '' !== axismundi_act_render_actor_feed_card( $ax_feed_tpl_candidate, $ax_feed_tpl_source ) ) {
+				$ax_feed_tpl_item = $ax_feed_tpl_candidate;
+				break;
+			}
+		}
+		$ax_feed_tpl_norm   = static function ( string $html ) : string {
+			return preg_replace( '/\s+/', ' ', preg_replace( '/(ax-rx|ax-announce-menu|ax-announce-trigger|ax-object-spoiler)-\d+/', 'GEN', $html ) );
+		};
+
+		ax_feed_assert(
+			$ax_feed_results,
+			'the feed resolves one saved card template for both the first page and every page after it',
+			'' !== $ax_feed_tpl_source
+				&& false !== strpos( $ax_feed_tpl_source, 'axismundi/object-card-body' )
+				// The frame is not in the saved template: which article wrapper and which type modifier
+				// a row gets depends on the Object, and only the renderer knows which one it holds.
+				&& false === strpos( $ax_feed_tpl_source, 'axismundi-object-card--article' )
+			// A renderable row was found, so the two checks below are looking at real cards.
+			&& ! empty( $ax_feed_tpl_item )
+		);
+
+		ax_feed_assert(
+			$ax_feed_results,
+			'one item rendered through that template twice comes out the same, apart from the ids that must differ',
+			// Non-empty first: two blank renders are equal, and a check that cannot tell those from
+			// two real ones is not checking anything.
+			! empty( $ax_feed_tpl_item )
+				&& '' !== axismundi_act_render_actor_feed_card( $ax_feed_tpl_item, $ax_feed_tpl_source )
+				&& $ax_feed_tpl_norm( axismundi_act_render_actor_feed_card( $ax_feed_tpl_item, $ax_feed_tpl_source ) )
+					=== $ax_feed_tpl_norm( axismundi_act_render_actor_feed_card( $ax_feed_tpl_item, $ax_feed_tpl_source ) )
+		);
+
+		/*
+		 * That the saved template renders the same card as the bundled one proves nothing either
+		 * way: it was seeded from it. What has to be true is that a *different* template produces a
+		 * different card — otherwise the source could be ignored entirely and every check above
+		 * would still pass.
+		 */
+		$ax_feed_tpl_minimal = axismundi_act_render_actor_feed_card( $ax_feed_tpl_item, '<!-- wp:axismundi/object-title /-->' );
+		ax_feed_assert(
+			$ax_feed_results,
+			'the card a caller supplies is the card that gets rendered, inside a frame the Object decides',
+			// Stated as a contrast rather than by looking for one block's output: which blocks draw
+			// anything depends on what the fixture Object happens to carry, but a template without
+			// the action row can never produce one.
+			! empty( $ax_feed_tpl_item )
+				&& false === strpos( $ax_feed_tpl_minimal, 'axismundi-interaction__button' )
+				&& false !== strpos( axismundi_act_render_actor_feed_card( $ax_feed_tpl_item, $ax_feed_tpl_source ), 'axismundi-interaction__button' )
+				// The frame is the Object's either way, whatever was supplied.
+				&& false !== strpos( $ax_feed_tpl_minimal, 'axismundi-object-card' )
+		);
+	}
+
 	axismundi_actors_set_status( $ax_feed_identity, 'internal' );
 	ax_feed_assert( $ax_feed_results, 'a non-public Actor exposes no public Activity feed', array() === axismundi_act_actor_feed_items( $actor, 20 ) );
 } finally {
@@ -633,6 +712,7 @@ try {
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_feed_results ), $ax_feed_failures );
+
 if ( class_exists( 'WP_CLI' ) ) {
 	WP_CLI::halt( $ax_feed_failures > 0 ? 1 : 0 );
 }

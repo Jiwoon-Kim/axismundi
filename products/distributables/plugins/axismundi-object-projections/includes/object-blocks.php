@@ -111,6 +111,32 @@ function axismundi_op_object_template_option( string $key, $default = null ) {
 }
 
 /**
+ * Wrap an author-edited card body in the frame the Object decides.
+ *
+ * The frame is not editable and deliberately so: the thread wrapper, the `<article>`, the type
+ * modifier and the reply-context above the card are all answers to "which Object is this", and
+ * that is known here and nowhere the author is editing. The same reasoning that put the type
+ * decision in one place when the two card templates merged applies to a card supplied from
+ * outside.
+ *
+ * @param string $inner Serialized card contents.
+ * @return string
+ */
+function axismundi_op_object_card_frame( string $inner ) : string {
+	$model = axismundi_op_current_object_view_model();
+	$class = is_array( $model ) && 'Article' === (string) ( $model['type'] ?? '' )
+		? 'axismundi-object-card axismundi-object-card--article'
+		: 'axismundi-object-card';
+	return '<!-- wp:group {"className":"axismundi-object-thread-item","layout":{"type":"constrained"}} -->'
+		. '<div class="wp-block-group axismundi-object-thread-item">'
+		. '<!-- wp:axismundi/reply-context /-->'
+		. '<!-- wp:group {"tagName":"article","className":"' . esc_attr( $class ) . '","layout":{"type":"constrained"}} -->'
+		. '<article class="wp-block-group ' . esc_attr( $class ) . '">'
+		. $inner
+		. '</article><!-- /wp:group --></div><!-- /wp:group -->';
+}
+
+/**
  * Render the shared starter pattern. Single and archive templates remain separate;
  * each may diverge after insertion in the Site Editor.
  *
@@ -132,6 +158,22 @@ function axismundi_op_render_object_pattern( array $options = array() ) : string
 		$options
 	);
 	try {
+		/*
+		 * A caller may supply the card to repeat instead of using the bundled one.
+		 *
+		 * A feed's cards are edited once in a template and rendered twice — on the first page
+		 * while that template is being rendered, and again for every page fetched afterwards,
+		 * where there is no template at all. Passing the same saved markup into both is what
+		 * keeps the second batch from being a different card than the first.
+		 *
+		 * What arrives is the card's contents, not its frame: the `<article>`, its type modifier
+		 * and the reply-context above it depend on the Object being rendered, and only this
+		 * renderer knows which Object that is.
+		 */
+		$supplied = isset( $options['cardTemplate'] ) ? (string) $options['cardTemplate'] : '';
+		if ( '' !== $supplied ) {
+			return do_blocks( axismundi_op_object_card_frame( $supplied ) );
+		}
 		return do_blocks( axismundi_op_object_card_pattern_content( axismundi_op_object_card_slug() ) );
 	} finally {
 		$GLOBALS['axismundi_op_object_template_options'] = $previous;

@@ -658,6 +658,8 @@ function axismundi_op_render_object_by_uri( string $uri, array $opts = array() )
 		 * that never grows — a hashtag archive — is a stream whose blocks are still fine.
 		 */
 		'interactionOwner' => isset( $opts['interactionOwner'] ) ? (string) $opts['interactionOwner'] : 'block',
+		// The card an outer surface wants repeated; empty means the bundled one.
+		'cardTemplate'     => isset( $opts['cardTemplate'] ) ? (string) $opts['cardTemplate'] : '',
 	);
 	$previous = axismundi_op_current_object_view_model();
 	axismundi_op_set_current_object_view_model( $model );

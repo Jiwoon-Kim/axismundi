@@ -17,10 +17,11 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Resolve one public Activity feed item's object into compact object HTML.
  *
- * @param string              $html Existing product renderer output.
- * @param array<string,mixed> $item Public-safe Activity feed item.
+ * @param string              $html          Existing product renderer output.
+ * @param array<string,mixed> $item          Public-safe Activity feed item.
+ * @param string              $card_template Card the feed wants repeated; empty means the bundled one.
  */
-function axismundi_op_actor_feed_object_html( string $html, array $item ) : string {
+function axismundi_op_actor_feed_object_html( string $html, array $item, string $card_template = '' ) : string {
 	if ( '' !== $html || ! function_exists( 'axismundi_op_render_object_by_uri' ) ) {
 		return $html;
 	}
@@ -37,13 +38,13 @@ function axismundi_op_actor_feed_object_html( string $html, array $item ) : stri
 	 * interactive block would arrive dead the moment it was appended. Controls therefore render
 	 * as presentation and the feed region dispatches their actions.
 	 */
-	$options = array( 'headingTag' => 'h3', 'interactions' => true, 'viewerScoped' => true, 'interactionOwner' => 'feed' );
+	$options = array( 'headingTag' => 'h3', 'interactions' => true, 'viewerScoped' => true, 'interactionOwner' => 'feed', 'cardTemplate' => $card_template );
 	if ( 'Create' === (string) ( $item['type'] ?? '' ) ) {
 		$options['expected_author'] = (string) ( $item['actor_uri'] ?? '' );
 	}
 	return axismundi_op_render_object_by_uri( $object_uri, $options );
 }
-add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_op_actor_feed_object_html', 20, 2 );
+add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_op_actor_feed_object_html', 20, 3 );
 
 /**
  * Render a public Activity's uncached Object as an outbound reference.

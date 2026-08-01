@@ -364,6 +364,17 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 	$cards       = array();
 	$head_cursor = $cursor;
 	$scan_pages  = 0;
+	/*
+	 * Resolved here because this is the one function both callers go through.
+	 *
+	 * The first page is built while a template is being rendered; every page after it comes from a
+	 * REST request with no template in sight. Resolving the card in each place separately would
+	 * work until somebody changed one of them, and the difference would only ever appear after
+	 * "Load more" — so the answer is worked out once, on the way in.
+	 */
+	$card_template = function_exists( 'axismundi_act_actor_feed_template_source' )
+		? axismundi_act_actor_feed_template_source( $actor )
+		: '';
 	$scan_limit  = max( 1, (int) apply_filters( 'axismundi_act_actor_feed_card_scan_pages', 10, $actor, $limit ) );
 	$page        = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false );
 	while ( true ) {
@@ -375,7 +386,7 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 			if ( '' === $head_cursor && ! empty( $item['cursor'] ) ) {
 				$head_cursor = (string) $item['cursor'];
 			}
-			$card = axismundi_act_render_actor_feed_card( $item );
+			$card = axismundi_act_render_actor_feed_card( $item, $card_template );
 			if ( '' !== $card ) {
 				$cards[] = $card;
 			}
@@ -844,11 +855,11 @@ function axismundi_act_actor_activity_surface_page( Axismundi_Actor $actor, int 
  * @param array<int,array<string,mixed>> $items Feed item descriptors.
  * @return string
  */
-function axismundi_act_render_actor_feed_cards( array $items ) : string {
+function axismundi_act_render_actor_feed_cards( array $items, string $card_template = '' ) : string {
 	$cards = array();
 	foreach ( $items as $item ) {
 		if ( is_array( $item ) ) {
-			$card = axismundi_act_render_actor_feed_card( $item );
+			$card = axismundi_act_render_actor_feed_card( $item, $card_template );
 			if ( '' !== $card ) {
 				$cards[] = $card;
 			}
@@ -858,7 +869,7 @@ function axismundi_act_render_actor_feed_cards( array $items ) : string {
 }
 
 /** Render one public-safe feed descriptor into a card, or nothing when its object no longer exists. */
-function axismundi_act_render_actor_feed_card( array $item ) : string {
+function axismundi_act_render_actor_feed_card( array $item, string $card_template = '' ) : string {
 	/**
 	 * Let an object-owning product render a public activity's object through its own view model.
 	 * Activities deliberately owns only ledger selection and verb framing, so it never reaches
@@ -867,7 +878,7 @@ function axismundi_act_render_actor_feed_card( array $item ) : string {
 	 * @param string              $html Empty by default.
 	 * @param array<string,mixed> $item Public-safe Activity feed item.
 	 */
-	$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item );
+	$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item, $card_template );
 	if ( '' === $object_html ) {
 		/**
 		 * A public Activity can reference a remote Object which was not embedded in a Create and
@@ -959,5 +970,68 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 /** Register the server-rendered Actor Activity feed block. */
 function axismundi_act_register_actor_activity_feed_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/actor-activity-feed', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
 }
 add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
+
+/**
+ * The saved card template this feed repeats, resolved the same way for both callers.
+ *
+ * A feed renders its first page while a template is being rendered and its later pages from a REST
+ * request that has no template, no block instance, and no inner blocks. If each side worked out
+ * which markup to repeat on its own, the two would agree until somebody edited one of them — and
+ * the failure would show up only after "Load more", which is close to the worst place to look for
+ * it. So both call this, and there is one answer.
+ *
+ * A saved template wins over the bundled file. The Site Editor writes its own `wp_template` post
+ * and that post is what the page renders from, so reading the file would quietly serve continuation
+ * cards that ignore every edit the author made.
+ *
+ * Which template is a property of the Actor, not of the request. The endpoint is given an Actor
+ * URI and derives the rest, so nothing about the choice is taken on the client's word.
+ *
+ * @param Axismundi_Actor $actor Actor whose profile is being read.
+ * @return string Serialized inner blocks of the feed item template, or '' when there is none.
+ */
+function axismundi_act_actor_feed_template_source( Axismundi_Actor $actor ) : string {
+	$slug = 'Group' === $actor->get_type() ? 'actor-group-profile' : 'actor-person-profile';
+
+	$content = '';
+	if ( function_exists( 'get_block_template' ) ) {
+		$template = get_block_template( 'axismundi-actors//' . $slug, 'wp_template' );
+		if ( $template instanceof WP_Block_Template && '' !== (string) $template->content ) {
+			$content = (string) $template->content;
+		}
+	}
+	if ( '' === $content && function_exists( 'axismundi_actors_profile_template_content' ) ) {
+		$content = axismundi_actors_profile_template_content( $slug );
+	}
+	if ( '' === $content ) {
+		return '';
+	}
+	return axismundi_act_extract_feed_item_template( parse_blocks( $content ) );
+}
+
+/**
+ * Find the feed item template anywhere in a parsed template and give back its children.
+ *
+ * Its children rather than the block itself: what repeats is the card, and the wrapper exists only
+ * so an author has something to edit. Searching recursively rather than at a fixed depth keeps the
+ * lookup working when the feed is moved inside a group, a column, or whatever else the Site Editor
+ * lets someone wrap it in.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed blocks.
+ * @return string
+ */
+function axismundi_act_extract_feed_item_template( array $blocks ) : string {
+	foreach ( $blocks as $block ) {
+		if ( 'axismundi/feed-item-template' === ( $block['blockName'] ?? '' ) ) {
+			return serialize_blocks( (array) ( $block['innerBlocks'] ?? array() ) );
+		}
+		$found = axismundi_act_extract_feed_item_template( (array) ( $block['innerBlocks'] ?? array() ) );
+		if ( '' !== $found ) {
+			return $found;
+		}
+	}
+	return '';
+}

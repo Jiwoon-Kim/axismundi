@@ -54,7 +54,33 @@ endif;
 ?>
 
 <!-- wp:group {"className":"<?php echo esc_attr( $axismundi_actor_feed_class ); ?>"} -->
-<div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/actor-activity-feed /--></div>
+<div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/actor-activity-feed -->
+	<?php
+	/*
+	 * The card the feed repeats, saved here so an author can edit it.
+	 *
+	 * It is inside the feed rather than beside it because the feed is what renders it — once per
+	 * Object on the first page, and once per Object again for every page that arrives after
+	 * "Load more". Both read this same saved markup, which is the only way an edit here can reach
+	 * the cards a reader has not scrolled to yet.
+	 *
+	 * The `<article>` shell and the type modifier are not here: those depend on the Object being
+	 * rendered, and only the loop knows which one a given row holds.
+	 */
+	?>
+	<!-- wp:axismundi/feed-item-template -->
+		<?php require WP_PLUGIN_DIR . '/axismundi-object-projections/templates/parts/object-card-header.php'; ?>
+		<!-- wp:axismundi/object-card-body /-->
+		<!-- wp:axismundi/object-hashtags {"className":"is-style-tags"} /-->
+		<!-- wp:axismundi/reaction-bar /-->
+		<!-- wp:axismundi/interactions -->
+			<!-- wp:axismundi/interaction {"type":"reply"} /-->
+			<!-- wp:axismundi/interaction {"type":"like"} /-->
+			<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true} /-->
+			<!-- wp:axismundi/interaction {"type":"reaction"} /-->
+		<!-- /wp:axismundi/interactions -->
+	<!-- /wp:axismundi/feed-item-template -->
+<!-- /wp:axismundi/actor-activity-feed --></div>
 <!-- /wp:group -->
 
 </div>

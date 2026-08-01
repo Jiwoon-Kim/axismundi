@@ -72,7 +72,9 @@ if ( empty( $axismundi_counts_items ) ) {
 	return;
 }
 
-$axismundi_counts_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-actor-social-counts' ) );
+// The Core-generated `wp-block-axismundi-*` wrapper is the stable hook; a hand-written alias
+// beside it named the same element twice and was styled by nothing.
+$axismundi_counts_wrapper = get_block_wrapper_attributes();
 ?>
 <ul <?php echo $axismundi_counts_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>>
 	<?php foreach ( $axismundi_counts_items as $axismundi_counts_kind => $axismundi_counts_item ) : ?>

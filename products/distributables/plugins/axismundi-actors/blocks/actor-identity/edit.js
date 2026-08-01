@@ -34,7 +34,7 @@
 				),
 				el(
 					'div',
-					blockEditor.useBlockProps( { className: 'ax-actor-identity is-editor-preview' + ( compact ? ' is-compact' : '' ) } ),
+					blockEditor.useBlockProps( { className: 'is-editor-preview' + ( compact ? ' is-compact' : '' ) } ),
 					compact ? el( 'span', { className: 'ax-actor-identity__name' }, __( 'Actor display name', 'axismundi-actors' ) ) : el( 'h1', { className: 'wp-block-heading ax-actor-identity__name' }, __( 'Actor display name', 'axismundi-actors' ) ),
 					compact && el( 'span', { className: 'ax-actor-identity__preferred-username' }, '@actor' ),
 					! compact && ( attributes.showHandle || attributes.showTypeBadge ) && el(

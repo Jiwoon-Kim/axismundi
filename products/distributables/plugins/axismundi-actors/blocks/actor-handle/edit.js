@@ -34,7 +34,7 @@
 				),
 				el(
 					'span',
-					blockEditor.useBlockProps( { className: 'ax-actor-handle is-editor-preview' } ),
+					blockEditor.useBlockProps( { className: 'is-editor-preview' } ),
 					attributes.shortForm ? '@actor' : '@actor@example.test'
 				)
 			);

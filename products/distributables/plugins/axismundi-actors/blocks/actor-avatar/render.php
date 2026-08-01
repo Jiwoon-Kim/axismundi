@@ -53,7 +53,6 @@ $axismundi_actor_avatar_image_style = trim(
 // the outer wrapper; the inner image reads its own dimensions from it via CSS.
 $axismundi_actor_avatar_wrapper = get_block_wrapper_attributes(
 	array(
-		'class' => 'ax-actor-avatar',
 		'style' => '--axismundi-actor-avatar-size:' . (int) $axismundi_actor_avatar_size . 'px',
 	)
 );

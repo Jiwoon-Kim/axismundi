@@ -33,7 +33,7 @@
 			var setAttributes = props.setAttributes;
 
 			var blockProps = blockEditor.useBlockProps( {
-				className: 'ax-actor-avatar is-editor-preview',
+				className: 'is-editor-preview',
 				style: { '--axismundi-actor-avatar-size': ( attributes.size || 128 ) + 'px' },
 			} );
 

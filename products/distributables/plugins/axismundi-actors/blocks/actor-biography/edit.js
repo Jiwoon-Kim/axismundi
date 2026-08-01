@@ -8,7 +8,7 @@
 		edit: function () {
 			return el(
 				'div',
-				blockEditor.useBlockProps( { className: 'ax-actor-biography is-editor-preview' } ),
+				blockEditor.useBlockProps( { className: 'is-editor-preview' } ),
 				el( 'div', { className: 'ax-actor-biography__summary' }, __( 'A short profile summary appears here, carrying the Actor\'s voice across the network.', 'axismundi-actors' ) )
 			);
 		},

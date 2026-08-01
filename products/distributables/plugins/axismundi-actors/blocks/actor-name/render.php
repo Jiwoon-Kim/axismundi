@@ -24,7 +24,9 @@ $axismundi_actor_name_level = isset( $attributes['level'] ) ? (int) $attributes[
 $axismundi_actor_name_tag   = $axismundi_actor_name_level >= 1 && $axismundi_actor_name_level <= 6 ? 'h' . $axismundi_actor_name_level : 'span';
 $axismundi_actor_name_url   = (string) $axismundi_actor_name_subject['url'];
 $axismundi_actor_name_link  = ! isset( $attributes['isLink'] ) || (bool) $attributes['isLink'];
-$axismundi_actor_name_class = 'ax-actor-name' . ( 'span' === $axismundi_actor_name_tag ? '' : ' wp-block-heading' );
+// The Core-generated `wp-block-axismundi-actor-name` wrapper is the stable hook; a hand-written
+// alias beside it named the same element twice and was styled by nothing.
+$axismundi_actor_name_class = 'span' === $axismundi_actor_name_tag ? '' : 'wp-block-heading';
 $axismundi_actor_name_inner = (string) apply_filters(
 	'axismundi_actors_display_name_html',
 	esc_html( $axismundi_actor_name_value ),

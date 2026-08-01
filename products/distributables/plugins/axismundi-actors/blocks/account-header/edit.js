@@ -51,7 +51,7 @@
 
 	blocks.registerBlockType( 'axismundi/account-header', {
 		edit: function () {
-			var blockProps = useBlockProps( { className: 'ax-account-header' } );
+			var blockProps = useBlockProps();
 			var innerBlocksProps = useInnerBlocksProps( blockProps, {
 				template: TEMPLATE,
 				allowedBlocks: ALLOWED_BLOCKS,

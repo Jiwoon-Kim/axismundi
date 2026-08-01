@@ -12,7 +12,9 @@ if ( ! $axismundi_actor_profile_actor ) {
 	return;
 }
 $axismundi_actor_profile_data    = axismundi_actors_profile_data( $axismundi_actor_profile_actor );
-$axismundi_actor_profile_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-actor-profile' ) );
+// The Core-generated `wp-block-axismundi-*` wrapper is the stable hook; a hand-written alias
+// beside it named the same element twice and was styled by nothing.
+$axismundi_actor_profile_wrapper = get_block_wrapper_attributes();
 $axismundi_actor_profile_header = axismundi_actors_header_html( $axismundi_actor_profile_actor );
 $axismundi_actor_profile_avatar = axismundi_actors_avatar_html( $axismundi_actor_profile_actor, 96 );
 $axismundi_actor_profile_handle = '@' . $axismundi_actor_profile_actor->get_preferred_username() . ( $axismundi_actor_profile_actor->is_local() ? '' : '@' . axismundi_actors_webfinger_authority_from_url( $axismundi_actor_profile_actor->get_uri() ) );

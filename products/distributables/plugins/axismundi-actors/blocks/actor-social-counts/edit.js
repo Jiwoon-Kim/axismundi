@@ -8,7 +8,7 @@
 		edit: function () {
 			return el(
 				'div',
-				blockEditor.useBlockProps( { className: 'ax-actor-social-counts is-editor-preview' } ),
+				blockEditor.useBlockProps( { className: 'is-editor-preview' } ),
 				el( components.Placeholder, {
 					icon: 'groups',
 					label: __( 'Actor Social Counts', 'axismundi-actors' ),

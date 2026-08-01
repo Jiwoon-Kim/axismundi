@@ -34,6 +34,13 @@ delivery. Those belong to Axismundi Activities and Axismundi Federation.
 == Changelog ==
 
 = 0.0.63 =
+* Drops twelve hand-written root class aliases that duplicated the block wrapper
+  WordPress generates. `ax-actor-avatar` and friends named the same element a
+  second time and were styled by nothing -- every rule was already keyed on
+  `wp-block-axismundi-*`, which is now the sole wrapper contract. The Actor
+  Identity block's compact variant did read its alias, so its selectors moved to
+  the Core wrapper before the alias went. Child BEM classes and admin JS hooks
+  are unaffected.
 * Every theme design token in this plugin's CSS now carries a fallback, so the
   plugin renders sensibly under any theme rather than only under Axismundi.
   System colours are used where the browser has a real equivalent -- they

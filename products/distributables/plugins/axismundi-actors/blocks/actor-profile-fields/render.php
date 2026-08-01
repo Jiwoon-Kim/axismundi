@@ -23,7 +23,10 @@ $axismundi_actor_fields_limit  = max( 1, min( 8, (int) ( $attributes['itemsToSho
 $axismundi_actor_fields        = array_slice( $axismundi_actor_fields, 0, $axismundi_actor_fields_limit );
 $axismundi_actor_fields_display = isset( $attributes['display'] ) && 'grid' === $attributes['display'] ? 'grid' : 'list';
 $axismundi_actor_fields_columns = max( 2, min( 4, (int) ( $attributes['columns'] ?? 2 ) ) );
-$axismundi_actor_fields_class   = 'ax-actor-profile-fields-block is-display-' . $axismundi_actor_fields_display;
+// The Core-generated `wp-block-axismundi-actor-profile-fields` wrapper is the sole root
+// contract -- the layout variants below already key on it, so the hand-written alias beside it
+// named the same element twice and was styled by nothing. The `__item` children keep their names.
+$axismundi_actor_fields_class   = 'is-display-' . $axismundi_actor_fields_display;
 if ( 'grid' === $axismundi_actor_fields_display ) {
 	$axismundi_actor_fields_class .= ' columns-' . $axismundi_actor_fields_columns;
 }

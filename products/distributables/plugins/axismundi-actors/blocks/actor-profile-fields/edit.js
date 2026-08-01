@@ -97,7 +97,7 @@
 			);
 
 			var previewFields = SAMPLE_FIELDS.slice( 0, itemsToShow );
-			var previewClass = 'ax-actor-profile-fields-block is-display-' + display + ' is-editor-preview'
+			var previewClass = 'is-display-' + display + ' is-editor-preview'
 				+ ( 'grid' === display ? ' columns-' + columns : '' );
 
 			return el(

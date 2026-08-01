@@ -39,15 +39,15 @@
 	gap: 0.25rem 0.5rem;
 }
 
-.ax-actor-identity.is-compact .ax-actor-identity__name {
+.wp-block-axismundi-actor-identity.is-compact .ax-actor-identity__name {
 	font-family: inherit;
 	font-size: 1rem;
 	font-weight: 700;
 	line-height: 1.25;
 }
 
-.ax-actor-identity.is-compact .ax-actor-identity__preferred-username,
-.ax-actor-identity.is-compact .ax-actor-identity__handle {
+.wp-block-axismundi-actor-identity.is-compact .ax-actor-identity__preferred-username,
+.wp-block-axismundi-actor-identity.is-compact .ax-actor-identity__handle {
 	color: color-mix(in srgb, currentColor 66%, transparent);
 	font-family: var(--wp--preset--font-family--roboto-mono, ui-monospace, monospace);
 	font-size: 0.875rem;

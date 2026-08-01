@@ -43,7 +43,9 @@ $axismundi_follow_total = $axismundi_follow_is_remote
 	? $axismundi_follow_actor->get_remote_follow_total( $axismundi_follow_kind )
 	: null;
 
-$axismundi_follow_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-actor-follow-list' ) );
+// The Core-generated `wp-block-axismundi-*` wrapper is the stable hook; a hand-written alias
+// beside it named the same element twice and was styled by nothing.
+$axismundi_follow_wrapper = get_block_wrapper_attributes();
 ?>
 <section <?php echo $axismundi_follow_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>>
 	<h1><?php echo esc_html( 'followers' === $axismundi_follow_kind ? __( 'Followers', 'axismundi-actors' ) : __( 'Following', 'axismundi-actors' ) ); ?></h1>

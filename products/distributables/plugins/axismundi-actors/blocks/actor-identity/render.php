@@ -23,7 +23,9 @@ $axismundi_actor_identity_url         = esc_url( (string) $axismundi_actor_ident
 $axismundi_actor_identity_show_handle = ! isset( $attributes['showHandle'] ) || (bool) $attributes['showHandle'];
 $axismundi_actor_identity_show_user   = 'compact' === $axismundi_actor_identity_variant || ! empty( $attributes['showUsername'] );
 $axismundi_actor_identity_show_type   = isset( $attributes['showTypeBadge'] ) && (bool) $attributes['showTypeBadge'];
-$axismundi_actor_identity_wrapper     = get_block_wrapper_attributes( array( 'class' => 'ax-actor-identity is-' . $axismundi_actor_identity_variant ) );
+// The Core-generated `wp-block-axismundi-*` wrapper is the sole root contract; the hand-written
+// alias named the same element twice.
+$axismundi_actor_identity_wrapper     = get_block_wrapper_attributes( array( 'class' => 'is-' . $axismundi_actor_identity_variant ) );
 
 /**
  * The display name as HTML, after escaping.

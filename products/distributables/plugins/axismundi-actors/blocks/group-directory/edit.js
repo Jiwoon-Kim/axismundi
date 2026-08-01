@@ -3,7 +3,7 @@
 	var __ = i18n.__;
 	blocks.registerBlockType( 'axismundi/group-directory', {
 		edit: function () {
-			return el( 'div', blockEditor.useBlockProps( { className: 'ax-group-directory is-editor-preview' } ), el( components.Placeholder, {
+			return el( 'div', blockEditor.useBlockProps( { className: 'is-editor-preview' } ), el( components.Placeholder, {
 				icon: 'groups',
 				label: __( 'Group Directory', 'axismundi-actors' ),
 				instructions: __( 'Displays public Group Actors known to this server.', 'axismundi-actors' ),

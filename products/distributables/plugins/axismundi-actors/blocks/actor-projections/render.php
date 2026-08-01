@@ -15,7 +15,9 @@ $axismundi_actor_projections_items = axismundi_actors_get_projections( $axismund
 if ( empty( $axismundi_actor_projections_items ) ) {
 	return;
 }
-$axismundi_actor_projections_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-actor-projections' ) );
+// The Core-generated `wp-block-axismundi-*` wrapper is the sole root contract; the hand-written
+// alias named the same element twice.
+$axismundi_actor_projections_wrapper = get_block_wrapper_attributes();
 ?>
 <nav <?php echo $axismundi_actor_projections_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?> aria-label="<?php esc_attr_e( 'Actor profiles', 'axismundi-actors' ); ?>">
 	<ul class="ax-actor-projections__list">

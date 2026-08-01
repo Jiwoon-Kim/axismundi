@@ -14,7 +14,9 @@ $axismundi_account_header_actor = axismundi_actors_resolve_block_actor( (string)
 if ( ! $axismundi_account_header_actor ) {
 	return;
 }
-$axismundi_account_header_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-account-header' ) );
+// The Core-generated `wp-block-axismundi-*` wrapper is the stable hook; a hand-written alias
+// beside it named the same element twice and was styled by nothing.
+$axismundi_account_header_wrapper = get_block_wrapper_attributes();
 ?>
 <div <?php echo $axismundi_account_header_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>>
 	<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Inner Actor blocks render and escape their own markup. ?>

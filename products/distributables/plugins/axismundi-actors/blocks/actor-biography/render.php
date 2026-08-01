@@ -18,7 +18,9 @@ $axismundi_actor_bio_has_body = '' !== $axismundi_actor_bio_data['summary'];
 if ( ! $axismundi_actor_bio_has_body && $axismundi_actor_bio_is_local && $axismundi_actor_bio_is_public ) {
 	return;
 }
-$axismundi_actor_bio_wrapper = get_block_wrapper_attributes( array( 'class' => 'ax-actor-biography' ) );
+// The Core-generated `wp-block-axismundi-*` wrapper is the stable hook; a hand-written alias
+// beside it named the same element twice and was styled by nothing.
+$axismundi_actor_bio_wrapper = get_block_wrapper_attributes();
 /**
  * The rendered summary, after sanitizing.
  *

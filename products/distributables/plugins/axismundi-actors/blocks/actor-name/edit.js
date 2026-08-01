@@ -44,7 +44,7 @@
 				),
 				el(
 					Tag,
-					blockEditor.useBlockProps( { className: 'ax-actor-name is-editor-preview' + ( 'span' === Tag ? '' : ' wp-block-heading' ) } ),
+					blockEditor.useBlockProps( { className: 'is-editor-preview' + ( 'span' === Tag ? '' : ' wp-block-heading' ) } ),
 					__( 'Actor display name', 'axismundi-actors' )
 				)
 			);

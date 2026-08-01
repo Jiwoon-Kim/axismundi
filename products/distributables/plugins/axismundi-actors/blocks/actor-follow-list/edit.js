@@ -30,7 +30,7 @@
 				),
 				el(
 					'div',
-					blockEditor.useBlockProps( { className: 'ax-actor-follow-list is-editor-preview' } ),
+					blockEditor.useBlockProps( { className: 'is-editor-preview' } ),
 					el( components.Placeholder, {
 						icon: 'groups',
 						label: 'following' === collection ? __( 'Following', 'axismundi-actors' ) : __( 'Followers', 'axismundi-actors' ),

@@ -34,6 +34,6 @@ if ( ! empty( $attributes['isLink'] ) && '' !== $axismundi_actor_handle_url ) {
 }
 printf(
 	'<span %1$s>%2$s</span>',
-	get_block_wrapper_attributes( array( 'class' => 'ax-actor-handle' ) ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes.
+	get_block_wrapper_attributes(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes.
 	$axismundi_actor_handle_inner // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
 );

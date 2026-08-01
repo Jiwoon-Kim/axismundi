@@ -266,3 +266,76 @@ function axismundi_act_register_like_button_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/like-button', array( 'render_callback' => 'axismundi_act_render_like_button' ) );
 }
 add_action( 'init', 'axismundi_act_register_like_button_block' );
+
+/**
+ * Describe a Like for the unified interaction block.
+ *
+ * Only what makes this a Like: its icon, its words, its count, whether the reader has already
+ * done it, and how its clicks are wired. The button around all of that is not this function's
+ * business, which is the entire reason the six buttons became one.
+ *
+ * @param array    $attributes Block attributes.
+ * @param WP_Block $block      Block instance.
+ * @return array<string,mixed>|null
+ */
+function axismundi_act_describe_like_interaction( array $attributes, WP_Block $block ) : ?array {
+	$object_uri = axismundi_act_like_block_object_uri( $attributes, $block );
+	if ( '' === $object_uri ) {
+		return null;
+	}
+	axismundi_act_no_cache_like_state();
+	$actor    = axismundi_act_current_local_actor();
+	$can_like = $actor instanceof Axismundi_Actor && ! is_wp_error( axismundi_act_resolve_like_target( $object_uri ) );
+	$is_liked = $actor instanceof Axismundi_Actor ? axismundi_act_get_like_state( $actor->get_uri(), $object_uri ) : false;
+	$endpoint = rest_url( 'axismundi/v1/likes' );
+	$context  = array(
+		'objectUri'     => $object_uri,
+		'likes'         => axismundi_act_get_like_count( $object_uri ),
+		'isLiked'       => $is_liked,
+		'isPending'     => false,
+		'canLike'       => $can_like,
+		'endpoint'      => $endpoint,
+		'nonce'         => $can_like ? wp_create_nonce( 'wp_rest' ) : '',
+		'error'         => '',
+		'errorFallback' => __( 'The Like could not be saved.', 'axismundi-activities' ),
+	);
+	return array(
+		'icon'       => 'favorite',
+		'label'      => __( 'Like', 'axismundi-activities' ),
+		'aria_label' => $can_like
+			? __( 'Like', 'axismundi-activities' )
+			: ( is_user_logged_in() ? __( 'Activate a public Actor profile to Like.', 'axismundi-activities' ) : __( 'Log in to Like.', 'axismundi-activities' ) ),
+		'count'      => (int) $context['likes'],
+		'selected'   => $is_liked,
+		'disabled'   => ! $can_like,
+		'namespace'  => 'axismundi/like-button',
+		'context'    => $context,
+		'bindings'   => array(
+			'data-wp-on--click'      => 'actions.toggleLike',
+			'data-wp-bind--disabled' => 'state.isDisabled',
+			'data-wp-class--is-selected' => 'context.isLiked',
+			'data-wp-bind--aria-pressed' => 'context.isLiked',
+		),
+		'delegated'  => array(
+			'data-ax-action'     => 'like',
+			'data-ax-object-uri' => $object_uri,
+			'data-ax-endpoint'   => $endpoint,
+			'data-ax-nonce'      => $can_like ? (string) $context['nonce'] : '',
+		),
+	);
+}
+
+/** Offer Like as an interaction type. */
+function axismundi_act_register_like_interaction_type() : void {
+	if ( function_exists( 'axismundi_act_register_interaction_type' ) ) {
+		axismundi_act_register_interaction_type(
+			'like',
+			array(
+				'describe' => 'axismundi_act_describe_like_interaction',
+				'label'    => __( 'Like', 'axismundi-activities' ),
+				'icon'     => 'favorite',
+			)
+		);
+	}
+}
+add_action( 'axismundi_act_register_interaction_types', 'axismundi_act_register_like_interaction_type' );

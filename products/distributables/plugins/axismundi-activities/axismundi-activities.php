@@ -39,6 +39,7 @@ require_once __DIR__ . '/includes/votes.php';
 require_once __DIR__ . '/includes/reactions.php';
 require_once __DIR__ . '/includes/unicode-catalogue.php';
 require_once __DIR__ . '/includes/announces.php';
+require_once __DIR__ . '/includes/interaction-block.php';
 require_once __DIR__ . '/includes/like-block.php';
 // After like-block.php, which owns the shared object-resolution gate this reuses.
 require_once __DIR__ . '/includes/reaction-summary.php';

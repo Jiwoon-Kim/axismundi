@@ -14,7 +14,7 @@
 				) ),
 				el( 'section', blockEditor.useBlockProps( { className: 'axismundi-forum-topic-list is-editor-preview' } ),
 					el( 'h2', {}, __( 'Topics', 'axismundi-forum' ) ),
-					el( 'ol', { className: 'axismundi-forum-topic-list__items' },
+					el( 'ul', { className: 'axismundi-forum-topic-list__items' },
 						el( 'li', {}, __( 'A Forum Topic appears here', 'axismundi-forum' ) ),
 						el( 'li', {}, __( 'Topic context stays separate from activity', 'axismundi-forum' ) )
 					)

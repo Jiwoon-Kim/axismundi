@@ -112,15 +112,15 @@ try {
 
 	$active_html    = axismundi_op_render_object_view_block();
 	$pattern_html   = axismundi_op_render_object_pattern();
-	ax_nh_assert( $ax_nh_results, 'the active human view renders title and content, while the editable Object pattern owns nested Reply, Like, and Repost controls', false !== strpos( $active_html, 'Optional Note title' ) && 'Optional Note title' === axismundi_note_object_document_title( 'fallback' ) && false !== strpos( $active_html, 'Human Note route.' ) && false !== strpos( $active_html, 'axismundi-reply-button' ) && false !== strpos( $active_html, 'axismundi-like-button' ) && false !== strpos( $active_html, 'axismundi-announce-button' ) && false !== strpos( $pattern_html, 'axismundi-object__interactions' ) && false !== strpos( $pattern_html, 'axismundi-reply-button' ) && false !== strpos( $pattern_html, 'axismundi-like-button' ) && false !== strpos( $pattern_html, 'axismundi-announce-button' ) );
+	ax_nh_assert( $ax_nh_results, 'the active human view renders title and content, while the editable Object pattern owns nested Reply, Like, and Repost controls', false !== strpos( $active_html, 'Optional Note title' ) && 'Optional Note title' === axismundi_note_object_document_title( 'fallback' ) && false !== strpos( $active_html, 'Human Note route.' ) && 3 === substr_count( $active_html, 'axismundi-interaction__button' ) && false !== strpos( $pattern_html, 'axismundi-object__interactions' ) && substr_count( $pattern_html, 'axismundi-interaction__button' ) >= 3 );
 
 	$like_target = axismundi_act_resolve_like_target( $public_id );
 	$boost_target = axismundi_act_resolve_announce_target( $public_id );
 	ax_nh_assert( $ax_nh_results, 'Like and Announce resolve the same exact public Note and frozen recipient Actor without network access', is_array( $like_target ) && is_array( $boost_target ) && $public_id === $like_target['object_uri'] && $actor->get_uri() === $like_target['recipient_uri'] && $actor->get_uri() === $boost_target['recipient_uri'] );
 	wp_set_current_user( $author_id );
-	$reply_button = do_blocks( '<!-- wp:axismundi/reply-button {"objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
-	ax_nh_assert( $ax_nh_results, 'the authenticated Reply control opens the Note editor with the canonical parent URI prefilled', false !== strpos( $reply_button, 'axismundi-reply-button' ) && false !== strpos( $reply_button, 'ax_reply_to=' ) && false !== strpos( $reply_button, $public_id ) && false !== strpos( $reply_button, '>reply<' ) );
-	$announce_menu = do_blocks( '<!-- wp:axismundi/announce-button {"objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
+	$reply_button = do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
+	ax_nh_assert( $ax_nh_results, 'the authenticated Reply control opens the Note editor with the canonical parent URI prefilled', false !== strpos( $reply_button, 'axismundi-interaction__button' ) && false !== strpos( $reply_button, 'ax_reply_to=' ) && false !== strpos( $reply_button, $public_id ) && false !== strpos( $reply_button, '>reply<' ) );
+	$announce_menu = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
 	ax_nh_assert( $ax_nh_results, 'the authenticated Announce control opens a Dialogs menu with distinct repost and Quote commands', false !== strpos( $announce_menu, 'data-wp-interactive="axismundi/announce-button"' ) && false !== strpos( $announce_menu, 'ax-interaction-dialog' ) && false !== strpos( $announce_menu, 'ax_quote_target' ) && false !== strpos( $announce_menu, 'Quote</a>' ) );
 	wp_set_current_user( 0 );
 
@@ -262,7 +262,7 @@ try {
 	$tomb_html  = axismundi_op_render_object_view_block();
 	$tomb_target = axismundi_note_reaction_target( $public_id );
 	$robots     = axismundi_note_object_robots( array() );
-	ax_nh_assert( $ax_nh_results, 'a Post-less Tombstone returns 410 with a minimal non-interactive view and remains out of indexes', 410 === (int) $tomb_route['route']['status'] && array() === $tomb_query->posts && ! $tomb_query->is_singular && false !== strpos( $tomb_html, 'has been deleted' ) && false === strpos( $tomb_html, 'axismundi-like-button' ) && is_wp_error( $tomb_target ) && ! empty( $robots['noindex'] ) );
+	ax_nh_assert( $ax_nh_results, 'a Post-less Tombstone returns 410 with a minimal non-interactive view and remains out of indexes', 410 === (int) $tomb_route['route']['status'] && array() === $tomb_query->posts && ! $tomb_query->is_singular && false !== strpos( $tomb_html, 'has been deleted' ) && false === strpos( $tomb_html, 'axismundi-interaction__button' ) && is_wp_error( $tomb_target ) && ! empty( $robots['noindex'] ) );
 } finally {
 	$_GET    = $ax_nh_get;
 	$_SERVER = $ax_nh_server;

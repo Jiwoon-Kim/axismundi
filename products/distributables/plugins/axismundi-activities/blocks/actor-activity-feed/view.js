@@ -159,7 +159,18 @@ const requestPage = async ( context, after ) => {
 	url.searchParams.set( 'filter', context.filter );
 	url.searchParams.set( 'after', after || '' );
 	url.searchParams.set( 'per_page', String( context.perPage ) );
-	const response = await fetch( url, { credentials: 'same-origin' } );
+	/*
+	 * The nonce is what makes the cookie count.
+	 *
+	 * WordPress accepts cookie authentication on a REST request only alongside a valid nonce;
+	 * without one the request is anonymous even though the browser sent the session. This page is
+	 * rendered server-side, so every control on it came back saying "log in to do this" — a feed
+	 * whose first page knew who was reading and whose second page did not.
+	 */
+	const response = await fetch( url, {
+		credentials: 'same-origin',
+		headers: context.nonce ? { 'X-WP-Nonce': context.nonce } : {},
+	} );
 	const result = await response.json();
 	if ( ! response.ok ) {
 		throw new Error( result.message || 'request_failed' );

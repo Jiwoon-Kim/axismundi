@@ -107,7 +107,7 @@ try {
 		$community_template instanceof WP_Block_Template
 			&& $reply_template instanceof WP_Block_Template
 			&& false !== strpos( $community_template->content, 'wp:axismundi/community-card' )
-			&& false !== strpos( $community_template->content, 'wp:axismundi/vote-buttons' )
+			&& false !== strpos( $community_template->content, 'wp:axismundi/interaction {"type":"vote"}' )
 			&& false !== strpos( $community_template->content, 'axismundi-object-thread-item' )
 			&& false !== strpos( $community_template->content, 'wp:axismundi/object-replies' )
 			// The Object card, not post blocks: an Object document has no post behind it.

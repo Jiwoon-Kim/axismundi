@@ -302,78 +302,9 @@ function axismundi_act_render_reaction_bar( array $attributes, string $content, 
 	return (string) ob_get_clean();
 }
 
-/**
- * The picker button.
- *
- * Sits with the other actions. Owns the popover and nothing else — it does not render
- * chips, so a template may place it without a bar, or a bar without it.
- */
-function axismundi_act_render_reaction_button( array $attributes, string $content, WP_Block $block ) : string {
-	$object_uri = axismundi_act_reaction_block_object_uri( $attributes, $block );
-	if ( '' === $object_uri ) {
-		return '';
-	}
-	$actor = axismundi_act_current_reaction_actor();
-	/*
-	 * A visitor who cannot react still sees the control, disabled and saying why. Removing
-	 * it instead was a mistake: Reply and Like both stay put and explain themselves, so the
-	 * one gap in the row reads as a broken feature rather than as a closed door, and an
-	 * action row that changes length depending on who is looking is harder to scan.
-	 */
-	$can_react = $actor instanceof Axismundi_Actor;
-	axismundi_act_seed_reaction_state( $object_uri );
-	axismundi_act_no_cache_like_state();
-	wp_enqueue_style( 'axismundi-activities-reactions' );
-	// Same three-way wording the Like button uses, so the reason is stated in the same
-	// terms wherever a reader meets it.
-	$label = $can_react
-		? __( 'Add reaction', 'axismundi-activities' )
-		: ( is_user_logged_in()
-			? __( 'Activate a public Actor profile to react.', 'axismundi-activities' )
-			: __( 'Log in to react.', 'axismundi-activities' ) );
-
-	/*
-	 * Unique to this control, not to the Object it points at.
-	 *
-	 * A feed can show one Object twice — an original and a boost of it — and both cards carry one
-	 * `objectUri` between them. Keyed on that, opening either picker opened both, because the
-	 * condition was true in both places at once. The identity that matters is the control the
-	 * reader clicked.
-	 */
-	$picker_id = wp_unique_id( 'ax-rx-' );
-
-	ob_start();
-	?>
-	<div
-		<?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-reaction-button' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		data-wp-interactive="axismundi/reactions"
-		<?php echo wp_interactivity_data_wp_context( array( 'objectUri' => $object_uri, 'pickerId' => $picker_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		data-wp-watch="callbacks.pickerLifecycle"
-	>
-		<button
-			type="button"
-			class="axismundi-reaction-button__trigger"
-			data-wp-on--click="actions.togglePicker"
-			data-wp-bind--aria-expanded="state.isOpen"
-			aria-haspopup="dialog"
-			aria-label="<?php echo esc_attr( $label ); ?>"
-			title="<?php echo esc_attr( $label ); ?>"
-			<?php disabled( ! $can_react ); ?>
-		>
-			<span class="material-symbols-outlined" aria-hidden="true">add_reaction</span>
-		</button>
-		<?php if ( $can_react ) : ?>
-		<?php echo axismundi_act_render_reaction_picker( $picker_id, $label ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- the picker escapes its own output. ?>
-		<?php endif; ?>
-		<span class="axismundi-reaction-button__status" data-wp-text="state.error" aria-live="polite"></span>
-	</div>
-	<?php
-	return (string) ob_get_clean();
-}
-
 /** Register both blocks. */
 function axismundi_act_register_reaction_blocks() : void {
-	foreach ( array( 'reaction-bar' => 'axismundi_act_render_reaction_bar', 'reaction-button' => 'axismundi_act_render_reaction_button' ) as $dir => $callback ) {
+	foreach ( array( 'reaction-bar' => 'axismundi_act_render_reaction_bar' ) as $dir => $callback ) {
 		$path = dirname( __DIR__ ) . '/blocks/' . $dir;
 		if ( is_readable( $path . '/block.json' ) ) {
 			register_block_type( $path, array( 'render_callback' => $callback ) );
@@ -384,7 +315,7 @@ add_action( 'init', 'axismundi_act_register_reaction_blocks' );
 
 /** Both blocks share one script module rather than shipping a copy each. */
 function axismundi_act_enqueue_reaction_module( string $block_content, array $block ) : string {
-	if ( in_array( $block['blockName'] ?? '', array( 'axismundi/reaction-bar', 'axismundi/reaction-button' ), true ) && '' !== trim( $block_content ) && function_exists( 'wp_enqueue_script_module' ) ) {
+	if ( in_array( $block['blockName'] ?? '', array( 'axismundi/reaction-bar', 'axismundi/interaction' ), true ) && '' !== trim( $block_content ) && function_exists( 'wp_enqueue_script_module' ) ) {
 		wp_enqueue_script_module( 'axismundi-activities-reactions' );
 	}
 	return $block_content;
@@ -608,6 +539,9 @@ function axismundi_act_describe_reaction_interaction( array $attributes, WP_Bloc
 		'disabled'   => ! $can_react,
 		'namespace'  => 'axismundi/reactions',
 		'context'    => array( 'objectUri' => $object_uri, 'pickerId' => $picker_id ),
+		// On the wrapper, because the callback measures the trigger against the popover and both
+		// live inside it. Attached to the button instead, it has only half of what it needs.
+		'wrapper'    => $can_react ? array( 'data-wp-watch' => 'callbacks.pickerLifecycle' ) : array(),
 		'bindings'   => $can_react
 			? array(
 				'data-wp-on--click'           => 'actions.togglePicker',

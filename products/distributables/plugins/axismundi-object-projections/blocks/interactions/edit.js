@@ -10,7 +10,12 @@
 	var el = element.createElement;
 	var InnerBlocks = blockEditor.InnerBlocks;
 	var useInnerBlocksProps = blockEditor.useInnerBlocksProps || blockEditor.__experimentalUseInnerBlocksProps;
-	var TEMPLATE = [ [ 'axismundi/reply-button' ], [ 'axismundi/like-button' ], [ 'axismundi/announce-button' ], [ 'axismundi/reaction-button' ] ];
+	var TEMPLATE = [
+		[ 'axismundi/interaction', { type: 'reply' } ],
+		[ 'axismundi/interaction', { type: 'like' } ],
+		[ 'axismundi/interaction', { type: 'announce', announceMenu: true } ],
+		[ 'axismundi/interaction', { type: 'reaction' } ]
+	];
 	blocks.registerBlockType( 'axismundi/interactions', {
 		edit: function () {
 			var blockProps = blockEditor.useBlockProps( { className: 'axismundi-object__interactions' } );

@@ -85,9 +85,8 @@ try {
 	ax_announce_assert( $results, 're-Announce after Undo starts a new immutable cycle', $again instanceof Axismundi_Activity && $announce instanceof Axismundi_Activity && $again->get_uri() !== $announce->get_uri() && 2 === axismundi_act_announce_cycle_count( $local->get_uri(), $public_uri ) );
 
 	wp_set_current_user( (int) $local->get_local_user_id() );
-	axismundi_act_register_boost_button_block();
-	$markup = do_blocks( '<!-- wp:axismundi/boost-button {"objectUri":"' . esc_url_raw( $public_uri ) . '"} /-->' );
-	ax_announce_assert( $results, 'Boost block exposes canonical state through the Interactivity API', str_contains( $markup, 'data-wp-interactive="axismundi/boost-button"' ) && str_contains( $markup, 'actions.toggleAnnounce' ) && str_contains( $markup, 'aria-pressed' ) );
+	$markup = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"objectUri":"' . esc_url_raw( $public_uri ) . '"} /-->' );
+	ax_announce_assert( $results, 'Announce block exposes canonical state through the Interactivity API', str_contains( $markup, 'data-wp-interactive="axismundi/announce-button"' ) && str_contains( $markup, 'actions.toggleAnnounce' ) && str_contains( $markup, 'aria-pressed' ) );
 
 	$post_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => (int) $local->get_local_user_id(), 'post_title' => 'Shares fixture', 'post_content' => 'Public Article.' ) );
 	if ( is_int( $post_id ) && $post_id > 0 ) {

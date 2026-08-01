@@ -697,7 +697,11 @@ const { state, actions } = store( NAMESPACE, {
 			if ( '' === state.openFor || state.openFor !== pickerId ) {
 				return;
 			}
-			const trigger = ref.querySelector( '.axismundi-reaction-button__trigger' );
+			// Either wrapper can hold the trigger: the standalone picker block names it for
+			// itself, the unified interaction block gives it the shared control class. Matching
+			// only one meant the callback returned early and the popover was never positioned
+			// and never got its outside-click and Escape listeners.
+			const trigger = ref.querySelector( '.axismundi-reaction-button__trigger, .axismundi-interaction__button' );
 			const picker = ref.querySelector( '.axismundi-reaction-button__picker' );
 			if ( ! trigger || ! picker ) {
 				return;

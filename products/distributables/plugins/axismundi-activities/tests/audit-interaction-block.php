@@ -128,10 +128,26 @@ try {
 	$stylesheet = (string) file_get_contents( dirname( __DIR__ ) . '/blocks/interaction/style.css' );
 	ax_ib_assert(
 		$ax_ib_results,
-		'the block never redeclares the shape and motion the theme owns',
+		'the block never redeclares the shape the theme owns, nor sizes icons behind the icon system',
 		false === strpos( $stylesheet, 'border-radius' )
-			&& false === strpos( $stylesheet, 'transition' )
+			// The theme's icon rule reads `--md-icon-size`; setting `font-size` on the glyph both
+			// fights that contract and silently changes the size.
+			&& 0 === preg_match( '#\.material-symbols-outlined[^}]*font-size#', $stylesheet )
+			&& false !== strpos( $stylesheet, '--md-icon-size' )
 			&& false !== strpos( $stylesheet, '--md-sys-state-hover-state-layer-opacity' )
+	);
+
+	/*
+	 * The affordances that let a reader tell one control from another without reading it. Each
+	 * belonged to one of the six blocks and would have been lost with them; they hang off the
+	 * type now, which is where they always belonged.
+	 */
+	ax_ib_assert(
+		$ax_ib_results,
+		'each interaction keeps the gesture it is recognised by',
+		false !== strpos( $stylesheet, 'is-type-like' ) && false !== strpos( $stylesheet, '--md-icon-fill: 1' )
+			&& false !== strpos( $stylesheet, 'color--error' )
+			&& false !== strpos( $stylesheet, 'is-type-announce' ) && false !== strpos( $stylesheet, 'rotate(-180deg)' )
 	);
 
 	ax_ib_assert(
@@ -187,11 +203,39 @@ try {
 		'the reaction picker hangs off its control, ships closed, and claims a dialog rather than a toggle',
 		array_key_exists( 'reaction', axismundi_act_interaction_types() )
 			&& false !== strpos( $reaction_html, 'is-type-reaction' )
+			// On the wrapper, not the button: the lifecycle callback measures the trigger against
+			// the popover and needs the element holding both. Without it the picker was shown and
+			// never positioned, which looks exactly like a picker that does not open.
+			&& 1 === preg_match( '#<div class="axismundi-interaction[^"]*"[^>]*data-wp-watch="callbacks\.pickerLifecycle"#', $reaction_html )
 			&& 'dialog' === ax_ib_button_attr( $reaction_html, 'aria-haspopup' )
 			&& 'false' === ax_ib_button_attr( $reaction_html, 'aria-expanded' )
 			&& '' === ax_ib_button_attr( $reaction_html, 'aria-pressed' )
 			&& '' !== $reaction_picker
 			&& 1 === preg_match( '#(?<![-\w])hidden(?=[\s>])#', $reaction_picker )
+	);
+
+	/*
+	 * A control that mutates has to carry two things or it only looks like it worked: the store
+	 * that answers its clicks, and a binding on every part that changes as a result. Without the
+	 * store nothing happens at all; without the binding the server is right and the page is stale
+	 * until someone reloads it.
+	 */
+	ax_ib_assert(
+		$ax_ib_results,
+		'a mutating control brings its store and keeps its count current without a reload',
+		// Rendered here rather than reused, so the reader this markup describes is unambiguous.
+		( static function () use ( $object_uri ) : bool {
+			$like     = do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+			$announce = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+			return false !== strpos( $like, 'data-wp-interactive="axismundi/like-button"' )
+				&& false !== strpos( $like, 'data-wp-text="context.likes"' )
+				&& false !== strpos( $announce, 'data-wp-text="context.announces"' );
+		} )()
+			// The stores those directives are useless without. They moved out of block directories
+			// that were then deleted, so their absence is a thing that has already happened once.
+			&& is_readable( dirname( __DIR__ ) . '/assets/interactions/like.js' )
+			&& is_readable( dirname( __DIR__ ) . '/assets/interactions/announce.js' )
+			&& false !== strpos( (string) file_get_contents( dirname( __DIR__ ) . '/assets/interactions/like.js' ), "store( 'axismundi/like-button'" )
 	);
 
 	/*

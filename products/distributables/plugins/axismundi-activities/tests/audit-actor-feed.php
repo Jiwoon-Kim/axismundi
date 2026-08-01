@@ -89,7 +89,7 @@ try {
 	if ( function_exists( 'axismundi_op_set_current_object_view_model' ) ) {
 		axismundi_op_set_current_object_view_model( array( 'object_uri' => $remote_note_uri ) );
 	}
-	$context_block = new WP_Block( array( 'blockName' => 'axismundi/announce-button', 'attrs' => array() ), array( 'postId' => $ax_feed_post_id ) );
+	$context_block = new WP_Block( array( 'blockName' => 'axismundi/interaction', 'attrs' => array( 'type' => 'announce' ) ), array( 'postId' => $ax_feed_post_id ) );
 	$resolved_button_uri = axismundi_act_like_block_object_uri( array(), $context_block );
 	if ( function_exists( 'axismundi_op_set_current_object_view_model' ) ) {
 		axismundi_op_set_current_object_view_model( $previous_model );
@@ -190,7 +190,7 @@ try {
 	$GLOBALS['axismundi_actors_current_actor'] = $actor;
 	$local_feed_markup = axismundi_act_render_actor_activity_feed();
 	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
-	ax_feed_assert( $ax_feed_results, 'an Actor timeline exposes Reply, Like, and Repost controls while archive renderers remain independently configurable', false !== strpos( $local_feed_markup, 'axismundi-reply-button__button' ) && false !== strpos( $local_feed_markup, 'axismundi-like-button__button' ) && false !== strpos( $local_feed_markup, 'axismundi-announce-button__button' ) );
+	ax_feed_assert( $ax_feed_results, 'an Actor timeline exposes Reply, Like, and Repost controls while archive renderers remain independently configurable', false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) && false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) && false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) );
 
 	$undo = axismundi_act_unannounce_object( $actor, $remote_note_uri );
 	if ( $undo instanceof Axismundi_Activity ) {
@@ -466,7 +466,7 @@ try {
 	 * owns itself. The feed variant must not merely be guarded at runtime — the interactive
 	 * directives have to be absent, because markup that is not there cannot fire twice.
 	 */
-	$single_like = do_blocks( '<!-- wp:axismundi/like-button {"objectUri":"' . $remote_note_uri . '"} /-->' );
+	$single_like = do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . $remote_note_uri . '"} /-->' );
 	ax_feed_assert(
 		$ax_feed_results,
 		'a feed card delegates its controls to the region while a single object page keeps its own interactive block',
@@ -480,9 +480,9 @@ try {
 	ax_feed_assert(
 		$ax_feed_results,
 		'the reply control needs no delegation, being either a link or a disabled button and never a script-driven one',
-		false !== strpos( $paginated_markup, 'axismundi-reply-button__button' )
+		false !== strpos( $paginated_markup, 'axismundi-interaction__button' )
 			&& false === strpos( $paginated_markup, 'data-wp-interactive="axismundi/reply-button"' )
-			&& 0 === preg_match( '#class="axismundi-reply-button__button"[^>]*data-(wp-on|ax-action)#', $paginated_markup )
+			&& 0 === preg_match( '#class="axismundi-interaction__button"[^>]*data-(wp-on|ax-action)#', $paginated_markup )
 	);
 
 	ax_feed_assert(

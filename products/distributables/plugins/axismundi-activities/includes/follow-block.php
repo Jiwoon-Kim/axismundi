@@ -398,7 +398,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 		}
 		ob_start();
 		?>
-		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><a class="axismundi-follow-button__button" href="<?php echo esc_url( wp_login_url( $profile_url ) ); ?>"><?php echo esc_html( (string) $words['sign_in'] ); ?></a><a class="axismundi-follow-button__remote" href="https://joinmastodon.org/servers/" rel="external noopener noreferrer" target="_blank"><?php esc_html_e( 'Use another Fediverse server', 'axismundi-activities' ); ?></a></div>
+		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><a class="wp-element-button axismundi-follow-button__button" href="<?php echo esc_url( wp_login_url( $profile_url ) ); ?>"><?php echo esc_html( (string) $words['sign_in'] ); ?></a><a class="axismundi-follow-button__remote" href="https://joinmastodon.org/servers/" rel="external noopener noreferrer" target="_blank"><?php esc_html_e( 'Use another Fediverse server', 'axismundi-activities' ); ?></a></div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -406,7 +406,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 		$profile_admin = current_user_can( 'list_users' ) ? admin_url( 'users.php?page=axismundi-actor-profile' ) : admin_url( 'profile.php?page=axismundi-actor-profile' );
 		ob_start();
 		?>
-		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-unavailable' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>><a class="axismundi-follow-button__button" href="<?php echo esc_url( $profile_admin ); ?>"><?php esc_html_e( 'Activate your Actor profile to follow', 'axismundi-activities' ); ?></a></div>
+		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-unavailable' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>><a class="wp-element-button axismundi-follow-button__button" href="<?php echo esc_url( $profile_admin ); ?>"><?php esc_html_e( 'Activate your Actor profile to follow', 'axismundi-activities' ); ?></a></div>
 		<?php
 		return (string) ob_get_clean();
 	}
@@ -416,10 +416,19 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 
 	axismundi_act_no_cache_like_state();
 	$state   = axismundi_act_follow_button_state( $subject, $target );
+	$classes = 'wp-element-button axismundi-follow-button__button';
+	if ( 'accepted' === (string) $state['state'] ) {
+		$classes .= ' is-following';
+		if ( ! empty( $state['follows_you'] ) ) {
+			$classes .= ' is-mutual';
+		}
+	}
 	$context = array(
 		'targetUri'     => $target->get_uri(),
 		'relationState' => $state['state'],
 		'followsYou'    => $state['follows_you'],
+		'isFollowing'   => 'accepted' === (string) $state['state'],
+		'isMutual'      => 'accepted' === (string) $state['state'] && ! empty( $state['follows_you'] ),
 		'isLegacy'      => $state['legacy'],
 		'isPending'     => false,
 		'canFollow'     => true,
@@ -433,7 +442,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 	ob_start();
 	?>
 	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-		<button type="button" class="axismundi-follow-button__button" data-wp-on--click="actions.toggleFollow" data-wp-bind--disabled="state.isDisabled" data-wp-bind--aria-pressed="state.isFollowing" data-wp-bind--aria-label="state.actionLabel" data-wp-bind--title="state.actionLabel" data-wp-class--is-following="state.isFollowing" data-wp-class--is-mutual="state.isMutual"><span data-wp-text="state.label"><?php echo esc_html( $state['label'] ); ?></span></button>
+		<button type="button" class="<?php echo esc_attr( $classes ); ?>" aria-pressed="<?php echo 'accepted' === (string) $state['state'] ? 'true' : 'false'; ?>" data-wp-on--click="actions.toggleFollow" data-wp-bind--disabled="state.isDisabled" data-wp-bind--aria-pressed="context.isFollowing" data-wp-bind--aria-label="state.actionLabel" data-wp-bind--title="state.actionLabel" data-wp-class--is-following="context.isFollowing" data-wp-class--is-mutual="context.isMutual"><span data-wp-text="state.label"><?php echo esc_html( $state['label'] ); ?></span></button>
 		<span class="axismundi-follow-button__status" data-wp-text="context.error" aria-live="polite"></span>
 	</div>
 	<?php

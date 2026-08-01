@@ -1,0 +1,27 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/group-moderators",
+	"version": "0.1.0",
+	"title": "Community Moderators",
+	"category": "theme",
+	"icon": "shield",
+	"description": "The people who run the community whose Group profile is being viewed.",
+	"textdomain": "axismundi-forum",
+	"attributes": {
+		"showHeading": { "type": "boolean", "default": true }
+	},
+	"usesContext": [ "axismundi/actorId" ],
+	"example": { "viewportWidth": 480 },
+	"supports": {
+		"html": false,
+		"anchor": true,
+		"interactivity": { "clientNavigation": true },
+		"color": { "text": true, "background": true, "link": true },
+		"spacing": { "margin": true, "padding": true, "blockGap": true },
+		"typography": { "fontSize": true, "lineHeight": true }
+	},
+	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
+	"render": "file:./render.php"
+}

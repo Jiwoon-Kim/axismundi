@@ -97,6 +97,17 @@ function axismundi_act_interaction_descriptor_defaults() : array {
 		'count_text'  => '',
 		// Set on an entry in `controls` to render a value rather than a control.
 		'text'        => '',
+		/*
+		 * Context paths for the parts that change after a click, without the page changing.
+		 *
+		 * The server prints the current value and the runtime keeps it current; leave one out and
+		 * that part is right only until someone touches it, which is a bug you have to reload to
+		 * stop seeing. The count, the value between the vote buttons, and the icon whose fill
+		 * follows the reader's own choice all need one.
+		 */
+		'count_bind'  => '',
+		'text_bind'   => '',
+		'icon_bind'   => '',
 		'selected'    => false,
 		'disabled'    => false,
 		/*
@@ -112,7 +123,24 @@ function axismundi_act_interaction_descriptor_defaults() : array {
 		'toggle'      => false,
 		// Interactivity wiring for a button that owns its own clicks.
 		'namespace'   => '',
+		/*
+		 * The script module holding this type's store, registered by whoever owns the type.
+		 *
+		 * A type brings its own behaviour, and the block loads it only when that type is on the
+		 * page — one block declaring a single view module could not do that, and a page with a
+		 * Reply on it has no use for the vote store.
+		 */
+		'module'      => '',
 		'context'     => array(),
+		/*
+		 * Directives that belong to the wrapper rather than to the control.
+		 *
+		 * `bindings` land on the button, which is right for a click or a disabled state — but a
+		 * popover's lifecycle watches the region that contains both the trigger and the popover,
+		 * and putting it on the button would give it the wrong element to measure against. The
+		 * reaction picker opened into nowhere without this: it was shown, and never positioned.
+		 */
+		'wrapper'     => array(),
 		'bindings'    => array(),
 		// Flat attributes for the delegated variant, where a feed owns the clicks instead.
 		'delegated'   => array(),
@@ -205,13 +233,18 @@ function axismundi_act_render_interaction_control( string $type, array $descript
 		$rendered .= ' disabled';
 	}
 
-	$inner = '<span class="material-symbols-outlined" aria-hidden="true">' . esc_html( (string) $descriptor['icon'] ) . '</span>';
+	// A binding is only useful where the runtime is; a delegated control is presentation.
+	$bind = static function ( string $path ) use ( $delegated ) : string {
+		return $delegated || '' === $path ? '' : ' data-wp-text="' . esc_attr( $path ) . '"';
+	};
+
+	$inner = '<span class="material-symbols-outlined" aria-hidden="true"' . $bind( (string) $descriptor['icon_bind'] ) . '>' . esc_html( (string) $descriptor['icon'] ) . '</span>';
 	if ( $show_label && '' !== (string) $descriptor['label'] ) {
 		$inner .= '<span class="axismundi-interaction__label" aria-hidden="true">' . esc_html( (string) $descriptor['label'] ) . '</span>';
 	}
 	if ( $show_count ) {
 		$printed = '' !== (string) $descriptor['count_text'] ? (string) $descriptor['count_text'] : number_format_i18n( (int) $descriptor['count'] );
-		$inner  .= '<span class="axismundi-interaction__count" aria-hidden="true">' . esc_html( $printed ) . '</span>';
+		$inner  .= '<span class="axismundi-interaction__count" aria-hidden="true"' . $bind( (string) $descriptor['count_bind'] ) . '>' . esc_html( $printed ) . '</span>';
 	}
 
 	$tag = $is_link ? 'a' : 'button';
@@ -246,7 +279,10 @@ function axismundi_act_render_interaction_block( array $attributes, string $cont
 		foreach ( (array) $descriptor['controls'] as $entry ) {
 			$part = array_merge( axismundi_act_interaction_descriptor_defaults(), (array) $entry );
 			$parts .= '' !== (string) $part['text']
-				? '<span class="axismundi-interaction__value"' . ( '' !== (string) $part['aria_label'] ? ' title="' . esc_attr( (string) $part['aria_label'] ) . '"' : '' ) . '>' . esc_html( (string) $part['text'] ) . '</span>'
+				? '<span class="axismundi-interaction__value"'
+					. ( '' !== (string) $part['aria_label'] ? ' title="' . esc_attr( (string) $part['aria_label'] ) . '"' : '' )
+					. ( '' !== (string) $part['text_bind'] && ! axismundi_act_interaction_is_delegated() ? ' data-wp-text="' . esc_attr( (string) $part['text_bind'] ) . '"' : '' )
+					. '>' . esc_html( (string) $part['text'] ) . '</span>'
 				: axismundi_act_render_interaction_control( $type, $part, $attributes );
 		}
 		$control = '<div class="axismundi-interaction__group" role="group"'
@@ -261,6 +297,14 @@ function axismundi_act_render_interaction_block( array $attributes, string $cont
 	if ( ! axismundi_act_interaction_is_delegated() && '' !== (string) $descriptor['namespace'] ) {
 		$extra = ' data-wp-interactive="' . esc_attr( (string) $descriptor['namespace'] ) . '" '
 			. wp_interactivity_data_wp_context( (array) $descriptor['context'] );
+		foreach ( (array) $descriptor['wrapper'] as $name => $value ) {
+			$extra .= ' ' . esc_attr( (string) $name ) . '="' . esc_attr( (string) $value ) . '"';
+		}
+		// The store that answers those directives, loaded only because this type is on the page.
+		// A delegated control has no clicks of its own, so it asks for nothing.
+		if ( '' !== (string) $descriptor['module'] && function_exists( 'wp_enqueue_script_module' ) ) {
+			wp_enqueue_script_module( (string) $descriptor['module'] );
+		}
 	}
 	/*
 	 * This renderer answers to the block and, through the registry, to surfaces that compose it
@@ -276,6 +320,21 @@ function axismundi_act_render_interaction_block( array $attributes, string $cont
 	return '<div ' . $wrapper_attributes . $extra . '>' . $control . (string) $descriptor['after'] . '</div>';
 }
 
+/**
+ * Keep a page carrying interaction controls out of shared caches for a signed-in reader.
+ *
+ * Every control states something personal — whether this reader liked it, may vote, holds a REST
+ * nonce — so one page cached for everyone would hand one reader another's state. There is one
+ * check now rather than one per control, which is the only reason this used to be repeated.
+ */
+function axismundi_act_prepare_interaction_cache_policy() : void {
+	$post = get_queried_object();
+	if ( $post instanceof WP_Post && has_block( 'axismundi/interaction', $post ) ) {
+		axismundi_act_no_cache_like_state();
+	}
+}
+add_action( 'template_redirect', 'axismundi_act_prepare_interaction_cache_policy', 1 );
+
 /** Register the unified interaction block once its types have had a chance to register. */
 function axismundi_act_register_interaction_block() : void {
 	/**
@@ -287,3 +346,29 @@ function axismundi_act_register_interaction_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/interaction', array( 'render_callback' => 'axismundi_act_render_interaction_block' ) );
 }
 add_action( 'init', 'axismundi_act_register_interaction_block', 15 );
+
+/**
+ * Register the script modules the built-in interaction types bring with them.
+ *
+ * They were each a block's `viewScriptModule` before the six became one, and one block can only
+ * declare a single view module — so the stores are registered here and pulled in per type, which
+ * also means a page never carries a store for an interaction it does not show.
+ */
+function axismundi_act_register_interaction_modules() : void {
+	if ( ! function_exists( 'wp_register_script_module' ) ) {
+		return;
+	}
+	$base = dirname( __DIR__ ) . '/axismundi-activities.php';
+	foreach ( array( 'like', 'announce' ) as $type ) {
+		$path = dirname( __DIR__ ) . '/assets/interactions/' . $type . '.js';
+		if ( is_readable( $path ) ) {
+			wp_register_script_module(
+				'axismundi-interaction-' . $type,
+				plugins_url( 'assets/interactions/' . $type . '.js', $base ),
+				array( '@wordpress/interactivity' ),
+				(string) filemtime( $path )
+			);
+		}
+	}
+}
+add_action( 'init', 'axismundi_act_register_interaction_modules', 5 );

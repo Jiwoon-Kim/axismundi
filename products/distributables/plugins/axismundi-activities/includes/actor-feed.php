@@ -399,6 +399,87 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 	);
 }
 
+/**
+ * The link that addresses one surface and filter on a profile.
+ *
+ * The default filter is left out of the URL so the plain profile address stays the plain one, and
+ * the timeline's own switches never appear here at all — those are a reading preference kept in
+ * the browser, not part of the address.
+ *
+ * @param array<string,array<string,mixed>> $surfaces Registered surfaces.
+ * @param string                            $surface  Surface key.
+ * @param string                            $filter   Filter key.
+ * @param array<string,scalar>              $query    Extra query arguments.
+ * @return string
+ */
+function axismundi_act_actor_profile_url( array $surfaces, string $surface, string $filter, array $query = array() ) : string {
+	$base = remove_query_arg( array( 'feed_after', 'feed_from', 'feed_pages', 'feed_head', 'view', 'filter', 'page' ) );
+	$url  = 'activity' === $surface ? $base : add_query_arg( 'view', $surface, $base );
+	if ( $filter !== (string) ( $surfaces[ $surface ]['default_filter'] ?? '' ) ) {
+		$url = add_query_arg( 'filter', $filter, $url );
+	}
+	foreach ( $query as $key => $value ) {
+		$url = add_query_arg( $key, rawurlencode( (string) $value ), $url );
+	}
+	return $url;
+}
+
+/** One navigation tab. */
+function axismundi_act_actor_profile_tab( string $href, string $label, bool $is_current, string $class ) : string {
+	return '<a class="' . esc_attr( $class ) . ( $is_current ? ' is-current' : '' ) . '" href="' . esc_url( $href ) . '"'
+		. ( $is_current ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
+}
+
+/**
+ * Chrome for a surface that renders its own body.
+ *
+ * The tabs are the same tabs the timeline gets, built once here so a surface that is not a feed
+ * does not grow a second, drifting copy of the profile's navigation.
+ *
+ * @param Axismundi_Actor                   $actor    Profile Actor.
+ * @param array<string,array<string,mixed>> $surfaces Registered surfaces.
+ * @param string                            $surface  Current surface key.
+ * @param string                            $filter   Current filter key.
+ * @param array<string,mixed>               $current  Current surface definition.
+ * @param string                            $body     Surface-rendered body HTML.
+ * @return string
+ */
+function axismundi_act_render_actor_feed_shell( Axismundi_Actor $actor, array $surfaces, string $surface, string $filter, array $current, string $body ) : string {
+	unset( $actor );
+	$surface_nav = '';
+	if ( count( $surfaces ) > 1 ) {
+		$tabs = array();
+		foreach ( $surfaces as $key => $definition ) {
+			$tabs[] = axismundi_act_actor_profile_tab(
+				axismundi_act_actor_profile_url( $surfaces, (string) $key, (string) $definition['default_filter'] ),
+				(string) $definition['label'],
+				(string) $key === $surface,
+				'axismundi-activity-feed__surface'
+			);
+		}
+		$surface_nav = '<nav class="axismundi-activity-feed__surfaces" aria-label="' . esc_attr__( 'Profile surfaces', 'axismundi-activities' ) . '">'
+			. implode( '', $tabs ) . '</nav>';
+	}
+	$filter_tabs = array();
+	foreach ( (array) $current['filters'] as $key => $label ) {
+		$filter_tabs[] = axismundi_act_actor_profile_tab(
+			axismundi_act_actor_profile_url( $surfaces, $surface, (string) $key ),
+			(string) $label,
+			(string) $key === $filter,
+			'axismundi-activity-feed__view'
+		);
+	}
+	$filter_nav = count( $filter_tabs ) > 1
+		? '<nav class="axismundi-activity-feed__views" aria-label="' . esc_attr__( 'Timeline views', 'axismundi-activities' ) . '">' . implode( '', $filter_tabs ) . '</nav>'
+		: '';
+	return '<section class="axismundi-activity-feed" aria-labelledby="axismundi-activity-feed-heading">'
+		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html( (string) $current['heading'] ) . '</h2>'
+		. $surface_nav
+		. $filter_nav
+		. $body
+		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Tabs are escaped above; the body is escaped by the surface that produced it.
+}
+
 /** Render the current Actor's public Activity feed. */
 function axismundi_act_render_actor_activity_feed() : string {
 	if ( ! function_exists( 'axismundi_actors_current_actor' ) ) {
@@ -472,6 +553,19 @@ function axismundi_act_render_actor_activity_feed() : string {
 	 * scroll does and what keeps the cost of each step constant. Re-rendering everything already
 	 * on screen in order to grow a window makes the tenth step ten times the work of the first.
 	 */
+	/*
+	 * A surface may render its own body.
+	 *
+	 * The timeline is a feed: cards, newest first, continued by cursor. A contributions archive
+	 * is not — it is browsed, returned to, and linked into ("the thing I wrote on page 3"), which
+	 * wants numbered pages and a list rather than an endless column of full posts. Rather than
+	 * teach the feed chrome to be both, a surface that is not a feed supplies its own body and
+	 * keeps only the tabs above it.
+	 */
+	if ( isset( $current['render'] ) && is_callable( $current['render'] ) ) {
+		$body = (string) call_user_func( $current['render'], $actor, $filter, $per_page );
+		return axismundi_act_render_actor_feed_shell( $actor, $surfaces, $surface, $filter, $current, $body );
+	}
 	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter );
 	$cards = implode( '', $page['cards'] );
 	/*
@@ -630,6 +724,12 @@ function axismundi_act_render_actor_activity_feed() : string {
 	 */
 	$context = array(
 		'endpoint'      => rest_url( 'axismundi/v1/actor-feed' ),
+		/*
+		 * Cookie authentication on a REST request counts only alongside a nonce. Without one the
+		 * next page is fetched as a stranger, and every control on it comes back telling the
+		 * reader to log in — on a page they are already logged into.
+		 */
+		'nonce'         => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
 		'actorUri'      => $actor->get_uri(),
 		'surface'       => $surface,
 		'filter'        => $filter,

@@ -58,17 +58,22 @@ function axismundi_note_object_view_interactions( string $html, array $model ) :
 	if ( null === axismundi_note_local_uuid_from_uri( $uri ) || is_wp_error( axismundi_note_reaction_target( $uri ) ) ) {
 		return $html;
 	}
-	$attributes = array( 'objectUri' => $uri );
-	$reply      = function_exists( 'render_block' )
-		? render_block( array( 'blockName' => 'axismundi/reply-button', 'attrs' => $attributes, 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ) )
-		: '';
-	$like       = function_exists( 'render_block' )
-		? render_block( array( 'blockName' => 'axismundi/like-button', 'attrs' => $attributes, 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ) )
-		: '';
-	$announce   = function_exists( 'render_block' )
-		? render_block( array( 'blockName' => 'axismundi/announce-button', 'attrs' => $attributes, 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ) )
-		: '';
-	return $html . $reply . $like . $announce;
+	if ( ! function_exists( 'render_block' ) ) {
+		return $html;
+	}
+	// One block, one control each, named by type — the same three this rendered before, now
+	// asking for them the way a template does.
+	$controls = '';
+	foreach ( array( 'reply', 'like', array( 'announce', array( 'announceMenu' => true ) ) ) as $type ) {
+		$attributes = array_merge(
+			array( 'objectUri' => $uri, 'type' => is_array( $type ) ? $type[0] : $type ),
+			is_array( $type ) ? $type[1] : array()
+		);
+		$controls  .= render_block(
+			array( 'blockName' => 'axismundi/interaction', 'attrs' => $attributes, 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() )
+		);
+	}
+	return $html . $controls;
 }
 add_filter( 'axismundi_op_object_view_interactions', 'axismundi_note_object_view_interactions', 10, 2 );
 

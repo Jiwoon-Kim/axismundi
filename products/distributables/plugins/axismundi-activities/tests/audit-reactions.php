@@ -116,8 +116,8 @@ try {
 	}
 	ax_react_assert( $ax_react_results, 'REST mutation returns authoritative server state and distinct count', $response instanceof WP_REST_Response && false === $data['is_liked'] && 1 === (int) $data['like_count'] );
 
-	axismundi_act_register_like_button_block();
-	$markup = do_blocks( '<!-- wp:axismundi/like-button {"objectUri":"' . esc_url_raw( $ax_react_object_uri ) . '"} /-->' );
+	axismundi_act_register_interaction_block();
+	$markup = do_blocks( '<!-- wp:axismundi/interaction {"type":"like","objectUri":"' . esc_url_raw( $ax_react_object_uri ) . '"} /-->' );
 	ax_react_assert( $ax_react_results, 'dynamic block emits Interactivity directives, canonical URI context, accessible state, and a logged-in cache bypass', str_contains( $markup, 'data-wp-interactive="axismundi/like-button"' ) && str_contains( $markup, 'data-wp-on--click="actions.toggleLike"' ) && str_contains( $markup, 'aria-pressed' ) && str_contains( str_replace( '\\/', '/', $markup ), esc_url_raw( $ax_react_object_uri ) ) && defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE );
 
 	$post_id = wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'publish', 'post_author' => (int) $local->get_local_user_id(), 'post_title' => 'Likes collection fixture', 'post_content' => 'Public Article.' ) );

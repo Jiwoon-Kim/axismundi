@@ -37,10 +37,10 @@ defined( 'ABSPATH' ) || exit;
 			<!-- wp:axismundi/object-hashtags {"className":"is-style-tags"} /-->
 			<!-- wp:axismundi/reaction-bar /-->
 			<!-- wp:axismundi/interactions -->
-				<!-- wp:axismundi/reply-button /-->
-				<!-- wp:axismundi/like-button /-->
-				<!-- wp:axismundi/announce-button /-->
-				<!-- wp:axismundi/reaction-button /-->
+				<!-- wp:axismundi/interaction {"type":"reply"} /-->
+				<!-- wp:axismundi/interaction {"type":"like"} /-->
+				<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true} /-->
+				<!-- wp:axismundi/interaction {"type":"reaction"} /-->
 			<!-- /wp:axismundi/interactions -->
 		</article>
 		<!-- /wp:group -->

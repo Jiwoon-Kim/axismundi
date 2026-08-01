@@ -9,7 +9,7 @@
 	"description": "A link into the full representation of the ActivityStreams Object being rendered. The words are yours to write, the destination is the Object's.",
 	"textdomain": "axismundi-object-projections",
 	"attributes": {
-		"text": { "type": "string", "role": "content" },
+		"text": { "type": "string", "role": "content", "default": "Read more" },
 		"textAlign": { "type": "string" }
 	},
 	"example": { "viewportWidth": 500 },

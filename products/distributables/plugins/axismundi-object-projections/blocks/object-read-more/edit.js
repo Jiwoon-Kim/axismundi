@@ -1,11 +1,8 @@
 /**
  * axismundi/object-read-more editor registration (no build step).
  *
- * The words are typed here, the way Core's Post Excerpt asks for its more-link text: a phrase
- * shipped as a default would be wrong for half the sites using it, and this block has no idea
- * whether the destination reads better as "Read more", "Continue", or the publication's own
- * idiom. Nothing is rendered until something is written, so an empty label never becomes an
- * invisible target.
+ * The initial words follow the FEP example: "Read more". An editor can replace them with the
+ * publication's own idiom. Empty content falls back to that visible route at render time.
  *
  * The destination is not editable and is not shown here. It belongs to whichever Object the card
  * is rendering, which is known at render time and not while editing a template.

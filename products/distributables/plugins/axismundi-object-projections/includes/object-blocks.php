@@ -1053,10 +1053,9 @@ function axismundi_op_render_object_featured_image_block( array $attributes = ar
  * push the summary with it. Separating the two costs one block and gives the card a footer
  * element instead of a sentence ending.
  *
- * The words are the author's. Core asks the same of Post Excerpt's more link rather than shipping
- * a phrase that would be wrong for half the sites using it, and nothing here knows whether the
- * destination reads better as "Read more", "Continue", or the publication's own idiom. With no
- * text there is no link: an empty label would be an invisible target.
+ * The words begin with the FEP example's "Read more" and may be replaced with the publication's
+ * own idiom. An omitted or empty value still uses that default: a stream Article must retain a
+ * visible route to its full representation.
  *
  * The destination is not the author's. It is the Object's own cached view, falling back to the
  * page it came from — the same resolution `object-summary` uses, so the two cannot send a reader
@@ -1068,7 +1067,10 @@ function axismundi_op_render_object_featured_image_block( array $attributes = ar
 function axismundi_op_render_object_read_more_block( array $attributes = array() ) : string {
 	$model = axismundi_op_active_object_view_model();
 	$text  = trim( (string) ( $attributes['text'] ?? '' ) );
-	if ( ! is_array( $model ) || '' === $text ) {
+	if ( '' === $text ) {
+		$text = __( 'Read more', 'axismundi-object-projections' );
+	}
+	if ( ! is_array( $model ) ) {
 		return '';
 	}
 	$url = trim( (string) ( $model['cached_view_url'] ?? '' ) );

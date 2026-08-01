@@ -595,23 +595,26 @@ $ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : 
  *
  * `object-summary` can still end with one and that stays — templates depend on it — but a link
  * welded to the end of a paragraph cannot be aligned or grouped on its own. What matters here is
- * that the words are the author's and the destination is not: with nothing written there is no
- * link, because an empty label is an invisible target.
+ * that the words are editable while the destination is not. The FEP example supplies the initial
+ * "Read more" label. An editor can replace it, while an omitted or empty value still retains a
+ * visible route to the full Object.
  */
 $ax_rnd_read_more_model              = axismundi_op_object_view_model_defaults();
 $ax_rnd_read_more_model['status']    = 'active';
 $ax_rnd_read_more_model['type']      = 'Article';
 $ax_rnd_read_more_model['human_url'] = 'https://example.com/read-more-target/';
 axismundi_op_set_current_object_view_model( $ax_rnd_read_more_model );
-$ax_rnd_read_more_empty = trim( do_blocks( '<!-- wp:axismundi/object-read-more /-->' ) );
+$ax_rnd_read_more_default = trim( do_blocks( '<!-- wp:axismundi/object-read-more /-->' ) );
 $ax_rnd_read_more_text  = trim( do_blocks( '<!-- wp:axismundi/object-read-more {"text":"Read more"} /-->' ) );
+$ax_rnd_read_more_cleared = trim( do_blocks( '<!-- wp:axismundi/object-read-more {"text":""} /-->' ) );
 axismundi_op_set_current_object_view_model( null );
 $ax_rnd_read_more_none  = trim( do_blocks( '<!-- wp:axismundi/object-read-more {"text":"Read more"} /-->' ) );
 
 ax_rnd_assert(
 	$ax_rnd_results,
-	'the Read More link renders only when an author wrote one and an Object is being rendered',
-	'' === $ax_rnd_read_more_empty
+	'the Read More link defaults to the FEP label when omitted or empty, stays editable, and is absent only without an Object',
+	false !== strpos( $ax_rnd_read_more_default, '>Read more<' )
+		&& false !== strpos( $ax_rnd_read_more_cleared, '>Read more<' )
 		&& '' === $ax_rnd_read_more_none
 		&& false !== strpos( $ax_rnd_read_more_text, 'axismundi-object__read-more-link' )
 		&& 1 === preg_match( '#<a[^>]*href="[^"]+"#', $ax_rnd_read_more_text )

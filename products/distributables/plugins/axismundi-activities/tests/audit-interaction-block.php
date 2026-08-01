@@ -157,6 +157,20 @@ try {
 	);
 
 	/*
+	 * Quote is Reply's twin: both open a composer with one field already filled in, so both are
+	 * navigation. Neither has a pressed state — quoting makes a new Object of the reader's own,
+	 * and whether they have done it before is not a property of what they quoted.
+	 */
+	$quote_html = do_blocks( '<!-- wp:axismundi/interaction {"type":"quote","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+	ax_ib_assert(
+		$ax_ib_results,
+		'Quote opens a composer prefilled with what is being quoted, and claims no pressed state',
+		array_key_exists( 'quote', axismundi_act_interaction_types() )
+			&& 1 === preg_match( '#<a\b[^>]*href="[^"]*ax_quote_target#', $quote_html )
+			&& '' === ax_ib_button_attr( $quote_html, 'aria-pressed' )
+	);
+
+	/*
 	 * The Interactivity API evaluates directives on the server too. Binding an attribute to a
 	 * `state` getter that only exists in the JavaScript module makes the server resolve it to
 	 * nothing and strip the attribute — so a control rendered disabled arrived enabled, which is

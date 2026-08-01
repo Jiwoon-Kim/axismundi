@@ -25,7 +25,18 @@ function axismundi_op_object_card_pattern_content( string $slug = 'object-card-d
 	if ( isset( $cache[ $slug ] ) ) {
 		return $cache[ $slug ];
 	}
-	$path = dirname( __DIR__ ) . '/templates/' . $slug . '.php';
+	/*
+	 * One file, two names. The slugs stay because callers and saved references use them, but they
+	 * now select a variant of one card rather than two separate documents — the difference between
+	 * them shrank to a modifier class once the body moved into its own block.
+	 *
+	 * The cache is still keyed by slug, which is what keeps that variant from leaking: a feed
+	 * renders both kinds, and a cache keyed by anything coarser would hand the second kind
+	 * whichever card the first one produced.
+	 */
+	// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- read by the included template.
+	$axismundi_op_card_variant = 'object-card-article' === $slug ? 'article' : 'default';
+	$path                      = dirname( __DIR__ ) . '/templates/object-card.php';
 	if ( ! is_readable( $path ) ) {
 		return '';
 	}
@@ -1070,9 +1081,20 @@ function axismundi_op_render_object_card_body_block() : string {
 	$type = (string) ( $model['type'] ?? '' );
 
 	/*
-	 * A lead image is given a fixed height because it is a lead-in rather than the piece. A stream
-	 * is a list of posts, and letting each Article's image take its intrinsic height makes the card
-	 * as tall as the picture happens to be, pushing the next post off screen. The Article's own page
+	 * An Article in a stream is a lead-in, not the piece: image, title, summary, and a way through
+	 * to the full text. There is deliberately no content block, because the body lives on the
+	 * Article's own page — which is what Read More is for.
+	 *
+	 * That absence is what keeps the rules from piling up. With no body in the card there is
+	 * nothing for a post-level content warning to fold, so this carries no `object-content-warning`
+	 * wrapper and needs no "hide in feed" switch: a sensitive Article is protected by
+	 * `object-summary`, which obscures the summary in place and leaves the route to the piece
+	 * reachable outside the cover. Covering that route too would leave a warned Article unable to
+	 * reach itself.
+	 *
+	 * The lead image is given a fixed height for the same reason it is a lead-in. A stream is a
+	 * list of posts, and letting each Article's image take its intrinsic height makes the card as
+	 * tall as the picture happens to be, pushing the next post off screen. The Article's own page
 	 * shows it at its real size.
 	 */
 	$article = '<!-- wp:axismundi/object-featured-image {"style":{"dimensions":{"height":"200px"}}} /-->'

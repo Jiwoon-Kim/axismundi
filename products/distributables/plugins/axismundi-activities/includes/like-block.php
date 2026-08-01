@@ -294,6 +294,10 @@ function axismundi_act_describe_like_interaction( array $attributes, WP_Block $b
 		'isLiked'       => $is_liked,
 		'isPending'     => false,
 		'canLike'       => $can_like,
+		// On the context rather than derived in the store, so the server and the runtime agree —
+		// a `state` getter defined only in JavaScript resolves to nothing during server-side
+		// directive processing, and the attribute it controls is stripped instead of set.
+		'isDisabled'    => ! $can_like,
 		'endpoint'      => $endpoint,
 		'nonce'         => $can_like ? wp_create_nonce( 'wp_rest' ) : '',
 		'error'         => '',
@@ -307,12 +311,13 @@ function axismundi_act_describe_like_interaction( array $attributes, WP_Block $b
 			: ( is_user_logged_in() ? __( 'Activate a public Actor profile to Like.', 'axismundi-activities' ) : __( 'Log in to Like.', 'axismundi-activities' ) ),
 		'count'      => (int) $context['likes'],
 		'selected'   => $is_liked,
+		'toggle'     => true,
 		'disabled'   => ! $can_like,
 		'namespace'  => 'axismundi/like-button',
 		'context'    => $context,
 		'bindings'   => array(
-			'data-wp-on--click'      => 'actions.toggleLike',
-			'data-wp-bind--disabled' => 'state.isDisabled',
+			'data-wp-on--click'          => 'actions.toggleLike',
+			'data-wp-bind--disabled'     => 'context.isDisabled',
 			'data-wp-class--is-selected' => 'context.isLiked',
 			'data-wp-bind--aria-pressed' => 'context.isLiked',
 		),

@@ -89,8 +89,25 @@ function axismundi_act_interaction_descriptor_defaults() : array {
 		'label'       => '',
 		'aria_label'  => '',
 		'count'       => null,
+		/*
+		 * What to print instead of the number, when the number is not the whole truth. A bounded
+		 * scan knows "at least this many", and "12+" says that where a bare 12 would claim to be
+		 * exact.
+		 */
+		'count_text'  => '',
 		'selected'    => false,
 		'disabled'    => false,
+		/*
+		 * Where this goes, when it goes somewhere. A Reply is navigation — it opens a composer —
+		 * while a Like mutates in place, and the markup has to say which: an anchor that acts and
+		 * a button that navigates both lie to anyone not using a mouse.
+		 */
+		'href'        => '',
+		/*
+		 * Whether this is a two-state control. Only a toggle gets `aria-pressed`; announcing a
+		 * pressed state on a Reply would promise a state it does not have.
+		 */
+		'toggle'      => false,
 		// Interactivity wiring for a button that owns its own clicks.
 		'namespace'   => '',
 		'context'     => array(),
@@ -145,22 +162,29 @@ function axismundi_act_render_interaction_control( string $type, array $descript
 		$classes[] = 'is-selected';
 	}
 
-	$attrs = array(
-		'type'         => 'button',
-		'class'        => implode( ' ', $classes ),
-		'aria-pressed' => $descriptor['selected'] ? 'true' : 'false',
-		'aria-label'   => (string) ( '' !== $descriptor['aria_label'] ? $descriptor['aria_label'] : $descriptor['label'] ),
-		'title'        => (string) ( '' !== $descriptor['aria_label'] ? $descriptor['aria_label'] : $descriptor['label'] ),
-	);
+	// An anchor cannot be disabled, so a destination the reader may not use is rendered as the
+	// inert button it actually is rather than as a link that quietly does nothing.
+	$href    = $descriptor['disabled'] ? '' : (string) $descriptor['href'];
+	$is_link = '' !== $href;
+	$label   = (string) ( '' !== $descriptor['aria_label'] ? $descriptor['aria_label'] : $descriptor['label'] );
+
+	$attrs = $is_link
+		? array( 'class' => implode( ' ', $classes ), 'href' => $href )
+		: array( 'type' => 'button', 'class' => implode( ' ', $classes ) );
+	if ( $descriptor['toggle'] ) {
+		$attrs['aria-pressed'] = $descriptor['selected'] ? 'true' : 'false';
+	}
+	$attrs['aria-label'] = $label;
+	$attrs['title']      = $label;
 	foreach ( ( $delegated ? $descriptor['delegated'] : $descriptor['bindings'] ) as $name => $value ) {
 		$attrs[ $name ] = (string) $value;
 	}
 
 	$rendered = '';
 	foreach ( $attrs as $name => $value ) {
-		$rendered .= ' ' . esc_attr( $name ) . '="' . esc_attr( $value ) . '"';
+		$rendered .= ' ' . esc_attr( $name ) . '="' . ( 'href' === $name ? esc_url( $value ) : esc_attr( $value ) ) . '"';
 	}
-	if ( $descriptor['disabled'] ) {
+	if ( $descriptor['disabled'] && ! $is_link ) {
 		$rendered .= ' disabled';
 	}
 
@@ -169,11 +193,13 @@ function axismundi_act_render_interaction_control( string $type, array $descript
 		$inner .= '<span class="axismundi-interaction__label" aria-hidden="true">' . esc_html( (string) $descriptor['label'] ) . '</span>';
 	}
 	if ( $show_count ) {
-		$inner .= '<span class="axismundi-interaction__count" aria-hidden="true">' . esc_html( number_format_i18n( (int) $descriptor['count'] ) ) . '</span>';
+		$printed = '' !== (string) $descriptor['count_text'] ? (string) $descriptor['count_text'] : number_format_i18n( (int) $descriptor['count'] );
+		$inner  .= '<span class="axismundi-interaction__count" aria-hidden="true">' . esc_html( $printed ) . '</span>';
 	}
 
+	$tag = $is_link ? 'a' : 'button';
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- every part is escaped above.
-	return '<button' . $rendered . '>' . $inner . '</button>';
+	return '<' . $tag . $rendered . '>' . $inner . '</' . $tag . '>';
 }
 
 /**

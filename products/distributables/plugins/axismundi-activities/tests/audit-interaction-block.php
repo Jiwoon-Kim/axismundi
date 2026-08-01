@@ -139,6 +139,41 @@ try {
 		'the control carries the core button class so the theme reaches it',
 		false !== strpos( ax_ib_button_attr( $plain_html, 'class' ), 'wp-element-button' )
 	);
+
+	/*
+	 * A Reply goes somewhere; a Like changes something. An anchor that acts and a button that
+	 * navigates both mislead anyone not using a mouse, so the tag follows the act — and only a
+	 * two-state control claims `aria-pressed`, because promising a pressed state on a Reply
+	 * describes a state it does not have.
+	 */
+	$reply_html = do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+	ax_ib_assert(
+		$ax_ib_results,
+		'Reply is a link for a reader who can use it and never claims a pressed state',
+		'reply' === ( array_key_exists( 'reply', axismundi_act_interaction_types() ) ? 'reply' : '' )
+			&& 1 === preg_match( '#<a\b[^>]*href="#', $reply_html )
+			&& '' === ax_ib_button_attr( $reply_html, 'aria-pressed' )
+			&& '' !== ax_ib_button_attr( $plain_html, 'aria-pressed' )
+	);
+
+	/*
+	 * The Interactivity API evaluates directives on the server too. Binding an attribute to a
+	 * `state` getter that only exists in the JavaScript module makes the server resolve it to
+	 * nothing and strip the attribute — so a control rendered disabled arrived enabled, which is
+	 * what the block this replaces did. The value lives on the context, which means the same
+	 * thing in both places.
+	 */
+	wp_set_current_user( 0 );
+	$anon_like  = do_blocks( $markup );
+	$anon_reply = do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+	wp_set_current_user( $owner );
+	ax_ib_assert(
+		$ax_ib_results,
+		'a visitor who cannot act is served a control that is still disabled after directives are processed',
+		1 === preg_match( '#<button\b[^>]*\sdisabled[\s>]#', $anon_like )
+			&& 1 === preg_match( '#<button\b[^>]*\sdisabled[\s>]#', $anon_reply )
+			&& 0 === preg_match( '#<a\b[^>]*href="#', $anon_reply )
+	);
 } finally {
 	$GLOBALS['axismundi_op_object_template_options'] = array();
 	foreach ( array_unique( $ax_ib_posts ) as $post_id ) {

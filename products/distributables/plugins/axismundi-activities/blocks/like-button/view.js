@@ -7,6 +7,15 @@ store( 'axismundi/like-button', {
 			return ! context.canLike || context.isPending;
 		},
 	},
+	/*
+	 * `isDisabled` is also kept on the context, not only derived here.
+	 *
+	 * The Interactivity API evaluates directives on the server as well, and a `state` getter
+	 * defined in this module does not exist there — so binding an attribute to one makes the
+	 * server resolve it to nothing and strip the attribute it was asked to control. A control
+	 * that ships disabled would arrive enabled. Context is serialized into the markup and
+	 * therefore means the same thing in both places.
+	 */
 	actions: {
 		*toggleLike() {
 			const context = getContext();
@@ -16,6 +25,7 @@ store( 'axismundi/like-button', {
 			const previousLiked = context.isLiked;
 			const previousLikes = context.likes;
 			context.isPending = true;
+			context.isDisabled = true;
 			context.error = '';
 			context.isLiked = ! previousLiked;
 			context.likes = Math.max( 0, previousLikes + ( context.isLiked ? 1 : -1 ) );
@@ -38,6 +48,7 @@ store( 'axismundi/like-button', {
 				context.error = error instanceof Error && error.message !== 'request_failed' ? error.message : context.errorFallback;
 			} finally {
 				context.isPending = false;
+				context.isDisabled = ! context.canLike;
 			}
 		},
 	},

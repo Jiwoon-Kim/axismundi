@@ -192,6 +192,35 @@ try {
 	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
 	ax_feed_assert( $ax_feed_results, 'an Actor timeline exposes Reply, Like, and Repost controls while archive renderers remain independently configurable', false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) && false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) && false !== strpos( $local_feed_markup, 'axismundi-interaction__button' ) );
 
+	/*
+	 * Feed cards are deliberately unhydrated presentation, including cards appended later. A
+	 * logged-in reader therefore gets exactly one picker host in the SSR shell, not one inert
+	 * picker per card. Its document handler can receive every card's delegated reaction control.
+	 */
+	wp_set_current_user( $ax_feed_user_id );
+	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$authenticated_feed_markup = axismundi_act_render_actor_activity_feed();
+	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
+	wp_set_current_user( 0 );
+	ax_feed_assert(
+		$ax_feed_results,
+		'a signed-in feed renders one hydrated reaction picker host and delegates every card trigger to it',
+		1 === substr_count( $authenticated_feed_markup, 'axismundi-reaction-picker-host' )
+			&& false !== strpos( $authenticated_feed_markup, 'data-wp-on-document--click="actions.openFeedPicker"' )
+			&& false !== strpos( $authenticated_feed_markup, 'data-ax-action="reaction"' )
+			&& 1 === substr_count( $authenticated_feed_markup, 'class="axismundi-reaction-button__picker"' )
+	);
+	ax_feed_assert(
+		$ax_feed_results,
+		'a signed-in feed opens one role-menu host for Repost and Quote instead of posting Announce from the card trigger',
+		1 === substr_count( $authenticated_feed_markup, 'axismundi-announce-menu-host' )
+			&& false !== strpos( $authenticated_feed_markup, 'data-wp-on-document--click="actions.openFeedMenu"' )
+			&& false !== strpos( $authenticated_feed_markup, 'data-ax-action="announce-menu"' )
+			&& 1 === substr_count( $authenticated_feed_markup, 'class="axismundi-announce-menu"' )
+			&& false === strpos( $authenticated_feed_markup, '<dialog' )
+	);
+
 	$undo = axismundi_act_unannounce_object( $actor, $remote_note_uri );
 	if ( $undo instanceof Axismundi_Activity ) {
 		$ax_feed_activities[] = $undo->get_uri();

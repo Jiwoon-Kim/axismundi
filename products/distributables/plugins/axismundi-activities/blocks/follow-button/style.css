@@ -7,18 +7,12 @@
 	gap: 0.5rem;
 }
 
-.axismundi-follow-button__button,
-.axismundi-follow-button.is-anonymous a,
-.axismundi-follow-button.is-unavailable a {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+.axismundi-follow-button__button {
 	min-block-size: 2.5rem;
-	padding: 0.5rem 0.875rem;
-	border: 1px solid currentColor;
-	border-radius: 4px;
-	background: transparent;
-	color: inherit;
+	padding: 0.5rem 1.5rem;
+	border: 0;
+	background-color: var(--wp--preset--color--primary, #6750a4);
+	color: var(--wp--preset--color--on-primary, #ffffff);
 	font: inherit;
 	font-weight: 600;
 	line-height: 1;
@@ -26,25 +20,36 @@
 	cursor: pointer;
 }
 
+/* A current relationship is a tonal status, not a second primary call to action. */
 .axismundi-follow-button__button.is-following {
-	background: var(--wp--preset--color--surface-container-high, #ece6f0);
+	background-color: var(--wp--preset--color--secondary-container, #e8def8);
+	color: var(--wp--preset--color--on-secondary-container, #4a4458);
 }
 
-.axismundi-follow-button__button.is-mutual {
-	border-style: dashed;
+.axismundi-follow-button__button.is-following:hover {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container, #4a4458) calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), var(--wp--preset--color--secondary-container, #e8def8));
+}
+
+.axismundi-follow-button__button.is-following:focus {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container, #4a4458) calc(var(--md-sys-state-focus-state-layer-opacity, 0.1) * 100%), var(--wp--preset--color--secondary-container, #e8def8));
+}
+
+.axismundi-follow-button__button.is-following:active {
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-secondary-container, #4a4458) calc(var(--md-sys-state-pressed-state-layer-opacity, 0.1) * 100%), var(--wp--preset--color--secondary-container, #e8def8));
 }
 
 .axismundi-follow-button__button:disabled {
 	cursor: wait;
-	opacity: 0.65;
+	background-color: color-mix(in srgb, var(--wp--preset--color--on-surface, #1d1b20) 12%, transparent);
+	color: color-mix(in srgb, var(--wp--preset--color--on-surface, #1d1b20) 38%, transparent);
 }
 
 .axismundi-follow-button__remote {
-	border: 0 !important;
-	padding-inline: 0.25rem !important;
+	border: 0;
+	padding-inline: 0.25rem;
 	font-size: 0.875rem;
-	font-weight: 400 !important;
-	text-decoration: underline !important;
+	font-weight: 400;
+	text-decoration: underline;
 	text-underline-offset: 0.2em;
 }
 
@@ -104,4 +109,12 @@
 .axismundi-remote-follow__error {
 	margin: 0;
 	color: var(--wp--preset--color--error, #b3261e);
+}
+
+@media (forced-colors: active) {
+	.axismundi-follow-button__button {
+		border: 1px solid ButtonText;
+		background: ButtonFace;
+		color: ButtonText;
+	}
 }

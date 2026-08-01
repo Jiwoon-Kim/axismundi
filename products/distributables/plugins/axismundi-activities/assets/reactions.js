@@ -270,6 +270,20 @@ function* loadUnicodeGroup( group ) {
 	state.unicodeLoadedGroups = [ ...state.unicodeLoadedGroups, group ];
 }
 
+/** Open a picker after its context has named both the target Object and its control. */
+function* openPicker( context ) {
+	state.openFor = context.pickerId;
+	state.error = '';
+	state.recent = readRecent();
+	state.activeSection = 'recent';
+	/* See the matching note in togglePicker: local emoji are the useful first view. */
+	if ( ! state.catalogueLoaded ) {
+		yield* loadCustomCatalogue();
+		const categories = [ ...new Set( state.catalogue.map( ( item ) => `custom:${ item.category || '' }` ) ) ];
+		state.expandedSections = [ ...new Set( [ ...state.expandedSections, ...categories ] ) ];
+	}
+}
+
 const { state, actions } = store( NAMESPACE, {
 	state: {
 		/*
@@ -437,29 +451,34 @@ const { state, actions } = store( NAMESPACE, {
 
 	actions: {
 		*togglePicker() {
-			const { pickerId } = getContext();
-			state.openFor = state.openFor === pickerId ? '' : pickerId;
-			state.error = '';
-			if ( ! state.openFor ) {
+			const context = getContext();
+			if ( state.openFor === context.pickerId ) {
+				state.openFor = '';
 				return;
 			}
-			state.recent = readRecent();
-			state.activeSection = 'recent';
-			/*
-			 * The site's own emoji load with the picker, because the Custom section no longer
-			 * folds and there is nothing left to trigger the fetch. They are also the reason
-			 * most readers opened this: a handful of images, not four thousand.
-			 *
-			 * Their categories start open for the same reason. Folding exists to keep the
-			 * Unicode set out of the DOM; a site's own set is small enough to show, and a
-			 * reader who has to expand a category to find the emoji they came for has been
-			 * given a click for nothing.
-			 */
-			if ( ! state.catalogueLoaded ) {
-				yield* loadCustomCatalogue();
-				const categories = [ ...new Set( state.catalogue.map( ( item ) => `custom:${ item.category || '' }` ) ) ];
-				state.expandedSections = [ ...new Set( [ ...state.expandedSections, ...categories ] ) ];
+			yield* openPicker( context );
+		},
+
+		/**
+		 * The activity feed delegates repeated card controls to one picker host that was hydrated
+		 * on the first page. This handler intentionally sees document clicks so appended controls
+		 * work without needing a private hydration API.
+		 */
+		*openFeedPicker( event ) {
+			const target = event.target instanceof Element ? event.target : null;
+			const trigger = target ? target.closest( '[data-ax-action="reaction"]' ) : null;
+			if ( ! trigger || trigger.disabled || ! trigger.dataset.axObjectUri ) {
+				return;
 			}
+			event.preventDefault();
+			for ( const openTrigger of document.querySelectorAll( '[data-ax-action="reaction"][aria-expanded="true"]' ) ) {
+				openTrigger.setAttribute( 'aria-expanded', 'false' );
+			}
+			trigger.setAttribute( 'aria-expanded', 'true' );
+			const context = getContext();
+			context.objectUri = trigger.dataset.axObjectUri;
+			context.anchorId = trigger.id;
+			yield* openPicker( context );
 		},
 
 		/** Expand or collapse one category. Fetching is tied to first expansion. */
@@ -691,7 +710,8 @@ const { state, actions } = store( NAMESPACE, {
 		 */
 		pickerLifecycle() {
 			const { ref } = getElement();
-			const { pickerId } = getContext();
+			const context = getContext();
+			const { pickerId } = context;
 			// By control, for the same reason `isOpen` is: two cards showing one Object would
 			// otherwise both attach the document listeners the open picker needs.
 			if ( '' === state.openFor || state.openFor !== pickerId ) {
@@ -701,7 +721,7 @@ const { state, actions } = store( NAMESPACE, {
 			// itself, the unified interaction block gives it the shared control class. Matching
 			// only one meant the callback returned early and the popover was never positioned
 			// and never got its outside-click and Escape listeners.
-			const trigger = ref.querySelector( '.axismundi-reaction-button__trigger, .axismundi-interaction__button' );
+			const trigger = context.anchorId ? document.getElementById( context.anchorId ) : ref.querySelector( '.axismundi-reaction-button__trigger, .axismundi-interaction__button' );
 			const picker = ref.querySelector( '.axismundi-reaction-button__picker' );
 			if ( ! trigger || ! picker ) {
 				return;
@@ -712,11 +732,17 @@ const { state, actions } = store( NAMESPACE, {
 			const onDown = withScope( ( event ) => {
 				if ( ! ref.contains( event.target ) ) {
 					state.openFor = '';
+					if ( context.anchorId ) {
+						trigger.setAttribute( 'aria-expanded', 'false' );
+					}
 				}
 			} );
 			const onKey = withScope( ( event ) => {
 				if ( event.key === 'Escape' ) {
 					state.openFor = '';
+					if ( context.anchorId ) {
+						trigger.setAttribute( 'aria-expanded', 'false' );
+					}
 					trigger.focus();
 				}
 			} );

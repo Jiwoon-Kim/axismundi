@@ -294,9 +294,25 @@ function axismundi_op_plaintext_mention_actor( string $token ) : ?Axismundi_Acto
 	if ( '' === $token ) {
 		return null;
 	}
-	$actor = str_contains( $token, '@' )
-		? ( function_exists( 'axismundi_actors_get_by_remote_acct' ) ? axismundi_actors_get_by_remote_acct( $token ) : null )
-		: ( function_exists( 'axismundi_actors_get_by_handle' ) ? axismundi_actors_get_by_handle( $token ) : null );
+	/*
+	 * A remote acct can name a Person and a Group at once, so a written `@name@host` is resolved
+	 * by preference rather than by whichever row comes back first: in every compose box `@name`
+	 * means the account, and a community is mentioned deliberately when there is no person by
+	 * that name. Guessing from row order would make the same mention resolve differently on two
+	 * sites that cached the pair in a different order.
+	 */
+	$actor = null;
+	if ( str_contains( $token, '@' ) && function_exists( 'axismundi_actors_get_all_by_remote_acct' ) ) {
+		foreach ( axismundi_actors_get_all_by_remote_acct( $token ) as $candidate ) {
+			if ( 'Person' === $candidate->get_type() ) {
+				$actor = $candidate;
+				break;
+			}
+			$actor = $actor instanceof Axismundi_Actor ? $actor : $candidate;
+		}
+	} elseif ( ! str_contains( $token, '@' ) && function_exists( 'axismundi_actors_get_by_handle' ) ) {
+		$actor = axismundi_actors_get_by_handle( $token );
+	}
 	return $actor instanceof Axismundi_Actor && 'public' === $actor->get_status() ? $actor : null;
 }
 

@@ -646,7 +646,7 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	}
 	$body = empty( $items )
 		? '<p class="axismundi-forum-topic-list__empty">' . esc_html__( 'No topics yet.', 'axismundi-forum' ) . '</p>'
-		: '<ol class="axismundi-forum-topic-list__items">' . implode( '', $items ) . '</ol>';
+		: '<ul class="axismundi-forum-topic-list__items">' . implode( '', $items ) . '</ul>';
 	// Both community collections page the same way and say so with the same words, so the
 	// pagination is the archive's rather than one this list keeps to itself.
 	$pagination = axismundi_forum_render_archive_pagination( $page, $pages, 'posts' );

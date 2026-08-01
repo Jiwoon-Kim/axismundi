@@ -129,7 +129,9 @@ try {
 	ax_ib_assert(
 		$ax_ib_results,
 		'the block never redeclares the shape the theme owns, nor sizes icons behind the icon system',
-		false === strpos( $stylesheet, 'border-radius' )
+		// The command-menu surface has its own radius. Only the interaction button must inherit
+		// shape from the theme's core-button bridge.
+		0 === preg_match( '#\.axismundi-interaction[^}]*\.axismundi-interaction__button[^}]*border-radius#s', $stylesheet )
 			// The theme's icon rule reads `--md-icon-size`; setting `font-size` on the glyph both
 			// fights that contract and silently changes the size.
 			&& 0 === preg_match( '#\.material-symbols-outlined[^}]*font-size#', $stylesheet )
@@ -265,7 +267,7 @@ try {
 		'Announce opens a menu of two commands when asked and reposts directly when not',
 		false !== strpos( $menu_html, 'role="menu"' )
 			&& 'menu' === ax_ib_button_attr( $menu_html, 'aria-haspopup' )
-			&& false !== strpos( ax_ib_button_attr( $menu_html, 'data-wp-on--click' ), 'openMenu' )
+			&& false !== strpos( ax_ib_button_attr( $menu_html, 'data-wp-on--click' ), 'toggleMenu' )
 			&& '' === ax_ib_button_attr( $direct_html, 'aria-haspopup' )
 			&& false !== strpos( ax_ib_button_attr( $direct_html, 'data-wp-on--click' ), 'toggleAnnounce' )
 	);

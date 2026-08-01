@@ -42,6 +42,9 @@ excluded from public projections.
   the first.
 * Load more is a real cursor link before it is anything else, so the whole feed
   stays reachable without script and by a crawler.
+* The follow control takes its words from the kind of Actor it points at:
+  Subscribe for a community, Follow for a person. The activity sent and the
+  relation stored are unchanged.
 * Paginates by cursor rather than offset: the ledger grows at the head, so
   offset paging would show a reader rows they had already passed.
 * Interaction ownership now follows the surface. In a feed every card renders

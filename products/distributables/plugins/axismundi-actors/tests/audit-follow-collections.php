@@ -196,7 +196,7 @@ try {
 
 	// Remote Actors have no local policy: their server decides, so we publish nothing
 	// about them under our own name.
-	$ax_fc_remote = axismundi_actors_get_by_remote_acct( '@thaumiel999@mastodon.social' );
+	$ax_fc_remote = axismundi_actors_get_by_remote_acct( '@thaumiel999@mastodon.social', 'Person' );
 	if ( $ax_fc_remote instanceof Axismundi_Actor ) {
 		ax_fc_assert(
 			$ax_fc_results,
@@ -229,7 +229,7 @@ try {
 			$ax_fc_remote->get_remote_follow_total( 'following' ),
 		);
 		axismundi_actors_set_remote_follow_totals( $ax_fc_remote->get_identity_id(), 47, 0 );
-		$ax_fc_cached = axismundi_actors_get_by_remote_acct( '@thaumiel999@mastodon.social' );
+		$ax_fc_cached = axismundi_actors_get_by_remote_acct( '@thaumiel999@mastodon.social', 'Person' );
 		ax_fc_assert(
 			$ax_fc_results,
 			'a cached remote total round-trips, and a genuine 0 stays 0 rather than becoming unknown',
@@ -239,7 +239,7 @@ try {
 		);
 
 		axismundi_actors_set_remote_follow_totals( $ax_fc_remote->get_identity_id(), null, null );
-		$ax_fc_unknown = axismundi_actors_get_by_remote_acct( '@thaumiel999@mastodon.social' );
+		$ax_fc_unknown = axismundi_actors_get_by_remote_acct( '@thaumiel999@mastodon.social', 'Person' );
 		ax_fc_assert(
 			$ax_fc_results,
 			'an unreachable collection stores unknown rather than zero, and still records the attempt',

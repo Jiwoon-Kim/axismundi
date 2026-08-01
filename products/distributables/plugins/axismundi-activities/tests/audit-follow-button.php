@@ -111,6 +111,9 @@ try {
 	}
 	ax_follow_button_assert( $ax_follow_button_results, 'REST Follow returns the authoritative Mutual state after local auto-accept', $post_response instanceof WP_REST_Response && 'accepted' === $post_data['state'] && true === $post_data['follows_you'] && 'Mutual' === $post_data['label'] && is_array( $following ) && 'accepted' === $following['state'] );
 
+	$accepted_markup = do_blocks( '<!-- wp:axismundi/follow-button {"actorUri":"' . esc_url_raw( $target->get_uri() ) . '"} /-->' );
+	ax_follow_button_assert( $ax_follow_button_results, 'an accepted relationship renders its pressed state before Interactivity hydrates', str_contains( $accepted_markup, 'axismundi-follow-button__button is-following is-mutual' ) && str_contains( $accepted_markup, 'aria-pressed="true"' ) );
+
 	$delete_request = new WP_REST_Request( 'DELETE', '/axismundi/v1/follows' );
 	$delete_request->set_param( 'target_uri', $target->get_uri() );
 	$delete_response = axismundi_act_rest_unfollow_actor( $delete_request );

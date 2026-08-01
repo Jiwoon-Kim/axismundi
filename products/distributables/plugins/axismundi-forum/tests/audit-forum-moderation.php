@@ -464,6 +464,55 @@ try {
 			&& $remove_wrapper instanceof Axismundi_Activity && $group instanceof Axismundi_Actor && $group->get_uri() === $remove_wrapper->get_actor_uri()
 			&& axismundi_forum_user_can_manage( $group_id, $owner_user )
 	);
+
+	/*
+	 * The roster is its own surface, not a section of the subscriber list.
+	 *
+	 * A Group's manager has no reason to have followed the community they run, so sorting
+	 * moderators to the top of the follower list would silently omit exactly the people the
+	 * reader was looking for. This checks the case that motivated the separation, which is why
+	 * the fixture Group below is deliberately one nobody follows.
+	 */
+	$roster_group = axismundi_actors_create_managed_group( array( 'owner_user_id' => $owner_user, 'preferred_username' => 'axfmodr' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'public' ) );
+	if ( $roster_group instanceof Axismundi_Actor ) {
+		$ax_fmod_identities[] = $roster_group->get_identity_id();
+		$previous_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+		$GLOBALS['axismundi_actors_current_actor'] = $roster_group;
+		$roster = axismundi_forum_render_group_moderators(
+			array(),
+			'',
+			new WP_Block( array( 'blockName' => 'axismundi/group-moderators', 'attrs' => array() ), array( 'axismundi/actorId' => $roster_group->get_uuid() ) )
+		);
+		$GLOBALS['axismundi_actors_current_actor'] = $previous_actor;
+		$roster_follow = $owner instanceof Axismundi_Actor ? axismundi_act_get_relation( 'follow', $owner->get_uri(), $roster_group->get_uri() ) : null;
+
+		ax_fmod_assert(
+			$ax_fmod_results,
+			'the moderator roster lists someone who runs the community even though they never followed it',
+			! is_array( $roster_follow )
+				&& 1 === substr_count( $roster, 'axismundi-group-moderators__item' )
+				&& false !== strpos( $roster, 'axismundi-group-moderators__heading' )
+		);
+
+		$previous_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+		$GLOBALS['axismundi_actors_current_actor'] = $owner;
+		$person_roster = $owner instanceof Axismundi_Actor
+			? axismundi_forum_render_group_moderators( array(), '', new WP_Block( array( 'blockName' => 'axismundi/group-moderators', 'attrs' => array() ), array( 'axismundi/actorId' => $owner->get_uuid() ) ) )
+			: 'not-empty';
+		$GLOBALS['axismundi_actors_current_actor'] = $previous_actor;
+		$group_tpl  = get_block_template( 'axismundi-actors//actor-group-profile', 'wp_template' );
+		$person_tpl = get_block_template( 'axismundi-actors//actor-person-profile', 'wp_template' );
+		ax_fmod_assert(
+			$ax_fmod_results,
+			'the roster renders nothing for a Person and is placed only in the Group profile template',
+			'' === $person_roster
+				&& $group_tpl instanceof WP_Block_Template
+				&& $person_tpl instanceof WP_Block_Template
+				&& false !== strpos( $group_tpl->content, 'wp:axismundi/group-moderators' )
+				&& false === strpos( $person_tpl->content, 'wp:axismundi/group-moderators' )
+		);
+	}
+
 } finally {
 	foreach ( $ax_fmod_posts as $post_id ) { wp_delete_post( $post_id, true ); }
 	foreach ( $ax_fmod_identities as $identity_id ) {

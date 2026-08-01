@@ -109,10 +109,11 @@ function axismundi_act_describe_announce_interaction( array $attributes, WP_Bloc
 	 * pointing `aria-controls` at an id that is not on the page — describes a control that does
 	 * not exist. The disabled button already says the true thing on its own.
 	 */
-	$renders_menu = ! empty( $attributes['announceMenu'] )
-		&& $can_announce
-		&& function_exists( 'axismundi_dialogs_render_interaction_dialog' );
-	$dialog_id    = $renders_menu ? 'ax-announce-menu-' . wp_unique_id() : '';
+	$delegated    = axismundi_act_interaction_is_delegated();
+	$renders_menu = ! empty( $attributes['announceMenu'] ) && $can_announce;
+	$menu_id      = $renders_menu ? wp_unique_id( 'ax-announce-menu-' ) : '';
+	$anchor_id    = $renders_menu ? wp_unique_id( 'ax-announce-trigger-' ) : '';
+	axismundi_act_seed_announce_menu_state();
 
 	$context = array(
 		'objectUri'     => $object_uri,
@@ -121,46 +122,28 @@ function axismundi_act_describe_announce_interaction( array $attributes, WP_Bloc
 		'isPending'     => false,
 		'canAnnounce'   => $can_announce,
 		'isDisabled'    => ! $can_announce,
-		'dialogId'      => $dialog_id,
+		'menuId'        => $menu_id,
+		'anchorId'      => $anchor_id,
+		'quoteUrl'      => $quote_url,
 		'endpoint'      => rest_url( 'axismundi/v1/announces' ),
 		'nonce'         => $can_announce ? wp_create_nonce( 'wp_rest' ) : '',
 		'error'         => '',
 		'errorFallback' => __( 'The repost could not be saved.', 'axismundi-activities' ),
 	);
 
-	$after = '';
-	if ( $renders_menu ) {
-		$body = '<div class="axismundi-announce-menu" role="menu">'
-			. '<button type="button" role="menuitem" class="axismundi-announce-menu__action" data-wp-on--click="actions.toggleAnnounce" data-wp-bind--disabled="context.isDisabled">'
-			. '<span class="material-symbols-outlined" aria-hidden="true">sync</span> '
-			. '<span data-wp-text="state.announceLabel">' . esc_html__( 'Repost', 'axismundi-activities' ) . '</span></button>';
-		if ( '' !== $quote_url ) {
-			$body .= '<a role="menuitem" class="axismundi-announce-menu__action" href="' . esc_url( $quote_url ) . '">'
-				. '<span class="material-symbols-outlined" aria-hidden="true">format_quote</span> '
-				. esc_html__( 'Quote', 'axismundi-activities' ) . '</a>';
-		}
-		$body .= '</div>';
-		$after = axismundi_dialogs_render_interaction_dialog(
-			array(
-				'id'              => $dialog_id,
-				'title'           => __( 'Repost or quote', 'axismundi-activities' ),
-				'body'            => $body,
-				'close_action'    => 'actions.closeMenu',
-				'cancel_action'   => 'actions.onMenuCancel',
-				'backdrop_action' => 'actions.onMenuBackdrop',
-			)
-		);
-	}
+	$after = $renders_menu && ! $delegated ? axismundi_act_render_announce_menu( $menu_id ) : '';
 
 	$bindings = array(
-		'data-wp-on--click'          => $renders_menu ? 'actions.openMenu' : 'actions.toggleAnnounce',
+		'data-wp-on--click'          => $renders_menu ? 'actions.toggleMenu' : 'actions.toggleAnnounce',
 		'data-wp-bind--disabled'     => 'context.isDisabled',
 		'data-wp-class--is-selected' => 'context.isAnnounced',
 		'data-wp-bind--aria-pressed' => 'context.isAnnounced',
 	);
 	if ( $renders_menu ) {
 		$bindings['aria-haspopup'] = 'menu';
-		$bindings['aria-controls'] = $dialog_id;
+		$bindings['aria-controls'] = $menu_id;
+		$bindings['id']            = $anchor_id;
+		$bindings['data-wp-bind--aria-expanded'] = 'state.isMenuOpen';
 	}
 
 	return array(
@@ -179,13 +162,80 @@ function axismundi_act_describe_announce_interaction( array $attributes, WP_Bloc
 		'context'    => $context,
 		'bindings'   => $bindings,
 		'delegated'  => array(
-			'data-ax-action'     => 'announce',
+			'data-ax-action'     => $renders_menu ? 'announce-menu' : 'announce',
 			'data-ax-object-uri' => $object_uri,
 			'data-ax-endpoint'   => (string) $context['endpoint'],
 			'data-ax-nonce'      => (string) $context['nonce'],
-		),
+		) + ( $renders_menu ? array(
+			'id'                 => $anchor_id,
+			'aria-haspopup'      => 'menu',
+			'aria-expanded'      => 'false',
+			'data-ax-quote-url'  => $quote_url,
+		) : array() ),
 		'after'      => $after,
 	);
+}
+
+/** Seed server-visible values for menu directives whose client getters take over on hydration. */
+function axismundi_act_seed_announce_menu_state() : void {
+	static $seeded = false;
+	if ( $seeded ) {
+		return;
+	}
+	wp_interactivity_state(
+		'axismundi/announce-button',
+		array(
+			'menuOpenFor' => '',
+			'isMenuOpen'  => false,
+			'isMenuHidden' => true,
+		)
+	);
+	$seeded = true;
+}
+
+/** The compact command menu shared by a standalone Announce and the feed-level host. */
+function axismundi_act_render_announce_menu( string $menu_id ) : string {
+	return '<div class="axismundi-announce-menu" role="menu" id="' . esc_attr( $menu_id ) . '" hidden'
+		. ' data-wp-bind--hidden="state.isMenuHidden" data-wp-class--is-open="state.isMenuOpen">'
+		. '<button type="button" role="menuitem" class="axismundi-announce-menu__action" data-wp-on--click="actions.toggleAnnounce" data-wp-bind--disabled="context.isDisabled">'
+		. '<span class="material-symbols-outlined" aria-hidden="true">sync</span> <span data-wp-text="state.announceLabel">' . esc_html__( 'Repost', 'axismundi-activities' ) . '</span></button>'
+		. '<a role="menuitem" class="axismundi-announce-menu__action" data-wp-bind--href="context.quoteUrl" data-wp-bind--hidden="!context.quoteUrl">'
+		. '<span class="material-symbols-outlined" aria-hidden="true">format_quote</span> ' . esc_html__( 'Quote', 'axismundi-activities' ) . '</a>'
+		. '</div>';
+}
+
+/** Render the one hydrated announce menu a delegated activity feed shares. */
+function axismundi_act_render_feed_announce_menu_host() : string {
+	$actor = axismundi_act_current_local_actor();
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return '';
+	}
+	axismundi_act_seed_announce_menu_state();
+	if ( function_exists( 'wp_enqueue_script_module' ) ) {
+		wp_enqueue_script_module( 'axismundi-interaction-announce' );
+	}
+	$menu_id = wp_unique_id( 'ax-announce-feed-' );
+	$context = array(
+		'objectUri'     => '',
+		'menuId'        => $menu_id,
+		'anchorId'      => '',
+		'quoteUrl'      => '',
+		'announces'     => 0,
+		'isAnnounced'   => false,
+		'isPending'     => false,
+		'canAnnounce'   => false,
+		'isDisabled'    => true,
+		'endpoint'      => rest_url( 'axismundi/v1/announces' ),
+		'nonce'         => wp_create_nonce( 'wp_rest' ),
+		'error'         => '',
+		'errorFallback' => __( 'The repost could not be saved.', 'axismundi-activities' ),
+	);
+	return '<div class="axismundi-announce-menu-host" data-wp-interactive="axismundi/announce-button" '
+		. wp_interactivity_data_wp_context( $context )
+		. ' data-wp-on-document--click="actions.openFeedMenu" data-wp-watch="callbacks.menuLifecycle">'
+		. axismundi_act_render_announce_menu( $menu_id )
+		. '<span class="axismundi-interaction__status" data-wp-text="context.error" aria-live="polite"></span>'
+		. '</div>';
 }
 
 /** Offer Announce as an interaction type. */
@@ -202,4 +252,3 @@ function axismundi_act_register_announce_interaction_type() : void {
 	}
 }
 add_action( 'axismundi_act_register_interaction_types', 'axismundi_act_register_announce_interaction_type' );
-

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.19
+Stable tag: 0.9.22
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,45 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.22 =
+* Adds a moderator roster to the Group profile: the complete, unpaginated set of
+  people who run a community. It is its own surface rather than a section of the
+  subscriber list because a Group's manager has no reason to have followed the
+  community they run -- sorting moderators to the top of that list would have
+  silently omitted exactly the people a reader was looking for, and a paginated
+  list only shows them on page one anyway.
+* Marks moderators in a community's subscriber list. The role is answered by
+  this plugin because it owns the permission; the list never infers it from the
+  Follow relation, and ordinary subscribers are not labelled members.
+
+= 0.9.21 =
+* The community surface on a Person profile is now a browsable archive rather
+  than a feed: numbered pages, a list of titles with a short preview, and links
+  that keep working when someone returns to them. A cursor cannot express
+  "page 3", and an archive is a thing readers come back to.
+* Caches the selection for each page briefly, never the rendered rows. What a
+  reader may see, and any control on a row, is theirs alone; only the list of
+  object URIs is shared. A generation counter per Actor invalidates every page
+  at once when that person posts, edits, deletes, or undoes.
+* Remote Group submissions keep including Public. A remote server's policy is
+  the authoritative one, there is no trustworthy visibility field to read, and
+  guessing would have peers reject the submission outright; submitting to a
+  remote community is treated as accepting public distribution.
+
+= 0.9.20 =
+* A Topic in a member-distributed community is now withheld from readers who
+  are not entitled to it, on the HTML permalink as well as in the
+  ActivityStreams projection. Previously only the federated representation was
+  protected, so anyone with the URL could read the post in a browser.
+* The refusal is a 404 rather than a notice: telling a stranger that a post
+  exists but is for members still discloses that it exists, who wrote it, and
+  what it is about, which is the disclosure a closed community is avoiding.
+* Restricted Topics are also kept out of search results and archives for those
+  readers, since a title in a listing discloses the same thing.
+* The author of a Topic can always read it. Membership can be revoked and a
+  community can change its distribution scope afterwards, and neither should
+  take someone's own post away from them.
 
 = 0.9.19 =
 * The community vote control renders as presentation on a surface that owns its

@@ -48,7 +48,17 @@ $axismundi_follow_total = $axismundi_follow_is_remote
 $axismundi_follow_wrapper = get_block_wrapper_attributes();
 ?>
 <section <?php echo $axismundi_follow_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated block wrapper attributes. ?>>
-	<h1><?php echo esc_html( 'followers' === $axismundi_follow_kind ? __( 'Followers', 'axismundi-actors' ) : __( 'Following', 'axismundi-actors' ) ); ?></h1>
+	<?php
+	/*
+	 * A community's followers are its subscribers. One relation, two vocabularies: nothing about
+	 * what is stored or federated changes here, only what the list is called, because "Followers"
+	 * on a community reads as if the community were a person.
+	 */
+	$axismundi_follow_words = axismundi_actors_follow_vocabulary( $axismundi_follow_actor->get_type() );
+	// Roles are asked for once, for the whole page, rather than per row.
+	$axismundi_follow_roles = axismundi_actors_follow_list_roles( $axismundi_follow_actor, (array) $axismundi_follow_data['items'] );
+	?>
+	<h1><?php echo esc_html( 'followers' === $axismundi_follow_kind ? $axismundi_follow_words['inbound'] : $axismundi_follow_words['outbound'] ); ?></h1>
 
 	<?php if ( $axismundi_follow_is_remote ) : ?>
 		<p class="ax-actor-follow-list__scope">
@@ -102,6 +112,18 @@ $axismundi_follow_wrapper = get_block_wrapper_attributes();
 							<span>
 								<strong><?php echo esc_html( '' !== $axismundi_follow_name ? $axismundi_follow_name : $axismundi_follow_related->get_preferred_username() ); ?></strong>
 								<small><?php echo esc_html( $axismundi_follow_handle ); ?></small>
+								<?php
+								/*
+								 * Whoever runs the community is shown running it. A reader
+								 * scanning a subscriber list expects to be able to tell, and
+								 * the role is a permission the forum owns -- it is asked for
+								 * here, never inferred from the relation.
+								 */
+								$axismundi_follow_role = (string) ( $axismundi_follow_roles[ $axismundi_follow_uri ] ?? '' );
+								if ( '' !== $axismundi_follow_role ) :
+									?>
+									<span class="ax-actor-follow-list__role"><?php echo esc_html( $axismundi_follow_role ); ?></span>
+								<?php endif; ?>
 							</span>
 						</a>
 					<?php else : ?>

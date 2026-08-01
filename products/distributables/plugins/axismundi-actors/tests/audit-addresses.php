@@ -34,8 +34,23 @@ try {
 
 	// Schema gate.
 	$cols    = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$addresses}" ); // phpcs:ignore WordPress.DB
-	$indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" ); // phpcs:ignore WordPress.DB
-	ax_addr_assert( $ax_addr_results, 'the address ledger has a unique address_hash and the version is recorded (v5+)', in_array( 'address_hash', $cols, true ) && ! empty( $indexes ) && (int) get_option( 'ax_actors_db_version' ) >= 5 );
+	/*
+	 * Uniqueness is per kind of Actor, not global. A Person and a Group may hold the same acct
+	 * on one host -- Lemmy allows exactly that -- and under a global unique key the second one
+	 * cached was refused its address entirely and became unreachable by handle.
+	 */
+	$indexes = (array) $wpdb->get_results( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_kind'", ARRAY_A ); // phpcs:ignore WordPress.DB
+	$columns_in_key = array_column( $indexes, 'Column_name' );
+	$legacy_global  = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" ); // phpcs:ignore WordPress.DB
+	ax_addr_assert(
+		$ax_addr_results,
+		'the address ledger keys acct uniqueness on the Actor kind, not on the address alone',
+		in_array( 'address_hash', $cols, true )
+			&& in_array( 'actor_kind', $cols, true )
+			&& array( 'address_hash', 'actor_kind' ) === $columns_in_key
+			&& empty( $legacy_global )
+			&& (float) get_option( 'ax_actors_db_version' ) >= 15
+	);
 
 	// register_handle writes a primary local_handle address the ledger can resolve.
 	$u1 = (int) wp_insert_user( array( 'user_login' => 'ax_addr_alice', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );

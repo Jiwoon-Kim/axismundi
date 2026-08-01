@@ -21,6 +21,17 @@ function axismundi_actors_rewrite_rules() : array {
 		'^\.well-known/webfinger/?$'      => 'index.php?ax_webfinger=1',
 		'^\.well-known/nodeinfo/?$'       => 'index.php?ax_nodeinfo=discovery',
 		'^nodeinfo/2\.1/?$'               => 'index.php?ax_nodeinfo=2.1',
+		/*
+		 * Groups live in their own namespace.
+		 *
+		 * A handle does not identify an Actor on the fediverse at large: Lemmy lets a Person and
+		 * a Community share one on the same host, so `@name@host` can name two different Actors
+		 * and `/@name@host` alone cannot say which. Separating the address space is what makes
+		 * both reachable. `group` rather than `forum` because a Group is an identity, not a
+		 * forum feature — the same Actor may later own media, events, or documents.
+		 */
+		'^group/@([^/]+)/(followers|following)/?$' => 'index.php?ax_actor_handle=$matches[1]&ax_actor_kind=Group&ax_actor_collection=$matches[2]',
+		'^group/@([^/]+)/?$'               => 'index.php?ax_actor_handle=$matches[1]&ax_actor_kind=Group',
 		'^@([^/]+)/(followers|following)/?$' => 'index.php?ax_actor_handle=$matches[1]&ax_actor_collection=$matches[2]',
 		'^actors/([0-9a-fA-F-]{36})/(followers|following)/?$' => 'index.php?ax_actor=$matches[1]&ax_actor_collection=$matches[2]',
 		'^actors/([0-9a-fA-F-]{36})/?$'                       => 'index.php?ax_actor=$matches[1]',
@@ -114,6 +125,7 @@ add_action( 'init', 'axismundi_actors_maybe_upgrade_rewrite_rules', 11 );
 function axismundi_actors_query_vars( array $vars ) : array {
 	$vars[] = 'ax_actor';
 	$vars[] = 'ax_actor_handle';
+	$vars[] = 'ax_actor_kind';
 	$vars[] = 'ax_actor_collection';
 	$vars[] = 'ax_group_directory';
 	$vars[] = 'ax_webfinger';
@@ -183,7 +195,7 @@ function axismundi_actors_can_view( Axismundi_Actor $actor, ?int $user_id = null
  * @param string $handle Handle query value.
  * @return Axismundi_Actor|null
  */
-function axismundi_actors_resolve_request_actor( string $uuid, string $handle ) : ?Axismundi_Actor {
+function axismundi_actors_resolve_request_actor( string $uuid, string $handle, string $kind = '' ) : ?Axismundi_Actor {
 	if ( '' !== $uuid ) {
 		if ( 1 !== preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $uuid ) ) {
 			return null;
@@ -194,9 +206,24 @@ function axismundi_actors_resolve_request_actor( string $uuid, string $handle ) 
 	if ( '' === $handle ) {
 		return null;
 	}
-	return str_contains( $handle, '@' )
-		? axismundi_actors_get_by_remote_acct( $handle )
-		: axismundi_actors_get_by_handle( $handle );
+	/*
+	 * Which namespace the request came through decides which kind of Actor is being asked for.
+	 * `/@handle` is the Person surface and `/group/@handle` the Group one, because a handle alone
+	 * does not identify an Actor: Lemmy lets a Person and a Community share one on a host, and
+	 * answering with whichever was cached first makes the address mean different things on
+	 * different sites.
+	 */
+	$kind = 'Group' === $kind ? 'Group' : 'Person';
+	if ( str_contains( $handle, '@' ) ) {
+		return axismundi_actors_get_by_remote_acct( $handle, $kind );
+	}
+	$actor = axismundi_actors_get_by_handle( $handle );
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return null;
+	}
+	// A local handle is unique across kinds, so the lookup cannot be ambiguous — but a Group
+	// answering on the Person surface, or the reverse, would make two addresses for one Actor.
+	return ( 'Group' === $actor->get_type() ) === ( 'Group' === $kind ) ? $actor : null;
 }
 
 /**
@@ -355,7 +382,7 @@ function axismundi_actors_routed_handle_alias_actor() : ?Axismundi_Actor {
 	if ( '' === $handle ) {
 		return null;
 	}
-	$actor = axismundi_actors_resolve_request_actor( '', $handle );
+	$actor = axismundi_actors_resolve_request_actor( '', $handle, (string) get_query_var( 'ax_actor_kind' ) );
 	return $actor instanceof Axismundi_Actor && axismundi_actors_can_view( $actor ) ? $actor : null;
 }
 
@@ -420,6 +447,37 @@ function axismundi_actors_redirect_identity_trailing_slash() : void {
 	exit;
 }
 add_action( 'template_redirect', 'axismundi_actors_redirect_identity_trailing_slash', 1 );
+
+/**
+ * Send a local Group's old `/@handle` address to its namespace.
+ *
+ * Only a local Group. A remote `@handle@host` under the old scheme was answered by whichever of
+ * a Person and a Group happened to be cached first, so it never named one Actor reliably and
+ * must not be treated as a canonical address to redirect from — a 301 would make an accident
+ * permanent. Those are simply not answered on this surface any more.
+ *
+ * @return void
+ */
+function axismundi_actors_redirect_local_group_handle() : void {
+	if ( 'Group' === (string) get_query_var( 'ax_actor_kind' ) ) {
+		return;
+	}
+	$handle = (string) get_query_var( 'ax_actor_handle' );
+	if ( '' === $handle || str_contains( $handle, '@' ) ) {
+		return;
+	}
+	$actor = axismundi_actors_get_by_handle( rawurldecode( $handle ) );
+	if ( ! $actor instanceof Axismundi_Actor || 'Group' !== $actor->get_type() ) {
+		return;
+	}
+	$target = $actor->get_profile_url();
+	if ( '' === $target ) {
+		return;
+	}
+	wp_safe_redirect( $target, 301 );
+	exit;
+}
+add_action( 'template_redirect', 'axismundi_actors_redirect_local_group_handle', 0 );
 
 /** Redirect the tolerated trailing-slash alias to the compact canonical hub. */
 function axismundi_actors_redirect_handle_alias_trailing_slash() : void {
@@ -515,7 +573,7 @@ function axismundi_actors_resolve_unrouted_actor_request( WP $wp ) : void {
 		return;
 	}
 
-	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle );
+	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle, (string) $query->get( 'ax_actor_kind' ) );
 	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_view( $actor ) ) {
 		return;
 	}
@@ -685,7 +743,7 @@ function axismundi_actors_handle_profile_request( bool $preempt, WP_Query $query
 		return $preempt;
 	}
 
-	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle );
+	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle, (string) $query->get( 'ax_actor_kind' ) );
 	$collection = (string) $query->get( 'ax_actor_collection' );
 	if ( ! $actor || ! axismundi_actors_can_view( $actor ) || ( '' !== $collection && ! axismundi_actors_follow_collection_page_is_available( $actor ) ) ) {
 		$GLOBALS['axismundi_actors_current_actor'] = null;

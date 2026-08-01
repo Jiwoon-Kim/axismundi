@@ -250,3 +250,92 @@ function axismundi_forum_register_moderator_collection_route() : void {
 	);
 }
 add_action( 'rest_api_init', 'axismundi_forum_register_moderator_collection_route' );
+
+/**
+ * Mark the Actors in a Group's subscriber list who run it.
+ *
+ * A moderator is a permission this plugin owns, not a kind of Follow, so Actors asks rather than
+ * infers. Membership is a third thing again and is deliberately not labelled here: every accepted
+ * member would carry a badge, which tells a reader nothing they came to find out.
+ *
+ * @param array<string,string> $roles    Actor URI => role label.
+ * @param Axismundi_Actor      $group    Group being listed.
+ * @param string[]             $subjects Actor URIs in the list.
+ * @return array<string,string>
+ */
+function axismundi_forum_follow_list_roles( array $roles, Axismundi_Actor $group, array $subjects ) : array {
+	if ( ! $group->is_local() || ! axismundi_forum_is_community( $group->get_identity_id() ) ) {
+		return $roles;
+	}
+	$wanted = array_flip( array_map( 'strval', $subjects ) );
+	foreach ( axismundi_forum_effective_moderators( $group->get_identity_id() ) as $moderator ) {
+		$uri = $moderator->get_uri();
+		if ( isset( $wanted[ $uri ] ) ) {
+			$roles[ $uri ] = __( 'Moderator', 'axismundi-forum' );
+		}
+	}
+	return $roles;
+}
+add_filter( 'axismundi_actors_follow_list_roles', 'axismundi_forum_follow_list_roles', 10, 3 );
+
+/**
+ * Render the people who run one community.
+ *
+ * A roster, deliberately not a paginated list. `axismundi_forum_effective_moderators()` returns
+ * the complete set — explicit moderator memberships plus the Group's managers — and it is small
+ * by nature, so it is shown whole. That completeness is the reason this is its own surface rather
+ * than a section of the subscriber list: a manager has no reason to have followed the community
+ * they run, so sorting moderators to the top of that list would silently omit them.
+ *
+ * @param array<string,mixed> $attributes Block attributes.
+ * @param string              $content    Block content.
+ * @param WP_Block|null       $block      Block instance.
+ * @return string
+ */
+function axismundi_forum_render_group_moderators( array $attributes = array(), string $content = '', ?WP_Block $block = null ) : string {
+	unset( $content );
+	$actor = function_exists( 'axismundi_actors_resolve_block_actor' )
+		? axismundi_actors_resolve_block_actor( (string) ( $block->context['axismundi/actorId'] ?? '' ) )
+		: null;
+	if ( ! $actor instanceof Axismundi_Actor
+		|| 'Group' !== $actor->get_type()
+		|| ! $actor->is_local()
+		|| ! axismundi_forum_is_community( $actor->get_identity_id() )
+	) {
+		return '';
+	}
+	$moderators = axismundi_forum_effective_moderators( $actor->get_identity_id() );
+	if ( empty( $moderators ) ) {
+		// A community with no one visible running it says nothing rather than showing an empty
+		// heading, which reads as a fault rather than as an absence.
+		return '';
+	}
+	$items = array();
+	foreach ( $moderators as $moderator ) {
+		$handle = function_exists( 'axismundi_actors_federated_mention_name' )
+			? axismundi_actors_federated_mention_name( $moderator )
+			: '@' . $moderator->get_preferred_username();
+		$name  = $moderator->get_display_name();
+		$name  = '' !== $name ? $name : $moderator->get_preferred_username();
+		$url   = function_exists( 'axismundi_actors_profile_hub_url' ) ? axismundi_actors_profile_hub_url( $moderator ) : '';
+		$inner = ( function_exists( 'axismundi_actors_avatar_html' ) ? axismundi_actors_avatar_html( $moderator, 32 ) : '' )
+			. '<span class="axismundi-group-moderators__name">' . esc_html( $name ) . '</span>'
+			. '<span class="axismundi-group-moderators__handle">' . esc_html( $handle ) . '</span>';
+		$items[] = '<li class="axismundi-group-moderators__item">'
+			. ( '' !== $url ? '<a href="' . esc_url( $url ) . '">' . $inner . '</a>' : $inner )
+			. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Parts escaped above; avatar markup is repository-built.
+	}
+	$heading = ! isset( $attributes['showHeading'] ) || (bool) $attributes['showHeading']
+		? '<h2 class="axismundi-group-moderators__heading">' . esc_html( _n( 'Moderator', 'Moderators', count( $items ), 'axismundi-forum' ) ) . '</h2>'
+		: '';
+	$wrapper = null === WP_Block_Supports::$block_to_render
+		? 'class="wp-block-axismundi-group-moderators"'
+		: get_block_wrapper_attributes();
+	return '<div ' . $wrapper . '>' . $heading . '<ul class="axismundi-group-moderators__list">' . implode( '', $items ) . '</ul></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wrapper is a literal or core-escaped; items escaped above.
+}
+
+/** Register the moderators roster block. */
+function axismundi_forum_register_group_moderators_block() : void {
+	register_block_type( dirname( __DIR__ ) . '/blocks/group-moderators', array( 'render_callback' => 'axismundi_forum_render_group_moderators' ) );
+}
+add_action( 'init', 'axismundi_forum_register_group_moderators_block', 20 );

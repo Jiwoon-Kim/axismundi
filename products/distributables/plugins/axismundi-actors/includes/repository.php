@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACTORS_DB_VERSION = '14.0';
+const AXISMUNDI_ACTORS_DB_VERSION = '15.0';
 
 /** @return string identities table name. */
 function axismundi_actors_identities_table() : string {
@@ -212,6 +212,8 @@ function axismundi_actors_install() : void {
 	);
 
 	$addresses = axismundi_actors_addresses_table();
+	// An acct is unique per Actor kind: a Person and a Group may share one handle on a host.
+	// Keep this outside the SQL literal; dbDelta() parses every line as a column or index rule.
 	dbDelta(
 		"CREATE TABLE {$addresses} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -219,12 +221,13 @@ function axismundi_actors_install() : void {
 			address_type varchar(16) NOT NULL,
 			address varchar(191) NOT NULL,
 			address_hash char(64) NOT NULL,
+			actor_kind varchar(16) NOT NULL DEFAULT '',
 			status varchar(12) NOT NULL,
 			verified_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
 			retired_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
-			UNIQUE KEY address_hash (address_hash),
+			UNIQUE KEY address_kind (address_hash, actor_kind),
 			KEY identity_status (identity_id, status)
 		) ENGINE=InnoDB {$charset};"
 	);
@@ -518,7 +521,30 @@ function axismundi_actors_install() : void {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$profile_field_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$profile_fields}" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
-	$address_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" );
+	/*
+	 * Replace the global acct uniqueness with per-kind uniqueness.
+	 *
+	 * `dbDelta()` adds the column but will not drop an existing UNIQUE key, so the index swap is
+	 * explicit. The backfill runs first: rows written before this migration carry no kind, and
+	 * an index built over an empty kind would collapse every one of them onto a single slot.
+	 */
+	$address_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$addresses}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	if ( in_array( 'actor_kind', $address_columns, true ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time backfill on a custom table.
+		$wpdb->query( "UPDATE {$addresses} ad INNER JOIN {$actors} ac ON ac.identity_id = ad.identity_id SET ad.actor_kind = ac.actor_type WHERE ad.actor_kind = ''" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+		$legacy_unique = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_hash'" );
+		if ( ! empty( $legacy_unique ) ) {
+			$wpdb->query( "ALTER TABLE {$addresses} DROP INDEX address_hash" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time index swap.
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+		$kind_unique = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_kind'" );
+		if ( empty( $kind_unique ) ) {
+			$wpdb->query( "ALTER TABLE {$addresses} ADD UNIQUE KEY address_kind (address_hash, actor_kind)" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time index swap.
+		}
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
+	$address_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$addresses} WHERE Key_name = 'address_kind'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
 	$instance_indexes = (array) $wpdb->get_col( "SHOW INDEX FROM {$instances} WHERE Key_name = 'host_hash'" );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- schema self-check on a custom table.
@@ -705,9 +731,21 @@ final class Axismundi_Actor {
 			if ( '' === $handle ) {
 				return ''; // A handle-less (not-yet-registered) local actor has no /@ alias.
 			}
-			return get_option( 'permalink_structure' )
-				? home_url( '/@' . rawurlencode( $handle ) )
-				: add_query_arg( 'ax_actor_handle', $handle, home_url( '/' ) );
+			/*
+			 * A Group is addressed under its own namespace, because a handle does not identify an
+			 * Actor across the fediverse: a Person and a Community may share one on the same host.
+			 * Keeping both in `/@handle` would mean two Actors competing for one address, which is
+			 * decided by whichever was cached first — an answer that differs from site to site.
+			 */
+			$prefix = 'Group' === $this->get_type() ? '/group/@' : '/@';
+			if ( ! get_option( 'permalink_structure' ) ) {
+				$query = array( 'ax_actor_handle' => $handle );
+				if ( 'Group' === $this->get_type() ) {
+					$query['ax_actor_kind'] = 'Group';
+				}
+				return add_query_arg( $query, home_url( '/' ) );
+			}
+			return home_url( $prefix . rawurlencode( $handle ) );
 		}
 		return (string) ( $this->row['profile_url'] ?? '' );
 	}
@@ -960,20 +998,59 @@ function axismundi_actors_get_by_handle( string $handle ) : ?Axismundi_Actor {
  * @param string $acct Bare or `@`-prefixed acct address.
  * @return Axismundi_Actor|null
  */
-function axismundi_actors_get_by_remote_acct( string $acct ) : ?Axismundi_Actor {
+function axismundi_actors_get_by_remote_acct( string $acct, string $kind = '' ) : ?Axismundi_Actor {
 	$acct = strtolower( ltrim( trim( $acct ), '@' ) );
 	if ( '' === $acct || ! str_contains( $acct, '@' ) ) {
 		return null;
 	}
 	$addresses = axismundi_actors_addresses_table();
 	$hash      = axismundi_actors_address_hash( 'acct', $acct );
+	/*
+	 * An acct alone no longer identifies an Actor: a Person and a Group may share one. A caller
+	 * that knows which it wants says so; a caller that does not gets nothing rather than
+	 * whichever row the database happened to return first, because "first" here means "cached
+	 * first", which differs from site to site and is not an answer.
+	 */
+	if ( '' === $kind ) {
+		return null;
+	}
 	return axismundi_actors_query_one(
-		"i.origin = %s AND EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address_type = %s AND ad.address_hash = %s AND ad.status = %s)",
+		"i.origin = %s AND EXISTS (SELECT 1 FROM {$addresses} ad WHERE ad.identity_id = i.id AND ad.address_type = %s AND ad.address_hash = %s AND ad.actor_kind = %s AND ad.status = %s)",
 		'remote',
 		'acct',
 		$hash,
+		$kind,
 		'primary'
 	);
+}
+
+/**
+ * Every cached remote Actor holding one acct, whatever their kind.
+ *
+ * For the callers that genuinely have to disambiguate — a routing layer deciding which surface a
+ * handle belongs to, an admin screen showing what a host has sent us.
+ *
+ * @param string $acct Bare or `@`-prefixed acct address.
+ * @return Axismundi_Actor[]
+ */
+function axismundi_actors_get_all_by_remote_acct( string $acct ) : array {
+	$acct = strtolower( ltrim( trim( $acct ), '@' ) );
+	if ( '' === $acct || ! str_contains( $acct, '@' ) ) {
+		return array();
+	}
+	$found = array();
+	foreach ( axismundi_actors_kinds() as $kind ) {
+		$actor = axismundi_actors_get_by_remote_acct( $acct, $kind );
+		if ( $actor instanceof Axismundi_Actor ) {
+			$found[] = $actor;
+		}
+	}
+	return $found;
+}
+
+/** The Actor types this site stores addresses for. */
+function axismundi_actors_kinds() : array {
+	return array( 'Person', 'Group', 'Organization', 'Application', 'Service' );
 }
 
 /**
@@ -1946,20 +2023,31 @@ function axismundi_actors_record_verified_acct_address( int $identity_id, string
 		return false;
 	}
 	$addresses = axismundi_actors_addresses_table();
+	$actors    = axismundi_actors_actors_table();
 	$hash      = axismundi_actors_address_hash( 'acct', $acct );
 	$now       = current_time( 'mysql', true );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
-	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$addresses} WHERE address_hash = %s", $hash ) );
+	/*
+	 * The address belongs to an acct *and a kind of Actor*. A Person and a Group on the same
+	 * host may legitimately share a handle, and the row is scoped so each can own its own.
+	 */
+	$kind = (string) $wpdb->get_var( $wpdb->prepare( "SELECT actor_type FROM {$actors} WHERE identity_id = %d", $identity_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom actor ledger.
+	if ( '' === $kind ) {
+		return false;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
+	$existing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$addresses} WHERE address_hash = %s AND actor_kind = %s", $hash, $kind ) );
 	if ( $existing > 0 ) {
-		$owner = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$addresses} WHERE id = %d", $existing ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
+		$owner = (int) $wpdb->get_var( $wpdb->prepare( "SELECT identity_id FROM {$addresses} WHERE id = %d", $existing ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom address ledger.
+		// Two Actors of the same kind claiming one acct is still a genuine conflict, and the
+		// first verified owner keeps it.
 		if ( $owner !== $identity_id ) {
 			return false;
 		}
 		$done = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$addresses,
-			array( 'address_type' => 'acct', 'address' => $acct, 'status' => 'primary', 'verified_at' => $now, 'retired_at' => null ),
+			array( 'address_type' => 'acct', 'address' => $acct, 'actor_kind' => $kind, 'status' => 'primary', 'verified_at' => $now, 'retired_at' => null ),
 			array( 'id' => $existing ),
-			array( '%s', '%s', '%s', '%s', '%s' ),
+			array( '%s', '%s', '%s', '%s', '%s', '%s' ),
 			array( '%d' )
 		);
 		return false !== $done;
@@ -1971,11 +2059,12 @@ function axismundi_actors_record_verified_acct_address( int $identity_id, string
 			'address_type' => 'acct',
 			'address'      => $acct,
 			'address_hash' => $hash,
+			'actor_kind'   => $kind,
 			'status'       => 'primary',
 			'verified_at'  => $now,
 			'created_at'   => $now,
 		),
-		array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 	);
 	return false !== $done;
 }

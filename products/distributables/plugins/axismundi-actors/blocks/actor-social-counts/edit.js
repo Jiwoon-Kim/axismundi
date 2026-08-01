@@ -3,17 +3,27 @@
  */
 ( function ( blocks, blockEditor, components, element, i18n ) {
 	var el = element.createElement;
-	var __ = i18n.__;
 	blocks.registerBlockType( 'axismundi/actor-social-counts', {
 		edit: function () {
 			return el(
-				'div',
+				'ul',
 				blockEditor.useBlockProps( { className: 'is-editor-preview' } ),
-				el( components.Placeholder, {
-					icon: 'groups',
-					label: __( 'Actor Social Counts', 'axismundi-actors' ),
-					instructions: __( 'Displays the current Actor\'s public follower and following counts.', 'axismundi-actors' ),
-				} )
+				el(
+					'li',
+					{ className: 'ax-actor-social-counts__item' },
+					el( 'a', { href: '#', onClick: function ( event ) { event.preventDefault(); } },
+						el( 'span', {}, i18n.__( 'Followers', 'axismundi-actors' ) ),
+						el( 'strong', {}, '0' )
+					)
+				),
+				el(
+					'li',
+					{ className: 'ax-actor-social-counts__item' },
+					el( 'a', { href: '#', onClick: function ( event ) { event.preventDefault(); } },
+						el( 'span', {}, i18n.__( 'Following', 'axismundi-actors' ) ),
+						el( 'strong', {}, '0' )
+					)
+				)
 			);
 		},
 		save: function () { return null; },

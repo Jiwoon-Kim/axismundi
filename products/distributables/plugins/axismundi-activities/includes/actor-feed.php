@@ -508,6 +508,14 @@ function axismundi_act_render_actor_activity_feed() : string {
 	if ( '' !== $claimed ) {
 		return $claimed;
 	}
+	/*
+	 * The Actor profile template is PHP that embeds this block as markup. Core's metadata-driven
+	 * view-module enqueue is skipped on that composition path, so the feed shell must enqueue its
+	 * own delegated-controller module before it emits `data-wp-interactive="axismundi/actor-feed"`.
+	 */
+	if ( function_exists( 'wp_enqueue_script_module' ) ) {
+		wp_enqueue_script_module( 'axismundi-actor-activity-feed-view-script-module' );
+	}
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read pagination.
 	$cursor = isset( $_GET['feed_after'] ) ? sanitize_text_field( wp_unslash( $_GET['feed_after'] ) ) : '';
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read surface selection.
@@ -715,6 +723,12 @@ function axismundi_act_render_actor_activity_feed() : string {
 			. esc_html__( 'Back to the newest activity', 'axismundi-activities' ) . '</a>';
 	}
 	$navigation = '<nav class="axismundi-activity-feed__pagination" aria-label="' . esc_attr__( 'Timeline pages', 'axismundi-activities' ) . '">' . $newer . $more . '</nav>';
+	$reaction_host = function_exists( 'axismundi_act_render_feed_reaction_picker_host' )
+		? axismundi_act_render_feed_reaction_picker_host()
+		: '';
+	$announce_host = function_exists( 'axismundi_act_render_feed_announce_menu_host' )
+		? axismundi_act_render_feed_announce_menu_host()
+		: '';
 
 	/*
 	 * The feed is a client-rendered island inside a server-rendered page: the profile header,
@@ -758,6 +772,8 @@ function axismundi_act_render_actor_activity_feed() : string {
 		. '<ol class="axismundi-activity-feed__list" data-wp-init="callbacks.watchFeed">'
 		. ( '' === $cards ? '<li class="axismundi-activity-feed__empty">' . esc_html__( 'Nothing to show in this view.', 'axismundi-activities' ) . '</li>' : $cards )
 		. '</ol>'
+		. $announce_host
+		. $reaction_host
 		. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>'
 		. $navigation
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.

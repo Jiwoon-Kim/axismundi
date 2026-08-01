@@ -30,13 +30,23 @@ const send = async ( url, method, body, nonce ) => {
 	return result;
 };
 
-/** Reflect a Like result back into the control that was pressed. */
+/** Reflect a Like result back into the shared interaction control that was pressed. */
 const paintLike = ( button, result ) => {
 	button.setAttribute( 'aria-pressed', result.is_liked ? 'true' : 'false' );
-	button.classList.toggle( 'is-liked', !! result.is_liked );
-	const count = button.querySelector( '.axismundi-like-button__count' );
+	button.classList.toggle( 'is-selected', !! result.is_liked );
+	const count = button.querySelector( '.axismundi-interaction__count' );
 	if ( count ) {
 		count.textContent = Number( result.like_count || 0 ).toLocaleString();
+	}
+};
+
+/** Reflect a Repost result back into the shared interaction control that was pressed. */
+const paintAnnounce = ( button, result ) => {
+	button.setAttribute( 'aria-pressed', result.is_announced ? 'true' : 'false' );
+	button.classList.toggle( 'is-selected', !! result.is_announced );
+	const count = button.querySelector( '.axismundi-interaction__count' );
+	if ( count ) {
+		count.textContent = Number( result.announce_count || 0 ).toLocaleString();
 	}
 };
 
@@ -48,15 +58,15 @@ const paintVote = ( group, result ) => {
 			return;
 		}
 		button.setAttribute( 'aria-pressed', active ? 'true' : 'false' );
-		button.classList.toggle( 'is-active', active );
+		button.classList.toggle( 'is-selected', active );
 		const icon = button.querySelector( '.material-symbols-outlined' );
 		if ( icon ) {
 			icon.textContent = active ? on : off;
 		}
 	};
-	paint( group.querySelector( '.axismundi-vote-buttons__button--up' ), result.viewer === 'up', 'thumb_up', 'thumb_up_off_alt' );
-	paint( group.querySelector( '.axismundi-vote-buttons__button--down' ), result.viewer === 'down', 'thumb_down', 'thumb_down_off_alt' );
-	const score = group.querySelector( '.axismundi-vote-buttons__score' );
+	paint( group.querySelector( '[data-ax-direction="up"]' ), result.viewer === 'up', 'thumb_up', 'thumb_up_off_alt' );
+	paint( group.querySelector( '[data-ax-direction="down"]' ), result.viewer === 'down', 'thumb_down', 'thumb_down_off_alt' );
+	const score = group.querySelector( '.axismundi-interaction__value' );
 	if ( score ) {
 		score.textContent = Number( result.score || 0 ).toLocaleString();
 	}
@@ -73,7 +83,26 @@ const performAction = async ( button ) => {
 	const action = button.dataset.axAction;
 	if ( 'like' === action ) {
 		const liked = button.getAttribute( 'aria-pressed' ) === 'true';
-		paintLike( button, await send( button.dataset.axEndpoint, liked ? 'DELETE' : 'POST', { object_uri: button.dataset.axObjectUri }, button.dataset.axNonce ) );
+		const previousCount = Number( button.querySelector( '.axismundi-interaction__count' )?.textContent || 0 );
+		paintLike( button, { is_liked: ! liked, like_count: Math.max( 0, previousCount + ( liked ? -1 : 1 ) ) } );
+		try {
+			paintLike( button, await send( button.dataset.axEndpoint, liked ? 'DELETE' : 'POST', { object_uri: button.dataset.axObjectUri }, button.dataset.axNonce ) );
+		} catch ( error ) {
+			paintLike( button, { is_liked: liked, like_count: previousCount } );
+			throw error;
+		}
+		return;
+	}
+	if ( 'announce' === action ) {
+		const announced = button.getAttribute( 'aria-pressed' ) === 'true';
+		const previousCount = Number( button.querySelector( '.axismundi-interaction__count' )?.textContent || 0 );
+		paintAnnounce( button, { is_announced: ! announced, announce_count: Math.max( 0, previousCount + ( announced ? -1 : 1 ) ) } );
+		try {
+			paintAnnounce( button, await send( button.dataset.axEndpoint, announced ? 'DELETE' : 'POST', { object_uri: button.dataset.axObjectUri }, button.dataset.axNonce ) );
+		} catch ( error ) {
+			paintAnnounce( button, { is_announced: announced, announce_count: previousCount } );
+			throw error;
+		}
 		return;
 	}
 	if ( 'vote' === action ) {
@@ -94,8 +123,14 @@ const handleFeedClick = async ( event ) => {
 	if ( ! button || button.disabled || button.dataset.axPending === '1' ) {
 		return;
 	}
+	// The one hydrated picker host owns reaction controls, including controls in appended cards.
+	// It needs the original click to reach its document-level handler.
+	if ( 'reaction' === button.dataset.axAction || 'announce-menu' === button.dataset.axAction ) {
+		return;
+	}
 	event.preventDefault();
 	button.dataset.axPending = '1';
+	button.disabled = true;
 	try {
 		await performAction( button );
 	} catch ( error ) {
@@ -103,6 +138,7 @@ const handleFeedClick = async ( event ) => {
 		// than leaving it where it was.
 	} finally {
 		delete button.dataset.axPending;
+		button.disabled = false;
 	}
 };
 

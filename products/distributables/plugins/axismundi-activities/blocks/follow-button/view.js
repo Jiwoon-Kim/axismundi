@@ -9,6 +9,11 @@ const syncDialogScrollLock = () =>
 		Boolean( document.querySelector( 'dialog.ax-dialog[open]:not([data-ax-modal="false"])' ) )
 	);
 
+const syncRelationshipState = ( context ) => {
+	context.isFollowing = context.relationState === 'accepted';
+	context.isMutual = context.isFollowing && context.followsYou;
+};
+
 store( 'axismundi/follow-button', {
 	state: {
 		get isFollowing() {
@@ -159,6 +164,7 @@ store( 'axismundi/follow-button', {
 			const remove = previousState === 'pending' || previousState === 'accepted';
 			context.relationState = remove ? 'none' : 'pending';
 			context.isLegacy = false;
+			syncRelationshipState( context );
 			try {
 				const response = yield fetch( context.endpoint, {
 					method: remove ? 'DELETE' : 'POST',
@@ -173,9 +179,11 @@ store( 'axismundi/follow-button', {
 				context.relationState = result.state || 'none';
 				context.followsYou = Boolean( result.follows_you );
 				context.isLegacy = Boolean( result.legacy );
+				syncRelationshipState( context );
 			} catch ( error ) {
 				context.relationState = previousState;
 				context.isLegacy = previousLegacy;
+				syncRelationshipState( context );
 				context.error = error instanceof Error && error.message !== 'request_failed' ? error.message : context.errorFallback;
 			} finally {
 				context.isPending = false;

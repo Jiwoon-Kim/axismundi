@@ -22,3 +22,103 @@
 	font-variant-numeric: tabular-nums;
 	opacity: 0.72;
 }
+
+/* Editor-only object specimens: the front end remains the projection-link list above. */
+.ax-actor-projections__preview {
+	display: grid;
+	gap: var(--wp--preset--spacing--200, 0.75rem);
+}
+
+.ax-actor-projections__preview-card {
+	display: grid;
+	gap: var(--wp--preset--spacing--150, 0.5rem);
+	box-sizing: border-box;
+	margin: 0;
+	padding: var(--wp--preset--spacing--200, 1rem);
+	border: 1px solid var(--wp--preset--color--outline-variant, GrayText);
+	border-radius: 12px;
+	background: var(--wp--preset--color--surface-container-low, Canvas);
+	color: var(--wp--preset--color--on-surface, CanvasText);
+}
+
+.ax-actor-projections__preview-card :is(h3, p, blockquote) {
+	margin: 0;
+}
+
+.ax-actor-projections__preview-header {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--wp--preset--spacing--100, 0.5rem);
+}
+
+.ax-actor-projections__preview-avatar {
+	display: grid;
+	place-items: center;
+	inline-size: 2rem;
+	block-size: 2rem;
+	border-radius: 50%;
+	background: var(--wp--preset--color--secondary-container, #e8def8);
+	color: var(--wp--preset--color--on-secondary-container, #4a4458);
+	font-weight: 600;
+}
+
+.ax-actor-projections__preview-author,
+.ax-actor-projections__preview-meta {
+	display: grid;
+	gap: 0.125rem;
+}
+
+.ax-actor-projections__preview-author > span,
+.ax-actor-projections__preview-meta {
+	color: color-mix(in srgb, currentColor 66%, transparent);
+	font-size: 0.8125rem;
+}
+
+.ax-actor-projections__preview-meta {
+	text-align: end;
+}
+
+.ax-actor-projections__preview-card h3 {
+	font-size: 1.125rem;
+	line-height: 1.333;
+}
+
+.ax-actor-projections__preview-more {
+	color: var(--wp--preset--color--primary, LinkText);
+	font-weight: 600;
+}
+
+.ax-actor-projections__preview-poll {
+	display: grid;
+	gap: 0.25rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ax-actor-projections__preview-poll li {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 8px;
+	background: var(--wp--preset--color--surface-container, color-mix(in srgb, currentColor 8%, transparent));
+}
+
+.ax-actor-projections__preview-poll li:first-child {
+	background: var(--wp--preset--color--secondary-container, #e8def8);
+	color: var(--wp--preset--color--on-secondary-container, #4a4458);
+}
+
+.ax-actor-projections__preview-card blockquote {
+	padding-inline-start: 0.75rem;
+	border-inline-start: 3px solid var(--wp--preset--color--primary, LinkText);
+}
+
+.ax-actor-projections__preview-card cite {
+	display: block;
+	margin-block-start: 0.25rem;
+	font-size: 0.8125rem;
+	font-style: normal;
+}

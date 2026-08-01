@@ -36,6 +36,23 @@ $axismundi_actor_feed_class   = 'group' === $axismundi_actor_profile_kind
 <!-- wp:axismundi/actor-social-counts /-->
 <!-- /wp:axismundi/account-header -->
 
+<?php
+/*
+ * Who runs the community, on the Group profile only.
+ *
+ * The block belongs to whichever product owns the concept — Actors has no idea what a moderator
+ * is — and it renders nothing when that product is not installed, because an unregistered block
+ * produces no output. Placing it here rather than in the shared follower list is deliberate: the
+ * roster is small and complete, while a subscriber list is large, paginated, and does not
+ * necessarily contain the people who run the place at all.
+ */
+if ( 'group' === $axismundi_actor_profile_kind ) :
+	?>
+<!-- wp:axismundi/group-moderators {"style":{"spacing":{"margin":{"top":"var:preset|spacing|300"}}}} /-->
+	<?php
+endif;
+?>
+
 <!-- wp:group {"className":"<?php echo esc_attr( $axismundi_actor_feed_class ); ?>"} -->
 <div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/actor-activity-feed /--></div>
 <!-- /wp:group -->

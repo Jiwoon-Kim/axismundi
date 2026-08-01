@@ -156,6 +156,50 @@
 	font-size: 0.875rem;
 }
 
+/* A two-command menu, not a dialog: Repost and Quote are peer commands. */
+.axismundi-announce-menu {
+	position: fixed;
+	z-index: 20;
+	display: grid;
+	min-inline-size: 10rem;
+	padding-block: 0.25rem;
+	background-color: var(--wp--preset--color--surface-container-low, Canvas);
+	color: var(--wp--preset--color--on-surface, CanvasText);
+	border-radius: 0.75rem;
+	box-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 2px 6px 2px rgb(0 0 0 / 15%);
+}
+
+.axismundi-announce-menu[hidden] {
+	display: none;
+}
+
+.axismundi-announce-menu__action {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	min-block-size: 2.5rem;
+	padding-inline: 0.75rem 1rem;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: var(--wp--preset--font-size--label-large, 0.875rem);
+	font-weight: 500;
+	text-align: start;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.axismundi-announce-menu__action:hover,
+.axismundi-announce-menu__action:focus-visible {
+	background-color: color-mix(in srgb, currentColor calc(var(--md-sys-state-hover-state-layer-opacity, 0.08) * 100%), transparent);
+}
+
+.axismundi-announce-menu__action:disabled {
+	color: color-mix(in srgb, var(--wp--preset--color--on-surface, CanvasText) 38%, transparent);
+	cursor: wait;
+}
+
 @media (forced-colors: active) {
 	.axismundi-interaction .axismundi-interaction__button {
 		color: ButtonText;
@@ -163,5 +207,10 @@
 
 	.axismundi-interaction .axismundi-interaction__button:disabled {
 		color: GrayText;
+	}
+
+	.axismundi-announce-menu {
+		outline: 1px solid CanvasText;
+		box-shadow: none;
 	}
 }

@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.66
+Stable tag: 0.0.67
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,15 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.67 =
+* Adds a display-only list preview for surfaces that list Objects rather than
+  render them. The author's own `summary` is used when there is one; otherwise
+  the body is trimmed locally. The protocol object is left untouched -- a
+  generated `summary` would federate, and a peer receiving one cannot tell an
+  authored abstract from a machine-cut first paragraph.
+* A sensitive Object gets no preview at all, only its warning. An excerpt of
+  something behind a content warning is the warning defeated.
 
 = 0.0.66 =
 * Every theme design token in this plugin's CSS now carries a fallback, so the

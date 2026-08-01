@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/actor-activity-feed",
-	"version": "0.0.35",
+	"version": "0.0.36",
 	"title": "Actor Timeline",
 	"category": "theme",
 	"icon": "list-view",
@@ -22,6 +22,7 @@
 		"interactivity": true
 	},
 	"style": "file:./style.css",
+	"editorScript": "file:./edit.js",
 	"render": "file:./render.php",
 	"viewScriptModule": "file:./view.js"
 }

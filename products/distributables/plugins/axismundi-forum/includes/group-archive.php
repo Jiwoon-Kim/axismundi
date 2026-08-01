@@ -178,7 +178,7 @@ function axismundi_forum_render_group_comments( Axismundi_Actor $group, int $pag
 	}
 	$html = empty( $items )
 		? '<p class="axismundi-forum-archive__empty">' . esc_html__( 'No comments yet.', 'axismundi-forum' ) . '</p>'
-		: '<ol class="axismundi-forum-archive__items">' . implode( '', $items ) . '</ol>';
+		: '<ul class="axismundi-forum-archive__items">' . implode( '', $items ) . '</ul>';
 	return array( 'html' => $html, 'pages' => $pages, 'page' => $page );
 }
 

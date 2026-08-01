@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.63
+Stable tag: 0.0.64
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,33 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.64 =
+* An acct address is now unique per kind of Actor rather than globally
+  (database version 15). Lemmy lets a Person and a Community hold the same
+  handle on one host, and under the old key the second one cached was refused
+  its address outright -- it became unreachable by handle and its discovery
+  failed. Existing rows are backfilled and the index is swapped in place.
+* Looking an Actor up by acct now requires saying which kind is wanted.
+  Answering with whichever row came back first meant "whichever was cached
+  first", which differs between sites, so an untyped lookup returns nothing and
+  `axismundi_actors_get_all_by_remote_acct()` exists for callers that must
+  genuinely disambiguate.
+* A follow of a community is described as a subscription. One relation and one
+  activity either way -- `Follow` is what is stored and what goes on the wire --
+  but "Following" on a community reads as if the community were a person, so the
+  button says Subscribe and the lists say Subscribers and Subscriptions.
+* The Group profile template makes room for a community's moderator roster. The
+  block belongs to whichever product owns the concept, so the slot renders
+  nothing when none is installed, and a Person profile never carries it.
+* A community's subscriber list marks the people who run it. Moderator is a
+  permission the forum owns, so the list asks for roles rather than inferring
+  them from the relation, and being subscribed still does not make someone a
+  member.
+* Groups are addressed at `/group/@handle` and `/group/@handle@host`. A local
+  Group's old `/@handle` redirects there permanently; a remote one does not,
+  because that address never reliably named one Actor and a 301 would make the
+  accident permanent.
 
 = 0.0.63 =
 * Drops twelve hand-written root class aliases that duplicated the block wrapper

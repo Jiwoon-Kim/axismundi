@@ -499,6 +499,39 @@ function axismundi_act_render_reaction_picker( string $picker_id, string $label 
 }
 
 /**
+ * Render the one hydrated picker a delegated activity feed shares.
+ *
+ * A feed appends cards after page load, and those cards deliberately have no per-card
+ * Interactivity island. Putting a full picker in each one would leave every appended picker
+ * inert. The host is part of the first server render, while its document-level handler receives
+ * clicks from every feed reaction control, including controls appended later.
+ *
+ * @return string
+ */
+function axismundi_act_render_feed_reaction_picker_host() : string {
+	if ( ! axismundi_act_current_reaction_actor() instanceof Axismundi_Actor ) {
+		return '';
+	}
+	wp_enqueue_style( 'axismundi-activities-reactions' );
+	if ( function_exists( 'wp_enqueue_script_module' ) ) {
+		wp_enqueue_script_module( 'axismundi-activities-reactions' );
+	}
+	$picker_id = wp_unique_id( 'ax-rx-feed-' );
+	$label     = __( 'Add reaction', 'axismundi-activities' );
+	$context   = array(
+		'objectUri' => '',
+		'pickerId'  => $picker_id,
+		'anchorId'  => '',
+	);
+	return '<div class="axismundi-reaction-picker-host" data-wp-interactive="axismundi/reactions" '
+		. wp_interactivity_data_wp_context( $context )
+		. ' data-wp-on-document--click="actions.openFeedPicker" data-wp-watch="callbacks.pickerLifecycle">'
+		. axismundi_act_render_reaction_picker( $picker_id, $label )
+		. '<span class="axismundi-interaction__status" data-wp-text="state.error" aria-live="polite"></span>'
+		. '</div>';
+}
+
+/**
  * Describe the reaction picker for the unified interaction block.
  *
  * The trigger is an ordinary interaction control and the popover hangs off it, which is what the
@@ -523,7 +556,9 @@ function axismundi_act_describe_reaction_interaction( array $attributes, WP_Bloc
 	axismundi_act_seed_reaction_state( $object_uri );
 	axismundi_act_no_cache_like_state();
 	wp_enqueue_style( 'axismundi-activities-reactions' );
+	$delegated = function_exists( 'axismundi_act_interaction_is_delegated' ) && axismundi_act_interaction_is_delegated();
 	$picker_id = wp_unique_id( 'ax-rx-' );
+	$trigger_id = wp_unique_id( 'ax-rx-trigger-' );
 	// The same three-way wording Like uses, so the reason is stated in the same terms wherever a
 	// reader meets it.
 	$label = $can_react
@@ -549,7 +584,20 @@ function axismundi_act_describe_reaction_interaction( array $attributes, WP_Bloc
 				'aria-haspopup'               => 'dialog',
 			)
 			: array(),
-		'after'      => $can_react
+		/*
+		 * Feed cards are presentation-only. Their one shared, hydrated picker is emitted by the
+		 * feed shell so an appended card never carries a dead copy of this complex dialog.
+		 */
+		'delegated'  => $can_react && $delegated
+			? array(
+				'data-ax-action'     => 'reaction',
+				'data-ax-object-uri' => $object_uri,
+				'id'                 => $trigger_id,
+				'aria-haspopup'      => 'dialog',
+				'aria-expanded'      => 'false',
+			)
+			: array(),
+		'after'      => $can_react && ! $delegated
 			? axismundi_act_render_reaction_picker( $picker_id, $label )
 				. '<span class="axismundi-interaction__status" data-wp-text="state.error" aria-live="polite"></span>'
 			: '',

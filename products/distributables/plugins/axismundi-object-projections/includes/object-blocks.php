@@ -1044,6 +1044,50 @@ function axismundi_op_render_object_featured_image_block( array $attributes = ar
  * warning: the view model separates a plain summary from a warning, so a
  * spoiler never renders as an excerpt.
  */
+/**
+ * The link into an Object's full representation, as its own block.
+ *
+ * `object-summary` can already end with one, and that stays: it is where the link has always
+ * been, and templates depend on it. But a link welded to the end of a paragraph cannot be moved,
+ * aligned, or grouped on its own — an author who wants it pushed to the right of the card has to
+ * push the summary with it. Separating the two costs one block and gives the card a footer
+ * element instead of a sentence ending.
+ *
+ * The words are the author's. Core asks the same of Post Excerpt's more link rather than shipping
+ * a phrase that would be wrong for half the sites using it, and nothing here knows whether the
+ * destination reads better as "Read more", "Continue", or the publication's own idiom. With no
+ * text there is no link: an empty label would be an invisible target.
+ *
+ * The destination is not the author's. It is the Object's own cached view, falling back to the
+ * page it came from — the same resolution `object-summary` uses, so the two cannot send a reader
+ * to different places.
+ *
+ * @param array<string,mixed> $attributes Block attributes.
+ * @return string
+ */
+function axismundi_op_render_object_read_more_block( array $attributes = array() ) : string {
+	$model = axismundi_op_active_object_view_model();
+	$text  = trim( (string) ( $attributes['text'] ?? '' ) );
+	if ( ! is_array( $model ) || '' === $text ) {
+		return '';
+	}
+	$url = trim( (string) ( $model['cached_view_url'] ?? '' ) );
+	if ( '' === $url ) {
+		$url = trim( (string) ( $model['human_url'] ?? '' ) );
+	}
+	if ( '' === $url ) {
+		return '';
+	}
+	$align   = isset( $attributes['textAlign'] ) ? sanitize_html_class( (string) $attributes['textAlign'] ) : '';
+	$classes = 'axismundi-object__read-more' . ( '' !== $align ? ' has-text-align-' . $align : '' );
+	$wrapper = null === WP_Block_Supports::$block_to_render
+		? 'class="' . esc_attr( $classes ) . '"'
+		: get_block_wrapper_attributes( array( 'class' => $classes ) );
+
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wrapper is core-escaped or a literal.
+	return '<p ' . $wrapper . '><a class="axismundi-object__read-more-link" href="' . esc_url( $url ) . '">' . esc_html( $text ) . '</a></p>';
+}
+
 function axismundi_op_render_object_summary_block( array $attributes = array() ) : string {
 	$model   = axismundi_op_active_object_view_model();
 	$summary = is_array( $model ) ? trim( (string) ( $model['summary'] ?? '' ) ) : '';
@@ -1343,6 +1387,7 @@ function axismundi_op_register_object_blocks() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-date' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-type' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-summary' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/object-read-more' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-hashtags' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/interactions' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-featured-image' );

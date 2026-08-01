@@ -121,7 +121,7 @@ try {
 	$reply_button = do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
 	ax_nh_assert( $ax_nh_results, 'the authenticated Reply control opens the Note editor with the canonical parent URI prefilled', false !== strpos( $reply_button, 'axismundi-interaction__button' ) && false !== strpos( $reply_button, 'ax_reply_to=' ) && false !== strpos( $reply_button, $public_id ) && false !== strpos( $reply_button, '>reply<' ) );
 	$announce_menu = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"objectUri":"' . esc_url_raw( $public_id ) . '"} /-->' );
-	ax_nh_assert( $ax_nh_results, 'the authenticated Announce control opens a Dialogs menu with distinct repost and Quote commands', false !== strpos( $announce_menu, 'data-wp-interactive="axismundi/announce-button"' ) && false !== strpos( $announce_menu, 'ax-interaction-dialog' ) && false !== strpos( $announce_menu, 'ax_quote_target' ) && false !== strpos( $announce_menu, 'Quote</a>' ) );
+	ax_nh_assert( $ax_nh_results, 'the authenticated Announce control opens a two-command menu with distinct repost and Quote commands', false !== strpos( $announce_menu, 'data-wp-interactive="axismundi/announce-button"' ) && false !== strpos( $announce_menu, 'role="menu"' ) && false !== strpos( $announce_menu, 'axismundi-announce-menu__action' ) && false !== strpos( $announce_menu, 'context.quoteUrl' ) );
 	wp_set_current_user( 0 );
 
 	$private_route = ax_nh_route( $private_id, array( 'ax_note' => (string) $private['local_uuid'] ) );

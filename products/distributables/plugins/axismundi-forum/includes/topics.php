@@ -584,22 +584,64 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	if ( $page > $pages ) {
 		$page = $pages;
 	}
+	/*
+	 * One card for both, because a Topic is one thing.
+	 *
+	 * A Topic is projected as an `Article`, and a remote community's Topics were already shown
+	 * that way — while our own were a title on a line. So the archive said, in its own markup,
+	 * that a Topic from elsewhere is a post and a Topic from here is a link, and a reader could
+	 * see the asymmetry without knowing why it was there. The same renderer answers for both now,
+	 * which also means the Person community surface can reuse this by adding an author filter
+	 * rather than by growing a third way to draw the same object.
+	 */
 	$items = array();
 	foreach ( axismundi_forum_visible_topic_entries( $group_identity_id, $limit, $page ) as $entry ) {
 		$source_post_id = (int) ( $entry['source_post_id'] ?? 0 );
-		if ( $source_post_id > 0 ) {
-			$topic = get_post( $source_post_id );
-			if ( $topic instanceof WP_Post && 'publish' === $topic->post_status ) {
-				$items[] = '<li class="axismundi-forum-topic-list__item"><a href="' . esc_url( get_permalink( $topic ) ) . '">' . esc_html( get_the_title( $topic ) ) . '</a></li>';
-			}
+		$local          = $source_post_id > 0 ? get_post( $source_post_id ) : null;
+		if ( $source_post_id > 0 && ( ! $local instanceof WP_Post || 'publish' !== $local->post_status ) ) {
 			continue;
 		}
 		$author = function_exists( 'axismundi_actors_get_by_identity' ) ? axismundi_actors_get_by_identity( (int) ( $entry['submission_actor_identity_id'] ?? 0 ) ) : null;
+		$uri    = $local instanceof WP_Post ? axismundi_forum_topic_object_uri( $local ) : (string) ( $entry['object_uri'] ?? '' );
 		$card   = function_exists( 'axismundi_op_render_object_by_uri' )
-			? axismundi_op_render_object_by_uri( (string) ( $entry['object_uri'] ?? '' ), array( 'headingTag' => 'h3', 'interactions' => false, 'expected_author' => $author instanceof Axismundi_Actor ? $author->get_uri() : '' ) )
+			? axismundi_op_render_object_by_uri(
+				$uri,
+				array(
+					'headingTag'      => 'h3',
+					'interactions'    => false,
+					'expected_author' => $author instanceof Axismundi_Actor ? $author->get_uri() : '',
+					/*
+					 * The renderer's public gate is the federation gate, and it withholds a
+					 * members-only Topic from everyone — correctly, because that gate answers
+					 * "may this be republished", not "may this reader see it". The entitlement
+					 * question was already answered above for this whole list, so the answer is
+					 * carried here rather than asked again with less context. Naming the
+					 * community makes the claim checkable: the filter refuses a Topic that is
+					 * not in it.
+					 */
+					'communityViewer' => $group_identity_id,
+				)
+			)
 			: '';
 		if ( '' !== $card ) {
-			$items[] = '<li class="axismundi-forum-topic-list__item axismundi-forum-topic-list__item--remote">' . $card . '</li>';
+			$items[] = '<li class="axismundi-forum-topic-list__item' . ( $local instanceof WP_Post ? '' : ' axismundi-forum-topic-list__item--remote' ) . '">' . $card . '</li>';
+			continue;
+		}
+		/*
+		 * A members-only Topic has no card to give, even to the member reading it.
+		 *
+		 * The card gate takes an opt-in from this caller, but the view model underneath it does
+		 * not: it asks whether the source is publicly visible and has no way to be told that this
+		 * reader was already authorized. So for a members-only community the card comes back
+		 * empty for everyone, including the people the community exists for.
+		 *
+		 * Falling back to the title keeps that reader seeing exactly what they saw before rather
+		 * than an empty page — this list is already behind the community's own entitlement check.
+		 * It is a smaller row than a public community gets, and that difference is the honest
+		 * shape of the limitation rather than something hidden by rendering nothing.
+		 */
+		if ( $local instanceof WP_Post && axismundi_forum_can_read_topic( $local ) ) {
+			$items[] = '<li class="axismundi-forum-topic-list__item axismundi-forum-topic-list__item--title-only"><a href="' . esc_url( get_permalink( $local ) ) . '">' . esc_html( get_the_title( $local ) ) . '</a></li>';
 		}
 	}
 	$body = empty( $items )
@@ -755,6 +797,38 @@ function axismundi_forum_resolve_topic_source( $source, string $uri ) {
 	return $topic instanceof WP_Post && axismundi_forum_topic_article_supports( $topic ) && hash_equals( $uri, axismundi_forum_topic_object_uri( $topic ) ) ? $topic : null;
 }
 add_filter( 'axismundi_op_resolve_source_by_uri', 'axismundi_forum_resolve_topic_source', 11, 2 );
+
+/**
+ * Let an entitled reader see a members-only Topic's card on the community's own archive.
+ *
+ * The renderer's default gate asks whether a source may be republished publicly, and for a
+ * members-only Topic the answer is no for everyone — which is right for the federated
+ * representation and wrong for the member reading the community they belong to. Without this the
+ * archive would render a row of nothing to exactly the people it exists for.
+ *
+ * Two things keep this from being a hole. The caller has to ask, by naming the community it
+ * already authorized the reader against, so no other surface is widened by accident. And the
+ * Topic has to actually be in that community and readable by this reader, which is the same
+ * question the HTML permalink answers — a caller naming the wrong community, or a reader who
+ * simply is not a member, gets the public answer back unchanged.
+ *
+ * @param bool  $public Whether the source is publicly card-renderable.
+ * @param mixed $source Resolved source.
+ * @param array $opts   Renderer options supplied by the caller.
+ * @return bool
+ */
+function axismundi_forum_open_community_topic_card( bool $public, $source, array $opts ) : bool {
+	$group_identity_id = isset( $opts['communityViewer'] ) ? (int) $opts['communityViewer'] : 0;
+	if ( $public || $group_identity_id <= 0 || ! $source instanceof WP_Post || ! axismundi_forum_topic_article_supports( $source ) ) {
+		return $public;
+	}
+	$entry = axismundi_forum_get_topic_entry( $source->ID );
+	if ( ! is_array( $entry ) || (int) $entry['group_identity_id'] !== $group_identity_id || 'publish' !== $source->post_status ) {
+		return $public;
+	}
+	return axismundi_forum_can_read_topic( $source );
+}
+add_filter( 'axismundi_op_object_card_renderable', 'axismundi_forum_open_community_topic_card', 10, 3 );
 
 /** Register the Forum Topic Page transformer through OP's public registry seam. */
 function axismundi_forum_register_topic_page_transformer() : void {

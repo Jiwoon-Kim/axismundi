@@ -165,6 +165,54 @@ try {
 		! is_wp_error( $undone ) && $still_claims && ! in_array( $reply_uri, $after_undo['uris'], true )
 	);
 
+	/*
+	 * A Topic is projected as an Article, so the archive shows it as one — the same card a remote
+	 * community's Topics already used, rather than a title on a line for ours and a card for
+	 * theirs.
+	 */
+	$card_opts   = array( 'headingTag' => 'h3', 'interactions' => false );
+	$public_card = axismundi_op_render_object_by_uri( $topic_uri, $card_opts + array( 'communityViewer' => $community ) );
+	ax_ga_assert(
+		$ax_ga_results,
+		'a local Topic in a public community renders the same Article card a remote one does',
+		'' !== $public_card && false !== strpos( $public_card, 'axismundi-object' )
+	);
+
+	/*
+	 * The opt-in is a claim the filter checks rather than takes. A caller naming a community the
+	 * Topic is not in gets the public answer back, so the argument cannot be used to open
+	 * something by asserting the wrong thing about it.
+	 */
+	axismundi_forum_set_distribution_scope( $community, $owner, 'members' );
+	$member_card    = axismundi_op_render_object_by_uri( $topic_uri, $card_opts + array( 'communityViewer' => $community ) );
+	$member_can_read = axismundi_forum_can_read_topic( get_post( $topic ) );
+	$wrong_community = axismundi_forum_open_community_topic_card( false, get_post( $topic ), array( 'communityViewer' => 99999901 ) );
+	$card_gate_opens = axismundi_forum_open_community_topic_card( false, get_post( $topic ), array( 'communityViewer' => $community ) );
+	wp_set_current_user( 0 );
+	$stranger_card = axismundi_op_render_object_by_uri( $topic_uri, $card_opts + array( 'communityViewer' => $community ) );
+	$stranger_gate = axismundi_forum_open_community_topic_card( false, get_post( $topic ), array( 'communityViewer' => $community ) );
+	wp_set_current_user( $owner );
+	axismundi_forum_set_distribution_scope( $community, $owner, 'public' );
+
+	ax_ga_assert(
+		$ax_ga_results,
+		'a members-only Topic stays shut to a stranger, and naming the wrong community does not open it',
+		false === $stranger_gate && '' === $stranger_card && false === $wrong_community
+	);
+
+	/*
+	 * The limitation, asserted rather than left implicit. The card gate opens for an entitled
+	 * member, but the view model underneath asks only whether the source is publicly visible and
+	 * takes no argument from its caller — so the card is still empty and the archive falls back to
+	 * the Topic title for that reader. When Object Projections grows a viewer-scoped view model
+	 * this assertion is what will fail and say so.
+	 */
+	ax_ga_assert(
+		$ax_ga_results,
+		'an entitled member is allowed the card but still gets none, because the view model has no viewer-scoped seam yet',
+		true === $member_can_read && true === $card_gate_opens && '' === $member_card
+	);
+
 	// The reader-facing surface: two collections, addressed separately, paged the same way.
 	$filters = axismundi_forum_group_archive_filters();
 	$tabs    = axismundi_forum_render_archive_tabs( 'comments' );

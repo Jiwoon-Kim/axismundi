@@ -426,7 +426,8 @@ delivery. Those belong to Axismundi Activities and Axismundi Federation.
   surface is an activity feed (owned by Axismundi Activities); Actors ships no
   built-in projection and renders header-only until a domain plugin registers one.
   The core-post projection, when added, is `articles` (not `posts`) and is owned by
-  its own registrar. The registry, hook, and navigation block are unchanged.
+  its own registrar. The registry and hook remain available; the unused profile-links
+  block was removed because the profile feed is owned by Activities.
 * Lock two design contracts ahead of admin integration: the Actor handle is
   independent of the WordPress profile name and the author/media archive URLs
   (handle changes never move `/author/…` or `/media/author/…`); and the handle is a

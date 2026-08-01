@@ -974,7 +974,6 @@ function axismundi_actors_register_profile_block_and_template() : void {
 	register_block_type( __DIR__ . '/../blocks/actor-handle' );
 	register_block_type( __DIR__ . '/../blocks/actor-biography' );
 	register_block_type( __DIR__ . '/../blocks/actor-profile-fields' );
-	register_block_type( __DIR__ . '/../blocks/actor-projections' );
 	register_block_type( __DIR__ . '/../blocks/actor-social-counts' );
 	register_block_type( __DIR__ . '/../blocks/actor-follow-list' );
 	register_block_type( __DIR__ . '/../blocks/group-directory' );

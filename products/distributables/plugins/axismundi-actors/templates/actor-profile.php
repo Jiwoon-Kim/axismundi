@@ -57,7 +57,7 @@ endif;
 <div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/actor-activity-feed /--></div>
 <!-- /wp:group -->
 
-<!-- wp:axismundi/actor-projections {"style":{"spacing":{"margin":{"top":"var:preset|spacing|400"}}}} /--></div>
+</div>
 <!-- /wp:group --></main>
 <!-- /wp:group -->
 

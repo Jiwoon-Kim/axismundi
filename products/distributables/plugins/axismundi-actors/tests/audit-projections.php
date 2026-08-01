@@ -143,12 +143,10 @@ try {
 	ax_projection_assert( $ax_projection_results, 'the owner preview may resolve their internal actor projections', in_array( 'articles', array_column( axismundi_actors_get_projections( $internal_actor, $user_id ), 'id' ), true ) );
 	wp_set_current_user( 0 );
 
-	// Navigation block renders the registered projections (no built-in Posts).
-	axismundi_actors_set_status( $actor->get_identity_id(), 'public' );
-	$actor = axismundi_actors_get_by_uuid( $actor->get_uuid() );
-	$GLOBALS['axismundi_actors_current_actor'] = $actor;
-	$rendered = render_block( array( 'blockName' => 'axismundi/actor-projections', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ) );
-	ax_projection_assert( $ax_projection_results, 'projection block renders registered links (Articles) and no built-in Posts', false !== strpos( $rendered, 'aria-label="Actor profiles"' ) && false !== strpos( $rendered, '>Articles<' ) && false === strpos( $rendered, '>Posts<' ) );
+	// Projections remain a registration contract, not a profile UI block. The former block
+	// rendered nothing in shipped profiles unless another product registered links, while its
+	// editor preview misleadingly showed a feed. A feed-loop owns that presentation instead.
+	ax_projection_assert( $ax_projection_results, 'Actors keeps projection registration without registering the removed profile-links block', null === WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/actor-projections' ) );
 } finally {
 	$GLOBALS['axismundi_actors_current_actor'] = null;
 	wp_set_current_user( 0 );

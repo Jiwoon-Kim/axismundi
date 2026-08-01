@@ -608,9 +608,11 @@ try {
 	 * template, because reading the bundled file would serve continuation cards that ignore every edit
 	 * an author made.
 	 *
-	 * Byte equality is not the contract. The picker and the repost menu mint a unique id per control,
-	 * which is what stops one click from opening every picker on the page; those ids are normalised
-	 * away here rather than removed from the product.
+	 * Byte equality is not the contract; the card's semantics are. The picker and the repost menu
+	 * mint a unique id per control, which is what stops one click from opening every picker on a
+	 * page — so those ids differing is a requirement rather than noise. They are normalised here
+	 * because this check is about the card, and asserted as distinct where that belongs, in the
+	 * interaction audit.
 	 */
 	$ax_feed_tpl_actor = $actor;
 	if ( $ax_feed_tpl_actor instanceof Axismundi_Actor ) {
@@ -648,7 +650,7 @@ try {
 
 		ax_feed_assert(
 			$ax_feed_results,
-			'one item rendered through that template twice comes out the same, apart from the ids that must differ',
+			'one item rendered through that template twice is the same card, and its control ids are required to differ',
 			// Non-empty first: two blank renders are equal, and a check that cannot tell those from
 			// two real ones is not checking anything.
 			! empty( $ax_feed_tpl_item )

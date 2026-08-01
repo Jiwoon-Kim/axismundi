@@ -241,6 +241,38 @@ try {
 	);
 
 	/*
+	 * Two controls for one Object must not be one control.
+	 *
+	 * A feed can show the same Object twice — an original and someone's boost of it — and these
+	 * ids were once derived from the Object, so both cards claimed the same picker and the same
+	 * menu. Opening either opened all of them, and the duplicated `id` left anything pointing at
+	 * one aiming for whichever came first. On this site's own timeline that meant six.
+	 *
+	 * The feed audit normalises these ids away when it compares cards, which is right there and
+	 * exactly why the property has to be held here: nothing else would notice them collapsing
+	 * back into one.
+	 */
+	$ax_ib_twice = do_blocks(
+		'<!-- wp:axismundi/interaction {"type":"reaction","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->'
+		. '<!-- wp:axismundi/interaction {"type":"reaction","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->'
+		. '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->'
+		. '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->'
+	);
+	preg_match_all( '#\bid="(ax-rx-[^"]+|ax-announce-menu-[^"]+)"#', $ax_ib_twice, $ax_ib_ids );
+	$ax_ib_emitted = (array) ( $ax_ib_ids[1] ?? array() );
+
+	ax_ib_assert(
+		$ax_ib_results,
+		'the same Object rendered twice gets two controls, not one wearing two hats',
+		// Four controls were asked for and at least the two popovers must have identified
+		// themselves, so an empty match cannot pass this by finding nothing to disagree about.
+		count( $ax_ib_emitted ) >= 2
+			&& count( $ax_ib_emitted ) === count( array_unique( $ax_ib_emitted ) )
+			&& 2 === substr_count( $ax_ib_twice, 'is-type-reaction' )
+			&& 2 === substr_count( $ax_ib_twice, 'is-type-announce' )
+	);
+
+	/*
 	 * The Interactivity API evaluates directives on the server too. Binding an attribute to a
 	 * `state` getter that only exists in the JavaScript module makes the server resolve it to
 	 * nothing and strip the attribute — so a control rendered disabled arrived enabled, which is

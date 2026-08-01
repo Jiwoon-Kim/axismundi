@@ -74,6 +74,7 @@ try {
 	);
 
 	$collection = axismundi_forum_thread_collection( get_post( $topic ) );
+	$first_page = axismundi_forum_thread_collection_page( get_post( $topic ), 0 );
 	ax_tc_assert(
 		$ax_tc_results,
 		'the context URI dereferences to an OrderedCollection owned by the Group and led by the root post',
@@ -81,23 +82,54 @@ try {
 			&& 'Thread Context Topic' === (string) $collection['name']
 			&& $group instanceof Axismundi_Actor
 			&& $group->get_uri() === (string) ( $collection['attributedTo'] ?? '' )
-			&& is_array( $collection['orderedItems'] )
-			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === (string) $collection['orderedItems'][0]
 			&& (string) $collection['id'] === axismundi_forum_topic_context_uri( get_post( $topic ) )
+			// FEP-f228 requires the top-level post to be a member; it leads the first page.
+			&& 'OrderedCollectionPage' === (string) $first_page['type']
+			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === (string) ( $first_page['orderedItems'][0] ?? '' )
+			&& (string) $first_page['partOf'] === (string) $collection['id']
 	);
 
-	$request  = new WP_REST_Request( 'GET', '/axismundi/v1/forum/thread' );
-	$request->set_param( 'object', axismundi_forum_topic_object_uri( get_post( $topic ) ) );
+	/*
+	 * FEP-9f9f asks a collection to identify itself without query parameters, and FEP-1985 asks it
+	 * to say which way it runs. Both are wire contracts, so both are checked as strings rather than
+	 * trusted to the builder.
+	 */
+	ax_tc_assert(
+		$ax_tc_results,
+		'the collection names itself with a path and declares that a conversation reads oldest first',
+		false === strpos( (string) $collection['id'], '?' )
+			&& 'ForwardChronological' === (string) ( $collection['orderType'] ?? '' )
+			&& in_array( 'https://w3id.org/fep/1985', (array) $collection['@context'], true )
+			&& (string) ( $collection['first'] ?? '' ) === (string) $first_page['id']
+	);
+
+	// A total and a `last` can only be known by scanning and proving the whole conversation, which
+	// is the work the cursor exists to avoid. Publishing either would tell a reader it had
+	// everything when it had one bounded scan's worth.
+	ax_tc_assert(
+		$ax_tc_results,
+		'the collection claims neither a total nor a last page it would have to scan the whole thread to know',
+		! isset( $collection['totalItems'] ) && ! isset( $collection['last'] )
+	);
+
+	$request  = new WP_REST_Request( 'GET', '/axismundi/v1/forum/thread/' . $topic );
+	$request->set_param( 'topic', $topic );
 	$served   = axismundi_forum_get_thread( $request );
-	$missing  = new WP_REST_Request( 'GET', '/axismundi/v1/forum/thread' );
-	$missing->set_param( 'object', home_url( '/?p=99999901' ) );
+	$paged    = new WP_REST_Request( 'GET', '/axismundi/v1/forum/thread/' . $topic );
+	$paged->set_param( 'topic', $topic );
+	$paged->set_param( 'after', 0 );
+	$served_page = axismundi_forum_get_thread( $paged );
+	$missing  = new WP_REST_Request( 'GET', '/axismundi/v1/forum/thread/99999901' );
+	$missing->set_param( 'topic', 99999901 );
 	$refused  = axismundi_forum_get_thread( $missing );
 	ax_tc_assert(
 		$ax_tc_results,
-		'the thread route serves activity+json for a visible Topic and 404s for anything else',
+		'the thread route serves activity+json for a visible Topic, pages on request, and 404s for anything else',
 		$served instanceof WP_REST_Response
 			&& 'OrderedCollection' === (string) ( $served->get_data()['type'] ?? '' )
 			&& false !== strpos( (string) $served->get_headers()['Content-Type'], 'application/activity+json' )
+			&& $served_page instanceof WP_REST_Response
+			&& 'OrderedCollectionPage' === (string) ( $served_page->get_data()['type'] ?? '' )
 			&& is_wp_error( $refused )
 			&& 404 === (int) ( $refused->get_error_data()['status'] ?? 0 )
 	);
@@ -144,6 +176,124 @@ try {
 			&& $reply_announce instanceof Axismundi_Activity && 'Announce' === $reply_announce->get_type()
 			&& 'Create' === (string) ( $reply_announce->get_payload()['object']['type'] ?? '' )
 			&& $group->get_uri() === $reply_announce->get_actor_uri()
+	);
+
+	/*
+	 * The whole point of admission as the membership rule: `inReplyTo` decides the shape of the
+	 * tree, not who is in the community's conversation. This forges the attack the rule exists to
+	 * refuse — an object that points into the thread and claims the Group as its own `audience`,
+	 * with no Create addressed to that Group behind it. It earns a thread edge, because it really
+	 * does reply to the Topic, and it must still be refused a place in the collection.
+	 */
+	$forged_uri = 'https://example.com/forged/' . wp_generate_uuid4();
+	$ax_tc_objects[] = $forged_uri;
+	$forged = function_exists( 'axismundi_op_remote_object_store' ) ? axismundi_op_remote_object_store(
+		array( 'id' => $forged_uri, 'type' => 'Note', 'attributedTo' => 'https://example.com/u/axtc-stranger', 'inReplyTo' => axismundi_forum_topic_object_uri( get_post( $topic ) ), 'audience' => $group instanceof Axismundi_Actor ? $group->get_uri() : '', 'to' => array( $public_uri ), 'content' => '<p>Forged membership claim.</p>' )
+	) : new WP_Error( 'fixture' );
+	$forged_edge = '' !== axismundi_op_get_thread_parent_uri( $forged_uri );
+
+	// Measure the builder rather than whatever an earlier call left cached, through the same
+	// invalidation seam the ledger uses.
+	update_option( 'ax_forum_thread_generation', axismundi_forum_thread_cache_generation() + 1, false );
+	$members = axismundi_forum_thread_page_members( get_post( $topic ), 0 );
+
+	ax_tc_assert(
+		$ax_tc_results,
+		'the forged reply really did join the thread graph, so refusing it is a decision and not an accident',
+		! is_wp_error( $forged ) && true === $forged_edge
+			&& in_array( $forged_uri, axismundi_op_get_thread_descendant_uris( axismundi_forum_topic_object_uri( get_post( $topic ) ), 100, 0 ), true )
+	);
+
+	ax_tc_assert(
+		$ax_tc_results,
+		'the conversation admits the reply the Group distributed and refuses the one that only claimed the Group',
+		'' !== $reply_uri
+			&& in_array( $reply_uri, $members['uris'], true )
+			&& ! in_array( $forged_uri, $members['uris'], true )
+			&& axismundi_forum_topic_object_uri( get_post( $topic ) ) === (string) ( $members['uris'][0] ?? '' )
+	);
+
+	/*
+	 * A bound on one request must never become a bound on the conversation. With the scan shrunk to
+	 * a single edge, every page but the last runs out of budget before it can fill, which is the
+	 * exact case a page number cannot express: the reader has to be able to resume from where the
+	 * scan stopped, not from where the previous page ended.
+	 */
+	$ax_tc_shrink = static fn() : int => 1;
+	add_filter( 'axismundi_forum_thread_scan_limit', $ax_tc_shrink );
+	update_option( 'ax_forum_thread_generation', axismundi_forum_thread_cache_generation() + 1, false );
+	$walked = array();
+	$cursor = 0;
+	$hops   = 0;
+	do {
+		$step   = axismundi_forum_thread_page_members( get_post( $topic ), $cursor );
+		$walked = array_merge( $walked, $step['uris'] );
+		$cursor = (int) $step['next'];
+		++$hops;
+	} while ( $cursor > 0 && $hops < 20 );
+	remove_filter( 'axismundi_forum_thread_scan_limit', $ax_tc_shrink );
+
+	ax_tc_assert(
+		$ax_tc_results,
+		'an accepted reply beyond one scan budget is still reachable by following the cursor, and the walk ends',
+		$hops > 1 && $hops < 20 && 0 === $cursor
+			&& in_array( $reply_uri, $walked, true )
+			&& ! in_array( $forged_uri, $walked, true )
+	);
+
+	/*
+	 * Acceptance is a decision a community can take back. `Undo` of the Group's `Announce` is how a
+	 * moderator removes a post, and the author's `Create` behind it is immutable and stays — so a
+	 * collection that read only the submission would go on publishing what had already been pulled.
+	 */
+	$reply_announce_undone = $reply_announce instanceof Axismundi_Activity && $group instanceof Axismundi_Actor
+		? axismundi_act_record_source_activity(
+			array( 'type' => 'Undo', 'actor' => $group->get_uri(), 'object' => $reply_announce->get_uri() ),
+			'outbound',
+			'axtc-unannounce:' . $reply_announce->get_uri()
+		)
+		: new WP_Error( 'fixture' );
+	update_option( 'ax_forum_thread_generation', axismundi_forum_thread_cache_generation() + 1, false );
+	$after_undo = axismundi_forum_thread_page_members( get_post( $topic ), 0 );
+	$announce_now = $reply_announce instanceof Axismundi_Activity ? axismundi_act_get( $reply_announce->get_uri() ) : null;
+
+	ax_tc_assert(
+		$ax_tc_results,
+		'withdrawing the Group Announce really did make it ineffective, so the removal below is measured and not assumed',
+		! is_wp_error( $reply_announce_undone )
+			&& $announce_now instanceof Axismundi_Activity && ! $announce_now->is_effective()
+	);
+
+	ax_tc_assert(
+		$ax_tc_results,
+		'a reply the community removed leaves the conversation even though its immutable Create remains',
+		'' !== $reply_uri
+			&& ! in_array( $reply_uri, $after_undo['uris'], true )
+			&& axismundi_act_get_object_lifecycle( $reply_uri ) instanceof Axismundi_Activity
+			&& axismundi_forum_thread_member_submitted( $reply_uri, $group )
+	);
+
+	/*
+	 * The AS2 thread surface is public-only, and that is narrower than the HTML surface on purpose:
+	 * a members-only community's thread is absent here for everyone, including a reader entitled to
+	 * it, until a viewer-aware gate and a per-reader cache exist.
+	 */
+	$scoped = axismundi_forum_set_distribution_scope( $community, $owner, 'members' );
+	$members_request = new WP_REST_Request( 'GET', '/axismundi/v1/forum/thread/' . $topic );
+	$members_request->set_param( 'topic', $topic );
+	$members_refused = axismundi_forum_get_thread( $members_request );
+	$scope_while_refused = axismundi_forum_get_distribution_scope( $community );
+	axismundi_forum_set_distribution_scope( $community, $owner, 'public' );
+	$public_again = axismundi_forum_get_thread( $members_request );
+
+	ax_tc_assert(
+		$ax_tc_results,
+		'a members-only community thread is refused on the AS2 route, and the refusal tracks the scope rather than being permanent',
+		! is_wp_error( $scoped )
+			&& 'members' === $scope_while_refused
+			&& is_wp_error( $members_refused )
+			&& 404 === (int) ( $members_refused->get_error_data()['status'] ?? 0 )
+			&& $public_again instanceof WP_REST_Response
 	);
 
 	// A reply to a remote community is its own direct submission. The remote Group, not this

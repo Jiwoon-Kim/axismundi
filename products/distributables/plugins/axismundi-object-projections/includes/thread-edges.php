@@ -83,6 +83,67 @@ function axismundi_op_get_thread_parent_uri( string $child_uri ) : string {
 	return is_array( $edge ) ? (string) $edge['parent_uri'] : '';
 }
 
+/**
+ * Every recorded descendant URI of one thread root, oldest first.
+ *
+ * A conversation is the whole reply tree, and walking that tree node by node would mean an
+ * unbounded number of queries for a thread whose shape an author controls. The index already
+ * answers it in one: an edge records the root it descends from, so the thread is a single
+ * indexed range scan rather than a traversal, and the ordering is insertion order — which for
+ * a reply graph is the order the replies became known, oldest first.
+ *
+ * Only resolved edges carry a root, so an edge whose parent has not been fetched is absent
+ * here. That is the correct answer rather than a gap: until its parent resolves there is no
+ * evidence of which conversation it belongs to, and guessing would put a stranger's reply in
+ * someone else's thread.
+ *
+ * The root itself is not a descendant and is never returned; a caller assembling a whole
+ * conversation adds it.
+ *
+ * Rows are keyed by edge id so a caller can resume from where it stopped. An offset cannot do
+ * that job: a caller that discards some of what it read — because the conversation's owner did
+ * not accept it, or because the reader may not see it — has no way to express "continue after
+ * the last row I actually examined", and would either re-read or skip rows on the next request.
+ *
+ * @param string $root_uri Thread root Object URI.
+ * @param int    $limit    Bounded row count.
+ * @param int    $after_id Resume strictly after this edge id; 0 starts at the beginning.
+ * @return array<int,array{id:int,uri:string}>
+ */
+function axismundi_op_get_thread_descendant_rows( string $root_uri, int $limit = 50, int $after_id = 0 ) : array {
+	global $wpdb;
+	$root = axismundi_op_relation_uri( $root_uri );
+	if ( '' === $root ) {
+		return array();
+	}
+	$table    = axismundi_op_thread_edges_table();
+	$limit    = max( 1, min( 200, $limit ) );
+	$after_id = max( 0, $after_id );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- indexed exact-URI range scan.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, child_uri, root_uri FROM {$table} WHERE root_uri_hash = %s AND root_uri = %s AND id > %d ORDER BY id ASC LIMIT %d", hash( 'sha256', $root ), $root, $after_id, $limit ), ARRAY_A );
+	$out = array();
+	foreach ( $rows as $row ) {
+		// The hash narrows the scan; the literal comparison is what decides, so a colliding or
+		// truncated hash can never smuggle a foreign thread's reply into this conversation.
+		if ( hash_equals( $root, (string) $row['root_uri'] ) && ! hash_equals( $root, (string) $row['child_uri'] ) ) {
+			$out[] = array( 'id' => (int) $row['id'], 'uri' => (string) $row['child_uri'] );
+		}
+	}
+	return $out;
+}
+
+/**
+ * Descendant URIs of one thread root, oldest first.
+ *
+ * @param string $root_uri Thread root Object URI.
+ * @param int    $limit    Bounded row count.
+ * @param int    $after_id Resume strictly after this edge id; 0 starts at the beginning.
+ * @return string[]
+ */
+function axismundi_op_get_thread_descendant_uris( string $root_uri, int $limit = 50, int $after_id = 0 ) : array {
+	return array_column( axismundi_op_get_thread_descendant_rows( $root_uri, $limit, $after_id ), 'uri' );
+}
+
 /** Direct reply (child) URIs for one parent, oldest first. */
 function axismundi_op_get_thread_reply_uris( string $parent_uri, int $limit = 50, int $offset = 0 ) : array {
 	global $wpdb;

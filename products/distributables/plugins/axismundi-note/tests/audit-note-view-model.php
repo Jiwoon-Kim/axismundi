@@ -96,12 +96,12 @@ try {
 			&& ! str_contains( $pattern_source, 'wp:axismundi/object-identity' )
 			&& str_contains( $pattern_source, 'wp:axismundi/reply-context' )
 			&& strpos( $pattern_source, 'wp:axismundi/reply-context' ) < strpos( $pattern_source, 'axismundi-object-card' )
-			&& strpos( $pattern_source, 'wp:axismundi/object-featured-image' ) < strpos( $pattern_source, 'wp:axismundi/object-title' )
-			&& strpos( $pattern_source, 'wp:axismundi/object-title' ) < strpos( $pattern_source, 'wp:axismundi/object-summary' )
-			&& strpos( $pattern_source, 'wp:axismundi/object-summary' ) < strpos( $pattern_source, 'wp:axismundi/object-content' )
-			&& strpos( $pattern_source, 'wp:axismundi/object-content' ) < strpos( $pattern_source, 'wp:axismundi/quote-context' )
-			&& strpos( $pattern_source, 'wp:axismundi/question' ) < strpos( $pattern_source, 'wp:axismundi/object-attachments' )
-			&& str_contains( $pattern_source, 'wp:axismundi/object-summary' )
+			// The body's own ordering -- image, title, summary, then the warned body with its
+			// quote, poll and attachments -- moved into the card body block along with the blocks
+			// themselves, and is asserted where it now lives. What this card still owns is that it
+			// asks for that region instead of keeping a second copy of it.
+			&& str_contains( $pattern_source, 'wp:axismundi/object-card-body' )
+			&& ! str_contains( $pattern_source, 'wp:axismundi/object-content ' )
 			&& str_contains( $pattern_source, 'wp:axismundi/object-hashtags' )
 			&& str_contains( $pattern_source, 'wp:axismundi/interactions' )
 			&& str_contains( $pattern_html, 'axismundi-object-card' )
@@ -109,7 +109,7 @@ try {
 			&& str_contains( $pattern_html, 'Hello from a note.' )
 	);
 	$single_template = axismundi_op_single_object_template_content();
-	ax_vm_assert( $ax_vm_results, 'the OP-owned single template composes the shared pattern and its own replies region without becoming the Activities archive template', str_contains( $single_template, 'wp:axismundi/actor-avatar' ) && str_contains( $single_template, 'wp:axismundi/object-content' ) && str_contains( $single_template, 'wp:axismundi/replies' ) && ! str_contains( $single_template, 'wp:query' ) );
+	ax_vm_assert( $ax_vm_results, 'the OP-owned single template composes the shared pattern and its own replies region without becoming the Activities archive template', str_contains( $single_template, 'wp:axismundi/actor-avatar' ) && str_contains( $single_template, 'wp:axismundi/object-card-body' ) && str_contains( $single_template, 'wp:axismundi/replies' ) && ! str_contains( $single_template, 'wp:query' ) );
 
 	// An embedded object caller can choose a smaller heading and suppress the
 	// personalized interaction slot without changing the source view model.

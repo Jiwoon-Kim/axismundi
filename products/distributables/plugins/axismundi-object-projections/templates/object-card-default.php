@@ -16,25 +16,7 @@ defined( 'ABSPATH' ) || exit;
 	<!-- wp:group {"tagName":"article","className":"axismundi-object-card","layout":{"type":"constrained"}} -->
 	<article class="wp-block-group axismundi-object-card">
 		<?php require __DIR__ . '/parts/object-card-header.php'; ?>
-		<!-- wp:axismundi/object-featured-image /-->
-		<!-- wp:axismundi/object-title /-->
-		<!-- wp:axismundi/object-summary /-->
-		<?php
-		/*
-		 * An authored content warning covers the whole post, so the body, the quote
-		 * preview, the poll, and the attachments share one disclosure — matching how
-		 * Mastodon and Misskey present a warned post. `reply-context`, the header,
-		 * hashtags, and actions stay outside: they are the surrounding conversation,
-		 * not the warned material. Without an authored warning this wrapper renders
-		 * its children untouched.
-		 */
-		?>
-		<!-- wp:axismundi/object-content-warning -->
-			<!-- wp:axismundi/object-content /-->
-			<!-- wp:axismundi/quote-context /-->
-			<!-- wp:axismundi/question /-->
-			<!-- wp:axismundi/object-attachments /-->
-		<!-- /wp:axismundi/object-content-warning -->
+		<!-- wp:axismundi/object-card-body /-->
 		<!-- wp:axismundi/object-hashtags {"className":"is-style-tags"} /-->
 		<!-- wp:axismundi/reaction-bar /-->
 		<!-- wp:axismundi/interactions -->

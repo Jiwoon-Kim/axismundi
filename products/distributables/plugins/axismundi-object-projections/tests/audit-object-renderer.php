@@ -540,9 +540,16 @@ $ax_rnd_results[] = ( static function () : bool {
 		// The Article card carries no body at all, so there is nothing for it to hide.
 		&& false === strpos( $article_card, '<!-- wp:axismundi/object-content ' )
 		&& false === strpos( $article_card, '<!-- wp:axismundi/object-content /' )
-		// The default card keeps both the fold and the body it exists to cover.
-		&& false !== strpos( $default_card, '<!-- wp:axismundi/object-content-warning' )
-		&& false !== strpos( $default_card, '<!-- wp:axismundi/object-content /' );
+		/*
+		 * The default card still has both, one level down: the fold and the body it exists to
+		 * cover moved into `object-card-body` together, which is the point — separating them
+		 * would leave a disclosure with nothing behind it. That they arrive together is asserted
+		 * against the rendered card further down; what can be seen from here is that this card
+		 * asks for them rather than keeping its own copy.
+		 */
+		&& false !== strpos( $default_card, '<!-- wp:axismundi/object-card-body /-->' )
+		&& false === strpos( $default_card, '<!-- wp:axismundi/object-content-warning' )
+		&& false === strpos( $default_card, '<!-- wp:axismundi/object-content /' );
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 	printf( "[%s] the fold lives only where a body can be folded, never on an Article surface\n", $pass ? 'PASS' : 'FAIL' );
 	return $pass;
@@ -701,6 +708,54 @@ ax_rnd_assert(
 	false === strpos( $ax_rnd_card_html, 'post-excerpt__more-link' )
 		&& 1 === substr_count( $ax_rnd_card_html, 'axismundi-object__read-more-link' )
 		&& 'https://example.com/a/1' === $ax_rnd_card_href
+);
+
+
+/*
+ * The Note card kept everything, including the shape of its disclosure.
+ *
+ * Unlike the Article card this delegation was meant to change nothing at all, so the check is
+ * equality rather than a list of survivors — the only permitted difference is whitespace between
+ * blocks, which a template's newlines produce and a concatenated block template does not.
+ *
+ * The content warning is the part worth naming. One authored warning covers the body, the quote
+ * preview, the poll and the attachments together, the way Mastodon and Misskey present a warned
+ * post; a delegation that emitted four separate disclosures, or none, would look right in a
+ * screenshot and be wrong about what the author asked for.
+ */
+$ax_rnd_note_model                   = axismundi_op_object_view_model_defaults();
+$ax_rnd_note_model['status']         = 'active';
+$ax_rnd_note_model['type']           = 'Note';
+$ax_rnd_note_model['object_uri']     = 'https://example.com/n/1';
+$ax_rnd_note_model['human_url']      = 'https://example.com/n/1';
+$ax_rnd_note_model['title']          = 'Note title';
+$ax_rnd_note_model['summary']        = 'Note summary text.';
+$ax_rnd_note_model['content']        = '<p>Note body text.</p>';
+$ax_rnd_note_model['media']['image'] = array( 'url' => 'https://example.com/lead.jpg', 'alt' => 'Lead', 'width' => 1200, 'height' => 800 );
+$ax_rnd_note_model['author']         = array( 'id' => 'https://example.com/actors/u', 'name' => 'Author', 'handle' => '@a@example.com', 'url' => 'https://example.com/actors/u' );
+axismundi_op_set_current_object_view_model( $ax_rnd_note_model );
+$ax_rnd_note_card = axismundi_op_render_object_pattern( array( 'headingTag' => 'h3', 'interactions' => false ) );
+$ax_rnd_note_body = do_blocks( '<!-- wp:axismundi/object-card-body /-->' );
+axismundi_op_set_current_object_view_model( null );
+
+ax_rnd_assert(
+	$ax_rnd_results,
+	'a Note card wraps its body, quote, poll and attachments in one disclosure, delegated or not',
+	1 === substr_count( $ax_rnd_note_card, 'content-warning' )
+		&& 1 === substr_count( $ax_rnd_note_body, 'content-warning' )
+		&& false !== strpos( $ax_rnd_note_card, 'lead.jpg' )
+		&& false !== strpos( $ax_rnd_note_card, 'axismundi-object__title' )
+);
+
+// The card template asks the body block for this region; finding the blocks themselves back in
+// the template would mean the two had been allowed to drift into separate copies.
+$ax_rnd_note_template = axismundi_op_object_card_pattern_content( 'object-card-default' );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'the Note card delegates its body rather than keeping a second copy of it',
+	false !== strpos( $ax_rnd_note_template, '<!-- wp:axismundi/object-card-body /-->' )
+		&& false === strpos( $ax_rnd_note_template, '<!-- wp:axismundi/object-content /' )
+		&& false === strpos( $ax_rnd_note_template, '<!-- wp:axismundi/object-content-warning' )
 );
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

@@ -36,12 +36,12 @@ defined( 'ABSPATH' ) || exit;
 		<!-- wp:axismundi/object-summary {"moreText":"Read more"} /-->
 		<!-- wp:axismundi/object-hashtags {"className":"is-style-tags"} /-->
 		<!-- wp:axismundi/reaction-bar /-->
-		<!-- wp:axismundi/object-actions -->
+		<!-- wp:axismundi/interactions -->
 			<!-- wp:axismundi/reply-button /-->
 			<!-- wp:axismundi/like-button /-->
 			<!-- wp:axismundi/announce-button /-->
 			<!-- wp:axismundi/reaction-button /-->
-		<!-- /wp:axismundi/object-actions -->
+		<!-- /wp:axismundi/interactions -->
 	</article>
 	<!-- /wp:group -->
 </div>

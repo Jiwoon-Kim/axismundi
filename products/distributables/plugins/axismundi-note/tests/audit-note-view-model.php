@@ -103,7 +103,7 @@ try {
 			&& strpos( $pattern_source, 'wp:axismundi/question' ) < strpos( $pattern_source, 'wp:axismundi/object-attachments' )
 			&& str_contains( $pattern_source, 'wp:axismundi/object-summary' )
 			&& str_contains( $pattern_source, 'wp:axismundi/object-hashtags' )
-			&& str_contains( $pattern_source, 'wp:axismundi/object-actions' )
+			&& str_contains( $pattern_source, 'wp:axismundi/interactions' )
 			&& str_contains( $pattern_html, 'axismundi-object-card' )
 			&& str_contains( $pattern_html, 'wp-block-axismundi-actor-name' )
 			&& str_contains( $pattern_html, 'Hello from a note.' )

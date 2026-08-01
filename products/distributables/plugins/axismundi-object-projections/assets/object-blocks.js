@@ -9,7 +9,6 @@
 ( function ( blocks, blockEditor, element, i18n ) {
 	var el = element.createElement;
 	var __ = i18n.__;
-	var InnerBlocks = blockEditor.InnerBlocks;
 	var registry = window.axismundiOpObjectBlocks || {};
 
 	Object.keys( registry ).forEach( function ( name ) {
@@ -22,23 +21,6 @@
 			attributes: definition.attributes || {},
 			supports: definition.supports || {},
 		};
-
-		if ( 'axismundi/object-interactions' === name ) {
-			settings.edit = function () {
-				return el(
-					'div',
-					blockEditor.useBlockProps( { className: 'axismundi-object__interactions' } ),
-					el( InnerBlocks, {
-						template: [ [ 'axismundi/reply-button' ], [ 'axismundi/like-button' ], [ 'axismundi/announce-button' ] ],
-						templateLock: false,
-						orientation: 'horizontal'
-					} )
-				);
-			};
-			settings.save = function () { return null; };
-			blocks.registerBlockType( name, settings );
-			return;
-		}
 
 		settings.edit = function () {
 			return el(

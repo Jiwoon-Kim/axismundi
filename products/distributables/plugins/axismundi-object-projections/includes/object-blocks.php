@@ -1312,7 +1312,6 @@ function axismundi_op_register_object_blocks() : void {
 		'object-avatar'       => array( 'Legacy Object Actor Avatar', 'axismundi_op_render_object_avatar_block' ),
 		'object-identity'     => array( 'Legacy Object Actor Identity', 'axismundi_op_render_object_identity_block' ),
 		'object-meta'         => array( 'Object Metadata', 'axismundi_op_render_object_meta_block' ),
-		'object-interactions' => array( 'Object Interactions', 'axismundi_op_render_object_interactions_block' ),
 	);
 	foreach ( $blocks as $slug => $definition ) {
 		register_block_type(
@@ -1328,11 +1327,7 @@ function axismundi_op_register_object_blocks() : void {
 				'supports'        => array_merge(
 					axismundi_op_object_block_supports(),
 					array(
-						// `object-interactions` is the deprecated name for
-						// `object-actions`; it stays registered so a saved template
-						// keeps rendering, but out of the inserter.
-						'inserter' => ! in_array( $slug, array( 'object-avatar', 'object-identity', 'object-interactions', 'object-meta' ), true ),
-						'layout'   => 'object-interactions' === $slug,
+						'inserter' => ! in_array( $slug, array( 'object-avatar', 'object-identity', 'object-meta' ), true ),
 					)
 				),
 				'attributes'      => 'object-avatar' === $slug ? array( 'size' => array( 'type' => 'number', 'default' => 48 ) ) : array(),
@@ -1349,7 +1344,7 @@ function axismundi_op_register_object_blocks() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-type' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-summary' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-hashtags' );
-	register_block_type( dirname( __DIR__ ) . '/blocks/object-actions' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/interactions' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-featured-image' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-attachments' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/quote-context' );

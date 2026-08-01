@@ -1,12 +1,12 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "axismundi/object-actions",
+	"name": "axismundi/interactions",
 	"version": "0.1.0",
-	"title": "Object Actions",
+	"title": "Interactions",
 	"category": "theme",
 	"icon": "button",
-	"description": "What a viewer can do with the current Object: reply, like, repost. The Object sibling of Core's Buttons, so alignment, gap, and justification work the same way.",
+	"description": "The row of interaction controls for the current Object. Holds Interaction blocks the way Core's Buttons holds Button, so alignment, gap, and justification work the same way.",
 	"textdomain": "axismundi-object-projections",
 	"supports": {
 		"anchor": true,

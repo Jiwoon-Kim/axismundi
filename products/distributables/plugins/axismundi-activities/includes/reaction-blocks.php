@@ -3,7 +3,7 @@
  * The two blocks a reader touches: the picker button, and the row of chips.
  *
  * Split on purpose. The button is an *action* and belongs among Reply, Like, and Repost
- * inside `object-actions`; the chips are *state* and belong above them, where their changing
+ * inside `interactions`; the chips are *state* and belong above them, where their changing
  * height cannot push the action row away from the reply controls below. Putting both in one
  * block forced a layout that had to be one or the other.
  *

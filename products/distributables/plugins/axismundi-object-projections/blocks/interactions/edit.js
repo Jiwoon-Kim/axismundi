@@ -1,5 +1,5 @@
 /**
- * axismundi/object-actions editor registration (no build step).
+ * axismundi/interactions editor registration (no build step).
  *
  * A Buttons-style container: the action buttons are real inner blocks, so an
  * author can reorder or remove them and use the same alignment and gap controls
@@ -11,7 +11,7 @@
 	var InnerBlocks = blockEditor.InnerBlocks;
 	var useInnerBlocksProps = blockEditor.useInnerBlocksProps || blockEditor.__experimentalUseInnerBlocksProps;
 	var TEMPLATE = [ [ 'axismundi/reply-button' ], [ 'axismundi/like-button' ], [ 'axismundi/announce-button' ], [ 'axismundi/reaction-button' ] ];
-	blocks.registerBlockType( 'axismundi/object-actions', {
+	blocks.registerBlockType( 'axismundi/interactions', {
 		edit: function () {
 			var blockProps = blockEditor.useBlockProps( { className: 'axismundi-object__interactions' } );
 			// The layout classes land on the block wrapper, so the buttons have to be

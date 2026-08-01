@@ -72,6 +72,35 @@ function axismundi_act_remote_follow_rate_limit() {
 	return true;
 }
 
+/**
+ * The words one Actor's follow relation is described with.
+ *
+ * Every surface that names this action goes through here, including the one an anonymous visitor
+ * sees. That path used to write "Follow" into the markup directly, so a community's own profile
+ * offered to follow it as though it were a person — the vocabulary existed and the button simply
+ * did not ask for it.
+ *
+ * @param Axismundi_Actor|null $target Actor the relation points at.
+ * @return array<string,string>
+ */
+function axismundi_act_follow_words( ?Axismundi_Actor $target ) : array {
+	if ( function_exists( 'axismundi_actors_follow_vocabulary' ) ) {
+		return axismundi_actors_follow_vocabulary( $target instanceof Axismundi_Actor ? $target->get_type() : 'Person' );
+	}
+	// Actors is a hard dependency of this plugin; this only keeps a half-activated site readable.
+	return array(
+		'verb'         => __( 'Follow', 'axismundi-activities' ),
+		'verb_done'    => __( 'Following', 'axismundi-activities' ),
+		'undo'         => __( 'Unfollow', 'axismundi-activities' ),
+		'pending'      => __( 'Requested', 'axismundi-activities' ),
+		/* translators: %s: actor display name. */
+		'verb_target'  => __( 'Follow %s', 'axismundi-activities' ),
+		'sign_in'      => __( 'Log in to follow', 'axismundi-activities' ),
+		'remote_intro' => __( 'Follow this profile from your own Fediverse account.', 'axismundi-activities' ),
+		'target_label' => __( 'Profile to follow', 'axismundi-activities' ),
+	);
+}
+
 /** Resolve an anonymous visitor's remote-follow browser URL. */
 function axismundi_act_rest_remote_follow( WP_REST_Request $request ) {
 	$target = axismundi_act_follow_rest_target( (string) $request['target_uri'] );
@@ -120,22 +149,34 @@ function axismundi_act_follow_button_state( ?Axismundi_Actor $subject, Axismundi
 		}
 	}
 
-	$label  = __( 'Follow', 'axismundi-activities' );
-	$action = __( 'Follow', 'axismundi-activities' );
+	/*
+	 * One relation, two vocabularies.
+	 *
+	 * The activity sent and the row stored are `Follow` either way — this only decides what the
+	 * control is called. Following a person is following them; following a community is
+	 * subscribing to it, and "Following" on a community reads as if the community were someone.
+	 * Actors owns the words because the distinction is a property of the Actor, not of Follow.
+	 */
+	$words = axismundi_act_follow_words( $target );
+	$is_group = $target instanceof Axismundi_Actor && 'Group' === $target->get_type();
+	$label    = (string) $words['verb'];
+	$action   = (string) $words['verb'];
 	if ( $legacy && in_array( $state, array( 'accepted', 'legacy_pending' ), true ) ) {
-		$label  = __( 'Re-follow', 'axismundi-activities' );
+		$label  = $is_group ? __( 'Re-subscribe', 'axismundi-activities' ) : __( 'Re-follow', 'axismundi-activities' );
 		$action = $label;
 	} elseif ( 'pending' === $state ) {
-		$label  = __( 'Requested', 'axismundi-activities' );
-		$action = __( 'Cancel follow request', 'axismundi-activities' );
+		$label  = (string) $words['pending'];
+		$action = $is_group ? __( 'Cancel subscription request', 'axismundi-activities' ) : __( 'Cancel follow request', 'axismundi-activities' );
 	} elseif ( 'accepted' === $state && $follows_you ) {
-		$label  = __( 'Mutual', 'axismundi-activities' );
-		$action = __( 'Unfollow', 'axismundi-activities' );
+		// A Group does not follow anyone back, so "Mutual" is a Person-only state; a Group that
+		// somehow appears to follow you is still just subscribed to.
+		$label  = $is_group ? (string) $words['verb_done'] : __( 'Mutual', 'axismundi-activities' );
+		$action = (string) $words['undo'];
 	} elseif ( 'accepted' === $state ) {
-		$label  = __( 'Following', 'axismundi-activities' );
-		$action = __( 'Unfollow', 'axismundi-activities' );
+		$label  = (string) $words['verb_done'];
+		$action = (string) $words['undo'];
 	} elseif ( $follows_you ) {
-		$label  = __( 'Follow back', 'axismundi-activities' );
+		$label  = $is_group ? (string) $words['verb'] : __( 'Follow back', 'axismundi-activities' );
 		$action = $label;
 	}
 
@@ -257,12 +298,13 @@ function axismundi_act_render_remote_follow_modal( Axismundi_Actor $target, stri
 	if ( is_wp_error( $resource ) ) {
 		return '';
 	}
-	$name = $target->get_display_name() ?: $target->get_preferred_username();
+	$name  = $target->get_display_name() ?: $target->get_preferred_username();
+	$words = axismundi_act_follow_words( $target );
 	ob_start();
 	?>
-	<p><?php esc_html_e( 'Follow this profile from your own Fediverse account.', 'axismundi-activities' ); ?></p>
+	<p><?php echo esc_html( (string) $words['remote_intro'] ); ?></p>
 	<div class="axismundi-remote-follow__target">
-		<label for="<?php echo esc_attr( $modal_id . '-target' ); ?>"><?php esc_html_e( 'Profile to follow', 'axismundi-activities' ); ?></label>
+		<label for="<?php echo esc_attr( $modal_id . '-target' ); ?>"><?php echo esc_html( (string) $words['target_label'] ); ?></label>
 		<input id="<?php echo esc_attr( $modal_id . '-target' ); ?>" type="text" readonly value="<?php echo esc_attr( $resource ); ?>">
 		<button type="button" class="axismundi-remote-follow__copy" data-wp-on--click="actions.copyRemoteFollowTarget"><span data-wp-text="context.copyLabel"><?php esc_html_e( 'Copy', 'axismundi-activities' ); ?></span></button>
 	</div>
@@ -280,8 +322,7 @@ function axismundi_act_render_remote_follow_modal( Axismundi_Actor $target, stri
 	return axismundi_dialogs_render_interaction_dialog(
 		array(
 			'id'              => $modal_id,
-			/* translators: %s: actor display name. */
-			'title'           => sprintf( __( 'Follow %s', 'axismundi-activities' ), $name ),
+			'title'           => sprintf( (string) $words['verb_target'], $name ),
 			'body'            => $body,
 			'close_action'    => 'actions.closeRemoteFollowDialog',
 			'cancel_action'   => 'actions.onRemoteFollowDialogCancel',
@@ -302,6 +343,7 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 		return '';
 	}
 	$profile_url = $target->get_profile_url();
+	$words       = axismundi_act_follow_words( $target );
 	if ( ! is_user_logged_in() ) {
 		$modal_id = 'ax-remote-follow-' . wp_unique_id();
 		$modal    = axismundi_act_render_remote_follow_modal( $target, $modal_id, $profile_url );
@@ -322,13 +364,13 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 			);
 			ob_start();
 			?>
-			<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button axismundi-follow-button__button" aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $modal_id ); ?>" data-wp-on--click="actions.openRemoteFollowDialog"><?php esc_html_e( 'Follow', 'axismundi-activities' ); ?></button></div><?php echo $modal; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dialog helper renders escaped chrome and this function renders the escaped body. ?></div>
+			<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/follow-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><div class="wp-block-button"><button type="button" class="wp-block-button__link wp-element-button axismundi-follow-button__button" aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $modal_id ); ?>" data-wp-on--click="actions.openRemoteFollowDialog"><?php echo esc_html( (string) $words['verb'] ); ?></button></div><?php echo $modal; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dialog helper renders escaped chrome and this function renders the escaped body. ?></div>
 			<?php
 			return (string) ob_get_clean();
 		}
 		ob_start();
 		?>
-		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><a class="axismundi-follow-button__button" href="<?php echo esc_url( wp_login_url( $profile_url ) ); ?>"><?php esc_html_e( 'Log in to follow', 'axismundi-activities' ); ?></a><a class="axismundi-follow-button__remote" href="https://joinmastodon.org/servers/" rel="external noopener noreferrer" target="_blank"><?php esc_html_e( 'Use another Fediverse server', 'axismundi-activities' ); ?></a></div>
+		<div <?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-follow-button is-anonymous' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><a class="axismundi-follow-button__button" href="<?php echo esc_url( wp_login_url( $profile_url ) ); ?>"><?php echo esc_html( (string) $words['sign_in'] ); ?></a><a class="axismundi-follow-button__remote" href="https://joinmastodon.org/servers/" rel="external noopener noreferrer" target="_blank"><?php esc_html_e( 'Use another Fediverse server', 'axismundi-activities' ); ?></a></div>
 		<?php
 		return (string) ob_get_clean();
 	}

@@ -165,6 +165,23 @@ final class Axismundi_Activity {
 	/** @return array<string,mixed> */
 	public function get_payload() : array { return (array) $this->row['payload']; }
 	public function get_published_at() : ?string { return null !== $this->row['published_at'] ? (string) $this->row['published_at'] : null; }
+	/**
+	 * The time the ledger orders by.
+	 *
+	 * This mirrors the `COALESCE(published_at, received_at, created_at)` every feed query sorts
+	 * on. It exists so a continuation cursor is built from the same expression the ORDER BY
+	 * uses — computing the two separately is how a cursor ends up naming a position the query
+	 * does not agree with, and rows fall through the gap between pages.
+	 */
+	public function get_effective_time() : string {
+		foreach ( array( 'published_at', 'received_at', 'created_at' ) as $column ) {
+			$value = $this->row[ $column ] ?? null;
+			if ( null !== $value && '' !== (string) $value ) {
+				return (string) $value;
+			}
+		}
+		return '';
+	}
 }
 
 /** Absolute HTTP(S) URI validation without performing a request. */
@@ -528,6 +545,94 @@ function axismundi_act_get_actor_feed( string $actor_uri, int $limit = 20, int $
 	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed feed selection in the custom ledger; direction placeholders and every value are allowlisted/prepared.
 	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d OFFSET %d", array_merge( array( hash( 'sha256', $uri ), $uri ), $directions, array( $limit, $offset ) ) ), ARRAY_A );
+	return array_map( 'axismundi_act_hydrate', $rows );
+}
+
+/**
+ * The feed's sort key for one ledger row, as an opaque continuation cursor.
+ *
+ * The feed is ordered by effective time and then by id, so a cursor has to carry both. Time
+ * alone is not unique — a batch of activities imported together shares one timestamp, and a
+ * cursor that only remembered the time would either repeat that whole batch or skip it.
+ *
+ * @param Axismundi_Activity $activity Activity to describe.
+ * @return string Cursor, or '' when the row cannot be positioned.
+ */
+function axismundi_act_feed_cursor( Axismundi_Activity $activity ) : string {
+	$time = $activity->get_effective_time();
+	return '' === $time ? '' : $time . '@' . $activity->get_id();
+}
+
+/** Split a continuation cursor back into its time and id halves. */
+function axismundi_act_parse_feed_cursor( string $cursor ) : ?array {
+	$parts = explode( '@', $cursor );
+	if ( 2 !== count( $parts ) || '' === trim( $parts[0] ) || ! ctype_digit( $parts[1] ) ) {
+		return null;
+	}
+	$time = trim( $parts[0] );
+	// A cursor arrives from a URL, so it is attacker-controlled. Accept only the exact
+	// datetime shape the ledger stores; anything else is discarded rather than passed to a
+	// comparison that would silently match everything or nothing.
+	if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $time ) ) {
+		return null;
+	}
+	return array( 'time' => $time, 'id' => (int) $parts[1] );
+}
+
+/**
+ * One page of an Actor's feed strictly older than a cursor.
+ *
+ * Offset paging is wrong for this feed and gets more wrong the more active the Actor is: the
+ * ledger grows at the head, so by the time a reader asks for the next page the rows have all
+ * shifted down by however many arrived, and the reader sees duplicates. A cursor names a
+ * position in the ordering itself, so what comes back is always what follows what was shown.
+ *
+ * @param string $actor_uri Actor whose feed is read.
+ * @param int    $limit     Maximum rows.
+ * @param string $cursor    Continuation cursor, or '' for the newest page.
+ * @param bool   $inclusive Whether the cursor's own row is included.
+ * @return Axismundi_Activity[]
+ */
+function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20, string $cursor = '', bool $inclusive = false ) : array {
+	global $wpdb;
+	$uri = axismundi_act_uri( $actor_uri );
+	if ( '' === $uri || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		return array();
+	}
+	$actor = axismundi_actors_get_by_uri( $uri );
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return array();
+	}
+	$position = '' === $cursor ? null : axismundi_act_parse_feed_cursor( $cursor );
+	if ( '' !== $cursor && null === $position ) {
+		// An unreadable cursor is refused rather than quietly restarting at the newest page,
+		// which would loop a scrolling reader back to the top forever.
+		return array();
+	}
+	$table         = axismundi_act_activities_table();
+	$limit         = max( 1, min( 50, $limit ) );
+	$directions    = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
+	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
+	$sort          = 'COALESCE(published_at, received_at, created_at)';
+	$where         = '';
+	$args          = array_merge( array( hash( 'sha256', $uri ), $uri ), $directions );
+	if ( null !== $position ) {
+		/*
+		 * Inclusive is what an infinite-scrolling window needs: it anchors to the newest row the
+		 * reader has already been shown, so growing the window re-renders from exactly that row
+		 * and activity arriving at the head afterwards cannot shift what is below it. Exclusive
+		 * is what a next-page link needs. The two differ by one character, so they share a query
+		 * rather than becoming two that can disagree about a boundary row.
+		 */
+		$comparison = $inclusive ? '<=' : '<';
+		$where      = " AND ( {$sort} < %s OR ( {$sort} = %s AND id {$comparison} %d ) )";
+		$args[]     = $position['time'];
+		$args[]     = $position['time'];
+		$args[]     = $position['id'];
+	}
+	$args[] = $limit;
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed feed selection in the custom ledger; direction placeholders and every value are allowlisted/prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active'{$where} ORDER BY {$sort} DESC, id DESC LIMIT %d", $args ), ARRAY_A );
 	return array_map( 'axismundi_act_hydrate', $rows );
 }
 

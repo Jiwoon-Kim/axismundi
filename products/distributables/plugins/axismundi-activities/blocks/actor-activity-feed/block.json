@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/actor-activity-feed",
-	"version": "0.0.24",
+	"version": "0.0.35",
 	"title": "Actor Timeline",
 	"category": "theme",
 	"icon": "list-view",
@@ -11,9 +11,17 @@
 	"supports": {
 		"html": false,
 		"inserter": false,
-		"align": ["wide", "full"],
-		"spacing": { "margin": true, "padding": true }
+		"align": [
+			"wide",
+			"full"
+		],
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"interactivity": true
 	},
 	"style": "file:./style.css",
-	"render": "file:./render.php"
+	"render": "file:./render.php",
+	"viewScriptModule": "file:./view.js"
 }

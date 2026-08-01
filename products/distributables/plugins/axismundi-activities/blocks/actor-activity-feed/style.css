@@ -31,3 +31,151 @@
 	--md-icon-size: 1.125rem;
 	font-size: 1.125rem;
 }
+
+/*
+ * Profile surfaces read as tabs; the timeline's own filters read as two switches under a
+ * disclosure whose label names the combination. Both are links, so they work with no script and
+ * survive being shared -- the state is in the URL, never in browser storage.
+ */
+.axismundi-activity-feed__surfaces,
+.axismundi-activity-feed__views {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-block-end: var(--wp--preset--spacing--300, 1rem);
+}
+
+.axismundi-activity-feed__surface,
+.axismundi-activity-feed__view {
+	padding: 0.375rem 0.75rem;
+	border-radius: 9999px;
+	text-decoration: none;
+	color: inherit;
+}
+
+.axismundi-activity-feed__surface:hover,
+.axismundi-activity-feed__view:hover {
+	background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+/* The selected state is carried by weight and fill together, so it survives a display where
+   the accent colour alone is not distinguishable. */
+.axismundi-activity-feed__surface.is-current,
+.axismundi-activity-feed__view.is-current {
+	background: color-mix(in srgb, currentColor 12%, transparent);
+	font-weight: 600;
+}
+
+.axismundi-activity-feed__filters {
+	position: relative;
+	margin-block-end: var(--wp--preset--spacing--300, 1rem);
+}
+
+.axismundi-activity-feed__filters-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	cursor: pointer;
+	border: 0;
+	padding: 0.375rem 0.75rem;
+	border-radius: 9999px;
+	background: color-mix(in srgb, currentColor 8%, transparent);
+	color: inherit;
+	font: inherit;
+}
+
+/*
+ * A popover has to read as floating over the page, which means it needs its own surface —
+ * elevated rather than outlined, the same treatment the reaction picker and the theme's
+ * navigation submenu use. `surface-container-low`, no border, a level-2 shadow.
+ *
+ * The theme's presets rather than system colours: `Canvas`/`CanvasText` are the browser's
+ * idea of a page, which is neither the right surface tone here nor dark-mode aware. The
+ * shadow is kept locally because the theme's elevation preset resolves to `none` in dark
+ * mode — it carries elevation as surface tone there, which is the M3 rule for dark
+ * surfaces, with floating things as the documented exception.
+ *
+ * This one is two rows, so unlike the picker it needs no measuring or flipping: it hangs
+ * from the trigger and stays in flow-relative terms.
+ */
+.axismundi-activity-feed__filters-panel {
+	position: absolute;
+	inset-inline-start: 0;
+	inset-block-start: calc(100% + 0.25rem);
+	z-index: var(--md-sys-z-popover, 50);
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	min-inline-size: max-content;
+	padding: var(--wp--preset--spacing--50, 0.5rem);
+	border: 0;
+	border-radius: 16px;
+	/*
+	 * Every theme token carries a fallback, because this plugin can be installed under any
+	 * theme and a popover with no surface is not a lesser popover — it is an unreadable one.
+	 * `Canvas` and `CanvasText` are the browser's own page colours: the wrong tone under our
+	 * theme, which is why the token comes first, but exactly right when there is no theme to
+	 * ask, and they follow the reader's light/dark and forced-colors settings for free.
+	 */
+	background-color: var(--wp--preset--color--surface-container-low, Canvas);
+	color: var(--wp--preset--color--on-surface, CanvasText);
+	box-shadow:
+		0 1px 2px color-mix(in srgb, var(--md-sys-color-shadow, #000), transparent 70%),
+		0 2px 6px 2px color-mix(in srgb, var(--md-sys-color-shadow, #000), transparent 85%);
+	/* A border only where there is no shadow to separate the popover from the page. */
+	outline: 1px solid transparent;
+}
+
+/*
+ * `display: flex` above is a class rule and outranks the user agent's
+ * `[hidden] { display: none }`, so without this the closed panel stays on screen. Any
+ * component that sets `display` has to restate this.
+ */
+.axismundi-activity-feed__filters-panel[hidden] {
+	display: none;
+}
+
+/*
+ * Forced-colors mode drops both the background and the shadow, which would leave the popover
+ * as floating text over whatever is beneath it. The outline is the only separation that
+ * survives there, so it is drawn rather than left transparent.
+ */
+@media ( forced-colors: active ) {
+	.axismundi-activity-feed__filters-panel {
+		outline-color: CanvasText;
+	}
+}
+
+.axismundi-activity-feed__switch {
+	margin-block: 0.125rem;
+}
+
+.axismundi-activity-feed__empty {
+	opacity: 0.7;
+}
+
+.axismundi-activity-feed__pagination {
+	display: flex;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-block-start: var(--wp--preset--spacing--300, 1rem);
+}
+
+/* This stays an anchor so the next cumulative window is reachable without JavaScript. */
+.axismundi-activity-feed__more-link,
+.axismundi-activity-feed__newer-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-block-size: 2.5rem;
+	padding-inline: 1rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.axismundi-activity-feed__more-link:hover,
+.axismundi-activity-feed__newer-link:hover {
+	background: color-mix(in srgb, currentColor 10%, transparent);
+}

@@ -19,7 +19,7 @@
 /* List = a single-column stack of cards, exactly like Latest Posts' list. */
 .wp-block-axismundi-actor-profile-fields.is-display-list {
 	display: grid;
-	gap: var(--wp--preset--spacing--200);
+	gap: var(--wp--preset--spacing--200, 0.75rem);
 }
 
 /* Grid = the same cards arranged into columns, with Latest Posts' own inline-size
@@ -27,7 +27,7 @@
 .wp-block-axismundi-actor-profile-fields.is-display-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--wp--preset--spacing--200);
+	gap: var(--wp--preset--spacing--200, 0.75rem);
 }
 
 /* The card surface -- shared by list and grid, matching
@@ -38,9 +38,9 @@
 	flex-wrap: wrap;
 	align-items: baseline;
 	gap: 0.35rem;
-	padding: var(--wp--preset--spacing--200);
+	padding: var(--wp--preset--spacing--200, 0.75rem);
 	border-radius: 12px;
-	background-color: var(--wp--preset--color--surface-container);
+	background-color: var(--wp--preset--color--surface-container, Canvas);
 	box-shadow: none;
 }
 
@@ -51,20 +51,20 @@
 
 @media (min-width: 480px) {
 	.wp-block-axismundi-actor-profile-fields.is-display-grid.columns-2 .ax-actor-profile-fields-block__item {
-		inline-size: calc((100% - var(--wp--preset--spacing--200)) / 2);
+		inline-size: calc((100% - var(--wp--preset--spacing--200, 0.75rem)) / 2);
 	}
 	.wp-block-axismundi-actor-profile-fields.is-display-grid.columns-3 .ax-actor-profile-fields-block__item {
-		inline-size: calc((100% - 2 * var(--wp--preset--spacing--200)) / 3);
+		inline-size: calc((100% - 2 * var(--wp--preset--spacing--200, 0.75rem)) / 3);
 	}
 	.wp-block-axismundi-actor-profile-fields.is-display-grid.columns-4 .ax-actor-profile-fields-block__item {
-		inline-size: calc((100% - 3 * var(--wp--preset--spacing--200)) / 4);
+		inline-size: calc((100% - 3 * var(--wp--preset--spacing--200, 0.75rem)) / 4);
 	}
 }
 
 /* Field label -- the row's metadata, styled like Latest Posts' date/author. */
 .ax-actor-profile-fields-block__name {
-	color: var(--wp--preset--color--on-surface-variant);
-	font-size: var(--wp--preset--font-size--body-small);
+	color: var(--wp--preset--color--on-surface-variant, GrayText);
+	font-size: var(--wp--preset--font-size--body-small, 0.875rem);
 	font-weight: 600;
 	line-height: 1.333;
 	letter-spacing: 0.4px;
@@ -72,8 +72,8 @@
 
 /* The URL is the row's clickable content -- styled like Latest Posts' title. */
 .ax-actor-profile-fields-block__url {
-	color: var(--wp--preset--color--on-surface);
-	font-size: var(--wp--preset--font-size--title-medium);
+	color: var(--wp--preset--color--on-surface, CanvasText);
+	font-size: var(--wp--preset--font-size--title-medium, 1rem);
 	font-weight: 500;
 	line-height: 1.5;
 	letter-spacing: 0.15px;

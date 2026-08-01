@@ -361,9 +361,10 @@ function axismundi_act_render_reaction_button( array $attributes, string $conten
 		$uid      = 'ax-rx-' . substr( md5( $object_uri ), 0, 8 );
 		$unicode  = axismundi_act_unicode_picker_source();
 		?>
-		<div class="axismundi-reaction-button__picker ax-menu" role="dialog" aria-label="<?php echo esc_attr( $label ); ?>" hidden data-wp-bind--hidden="state.isPickerHidden" data-wp-class--is-open="state.isOpen">
-			<div class="axismundi-reaction-picker__search ax-text-field ax-text-field--search">
-				<span class="material-symbols-outlined ax-text-field__leading" aria-hidden="true">search</span>
+		<div class="axismundi-reaction-button__picker" role="dialog" aria-label="<?php echo esc_attr( $label ); ?>" hidden data-wp-bind--hidden="state.isPickerHidden" data-wp-class--is-open="state.isOpen">
+			<div class="axismundi-reaction-picker__search">
+				<?php // Placed by the field's own `grid-template-columns: auto 1fr`, so it needs no class of its own. ?>
+				<span class="material-symbols-outlined" aria-hidden="true">search</span>
 				<input
 					type="search"
 					class="axismundi-reaction-picker__input"

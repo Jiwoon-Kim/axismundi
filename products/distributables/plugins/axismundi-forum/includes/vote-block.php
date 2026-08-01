@@ -70,6 +70,45 @@ function axismundi_forum_vote_block_object_uri( array $attributes, WP_Block $blo
 	return (string) apply_filters( 'axismundi_forum_vote_block_object_uri', $uri, $attributes, $block );
 }
 
+/**
+ * Render the vote control as presentation only, for a surface that owns its own clicks.
+ *
+ * @param array<string,mixed> $context    Resolved vote state.
+ * @param string              $up_label   Accessible label for the up control.
+ * @param string              $down_label Accessible label for the down control.
+ * @param string              $tally      Spelled-out counts for assistive technology.
+ * @return string
+ */
+function axismundi_forum_render_vote_buttons_markup( array $context, string $up_label, string $down_label, string $tally ) : string {
+	$disabled = ! $context['canVote'];
+	ob_start();
+	?>
+	<div class="wp-block-axismundi-vote-buttons"
+		data-ax-vote-object-uri="<?php echo esc_attr( (string) $context['objectUri'] ); ?>"
+		data-ax-vote-endpoint="<?php echo esc_url( (string) $context['endpoint'] ); ?>"
+		data-ax-vote-viewer="<?php echo esc_attr( (string) $context['viewer'] ); ?>"
+		<?php if ( ! $disabled ) : ?>data-ax-nonce="<?php echo esc_attr( (string) $context['nonce'] ); ?>"<?php endif; ?>>
+		<div class="axismundi-vote-buttons__group" role="group" aria-label="<?php esc_attr_e( 'Community vote', 'axismundi-forum' ); ?>">
+			<button type="button" class="axismundi-vote-buttons__button axismundi-vote-buttons__button--up<?php echo $context['isUpvoted'] ? ' is-active' : ''; ?>"
+				data-ax-action="vote" data-ax-direction="up"
+				aria-pressed="<?php echo $context['isUpvoted'] ? 'true' : 'false'; ?>"
+				aria-label="<?php echo esc_attr( $up_label ); ?>" title="<?php echo esc_attr( $up_label ); ?>"<?php disabled( $disabled ); ?>>
+				<span class="material-symbols-outlined" aria-hidden="true"><?php echo esc_html( (string) $context['upIcon'] ); ?></span>
+			</button>
+			<span class="axismundi-vote-buttons__score" title="<?php echo esc_attr( $tally ); ?>"><?php echo esc_html( (string) $context['formattedScore'] ); ?></span>
+			<button type="button" class="axismundi-vote-buttons__button axismundi-vote-buttons__button--down<?php echo $context['isDownvoted'] ? ' is-active' : ''; ?>"
+				data-ax-action="vote" data-ax-direction="down"
+				aria-pressed="<?php echo $context['isDownvoted'] ? 'true' : 'false'; ?>"
+				aria-label="<?php echo esc_attr( $down_label ); ?>" title="<?php echo esc_attr( $down_label ); ?>"<?php disabled( $disabled ); ?>>
+				<span class="material-symbols-outlined" aria-hidden="true"><?php echo esc_html( (string) $context['downIcon'] ); ?></span>
+			</button>
+		</div>
+		<span class="screen-reader-text"><?php echo esc_html( $tally ); ?></span>
+	</div>
+	<?php
+	return (string) ob_get_clean();
+}
+
 /** Render the dynamic vote control. */
 function axismundi_forum_render_vote_buttons( array $attributes, string $content, WP_Block $block ) : string {
 	$object_uri = axismundi_forum_vote_block_object_uri( $attributes, $block );
@@ -125,6 +164,17 @@ function axismundi_forum_render_vote_buttons( array $attributes, string $content
 	$tally            = sprintf( $tally_template, number_format_i18n( $score['up'] ), number_format_i18n( $score['down'] ) );
 	$context['tally']         = $tally;
 	$context['tallyTemplate'] = $tally_template;
+	/*
+	 * Inside a feed the surrounding region owns clicks, because cards there are appended and
+	 * replaced continuously and appended DOM never hydrates. On a single object page this control
+	 * is the interaction and keeps owning itself. The feed variant omits the interactive
+	 * directives rather than emitting them behind a guard: markup that is not there cannot fire
+	 * twice.
+	 */
+	if ( function_exists( 'axismundi_op_object_template_option' )
+		&& 'feed' === (string) axismundi_op_object_template_option( 'interactionOwner', 'block' ) ) {
+		return axismundi_forum_render_vote_buttons_markup( $context, $up_label, $down_label, $tally );
+	}
 	ob_start();
 	?>
 	<div <?php echo get_block_wrapper_attributes(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/vote-buttons" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>

@@ -104,6 +104,7 @@ function axismundi_setup() : void {
 					file_exists( get_template_directory() . '/assets/styles/icons.css' ) ? 'assets/styles/icons.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/components.button.css' ) ? 'assets/styles/components.button.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/components.select.css' ) ? 'assets/styles/components.select.css' : null,
+					file_exists( get_template_directory() . '/assets/styles/components.switch.css' ) ? 'assets/styles/components.switch.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.text.css' ) ? 'assets/styles/blocks.text.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.table.css' ) ? 'assets/styles/blocks.table.css' : null,
 					file_exists( get_template_directory() . '/assets/styles/blocks.accordion.css' ) ? 'assets/styles/blocks.accordion.css' : null,
@@ -275,6 +276,9 @@ function axismundi_enqueue_assets() : void {
 		'axismundi-button'             => array( 'assets/styles/components.button.css', array( 'axismundi-tokens-motion', 'axismundi-icons' ) ),
 		// core/categories + core/archives dropdown — native <select> as an M3 field.
 		'axismundi-select'             => array( 'assets/styles/components.select.css', array( 'axismundi-button' ) ),
+		// A switch has no Core block behind it: this dresses the structural markup a
+		// plugin emits (label > native checkbox + track + label span).
+		'axismundi-switch'             => array( 'assets/styles/components.switch.css', array( 'axismundi-select' ) ),
 		// Core text block refinements that need pseudo-elements / specificity.
 		'axismundi-blocks-text'        => array( 'assets/styles/blocks.text.css', array( 'axismundi-tokens-motion' ) ),
 		// Core/raw table refinements that need cell-level selectors.

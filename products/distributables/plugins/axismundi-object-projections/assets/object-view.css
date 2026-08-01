@@ -129,8 +129,8 @@
 }
 
 .axismundi-question__choices > li:has(.ax-checkbox__input:checked) {
-	background-color: var(--wp--preset--color--secondary-container);
-	color: var(--wp--preset--color--on-secondary-container);
+	background-color: var(--wp--preset--color--secondary-container, Canvas);
+	color: var(--wp--preset--color--on-secondary-container, CanvasText);
 }
 
 .axismundi-question__option,
@@ -252,16 +252,16 @@
 	width: 18px; /* M3 §13.1 container size */
 	height: 18px;
 	border-radius: 2px; /* M3 §13.1 sub-xs literal */
-	border: 2px solid var(--md-sys-color-on-surface-variant); /* M3 §13.2 unselected outline */
+	border: 2px solid var(--md-sys-color-on-surface-variant, GrayText); /* M3 §13.2 unselected outline */
 	background-color: transparent;
 
 	transition:
 		background-color
-			var(--md-sys-motion-curve-fast-effects-duration)
-			var(--md-sys-motion-curve-fast-effects),
+			var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+			var(--md-sys-motion-curve-fast-effects, ease),
 		border-color
-			var(--md-sys-motion-curve-fast-effects-duration)
-			var(--md-sys-motion-curve-fast-effects);
+			var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+			var(--md-sys-motion-curve-fast-effects, ease);
 }
 
 /* State layer — 40×40 circle, behind visual, currentColor-driven */
@@ -274,15 +274,15 @@
 	width: 40px; /* M3 §13.1 state layer size */
 	height: 40px;
 	border-radius: 50%;
-	background-color: var(--md-sys-color-on-surface);
+	background-color: var(--md-sys-color-on-surface, CanvasText);
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity
-		var(--md-sys-motion-curve-fast-effects-duration)
-		var(--md-sys-motion-curve-fast-effects),
+		var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+		var(--md-sys-motion-curve-fast-effects, ease),
 		background-color
-			var(--md-sys-motion-curve-fast-effects-duration)
-			var(--md-sys-motion-curve-fast-effects);
+			var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+			var(--md-sys-motion-curve-fast-effects, ease);
 }
 
 /* Check icon — hidden by default, shown when checked */
@@ -290,40 +290,40 @@
 	width: 18px;
 	height: 18px;
 	fill: none;
-	stroke: var(--md-sys-color-on-primary);
+	stroke: var(--md-sys-color-on-primary, Canvas);
 	stroke-width: 3;
 	stroke-linecap: round;
 	stroke-linejoin: round;
 	opacity: 0;
 	transition: opacity
-		var(--md-sys-motion-curve-fast-effects-duration)
-		var(--md-sys-motion-curve-fast-effects);
+		var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+		var(--md-sys-motion-curve-fast-effects, ease);
 }
 
 /* Hover / focus / pressed — state layer becomes visible.
    :hover and :focus-visible drive on-surface color (unselected).
    :active uses primary (M3 pressed quirk). */
 .ax-checkbox__input:hover ~ .ax-checkbox__visual::before {
-	opacity: var(--md-sys-state-hover-state-layer-opacity);
+	opacity: var(--md-sys-state-hover-state-layer-opacity, 0.08);
 }
 .ax-checkbox__input:focus-visible ~ .ax-checkbox__visual::before {
-	opacity: var(--md-sys-state-focus-state-layer-opacity);
+	opacity: var(--md-sys-state-focus-state-layer-opacity, 0.1);
 }
 .ax-checkbox__input:active ~ .ax-checkbox__visual::before {
-	opacity: var(--md-sys-state-pressed-state-layer-opacity);
-	background-color: var(--md-sys-color-primary); /* unselected pressed = primary */
+	opacity: var(--md-sys-state-pressed-state-layer-opacity, 0.1);
+	background-color: var(--md-sys-color-primary, LinkText); /* unselected pressed = primary */
 }
 
 /* Focus indicator — on the visual itself (not the hidden input) */
 .ax-checkbox__input:focus-visible ~ .ax-checkbox__visual {
-	outline: 2px solid var(--md-sys-color-secondary);
+	outline: 2px solid var(--md-sys-color-secondary, LinkText);
 	outline-offset: 2px;
 }
 
 /* --- Selected state (input:checked) --- */
 .ax-checkbox__input:checked ~ .ax-checkbox__visual {
-	background-color: var(--md-sys-color-primary);
-	border-color: var(--md-sys-color-primary);
+	background-color: var(--md-sys-color-primary, LinkText);
+	border-color: var(--md-sys-color-primary, LinkText);
 }
 .ax-checkbox__input:checked ~ .ax-checkbox__visual .ax-checkbox__check {
 	opacity: 1;
@@ -331,16 +331,16 @@
 /* Selected hover/focus → primary state layer; pressed → on-surface */
 .ax-checkbox__input:checked:hover ~ .ax-checkbox__visual::before,
 .ax-checkbox__input:checked:focus-visible ~ .ax-checkbox__visual::before {
-	background-color: var(--md-sys-color-primary);
+	background-color: var(--md-sys-color-primary, LinkText);
 }
 .ax-checkbox__input:checked:active ~ .ax-checkbox__visual::before {
-	background-color: var(--md-sys-color-on-surface);
+	background-color: var(--md-sys-color-on-surface, CanvasText);
 }
 
 /* --- Indeterminate state — horizontal bar instead of check --- */
 .ax-checkbox__input:indeterminate ~ .ax-checkbox__visual {
-	background-color: var(--md-sys-color-primary);
-	border-color: var(--md-sys-color-primary);
+	background-color: var(--md-sys-color-primary, LinkText);
+	border-color: var(--md-sys-color-primary, LinkText);
 }
 .ax-checkbox__input:indeterminate ~ .ax-checkbox__visual .ax-checkbox__check {
 	opacity: 0; /* hide check */
@@ -353,23 +353,23 @@
 	transform: translate(-50%, -50%);
 	width: 10px;
 	height: 2px;
-	background-color: var(--md-sys-color-on-primary);
+	background-color: var(--md-sys-color-on-primary, Canvas);
 	border-radius: 1px;
 }
 
 /* --- Error state --- */
 .ax-checkbox.is-error .ax-checkbox__visual {
-	border-color: var(--md-sys-color-error);
+	border-color: var(--md-sys-color-error, #b3261e);
 }
 .ax-checkbox.is-error .ax-checkbox__input:checked ~ .ax-checkbox__visual {
-	background-color: var(--md-sys-color-error);
-	border-color: var(--md-sys-color-error);
+	background-color: var(--md-sys-color-error, #b3261e);
+	border-color: var(--md-sys-color-error, #b3261e);
 }
 .ax-checkbox.is-error .ax-checkbox__input:checked ~ .ax-checkbox__visual .ax-checkbox__check {
-	stroke: var(--md-sys-color-on-error);
+	stroke: var(--md-sys-color-on-error, #fff);
 }
 .ax-checkbox.is-error .ax-checkbox__visual::before {
-	background-color: var(--md-sys-color-error);
+	background-color: var(--md-sys-color-error, #b3261e);
 }
 
 /* --- Disabled (Pattern C) --- */
@@ -377,16 +377,16 @@
 	cursor: not-allowed;
 }
 .ax-checkbox__input:disabled ~ .ax-checkbox__visual {
-	border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
 }
 .ax-checkbox__input:disabled:checked ~ .ax-checkbox__visual,
 .ax-checkbox__input:disabled:indeterminate ~ .ax-checkbox__visual {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
 	border-color: transparent;
 }
 .ax-checkbox__input:disabled:checked ~ .ax-checkbox__visual .ax-checkbox__check {
 	/* Selected disabled icon stays full opacity, color = surface (M3 §13.4) */
-	stroke: var(--md-sys-color-surface);
+	stroke: var(--md-sys-color-surface, Canvas);
 	opacity: 1;
 }
 .ax-checkbox__input:disabled ~ .ax-checkbox__visual::before {
@@ -395,15 +395,15 @@
 
 /* Adjacent label */
 .ax-checkbox__label {
-	font-family: var(--md-sys-typescale-body-large-font);
-	font-size: var(--md-sys-typescale-body-large-size);
-	line-height: var(--md-sys-typescale-body-large-line-height);
-	font-weight: var(--md-sys-typescale-body-large-weight);
-	letter-spacing: var(--md-sys-typescale-body-large-tracking);
-	color: var(--md-sys-color-on-surface);
+	font-family: var(--md-sys-typescale-body-large-font, inherit);
+	font-size: var(--md-sys-typescale-body-large-size, 1rem);
+	line-height: var(--md-sys-typescale-body-large-line-height, 1.5);
+	font-weight: var(--md-sys-typescale-body-large-weight, 400);
+	letter-spacing: var(--md-sys-typescale-body-large-tracking, normal);
+	color: var(--md-sys-color-on-surface, CanvasText);
 }
 .ax-checkbox__input:disabled ~ .ax-checkbox__label {
-	color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
 }
 
 /* Radio primitive copied from axismundi-lab/modules/radio. */
@@ -442,12 +442,12 @@
 	width: 20px; /* M3 §25.1 icon size */
 	height: 20px;
 	border-radius: 50%;
-	border: 2px solid var(--md-sys-color-on-surface-variant);
+	border: 2px solid var(--md-sys-color-on-surface-variant, GrayText);
 	background-color: transparent;
 
 	transition: border-color
-		var(--md-sys-motion-curve-fast-effects-duration)
-		var(--md-sys-motion-curve-fast-effects);
+		var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+		var(--md-sys-motion-curve-fast-effects, ease);
 }
 
 /* State layer — 40×40 circle */
@@ -460,15 +460,15 @@
 	width: 40px;
 	height: 40px;
 	border-radius: 50%;
-	background-color: var(--md-sys-color-on-surface);
+	background-color: var(--md-sys-color-on-surface, CanvasText);
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity
-		var(--md-sys-motion-curve-fast-effects-duration)
-		var(--md-sys-motion-curve-fast-effects),
+		var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+		var(--md-sys-motion-curve-fast-effects, ease),
 		background-color
-			var(--md-sys-motion-curve-fast-effects-duration)
-			var(--md-sys-motion-curve-fast-effects);
+			var(--md-sys-motion-curve-fast-effects-duration, 150ms)
+			var(--md-sys-motion-curve-fast-effects, ease);
 }
 
 /* Inner dot — hidden by default, scales in on selected */
@@ -480,43 +480,43 @@
 	width: 10px; /* selected dot — 10/20 ratio per M3 baseline */
 	height: 10px;
 	border-radius: 50%;
-	background-color: var(--md-sys-color-primary);
+	background-color: var(--md-sys-color-primary, LinkText);
 	transform: translate(-50%, -50%) scale(0);
 	transition: transform
-		var(--md-sys-motion-curve-fast-spatial-duration)
-		var(--md-sys-motion-curve-fast-spatial);
+		var(--md-sys-motion-curve-fast-spatial-duration, 200ms)
+		var(--md-sys-motion-curve-fast-spatial, ease);
 }
 
 /* Hover/focus/pressed (M3 §25.3) */
 .ax-radio__input:hover ~ .ax-radio__visual::before {
-	opacity: var(--md-sys-state-hover-state-layer-opacity);
+	opacity: var(--md-sys-state-hover-state-layer-opacity, 0.08);
 }
 .ax-radio__input:focus-visible ~ .ax-radio__visual::before {
-	opacity: var(--md-sys-state-focus-state-layer-opacity);
+	opacity: var(--md-sys-state-focus-state-layer-opacity, 0.1);
 }
 .ax-radio__input:active ~ .ax-radio__visual::before {
-	opacity: var(--md-sys-state-pressed-state-layer-opacity);
-	background-color: var(--md-sys-color-primary); /* unselected pressed = primary */
+	opacity: var(--md-sys-state-pressed-state-layer-opacity, 0.1);
+	background-color: var(--md-sys-color-primary, LinkText); /* unselected pressed = primary */
 }
 
 .ax-radio__input:focus-visible ~ .ax-radio__visual {
-	outline: 2px solid var(--md-sys-color-secondary);
+	outline: 2px solid var(--md-sys-color-secondary, LinkText);
 	outline-offset: 2px;
 }
 
 /* --- Selected state --- */
 .ax-radio__input:checked ~ .ax-radio__visual {
-	border-color: var(--md-sys-color-primary);
+	border-color: var(--md-sys-color-primary, LinkText);
 }
 .ax-radio__input:checked ~ .ax-radio__visual::after {
 	transform: translate(-50%, -50%) scale(1);
 }
 .ax-radio__input:checked:hover ~ .ax-radio__visual::before,
 .ax-radio__input:checked:focus-visible ~ .ax-radio__visual::before {
-	background-color: var(--md-sys-color-primary);
+	background-color: var(--md-sys-color-primary, LinkText);
 }
 .ax-radio__input:checked:active ~ .ax-radio__visual::before {
-	background-color: var(--md-sys-color-on-surface);
+	background-color: var(--md-sys-color-on-surface, CanvasText);
 }
 
 /* --- Disabled (Pattern C — icon 38%, label kept) --- */
@@ -524,10 +524,10 @@
 	cursor: not-allowed;
 }
 .ax-radio__input:disabled ~ .ax-radio__visual {
-	border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
 }
 .ax-radio__input:disabled:checked ~ .ax-radio__visual::after {
-	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
 }
 .ax-radio__input:disabled ~ .ax-radio__visual::before {
 	display: none;
@@ -535,17 +535,17 @@
 
 /* Label */
 .ax-radio__label {
-	font-family: var(--md-sys-typescale-body-large-font);
-	font-size: var(--md-sys-typescale-body-large-size);
-	line-height: var(--md-sys-typescale-body-large-line-height);
-	font-weight: var(--md-sys-typescale-body-large-weight);
-	letter-spacing: var(--md-sys-typescale-body-large-tracking);
-	color: var(--md-sys-color-on-surface);
+	font-family: var(--md-sys-typescale-body-large-font, inherit);
+	font-size: var(--md-sys-typescale-body-large-size, 1rem);
+	line-height: var(--md-sys-typescale-body-large-line-height, 1.5);
+	font-weight: var(--md-sys-typescale-body-large-weight, 400);
+	letter-spacing: var(--md-sys-typescale-body-large-tracking, normal);
+	color: var(--md-sys-color-on-surface, CanvasText);
 }
 .ax-radio__input:disabled ~ .ax-radio__label {
 	/* Per M3 §25.4 — disabled radio's adjacent label keeps on-surface (full).
 	 * But for accessibility cue we still soften slightly. Author can override. */
-	color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+	color: color-mix(in srgb, var(--md-sys-color-on-surface, CanvasText) 38%, transparent);
 }
 
 .axismundi-question__choices > li:has(.ax-radio__input:checked) {

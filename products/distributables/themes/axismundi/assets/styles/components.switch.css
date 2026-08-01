@@ -1,0 +1,226 @@
+/**
+ * Axismundi — switch component (M3 Switch, M3-COMPONENT-SPECS §30).
+ *
+ * A switch has no Core block behind it, so unlike components.button.css and
+ * components.select.css this file does not bridge Core output — it dresses markup a
+ * plugin emits. The contract is deliberately small and structural:
+ *
+ *   label.axismundi-switch
+ *     input.axismundi-switch__input[type=checkbox][role=switch]
+ *     span.axismundi-switch__track      (aria-hidden)
+ *     span.axismundi-switch__label
+ *
+ * The input is native and stays native — it keeps Space-to-toggle, focus, form
+ * participation, and the checked state, none of which is re-implemented here. It is
+ * laid over the whole control at zero opacity so the label and track are both hit
+ * targets for it, and every visual state is expressed as a sibling selector off its
+ * real state rather than off a class some script has to remember to keep in sync.
+ *
+ * The handle and the state layer are the track's two pseudo-elements. That is not a
+ * shortcut: a switch has exactly one moving part and one ripple, and giving each its
+ * own node would mean two more things a caller could omit or mis-order.
+ *
+ * Geometry is M3 §30.1 and is commented where a number is derived rather than given,
+ * because `box-sizing: border-box` on the track means absolutely-positioned children
+ * are measured from inside its 2px border, and every offset below accounts for that.
+ *
+ * @package Axismundi
+ */
+
+.axismundi-switch {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * Invisible but present. Hiding the input with `display: none` or `visibility: hidden`
+ * would take it out of the focus order and out of the accessibility tree, which is the
+ * whole reason for using a native control; covering the component with it instead keeps
+ * it focusable and makes the entire switch clickable.
+ */
+.axismundi-switch__input {
+	position: absolute;
+	inset: 0;
+	inline-size: 100%;
+	block-size: 100%;
+	margin: 0;
+	padding: 0;
+	opacity: 0;
+	cursor: pointer;
+	z-index: 1;
+}
+
+/* Track — the pill. 52x32 outer (M3 §30.1); the 2px border is part of the visible
+   surface, so the padding box it establishes for the handle is 48 wide. */
+.axismundi-switch__track {
+	position: relative;
+	flex-shrink: 0;
+	display: inline-block;
+	box-sizing: border-box;
+	inline-size: 52px;
+	block-size: 32px;
+	border-radius: var(--md-sys-shape-corner-full, 9999px);
+	background-color: var(--md-sys-color-surface-container-highest);
+	border: 2px solid var(--md-sys-color-outline);
+	/* The pressed handle grows to 28px, taller than the 28px inner height, and is
+	   allowed to break the edge — that overflow is the size-morph cue. */
+	overflow: visible;
+	transition:
+		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease),
+		border-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease);
+}
+
+/*
+ * Handle. Offsets are measured from the padding edge, inside the border:
+ *   unselected 16x16, visual 8px inset from the outer edge → 8 - 2 = 6.
+ *   selected   24x24, 2px inner trailing pad → 48 - 24 - 2 = 22.
+ */
+.axismundi-switch__track::after {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inline-size: 16px;
+	block-size: 16px;
+	border-radius: 50%;
+	background-color: var(--md-sys-color-outline);
+	inset-inline-start: 6px;
+	transform: translateY(-50%);
+	transition:
+		inset-inline-start var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		inline-size var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		block-size var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease);
+}
+
+/* State layer — a 40x40 circle centred on the handle's rest position.
+   Unselected centre 14 → 14 - 20 = -6. Selected centre 34 → 34 - 20 = 14. */
+.axismundi-switch__track::before {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inline-size: 40px;
+	block-size: 40px;
+	border-radius: 50%;
+	background-color: var(--md-sys-color-on-surface);
+	opacity: 0;
+	pointer-events: none;
+	inset-inline-start: -6px;
+	transform: translateY(-50%);
+	transition:
+		inset-inline-start var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		opacity var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease),
+		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease);
+}
+
+.axismundi-switch__input:hover ~ .axismundi-switch__track::before {
+	opacity: var(--md-sys-state-hover-state-layer-opacity, 0.08);
+}
+
+.axismundi-switch__input:focus-visible ~ .axismundi-switch__track::before {
+	opacity: var(--md-sys-state-focus-state-layer-opacity, 0.1);
+}
+
+.axismundi-switch__input:active ~ .axismundi-switch__track::before {
+	opacity: var(--md-sys-state-pressed-state-layer-opacity, 0.1);
+}
+
+/* Pressed handle morph, 28x28 grown around the rest centre (M3 §30.2). */
+.axismundi-switch__input:active ~ .axismundi-switch__track::after {
+	inline-size: 28px;
+	block-size: 28px;
+	inset-inline-start: 0;
+}
+
+/* The focus ring goes on the track: the input itself is invisible, so a ring on it
+   would be a ring around nothing the reader can see. */
+.axismundi-switch__input:focus-visible ~ .axismundi-switch__track {
+	outline: 2px solid var(--md-sys-color-secondary);
+	outline-offset: 2px;
+}
+
+/* --- Selected --- */
+
+.axismundi-switch__input:checked ~ .axismundi-switch__track {
+	background-color: var(--md-sys-color-primary);
+	border-color: var(--md-sys-color-primary);
+}
+
+.axismundi-switch__input:checked ~ .axismundi-switch__track::after {
+	inline-size: 24px;
+	block-size: 24px;
+	background-color: var(--md-sys-color-on-primary);
+	inset-inline-start: 22px;
+}
+
+.axismundi-switch__input:checked ~ .axismundi-switch__track::before {
+	background-color: var(--md-sys-color-primary);
+	inset-inline-start: 14px;
+}
+
+.axismundi-switch__input:checked:active ~ .axismundi-switch__track::after {
+	inline-size: 28px;
+	block-size: 28px;
+	inset-inline-start: 20px;
+}
+
+/* --- Disabled --- */
+
+.axismundi-switch__input:disabled {
+	cursor: not-allowed;
+}
+
+.axismundi-switch__input:disabled ~ .axismundi-switch__track {
+	background-color: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 88%, transparent);
+	border-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+}
+
+.axismundi-switch__input:disabled ~ .axismundi-switch__track::after {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+}
+
+.axismundi-switch__input:disabled:checked ~ .axismundi-switch__track {
+	background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+	border-color: transparent;
+}
+
+/* Selected-disabled keeps a full-opacity surface handle (M3 §30.6): the contrast has
+   to survive against the flattened track, which a faded handle would not. */
+.axismundi-switch__input:disabled:checked ~ .axismundi-switch__track::after {
+	background-color: var(--md-sys-color-surface);
+}
+
+/* No state layer at all when disabled — a hover response would contradict the cursor. */
+.axismundi-switch__input:disabled ~ .axismundi-switch__track::before {
+	display: none;
+}
+
+.axismundi-switch__label {
+	font-family: var(--md-sys-typescale-body-large-font);
+	font-size: var(--md-sys-typescale-body-large-size);
+	line-height: var(--md-sys-typescale-body-large-line-height);
+	font-weight: var(--md-sys-typescale-body-large-weight);
+	letter-spacing: var(--md-sys-typescale-body-large-tracking);
+	color: var(--md-sys-color-on-surface);
+}
+
+.axismundi-switch__input:disabled ~ .axismundi-switch__label {
+	color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
+}
+
+/*
+ * A reader who has asked for less motion still needs to see that the switch moved —
+ * the handle's position is the state. The travel stays and only its duration collapses,
+ * so nothing animates but nothing disappears either.
+ */
+@media ( prefers-reduced-motion: reduce ) {
+	.axismundi-switch__track,
+	.axismundi-switch__track::after,
+	.axismundi-switch__track::before {
+		transition-duration: 1ms;
+	}
+}

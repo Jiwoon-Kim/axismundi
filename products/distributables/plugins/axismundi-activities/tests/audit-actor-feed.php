@@ -179,9 +179,13 @@ try {
 	ax_feed_assert( $ax_feed_results, 'an Object already framed by an Announce is not also added as an observed fallback card', 1 === count( $announced_object_rows ) && $remote_announce_uri === (string) ( $announced_object_rows[0]['id'] ?? '' ) && 'activity' === (string) ( $announced_object_rows[0]['kind'] ?? '' ) );
 	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
 	$GLOBALS['axismundi_actors_current_actor'] = $remote_actor;
+	// A boost is not in the default filter, so this also proves the renderer honours `?filter=`
+	// rather than always rendering one fixed slice.
+	$_GET['filter'] = 'posts-and-boosts';
 	$remote_feed_markup = axismundi_act_render_actor_activity_feed();
+	unset( $_GET['filter'] );
 	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
-	ax_feed_assert( $ax_feed_results, 'a public remote Actor profile renders an uncached Announce as a Boosted external-object row', false !== strpos( $remote_feed_markup, 'axismundi-activity-feed__boost' ) && false !== strpos( $remote_feed_markup, 'axismundi-object-card--external-reference' ) && false !== strpos( $remote_feed_markup, 'unresolved.example' ) );
+	ax_feed_assert( $ax_feed_results, 'a public remote Actor profile renders an uncached Announce as a Boosted external-object row when boosts are selected', false !== strpos( $remote_feed_markup, 'axismundi-activity-feed__boost' ) && false !== strpos( $remote_feed_markup, 'axismundi-object-card--external-reference' ) && false !== strpos( $remote_feed_markup, 'unresolved.example' ) );
 	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
 	$GLOBALS['axismundi_actors_current_actor'] = $actor;
 	$local_feed_markup = axismundi_act_render_actor_activity_feed();
@@ -194,6 +198,377 @@ try {
 	}
 	$after_ids = array_column( axismundi_act_actor_feed_items( $actor, 20 ), 'id' );
 	ax_feed_assert( $ax_feed_results, 'an undone Announce drops out of the feed while the authored Create stays', ! in_array( $announce_uri, $after_ids, true ) && in_array( $create_uri, $after_ids, true ) );
+
+	// --- Timeline views ---
+	// A reply and a boost by the same Actor, so each view can be told apart by what it drops.
+	$reply_uri            = home_url( '/activities/' . wp_generate_uuid4() . '/' );
+	$ax_feed_activities[] = $reply_uri;
+	axismundi_act_record_activity(
+		array(
+			'id'     => $reply_uri,
+			'type'   => 'Create',
+			'actor'  => $actor_uri,
+			'object' => array( 'id' => home_url( '/notes/' . wp_generate_uuid4() . '/' ), 'type' => 'Note', 'content' => '<p>A reply.</p>', 'inReplyTo' => $note_uri ),
+			'to'     => array( $public_uri ),
+		),
+		'outbound'
+	);
+	$boost = axismundi_act_announce_object( $actor, $remote_note_uri, $remote_actor_uri );
+	if ( $boost instanceof Axismundi_Activity ) {
+		$ax_feed_activities[] = $boost->get_uri();
+	}
+	$boost_uri = $boost instanceof Axismundi_Activity ? $boost->get_uri() : '';
+
+	$view_ids = array();
+	foreach ( array_keys( axismundi_act_actor_feed_filters() ) as $view_key ) {
+		$view_ids[ $view_key ] = array_column( axismundi_act_actor_feed_page( $actor, 50, '', $view_key )['items'], 'id' );
+	}
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'"Posts" shows authored posts while excluding both replies and boosts',
+		in_array( $create_uri, $view_ids['posts'], true )
+			&& ! in_array( $reply_uri, $view_ids['posts'], true )
+			&& '' !== $boost_uri && ! in_array( $boost_uri, $view_ids['posts'], true )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'"Posts and boosts" adds the boost and still withholds the reply',
+		in_array( $boost_uri, $view_ids['posts-and-boosts'], true )
+			&& in_array( $create_uri, $view_ids['posts-and-boosts'], true )
+			&& ! in_array( $reply_uri, $view_ids['posts-and-boosts'], true )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'"Posts and replies" adds the reply and still withholds the boost',
+		in_array( $reply_uri, $view_ids['posts-and-replies'], true )
+			&& in_array( $create_uri, $view_ids['posts-and-replies'], true )
+			&& ! in_array( $boost_uri, $view_ids['posts-and-replies'], true )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'"All activity" is the union of the narrower views and never a superset of what is visible',
+		in_array( $reply_uri, $view_ids['all'], true )
+			&& in_array( $boost_uri, $view_ids['all'], true )
+			&& array() === array_diff( $view_ids['posts-and-boosts'], $view_ids['all'] )
+			&& array() === array_diff( $view_ids['posts-and-replies'], $view_ids['all'] )
+			// The followers-only Create is excluded from every view: a filter narrows a public
+			// feed, it must never widen one.
+			&& ! in_array( $private_uri, $view_ids['all'], true )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'an unrecognised view falls back to the default rather than showing an empty or unfiltered feed',
+		axismundi_act_actor_feed_filter( 'sideways' ) === axismundi_act_actor_feed_default_filter()
+			&& $view_ids[ axismundi_act_actor_feed_default_filter() ] === array_column( axismundi_act_actor_feed_page( $actor, 50, '', 'sideways' )['items'], 'id' )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'a profile opens with boosts shown and replies hidden, the combination Mastodon also defaults to',
+		'posts-and-boosts' === axismundi_act_actor_feed_default_filter()
+			&& false === axismundi_act_actor_feed_filters()['posts-and-boosts']['replies']
+			&& true === axismundi_act_actor_feed_filters()['posts-and-boosts']['boosts']
+	);
+
+	// The four filters are the 2x2 product of two independent switches, so each control must
+	// flip exactly its own bit and leave the other alone.
+	$flips = array();
+	foreach ( array_keys( axismundi_act_actor_feed_filters() ) as $key ) {
+		$rules = axismundi_act_actor_feed_filters()[ $key ];
+		$flips[ $key ] = array(
+			'replies' => axismundi_act_actor_feed_filter_key( ! $rules['replies'], (bool) $rules['boosts'] ),
+			'boosts'  => axismundi_act_actor_feed_filter_key( (bool) $rules['replies'], ! $rules['boosts'] ),
+		);
+	}
+	ax_feed_assert(
+		$ax_feed_results,
+		'each timeline switch flips only its own dimension, so the four filters behave as two independent choices',
+		array(
+			'posts'             => array( 'replies' => 'posts-and-replies', 'boosts' => 'posts-and-boosts' ),
+			'posts-and-boosts'  => array( 'replies' => 'all', 'boosts' => 'posts' ),
+			'posts-and-replies' => array( 'replies' => 'posts', 'boosts' => 'all' ),
+			'all'               => array( 'replies' => 'posts-and-boosts', 'boosts' => 'posts-and-replies' ),
+		) === $flips
+	);
+
+	// --- Profile surfaces ---
+	$surfaces = axismundi_act_actor_profile_surfaces( $actor );
+	ax_feed_assert(
+		$ax_feed_results,
+		'Activities owns only the activity surface and cannot have it removed by a product',
+		isset( $surfaces['activity'] )
+			&& is_callable( $surfaces['activity']['page'] )
+			&& 'posts-and-boosts' === (string) $surfaces['activity']['default_filter']
+			&& $surfaces === axismundi_act_actor_profile_surfaces( $actor )
+	);
+
+	$removed = static fn( array $list ) : array => array();
+	add_filter( 'axismundi_act_actor_profile_surfaces', $removed, 99 );
+	$after_removal = axismundi_act_actor_profile_surfaces( $actor );
+	remove_filter( 'axismundi_act_actor_profile_surfaces', $removed, 99 );
+	ax_feed_assert(
+		$ax_feed_results,
+		'a product cannot leave the profile with no surface for the router to land on',
+		isset( $after_removal['activity'] ) && is_callable( $after_removal['activity']['page'] )
+	);
+
+	// --- Cursor pagination ---
+	// Enough public activities to need several pages, timestamped apart so the expected order
+	// is unambiguous rather than resting on insertion order.
+	$paged_uris = array();
+	for ( $index = 0; $index < 12; $index++ ) {
+		$paged_uri            = home_url( '/activities/' . wp_generate_uuid4() . '/' );
+		$paged_uris[]         = $paged_uri;
+		$ax_feed_activities[] = $paged_uri;
+		axismundi_act_record_activity(
+			array(
+				'id'        => $paged_uri,
+				'type'      => 'Create',
+				'actor'     => $actor_uri,
+				'published' => gmdate( 'c', strtotime( '2026-01-01 00:00:00 UTC' ) + $index * 60 ),
+				'object'    => array( 'id' => home_url( '/notes/' . wp_generate_uuid4() . '/' ), 'type' => 'Note', 'content' => '<p>Paged ' . $index . '.</p>' ),
+				'to'        => array( $public_uri ),
+			),
+			'outbound'
+		);
+	}
+
+	$walked = array();
+	$cursor = '';
+	$guard  = 0;
+	do {
+		$page   = axismundi_act_actor_feed_page( $actor, 5, $cursor );
+		$walked = array_merge( $walked, array_column( $page['items'], 'id' ) );
+		$cursor = (string) $page['next_cursor'];
+		++$guard;
+	} while ( $page['has_more'] && $guard < 40 );
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'walking the cursor visits every public activity exactly once, with no repeats between pages',
+		count( $walked ) === count( array_unique( $walked ) ) && $guard < 40
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'pagination reaches the oldest activities instead of stopping at the first page',
+		count( array_intersect( $paged_uris, $walked ) ) === count( $paged_uris )
+	);
+
+	// The reason a cursor is used at all: new activity arriving mid-read must not push the
+	// unread rows down into a page the reader has already passed.
+	$first     = axismundi_act_actor_feed_page( $actor, 5 );
+	$intruder  = home_url( '/activities/' . wp_generate_uuid4() . '/' );
+	$ax_feed_activities[] = $intruder;
+	axismundi_act_record_activity( array( 'id' => $intruder, 'type' => 'Create', 'actor' => $actor_uri, 'object' => array( 'id' => home_url( '/notes/' . wp_generate_uuid4() . '/' ), 'type' => 'Note', 'content' => '<p>Arrived mid-read.</p>' ), 'to' => array( $public_uri ) ), 'outbound' );
+	$second    = axismundi_act_actor_feed_page( $actor, 5, (string) $first['next_cursor'] );
+	$overlap   = array_intersect( array_column( $first['items'], 'id' ), array_column( $second['items'], 'id' ) );
+	ax_feed_assert(
+		$ax_feed_results,
+		'an activity arriving between two page reads does not duplicate rows the reader already saw',
+		'' !== (string) $first['next_cursor'] && empty( $overlap ) && ! in_array( $intruder, array_column( $second['items'], 'id' ), true )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'an unreadable cursor yields nothing rather than silently restarting at the newest page',
+		array() === axismundi_act_get_actor_feed_after( $actor_uri, 5, 'not-a-cursor' )
+			&& array() === axismundi_act_get_actor_feed_after( $actor_uri, 5, "'; DROP TABLE x; --@1" )
+	);
+
+	$ax_feed_small_page = static fn() : int => 5;
+	add_filter( 'axismundi_act_actor_feed_per_page', $ax_feed_small_page );
+	// The local fixture's authored Create objects deliberately have no backing Object source: that
+	// covers the hidden-Create contract above, but cannot demonstrate a rendered continuation.
+	// Use the cached remote Actor whose Objects are real cards, and add enough rows to cross the
+	// small page boundary.
+	$pagination_activities = array();
+	for ( $index = 0; $index < 6; $index++ ) {
+		$pagination_uri          = 'https://example.com/activities/' . wp_generate_uuid4();
+		$pagination_activities[] = $pagination_uri;
+		$ax_feed_activities[]    = $pagination_uri;
+		axismundi_act_record_activity(
+			array(
+				'id'     => $pagination_uri,
+				'type'   => 'Create',
+				'actor'  => $remote_actor_uri,
+				'object' => $remote_note_uri,
+				'to'     => array( $public_uri ),
+			),
+			'inbound'
+		);
+	}
+	$paginated_markup = ( static function () use ( $remote_actor ) {
+		$previous = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+		$GLOBALS['axismundi_actors_current_actor'] = $remote_actor;
+		$markup = axismundi_act_render_actor_activity_feed();
+		$GLOBALS['axismundi_actors_current_actor'] = $previous;
+		return $markup;
+	} )();
+	remove_filter( 'axismundi_act_actor_feed_per_page', $ax_feed_small_page );
+	ax_feed_assert(
+		$ax_feed_results,
+		'the timeline is controlled by two native switches whose state the server renders as a default',
+		// Native checkbox with switch semantics: the browser keeps Space-to-toggle, focus, and the
+		// checked state, so none of that has to be rebuilt in script.
+		2 === preg_match_all( '#<input class="axismundi-switch__input" type="checkbox" role="switch"#', $paginated_markup )
+			&& 1 === preg_match( '#name="replies"[^>]*data-wp-on--change#', $paginated_markup )
+			&& 1 === preg_match( '#name="boosts" checked#', $paginated_markup )
+			// A trigger and a `role="dialog"` popover, the shape the reaction picker established
+			// — not a disclosure, which would promise none of the closing behaviour this has.
+			&& 1 === preg_match( '#class="axismundi-activity-feed__filters-trigger"[^>]*aria-haspopup="dialog"#', $paginated_markup )
+			&& 1 === preg_match( '#data-wp-text="context.filterLabel">Posts and boosts<#', $paginated_markup )
+			&& 1 === preg_match( '#class="axismundi-activity-feed__filters-panel" role="dialog"#', $paginated_markup )
+			/*
+			 * No Lab class names reach the product at all. `ax-switch` and `ax-menu` exist only
+			 * in the reference implementation, so shipping either means a control with no styles
+			 * behind it — which is exactly what an `ax-menu` popover turned out to be: a dialog
+			 * with no surface.
+			 */
+			&& 0 === preg_match( '#class="[^"]*ax-(switch|menu)#', $paginated_markup )
+			/*
+			 * Hidden until the runtime reveals it. These checkboxes are in no form, so without
+			 * script they would be a control that visibly does nothing; a reader without script
+			 * gets the default timeline instead, which is the one everyone else starts on.
+			 */
+			&& 1 === preg_match( '#class="axismundi-activity-feed__filters" hidden#', $paginated_markup )
+	);
+
+	// The timeline switches are a reading preference, so the URL must not decide them: two readers
+	// opening the same profile link see the same list. The community surface's slices are
+	// collections, not preferences, and stay addressable.
+	$_GET['filter'] = 'all';
+	$url_filtered   = ( static function () use ( $remote_actor ) {
+		$previous = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+		$GLOBALS['axismundi_actors_current_actor'] = $remote_actor;
+		$markup = axismundi_act_render_actor_activity_feed();
+		$GLOBALS['axismundi_actors_current_actor'] = $previous;
+		return $markup;
+	} )();
+	unset( $_GET['filter'] );
+	ax_feed_assert(
+		$ax_feed_results,
+		'a filter in the URL no longer steers the timeline, because a reading preference is not a destination',
+		1 === preg_match( '#data-wp-text="context.filterLabel">Posts and boosts<#', $url_filtered )
+			&& 1 === preg_match( '#name="boosts" checked#', $url_filtered )
+			&& 0 === preg_match( '#name="replies" checked#', $url_filtered )
+	);
+
+	/*
+	 * Interaction ownership follows the surface. In a feed the cards are appended and replaced,
+	 * and DOM added after load is never hydrated, so their controls render as presentation and
+	 * the region dispatches them. On a single object page the control is the interaction and
+	 * owns itself. The feed variant must not merely be guarded at runtime — the interactive
+	 * directives have to be absent, because markup that is not there cannot fire twice.
+	 */
+	$single_like = do_blocks( '<!-- wp:axismundi/like-button {"objectUri":"' . $remote_note_uri . '"} /-->' );
+	ax_feed_assert(
+		$ax_feed_results,
+		'a feed card delegates its controls to the region while a single object page keeps its own interactive block',
+		false === strpos( $paginated_markup, 'data-wp-interactive="axismundi/like-button"' )
+			&& false !== strpos( $paginated_markup, 'data-ax-action="like"' )
+			&& false !== strpos( $paginated_markup, 'data-ax-object-uri=' )
+			&& false !== strpos( $single_like, 'data-wp-interactive="axismundi/like-button"' )
+			&& false === strpos( $single_like, 'data-ax-action=' )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'the reply control needs no delegation, being either a link or a disabled button and never a script-driven one',
+		false !== strpos( $paginated_markup, 'axismundi-reply-button__button' )
+			&& false === strpos( $paginated_markup, 'data-wp-interactive="axismundi/reply-button"' )
+			&& 0 === preg_match( '#class="axismundi-reply-button__button"[^>]*data-(wp-on|ax-action)#', $paginated_markup )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'the rendered feed offers a real cursor link for Load more, not a script-only control',
+		false !== strpos( $paginated_markup, 'feed_after=' )
+			&& 1 === preg_match( '/<a class="axismundi-activity-feed__more-link"[^>]+href="[^"]+"/', $paginated_markup )
+			&& false !== strpos( $paginated_markup, 'data-wp-on--click="actions.loadMore"' )
+			// The list container is always present, because appended pages need something to
+			// attach to even when the first page came back empty.
+			&& false !== strpos( $paginated_markup, 'axismundi-activity-feed__list' )
+			&& false !== strpos( $paginated_markup, 'callbacks.watchFeed' )
+	);
+
+	// The endpoint the island calls. Each request must return exactly one page: that constant
+	// cost is the entire reason for appending rather than re-rendering a growing window.
+	$feed_request = new WP_REST_Request( 'GET', '/axismundi/v1/actor-feed' );
+	$feed_request->set_query_params( array( 'actor_uri' => $remote_actor->get_uri(), 'filter' => 'all', 'per_page' => 2 ) );
+	$feed_response = rest_do_request( $feed_request );
+	$feed_body     = $feed_response instanceof WP_REST_Response ? (array) $feed_response->get_data() : array();
+	$feed_second   = array();
+	if ( ! empty( $feed_body['next_cursor'] ) ) {
+		$second = new WP_REST_Request( 'GET', '/axismundi/v1/actor-feed' );
+		$second->set_query_params( array( 'actor_uri' => $remote_actor->get_uri(), 'filter' => 'all', 'per_page' => 2, 'after' => (string) $feed_body['next_cursor'] ) );
+		$second_response = rest_do_request( $second );
+		$feed_second     = $second_response instanceof WP_REST_Response ? (array) $second_response->get_data() : array();
+	}
+	ax_feed_assert(
+		$ax_feed_results,
+		'the feed endpoint returns one bounded page of cards and a cursor for the next one',
+		$feed_response instanceof WP_REST_Response && 200 === $feed_response->get_status()
+			&& isset( $feed_body['html'], $feed_body['next_cursor'], $feed_body['has_more'] )
+			&& '' !== (string) $feed_body['next_cursor']
+			/*
+			 * A continuation page is bounded by what was asked for. The head page is not, and
+			 * deliberately so: cache-miss fallback rows have no ledger position, so they ride
+			 * along with the first page or they would never be shown at all.
+			 */
+			&& substr_count( (string) ( $feed_second['html'] ?? '' ), 'axismundi-activity-feed__item--object' ) <= 2
+			// The second page is a different page, not the first one served again.
+			&& ( empty( $feed_second['html'] ) || $feed_second['html'] !== $feed_body['html'] )
+	);
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'a personalised feed response is never stored by a shared cache while an anonymous one may be',
+		'public, max-age=30' === (string) ( $feed_response->get_headers()['Cache-Control'] ?? '' )
+			&& ( static function () use ( $remote_actor, $ax_feed_user_id ) {
+				wp_set_current_user( $ax_feed_user_id );
+				$request = new WP_REST_Request( 'GET', '/axismundi/v1/actor-feed' );
+				$request->set_query_params( array( 'actor_uri' => $remote_actor->get_uri(), 'per_page' => 2 ) );
+				$response = rest_do_request( $request );
+				wp_set_current_user( 0 );
+				return 'private, no-store, max-age=0' === (string) ( $response->get_headers()['Cache-Control'] ?? '' );
+			} )()
+	);
+
+	$unknown_feed = new WP_REST_Request( 'GET', '/axismundi/v1/actor-feed' );
+	$unknown_feed->set_query_params( array( 'actor_uri' => 'https://example.com/users/' . wp_generate_uuid4() ) );
+	ax_feed_assert(
+		$ax_feed_results,
+		'the feed endpoint refuses an Actor it does not know rather than answering with an empty page',
+		404 === rest_do_request( $unknown_feed )->get_status()
+	);
+
+	/*
+	 * No reference-implementation class name ships from this plugin at all.
+	 *
+	 * `ax-menu`, `ax-text-field`, and `ax-icon-button` exist only in the Lab, so shipping one
+	 * means markup carrying a class no stylesheet defines — a component contract that does not
+	 * exist. That is not theoretical: the timeline's filter popover shipped `ax-menu` and had no
+	 * surface at all, and the emoji picker's search field carried three of them while its own
+	 * BEM classes did the real work.
+	 */
+	$lab_leak = array();
+	foreach ( glob( WP_PLUGIN_DIR . '/axismundi-activities/includes/*.php' ) as $source ) {
+		$body = (string) file_get_contents( $source ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading our own source in a dev audit.
+		if ( preg_match( '#class="[^"]*\bax-(menu|text-field|icon-button)\b#', $body ) ) {
+			$lab_leak[] = basename( $source );
+		}
+	}
+	ax_feed_assert(
+		$ax_feed_results,
+		'no Lab-only class name is emitted by this plugin, so nothing ships depending on styles that do not exist',
+		array() === $lab_leak
+	);
 
 	axismundi_actors_set_status( $ax_feed_identity, 'internal' );
 	ax_feed_assert( $ax_feed_results, 'a non-public Actor exposes no public Activity feed', array() === axismundi_act_actor_feed_items( $actor, 20 ) );

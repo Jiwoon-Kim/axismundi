@@ -31,7 +31,13 @@ function axismundi_op_actor_feed_object_html( string $html, array $item ) : stri
 	// Actor timelines are viewer-specific action surfaces. The nested dynamic
 	// buttons set the no-cache policy when they bind a logged-in Actor's state;
 	// hashtag archives remain read-only through their separate renderer options.
-	$options = array( 'headingTag' => 'h3', 'interactions' => true, 'viewerScoped' => true );
+	/*
+	 * The feed owns clicks for the cards inside it. Cards here are appended, replaced, and
+	 * filtered continuously, and DOM added after load is never hydrated, so a per-card
+	 * interactive block would arrive dead the moment it was appended. Controls therefore render
+	 * as presentation and the feed region dispatches their actions.
+	 */
+	$options = array( 'headingTag' => 'h3', 'interactions' => true, 'viewerScoped' => true, 'interactionOwner' => 'feed' );
 	if ( 'Create' === (string) ( $item['type'] ?? '' ) ) {
 		$options['expected_author'] = (string) ( $item['actor_uri'] ?? '' );
 	}
@@ -99,3 +105,33 @@ function axismundi_op_actor_feed_observed_items( array $items, Axismundi_Actor $
 	return array_merge( $items, axismundi_op_get_observed_actor_objects( $actor->get_uri(), $activity_object_uris, $limit ) );
 }
 add_filter( 'axismundi_act_actor_feed_observed_items', 'axismundi_op_actor_feed_observed_items', 20, 4 );
+
+/**
+ * Answer whether an Object the Activity only names is a reply.
+ *
+ * Object Projections owns the thread graph, so it can answer for an inbound Create that carried
+ * a bare URI — the case the ledger payload cannot settle on its own. A cached remote payload is
+ * consulted second: an object we hold a copy of states its own `inReplyTo`, and trusting that is
+ * the same thing the card rendering already does.
+ *
+ * @param bool   $is_reply   Whether the entry is a reply.
+ * @param string $object_uri Canonical object URI.
+ * @return bool
+ */
+function axismundi_op_actor_feed_item_is_reply( bool $is_reply, string $object_uri ) : bool {
+	if ( $is_reply || '' === $object_uri ) {
+		return $is_reply;
+	}
+	if ( function_exists( 'axismundi_op_get_thread_parent_uri' ) && '' !== axismundi_op_get_thread_parent_uri( $object_uri ) ) {
+		return true;
+	}
+	if ( function_exists( 'axismundi_op_remote_object_get' ) ) {
+		$remote  = axismundi_op_remote_object_get( $object_uri, false );
+		$payload = is_array( $remote ) ? (array) ( $remote['payload'] ?? array() ) : array();
+		if ( ! empty( $payload['inReplyTo'] ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+add_filter( 'axismundi_act_actor_feed_item_is_reply', 'axismundi_op_actor_feed_item_is_reply', 10, 2 );

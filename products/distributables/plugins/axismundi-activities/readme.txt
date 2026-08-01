@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.39
+Stable tag: 0.0.40
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,61 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.40 =
+* Turns the profile timeline into a client-rendered island inside the
+  server-rendered page. The header, tabs, and first page are ordinary HTML;
+  Load more fetches exactly one further page from
+  `axismundi/v1/actor-feed` and appends it once, so each step costs the same as
+  the first.
+* Load more is a real cursor link before it is anything else, so the whole feed
+  stays reachable without script and by a crawler.
+* Paginates by cursor rather than offset: the ledger grows at the head, so
+  offset paging would show a reader rows they had already passed.
+* Interaction ownership now follows the surface. In a feed every card renders
+  its controls as presentation and the region dispatches their clicks --
+  uniformly, whether the card arrived with the document or was appended -- so
+  there is no second handler to race. On an Object's own page the control is
+  the interaction and keeps owning itself. The feed variant omits the
+  interactive directives rather than guarding them, because markup that is not
+  there cannot fire twice.
+* Splits the timeline into filters -- posts, posts and boosts, posts and
+  replies, all activity -- presented as two native switches with a derived
+  label. A profile opens with boosts shown and replies hidden: a reply is half
+  of a conversation and reads as a fragment away from its thread, while a boost
+  is something the Actor chose to put on their own page.
+* Those switches are a reading preference rather than a destination, so they
+  live in the reader's browser instead of the URL. Everyone opening the same
+  profile link sees the same list, and one reader's choice to hide boosts is
+  not baked into every link they share. The server renders the default and the
+  runtime reconciles a stored preference by refetching the first page.
+* The community surface's slices stay in the URL, because Topics and Replies
+  are different collections rather than a way of reading one.
+* The switches are native checkboxes with `role="switch"` inside a popover, the
+  same trigger-and-dialog shape the Add reaction picker uses, closing on Escape
+  and on a click outside. The plugin emits the semantics; how a switch looks is
+  a theme component.
+* Every theme design token in this plugin's CSS now carries a fallback, so it
+  renders sensibly under any theme rather than only under Axismundi -- the
+  filter popover had no surface at all under a third-party theme until this.
+  Verified under Twenty Twenty-Five.
+* Removes reference-implementation class names from shipped markup. `ax-menu`
+  and `ax-text-field` exist only in the Axismundi Lab, so elements carrying
+  them depended on styles that are in no release -- the filter popover shipped
+  `ax-menu` and had no surface at all until it was given one. An audit now
+  fails if any of those names reappears in this plugin's markup.
+* Adds a profile surface registry. A Person is one Actor with one identity URI
+  and one outbox, so a surface is a way of reading that Actor rather than a
+  second profile; products register their own through
+  `axismundi_act_actor_profile_surfaces`.
+* `axismundi_act_actor_feed_activity_visible` now receives the surface being
+  rendered, so an entry can belong on one surface and not another without two
+  rules that can drift apart.
+* Feed ordering uses the same tie-break as the query it came from. Two entries
+  sharing a timestamp could otherwise swap places depending on where a page
+  boundary fell.
+* A personalised feed response is `private, no-store`; an anonymous one stays
+  cacheable, which is the point of splitting the feed out of the profile shell.
 
 = 0.0.39 =
 * Adds a complete per-Actor latest-vote projection for consumers that impose

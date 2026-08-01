@@ -256,11 +256,20 @@ function axismundi_forum_is_direct_topic_submission_activity( Axismundi_Activity
 		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
 }
 
-/** Hide a Group-directed Topic commit from the author's human profile feed. */
-function axismundi_forum_topic_submission_actor_feed_visible( bool $visible, Axismundi_Activity $activity ) : bool {
+/**
+ * Hide a Group-directed Topic commit from the author's personal timeline.
+ *
+ * Only from the personal timeline. The same submission is the entire point of the community
+ * surface, so this refuses to answer for any surface but `activity` — otherwise hiding it here
+ * would also hide it from the one place built to show it.
+ */
+function axismundi_forum_topic_submission_actor_feed_visible( bool $visible, Axismundi_Activity $activity, string $surface = 'activity' ) : bool {
+	if ( 'activity' !== $surface ) {
+		return $visible;
+	}
 	return axismundi_forum_is_direct_topic_submission_activity( $activity ) ? false : $visible;
 }
-add_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_topic_submission_actor_feed_visible', 30, 2 );
+add_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_topic_submission_actor_feed_visible', 30, 3 );
 
 /** Keep public-routing metadata from adding a direct Topic commit to a Person outbox. */
 function axismundi_forum_topic_submission_public_outbox_payload( $payload, Axismundi_Activity $activity ) {

@@ -162,6 +162,43 @@ function axismundi_act_like_block_object_uri( array $attributes, WP_Block $block
 	return (string) apply_filters( 'axismundi_act_like_button_object_uri', $uri, $attributes, $block );
 }
 
+/**
+ * Render the Like control as presentation only, for a surface that owns its own clicks.
+ *
+ * Everything the delegated handler needs travels on the element: which action this is, what it
+ * targets, and where to send it. The state it shows is the same state the interactive variant
+ * shows, from the same reader's point of view — only the ownership of the click differs.
+ *
+ * @param array<string,mixed> $context    Resolved Like state.
+ * @param string              $label      Accessible label.
+ * @param bool                $show_label Whether the text label is rendered.
+ * @param bool                $show_count Whether the count is rendered.
+ * @return string
+ */
+function axismundi_act_render_like_button_markup( array $context, string $label, bool $show_label, bool $show_count ) : string {
+	ob_start();
+	?>
+	<div class="wp-block-axismundi-like-button">
+		<button type="button" class="axismundi-like-button__button<?php echo $context['isLiked'] ? ' is-liked' : ''; ?>"
+			data-ax-action="like"
+			data-ax-object-uri="<?php echo esc_attr( (string) $context['objectUri'] ); ?>"
+			data-ax-endpoint="<?php echo esc_url( (string) $context['endpoint'] ); ?>"
+			<?php if ( $context['canLike'] ) : ?>data-ax-nonce="<?php echo esc_attr( (string) $context['nonce'] ); ?>"<?php endif; ?>
+			aria-pressed="<?php echo $context['isLiked'] ? 'true' : 'false'; ?>"
+			aria-label="<?php echo esc_attr( $label ); ?>" title="<?php echo esc_attr( $label ); ?>"<?php disabled( ! $context['canLike'] ); ?>>
+			<span class="material-symbols-outlined" aria-hidden="true">favorite</span>
+			<?php if ( $show_label ) : ?>
+				<span class="axismundi-like-button__label" aria-hidden="true"><?php esc_html_e( 'Like', 'axismundi-activities' ); ?></span>
+			<?php endif; ?>
+			<?php if ( $show_count ) : ?>
+				<span class="axismundi-like-button__count" aria-hidden="true"><?php echo esc_html( number_format_i18n( (int) $context['likes'] ) ); ?></span>
+			<?php endif; ?>
+		</button>
+	</div>
+	<?php
+	return (string) ob_get_clean();
+}
+
 /** Render the dynamic Like button. */
 function axismundi_act_render_like_button( array $attributes, string $content, WP_Block $block ) : string {
 	$object_uri = axismundi_act_like_block_object_uri( $attributes, $block );
@@ -188,6 +225,24 @@ function axismundi_act_render_like_button( array $attributes, string $content, W
 	// on by default. The accessible name stays on the control either way.
 	$show_label = ! empty( $attributes['showLabel'] );
 	$show_count = ! isset( $attributes['showCount'] ) || (bool) $attributes['showCount'];
+	/*
+	 * Who owns this button's clicks depends on where it is.
+	 *
+	 * On a single object page the button is the interaction: it knows its own target, manages
+	 * its own state, and must work with no container around it — so it stays an interactive
+	 * block. Inside a feed the same markup repeats across cards that are appended, replaced, and
+	 * filtered continuously, and appended DOM is never hydrated, so the feed owns the clicks
+	 * instead and this renders as presentation only.
+	 *
+	 * The feed variant omits the interactive directives entirely rather than emitting them and
+	 * relying on a runtime guard to keep both handlers from firing. A guard is a rule you have to
+	 * remember; absent markup cannot double-fire.
+	 */
+	$delegated = function_exists( 'axismundi_op_object_template_option' )
+		&& 'feed' === (string) axismundi_op_object_template_option( 'interactionOwner', 'block' );
+	if ( $delegated ) {
+		return axismundi_act_render_like_button_markup( $context, $label, $show_label, $show_count );
+	}
 	ob_start();
 	?>
 	<div <?php echo get_block_wrapper_attributes(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-interactive="axismundi/like-button" <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>

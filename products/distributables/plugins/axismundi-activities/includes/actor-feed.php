@@ -12,6 +12,93 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * The views a profile timeline can be read through.
+ *
+ * These are views of one Actor, not separate Actors: a Person is a single identity URI and a
+ * single outbox, and splitting the profile across addresses would mean claiming otherwise. The
+ * view is a way of reading the same feed, so it lives in a query argument, and the federated
+ * representation is untouched by it.
+ *
+ * @return array<string,array{replies:bool,boosts:bool,label:string}>
+ */
+function axismundi_act_actor_feed_filters() : array {
+	return array(
+		'posts'            => array( 'replies' => false, 'boosts' => false, 'label' => __( 'Posts', 'axismundi-activities' ) ),
+		'posts-and-boosts' => array( 'replies' => false, 'boosts' => true, 'label' => __( 'Posts and boosts', 'axismundi-activities' ) ),
+		'posts-and-replies' => array( 'replies' => true, 'boosts' => false, 'label' => __( 'Posts and replies', 'axismundi-activities' ) ),
+		'all'              => array( 'replies' => true, 'boosts' => true, 'label' => __( 'All activity', 'axismundi-activities' ) ),
+	);
+}
+
+/**
+ * The default timeline filter, and the one an unrecognised request falls back to.
+ *
+ * Replies off, boosts on. A reply is half of a conversation and reads as a fragment out of the
+ * thread it belongs to, whereas a boost is something the Actor chose to put on their own page —
+ * which is why Mastodon opens on the same combination.
+ */
+function axismundi_act_actor_feed_default_filter() : string {
+	/** @param string $filter Default filter key. */
+	$filter  = (string) apply_filters( 'axismundi_act_actor_feed_default_filter', 'posts-and-boosts' );
+	$filters = axismundi_act_actor_feed_filters();
+	return isset( $filters[ $filter ] ) ? $filter : 'posts-and-boosts';
+}
+
+/** Resolve a requested filter key to a supported one. */
+function axismundi_act_actor_feed_filter( string $filter ) : string {
+	$filters = axismundi_act_actor_feed_filters();
+	return isset( $filters[ $filter ] ) ? $filter : axismundi_act_actor_feed_default_filter();
+}
+
+/**
+ * The filter key for one combination of the two independent switches.
+ *
+ * The four named filters are the 2x2 product of "show replies" and "show boosts", which is how
+ * Mastodon models the same control: it presents the two switches and derives the label. Naming
+ * the four combinations keeps them addressable in a URL — a link has to say which list it points
+ * at — while the control the reader touches stays the two questions they actually have.
+ *
+ * @param bool $replies Whether replies are shown.
+ * @param bool $boosts  Whether boosts are shown.
+ * @return string
+ */
+function axismundi_act_actor_feed_filter_key( bool $replies, bool $boosts ) : string {
+	foreach ( axismundi_act_actor_feed_filters() as $key => $rules ) {
+		if ( (bool) $rules['replies'] === $replies && (bool) $rules['boosts'] === $boosts ) {
+			return (string) $key;
+		}
+	}
+	return axismundi_act_actor_feed_default_filter();
+}
+
+/**
+ * Whether one feed entry is a reply.
+ *
+ * An embedded object answers for itself. A Create that carries only a URI does not, and the
+ * thread graph is owned elsewhere, so the question is asked through a filter rather than by
+ * reaching into another product's tables from here.
+ *
+ * @param Axismundi_Activity $activity Ledger row.
+ * @param string             $object_uri Canonical object URI.
+ * @return bool
+ */
+function axismundi_act_actor_feed_item_is_reply( Axismundi_Activity $activity, string $object_uri ) : bool {
+	$object = $activity->get_payload()['object'] ?? null;
+	if ( is_array( $object ) && ! empty( $object['inReplyTo'] ) ) {
+		return true;
+	}
+	$known = is_array( $object ) && array_key_exists( 'inReplyTo', $object );
+	/**
+	 * Let the product that owns the thread graph answer for an object the Activity only names.
+	 *
+	 * @param bool               $is_reply   Whether the entry is a reply.
+	 * @param string             $object_uri Canonical object URI.
+	 * @param Axismundi_Activity $activity   Ledger row.
+	 */
+	return $known ? false : (bool) apply_filters( 'axismundi_act_actor_feed_item_is_reply', false, $object_uri, $activity );
+}
+
+/**
  * Build one viewer-safe feed item descriptor from a Create or Announce row.
  *
  * The card content is not read here: Activities owns selection and verb framing,
@@ -19,16 +106,22 @@ defined( 'ABSPATH' ) || exit;
  * always eligible; a product may additionally admit an addressed private entry
  * for the current local viewer without changing the public outbox contract.
  */
-function axismundi_act_actor_feed_item( Axismundi_Activity $activity ) : ?array {
+function axismundi_act_actor_feed_item( Axismundi_Activity $activity, string $surface = 'activity' ) : ?array {
 	$visible = axismundi_act_is_publicly_renderable( $activity );
 	/**
 	 * Viewer-specific Actor-feed admission. This is presentation-only: Activity
 	 * collections and public outboxes continue to use their public audience gate.
 	 *
+	 * The surface is passed because the same entry can belong on one profile surface and not
+	 * another. A Topic submitted to a community is not personal activity, but it is exactly what
+	 * the community surface exists to show — one predicate, read in two directions, rather than
+	 * two rules that can drift apart.
+	 *
 	 * @param bool                $visible  Whether the activity is publicly renderable.
 	 * @param Axismundi_Activity  $activity Candidate ledger row.
+	 * @param string              $surface  Profile surface being rendered.
 	 */
-	$visible = (bool) apply_filters( 'axismundi_act_actor_feed_activity_visible', $visible, $activity );
+	$visible = (bool) apply_filters( 'axismundi_act_actor_feed_activity_visible', $visible, $activity, $surface );
 	if ( ! $visible ) {
 		return null;
 	}
@@ -54,7 +147,27 @@ function axismundi_act_actor_feed_item( Axismundi_Activity $activity ) : ?array 
 		'actor_uri'  => $activity->get_actor_uri(),
 		'object_uri' => $object_uri,
 		'published'  => is_string( $published ) ? $published : '',
+		// An Announce is a boost, never a reply, so the thread graph is not consulted for one.
+		'is_reply'   => 'Create' === $type && axismundi_act_actor_feed_item_is_reply( $activity, $object_uri ),
 	);
+}
+
+/**
+ * Whether one feed item belongs in one view.
+ *
+ * @param array<string,mixed> $item Feed item descriptor.
+ * @param string              $filter Resolved filter key.
+ * @return bool
+ */
+function axismundi_act_actor_feed_item_in_filter( array $item, string $filter ) : bool {
+	$filters = axismundi_act_actor_feed_filters();
+	$rules   = $filters[ $filter ] ?? $filters[ axismundi_act_actor_feed_default_filter() ];
+	if ( 'Announce' === (string) ( $item['type'] ?? '' ) ) {
+		return (bool) $rules['boosts'];
+	}
+	// An observed Object has no Activity framing it: it is something this Actor was seen to
+	// have posted, so it belongs wherever plain posts do.
+	return empty( $item['is_reply'] ) || (bool) $rules['replies'];
 }
 
 /** Normalize one third-party observed Object fallback row. */
@@ -77,8 +190,25 @@ function axismundi_act_actor_feed_observed_item( $item, Axismundi_Actor $actor )
 	);
 }
 
-/** Descending feed chronology with a deterministic identity tie-breaker. */
+/**
+ * Descending feed chronology with a deterministic identity tie-breaker.
+ *
+ * Two ledger rows are compared by their cursors, because that is the ordering the query itself
+ * used. Sorting them by anything else — an activity URI, say — silently reorders rows that share
+ * a timestamp, and then which of the tied rows appears depends on where the page boundary
+ * happened to fall. In a cursor-paged feed that would make a row repeat or disappear at the
+ * page boundary.
+ *
+ * An observed Object has no cursor, so it can only be placed by its published time.
+ */
 function axismundi_act_actor_feed_compare( array $left, array $right ) : int {
+	$left_at  = axismundi_act_parse_feed_cursor( (string) ( $left['cursor'] ?? '' ) );
+	$right_at = axismundi_act_parse_feed_cursor( (string) ( $right['cursor'] ?? '' ) );
+	if ( null !== $left_at && null !== $right_at ) {
+		return $left_at['time'] === $right_at['time']
+			? $right_at['id'] <=> $left_at['id']
+			: strcmp( $right_at['time'], $left_at['time'] );
+	}
 	$left_time  = '' !== (string) ( $left['published'] ?? '' ) ? (int) strtotime( (string) $left['published'] ) : 0;
 	$right_time = '' !== (string) ( $right['published'] ?? '' ) ? (int) strtotime( (string) $right['published'] ) : 0;
 	if ( $left_time !== $right_time ) {
@@ -87,80 +217,186 @@ function axismundi_act_actor_feed_compare( array $left, array $right ) : int {
 	return strcmp( (string) ( $right['id'] ?? '' ), (string) ( $left['id'] ?? '' ) );
 }
 
-/** Public Activity feed items for one local or cached remote public Actor. */
+/**
+ * Public Activity feed items for one local or cached remote public Actor.
+ *
+ * This is the newest page and nothing else. It delegates rather than selecting rows of its own,
+ * so a caller that does not paginate still sees exactly what the first page of the paginated
+ * feed shows — two selection paths for one feed is how they quietly stop agreeing.
+ */
 function axismundi_act_actor_feed_items( Axismundi_Actor $actor, int $limit = 20 ) : array {
-	// A profile may be rendered from a long-lived object in an admin preview.
-	// Re-resolve the identity before applying the public boundary so a status
-	// change cannot leave a stale Actor object advertising a public feed.
+	return axismundi_act_actor_feed_page( $actor, $limit )['items'];
+}
+
+/**
+ * One cursor-positioned page of an Actor's public feed.
+ *
+ * The visibility filter runs after the query, so how many rows a page yields is not known until
+ * they have been examined. `has_more` therefore reports whether the *ledger* has anything left
+ * beyond this page, not whether that remainder will render — a page that filters down to nothing
+ * still hands back a cursor, because stopping there would hide everything older than one private
+ * run of activities.
+ *
+ * @param Axismundi_Actor $actor  Actor whose feed is read.
+ * @param int             $limit  Items per page.
+ * @param string          $cursor Continuation cursor, or '' for the newest page.
+ * @param string          $filter Timeline filter key; entries outside it are skipped.
+ * @param string          $surface Profile surface being read; products admit entries per surface.
+ * @param bool            $inclusive Whether the cursor includes its anchor row. This is reserved
+ *                                   for a caller that needs a stable snapshot; profile navigation
+ *                                   always uses an exclusive continuation cursor.
+ * @param bool            $head_window Whether the caller is rendering from the feed head.
+ * @return array{items:array<int,array<string,mixed>>,next_cursor:string,has_more:bool,filter:string}
+ */
+function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20, string $cursor = '', string $filter = 'all', string $surface = 'activity', bool $inclusive = false, bool $head_window = false ) : array {
+	$filter = axismundi_act_actor_feed_filter( $filter );
+	$empty = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false, 'filter' => $filter );
 	if ( function_exists( 'axismundi_actors_get_by_uri' ) ) {
+		// Re-resolve before applying the public boundary: a status change must not be able to
+		// leave a stale Actor object advertising a public feed.
 		$current = axismundi_actors_get_by_uri( $actor->get_uri() );
 		if ( ! $current instanceof Axismundi_Actor ) {
-			return array();
+			return $empty;
 		}
 		$actor = $current;
 	}
-	if ( ! function_exists( 'axismundi_actors_is_public_profile' )
-		|| ! axismundi_actors_is_public_profile( $actor )
-	) {
-		return array();
+	if ( ! function_exists( 'axismundi_actors_is_public_profile' ) || ! axismundi_actors_is_public_profile( $actor ) ) {
+		return $empty;
 	}
-	$items      = array();
-	$offset     = 0;
-	$batch_size = min( 50, max( 20, $limit ) );
-	// A visibility filter can exclude a run of otherwise valid ledger rows. Scan a bounded
-	// window until the rendered page is full, rather than letting a private recent run make a
-	// public profile appear truncated. Cursor pagination owns the unbounded continuation.
+	$limit = max( 1, min( 50, $limit ) );
+	$items = array();
+	$last  = $cursor;
+	/*
+	 * A visibility filter can exclude a long run of otherwise valid ledger rows, so one query of
+	 * `$limit` rows can yield almost nothing. Walk forward with the cursor until the page is
+	 * full rather than letting a private run make the profile look like it ends there. The scan
+	 * is bounded: an Actor whose entire recent history is private returns a short page and an
+	 * honest cursor, instead of holding the request open reading the whole ledger.
+	 */
+	$scanned    = 0;
 	$scan_limit = (int) apply_filters( 'axismundi_act_actor_feed_scan_limit', max( 50, min( 200, $limit * 10 ) ), $actor, $limit );
-	$scan_limit = max( $batch_size, min( 200, $scan_limit ) );
-	while ( count( $items ) < $limit && $offset < $scan_limit ) {
-		$batch_limit = min( $batch_size, $scan_limit - $offset );
-		$activities  = axismundi_act_get_actor_feed( $actor->get_uri(), $batch_limit, $offset );
+	$scan_limit = max( $limit, min( 200, $scan_limit ) );
+	$has_more   = false;
+	while ( count( $items ) < $limit && $scanned < $scan_limit ) {
+		$batch      = min( $limit, $scan_limit - $scanned );
+		// Only the first batch may include the anchor row; continuing the scan is always
+		// exclusive, or the last row of one batch would repeat as the first of the next.
+		$activities = axismundi_act_get_actor_feed_after( $actor->get_uri(), $batch, $last, $inclusive && 0 === $scanned );
 		if ( empty( $activities ) ) {
 			break;
 		}
+		$examined = 0;
+		$filled   = false;
 		foreach ( $activities as $activity ) {
+			++$examined;
 			if ( ! $activity instanceof Axismundi_Activity ) {
 				continue;
 			}
-			$item = axismundi_act_actor_feed_item( $activity );
-			if ( is_array( $item ) ) {
-				$items[] = $item;
+			$last = axismundi_act_feed_cursor( $activity );
+			$item = axismundi_act_actor_feed_item( $activity, $surface );
+			if ( is_array( $item ) && axismundi_act_actor_feed_item_in_filter( $item, $filter ) ) {
+				$item['cursor'] = $last;
+				$items[]        = $item;
 				if ( count( $items ) >= $limit ) {
+					// Stop on the row that fills the page, so the page is exactly the size it
+					// was asked for and the cursor names the last row actually shown. Draining
+					// the rest of the batch would overshoot and leave the cursor past rows the
+					// reader never saw.
+					$filled = true;
 					break;
 				}
 			}
 		}
-		$offset += count( $activities );
-		if ( count( $activities ) < $batch_limit ) {
+		$scanned += $examined;
+		if ( $filled ) {
+			$has_more = true;
+			break;
+		}
+		// A short batch means the ledger is exhausted, which is the only way to know there is
+		// nothing further; a full batch leaves the question open and the cursor stands. This is
+		// reassigned each pass, so an earlier full batch cannot leave a stale claim of more.
+		$has_more = count( $activities ) >= $batch;
+		if ( ! $has_more ) {
 			break;
 		}
 	}
-	$activity_object_uris = array_values(
-		array_unique(
-			array_filter(
-				array_map(
-					static fn( array $item ) : string => (string) ( $item['object_uri'] ?? '' ),
-					$items
-				)
-			)
-		)
-	);
-	/**
-	 * Allow Object Projections to include directly observed public Objects that
-	 * have no Activity anchor, such as an uncached remote inReplyTo parent.
-	 *
-	 * @param array<int,array<string,mixed>> $observed Existing observed rows.
-	 * @param string[]                       $activity_object_uris Object URIs already framed by an Activity.
+	$has_more = $has_more && '' !== $last && ( $inclusive || $last !== $cursor );
+
+	/*
+	 * Observed Objects have no position in the ledger — they are a cache-miss fallback anchored
+	 * to nothing — so they belong to a render that starts at the top of the feed. Re-offering
+	 * them further down would repeat the same rows on every page, since there is no cursor that
+	 * could exclude them.
 	 */
-	$observed = (array) apply_filters( 'axismundi_act_actor_feed_observed_items', array(), $actor, $activity_object_uris, $limit );
-	foreach ( $observed as $item ) {
-		$normalized = axismundi_act_actor_feed_observed_item( $item, $actor );
-		if ( is_array( $normalized ) ) {
-			$items[] = $normalized;
+	if ( '' === $cursor || $head_window ) {
+		$activity_object_uris = array_values( array_unique( array_filter( array_map( static fn( array $item ) : string => (string) ( $item['object_uri'] ?? '' ), $items ) ) ) );
+		$observed             = (array) apply_filters( 'axismundi_act_actor_feed_observed_items', array(), $actor, $activity_object_uris, $limit );
+		foreach ( $observed as $item ) {
+			$normalized = axismundi_act_actor_feed_observed_item( $item, $actor );
+			if ( is_array( $normalized ) && axismundi_act_actor_feed_item_in_filter( $normalized, $filter ) ) {
+				$normalized['cursor'] = '';
+				$items[]              = $normalized;
+			}
 		}
+		usort( $items, 'axismundi_act_actor_feed_compare' );
 	}
-	usort( $items, 'axismundi_act_actor_feed_compare' );
-	return array_slice( $items, 0, $limit );
+	return array(
+		'items'       => $items,
+		'next_cursor' => $has_more ? $last : '',
+		'has_more'    => $has_more,
+		'filter'      => $filter,
+	);
+}
+
+/**
+ * Render one display-sized feed page, skipping immutable ledger rows whose Object vanished.
+ *
+ * @param callable          $page_callback Surface page callback.
+ * @param Axismundi_Actor   $actor         Profile Actor.
+ * @param int               $limit         Requested visible-card count.
+ * @param string            $cursor        Start cursor.
+ * @param string            $filter        Surface filter.
+ * @param bool              $inclusive     Whether to include the anchor.
+ * @param bool              $head_window   Whether this is the first display page in the window.
+ * @return array{cards:array<int,string>,head_cursor:string,next_cursor:string,has_more:bool}
+ */
+function axismundi_act_actor_feed_display_page( callable $page_callback, Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
+	$cards       = array();
+	$head_cursor = $cursor;
+	$scan_pages  = 0;
+	$scan_limit  = max( 1, (int) apply_filters( 'axismundi_act_actor_feed_card_scan_pages', 10, $actor, $limit ) );
+	$page        = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false );
+	while ( true ) {
+		$page = (array) call_user_func( $page_callback, $actor, $limit, $cursor, $filter, $inclusive, $head_window && 0 === $scan_pages );
+		foreach ( (array) ( $page['items'] ?? array() ) as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+			if ( '' === $head_cursor && ! empty( $item['cursor'] ) ) {
+				$head_cursor = (string) $item['cursor'];
+			}
+			$card = axismundi_act_render_actor_feed_card( $item );
+			if ( '' !== $card ) {
+				$cards[] = $card;
+			}
+		}
+		if ( count( $cards ) >= $limit || empty( $page['has_more'] ) || ++$scan_pages >= $scan_limit ) {
+			break;
+		}
+		$cursor = (string) ( $page['next_cursor'] ?? '' );
+		if ( '' === $cursor ) {
+			break;
+		}
+		// Only the first query includes its anchor. Every scan after it must advance past the
+		// previous batch, or the last ledger row would render twice.
+		$inclusive = false;
+	}
+	return array(
+		'cards'       => $cards,
+		'head_cursor' => $head_cursor,
+		'next_cursor' => (string) ( $page['next_cursor'] ?? '' ),
+		'has_more'    => ! empty( $page['has_more'] ),
+	);
 }
 
 /** Render the current Actor's public Activity feed. */
@@ -191,54 +427,417 @@ function axismundi_act_render_actor_activity_feed() : string {
 	if ( '' !== $claimed ) {
 		return $claimed;
 	}
-	$items = axismundi_act_actor_feed_items( $actor );
-	if ( empty( $items ) ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read pagination.
+	$cursor = isset( $_GET['feed_after'] ) ? sanitize_text_field( wp_unslash( $_GET['feed_after'] ) ) : '';
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read surface selection.
+	$surface = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read filter selection.
+	$filter   = isset( $_GET['filter'] ) ? sanitize_key( wp_unslash( $_GET['filter'] ) ) : '';
+	$surfaces = axismundi_act_actor_profile_surfaces( $actor );
+	$surface  = isset( $surfaces[ $surface ] ) ? $surface : 'activity';
+	$current  = $surfaces[ $surface ];
+	/*
+	 * A surface's slices divide differently, so they are addressed differently.
+	 *
+	 * The community surface's slices are collections — Topics is a different list of things than
+	 * Replies — so they stay in the URL where they can be linked to and crawled. The timeline's
+	 * switches are a reading preference, closer to a display setting than to a destination: two
+	 * readers looking at the same profile are looking at the same thing whether or not one of
+	 * them has boosts hidden. A preference does not belong in a URL it would then be baked into
+	 * and shared with, so those live in the reader's browser and the server always renders the
+	 * default.
+	 */
+	$client_owned = ! empty( $current['toggles'] );
+	$filter       = $client_owned || ! isset( $current['filters'][ $filter ] )
+		? (string) $current['default_filter']
+		: $filter;
+	/**
+	 * How many timeline entries one page shows.
+	 *
+	 * @param int             $per_page Entries per page.
+	 * @param Axismundi_Actor $actor    Actor whose profile is being rendered.
+	 */
+	$per_page = (int) apply_filters( 'axismundi_act_actor_feed_per_page', 20, $actor );
+	/*
+	 * The ledger can outlive the object it once announced. `actor_feed_page()` intentionally keeps
+	 * those rows: it owns an immutable record, not the mutable local object store. The card
+	 * renderer rightly drops an unresolved Create, though, so a page selected only by ledger rows
+	 * can otherwise be blank while its "older" link points at the first useful card.
+	 *
+	 * Fill each display page by following a bounded number of cursor pages until it has actual
+	 * cards.
+	 *
+	 * The server always renders exactly one page. Loading more is the browser's job: it asks the
+	 * feed endpoint for the next page and appends it once, which is what Jetpack's infinite
+	 * scroll does and what keeps the cost of each step constant. Re-rendering everything already
+	 * on screen in order to grow a window makes the tenth step ten times the work of the first.
+	 */
+	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter );
+	$cards = implode( '', $page['cards'] );
+	/*
+	 * An empty *narrowed* surface still renders: the reader chose that tab and needs the
+	 * navigation to get back out of it. Only an Actor with nothing at all on the default surface,
+	 * and nowhere else to go, yields nothing — so a profile that has never posted does not grow
+	 * an empty timeline chrome.
+	 */
+	if ( '' === $cards && empty( $page['has_more'] ) && '' === $cursor && 'activity' === $surface
+		&& $filter === (string) $current['default_filter'] && count( $surfaces ) <= 1 ) {
 		return '';
 	}
+
+	/*
+	 * Surface and filter are both part of the address of what the reader is looking at, so they
+	 * ride along on every link built here. Dropping either from the continuation would silently
+	 * return them to the default one page in — the very list they had just chosen to narrow.
+	 *
+	 * The cursor is deliberately not carried across a surface or filter change: a cursor names a
+	 * position in one ordering, and reusing it in a differently filtered list would land the
+	 * reader somewhere they were never at.
+	 */
+	$base_url = remove_query_arg( array( 'feed_after', 'feed_from', 'feed_pages', 'feed_head', 'view', 'filter' ) );
+	$link_url = static function ( string $surface_key, string $filter_key, array $query = array() ) use ( $base_url, $surfaces ) : string {
+		$url = 'activity' === $surface_key ? $base_url : add_query_arg( 'view', $surface_key, $base_url );
+		if ( $filter_key !== (string) $surfaces[ $surface_key ]['default_filter'] ) {
+			$url = add_query_arg( 'filter', $filter_key, $url );
+		}
+		foreach ( $query as $key => $value ) {
+			$url = add_query_arg( $key, rawurlencode( (string) $value ), $url );
+		}
+		return $url;
+	};
+	$tab = static function ( string $href, string $label, bool $is_current, string $class ) : string {
+		return '<a class="' . esc_attr( $class ) . ( $is_current ? ' is-current' : '' ) . '" href="' . esc_url( $href ) . '"'
+			. ( $is_current ? ' aria-current="page"' : '' ) . '>'
+			. esc_html( $label ) . '</a>';
+	};
+
+	// One surface is not a choice, so the surface navigation appears only once a product has
+	// contributed a second one.
+	$surface_nav = '';
+	if ( count( $surfaces ) > 1 ) {
+		$surface_tabs = array();
+		foreach ( $surfaces as $key => $definition ) {
+			$surface_tabs[] = $tab( $link_url( (string) $key, (string) $definition['default_filter'] ), (string) $definition['label'], (string) $key === $surface, 'axismundi-activity-feed__surface' );
+		}
+		$surface_nav = '<nav class="axismundi-activity-feed__surfaces" aria-label="' . esc_attr__( 'Profile surfaces', 'axismundi-activities' ) . '">'
+			. implode( '', $surface_tabs ) . '</nav>';
+	}
+	/*
+	 * Two shapes of control, because the two surfaces ask different kinds of question.
+	 *
+	 * The timeline's filters are the product of two independent switches — show replies, show
+	 * boosts — so they are presented as two switches under a disclosure whose label states the
+	 * combination, which is what Mastodon does. The community surface's slices are mutually
+	 * exclusive collections, so they stay tabs, which is what Lemmy does. Forcing either into
+	 * the other's control would misrepresent how the choices relate.
+	 *
+	 * The switches are links, not checkboxes, and the disclosure is a `details` element. Both
+	 * work with no script at all, and the chosen combination stays in the URL rather than in
+	 * browser storage — Mastodon can keep it in `localStorage` because nothing on that page is
+	 * server-rendered, but ours is, so a stored preference the server cannot see would be
+	 * contradicted by the very first paint and would not survive being shared as a link.
+	 */
+	$filter_nav = '';
+	if ( $client_owned ) {
+		$state    = axismundi_act_actor_feed_filters()[ $filter ];
+		$switches = array();
+		/*
+		 * A native checkbox with `role="switch"`, wrapped in its own label. Native means the
+		 * browser keeps Space-to-toggle, focus, and the checked state for free; the track is a
+		 * sibling the theme draws, and the handle is that track's pseudo-element rather than
+		 * another node to keep in sync. The plugin emits the semantics; the switch's appearance
+		 * is a theme component, the same way buttons and selects are.
+		 */
+		foreach ( (array) $current['toggles'] as $bit => $label ) {
+			$switches[] = '<label class="axismundi-switch axismundi-activity-feed__switch">'
+				. '<input class="axismundi-switch__input" type="checkbox" role="switch"'
+				. ' name="' . esc_attr( (string) $bit ) . '"'
+				. checked( (bool) $state[ $bit ], true, false )
+				. ' data-wp-on--change="actions.setFilter">'
+				. '<span class="axismundi-switch__track" aria-hidden="true"></span>'
+				. '<span class="axismundi-switch__label">' . esc_html( (string) $label ) . '</span>'
+				. '</label>';
+		}
+		/*
+		 * A trigger and a popover, which is the shape the Add reaction picker already
+		 * established: a button that states what is open, and a `role="dialog"` panel holding
+		 * controls. A `details` element would have been less code but the wrong promise — this
+		 * holds form controls, floats over the page, and closes on Escape and on a click
+		 * outside, none of which a disclosure does.
+		 *
+		 * The whole control is hidden until the runtime reveals it. These are real checkboxes in
+		 * no form, so without script they would sit there doing nothing — and a control that
+		 * visibly does nothing is worse than one never offered. A reader without script gets the
+		 * default timeline, which is the timeline everyone else starts on.
+		 */
+		$filter_nav = '<div class="axismundi-activity-feed__filters" hidden'
+			. ' data-wp-init="callbacks.watchFilters" data-wp-watch="callbacks.filtersLifecycle">'
+			. '<button type="button" class="axismundi-activity-feed__filters-trigger"'
+			. ' data-wp-on--click="actions.toggleFilters"'
+			. ' data-wp-bind--aria-expanded="context.isFiltersOpen"'
+			. ' aria-haspopup="dialog">'
+			. '<span data-wp-text="context.filterLabel">' . esc_html( (string) $current['filters'][ $filter ] ) . '</span>'
+			. '<span class="material-symbols-outlined" aria-hidden="true">unfold_more</span>'
+			. '</button>'
+			. '<div class="axismundi-activity-feed__filters-panel" role="dialog"'
+			. ' aria-label="' . esc_attr__( 'Timeline filters', 'axismundi-activities' ) . '"'
+			. ' hidden data-wp-bind--hidden="!context.isFiltersOpen">'
+			. implode( '', $switches )
+			. '</div>'
+			. '</div>';
+	} else {
+		$filter_tabs = array();
+		foreach ( (array) $current['filters'] as $key => $label ) {
+			$filter_tabs[] = $tab( $link_url( $surface, (string) $key ), (string) $label, (string) $key === $filter, 'axismundi-activity-feed__view' );
+		}
+		$filter_nav = count( $filter_tabs ) > 1
+			? '<nav class="axismundi-activity-feed__views" aria-label="' . esc_attr__( 'Timeline views', 'axismundi-activities' ) . '">' . implode( '', $filter_tabs ) . '</nav>'
+			: '';
+	}
+
+	/*
+	 * Load more is a real link before it is anything else. Without JavaScript it navigates to the
+	 * next cursor page, so the whole feed stays reachable by a reader with no script and by a
+	 * crawler. With JavaScript the same element fetches that page from the feed endpoint and
+	 * appends it once — constant work per step, which is the whole reason for doing it this way
+	 * rather than re-rendering a growing window.
+	 */
+	/*
+	 * The control is always present and hidden when there is nothing further, rather than being
+	 * removed and rebuilt. Changing the switches replaces the list from page one, and a link that
+	 * had been deleted would have to be recreated at exactly the right moment; one that is only
+	 * hidden simply reappears.
+	 */
+	$has_more = ! empty( $page['has_more'] ) && '' !== (string) $page['next_cursor'];
+	$more     = '<a class="axismundi-activity-feed__more-link" data-wp-on--click="actions.loadMore"'
+		. ( $has_more ? '' : ' hidden' )
+		. ' href="' . esc_url( $link_url( $surface, $filter, array( 'feed_after' => (string) $page['next_cursor'] ) ) ) . '">'
+		. esc_html__( 'Load more', 'axismundi-activities' ) . '</a>';
+	$newer = '';
+	if ( '' !== $cursor ) {
+		// A cursor names where the next page starts, not where the reader came from, so there is
+		// no honest "previous". The top is the one position always known to be real.
+		$newer = '<a class="axismundi-activity-feed__newer-link" href="' . esc_url( $link_url( $surface, $filter ) ) . '">'
+			. esc_html__( 'Back to the newest activity', 'axismundi-activities' ) . '</a>';
+	}
+	$navigation = '<nav class="axismundi-activity-feed__pagination" aria-label="' . esc_attr__( 'Timeline pages', 'axismundi-activities' ) . '">' . $newer . $more . '</nav>';
+
+	/*
+	 * The feed is a client-rendered island inside a server-rendered page: the profile header,
+	 * the tabs, and the first page are ordinary HTML, and only the continuation is fetched. The
+	 * context carries everything the runtime needs to ask for the next page, so it never has to
+	 * parse it back out of a URL.
+	 */
+	$context = array(
+		'endpoint'      => rest_url( 'axismundi/v1/actor-feed' ),
+		'actorUri'      => $actor->get_uri(),
+		'surface'       => $surface,
+		'filter'        => $filter,
+		'cursor'        => $has_more ? (string) $page['next_cursor'] : '',
+		'perPage'       => $per_page,
+		'defaultFilter' => (string) $current['default_filter'],
+		'filterLabel'   => (string) $current['filters'][ $filter ],
+		// Labels for every combination, so the runtime can name the reader's choice without
+		// asking the server again for a string it already had.
+		'filterLabels'  => array_map( 'strval', (array) $current['filters'] ),
+		'clientOwned'   => $client_owned,
+		'isFiltersOpen' => false,
+		'isPending'     => false,
+		'error'         => '',
+		'errorFallback' => __( 'More activity could not be loaded.', 'axismundi-activities' ),
+	);
+	return '<section class="axismundi-activity-feed" data-wp-interactive="axismundi/actor-feed" '
+		. wp_interactivity_data_wp_context( $context )
+		. ' aria-labelledby="axismundi-activity-feed-heading">'
+		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html( (string) $current['heading'] ) . '</h2>'
+		. $surface_nav
+		. $filter_nav
+		// The list is always emitted, even when this page is empty, because appended pages need
+		// something to attach to. An empty feed says so in its own row rather than by omitting
+		// the container the runtime is going to look for.
+		. '<ol class="axismundi-activity-feed__list" data-wp-init="callbacks.watchFeed">'
+		. ( '' === $cards ? '<li class="axismundi-activity-feed__empty">' . esc_html__( 'Nothing to show in this view.', 'axismundi-activities' ) . '</li>' : $cards )
+		. '</ol>'
+		. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>'
+		. $navigation
+		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.
+}
+
+/**
+ * The surfaces a Person profile can be read through.
+ *
+ * A Person is one Actor with one identity URI and one outbox, so these are not separate Actors
+ * and not separate profiles — they are collections over the same Actor's objects, which is the
+ * model Lemmy and WordPress.org both use. The federated representation is untouched by which one
+ * a reader happens to be looking at.
+ *
+ * Activities owns exactly one surface: what this Person published themselves. A product that
+ * owns some other context of the same Actor — a forum's community contributions, an archive of
+ * their long-form work — registers its own here, and Activities does not know those exist.
+ *
+ * @param Axismundi_Actor $actor Actor whose profile is being rendered.
+ * @return array<string,array{label:string,heading:string,filters:array<string,string>,default_filter:string,page:callable}>
+ */
+function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array {
+	$filters = array();
+	foreach ( axismundi_act_actor_feed_filters() as $key => $definition ) {
+		$filters[ $key ] = (string) $definition['label'];
+	}
+	$activity = array(
+		'label'          => __( 'Activity', 'axismundi-activities' ),
+		'heading'        => __( 'Timeline', 'axismundi-activities' ),
+		'filters'        => $filters,
+		// The two independent switches the four filter keys are the product of.
+		'toggles'        => array(
+			'replies' => __( 'Show replies', 'axismundi-activities' ),
+			'boosts'  => __( 'Show boosts', 'axismundi-activities' ),
+		),
+		'default_filter' => axismundi_act_actor_feed_default_filter(),
+		'page'           => 'axismundi_act_actor_activity_surface_page',
+	);
+	/**
+	 * Contribute a profile surface for an Actor.
+	 *
+	 * Each surface supplies a `page` callable with the signature
+	 * `( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive,
+	 * bool $head_window )` returning the same
+	 * shape as `axismundi_act_actor_feed_page()`, so chrome, pagination, and card rendering are
+	 * shared rather than reimplemented per product.
+	 *
+	 * @param array<string,array<string,mixed>> $surfaces Registered surfaces, keyed by slug.
+	 * @param Axismundi_Actor                   $actor    Actor whose profile is being rendered.
+	 */
+	$surfaces = (array) apply_filters( 'axismundi_act_actor_profile_surfaces', array( 'activity' => $activity ), $actor );
+	// `activity` is the default surface and the fallback for an unrecognised request, so it is
+	// not something a product may remove out from under the reader.
+	$surfaces['activity'] = $activity;
+	return $surfaces;
+}
+
+/** The Activities-owned surface: what this Person published themselves. */
+function axismundi_act_actor_activity_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
+	return axismundi_act_actor_feed_page( $actor, $limit, $cursor, $filter, 'activity', $inclusive, $head_window );
+}
+
+/**
+ * Render feed item descriptors into list items.
+ *
+ * Extracted so the REST continuation returns markup built by exactly this code. A second
+ * renderer for appended pages is how the tenth page stops looking like the first.
+ *
+ * @param array<int,array<string,mixed>> $items Feed item descriptors.
+ * @return string
+ */
+function axismundi_act_render_actor_feed_cards( array $items ) : string {
 	$cards = array();
 	foreach ( $items as $item ) {
-		/**
-		 * Let an object-owning product render a public activity's object through
-		 * its own view model. Activities deliberately owns only ledger selection
-		 * and verb framing, so it never reaches into Note or Object Projections
-		 * directly. Object Projections registers the default handler.
-		 *
-		 * @param string               $html Empty by default.
-		 * @param array<string,mixed>  $item Public-safe Activity feed item.
-		 */
-		$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item );
-		if ( '' === $object_html ) {
-			/**
-			 * A public Activity can reference a remote Object which was not embedded in
-			 * a Create and has not been explicitly cached. Products may render a safe
-			 * external reference in that narrow cache-miss case. A known tombstone or
-			 * non-public source still returns an empty string and hides the row.
-			 *
-			 * @param string               $html Empty by default.
-			 * @param array<string,mixed>  $item Public-safe Activity feed item.
-			 */
-			$object_html = (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $item );
-			if ( '' === $object_html ) {
-				continue;
+		if ( is_array( $item ) ) {
+			$card = axismundi_act_render_actor_feed_card( $item );
+			if ( '' !== $card ) {
+				$cards[] = $card;
 			}
 		}
-		$frame = '';
-		if ( 'Announce' === $item['type'] ) {
-			$frame = '<p class="axismundi-activity-feed__boost"><span class="material-symbols-outlined" aria-hidden="true">sync</span> '
-				. esc_html__( 'Boosted', 'axismundi-activities' ) . '</p>';
+	}
+	return implode( '', $cards );
+}
+
+/** Render one public-safe feed descriptor into a card, or nothing when its object no longer exists. */
+function axismundi_act_render_actor_feed_card( array $item ) : string {
+	/**
+	 * Let an object-owning product render a public activity's object through its own view model.
+	 * Activities deliberately owns only ledger selection and verb framing, so it never reaches
+	 * into Note or Object Projections directly. Object Projections registers the default handler.
+	 *
+	 * @param string              $html Empty by default.
+	 * @param array<string,mixed> $item Public-safe Activity feed item.
+	 */
+	$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item );
+	if ( '' === $object_html ) {
+		/**
+		 * A public Activity can reference a remote Object which was not embedded in a Create and
+		 * has not been explicitly cached. Products may render a safe external reference in that
+		 * narrow cache-miss case. A known tombstone or non-public source remains hidden.
+		 *
+		 * @param string              $html Empty by default.
+		 * @param array<string,mixed> $item Public-safe Activity feed item.
+		 */
+		$object_html = (string) apply_filters( 'axismundi_act_actor_feed_missing_object_html', '', $item );
+		if ( '' === $object_html ) {
+			return '';
 		}
-		$cards[] = '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--object axismundi-activity-feed__item--' . esc_attr( strtolower( $item['type'] ) ) . '">'
-			. $frame
-			. $object_html
-			. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Frame is escaped above; the owning product owns and escapes its renderer output.
 	}
-	if ( empty( $cards ) ) {
-		return '';
+	$frame = '';
+	if ( 'Announce' === (string) ( $item['type'] ?? '' ) ) {
+		$frame = '<p class="axismundi-activity-feed__boost"><span class="material-symbols-outlined" aria-hidden="true">sync</span> '
+			. esc_html__( 'Boosted', 'axismundi-activities' ) . '</p>';
 	}
-	return '<section class="axismundi-activity-feed" aria-labelledby="axismundi-activity-feed-heading">'
-		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html__( 'Timeline', 'axismundi-activities' ) . '</h2>'
-		. '<ol class="axismundi-activity-feed__list">' . implode( '', $cards ) . '</ol>'
-		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards are escaped above.
+	return '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--object axismundi-activity-feed__item--' . esc_attr( strtolower( (string) ( $item['type'] ?? '' ) ) ) . '">'
+		. $frame
+		. $object_html
+		. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Frame is escaped above; the owning product owns and escapes its renderer output.
+}
+
+/**
+ * Register the feed continuation endpoint.
+ *
+ * Reading a public profile's timeline needs no authentication, and requiring it would make every
+ * response uncacheable for the anonymous readers who are most of the traffic. The endpoint serves
+ * what the profile page itself would show the same visitor, applying the same public boundary.
+ */
+function axismundi_act_register_actor_feed_route() : void {
+	register_rest_route(
+		'axismundi/v1',
+		'/actor-feed',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => 'axismundi_act_rest_actor_feed',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'actor_uri' => array( 'required' => true, 'type' => 'string', 'format' => 'uri' ),
+				'surface'   => array( 'required' => false, 'type' => 'string', 'default' => 'activity' ),
+				'filter'    => array( 'required' => false, 'type' => 'string', 'default' => '' ),
+				'after'     => array( 'required' => false, 'type' => 'string', 'default' => '' ),
+				'per_page'  => array( 'required' => false, 'type' => 'integer', 'default' => 20, 'minimum' => 1, 'maximum' => 50 ),
+			),
+		)
+	);
+}
+add_action( 'rest_api_init', 'axismundi_act_register_actor_feed_route' );
+
+/** Serve exactly one continuation page of a profile feed. */
+function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
+	$actor = function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( axismundi_act_uri( (string) $request['actor_uri'] ) ) : null;
+	if ( ! $actor instanceof Axismundi_Actor ) {
+		return new WP_Error( 'ax_act_feed_actor', __( 'That Actor is not available here.', 'axismundi-activities' ), array( 'status' => 404 ) );
+	}
+	$surfaces = axismundi_act_actor_profile_surfaces( $actor );
+	$surface  = (string) $request['surface'];
+	$surface  = isset( $surfaces[ $surface ] ) ? $surface : 'activity';
+	$current  = $surfaces[ $surface ];
+	$filter   = (string) $request['filter'];
+	$filter   = isset( $current['filters'][ $filter ] ) ? $filter : (string) $current['default_filter'];
+
+	$page = axismundi_act_actor_feed_display_page( $current['page'], $actor, (int) $request['per_page'], (string) $request['after'], $filter );
+	$response = new WP_REST_Response(
+		array(
+			'html'        => implode( '', $page['cards'] ),
+			'next_cursor' => (string) $page['next_cursor'],
+			'has_more'    => (bool) $page['has_more'],
+		),
+		200
+	);
+	/*
+	 * A logged-in reader's cards carry their own Like state and REST nonces, so that response is
+	 * theirs alone and must not be stored by a shared cache. An anonymous response is the same
+	 * for everyone and may be cached briefly — the profile shell around it stays cacheable either
+	 * way, which is the point of splitting the feed out of it.
+	 */
+	if ( is_user_logged_in() ) {
+		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+	} else {
+		$response->header( 'Cache-Control', 'public, max-age=30' );
+	}
+	return $response;
 }
 
 /** Register the server-rendered Actor Activity feed block. */

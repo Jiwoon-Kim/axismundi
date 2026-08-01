@@ -117,7 +117,7 @@ function axismundi_op_render_object_pattern( array $options = array() ) : string
 	// default is `single`, which is also what an un-wrapped render (the single Object
 	// template, which emits the pattern markup without calling this) correctly sees.
 	$GLOBALS['axismundi_op_object_template_options'] = array_merge(
-		array( 'headingTag' => 'h1', 'interactions' => true, 'surface' => 'single' ),
+		array( 'headingTag' => 'h1', 'interactions' => true, 'surface' => 'single', 'interactionOwner' => 'block' ),
 		$options
 	);
 	try {

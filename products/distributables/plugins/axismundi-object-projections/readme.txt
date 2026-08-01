@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.64
+Stable tag: 0.0.66
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, jsonld, federation
@@ -43,6 +43,21 @@ Administrators may also probe a remote ActivityStreams Collection and its same-h
 page without persisting the Collection, fetching its item URLs, or downloading binaries.
 
 == Changelog ==
+
+= 0.0.66 =
+* Every theme design token in this plugin's CSS now carries a fallback, so the
+  plugin renders sensibly under any theme rather than only under Axismundi.
+  System colours are used where the browser has a real equivalent -- they
+  follow the reader's light/dark and forced-colors settings for free -- and
+  literals only where it does not. Verified under Twenty Twenty-Five.
+
+= 0.0.65 =
+* Object cards now state who owns their controls' clicks. A caller whose cards
+  are appended or replaced after load asks for `interactionOwner => feed`, and
+  the controls render as presentation for the surrounding region to dispatch;
+  everywhere else they stay interactive blocks that own themselves. It is
+  stated rather than inferred from the surface, because a stream that never
+  grows is a stream whose blocks are still fine.
 
 = 0.0.64 =
 * Splits the reply page from the root Object page. An Object that replies to

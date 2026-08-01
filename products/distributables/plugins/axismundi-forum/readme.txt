@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.17
+Stable tag: 0.9.19
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,22 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.19 =
+* The community vote control renders as presentation on a surface that owns its
+  own clicks, such as a profile timeline whose cards are appended after load.
+  On an Object's own page it stays an interactive block. The feed variant omits
+  the interactive directives rather than guarding them at runtime: markup that
+  is not there cannot fire twice.
+
+= 0.9.18 =
+* Adds a community surface to a Person profile. Topics and replies submitted to
+  a community were hidden from the personal timeline, which was right, but left
+  the contribution history with nowhere to be found; the same two predicates
+  that hide them are now read in the opposite direction to fill
+  `?view=community`, with Overview, Topics, and Replies.
+* A Group profile is given no community tab, because a Group profile already is
+  its community.
 
 = 0.9.17 =
 * Keeps locally authored Topics submitted to a remote Group in that Group's

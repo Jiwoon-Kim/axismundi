@@ -81,21 +81,21 @@
 .axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip {
 	background-color: transparent;
 	background-image: none;
-	color: var( --wp--preset--color--on-surface-variant );
-	border: 1px solid var( --wp--preset--color--outline-variant );
+	color: var( --wp--preset--color--on-surface-variant, GrayText );
+	border: 1px solid var( --wp--preset--color--outline-variant, GrayText );
 }
 
 /* The same state layers the variation defines, over a transparent container. */
 .axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip:hover {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant, GrayText ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ), transparent );
 }
 
 .axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip:focus {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant, GrayText ) calc( var( --md-sys-state-focus-state-layer-opacity, 0.1 ) * 100% ), transparent );
 }
 
 .axismundi-reaction-bar .wp-block-button:not( .is-style-tonal ) .axismundi-reaction-bar__chip:active {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface-variant, GrayText ) calc( var( --md-sys-state-pressed-state-layer-opacity, 0.1 ) * 100% ), transparent );
 }
 
 /* A chip nobody here can join — somebody else's custom emoji — is still readable, and
@@ -205,8 +205,8 @@
 	padding: var( --wp--preset--spacing--50, 0.5rem );
 	border: 0;
 	border-radius: 16px;
-	background-color: var( --wp--preset--color--surface-container-low );
-	color: var( --wp--preset--color--on-surface );
+	background-color: var( --wp--preset--color--surface-container-low, Canvas );
+	color: var( --wp--preset--color--on-surface, CanvasText );
 	/*
 	 * The elevation preset resolves to `none` in dark mode: the theme suppresses physical
 	 * shadows there and carries elevation as surface tone instead, which is the M3 rule for
@@ -215,8 +215,8 @@
 	 * the page needs to read as floating whichever mode it is in. Same formula, same reason.
 	 */
 	box-shadow:
-		0 1px 2px color-mix( in srgb, var( --md-sys-color-shadow ), transparent 70% ),
-		0 2px 6px 2px color-mix( in srgb, var( --md-sys-color-shadow ), transparent 85% );
+		0 1px 2px color-mix( in srgb, var( --md-sys-color-shadow, #000 ), transparent 70% ),
+		0 2px 6px 2px color-mix( in srgb, var( --md-sys-color-shadow, #000 ), transparent 85% );
 }
 
 /*
@@ -397,8 +397,8 @@
 	flex: 0 0 auto;
 	overflow-x: auto;
 	scrollbar-width: thin;
-	scrollbar-color: var( --wp--preset--color--outline-variant ) transparent;
-	border-block-end: 1px solid var( --wp--preset--color--outline-variant );
+	scrollbar-color: var( --wp--preset--color--outline-variant, GrayText ) transparent;
+	border-block-end: 1px solid var( --wp--preset--color--outline-variant, GrayText );
 }
 
 .axismundi-reaction-picker__strip[ hidden ] {
@@ -423,7 +423,7 @@
 	border: 0;
 	border-radius: 0;
 	background: none;
-	color: var( --wp--preset--color--on-surface-variant );
+	color: var( --wp--preset--color--on-surface-variant, GrayText );
 	cursor: pointer;
 }
 
@@ -448,32 +448,32 @@
 }
 
 .axismundi-reaction-picker__jump.is-active {
-	color: var( --wp--preset--color--primary );
+	color: var( --wp--preset--color--primary, LinkText );
 }
 
 .axismundi-reaction-picker__jump.is-active::after {
-	background-color: var( --wp--preset--color--primary );
+	background-color: var( --wp--preset--color--primary, LinkText );
 }
 
 /* State layers take the colour of the tab's own role, per the component's states. */
 .axismundi-reaction-picker__jump:hover {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
-	color: var( --wp--preset--color--on-surface );
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface, CanvasText ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ), transparent );
+	color: var( --wp--preset--color--on-surface, CanvasText );
 }
 
 .axismundi-reaction-picker__jump.is-active:hover {
-	background-color: color-mix( in srgb, var( --wp--preset--color--primary ) calc( var( --md-sys-state-hover-state-layer-opacity ) * 100% ), transparent );
-	color: var( --wp--preset--color--primary );
+	background-color: color-mix( in srgb, var( --wp--preset--color--primary, LinkText ) calc( var( --md-sys-state-hover-state-layer-opacity, 0.08 ) * 100% ), transparent );
+	color: var( --wp--preset--color--primary, LinkText );
 }
 
 .axismundi-reaction-picker__jump:focus-visible {
-	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface ) calc( var( --md-sys-state-focus-state-layer-opacity ) * 100% ), transparent );
-	outline: 3px solid var( --wp--preset--color--secondary );
+	background-color: color-mix( in srgb, var( --wp--preset--color--on-surface, CanvasText ) calc( var( --md-sys-state-focus-state-layer-opacity, 0.1 ) * 100% ), transparent );
+	outline: 3px solid var( --wp--preset--color--secondary, LinkText );
 	outline-offset: -3px;
 }
 
 .axismundi-reaction-picker__jump:active {
-	background-color: color-mix( in srgb, var( --wp--preset--color--primary ) calc( var( --md-sys-state-pressed-state-layer-opacity ) * 100% ), transparent );
+	background-color: color-mix( in srgb, var( --wp--preset--color--primary, LinkText ) calc( var( --md-sys-state-pressed-state-layer-opacity, 0.1 ) * 100% ), transparent );
 }
 
 /*
@@ -491,10 +491,10 @@
 	overscroll-behavior: contain;
 	/* The theme's scrollbar treatment, taken from its select popover. */
 	scrollbar-width: thin;
-	scrollbar-color: var( --wp--preset--color--outline-variant ) transparent;
-	border: 1px solid var( --wp--preset--color--outline-variant );
+	scrollbar-color: var( --wp--preset--color--outline-variant, GrayText ) transparent;
+	border: 1px solid var( --wp--preset--color--outline-variant, GrayText );
 	border-radius: 12px;
-	background-color: var( --wp--preset--color--surface );
+	background-color: var( --wp--preset--color--surface, Canvas );
 	padding-inline: var( --wp--preset--spacing--25, 0.375rem );
 }
 
@@ -532,10 +532,10 @@
 	 * `backdrop-filter` is progressive: where it is unsupported the colour is still 88%
 	 * opaque, so the words stay readable and only the texture is lost.
 	 */
-	background-color: color-mix( in srgb, var( --wp--preset--color--surface ) 70%, transparent );
+	background-color: color-mix( in srgb, var( --wp--preset--color--surface, Canvas ) 70%, transparent );
 	backdrop-filter: blur( 12px );
-	box-shadow: 0 1px 0 0 var( --wp--preset--color--outline-variant );
-	color: var( --wp--preset--color--on-surface-variant );
+	box-shadow: 0 1px 0 0 var( --wp--preset--color--outline-variant, GrayText );
+	color: var( --wp--preset--color--on-surface-variant, GrayText );
 	font-size: 0.75rem;
 	font-weight: 600;
 	letter-spacing: 0.04em;
@@ -564,7 +564,7 @@
 .axismundi-reaction-picker__loading {
 	block-size: 4px;
 	overflow: hidden;
-	background-color: var( --wp--preset--color--surface-container-highest );
+	background-color: var( --wp--preset--color--surface-container-highest, Canvas );
 }
 
 .axismundi-reaction-picker__loading[ hidden ] {
@@ -573,7 +573,7 @@
 
 .ax-progress-linear.is-indeterminate {
 	block-size: 100%;
-	background-color: var( --wp--preset--color--primary );
+	background-color: var( --wp--preset--color--primary, LinkText );
 	transform-origin: 0 50%;
 	animation: axismundi-reaction-progress 1.2s var( --md-sys-motion-easing-standard, cubic-bezier( 0.2, 0, 0, 1 ) ) infinite;
 }

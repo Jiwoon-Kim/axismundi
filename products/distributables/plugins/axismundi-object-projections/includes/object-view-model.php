@@ -649,6 +649,15 @@ function axismundi_op_render_object_by_uri( string $uri, array $opts = array() )
 		// hashtag archive, a feed. Blocks that show less in a stream than on the Object's
 		// own page read this rather than guessing from the heading level.
 		'surface'      => $opts['surface'] ?? 'feed',
+		/*
+		 * Who handles a card control's clicks. `block` means each control is its own
+		 * interactive island, which is right wherever the card is stable. A caller whose cards
+		 * are appended or replaced after load says `feed` instead: DOM added after load is
+		 * never hydrated, so those controls render as presentation and the surrounding region
+		 * dispatches them. It is stated rather than inferred from `surface`, because a stream
+		 * that never grows — a hashtag archive — is a stream whose blocks are still fine.
+		 */
+		'interactionOwner' => isset( $opts['interactionOwner'] ) ? (string) $opts['interactionOwner'] : 'block',
 	);
 	$previous = axismundi_op_current_object_view_model();
 	axismundi_op_set_current_object_view_model( $model );

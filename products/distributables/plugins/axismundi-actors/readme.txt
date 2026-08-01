@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.62
+Stable tag: 0.0.63
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,13 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.63 =
+* Every theme design token in this plugin's CSS now carries a fallback, so the
+  plugin renders sensibly under any theme rather than only under Axismundi.
+  System colours are used where the browser has a real equivalent -- they
+  follow the reader's light/dark and forced-colors settings for free -- and
+  literals only where it does not. Verified under Twenty Twenty-Five.
 
 = 0.0.62 =
 * Redirect legacy public WordPress author archives to their Axismundi Actor profile hubs, preserving links cached by older federation peers.

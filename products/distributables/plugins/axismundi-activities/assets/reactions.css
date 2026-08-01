@@ -124,7 +124,14 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.axismundi-reaction-button {
+/*
+ * The popover is positioned against whichever element holds the trigger, so both wrappers that
+ * can hold one need to be a containing block. Without this the picker resolves against the page
+ * and opens in a corner — the trigger moved into the unified interaction block, the rule did not
+ * follow it, and nothing about the picker's own markup would have said why.
+ */
+.axismundi-reaction-button,
+.axismundi-interaction.is-type-reaction {
 	position: relative;
 	display: inline-flex;
 }

@@ -363,6 +363,51 @@ function axismundi_act_render_reaction_button( array $attributes, string $conten
 			<span class="material-symbols-outlined" aria-hidden="true">add_reaction</span>
 		</button>
 		<?php if ( $can_react ) : ?>
+		<?php echo axismundi_act_render_reaction_picker( $picker_id, $label ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- the picker escapes its own output. ?>
+		<?php endif; ?>
+		<span class="axismundi-reaction-button__status" data-wp-text="state.error" aria-live="polite"></span>
+	</div>
+	<?php
+	return (string) ob_get_clean();
+}
+
+/** Register both blocks. */
+function axismundi_act_register_reaction_blocks() : void {
+	foreach ( array( 'reaction-bar' => 'axismundi_act_render_reaction_bar', 'reaction-button' => 'axismundi_act_render_reaction_button' ) as $dir => $callback ) {
+		$path = dirname( __DIR__ ) . '/blocks/' . $dir;
+		if ( is_readable( $path . '/block.json' ) ) {
+			register_block_type( $path, array( 'render_callback' => $callback ) );
+		}
+	}
+}
+add_action( 'init', 'axismundi_act_register_reaction_blocks' );
+
+/** Both blocks share one script module rather than shipping a copy each. */
+function axismundi_act_enqueue_reaction_module( string $block_content, array $block ) : string {
+	if ( in_array( $block['blockName'] ?? '', array( 'axismundi/reaction-bar', 'axismundi/reaction-button' ), true ) && '' !== trim( $block_content ) && function_exists( 'wp_enqueue_script_module' ) ) {
+		wp_enqueue_script_module( 'axismundi-activities-reactions' );
+	}
+	return $block_content;
+}
+add_filter( 'render_block', 'axismundi_act_enqueue_reaction_module', 10, 2 );
+
+/**
+ * The popover the picker button owns.
+ *
+ * Extracted so the same markup can sit inside the unified interaction block without being written
+ * a second time. The trigger is an ordinary interaction control; this is everything that hangs off
+ * it, and nothing in here knows which of the two rendered it.
+ *
+ * `$picker_id` must be unique to the control rather than derived from the Object: a feed can show
+ * one Object twice, and ids built from the Object collided inside a single document.
+ *
+ * @param string $picker_id Unique id for this control's elements.
+ * @param string $label     Accessible name for the dialog.
+ * @return string
+ */
+function axismundi_act_render_reaction_picker( string $picker_id, string $label ) : string {
+	ob_start();
+	?>
 		<?php
 		/*
 		 * One scrolling page, not a set of panels.
@@ -518,29 +563,76 @@ function axismundi_act_render_reaction_button( array $attributes, string $conten
 				</template>
 			</div>
 		</div>
-		<?php endif; ?>
-		<span class="axismundi-reaction-button__status" data-wp-text="state.error" aria-live="polite"></span>
-	</div>
 	<?php
 	return (string) ob_get_clean();
 }
 
-/** Register both blocks. */
-function axismundi_act_register_reaction_blocks() : void {
-	foreach ( array( 'reaction-bar' => 'axismundi_act_render_reaction_bar', 'reaction-button' => 'axismundi_act_render_reaction_button' ) as $dir => $callback ) {
-		$path = dirname( __DIR__ ) . '/blocks/' . $dir;
-		if ( is_readable( $path . '/block.json' ) ) {
-			register_block_type( $path, array( 'render_callback' => $callback ) );
-		}
+/**
+ * Describe the reaction picker for the unified interaction block.
+ *
+ * The trigger is an ordinary interaction control and the popover hangs off it, which is what the
+ * descriptor's trailing slot is for. It is a dialog rather than a menu because it holds a search
+ * field, a jump strip and a grid — the up/down command model `role="menu"` promises is what the
+ * Announce chooser has, and this deliberately does not claim it.
+ *
+ * There is no count and no pressed state: the control opens something. What the reader has already
+ * reacted with is the chip row's job, which is a separate block for exactly that reason.
+ *
+ * @param array    $attributes Block attributes.
+ * @param WP_Block $block      Block instance.
+ * @return array<string,mixed>|null
+ */
+function axismundi_act_describe_reaction_interaction( array $attributes, WP_Block $block ) : ?array {
+	$object_uri = axismundi_act_reaction_block_object_uri( $attributes, $block );
+	if ( '' === $object_uri ) {
+		return null;
 	}
-}
-add_action( 'init', 'axismundi_act_register_reaction_blocks' );
+	$actor     = axismundi_act_current_reaction_actor();
+	$can_react = $actor instanceof Axismundi_Actor;
+	axismundi_act_seed_reaction_state( $object_uri );
+	axismundi_act_no_cache_like_state();
+	wp_enqueue_style( 'axismundi-activities-reactions' );
+	$picker_id = wp_unique_id( 'ax-rx-' );
+	// The same three-way wording Like uses, so the reason is stated in the same terms wherever a
+	// reader meets it.
+	$label = $can_react
+		? __( 'Add reaction', 'axismundi-activities' )
+		: ( is_user_logged_in()
+			? __( 'Activate a public Actor profile to react.', 'axismundi-activities' )
+			: __( 'Log in to react.', 'axismundi-activities' ) );
 
-/** Both blocks share one script module rather than shipping a copy each. */
-function axismundi_act_enqueue_reaction_module( string $block_content, array $block ) : string {
-	if ( in_array( $block['blockName'] ?? '', array( 'axismundi/reaction-bar', 'axismundi/reaction-button' ), true ) && '' !== trim( $block_content ) && function_exists( 'wp_enqueue_script_module' ) ) {
-		wp_enqueue_script_module( 'axismundi-activities-reactions' );
-	}
-	return $block_content;
+	return array(
+		'icon'       => 'add_reaction',
+		'label'      => __( 'React', 'axismundi-activities' ),
+		'aria_label' => $label,
+		'disabled'   => ! $can_react,
+		'namespace'  => 'axismundi/reactions',
+		'context'    => array( 'objectUri' => $object_uri, 'pickerId' => $picker_id ),
+		'bindings'   => $can_react
+			? array(
+				'data-wp-on--click'           => 'actions.togglePicker',
+				'data-wp-bind--aria-expanded' => 'state.isOpen',
+				'aria-haspopup'               => 'dialog',
+			)
+			: array(),
+		'after'      => $can_react
+			? axismundi_act_render_reaction_picker( $picker_id, $label )
+				. '<span class="axismundi-interaction__status" data-wp-text="state.error" aria-live="polite"></span>'
+			: '',
+	);
 }
-add_filter( 'render_block', 'axismundi_act_enqueue_reaction_module', 10, 2 );
+
+/** Offer the reaction picker as an interaction type. */
+function axismundi_act_register_reaction_interaction_type() : void {
+	if ( function_exists( 'axismundi_act_register_interaction_type' ) ) {
+		axismundi_act_register_interaction_type(
+			'reaction',
+			array(
+				'describe' => 'axismundi_act_describe_reaction_interaction',
+				'label'    => __( 'React', 'axismundi-activities' ),
+				'icon'     => 'add_reaction',
+			)
+		);
+	}
+}
+add_action( 'axismundi_act_register_interaction_types', 'axismundi_act_register_reaction_interaction_type' );

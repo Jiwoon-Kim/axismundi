@@ -171,6 +171,30 @@ try {
 	);
 
 	/*
+	 * The reaction trigger is an ordinary control with a popover hanging off it. It is a dialog
+	 * rather than a menu because it holds a search field, a jump strip and a grid — the up/down
+	 * command model belongs to the Announce chooser, and this does not claim it. It has no pressed
+	 * state either: it opens something, and what the reader already reacted with is the chip row's
+	 * job.
+	 *
+	 * The popover ships closed. Both halves of that were being stripped by server-side directive
+	 * processing, so every picker on a page arrived open.
+	 */
+	$reaction_html = do_blocks( '<!-- wp:axismundi/interaction {"type":"reaction","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+	$reaction_picker = preg_match( '#<div class="axismundi-reaction-button__picker"([^>]*)>#', $reaction_html, $picker ) ? $picker[1] : '';
+	ax_ib_assert(
+		$ax_ib_results,
+		'the reaction picker hangs off its control, ships closed, and claims a dialog rather than a toggle',
+		array_key_exists( 'reaction', axismundi_act_interaction_types() )
+			&& false !== strpos( $reaction_html, 'is-type-reaction' )
+			&& 'dialog' === ax_ib_button_attr( $reaction_html, 'aria-haspopup' )
+			&& 'false' === ax_ib_button_attr( $reaction_html, 'aria-expanded' )
+			&& '' === ax_ib_button_attr( $reaction_html, 'aria-pressed' )
+			&& '' !== $reaction_picker
+			&& 1 === preg_match( '#(?<![-\w])hidden(?=[\s>])#', $reaction_picker )
+	);
+
+	/*
 	 * The Interactivity API evaluates directives on the server too. Binding an attribute to a
 	 * `state` getter that only exists in the JavaScript module makes the server resolve it to
 	 * nothing and strip the attribute — so a control rendered disabled arrived enabled, which is

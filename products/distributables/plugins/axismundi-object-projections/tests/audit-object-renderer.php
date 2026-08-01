@@ -758,6 +758,54 @@ ax_rnd_assert(
 		&& false === strpos( $ax_rnd_note_template, '<!-- wp:axismundi/object-content-warning' )
 );
 
+
+/*
+ * A warned Article must still be able to reach itself.
+ *
+ * FEP-b2b8 asks an Article's content to stay covered until the reader chooses, so the summary is
+ * obscured behind a warning and a reveal. The route to the full piece is deliberately not covered
+ * with it: a warned Article whose only link sat under its own cover would be unreachable without
+ * first revealing the thing the warning exists to withhold.
+ *
+ * That link used to live inside the summary block, placed after the spoiler by hand. It is its own
+ * block now, so this checks the property rather than the arrangement that used to produce it — the
+ * spoiler's element closes before the link begins, whoever emitted them.
+ *
+ * The absent content-warning wrapper is part of the same rule: with no body in an Article card
+ * there is nothing for a post-level fold to cover, and the summary's own cover is the mechanism.
+ */
+$ax_rnd_warned                   = axismundi_op_object_view_model_defaults();
+$ax_rnd_warned['status']         = 'active';
+$ax_rnd_warned['type']           = 'Article';
+$ax_rnd_warned['sensitive']      = true;
+$ax_rnd_warned['object_uri']     = 'https://example.com/a/1';
+$ax_rnd_warned['human_url']      = 'https://example.com/a/1';
+$ax_rnd_warned['title']          = 'Sensitive Article';
+$ax_rnd_warned['summary']        = 'Summary that should be covered.';
+$ax_rnd_warned['author']         = array( 'id' => 'https://example.com/actors/u', 'name' => 'A', 'handle' => '@a', 'url' => 'https://example.com/actors/u' );
+axismundi_op_set_current_object_view_model( $ax_rnd_warned );
+$ax_rnd_warned_card = axismundi_op_render_object_pattern( array( 'headingTag' => 'h3', 'interactions' => false ) );
+axismundi_op_set_current_object_view_model( null );
+
+$ax_rnd_gate_at     = strpos( $ax_rnd_warned_card, 'summary-gate' );
+$ax_rnd_link_at     = strpos( $ax_rnd_warned_card, 'axismundi-object__read-more' );
+$ax_rnd_between     = false !== $ax_rnd_gate_at && false !== $ax_rnd_link_at
+	? substr( $ax_rnd_warned_card, $ax_rnd_gate_at, $ax_rnd_link_at - $ax_rnd_gate_at )
+	: '';
+
+ax_rnd_assert(
+	$ax_rnd_results,
+	'a warned Article covers its summary and leaves the route to itself outside the cover',
+	false !== strpos( $ax_rnd_warned_card, 'is-obscured' )
+		&& false !== strpos( $ax_rnd_warned_card, 'axismundi-object__spoiler-reveal' )
+		&& false === strpos( $ax_rnd_warned_card, 'content-warning' )
+		&& false !== $ax_rnd_link_at
+		&& false !== $ax_rnd_gate_at
+		// Every element opened inside the cover is closed before the link starts, so the link is
+		// a sibling of the cover rather than something inside it.
+		&& substr_count( $ax_rnd_between, '</div>' ) > substr_count( $ax_rnd_between, '<div' )
+);
+
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_rnd_results ), $ax_rnd_failures );
 

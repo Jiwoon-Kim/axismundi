@@ -272,8 +272,17 @@ function* loadUnicodeGroup( group ) {
 
 const { state, actions } = store( NAMESPACE, {
 	state: {
+		/*
+		 * Which picker is open, by control rather than by Object.
+		 *
+		 * A feed can show the same Object twice — an original and someone's boost of it — and
+		 * those two cards carry one `objectUri` between them. Keyed on that, opening either
+		 * picker opened both, because the condition was true in both places at once. The
+		 * identity that matters here is the control the reader clicked, not the thing it
+		 * points at.
+		 */
 		get isOpen() {
-			return state.openFor === getContext().objectUri;
+			return '' !== state.openFor && state.openFor === getContext().pickerId;
 		},
 		get isPickerHidden() {
 			return ! state.isOpen;
@@ -428,8 +437,8 @@ const { state, actions } = store( NAMESPACE, {
 
 	actions: {
 		*togglePicker() {
-			const { objectUri } = getContext();
-			state.openFor = state.openFor === objectUri ? '' : objectUri;
+			const { pickerId } = getContext();
+			state.openFor = state.openFor === pickerId ? '' : pickerId;
 			state.error = '';
 			if ( ! state.openFor ) {
 				return;
@@ -682,8 +691,10 @@ const { state, actions } = store( NAMESPACE, {
 		 */
 		pickerLifecycle() {
 			const { ref } = getElement();
-			const { objectUri } = getContext();
-			if ( state.openFor !== objectUri ) {
+			const { pickerId } = getContext();
+			// By control, for the same reason `isOpen` is: two cards showing one Object would
+			// otherwise both attach the document listeners the open picker needs.
+			if ( '' === state.openFor || state.openFor !== pickerId ) {
 				return;
 			}
 			const trigger = ref.querySelector( '.axismundi-reaction-button__trigger' );

@@ -319,12 +319,22 @@ function axismundi_act_render_reaction_button( array $attributes, string $conten
 			? __( 'Activate a public Actor profile to react.', 'axismundi-activities' )
 			: __( 'Log in to react.', 'axismundi-activities' ) );
 
+	/*
+	 * Unique to this control, not to the Object it points at.
+	 *
+	 * A feed can show one Object twice — an original and a boost of it — and both cards carry one
+	 * `objectUri` between them. Keyed on that, opening either picker opened both, because the
+	 * condition was true in both places at once. The identity that matters is the control the
+	 * reader clicked.
+	 */
+	$picker_id = wp_unique_id( 'ax-rx-' );
+
 	ob_start();
 	?>
 	<div
 		<?php echo get_block_wrapper_attributes( array( 'class' => 'axismundi-reaction-button' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		data-wp-interactive="axismundi/reactions"
-		<?php echo wp_interactivity_data_wp_context( array( 'objectUri' => $object_uri ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php echo wp_interactivity_data_wp_context( array( 'objectUri' => $object_uri, 'pickerId' => $picker_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		data-wp-watch="callbacks.pickerLifecycle"
 	>
 		<button
@@ -358,7 +368,15 @@ function axismundi_act_render_reaction_button( array $attributes, string $conten
 		 * A dialog rather than a menu, for the same care: `role="menu"` promises an up/down
 		 * command model, and this holds a search field, a strip, and a grid.
 		 */
-		$uid      = 'ax-rx-' . substr( md5( $object_uri ), 0, 8 );
+		/*
+		 * Unique to this control, not to the Object it points at.
+		 *
+		 * A feed can show one Object twice — an original and a boost of it — and an id derived
+		 * from the Object put the same `id` on two elements in one document, which is invalid
+		 * and leaves anything pointing at it aiming for whichever came first. It is also what
+		 * made opening either picker open both.
+		 */
+		$uid      = $picker_id;
 		$unicode  = axismundi_act_unicode_picker_source();
 		?>
 		<div class="axismundi-reaction-button__picker" role="dialog" aria-label="<?php echo esc_attr( $label ); ?>" hidden data-wp-bind--hidden="state.isPickerHidden" data-wp-class--is-open="state.isOpen">

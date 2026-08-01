@@ -1045,6 +1045,71 @@ function axismundi_op_render_object_featured_image_block( array $attributes = ar
  * spoiler never renders as an excerpt.
  */
 /**
+ * The one part of a card that depends on what kind of Object it is.
+ *
+ * Everything else a card is made of — status, header, hashtags, reactions, the action row — is
+ * the same whatever is inside it, and belongs in a template an author can rearrange. The body is
+ * not: a Note *is* its text, so the card shows the text; an Article is a piece the card is only
+ * pointing at, so the card shows a lead image, a title and a summary and stops.
+ *
+ * That difference cannot be a static block tree, because one feed mixes both and the choice is
+ * only knowable per row at render time. Hence one dynamic block here rather than two card
+ * templates that are otherwise identical.
+ *
+ * It renders blocks rather than markup. The composition stays inspectable, the blocks stay the
+ * ones the rest of the card already uses, and a type's body can be filtered without this function
+ * learning anything new.
+ *
+ * @return string
+ */
+function axismundi_op_render_object_card_body_block() : string {
+	$model = axismundi_op_active_object_view_model();
+	if ( ! is_array( $model ) ) {
+		return '';
+	}
+	$type = (string) ( $model['type'] ?? '' );
+
+	/*
+	 * A lead image is given a fixed height because it is a lead-in rather than the piece. A stream
+	 * is a list of posts, and letting each Article's image take its intrinsic height makes the card
+	 * as tall as the picture happens to be, pushing the next post off screen. The Article's own page
+	 * shows it at its real size.
+	 */
+	$article = '<!-- wp:axismundi/object-featured-image {"style":{"dimensions":{"height":"200px"}}} /-->'
+		. '<!-- wp:axismundi/object-title /-->'
+		. '<!-- wp:axismundi/object-summary /-->'
+		. '<!-- wp:axismundi/object-read-more /-->';
+
+	/*
+	 * An authored content warning covers the whole post, so the body, the quote preview, the poll,
+	 * and the attachments share one disclosure — matching how Mastodon and Misskey present a warned
+	 * post. The header, hashtags and actions stay outside it: they are the surrounding
+	 * conversation, not the warned material. Without an authored warning the wrapper renders its
+	 * children untouched.
+	 */
+	$default = '<!-- wp:axismundi/object-featured-image /-->'
+		. '<!-- wp:axismundi/object-title /-->'
+		. '<!-- wp:axismundi/object-summary /-->'
+		. '<!-- wp:axismundi/object-content-warning -->'
+		. '<!-- wp:axismundi/object-content /-->'
+		. '<!-- wp:axismundi/quote-context /-->'
+		. '<!-- wp:axismundi/question /-->'
+		. '<!-- wp:axismundi/object-attachments /-->'
+		. '<!-- /wp:axismundi/object-content-warning -->';
+
+	$template = 'Article' === $type ? $article : $default;
+	/**
+	 * Filter the block template one kind of Object's card body is built from.
+	 *
+	 * @param string              $template Block markup.
+	 * @param string              $type     Object type.
+	 * @param array<string,mixed> $model    Active Object view model.
+	 */
+	$template = (string) apply_filters( 'axismundi_op_object_card_body_template', $template, $type, $model );
+	return do_blocks( $template );
+}
+
+/**
  * The link into an Object's full representation, as its own block.
  *
  * `object-summary` can already end with one, and that stays: it is where the link has always
@@ -1390,6 +1455,7 @@ function axismundi_op_register_object_blocks() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-type' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-summary' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-read-more' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/object-card-body' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-hashtags' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/interactions' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-featured-image' );

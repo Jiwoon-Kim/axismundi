@@ -251,6 +251,7 @@ $ax_rnd_owned = array(
 	'axismundi/object-content',
 	'axismundi/object-summary',
 	'axismundi/object-read-more',
+	'axismundi/object-card-body',
 	'axismundi/object-hashtags',
 	'axismundi/object-attachments',
 	'axismundi/interactions',
@@ -588,8 +589,6 @@ $ax_rnd_results[] = ( static function () : bool {
 	return $pass;
 } )();
 
-$ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
-
 /*
  * The Read More link is its own block so a card can place it.
  *
@@ -619,6 +618,40 @@ ax_rnd_assert(
 		&& false !== strpos( $ax_rnd_read_more_text, 'axismundi-object__read-more-link' )
 		&& 1 === preg_match( '#<a[^>]*href="[^"]+"#', $ax_rnd_read_more_text )
 );
+
+/*
+ * One feed can mix Note and Article cards, so card-body must choose the Object-specific block
+ * composition at render time while leaving every other card part to its shared template.
+ */
+$ax_rnd_body_article              = axismundi_op_object_view_model_defaults();
+$ax_rnd_body_article['status']    = 'active';
+$ax_rnd_body_article['type']      = 'Article';
+$ax_rnd_body_article['title']     = 'Article lead';
+$ax_rnd_body_article['summary']   = 'Article summary.';
+$ax_rnd_body_article['human_url'] = 'https://example.com/article-lead/';
+$ax_rnd_body_note                 = axismundi_op_object_view_model_defaults();
+$ax_rnd_body_note['status']       = 'active';
+$ax_rnd_body_note['type']         = 'Note';
+$ax_rnd_body_note['content_html'] = '<p>Note body.</p>';
+axismundi_op_set_current_object_view_model( $ax_rnd_body_article );
+$ax_rnd_article_body_html = do_blocks( '<!-- wp:axismundi/object-card-body /-->' );
+axismundi_op_set_current_object_view_model( $ax_rnd_body_note );
+$ax_rnd_note_body_html = do_blocks( '<!-- wp:axismundi/object-card-body /-->' );
+axismundi_op_set_current_object_view_model( null );
+$ax_rnd_unbound_body_html = do_blocks( '<!-- wp:axismundi/object-card-body /-->' );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'card body chooses the Article lead or the warned Note body per rendered Object',
+	false !== strpos( $ax_rnd_article_body_html, 'Article lead' )
+		&& false !== strpos( $ax_rnd_article_body_html, 'Article summary.' )
+		&& false !== strpos( $ax_rnd_article_body_html, 'axismundi-object__read-more-link' )
+		&& false === strpos( $ax_rnd_article_body_html, 'wp-block-axismundi-object-content-warning' )
+		&& false !== strpos( $ax_rnd_note_body_html, 'Note body.' )
+		&& false !== strpos( $ax_rnd_note_body_html, 'wp-block-axismundi-object-content-warning' )
+		&& '' === trim( $ax_rnd_unbound_body_html )
+);
+
+$ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_rnd_results ), $ax_rnd_failures );

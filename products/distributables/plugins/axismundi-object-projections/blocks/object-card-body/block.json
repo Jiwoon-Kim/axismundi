@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-card-body",
+	"version": "0.1.0",
+	"title": "Object Card Body",
+	"category": "theme",
+	"icon": "align-center",
+	"description": "The part of an Object card that depends on what kind of Object it is: a Note's warned body, or an Article's lead image, title and summary.",
+	"textdomain": "axismundi-object-projections",
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"spacing": { "margin": true, "padding": true },
+		"interactivity": { "clientNavigation": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

@@ -16,7 +16,7 @@
 	var TYPES = [
 		{ name: 'reply', title: __( 'Reply', 'axismundi-activities' ), icon: 'reply', label: __( 'Reply', 'axismundi-activities' ) },
 		{ name: 'like', title: __( 'Like', 'axismundi-activities' ), icon: 'favorite', label: __( 'Like', 'axismundi-activities' ) },
-		{ name: 'announce', title: __( 'Announce', 'axismundi-activities' ), icon: 'repeat', label: __( 'Announce', 'axismundi-activities' ) },
+		{ name: 'announce', title: __( 'Announce', 'axismundi-activities' ), icon: 'sync', label: __( 'Announce', 'axismundi-activities' ) },
 		{ name: 'quote', title: __( 'Quote', 'axismundi-activities' ), icon: 'format_quote', label: __( 'Quote', 'axismundi-activities' ) },
 		{ name: 'reaction', title: __( 'Reaction', 'axismundi-activities' ), icon: 'add_reaction', label: __( 'React', 'axismundi-activities' ) },
 		{ name: 'vote', title: __( 'Vote', 'axismundi-activities' ), icon: 'thumb_up', label: __( 'Vote', 'axismundi-activities' ) }

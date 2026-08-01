@@ -166,7 +166,40 @@ try {
 	wp_set_current_user( 0 );
 	$anon_like  = do_blocks( $markup );
 	$anon_reply = do_blocks( '<!-- wp:axismundi/interaction {"type":"reply","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+	$anon_menu = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
 	wp_set_current_user( $owner );
+
+	/*
+	 * Announce is two interactions wearing one control: with the menu it offers Repost and Quote,
+	 * without it it reposts directly. A menu of two verbs is a menu, not the dialog the emoji
+	 * picker is — that one holds a search field and a grid, and the picker's own reasoning is what
+	 * settles this.
+	 */
+	$menu_html   = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+	$direct_html = do_blocks( '<!-- wp:axismundi/interaction {"type":"announce","objectUri":"' . esc_url_raw( $object_uri ) . '"} /-->' );
+	$controls    = preg_match( '#aria-controls="([^"]*)"#', $menu_html, $found ) ? $found[1] : '';
+	ax_ib_assert(
+		$ax_ib_results,
+		'Announce opens a menu of two commands when asked and reposts directly when not',
+		false !== strpos( $menu_html, 'role="menu"' )
+			&& 'menu' === ax_ib_button_attr( $menu_html, 'aria-haspopup' )
+			&& false !== strpos( ax_ib_button_attr( $menu_html, 'data-wp-on--click' ), 'openMenu' )
+			&& '' === ax_ib_button_attr( $direct_html, 'aria-haspopup' )
+			&& false !== strpos( ax_ib_button_attr( $direct_html, 'data-wp-on--click' ), 'toggleAnnounce' )
+	);
+
+	// Advertising a popup that was not rendered, and pointing at an id that is not on the page,
+	// describes a control that does not exist.
+	ax_ib_assert(
+		$ax_ib_results,
+		'a menu is only advertised when one is actually on the page, and its target resolves',
+		'' !== $controls
+			&& false !== strpos( $menu_html, 'id="' . $controls . '"' )
+			&& '' === ax_ib_button_attr( $anon_menu, 'aria-haspopup' )
+			&& '' === ax_ib_button_attr( $anon_menu, 'aria-controls' )
+			&& false === strpos( $anon_menu, 'role="menu"' )
+	);
+
 	ax_ib_assert(
 		$ax_ib_results,
 		'a visitor who cannot act is served a control that is still disabled after directives are processed',

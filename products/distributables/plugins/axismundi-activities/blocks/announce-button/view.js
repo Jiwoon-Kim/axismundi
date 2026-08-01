@@ -49,6 +49,10 @@ store( 'axismundi/announce-button', {
 			const previousState = context.isAnnounced;
 			const previousCount = context.announces;
 			context.isPending = true;
+			// Also on the context, because the Interactivity API evaluates directives on the
+			// server too and a `state` getter defined here does not exist there — binding an
+			// attribute to one makes the server strip the attribute instead of setting it.
+			context.isDisabled = true;
 			context.error = '';
 			context.isAnnounced = ! previousState;
 			context.announces = Math.max( 0, previousCount + ( context.isAnnounced ? 1 : -1 ) );
@@ -75,6 +79,7 @@ store( 'axismundi/announce-button', {
 				context.error = error instanceof Error && error.message !== 'request_failed' ? error.message : context.errorFallback;
 			} finally {
 				context.isPending = false;
+				context.isDisabled = ! context.canAnnounce;
 			}
 		},
 	},

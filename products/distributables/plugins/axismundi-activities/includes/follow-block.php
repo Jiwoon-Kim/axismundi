@@ -101,6 +101,37 @@ function axismundi_act_follow_words( ?Axismundi_Actor $target ) : array {
 	);
 }
 
+/**
+ * Every label the follow control can show, for one kind of Actor.
+ *
+ * The server renders one of these and the Interactivity runtime swaps between them, so both have
+ * to be reading the same list. They were not: the runtime carried a hardcoded Person set, which
+ * meant a community rendered "Subscribed" and was relabelled "Following" the moment the page
+ * hydrated — before anyone had even clicked. Two sources for the same words is the defect; one
+ * source that both sides read is the fix.
+ *
+ * A few states have no community reading at all. A Group does not follow anyone back, so "Mutual"
+ * is a Person-only state, and a Group that somehow appears to follow you is still just subscribed
+ * to.
+ *
+ * @param Axismundi_Actor|null $target Actor the relation points at.
+ * @return array<string,string>
+ */
+function axismundi_act_follow_label_set( ?Axismundi_Actor $target ) : array {
+	$words    = axismundi_act_follow_words( $target );
+	$is_group = $target instanceof Axismundi_Actor && 'Group' === $target->get_type();
+	return array(
+		'follow'     => (string) $words['verb'],
+		'followBack' => $is_group ? (string) $words['verb'] : __( 'Follow back', 'axismundi-activities' ),
+		'following'  => (string) $words['verb_done'],
+		'mutual'     => $is_group ? (string) $words['verb_done'] : __( 'Mutual', 'axismundi-activities' ),
+		'requested'  => (string) $words['pending'],
+		'reFollow'   => $is_group ? __( 'Re-subscribe', 'axismundi-activities' ) : __( 'Re-follow', 'axismundi-activities' ),
+		'cancel'     => $is_group ? __( 'Cancel subscription request', 'axismundi-activities' ) : __( 'Cancel follow request', 'axismundi-activities' ),
+		'unfollow'   => (string) $words['undo'],
+	);
+}
+
 /** Resolve an anonymous visitor's remote-follow browser URL. */
 function axismundi_act_rest_remote_follow( WP_REST_Request $request ) {
 	$target = axismundi_act_follow_rest_target( (string) $request['target_uri'] );
@@ -157,26 +188,23 @@ function axismundi_act_follow_button_state( ?Axismundi_Actor $subject, Axismundi
 	 * subscribing to it, and "Following" on a community reads as if the community were someone.
 	 * Actors owns the words because the distinction is a property of the Actor, not of Follow.
 	 */
-	$words = axismundi_act_follow_words( $target );
-	$is_group = $target instanceof Axismundi_Actor && 'Group' === $target->get_type();
-	$label    = (string) $words['verb'];
-	$action   = (string) $words['verb'];
+	$labels = axismundi_act_follow_label_set( $target );
+	$label  = $labels['follow'];
+	$action = $labels['follow'];
 	if ( $legacy && in_array( $state, array( 'accepted', 'legacy_pending' ), true ) ) {
-		$label  = $is_group ? __( 'Re-subscribe', 'axismundi-activities' ) : __( 'Re-follow', 'axismundi-activities' );
+		$label  = $labels['reFollow'];
 		$action = $label;
 	} elseif ( 'pending' === $state ) {
-		$label  = (string) $words['pending'];
-		$action = $is_group ? __( 'Cancel subscription request', 'axismundi-activities' ) : __( 'Cancel follow request', 'axismundi-activities' );
+		$label  = $labels['requested'];
+		$action = $labels['cancel'];
 	} elseif ( 'accepted' === $state && $follows_you ) {
-		// A Group does not follow anyone back, so "Mutual" is a Person-only state; a Group that
-		// somehow appears to follow you is still just subscribed to.
-		$label  = $is_group ? (string) $words['verb_done'] : __( 'Mutual', 'axismundi-activities' );
-		$action = (string) $words['undo'];
+		$label  = $labels['mutual'];
+		$action = $labels['unfollow'];
 	} elseif ( 'accepted' === $state ) {
-		$label  = (string) $words['verb_done'];
-		$action = (string) $words['undo'];
+		$label  = $labels['following'];
+		$action = $labels['unfollow'];
 	} elseif ( $follows_you ) {
-		$label  = $is_group ? (string) $words['verb'] : __( 'Follow back', 'axismundi-activities' );
+		$label  = $labels['followBack'];
 		$action = $label;
 	}
 
@@ -399,16 +427,8 @@ function axismundi_act_render_follow_button( array $attributes, string $content,
 		'nonce'         => wp_create_nonce( 'wp_rest' ),
 		'error'         => '',
 		'errorFallback' => __( 'The Follow could not be saved.', 'axismundi-activities' ),
-		'labels'        => array(
-			'follow'       => __( 'Follow', 'axismundi-activities' ),
-			'followBack'   => __( 'Follow back', 'axismundi-activities' ),
-			'following'    => __( 'Following', 'axismundi-activities' ),
-			'mutual'       => __( 'Mutual', 'axismundi-activities' ),
-			'requested'    => __( 'Requested', 'axismundi-activities' ),
-			'reFollow'     => __( 'Re-follow', 'axismundi-activities' ),
-			'cancel'       => __( 'Cancel follow request', 'axismundi-activities' ),
-			'unfollow'     => __( 'Unfollow', 'axismundi-activities' ),
-		),
+		// The same set the server just rendered from, so hydration cannot change the words.
+		'labels'        => axismundi_act_follow_label_set( $target ),
 	);
 	ob_start();
 	?>

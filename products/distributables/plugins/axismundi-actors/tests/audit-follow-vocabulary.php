@@ -57,6 +57,24 @@ try {
 	);
 
 	/*
+	 * The server renders one label and the Interactivity runtime swaps between the rest, so the
+	 * runtime carries the whole set. It used to carry a hardcoded Person set, which relabelled a
+	 * community "Following" the moment the page hydrated — the server had already rendered
+	 * "Subscribed" and was overwritten before anyone clicked. Both sides read one set now, and the
+	 * state above is checked against that same set here so they cannot drift apart again.
+	 */
+	$group_labels  = axismundi_act_follow_label_set( $group );
+	$person_labels = axismundi_act_follow_label_set( $person );
+	ax_fv_assert(
+		$ax_fv_results,
+		'the label set the runtime swaps between is the community vocabulary, not a person one',
+		'Subscribed' === $group_labels['following']
+			&& 'Unsubscribe' === $group_labels['unfollow']
+			&& 'Following' === $person_labels['following']
+			&& array() === array_intersect( array( 'Following', 'Follow', 'Unfollow', 'Mutual', 'Follow back' ), array_values( $group_labels ) )
+	);
+
+	/*
 	 * The signed-in control is not the only one a community shows. A logged-out visitor gets the
 	 * remote-follow surface instead, and that path wrote "Follow" into its markup directly — so a
 	 * community offered to be followed as though it were a person, while the state above said
@@ -89,6 +107,15 @@ try {
 			&& is_array( $relation )
 			&& 'follow' === (string) $relation['relation_type']
 			&& 'accepted' === (string) $relation['state']
+	);
+
+	// Now that the relation really is accepted, the rendered word and the word the runtime would
+	// swap in for that same state must be the one word, measured rather than assumed to agree.
+	ax_fv_assert(
+		$ax_fv_results,
+		'an accepted subscription renders the same word the runtime holds for that state',
+		'Subscribed' === axismundi_act_follow_button_state( $person, $group )['label']
+			&& axismundi_act_follow_label_set( $group )['following'] === axismundi_act_follow_button_state( $person, $group )['label']
 	);
 
 	// A moderator is a permission the forum owns, so the list asks rather than infers it.

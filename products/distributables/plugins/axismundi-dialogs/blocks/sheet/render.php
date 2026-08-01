@@ -99,7 +99,7 @@ $axismundi_dialogs_wrapper = get_block_wrapper_attributes(
 >
 	<button
 		type="button"
-		class="ax-dialog__open-button ax-icon-button has-state-layer"
+		class="ax-dialog__open-button"
 		aria-haspopup="dialog"
 		aria-controls="<?php echo esc_attr( $axismundi_dialogs_id ); ?>"
 		aria-expanded="false"

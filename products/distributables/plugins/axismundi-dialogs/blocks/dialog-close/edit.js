@@ -17,7 +17,7 @@
 		edit: function ( props ) {
 			var a = props.attributes;
 			var set = props.setAttributes;
-			var blockProps = useBlockProps( { className: 'ax-dialog-close ax-icon-button is-standard' } );
+			var blockProps = useBlockProps( { className: 'ax-dialog-close' } );
 
 			return el( Fragment, null,
 				el( InspectorControls, null,

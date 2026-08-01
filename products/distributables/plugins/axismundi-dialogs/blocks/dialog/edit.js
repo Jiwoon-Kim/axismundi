@@ -110,7 +110,7 @@
 					el( PanelBody, { title: __( 'Dialog', 'axismundi-dialogs' ), initialOpen: true }, controls )
 				),
 				el( 'div', blockProps,
-					el( 'div', { className: 'ax-dialog__open-button ax-icon-button' },
+					el( 'div', { className: 'ax-dialog__open-button' },
 						el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': true }, a.triggerIcon || 'open_in_new' ),
 						el( RichText, {
 							tagName: 'span',

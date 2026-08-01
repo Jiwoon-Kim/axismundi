@@ -12,6 +12,12 @@ Add a Material Symbols leading icon to navigation items (link, submenu, home) fo
 
 == Description ==
 
+This is a companion plugin: it extends the Axismundi theme's own navigation
+component and has no meaning without it. Its CSS therefore reads the theme's
+design tokens directly, with no fallbacks — a fallback here would promise an
+appearance the plugin cannot actually deliver on its own.
+
+
 Axismundi Navigation Icons is an authoring plugin: it adds a "Navigation Icon"
 panel to the block sidebar for navigation items, where you type a Material
 Symbols ligature name (e.g. `home`, `article`, `category`, `sell`, `tag`,

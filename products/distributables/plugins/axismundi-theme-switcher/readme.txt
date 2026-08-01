@@ -4,7 +4,7 @@ Tags: dark-mode, block, appearance, editor, color-scheme
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -38,6 +38,13 @@ color-scheme change depends on a theme or stylesheet that consumes
 `html[data-theme]` selectors.
 
 == Changelog ==
+
+= 0.1.6 =
+* Removes reference-implementation class names from the markup this plugin
+  ships. `ax-icon-button`, `ax-menu`, and `ax-text-field` exist only in the
+  Axismundi Lab, so every element carrying one was depending on styles that are
+  not part of any release; the components' own classes were already doing the
+  work. Rendering is unchanged.
 
 = 0.1.5 =
 

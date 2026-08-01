@@ -40,7 +40,7 @@ $axismundi_theme_switcher_wrapper = get_block_wrapper_attributes(
 	<?php if ( $axismundi_theme_switcher_is_cycle ) : ?>
 		<button
 			type="button"
-			class="axismundi-theme-switcher__button axismundi-theme-switcher__cycle ax-icon-button is-standard has-state-layer t-theme-cycle"
+			class="axismundi-theme-switcher__button axismundi-theme-switcher__cycle"
 			data-theme-cycle="true"
 			data-wp-on--click="actions.cycleScheme"
 			data-wp-bind--aria-label="state.cycleAriaLabel"

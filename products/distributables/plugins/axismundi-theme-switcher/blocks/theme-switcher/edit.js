@@ -74,7 +74,7 @@
 						'button',
 						{
 							type: 'button',
-							className: 'axismundi-theme-switcher__button axismundi-theme-switcher__cycle ax-icon-button is-standard has-state-layer t-theme-cycle',
+							className: 'axismundi-theme-switcher__button axismundi-theme-switcher__cycle',
 							'data-theme-cycle': 'true',
 							'aria-label': 'Color scheme: ' + currentMode.label + '. Activate to cycle.',
 							onClick: function ( event ) {

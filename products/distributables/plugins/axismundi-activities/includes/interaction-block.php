@@ -95,6 +95,8 @@ function axismundi_act_interaction_descriptor_defaults() : array {
 		 * exact.
 		 */
 		'count_text'  => '',
+		// Set on an entry in `controls` to render a value rather than a control.
+		'text'        => '',
 		'selected'    => false,
 		'disabled'    => false,
 		/*
@@ -116,6 +118,21 @@ function axismundi_act_interaction_descriptor_defaults() : array {
 		'delegated'   => array(),
 		// Markup appended inside the wrapper, after the button — a status line, a popover.
 		'after'       => '',
+		/*
+		 * Some interactions are one state wearing several controls.
+		 *
+		 * A vote is up, a score, and down: two buttons that cannot both be pressed, and a number
+		 * that is neither. That is one interaction, not three — splitting it would give each half
+		 * of a mutually exclusive pair its own idea of what the reader had chosen. So a type may
+		 * describe a list instead of a single control, and each entry is described exactly as a
+		 * lone control is.
+		 *
+		 * An entry carrying `text` is a value rather than a control, which is how the score sits
+		 * between the two buttons without pretending to be pressable.
+		 */
+		'controls'    => array(),
+		// Names the set for a reader who arrives on it without seeing the buttons.
+		'group_label' => '',
 	);
 }
 
@@ -224,7 +241,20 @@ function axismundi_act_render_interaction_block( array $attributes, string $cont
 		return '';
 	}
 	$descriptor = array_merge( axismundi_act_interaction_descriptor_defaults(), $described );
-	$control    = axismundi_act_render_interaction_control( $type, $descriptor, $attributes );
+	if ( ! empty( $descriptor['controls'] ) ) {
+		$parts = '';
+		foreach ( (array) $descriptor['controls'] as $entry ) {
+			$part = array_merge( axismundi_act_interaction_descriptor_defaults(), (array) $entry );
+			$parts .= '' !== (string) $part['text']
+				? '<span class="axismundi-interaction__value"' . ( '' !== (string) $part['aria_label'] ? ' title="' . esc_attr( (string) $part['aria_label'] ) . '"' : '' ) . '>' . esc_html( (string) $part['text'] ) . '</span>'
+				: axismundi_act_render_interaction_control( $type, $part, $attributes );
+		}
+		$control = '<div class="axismundi-interaction__group" role="group"'
+			. ( '' !== (string) $descriptor['group_label'] ? ' aria-label="' . esc_attr( (string) $descriptor['group_label'] ) . '"' : '' )
+			. '>' . $parts . '</div>';
+	} else {
+		$control = axismundi_act_render_interaction_control( $type, $descriptor, $attributes );
+	}
 
 	$wrapper = array( 'class' => 'axismundi-interaction is-type-' . $type );
 	$extra   = '';

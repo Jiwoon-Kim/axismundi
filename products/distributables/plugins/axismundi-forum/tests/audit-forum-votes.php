@@ -149,6 +149,71 @@ try {
 		'a well-formed vote from a visitor with no active local Actor is refused',
 		$anonymous_response instanceof WP_REST_Response && in_array( $anonymous_response->get_status(), array( 401, 403 ), true )
 	);
+
+	/*
+	 * The reason the interaction registry exists. Activities owns the control and has no idea
+	 * what a community is; a vote is only meaningful inside one. Forum answers for it here, and
+	 * nothing in Activities had to learn the concept.
+	 */
+	$anon_vote = do_blocks( '<!-- wp:axismundi/interaction {"type":"vote","objectUri":"' . esc_url_raw( $topic_uri ) . '"} /-->' );
+	wp_set_current_user( $user );
+	ax_fv_assert(
+		$ax_fv_results,
+		'the community vote is offered as an interaction type by Forum, not built into Activities',
+		function_exists( 'axismundi_act_interaction_types' )
+			&& array_key_exists( 'vote', axismundi_act_interaction_types() )
+			// Where the callback is defined is the claim: this plugin answers, Activities does not
+			// know what a community is.
+			&& false !== strpos(
+				(string) ( new ReflectionFunction( axismundi_act_interaction_types()['vote']['describe'] ) )->getFileName(),
+				'axismundi-forum'
+			)
+	);
+
+	/*
+	 * One state, three parts. Up and down cannot both be pressed, and the score between them is
+	 * neither — so this is one interaction describing several controls rather than several
+	 * interactions each holding their own idea of what the reader chose.
+	 */
+	$ax_fv_read = static function ( string $html ) : array {
+		preg_match_all( '#<button\b([^>]*)>#', $html, $found );
+		$rows = array();
+		foreach ( $found[1] as $tag ) {
+			preg_match( '#\bclass="([^"]*)"#', $tag, $class );
+			preg_match( '#(?<![-\w])aria-pressed="([^"]*)"#', $tag, $pressed );
+			$rows[] = array(
+				'pressed'  => $pressed[1] ?? '',
+				'selected' => false !== strpos( $class[1] ?? '', 'is-selected' ),
+				'disabled' => false !== strpos( $tag, ' disabled' ),
+			);
+		}
+		return $rows;
+	};
+	// Start from no vote: this Actor already voted through the endpoint above, and casting the
+	// side they hold would clear it rather than set it.
+	axismundi_forum_cast_vote( $actor, $topic_uri, 'none' );
+	axismundi_forum_cast_vote( $actor, $topic_uri, 'up' );
+	$up_rows = $ax_fv_read( do_blocks( '<!-- wp:axismundi/interaction {"type":"vote","objectUri":"' . esc_url_raw( $topic_uri ) . '"} /-->' ) );
+	axismundi_forum_cast_vote( $actor, $topic_uri, 'down' );
+	$down_rows = $ax_fv_read( do_blocks( '<!-- wp:axismundi/interaction {"type":"vote","objectUri":"' . esc_url_raw( $topic_uri ) . '"} /-->' ) );
+
+	ax_fv_assert(
+		$ax_fv_results,
+		'the vote renders as one group of two controls whose pressed state is mutually exclusive and server-rendered',
+		2 === count( $up_rows ) && 2 === count( $down_rows )
+			&& 'true' === $up_rows[0]['pressed'] && true === $up_rows[0]['selected']
+			&& 'false' === $up_rows[1]['pressed'] && false === $up_rows[1]['selected']
+			&& 'false' === $down_rows[0]['pressed'] && false === $down_rows[0]['selected']
+			&& 'true' === $down_rows[1]['pressed'] && true === $down_rows[1]['selected']
+	);
+
+	// A visitor who may not vote is shown the control and told why, rather than shown a gap.
+	$anon_rows = $ax_fv_read( $anon_vote );
+	ax_fv_assert(
+		$ax_fv_results,
+		'a visitor who cannot vote gets both controls, still disabled after directives are processed',
+		2 === count( $anon_rows ) && true === $anon_rows[0]['disabled'] && true === $anon_rows[1]['disabled']
+	);
 } finally {
 	$table = axismundi_act_activities_table();
 	foreach ( array_filter( array_unique( $ax_fv_ids ) ) as $identity_id ) {

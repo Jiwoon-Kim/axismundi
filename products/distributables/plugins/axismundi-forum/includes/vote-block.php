@@ -195,6 +195,121 @@ function axismundi_forum_render_vote_buttons( array $attributes, string $content
 }
 
 /** Register the dynamic block. */
+/**
+ * Describe a community vote for the unified interaction block.
+ *
+ * The first interaction type another product registers, and the reason the registry exists:
+ * Activities owns the control and has no idea what a community is, while a vote is only
+ * meaningful inside one. Forum answers here and Activities never learns the concept.
+ *
+ * A vote is also the reason a type may describe more than one control. Up and down cannot both
+ * be pressed, and the score between them is neither — one interaction with three parts rather
+ * than three interactions that would each hold their own opinion of what the reader had chosen.
+ *
+ * Every bound value is a context value. Directives are processed on the server too, and a `state`
+ * getter that exists only in the browser evaluates to nothing there: it blanked the score and the
+ * icons and dropped `disabled` from a control the visitor was not allowed to use.
+ *
+ * @param array    $attributes Block attributes.
+ * @param WP_Block $block      Block instance.
+ * @return array<string,mixed>|null
+ */
+function axismundi_forum_describe_vote_interaction( array $attributes, WP_Block $block ) : ?array {
+	$object_uri = axismundi_forum_vote_block_object_uri( $attributes, $block );
+	if ( '' === $object_uri ) {
+		return null;
+	}
+	if ( function_exists( 'axismundi_act_no_cache_like_state' ) ) {
+		axismundi_act_no_cache_like_state();
+	}
+	$actor    = function_exists( 'axismundi_act_current_local_actor' ) ? axismundi_act_current_local_actor() : null;
+	$can_vote = $actor instanceof Axismundi_Actor && ! is_wp_error( axismundi_act_resolve_like_target( $object_uri ) );
+	$score    = axismundi_forum_vote_score( $object_uri, $actor instanceof Axismundi_Actor ? $actor->get_uri() : '' );
+	$blocked  = is_user_logged_in()
+		? __( 'Activate a public Actor profile to vote.', 'axismundi-forum' )
+		: __( 'Log in to vote.', 'axismundi-forum' );
+	/* translators: 1: upvote count, 2: downvote count. */
+	$tally_template = __( '%1$s upvotes, %2$s downvotes', 'axismundi-forum' );
+	$tally          = sprintf( $tally_template, number_format_i18n( $score['up'] ), number_format_i18n( $score['down'] ) );
+
+	$context = array(
+		'objectUri'      => $object_uri,
+		'up'             => $score['up'],
+		'down'           => $score['down'],
+		'score'          => $score['score'],
+		'viewer'         => $score['viewer'],
+		'isUpvoted'      => 'up' === $score['viewer'],
+		'isDownvoted'    => 'down' === $score['viewer'],
+		'upIcon'         => 'up' === $score['viewer'] ? 'thumb_up' : 'thumb_up_off_alt',
+		'downIcon'       => 'down' === $score['viewer'] ? 'thumb_down' : 'thumb_down_off_alt',
+		'formattedScore' => number_format_i18n( $score['score'] ),
+		'isPending'      => false,
+		'canVote'        => $can_vote,
+		'isDisabled'     => ! $can_vote,
+		'endpoint'       => rest_url( 'axismundi/v1/community-votes' ),
+		'nonce'          => $can_vote ? wp_create_nonce( 'wp_rest' ) : '',
+		'error'          => '',
+		'errorFallback'  => __( 'The vote could not be saved.', 'axismundi-forum' ),
+		'tally'          => $tally,
+		'tallyTemplate'  => $tally_template,
+	);
+
+	$direction = static function ( string $way, string $label, bool $selected, string $icon ) use ( $can_vote, $blocked, $object_uri, $context ) : array {
+		return array(
+			'icon'       => $icon,
+			'label'      => $label,
+			'aria_label' => $can_vote ? $label : $blocked,
+			'selected'   => $selected,
+			'toggle'     => true,
+			'disabled'   => ! $can_vote,
+			'bindings'   => array(
+				'data-wp-on--click'          => 'up' === $way ? 'actions.voteUp' : 'actions.voteDown',
+				'data-wp-bind--disabled'     => 'context.isDisabled',
+				'data-wp-bind--aria-pressed' => 'up' === $way ? 'context.isUpvoted' : 'context.isDownvoted',
+				'data-wp-class--is-selected' => 'up' === $way ? 'context.isUpvoted' : 'context.isDownvoted',
+			),
+			'delegated'  => array(
+				'data-ax-action'     => 'vote',
+				'data-ax-direction'  => $way,
+				'data-ax-object-uri' => $object_uri,
+				'data-ax-endpoint'   => (string) $context['endpoint'],
+				'data-ax-nonce'      => (string) $context['nonce'],
+			),
+		);
+	};
+
+	return array(
+		'icon'        => 'thumb_up',
+		'label'       => __( 'Vote', 'axismundi-forum' ),
+		'group_label' => __( 'Community vote', 'axismundi-forum' ),
+		'namespace'   => 'axismundi/vote-buttons',
+		'context'     => $context,
+		'controls'    => array(
+			$direction( 'up', __( 'Upvote', 'axismundi-forum' ), 'up' === $score['viewer'], (string) $context['upIcon'] ),
+			// The net score is what a reader acts on; the raw tallies stay available as its
+			// title so the number is not left unexplained.
+			array( 'text' => (string) $context['formattedScore'], 'aria_label' => $tally ),
+			$direction( 'down', __( 'Downvote', 'axismundi-forum' ), 'down' === $score['viewer'], (string) $context['downIcon'] ),
+		),
+	);
+}
+
+/** Offer the community vote as an interaction type. */
+function axismundi_forum_register_vote_interaction_type() : void {
+	if ( function_exists( 'axismundi_act_register_interaction_type' ) ) {
+		axismundi_act_register_interaction_type(
+			'vote',
+			array(
+				'describe' => 'axismundi_forum_describe_vote_interaction',
+				'label'    => __( 'Vote', 'axismundi-forum' ),
+				'icon'     => 'thumb_up',
+			)
+		);
+	}
+}
+add_action( 'axismundi_act_register_interaction_types', 'axismundi_forum_register_vote_interaction_type' );
+
+/** Register the community vote block. */
 function axismundi_forum_register_vote_buttons_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/vote-buttons', array( 'render_callback' => 'axismundi_forum_render_vote_buttons' ) );
 }

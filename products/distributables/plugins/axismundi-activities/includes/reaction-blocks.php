@@ -96,6 +96,19 @@ function axismundi_act_seed_reaction_state( string $object_uri, ?array $summary 
 				'customSearch'      => array(),
 				'catalogueLoaded'   => false,
 				'openFor'           => '',
+				/*
+				 * Seeded because directives are evaluated on the server too, and the getter that
+				 * normally answers this lives only in the browser module. Resolving to nothing
+				 * there made the server strip the `hidden` it had just written, so every picker
+				 * on the page rendered open until the runtime booted and closed it.
+				 *
+				 * A single value is right for this pass: nothing is open when a page is built.
+				 * The module's getter takes over once it loads and answers per control.
+				 */
+				'isPickerHidden'    => true,
+				// Same reason, and the other half of the same control: without it the trigger
+				// went out with no `aria-expanded` at all, while announcing that it opens a dialog.
+				'isOpen'            => false,
 				'pendingFor'        => '',
 				'searchTimer'       => 0,
 				'error'             => '',

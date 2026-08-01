@@ -373,6 +373,42 @@ function axismundi_act_get_by_actor( string $actor_uri, int $limit = 50 ) : arra
 	return axismundi_act_get_by_reference( 'actor', $actor_uri, $limit );
 }
 
+/**
+ * One Actor's still-effective activities of given types, newest first.
+ *
+ * `axismundi_act_get_by_actor()` answers "everything this Actor ever did", which is the wrong
+ * question for a surface that lists one kind of act and has to page through it. A Group's
+ * community archive is the case in point: what it wants is that Group's `Announce` rows and
+ * nothing else, and reading two hundred mixed rows to find them would both miss some and cost
+ * more than the query it replaced.
+ *
+ * Withdrawn rows are excluded here rather than by the caller, because every caller wants the
+ * same thing — an `Undo` means the act no longer stands, and a list that showed it anyway would
+ * republish what someone deliberately took back.
+ *
+ * @param string   $actor_uri Actor URI.
+ * @param string[] $types     Activity types to include.
+ * @param int      $limit     Bounded row count.
+ * @param int      $offset    Rows to skip.
+ * @return Axismundi_Activity[]
+ */
+function axismundi_act_get_effective_by_actor_and_type( string $actor_uri, array $types, int $limit = 50, int $offset = 0 ) : array {
+	global $wpdb;
+	$uri   = axismundi_act_uri( $actor_uri );
+	$types = array_values( array_filter( array_map( 'axismundi_act_type', $types ) ) );
+	if ( '' === $uri || empty( $types ) || AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' ) ) {
+		return array();
+	}
+	$table        = axismundi_act_activities_table();
+	$limit        = max( 1, min( 200, $limit ) );
+	$offset       = max( 0, $offset );
+	$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+	$args         = array_merge( array( hash( 'sha256', $uri ), $uri ), $types, array( $limit, $offset ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table, generated placeholders, values prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND activity_type IN ({$placeholders}) AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d OFFSET %d", $args ), ARRAY_A );
+	return array_map( 'axismundi_act_hydrate', $rows );
+}
+
 /** Whether an Activity declares the ActivityStreams Public audience. */
 function axismundi_act_has_public_audience( Axismundi_Activity $activity ) : bool {
 	$audience = $activity->get_audience();

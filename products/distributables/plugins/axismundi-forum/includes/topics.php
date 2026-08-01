@@ -444,6 +444,115 @@ function axismundi_forum_can_view_community_topics( int $group_identity_id, ?int
 }
 
 /**
+ * Whether one reader may read one Topic.
+ *
+ * The community rule plus the one case it cannot express: an author may always read what they
+ * wrote. Membership can be revoked and a community can change its scope after the fact, and
+ * neither should take someone's own post away from them.
+ *
+ * @param WP_Post  $topic   Topic post.
+ * @param int|null $user_id Reader, or null for the current one.
+ * @return bool
+ */
+function axismundi_forum_can_read_topic( WP_Post $topic, ?int $user_id = null ) : bool {
+	$entry = axismundi_forum_get_topic_entry( $topic->ID );
+	if ( ! is_array( $entry ) ) {
+		return true;
+	}
+	$user_id = null === $user_id ? get_current_user_id() : $user_id;
+	if ( $user_id > 0 && (int) $topic->post_author === $user_id ) {
+		return true;
+	}
+	return axismundi_forum_can_view_community_topics( (int) $entry['group_identity_id'], $user_id );
+}
+
+/**
+ * Refuse a member-distributed Topic to a reader who is not entitled to it.
+ *
+ * A 404 rather than a message. A notice saying "this post is for members" still discloses that
+ * the post exists, who wrote it, and — through the title in `<title>` and the URL slug — what it
+ * is about. For a community whose whole point is that its threads are not public, that disclosure
+ * is the leak.
+ *
+ * The ActivityStreams route already withholds these through
+ * `axismundi_forum_topic_article_visible()`; without this the HTML permalink answered 200 for the
+ * same Topic, which made the protection true only of the representation nobody reads by hand.
+ */
+function axismundi_forum_guard_topic_request() : void {
+	if ( ! is_singular( AXISMUNDI_FORUM_TOPIC_POST_TYPE ) ) {
+		return;
+	}
+	$topic = get_queried_object();
+	if ( ! $topic instanceof WP_Post || axismundi_forum_can_read_topic( $topic ) ) {
+		return;
+	}
+	global $wp_query;
+	$wp_query->set_404();
+	status_header( 404 );
+	nocache_headers();
+}
+add_action( 'template_redirect', 'axismundi_forum_guard_topic_request', 1 );
+
+/**
+ * Keep member-distributed Topics out of public listings for readers without access.
+ *
+ * The permalink guard alone would still leave the title in search results and archives, which
+ * discloses the same thing the guard exists to withhold.
+ *
+ * @param WP_Query $query Query being prepared.
+ * @return void
+ */
+function axismundi_forum_exclude_restricted_topics( WP_Query $query ) : void {
+	if ( is_admin() || $query->is_singular() ) {
+		return;
+	}
+	$types = (array) $query->get( 'post_type' );
+	if ( ! in_array( AXISMUNDI_FORUM_TOPIC_POST_TYPE, $types, true ) && ! $query->is_search() && ! $query->is_home() ) {
+		return;
+	}
+	$restricted = axismundi_forum_restricted_topic_ids( get_current_user_id() );
+	if ( empty( $restricted ) ) {
+		return;
+	}
+	$query->set( 'post__not_in', array_values( array_unique( array_merge( (array) $query->get( 'post__not_in' ), $restricted ) ) ) );
+}
+add_action( 'pre_get_posts', 'axismundi_forum_exclude_restricted_topics' );
+
+/**
+ * Topic ids one reader may not see, from the communities that restrict distribution.
+ *
+ * Only member-scoped communities are consulted, so a site whose communities are all public pays
+ * one cheap lookup and gets an empty list.
+ *
+ * @param int $user_id Reader.
+ * @return int[]
+ */
+function axismundi_forum_restricted_topic_ids( int $user_id ) : array {
+	global $wpdb;
+	$settings = axismundi_forum_settings_table();
+	$entries  = axismundi_forum_entries_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- own tables, no user input.
+	$groups = (array) $wpdb->get_col( "SELECT group_identity_id FROM {$settings} WHERE distribution_scope = 'members'" );
+	$hidden = array();
+	foreach ( $groups as $group_identity_id ) {
+		$group_identity_id = (int) $group_identity_id;
+		if ( axismundi_forum_can_view_community_topics( $group_identity_id, $user_id ) ) {
+			continue;
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- own table, prepared id.
+		$ids = (array) $wpdb->get_col( $wpdb->prepare( "SELECT source_post_id FROM {$entries} WHERE group_identity_id = %d AND source_post_id > 0", $group_identity_id ) );
+		foreach ( $ids as $id ) {
+			$id = (int) $id;
+			// An author keeps their own post in listings even where the community is closed.
+			if ( $id > 0 && ( $user_id <= 0 || (int) get_post_field( 'post_author', $id ) !== $user_id ) ) {
+				$hidden[] = $id;
+			}
+		}
+	}
+	return $hidden;
+}
+
+/**
  * The Group identity the page being rendered is about.
  *
  * @return int Group identity, or 0 when this page is about no community.
@@ -457,7 +566,7 @@ function axismundi_forum_context_group_id() : int {
 }
 
 /** Render the Forum-owned Topic index; this intentionally is not a Core Query Loop. */
-function axismundi_forum_render_topic_list_block( array $attributes = array(), string $content = '' ) : string {
+function axismundi_forum_render_topic_list_block( array $attributes = array(), string $content = '', bool $standalone = true ) : string {
 	unset( $content );
 	$group_identity_id = axismundi_forum_context_group_id();
 	if ( $group_identity_id <= 0 ) {
@@ -469,7 +578,7 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	}
 	$limit = isset( $attributes['perPage'] ) ? (int) $attributes['perPage'] : 20;
 	$limit = max( 1, min( 100, $limit ) );
-	$page  = isset( $_GET['topic_page'] ) ? max( 1, absint( wp_unslash( $_GET['topic_page'] ) ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read pagination.
+	$page  = axismundi_forum_group_archive_page_number();
 	$total = axismundi_forum_visible_topic_entry_count( $group_identity_id );
 	$pages = max( 1, (int) ceil( $total / $limit ) );
 	if ( $page > $pages ) {
@@ -496,16 +605,11 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 	$body = empty( $items )
 		? '<p class="axismundi-forum-topic-list__empty">' . esc_html__( 'No topics yet.', 'axismundi-forum' ) . '</p>'
 		: '<ol class="axismundi-forum-topic-list__items">' . implode( '', $items ) . '</ol>';
-	$pagination = '';
-	if ( $pages > 1 ) {
-		$base_url = remove_query_arg( 'topic_page' );
-		$previous = $page > 1 ? add_query_arg( 'topic_page', $page - 1, $base_url ) : '';
-		$next     = $page < $pages ? add_query_arg( 'topic_page', $page + 1, $base_url ) : '';
-		$pagination = '<nav class="axismundi-forum-topic-list__pagination" aria-label="' . esc_attr__( 'Topic pages', 'axismundi-forum' ) . '">'
-			. ( '' !== $previous ? '<a class="axismundi-forum-topic-list__previous" href="' . esc_url( $previous ) . '">' . esc_html__( 'Newer topics', 'axismundi-forum' ) . '</a>' : '<span class="axismundi-forum-topic-list__previous" aria-hidden="true"></span>' )
-			. '<span class="axismundi-forum-topic-list__page">' . esc_html( sprintf( __( 'Page %1$d of %2$d', 'axismundi-forum' ), $page, $pages ) ) . '</span>'
-			. ( '' !== $next ? '<a class="axismundi-forum-topic-list__next" href="' . esc_url( $next ) . '">' . esc_html__( 'Older topics', 'axismundi-forum' ) . '</a>' : '<span class="axismundi-forum-topic-list__next" aria-hidden="true"></span>' )
-			. '</nav>';
+	// Both community collections page the same way and say so with the same words, so the
+	// pagination is the archive's rather than one this list keeps to itself.
+	$pagination = axismundi_forum_render_archive_pagination( $page, $pages, 'posts' );
+	if ( ! $standalone ) {
+		return $body . $pagination;
 	}
 	/*
 	 * This renderer answers to two callers: the block, and the Group profile feed, which has
@@ -540,7 +644,7 @@ function axismundi_forum_actor_feed_html( string $html, Axismundi_Actor $actor )
 		return $html;
 	}
 	return axismundi_forum_is_community( $actor->get_identity_id() )
-		? axismundi_forum_render_topic_list_block()
+		? axismundi_forum_render_group_archive( $actor )
 		: $html;
 }
 add_filter( 'axismundi_act_actor_feed_html', 'axismundi_forum_actor_feed_html', 10, 2 );

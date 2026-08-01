@@ -552,9 +552,16 @@ $ax_rnd_results[] = ( static function () : bool {
 	// The Article card is the stream lead-in and the Article page is the piece, so the
 	// summary belongs to one and the body to the other. Swapping either would either
 	// leak an Article's body into a feed or repeat its teaser above its own text.
+	/*
+	 * The card half of this moved. An Article card's summary now comes from `object-card-body`
+	 * rather than from the card template, so it is asserted against the rendered card further
+	 * down; reading the template string for it here would only ever find nothing. What stays
+	 * here is the half this file can still see: the Article's own page leads with its body and
+	 * never repeats the teaser above it.
+	 */
 	$article_card   = axismundi_op_object_card_pattern_content( 'object-card-article' );
 	$article_single = axismundi_op_single_object_template_content( 'single-object-article' );
-	$pass = false !== strpos( $article_card, '<!-- wp:axismundi/object-summary ' )
+	$pass = false !== strpos( $article_card, '<!-- wp:axismundi/object-card-body /-->' )
 		&& false === strpos( $article_single, '<!-- wp:axismundi/object-summary' )
 		&& false !== strpos( $article_single, '<!-- wp:axismundi/object-content /' );
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
@@ -652,6 +659,49 @@ ax_rnd_assert(
 );
 
 $ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
+
+
+/*
+ * The Article card's shell delegates its body, and delegating changed exactly one thing.
+ *
+ * Selection is only `'Article' === $model['type']`, so a synthetic model exercises the real
+ * template without depending on what happens to be in the database. The Read More link moved out
+ * of the summary and into its own block — that is the intended difference — and everything else
+ * the card is made of has to survive it, including the lead image's fixed height and the URL the
+ * link points at. A `href` that changed would mean the two blocks resolve destinations
+ * differently, which is the failure this arrangement exists to prevent.
+ */
+$ax_rnd_card_model                   = axismundi_op_object_view_model_defaults();
+$ax_rnd_card_model['status']         = 'active';
+$ax_rnd_card_model['type']           = 'Article';
+$ax_rnd_card_model['object_uri']     = 'https://example.com/a/1';
+$ax_rnd_card_model['human_url']      = 'https://example.com/a/1';
+$ax_rnd_card_model['title']          = 'Baseline Article';
+$ax_rnd_card_model['summary']        = 'A summary that is long enough to trim.';
+$ax_rnd_card_model['media']['image'] = array( 'url' => 'https://example.com/lead.jpg', 'alt' => 'Lead image', 'width' => 1200, 'height' => 800 );
+$ax_rnd_card_model['author']         = array( 'id' => 'https://example.com/actors/u', 'name' => 'Author', 'handle' => '@a@example.com', 'url' => 'https://example.com/actors/u' );
+axismundi_op_set_current_object_view_model( $ax_rnd_card_model );
+$ax_rnd_card_html = axismundi_op_render_object_pattern( array( 'headingTag' => 'h3', 'interactions' => false ) );
+axismundi_op_set_current_object_view_model( null );
+$ax_rnd_card_href = preg_match( '#read-more-link" href="([^"]*)#', $ax_rnd_card_html, $ax_rnd_card_match ) ? $ax_rnd_card_match[1] : '';
+
+ax_rnd_assert(
+	$ax_rnd_results,
+	'an Article card keeps its lead image, fixed height, title and summary once its body is delegated',
+	false !== strpos( $ax_rnd_card_html, 'axismundi-object-card--article' )
+		&& false !== strpos( $ax_rnd_card_html, 'lead.jpg' )
+		&& false !== strpos( $ax_rnd_card_html, '200px' )
+		&& false !== strpos( $ax_rnd_card_html, 'axismundi-object__title' )
+		&& false !== strpos( $ax_rnd_card_html, 'post-excerpt__excerpt' )
+);
+
+ax_rnd_assert(
+	$ax_rnd_results,
+	'the Read More link left the summary for a block of its own and still points where it did',
+	false === strpos( $ax_rnd_card_html, 'post-excerpt__more-link' )
+		&& 1 === substr_count( $ax_rnd_card_html, 'axismundi-object__read-more-link' )
+		&& 'https://example.com/a/1' === $ax_rnd_card_href
+);
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_rnd_results ), $ax_rnd_failures );

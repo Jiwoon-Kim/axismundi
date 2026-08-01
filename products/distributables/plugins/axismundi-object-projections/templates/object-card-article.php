@@ -23,17 +23,7 @@ defined( 'ABSPATH' ) || exit;
 	<!-- wp:group {"tagName":"article","className":"axismundi-object-card axismundi-object-card--article","layout":{"type":"constrained"}} -->
 	<article class="wp-block-group axismundi-object-card axismundi-object-card--article">
 		<?php require __DIR__ . '/parts/object-card-header.php'; ?>
-		<?php
-		/*
-		 * A fixed height, because this image is a lead-in rather than the piece. A stream
-		 * is a list of posts, and letting each Article's image take its intrinsic height
-		 * makes the card as tall as the picture happens to be, pushing the next post off
-		 * screen. The Article's own page shows the image at its real size.
-		 */
-		?>
-		<!-- wp:axismundi/object-featured-image {"style":{"dimensions":{"height":"200px"}}} /-->
-		<!-- wp:axismundi/object-title /-->
-		<!-- wp:axismundi/object-summary {"moreText":"Read more"} /-->
+		<!-- wp:axismundi/object-card-body /-->
 		<!-- wp:axismundi/object-hashtags {"className":"is-style-tags"} /-->
 		<!-- wp:axismundi/reaction-bar /-->
 		<!-- wp:axismundi/interactions -->

@@ -5,7 +5,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-geodata
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -53,7 +53,32 @@ later work.
 2. Upload and activate this plugin.
 3. Add the Axismundi Map block to a post or page and choose a source.
 
+== External services ==
+
+When the Axismundi Geo Data provider is configured to use an uploaded PMTiles
+map pack, this plugin configures MapLibre to fetch map font glyphs and sprite
+images from the Protomaps Basemaps Assets project, hosted on GitHub Pages. The
+visitor's browser makes these requests while rendering the map. The requests
+include the visitor's IP address and standard HTTP request metadata, plus the
+requested font range or sprite filename. No WordPress account data, post data,
+or visitor location is sent by this plugin to that service.
+
+* Service: Protomaps Basemaps Assets (GitHub Pages), used for PMTiles map labels
+  and symbols. It is not contacted when the configured provider uses custom
+  raster tiles.
+* Terms: https://protomaps.com/legal
+* Privacy: https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement
+
+Site administrators separately choose and host their raster tiles or PMTiles
+pack through Axismundi Geo Data. Those configured providers may have their own
+terms and privacy policies.
+
 == Changelog ==
+
+= 0.2.2 =
+* Document the Protomaps Basemaps Assets external service used by the PMTiles
+  provider.
+* Escape the map Interactivity context through the block wrapper at output.
 
 = 0.2.1 =
 * Follow Axismundi Geodata's namespaced internal taxonomy identifiers while keeping the public map and GeoJSON query contract unchanged.

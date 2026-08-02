@@ -1062,35 +1062,24 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	$density_nav = count( $density_switch ) < 2 ? '' : '<div class="axismundi-activity-feed__densities" role="group" aria-label="'
 		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">' . implode( '', $density_switch ) . '</div>';
 
-	$parts = array(
-		'filters'    => $filter_nav,
-		'density'    => $density_nav,
-		// The list is always emitted, even when this page is empty, because appended pages need
-		// something to attach to. An empty feed says so in its own row rather than by omitting
-		// the container the runtime is going to look for.
-		'list'       => axismundi_act_render_feed_loop(
-			axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ),
-			array( 'cards' => $cards, 'announceHost' => $announce_host, 'reactionHost' => $reaction_host )
-		),
-		'pagination' => $navigation,
-	);
 	/*
-	 * The template's arrangement when it has one, and the arrangement it used to be born with
-	 * when it does not. The list is forced back in either way: it holds the cards, the runtime
-	 * finds the continuation container by looking for it, and a template that omitted it would
-	 * be asking for a feed with no feed in it.
+	 * The saved layout renders itself, in its own order.
+	 *
+	 * The parts the feed builds — its filters, its density switch, its pager — are handed to the
+	 * blocks that mark where they go, and the loop builds the list. There is no assembly step
+	 * left, because the arrangement is the block tree rather than a slot list derived from it.
 	 */
-	$slots = axismundi_act_actor_feed_slots( $actor, $surface );
-	// A template written before the density block existed still gets the control, in the place it
-	// was emitted from before it could be placed at all.
-	$slots = array() === $slots ? array( 'filters', 'density', 'list', 'pagination' ) : $slots;
-	if ( ! in_array( 'list', $slots, true ) ) {
-		$slots[] = 'list';
-	}
-	$body = '';
-	foreach ( $slots as $slot ) {
-		$body .= $parts[ $slot ] ?? '';
-	}
+	$body = axismundi_act_render_feed_body(
+		axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ),
+		array(
+			'filters'      => $filter_nav,
+			'density'      => $density_nav,
+			'pagination'   => $navigation,
+			'cards'        => $cards,
+			'announceHost' => $announce_host,
+			'reactionHost' => $reaction_host,
+		)
+	);
 
 	return '<section class="axismundi-activity-feed is-density-' . esc_attr( $density ) . '"'
 		. ' data-density="' . esc_attr( $density ) . '" data-wp-interactive="axismundi/actor-feed" '
@@ -1100,6 +1089,86 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		. $surface_nav
 		. $body
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.
+}
+
+/**
+ * Read one part of the feed's own chrome out of block context.
+ *
+ * The three chrome blocks describe the query the feed just ran, so the feed builds them and each
+ * block says where it goes. They are markers no longer: a marker only records a position, and the
+ * feed then had to assemble the parts in that order itself — which meant two descriptions of the
+ * same arrangement, the saved block tree and a slot list derived from it.
+ *
+ * @param string        $key   Context key holding this part's markup.
+ * @param WP_Block|null $block Block instance carrying the feed context.
+ * @return string
+ */
+function axismundi_act_feed_chrome_part( string $key, $block ) : string {
+	$context = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
+	return (string) ( $context[ $key ] ?? '' );
+}
+
+/** The filter control, where the template placed it. */
+function axismundi_act_render_feed_filters_block( array $attributes = array(), string $content = '', $block = null ) : string {
+	unset( $attributes, $content );
+	return axismundi_act_feed_chrome_part( 'filters', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
+}
+
+/** The density switch, where the template placed it. */
+function axismundi_act_render_feed_density_switch_block( array $attributes = array(), string $content = '', $block = null ) : string {
+	unset( $attributes, $content );
+	return axismundi_act_feed_chrome_part( 'density', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
+}
+
+/** The pager — cursor or numbered, whichever this surface is walked by — where the template placed it. */
+function axismundi_act_render_feed_pagination_block( array $attributes = array(), string $content = '', $block = null ) : string {
+	unset( $attributes, $content );
+	return axismundi_act_feed_chrome_part( 'pagination', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
+}
+
+/**
+ * Render the current surface's saved layout, in the order it was saved in.
+ *
+ * The arrangement is the block tree now. It used to be read out of the tree into a list of slot
+ * keys which the feed then assembled, so moving a control meant the same fact was recorded twice —
+ * once by the author moving a block and once by a helper deriving the order again.
+ *
+ * A template with no loop still gets one appended: the runtime finds the container it appends to
+ * by looking for it, so a template that omitted the list would be a feed that cannot be paged.
+ *
+ * @param array<int,array<string,mixed>> $blocks  Blocks of the surface being rendered.
+ * @param array<string,mixed>            $context Feed context for the children.
+ * @return string
+ */
+function axismundi_act_render_feed_body( array $blocks, array $context ) : string {
+	$children = axismundi_act_feed_surface_children( $blocks );
+	$has_loop = null !== axismundi_act_find_block_by_name( $children, 'axismundi/feed-loop' );
+	if ( ! $has_loop ) {
+		$children[] = array( 'blockName' => 'axismundi/feed-loop', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() );
+	}
+	$body = '';
+	foreach ( $children as $child ) {
+		if ( '' === (string) ( $child['blockName'] ?? '' ) ) {
+			continue;
+		}
+		$body .= ( new WP_Block( $child, array( 'axismundi/feed' => $context ) ) )->render();
+	}
+	return $body;
+}
+
+/**
+ * The blocks that make up one surface's layout.
+ *
+ * The surface's own children when the template has tabs, and the feed's children when it does not —
+ * a template written before tabs existed keeps its single arrangement, and one written before the
+ * chrome blocks existed has only a loop, which still renders.
+ *
+ * @param array<int,array<string,mixed>> $blocks Blocks of the surface being rendered.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_act_feed_surface_children( array $blocks ) : array {
+	$feed = axismundi_act_find_block_by_name( $blocks, 'axismundi/feed' );
+	return null === $feed ? $blocks : (array) ( $feed['innerBlocks'] ?? array() );
 }
 
 /**
@@ -1482,9 +1551,9 @@ function axismundi_act_register_actor_activity_feed_block() : void {
 	 * a "Load more" block on the Community would be offering a reader a direction that surface does
 	 * not have.
 	 */
-	register_block_type( dirname( __DIR__ ) . '/blocks/feed-filters' );
-	register_block_type( dirname( __DIR__ ) . '/blocks/feed-pagination' );
-	register_block_type( dirname( __DIR__ ) . '/blocks/feed-density-switch' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-filters', array( 'render_callback' => 'axismundi_act_render_feed_filters_block' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-pagination', array( 'render_callback' => 'axismundi_act_render_feed_pagination_block' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-density-switch', array( 'render_callback' => 'axismundi_act_render_feed_density_switch_block' ) );
 }
 add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
 
@@ -1577,67 +1646,6 @@ function axismundi_act_actor_feed_template_blocks( Axismundi_Actor $actor ) : ar
 	}
 	$parsed[ $slug ] = '' === $content ? array() : parse_blocks( $content );
 	return $parsed[ $slug ];
-}
-
-/**
- * The order the feed's own parts appear in, as the template arranges them.
- *
- * The filters and the pagination are blocks so that an author can move them — put the filters
- * under the list, drop them entirely on a profile that only ever shows one view. What they are
- * not is self-rendering: both describe the same query the loop just ran, so the loop renders
- * them and these blocks say where.
- *
- * An empty result means the template says nothing about the arrangement, and the caller keeps
- * the fixed order the feed had before it could be arranged at all. That is what a template
- * written before these blocks existed looks like — including one already saved to the database
- * by the Site Editor — and it has to keep working, because losing this reading is losing
- * "Load more".
- *
- * @param Axismundi_Actor $actor Actor whose profile is being read.
- * @return array<int,string> Slot keys in template order, or an empty array for no opinion.
- */
-function axismundi_act_actor_feed_slots( Axismundi_Actor $actor, string $surface = '' ) : array {
-	return axismundi_act_feed_slots_from_blocks( axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ) );
-}
-
-/**
- * The arrangement a parsed template asks for, separate from where that template came from.
- *
- * Split out because the two halves fail differently and are worth being able to ask about
- * separately: resolving the template is about the Site Editor and the filesystem, while this is
- * about what the author arranged.
- *
- * @param array<int,array<string,mixed>> $blocks Parsed template blocks.
- * @return array<int,string> Slot keys in template order, or an empty array for no opinion.
- */
-function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
-	/*
-	 * The loop when these are a whole template, and these blocks themselves when they are not.
-	 *
-	 * A surface's blocks have already been narrowed to one tab's children by the time they get
-	 * here, and that tab sits inside the loop rather than containing one — so looking for a loop
-	 * and giving up when there is none would read every tabbed template as having no
-	 * arrangement at all, which is the same answer as a template written before these blocks
-	 * existed and would silently take the chrome back to its fixed order.
-	 */
-	$loop     = axismundi_act_find_feed_loop_block( $blocks );
-	$children = null === $loop ? $blocks : (array) ( $loop['innerBlocks'] ?? array() );
-	$known = array(
-		'axismundi/feed-filters'       => 'filters',
-		'axismundi/feed-density-switch' => 'density',
-		'axismundi/feed-loop' => 'list',
-		'axismundi/feed-pagination'    => 'pagination',
-	);
-	$slots = array();
-	foreach ( $children as $block ) {
-		$slot = $known[ (string) ( $block['blockName'] ?? '' ) ] ?? '';
-		if ( '' !== $slot && ! in_array( $slot, $slots, true ) ) {
-			$slots[] = $slot;
-		}
-	}
-	// A template that names only the card is the old arrangement written out, not a request to
-	// drop the chrome. It takes a chrome block to move one, and a chrome block to omit the other.
-	return array( 'list' ) === $slots ? array() : $slots;
 }
 
 /**

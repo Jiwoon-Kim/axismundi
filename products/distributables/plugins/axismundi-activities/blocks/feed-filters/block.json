@@ -9,6 +9,7 @@
 	"description": "Where the timeline's view switches appear. Which switches exist depends on the surface being read, so the loop renders them and this block places them.",
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/feed-tab" ],
+	"usesContext": [ "axismundi/feed" ],
 	"supports": {
 		"html": false,
 		"reusable": false,

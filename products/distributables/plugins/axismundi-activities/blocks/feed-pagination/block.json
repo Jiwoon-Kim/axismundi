@@ -9,6 +9,7 @@
 	"description": "Where the timeline continues. A cursor feed has one direction and no page numbers, so this is Load more rather than a numbered pager.",
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/feed-tab" ],
+	"usesContext": [ "axismundi/feed" ],
 	"supports": {
 		"html": false,
 		"reusable": false,

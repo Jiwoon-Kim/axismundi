@@ -9,6 +9,7 @@
 	"description": "Where the Card/Compact control appears. It changes how the same entries are drawn, never which ones.",
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/feed-tab" ],
+	"usesContext": [ "axismundi/feed" ],
 	"supports": {
 		"html": false,
 		"reusable": false,

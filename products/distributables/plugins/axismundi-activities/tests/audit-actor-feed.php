@@ -844,27 +844,51 @@ try {
 					!== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'compact' )
 		);
 
-		$ax_feed_arrangement = static function ( string $inner ) : array {
-			return axismundi_act_feed_slots_from_blocks(
-				parse_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:axismundi/feed -->' . $inner . '<!-- /wp:axismundi/feed --></div><!-- /wp:group -->' )
+		/*
+		 * The arrangement, measured in the rendered feed rather than in a list derived from the
+		 * template.
+		 *
+		 * It used to be asserted through a helper that read the block tree into slot keys, which
+		 * meant the test agreed with a second description of the layout rather than with the page.
+		 * The helper is gone: the blocks render themselves in the order they were saved, so the
+		 * order in the markup is the only description there is.
+		 */
+		$ax_feed_rendered_order = static function ( string $inner ) use ( $ax_feed_live_actor ) : array {
+			$blocks = parse_blocks(
+				'<!-- wp:axismundi/feed --><!-- wp:axismundi/feed-tabs --><!-- wp:axismundi/feed-tab {"surface":"activity"} -->'
+				. $inner
+				. '<!-- /wp:axismundi/feed-tab --><!-- /wp:axismundi/feed-tabs --><!-- /wp:axismundi/feed -->'
 			);
+			$html   = axismundi_act_render_feed_body(
+				axismundi_act_feed_surface_blocks( $blocks, 'activity' ),
+				array( 'filters' => '<i id="ax-f"></i>', 'density' => '<i id="ax-d"></i>', 'pagination' => '<i id="ax-p"></i>', 'cards' => '' )
+			);
+			$found = array();
+			foreach ( array( 'ax-f' => 'filters', 'ax-d' => 'density', 'axismundi-activity-feed__list' => 'list', 'ax-p' => 'pagination' ) as $needle => $name ) {
+				$at = strpos( $html, $needle );
+				if ( false !== $at ) {
+					$found[ $at ] = $name;
+				}
+			}
+			ksort( $found );
+			return array_values( $found );
 		};
-		$ax_feed_legacy_shape = $ax_feed_arrangement( '<!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop -->' );
-		$ax_feed_moved        = $ax_feed_arrangement( '<!-- wp:axismundi/feed-pagination /--><!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop --><!-- wp:axismundi/feed-filters /-->' );
-		$ax_feed_dropped      = $ax_feed_arrangement( '<!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop --><!-- wp:axismundi/feed-pagination /-->' );
+		$ax_feed_legacy_shape = $ax_feed_rendered_order( '<!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop -->' );
+		$ax_feed_moved        = $ax_feed_rendered_order( '<!-- wp:axismundi/feed-pagination /--><!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop --><!-- wp:axismundi/feed-filters /-->' );
+		$ax_feed_dropped      = $ax_feed_rendered_order( '<!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop --><!-- wp:axismundi/feed-pagination /-->' );
 		ax_feed_assert(
 			$ax_feed_results,
-			'a template written before the chrome blocks existed keeps both controls in their original places',
-			array() === $ax_feed_legacy_shape
+			'a template written before the chrome blocks existed renders its list and no controls it never placed',
+			array( 'list' ) === $ax_feed_legacy_shape
 		);
 		ax_feed_assert(
 			$ax_feed_results,
-			'the chrome goes where the template puts it, in the template order rather than a fixed one',
+			'the chrome renders where the template puts it, in the saved order rather than a fixed one',
 			array( 'pagination', 'list', 'filters' ) === $ax_feed_moved
 		);
 		ax_feed_assert(
 			$ax_feed_results,
-			'naming one control is how a template drops the other, which a legacy template cannot do by accident',
+			'a control the template does not name renders nothing at all, rather than falling back into place',
 			array( 'list', 'pagination' ) === $ax_feed_dropped
 		);
 		/*
@@ -1083,8 +1107,8 @@ ax_feed_assert(
 	'each surface is read out of its own tab, so two tabs can hold different cards and different chrome',
 	false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_activity, 'card' ), 'object-title' )
 		&& false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_community, 'card' ), 'object-summary' )
-		&& array( 'filters', 'list' ) === axismundi_act_feed_slots_from_blocks( $ax_feed_tab_activity )
-		&& array( 'list', 'pagination' ) === axismundi_act_feed_slots_from_blocks( $ax_feed_tab_community )
+		&& false !== strpos( axismundi_act_render_feed_body( $ax_feed_tab_activity, array( 'filters' => '<i id="ax-f"></i>' ) ), 'ax-f' )
+		&& false === strpos( axismundi_act_render_feed_body( $ax_feed_tab_community, array( 'filters' => '<i id="ax-f"></i>' ) ), 'ax-f' )
 );
 
 /*

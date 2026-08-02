@@ -679,7 +679,7 @@ try {
 		 * rather than leaving the second to be discovered missing.
 		 */
 		$ax_feed_pair = static function ( string $inner ) : array {
-			$blocks = parse_blocks( '<!-- wp:axismundi/actor-feed-loop -->' . $inner . '<!-- /wp:axismundi/actor-feed-loop -->' );
+			$blocks = parse_blocks( '<!-- wp:axismundi/actor-feed-loop --><!-- wp:axismundi/feed-item-templates -->' . $inner . '<!-- /wp:axismundi/feed-item-templates --><!-- /wp:axismundi/actor-feed-loop -->' );
 			return array(
 				'card'    => axismundi_act_extract_feed_item_template( $blocks, 'card' ),
 				'compact' => axismundi_act_extract_feed_item_template( $blocks, 'compact' ),
@@ -737,10 +737,25 @@ try {
 				&& $ax_feed_both['card'] !== $ax_feed_both['compact']
 				&& '' !== $ax_feed_both['compact']
 		);
+		/*
+		 * Cards are read from the set and from nowhere else.
+		 *
+		 * They used to sit directly under the loop, and that shape is deliberately no longer
+		 * understood: reading both would let a template stay half-migrated with nothing saying
+		 * which arrangement was in force. The saved templates are overwritten on deploy, so there
+		 * is no install to carry — and a template with no set rendering no cards is loud, which is
+		 * what a clean break should be.
+		 */
+		$ax_feed_setless = axismundi_act_feed_item_templates(
+			parse_blocks( '<!-- wp:axismundi/actor-feed-loop --><!-- wp:axismundi/feed-item-template --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template --><!-- /wp:axismundi/actor-feed-loop -->' )
+		);
 		ax_feed_assert(
 			$ax_feed_results,
-			'a template saved before there were two cards answers for both densities instead of leaving one blank',
-			'' !== $ax_feed_single['card'] && $ax_feed_single['compact'] === $ax_feed_single['card']
+			'a card outside the set is not read, so a half-migrated template fails loudly instead of half-working',
+			array() === $ax_feed_setless['order']
+				&& array() === $ax_feed_setless['templates']
+				// The same card inside a set is read, so this is about placement and nothing else.
+				&& '' !== $ax_feed_single['card']
 		);
 		$ax_feed_live_actor = $actor instanceof Axismundi_Actor ? $actor : null;
 		ax_feed_assert(

@@ -1369,25 +1369,53 @@ function axismundi_act_extract_feed_item_template( array $blocks, string $densit
  */
 function axismundi_act_feed_item_templates( array $blocks ) : array {
 	$found = array( 'templates' => array(), 'order' => array(), 'duplicates' => array() );
-	$collect = static function ( array $nodes ) use ( &$collect, &$found ) : void {
-		foreach ( $nodes as $node ) {
-			$name = (string) ( $node['blockName'] ?? '' );
-			if ( 'axismundi/feed-item-template' === $name ) {
-				$density = (string) ( $node['attrs']['density'] ?? 'card' );
-				$density = 'compact' === $density ? 'compact' : 'card';
-				if ( isset( $found['templates'][ $density ] ) ) {
-					$found['duplicates'][] = $density;
-					continue;
-				}
-				$found['templates'][ $density ] = serialize_blocks( (array) ( $node['innerBlocks'] ?? array() ) );
-				$found['order'][]               = $density;
-				continue;
-			}
-			$collect( (array) ( $node['innerBlocks'] ?? array() ) );
+	/*
+	 * The set, and only the set. A card is read from the direct children of `feed-item-templates`
+	 * and nowhere else — not from the loop's own children, which is where they used to live.
+	 *
+	 * That is a clean break rather than an oversight. Reading both shapes would mean a template
+	 * could be half-migrated indefinitely and nothing would say which one was in force; the saved
+	 * templates are being overwritten on deploy, so there is no install to carry. A template with
+	 * no set renders no cards, which is loud, instead of quietly finding one somewhere else.
+	 */
+	$wrapper = axismundi_act_find_block_by_name( $blocks, 'axismundi/feed-item-templates' );
+	if ( null === $wrapper ) {
+		return $found;
+	}
+	foreach ( (array) ( $wrapper['innerBlocks'] ?? array() ) as $node ) {
+		if ( 'axismundi/feed-item-template' !== (string) ( $node['blockName'] ?? '' ) ) {
+			continue;
 		}
-	};
-	$collect( $blocks );
+		$density = (string) ( $node['attrs']['density'] ?? 'card' );
+		$density = 'compact' === $density ? 'compact' : 'card';
+		if ( isset( $found['templates'][ $density ] ) ) {
+			$found['duplicates'][] = $density;
+			continue;
+		}
+		$found['templates'][ $density ] = serialize_blocks( (array) ( $node['innerBlocks'] ?? array() ) );
+		$found['order'][]               = $density;
+	}
 	return $found;
+}
+
+/**
+ * Find the first block of one name anywhere in a parsed tree.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed blocks.
+ * @param string                         $name   Block name.
+ * @return array<string,mixed>|null
+ */
+function axismundi_act_find_block_by_name( array $blocks, string $name ) : ?array {
+	foreach ( $blocks as $block ) {
+		if ( $name === (string) ( $block['blockName'] ?? '' ) ) {
+			return $block;
+		}
+		$found = axismundi_act_find_block_by_name( (array) ( $block['innerBlocks'] ?? array() ), $name );
+		if ( null !== $found ) {
+			return $found;
+		}
+	}
+	return null;
 }
 
 /**

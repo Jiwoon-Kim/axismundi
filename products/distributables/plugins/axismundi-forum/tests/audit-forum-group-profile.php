@@ -254,7 +254,7 @@ try {
 		'a community refuses an infinite feed it cannot serve and stays on numbered pages',
 		$group instanceof Axismundi_Actor
 			&& array( 'pagination' ) === (array) axismundi_act_actor_profile_surfaces( $group )['community']['modes']
-			&& 1 === preg_match( '#axismundi-activity-feed__page\b#', $ax_gp_forced_infinite )
+			&& 1 === preg_match( '#axismundi-feed-pagination__numbers\b#', $ax_gp_forced_infinite )
 			&& 0 === preg_match( '#axismundi-activity-feed__more-link#', $ax_gp_forced_infinite )
 	);
 
@@ -319,13 +319,13 @@ try {
 		// Collection tabs and the numbered pager both, since either would silently return the
 		// reader to cards on the first click and nothing about the page would look wrong after.
 		0 < preg_match_all( '#axismundi-activity-feed__view[^>]*href="[^"]*density=compact#', $ax_gp_compact_html )
-			&& 0 < preg_match_all( '#axismundi-activity-feed__(next|previous)-link" href="[^"]*density=compact#', $ax_gp_compact_html )
+			&& 0 < preg_match_all( '#axismundi-feed-pagination__(next|previous)" href="[^"]*density=compact#', $ax_gp_compact_html )
 			/*
 			 * Scoped to navigation, because the density switch itself must of course link to the
 			 * other density — including from card view, where it is the only way to reach compact.
 			 * The claim is about links that go somewhere else and carry the reader's density along.
 			 */
-			&& 0 === preg_match_all( '#axismundi-activity-feed__(view|next-link|previous-link)[^>]*href="[^"]*density=#', $ax_gp_card_html )
+			&& 0 === preg_match_all( '#(axismundi-activity-feed__view|axismundi-feed-pagination__(next|previous))[^>]*href="[^"]*density=#', $ax_gp_card_html )
 			&& false === strpos( $ax_gp_compact_html, 'view=compact' )
 	);
 

@@ -938,53 +938,19 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	}
 
 	/*
-	 * Load more is a real link before it is anything else. Without JavaScript it navigates to the
-	 * next cursor page, so the whole feed stays reachable by a reader with no script and by a
-	 * crawler. With JavaScript the same element fetches that page from the feed endpoint and
-	 * appends it once — constant work per step, which is the whole reason for doing it this way
-	 * rather than re-rendering a growing window.
-	 */
-	/*
-	 * The control is always present and hidden when there is nothing further, rather than being
-	 * removed and rebuilt. Changing the switches replaces the list from page one, and a link that
-	 * had been deleted would have to be recreated at exactly the right moment; one that is only
-	 * hidden simply reappears.
-	 */
-	$has_more = ! empty( $page['has_more'] ) && '' !== (string) $page['next_cursor'];
-	$more     = '<a class="axismundi-activity-feed__more-link" data-wp-on--click="actions.loadMore"'
-		. ( $has_more ? '' : ' hidden' )
-		. ' href="' . esc_url( $link_url( $surface, $filter, array( 'feed_after' => (string) $page['next_cursor'] ) ) ) . '">'
-		. esc_html__( 'Load more', 'axismundi-activities' ) . '</a>';
-	$newer = '';
-	if ( '' !== $cursor ) {
-		// A cursor names where the next page starts, not where the reader came from, so there is
-		// no honest "previous". The top is the one position always known to be real.
-		$newer = '<a class="axismundi-activity-feed__newer-link" href="' . esc_url( $link_url( $surface, $filter ) ) . '">'
-			. esc_html__( 'Back to the newest activity', 'axismundi-activities' ) . '</a>';
-	}
-	$navigation = '<nav class="axismundi-activity-feed__pagination" aria-label="' . esc_attr__( 'Timeline pages', 'axismundi-activities' ) . '">' . $newer . $more . '</nav>';
-	/*
-	 * A numbered pager instead, when the surface is walked that way.
+	 * How far along this page is, as a model rather than as a control.
 	 *
-	 * Plain links with no runtime behaviour: this surface changes page by navigating, which is the
-	 * whole reason its position is a number and not a cursor. That also means it works with no
-	 * script and that the address reproduces exactly what the reader is looking at.
+	 * The feed knows the position and how the collection is walked; what a reader presses to
+	 * walk it is the pager's, and the two shapes it can take are genuinely different controls.
 	 */
-	if ( 'pagination' === $mode ) {
-		$current_page = max( 1, (int) ( $page['page'] ?? 1 ) );
-		$total_pages  = max( 1, (int) ( $page['pages'] ?? 1 ) );
-		$page_link    = static function ( int $target, string $class, string $label ) use ( $link_url, $surface, $filter ) : string {
-			return '<a class="axismundi-activity-feed__' . esc_attr( $class ) . '" href="'
-				. esc_url( $link_url( $surface, $filter, array( 'page' => (string) $target ) ) ) . '">' . esc_html( $label ) . '</a>';
-		};
-		$navigation = $total_pages < 2 ? '' : '<nav class="axismundi-activity-feed__pagination" aria-label="'
-			. esc_attr__( 'Archive pages', 'axismundi-activities' ) . '">'
-			. ( $current_page > 1 ? $page_link( $current_page - 1, 'previous-link', __( 'Newer', 'axismundi-activities' ) ) : '' )
-			/* translators: 1: current page number, 2: total page count. */
-			. '<span class="axismundi-activity-feed__page">' . esc_html( sprintf( __( 'Page %1$d of %2$d', 'axismundi-activities' ), $current_page, $total_pages ) ) . '</span>'
-			. ( $current_page < $total_pages ? $page_link( $current_page + 1, 'next-link', __( 'Older', 'axismundi-activities' ) ) : '' )
-			. '</nav>';
-	}
+	$page_model = array(
+		'page'       => (int) ( $page['page'] ?? 1 ),
+		'pages'      => (int) ( $page['pages'] ?? 1 ),
+		'hasMore'    => ! empty( $page['has_more'] ),
+		'nextCursor' => (string) ( $page['next_cursor'] ?? '' ),
+		'cursor'     => $cursor,
+	);
+
 	$reaction_host = function_exists( 'axismundi_act_render_feed_reaction_picker_host' )
 		? axismundi_act_render_feed_reaction_picker_host()
 		: '';
@@ -1009,7 +975,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		'actorUri'      => $actor->get_uri(),
 		'surface'       => $surface,
 		'filter'        => $filter,
-		'cursor'        => $has_more ? (string) $page['next_cursor'] : '',
+		'cursor'        => ! empty( $page_model['hasMore'] ) && '' !== $page_model['nextCursor'] ? $page_model['nextCursor'] : '',
 		'perPage'       => $per_page,
 		'defaultFilter' => (string) $current['default_filter'],
 		'filterLabel'   => (string) $current['filters'][ $filter ],
@@ -1072,9 +1038,20 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	$body = axismundi_act_render_feed_body(
 		axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ),
 		array(
-			'filters'      => $filter_nav,
-			'density'      => $density_nav,
-			'pagination'   => $navigation,
+			/*
+			 * Markup keys and state keys are named apart on purpose. `density` is the reader's
+			 * current choice and rides on every link the pager builds; `densityHtml` is the switch
+			 * that offers the choice. One name for both put a block of markup into a URL.
+			 */
+			'filtersHtml'    => $filter_nav,
+			'densityHtml'    => $density_nav,
+			'baseUrl'        => $base_url,
+			'surface'        => $surface,
+			'filter'         => $filter,
+			'defaultFilter'  => (string) $current['default_filter'],
+			'density'        => $density,
+			'navigation'     => $mode,
+			'page'           => $page_model,
 			'cards'        => $cards,
 			'announceHost' => $announce_host,
 			'reactionHost' => $reaction_host,
@@ -1089,6 +1066,147 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		. $surface_nav
 		. $body
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.
+}
+
+/**
+ * One address for a feed, built from the feed's own state rather than from a closure.
+ *
+ * A pure function over the context so the blocks can address the feed without being handed a
+ * callable: context stays data, which is what survives being serialized, inspected, or read by a
+ * block rendering on a request the feed did not build.
+ *
+ * The surface and the filter ride on every link, so following a pager does not quietly reset
+ * which entries are shown, and each is left out when it already is the default so an ordinary
+ * address stays short. The density is not added here: the base address already carries it under
+ * the same rule, and stating one rule in two places is how the two copies start disagreeing.
+ *
+ * @param array<string,mixed>  $context Feed context.
+ * @param array<string,string> $query   Extra arguments, such as a page or a cursor.
+ * @return string
+ */
+function axismundi_act_feed_url( array $context, array $query = array() ) : string {
+	$url     = (string) ( $context['baseUrl'] ?? '' );
+	$surface = (string) ( $context['surface'] ?? 'activity' );
+	if ( 'activity' !== $surface ) {
+		$url = add_query_arg( 'view', $surface, $url );
+	}
+	if ( (string) ( $context['filter'] ?? '' ) !== (string) ( $context['defaultFilter'] ?? '' ) ) {
+		$url = add_query_arg( 'filter', (string) $context['filter'], $url );
+	}
+	foreach ( $query as $key => $value ) {
+		$url = add_query_arg( $key, rawurlencode( (string) $value ), $url );
+	}
+	return $url;
+}
+
+/**
+ * The pager, in whichever shape this surface is walked by.
+ *
+ * Both shapes live here rather than being chosen by the feed and handed over as finished markup.
+ * How a collection is walked is the feed's decision and is already in the context; what a reader
+ * presses in order to walk it is this block's, and the two are genuinely different controls — one
+ * navigates, one appends.
+ *
+ * @param array<string,mixed> $attributes Block attributes.
+ * @param string              $content    Inner blocks, of which there are none.
+ * @param WP_Block|null       $block      Block instance carrying the feed context.
+ * @return string
+ */
+function axismundi_act_render_feed_pagination_block( array $attributes = array(), string $content = '', $block = null ) : string {
+	unset( $attributes, $content );
+	$context = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
+	if ( array() === $context ) {
+		return '';
+	}
+	$page = (array) ( $context['page'] ?? array() );
+	return 'pagination' === (string) ( $context['navigation'] ?? 'infinite' )
+		? axismundi_act_feed_numbered_pager( $context, $page )
+		: axismundi_act_feed_cursor_pager( $context, $page );
+}
+
+/**
+ * A numbered pager, in the markup the theme already styles.
+ *
+ * `core/query-pagination`'s class contract, because this is the same control answering the same
+ * question and a reader should not be able to tell which block drew it. Plain links with no
+ * runtime behaviour: this surface changes page by navigating, which is the whole reason its
+ * position is a number and not a cursor. It works with no script, and the address reproduces
+ * exactly what the reader is looking at.
+ *
+ * Its own spacing is not set here. Where the pager sits, and what it is wrapped in, belongs to the
+ * template that placed it.
+ *
+ * @param array<string,mixed> $context Feed context.
+ * @param array<string,mixed> $page    Page model.
+ * @return string
+ */
+function axismundi_act_feed_numbered_pager( array $context, array $page ) : string {
+	$current = max( 1, (int) ( $page['page'] ?? 1 ) );
+	$total   = max( 1, (int) ( $page['pages'] ?? 1 ) );
+	if ( $total < 2 ) {
+		return '';
+	}
+	$link = static function ( int $target, string $class, string $label ) use ( $context ) : string {
+		return '<a class="wp-block-query-pagination-' . esc_attr( $class ) . ' axismundi-feed-pagination__' . esc_attr( $class ) . '"'
+			. ' href="' . esc_url( axismundi_act_feed_url( $context, array( 'page' => (string) $target ) ) ) . '">'
+			. esc_html( $label ) . '</a>';
+	};
+	return '<nav class="wp-block-query-pagination axismundi-feed-pagination is-navigation-pagination" aria-label="'
+		. esc_attr__( 'Archive pages', 'axismundi-activities' ) . '">'
+		. ( $current > 1 ? $link( $current - 1, 'previous', __( 'Newer', 'axismundi-activities' ) ) : '' )
+		/* translators: 1: current page number, 2: total page count. */
+		. '<span class="wp-block-query-pagination-numbers axismundi-feed-pagination__numbers">' . esc_html( sprintf( __( 'Page %1$d of %2$d', 'axismundi-activities' ), $current, $total ) ) . '</span>'
+		. ( $current < $total ? $link( $current + 1, 'next', __( 'Older', 'axismundi-activities' ) ) : '' )
+		. '</nav>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links and labels are escaped above.
+}
+
+/**
+ * A cursor pager: one control that continues the feed in place.
+ *
+ * Load more is a real link before it is anything else. With no script it navigates to the next
+ * cursor page, so the whole feed stays reachable by a reader without script and by a crawler; with
+ * script the same element fetches that page and appends it once.
+ *
+ * The control is always present and hidden when there is nothing further, rather than removed and
+ * rebuilt: changing the filters replaces the list from page one, and a link that had been deleted
+ * would have to be recreated at exactly the right moment, while one that is only hidden reappears.
+ *
+ * @param array<string,mixed> $context Feed context.
+ * @param array<string,mixed> $page    Page model.
+ * @return string
+ */
+function axismundi_act_feed_cursor_pager( array $context, array $page ) : string {
+	$has_more = ! empty( $page['hasMore'] ) && '' !== (string) ( $page['nextCursor'] ?? '' );
+	$newer    = '';
+	if ( '' !== (string) ( $page['cursor'] ?? '' ) ) {
+		// A cursor names where the next page starts, not where the reader came from, so there is no
+		// honest "previous". The top is the one position always known to be real.
+		$newer = '<a class="axismundi-feed-pagination__newer axismundi-activity-feed__newer-link" href="'
+			. esc_url( axismundi_act_feed_url( $context ) ) . '">'
+			. esc_html__( 'Back to the newest activity', 'axismundi-activities' ) . '</a>';
+	}
+	/*
+	 * The busy state is drawn rather than borrowed from an icon font.
+	 *
+	 * A circular indeterminate indicator is a shape and a motion, and `progress_activity` is a
+	 * static glyph that would need both put back on top of it. Indeterminate and not a value: the
+	 * feed does not know how much of the next page has arrived, and an indicator that filled at a
+	 * rate nobody measured would be claiming it did.
+	 */
+	$busy = '<span class="axismundi-feed-pagination__loading" aria-hidden="true">'
+		. '<svg viewBox="0 0 48 48" focusable="false" aria-hidden="true">'
+		. '<circle cx="24" cy="24" r="20" fill="none" stroke-width="4" pathLength="100" />'
+		. '</svg></span>';
+	$more = '<a class="axismundi-feed-pagination__more axismundi-activity-feed__more-link"'
+		. ' data-wp-on--click="actions.loadMore"'
+		. ' data-wp-bind--aria-busy="context.isPending"'
+		. ( $has_more ? '' : ' hidden' )
+		. ' href="' . esc_url( axismundi_act_feed_url( $context, array( 'feed_after' => (string) ( $page['nextCursor'] ?? '' ) ) ) ) . '">'
+		. $busy
+		. '<span class="axismundi-feed-pagination__more-label">' . esc_html__( 'Load more', 'axismundi-activities' ) . '</span>'
+		. '</a>';
+	return '<nav class="axismundi-feed-pagination axismundi-activity-feed__pagination is-navigation-infinite" aria-label="'
+		. esc_attr__( 'Timeline pages', 'axismundi-activities' ) . '">' . $newer . $more . '</nav>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links and labels are escaped above.
 }
 
 /**
@@ -1111,19 +1229,13 @@ function axismundi_act_feed_chrome_part( string $key, $block ) : string {
 /** The filter control, where the template placed it. */
 function axismundi_act_render_feed_filters_block( array $attributes = array(), string $content = '', $block = null ) : string {
 	unset( $attributes, $content );
-	return axismundi_act_feed_chrome_part( 'filters', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
+	return axismundi_act_feed_chrome_part( 'filtersHtml', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
 }
 
 /** The density switch, where the template placed it. */
 function axismundi_act_render_feed_density_switch_block( array $attributes = array(), string $content = '', $block = null ) : string {
 	unset( $attributes, $content );
-	return axismundi_act_feed_chrome_part( 'density', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
-}
-
-/** The pager — cursor or numbered, whichever this surface is walked by — where the template placed it. */
-function axismundi_act_render_feed_pagination_block( array $attributes = array(), string $content = '', $block = null ) : string {
-	unset( $attributes, $content );
-	return axismundi_act_feed_chrome_part( 'pagination', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
+	return axismundi_act_feed_chrome_part( 'densityHtml', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
 }
 
 /**

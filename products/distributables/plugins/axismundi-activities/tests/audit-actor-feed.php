@@ -518,7 +518,7 @@ try {
 		$ax_feed_results,
 		'the rendered feed offers a real cursor link for Load more, not a script-only control',
 		false !== strpos( $paginated_markup, 'feed_after=' )
-			&& 1 === preg_match( '/<a class="axismundi-activity-feed__more-link"[^>]+href="[^"]+"/', $paginated_markup )
+			&& 1 === preg_match( '/<a class="[^"]*axismundi-activity-feed__more-link"[^>]+href="[^"]+"/', $paginated_markup )
 			&& false !== strpos( $paginated_markup, 'data-wp-on--click="actions.loadMore"' )
 			// The list container is always present, because appended pages need something to
 			// attach to even when the first page came back empty.
@@ -861,10 +861,19 @@ try {
 			);
 			$html   = axismundi_act_render_feed_body(
 				axismundi_act_feed_surface_blocks( $blocks, 'activity' ),
-				array( 'filters' => '<i id="ax-f"></i>', 'density' => '<i id="ax-d"></i>', 'pagination' => '<i id="ax-p"></i>', 'cards' => '' )
+				array(
+					'filtersHtml' => '<i id="ax-f"></i>',
+					'densityHtml' => '<i id="ax-d"></i>',
+					'cards'      => '',
+					// The pager draws itself from the model now, so it is given one rather than a marker:
+					// a control that renders nothing cannot be found in an order.
+					'baseUrl'    => 'https://example.test/@ax',
+					'navigation' => 'infinite',
+					'page'       => array( 'hasMore' => true, 'nextCursor' => 'c1', 'cursor' => '' ),
+				)
 			);
 			$found = array();
-			foreach ( array( 'ax-f' => 'filters', 'ax-d' => 'density', 'axismundi-activity-feed__list' => 'list', 'ax-p' => 'pagination' ) as $needle => $name ) {
+			foreach ( array( 'ax-f' => 'filters', 'ax-d' => 'density', 'axismundi-activity-feed__list' => 'list', 'axismundi-feed-pagination' => 'pagination' ) as $needle => $name ) {
 				$at = strpos( $html, $needle );
 				if ( false !== $at ) {
 					$found[ $at ] = $name;
@@ -1107,8 +1116,8 @@ ax_feed_assert(
 	'each surface is read out of its own tab, so two tabs can hold different cards and different chrome',
 	false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_activity, 'card' ), 'object-title' )
 		&& false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_community, 'card' ), 'object-summary' )
-		&& false !== strpos( axismundi_act_render_feed_body( $ax_feed_tab_activity, array( 'filters' => '<i id="ax-f"></i>' ) ), 'ax-f' )
-		&& false === strpos( axismundi_act_render_feed_body( $ax_feed_tab_community, array( 'filters' => '<i id="ax-f"></i>' ) ), 'ax-f' )
+		&& false !== strpos( axismundi_act_render_feed_body( $ax_feed_tab_activity, array( 'filtersHtml' => '<i id="ax-f"></i>', 'navigation' => 'infinite', 'page' => array() ) ), 'ax-f' )
+		&& false === strpos( axismundi_act_render_feed_body( $ax_feed_tab_community, array( 'filtersHtml' => '<i id="ax-f"></i>', 'navigation' => 'infinite', 'page' => array() ) ), 'ax-f' )
 );
 
 /*

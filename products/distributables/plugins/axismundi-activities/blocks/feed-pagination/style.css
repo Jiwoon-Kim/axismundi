@@ -1,0 +1,78 @@
+/*
+ * The pager's own busy indicator.
+ *
+ * Only the indicator. Where the pager sits, how it is spaced and what a numbered page link looks
+ * like are the template's and the theme's — the numbered shape deliberately carries
+ * `wp-block-query-pagination` classes so it inherits whatever the theme already gives that
+ * control, and this file adds nothing to them.
+ */
+.axismundi-feed-pagination__loading {
+	display: none;
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	flex: none;
+}
+
+/*
+ * Shown only while a page is in flight. `aria-busy` is set by the runtime on the link itself, so
+ * the indicator appears for exactly as long as the request it describes — and never at all
+ * without script, where the same element is an ordinary link that navigates.
+ */
+.axismundi-activity-feed__more-link[aria-busy="true"] .axismundi-feed-pagination__loading {
+	display: inline-block;
+}
+
+.axismundi-feed-pagination__loading svg {
+	inline-size: 100%;
+	block-size: 100%;
+	animation: axismundi-feed-pagination-rotate 1.6s linear infinite;
+}
+
+/*
+ * Indeterminate: the arc grows and shrinks while the whole thing turns, which reads as "working"
+ * rather than as a proportion. The feed does not know how much of the next page has arrived, so
+ * nothing here should look like it is measuring one.
+ */
+.axismundi-feed-pagination__loading circle {
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-dasharray: 25 100;
+	transform-origin: center;
+	animation: axismundi-feed-pagination-arc 1.6s ease-in-out infinite;
+}
+
+@keyframes axismundi-feed-pagination-rotate {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes axismundi-feed-pagination-arc {
+	0% {
+		stroke-dasharray: 10 100;
+		stroke-dashoffset: 0;
+	}
+	50% {
+		stroke-dasharray: 70 100;
+		stroke-dashoffset: -15;
+	}
+	100% {
+		stroke-dasharray: 10 100;
+		stroke-dashoffset: -85;
+	}
+}
+
+/*
+ * Reduced motion keeps the indicator and drops the spin: something still has to say the control is
+ * busy, and a static ring beside a disabled link says it without moving.
+ */
+@media ( prefers-reduced-motion: reduce ) {
+	.axismundi-feed-pagination__loading svg,
+	.axismundi-feed-pagination__loading circle {
+		animation: none;
+	}
+
+	.axismundi-feed-pagination__loading circle {
+		stroke-dasharray: 70 100;
+	}
+}

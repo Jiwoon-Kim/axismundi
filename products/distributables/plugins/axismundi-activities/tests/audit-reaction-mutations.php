@@ -136,7 +136,7 @@ try {
 	$ax_rm_remote_uri = 'https://remote.example/objects/' . strtolower( wp_generate_password( 10, false, false ) );
 	$ax_rm_remote[]   = $ax_rm_remote_uri;
 	$ax_rm_remote_actor = 'https://remote.example/users/' . strtolower( wp_generate_password( 8, false, false ) );
-	axismundi_op_remote_object_store( array( 'id' => $ax_rm_remote_uri, 'type' => 'Note', 'attributedTo' => $ax_rm_remote_actor, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote fixture.' ) );
+	axismundi_op_store_remote_object( array( 'id' => $ax_rm_remote_uri, 'type' => 'Note', 'attributedTo' => $ax_rm_remote_actor, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote fixture.' ) );
 	$ax_rm_before_leases = axismundi_op_active_lease_count( $ax_rm_remote_uri );
 	$ax_rm_remote_react  = axismundi_act_react_to_object( $ax_rm_actor, $ax_rm_remote_uri, '❤' );
 	if ( $ax_rm_remote_react instanceof Axismundi_Activity ) {

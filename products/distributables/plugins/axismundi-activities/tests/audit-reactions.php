@@ -60,7 +60,7 @@ try {
 	if ( $remote instanceof Axismundi_Actor ) {
 		$ax_react_identities[] = $remote->get_identity_id();
 	}
-	$stored = axismundi_op_remote_object_store( array( 'id' => $ax_react_object_uri, 'type' => 'Note', 'attributedTo' => $remote_uri, 'content' => 'Remote Note.' ) );
+	$stored = axismundi_op_store_remote_object( array( 'id' => $ax_react_object_uri, 'type' => 'Note', 'attributedTo' => $remote_uri, 'content' => 'Remote Note.' ) );
 	ax_react_assert( $ax_react_results, 'fixture creates one local reaction Actor and one cached remote target', $local instanceof Axismundi_Actor && $remote instanceof Axismundi_Actor && is_array( $stored ) );
 
 	$like = axismundi_act_like_object( $local, $ax_react_object_uri, $remote_uri );

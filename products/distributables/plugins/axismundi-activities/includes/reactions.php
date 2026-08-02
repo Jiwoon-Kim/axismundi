@@ -132,7 +132,7 @@ function axismundi_act_local_emoji_declaration( string $content ) : ?array {
  * refuse to publish would arrive as a bare word.
  */
 function axismundi_act_object_is_local( string $object_uri ) : bool {
-	if ( function_exists( 'axismundi_op_remote_object_get' ) && is_array( axismundi_op_remote_object_get( $object_uri, false ) ) ) {
+	if ( function_exists( 'axismundi_op_get_remote_object' ) && is_array( axismundi_op_get_remote_object( $object_uri, false ) ) ) {
 		return false;
 	}
 	$host = strtolower( (string) wp_parse_url( $object_uri, PHP_URL_HOST ) );
@@ -285,7 +285,7 @@ function axismundi_act_unreact_to_object( Axismundi_Actor $actor, string $object
 
 /** Keep Object Projections interaction leases aligned with committed Like/Undo rows. */
 function axismundi_act_sync_reaction_lease( Axismundi_Activity $activity ) : void {
-	if ( ! function_exists( 'axismundi_op_remote_object_get' ) || ! function_exists( 'axismundi_op_add_lease' ) || ! function_exists( 'axismundi_op_release_lease' ) ) {
+	if ( ! function_exists( 'axismundi_op_get_remote_object' ) || ! function_exists( 'axismundi_op_add_lease' ) || ! function_exists( 'axismundi_op_release_lease' ) ) {
 		return;
 	}
 	/*
@@ -295,7 +295,7 @@ function axismundi_act_sync_reaction_lease( Axismundi_Activity $activity ) : voi
 	 * holding several reactions holds several leases and withdrawing one releases only that
 	 * one.
 	 */
-	if ( in_array( $activity->get_type(), array( 'Like', 'EmojiReact' ), true ) && $activity->is_effective() && null !== $activity->get_object_uri() && axismundi_op_remote_object_get( $activity->get_object_uri() ) ) {
+	if ( in_array( $activity->get_type(), array( 'Like', 'EmojiReact' ), true ) && $activity->is_effective() && null !== $activity->get_object_uri() && axismundi_op_get_remote_object( $activity->get_object_uri() ) ) {
 		axismundi_op_add_lease( $activity->get_object_uri(), 'interaction', $activity->get_uri() );
 		return;
 	}

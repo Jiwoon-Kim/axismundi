@@ -154,10 +154,10 @@ function axismundi_act_unannounce_object( Axismundi_Actor $actor, string $object
 
 /** Keep remote-object interaction leases aligned with effective Announce cycles. */
 function axismundi_act_sync_announce_lease( Axismundi_Activity $activity ) : void {
-	if ( ! function_exists( 'axismundi_op_remote_object_get' ) || ! function_exists( 'axismundi_op_add_lease' ) || ! function_exists( 'axismundi_op_release_lease' ) ) {
+	if ( ! function_exists( 'axismundi_op_get_remote_object' ) || ! function_exists( 'axismundi_op_add_lease' ) || ! function_exists( 'axismundi_op_release_lease' ) ) {
 		return;
 	}
-	if ( 'Announce' === $activity->get_type() && $activity->is_effective() && null !== $activity->get_object_uri() && axismundi_op_remote_object_get( $activity->get_object_uri() ) ) {
+	if ( 'Announce' === $activity->get_type() && $activity->is_effective() && null !== $activity->get_object_uri() && axismundi_op_get_remote_object( $activity->get_object_uri() ) ) {
 		axismundi_op_add_lease( $activity->get_object_uri(), 'interaction', $activity->get_uri() );
 		return;
 	}

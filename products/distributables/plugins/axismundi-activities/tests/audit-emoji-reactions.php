@@ -88,7 +88,7 @@ try {
 	axismundi_act_install();
 	$ax_er_a = ax_er_actor( $ax_er_alice, $ax_er_identities );
 	$ax_er_b = ax_er_actor( $ax_er_bob, $ax_er_identities );
-	axismundi_op_remote_object_store( array( 'id' => $ax_er_object, 'type' => 'Note', 'attributedTo' => $ax_er_alice, 'content' => 'target' ) );
+	axismundi_op_store_remote_object( array( 'id' => $ax_er_object, 'type' => 'Note', 'attributedTo' => $ax_er_alice, 'content' => 'target' ) );
 	ax_er_assert( $ax_er_results, 'the fixture caches two Actors and one target Object', $ax_er_a instanceof Axismundi_Actor && $ax_er_b instanceof Axismundi_Actor );
 
 	$ax_er_react = static function ( string $actor, string $id, $content, array $extra = array() ) use ( $ax_er_object ) {

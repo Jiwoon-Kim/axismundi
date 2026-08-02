@@ -55,8 +55,8 @@ try {
 	if ( $remote instanceof Axismundi_Actor ) {
 		$identities[] = $remote->get_identity_id();
 	}
-	$public = axismundi_op_remote_object_store( array( 'id' => $public_uri, 'type' => 'Note', 'attributedTo' => $remote_uri, 'content' => 'Public Note.', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) );
-	$private = axismundi_op_remote_object_store( array( 'id' => $private_uri, 'type' => 'Note', 'attributedTo' => $remote_uri, 'content' => 'Private Note.', 'to' => array( $remote_uri . '/followers' ) ) );
+	$public = axismundi_op_store_remote_object( array( 'id' => $public_uri, 'type' => 'Note', 'attributedTo' => $remote_uri, 'content' => 'Public Note.', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) );
+	$private = axismundi_op_store_remote_object( array( 'id' => $private_uri, 'type' => 'Note', 'attributedTo' => $remote_uri, 'content' => 'Private Note.', 'to' => array( $remote_uri . '/followers' ) ) );
 	ax_announce_assert( $results, 'fixture creates one local Actor and public/private cached targets', $local instanceof Axismundi_Actor && $remote instanceof Axismundi_Actor && is_array( $public ) && is_array( $private ) );
 
 	$denied = $local instanceof Axismundi_Actor ? axismundi_act_announce_object( $local, $private_uri, $remote_uri ) : null;

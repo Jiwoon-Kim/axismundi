@@ -13,8 +13,8 @@ function axismundi_act_resolve_like_target( string $object_uri ) {
 	if ( '' === $uri ) {
 		return new WP_Error( 'ax_act_like_target', __( 'The object URI is invalid.', 'axismundi-activities' ) );
 	}
-	if ( function_exists( 'axismundi_op_remote_object_get' ) ) {
-		$remote = axismundi_op_remote_object_get( $uri, false );
+	if ( function_exists( 'axismundi_op_get_remote_object' ) ) {
+		$remote = axismundi_op_get_remote_object( $uri, false );
 		if ( is_array( $remote ) ) {
 			if ( 'active' !== (string) $remote['object_status'] || empty( $remote['attributed_to_uri'] ) ) {
 				return new WP_Error( 'ax_act_like_target_unavailable', __( 'The remote object cannot currently receive a Like.', 'axismundi-activities' ), array( 'status' => 409 ) );

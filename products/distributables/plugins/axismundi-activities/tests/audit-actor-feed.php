@@ -69,11 +69,11 @@ try {
 	$private_note_uri  = 'https://example.com/notes/' . wp_generate_uuid4();
 	$tomb_note_uri     = 'https://example.com/notes/' . wp_generate_uuid4();
 	$ax_feed_remote    = array( $remote_note_uri, $observed_note_uri, $unanchored_note_uri, $private_note_uri, $tomb_note_uri );
-	$stored_active    = axismundi_op_remote_object_store( array( 'id' => $remote_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Boosted remote note body.', 'to' => array( $public_uri ) ) );
-	$stored_observed  = axismundi_op_remote_object_store( array( 'id' => $observed_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Fetched reply parent body.', 'published' => '2026-07-22T00:00:00Z', 'to' => array( $public_uri ) ) );
-	$stored_unanchored = axismundi_op_remote_object_store( array( 'id' => $unanchored_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Still cache-only parent body.', 'published' => '2026-07-21T00:00:00Z', 'to' => array( $public_uri ) ) );
-	$stored_private   = axismundi_op_remote_object_store( array( 'id' => $private_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Followers-only cached parent.', 'to' => array( $remote_actor_uri . '/followers' ) ) );
-	$stored_tomb      = axismundi_op_remote_object_store( array( 'id' => $tomb_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Tombstoned remote note.', 'to' => array( $public_uri ) ) );
+	$stored_active    = axismundi_op_store_remote_object( array( 'id' => $remote_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Boosted remote note body.', 'to' => array( $public_uri ) ) );
+	$stored_observed  = axismundi_op_store_remote_object( array( 'id' => $observed_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Fetched reply parent body.', 'published' => '2026-07-22T00:00:00Z', 'to' => array( $public_uri ) ) );
+	$stored_unanchored = axismundi_op_store_remote_object( array( 'id' => $unanchored_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Still cache-only parent body.', 'published' => '2026-07-21T00:00:00Z', 'to' => array( $public_uri ) ) );
+	$stored_private   = axismundi_op_store_remote_object( array( 'id' => $private_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Followers-only cached parent.', 'to' => array( $remote_actor_uri . '/followers' ) ) );
+	$stored_tomb      = axismundi_op_store_remote_object( array( 'id' => $tomb_note_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'content' => 'Tombstoned remote note.', 'to' => array( $public_uri ) ) );
 	ax_feed_assert( $ax_feed_results, 'fixture caches public and followers-only remote Objects for one Actor', is_array( $stored_active ) && is_array( $stored_observed ) && is_array( $stored_unanchored ) && is_array( $stored_private ) && is_array( $stored_tomb ) && $remote_actor instanceof Axismundi_Actor );
 
 	$ax_feed_post_id = (int) wp_insert_post(

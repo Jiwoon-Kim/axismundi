@@ -37,8 +37,8 @@ try {
 		is_wp_error( axismundi_op_remote_object_uri( 'https://user:pass@example.com/object' ) )
 			&& is_wp_error( axismundi_op_remote_object_uri( 'urn:example:object' ) )
 	);
-	$activity = axismundi_op_remote_object_store( array( 'id' => 'https://remote.example/activities/1', 'type' => 'Create' ) );
-	$actor    = axismundi_op_remote_object_store( array( 'id' => 'https://remote.example/users/alice', 'type' => 'Person' ) );
+	$activity = axismundi_op_store_remote_object( array( 'id' => 'https://remote.example/activities/1', 'type' => 'Create' ) );
+	$actor    = axismundi_op_store_remote_object( array( 'id' => 'https://remote.example/users/alice', 'type' => 'Person' ) );
 	ax_remote_assert( $ax_remote_results, 'Activity and Actor documents are rejected instead of crossing repository ownership', is_wp_error( $activity ) && is_wp_error( $actor ) && 'ax_op_remote_type' === $activity->get_error_code() && 'ax_op_remote_type' === $actor->get_error_code() );
 
 	$payload = array(
@@ -55,7 +55,7 @@ try {
 		'mediaType'    => 'text/html',
 		'published'    => '2026-07-14T10:00:00Z',
 	);
-	$stored  = axismundi_op_remote_object_store( $payload, array( 'etag' => '"phase-4a"' ) );
+	$stored  = axismundi_op_store_remote_object( $payload, array( 'etag' => '"phase-4a"' ) );
 	ax_remote_assert(
 		$ax_remote_results,
 		'a Note snapshot stores canonical identity, scalar relation URIs, and response validators',
@@ -78,16 +78,16 @@ try {
 	$first_id              = is_array( $stored ) ? (int) $stored['id'] : 0;
 	$payload['content']     = '<p>Updated observation.</p>';
 	$payload['sensitive']   = false;
-	$updated                = axismundi_op_remote_object_store( $payload );
+	$updated                = axismundi_op_store_remote_object( $payload );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture counts its own URI row.
 	$row_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE object_uri_hash = %s", hash( 'sha256', $ax_remote_uris[0] ) ) );
 	ax_remote_assert( $ax_remote_results, 'upserting the same URI is idempotent and preserves explicit sensitive=false', is_array( $updated ) && $first_id === (int) $updated['id'] && 1 === $row_count && 0 === (int) $updated['is_sensitive'] && false !== strpos( (string) $updated['content'], 'Updated observation' ) );
 
-	$bad = axismundi_op_remote_object_store( array( 'id' => $ax_remote_uris[0] ) );
-	$after_bad = axismundi_op_remote_object_get( $ax_remote_uris[0] );
+	$bad = axismundi_op_store_remote_object( array( 'id' => $ax_remote_uris[0] ) );
+	$after_bad = axismundi_op_get_remote_object( $ax_remote_uris[0] );
 	ax_remote_assert( $ax_remote_results, 'invalid refresh input returns an error and preserves the last good snapshot', is_wp_error( $bad ) && is_array( $after_bad ) && (string) $updated['payload_hash'] === (string) $after_bad['payload_hash'] );
 
-	$oversized = axismundi_op_remote_object_store(
+	$oversized = axismundi_op_store_remote_object(
 		array(
 			'id'      => 'https://remote.example/objects/too-large',
 			'type'    => 'Note',
@@ -96,7 +96,7 @@ try {
 	);
 	ax_remote_assert( $ax_remote_results, 'payloads over the one MiB repository cap are rejected before writing', is_wp_error( $oversized ) && 'ax_op_remote_payload_size' === $oversized->get_error_code() );
 
-	$tombstone = axismundi_op_remote_object_store(
+	$tombstone = axismundi_op_store_remote_object(
 		array(
 			'id'     => $ax_remote_uris[1],
 			'type'   => 'Tombstone',
@@ -106,11 +106,11 @@ try {
 	);
 	ax_remote_assert( $ax_remote_results, 'Tombstone observations are retained as lifecycle state rather than treated as missing', is_array( $tombstone ) && 'tombstone' === $tombstone['object_status'] );
 
-	$deleted = axismundi_op_remote_object_delete( $ax_remote_uris[0] );
-	ax_remote_assert( $ax_remote_results, 'cache deletion removes only the addressed local observation', $deleted && null === axismundi_op_remote_object_get( $ax_remote_uris[0] ) && null !== axismundi_op_remote_object_get( $ax_remote_uris[1] ) );
+	$deleted = axismundi_op_delete_remote_object( $ax_remote_uris[0] );
+	ax_remote_assert( $ax_remote_results, 'cache deletion removes only the addressed local observation', $deleted && null === axismundi_op_get_remote_object( $ax_remote_uris[0] ) && null !== axismundi_op_get_remote_object( $ax_remote_uris[1] ) );
 } finally {
 	foreach ( $ax_remote_uris as $ax_remote_uri ) {
-		axismundi_op_remote_object_delete( $ax_remote_uri );
+		axismundi_op_delete_remote_object( $ax_remote_uri );
 	}
 }
 

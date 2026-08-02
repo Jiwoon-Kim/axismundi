@@ -62,7 +62,7 @@ function axismundi_op_schedule_announced_object_fetch( string $object_uri ) : bo
 	if ( 'https' !== strtolower( (string) wp_parse_url( $object_uri, PHP_URL_SCHEME ) ) || '' === (string) wp_parse_url( $object_uri, PHP_URL_HOST ) ) {
 		return false;
 	}
-	if ( is_array( axismundi_op_remote_object_get( $object_uri ) ) ) {
+	if ( is_array( axismundi_op_get_remote_object( $object_uri ) ) ) {
 		return false;
 	}
 	$args = array( $object_uri );
@@ -74,7 +74,7 @@ function axismundi_op_schedule_announced_object_fetch( string $object_uri ) : bo
 
 /** Run one deferred Announce target acquisition. */
 function axismundi_op_fetch_announced_object( string $object_uri ) : void {
-	if ( ! is_array( axismundi_op_remote_object_get( $object_uri ) ) ) {
+	if ( ! is_array( axismundi_op_get_remote_object( $object_uri ) ) ) {
 		axismundi_op_remote_object_fetch( $object_uri );
 	}
 }
@@ -114,7 +114,7 @@ function axismundi_op_remote_object_fetch( string $url ) {
 		return new WP_Error( 'ax_op_remote_fetch_url', __( 'Enter a safe public HTTPS object URL.', 'axismundi-object-projections' ) );
 	}
 
-	$existing = axismundi_op_remote_object_get( $url );
+	$existing = axismundi_op_get_remote_object( $url );
 	$headers  = array(
 		'Accept'     => 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/json;q=0.5',
 		'User-Agent' => 'Axismundi Object Projections/' . AXISMUNDI_OP_VERSION . '; ' . home_url( '/' ),
@@ -197,7 +197,7 @@ function axismundi_op_remote_object_fetch( string $url ) {
 		return axismundi_op_remote_fetch_error( $url, 'ax_op_remote_fetch_json', __( 'The remote response is not a JSON object.', 'axismundi-object-projections' ) );
 	}
 
-	$stored = axismundi_op_remote_object_store(
+	$stored = axismundi_op_store_remote_object(
 		$payload,
 		array(
 			'etag'          => (string) wp_remote_retrieve_header( $response, 'etag' ),

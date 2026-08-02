@@ -97,7 +97,7 @@ try {
 	// Thread fixtures declare the public audience they are meant to represent:
 	// a publicly rendered thread proves each remote member is public rather than
 	// trusting that observing it was enough.
-	$stored_parent = axismundi_op_remote_object_store( array( 'id' => $unknown_parent, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Now cached remote parent.' ) );
+	$stored_parent = axismundi_op_store_remote_object( array( 'id' => $unknown_parent, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Now cached remote parent.' ) );
 	$ax_te_remote_uris[] = $unknown_parent;
 	$reconciled_edge = axismundi_op_get_thread_edge( $waiting_reply['uri'] );
 	ax_te_assert( $ax_te_results, 'caching the remote parent reconciles the waiting edge to resolved with root and depth', is_array( $stored_parent ) && is_array( $reconciled_edge ) && 'resolved' === $reconciled_edge['resolution_state'] && $unknown_parent === $reconciled_edge['root_uri'] && 1 === (int) $reconciled_edge['depth'] );
@@ -126,7 +126,7 @@ try {
 	}
 	$remote_question_uri = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
 	$remote_quote_uri    = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
-	$stored_question = axismundi_op_remote_object_store(
+	$stored_question = axismundi_op_store_remote_object(
 		array(
 			'id'           => $remote_question_uri,
 			'type'         => 'Question',
@@ -150,7 +150,7 @@ try {
 	// surface it exactly like a local reply, and a tombstoned remote child must
 	// still appear (as a deleted placeholder), never silently vanish.
 	$remote_reply_uri = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
-	$stored_remote_reply = axismundi_op_remote_object_store( array( 'id' => $remote_reply_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote reply to our root.' ) );
+	$stored_remote_reply = axismundi_op_store_remote_object( array( 'id' => $remote_reply_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote reply to our root.' ) );
 	$ax_te_remote_uris[] = $remote_reply_uri;
 	$ax_te_edge_uris[]   = $remote_reply_uri;
 	$mixed_reply_uris = axismundi_op_get_thread_reply_uris( $root['uri'] );
@@ -169,7 +169,7 @@ try {
 	// remote reply to a public parent must not surface in the anonymous thread,
 	// and it must not take the rendered branch down with it either.
 	$ax_te_private_reply = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
-	axismundi_op_remote_object_store( array( 'id' => $ax_te_private_reply, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $root['uri'], 'to' => array( $remote_actor_uri . '/followers' ), 'content' => 'AX-TE-FOLLOWERS-ONLY' ) );
+	axismundi_op_store_remote_object( array( 'id' => $ax_te_private_reply, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $root['uri'], 'to' => array( $remote_actor_uri . '/followers' ), 'content' => 'AX-TE-FOLLOWERS-ONLY' ) );
 	$ax_te_remote_uris[] = $ax_te_private_reply;
 	$ax_te_edge_uris[]   = $ax_te_private_reply;
 	$ax_te_private_models = axismundi_op_get_reply_view_models( $root['uri'] );
@@ -189,7 +189,7 @@ try {
 			&& false !== strpos( $ax_te_private_tree['html'], 'Remote reply to our root.' )
 	);
 
-	$tombstoned_remote_reply = axismundi_op_remote_object_store( array( 'id' => $remote_reply_uri, 'type' => 'Tombstone', 'formerType' => 'Note' ) );
+	$tombstoned_remote_reply = axismundi_op_store_remote_object( array( 'id' => $remote_reply_uri, 'type' => 'Tombstone', 'formerType' => 'Note' ) );
 	$tombstone_models = axismundi_op_get_reply_view_models( $root['uri'] );
 	$tombstone_model  = null;
 	foreach ( $tombstone_models as $candidate ) {
@@ -203,7 +203,7 @@ try {
 	// This catches the classic comment-table failure mode where deleting a parent
 	// silently hides the entire lower branch.
 	$remote_grandchild_uri = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
-	$stored_remote_grandchild = axismundi_op_remote_object_store( array( 'id' => $remote_grandchild_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $remote_reply_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote reply below a deleted parent.' ) );
+	$stored_remote_grandchild = axismundi_op_store_remote_object( array( 'id' => $remote_grandchild_uri, 'type' => 'Note', 'attributedTo' => $remote_actor_uri, 'inReplyTo' => $remote_reply_uri, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote reply below a deleted parent.' ) );
 	$ax_te_remote_uris[] = $remote_grandchild_uri;
 	$ax_te_edge_uris[]   = $remote_grandchild_uri;
 	$root_source = new Axismundi_Note_Source( axismundi_note_get( $root['post_id'] ), get_post( $root['post_id'] ) );
@@ -263,7 +263,7 @@ try {
 	ax_te_assert( $ax_te_results, 'hidden interaction rows do not starve a later textual reply from the display window', array( $visible_after_hidden ) === $display_window['uris'] && ! $display_window['truncated'] );
 } finally {
 	foreach ( array_unique( $ax_te_remote_uris ) as $uri ) {
-		axismundi_op_remote_object_delete( $uri );
+		axismundi_op_delete_remote_object( $uri );
 	}
 	foreach ( array_unique( $ax_te_edge_uris ) as $uri ) {
 		$wpdb->delete( axismundi_op_thread_edges_table(), array( 'child_uri_hash' => hash( 'sha256', $uri ), 'child_uri' => $uri ), array( '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

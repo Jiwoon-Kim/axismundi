@@ -25,7 +25,7 @@ function axismundi_op_observe_inbound_object( Axismundi_Activity $activity ) : v
 	) {
 		return;
 	}
-	$stored = axismundi_op_remote_object_store( $object, array( 'fetched_at' => current_time( 'mysql', true ) ) );
+	$stored = axismundi_op_store_remote_object( $object, array( 'fetched_at' => current_time( 'mysql', true ) ) );
 	if ( is_array( $stored ) ) {
 		do_action( 'axismundi_op_remote_object_observed', $stored, $activity );
 	}

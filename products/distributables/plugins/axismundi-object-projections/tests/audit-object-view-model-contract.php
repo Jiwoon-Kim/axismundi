@@ -34,7 +34,7 @@ function ax_vmc_assert( array &$results, string $label, bool $condition ) : void
  * @return array<string,mixed>
  */
 function ax_vmc_remote_model( array $payload, array &$tracked ) : array {
-	axismundi_op_remote_object_store( $payload );
+	axismundi_op_store_remote_object( $payload );
 	$tracked[] = (string) $payload['id'];
 	$source    = axismundi_op_resolve_source_by_uri( (string) $payload['id'] );
 	$model     = null === $source ? null : axismundi_op_object_view_model( $source );
@@ -482,7 +482,7 @@ try {
 } finally {
 	wp_set_current_user( $ax_vmc_user );
 	foreach ( $ax_vmc_remote as $ax_vmc_uri ) {
-		axismundi_op_remote_object_delete( $ax_vmc_uri );
+		axismundi_op_delete_remote_object( $ax_vmc_uri );
 	}
 	// Attachments outlive their parent post, so the file and its derivatives have to be
 	// removed explicitly or a fixture leaves uploads behind on every run.

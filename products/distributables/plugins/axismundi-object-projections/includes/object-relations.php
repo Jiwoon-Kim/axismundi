@@ -268,7 +268,7 @@ function axismundi_op_get_quote_count( string $target_uri ) : int {
 			continue;
 		}
 		$source = (string) $relation['source_object_uri'];
-		$row    = function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $source, false ) : null;
+		$row    = function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $source, false ) : null;
 		if ( ! is_array( $row ) || ! function_exists( 'axismundi_op_remote_object_is_announceable' ) || ! axismundi_op_remote_object_is_announceable( $row ) ) {
 			continue;
 		}

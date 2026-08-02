@@ -87,14 +87,14 @@ observation eligible again.
 
 ## 3. Repository contract
 
-- `axismundi_op_remote_object_store($payload, $fetch)` validates then atomically upserts
+- `axismundi_op_store_remote_object($payload, $fetch)` validates then atomically upserts
   by canonical `id`. Invalid input never deletes or overwrites the last good snapshot.
 - The default type allowlist is Object, Article, Audio, Document, Event, Image, Note,
   Page, Place, Profile, Question, Relationship, Tombstone, and Video. Actor types belong
   to Axismundi Actors; Activity types belong to Axismundi Activities; Collection types
   use collection projections. A filter may add a genuine object extension type.
-- `axismundi_op_remote_object_get($uri)` reads by hash plus exact URI.
-- `axismundi_op_remote_object_delete($uri)` deletes only the cache row, never a remote
+- `axismundi_op_get_remote_object($uri)` reads by hash plus exact URI.
+- `axismundi_op_delete_remote_object($uri)` deletes only the cache row, never a remote
   resource, WordPress post, Actor, or binary.
 - `Tombstone` is retained as `object_status=tombstone`; it is not treated as absence.
 - The original bounded JSON is preserved in `payload_json`; normalized display fields

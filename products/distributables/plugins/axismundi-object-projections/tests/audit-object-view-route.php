@@ -72,7 +72,7 @@ try {
 	if ( $actor instanceof Axismundi_Actor ) {
 		$ax_ovr_actor_id = $actor->get_identity_id();
 	}
-	$active = axismundi_op_remote_object_store(
+	$active = axismundi_op_store_remote_object(
 		array(
 			'id'           => $active_uri,
 			'type'         => 'Note',
@@ -81,8 +81,8 @@ try {
 			'content'      => '<p>Cached human view.</p>',
 		)
 	);
-	$gone = axismundi_op_remote_object_store( array( 'id' => $gone_uri, 'type' => 'Tombstone', 'formerType' => 'Note' ) );
-	$private = axismundi_op_remote_object_store(
+	$gone = axismundi_op_store_remote_object( array( 'id' => $gone_uri, 'type' => 'Tombstone', 'formerType' => 'Note' ) );
+	$private = axismundi_op_store_remote_object(
 		array(
 			'id'           => $private_uri,
 			'type'         => 'Note',
@@ -136,7 +136,7 @@ try {
 	ax_ovr_assert( $ax_ovr_results, 'a cached followers-only Object is not promoted into an anonymous standalone human view', is_array( $private ) && 404 === (int) $private_route['route']['status'] && $private_route['query']->is_404 && null === $private_route['model'] );
 
 	ob_start();
-	axismundi_op_render_remote_object_detail( (array) axismundi_op_remote_object_get( $active_uri ) );
+	axismundi_op_render_remote_object_detail( (array) axismundi_op_get_remote_object( $active_uri ) );
 	$admin_html = (string) ob_get_clean();
 	ax_ovr_assert( $ax_ovr_results, 'the Remote Objects inspector exposes the local human View route separately from the remote source page', false !== strpos( $admin_html, esc_url( axismundi_op_cached_object_view_url( $active_uri ) ) ) && false !== strpos( $admin_html, 'View' ) );
 	wp_set_current_user( 1 );

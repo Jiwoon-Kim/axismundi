@@ -382,7 +382,7 @@ function axismundi_op_resolve_source_by_uri( string $uri ) {
 	if ( null !== $source ) {
 		return $source;
 	}
-	$cached = function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $uri ) : null;
+	$cached = function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $uri ) : null;
 	return is_array( $cached ) ? new Axismundi_Op_Remote_Source( $cached ) : null;
 }
 

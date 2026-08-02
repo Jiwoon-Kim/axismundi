@@ -112,7 +112,7 @@ function axismundi_op_handle_object_html_request( bool $preempt, WP_Query $query
 		return $preempt;
 	}
 	axismundi_op_clear_object_main_query( $query );
-	$row = '' !== $hash ? axismundi_op_remote_object_get_by_hash( $hash, true ) : null;
+	$row = '' !== $hash ? axismundi_op_get_remote_object_by_hash( $hash, true ) : null;
 	if ( ! is_array( $row ) ) {
 		$query->set_404();
 		axismundi_op_set_object_html_route( 404 );

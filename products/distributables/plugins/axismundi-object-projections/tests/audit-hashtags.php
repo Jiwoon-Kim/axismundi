@@ -44,7 +44,7 @@ try {
 			array( 'type' => 'Mention', 'name' => '@alice', 'href' => 'https://hashtags.example/users/alice' ),
 		),
 	);
-	$stored = axismundi_op_remote_object_store( $payload );
+	$stored = axismundi_op_store_remote_object( $payload );
 	$rows   = is_array( $stored )
 		? (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE remote_object_id = %d", (int) $stored['id'] ), ARRAY_A )
 		: array();
@@ -55,7 +55,7 @@ try {
 	}
 
 	$payload['tag'] = array( array( 'type' => 'Hashtag', 'name' => '#' . $ax_hashtag_second, 'href' => 'https://hashtags.example/tags/second' ) );
-	$updated        = axismundi_op_remote_object_store( $payload );
+	$updated        = axismundi_op_store_remote_object( $payload );
 	$rows           = is_array( $updated )
 		? (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE remote_object_id = %d", (int) $updated['id'] ), ARRAY_A )
 		: array();
@@ -87,11 +87,11 @@ try {
 	if ( ! is_wp_error( $attachment_id ) ) {
 		wp_delete_attachment( $attachment_id, true );
 	}
-	$deleted = axismundi_op_remote_object_delete( $ax_hashtag_uri );
+	$deleted = axismundi_op_delete_remote_object( $ax_hashtag_uri );
 	$rows    = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE remote_object_id = %d", (int) ( $updated['id'] ?? 0 ) ), ARRAY_A );
 	ax_hashtag_assert( $ax_hashtag_results, 'deleting a remote observation removes only its rebuildable hashtag relation rows', $deleted && empty( $rows ) );
 } finally {
-	axismundi_op_remote_object_delete( $ax_hashtag_uri );
+	axismundi_op_delete_remote_object( $ax_hashtag_uri );
 	foreach ( array_unique( $ax_hashtag_terms ) as $term_id ) {
 		wp_delete_term( (int) $term_id, AXISMUNDI_OP_HASHTAG_TAXONOMY );
 	}

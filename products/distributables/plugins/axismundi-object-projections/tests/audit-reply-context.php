@@ -36,7 +36,7 @@ function ax_rc_store( array &$uris, string $uri, array $extra = array() ) : bool
 		),
 		$extra
 	);
-	$stored = axismundi_op_remote_object_store( $payload );
+	$stored = axismundi_op_store_remote_object( $payload );
 	if ( ! is_wp_error( $stored ) ) {
 		$uris[] = $uri;
 		return true;
@@ -143,7 +143,7 @@ try {
 	);
 } finally {
 	foreach ( array_unique( $ax_rc_uris ) as $ax_rc_uri ) {
-		axismundi_op_remote_object_delete( $ax_rc_uri );
+		axismundi_op_delete_remote_object( $ax_rc_uri );
 	}
 }
 

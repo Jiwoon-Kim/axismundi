@@ -86,7 +86,7 @@ try {
 		: new WP_Error( 'fixture' );
 	$ax_iga_uris = array( $outer_uri, (string) ( $create['id'] ?? '' ) );
 	$inner = function_exists( 'axismundi_act_get' ) ? axismundi_act_get( (string) ( $create['id'] ?? '' ) ) : null;
-	$cached = '' !== $object_uri && function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $object_uri ) : null;
+	$cached = '' !== $object_uri && function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $object_uri ) : null;
 	ax_iga_assert(
 		$ax_iga_results,
 		'a remote Group Announce preserves and caches its complete Group-addressed Create, including unknown future members',

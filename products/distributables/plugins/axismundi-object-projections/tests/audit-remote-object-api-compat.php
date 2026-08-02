@@ -171,36 +171,51 @@ try {
 }
 
 /*
- * How much of the migration is left, printed rather than asserted.
+ * How much of the migration is left, printed rather than asserted, per product.
  *
  * A count is not a pass/fail condition — the old names are supposed to be in use right now. It is
- * the signal for when this audit has done its job: at zero, this file is the only caller left and
- * the aliases can be removed along with it.
+ * the signal for when this audit has done its job: at zero everywhere, this file is the only
+ * caller left and the aliases can be removed along with it.
+ *
+ * The scan walks every installed plugin, not this one. The functions are called from five
+ * products and the decision to remove an alias is repo-wide, so a number that only counted this
+ * plugin would read as done while four products still depended on the old names. Grouping by
+ * product is what makes it usable during the migration: each product's commit watches its own
+ * line reach zero.
  */
-$ax_compat_old   = array( 'axismundi_op_remote_object_get', 'axismundi_op_remote_object_store', 'axismundi_op_remote_object_delete' );
-$ax_compat_files = array();
-$ax_compat_root  = dirname( dirname( __DIR__ ) );
-$ax_compat_dir   = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $ax_compat_root ) );
+$ax_compat_old    = array( 'axismundi_op_remote_object_get', 'axismundi_op_remote_object_store', 'axismundi_op_remote_object_delete' );
+$ax_compat_root   = dirname( dirname( __DIR__ ) );
+$ax_compat_counts = array();
+$ax_compat_dir    = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $ax_compat_root ) );
 foreach ( $ax_compat_dir as $ax_compat_file ) {
 	if ( ! $ax_compat_file->isFile() || 'php' !== strtolower( $ax_compat_file->getExtension() ) ) {
 		continue;
 	}
 	$ax_compat_path = str_replace( '\\', '/', (string) $ax_compat_file->getPathname() );
+	// The two files that keep the old names on purpose: this audit, and the aliases themselves.
 	if ( false !== strpos( $ax_compat_path, '/tests/audit-remote-object-api-compat.php' )
-		|| false !== strpos( $ax_compat_path, '/includes/remote-objects.php' )
+		|| false !== strpos( $ax_compat_path, '/axismundi-object-projections/includes/remote-objects.php' )
 	) {
 		continue;
 	}
 	$ax_compat_body = (string) file_get_contents( $ax_compat_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- dev-only migration counter.
 	foreach ( $ax_compat_old as $ax_compat_name ) {
+		// `(?!_)` so `axismundi_op_remote_object_get_by_hash` is counted once, under `_get_by_hash`
+		// rather than twice under `_get` as well.
 		if ( 1 === preg_match( '/\b' . preg_quote( $ax_compat_name, '/' ) . '\b(?!_)/', $ax_compat_body ) ) {
-			$ax_compat_files[] = $ax_compat_path;
+			$ax_compat_plugin                      = explode( '/', trim( str_replace( $ax_compat_root, '', $ax_compat_path ), '/' ) )[0];
+			$ax_compat_counts[ $ax_compat_plugin ] = (int) ( $ax_compat_counts[ $ax_compat_plugin ] ?? 0 ) + 1;
 			break;
 		}
 	}
 }
+ksort( $ax_compat_counts );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-printf( "\n-- %d file(s) in this plugin still call the deprecated names --\n", count( $ax_compat_files ) );
+printf( "\n-- %d file(s) still call the deprecated names --\n", array_sum( $ax_compat_counts ) );
+foreach ( $ax_compat_counts as $ax_compat_plugin => $ax_compat_count ) {
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "   %-32s %d\n", $ax_compat_plugin, $ax_compat_count );
+}
 
 $ax_compat_failures = count( array_filter( $ax_compat_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.

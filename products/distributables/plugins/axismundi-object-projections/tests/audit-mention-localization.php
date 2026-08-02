@@ -76,7 +76,7 @@ try {
 	if ( is_wp_error( $ax_ml_created ) ) {
 		throw new RuntimeException( 'Actor fixture: ' . $ax_ml_created->get_error_message() );
 	}
-	$ax_ml_stored = axismundi_op_remote_object_store( $ax_ml_payload );
+	$ax_ml_stored = axismundi_op_store_remote_object( $ax_ml_payload );
 	ax_ml_assert( $ax_ml_results, 'the fixture Object is cached', ! is_wp_error( $ax_ml_stored ) );
 
 	$ax_ml_model = array( 'object_uri' => $ax_ml_uri, 'content_html' => $ax_ml_payload['content'] );

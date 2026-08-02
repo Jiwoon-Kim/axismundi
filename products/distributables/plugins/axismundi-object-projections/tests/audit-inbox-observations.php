@@ -88,7 +88,7 @@ try {
 	if ( $create instanceof Axismundi_Activity ) {
 		$ax_inbox_activity_uris[] = $create->get_uri();
 	}
-	$initial = axismundi_op_remote_object_get( $ax_inbox_object_uri );
+	$initial = axismundi_op_get_remote_object( $ax_inbox_object_uri );
 	ax_inbox_assert( $ax_inbox_results, 'an inbound Create stores its inline Question snapshot', $create instanceof Axismundi_Activity && is_array( $initial ) && 'Question' === $initial['object_type'] );
 
 	$update_uri = 'https://remote.example/activities/update-' . $ax_inbox_suffix;
@@ -110,7 +110,7 @@ try {
 	if ( $update instanceof Axismundi_Activity ) {
 		$ax_inbox_activity_uris[] = $update->get_uri();
 	}
-	$refreshed = axismundi_op_remote_object_get( $ax_inbox_object_uri );
+	$refreshed = axismundi_op_get_remote_object( $ax_inbox_object_uri );
 	ax_inbox_assert( $ax_inbox_results, 'an inbound Update replaces the same cache row and permits Question-to-Note type changes', $update instanceof Axismundi_Activity && is_array( $refreshed ) && (int) $initial['id'] === (int) $refreshed['id'] && 'Note' === $refreshed['object_type'] && false !== strpos( (string) $refreshed['content'], 'Poll removed' ) );
 
 	$spoof_uri = 'https://remote.example/activities/spoof-' . $ax_inbox_suffix;
@@ -126,7 +126,7 @@ try {
 	if ( $spoof instanceof Axismundi_Activity ) {
 		$ax_inbox_activity_uris[] = $spoof->get_uri();
 	}
-	$after_spoof = axismundi_op_remote_object_get( $ax_inbox_object_uri );
+	$after_spoof = axismundi_op_get_remote_object( $ax_inbox_object_uri );
 	ax_inbox_assert( $ax_inbox_results, 'a mismatched Update actor cannot overwrite the cached Object', $spoof instanceof Axismundi_Activity && is_array( $after_spoof ) && 'Note' === $after_spoof['object_type'] && false !== strpos( (string) $after_spoof['content'], 'Poll removed' ) );
 
 	$announce_uri = 'https://remote.example/activities/announce-' . $ax_inbox_suffix;
@@ -149,16 +149,16 @@ try {
 	add_filter( 'pre_http_request', 'ax_inbox_announce_fetch_mock', 10, 3 );
 	axismundi_op_fetch_announced_object( $ax_inbox_announce_uri );
 	remove_filter( 'pre_http_request', 'ax_inbox_announce_fetch_mock', 10 );
-	$announced_object = axismundi_op_remote_object_get( $ax_inbox_announce_uri );
+	$announced_object = axismundi_op_get_remote_object( $ax_inbox_announce_uri );
 	ax_inbox_assert( $ax_inbox_results, 'the deferred Announce target fetch stores a renderable remote Object cache row', is_array( $announced_object ) && 'Article' === $announced_object['object_type'] && false !== strpos( (string) $announced_object['content'], 'Cached from a public Announce.' ) );
 } finally {
 	global $wpdb;
 	foreach ( $ax_inbox_activity_uris as $uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
-	axismundi_op_remote_object_delete( $ax_inbox_object_uri );
+	axismundi_op_delete_remote_object( $ax_inbox_object_uri );
 	wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object', array( $ax_inbox_announce_uri ) );
-	axismundi_op_remote_object_delete( $ax_inbox_announce_uri );
+	axismundi_op_delete_remote_object( $ax_inbox_announce_uri );
 }
 
 $ax_inbox_failures = count( array_filter( $ax_inbox_results, static fn( bool $result ) : bool => ! $result ) );

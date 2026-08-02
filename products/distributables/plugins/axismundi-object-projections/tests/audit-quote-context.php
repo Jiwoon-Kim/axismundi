@@ -59,7 +59,7 @@ try {
 			array( 'id' => $cycle_uri, 'type' => 'Note', 'attributedTo' => $ax_qc_actor, 'content' => '<p>Cycle commentary.</p>', 'quote' => $cycle_uri, 'to' => array( $ax_qc_public ) ),
 		) as $payload
 	) {
-		axismundi_op_remote_object_store( $payload );
+		axismundi_op_store_remote_object( $payload );
 	}
 
 	$embed_model = ax_qc_enriched_model( $source_uri );
@@ -109,7 +109,7 @@ try {
 			&& false === strpos( $rejected_html, 'Quoted article body.' )
 	);
 
-	axismundi_op_remote_object_store(
+	axismundi_op_store_remote_object(
 		array(
 			'id'           => $target_uri,
 			'type'         => 'Tombstone',
@@ -140,7 +140,7 @@ try {
 } finally {
 	axismundi_op_set_current_object_view_model( null );
 	foreach ( $ax_qc_uris as $uri ) {
-		axismundi_op_remote_object_delete( $uri );
+		axismundi_op_delete_remote_object( $uri );
 	}
 }
 

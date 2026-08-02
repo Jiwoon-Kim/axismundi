@@ -47,7 +47,7 @@ try {
 	if ( $term instanceof WP_Term && $ax_hashtag_archive_post_id > 0 ) {
 		wp_set_object_terms( $ax_hashtag_archive_post_id, array( $term->term_id ), AXISMUNDI_OP_HASHTAG_TAXONOMY );
 	}
-	$public = axismundi_op_remote_object_store(
+	$public = axismundi_op_store_remote_object(
 		array(
 			'id'           => $ax_hashtag_archive_public,
 			'type'         => 'Note',
@@ -58,7 +58,7 @@ try {
 			'tag'          => array( array( 'type' => 'Hashtag', 'name' => '#' . $ax_hashtag_archive_name ) ),
 		)
 	);
-	$private = axismundi_op_remote_object_store(
+	$private = axismundi_op_store_remote_object(
 		array(
 			'id'           => $ax_hashtag_archive_private,
 			'type'         => 'Note',
@@ -151,8 +151,8 @@ try {
 	if ( $ax_hashtag_archive_post_id > 0 ) {
 		wp_delete_post( $ax_hashtag_archive_post_id, true );
 	}
-	axismundi_op_remote_object_delete( $ax_hashtag_archive_public );
-	axismundi_op_remote_object_delete( $ax_hashtag_archive_private );
+	axismundi_op_delete_remote_object( $ax_hashtag_archive_public );
+	axismundi_op_delete_remote_object( $ax_hashtag_archive_private );
 	if ( $ax_hashtag_archive_term_id > 0 ) {
 		wp_delete_term( $ax_hashtag_archive_term_id, AXISMUNDI_OP_HASHTAG_TAXONOMY );
 	}

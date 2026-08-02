@@ -52,7 +52,7 @@ try {
 	$bob_rows   = ax_mention_rows_for_source( axismundi_op_object_mentions_for_actor( $ax_mention_actor_b ), $source_uri );
 	ax_mention_assert( $ax_mention_results, 'a local Post keeps inline and explicit canonical Actor URI edges as separate provenance', 1 === count( $alice_rows ) && 'inline' === (string) $alice_rows[0]['origin'] && 1 === count( $bob_rows ) && 'explicit' === (string) $bob_rows[0]['origin'] && $source_uri === (string) $alice_rows[0]['source_object_uri'] );
 
-	$stored = axismundi_op_remote_object_store(
+	$stored = axismundi_op_store_remote_object(
 		array(
 			'id'           => $ax_mention_remote,
 			'type'         => 'Note',
@@ -76,12 +76,12 @@ try {
 		'content'      => '<p>Remote mention updated.</p>',
 		'tag'          => array( array( 'type' => 'Mention', 'href' => $ax_mention_actor_a, 'name' => '@alice@mentions-audit.example' ) ),
 	);
-	axismundi_op_remote_object_store( $updated_payload );
+	axismundi_op_store_remote_object( $updated_payload );
 	$carol_rows = ax_mention_rows_for_source( axismundi_op_object_mentions_for_actor( $ax_mention_actor_c ), $ax_mention_remote );
 	$alice_rows = ax_mention_rows_for_source( axismundi_op_object_mentions_for_actor( $ax_mention_actor_a ), $ax_mention_remote );
 	ax_mention_assert( $ax_mention_results, 'a remote refresh replaces stale Mention evidence rather than accumulating it', empty( $carol_rows ) && 1 === count( $alice_rows ) );
 
-	axismundi_op_remote_object_delete( $ax_mention_remote );
+	axismundi_op_delete_remote_object( $ax_mention_remote );
 	$alice_rows = ax_mention_rows_for_source( axismundi_op_object_mentions_for_actor( $ax_mention_actor_a ), $ax_mention_remote );
 	ax_mention_assert( $ax_mention_results, 'deleting a remote observation removes only its rebuildable Mention edges', empty( $alice_rows ) );
 
@@ -91,7 +91,7 @@ try {
 	$bob_rows   = ax_mention_rows_for_source( axismundi_op_object_mentions_for_actor( $ax_mention_actor_b ), $source_uri );
 	ax_mention_assert( $ax_mention_results, 'deleting a local Post removes its explicit and inline Mention edges', empty( $alice_rows ) && empty( $bob_rows ) );
 } finally {
-	axismundi_op_remote_object_delete( $ax_mention_remote );
+	axismundi_op_delete_remote_object( $ax_mention_remote );
 	if ( $ax_mention_post_id > 0 ) {
 		wp_delete_post( $ax_mention_post_id, true );
 	}

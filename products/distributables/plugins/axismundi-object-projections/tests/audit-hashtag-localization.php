@@ -42,7 +42,7 @@ try {
 			array( 'type' => 'Hashtag', 'href' => 'https://hashtag-localize.test/tags/HashTag', 'name' => '#HashTag' ),
 		),
 	);
-	$ax_hl_stored = axismundi_op_remote_object_store( $ax_hl_payload );
+	$ax_hl_stored = axismundi_op_store_remote_object( $ax_hl_payload );
 	ax_hl_assert( $ax_hl_results, 'the fixture Object is cached', ! is_wp_error( $ax_hl_stored ) );
 
 	$ax_hl_model = array( 'object_uri' => $ax_hl_uri, 'content_html' => $ax_hl_payload['content'] );

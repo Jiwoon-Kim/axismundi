@@ -16,7 +16,7 @@ function ax_lease_assert( array &$results, string $label, bool $condition ) : vo
 
 try {
 	axismundi_op_install();
-	$stored = axismundi_op_remote_object_store(
+	$stored = axismundi_op_store_remote_object(
 		array( 'id' => $ax_lease_object, 'type' => 'Note', 'attributedTo' => 'https://remote.example/users/author', 'content' => 'Lease fixture.' ),
 		array( 'fetched_at' => gmdate( 'Y-m-d H:i:s', time() - 40 * DAY_IN_SECONDS ) )
 	);
@@ -25,9 +25,9 @@ try {
 	$added = axismundi_op_add_lease( $ax_lease_object, 'interaction', $ax_lease_ref );
 	$again = axismundi_op_add_lease( $ax_lease_object, 'interaction', $ax_lease_ref );
 	ax_lease_assert( $ax_lease_results, 'DB v3 creates an idempotent URI/reason/reference lease', is_array( $stored ) && $added && $again && 1 === axismundi_op_active_lease_count( $ax_lease_object ) );
-	ax_lease_assert( $ax_lease_results, 'an active lease prevents expiry dry-run and deletion', 0 === axismundi_op_remote_objects_purge_expired( true ) && 0 === axismundi_op_remote_objects_purge_expired() && null !== axismundi_op_remote_object_get( $ax_lease_object ) );
+	ax_lease_assert( $ax_lease_results, 'an active lease prevents expiry dry-run and deletion', 0 === axismundi_op_remote_objects_purge_expired( true ) && 0 === axismundi_op_remote_objects_purge_expired() && null !== axismundi_op_get_remote_object( $ax_lease_object ) );
 	$released = axismundi_op_release_lease( $ax_lease_object, 'interaction', $ax_lease_ref );
-	ax_lease_assert( $ax_lease_results, 'releasing the final lease makes the expired observation purgeable', $released && 0 === axismundi_op_active_lease_count( $ax_lease_object ) && 1 <= axismundi_op_remote_objects_purge_expired( true ) && 1 <= axismundi_op_remote_objects_purge_expired() && null === axismundi_op_remote_object_get( $ax_lease_object ) );
+	ax_lease_assert( $ax_lease_results, 'releasing the final lease makes the expired observation purgeable', $released && 0 === axismundi_op_active_lease_count( $ax_lease_object ) && 1 <= axismundi_op_remote_objects_purge_expired( true ) && 1 <= axismundi_op_remote_objects_purge_expired() && null === axismundi_op_get_remote_object( $ax_lease_object ) );
 } finally {
 	global $wpdb;
 	$wpdb->delete( axismundi_op_object_leases_table(), array( 'object_uri_hash' => hash( 'sha256', $ax_lease_object ) ) ); // phpcs:ignore WordPress.DB

@@ -370,10 +370,10 @@ function axismundi_op_localize_object_hashtag_links( string $html, array $model 
 		return $html;
 	}
 	$uri = (string) ( $model['object_uri'] ?? $model['id'] ?? '' );
-	if ( '' === $uri || ! function_exists( 'axismundi_op_remote_object_get' ) ) {
+	if ( '' === $uri || ! function_exists( 'axismundi_op_get_remote_object' ) ) {
 		return $html;
 	}
-	$row = axismundi_op_remote_object_get( $uri );
+	$row = axismundi_op_get_remote_object( $uri );
 	if ( ! is_array( $row ) ) {
 		return $html;
 	}

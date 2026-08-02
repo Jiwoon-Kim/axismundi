@@ -321,7 +321,7 @@ function axismundi_op_can_announce_object( $allowed, Axismundi_Actor $actor, str
 	if ( null !== $source ) {
 		return true;
 	}
-	$row = function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $object_uri, false ) : null;
+	$row = function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $object_uri, false ) : null;
 	return is_array( $row ) && axismundi_op_remote_object_is_announceable( $row )
 		? true
 		: $allowed;
@@ -337,7 +337,7 @@ function axismundi_op_resolve_announce_target( $target, string $object_uri ) {
 			return array( 'object_uri' => $object_uri, 'recipient_uri' => axismundi_act_member_uri( $object['attributedTo'] ), 'source' => $source );
 		}
 	}
-	$row = function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $object_uri, false ) : null;
+	$row = function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $object_uri, false ) : null;
 	if ( is_array( $row ) && axismundi_op_remote_object_is_announceable( $row ) ) {
 		return array( 'object_uri' => $object_uri, 'recipient_uri' => (string) $row['attributed_to_uri'], 'source' => $row );
 	}

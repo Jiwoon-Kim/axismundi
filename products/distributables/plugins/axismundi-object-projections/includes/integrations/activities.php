@@ -152,8 +152,8 @@ function axismundi_op_actor_feed_item_is_reply( bool $is_reply, string $object_u
 	if ( function_exists( 'axismundi_op_get_thread_parent_uri' ) && '' !== axismundi_op_get_thread_parent_uri( $object_uri ) ) {
 		return true;
 	}
-	if ( function_exists( 'axismundi_op_remote_object_get' ) ) {
-		$remote  = axismundi_op_remote_object_get( $object_uri, false );
+	if ( function_exists( 'axismundi_op_get_remote_object' ) ) {
+		$remote  = axismundi_op_get_remote_object( $object_uri, false );
 		$payload = is_array( $remote ) ? (array) ( $remote['payload'] ?? array() ) : array();
 		if ( ! empty( $payload['inReplyTo'] ) ) {
 			return true;
@@ -175,10 +175,10 @@ add_filter( 'axismundi_act_actor_feed_item_is_reply', 'axismundi_op_actor_feed_i
  * @return array<string,mixed>
  */
 function axismundi_op_feed_object_payload( array $payload, string $object_uri ) : array {
-	if ( ! empty( $payload ) || '' === $object_uri || ! function_exists( 'axismundi_op_remote_object_get' ) ) {
+	if ( ! empty( $payload ) || '' === $object_uri || ! function_exists( 'axismundi_op_get_remote_object' ) ) {
 		return $payload;
 	}
-	$row = axismundi_op_remote_object_get( $object_uri );
+	$row = axismundi_op_get_remote_object( $object_uri );
 	return is_array( $row ) && is_array( $row['payload'] ?? null ) ? $row['payload'] : $payload;
 }
 add_filter( 'axismundi_act_feed_object_payload', 'axismundi_op_feed_object_payload', 10, 2 );

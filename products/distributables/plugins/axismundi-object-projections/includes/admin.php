@@ -323,7 +323,7 @@ function axismundi_op_render_remote_admin_page() : void {
 		wp_die( esc_html__( 'You cannot inspect remote objects.', 'axismundi-object-projections' ), '', array( 'response' => 403 ) );
 	}
 	$selected_uri = isset( $_GET['object_uri'] ) ? esc_url_raw( wp_unslash( $_GET['object_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection.
-	$selected     = '' !== $selected_uri ? axismundi_op_remote_object_get( $selected_uri, true ) : null;
+	$selected     = '' !== $selected_uri ? axismundi_op_get_remote_object( $selected_uri, true ) : null;
 	$objects      = axismundi_op_remote_objects_list();
 	$collection_probe = null;
 	$probe_token      = isset( $_GET['ax_op_collection_probe'] ) ? sanitize_key( wp_unslash( $_GET['ax_op_collection_probe'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Opaque read-only transient token.
@@ -437,7 +437,7 @@ function axismundi_op_handle_delete_remote_object() : void {
 	}
 	check_admin_referer( 'ax_op_delete_remote_object' );
 	$url = isset( $_POST['remote_object'] ) ? esc_url_raw( wp_unslash( $_POST['remote_object'] ) ) : '';
-	axismundi_op_remote_object_delete( $url );
+	axismundi_op_delete_remote_object( $url );
 	wp_safe_redirect( axismundi_op_remote_admin_url() );
 	exit;
 }

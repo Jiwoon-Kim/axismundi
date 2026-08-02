@@ -66,9 +66,9 @@ try {
 	$hidden_uri   = 'https://remote.example/objects/' . strtolower( wp_generate_password( 7, false, false ) );
 	$remote_parent = 'https://remote.example/objects/' . strtolower( wp_generate_password( 7, false, false ) );
 	$ax_rc_remote = array( $remote_uri, $hidden_uri, $remote_parent );
-	axismundi_op_remote_object_store( array( 'id' => $remote_uri, 'type' => 'Note', 'attributedTo' => $remote_actor, 'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Visible remote reply.' ) );
-	axismundi_op_remote_object_store( array( 'id' => $hidden_uri, 'type' => 'Note', 'attributedTo' => $remote_actor, 'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Hidden interaction.' ) );
-	axismundi_op_remote_object_store( array( 'id' => $remote_parent, 'type' => 'Note', 'attributedTo' => $remote_actor, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote parent.' ) );
+	axismundi_op_store_remote_object( array( 'id' => $remote_uri, 'type' => 'Note', 'attributedTo' => $remote_actor, 'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Visible remote reply.' ) );
+	axismundi_op_store_remote_object( array( 'id' => $hidden_uri, 'type' => 'Note', 'attributedTo' => $remote_actor, 'inReplyTo' => $root['uri'], 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Hidden interaction.' ) );
+	axismundi_op_store_remote_object( array( 'id' => $remote_parent, 'type' => 'Note', 'attributedTo' => $remote_actor, 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'content' => 'Remote parent.' ) );
 	array_push( $ax_rc_edges, $remote_uri, $hidden_uri );
 
 	$root_source = axismundi_op_authoritative_source_from_object_uri( $root['uri'] );
@@ -105,7 +105,7 @@ try {
 } finally {
 	remove_filter( 'axismundi_op_thread_include_reply', 'ax_rc_hide_one_reply', 1 );
 	foreach ( array_unique( $ax_rc_remote ) as $uri ) {
-		axismundi_op_remote_object_delete( $uri );
+		axismundi_op_delete_remote_object( $uri );
 	}
 	foreach ( array_unique( $ax_rc_edges ) as $uri ) {
 		$wpdb->delete( axismundi_op_thread_edges_table(), array( 'child_uri_hash' => hash( 'sha256', $uri ), 'child_uri' => $uri ), array( '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

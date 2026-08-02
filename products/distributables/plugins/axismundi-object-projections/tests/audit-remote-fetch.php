@@ -110,7 +110,7 @@ try {
 
 	$GLOBALS['ax_fetch_mode'] = 'wrong-type';
 	$wrong_type               = axismundi_op_remote_object_fetch( $ax_fetch_url );
-	$after_failure            = axismundi_op_remote_object_get( $ax_fetch_url );
+	$after_failure            = axismundi_op_get_remote_object( $ax_fetch_url );
 	ax_fetch_assert( $ax_fetch_results, 'unsupported response MIME records backoff but preserves the last successful payload', is_wp_error( $wrong_type ) && 'ax_op_remote_fetch_content_type' === $wrong_type->get_error_code() && is_array( $after_failure ) && 1 === (int) $after_failure['failure_count'] && (string) $stored['payload_hash'] === (string) $after_failure['payload_hash'] );
 
 	$GLOBALS['ax_fetch_mode'] = 'signed';
@@ -163,15 +163,15 @@ try {
 	$wpdb->update( $table, array( 'expires_at' => '2000-01-01 00:00:00' ), array( 'object_uri_hash' => hash( 'sha256', $ax_fetch_url ) ) );
 	$dry_count = axismundi_op_remote_objects_purge_expired( true );
 	$purged    = axismundi_op_remote_objects_purge_expired();
-	ax_fetch_assert( $ax_fetch_results, 'expired metadata is counted and purged without touching a remote resource', 1 === $dry_count && 1 === $purged && null === axismundi_op_remote_object_get( $ax_fetch_url ) );
+	ax_fetch_assert( $ax_fetch_results, 'expired metadata is counted and purged without touching a remote resource', 1 === $dry_count && 1 === $purged && null === axismundi_op_get_remote_object( $ax_fetch_url ) );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_fetch_mock', 10 );
 	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) );
-	axismundi_op_remote_object_delete( $ax_fetch_url );
-	axismundi_op_remote_object_delete( $ax_fetch_signed );
-	axismundi_op_remote_object_delete( $ax_fetch_redirect );
-	axismundi_op_remote_object_delete( $ax_fetch_target );
-	axismundi_op_remote_object_delete( $ax_fetch_loop );
+	axismundi_op_delete_remote_object( $ax_fetch_url );
+	axismundi_op_delete_remote_object( $ax_fetch_signed );
+	axismundi_op_delete_remote_object( $ax_fetch_redirect );
+	axismundi_op_delete_remote_object( $ax_fetch_target );
+	axismundi_op_delete_remote_object( $ax_fetch_loop );
 	// The mocked payload materializes a shared vocabulary term; leaving it behind
 	// would pollute a site-wide taxonomy and make repeat runs non-deterministic.
 	$ax_fetch_term = get_term_by( 'slug', 'remoteobjects', AXISMUNDI_OP_HASHTAG_TAXONOMY );

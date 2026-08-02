@@ -30,7 +30,7 @@ function ax_fi_assert( array &$results, string $label, bool $condition ) : void 
  * @return void
  */
 function ax_fi_activate( array $payload, array &$tracked ) : void {
-	axismundi_op_remote_object_store( $payload );
+	axismundi_op_store_remote_object( $payload );
 	$tracked[] = (string) $payload['id'];
 	$source    = axismundi_op_resolve_source_by_uri( (string) $payload['id'] );
 	axismundi_op_set_current_object_view_model( null === $source ? null : axismundi_op_object_view_model( $source ) );
@@ -194,7 +194,7 @@ try {
 } finally {
 	axismundi_op_set_current_object_view_model( null );
 	foreach ( $ax_fi_remote as $ax_fi_uri ) {
-		axismundi_op_remote_object_delete( $ax_fi_uri );
+		axismundi_op_delete_remote_object( $ax_fi_uri );
 	}
 }
 

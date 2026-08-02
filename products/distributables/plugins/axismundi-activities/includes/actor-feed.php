@@ -360,7 +360,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
  * @param bool              $head_window   Whether this is the first display page in the window.
  * @return array{cards:array<int,string>,head_cursor:string,next_cursor:string,has_more:bool}
  */
-function axismundi_act_actor_feed_display_page( callable $page_callback, Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
+function axismundi_act_actor_feed_display_page( callable $page_callback, Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false, string $mode = 'infinite' ) : array {
 	$cards       = array();
 	$head_cursor = $cursor;
 	$scan_pages  = 0;
@@ -386,7 +386,7 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 			if ( '' === $head_cursor && ! empty( $item['cursor'] ) ) {
 				$head_cursor = (string) $item['cursor'];
 			}
-			$card = axismundi_act_render_actor_feed_card( $item, $card_template );
+			$card = axismundi_act_render_actor_feed_card( $item, $card_template, $mode );
 			if ( '' !== $card ) {
 				$cards[] = $card;
 			}
@@ -407,6 +407,13 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 		'head_cursor' => $head_cursor,
 		'next_cursor' => (string) ( $page['next_cursor'] ?? '' ),
 		'has_more'    => ! empty( $page['has_more'] ),
+		/*
+		 * Carried through for a paged surface, which answers where it is by number rather than by
+		 * cursor. Absent for a cursor feed — a ledger has no page count, and inventing 1 of 1 for
+		 * one would be answering a question it was never asked.
+		 */
+		'page'        => isset( $page['page'] ) ? max( 1, (int) $page['page'] ) : 0,
+		'pages'       => isset( $page['pages'] ) ? max( 1, (int) $page['pages'] ) : 0,
 	);
 }
 
@@ -585,7 +592,18 @@ function axismundi_act_render_actor_activity_feed() : string {
 		$body = (string) call_user_func( $current['render'], $actor, $filter, $per_page );
 		return axismundi_act_render_actor_feed_shell( $actor, $surfaces, $surface, $filter, $current, $body );
 	}
-	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter );
+	$mode = (string) ( $current['mode'] ?? 'infinite' );
+	/*
+	 * A paged surface is addressed by number, so the position it is asked for is a page rather
+	 * than a cursor. `page` is the same name the community archive already published, so links
+	 * already in the world keep working.
+	 */
+	if ( 'pagination' === $mode ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read pagination.
+		$requested_page = isset( $_GET['page'] ) ? max( 1, absint( wp_unslash( $_GET['page'] ) ) ) : 1;
+		$cursor         = (string) $requested_page;
+	}
+	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter, false, false, $mode );
 	$cards = implode( '', $page['cards'] );
 	/*
 	 * An empty *narrowed* surface still renders: the reader chose that tab and needs the
@@ -734,6 +752,28 @@ function axismundi_act_render_actor_activity_feed() : string {
 			. esc_html__( 'Back to the newest activity', 'axismundi-activities' ) . '</a>';
 	}
 	$navigation = '<nav class="axismundi-activity-feed__pagination" aria-label="' . esc_attr__( 'Timeline pages', 'axismundi-activities' ) . '">' . $newer . $more . '</nav>';
+	/*
+	 * A numbered pager instead, when the surface is walked that way.
+	 *
+	 * Plain links with no runtime behaviour: this surface changes page by navigating, which is the
+	 * whole reason its position is a number and not a cursor. That also means it works with no
+	 * script and that the address reproduces exactly what the reader is looking at.
+	 */
+	if ( 'pagination' === $mode ) {
+		$current_page = max( 1, (int) ( $page['page'] ?? 1 ) );
+		$total_pages  = max( 1, (int) ( $page['pages'] ?? 1 ) );
+		$page_link    = static function ( int $target, string $class, string $label ) use ( $link_url, $surface, $filter ) : string {
+			return '<a class="axismundi-activity-feed__' . esc_attr( $class ) . '" href="'
+				. esc_url( $link_url( $surface, $filter, array( 'page' => (string) $target ) ) ) . '">' . esc_html( $label ) . '</a>';
+		};
+		$navigation = $total_pages < 2 ? '' : '<nav class="axismundi-activity-feed__pagination" aria-label="'
+			. esc_attr__( 'Archive pages', 'axismundi-activities' ) . '">'
+			. ( $current_page > 1 ? $page_link( $current_page - 1, 'previous-link', __( 'Newer', 'axismundi-activities' ) ) : '' )
+			/* translators: 1: current page number, 2: total page count. */
+			. '<span class="axismundi-activity-feed__page">' . esc_html( sprintf( __( 'Page %1$d of %2$d', 'axismundi-activities' ), $current_page, $total_pages ) ) . '</span>'
+			. ( $current_page < $total_pages ? $page_link( $current_page + 1, 'next-link', __( 'Older', 'axismundi-activities' ) ) : '' )
+			. '</nav>';
+	}
 	$reaction_host = function_exists( 'axismundi_act_render_feed_reaction_picker_host' )
 		? axismundi_act_render_feed_reaction_picker_host()
 		: '';
@@ -922,11 +962,11 @@ function axismundi_act_actor_activity_surface_page( Axismundi_Actor $actor, int 
  * @param array<int,array<string,mixed>> $items Feed item descriptors.
  * @return string
  */
-function axismundi_act_render_actor_feed_cards( array $items, string $card_template = '' ) : string {
+function axismundi_act_render_actor_feed_cards( array $items, string $card_template = '', string $mode = 'infinite' ) : string {
 	$cards = array();
 	foreach ( $items as $item ) {
 		if ( is_array( $item ) ) {
-			$card = axismundi_act_render_actor_feed_card( $item, $card_template );
+			$card = axismundi_act_render_actor_feed_card( $item, $card_template, $mode );
 			if ( '' !== $card ) {
 				$cards[] = $card;
 			}
@@ -936,7 +976,7 @@ function axismundi_act_render_actor_feed_cards( array $items, string $card_templ
 }
 
 /** Render one public-safe feed descriptor into a card, or nothing when its object no longer exists. */
-function axismundi_act_render_actor_feed_card( array $item, string $card_template = '' ) : string {
+function axismundi_act_render_actor_feed_card( array $item, string $card_template = '', string $mode = 'infinite' ) : string {
 	/**
 	 * Let an object-owning product render a public activity's object through its own view model.
 	 * Activities deliberately owns only ledger selection and verb framing, so it never reaches
@@ -945,7 +985,7 @@ function axismundi_act_render_actor_feed_card( array $item, string $card_templat
 	 * @param string              $html Empty by default.
 	 * @param array<string,mixed> $item Public-safe Activity feed item.
 	 */
-	$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item, $card_template );
+	$object_html = (string) apply_filters( 'axismundi_act_actor_feed_object_html', '', $item, $card_template, $mode );
 	if ( '' === $object_html ) {
 		/**
 		 * A public Activity can reference a remote Object which was not embedded in a Create and

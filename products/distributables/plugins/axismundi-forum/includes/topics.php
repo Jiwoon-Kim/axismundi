@@ -698,14 +698,137 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
  * @return string
  */
 function axismundi_forum_actor_feed_html( string $html, Axismundi_Actor $actor ) : string {
-	if ( '' !== $html || ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
-		return $html;
-	}
-	return axismundi_forum_is_community( $actor->get_identity_id() )
-		? axismundi_forum_render_group_archive( $actor )
-		: $html;
+	unset( $actor );
+	/*
+	 * Forum no longer answers here.
+	 *
+	 * It used to return the whole community archive as HTML, which meant a Group profile never ran
+	 * the feed at all: the loop, the saved card template and the pagination block were all bypassed,
+	 * and Forum ended up making decisions that were never its own — whether cards carried
+	 * interactions, and whether the list was an `ol` or a `ul`. Both had to be corrected by hand,
+	 * which is the sign that the seam was in the wrong place.
+	 *
+	 * A community is now a *surface*: Forum says which entries it contains and that it is paged by
+	 * number, and the feed renders them exactly as it renders a Person's. The divergence is not
+	 * fixed so much as no longer expressible.
+	 */
+	return $html;
 }
-add_filter( 'axismundi_act_actor_feed_html', 'axismundi_forum_actor_feed_html', 10, 2 );
+
+/**
+ * A community Group's profile is its archive, and that is the only surface it has.
+ *
+ * The Activity surface is removed rather than joined, because a chronology of the Group Actor's own
+ * Activities is not a second way to read this profile — it is a thinner, mostly empty thing, and
+ * offering it as a tab invites a reader away from the only content there is. With one surface the
+ * feed draws no surface navigation at all, which is why the Person's Activity/Community switch does
+ * not appear here.
+ *
+ * Posts and Comments stay inside this surface as its collections. They are not profile surfaces:
+ * they are two lists of the same community, addressed the same way and paged the same way, which is
+ * what a filter on one surface means.
+ *
+ * @param array<string,array<string,mixed>> $surfaces Registered surfaces.
+ * @return array<string,array<string,mixed>>
+ */
+function axismundi_forum_actor_profile_surfaces( array $surfaces, Axismundi_Actor $actor ) : array {
+	if ( ! $actor->is_local() || ! $actor->is_managed() || 'Group' !== $actor->get_type() ) {
+		return $surfaces;
+	}
+	if ( ! axismundi_forum_is_community( $actor->get_identity_id() ) ) {
+		return $surfaces;
+	}
+	return array(
+		'community' => array(
+			'label'          => __( 'Community', 'axismundi-forum' ),
+			'heading'        => __( 'Community', 'axismundi-forum' ),
+			'filters'        => axismundi_forum_group_archive_filters(),
+			'default_filter' => 'posts',
+			// Counted and jumpable, unlike a ledger nobody asks the length of.
+			'mode'           => 'pagination',
+			'page'           => 'axismundi_forum_community_surface_page',
+		),
+	);
+}
+add_filter( 'axismundi_act_actor_profile_surfaces', 'axismundi_forum_actor_profile_surfaces', 10, 2 );
+
+/**
+ * One numbered page of a community, as feed item descriptors.
+ *
+ * The entries are the Group's own effective Announces, which is what admission to a community *is*
+ * — so "what this community contains" and "what it has accepted" cannot drift apart into two
+ * answers. Each descriptor is shaped exactly like an Activity feed item, because from the feed's
+ * side that is what it is.
+ *
+ * @param Axismundi_Actor $actor    Community Group.
+ * @param int             $limit    Entries per page.
+ * @param string          $position Requested page number, as the address carries it.
+ * @param string          $filter   Active collection.
+ * @return array{items:array<int,array<string,mixed>>,page:int,pages:int,total:int,has_more:bool,next_cursor:string,filter:string}
+ */
+function axismundi_forum_community_surface_page( Axismundi_Actor $actor, int $limit, string $position, string $filter = 'posts', bool $inclusive = false, bool $head_window = false ) : array {
+	unset( $inclusive, $head_window );
+	$filter = 'comments' === $filter ? 'comments' : 'posts';
+	$group  = $actor->get_identity_id();
+	$empty  = array( 'items' => array(), 'page' => 1, 'pages' => 1, 'total' => 0, 'has_more' => false, 'next_cursor' => '', 'filter' => $filter );
+	if ( ! axismundi_forum_can_view_community_topics( $group ) ) {
+		return $empty;
+	}
+	/*
+	 * Public-scope communities only, for now, and deliberately empty rather than half-open.
+	 *
+	 * A members-scope community needs a viewer-aware card renderer, and there isn't one: the
+	 * Object view model closes a members-only Topic through the transformer's federation
+	 * visibility, which is the right answer to "may this be republished" and the wrong gate to be
+	 * answering "may this member read it". Carrying an entitlement that far is a real piece of
+	 * work, not a flag.
+	 *
+	 * Until then this surface says nothing rather than guessing. Note what is being given up: the
+	 * old archive fell back to a bare title link whenever a card came back empty, so an accepted
+	 * member of a members-scope community was seeing a list of titles — not by design but because
+	 * the fallback hid that the cards had never rendered. Losing that is a real reduction and is
+	 * chosen here rather than allowed to happen quietly. Anonymous readers saw nothing before and
+	 * still see nothing.
+	 *
+	 * Lemmy has no private communities either, so this is not a gap against the thing we are
+	 * following; it is a feature neither product has built yet.
+	 */
+	if ( 'public' !== axismundi_forum_get_distribution_scope( $group ) ) {
+		return $empty;
+	}
+	$requested = max( 1, (int) $position );
+	$uris      = 'comments' === $filter
+		? axismundi_forum_group_comment_uris( $actor )['uris']
+		: array();
+	if ( 'comments' === $filter ) {
+		$total = count( $uris );
+		$pages = max( 1, (int) ceil( $total / $limit ) );
+		$page  = min( $requested, $pages );
+		$slice = array_slice( $uris, ( $page - 1 ) * $limit, $limit );
+		$items = array();
+		foreach ( $slice as $uri ) {
+			$items[] = array( 'kind' => 'activity', 'type' => 'Announce', 'actor_uri' => $actor->get_uri(), 'object_uri' => (string) $uri, 'community_viewer' => $group );
+		}
+		return array( 'items' => $items, 'page' => $page, 'pages' => $pages, 'total' => $total, 'has_more' => $page < $pages, 'next_cursor' => '', 'filter' => $filter );
+	}
+	$total = axismundi_forum_visible_topic_entry_count( $group );
+	$pages = max( 1, (int) ceil( $total / $limit ) );
+	$page  = min( $requested, $pages );
+	$items = array();
+	foreach ( axismundi_forum_visible_topic_entries( $group, $limit, $page ) as $entry ) {
+		$source_post_id = (int) ( $entry['source_post_id'] ?? 0 );
+		$local          = $source_post_id > 0 ? get_post( $source_post_id ) : null;
+		if ( $source_post_id > 0 && ( ! $local instanceof WP_Post || 'publish' !== $local->post_status ) ) {
+			continue;
+		}
+		$uri = $local instanceof WP_Post ? axismundi_forum_topic_object_uri( $local ) : (string) ( $entry['object_uri'] ?? '' );
+		if ( '' === $uri ) {
+			continue;
+		}
+		$items[] = array( 'kind' => 'activity', 'type' => 'Announce', 'actor_uri' => $actor->get_uri(), 'object_uri' => $uri, 'community_viewer' => $group );
+	}
+	return array( 'items' => $items, 'page' => $page, 'pages' => $pages, 'total' => $total, 'has_more' => $page < $pages, 'next_cursor' => '', 'filter' => $filter );
+}
 
 /** A member-distributed community feed varies by the logged-in viewer. */
 function axismundi_forum_group_profile_requires_nocache( bool $requires_nocache, Axismundi_Actor $actor ) : bool {

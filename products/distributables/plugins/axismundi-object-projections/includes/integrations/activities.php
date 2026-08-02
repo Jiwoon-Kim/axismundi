@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  * @param array<string,mixed> $item          Public-safe Activity feed item.
  * @param string              $card_template Card the feed wants repeated; empty means the bundled one.
  */
-function axismundi_op_actor_feed_object_html( string $html, array $item, string $card_template = '' ) : string {
+function axismundi_op_actor_feed_object_html( string $html, array $item, string $card_template = '', string $mode = 'infinite' ) : string {
 	if ( '' !== $html || ! function_exists( 'axismundi_op_render_object_by_uri' ) ) {
 		return $html;
 	}
@@ -33,18 +33,44 @@ function axismundi_op_actor_feed_object_html( string $html, array $item, string 
 	// buttons set the no-cache policy when they bind a logged-in Actor's state;
 	// hashtag archives remain read-only through their separate renderer options.
 	/*
-	 * The feed owns clicks for the cards inside it. Cards here are appended, replaced, and
-	 * filtered continuously, and DOM added after load is never hydrated, so a per-card
-	 * interactive block would arrive dead the moment it was appended. Controls therefore render
-	 * as presentation and the feed region dispatches their actions.
+	 * Who owns a card's clicks follows from how the feed is walked, so it is derived rather than
+	 * decided here.
+	 *
+	 * An `infinite` feed appends, replaces and filters its cards continuously, and DOM added after
+	 * load is never hydrated — a per-card interactive block would arrive dead the moment it was
+	 * appended. So its controls render as presentation and the feed region dispatches them.
+	 *
+	 * A `pagination` feed changes page by navigating. Every card on it is server-rendered into a
+	 * fresh document and hydrated normally, so each one owns its own clicks — which is also why a
+	 * repost menu on such a page opens instead of firing immediately, the way it once did when a
+	 * delegated control was pressed on a page that never delegated.
 	 */
-	$options = array( 'headingTag' => 'h3', 'interactions' => true, 'viewerScoped' => true, 'interactionOwner' => 'feed', 'cardTemplate' => $card_template );
+	$options = array(
+		'headingTag'       => 'h3',
+		'interactions'     => true,
+		'viewerScoped'     => true,
+		'interactionOwner' => 'pagination' === $mode ? 'block' : 'feed',
+		'cardTemplate'     => $card_template,
+	);
 	if ( 'Create' === (string) ( $item['type'] ?? '' ) ) {
 		$options['expected_author'] = (string) ( $item['actor_uri'] ?? '' );
 	}
+	/*
+	 * An entitlement the selecting product already established, carried rather than re-asked.
+	 *
+	 * This renderer's public gate is the federation gate: it answers "may this be republished",
+	 * and so it withholds a members-only object from everyone — correctly, because it is not the
+	 * gate that knows who a member is. The product that chose these entries answered that question
+	 * for the whole list before handing them over, and states its answer on the descriptor. Without
+	 * it an accepted member sees an empty community, which is the safe direction to fail in and
+	 * still the wrong one.
+	 */
+	if ( ! empty( $item['community_viewer'] ) ) {
+		$options['communityViewer'] = (int) $item['community_viewer'];
+	}
 	return axismundi_op_render_object_by_uri( $object_uri, $options );
 }
-add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_op_actor_feed_object_html', 20, 3 );
+add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_op_actor_feed_object_html', 20, 4 );
 
 /**
  * Render a public Activity's uncached Object as an outbound reference.

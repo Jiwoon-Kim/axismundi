@@ -83,12 +83,28 @@ try {
 	$group_feed = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
 	ax_gp_assert(
 		$ax_gp_results,
-		'a public managed Group profile shows Forum Topics in place of an Activity timeline',
+		'a public managed Group profile shows its community through the same feed a Person profile uses',
 		$bound
 			&& ! is_wp_error( $admitted )
-			&& false !== strpos( $group_feed, 'axismundi-forum-topic-list' )
+			// The shared loop, not a list Forum drew itself.
+			&& 1 === preg_match( '#<ol class="axismundi-activity-feed__list#', $group_feed )
 			&& false !== strpos( $group_feed, 'Group Profile Topic Alpha' )
-			&& false === strpos( $group_feed, 'axismundi-activity-feed' )
+			/*
+			 * A card, asserted as a card. The old form of this checked only that the title
+			 * appeared somewhere, which the archive's bare-title fallback satisfied even when the
+			 * card had rendered nothing at all — so it could not tell a working community from a
+			 * broken one.
+			 */
+			&& false !== strpos( $group_feed, 'axismundi-object-card__header' )
+			&& false !== strpos( $group_feed, 'is-type-like' )
+	);
+	ax_gp_assert(
+		$ax_gp_results,
+		'a Group community is one surface, so the Person profile\'s surface switch never appears on it',
+		false === strpos( $group_feed, 'axismundi-activity-feed__surfaces' )
+			&& $group instanceof Axismundi_Actor
+			&& array( 'community' ) === array_keys( axismundi_act_actor_profile_surfaces( $group ) )
+			&& 'pagination' === (string) axismundi_act_actor_profile_surfaces( $group )['community']['mode']
 	);
 	ax_gp_assert(
 		$ax_gp_results,
@@ -187,8 +203,13 @@ try {
 	ax_gp_assert(
 		$ax_gp_results,
 		'both profiles list their entries in the same kind of list, and it is the ordered one',
+		/*
+		 * They are now the same list because they are the same list — one loop renders both, so
+		 * this can no longer drift. It is kept as the thing that would notice if a product started
+		 * drawing its own container again.
+		 */
 		1 === preg_match( '#<ol class="axismundi-activity-feed__list#', $ax_gp_person_feed )
-			&& 1 === preg_match( '#<ol class="axismundi-forum-topic-list__items#', $ax_gp_topics_html )
+			&& 1 === preg_match( '#<ol class="axismundi-activity-feed__list#', $ax_gp_topics_html )
 			&& 0 === preg_match( '#<ul class="axismundi-forum-(topic-list|archive)__items#', $ax_gp_topics_html )
 	);
 	ax_gp_assert(
@@ -274,7 +295,7 @@ try {
 	ax_gp_assert(
 		$ax_gp_results,
 		'every public managed Group shows an empty Forum Topic feed before its first Topic',
-		$solo instanceof Axismundi_Actor && false !== strpos( $solo_feed, 'axismundi-forum-topic-list' )
+		$solo instanceof Axismundi_Actor && false !== strpos( $solo_feed, 'axismundi-activity-feed__list' )
 	);
 	$member_user = (int) wp_insert_user( array( 'user_login' => 'axgp_member_' . strtolower( wp_generate_password( 7, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
 	$ax_gp_users[] = $member_user;
@@ -295,8 +316,28 @@ try {
 	$member_scope_feed = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
 	ax_gp_assert(
 		$ax_gp_results,
-		'a members-scope Group hides Topics from anonymous profile visitors and shows them to an accepted signed-in member',
-		true === $members_scope && false === strpos( $anonymous_member_scope_feed, 'Group Profile Topic Alpha') && false !== strpos( $member_scope_feed, 'Group Profile Topic Alpha' )
+		'a members-scope community publishes nothing to anyone yet, including its own accepted members',
+		/*
+		 * Scoped out on purpose, and asserted in both directions so it stays a decision.
+		 *
+		 * Reading a members-only Topic needs a viewer-aware card renderer we have not built: the
+		 * Object view model closes such a Topic through the transformer's federation visibility,
+		 * which correctly answers "may this be republished" and is the wrong gate to be asked "may
+		 * this member read it". Carrying an entitlement that far is a piece of work, not a flag.
+		 *
+		 * The member half is the part worth being explicit about, because it is a reduction. The
+		 * old archive fell back to a bare title link whenever a card came back empty, so an
+		 * accepted member was seeing a list of titles — not by design, but because the fallback
+		 * concealed that the cards had never rendered at all. This asserts the new state rather
+		 * than pretending the old one was a feature; when the viewer-aware renderer exists, this
+		 * assertion is what has to be rewritten to demand cards.
+		 *
+		 * Anonymous stays hidden, which it always was and must remain.
+		 */
+		true === $members_scope
+			&& false === strpos( $anonymous_member_scope_feed, 'Group Profile Topic Alpha' )
+			&& false === strpos( $member_scope_feed, 'Group Profile Topic Alpha' )
+			&& false === strpos( $member_scope_feed, 'axismundi-object-card__header' )
 	);
 	ax_gp_assert(
 	$ax_gp_results,

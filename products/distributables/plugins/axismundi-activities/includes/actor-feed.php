@@ -1129,7 +1129,7 @@ function axismundi_act_render_feed_density_switch_block( array $attributes = arr
 			. '<span class="screen-reader-text">' . esc_html( $label ) . '</span>'
 			. '</a></div>';
 	}
-	return '<nav class="axismundi-feed-density-switch axismundi-activity-feed__densities" aria-label="'
+	return '<nav class="axismundi-feed-density-switch" aria-label="'
 		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">'
 		. '<div class="wp-block-buttons is-style-connected">' . implode( '', $segments ) . '</div>'
 		. '</nav>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links and labels are escaped above.
@@ -1922,4 +1922,3 @@ function axismundi_act_find_block_by_name( array $blocks, string $name ) : ?arra
 function axismundi_act_actor_feed_densities_available( Axismundi_Actor $actor, string $surface = '' ) : array {
 	return axismundi_act_feed_item_templates( axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ) )['order'];
 }
-

@@ -1189,6 +1189,10 @@ ax_feed_assert(
 		 */
 		&& 2 === substr_count( $ax_feed_density_from_card, 'is-style-outline' )
 		&& 1 === substr_count( $ax_feed_density_from_card, 'is-current' )
+		// The control owns its complete visual contract; the retired feed-chrome wrapper must not
+		// add a second border or clipping layer around it.
+		&& false === strpos( $ax_feed_density_from_card, 'axismundi-activity-feed__densities' )
+		&& false === strpos( (string) file_get_contents( dirname( __DIR__ ) . '/blocks/feed/style.css' ), 'axismundi-activity-feed__densit' )
 );
 ax_feed_assert(
 	$ax_feed_results,

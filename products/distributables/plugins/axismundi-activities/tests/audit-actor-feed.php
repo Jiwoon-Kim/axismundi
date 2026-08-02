@@ -697,6 +697,42 @@ try {
 		 * resolve: "first wins" decides among *different* densities, and letting it also arbitrate
 		 * duplicates would leave one card unreachable with nothing saying so.
 		 */
+		/*
+		 * What the editor seeds has to be something the resolver can read.
+		 *
+		 * This is the gap that let a broken loop ship: the audit checked the bundled PHP template,
+		 * which was correct, and never looked at the block an author actually inserts. Its seed
+		 * still placed a bare `feed-item-template` under the loop — a shape the resolver ignores by
+		 * design — so inserting a feed and saving it produced a template that looked right in the
+		 * canvas and rendered no cards at all. The editor would have been the thing that lied.
+		 *
+		 * Read from source because the seed is JavaScript. Comments are stripped first, so
+		 * describing the arrangement in prose cannot satisfy it.
+		 */
+		$ax_feed_loop_seed = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/actor-feed-loop/edit.js' );
+		$ax_feed_loop_seed = (string) preg_replace( '#/\*.*?\*/#s', '', $ax_feed_loop_seed );
+		$ax_feed_loop_seed = (string) preg_replace( '#//[^\n]*#', '', $ax_feed_loop_seed );
+		$ax_feed_seeded    = 1 === preg_match( '#var TEMPLATE = \[(.*?)\];#s', $ax_feed_loop_seed, $ax_feed_seed_m ) ? $ax_feed_seed_m[1] : '';
+		ax_feed_assert(
+			$ax_feed_results,
+			'inserting a feed in the editor seeds the set, not a card the resolver will not read',
+			'' !== $ax_feed_seeded
+				&& false !== strpos( $ax_feed_seeded, 'axismundi/feed-item-templates' )
+				// The leaf must not be seeded directly: outside the set it is invisible to the feed.
+				&& 0 === preg_match( "#'axismundi/feed-item-template'#", $ax_feed_seeded )
+				&& false !== strpos( $ax_feed_seeded, 'axismundi/feed-pagination' )
+		);
+		/*
+		 * And nothing in the resolver still knows how to read the old shape. A dead recursive
+		 * finder that reached outside the set is a clean break waiting to be undone by whoever
+		 * reuses it, so the contract is that it does not exist.
+		 */
+		ax_feed_assert(
+			$ax_feed_results,
+			'no reader is left that would find a card outside the set',
+			! function_exists( 'axismundi_act_find_feed_item_template' )
+		);
+
 		$ax_feed_map = static function ( string $inner ) : array {
 			return axismundi_act_feed_item_templates( parse_blocks( '<!-- wp:axismundi/feed-item-templates -->' . $inner . '<!-- /wp:axismundi/feed-item-templates -->' ) );
 		};
@@ -773,9 +809,9 @@ try {
 				parse_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:axismundi/actor-feed-loop -->' . $inner . '<!-- /wp:axismundi/actor-feed-loop --></div><!-- /wp:group -->' )
 			);
 		};
-		$ax_feed_legacy_shape = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-template --><!-- /wp:axismundi/feed-item-template -->' );
-		$ax_feed_moved        = $ax_feed_arrangement( '<!-- wp:axismundi/feed-pagination /--><!-- wp:axismundi/feed-item-template --><!-- /wp:axismundi/feed-item-template --><!-- wp:axismundi/feed-filters /-->' );
-		$ax_feed_dropped      = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-template --><!-- /wp:axismundi/feed-item-template --><!-- wp:axismundi/feed-pagination /-->' );
+		$ax_feed_legacy_shape = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-templates --><!-- /wp:axismundi/feed-item-templates -->' );
+		$ax_feed_moved        = $ax_feed_arrangement( '<!-- wp:axismundi/feed-pagination /--><!-- wp:axismundi/feed-item-templates --><!-- /wp:axismundi/feed-item-templates --><!-- wp:axismundi/feed-filters /-->' );
+		$ax_feed_dropped      = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-templates --><!-- /wp:axismundi/feed-item-templates --><!-- wp:axismundi/feed-pagination /-->' );
 		ax_feed_assert(
 			$ax_feed_results,
 			'a template written before the chrome blocks existed keeps both controls in their original places',

@@ -1290,7 +1290,6 @@ function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
 		'axismundi/feed-filters'       => 'filters',
 		'axismundi/feed-density-switch' => 'density',
 		'axismundi/feed-item-templates' => 'list',
-		'axismundi/feed-item-template'  => 'list',
 		'axismundi/feed-pagination'    => 'pagination',
 	);
 	$slots = array();
@@ -1428,32 +1427,3 @@ function axismundi_act_actor_feed_densities_available( Axismundi_Actor $actor ) 
 	return axismundi_act_feed_item_templates( axismundi_act_actor_feed_template_blocks( $actor ) )['order'];
 }
 
-/**
- * The saved card for one density, or '' when the template does not carry that one.
- *
- * Density is an attribute on the item template rather than a second block type, because both are
- * the same thing — the card this feed repeats — differing only in how much of an entry an author
- * chose to draw. `card` is the value a template with no attribute means, so the two spellings
- * cannot disagree.
- *
- * @param array<int,array<string,mixed>> $blocks  Parsed blocks.
- * @param string                         $density Density being rendered.
- * @return string
- */
-function axismundi_act_find_feed_item_template( array $blocks, string $density ) : string {
-	foreach ( $blocks as $block ) {
-		if ( 'axismundi/feed-item-template' === ( $block['blockName'] ?? '' ) ) {
-			$saved = (string) ( $block['attrs']['density'] ?? 'card' );
-			$saved = 'compact' === $saved ? 'compact' : 'card';
-			if ( $saved === $density ) {
-				return serialize_blocks( (array) ( $block['innerBlocks'] ?? array() ) );
-			}
-			continue;
-		}
-		$found = axismundi_act_find_feed_item_template( (array) ( $block['innerBlocks'] ?? array() ), $density );
-		if ( '' !== $found ) {
-			return $found;
-		}
-	}
-	return '';
-}

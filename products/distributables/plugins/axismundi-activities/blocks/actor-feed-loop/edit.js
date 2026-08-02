@@ -17,11 +17,19 @@
 	var __ = i18n.__;
 	var useInnerBlocksProps = blockEditor.useInnerBlocksProps || blockEditor.__experimentalUseInnerBlocksProps;
 
-	// The arrangement the bundled profile template ships with. Not locked: moving these, or
-	// dropping one, is the reason they are blocks.
+	/*
+	 * The arrangement the bundled profile template ships with. Not locked: moving these, or
+	 * dropping one, is the reason they are blocks.
+	 *
+	 * The cards go in through `feed-item-templates` and never directly. The resolver reads the set
+	 * and nothing else, so a loop seeded with a bare `feed-item-template` would look right in the
+	 * editor and render no cards at all on the front — the failure would be a template that saves
+	 * cleanly and produces an empty feed, with the editor being the thing that had lied.
+	 */
 	var TEMPLATE = [
 		[ 'axismundi/feed-filters' ],
-		[ 'axismundi/feed-item-template' ],
+		[ 'axismundi/feed-density-switch' ],
+		[ 'axismundi/feed-item-templates' ],
 		[ 'axismundi/feed-pagination' ]
 	];
 

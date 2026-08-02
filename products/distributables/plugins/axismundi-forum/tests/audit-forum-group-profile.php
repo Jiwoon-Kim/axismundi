@@ -150,6 +150,57 @@ try {
 	 * name and the two collections never share an address after all.
 	 */
 	/*
+	 * A community draws the same card a Person does, from the same saved template.
+	 *
+	 * Forum chooses which entries a community shows; it does not decide what a card contains. It
+	 * used to do both, by calling the Object renderer with no template and interactions switched
+	 * off — so a Group's cards were a second, poorer card kept in Forum, and the `interactions`
+	 * and `reaction-bar` blocks saved in the Group profile template never reached the page. The
+	 * failure was invisible from the editor, where both profiles are the same PHP template.
+	 *
+	 * Asserted against Activities' resolver rather than against a copy of its answer: the point is
+	 * that there is one card definition, so agreeing with a duplicate would miss the whole thing.
+	 */
+	$ax_gp_card_template = $group instanceof Axismundi_Actor ? axismundi_forum_archive_card_template( $group->get_identity_id() ) : '';
+	$ax_gp_person_source = $group instanceof Axismundi_Actor && function_exists( 'axismundi_act_actor_feed_template_source' )
+		? axismundi_act_actor_feed_template_source( $group )
+		: 'x';
+	ax_gp_assert(
+		$ax_gp_results,
+		'the community archive repeats the Group profile\'s own saved card, not a second one kept in Forum',
+		'' !== $ax_gp_card_template
+			&& $ax_gp_card_template === $ax_gp_person_source
+			&& false !== strpos( $ax_gp_card_template, 'axismundi/interactions' )
+	);
+	$ax_gp_archive_html = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
+	/*
+	 * The two surfaces must not disagree about what kind of list they are.
+	 *
+	 * The Activity timeline emitted `ol` and both Forum collections emitted `ul`, so the same kind
+	 * of list claimed its order was meaningful on one profile and meaningless on the next — a
+	 * difference a reader using a screen reader is told about and a sighted reader is not. Both are
+	 * newest-first, and here position is also what the page numbers count, so `ol` is the true one
+	 * and it is the timeline that was already right.
+	 */
+	$ax_gp_person_feed = $person instanceof Axismundi_Actor ? ax_gp_profile_feed( $person ) : '';
+	$ax_gp_topics_html = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
+	ax_gp_assert(
+		$ax_gp_results,
+		'both profiles list their entries in the same kind of list, and it is the ordered one',
+		1 === preg_match( '#<ol class="axismundi-activity-feed__list#', $ax_gp_person_feed )
+			&& 1 === preg_match( '#<ol class="axismundi-forum-topic-list__items#', $ax_gp_topics_html )
+			&& 0 === preg_match( '#<ul class="axismundi-forum-(topic-list|archive)__items#', $ax_gp_topics_html )
+	);
+	ax_gp_assert(
+		$ax_gp_results,
+		'the card the archive renders carries the controls that template defines',
+		'' !== $ax_gp_archive_html
+			&& false !== strpos( $ax_gp_archive_html, 'is-type-like' )
+			&& false !== strpos( $ax_gp_archive_html, 'is-type-reply' )
+			&& false !== strpos( $ax_gp_archive_html, 'is-type-announce' )
+	);
+
+	/*
 	 * Density is a presentation, so it must not change what is listed.
 	 *
 	 * This is the whole reason it is neither a tab nor a filter, and the only way to hold it is to
@@ -197,10 +248,23 @@ try {
 			&& 1 === preg_match_all( '#view=compact#', $ax_gp_switch )
 			&& false !== strpos( $ax_gp_switch, 'aria-current="true"' )
 	);
+	/*
+	 * Compared after normalising the per-control instance ids.
+	 *
+	 * Those ids are minted per rendered control and are *required* to differ — one Object shown
+	 * twice must not have two controls claiming one id, which is held in the interaction audit.
+	 * So they are not evidence about the address, and comparing them here would fail on the one
+	 * property another audit exists to guarantee. Everything else is compared byte for byte,
+	 * which is what "the same page" means.
+	 */
+	$ax_gp_normalise_ids = static function ( string $html ) : string {
+		return (string) preg_replace( '#(ax-(?:rx|announce-menu|announce-trigger))-\d+#', '$1-N', $html );
+	};
 	ax_gp_assert(
 		$ax_gp_results,
 		'the legacy topic_page address still reaches the same page but is never emitted again',
-		$page_two_legacy_html === $page_two_html
+		$ax_gp_normalise_ids( $page_two_legacy_html ) === $ax_gp_normalise_ids( $page_two_html )
+			&& $page_two_legacy_html !== $page_two_html
 			&& false !== strpos( $page_two_html, 'Page 2 of 3' )
 			&& false === strpos( $page_two_html, 'topic_page=' )
 	);

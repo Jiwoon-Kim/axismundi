@@ -48,6 +48,42 @@ function axismundi_forum_group_archive_filters() : array {
 }
 
 /**
+ * The card this archive repeats, which is the Group profile's own saved card.
+ *
+ * Forum decides *which* entries a community shows and in what order — that is what the Announce
+ * ledger, the two collections and the numbered pages are for. It does not decide what a card looks
+ * like. That was drifting: the archive called the Object renderer with no template and interactions
+ * switched off, so a Group's cards were a different, poorer card than a Person's, and the
+ * `interactions`, `reaction-bar` and `object-card-body` blocks saved in the Group profile template
+ * never reached the page. An author editing them saw nothing change.
+ *
+ * The resolver is Activities' and is called rather than copied. It already answers for a Group by
+ * reading `actor-group-profile`, so this is not Forum learning where templates live — it is Forum
+ * stopping short of rendering a card itself.
+ *
+ * An empty string is a real answer: no saved template means the bundled card, which is what the
+ * renderer does with no template at all.
+ *
+ * @param int $group_identity_id Community Group identity.
+ * @return string
+ */
+function axismundi_forum_archive_card_template( int $group_identity_id ) : string {
+	static $resolved = array();
+	if ( isset( $resolved[ $group_identity_id ] ) ) {
+		return $resolved[ $group_identity_id ];
+	}
+	$template = '';
+	if ( function_exists( 'axismundi_act_actor_feed_template_source' ) && function_exists( 'axismundi_actors_get_by_identity' ) ) {
+		$group = axismundi_actors_get_by_identity( $group_identity_id );
+		if ( $group instanceof Axismundi_Actor ) {
+			$template = axismundi_act_actor_feed_template_source( $group );
+		}
+	}
+	$resolved[ $group_identity_id ] = $template;
+	return $template;
+}
+
+/**
  * How densely the archive draws each entry.
  *
  * A presentation mode, not a selection: both views list exactly the same entries in exactly the
@@ -219,9 +255,25 @@ function axismundi_forum_render_group_comments( Axismundi_Actor $group, int $pag
 	$pages     = max( 1, (int) ceil( $total / AXISMUNDI_FORUM_ARCHIVE_PAGE_SIZE ) );
 	$page      = max( 1, min( $pages, $page ) );
 	$items     = array();
+	$template  = axismundi_forum_archive_card_template( $group->get_identity_id() );
 	foreach ( array_slice( $selection['uris'], ( $page - 1 ) * AXISMUNDI_FORUM_ARCHIVE_PAGE_SIZE, AXISMUNDI_FORUM_ARCHIVE_PAGE_SIZE ) as $uri ) {
 		$card = function_exists( 'axismundi_op_render_object_by_uri' )
-			? axismundi_op_render_object_by_uri( $uri, array( 'headingTag' => 'h3', 'interactions' => false ) )
+			? axismundi_op_render_object_by_uri(
+				$uri,
+				array(
+					'headingTag'   => 'h3',
+					'cardTemplate' => $template,
+					// Only consulted when no template was supplied; the saved card carries its
+					// own controls, and this is what a card with no template falls back to.
+					'interactions' => '' !== $template,
+					/*
+					 * `block`, not `feed`. These pages are whole navigations rather than markup
+					 * appended after load, so every control on them is hydrated normally and can
+					 * own its own clicks.
+					 */
+					'interactionOwner' => 'block',
+				)
+			)
 			: '';
 		if ( '' !== $card ) {
 			$items[] = '<li class="axismundi-forum-archive__item axismundi-forum-archive__item--comment">' . $card . '</li>';
@@ -229,7 +281,9 @@ function axismundi_forum_render_group_comments( Axismundi_Actor $group, int $pag
 	}
 	$html = empty( $items )
 		? '<p class="axismundi-forum-archive__empty">' . esc_html__( 'No comments yet.', 'axismundi-forum' ) . '</p>'
-		: '<ul class="axismundi-forum-archive__items">' . implode( '', $items ) . '</ul>';
+		// `ol`, matching the Topic list and the Activity timeline. Both collections are ordered
+		// and both are counted by the same page numbers, so neither may claim otherwise.
+		: '<ol class="axismundi-forum-archive__items" start="' . esc_attr( (string) ( ( ( $page - 1 ) * AXISMUNDI_FORUM_ARCHIVE_PAGE_SIZE ) + 1 ) ) . '">' . implode( '', $items ) . '</ol>';
 	return array( 'html' => $html, 'pages' => $pages, 'page' => $page );
 }
 

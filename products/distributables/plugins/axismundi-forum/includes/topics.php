@@ -608,7 +608,14 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 				$uri,
 				array(
 					'headingTag'      => 'h3',
-					'interactions'    => false,
+					/*
+					 * The community's own saved card, so a Topic here is drawn the way the Group
+					 * profile template says and not by a second, poorer card kept in this file.
+					 * Forum chooses which Topics appear; what a card contains is the template's.
+					 */
+					'cardTemplate'     => axismundi_forum_archive_card_template( $group_identity_id ),
+					'interactions'     => '' !== axismundi_forum_archive_card_template( $group_identity_id ),
+					'interactionOwner' => 'block',
 					'expected_author' => $author instanceof Axismundi_Actor ? $author->get_uri() : '',
 					/*
 					 * The renderer's public gate is the federation gate, and it withholds a
@@ -644,9 +651,18 @@ function axismundi_forum_render_topic_list_block( array $attributes = array(), s
 			$items[] = '<li class="axismundi-forum-topic-list__item axismundi-forum-topic-list__item--title-only"><a href="' . esc_url( get_permalink( $local ) ) . '">' . esc_html( get_the_title( $local ) ) . '</a></li>';
 		}
 	}
+	/*
+	 * `ol`, the same element the Activity timeline uses.
+	 *
+	 * These are the same kind of list read two ways, so they must not disagree about what kind of
+	 * list they are. The order carries meaning in both — newest first, and here the position is
+	 * also what the page numbers count — which is what an ordered list means and what an unordered
+	 * one denies. `start` continues the numbering across pages so a screen reader is told the
+	 * entry's place in the archive rather than being told every page begins at one.
+	 */
 	$body = empty( $items )
 		? '<p class="axismundi-forum-topic-list__empty">' . esc_html__( 'No topics yet.', 'axismundi-forum' ) . '</p>'
-		: '<ul class="axismundi-forum-topic-list__items">' . implode( '', $items ) . '</ul>';
+		: '<ol class="axismundi-forum-topic-list__items" start="' . esc_attr( (string) ( ( ( $page - 1 ) * $limit ) + 1 ) ) . '">' . implode( '', $items ) . '</ol>';
 	// Both community collections page the same way and say so with the same words, so the
 	// pagination is the archive's rather than one this list keeps to itself.
 	$pagination = axismundi_forum_render_archive_pagination( $page, $pages, 'posts' );

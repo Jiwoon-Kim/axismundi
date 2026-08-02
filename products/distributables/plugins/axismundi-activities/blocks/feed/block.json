@@ -1,12 +1,12 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "axismundi/actor-feed-loop",
+	"name": "axismundi/feed",
 	"version": "0.0.36",
-	"title": "Actor Feed Loop",
+	"title": "Feed",
 	"category": "theme",
 	"icon": "list-view",
-	"description": "Displays the current Actor's public timeline of Activities and observed Objects.",
+	"description": "The Actor feed: it resolves which surface is being read, how it is walked, and hands that to the layouts inside it.",
 	"attributes": {
 		"navigation": { "type": "string", "default": "" }
 	},

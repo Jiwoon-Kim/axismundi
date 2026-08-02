@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 ?>
 	<!-- wp:axismundi/feed-filters /-->
 	<!-- wp:axismundi/feed-density-switch /-->
-	<!-- wp:axismundi/feed-item-templates -->
+	<!-- wp:axismundi/feed-loop -->
 	<!-- wp:axismundi/feed-item-template {"density":"card"} -->
 		<?php require WP_PLUGIN_DIR . '/axismundi-object-projections/templates/parts/object-card-header.php'; ?>
 		<!-- wp:axismundi/object-card-body /-->
@@ -59,5 +59,5 @@ defined( 'ABSPATH' ) || exit;
 			<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"size":"xs"} /-->
 		<!-- /wp:axismundi/interactions -->
 	<!-- /wp:axismundi/feed-item-template -->
-	<!-- /wp:axismundi/feed-item-templates -->
+	<!-- /wp:axismundi/feed-loop -->
 	<!-- wp:axismundi/feed-pagination /-->

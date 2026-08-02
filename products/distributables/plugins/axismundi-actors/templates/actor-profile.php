@@ -54,7 +54,7 @@ endif;
 ?>
 
 <!-- wp:group {"className":"<?php echo esc_attr( $axismundi_actor_feed_class ); ?>"} -->
-<div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/actor-feed-loop -->
+<div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/feed -->
 	<?php
 	/*
 	 * The card the feed repeats, saved here so an author can edit it.
@@ -87,7 +87,7 @@ endif;
 	<?php require __DIR__ . '/parts/feed-surface-layout.php'; ?>
 	<!-- /wp:axismundi/feed-tab -->
 	<!-- /wp:axismundi/feed-tabs -->
-<!-- /wp:axismundi/actor-feed-loop --></div>
+<!-- /wp:axismundi/feed --></div>
 <!-- /wp:group -->
 
 </div>

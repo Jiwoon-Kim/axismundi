@@ -8,7 +8,7 @@
 	"icon": "table-row-before",
 	"description": "One editable layout per profile surface. The reader sees the tab they are on; an author edits each surface separately.",
 	"textdomain": "axismundi-activities",
-	"parent": [ "axismundi/actor-feed-loop" ],
+	"parent": [ "axismundi/feed" ],
 	"allowedBlocks": [ "axismundi/feed-tab" ],
 	"supports": {
 		"html": false,

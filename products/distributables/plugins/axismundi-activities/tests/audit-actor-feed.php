@@ -645,14 +645,19 @@ try {
 		 */
 		ax_feed_assert(
 			$ax_feed_results,
-			'the renamed loop is the only name left: registration, parent, and the module handle all moved',
-			WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/actor-feed-loop' )
+			'the promoted names are the only ones left: registration, the parent chain, and the module handle all moved',
+			WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/feed' )
 				&& ! WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/actor-activity-feed' )
-				// The cards nest one level deeper now: the loop holds the set, the set holds the
-				// cards. Asserted as a chain so neither half can be re-homed on its own.
-				&& array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-item-templates' )->parent
-				&& array( 'axismundi/feed-item-templates' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-item-template' )->parent
-				&& is_readable( dirname( __DIR__ ) . '/blocks/actor-feed-loop/view.js' )
+				/*
+				 * The chain, asserted link by link so no half can be re-homed on its own: the feed
+				 * holds tabs, a tab holds one surface's layout, and the loop inside it holds the
+				 * cards it repeats.
+				 */
+				&& array( 'axismundi/feed' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-tabs' )->parent
+				&& array( 'axismundi/feed-tabs' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-tab' )->parent
+				&& array( 'axismundi/feed-tab' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-loop' )->parent
+				&& array( 'axismundi/feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-item-template' )->parent
+				&& is_readable( dirname( __DIR__ ) . '/blocks/feed/view.js' )
 		);
 
 		/*
@@ -679,7 +684,7 @@ try {
 		 * rather than leaving the second to be discovered missing.
 		 */
 		$ax_feed_pair = static function ( string $inner ) : array {
-			$blocks = parse_blocks( '<!-- wp:axismundi/actor-feed-loop --><!-- wp:axismundi/feed-item-templates -->' . $inner . '<!-- /wp:axismundi/feed-item-templates --><!-- /wp:axismundi/actor-feed-loop -->' );
+			$blocks = parse_blocks( '<!-- wp:axismundi/feed --><!-- wp:axismundi/feed-loop -->' . $inner . '<!-- /wp:axismundi/feed-loop --><!-- /wp:axismundi/feed -->' );
 			return array(
 				'card'    => axismundi_act_extract_feed_item_template( $blocks, 'card' ),
 				'compact' => axismundi_act_extract_feed_item_template( $blocks, 'compact' ),
@@ -709,18 +714,21 @@ try {
 		 * Read from source because the seed is JavaScript. Comments are stripped first, so
 		 * describing the arrangement in prose cannot satisfy it.
 		 */
-		$ax_feed_loop_seed = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/actor-feed-loop/edit.js' );
+		$ax_feed_loop_seed = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed/edit.js' );
 		$ax_feed_loop_seed = (string) preg_replace( '#/\*.*?\*/#s', '', $ax_feed_loop_seed );
 		$ax_feed_loop_seed = (string) preg_replace( '#//[^\n]*#', '', $ax_feed_loop_seed );
 		$ax_feed_seeded    = 1 === preg_match( '#var TEMPLATE = \[(.*?)\];#s', $ax_feed_loop_seed, $ax_feed_seed_m ) ? $ax_feed_seed_m[1] : '';
 		ax_feed_assert(
 			$ax_feed_results,
-			'inserting a feed in the editor seeds the set, not a card the resolver will not read',
+			'inserting a feed in the editor seeds the tabs, and leaves each surface to seed its own chrome',
 			'' !== $ax_feed_seeded
-				&& false !== strpos( $ax_feed_seeded, 'axismundi/feed-item-templates' )
-				// The leaf must not be seeded directly: outside the set it is invisible to the feed.
-				&& 0 === preg_match( "#'axismundi/feed-item-template'#", $ax_feed_seeded )
-				&& false !== strpos( $ax_feed_seeded, 'axismundi/feed-pagination' )
+				&& false !== strpos( $ax_feed_seeded, 'axismundi/feed-tabs' )
+				/*
+				 * Nothing below the tabs is seeded here. Chrome placed at this level sits outside
+				 * every surface, where no surface reads it — the same class of mistake as seeding a
+				 * bare card outside the set, which is what this assertion was written for.
+				 */
+				&& 0 === preg_match( "#'axismundi/feed-(filters|pagination|density-switch|loop|item-template)'#", $ax_feed_seeded )
 		);
 		/*
 		 * And nothing in the resolver still knows how to read the old shape. A dead recursive
@@ -766,7 +774,7 @@ try {
 		);
 
 		$ax_feed_map = static function ( string $inner ) : array {
-			return axismundi_act_feed_item_templates( parse_blocks( '<!-- wp:axismundi/feed-item-templates -->' . $inner . '<!-- /wp:axismundi/feed-item-templates -->' ) );
+			return axismundi_act_feed_item_templates( parse_blocks( '<!-- wp:axismundi/feed-loop -->' . $inner . '<!-- /wp:axismundi/feed-loop -->' ) );
 		};
 		$ax_feed_compact_only = $ax_feed_map( '<!-- wp:axismundi/feed-item-template {"density":"compact"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->' );
 		$ax_feed_reordered    = $ax_feed_map(
@@ -781,10 +789,10 @@ try {
 				&& array( 'compact', 'card' ) === $ax_feed_reordered['order']
 				&& $ax_feed_reordered['templates']['compact'] === axismundi_act_extract_feed_item_template(
 					parse_blocks(
-						'<!-- wp:axismundi/feed-item-templates -->'
+						'<!-- wp:axismundi/feed-loop -->'
 						. '<!-- wp:axismundi/feed-item-template {"density":"compact"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
 						. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template -->'
-						. '<!-- /wp:axismundi/feed-item-templates -->'
+						. '<!-- /wp:axismundi/feed-loop -->'
 					),
 					''
 				)
@@ -815,7 +823,7 @@ try {
 		 * what a clean break should be.
 		 */
 		$ax_feed_setless = axismundi_act_feed_item_templates(
-			parse_blocks( '<!-- wp:axismundi/actor-feed-loop --><!-- wp:axismundi/feed-item-template --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template --><!-- /wp:axismundi/actor-feed-loop -->' )
+			parse_blocks( '<!-- wp:axismundi/feed --><!-- wp:axismundi/feed-item-template --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template --><!-- /wp:axismundi/feed -->' )
 		);
 		ax_feed_assert(
 			$ax_feed_results,
@@ -838,12 +846,12 @@ try {
 
 		$ax_feed_arrangement = static function ( string $inner ) : array {
 			return axismundi_act_feed_slots_from_blocks(
-				parse_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:axismundi/actor-feed-loop -->' . $inner . '<!-- /wp:axismundi/actor-feed-loop --></div><!-- /wp:group -->' )
+				parse_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:axismundi/feed -->' . $inner . '<!-- /wp:axismundi/feed --></div><!-- /wp:group -->' )
 			);
 		};
-		$ax_feed_legacy_shape = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-templates --><!-- /wp:axismundi/feed-item-templates -->' );
-		$ax_feed_moved        = $ax_feed_arrangement( '<!-- wp:axismundi/feed-pagination /--><!-- wp:axismundi/feed-item-templates --><!-- /wp:axismundi/feed-item-templates --><!-- wp:axismundi/feed-filters /-->' );
-		$ax_feed_dropped      = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-templates --><!-- /wp:axismundi/feed-item-templates --><!-- wp:axismundi/feed-pagination /-->' );
+		$ax_feed_legacy_shape = $ax_feed_arrangement( '<!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop -->' );
+		$ax_feed_moved        = $ax_feed_arrangement( '<!-- wp:axismundi/feed-pagination /--><!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop --><!-- wp:axismundi/feed-filters /-->' );
+		$ax_feed_dropped      = $ax_feed_arrangement( '<!-- wp:axismundi/feed-loop --><!-- /wp:axismundi/feed-loop --><!-- wp:axismundi/feed-pagination /-->' );
 		ax_feed_assert(
 			$ax_feed_results,
 			'a template written before the chrome blocks existed keeps both controls in their original places',
@@ -887,8 +895,10 @@ try {
 			return 1 === preg_match( '#save:\s*function\s*\([^)]*\)\s*\{([^{}]*)\}#', $src, $m ) ? trim( $m[1] ) : '';
 		};
 		$ax_feed_container_saves = array(
-			'actor-feed-loop'    => $ax_feed_save_body( 'actor-feed-loop' ),
-			'feed-item-templates' => $ax_feed_save_body( 'feed-item-templates' ),
+			'feed'      => $ax_feed_save_body( 'feed' ),
+			'feed-tabs' => $ax_feed_save_body( 'feed-tabs' ),
+			'feed-tab'  => $ax_feed_save_body( 'feed-tab' ),
+			'feed-loop' => $ax_feed_save_body( 'feed-loop' ),
 			'feed-item-template'  => $ax_feed_save_body( 'feed-item-template' ),
 		);
 		$ax_feed_leaf_saves = array(
@@ -907,7 +917,7 @@ try {
 		ax_feed_assert(
 			$ax_feed_results,
 			'every container saves its children, so an editor save keeps the card set and every placement',
-			3 === count( $ax_feed_container_saves ) && $ax_feed_containers_hold
+			5 === count( $ax_feed_container_saves ) && $ax_feed_containers_hold
 		);
 		ax_feed_assert(
 			$ax_feed_results,
@@ -916,9 +926,9 @@ try {
 		);
 		ax_feed_assert(
 			$ax_feed_results,
-			'the filter and pagination blocks are Activity feed children, not chrome any surface can host',
-			array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-filters' )->parent
-				&& array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-pagination' )->parent
+			'the filter and pagination blocks belong to one surface layout, not to the feed as a whole',
+			array( 'axismundi/feed-tab' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-filters' )->parent
+				&& array( 'axismundi/feed-tab' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-pagination' )->parent
 		);
 
 
@@ -1004,22 +1014,22 @@ try {
  * "the first one" becomes whichever surface an author put at the top, so the document is narrowed
  * before anything is looked for.
  */
-$ax_feed_tabs_markup = '<!-- wp:axismundi/actor-feed-loop -->'
+$ax_feed_tabs_markup = '<!-- wp:axismundi/feed -->'
 	. '<!-- wp:axismundi/feed-tabs -->'
 	. '<!-- wp:axismundi/feed-tab {"surface":"activity"} -->'
 	. '<!-- wp:axismundi/feed-filters /-->'
-	. '<!-- wp:axismundi/feed-item-templates -->'
+	. '<!-- wp:axismundi/feed-loop -->'
 	. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
-	. '<!-- /wp:axismundi/feed-item-templates -->'
+	. '<!-- /wp:axismundi/feed-loop -->'
 	. '<!-- /wp:axismundi/feed-tab -->'
 	. '<!-- wp:axismundi/feed-tab {"surface":"community"} -->'
-	. '<!-- wp:axismundi/feed-item-templates -->'
+	. '<!-- wp:axismundi/feed-loop -->'
 	. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-summary /--><!-- /wp:axismundi/feed-item-template -->'
-	. '<!-- /wp:axismundi/feed-item-templates -->'
+	. '<!-- /wp:axismundi/feed-loop -->'
 	. '<!-- wp:axismundi/feed-pagination /-->'
 	. '<!-- /wp:axismundi/feed-tab -->'
 	. '<!-- /wp:axismundi/feed-tabs -->'
-	. '<!-- /wp:axismundi/actor-feed-loop -->';
+	. '<!-- /wp:axismundi/feed -->';
 $ax_feed_tabs_blocks   = parse_blocks( $ax_feed_tabs_markup );
 $ax_feed_tab_activity  = axismundi_act_feed_surface_blocks( $ax_feed_tabs_blocks, 'activity' );
 $ax_feed_tab_community = axismundi_act_feed_surface_blocks( $ax_feed_tabs_blocks, 'community' );
@@ -1039,11 +1049,11 @@ ax_feed_assert(
  * reads as a working feed showing the wrong thing.
  */
 $ax_feed_untabbed = parse_blocks(
-	'<!-- wp:axismundi/actor-feed-loop -->'
-	. '<!-- wp:axismundi/feed-item-templates -->'
+	'<!-- wp:axismundi/feed -->'
+	. '<!-- wp:axismundi/feed-loop -->'
 	. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
-	. '<!-- /wp:axismundi/feed-item-templates -->'
-	. '<!-- /wp:axismundi/actor-feed-loop -->'
+	. '<!-- /wp:axismundi/feed-loop -->'
+	. '<!-- /wp:axismundi/feed -->'
 );
 ax_feed_assert(
 	$ax_feed_results,

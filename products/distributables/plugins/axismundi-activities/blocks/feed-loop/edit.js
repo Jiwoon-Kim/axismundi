@@ -1,5 +1,5 @@
 /**
- * axismundi/feed-item-templates editor registration (no build step).
+ * axismundi/feed-loop editor registration (no build step).
  *
  * A wrapper so the variants read as one thing. Left as siblings of the filters and the pager they
  * were just a run of blocks that happened to be next to each other; grouped, it is visible that
@@ -45,7 +45,7 @@
 		}
 	} );
 
-	blocks.registerBlockType( 'axismundi/feed-item-templates', {
+	blocks.registerBlockType( 'axismundi/feed-loop', {
 		edit: function ( props ) {
 			/*
 			 * Insertion closes once every density is spoken for.

@@ -722,7 +722,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 * own delegated-controller module before it emits `data-wp-interactive="axismundi/actor-feed"`.
 	 */
 	if ( function_exists( 'wp_enqueue_script_module' ) ) {
-		wp_enqueue_script_module( 'axismundi-actor-feed-loop-view-script-module' );
+		wp_enqueue_script_module( 'axismundi-feed-view-script-module' );
 	}
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read pagination.
 	$cursor = isset( $_GET['feed_after'] ) ? sanitize_text_field( wp_unslash( $_GET['feed_after'] ) ) : '';
@@ -1413,10 +1413,10 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 
 /** Register the server-rendered Actor Activity feed block. */
 function axismundi_act_register_actor_activity_feed_block() : void {
-	register_block_type( dirname( __DIR__ ) . '/blocks/actor-feed-loop', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-tabs' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-tab' );
-	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-templates' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-loop' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
 	/*
 	 * The chrome around the cards, as blocks an author can move or leave out.
@@ -1570,7 +1570,7 @@ function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
 	$known = array(
 		'axismundi/feed-filters'       => 'filters',
 		'axismundi/feed-density-switch' => 'density',
-		'axismundi/feed-item-templates' => 'list',
+		'axismundi/feed-loop' => 'list',
 		'axismundi/feed-pagination'    => 'pagination',
 	);
 	$slots = array();
@@ -1593,7 +1593,7 @@ function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
  */
 function axismundi_act_find_feed_loop_block( array $blocks ) : ?array {
 	foreach ( $blocks as $block ) {
-		if ( 'axismundi/actor-feed-loop' === ( $block['blockName'] ?? '' ) ) {
+		if ( 'axismundi/feed' === ( $block['blockName'] ?? '' ) ) {
 			return $block;
 		}
 		$found = axismundi_act_find_feed_loop_block( (array) ( $block['innerBlocks'] ?? array() ) );
@@ -1658,7 +1658,7 @@ function axismundi_act_feed_item_templates( array $blocks ) : array {
 	 * templates are being overwritten on deploy, so there is no install to carry. A template with
 	 * no set renders no cards, which is loud, instead of quietly finding one somewhere else.
 	 */
-	$wrapper = axismundi_act_find_block_by_name( $blocks, 'axismundi/feed-item-templates' );
+	$wrapper = axismundi_act_find_block_by_name( $blocks, 'axismundi/feed-loop' );
 	if ( null === $wrapper ) {
 		return $found;
 	}

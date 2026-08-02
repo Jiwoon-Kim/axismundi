@@ -11,7 +11,7 @@
 		"density": { "type": "string", "default": "card" }
 	},
 	"textdomain": "axismundi-activities",
-	"parent": [ "axismundi/feed-item-templates" ],
+	"parent": [ "axismundi/feed-loop" ],
 	"supports": {
 		"html": false,
 		"reusable": false,

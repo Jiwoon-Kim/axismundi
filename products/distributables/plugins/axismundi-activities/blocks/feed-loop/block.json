@@ -1,14 +1,14 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "axismundi/feed-item-templates",
+	"name": "axismundi/feed-loop",
 	"version": "0.1.0",
-	"title": "Feed Item Templates",
+	"title": "Feed Loop",
 	"category": "theme",
 	"icon": "layout",
-	"description": "The cards this feed can repeat, one per density. The first is the default; a second adds the Card/Compact switch.",
+	"description": "Repeats the feed's entries. It holds one item template per density; the first is the default, and a second adds the Card/Compact switch.",
 	"textdomain": "axismundi-activities",
-	"parent": [ "axismundi/actor-feed-loop" ],
+	"parent": [ "axismundi/feed-tab" ],
 	"allowedBlocks": [ "axismundi/feed-item-template" ],
 	"supports": {
 		"html": false,

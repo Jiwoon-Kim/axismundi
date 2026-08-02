@@ -19,7 +19,7 @@
 	var TEMPLATE = [
 		[ 'axismundi/feed-filters' ],
 		[ 'axismundi/feed-density-switch' ],
-		[ 'axismundi/feed-item-templates' ],
+		[ 'axismundi/feed-loop' ],
 		[ 'axismundi/feed-pagination' ]
 	];
 

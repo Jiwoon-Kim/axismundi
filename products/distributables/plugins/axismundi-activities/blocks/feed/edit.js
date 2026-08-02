@@ -1,5 +1,5 @@
 /**
- * axismundi/actor-feed-loop editor registration (no build step).
+ * axismundi/feed editor registration (no build step).
  *
  * The preview used to draw a whole feed — filter control, two skeleton cards, a Load more link —
  * because at the time none of those were blocks and a preview that drew nothing looked broken.
@@ -26,14 +26,18 @@
 	 * editor and render no cards at all on the front — the failure would be a template that saves
 	 * cleanly and produces an empty feed, with the editor being the thing that had lied.
 	 */
+	/*
+	 * One child, because the arrangement is no longer the feed's to hold.
+	 *
+	 * The chrome used to be seeded here, which was right while a profile had one layout. Each
+	 * surface has its own now, so the feed seeds the tabs and every tab seeds its own chrome —
+	 * seeding filters here would put them outside any surface, where nothing would read them.
+	 */
 	var TEMPLATE = [
-		[ 'axismundi/feed-filters' ],
-		[ 'axismundi/feed-density-switch' ],
-		[ 'axismundi/feed-item-templates' ],
-		[ 'axismundi/feed-pagination' ]
+		[ 'axismundi/feed-tabs' ]
 	];
 
-	blocks.registerBlockType( 'axismundi/actor-feed-loop', {
+	blocks.registerBlockType( 'axismundi/feed', {
 		edit: function () {
 			var blockProps = blockEditor.useBlockProps( { className: 'axismundi-activity-feed' } );
 			var inner = useInnerBlocksProps

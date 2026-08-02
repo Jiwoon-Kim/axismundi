@@ -8,7 +8,7 @@
 	"icon": "grid-view",
 	"description": "Where the Card/Compact control appears. It changes how the same entries are drawn, never which ones.",
 	"textdomain": "axismundi-activities",
-	"parent": [ "axismundi/actor-feed-loop" ],
+	"parent": [ "axismundi/feed-tab" ],
 	"supports": {
 		"html": false,
 		"reusable": false,

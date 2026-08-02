@@ -12,6 +12,8 @@ require_once dirname( __DIR__ ) . '/includes/audience.php';
 $ax_aud_results = array();
 $GLOBALS['ax_aud_http'] = 0;
 $ax_aud_identity_id = 0;
+$ax_aud_identity_ids = array();
+$ax_aud_users        = array();
 
 /** @param bool[] $results Results. */
 function ax_aud_assert( array &$results, string $label, bool $condition ) : void {
@@ -139,9 +141,94 @@ try {
 	ax_aud_assert( $ax_aud_results, 'an internal local Actor cannot author a federated audience', is_wp_error( $internal_result ) && 'ax_act_audience_actor' === $internal_result->get_error_code() );
 
 
+	/*
+	 * Group context, read off the addressing rather than off our own tables.
+	 *
+	 * This is what lets a Person's Community surface contain anything remote. The predicates it
+	 * replaces are local Forum ones — "is this a Topic we admitted", "is this a reply to a Topic we
+	 * hold" — which are unanswerable for a Lemmy Object and are precisely why Group context has
+	 * been invisible on remote profiles.
+	 */
+	// A managed Group needs a real owner, and this audit runs with no current user.
+	$ax_aud_owner   = (int) wp_insert_user( array( 'user_login' => 'axaud_' . strtolower( wp_generate_password( 8, false, false ) ), 'user_pass' => wp_generate_password(), 'role' => 'administrator' ) );
+	$ax_aud_users[] = $ax_aud_owner;
+	$ax_aud_group = axismundi_actors_create_managed_group(
+		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'internal' )
+	);
+	if ( $ax_aud_group instanceof Axismundi_Actor ) {
+		$ax_aud_identity_ids[] = $ax_aud_group->get_identity_id();
+	}
+	$ax_aud_group_uri  = $ax_aud_group instanceof Axismundi_Actor ? $ax_aud_group->get_uri() : '';
+	$ax_aud_second     = axismundi_actors_create_managed_group(
+		array( 'owner_user_id' => $ax_aud_owner, 'preferred_username' => 'axaud' . strtolower( wp_generate_password( 6, false, false ) ), 'status' => 'internal' )
+	);
+	if ( $ax_aud_second instanceof Axismundi_Actor ) {
+		$ax_aud_identity_ids[] = $ax_aud_second->get_identity_id();
+	}
+	$ax_aud_second_uri = $ax_aud_second instanceof Axismundi_Actor ? $ax_aud_second->get_uri() : '';
+
+	$ax_aud_declared  = axismundi_act_group_context( array( 'audience' => $ax_aud_group_uri, 'to' => array( $ax_aud_group_uri ), 'cc' => array( $public ) ) );
+	$ax_aud_addressed = axismundi_act_group_context( array( 'to' => array( $ax_aud_group_uri ), 'cc' => array( $public ) ) );
+	$ax_aud_plain     = axismundi_act_group_context( array( 'to' => array( $public ), 'cc' => array( $mention ) ) );
+	ax_aud_assert(
+		$ax_aud_results,
+		'a Group named in audience or addressed in to/cc is Group context, and a public post to nobody is not',
+		true === $ax_aud_declared['has_group_context']
+			&& $ax_aud_group_uri === $ax_aud_declared['primary_group_uri']
+			&& true === $ax_aud_addressed['has_group_context']
+			&& $ax_aud_group_uri === $ax_aud_addressed['primary_group_uri']
+			&& false === $ax_aud_plain['has_group_context']
+			&& '' === $ax_aud_plain['primary_group_uri']
+	);
+	/*
+	 * A reply names its parent, not the community, so a thread owner has to answer for it. The
+	 * contributor supplies URIs and nothing more — whether one is a Group is still the registry's
+	 * answer, which is why a contributed non-Group is discarded rather than trusted.
+	 */
+	$ax_aud_thread = static function ( array $uris ) use ( $ax_aud_group_uri, $mention ) : array {
+		unset( $uris );
+		return array( $ax_aud_group_uri, $mention );
+	};
+	add_filter( 'axismundi_act_group_context_uris', $ax_aud_thread );
+	$ax_aud_threaded = axismundi_act_group_context( array( 'to' => array( $public ) ), 'https://example.com/notes/threaded' );
+	remove_filter( 'axismundi_act_group_context_uris', $ax_aud_thread );
+	ax_aud_assert(
+		$ax_aud_results,
+		'a thread owner can name the Group a reply belongs to, but cannot make a non-Group into one',
+		true === $ax_aud_threaded['has_group_context']
+			&& array( $ax_aud_group_uri ) === $ax_aud_threaded['group_uris']
+			&& $ax_aud_group_uri === $ax_aud_threaded['primary_group_uri']
+	);
+	/*
+	 * Cross-posting is the case that has to fail quietly rather than confidently. Two Groups with
+	 * nothing saying which one the author meant is not a tie to break by position: naming the first
+	 * would let a card state the wrong community as fact. An explicit `audience` settles it, and
+	 * without one the caller gets no primary and shows nothing.
+	 */
+	$ax_aud_crossposted = axismundi_act_group_context( array( 'to' => array( $ax_aud_group_uri, $ax_aud_second_uri ), 'cc' => array( $public ) ) );
+	$ax_aud_settled     = axismundi_act_group_context( array( 'audience' => $ax_aud_second_uri, 'to' => array( $ax_aud_group_uri, $ax_aud_second_uri ) ) );
+	ax_aud_assert(
+		$ax_aud_results,
+		'a post in two Groups keeps both and names neither, unless its audience says which was meant',
+		true === $ax_aud_crossposted['has_group_context']
+			&& 2 === count( $ax_aud_crossposted['group_uris'] )
+			&& '' === $ax_aud_crossposted['primary_group_uri']
+			&& $ax_aud_second_uri === $ax_aud_settled['primary_group_uri']
+	);
+
 	ax_aud_assert( $ax_aud_results, 'the resolver performs no HTTP request', 0 === $GLOBALS['ax_aud_http'] );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_aud_http' );
+	// Every Group the classifier fixtures created, on the same path as the Actor above.
+	foreach ( $ax_aud_users as $ax_aud_user ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		wp_delete_user( (int) $ax_aud_user );
+	}
+	foreach ( $ax_aud_identity_ids as $ax_aud_extra ) {
+		global $wpdb;
+		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => (int) $ax_aud_extra ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Group cleanup.
+		$wpdb->delete( axismundi_actors_identities_table(), array( 'id' => (int) $ax_aud_extra ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned identity cleanup.
+	}
 	if ( $ax_aud_identity_id > 0 ) {
 		global $wpdb;
 		$wpdb->delete( axismundi_actors_actors_table(), array( 'identity_id' => $ax_aud_identity_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture-owned Actor cleanup.

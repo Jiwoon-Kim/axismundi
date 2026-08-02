@@ -173,3 +173,92 @@ function axismundi_act_audience_visibility( array $to, array $cc, string $follow
 	}
 	return in_array( $followers_uri, $to, true ) || in_array( $followers_uri, $cc, true ) ? 'followers' : 'mentioned';
 }
+
+/**
+ * Which Groups, if any, one Object was posted into.
+ *
+ * The question "is this part of a community" has to be answerable for a remote Object we have only
+ * observed, or a Person's Community surface can never include anything from Lemmy or NodeBB. That
+ * rules out asking a local product whether it recognises the Topic: those predicates are about our
+ * own Forum tables, which is exactly why Group context has been invisible on remote profiles.
+ *
+ * So the evidence is the addressing the Object arrived with. `audience` is the FEP-1b12 field for
+ * naming the community an Object belongs to and Lemmy populates it; `to`/`cc` are read as well
+ * because a Group is frequently addressed there too. Whether a URI *is* a Group is not this
+ * function's judgement and not Forum's either — Actors holds the registry and answers by type.
+ *
+ * A product that owns a thread graph contributes the one case addressing cannot show: a reply whose
+ * parent lives in a Group, where the reply itself names only its parent.
+ *
+ * `primary_group_uri` is deliberately conservative. It is filled when the author said which
+ * community they meant — an explicit `audience` — or when there is only one candidate and no
+ * ambiguity to resolve. With several Groups and no `audience`, picking the first would let a card
+ * name the wrong community with total confidence, so it names none and the caller shows nothing
+ * rather than something false. Cross-posting is where that would bite, and it is coming.
+ *
+ * @param array<string,mixed> $payload    AS2 Object or Activity payload.
+ * @param string              $object_uri Canonical Object URI, when known.
+ * @return array{has_group_context:bool,group_uris:string[],primary_group_uri:string}
+ */
+function axismundi_act_group_context( array $payload, string $object_uri = '' ) : array {
+	$is_group = static function ( string $uri ) : bool {
+		if ( '' === $uri || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+			return false;
+		}
+		$actor = axismundi_actors_get_by_uri( $uri );
+		return $actor instanceof Axismundi_Actor && 'Group' === $actor->get_type();
+	};
+	$listed = static function ( $value ) : array {
+		if ( null === $value ) {
+			return array();
+		}
+		$members = is_array( $value ) && array_is_list( $value ) ? $value : array( $value );
+		$uris    = array();
+		foreach ( $members as $member ) {
+			$uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $member ) : '';
+			if ( '' === $uri && is_scalar( $member ) ) {
+				$uri = (string) $member;
+			}
+			if ( '' !== $uri ) {
+				$uris[] = $uri;
+			}
+		}
+		return $uris;
+	};
+
+	$declared = array_values( array_filter( $listed( $payload['audience'] ?? null ), $is_group ) );
+	$addressed = array_values(
+		array_filter(
+			array_merge( $listed( $payload['to'] ?? null ), $listed( $payload['cc'] ?? null ) ),
+			$is_group
+		)
+	);
+	/**
+	 * Let a product that owns a thread graph name the Groups a reply belongs to.
+	 *
+	 * A reply addresses its parent, not the community, so this is the one form of Group context
+	 * that cannot be read off the wire. Forum answers it for threads it knows; nothing here needs
+	 * to understand what a Topic is.
+	 *
+	 * @param string[]            $uris       Group URIs contributed so far.
+	 * @param string              $object_uri Canonical Object URI.
+	 * @param array<string,mixed> $payload    Object or Activity payload.
+	 */
+	$threaded = (array) apply_filters( 'axismundi_act_group_context_uris', array(), $object_uri, $payload );
+	$threaded = array_values( array_filter( array_map( 'strval', $threaded ), $is_group ) );
+
+	$all = array_values( array_unique( array_merge( $declared, $addressed, $threaded ) ) );
+
+	$primary = '';
+	if ( 1 === count( $declared ) ) {
+		$primary = $declared[0];
+	} elseif ( empty( $declared ) && 1 === count( $all ) ) {
+		$primary = $all[0];
+	}
+
+	return array(
+		'has_group_context' => ! empty( $all ),
+		'group_uris'        => $all,
+		'primary_group_uri' => $primary,
+	);
+}

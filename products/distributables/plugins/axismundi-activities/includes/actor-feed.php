@@ -534,7 +534,7 @@ function axismundi_act_render_actor_activity_feed() : string {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read filter selection.
 	$filter   = isset( $_GET['filter'] ) ? sanitize_key( wp_unslash( $_GET['filter'] ) ) : '';
 	$surfaces = axismundi_act_actor_profile_surfaces( $actor );
-	$surface  = isset( $surfaces[ $surface ] ) ? $surface : 'activity';
+	$surface  = isset( $surfaces[ $surface ] ) ? $surface : axismundi_act_actor_default_surface( $surfaces );
 	$current  = $surfaces[ $surface ];
 	/*
 	 * A surface's slices divide differently, so they are addressed differently.
@@ -839,6 +839,16 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 		),
 		'default_filter' => axismundi_act_actor_feed_default_filter(),
 		'page'           => 'axismundi_act_actor_activity_surface_page',
+		/*
+		 * How this surface is walked, which is a property of the collection and not of the theme.
+		 *
+		 * A ledger of Activities has no length anybody asks for and one direction, so it is walked
+		 * with a cursor and continued in place. A community's archive is a list that can be
+		 * counted and jumped around in, so it is walked by number. The surface says which, and the
+		 * pagination block obeys — rather than each product drawing its own control and its own
+		 * list markup, which is how one profile came to be an `ol` and the other a `ul`.
+		 */
+		'mode'           => 'infinite',
 	);
 	/**
 	 * Contribute a profile surface for an Actor.
@@ -853,10 +863,49 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 	 * @param Axismundi_Actor                   $actor    Actor whose profile is being rendered.
 	 */
 	$surfaces = (array) apply_filters( 'axismundi_act_actor_profile_surfaces', array( 'activity' => $activity ), $actor );
-	// `activity` is the default surface and the fallback for an unrecognised request, so it is
-	// not something a product may remove out from under the reader.
-	$surfaces['activity'] = $activity;
+	$surfaces = array_filter( $surfaces, 'is_array' );
+	/*
+	 * A product may remove the Activity surface, but only by leaving another in its place.
+	 *
+	 * It used to be unremovable, on the grounds that a reader must not lose the timeline out from
+	 * under them. That is right for a Person and wrong for a Group whose profile *is* its
+	 * community: there, a chronology of the Group Actor's own Activities is not a second way to
+	 * read the profile, it is a different and emptier thing, and offering it as a tab invites a
+	 * reader to leave the only content there is.
+	 *
+	 * Leaving nothing is still refused, because a profile with no surface has no feed at all and
+	 * would fail as a blank region rather than as an error.
+	 */
+	if ( empty( $surfaces ) ) {
+		$surfaces = array( 'activity' => $activity );
+	}
+	foreach ( $surfaces as $key => $definition ) {
+		$surfaces[ $key ] = array_merge(
+			array( 'mode' => 'infinite', 'filters' => array(), 'default_filter' => '', 'heading' => '', 'label' => (string) $key ),
+			$definition
+		);
+		$surfaces[ $key ]['mode'] = 'pagination' === ( $definition['mode'] ?? '' ) ? 'pagination' : 'infinite';
+	}
 	return $surfaces;
+}
+
+/**
+ * The surface a profile opens on, and the one an unrecognised address falls back to.
+ *
+ * `activity` when it is present, which is every Person. When a product has replaced the set — a
+ * community Group, whose profile is its archive — the fallback is the first surface registered
+ * rather than a name that is no longer there. Falling back to a missing key is how a profile
+ * renders as an empty region with nothing to say about why.
+ *
+ * @param array<string,array<string,mixed>> $surfaces Registered surfaces.
+ * @return string
+ */
+function axismundi_act_actor_default_surface( array $surfaces ) : string {
+	if ( isset( $surfaces['activity'] ) ) {
+		return 'activity';
+	}
+	$keys = array_keys( $surfaces );
+	return '' !== (string) ( $keys[0] ?? '' ) ? (string) $keys[0] : 'activity';
 }
 
 /** The Activities-owned surface: what this Person published themselves. */
@@ -957,7 +1006,7 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 	}
 	$surfaces = axismundi_act_actor_profile_surfaces( $actor );
 	$surface  = (string) $request['surface'];
-	$surface  = isset( $surfaces[ $surface ] ) ? $surface : 'activity';
+	$surface  = isset( $surfaces[ $surface ] ) ? $surface : axismundi_act_actor_default_surface( $surfaces );
 	$current  = $surfaces[ $surface ];
 	$filter   = (string) $request['filter'];
 	$filter   = isset( $current['filters'][ $filter ] ) ? $filter : (string) $current['default_filter'];

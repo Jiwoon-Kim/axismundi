@@ -978,6 +978,51 @@ try {
 
 	axismundi_actors_set_status( $ax_feed_identity, 'internal' );
 	ax_feed_assert( $ax_feed_results, 'a non-public Actor exposes no public Activity feed', array() === axismundi_act_actor_feed_items( $actor, 20 ) );
+	/*
+	 * The loop is what makes the list, and it is reached on both halves of the feed.
+	 *
+	 * A responsibility move is easy to half-do: the block renders on the server-rendered page and the
+	 * continuation keeps building its own markup, and nothing looks wrong until the two disagree.
+	 * Both are asked here, and both are asked through a callback that has been replaced — so a feed
+	 * that quietly kept assembling the list itself fails rather than passing on the old output.
+	 */
+	$ax_feed_loop_calls = 0;
+	$ax_feed_loop_spy   = static function ( array $attributes = array(), string $content = '', $block = null ) use ( &$ax_feed_loop_calls ) : string {
+		++$ax_feed_loop_calls;
+		$context = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
+		// The marker carries the cards it was given, so a callback that is reached but ignored — or one
+		// handed an empty context — is not the same result as one that did the work.
+		return '<ol class="ax-loop-sentinel" data-cards="' . strlen( (string) ( $context['cards'] ?? '' ) ) . '"></ol>';
+	};
+	$ax_feed_loop_type = WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-loop' );
+	$ax_feed_loop_real = $ax_feed_loop_type instanceof WP_Block_Type ? $ax_feed_loop_type->render_callback : null;
+	$ax_feed_loop_type->render_callback = $ax_feed_loop_spy;
+
+	/*
+	 * The renderer reads the Actor being viewed from the request, so the fixture has to be the one
+	 * on screen — the same way every other feed assertion in this file renders.
+	 */
+	$ax_feed_loop_previous_actor               = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_live_actor;
+	$ax_feed_loop_ssr                          = $ax_feed_live_actor instanceof Axismundi_Actor
+		? axismundi_act_render_actor_activity_feed( array() )
+		: '';
+	$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_loop_previous_actor;
+	$ax_feed_loop_ssr_calls = $ax_feed_loop_calls;
+
+	$ax_feed_loop_type->render_callback = $ax_feed_loop_real;
+
+	ax_feed_assert(
+		$ax_feed_results,
+		'the loop block builds the list on the server-rendered page, which no longer assembles one of its own',
+		$ax_feed_loop_ssr_calls >= 1
+			&& false !== strpos( $ax_feed_loop_ssr, 'ax-loop-sentinel' )
+			// The feed's own `<ol>` is gone: if it still made one, replacing the loop would not have
+			// removed it.
+			&& false === strpos( $ax_feed_loop_ssr, 'axismundi-activity-feed__list' )
+	);
+
+
 } finally {
 	foreach ( $ax_feed_activities as $activity_uri ) {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri' => $activity_uri ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fixture cleanup.
@@ -1061,6 +1106,8 @@ ax_feed_assert(
 	false !== strpos( axismundi_act_extract_feed_item_template( axismundi_act_feed_surface_blocks( $ax_feed_untabbed, 'community' ), 'card' ), 'object-title' )
 		&& array() === axismundi_act_feed_surface_blocks( $ax_feed_tabs_blocks, 'archive' )
 );
+
+
 
 
 

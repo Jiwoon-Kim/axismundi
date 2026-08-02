@@ -10,12 +10,12 @@
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/feed-tab" ],
 	"allowedBlocks": [ "axismundi/feed-item-template" ],
+	"usesContext": [ "axismundi/feed" ],
 	"supports": {
 		"html": false,
 		"reusable": false,
 		"inserter": false,
 		"interactivity": { "clientNavigation": true }
 	},
-	"editorScript": "file:./edit.js",
-	"render": "file:./render.php"
+	"editorScript": "file:./edit.js"
 }

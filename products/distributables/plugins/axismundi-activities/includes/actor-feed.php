@@ -1068,12 +1068,10 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		// The list is always emitted, even when this page is empty, because appended pages need
 		// something to attach to. An empty feed says so in its own row rather than by omitting
 		// the container the runtime is going to look for.
-		'list'       => '<ol class="axismundi-activity-feed__list" data-wp-init="callbacks.watchFeed">'
-			. ( '' === $cards ? '<li class="axismundi-activity-feed__empty">' . esc_html__( 'Nothing to show in this view.', 'axismundi-activities' ) . '</li>' : $cards )
-			. '</ol>'
-			. $announce_host
-			. $reaction_host
-			. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>',
+		'list'       => axismundi_act_render_feed_loop(
+			axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ),
+			array( 'cards' => $cards, 'announceHost' => $announce_host, 'reactionHost' => $reaction_host )
+		),
 		'pagination' => $navigation,
 	);
 	/*
@@ -1102,6 +1100,63 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		. $surface_nav
 		. $body
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.
+}
+
+/**
+ * Repeat the feed's entries — the block that actually loops.
+ *
+ * The list markup lived in the feed's own renderer, which is why the block holding the cards was
+ * called `feed-item-templates` and did nothing at render time. It renders now, and the feed hands
+ * it what it needs through block context rather than assembling the list and dropping it into a
+ * slot the loop merely marked the position of.
+ *
+ * The list is always emitted, even when this page is empty: appended pages need something to
+ * attach to, so an empty feed says so in its own row rather than by omitting the container the
+ * runtime is going to look for.
+ *
+ * What is deliberately *not* here is rendering each Object into a card. That happens where the
+ * page is scanned, because the scan decides how many ledger rows to consume — a row whose Object
+ * has vanished renders nothing and must not count against the page size. Moving the card render
+ * here would separate that decision from its evidence and quietly shorten pages.
+ *
+ * @param array<string,mixed> $attributes Block attributes.
+ * @param string              $content    Inner blocks, which are the item templates and render nothing.
+ * @param WP_Block|null       $block      Block instance carrying the feed context.
+ * @return string
+ */
+function axismundi_act_render_feed_loop_block( array $attributes = array(), string $content = '', $block = null ) : string {
+	unset( $attributes, $content );
+	$context = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
+	$cards   = (string) ( $context['cards'] ?? '' );
+	return '<ol class="axismundi-activity-feed__list" data-wp-init="callbacks.watchFeed">'
+		. ( '' === $cards ? '<li class="axismundi-activity-feed__empty">' . esc_html__( 'Nothing to show in this view.', 'axismundi-activities' ) . '</li>' : $cards )
+		. '</ol>'
+		. (string) ( $context['announceHost'] ?? '' )
+		. (string) ( $context['reactionHost'] ?? '' )
+		. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and hosts are escaped by their own renderers.
+}
+
+/**
+ * Render the loop the current surface saved, through the block rather than around it.
+ *
+ * The parsed node is found in the surface's own subtree and rendered as a `WP_Block` with the
+ * feed's context attached. A `do_blocks()` on serialized markup would lose that context and the
+ * loop would render an empty list — which is exactly how a responsibility move gets reverted by
+ * accident, since an empty feed and a feed with nothing to show look the same.
+ *
+ * @param array<int,array<string,mixed>> $blocks  Blocks of the surface being rendered.
+ * @param array<string,mixed>            $context Feed context for the loop.
+ * @return string
+ */
+function axismundi_act_render_feed_loop( array $blocks, array $context ) : string {
+	$node = axismundi_act_find_block_by_name( $blocks, 'axismundi/feed-loop' );
+	if ( null === $node ) {
+		// A template with no loop still gets one. The runtime finds the continuation container by
+		// looking for it, so a missing list is a feed that cannot be paged rather than a feed
+		// without cards.
+		$node = array( 'blockName' => 'axismundi/feed-loop', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() );
+	}
+	return ( new WP_Block( $node, array( 'axismundi/feed' => $context ) ) )->render();
 }
 
 /**
@@ -1416,7 +1471,7 @@ function axismundi_act_register_actor_activity_feed_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-tabs' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-tab' );
-	register_block_type( dirname( __DIR__ ) . '/blocks/feed-loop' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-loop', array( 'render_callback' => 'axismundi_act_render_feed_loop_block' ) );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
 	/*
 	 * The chrome around the cards, as blocks an author can move or leave out.

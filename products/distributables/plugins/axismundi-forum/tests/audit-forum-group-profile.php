@@ -118,21 +118,43 @@ try {
 	}
 	$page_one_entries = axismundi_forum_visible_topic_entries( $community, 1, 1 );
 	$page_two_entries = axismundi_forum_visible_topic_entries( $community, 1, 2 );
-	$ax_gp_old_get    = $_GET;
-	$_GET['topic_page'] = '2';
-	$GLOBALS['axismundi_actors_current_actor'] = $group;
-	$page_two_html = axismundi_forum_render_topic_list_block( array( 'perPage' => 1 ) );
-	unset( $GLOBALS['axismundi_actors_current_actor'] );
-	$_GET = $ax_gp_old_get;
+	$ax_gp_old_get = $_GET;
+	/** @param array<string,string> $args Query string the reader arrived with. */
+	$ax_gp_paged_html = static function ( array $args ) use ( $group ) : string {
+		$restore = $_GET;
+		$_GET    = $args;
+		$GLOBALS['axismundi_actors_current_actor'] = $group;
+		$html = axismundi_forum_render_topic_list_block( array( 'perPage' => 1 ) );
+		unset( $GLOBALS['axismundi_actors_current_actor'] );
+		$_GET = $restore;
+		return $html;
+	};
+	$page_two_html        = $ax_gp_paged_html( array( 'page' => '2' ) );
+	$page_two_legacy_html = $ax_gp_paged_html( array( 'topic_page' => '2' ) );
+	$_GET                 = $ax_gp_old_get;
 	ax_gp_assert(
 		$ax_gp_results,
-		'a Group community feed uses reproducible topic_page URLs without repeating the first entry',
+		'a Group community feed pages without repeating the first entry, and addresses pages by the name both collections share',
 		3 === axismundi_forum_visible_topic_entry_count( $community )
 			&& 1 === count( $page_one_entries ) && 1 === count( $page_two_entries )
 			&& (int) $page_one_entries[0]['id'] !== (int) $page_two_entries[0]['id']
 			&& false !== strpos( $page_two_html, 'Page 2 of 3' )
-			&& false !== strpos( $page_two_html, 'topic_page=1' )
-			&& false !== strpos( $page_two_html, 'topic_page=3' )
+			&& 1 === preg_match( '#href="[^"]*[?&]page=1"#', $page_two_html )
+			&& 1 === preg_match( '#href="[^"]*[?&]page=3"#', $page_two_html )
+	);
+	/*
+	 * The old name is still read, and it is read *only* — the links this surface emits say
+	 * `page`, so a reader who follows one leaves the legacy name behind on the first click.
+	 * That asymmetry is the contract, and both halves need holding: drop the read and every
+	 * `topic_page` link anyone already published lands on page one, keep emitting the old
+	 * name and the two collections never share an address after all.
+	 */
+	ax_gp_assert(
+		$ax_gp_results,
+		'the legacy topic_page address still reaches the same page but is never emitted again',
+		$page_two_legacy_html === $page_two_html
+			&& false !== strpos( $page_two_html, 'Page 2 of 3' )
+			&& false === strpos( $page_two_html, 'topic_page=' )
 	);
 
 	$solo      = ax_gp_group( $owner, $ax_gp_ids );

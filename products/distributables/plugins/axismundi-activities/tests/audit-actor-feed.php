@@ -1281,6 +1281,33 @@ ax_feed_assert(
 		&& false === strpos( $ax_feed_source, 'filtersHtml' )
 		&& false === strpos( $ax_feed_source, 'axismundi_act_feed_chrome_part' )
 );
+/*
+ * The declaration has to arrive before it is consulted, which is a separate claim from either
+ * end being correct.
+ *
+ * This exact bug shipped once: the policy helper was called with `$tab_attrs` before that
+ * variable was assigned. PHP 8 warns and evaluates it to null, `(array) null` is an empty array,
+ * and an empty array is indistinguishable from "the author declared nothing" — so every
+ * declaration silently fell back to automatic while the helper answered its four cases
+ * perfectly and the renderer demonstrably called it. Both halves were green and the feature did
+ * nothing.
+ *
+ * A source-position check, and named as one: what it measures is that the read comes first, in
+ * the one function where both appear.
+ */
+$ax_feed_render_src   = (string) @file_get_contents( dirname( __DIR__ ) . '/includes/actor-feed.php' );
+$ax_feed_attrs_at     = strpos( $ax_feed_render_src, '$tab_attrs = axismundi_act_feed_tab_attributes(' );
+$ax_feed_style_at     = strpos( $ax_feed_render_src, 'axismundi_act_feed_filters_are_client_owned( $current, $tab_attrs )' );
+$ax_feed_navigation_at = strpos( $ax_feed_render_src, '$tab_attrs[' . "'navigation'" . ']' );
+ax_feed_assert(
+	$ax_feed_results,
+	'the tab declarations are read before either of the two decisions that consult them',
+	false !== $ax_feed_attrs_at
+		&& false !== $ax_feed_style_at
+		&& false !== $ax_feed_navigation_at
+		&& $ax_feed_attrs_at < $ax_feed_style_at
+		&& $ax_feed_attrs_at < $ax_feed_navigation_at
+);
 ax_feed_assert(
 	$ax_feed_results,
 	'a tab filter-style declaration reaches the server rather than changing only its editor preview',

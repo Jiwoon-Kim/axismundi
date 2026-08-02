@@ -693,6 +693,14 @@ function axismundi_op_render_object_by_uri( string $uri, array $opts = array() )
 		'interactionOwner' => isset( $opts['interactionOwner'] ) ? (string) $opts['interactionOwner'] : 'block',
 		// The card an outer surface wants repeated; empty means the bundled one.
 		'cardTemplate'     => isset( $opts['cardTemplate'] ) ? (string) $opts['cardTemplate'] : '',
+		/*
+		 * Why the selecting product put this entry in its list, if it said.
+		 *
+		 * Carried through explicitly because this array is an allowlist, not a merge: an option
+		 * the caller passes and this list does not name is silently dropped, which is how the
+		 * status row rendered nothing while both ends of it were correct.
+		 */
+		'status'           => isset( $opts['status'] ) && is_array( $opts['status'] ) ? $opts['status'] : array(),
 	);
 	$previous = axismundi_op_current_object_view_model();
 	axismundi_op_set_current_object_view_model( $model );

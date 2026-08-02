@@ -185,7 +185,7 @@ try {
 	$remote_feed_markup = axismundi_act_render_actor_activity_feed();
 	unset( $_GET['filter'] );
 	$GLOBALS['axismundi_actors_current_actor'] = $previous_current_actor;
-	ax_feed_assert( $ax_feed_results, 'a public remote Actor profile renders an uncached Announce as a Boosted external-object row when boosts are selected', false !== strpos( $remote_feed_markup, 'axismundi-activity-feed__boost' ) && false !== strpos( $remote_feed_markup, 'axismundi-object-card--external-reference' ) && false !== strpos( $remote_feed_markup, 'unresolved.example' ) );
+	ax_feed_assert( $ax_feed_results, 'a public remote Actor profile renders an uncached Announce as a Boosted external-object row when boosts are selected', false !== strpos( $remote_feed_markup, 'axismundi-object__status--announce' ) && false !== strpos( $remote_feed_markup, 'axismundi-object-card--external-reference' ) && false !== strpos( $remote_feed_markup, 'unresolved.example' ) );
 	$previous_current_actor = $GLOBALS['axismundi_actors_current_actor'] ?? null;
 	$GLOBALS['axismundi_actors_current_actor'] = $actor;
 	$local_feed_markup = axismundi_act_render_actor_activity_feed();

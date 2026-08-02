@@ -245,6 +245,33 @@ function axismundi_act_feed_item_with_group_context( array $item, array $payload
  * @param string              $mode `out`, `in`, or `both`.
  * @return bool
  */
+/**
+ * Why this entry is in this list, when there is anything to say.
+ *
+ * Null far more often than not, and that is the point: a Create on a personal timeline is the
+ * ordinary case and has no story, so it gets no descriptor rather than an empty one. A block
+ * reading "is there a status" would otherwise have to distinguish absent from blank, and every
+ * card would carry a row that renders nothing.
+ *
+ * Only Activities can answer this — it owns the verb and the surface policy — and only Object
+ * Projections should draw it, which is why this returns a descriptor rather than markup. The
+ * "Boosted" line used to be built here as HTML, which put an Activities decision at a fixed
+ * position inside a card whose layout belongs to the template.
+ *
+ * @param array<string,mixed> $item           Feed item descriptor.
+ * @param string              $announce_frame `show` or `hide`, from the surface.
+ * @return array<string,mixed>|null
+ */
+function axismundi_act_feed_item_status( array $item, string $announce_frame = 'show' ) : ?array {
+	if ( 'Announce' !== (string) ( $item['type'] ?? '' ) || 'show' !== $announce_frame ) {
+		return null;
+	}
+	return array(
+		'kind'      => 'announce',
+		'actor_uri' => (string) ( $item['actor_uri'] ?? '' ),
+	);
+}
+
 function axismundi_act_feed_item_in_group_context( array $item, string $mode ) : bool {
 	if ( ! function_exists( 'axismundi_act_group_context_admits' ) ) {
 		return true;
@@ -323,6 +350,16 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 	 */
 	$surfaces            = axismundi_act_actor_profile_surfaces( $actor );
 	$group_context_mode  = (string) ( $surfaces[ $surface ]['group_context'] ?? 'both' );
+	/*
+	 * Whether this surface explains an Announce, resolved here for the same reason.
+	 *
+	 * The policy belongs to the surface and the descriptor belongs to the entry, so the surface is
+	 * asked once and every entry on the page — ledger row or observed Object — carries its own
+	 * answer from then on. The alternative is asking again at render time, where the REST
+	 * continuation would have to be told the surface a second time and could be told a different
+	 * one than the page it is continuing.
+	 */
+	$announce_frame = (string) ( $surfaces[ $surface ]['announce_frame'] ?? 'show' );
 	$empty = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false, 'filter' => $filter );
 	if ( function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		// Re-resolve before applying the public boundary: a status change must not be able to
@@ -369,6 +406,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 			$item = axismundi_act_actor_feed_item( $activity, $surface );
 			if ( is_array( $item ) && axismundi_act_actor_feed_item_in_filter( $item, $filter ) && axismundi_act_feed_item_in_group_context( $item, $group_context_mode ) ) {
 				$item['cursor'] = $last;
+				$item['status'] = axismundi_act_feed_item_status( $item, $announce_frame );
 				$items[]        = $item;
 				if ( count( $items ) >= $limit ) {
 					// Stop on the row that fills the page, so the page is exactly the size it
@@ -408,6 +446,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 			$normalized = axismundi_act_actor_feed_observed_item( $item, $actor );
 			if ( is_array( $normalized ) && axismundi_act_actor_feed_item_in_filter( $normalized, $filter ) && axismundi_act_feed_item_in_group_context( $normalized, $group_context_mode ) ) {
 				$normalized['cursor'] = '';
+				$normalized['status'] = axismundi_act_feed_item_status( $normalized, $announce_frame );
 				$items[]              = $normalized;
 			}
 		}
@@ -1070,6 +1109,10 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 		'default_filter' => axismundi_act_actor_feed_default_filter(),
 		// Ledger-selected: this surface is everything the Actor did *outside* a community.
 		'group_context'  => 'out',
+		// A boost is an act this Actor performed, so their timeline says so; the header keeps naming
+		// whoever wrote the Object.
+		'header_actor_source' => 'object',
+		'announce_frame'      => 'show',
 		'page'           => 'axismundi_act_actor_activity_surface_page',
 		/*
 		 * How this surface is walked, which is a property of the collection and not of the theme.
@@ -1123,6 +1166,16 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 			 */
 			'default_filter' => 'all',
 			'group_context'  => 'in',
+			/*
+			 * The Group, not the Person, on every row of this surface.
+			 *
+			 * The page is already a Person's profile, so repeating their avatar and handle on each
+			 * entry says nothing a reader did not know; which community it went to is the thing
+			 * they came here to see. And nothing here needs the boost line: this surface is defined
+			 * by where an entry was addressed, not by what its author did with it.
+			 */
+			'header_actor_source' => 'audience',
+			'announce_frame'      => 'hide',
 			'page'           => 'axismundi_act_actor_community_surface_page',
 			'mode'           => 'infinite',
 		);
@@ -1146,7 +1199,7 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 	}
 	foreach ( $surfaces as $key => $definition ) {
 		$surfaces[ $key ] = array_merge(
-			array( 'modes' => array(), 'mode' => 'infinite', 'filters' => array(), 'default_filter' => '', 'heading' => '', 'label' => (string) $key ),
+			array( 'modes' => array(), 'mode' => 'infinite', 'filters' => array(), 'default_filter' => '', 'heading' => '', 'label' => (string) $key, 'header_actor_source' => 'object', 'announce_frame' => 'show' ),
 			$definition
 		);
 		/*
@@ -1254,13 +1307,11 @@ function axismundi_act_render_actor_feed_card( array $item, string $card_templat
 			return '';
 		}
 	}
-	$frame = '';
-	if ( 'Announce' === (string) ( $item['type'] ?? '' ) ) {
-		$frame = '<p class="axismundi-activity-feed__boost"><span class="material-symbols-outlined" aria-hidden="true">sync</span> '
-			. esc_html__( 'Boosted', 'axismundi-activities' ) . '</p>';
-	}
+	/*
+	 * No frame here any more. The boost line is a block inside the card now, placed wherever the
+	 * template puts `object-status`, and fed by the descriptor this item carries.
+	 */
 	return '<li class="axismundi-activity-feed__item axismundi-activity-feed__item--object axismundi-activity-feed__item--' . esc_attr( strtolower( (string) ( $item['type'] ?? '' ) ) ) . '">'
-		. $frame
 		. $object_html
 		. '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Frame is escaped above; the owning product owns and escapes its renderer output.
 }

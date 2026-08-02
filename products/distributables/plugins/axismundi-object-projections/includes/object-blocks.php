@@ -211,8 +211,48 @@ function axismundi_op_render_object_tombstone_block() : string {
  * exactly like what it rendered on a feed card yesterday. A tombstoned Object is never selected
  * into a feed in the first place, so nothing that used to be visible here has been lost.
  */
+/**
+ * The status row's markup, shared by the block and by the external-reference fallback.
+ *
+ * An uncached Announce renders as a bare external link built without the card template, so it has
+ * no blocks in it at all — and it is the entry that most needs the explanation, because otherwise
+ * a link to another site appears on a timeline with nothing saying who put it there.
+ *
+ * @param array<string,mixed> $status Status descriptor from the selecting product.
+ * @param string              $attributes Wrapper attributes, if this is being drawn as a block.
+ */
+function axismundi_op_object_status_html( array $status, string $attributes = '' ) : string {
+	if ( 'announce' !== (string) ( $status['kind'] ?? '' ) ) {
+		return '';
+	}
+	$actor_uri = (string) ( $status['actor_uri'] ?? '' );
+	$actor     = '' !== $actor_uri && function_exists( 'axismundi_actors_get_by_uri' ) ? axismundi_actors_get_by_uri( $actor_uri ) : null;
+	/*
+	 * The name of whoever did it when we hold their record, and the plain verb when we do not.
+	 *
+	 * A boost is evidence that this Actor acted, and the row is worth drawing on that evidence
+	 * alone; an unresolved Actor makes the sentence shorter, not the row absent. Falling back to
+	 * the raw URI would put a machine identifier in a sentence about a person.
+	 */
+	$name  = $actor instanceof Axismundi_Actor ? (string) $actor->get_display_name() : '';
+	$name  = '' === $name && $actor instanceof Axismundi_Actor ? (string) $actor->get_preferred_username() : $name;
+	$label = '' === $name
+		? esc_html__( 'Boosted', 'axismundi-object-projections' )
+		/* translators: %s: display name of the Actor who boosted the object. */
+		: esc_html( sprintf( __( '%s boosted', 'axismundi-object-projections' ), $name ) );
+	return '<p ' . ( '' !== $attributes ? $attributes : 'class="axismundi-object__status axismundi-object__status--announce"' ) . '>'
+		. '<span class="material-symbols-outlined" aria-hidden="true">sync</span> '
+		. $label // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+		. '</p>';
+}
+
 function axismundi_op_render_object_status_block() : string {
-	return '';
+	$options = (array) ( $GLOBALS['axismundi_op_object_template_options'] ?? array() );
+	$status  = is_array( $options['status'] ?? null ) ? $options['status'] : array();
+	return axismundi_op_object_status_html(
+		$status,
+		get_block_wrapper_attributes( array( 'class' => 'axismundi-object__status axismundi-object__status--announce' ) )
+	);
 }
 
 /**

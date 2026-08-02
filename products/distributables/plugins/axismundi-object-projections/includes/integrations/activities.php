@@ -68,6 +68,16 @@ function axismundi_op_actor_feed_object_html( string $html, array $item, string 
 	if ( ! empty( $item['community_viewer'] ) ) {
 		$options['communityViewer'] = (int) $item['community_viewer'];
 	}
+	/*
+	 * Why this entry is here, if the selecting product had anything to say.
+	 *
+	 * Carried rather than derived: whether a boost is worth explaining is a property of the
+	 * surface, and this renderer does not know which surface it is drawing for. Absent means
+	 * silent — the block renders nothing rather than an empty row.
+	 */
+	if ( is_array( $item['status'] ?? null ) && ! empty( $item['status'] ) ) {
+		$options['status'] = $item['status'];
+	}
 	return axismundi_op_render_object_by_uri( $object_uri, $options );
 }
 add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_op_actor_feed_object_html', 20, 4 );
@@ -106,8 +116,12 @@ function axismundi_op_actor_feed_missing_object_html( string $html, array $item 
 	if ( function_exists( 'axismundi_op_schedule_announced_object_fetch' ) ) {
 		axismundi_op_schedule_announced_object_fetch( $object_uri );
 	}
-	$host = (string) $parts['host'];
-	return '<article class="axismundi-object-card axismundi-object-card--external-reference">'
+	$host   = (string) $parts['host'];
+	$status = function_exists( 'axismundi_op_object_status_html' ) && is_array( $item['status'] ?? null )
+		? axismundi_op_object_status_html( (array) $item['status'] )
+		: '';
+	return $status // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by the shared builder.
+		. '<article class="axismundi-object-card axismundi-object-card--external-reference">'
 		. '<p class="axismundi-object-card__eyebrow">' . esc_html__( 'External object', 'axismundi-object-projections' ) . '</p>'
 		. '<a class="axismundi-object-card__external-link" href="' . esc_url( $object_uri ) . '" rel="nofollow noopener noreferrer" target="_blank">'
 		. '<span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>'

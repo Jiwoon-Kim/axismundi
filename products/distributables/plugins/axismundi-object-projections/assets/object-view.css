@@ -1159,7 +1159,7 @@ div.axismundi-object__featured-image-media.is-repeated {
  * competing with the post it announces is the wrong way round. Moved here from the Activities feed
  * stylesheet when the line stopped being feed markup and became a block inside the card.
  */
-.axismundi-object__status {
+.axismundi-object-card__status {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.375rem;
@@ -1168,7 +1168,7 @@ div.axismundi-object__featured-image-media.is-repeated {
 	opacity: 0.7;
 }
 
-.axismundi-object__status .material-symbols-outlined {
+.axismundi-object-card__status .material-symbols-outlined {
 	--md-icon-size: 1.125rem;
 	font-size: 1.125rem;
 }

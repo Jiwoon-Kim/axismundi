@@ -240,7 +240,7 @@ function axismundi_op_object_status_html( array $status, string $attributes = ''
 		? esc_html__( 'Boosted', 'axismundi-object-projections' )
 		/* translators: %s: display name of the Actor who boosted the object. */
 		: esc_html( sprintf( __( '%s boosted', 'axismundi-object-projections' ), $name ) );
-	return '<p ' . ( '' !== $attributes ? $attributes : 'class="axismundi-object__status axismundi-object__status--announce"' ) . '>'
+	return '<p ' . ( '' !== $attributes ? $attributes : 'class="axismundi-object-card__status axismundi-object-card__status--announce"' ) . '>'
 		. '<span class="material-symbols-outlined" aria-hidden="true">sync</span> '
 		. $label // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
 		. '</p>';
@@ -251,7 +251,7 @@ function axismundi_op_render_object_status_block() : string {
 	$status  = is_array( $options['status'] ?? null ) ? $options['status'] : array();
 	return axismundi_op_object_status_html(
 		$status,
-		get_block_wrapper_attributes( array( 'class' => 'axismundi-object__status axismundi-object__status--announce' ) )
+		get_block_wrapper_attributes( array( 'class' => 'axismundi-object-card__status axismundi-object-card__status--announce' ) )
 	);
 }
 

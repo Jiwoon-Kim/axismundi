@@ -17,7 +17,6 @@
 	},
 	"supports": {
 		"html": false,
-		"multiple": false,
 		"align": true,
 		"alignWide": false,
 		"shadow": {

@@ -70,10 +70,11 @@ try {
 	$registry = WP_Block_Type_Registry::get_instance();
 	ax_ah_assert(
 		$ax_ah_results,
-		'the legacy composite block and the new nested substrate are both registered',
+		'the legacy composite block and the new nested substrate are both registered, and the Avatar leaf may repeat in each feed card',
 		$registry->is_registered( 'axismundi/actor-profile' ) && $registry->is_registered( 'axismundi/account-header' )
 			&& $registry->is_registered( 'axismundi/actor-avatar' )
 			&& $registry->is_registered( 'axismundi/actor-identity' ) && $registry->is_registered( 'axismundi/actor-biography' )
+			&& false !== ( $registry->get_registered( 'axismundi/actor-avatar' )->supports['multiple'] ?? null )
 	);
 
 	$alice = ax_ah_public_actor( $ax_ah_results, $ax_ah_ids, $ax_ah_users, 'ax_ah_alice', 'Alice Header', 'alice_header' );

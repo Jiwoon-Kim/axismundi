@@ -919,7 +919,16 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 			. ' data-wp-bind--aria-expanded="context.isFiltersOpen"'
 			. ' aria-haspopup="dialog">'
 			. '<span data-wp-text="context.filterLabel">' . esc_html( (string) $current['filters'][ $filter ] ) . '</span>'
-			. '<span class="material-symbols-outlined" aria-hidden="true">unfold_more</span>'
+			/*
+			 * The caret says which way the panel goes, and which way it will go next.
+			 *
+			 * `unfold_more` points both ways at once, which is the icon for a control that expands in
+			 * either direction — a sort order, a resizable pane. This one opens downwards and closes
+			 * again, so the arrow follows it. Two spans rather than one swapped glyph, because the
+			 * server renders the closed state and the runtime only has to flip which is hidden.
+			 */
+			. '<span class="material-symbols-outlined" aria-hidden="true" data-wp-bind--hidden="context.isFiltersOpen">arrow_drop_down</span>'
+			. '<span class="material-symbols-outlined" aria-hidden="true" hidden data-wp-bind--hidden="!context.isFiltersOpen">arrow_drop_up</span>'
 			. '</button>'
 			. '<div class="axismundi-activity-feed__filters-panel" role="dialog"'
 			. ' aria-label="' . esc_attr__( 'Timeline filters', 'axismundi-activities' ) . '"'

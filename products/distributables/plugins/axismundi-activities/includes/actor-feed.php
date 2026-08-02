@@ -668,6 +668,18 @@ function axismundi_act_feed_tab_attributes( Axismundi_Actor $actor, string $surf
 	return array();
 }
 
+/** Whether this surface's filters are reader-owned switches instead of addressable tabs. */
+function axismundi_act_feed_filters_are_client_owned( array $surface, array $tab_attributes ) : bool {
+	$filter_style = (string) ( $tab_attributes['filterStyle'] ?? '' );
+	if ( 'tabs' === $filter_style ) {
+		return false;
+	}
+	if ( 'switches' === $filter_style ) {
+		return true;
+	}
+	return ! empty( $surface['toggles'] );
+}
+
 /** Render the current Actor's public Activity feed. */
 function axismundi_act_render_actor_activity_feed( array $attributes = array() ) : string {
 	if ( ! function_exists( 'axismundi_actors_current_actor' ) ) {
@@ -713,6 +725,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	$surfaces = axismundi_act_actor_profile_surfaces( $actor );
 	$surface  = isset( $surfaces[ $surface ] ) ? $surface : axismundi_act_actor_default_surface( $surfaces );
 	$current  = $surfaces[ $surface ];
+	$tab_attrs = axismundi_act_feed_tab_attributes( $actor, $surface );
 	/*
 	 * A surface's slices divide differently, so they are addressed differently.
 	 *
@@ -735,10 +748,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 *
 	 * Unset keeps the old behaviour exactly, so every template saved before this reads the same.
 	 */
-	$filter_style = (string) ( $tab_attrs['filterStyle'] ?? '' );
-	$client_owned = 'tabs' === $filter_style
-		? false
-		: ( 'switches' === $filter_style ? true : ! empty( $current['toggles'] ) );
+	$client_owned = axismundi_act_feed_filters_are_client_owned( $current, $tab_attrs );
 	$filter       = $client_owned || ! isset( $current['filters'][ $filter ] )
 		? (string) $current['default_filter']
 		: $filter;
@@ -771,7 +781,6 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 * a cursor it does not have, so the surface's declared modes are the bound.
 	 */
 	$supported = (array) ( $current['modes'] ?? array() );
-	$tab_attrs = axismundi_act_feed_tab_attributes( $actor, $surface );
 	$requested = (string) ( $tab_attrs['navigation'] ?? '' );
 	$mode      = in_array( $requested, $supported, true ) ? $requested : (string) ( $current['mode'] ?? 'infinite' );
 	$densities_available = axismundi_act_actor_feed_densities_available( $actor, $surface );

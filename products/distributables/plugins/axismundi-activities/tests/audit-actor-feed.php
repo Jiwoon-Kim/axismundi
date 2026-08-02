@@ -1283,6 +1283,14 @@ ax_feed_assert(
 );
 ax_feed_assert(
 	$ax_feed_results,
+	'a tab filter-style declaration reaches the server rather than changing only its editor preview',
+	false === axismundi_act_feed_filters_are_client_owned( array( 'toggles' => array( 'replies' => 'Replies' ) ), array( 'filterStyle' => 'tabs' ) )
+		&& true === axismundi_act_feed_filters_are_client_owned( array(), array( 'filterStyle' => 'switches' ) )
+		&& true === axismundi_act_feed_filters_are_client_owned( array( 'toggles' => array( 'replies' => 'Replies' ) ), array() )
+		&& false === axismundi_act_feed_filters_are_client_owned( array(), array() )
+);
+ax_feed_assert(
+	$ax_feed_results,
 	'the filters block owns its visual rules, including hidden-state protection against its flex panel',
 	false !== strpos( $ax_feed_filters_meta, '"style": "file:./style.css"' )
 		&& false !== strpos( $ax_feed_filters_style, '.axismundi-activity-feed__filters-panel[hidden]' )
@@ -1348,8 +1356,8 @@ ax_feed_assert(
 		&& 1 === preg_match( '#props\.context\[\s*.axismundi/feedFilterStyle.\s*\]#', $ax_feed_filters_editor )
 		&& false !== strpos( $ax_feed_filters_editor, "'tabs' === style" )
 		&& false !== strpos( $ax_feed_filters_editor, 'community ? communityPreview() : activityPreview()' )
-		// And the server reads the same declaration, so the two cannot drift apart.
-		&& false !== strpos( (string) @file_get_contents( dirname( __DIR__ ) . '/includes/actor-feed.php' ), "\$tab_attrs['filterStyle']" )
+		// And the server delegates the same declaration to its policy helper, so the two cannot drift apart.
+		&& false !== strpos( (string) @file_get_contents( dirname( __DIR__ ) . '/includes/actor-feed.php' ), 'axismundi_act_feed_filters_are_client_owned( $current, $tab_attrs )' )
 		&& false !== strpos( $ax_feed_filters_editor, 'arrow_drop_down' )
 		&& false !== strpos( $ax_feed_filters_editor, "'Posts'" )
 		&& false !== strpos( $ax_feed_filters_editor, "'Comments'" )

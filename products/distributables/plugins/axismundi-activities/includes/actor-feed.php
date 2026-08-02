@@ -140,15 +140,20 @@ function axismundi_act_actor_feed_item( Axismundi_Activity $activity, string $su
 	}
 	$published = $activity->get_published_at();
 
-	return array(
-		'id'         => $activity->get_uri(),
-		'kind'       => 'activity',
-		'type'       => $type,
-		'actor_uri'  => $activity->get_actor_uri(),
-		'object_uri' => $object_uri,
-		'published'  => is_string( $published ) ? $published : '',
-		// An Announce is a boost, never a reply, so the thread graph is not consulted for one.
-		'is_reply'   => 'Create' === $type && axismundi_act_actor_feed_item_is_reply( $activity, $object_uri ),
+	// The payload is already at hand here, so no lookup is needed — unlike an observed Object,
+	// which is why acquiring the addressing is per-kind and judging it is not.
+	return axismundi_act_feed_item_with_group_context(
+		array(
+			'id'         => $activity->get_uri(),
+			'kind'       => 'activity',
+			'type'       => $type,
+			'actor_uri'  => $activity->get_actor_uri(),
+			'object_uri' => $object_uri,
+			'published'  => is_string( $published ) ? $published : '',
+			// An Announce is a boost, never a reply, so the thread graph is not consulted for one.
+			'is_reply'   => 'Create' === $type && axismundi_act_actor_feed_item_is_reply( $activity, $object_uri ),
+		),
+		$payload
 	);
 }
 
@@ -180,14 +185,71 @@ function axismundi_act_actor_feed_observed_item( $item, Axismundi_Actor $actor )
 		return null;
 	}
 	$published = is_scalar( $item['published'] ?? null ) ? (string) $item['published'] : '';
-	return array(
-		'id'         => 'observed:' . hash( 'sha256', $object_uri ),
-		'kind'       => 'observed_object',
-		'type'       => 'Object',
-		'actor_uri'  => $actor->get_uri(),
-		'object_uri' => $object_uri,
-		'published'  => false === strtotime( $published ) ? '' : $published,
+	// No payload here — an observed Object is known by URI alone, so its addressing is fetched
+	// from whoever cached it. The stamp is the same one a ledger row gets.
+	return axismundi_act_feed_item_with_group_context(
+		array(
+			'id'         => 'observed:' . hash( 'sha256', $object_uri ),
+			'kind'       => 'observed_object',
+			'type'       => 'Object',
+			'actor_uri'  => $actor->get_uri(),
+			'object_uri' => $object_uri,
+			'published'  => false === strtotime( $published ) ? '' : $published,
+		)
 	);
+}
+
+/**
+ * Stamp one feed descriptor with the Groups its Object was posted into.
+ *
+ * Getting the addressing and judging it are separate problems, and only the first differs by kind.
+ * A ledger row carries its payload; an observed Object is a cache-miss fallback that carries a URI
+ * and nothing else, so its addressing has to be fetched from whoever cached it. Judging is then one
+ * function over one descriptor, which is the point — a Person's two surfaces are complements, and
+ * if the two kinds were classified separately they would disagree at exactly the row that decides
+ * which tab it belongs to.
+ *
+ * Remote Objects reach a profile mostly through the observed path, so classifying only ledger rows
+ * would leave a Lemmy Person's community posts either missing from Community or leaking into
+ * Activity — and only on the first page, since that is the only place observed Objects join.
+ *
+ * @param array<string,mixed> $item    Feed item descriptor.
+ * @param array<string,mixed> $payload Payload already at hand, if any.
+ * @return array<string,mixed>
+ */
+function axismundi_act_feed_item_with_group_context( array $item, array $payload = array() ) : array {
+	$object_uri = (string) ( $item['object_uri'] ?? '' );
+	if ( empty( $payload ) && '' !== $object_uri ) {
+		/**
+		 * Supply the stored payload for an Object this feed knows only by URI.
+		 *
+		 * Activities does not own an Object cache and must not read one directly; the product that
+		 * stored the Object answers, and an unanswered URI simply has no Group context rather than
+		 * being guessed at.
+		 *
+		 * @param array<string,mixed> $payload    Empty by default.
+		 * @param string              $object_uri Canonical Object URI.
+		 */
+		$payload = (array) apply_filters( 'axismundi_act_feed_object_payload', array(), $object_uri );
+	}
+	$item['group_context'] = function_exists( 'axismundi_act_group_context' )
+		? axismundi_act_group_context( $payload, $object_uri )
+		: array( 'has_group_context' => false, 'group_uris' => array(), 'primary_group_uri' => '' );
+	return $item;
+}
+
+/**
+ * Whether one stamped descriptor belongs in a feed selecting by Group context.
+ *
+ * @param array<string,mixed> $item Feed item descriptor.
+ * @param string              $mode `out`, `in`, or `both`.
+ * @return bool
+ */
+function axismundi_act_feed_item_in_group_context( array $item, string $mode ) : bool {
+	if ( ! function_exists( 'axismundi_act_group_context_admits' ) ) {
+		return true;
+	}
+	return axismundi_act_group_context_admits( $mode, ! empty( $item['group_context']['has_group_context'] ) );
 }
 
 /**
@@ -250,6 +312,17 @@ function axismundi_act_actor_feed_items( Axismundi_Actor $actor, int $limit = 20
  */
 function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20, string $cursor = '', string $filter = 'all', string $surface = 'activity', bool $inclusive = false, bool $head_window = false ) : array {
 	$filter = axismundi_act_actor_feed_filter( $filter );
+	/*
+	 * Which side of Group context this surface takes, read once and applied to both item kinds.
+	 *
+	 * Ledger rows and observed Objects arrive by different routes and join in one list, so the
+	 * question has to be asked of them in the same place with the same answer. Asking it only of
+	 * the ledger would sort a Lemmy Person's community posts wrongly — and only on the first page,
+	 * because that is the only page observed Objects join, which is the worst way for it to be
+	 * wrong: the profile would disagree with itself after "Load more".
+	 */
+	$surfaces            = axismundi_act_actor_profile_surfaces( $actor );
+	$group_context_mode  = (string) ( $surfaces[ $surface ]['group_context'] ?? 'both' );
 	$empty = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false, 'filter' => $filter );
 	if ( function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		// Re-resolve before applying the public boundary: a status change must not be able to
@@ -294,7 +367,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 			}
 			$last = axismundi_act_feed_cursor( $activity );
 			$item = axismundi_act_actor_feed_item( $activity, $surface );
-			if ( is_array( $item ) && axismundi_act_actor_feed_item_in_filter( $item, $filter ) ) {
+			if ( is_array( $item ) && axismundi_act_actor_feed_item_in_filter( $item, $filter ) && axismundi_act_feed_item_in_group_context( $item, $group_context_mode ) ) {
 				$item['cursor'] = $last;
 				$items[]        = $item;
 				if ( count( $items ) >= $limit ) {
@@ -333,7 +406,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 		$observed             = (array) apply_filters( 'axismundi_act_actor_feed_observed_items', array(), $actor, $activity_object_uris, $limit );
 		foreach ( $observed as $item ) {
 			$normalized = axismundi_act_actor_feed_observed_item( $item, $actor );
-			if ( is_array( $normalized ) && axismundi_act_actor_feed_item_in_filter( $normalized, $filter ) ) {
+			if ( is_array( $normalized ) && axismundi_act_actor_feed_item_in_filter( $normalized, $filter ) && axismundi_act_feed_item_in_group_context( $normalized, $group_context_mode ) ) {
 				$normalized['cursor'] = '';
 				$items[]              = $normalized;
 			}

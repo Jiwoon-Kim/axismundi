@@ -210,11 +210,25 @@ foreach ( $ax_compat_dir as $ax_compat_file ) {
 	}
 }
 ksort( $ax_compat_counts );
+/*
+ * The exclusions are printed with the number, not left to be rediscovered.
+ *
+ * Zero here does not mean nothing calls the old names — this audit calls all four of them, on
+ * purpose, a few lines up. Without saying so, the next reader finds a zero next to a live alias
+ * and has to work out which of the two is wrong.
+ */
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
-printf( "\n-- %d file(s) still call the deprecated names --\n", array_sum( $ax_compat_counts ) );
+printf(
+	"\n-- %d product file(s) still call the deprecated names --\n   (excludes the aliases in remote-objects.php and this audit, which call them deliberately)\n",
+	array_sum( $ax_compat_counts )
+);
 foreach ( $ax_compat_counts as $ax_compat_plugin => $ax_compat_count ) {
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 	printf( "   %-32s %d\n", $ax_compat_plugin, $ax_compat_count );
+}
+if ( empty( $ax_compat_counts ) ) {
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
+	printf( "   migration complete; removing the aliases is now a release decision, not a dependency\n" );
 }
 
 $ax_compat_failures = count( array_filter( $ax_compat_results, static fn( bool $result ) : bool => ! $result ) );

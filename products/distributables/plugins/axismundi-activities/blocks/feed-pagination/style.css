@@ -76,3 +76,15 @@
 		stroke-dasharray: 70 100;
 	}
 }
+
+/*
+ * While a page is in flight the control refuses presses, so it should not invite them.
+ *
+ * The refusal itself lives in the runtime, which returns early rather than starting a second
+ * request; this only makes the refusal visible. The link stays a link — with no script it never
+ * enters this state at all, and navigating to the next cursor page is the correct behaviour there.
+ */
+.axismundi-activity-feed__more-link[aria-disabled="true"] {
+	cursor: default;
+	opacity: 0.6;
+}

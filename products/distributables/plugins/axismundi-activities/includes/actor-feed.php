@@ -1199,7 +1199,17 @@ function axismundi_act_feed_cursor_pager( array $context, array $page ) : string
 		. '</svg></span>';
 	$more = '<a class="axismundi-feed-pagination__more axismundi-activity-feed__more-link"'
 		. ' data-wp-on--click="actions.loadMore"'
+		/*
+		 * Busy and unavailable are two different statements and the control needs both.
+		 *
+		 * A second press while a page is in flight is already refused by the runtime, which returns
+		 * early on `isPending` — so nothing is appended twice. But that refusal is silent: without
+		 * `aria-disabled` the control still presents itself as pressable, and a reader who cannot see
+		 * the indicator has no way to know why nothing happened. `disabled` is not an option here
+		 * because this is an anchor, where the attribute means nothing at all.
+		 */
 		. ' data-wp-bind--aria-busy="context.isPending"'
+		. ' data-wp-bind--aria-disabled="context.isPending"'
 		. ( $has_more ? '' : ' hidden' )
 		. ' href="' . esc_url( axismundi_act_feed_url( $context, array( 'feed_after' => (string) ( $page['nextCursor'] ?? '' ) ) ) ) . '">'
 		. $busy

@@ -820,11 +820,13 @@ try {
 		};
 		$ax_feed_container_saves = array(
 			'actor-feed-loop'    => $ax_feed_save_body( 'actor-feed-loop' ),
-			'feed-item-template' => $ax_feed_save_body( 'feed-item-template' ),
+			'feed-item-templates' => $ax_feed_save_body( 'feed-item-templates' ),
+			'feed-item-template'  => $ax_feed_save_body( 'feed-item-template' ),
 		);
 		$ax_feed_leaf_saves = array(
 			'feed-filters'    => $ax_feed_save_body( 'feed-filters' ),
-			'feed-pagination' => $ax_feed_save_body( 'feed-pagination' ),
+			'feed-pagination'     => $ax_feed_save_body( 'feed-pagination' ),
+			'feed-density-switch' => $ax_feed_save_body( 'feed-density-switch' ),
 		);
 		$ax_feed_containers_hold = true;
 		foreach ( $ax_feed_container_saves as $body ) {
@@ -836,13 +838,13 @@ try {
 		}
 		ax_feed_assert(
 			$ax_feed_results,
-			'the two containers save their children, so an editor save keeps the card template and both placements',
-			2 === count( $ax_feed_container_saves ) && $ax_feed_containers_hold
+			'every container saves its children, so an editor save keeps the card set and every placement',
+			3 === count( $ax_feed_container_saves ) && $ax_feed_containers_hold
 		);
 		ax_feed_assert(
 			$ax_feed_results,
-			'saving nothing stays what it is correct for: the two childless blocks, which self-close',
-			2 === count( $ax_feed_leaf_saves ) && $ax_feed_leaves_hold
+			'saving nothing stays what it is correct for: the childless blocks, which self-close',
+			3 === count( $ax_feed_leaf_saves ) && $ax_feed_leaves_hold
 		);
 		ax_feed_assert(
 			$ax_feed_results,

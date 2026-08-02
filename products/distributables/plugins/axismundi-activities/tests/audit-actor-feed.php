@@ -733,6 +733,58 @@ try {
 			! function_exists( 'axismundi_act_find_feed_item_template' )
 		);
 
+		/*
+		 * Surface layouts, which follow different rules from densities on purpose.
+		 *
+		 * A density is a variant an author composed, so a missing one means a wrong template. A
+		 * surface is a capability a product contributes — Forum supplies `community` — so a
+		 * template written before that product existed must not be able to delete a readable
+		 * surface from the tabs and the URL just by not mentioning it. The generic covers it.
+		 *
+		 * The case worth naming is the last one: a surface with no named layout *and* no generic
+		 * is a fault, and the resolver answers null so the caller stops advertising it. Rendering
+		 * an empty region under a tab that promised content is the failure this shape exists to
+		 * prevent, and it is the one this session kept running into by other routes.
+		 */
+		$ax_feed_surfaces = static function ( string $inner ) : array {
+			return axismundi_act_feed_surface_templates( parse_blocks( '<!-- wp:axismundi/feed-surface-templates -->' . $inner . '<!-- /wp:axismundi/feed-surface-templates -->' ) );
+		};
+		$ax_feed_generic_only = $ax_feed_surfaces( '<!-- wp:axismundi/feed-surface-template {"surface":"default"} --><!-- wp:paragraph --><p>g</p><!-- /wp:paragraph --><!-- /wp:axismundi/feed-surface-template -->' );
+		$ax_feed_overridden   = $ax_feed_surfaces(
+			'<!-- wp:axismundi/feed-surface-template {"surface":"default"} --><!-- wp:paragraph --><p>g</p><!-- /wp:paragraph --><!-- /wp:axismundi/feed-surface-template -->'
+			. '<!-- wp:axismundi/feed-surface-template {"surface":"community","navigation":"pagination"} --><!-- wp:paragraph --><p>c</p><!-- /wp:paragraph --><!-- /wp:axismundi/feed-surface-template -->'
+		);
+		$ax_feed_no_generic   = $ax_feed_surfaces( '<!-- wp:axismundi/feed-surface-template {"surface":"community"} --><!-- wp:paragraph --><p>c</p><!-- /wp:paragraph --><!-- /wp:axismundi/feed-surface-template -->' );
+		$ax_feed_dup_surface  = $ax_feed_surfaces( str_repeat( '<!-- wp:axismundi/feed-surface-template {"surface":"community"} --><!-- wp:paragraph --><p>c</p><!-- /wp:paragraph --><!-- /wp:axismundi/feed-surface-template -->', 2 ) );
+		ax_feed_assert(
+			$ax_feed_results,
+			'a generic layout answers for every surface, so a product contributing one is never erased by an older template',
+			null !== axismundi_act_feed_surface_layout( $ax_feed_generic_only['layouts'], 'community' )
+				&& null !== axismundi_act_feed_surface_layout( $ax_feed_generic_only['layouts'], 'activity' )
+				&& false !== strpos( (string) axismundi_act_feed_surface_layout( $ax_feed_generic_only['layouts'], 'community' )['content'], '<p>g</p>' )
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'a named layout wins for its own surface and carries how that surface is walked',
+			false !== strpos( (string) axismundi_act_feed_surface_layout( $ax_feed_overridden['layouts'], 'community' )['content'], '<p>c</p>' )
+				&& 'pagination' === (string) axismundi_act_feed_surface_layout( $ax_feed_overridden['layouts'], 'community' )['navigation']
+				// Everything it does not name still falls to the generic.
+				&& false !== strpos( (string) axismundi_act_feed_surface_layout( $ax_feed_overridden['layouts'], 'activity' )['content'], '<p>g</p>' )
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'a surface with neither a named layout nor a generic resolves to nothing, so it can be left unadvertised',
+			null === axismundi_act_feed_surface_layout( $ax_feed_no_generic['layouts'], 'activity' )
+				&& null !== axismundi_act_feed_surface_layout( $ax_feed_no_generic['layouts'], 'community' )
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'two layouts claiming one surface is reported rather than silently resolved',
+			array( 'community' ) === $ax_feed_dup_surface['duplicates']
+				&& array( 'community' ) === $ax_feed_dup_surface['order']
+				&& array() === $ax_feed_overridden['duplicates']
+		);
+
 		$ax_feed_map = static function ( string $inner ) : array {
 			return axismundi_act_feed_item_templates( parse_blocks( '<!-- wp:axismundi/feed-item-templates -->' . $inner . '<!-- /wp:axismundi/feed-item-templates -->' ) );
 		};

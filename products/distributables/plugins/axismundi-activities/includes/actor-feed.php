@@ -1217,6 +1217,8 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 /** Register the server-rendered Actor Activity feed block. */
 function axismundi_act_register_actor_activity_feed_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/actor-feed-loop', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-surface-templates' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-surface-template' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-templates' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
 	/*
@@ -1385,6 +1387,67 @@ function axismundi_act_extract_feed_item_template( array $blocks, string $densit
 	return isset( $found['templates'][ $density ] )
 		? $found['templates'][ $density ]
 		: $found['templates'][ $found['order'][0] ];
+}
+
+/**
+ * The saved layouts a profile template offers, one per feed surface.
+ *
+ * Surfaces are not like densities, and the difference decides the rules. A density is a variant an
+ * author composed: if it is missing, the saved template is simply wrong, so the cards are read from
+ * their set and nowhere else. A surface is a *capability a product contributes* — Forum supplies
+ * `community` — so a template that predates it, or was written on a site where Forum was inactive,
+ * must not be able to delete a readable surface from the URL and the tabs by omission.
+ *
+ * Hence a required generic. A named layout wins for its surface; anything else falls back to
+ * `default`; and a surface with neither is a configuration fault rather than a silent blank — the
+ * feed must not advertise it at all.
+ *
+ * Duplicates of one named surface fail the same way duplicate densities do: choosing between two
+ * layouts claiming the same surface is not an ordering question, and the loser would be unreachable
+ * with nothing saying so.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed template blocks.
+ * @return array{layouts:array<string,array{content:string,navigation:string}>,order:array<int,string>,duplicates:array<int,string>}
+ */
+function axismundi_act_feed_surface_templates( array $blocks ) : array {
+	$found   = array( 'layouts' => array(), 'order' => array(), 'duplicates' => array() );
+	$wrapper = axismundi_act_find_block_by_name( $blocks, 'axismundi/feed-surface-templates' );
+	if ( null === $wrapper ) {
+		return $found;
+	}
+	foreach ( (array) ( $wrapper['innerBlocks'] ?? array() ) as $node ) {
+		if ( 'axismundi/feed-surface-template' !== (string) ( $node['blockName'] ?? '' ) ) {
+			continue;
+		}
+		$surface = sanitize_key( (string) ( $node['attrs']['surface'] ?? 'default' ) );
+		$surface = '' !== $surface ? $surface : 'default';
+		if ( isset( $found['layouts'][ $surface ] ) ) {
+			$found['duplicates'][] = $surface;
+			continue;
+		}
+		$found['layouts'][ $surface ] = array(
+			'content'    => serialize_blocks( (array) ( $node['innerBlocks'] ?? array() ) ),
+			// How this surface is walked is a property of reading it, so it is stated beside the
+			// layout that reads it rather than on the loop that repeats the result.
+			'navigation' => (string) ( $node['attrs']['navigation'] ?? '' ),
+		);
+		$found['order'][] = $surface;
+	}
+	return $found;
+}
+
+/**
+ * The layout one surface is read through, or null when the template can draw it no way at all.
+ *
+ * Null is the whole point of the return type: a caller that gets it must stop offering the surface,
+ * rather than rendering an empty region under a tab that promised something.
+ *
+ * @param array<string,array{content:string,navigation:string}> $layouts Saved layouts.
+ * @param string                                                $surface Surface key.
+ * @return array{content:string,navigation:string}|null
+ */
+function axismundi_act_feed_surface_layout( array $layouts, string $surface ) : ?array {
+	return $layouts[ $surface ] ?? $layouts['default'] ?? null;
 }
 
 /**

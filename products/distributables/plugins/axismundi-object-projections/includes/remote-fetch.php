@@ -102,7 +102,8 @@ function axismundi_op_remote_object_fetched( array $stored ) : void {
 /**
  * Fetch, validate, and cache one remote ActivityStreams object.
  *
- * No redirect is followed. Render paths must never call this function.
+ * Redirects are followed manually, one safe HTTPS hop at a time. Render paths must never call
+ * this function.
  *
  * @param string $url Canonical or negotiated remote object URL.
  * @return array<string,mixed>|WP_Error Stored observation.
@@ -125,20 +126,45 @@ function axismundi_op_remote_object_fetch( string $url ) {
 		$headers['If-Modified-Since'] = (string) $existing['last_modified'];
 	}
 
-	$response = wp_safe_remote_get(
-		$url,
-		array(
-			'timeout'             => 10,
-			'redirection'         => 0,
-			'limit_response_size' => AXISMUNDI_OP_REMOTE_PAYLOAD_MAX + 1,
-			'headers'             => $headers,
-		)
-	);
-	if ( is_wp_error( $response ) ) {
-		return axismundi_op_remote_fetch_error( $url, 'ax_op_remote_fetch_http', __( 'The remote object could not be fetched.', 'axismundi-object-projections' ) );
+	/*
+	 * A Lemmy permalink can redirect to the canonical ActivityPub Object it observed, and that
+	 * Object can in turn redirect to its human-readable route. Do not let the HTTP client follow
+	 * those automatically: every target must independently pass WordPress' public-URL check.
+	 */
+	$request_url = $url;
+	$visited     = array( $request_url => true );
+	$response    = null;
+	$status      = 0;
+	for ( $hop = 0; $hop <= 3; ++$hop ) {
+		$response = wp_safe_remote_get(
+			$request_url,
+			array(
+				'timeout'             => 10,
+				'redirection'         => 0,
+				'limit_response_size' => AXISMUNDI_OP_REMOTE_PAYLOAD_MAX + 1,
+				'headers'             => $headers,
+			)
+		);
+		if ( is_wp_error( $response ) ) {
+			return axismundi_op_remote_fetch_error( $url, 'ax_op_remote_fetch_http', __( 'The remote object could not be fetched.', 'axismundi-object-projections' ) );
+		}
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		if ( ! in_array( $status, array( 301, 302, 303, 307, 308 ), true ) ) {
+			break;
+		}
+		$next_url = trim( (string) wp_remote_retrieve_header( $response, 'location' ) );
+		if ( 'https' !== strtolower( (string) wp_parse_url( $next_url, PHP_URL_SCHEME ) ) || ! wp_http_validate_url( $next_url ) ) {
+			return axismundi_op_remote_fetch_error( $url, 'ax_op_remote_fetch_redirect', __( 'The remote object redirected to an unsafe URL.', 'axismundi-object-projections' ) );
+		}
+		if ( isset( $visited[ $next_url ] ) ) {
+			return axismundi_op_remote_fetch_error( $url, 'ax_op_remote_fetch_redirect_loop', __( 'The remote object redirect loop could not be resolved.', 'axismundi-object-projections' ) );
+		}
+		$visited[ $next_url ] = true;
+		$request_url          = $next_url;
 	}
-
-	$status = (int) wp_remote_retrieve_response_code( $response );
+	if ( in_array( $status, array( 301, 302, 303, 307, 308 ), true ) ) {
+		return axismundi_op_remote_fetch_error( $url, 'ax_op_remote_fetch_redirect_limit', __( 'The remote object redirected too many times.', 'axismundi-object-projections' ) );
+	}
 	if ( 304 === $status && is_array( $existing ) ) {
 		$not_modified = axismundi_op_remote_object_not_modified( $url );
 		if ( is_array( $not_modified ) ) {

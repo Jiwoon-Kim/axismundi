@@ -14,14 +14,19 @@ require_once dirname( __DIR__ ) . '/includes/admin.php';
 $ax_fetch_results = array();
 $ax_fetch_url     = 'https://example.com/objects/ax-phase-4b';
 $ax_fetch_signed  = 'https://example.com/objects/ax-signed';
+$ax_fetch_redirect = 'https://example.com/objects/ax-redirect';
+$ax_fetch_target   = 'https://example.com/objects/ax-redirect-canonical';
+$ax_fetch_loop     = 'https://example.com/objects/ax-redirect-loop';
 $ax_fetch_actor   = 'https://example.com/users/ax-op-phase-4c-actor';
 $ax_fetch_mode    = 'success';
 $ax_fetch_args    = array();
 $ax_fetch_user    = get_current_user_id();
 $GLOBALS['ax_fetch_mode'] = 'success';
 $GLOBALS['ax_fetch_args'] = array();
+$GLOBALS['ax_fetch_request_args'] = array();
 $GLOBALS['ax_fetch_urls'] = array();
 $GLOBALS['ax_fetch_actor'] = $ax_fetch_actor;
+$GLOBALS['ax_fetch_target'] = $ax_fetch_target;
 
 /** @param array<bool> $results Results. @param string $label Label. @param bool $condition Condition. */
 function ax_fetch_assert( array &$results, string $label, bool $condition ) : void {
@@ -33,8 +38,15 @@ function ax_fetch_assert( array &$results, string $label, bool $condition ) : vo
 /** Mock bounded HTTP responses. */
 function ax_fetch_mock( $preempt, array $args, string $url ) {
 	$GLOBALS['ax_fetch_args'] = $args;
+	$GLOBALS['ax_fetch_request_args'][] = $args;
 	$GLOBALS['ax_fetch_urls'][] = $url;
 	$mode = (string) $GLOBALS['ax_fetch_mode'];
+	if ( 'redirect' === $mode && $GLOBALS['ax_fetch_target'] !== $url ) {
+		return array( 'headers' => array( 'location' => $GLOBALS['ax_fetch_target'] ), 'body' => '', 'response' => array( 'code' => 308, 'message' => 'Permanent Redirect' ), 'cookies' => array(), 'filename' => null );
+	}
+	if ( 'redirect-loop' === $mode ) {
+		return array( 'headers' => array( 'location' => $url ), 'body' => '', 'response' => array( 'code' => 308, 'message' => 'Permanent Redirect' ), 'cookies' => array(), 'filename' => null );
+	}
 	if ( 'signed' === $mode ) {
 		return array( 'headers' => array( 'content-type' => 'application/activity+json' ), 'body' => '', 'response' => array( 'code' => 401, 'message' => 'Unauthorized' ), 'cookies' => array(), 'filename' => null );
 	}
@@ -105,6 +117,24 @@ try {
 	$signed                   = axismundi_op_remote_object_fetch( $ax_fetch_signed );
 	ax_fetch_assert( $ax_fetch_results, '401/403 becomes an explicit signed-fetch-not-supported result', is_wp_error( $signed ) && 'ax_op_remote_signed_fetch_required' === $signed->get_error_code() );
 
+	$GLOBALS['ax_fetch_mode']         = 'redirect';
+	$GLOBALS['ax_fetch_urls']         = array();
+	$GLOBALS['ax_fetch_request_args'] = array();
+	$redirected                       = axismundi_op_remote_object_fetch( $ax_fetch_redirect );
+	ax_fetch_assert(
+		$ax_fetch_results,
+		'a bounded ActivityPub redirect is followed only through separately safe no-redirect requests',
+		is_array( $redirected )
+			&& $ax_fetch_target === (string) ( $redirected['object_uri'] ?? '' )
+			&& array( $ax_fetch_redirect, $ax_fetch_target ) === $GLOBALS['ax_fetch_urls']
+			&& 2 === count( $GLOBALS['ax_fetch_request_args'] )
+			&& array_reduce( $GLOBALS['ax_fetch_request_args'], static fn( bool $safe, array $args ) : bool => $safe && 0 === (int) ( $args['redirection'] ?? -1 ), true )
+	);
+
+	$GLOBALS['ax_fetch_mode'] = 'redirect-loop';
+	$looped                   = axismundi_op_remote_object_fetch( $ax_fetch_loop );
+	ax_fetch_assert( $ax_fetch_results, 'a redirect cycle is rejected rather than followed indefinitely', is_wp_error( $looped ) && 'ax_op_remote_fetch_redirect_loop' === $looped->get_error_code() );
+
 	$admins = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
 	wp_set_current_user( isset( $admins[0] ) ? (int) $admins[0] : 0 );
 	$_GET['object_uri'] = $ax_fetch_url;
@@ -139,6 +169,9 @@ try {
 	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) );
 	axismundi_op_remote_object_delete( $ax_fetch_url );
 	axismundi_op_remote_object_delete( $ax_fetch_signed );
+	axismundi_op_remote_object_delete( $ax_fetch_redirect );
+	axismundi_op_remote_object_delete( $ax_fetch_target );
+	axismundi_op_remote_object_delete( $ax_fetch_loop );
 	// The mocked payload materializes a shared vocabulary term; leaving it behind
 	// would pollute a site-wide taxonomy and make repeat runs non-deterministic.
 	$ax_fetch_term = get_term_by( 'slug', 'remoteobjects', AXISMUNDI_OP_HASHTAG_TAXONOMY );

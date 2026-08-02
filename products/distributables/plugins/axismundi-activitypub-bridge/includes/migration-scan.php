@@ -157,7 +157,7 @@ function axismundi_activitypub_bridge_scan_legacy_objects( array &$report ) : vo
 			continue;
 		}
 		$uri      = (string) $normalized['object_uri'];
-		$existing = axismundi_op_remote_object_get( $uri, false );
+		$existing = axismundi_op_get_remote_object( $uri, false );
 		axismundi_activitypub_bridge_legacy_add_row( $report, 'ap_post', (string) $post->ID, $uri, is_array( $existing ) ? 'duplicate' : 'importable', 'purgeable', __( 'Purge becomes available only after URI and payload verification.', 'axismundi-activitypub-bridge' ) );
 	}
 }

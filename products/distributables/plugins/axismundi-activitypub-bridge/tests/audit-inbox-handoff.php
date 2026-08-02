@@ -245,7 +245,7 @@ try {
 	$mention_response = ( new Activitypub\Rest\Inbox_Controller() )->create_item( $mention_request );
 	$mention_stored   = axismundi_act_get( $ax_bridge_mention_activity );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified shared-Inbox Mention href can supplement an otherwise absent local audience target', $mention_response instanceof WP_REST_Response && 202 === $mention_response->get_status() && $mention_stored instanceof Axismundi_Activity );
-	$mention_object = axismundi_op_remote_object_get( $ax_bridge_mention_object );
+	$mention_object = axismundi_op_get_remote_object( $ax_bridge_mention_object );
 	ax_bridge_inbox_assert( $ax_bridge_inbox_results, 'a verified inbound Create caches its complete self-consistent embedded Object without a second network fetch', is_array( $mention_object ) && $remote_uri === $mention_object['attributed_to_uri'] && false !== strpos( (string) $mention_object['content'], 'Private content' ) );
 
 	$untargeted                  = $payload;

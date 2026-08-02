@@ -103,7 +103,7 @@ function axismundi_activitypub_bridge_import_legacy_objects( array &$result ) : 
 			continue;
 		}
 		$uri    = (string) $normalized['object_uri'];
-		$before = axismundi_op_remote_object_get( $uri, false );
+		$before = axismundi_op_get_remote_object( $uri, false );
 		if ( is_array( $before ) ) {
 			$status = hash_equals( (string) $before['payload_hash'], (string) $normalized['payload_hash'] ) ? 'verified_existing' : 'failed';
 			axismundi_activitypub_bridge_legacy_import_row(
@@ -118,12 +118,12 @@ function axismundi_activitypub_bridge_import_legacy_objects( array &$result ) : 
 			);
 			continue;
 		}
-		$stored = axismundi_op_remote_object_store( $payload );
+		$stored = axismundi_op_store_remote_object( $payload );
 		if ( is_wp_error( $stored ) ) {
 			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, $uri, 'failed', $stored->get_error_message() );
 			continue;
 		}
-		$verified = axismundi_op_remote_object_get( $uri, false );
+		$verified = axismundi_op_get_remote_object( $uri, false );
 		if ( ! is_array( $verified ) || ! hash_equals( (string) $verified['object_uri'], $uri ) || ! hash_equals( (string) $verified['payload_hash'], (string) $normalized['payload_hash'] ) ) {
 			axismundi_activitypub_bridge_legacy_import_row( $result, 'ap_post', (string) $post->ID, $uri, 'failed', __( 'The imported Object could not be verified by canonical URI and payload hash.', 'axismundi-activitypub-bridge' ) );
 			continue;

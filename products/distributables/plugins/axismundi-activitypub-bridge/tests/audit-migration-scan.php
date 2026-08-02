@@ -83,7 +83,7 @@ try {
 	add_post_meta( $actor_post, '_activitypub_following', $ax_scan_user );
 
 	$object_payload = array( 'id' => $ax_scan_object_uri, 'type' => 'Note', 'attributedTo' => $ax_scan_remote_uri, 'content' => '<p>Legacy object</p>' );
-	axismundi_op_remote_object_store( $object_payload );
+	axismundi_op_store_remote_object( $object_payload );
 	$object_post = wp_insert_post( array( 'post_type' => 'ap_post', 'post_status' => 'publish', 'post_title' => 'Legacy Object', 'post_content' => wp_slash( wp_json_encode( $object_payload ) ), 'guid' => $ax_scan_object_uri ) );
 	$ax_scan_posts[] = $object_post;
 
@@ -145,8 +145,8 @@ try {
 	foreach ( array_reverse( array_filter( array_map( 'intval', $ax_scan_posts ) ) ) as $post_id ) {
 		wp_delete_post( $post_id, true );
 	}
-	if ( function_exists( 'axismundi_op_remote_object_delete' ) ) {
-		axismundi_op_remote_object_delete( $ax_scan_object_uri );
+	if ( function_exists( 'axismundi_op_delete_remote_object' ) ) {
+		axismundi_op_delete_remote_object( $ax_scan_object_uri );
 	}
 	foreach ( array_unique( array_map( 'intval', $ax_scan_identity_ids ) ) as $identity_id ) {
 		foreach ( array( axismundi_actors_texts_table(), axismundi_actors_addresses_table(), axismundi_actors_endpoints_table(), axismundi_actors_asset_cache_table(), axismundi_actors_keys_table(), axismundi_actors_fetch_state_table() ) as $table ) {

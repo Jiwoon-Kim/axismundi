@@ -103,7 +103,7 @@ try {
 	$remote_target_actor = ax_qd_remote_actor( $ax_qd_actor_ids, 'quoted-' . strtolower( wp_generate_password( 6, false, false ) ) );
 	$remote_target_uri    = 'https://remote.example/notes/' . strtolower( wp_generate_password( 8, false, false ) );
 	$remote_target_stored = $remote_target_actor instanceof Axismundi_Actor
-		? axismundi_op_remote_object_store( array( 'id' => $remote_target_uri, 'type' => 'Note', 'attributedTo' => $remote_target_actor->get_uri(), 'content' => 'Remote quoted note.' ) )
+		? axismundi_op_store_remote_object( array( 'id' => $remote_target_uri, 'type' => 'Note', 'attributedTo' => $remote_target_actor->get_uri(), 'content' => 'Remote quoted note.' ) )
 		: null;
 	$ax_qd_remote_uris[] = $remote_target_uri;
 
@@ -232,7 +232,7 @@ try {
 		$wpdb->delete( axismundi_activitypub_bridge_delivery_table(), array( 'id' => $delivery_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 	foreach ( array_unique( $ax_qd_remote_uris ) as $uri ) {
-		axismundi_op_remote_object_delete( $uri );
+		axismundi_op_delete_remote_object( $uri );
 	}
 	foreach ( array_unique( $ax_qd_post_ids ) as $post_id ) {
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

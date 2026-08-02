@@ -113,7 +113,7 @@ try {
 	if ( $pending_remote instanceof Axismundi_Actor ) {
 		$ax_import_ids[] = $pending_remote->get_identity_id();
 	}
-	$object   = axismundi_op_remote_object_get( $object_uri, false );
+	$object   = axismundi_op_get_remote_object( $object_uri, false );
 	$activity = axismundi_act_get( $activity_uri );
 	$relation = axismundi_act_get_relation( 'follow', $remote_uri, $local->get_uri() );
 	$following_relation = axismundi_act_get_relation( 'follow', $local->get_uri(), $remote_uri );
@@ -158,7 +158,7 @@ try {
 	}
 	$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $activity_uri ?? '' ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- exact fixture cleanup.
 	if ( isset( $object_uri ) ) {
-		axismundi_op_remote_object_delete( $object_uri );
+		axismundi_op_delete_remote_object( $object_uri );
 	}
 	foreach ( array_reverse( array_filter( array_map( 'intval', $ax_import_posts ) ) ) as $post_id ) {
 		wp_delete_post( $post_id, true );

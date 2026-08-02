@@ -525,7 +525,7 @@ function axismundi_act_render_actor_activity_feed() : string {
 	 * own delegated-controller module before it emits `data-wp-interactive="axismundi/actor-feed"`.
 	 */
 	if ( function_exists( 'wp_enqueue_script_module' ) ) {
-		wp_enqueue_script_module( 'axismundi-actor-activity-feed-view-script-module' );
+		wp_enqueue_script_module( 'axismundi-actor-feed-loop-view-script-module' );
 	}
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read pagination.
 	$cursor = isset( $_GET['feed_after'] ) ? sanitize_text_field( wp_unslash( $_GET['feed_after'] ) ) : '';
@@ -969,7 +969,7 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 
 /** Register the server-rendered Actor Activity feed block. */
 function axismundi_act_register_actor_activity_feed_block() : void {
-	register_block_type( dirname( __DIR__ ) . '/blocks/actor-activity-feed', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/actor-feed-loop', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
 }
 add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );

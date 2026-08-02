@@ -635,6 +635,23 @@ try {
 		$ax_feed_tpl_norm   = static function ( string $html ) : string {
 			return preg_replace( '/\s+/', ' ', preg_replace( '/(ax-rx|ax-announce-menu|ax-announce-trigger|ax-object-spoiler)-\d+/', 'GEN', $html ) );
 		};
+		/*
+		 * The block was renamed, which is only safe if everything that names it moved with it.
+		 *
+		 * A block name is not just a label here: the saved template refers to it, the item
+		 * template declares it as its parent, and the view module handle WordPress generates is
+		 * derived from it. Miss the handle and the feed still renders while Load more silently
+		 * stops working, which is the kind of break that looks like nothing at all.
+		 */
+		ax_feed_assert(
+			$ax_feed_results,
+			'the renamed loop is the only name left: registration, parent, and the module handle all moved',
+			WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/actor-feed-loop' )
+				&& ! WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/actor-activity-feed' )
+				&& array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-item-template' )->parent
+				&& is_readable( dirname( __DIR__ ) . '/blocks/actor-feed-loop/view.js' )
+		);
+
 
 		ax_feed_assert(
 			$ax_feed_results,

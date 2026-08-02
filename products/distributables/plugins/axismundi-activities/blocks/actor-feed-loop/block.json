@@ -1,9 +1,9 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "axismundi/actor-activity-feed",
+	"name": "axismundi/actor-feed-loop",
 	"version": "0.0.36",
-	"title": "Actor Timeline",
+	"title": "Actor Feed Loop",
 	"category": "theme",
 	"icon": "list-view",
 	"description": "Displays the current Actor's public timeline of Activities and observed Objects.",

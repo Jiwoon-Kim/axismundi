@@ -1,5 +1,5 @@
 /**
- * axismundi/actor-activity-feed editor registration (no build step).
+ * axismundi/actor-feed-loop editor registration (no build step).
  *
  * The preview drew the chrome and stopped, so the block that actually renders the profile's cards
  * showed none of them — while a neighbouring block that renders nothing showed four. An author
@@ -40,7 +40,7 @@
 		return el( 'li', { className: 'axismundi-activity-feed__item', key: key }, parts );
 	}
 
-	blocks.registerBlockType( 'axismundi/actor-activity-feed', {
+	blocks.registerBlockType( 'axismundi/actor-feed-loop', {
 		edit: function () {
 			return el(
 				'section',

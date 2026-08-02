@@ -8,7 +8,7 @@
 	"icon": "layout",
 	"description": "The card the feed repeats for every Object it lists. Edited once here; rendered once per Object, including the ones that arrive after Load more.",
 	"textdomain": "axismundi-activities",
-	"parent": [ "axismundi/actor-feed-loop", "axismundi/actor-activity-feed" ],
+	"parent": [ "axismundi/actor-feed-loop" ],
 	"supports": {
 		"html": false,
 		"reusable": false,

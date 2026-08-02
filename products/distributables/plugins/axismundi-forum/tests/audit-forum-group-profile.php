@@ -318,14 +318,14 @@ try {
 		'every link the feed builds carries the density, and carries the default by leaving it out',
 		// Collection tabs and the numbered pager both, since either would silently return the
 		// reader to cards on the first click and nothing about the page would look wrong after.
-		0 < preg_match_all( '#axismundi-activity-feed__view[^>]*href="[^"]*density=compact#', $ax_gp_compact_html )
+		0 < preg_match_all( '#axismundi-feed-filters__view[^>]*href="[^"]*density=compact#', $ax_gp_compact_html )
 			&& 0 < preg_match_all( '#axismundi-feed-pagination__(next|previous)" href="[^"]*density=compact#', $ax_gp_compact_html )
 			/*
 			 * Scoped to navigation, because the density switch itself must of course link to the
 			 * other density — including from card view, where it is the only way to reach compact.
 			 * The claim is about links that go somewhere else and carry the reader's density along.
 			 */
-			&& 0 === preg_match_all( '#(axismundi-activity-feed__view|axismundi-feed-pagination__(next|previous))[^>]*href="[^"]*density=#', $ax_gp_card_html )
+			&& 0 === preg_match_all( '#(axismundi-feed-filters__view|axismundi-feed-pagination__(next|previous))[^>]*href="[^"]*density=#', $ax_gp_card_html )
 			&& false === strpos( $ax_gp_compact_html, 'view=compact' )
 	);
 

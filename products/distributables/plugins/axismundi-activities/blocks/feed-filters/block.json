@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/feed-filters",
+	"version": "0.1.0",
+	"title": "Feed Filters",
+	"category": "theme",
+	"icon": "filter",
+	"description": "Where the timeline's view switches appear. Which switches exist depends on the surface being read, so the loop renders them and this block places them.",
+	"textdomain": "axismundi-activities",
+	"parent": [ "axismundi/actor-feed-loop" ],
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"inserter": false,
+		"interactivity": { "clientNavigation": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

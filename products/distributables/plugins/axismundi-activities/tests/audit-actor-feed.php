@@ -652,6 +652,52 @@ try {
 				&& is_readable( dirname( __DIR__ ) . '/blocks/actor-feed-loop/view.js' )
 		);
 
+		/*
+		 * The chrome is arranged by the template, and the arrangement has to survive a template
+		 * that predates it. The interesting case is not the one the bundled file writes — it is
+		 * the template already saved in somebody's database, which names only the card. That has
+		 * to keep both controls, because a reader who loses "Load more" loses the rest of the
+		 * feed and gets no error saying so.
+		 *
+		 * Parsed markup rather than the real template on purpose: this is a question about what an
+		 * arrangement means, and routing it through the filesystem would answer a different one
+		 * — as well as being unmeasurable within an opcache revalidation window.
+		 */
+		$ax_feed_arrangement = static function ( string $inner ) : array {
+			return axismundi_act_feed_slots_from_blocks(
+				parse_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:axismundi/actor-feed-loop -->' . $inner . '<!-- /wp:axismundi/actor-feed-loop --></div><!-- /wp:group -->' )
+			);
+		};
+		$ax_feed_legacy_shape = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-template --><!-- /wp:axismundi/feed-item-template -->' );
+		$ax_feed_moved        = $ax_feed_arrangement( '<!-- wp:axismundi/feed-pagination /--><!-- wp:axismundi/feed-item-template --><!-- /wp:axismundi/feed-item-template --><!-- wp:axismundi/feed-filters /-->' );
+		$ax_feed_dropped      = $ax_feed_arrangement( '<!-- wp:axismundi/feed-item-template --><!-- /wp:axismundi/feed-item-template --><!-- wp:axismundi/feed-pagination /-->' );
+		ax_feed_assert(
+			$ax_feed_results,
+			'a template written before the chrome blocks existed keeps both controls in their original places',
+			array() === $ax_feed_legacy_shape
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'the chrome goes where the template puts it, in the template order rather than a fixed one',
+			array( 'pagination', 'list', 'filters' ) === $ax_feed_moved
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'naming one control is how a template drops the other, which a legacy template cannot do by accident',
+			array( 'list', 'pagination' ) === $ax_feed_dropped
+		);
+		/*
+		 * Both blocks belong to this feed alone. The Community archive counts and numbers its
+		 * pages; this one walks a cursor with no total and one direction. Letting either block
+		 * be placed outside the loop would offer that surface a control it cannot honour.
+		 */
+		ax_feed_assert(
+			$ax_feed_results,
+			'the filter and pagination blocks are Activity feed children, not chrome any surface can host',
+			array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-filters' )->parent
+				&& array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-pagination' )->parent
+		);
+
 
 		ax_feed_assert(
 			$ax_feed_results,

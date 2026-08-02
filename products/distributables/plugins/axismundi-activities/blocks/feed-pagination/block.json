@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/feed-pagination",
+	"version": "0.1.0",
+	"title": "Feed Pagination",
+	"category": "theme",
+	"icon": "arrow-down-alt",
+	"description": "Where the timeline continues. A cursor feed has one direction and no page numbers, so this is Load more rather than a numbered pager.",
+	"textdomain": "axismundi-activities",
+	"parent": [ "axismundi/actor-feed-loop" ],
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"inserter": false,
+		"interactivity": { "clientNavigation": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

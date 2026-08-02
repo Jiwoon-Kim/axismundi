@@ -771,22 +771,40 @@ function axismundi_act_render_actor_activity_feed() : string {
 		'error'         => '',
 		'errorFallback' => __( 'More activity could not be loaded.', 'axismundi-activities' ),
 	);
+	$parts = array(
+		'filters'    => $filter_nav,
+		// The list is always emitted, even when this page is empty, because appended pages need
+		// something to attach to. An empty feed says so in its own row rather than by omitting
+		// the container the runtime is going to look for.
+		'list'       => '<ol class="axismundi-activity-feed__list" data-wp-init="callbacks.watchFeed">'
+			. ( '' === $cards ? '<li class="axismundi-activity-feed__empty">' . esc_html__( 'Nothing to show in this view.', 'axismundi-activities' ) . '</li>' : $cards )
+			. '</ol>'
+			. $announce_host
+			. $reaction_host
+			. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>',
+		'pagination' => $navigation,
+	);
+	/*
+	 * The template's arrangement when it has one, and the arrangement it used to be born with
+	 * when it does not. The list is forced back in either way: it holds the cards, the runtime
+	 * finds the continuation container by looking for it, and a template that omitted it would
+	 * be asking for a feed with no feed in it.
+	 */
+	$slots = axismundi_act_actor_feed_slots( $actor );
+	$slots = array() === $slots ? array( 'filters', 'list', 'pagination' ) : $slots;
+	if ( ! in_array( 'list', $slots, true ) ) {
+		$slots[] = 'list';
+	}
+	$body = '';
+	foreach ( $slots as $slot ) {
+		$body .= $parts[ $slot ] ?? '';
+	}
 	return '<section class="axismundi-activity-feed" data-wp-interactive="axismundi/actor-feed" '
 		. wp_interactivity_data_wp_context( $context )
 		. ' aria-labelledby="axismundi-activity-feed-heading">'
 		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html( (string) $current['heading'] ) . '</h2>'
 		. $surface_nav
-		. $filter_nav
-		// The list is always emitted, even when this page is empty, because appended pages need
-		// something to attach to. An empty feed says so in its own row rather than by omitting
-		// the container the runtime is going to look for.
-		. '<ol class="axismundi-activity-feed__list" data-wp-init="callbacks.watchFeed">'
-		. ( '' === $cards ? '<li class="axismundi-activity-feed__empty">' . esc_html__( 'Nothing to show in this view.', 'axismundi-activities' ) . '</li>' : $cards )
-		. '</ol>'
-		. $announce_host
-		. $reaction_host
-		. '<p class="axismundi-activity-feed__status" data-wp-text="context.error" role="status"></p>'
-		. $navigation
+		. $body
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.
 }
 
@@ -971,6 +989,17 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 function axismundi_act_register_actor_activity_feed_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/actor-feed-loop', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
+	/*
+	 * The chrome around the cards, as blocks an author can move or leave out.
+	 *
+	 * These belong to Activities and only to Activities. A Group's Community archive paginates by
+	 * number over a list that can be counted and jumped around in; this feed walks a cursor down a
+	 * ledger whose length nobody asks for. They are not one control with two settings, and putting
+	 * a "Load more" block on the Community would be offering a reader a direction that surface does
+	 * not have.
+	 */
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-filters' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-pagination' );
 }
 add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
 
@@ -994,7 +1023,25 @@ add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
  * @return string Serialized inner blocks of the feed item template, or '' when there is none.
  */
 function axismundi_act_actor_feed_template_source( Axismundi_Actor $actor ) : string {
+	return axismundi_act_extract_feed_item_template( axismundi_act_actor_feed_template_blocks( $actor ) );
+}
+
+/**
+ * The parsed profile template this Actor's feed is being read out of.
+ *
+ * Parsed once per Actor kind per request. Two things now read this template — which card to
+ * repeat, and where the chrome around the cards goes — and parsing it twice to answer two
+ * questions about the same document would be work done for nothing.
+ *
+ * @param Axismundi_Actor $actor Actor whose profile is being read.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_act_actor_feed_template_blocks( Axismundi_Actor $actor ) : array {
+	static $parsed = array();
 	$slug = 'Group' === $actor->get_type() ? 'actor-group-profile' : 'actor-person-profile';
+	if ( isset( $parsed[ $slug ] ) ) {
+		return $parsed[ $slug ];
+	}
 
 	$content = '';
 	if ( function_exists( 'get_block_template' ) ) {
@@ -1006,10 +1053,80 @@ function axismundi_act_actor_feed_template_source( Axismundi_Actor $actor ) : st
 	if ( '' === $content && function_exists( 'axismundi_actors_profile_template_content' ) ) {
 		$content = axismundi_actors_profile_template_content( $slug );
 	}
-	if ( '' === $content ) {
-		return '';
+	$parsed[ $slug ] = '' === $content ? array() : parse_blocks( $content );
+	return $parsed[ $slug ];
+}
+
+/**
+ * The order the feed's own parts appear in, as the template arranges them.
+ *
+ * The filters and the pagination are blocks so that an author can move them — put the filters
+ * under the list, drop them entirely on a profile that only ever shows one view. What they are
+ * not is self-rendering: both describe the same query the loop just ran, so the loop renders
+ * them and these blocks say where.
+ *
+ * An empty result means the template says nothing about the arrangement, and the caller keeps
+ * the fixed order the feed had before it could be arranged at all. That is what a template
+ * written before these blocks existed looks like — including one already saved to the database
+ * by the Site Editor — and it has to keep working, because losing this reading is losing
+ * "Load more".
+ *
+ * @param Axismundi_Actor $actor Actor whose profile is being read.
+ * @return array<int,string> Slot keys in template order, or an empty array for no opinion.
+ */
+function axismundi_act_actor_feed_slots( Axismundi_Actor $actor ) : array {
+	return axismundi_act_feed_slots_from_blocks( axismundi_act_actor_feed_template_blocks( $actor ) );
+}
+
+/**
+ * The arrangement a parsed template asks for, separate from where that template came from.
+ *
+ * Split out because the two halves fail differently and are worth being able to ask about
+ * separately: resolving the template is about the Site Editor and the filesystem, while this is
+ * about what the author arranged.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed template blocks.
+ * @return array<int,string> Slot keys in template order, or an empty array for no opinion.
+ */
+function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
+	$loop = axismundi_act_find_feed_loop_block( $blocks );
+	if ( null === $loop ) {
+		return array();
 	}
-	return axismundi_act_extract_feed_item_template( parse_blocks( $content ) );
+	$known = array(
+		'axismundi/feed-filters'       => 'filters',
+		'axismundi/feed-item-template' => 'list',
+		'axismundi/feed-pagination'    => 'pagination',
+	);
+	$slots = array();
+	foreach ( (array) ( $loop['innerBlocks'] ?? array() ) as $block ) {
+		$slot = $known[ (string) ( $block['blockName'] ?? '' ) ] ?? '';
+		if ( '' !== $slot && ! in_array( $slot, $slots, true ) ) {
+			$slots[] = $slot;
+		}
+	}
+	// A template that names only the card is the old arrangement written out, not a request to
+	// drop the chrome. It takes a chrome block to move one, and a chrome block to omit the other.
+	return array( 'list' ) === $slots ? array() : $slots;
+}
+
+/**
+ * Find the feed loop anywhere in a parsed template.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed blocks.
+ * @return array<string,mixed>|null
+ */
+function axismundi_act_find_feed_loop_block( array $blocks ) : ?array {
+	foreach ( $blocks as $block ) {
+		if ( 'axismundi/actor-feed-loop' === ( $block['blockName'] ?? '' ) ) {
+			return $block;
+		}
+		$found = axismundi_act_find_feed_loop_block( (array) ( $block['innerBlocks'] ?? array() ) );
+		if ( null !== $found ) {
+			return $found;
+		}
+	}
+	return null;
 }
 
 /**

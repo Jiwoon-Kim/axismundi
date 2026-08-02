@@ -68,6 +68,7 @@ endif;
 	 * rendered, and only the loop knows which one a given row holds.
 	 */
 	?>
+	<!-- wp:axismundi/feed-filters /-->
 	<!-- wp:axismundi/feed-item-template -->
 		<?php require WP_PLUGIN_DIR . '/axismundi-object-projections/templates/parts/object-card-header.php'; ?>
 		<!-- wp:axismundi/object-card-body /-->
@@ -80,6 +81,7 @@ endif;
 			<!-- wp:axismundi/interaction {"type":"reaction"} /-->
 		<!-- /wp:axismundi/interactions -->
 	<!-- /wp:axismundi/feed-item-template -->
+	<!-- wp:axismundi/feed-pagination /-->
 <!-- /wp:axismundi/actor-feed-loop --></div>
 <!-- /wp:group -->
 

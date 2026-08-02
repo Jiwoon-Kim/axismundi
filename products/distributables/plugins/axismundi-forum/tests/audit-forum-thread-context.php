@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit( 1 );
 
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/audience.php';
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/thread-context.php';
@@ -342,7 +343,8 @@ try {
 			&& in_array( $public_uri, (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
 			&& in_array( 'https://example.com/u/axtc-parent', (array) ( $remote_create->get_audience()['cc'] ?? array() ), true )
 			&& $remote_group->get_uri() === (string) ( $remote_create->get_payload()['object']['audience'] ?? '' )
-			&& false === axismundi_forum_group_reply_actor_feed_visible( true, $remote_create )
+			// Kept from the personal timeline by its own addressing rather than by a forum rule.
+			&& ! axismundi_act_group_context_admits( 'out', ! empty( axismundi_act_activity_group_context( $remote_create )['has_group_context'] ) )
 			&& null === axismundi_forum_group_reply_public_outbox_payload( $remote_create->get_payload(), $remote_create )
 			&& $remote_context_group instanceof Axismundi_Actor && $remote_group->get_uri() === $remote_context_group->get_uri()
 	);

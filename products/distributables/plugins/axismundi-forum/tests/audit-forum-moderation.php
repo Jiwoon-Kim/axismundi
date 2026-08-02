@@ -8,6 +8,7 @@ require_once WP_PLUGIN_DIR . '/axismundi-actors/includes/managed-groups.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/repository.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/relations.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/local-social.php';
+require_once WP_PLUGIN_DIR . '/axismundi-activities/includes/audience.php';
 require_once WP_PLUGIN_DIR . '/axismundi-activitypub-bridge/includes/transport.php';
 require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
@@ -146,7 +147,16 @@ try {
 			&& $create->get_uri() === (string) $pending_entry['accepted_activity_uri']
 			&& in_array( $group->get_uri(), (array) ( $create->get_audience()['to'] ?? array() ), true )
 			&& axismundi_act_has_public_audience( $create )
-			&& function_exists( 'axismundi_act_actor_feed_item' ) && null === axismundi_act_actor_feed_item( $create )
+			/*
+			 * The entry is built now and refused by the timeline's selection, where it used to be
+			 * refused at construction by a forum rule. Same outcome for the author's profile, but
+			 * it has to be asked of the surface: the descriptor exists precisely so the community
+			 * surface can also select it, and asking whether it is `null` would now be asking
+			 * whether the community can see it at all.
+			 */
+			&& function_exists( 'axismundi_act_feed_item_in_group_context' )
+			&& ! axismundi_act_feed_item_in_group_context( (array) axismundi_act_actor_feed_item( $create ), 'out' )
+			&& axismundi_act_feed_item_in_group_context( (array) axismundi_act_actor_feed_item( $create ), 'in' )
 			&& ! in_array( $create->get_uri(), $author_outbox_ids, true )
 			&& function_exists( 'axismundi_activitypub_bridge_is_direct_group_submission' ) && axismundi_activitypub_bridge_is_direct_group_submission( $create )
 			&& 1 === count( axismundi_forum_pending_topic_entries( $group_id ) )
@@ -176,7 +186,12 @@ try {
 		$cc_addressed_create instanceof Axismundi_Activity
 			&& axismundi_forum_is_direct_topic_submission_activity( $cc_addressed_create )
 			&& null === axismundi_forum_topic_submission_public_outbox_payload( array(), $cc_addressed_create )
-			&& ! axismundi_forum_topic_submission_actor_feed_visible( true, $cc_addressed_create )
+			/*
+			 * The feed half of this claim is now the addressing, not a forum rule. `cc` is the
+			 * point of the fixture: a Group named there rather than in `to` still puts the entry
+			 * in a community, so the personal timeline — which selects `out` — must refuse it.
+			 */
+			&& ! axismundi_act_group_context_admits( 'out', ! empty( axismundi_act_activity_group_context( $cc_addressed_create )['has_group_context'] ) )
 	);
 	wp_set_current_user( $alice_user );
 	ob_start();

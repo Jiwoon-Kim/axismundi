@@ -330,7 +330,7 @@ function axismundi_op_remote_object_normalize( array $payload, array $fetch = ar
  * @param array<string,mixed> $fetch   Optional response metadata.
  * @return array<string,mixed>|WP_Error Stored row.
  */
-function axismundi_op_remote_object_store( array $payload, array $fetch = array() ) {
+function axismundi_op_store_remote_object( array $payload, array $fetch = array() ) {
 	global $wpdb;
 	$normalized = axismundi_op_remote_object_normalize( $payload, $fetch );
 	if ( is_wp_error( $normalized ) ) {
@@ -362,7 +362,7 @@ function axismundi_op_remote_object_store( array $payload, array $fetch = array(
 	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit custom repository transaction.
 	$wpdb->query( 'COMMIT' );
-	$stored = axismundi_op_remote_object_get( (string) $normalized['object_uri'] );
+	$stored = axismundi_op_get_remote_object( (string) $normalized['object_uri'] );
 	if ( is_array( $stored ) && function_exists( 'axismundi_op_index_quote_relations' ) ) {
 		axismundi_op_index_quote_relations( $stored );
 	}
@@ -379,7 +379,7 @@ function axismundi_op_remote_object_store( array $payload, array $fetch = array(
 }
 
 /** @return array<string,mixed>|null Exact URI row with decoded `payload`. */
-function axismundi_op_remote_object_get( string $uri, bool $touch = false ) : ?array {
+function axismundi_op_get_remote_object( string $uri, bool $touch = false ) : ?array {
 	global $wpdb;
 	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
 		return null;
@@ -410,7 +410,7 @@ function axismundi_op_remote_object_get( string $uri, bool $touch = false ) : ?a
 }
 
 /** @return array<string,mixed>|null Exact SHA-256 identity row with decoded `payload`. */
-function axismundi_op_remote_object_get_by_hash( string $hash, bool $touch = false ) : ?array {
+function axismundi_op_get_remote_object_by_hash( string $hash, bool $touch = false ) : ?array {
 	global $wpdb;
 	$hash = strtolower( trim( $hash ) );
 	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' )
@@ -515,7 +515,7 @@ function axismundi_op_get_observed_actor_objects( string $actor_uri, array $crea
 /** Record a failed refresh without destroying the last successful payload. */
 function axismundi_op_remote_object_record_failure( string $uri, string $error_code ) : bool {
 	global $wpdb;
-	$row = axismundi_op_remote_object_get( $uri );
+	$row = axismundi_op_get_remote_object( $uri );
 	if ( null === $row ) {
 		return false;
 	}
@@ -536,7 +536,7 @@ function axismundi_op_remote_object_record_failure( string $uri, string $error_c
 /** Mark a conditional 304 as fresh while retaining the payload. */
 function axismundi_op_remote_object_not_modified( string $uri ) : ?array {
 	global $wpdb;
-	$row = axismundi_op_remote_object_get( $uri );
+	$row = axismundi_op_get_remote_object( $uri );
 	if ( null === $row ) {
 		return null;
 	}
@@ -555,7 +555,7 @@ function axismundi_op_remote_object_not_modified( string $uri ) : ?array {
 		),
 		array( 'id' => (int) $row['id'] )
 	);
-	return axismundi_op_remote_object_get( $uri );
+	return axismundi_op_get_remote_object( $uri );
 }
 
 /** Return recent cache rows for the administrator inspector. */
@@ -604,7 +604,7 @@ function axismundi_op_remote_objects_daily_maintenance() : void {
 add_action( 'axismundi_op_remote_objects_daily', 'axismundi_op_remote_objects_daily_maintenance' );
 
 /** Delete one local cache observation only. */
-function axismundi_op_remote_object_delete( string $uri ) : bool {
+function axismundi_op_delete_remote_object( string $uri ) : bool {
 	global $wpdb;
 	if ( AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
 		return false;
@@ -614,7 +614,7 @@ function axismundi_op_remote_object_delete( string $uri ) : bool {
 		return false;
 	}
 	$table = axismundi_op_remote_objects_table();
-	$existing = axismundi_op_remote_object_get( $valid );
+	$existing = axismundi_op_get_remote_object( $valid );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache deletion.
 	$deleted = false !== $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE object_uri_hash = %s AND object_uri = %s", hash( 'sha256', $valid ), $valid ) );
 	if ( $deleted && function_exists( 'axismundi_op_delete_object_relations_for_source' ) ) {
@@ -627,4 +627,52 @@ function axismundi_op_remote_object_delete( string $uri ) : bool {
 		axismundi_op_replace_object_mentions( (string) $existing['object_uri'], array() );
 	}
 	return $deleted;
+}
+
+/*
+ * The names these four had before, kept working for one release.
+ *
+ * They read `remote_object_get`, `remote_object_store`, `remote_object_delete` — noun first, verb
+ * last, which is the order nothing else in this codebase uses and the reverse of the neighbours
+ * they are called beside (`axismundi_op_delete_object_relations_for_source`,
+ * `axismundi_op_index_remote_object_hashtags`). Renaming them is worth doing precisely because
+ * they are called from five products, and that is also why the old names cannot simply vanish:
+ * a rename applied to definitions and call sites in one commit is a fatal error for anyone whose
+ * checkout lands between the two halves.
+ *
+ * So the definitions move now, the call sites move per product after, and these go when the last
+ * one has. They forward silently rather than through `_deprecated_function()`: while the products
+ * are still migrating, every notice would be about a call this same commit deliberately left
+ * working. The notice belongs in the commit that removes the last caller, not in the one that
+ * makes the old name safe.
+ *
+ * These live in this file, not a separate deprecations file, because the audits require
+ * `remote-objects.php` directly rather than booting the plugin. Anything that had these names
+ * before still has them, in the same load.
+ */
+
+/** @deprecated Use axismundi_op_get_remote_object(). */
+function axismundi_op_remote_object_get( string $uri, bool $touch = false ) : ?array {
+	return axismundi_op_get_remote_object( $uri, $touch );
+}
+
+/** @deprecated Use axismundi_op_get_remote_object_by_hash(). */
+function axismundi_op_remote_object_get_by_hash( string $hash, bool $touch = false ) : ?array {
+	return axismundi_op_get_remote_object_by_hash( $hash, $touch );
+}
+
+/**
+ * @deprecated Use axismundi_op_store_remote_object().
+ *
+ * @param array<string,mixed> $payload Decoded remote object.
+ * @param array<string,mixed> $fetch   Optional response metadata.
+ * @return array<string,mixed>|WP_Error Stored row.
+ */
+function axismundi_op_remote_object_store( array $payload, array $fetch = array() ) {
+	return axismundi_op_store_remote_object( $payload, $fetch );
+}
+
+/** @deprecated Use axismundi_op_delete_remote_object(). */
+function axismundi_op_remote_object_delete( string $uri ) : bool {
+	return axismundi_op_delete_remote_object( $uri );
 }

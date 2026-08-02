@@ -280,6 +280,17 @@ ax_rnd_assert(
 		&& $ax_rnd_expected === $ax_rnd_actual
 		&& false !== strpos( $ax_rnd_editor_js, 'axismundiOpObjectBlocks' )
 );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'object-status has an editor-only announce preview while its server renderer still answers the runtime descriptor',
+	false !== strpos( $ax_rnd_editor_js, "'axismundi/object-status' === name" )
+		&& false !== strpos( $ax_rnd_editor_js, 'axismundi-object-card__status--announce' )
+		&& false !== strpos( $ax_rnd_editor_js, "'sync'" )
+		&& false !== strpos( $ax_rnd_editor_js, 'Example actor boosted' )
+		&& false !== strpos( axismundi_op_object_status_html( array( 'kind' => 'announce' ) ), 'axismundi-object-card__status--announce' )
+		&& false !== strpos( axismundi_op_object_status_html( array( 'kind' => 'announce' ) ), 'sync' )
+		&& false !== strpos( axismundi_op_object_status_html( array( 'kind' => 'announce' ) ), 'Boosted' )
+);
 
 /*
  * Which of the two blocks answers for a deleted Object.

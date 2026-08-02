@@ -11,6 +11,16 @@
 	var __ = i18n.__;
 	var registry = window.axismundiOpObjectBlocks || {};
 
+	function objectStatusPreview() {
+		return el(
+			'p',
+			blockEditor.useBlockProps( { className: 'axismundi-object-card__status axismundi-object-card__status--announce' } ),
+			el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, 'sync' ),
+			' ',
+			__( 'Example actor boosted', 'axismundi-object-projections' )
+		);
+	}
+
 	Object.keys( registry ).forEach( function ( name ) {
 		var definition = registry[ name ] || {};
 		var label = definition.label || name;
@@ -23,6 +33,9 @@
 		};
 
 		settings.edit = function () {
+			if ( 'axismundi/object-status' === name ) {
+				return objectStatusPreview();
+			}
 			return el(
 				'div',
 				blockEditor.useBlockProps( { className: 'axismundi-object-block-placeholder' } ),

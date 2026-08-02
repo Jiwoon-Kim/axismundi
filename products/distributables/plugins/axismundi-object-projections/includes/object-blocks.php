@@ -1688,6 +1688,7 @@ function axismundi_op_register_object_blocks() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-type' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-summary' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-read-more' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/object-card-header' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-card-body' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-hashtags' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/interactions' );

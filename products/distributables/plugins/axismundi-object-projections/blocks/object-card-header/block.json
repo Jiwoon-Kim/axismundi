@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/object-card-header",
+	"version": "0.1.0",
+	"title": "Object Card Header",
+	"category": "theme",
+	"icon": "id",
+	"description": "The identity row an Object card opens with. Which Actor it names is decided by the surface the card is on.",
+	"textdomain": "axismundi-object-projections",
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"spacing": { "margin": true, "padding": true },
+		"interactivity": { "clientNavigation": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

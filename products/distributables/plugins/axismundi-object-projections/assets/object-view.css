@@ -1172,3 +1172,23 @@ div.axismundi-object__featured-image-media.is-repeated {
 	--md-icon-size: 1.125rem;
 	font-size: 1.125rem;
 }
+
+/*
+ * The header's own layout, now that it is a block rather than a core Group.
+ *
+ * It used to come from the Group block's layout support, which meant the arrangement lived in the
+ * saved markup — four levels of attributes that every template carried a copy of. Here it is one
+ * rule the block always has, and the children stay free to be rearranged inside it.
+ */
+.axismundi-object-card__header {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--150, 0.75rem);
+}
+
+.axismundi-object-card__header > .wp-block-group {
+	display: flex;
+	min-inline-size: 0;
+}

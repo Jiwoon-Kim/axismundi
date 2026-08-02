@@ -68,52 +68,25 @@ endif;
 	 * rendered, and only the loop knows which one a given row holds.
 	 */
 	?>
-	<!-- wp:axismundi/feed-filters /-->
-	<!-- wp:axismundi/feed-density-switch /-->
-	<!-- wp:axismundi/feed-item-templates -->
-	<!-- wp:axismundi/feed-item-template {"density":"card"} -->
-		<?php require WP_PLUGIN_DIR . '/axismundi-object-projections/templates/parts/object-card-header.php'; ?>
-		<!-- wp:axismundi/object-card-body /-->
-		<!-- wp:axismundi/object-hashtags {"className":"is-style-tags"} /-->
-		<!-- wp:axismundi/reaction-bar /-->
-		<!-- wp:axismundi/interactions -->
-			<!-- wp:axismundi/interaction {"type":"reply"} /-->
-			<!-- wp:axismundi/interaction {"type":"like"} /-->
-			<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true} /-->
-			<!-- wp:axismundi/interaction {"type":"reaction"} /-->
-		<!-- /wp:axismundi/interactions -->
-	<!-- /wp:axismundi/feed-item-template -->
+	<!-- wp:axismundi/feed-tabs -->
+	<!-- wp:axismundi/feed-tab {"surface":"activity"} -->
+	<?php require __DIR__ . '/parts/feed-surface-layout.php'; ?>
+	<!-- /wp:axismundi/feed-tab -->
 	<?php
 	/*
-	 * The same card, composed for a reader who asked for less of each entry.
+	 * The same layout to begin with, and separately editable from here on.
 	 *
-	 * Both are saved, and the switch on the page picks between them — so how much an entry shows is
-	 * decided by blocks an author can edit rather than by CSS hiding things that were rendered
-	 * anyway. A hidden summary still costs the work of building it and still tells anything reading
-	 * the markup that the entry has one.
-	 *
-	 * Seeded rather than left to be added later: a template carrying only one of the two would
-	 * leave the other density falling back to a card it did not choose, and the fallback is meant
-	 * to be the upgrade path for templates saved before this existed, not the normal case.
+	 * A community row is not a timeline row even when it is drawn the same way: its header names
+	 * the Group rather than the profile owner, and its entries are chosen by where they were
+	 * addressed. Its own saved markup is what lets that reading diverge — different filters, a
+	 * different card, the pager somewhere else — without either surface having to be described
+	 * as a variation of the other.
 	 */
 	?>
-	<!-- wp:axismundi/feed-item-template {"density":"compact"} -->
-		<!-- wp:axismundi/object-status /-->
-		<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|100"}},"layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center"}} -->
-		<div class="wp-block-group">
-			<!-- wp:axismundi/actor-avatar {"size":24,"style":{"border":{"radius":"50%"}}} /-->
-			<!-- wp:axismundi/object-title /-->
-			<!-- wp:axismundi/object-date /-->
-		</div>
-		<!-- /wp:group -->
-		<!-- wp:axismundi/interactions -->
-			<!-- wp:axismundi/interaction {"type":"reply","size":"xs"} /-->
-			<!-- wp:axismundi/interaction {"type":"like","size":"xs"} /-->
-			<!-- wp:axismundi/interaction {"type":"announce","announceMenu":true,"size":"xs"} /-->
-		<!-- /wp:axismundi/interactions -->
-	<!-- /wp:axismundi/feed-item-template -->
-	<!-- /wp:axismundi/feed-item-templates -->
-	<!-- wp:axismundi/feed-pagination /-->
+	<!-- wp:axismundi/feed-tab {"surface":"community"} -->
+	<?php require __DIR__ . '/parts/feed-surface-layout.php'; ?>
+	<!-- /wp:axismundi/feed-tab -->
+	<!-- /wp:axismundi/feed-tabs -->
 <!-- /wp:axismundi/actor-feed-loop --></div>
 <!-- /wp:group -->
 

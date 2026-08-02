@@ -473,16 +473,24 @@ function axismundi_act_feed_densities() : array {
  *
  * @return string
  */
-function axismundi_act_feed_density() : string {
-	$densities = axismundi_act_feed_densities();
+function axismundi_act_feed_density( array $available = array() ) : string {
+	/*
+	 * What the template offers, not what this file can name. A density nobody saved a card for is
+	 * not a density this feed has, so asking for it is the same as asking for nothing.
+	 */
+	$available = array_values( array_filter( $available, static fn( $key ) : bool => isset( axismundi_act_feed_densities()[ $key ] ) ) );
+	if ( empty( $available ) ) {
+		return 'card';
+	}
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read presentation.
 	$requested = isset( $_GET['density'] ) ? sanitize_key( wp_unslash( $_GET['density'] ) ) : '';
-	if ( ! isset( $densities[ $requested ] ) ) {
+	if ( ! in_array( $requested, $available, true ) ) {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- legacy public read presentation.
 		$legacy    = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
-		$requested = isset( $densities[ $legacy ] ) ? $legacy : '';
+		$requested = in_array( $legacy, $available, true ) ? $legacy : '';
 	}
-	return '' !== $requested ? $requested : 'card';
+	// The first saved card is the default, so re-ordering the templates re-homes the plain address.
+	return '' !== $requested ? $requested : $available[0];
 }
 
 /** One navigation tab. */
@@ -636,7 +644,8 @@ function axismundi_act_render_actor_activity_feed() : string {
 		return axismundi_act_render_actor_feed_shell( $actor, $surfaces, $surface, $filter, $current, $body );
 	}
 	$mode    = (string) ( $current['mode'] ?? 'infinite' );
-	$density = axismundi_act_feed_density();
+	$densities_available = axismundi_act_actor_feed_densities_available( $actor );
+	$density             = axismundi_act_feed_density( $densities_available );
 	/*
 	 * A paged surface is addressed by number, so the position it is asked for is a page rather
 	 * than a cursor. `page` is the same name the community archive already published, so links
@@ -676,7 +685,8 @@ function axismundi_act_render_actor_activity_feed() : string {
 	 * about the page would look wrong afterwards, which is how the previous attempt at this went
 	 * unnoticed. The default is carried by omission so a card address stays the short one.
 	 */
-	if ( 'card' !== $density ) {
+	// Carried only when it is not the default, and the default is the first saved card.
+	if ( isset( $densities_available[0] ) && $density !== $densities_available[0] ) {
 		$base_url = add_query_arg( 'density', $density, $base_url );
 	}
 	$link_url = static function ( string $surface_key, string $filter_key, array $query = array() ) use ( $base_url, $surfaces ) : string {
@@ -870,15 +880,27 @@ function axismundi_act_render_actor_activity_feed() : string {
 	 * reader's page and collection are kept, because density does not move anybody.
 	 */
 	$density_switch = array();
-	foreach ( axismundi_act_feed_densities() as $key => $label ) {
-		$is_current    = (string) $key === $density;
-		$density_href  = remove_query_arg( 'density' );
-		$density_href  = 'card' === (string) $key ? $density_href : add_query_arg( 'density', (string) $key, $density_href );
+	$density_labels = axismundi_act_feed_densities();
+	foreach ( $densities_available as $index => $key ) {
+		$is_current   = (string) $key === $density;
+		/*
+		 * The default is addressed by leaving `density` out, and the default is whichever card was
+		 * saved first. So re-ordering the templates moves the plain address onto the new default
+		 * while an old `?density=card` link keeps opening card explicitly, which is what it said.
+		 */
+		$density_href = 0 === (int) $index
+			? remove_query_arg( 'density' )
+			: add_query_arg( 'density', (string) $key, remove_query_arg( 'density' ) );
 		$density_switch[] = '<a class="axismundi-activity-feed__density' . ( $is_current ? ' is-current' : '' ) . '"'
 			. ' href="' . esc_url( $density_href ) . '"' . ( $is_current ? ' aria-current="true"' : '' ) . '>'
-			. esc_html( (string) $label ) . '</a>';
+			. esc_html( (string) ( $density_labels[ $key ] ?? $key ) ) . '</a>';
 	}
-	$density_nav = '<div class="axismundi-activity-feed__densities" role="group" aria-label="'
+	/*
+	 * No switch when there is nothing to switch between. A template holding one card is a template
+	 * whose author decided how this feed reads, and offering a control with a single option would
+	 * be presenting that decision as a question.
+	 */
+	$density_nav = count( $density_switch ) < 2 ? '' : '<div class="axismundi-activity-feed__densities" role="group" aria-label="'
 		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">' . implode( '', $density_switch ) . '</div>';
 
 	$parts = array(
@@ -1157,6 +1179,7 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 /** Register the server-rendered Actor Activity feed block. */
 function axismundi_act_register_actor_activity_feed_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/actor-feed-loop', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-templates' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
 	/*
 	 * The chrome around the cards, as blocks an author can move or leave out.
@@ -1266,7 +1289,8 @@ function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
 	$known = array(
 		'axismundi/feed-filters'       => 'filters',
 		'axismundi/feed-density-switch' => 'density',
-		'axismundi/feed-item-template' => 'list',
+		'axismundi/feed-item-templates' => 'list',
+		'axismundi/feed-item-template'  => 'list',
 		'axismundi/feed-pagination'    => 'pagination',
 	);
 	$slots = array();
@@ -1311,14 +1335,69 @@ function axismundi_act_find_feed_loop_block( array $blocks ) : ?array {
  * @param array<int,array<string,mixed>> $blocks Parsed blocks.
  * @return string
  */
-function axismundi_act_extract_feed_item_template( array $blocks, string $density = 'card' ) : string {
-	$found = axismundi_act_find_feed_item_template( $blocks, $density );
+function axismundi_act_extract_feed_item_template( array $blocks, string $density = '' ) : string {
+	$found = axismundi_act_feed_item_templates( $blocks );
+	if ( empty( $found['order'] ) ) {
+		return '';
+	}
 	/*
-	 * A saved template that names only one card is a template written before there were two, so it
-	 * answers for both densities rather than leaving compact with nothing to render. The bundled
-	 * template seeds both, so this is the upgrade path and not the normal case.
+	 * The requested density when the template has it, and otherwise the first one saved — which is
+	 * also what an address with no density at all means. Falling back to the first rather than to
+	 * `card` is what makes a compact-only template open compact instead of blank.
 	 */
-	return '' !== $found || 'card' === $density ? $found : axismundi_act_find_feed_item_template( $blocks, 'card' );
+	return isset( $found['templates'][ $density ] )
+		? $found['templates'][ $density ]
+		: $found['templates'][ $found['order'][0] ];
+}
+
+/**
+ * Every card this template holds, in the order they were saved.
+ *
+ * Order is the contract. The first entry is the default density, so an author changes what a
+ * reader opens on by moving blocks rather than by finding a setting — and a template holding only
+ * a compact card simply opens compact, with no switch offered, because there is nothing to switch
+ * between.
+ *
+ * A duplicate density is refused rather than resolved. "First wins" is the rule for choosing among
+ * *different* densities; letting it also silently decide between two cards claiming the same one
+ * would turn an ordering convenience into a data model, and the second card would be unreachable
+ * with nothing saying so. The audit fails on it; the renderer keeps the first so a hand-edited
+ * template still draws something.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed template blocks.
+ * @return array{templates:array<string,string>,order:array<int,string>,duplicates:array<int,string>}
+ */
+function axismundi_act_feed_item_templates( array $blocks ) : array {
+	$found = array( 'templates' => array(), 'order' => array(), 'duplicates' => array() );
+	$collect = static function ( array $nodes ) use ( &$collect, &$found ) : void {
+		foreach ( $nodes as $node ) {
+			$name = (string) ( $node['blockName'] ?? '' );
+			if ( 'axismundi/feed-item-template' === $name ) {
+				$density = (string) ( $node['attrs']['density'] ?? 'card' );
+				$density = 'compact' === $density ? 'compact' : 'card';
+				if ( isset( $found['templates'][ $density ] ) ) {
+					$found['duplicates'][] = $density;
+					continue;
+				}
+				$found['templates'][ $density ] = serialize_blocks( (array) ( $node['innerBlocks'] ?? array() ) );
+				$found['order'][]               = $density;
+				continue;
+			}
+			$collect( (array) ( $node['innerBlocks'] ?? array() ) );
+		}
+	};
+	$collect( $blocks );
+	return $found;
+}
+
+/**
+ * The densities this Actor's template actually offers, in saved order.
+ *
+ * @param Axismundi_Actor $actor Actor whose profile is being read.
+ * @return array<int,string>
+ */
+function axismundi_act_actor_feed_densities_available( Axismundi_Actor $actor ) : array {
+	return axismundi_act_feed_item_templates( axismundi_act_actor_feed_template_blocks( $actor ) )['order'];
 }
 
 /**

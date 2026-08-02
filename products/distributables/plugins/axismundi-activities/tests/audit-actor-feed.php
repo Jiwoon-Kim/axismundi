@@ -648,7 +648,10 @@ try {
 			'the renamed loop is the only name left: registration, parent, and the module handle all moved',
 			WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/actor-feed-loop' )
 				&& ! WP_Block_Type_Registry::get_instance()->is_registered( 'axismundi/actor-activity-feed' )
-				&& array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-item-template' )->parent
+				// The cards nest one level deeper now: the loop holds the set, the set holds the
+				// cards. Asserted as a chain so neither half can be re-homed on its own.
+				&& array( 'axismundi/actor-feed-loop' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-item-templates' )->parent
+				&& array( 'axismundi/feed-item-templates' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-item-template' )->parent
 				&& is_readable( dirname( __DIR__ ) . '/blocks/actor-feed-loop/view.js' )
 		);
 
@@ -687,6 +690,45 @@ try {
 			. '<!-- wp:axismundi/feed-item-template {"density":"compact"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
 		);
 		$ax_feed_single = $ax_feed_pair( '<!-- wp:axismundi/feed-item-template --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template -->' );
+		/*
+		 * Order is the contract, so a template holding only a compact card opens compact — the
+		 * default is whichever was saved first, not a name written into this file. And a second
+		 * card claiming a density that is already taken is a fault rather than something to
+		 * resolve: "first wins" decides among *different* densities, and letting it also arbitrate
+		 * duplicates would leave one card unreachable with nothing saying so.
+		 */
+		$ax_feed_map = static function ( string $inner ) : array {
+			return axismundi_act_feed_item_templates( parse_blocks( '<!-- wp:axismundi/feed-item-templates -->' . $inner . '<!-- /wp:axismundi/feed-item-templates -->' ) );
+		};
+		$ax_feed_compact_only = $ax_feed_map( '<!-- wp:axismundi/feed-item-template {"density":"compact"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->' );
+		$ax_feed_reordered    = $ax_feed_map(
+			'<!-- wp:axismundi/feed-item-template {"density":"compact"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
+			. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template -->'
+		);
+		$ax_feed_duplicated = $ax_feed_map( str_repeat( '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->', 2 ) );
+		ax_feed_assert(
+			$ax_feed_results,
+			'the first saved card is the default, so re-ordering the templates changes what a plain address opens',
+			array( 'compact' ) === $ax_feed_compact_only['order']
+				&& array( 'compact', 'card' ) === $ax_feed_reordered['order']
+				&& $ax_feed_reordered['templates']['compact'] === axismundi_act_extract_feed_item_template(
+					parse_blocks(
+						'<!-- wp:axismundi/feed-item-templates -->'
+						. '<!-- wp:axismundi/feed-item-template {"density":"compact"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
+						. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template -->'
+						. '<!-- /wp:axismundi/feed-item-templates -->'
+					),
+					''
+				)
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'two cards claiming one density is reported rather than silently resolved, and never renders twice',
+			array( 'card' ) === $ax_feed_duplicated['duplicates']
+				&& array( 'card' ) === $ax_feed_duplicated['order']
+				&& array() === $ax_feed_compact_only['duplicates']
+				&& array() === $ax_feed_reordered['duplicates']
+		);
 		ax_feed_assert(
 			$ax_feed_results,
 			'each density resolves to its own saved card, so compact is a composition rather than a stylesheet',

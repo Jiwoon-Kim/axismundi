@@ -563,7 +563,18 @@ function axismundi_actors_resolve_unrouted_actor_request( WP $wp ) : void {
 	$collection = '';
 	$handle     = '';
 	$uuid       = '';
-	if ( 1 === preg_match( '#^/@([^/]+?)(?:/(followers|following))?/?$#', $path, $matches ) ) {
+	/*
+	 * Which namespace the path came through is the only place the kind can come from here.
+	 * `ax_actor_kind` is a query var the rewrite rule sets, and this function runs precisely
+	 * when that rule did not fire — so reading it back would always find it empty, and the
+	 * Group surface would resolve as a Person and answer 404 for a Group that exists.
+	 */
+	$kind = 'Person';
+	if ( 1 === preg_match( '#^/group/@([^/]+?)(?:/(followers|following))?/?$#', $path, $matches ) ) {
+		$handle     = $matches[1];
+		$collection = $matches[2] ?? '';
+		$kind       = 'Group';
+	} elseif ( 1 === preg_match( '#^/@([^/]+?)(?:/(followers|following))?/?$#', $path, $matches ) ) {
 		$handle     = $matches[1];
 		$collection = $matches[2] ?? '';
 	} elseif ( 1 === preg_match( '#^/actors/([0-9a-fA-F-]{36})(?:/(followers|following))?/?$#', $path, $matches ) ) {
@@ -573,7 +584,7 @@ function axismundi_actors_resolve_unrouted_actor_request( WP $wp ) : void {
 		return;
 	}
 
-	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle, (string) $query->get( 'ax_actor_kind' ) );
+	$actor = axismundi_actors_resolve_request_actor( $uuid, $handle, $kind );
 	if ( ! $actor instanceof Axismundi_Actor || ! axismundi_actors_can_view( $actor ) ) {
 		return;
 	}
@@ -582,6 +593,12 @@ function axismundi_actors_resolve_unrouted_actor_request( WP $wp ) : void {
 		$wp->query_vars['ax_actor'] = $uuid;
 	} else {
 		$wp->query_vars['ax_actor_handle'] = $handle;
+	}
+	if ( 'Group' === $kind ) {
+		// The rewrite rule for this namespace sets the kind too, and the template selector and
+		// the 404 guard downstream both read it back. Resolving the Actor without recording how
+		// we resolved it would route the request to the Person profile surface.
+		$wp->query_vars['ax_actor_kind'] = 'Group';
 	}
 	if ( '' !== $collection ) {
 		$wp->query_vars['ax_actor_collection'] = $collection;

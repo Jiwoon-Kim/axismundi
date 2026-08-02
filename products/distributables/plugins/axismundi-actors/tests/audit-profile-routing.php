@@ -141,6 +141,24 @@ try {
 		axismundi_actors_resolve_unrouted_actor_request( $wp );
 		return $wp->query_vars;
 	};
+	/*
+	 * A Group to route through the other namespace. The fallback resolves the kind from the
+	 * path because the query var that carries it is set by the rewrite rule this function
+	 * stands in for, so on an install missing those rules the var is never there to read.
+	 */
+	$ax_profile_group = axismundi_actors_create_managed_group(
+		array(
+			'owner_user_id'      => $admin_id,
+			'preferred_username' => 'ax_profile_forum',
+			'status'             => 'public',
+		)
+	);
+	if ( $ax_profile_group instanceof Axismundi_Actor ) {
+		$ax_profile_ids[] = $ax_profile_group->get_identity_id();
+		axismundi_actors_register_handle( $ax_profile_group->get_identity_id(), 'ax_profile_forum' );
+		axismundi_actors_set_status( $ax_profile_group->get_identity_id(), 'public' );
+	}
+
 	$ax_profile_slashed   = $ax_profile_route( '/@alice_profile/' );
 	$ax_profile_slashless = $ax_profile_route( '/@alice_profile' );
 	$ax_profile_stranger  = $ax_profile_route( '/@not_an_actor/' );
@@ -166,6 +184,33 @@ try {
 		$ax_profile_results,
 		'the fallback claims nothing that does not name an existing viewable Actor',
 		array() === $ax_profile_stranger
+	);
+	/*
+	 * The two namespaces are the whole reason the resolver takes a kind: a handle alone does
+	 * not identify an Actor, so `/group/@x` and `/@x` must not answer with each other. The
+	 * fallback has to reproduce that itself, including recording the kind it resolved on —
+	 * the template selector and the 404 guard downstream read it back, so resolving a Group
+	 * without setting the var routes it onto the Person profile surface.
+	 */
+	$ax_profile_group_route  = $ax_profile_route( '/group/@ax_profile_forum' );
+	$ax_profile_group_person = $ax_profile_route( '/@ax_profile_forum' );
+	$ax_profile_person_group = $ax_profile_route( '/group/@alice_profile' );
+	ax_profile_assert(
+		$ax_profile_results,
+		'an unrouted Group address resolves on the Group namespace and records the kind the rewrite rule would have set',
+		$ax_profile_group instanceof Axismundi_Actor
+			&& 'ax_profile_forum' === ( $ax_profile_group_route['ax_actor_handle'] ?? '' )
+			&& 'Group' === ( $ax_profile_group_route['ax_actor_kind'] ?? '' )
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'neither namespace answers for the other kind, so one handle never means two addresses',
+		array() === $ax_profile_group_person && array() === $ax_profile_person_group
+	);
+	ax_profile_assert(
+		$ax_profile_results,
+		'the Person namespace does not claim a kind, leaving the default in one place',
+		! isset( $ax_profile_slashed['ax_actor_kind'] )
 	);
 	$ax_previous_current_actor = $GLOBALS['axismundi_actors_current_actor'];
 	$ax_previous_query         = $GLOBALS['wp_query'] ?? null;

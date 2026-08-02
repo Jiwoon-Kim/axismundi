@@ -691,6 +691,54 @@ try {
 		 * pages; this one walks a cursor with no total and one direction. Letting either block
 		 * be placed outside the loop would offer that surface a control it cannot honour.
 		 */
+		/*
+		 * What a container writes out when the editor saves it.
+		 *
+		 * This is the one regression a front-end render cannot see. Both containers are dynamic,
+		 * so the page looks the same whether or not their children survived — the loop falls back
+		 * to the fixed arrangement and keeps rendering cards. What is gone is the author's card
+		 * definition and both placements, discarded on the first save from the Site Editor
+		 * because the serializer writes only what `save` returns and emits a block that returns
+		 * nothing as self-closing.
+		 *
+		 * Read from source because the serializer is JavaScript and this audit is not. That makes
+		 * it a check on the contract rather than on the act, so it is written to fail the way the
+		 * mistake would actually be made: someone restores `return null` on a container, which is
+		 * correct for a leaf and quietly wrong here. Comments are stripped first, so describing
+		 * the rule in prose cannot satisfy it.
+		 */
+		$ax_feed_save_body = static function ( string $block ) : string {
+			$src = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/' . $block . '/edit.js' );
+			$src = (string) preg_replace( '#/\*.*?\*/#s', '', $src );
+			$src = (string) preg_replace( '#//[^\n]*#', '', $src );
+			return 1 === preg_match( '#save:\s*function\s*\([^)]*\)\s*\{([^{}]*)\}#', $src, $m ) ? trim( $m[1] ) : '';
+		};
+		$ax_feed_container_saves = array(
+			'actor-feed-loop'    => $ax_feed_save_body( 'actor-feed-loop' ),
+			'feed-item-template' => $ax_feed_save_body( 'feed-item-template' ),
+		);
+		$ax_feed_leaf_saves = array(
+			'feed-filters'    => $ax_feed_save_body( 'feed-filters' ),
+			'feed-pagination' => $ax_feed_save_body( 'feed-pagination' ),
+		);
+		$ax_feed_containers_hold = true;
+		foreach ( $ax_feed_container_saves as $body ) {
+			$ax_feed_containers_hold = $ax_feed_containers_hold && '' !== $body && false !== strpos( $body, 'InnerBlocks.Content' );
+		}
+		$ax_feed_leaves_hold = true;
+		foreach ( $ax_feed_leaf_saves as $body ) {
+			$ax_feed_leaves_hold = $ax_feed_leaves_hold && 1 === preg_match( '#^return\s+null;$#', $body );
+		}
+		ax_feed_assert(
+			$ax_feed_results,
+			'the two containers save their children, so an editor save keeps the card template and both placements',
+			2 === count( $ax_feed_container_saves ) && $ax_feed_containers_hold
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'saving nothing stays what it is correct for: the two childless blocks, which self-close',
+			2 === count( $ax_feed_leaf_saves ) && $ax_feed_leaves_hold
+		);
 		ax_feed_assert(
 			$ax_feed_results,
 			'the filter and pagination blocks are Activity feed children, not chrome any surface can host',

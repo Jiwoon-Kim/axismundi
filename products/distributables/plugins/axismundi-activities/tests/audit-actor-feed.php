@@ -733,6 +733,38 @@ try {
 			! function_exists( 'axismundi_act_find_feed_item_template' )
 		);
 
+		/*
+		 * Every Person surface has to say which side of Group context it takes.
+		 *
+		 * `axismundi_act_group_context_admits()` treats an unknown mode as "admit everything",
+		 * which is right for a generic feed source — a typo must not empty someone's profile — and
+		 * wrong here. These two surfaces are complements: whatever Activity excludes, Community
+		 * shows. A descriptor that forgot the key would widen to everything, and once the Forum
+		 * filters are removed that shows Group submissions back in a Person's Activity with
+		 * nothing catching it, because the fallback is silent by design.
+		 *
+		 * So the requirement is explicitness, checked on the surfaces a real Person profile
+		 * offers. Group surfaces are exempt: a community archive selects from the Announce ledger
+		 * and never asks this question.
+		 */
+		$ax_feed_person_surfaces = $actor instanceof Axismundi_Actor ? axismundi_act_actor_profile_surfaces( $actor ) : array();
+		$ax_feed_declared_sides  = array();
+		foreach ( $ax_feed_person_surfaces as $ax_feed_key => $ax_feed_definition ) {
+			$ax_feed_declared_sides[ (string) $ax_feed_key ] = (string) ( $ax_feed_definition['group_context'] ?? '' );
+		}
+		ax_feed_assert(
+			$ax_feed_results,
+			'both Person surfaces declare their side of Group context rather than relying on the permissive default',
+			array() !== $ax_feed_declared_sides
+				&& 'out' === ( $ax_feed_declared_sides['activity'] ?? '' )
+				&& 'in' === ( $ax_feed_declared_sides['community'] ?? '' )
+				// And nothing else slipped in undeclared, which is the case the default would hide.
+				&& array() === array_filter(
+					$ax_feed_declared_sides,
+					static fn( string $side ) : bool => ! in_array( $side, array( 'in', 'out' ), true )
+				)
+		);
+
 		$ax_feed_map = static function ( string $inner ) : array {
 			return axismundi_act_feed_item_templates( parse_blocks( '<!-- wp:axismundi/feed-item-templates -->' . $inner . '<!-- /wp:axismundi/feed-item-templates -->' ) );
 		};

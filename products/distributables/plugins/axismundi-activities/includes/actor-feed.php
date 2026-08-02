@@ -995,6 +995,8 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 			'boosts'  => __( 'Show boosts', 'axismundi-activities' ),
 		),
 		'default_filter' => axismundi_act_actor_feed_default_filter(),
+		// Ledger-selected: this surface is everything the Actor did *outside* a community.
+		'group_context'  => 'out',
 		'page'           => 'axismundi_act_actor_activity_surface_page',
 		/*
 		 * How this surface is walked, which is a property of the collection and not of the theme.

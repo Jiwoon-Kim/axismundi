@@ -286,6 +286,8 @@ function axismundi_forum_register_profile_surface( array $surfaces, Axismundi_Ac
 		'heading'        => __( 'Community contributions', 'axismundi-forum' ),
 		'filters'        => axismundi_forum_profile_filters(),
 		'default_filter' => 'overview',
+		// Ledger-selected, so it must say which side it takes. See axismundi_act_group_context_admits().
+		'group_context'  => 'in',
 		'page'           => 'axismundi_forum_profile_surface_page',
 		// An archive rather than a feed, so it renders its own list and numbers its own pages.
 		'render'         => 'axismundi_forum_render_profile_surface',

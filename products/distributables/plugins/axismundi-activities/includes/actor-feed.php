@@ -1079,6 +1079,12 @@ function axismundi_act_feed_url( array $context, array $query = array(), array $
  * block, so no `core/button` is ever parsed on the page and a style that waited for one would
  * never load.
  *
+ * Both segments are outlined; the current one is filled. That is the group's own contract rather
+ * than a call-to-action reading of the outline style: in a segmented control, outlined is the
+ * resting state of every segment and selection is shown by the secondary-container fill, whatever
+ * the base variant. Styling the unselected half as something quieter than outlined would make the
+ * pair read as one button and one hint.
+ *
  * `aria-current="page"` and not `aria-pressed`: these are links, and following one navigates to a
  * different address rather than toggling a state on this one. An icon with the name behind it,
  * not instead of it — the glyph makes the two choices readable at a glance, and the name stays
@@ -1115,7 +1121,7 @@ function axismundi_act_render_feed_density_switch_block( array $attributes = arr
 			? axismundi_act_feed_url( $context, array(), array( 'density' ) )
 			: axismundi_act_feed_url( $context, array( 'density' => (string) $key ), array( 'density' ) );
 		$label = (string) ( $labels[ $key ]['label'] ?? $key );
-		$segments[] = '<div class="wp-block-button ' . ( $is_current ? 'is-style-tonal is-current' : 'is-style-quiet' ) . '">'
+		$segments[] = '<div class="wp-block-button is-style-outline' . ( $is_current ? ' is-current' : '' ) . '">'
 			. '<a class="wp-block-button__link wp-element-button axismundi-feed-density-switch__link"'
 			. ' href="' . esc_url( $href ) . '"' . ( $is_current ? ' aria-current="page"' : '' )
 			. ' title="' . esc_attr( $label ) . '">'

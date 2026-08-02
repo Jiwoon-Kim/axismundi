@@ -1182,10 +1182,13 @@ ax_feed_assert(
 		&& 1 === substr_count( $ax_feed_density_from_card, 'aria-current="page"' )
 		// A link, so never `aria-pressed`: following one goes somewhere rather than toggling here.
 		&& false === strpos( $ax_feed_density_from_card, 'aria-pressed' )
-		&& 1 === substr_count( $ax_feed_density_from_card, 'is-style-tonal' )
-		&& 1 === substr_count( $ax_feed_density_from_card, 'is-style-quiet' )
-		// Not outline: that is a call to action, and the density not in use is not one.
-		&& false === strpos( $ax_feed_density_from_card, 'is-style-outline' )
+		/*
+		 * Both segments outlined, one marked current. Outlined is the resting state of a segmented
+		 * control rather than a call to action, and selection is the fill — so a quieter unselected
+		 * half would make the pair read as one button and one hint.
+		 */
+		&& 2 === substr_count( $ax_feed_density_from_card, 'is-style-outline' )
+		&& 1 === substr_count( $ax_feed_density_from_card, 'is-current' )
 );
 ax_feed_assert(
 	$ax_feed_results,

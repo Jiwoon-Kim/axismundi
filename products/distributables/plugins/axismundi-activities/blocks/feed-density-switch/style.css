@@ -7,67 +7,115 @@
  * as one connected control, and the rules below are what make that true without waiting for a
  * button block that is not there.
  *
+ * The visual contract is the Lab's connected button group (§28.7–28.9), transcribed rather than
+ * invented: 2px gap, finite inner and outer radii, and selection shown by the secondary-container
+ * fill that M3 §5.6 gives every base variant. Deliberately not transcribed: the Lab's
+ * `fieldset`/radio markup, because this control navigates rather than setting a value, and its
+ * ~15% widen on selection, because segments that changed width would shift the row every time the
+ * reader switched.
+ *
  * If the same connected pair turns up in several dynamic blocks, this is the point to promote to a
  * shared theme variation — one copy is a block owning its appearance, three would be a pattern
  * nobody named.
  */
+.axismundi-feed-density-switch {
+	/*
+	 * A finite pill radius derived from the segment height, which is what the Lab uses in place of
+	 * a very large constant: a radius that really is half the height stays correct while the corner
+	 * animates between states, where `999px` collapses to whatever the box allows and the morph
+	 * reads as a jump.
+	 */
+	--ax-density-height: 2.25rem;
+	--ax-density-pill: calc( var( --ax-density-height ) / 2 );
+	--ax-density-inner: var( --wp--custom--axismundi--shape--corner--small, 8px );
+	--ax-density-pressed: var( --wp--custom--axismundi--shape--corner--extra-small, 4px );
+}
+
 .axismundi-feed-density-switch .wp-block-buttons {
 	display: flex;
 	flex-wrap: nowrap;
-	gap: 0;
+	gap: 2px;
 }
 
-/*
- * Connected: the segments share a border and only the ends are rounded, so the pair reads as one
- * control with two positions rather than as two buttons that happen to be adjacent.
- */
 .axismundi-feed-density-switch .wp-block-button__link {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: 0;
-	padding-block: 0.375rem;
+	block-size: var( --ax-density-height );
+	padding-block: 0;
 	padding-inline: 0.75rem;
+	border-radius: var( --ax-density-inner );
+	transition:
+		background-color 150ms ease,
+		color 150ms ease,
+		border-radius 150ms ease,
+		box-shadow 150ms ease;
 }
 
+/* Outer corners are the pill; the inner pair stays tighter, so the two read as one control. */
 .axismundi-feed-density-switch .wp-block-button:first-child .wp-block-button__link {
-	border-start-start-radius: var(--wp--custom--axismundi--shape--corner--full, 999px);
-	border-end-start-radius: var(--wp--custom--axismundi--shape--corner--full, 999px);
+	border-start-start-radius: var( --ax-density-pill );
+	border-end-start-radius: var( --ax-density-pill );
 }
 
 .axismundi-feed-density-switch .wp-block-button:last-child .wp-block-button__link {
-	border-start-end-radius: var(--wp--custom--axismundi--shape--corner--full, 999px);
-	border-end-end-radius: var(--wp--custom--axismundi--shape--corner--full, 999px);
+	border-start-end-radius: var( --ax-density-pill );
+	border-end-end-radius: var( --ax-density-pill );
 }
 
 /*
- * The unselected segment is quiet, not outlined.
+ * Outlined is the resting state of every segment, not a call to action.
  *
- * An outline button is a call to action, and the density a reader is not currently using is not
- * one — it is the other half of a choice they have already made. Borrowing the core outline style
- * would make the two segments look like competing actions.
+ * In a segmented control both halves are offers, so both are outlined and the selected one is
+ * filled. Styling the unselected half as something quieter would make the pair read as one button
+ * and one hint rather than as a choice with two positions.
  */
-.axismundi-feed-density-switch .is-style-quiet .wp-block-button__link {
+.axismundi-feed-density-switch .is-style-outline .wp-block-button__link {
 	background-color: transparent;
 	color: inherit;
 	box-shadow: inset 0 0 0 1px color-mix( in srgb, currentColor 24%, transparent );
 }
 
-.axismundi-feed-density-switch .is-style-quiet .wp-block-button__link:hover,
-.axismundi-feed-density-switch .is-style-quiet .wp-block-button__link:focus-visible {
+.axismundi-feed-density-switch .wp-block-button__link:hover,
+.axismundi-feed-density-switch .wp-block-button__link:focus-visible {
 	background-color: color-mix( in srgb, currentColor 8%, transparent );
 }
 
 /*
- * The selected segment carries the tonal treatment, and says so to assistive technology through
- * `aria-current` rather than through the colour alone.
+ * Selected: secondary-container whatever the base variant, per M3 §5.6, with the outline cleared
+ * so the fill reads cleanly — and every corner becomes the pill, which is a second way of saying
+ * "this one" for a reader who does not perceive the colour.
  */
-.axismundi-feed-density-switch .is-style-tonal .wp-block-button__link {
+.axismundi-feed-density-switch .is-current .wp-block-button__link,
+.axismundi-feed-density-switch .is-current .wp-block-button__link:hover {
 	background-color: var( --wp--preset--color--secondary-container, color-mix( in srgb, currentColor 12%, transparent ) );
 	color: var( --wp--preset--color--on-secondary-container, inherit );
+	border-radius: var( --ax-density-pill );
+	box-shadow: none;
+}
+
+/* Pressed: the inner corners tighten while the outer pill holds, so only the seam moves. */
+.axismundi-feed-density-switch .wp-block-button__link:active {
+	border-radius: var( --ax-density-pressed );
+}
+
+.axismundi-feed-density-switch .wp-block-button:first-child .wp-block-button__link:active {
+	border-start-start-radius: var( --ax-density-pill );
+	border-end-start-radius: var( --ax-density-pill );
+}
+
+.axismundi-feed-density-switch .wp-block-button:last-child .wp-block-button__link:active {
+	border-start-end-radius: var( --ax-density-pill );
+	border-end-end-radius: var( --ax-density-pill );
 }
 
 .axismundi-feed-density-switch .material-symbols-outlined {
 	--md-icon-size: 1.25rem;
 	font-size: 1.25rem;
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.axismundi-feed-density-switch .wp-block-button__link {
+		transition: none;
+	}
 }

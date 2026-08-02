@@ -55,10 +55,10 @@ add_action( 'axismundi_op_remote_object_fetched', 'axismundi_emoji_observe_remot
  */
 function axismundi_emoji_object_declarations( array $model ) : array {
 	$uri = (string) ( $model['object_uri'] ?? $model['id'] ?? '' );
-	if ( '' === $uri || ! function_exists( 'axismundi_op_remote_object_get' ) || ! axismundi_emoji_ready() ) {
+	if ( '' === $uri || ! function_exists( 'axismundi_op_get_remote_object' ) || ! axismundi_emoji_ready() ) {
 		return array();
 	}
-	$row = axismundi_op_remote_object_get( $uri );
+	$row = axismundi_op_get_remote_object( $uri );
 	if ( is_array( $row ) ) {
 		$payload = $row['payload'] ?? $row['payload_json'] ?? null;
 		if ( is_string( $payload ) ) {

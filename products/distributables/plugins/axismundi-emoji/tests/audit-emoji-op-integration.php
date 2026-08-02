@@ -34,7 +34,7 @@ function ax_op_assert( array &$results, string $label, bool $cond ) : void {
 }
 
 try {
-	if ( ! function_exists( 'axismundi_op_remote_object_store' ) ) {
+	if ( ! function_exists( 'axismundi_op_store_remote_object' ) ) {
 		ax_op_assert( $ax_op_results, 'Object Projections is available to integrate with', false );
 		throw new RuntimeException( 'Object Projections not active' );
 	}
@@ -78,7 +78,7 @@ try {
 			),
 		),
 	);
-	$ax_op_stored = axismundi_op_remote_object_store( $ax_op_payload );
+	$ax_op_stored = axismundi_op_store_remote_object( $ax_op_payload );
 	ax_op_assert( $ax_op_results, 'the fixture Object is stored', ! is_wp_error( $ax_op_stored ) );
 
 	$ax_op_model = array( 'object_uri' => $ax_op_uri, 'content_html' => $ax_op_payload['content'] );

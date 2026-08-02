@@ -496,9 +496,10 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
  * @param string            $filter        Surface filter.
  * @param bool              $inclusive     Whether to include the anchor.
  * @param bool              $head_window   Whether this is the first display page in the window.
+ * @param string            $surface       Surface being rendered, so the card comes from that surface's layout.
  * @return array{cards:array<int,string>,head_cursor:string,next_cursor:string,has_more:bool}
  */
-function axismundi_act_actor_feed_display_page( callable $page_callback, Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false, string $mode = 'infinite', string $density = 'card' ) : array {
+function axismundi_act_actor_feed_display_page( callable $page_callback, Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false, string $mode = 'infinite', string $density = 'card', string $surface = '' ) : array {
 	$cards       = array();
 	$head_cursor = $cursor;
 	$scan_pages  = 0;
@@ -511,7 +512,7 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 	 * "Load more" — so the answer is worked out once, on the way in.
 	 */
 	$card_template = function_exists( 'axismundi_act_actor_feed_template_source' )
-		? axismundi_act_actor_feed_template_source( $actor, $density )
+		? axismundi_act_actor_feed_template_source( $actor, $density, $surface )
 		: '';
 	$scan_limit  = max( 1, (int) apply_filters( 'axismundi_act_actor_feed_card_scan_pages', 10, $actor, $limit ) );
 	$page        = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false );
@@ -791,7 +792,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	$supported = (array) ( $current['modes'] ?? array() );
 	$requested = (string) ( $attributes['navigation'] ?? '' );
 	$mode      = in_array( $requested, $supported, true ) ? $requested : (string) ( $current['mode'] ?? 'infinite' );
-	$densities_available = axismundi_act_actor_feed_densities_available( $actor );
+	$densities_available = axismundi_act_actor_feed_densities_available( $actor, $surface );
 	$density             = axismundi_act_feed_density( $densities_available );
 	/*
 	 * A paged surface is addressed by number, so the position it is asked for is a page rather
@@ -803,7 +804,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		$requested_page = isset( $_GET['page'] ) ? max( 1, absint( wp_unslash( $_GET['page'] ) ) ) : 1;
 		$cursor         = (string) $requested_page;
 	}
-	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter, false, false, $mode, $density );
+	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter, false, false, $mode, $density, $surface );
 	$cards = implode( '', $page['cards'] );
 	/*
 	 * An empty *narrowed* surface still renders: the reader chose that tab and needs the
@@ -1081,7 +1082,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 * finds the continuation container by looking for it, and a template that omitted it would
 	 * be asking for a feed with no feed in it.
 	 */
-	$slots = axismundi_act_actor_feed_slots( $actor );
+	$slots = axismundi_act_actor_feed_slots( $actor, $surface );
 	// A template written before the density block existed still gets the control, in the place it
 	// was emitted from before it could be placed at all.
 	$slots = array() === $slots ? array( 'filters', 'density', 'list', 'pagination' ) : $slots;
@@ -1387,7 +1388,7 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 	// request. Reading it off the server would find whatever the last visitor asked for.
 	$density  = 'compact' === (string) $request['density'] ? 'compact' : 'card';
 	$mode     = (string) ( $current['mode'] ?? 'infinite' );
-	$page = axismundi_act_actor_feed_display_page( $current['page'], $actor, (int) $request['per_page'], (string) $request['after'], $filter, false, false, $mode, $density );
+	$page = axismundi_act_actor_feed_display_page( $current['page'], $actor, (int) $request['per_page'], (string) $request['after'], $filter, false, false, $mode, $density, $surface );
 	$response = new WP_REST_Response(
 		array(
 			'html'        => implode( '', $page['cards'] ),
@@ -1413,6 +1414,8 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 /** Register the server-rendered Actor Activity feed block. */
 function axismundi_act_register_actor_activity_feed_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/actor-feed-loop', array( 'render_callback' => 'axismundi_act_render_actor_activity_feed' ) );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-tabs' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-tab' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-templates' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-item-template' );
 	/*
@@ -1449,8 +1452,45 @@ add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
  * @param Axismundi_Actor $actor Actor whose profile is being read.
  * @return string Serialized inner blocks of the feed item template, or '' when there is none.
  */
-function axismundi_act_actor_feed_template_source( Axismundi_Actor $actor, string $density = 'card' ) : string {
-	return axismundi_act_extract_feed_item_template( axismundi_act_actor_feed_template_blocks( $actor ), $density );
+function axismundi_act_actor_feed_template_source( Axismundi_Actor $actor, string $density = 'card', string $surface = '' ) : string {
+	return axismundi_act_extract_feed_item_template( axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ), $density );
+}
+
+/**
+ * Narrow a parsed template to the one surface being rendered.
+ *
+ * A profile used to have one arrangement, so every question about the template — which cards, what
+ * chrome, in what order — was asked of the whole document and answered by the first match found
+ * anywhere in it. With a layout per surface there are several of each, and "the first one" becomes
+ * whichever surface an author happened to put at the top.
+ *
+ * A template with no tabs is returned untouched. That is not a legacy path being tolerated: it is
+ * what a profile with a single arrangement looks like, and what every template saved before this
+ * block existed looks like, including the ones already in the database.
+ *
+ * A template that has tabs but none for this surface returns nothing rather than falling back to
+ * the whole document. Falling back would silently render the Activity layout under the Community
+ * heading, which reads as a working feed showing the wrong thing — the failure that is hardest to
+ * notice and hardest to explain.
+ *
+ * @param array<int,array<string,mixed>> $blocks  Parsed template blocks.
+ * @param string                         $surface Surface being rendered.
+ * @return array<int,array<string,mixed>>
+ */
+function axismundi_act_feed_surface_blocks( array $blocks, string $surface ) : array {
+	$tabs = axismundi_act_find_block_by_name( $blocks, 'axismundi/feed-tabs' );
+	if ( null === $tabs || '' === $surface ) {
+		return $blocks;
+	}
+	foreach ( (array) ( $tabs['innerBlocks'] ?? array() ) as $tab ) {
+		if ( 'axismundi/feed-tab' !== (string) ( $tab['blockName'] ?? '' ) ) {
+			continue;
+		}
+		if ( $surface === (string) ( $tab['attrs']['surface'] ?? 'activity' ) ) {
+			return (array) ( $tab['innerBlocks'] ?? array() );
+		}
+	}
+	return array();
 }
 
 /**
@@ -1501,8 +1541,8 @@ function axismundi_act_actor_feed_template_blocks( Axismundi_Actor $actor ) : ar
  * @param Axismundi_Actor $actor Actor whose profile is being read.
  * @return array<int,string> Slot keys in template order, or an empty array for no opinion.
  */
-function axismundi_act_actor_feed_slots( Axismundi_Actor $actor ) : array {
-	return axismundi_act_feed_slots_from_blocks( axismundi_act_actor_feed_template_blocks( $actor ) );
+function axismundi_act_actor_feed_slots( Axismundi_Actor $actor, string $surface = '' ) : array {
+	return axismundi_act_feed_slots_from_blocks( axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ) );
 }
 
 /**
@@ -1516,10 +1556,17 @@ function axismundi_act_actor_feed_slots( Axismundi_Actor $actor ) : array {
  * @return array<int,string> Slot keys in template order, or an empty array for no opinion.
  */
 function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
-	$loop = axismundi_act_find_feed_loop_block( $blocks );
-	if ( null === $loop ) {
-		return array();
-	}
+	/*
+	 * The loop when these are a whole template, and these blocks themselves when they are not.
+	 *
+	 * A surface's blocks have already been narrowed to one tab's children by the time they get
+	 * here, and that tab sits inside the loop rather than containing one — so looking for a loop
+	 * and giving up when there is none would read every tabbed template as having no
+	 * arrangement at all, which is the same answer as a template written before these blocks
+	 * existed and would silently take the chrome back to its fixed order.
+	 */
+	$loop     = axismundi_act_find_feed_loop_block( $blocks );
+	$children = null === $loop ? $blocks : (array) ( $loop['innerBlocks'] ?? array() );
 	$known = array(
 		'axismundi/feed-filters'       => 'filters',
 		'axismundi/feed-density-switch' => 'density',
@@ -1527,7 +1574,7 @@ function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
 		'axismundi/feed-pagination'    => 'pagination',
 	);
 	$slots = array();
-	foreach ( (array) ( $loop['innerBlocks'] ?? array() ) as $block ) {
+	foreach ( $children as $block ) {
 		$slot = $known[ (string) ( $block['blockName'] ?? '' ) ] ?? '';
 		if ( '' !== $slot && ! in_array( $slot, $slots, true ) ) {
 			$slots[] = $slot;
@@ -1657,7 +1704,7 @@ function axismundi_act_find_block_by_name( array $blocks, string $name ) : ?arra
  * @param Axismundi_Actor $actor Actor whose profile is being read.
  * @return array<int,string>
  */
-function axismundi_act_actor_feed_densities_available( Axismundi_Actor $actor ) : array {
-	return axismundi_act_feed_item_templates( axismundi_act_actor_feed_template_blocks( $actor ) )['order'];
+function axismundi_act_actor_feed_densities_available( Axismundi_Actor $actor, string $surface = '' ) : array {
+	return axismundi_act_feed_item_templates( axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ) )['order'];
 }
 

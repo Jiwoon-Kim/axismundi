@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/feed-tab",
+	"version": "0.1.0",
+	"title": "Feed Tab",
+	"category": "theme",
+	"icon": "index-card",
+	"description": "The layout of one profile surface: its filters, its density switch, the cards it repeats and where its pager goes.",
+	"textdomain": "axismundi-activities",
+	"parent": [ "axismundi/feed-tabs" ],
+	"attributes": {
+		"surface": { "type": "string", "default": "activity" }
+	},
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"inserter": false,
+		"interactivity": { "clientNavigation": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

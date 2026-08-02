@@ -1,0 +1,21 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "axismundi/feed-tabs",
+	"version": "0.1.0",
+	"title": "Feed Tabs",
+	"category": "theme",
+	"icon": "table-row-before",
+	"description": "One editable layout per profile surface. The reader sees the tab they are on; an author edits each surface separately.",
+	"textdomain": "axismundi-activities",
+	"parent": [ "axismundi/actor-feed-loop" ],
+	"allowedBlocks": [ "axismundi/feed-tab" ],
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"inserter": false,
+		"interactivity": { "clientNavigation": true }
+	},
+	"editorScript": "file:./edit.js",
+	"render": "file:./render.php"
+}

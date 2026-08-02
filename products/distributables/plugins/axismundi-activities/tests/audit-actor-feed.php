@@ -996,6 +996,63 @@ try {
 		wp_delete_user( $ax_feed_user_id );
 	}
 }
+/*
+ * Which surface's layout a question about the template is answered from.
+ *
+ * Every such question used to be asked of the whole document and answered by the first match
+ * anywhere in it, which was right while a profile had one arrangement. With a layout per surface
+ * "the first one" becomes whichever surface an author put at the top, so the document is narrowed
+ * before anything is looked for.
+ */
+$ax_feed_tabs_markup = '<!-- wp:axismundi/actor-feed-loop -->'
+	. '<!-- wp:axismundi/feed-tabs -->'
+	. '<!-- wp:axismundi/feed-tab {"surface":"activity"} -->'
+	. '<!-- wp:axismundi/feed-filters /-->'
+	. '<!-- wp:axismundi/feed-item-templates -->'
+	. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
+	. '<!-- /wp:axismundi/feed-item-templates -->'
+	. '<!-- /wp:axismundi/feed-tab -->'
+	. '<!-- wp:axismundi/feed-tab {"surface":"community"} -->'
+	. '<!-- wp:axismundi/feed-item-templates -->'
+	. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-summary /--><!-- /wp:axismundi/feed-item-template -->'
+	. '<!-- /wp:axismundi/feed-item-templates -->'
+	. '<!-- wp:axismundi/feed-pagination /-->'
+	. '<!-- /wp:axismundi/feed-tab -->'
+	. '<!-- /wp:axismundi/feed-tabs -->'
+	. '<!-- /wp:axismundi/actor-feed-loop -->';
+$ax_feed_tabs_blocks   = parse_blocks( $ax_feed_tabs_markup );
+$ax_feed_tab_activity  = axismundi_act_feed_surface_blocks( $ax_feed_tabs_blocks, 'activity' );
+$ax_feed_tab_community = axismundi_act_feed_surface_blocks( $ax_feed_tabs_blocks, 'community' );
+ax_feed_assert(
+	$ax_feed_results,
+	'each surface is read out of its own tab, so two tabs can hold different cards and different chrome',
+	false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_activity, 'card' ), 'object-title' )
+		&& false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_community, 'card' ), 'object-summary' )
+		&& array( 'filters', 'list' ) === axismundi_act_feed_slots_from_blocks( $ax_feed_tab_activity )
+		&& array( 'list', 'pagination' ) === axismundi_act_feed_slots_from_blocks( $ax_feed_tab_community )
+);
+
+/*
+ * A template with no tabs is one arrangement, not a broken one — that is every template saved
+ * before this block existed. A template that has tabs but not this surface is different: falling
+ * back to the whole document would render one surface's layout under another's heading, which
+ * reads as a working feed showing the wrong thing.
+ */
+$ax_feed_untabbed = parse_blocks(
+	'<!-- wp:axismundi/actor-feed-loop -->'
+	. '<!-- wp:axismundi/feed-item-templates -->'
+	. '<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
+	. '<!-- /wp:axismundi/feed-item-templates -->'
+	. '<!-- /wp:axismundi/actor-feed-loop -->'
+);
+ax_feed_assert(
+	$ax_feed_results,
+	'an untabbed template still answers for every surface, while a tabbed one refuses a surface it has no tab for',
+	false !== strpos( axismundi_act_extract_feed_item_template( axismundi_act_feed_surface_blocks( $ax_feed_untabbed, 'community' ), 'card' ), 'object-title' )
+		&& array() === axismundi_act_feed_surface_blocks( $ax_feed_tabs_blocks, 'archive' )
+);
+
+
 
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.

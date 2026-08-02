@@ -48,6 +48,57 @@ function axismundi_forum_group_archive_filters() : array {
 }
 
 /**
+ * How densely the archive draws each entry.
+ *
+ * A presentation mode, not a selection: both views list exactly the same entries in exactly the
+ * same order, and only the amount of each one drawn differs. That is why it is neither a tab nor
+ * a filter — Reddit's card and compact views are the same subreddit.
+ *
+ * @return array<string,string>
+ */
+function axismundi_forum_group_archive_views() : array {
+	return array(
+		'card'    => __( 'Card', 'axismundi-forum' ),
+		'compact' => __( 'Compact', 'axismundi-forum' ),
+	);
+}
+
+/**
+ * Which presentation the reader asked for.
+ *
+ * In the URL rather than in browser storage, because this archive is server-rendered and paginated
+ * by number. A stored preference the server cannot see would be contradicted by the first paint,
+ * would not survive being shared as a link, and would not reach a reader with no JavaScript — who
+ * can still page through this archive, because its pagination is links. The Activity timeline can
+ * keep its reading preferences client-side; it fetches its own continuations and has no page
+ * numbers to reproduce.
+ *
+ * @return string
+ */
+function axismundi_forum_group_archive_view() : string {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read presentation.
+	$requested = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
+	return array_key_exists( $requested, axismundi_forum_group_archive_views() ) ? $requested : 'card';
+}
+
+/**
+ * Carry the reader's presentation across a link that changes something else.
+ *
+ * Every link this archive builds goes through here. A tab or a page number that dropped the view
+ * would silently reset it on the first click, which is the failure this whole surface is arranged
+ * to avoid: the address has to reproduce what the reader is looking at.
+ *
+ * The default is carried by omission, so a card-view address stays the short one.
+ *
+ * @param string $url  Link being built.
+ * @param string $view Active presentation.
+ * @return string
+ */
+function axismundi_forum_archive_keep_view( string $url, string $view ) : string {
+	return 'card' === $view ? remove_query_arg( 'view', $url ) : add_query_arg( 'view', $view, $url );
+}
+
+/**
  * Which collection the reader asked for.
  *
  * @return string
@@ -188,11 +239,14 @@ function axismundi_forum_render_group_comments( Axismundi_Actor $group, int $pag
  * @param string $current Active filter.
  * @return string
  */
-function axismundi_forum_render_archive_tabs( string $current ) : string {
+function axismundi_forum_render_archive_tabs( string $current, string $view = 'card' ) : string {
 	$base  = remove_query_arg( array( 'filter', 'page', 'topic_page' ) );
 	$items = array();
 	foreach ( axismundi_forum_group_archive_filters() as $key => $label ) {
 		$url     = 'posts' === $key ? $base : add_query_arg( 'filter', $key, $base );
+		// Changing collection keeps how the reader is reading; it drops only where they were in
+		// the old collection, because a page number does not mean the same thing in the new one.
+		$url     = axismundi_forum_archive_keep_view( $url, $view );
 		$active  = $key === $current;
 		$items[] = '<li class="axismundi-forum-archive__tab' . ( $active ? ' is-active' : '' ) . '">'
 			// The active tab is still a link so it can be shared and so a reader can return to the
@@ -203,6 +257,61 @@ function axismundi_forum_render_archive_tabs( string $current ) : string {
 }
 
 /**
+ * Load the archive's own stylesheet, once, and only where an archive is drawn.
+ *
+ * Enqueued at render rather than on every front-end request because this surface appears on Group
+ * profiles alone. The archive is composed from a PHP template rather than inserted as a block, so
+ * there is no block metadata to hang a stylesheet on.
+ *
+ * @return void
+ */
+function axismundi_forum_enqueue_archive_style() : void {
+	if ( wp_style_is( 'axismundi-forum-archive', 'registered' ) ) {
+		wp_enqueue_style( 'axismundi-forum-archive' );
+		return;
+	}
+	$relative = 'assets/archive.css';
+	$path     = plugin_dir_path( dirname( __FILE__ ) ) . $relative;
+	wp_register_style(
+		'axismundi-forum-archive',
+		plugins_url( $relative, dirname( __FILE__ ) ),
+		array(),
+		is_readable( $path ) ? (string) filemtime( $path ) : false
+	);
+	wp_enqueue_style( 'axismundi-forum-archive' );
+}
+
+/**
+ * The card/compact switch.
+ *
+ * Links, not buttons, and beside the tabs rather than inside them. It changes nothing about which
+ * entries are listed, so it must not look like it selects anything — and being links means it
+ * works with no script and can be shared, which is the point of keeping the view in the URL.
+ *
+ * The reader's page is kept: density does not change which entries exist or their order, so
+ * page 3 is still page 3.
+ *
+ * @param string $current Active presentation.
+ * @param string $filter  Active collection.
+ * @param int    $page    Current page.
+ * @return string
+ */
+function axismundi_forum_render_archive_view_switch( string $current, string $filter, int $page ) : string {
+	$base  = remove_query_arg( array( 'view', 'filter', 'page', 'topic_page' ) );
+	$base  = 'posts' === $filter ? $base : add_query_arg( 'filter', $filter, $base );
+	$base  = $page > 1 ? add_query_arg( 'page', $page, $base ) : $base;
+	$items = array();
+	foreach ( axismundi_forum_group_archive_views() as $key => $label ) {
+		$active  = $key === $current;
+		$items[] = '<a class="axismundi-forum-archive__view' . ( $active ? ' is-active' : '' ) . '"'
+			. ' href="' . esc_url( axismundi_forum_archive_keep_view( $base, (string) $key ) ) . '"'
+			. ( $active ? ' aria-current="true"' : '' ) . '>' . esc_html( $label ) . '</a>';
+	}
+	return '<div class="axismundi-forum-archive__views" role="group" aria-label="'
+		. esc_attr__( 'Entry density', 'axismundi-forum' ) . '">' . implode( '', $items ) . '</div>';
+}
+
+/**
  * Numbered pagination shared by both collections.
  *
  * @param int    $page   Current page.
@@ -210,12 +319,13 @@ function axismundi_forum_render_archive_tabs( string $current ) : string {
  * @param string $filter Active filter.
  * @return string
  */
-function axismundi_forum_render_archive_pagination( int $page, int $pages, string $filter ) : string {
+function axismundi_forum_render_archive_pagination( int $page, int $pages, string $filter, string $view = 'card' ) : string {
 	if ( $pages < 2 ) {
 		return '';
 	}
 	$base = remove_query_arg( array( 'page', 'topic_page' ) );
 	$base = 'posts' === $filter ? remove_query_arg( 'filter', $base ) : add_query_arg( 'filter', $filter, $base );
+	$base = axismundi_forum_archive_keep_view( $base, $view );
 	$link = static function ( int $target, string $class, string $label ) use ( $base ) : string {
 		return '<a class="axismundi-forum-archive__' . esc_attr( $class ) . '" href="' . esc_url( add_query_arg( 'page', $target, $base ) ) . '">' . esc_html( $label ) . '</a>';
 	};
@@ -240,10 +350,11 @@ function axismundi_forum_render_group_archive( Axismundi_Actor $group ) : string
 	}
 	$filter = axismundi_forum_group_archive_filter();
 	$page   = axismundi_forum_group_archive_page_number();
+	$view   = axismundi_forum_group_archive_view();
 	if ( 'comments' === $filter ) {
 		$rendered   = axismundi_forum_render_group_comments( $group, $page );
 		$body       = $rendered['html'];
-		$pagination = axismundi_forum_render_archive_pagination( $rendered['page'], $rendered['pages'], $filter );
+		$pagination = axismundi_forum_render_archive_pagination( $rendered['page'], $rendered['pages'], $filter, $view );
 	} else {
 		// Posts keep their existing renderer: it already knows how to tell a local Topic from a
 		// cached remote one, and re-deriving that here would give the two collections two answers.
@@ -251,9 +362,17 @@ function axismundi_forum_render_group_archive( Axismundi_Actor $group ) : string
 		$pagination = '';
 	}
 	$labels = axismundi_forum_group_archive_filters();
-	return '<section class="axismundi-forum-archive">'
+	/*
+	 * The density is a class on the archive and a data attribute for anything asking. It is not
+	 * pushed down into each entry: the entries are rendered by whoever owns them — a local Topic
+	 * and a cached remote one come from different renderers — and asking each of them to know
+	 * about density would be two answers to one question.
+	 */
+	axismundi_forum_enqueue_archive_style();
+	return '<section class="axismundi-forum-archive is-view-' . esc_attr( $view ) . '" data-view="' . esc_attr( $view ) . '">'
 		. '<h2 class="axismundi-forum-archive__heading">' . esc_html( (string) $labels[ $filter ] ) . '</h2>'
-		. axismundi_forum_render_archive_tabs( $filter )
+		. axismundi_forum_render_archive_tabs( $filter, $view )
+		. axismundi_forum_render_archive_view_switch( $view, $filter, $page )
 		. $body
 		. $pagination
 		. '</section>';

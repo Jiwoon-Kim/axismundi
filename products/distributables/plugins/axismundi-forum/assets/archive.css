@@ -1,0 +1,56 @@
+/*
+ * Community archive density.
+ *
+ * One switch, one class on the archive, and rules that reach down into the entries — rather than
+ * a second set of entry renderers. A local Topic and a cached remote one are drawn by different
+ * code, and giving each of them a notion of density would be two answers to one question that
+ * would drift the first time only one of them was touched.
+ *
+ * Card view adds nothing here. It is what the entries already are, so it stays the default and
+ * costs no rules; only compact has anything to say.
+ */
+
+.axismundi-forum-archive__views {
+	display: flex;
+	gap: 0.25rem;
+	justify-content: flex-end;
+}
+
+.axismundi-forum-archive__views .axismundi-forum-archive__view {
+	border-radius: 20px;
+	padding: 0.25rem 0.75rem;
+	text-decoration: none;
+}
+
+.axismundi-forum-archive__view.is-active {
+	background-color: var(--md-sys-color-secondary-container, rgba(0, 0, 0, 0.08));
+	color: var(--md-sys-color-on-secondary-container, inherit);
+}
+
+/*
+ * Compact draws the same entries with less of each one. Two classes, because the theme's global
+ * styles emit at `:root :where(...)` and a single class would lose to them.
+ */
+.axismundi-forum-archive.is-view-compact .axismundi-forum-topic-list__item {
+	padding-block: 0.25rem;
+}
+
+.axismundi-forum-archive.is-view-compact .axismundi-object-card__header {
+	--md-icon-size: 1rem;
+	gap: 0.5rem;
+}
+
+/*
+ * The avatar is the single largest thing in a row that is otherwise one line of text, so it is
+ * what makes a list feel like cards. It is sized rather than hidden: it still identifies who
+ * posted, which is the one thing a dense list still has to answer.
+ */
+.axismundi-forum-archive.is-view-compact .axismundi-object-card__header img {
+	block-size: 24px;
+	border-radius: 50%;
+	inline-size: 24px;
+}
+
+.axismundi-forum-archive.is-view-compact .axismundi-object__read-more {
+	display: none;
+}

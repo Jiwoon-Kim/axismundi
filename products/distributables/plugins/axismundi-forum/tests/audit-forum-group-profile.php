@@ -149,6 +149,54 @@ try {
 	 * `topic_page` link anyone already published lands on page one, keep emitting the old
 	 * name and the two collections never share an address after all.
 	 */
+	/*
+	 * Density is a presentation, so it must not change what is listed.
+	 *
+	 * This is the whole reason it is neither a tab nor a filter, and the only way to hold it is to
+	 * compare what the two views select rather than what they draw. The entries are compared by
+	 * identity and order; the markup is expected to differ, because that is the point.
+	 */
+	$ax_gp_card_entries    = axismundi_forum_visible_topic_entries( $community, 20, 1 );
+	$ax_gp_old_view        = $_GET;
+	$_GET                  = array( 'view' => 'compact' );
+	$ax_gp_compact_view    = axismundi_forum_group_archive_view();
+	$ax_gp_compact_entries = axismundi_forum_visible_topic_entries( $community, 20, 1 );
+	$_GET                  = array( 'view' => 'not-a-view' );
+	$ax_gp_unknown_view    = axismundi_forum_group_archive_view();
+	$_GET                  = $ax_gp_old_view;
+	ax_gp_assert(
+		$ax_gp_results,
+		'card and compact list the same entries in the same order, because density is not a selection',
+		'compact' === $ax_gp_compact_view
+			&& 'card' === $ax_gp_unknown_view
+			&& array() !== $ax_gp_card_entries
+			&& array_map( static fn( array $e ) : int => (int) $e['id'], $ax_gp_card_entries )
+				=== array_map( static fn( array $e ) : int => (int) $e['id'], $ax_gp_compact_entries )
+	);
+	/*
+	 * Every link the archive builds has to carry the reader's density, or the first tab or page
+	 * click silently returns them to cards. The default is carried by omission, so a card address
+	 * stays the short one and there is exactly one address per state rather than two.
+	 */
+	$ax_gp_tab_links   = axismundi_forum_render_archive_tabs( 'posts', 'compact' );
+	$ax_gp_page_links  = axismundi_forum_render_archive_pagination( 2, 5, 'comments', 'compact' );
+	$ax_gp_switch      = axismundi_forum_render_archive_view_switch( 'compact', 'comments', 3 );
+	$ax_gp_card_tabs   = axismundi_forum_render_archive_tabs( 'posts', 'card' );
+	ax_gp_assert(
+		$ax_gp_results,
+		'tabs and numbered pages both carry the density, and carry the default by leaving it out',
+		2 === preg_match_all( '#view=compact#', $ax_gp_tab_links )
+			&& 2 === preg_match_all( '#view=compact#', $ax_gp_page_links )
+			&& false === strpos( $ax_gp_card_tabs, 'view=' )
+	);
+	ax_gp_assert(
+		$ax_gp_results,
+		'the density switch keeps the collection and the page it was pressed on',
+		2 === preg_match_all( '#filter=comments#', $ax_gp_switch )
+			&& 2 === preg_match_all( '#page=3#', $ax_gp_switch )
+			&& 1 === preg_match_all( '#view=compact#', $ax_gp_switch )
+			&& false !== strpos( $ax_gp_switch, 'aria-current="true"' )
+	);
 	ax_gp_assert(
 		$ax_gp_results,
 		'the legacy topic_page address still reaches the same page but is never emitted again',

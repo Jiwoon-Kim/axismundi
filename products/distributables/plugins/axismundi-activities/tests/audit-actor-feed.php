@@ -1291,6 +1291,44 @@ ax_feed_assert(
 		&& false === strpos( $ax_feed_root_style, 'axismundi-activity-feed__switch' )
 );
 
+/*
+ * Where the choice of pager lives, asserted in the editor sources as well as on the server.
+ *
+ * The feed decides how its collection is walked and the pager draws whichever control that is. A
+ * pager with a setting of its own could be told to number a list the loop is continuing by cursor,
+ * and both halves would look correct in isolation — so the assertion is that only one block offers
+ * the choice, and that the other reads it.
+ *
+ * Read from source because the control is JavaScript; comments are stripped first, so describing
+ * the rule in prose cannot satisfy it.
+ */
+$ax_feed_editor_source = static function ( string $block ) : string {
+	$src = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/' . $block . '/edit.js' );
+	$src = (string) preg_replace( '#/\*.*?\*/#s', '', $src );
+	return (string) preg_replace( '#//[^\n]*#', '', $src );
+};
+$ax_feed_feed_editor  = $ax_feed_editor_source( 'feed' );
+$ax_feed_pager_editor = $ax_feed_editor_source( 'feed-pagination' );
+ax_feed_assert(
+	$ax_feed_results,
+	'the feed is where navigation is chosen, and the pager reads that choice rather than offering its own',
+	false !== strpos( $ax_feed_feed_editor, "setAttributes( { navigation:" )
+		// Reads the context value, not merely names the key: the `usesContext` declaration keeps
+		// the string present even in a pager that has stopped consulting it.
+		&& 1 === preg_match( '#props\.context\[\s*.axismundi/feedNavigation.\s*\]#', $ax_feed_pager_editor )
+		// The pager must not write it: two writers of one decision is the failure being prevented.
+		&& false === strpos( $ax_feed_pager_editor, 'setAttributes' )
+		&& array( 'axismundi/feedNavigation' => 'navigation' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed' )->provides_context
+		&& in_array( 'axismundi/feedNavigation', (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-pagination' )->uses_context, true )
+);
+ax_feed_assert(
+	$ax_feed_results,
+	'the pager previews both controls, so an author sees the one their choice produces',
+	false !== strpos( $ax_feed_pager_editor, 'is-navigation-pagination' )
+		&& false !== strpos( $ax_feed_pager_editor, 'is-navigation-infinite' )
+		&& false !== strpos( $ax_feed_pager_editor, 'wp-block-query-pagination-numbers' )
+);
+
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_feed_results ), $ax_feed_failures );

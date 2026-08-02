@@ -10,6 +10,9 @@
 	"attributes": {
 		"navigation": { "type": "string", "default": "" }
 	},
+	"providesContext": {
+		"axismundi/feedNavigation": "navigation"
+	},
 	"textdomain": "axismundi-activities",
 	"supports": {
 		"html": false,

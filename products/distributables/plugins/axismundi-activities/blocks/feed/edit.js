@@ -11,7 +11,7 @@
  * surface tabs, both decided by the Actor being rendered rather than by anything an author arranges.
  * Everything between them is the children, in the order the author put them.
  */
-( function ( blocks, blockEditor, element, i18n ) {
+( function ( blocks, blockEditor, components, element, i18n ) {
 	'use strict';
 	var el = element.createElement;
 	var __ = i18n.__;
@@ -38,12 +38,50 @@
 	];
 
 	blocks.registerBlockType( 'axismundi/feed', {
-		edit: function () {
+		edit: function ( props ) {
 			var blockProps = blockEditor.useBlockProps( { className: 'axismundi-activity-feed' } );
 			var inner = useInnerBlocksProps
 				? useInnerBlocksProps( {}, { template: TEMPLATE, templateLock: false } )
 				: null;
+			/*
+			 * How the collection is walked, asked once and here.
+			 *
+			 * The loop repeats and the pager draws a control, but neither decides which control it
+			 * is: that is a property of the whole feed, and asking it in two places is how a pager
+			 * ends up numbering a list its loop is continuing by cursor.
+			 *
+			 * `Automatic` is the honest default and not a missing answer. Which modes a surface can
+			 * serve depends on the Actor being viewed — a ledger has no total to number, an archive
+			 * has no cursor to continue — and the editor is not looking at an Actor. Leaving it
+			 * automatic takes whichever mode the surface declares first; naming one is a request
+			 * the server honours only when that surface can serve it.
+			 */
+			var inspector = el(
+				blockEditor.InspectorControls,
+				null,
+				el(
+					components.PanelBody,
+					{ title: __( 'Navigation', 'axismundi-activities' ) },
+					el( components.SelectControl, {
+						label: __( 'Walked by', 'axismundi-activities' ),
+						value: props.attributes.navigation || '',
+						options: [
+							{ label: __( 'Automatic (what the surface offers)', 'axismundi-activities' ), value: '' },
+							{ label: __( 'Load more (cursor)', 'axismundi-activities' ), value: 'infinite' },
+							{ label: __( 'Numbered pages', 'axismundi-activities' ), value: 'pagination' }
+						],
+						onChange: function ( value ) {
+							props.setAttributes( { navigation: value } );
+						},
+						__nextHasNoMarginBottom: true
+					} )
+				)
+			);
 			return el(
+				element.Fragment,
+				null,
+				inspector,
+				el(
 				'section',
 				blockProps,
 				/*
@@ -62,6 +100,7 @@
 				inner
 					? el( 'div', inner )
 					: el( 'div', {}, el( blockEditor.InnerBlocks, { template: TEMPLATE, templateLock: false } ) )
+				)
 			);
 		},
 		/*
@@ -74,4 +113,4 @@
 			return el( blockEditor.InnerBlocks.Content );
 		}
 	} );
-}( window.wp.blocks, window.wp.blockEditor, window.wp.element, window.wp.i18n ) );
+}( window.wp.blocks, window.wp.blockEditor, window.wp.components, window.wp.element, window.wp.i18n ) );

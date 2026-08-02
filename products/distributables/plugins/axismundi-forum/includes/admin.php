@@ -82,6 +82,12 @@ function axismundi_forum_save_topic_context( int $post_id ) : void {
 }
 add_action( 'save_post', 'axismundi_forum_save_topic_context' );
 
+/** Whether one distribution scope can currently be selected from the Group admin screen. */
+function axismundi_forum_admin_distribution_scope_available( string $scope ) : bool {
+	// Members-only delivery still lacks its viewer-aware profile/card surface.
+	return 'members' !== $scope;
+}
+
 /** Render the community section inside Actors' managed Group screen. */
 function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : void {
 	$user_id = get_current_user_id();
@@ -121,9 +127,10 @@ function axismundi_forum_render_group_admin_section( Axismundi_Actor $group ) : 
 	echo '</select><p class="description">' . esc_html__( 'When approval is required, valid Topic submissions wait here until a moderator approves the Group Announce.', 'axismundi-forum' ) . '</p></td></tr></table>';
 	echo '<table class="form-table" role="presentation"><tr><th><label for="ax-forum-distribution">' . esc_html__( 'Topic distribution', 'axismundi-forum' ) . '</label></th><td><select id="ax-forum-distribution" name="distribution_scope">';
 	foreach ( axismundi_forum_distribution_scopes() as $value => $label ) {
-		printf( '<option value="%s" %s>%s</option>', esc_attr( $value ), selected( $community['distribution_scope'], $value, false ), esc_html( $label ) );
+		$available = axismundi_forum_admin_distribution_scope_available( $value );
+		printf( '<option value="%s" %s %s>%s</option>', esc_attr( $value ), selected( $community['distribution_scope'], $value, false ), disabled( $available, false, false ), esc_html( $label ) );
 	}
-	echo '</select><p class="description">' . esc_html__( 'Public Topics appear in the Group profile and public outbox. Community-member Topics are delivered to followers and stay off public Group surfaces.', 'axismundi-forum' ) . '</p></td></tr></table>';
+	echo '</select><p class="description">' . esc_html__( 'Public Topics appear in the Group profile and public outbox. Community-member distribution is not available yet.', 'axismundi-forum' ) . '</p></td></tr></table>';
 	submit_button( __( 'Save community settings', 'axismundi-forum' ), 'secondary' );
 	echo '</form>';
 	}
@@ -264,7 +271,10 @@ function axismundi_forum_handle_save_community() : void {
 		$result = axismundi_forum_set_topic_approval_policy( $group_id, get_current_user_id(), sanitize_key( (string) ( $_POST['topic_approval_policy'] ?? '' ) ) );
 	}
 	if ( ! is_wp_error( $result ) ) {
-		$result = axismundi_forum_set_distribution_scope( $group_id, get_current_user_id(), sanitize_key( (string) ( $_POST['distribution_scope'] ?? '' ) ) );
+		$scope = sanitize_key( (string) ( $_POST['distribution_scope'] ?? '' ) );
+		$result = ! axismundi_forum_admin_distribution_scope_available( $scope )
+			? new WP_Error( 'ax_forum_distribution_unavailable', __( 'Community-member Topic distribution is not available yet.', 'axismundi-forum' ) )
+			: axismundi_forum_set_distribution_scope( $group_id, get_current_user_id(), $scope );
 	}
 	axismundi_forum_group_admin_redirect( $group_id, $result );
 }

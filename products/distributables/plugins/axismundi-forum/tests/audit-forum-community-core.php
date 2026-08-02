@@ -106,6 +106,14 @@ try {
 		'the managed Group community screen exposes its member list, membership controls, and an empty Topic review queue',
 		$owner_actor instanceof Axismundi_Actor && str_contains( $community_admin, 'Members' ) && str_contains( $community_admin, 'Membership approval' ) && str_contains( $community_admin, 'Topic submissions' ) && str_contains( $community_admin, 'No Topic submissions are awaiting review.' ) && str_contains( $community_admin, function_exists( 'axismundi_actors_federated_mention_name' ) ? axismundi_actors_federated_mention_name( $owner_actor ) : '@' . $owner_actor->get_preferred_username() )
 	);
+	ax_fc_assert(
+		'the Group settings remember member-only Topic distribution without offering it before its reader surface exists',
+		function_exists( 'axismundi_forum_admin_distribution_scope_available' )
+			&& axismundi_forum_admin_distribution_scope_available( 'public' )
+			&& ! axismundi_forum_admin_distribution_scope_available( 'members' )
+			&& 1 === preg_match( '/<option\\s+value="members"[^>]*\\bdisabled(?:="disabled")?[^>]*>/', $community_admin )
+			&& str_contains( $community_admin, 'Community-member distribution is not available yet.' )
+	);
 
 	$policy = axismundi_forum_set_posting_policy( $group_id, $owner, 'managers' );
 	ax_fc_assert(

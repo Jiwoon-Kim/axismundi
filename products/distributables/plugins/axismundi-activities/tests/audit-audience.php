@@ -181,6 +181,29 @@ try {
 			&& '' === $ax_aud_plain['primary_group_uri']
 	);
 	/*
+	 * The shape that actually arrives.
+	 *
+	 * A `Create` addresses Public at its root and puts `audience` on the embedded Note. Every case
+	 * above hands the classifier flat top-level addressing, which is the tidy form and not the
+	 * federated one — reading only the root would find `to: [Public]`, answer "no community", and
+	 * lose precisely the Objects this classifier was written to catch.
+	 */
+	$ax_aud_enveloped = axismundi_act_group_context(
+		array(
+			'type'   => 'Create',
+			'to'     => array( $public ),
+			'object' => array( 'type' => 'Note', 'audience' => $ax_aud_group_uri, 'to' => array( $public ) ),
+		)
+	);
+	ax_aud_assert(
+		$ax_aud_results,
+		'a Create carrying its community on the embedded Object is Group context, not a plain public post',
+		true === $ax_aud_enveloped['has_group_context']
+			&& $ax_aud_group_uri === $ax_aud_enveloped['primary_group_uri']
+			&& array( $ax_aud_group_uri ) === $ax_aud_enveloped['group_uris']
+	);
+
+	/*
 	 * A reply names its parent, not the community, so a thread owner has to answer for it. The
 	 * contributor supplies URIs and nothing more — whether one is a Group is still the registry's
 	 * answer, which is why a contributed non-Group is discarded rather than trusted.

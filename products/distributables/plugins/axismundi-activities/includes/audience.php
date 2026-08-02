@@ -196,7 +196,7 @@ function axismundi_act_audience_visibility( array $to, array $cc, string $follow
  * name the wrong community with total confidence, so it names none and the caller shows nothing
  * rather than something false. Cross-posting is where that would bite, and it is coming.
  *
- * @param array<string,mixed> $payload    AS2 Object or Activity payload.
+ * @param array<string,mixed> $payload    AS2 Object, or an Activity whose `object` is embedded.
  * @param string              $object_uri Canonical Object URI, when known.
  * @return array{has_group_context:bool,group_uris:string[],primary_group_uri:string}
  */
@@ -226,10 +226,30 @@ function axismundi_act_group_context( array $payload, string $object_uri = '' ) 
 		return $uris;
 	};
 
-	$declared = array_values( array_filter( $listed( $payload['audience'] ?? null ), $is_group ) );
+	/*
+	 * The envelope and the Object it carries, read together.
+	 *
+	 * A `Create` addresses Public at its root and leaves `audience` on the embedded Note, which is
+	 * the ordinary shape and the one Lemmy sends. Reading only the root finds `to: [Public]` and
+	 * concludes there is no community — losing exactly the case this classifier exists for. An
+	 * Object fetched on its own has no envelope, so the same merge covers both by looking in each
+	 * place and caring about neither.
+	 */
+	$embedded  = is_array( $payload['object'] ?? null ) ? $payload['object'] : array();
+	$declared  = array_values(
+		array_filter(
+			array_merge( $listed( $payload['audience'] ?? null ), $listed( $embedded['audience'] ?? null ) ),
+			$is_group
+		)
+	);
 	$addressed = array_values(
 		array_filter(
-			array_merge( $listed( $payload['to'] ?? null ), $listed( $payload['cc'] ?? null ) ),
+			array_merge(
+				$listed( $payload['to'] ?? null ),
+				$listed( $payload['cc'] ?? null ),
+				$listed( $embedded['to'] ?? null ),
+				$listed( $embedded['cc'] ?? null )
+			),
 			$is_group
 		)
 	);

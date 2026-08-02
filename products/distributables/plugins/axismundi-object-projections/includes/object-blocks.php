@@ -294,8 +294,34 @@ function axismundi_op_object_visibility_vocabulary() : array {
 	);
 }
 
+/**
+ * Whether the audience marker is shown to readers at all.
+ *
+ * Off, and off deliberately. The five audiences are a real and necessary *internal* model — a
+ * remote Object arrives addressed some way and we have to read that correctly to decide who may
+ * see it — but they are not yet a feature, because nothing on the writing side offers an author a
+ * choice among them and no delivery rule is closed behind one.
+ *
+ * Marking a card with an audience the author could not choose, and that nothing enforces, states a
+ * promise the product does not keep. `home` is the sharpest case: it reads as "local only" while
+ * meaning nothing of the sort — the permalink stays public and anyone may fetch it. Real local-only
+ * is not a shape of `to`/`cc` at all; it is a delivery policy about which bridges an object is
+ * never handed to, and Lemmy models it as a property of a community rather than a per-post
+ * audience. Until that policy exists there is nothing honest for this marker to say.
+ *
+ * The block stays registered so the work can be finished and looked at, and the model keeps being
+ * resolved because access control needs it either way.
+ */
+function axismundi_op_object_visibility_block_enabled() : bool {
+	/** @param bool $enabled Whether to draw the audience marker on cards. */
+	return (bool) apply_filters( 'axismundi_op_object_visibility_marker_enabled', false );
+}
+
 /** Render the audience one Object was addressed to. */
 function axismundi_op_render_object_visibility_block( array $attributes = array() ) : string {
+	if ( ! axismundi_op_object_visibility_block_enabled() ) {
+		return '';
+	}
 	$model = axismundi_op_active_object_view_model();
 	if ( ! is_array( $model ) ) {
 		return '';

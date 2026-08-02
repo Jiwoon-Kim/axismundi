@@ -817,6 +817,28 @@ ax_rnd_assert(
  * one value that must never be assumed — it would describe a restricted Object as open on a card
  * its author is looking at.
  */
+/*
+ * Off for readers, and the audits below say what it does when it is switched on.
+ *
+ * The five audiences stay resolved because access control needs them, but nothing draws them: no
+ * author can choose an audience yet and no delivery rule is closed behind one, so a marker would
+ * describe a promise the product does not keep. The default is asserted first and separately,
+ * because that — not the glyph table — is the shipped behaviour.
+ */
+axismundi_op_set_current_object_view_model( array( 'object_uri' => 'https://example.com/n/v', 'visibility' => array( 'level' => 'public' ) ) );
+$ax_rnd_vis_default_off = do_blocks( '<!-- wp:axismundi/object-visibility /-->' );
+axismundi_op_set_current_object_view_model( null );
+ax_rnd_assert(
+	$ax_rnd_results,
+	'the audience marker draws nothing until a product can offer the choice it would be describing',
+	'' === trim( $ax_rnd_vis_default_off )
+		&& false === axismundi_op_object_visibility_block_enabled()
+		// And it is not placed in the bundled card either, so switching it on is one decision
+		// rather than one decision plus an edit to every saved template that already shipped.
+		&& false === strpos( (string) @file_get_contents( dirname( __DIR__ ) . '/templates/parts/object-card-header.php' ), '<!-- wp:axismundi/object-visibility' )
+);
+
+add_filter( 'axismundi_op_object_visibility_marker_enabled', '__return_true' );
 $ax_rnd_vis_glyphs = array();
 foreach ( array_keys( axismundi_op_object_visibility_vocabulary() ) as $ax_rnd_level ) {
 	axismundi_op_set_current_object_view_model( array( 'object_uri' => 'https://example.com/n/v', 'visibility' => array( 'level' => $ax_rnd_level ) ) );
@@ -854,6 +876,8 @@ ax_rnd_assert(
 		&& false !== strpos( $ax_rnd_vis_followers, 'aria-hidden="true"' )
 		&& false !== strpos( $ax_rnd_vis_followers, 'data-visibility="followers"' )
 );
+
+remove_filter( 'axismundi_op_object_visibility_marker_enabled', '__return_true' );
 
 /*
  * Counted here, after the last assertion, and not anywhere earlier.

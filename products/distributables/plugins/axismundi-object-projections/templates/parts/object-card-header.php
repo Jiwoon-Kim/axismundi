@@ -27,19 +27,19 @@ defined( 'ABSPATH' ) || exit;
 		<div class="wp-block-group">
 			<!-- wp:axismundi/object-type /--><?php
 			/*
-			 * Beside the time rather than beside the author, because it is a property of this
-			 * Object and not of whoever wrote it: the same author posts publicly and to
-			 * followers, and the marker has to change while the name above it does not.
+			 * The row an audience marker would sit in, kept empty on purpose.
 			 *
-			 * It says who this was addressed to and nothing about where it was posted. A Topic
-			 * in a community carries a community marker as well, contributed separately by
-			 * Forum — the two are independent, and a public community's Topic is both public
-			 * and in a community.
+			 * Beside the time is where it belongs when it belongs anywhere: the audience is a
+			 * property of this Object and not of whoever wrote it, so it has to change while the
+			 * name above it does not. It is not drawn today because nothing on the writing side
+			 * lets an author choose an audience and no delivery rule is closed behind one — a
+			 * marker for a choice that was never offered states a promise the product does not
+			 * keep. The block still exists and can be placed here; see
+			 * `axismundi_op_object_visibility_marker_enabled`.
 			 */
 			?>
 			<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|50"}},"layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center","justifyContent":"right"}} -->
 			<div class="wp-block-group">
-				<!-- wp:axismundi/object-visibility /-->
 			<?php
 			/*
 			 * `published`, not `updated`. Only a post that has actually been edited carries

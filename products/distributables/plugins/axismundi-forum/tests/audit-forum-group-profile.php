@@ -35,6 +35,25 @@ function ax_gp_assert( array &$results, string $label, bool $condition ) : void 
 	printf( "[%s] %s\n", $condition ? 'PASS' : 'FAIL', $label );
 }
 
+/**
+ * The feed as one loop attribute would render it.
+ *
+ * One entry per page, so there is a pager to look at. At the default page size this fixture fits
+ * on a single page, the numbered links never render, and an assertion about them would pass by
+ * finding nothing to disagree with.
+ *
+ * @return string
+ */
+function ax_gp_navigation_html( Axismundi_Actor $actor, string $navigation ) : string {
+	$one = static fn() : int => 1;
+	add_filter( 'axismundi_act_actor_feed_per_page', $one, 99 );
+	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$html = axismundi_act_render_actor_activity_feed( array( 'navigation' => $navigation ) );
+	unset( $GLOBALS['axismundi_actors_current_actor'] );
+	remove_filter( 'axismundi_act_actor_feed_per_page', $one, 99 );
+	return $html;
+}
+
 /** @return string The profile feed as the Actor profile template renders it. */
 function ax_gp_profile_feed( Axismundi_Actor $actor ) : string {
 	$GLOBALS['axismundi_actors_current_actor'] = $actor;
@@ -219,6 +238,24 @@ try {
 			&& false !== strpos( $ax_gp_archive_html, 'is-type-like' )
 			&& false !== strpos( $ax_gp_archive_html, 'is-type-reply' )
 			&& false !== strpos( $ax_gp_archive_html, 'is-type-announce' )
+	);
+
+	/*
+	 * The loop chooses how the list is walked, but only among what the source can serve.
+	 *
+	 * A community archive is counted and jumped around in and has no cursor to continue from, so a
+	 * template asking this loop for an infinite feed is not a preference to respect — it is a
+	 * request that cannot be answered, and the surface's declared modes settle it. Without the
+	 * bound, a saved template could quietly turn a working archive into one with no way forward.
+	 */
+	$ax_gp_forced_infinite = $group instanceof Axismundi_Actor ? ax_gp_navigation_html( $group, 'infinite' ) : '';
+	ax_gp_assert(
+		$ax_gp_results,
+		'a community refuses an infinite feed it cannot serve and stays on numbered pages',
+		$group instanceof Axismundi_Actor
+			&& array( 'pagination' ) === (array) axismundi_act_actor_profile_surfaces( $group )['community']['modes']
+			&& 1 === preg_match( '#axismundi-activity-feed__page\b#', $ax_gp_forced_infinite )
+			&& 0 === preg_match( '#axismundi-activity-feed__more-link#', $ax_gp_forced_infinite )
 	);
 
 	/*

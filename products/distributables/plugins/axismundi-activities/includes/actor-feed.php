@@ -455,7 +455,7 @@ function axismundi_act_actor_profile_url( array $surfaces, string $surface, stri
 function axismundi_act_feed_densities() : array {
 	return array(
 		'card'    => array( 'label' => __( 'Card view', 'axismundi-activities' ), 'icon' => 'view_stream' ),
-		'compact' => array( 'label' => __( 'Compact view', 'axismundi-activities' ), 'icon' => 'view_list' ),
+		'compact' => array( 'label' => __( 'List view', 'axismundi-activities' ), 'icon' => 'view_list' ),
 	);
 }
 
@@ -550,7 +550,7 @@ function axismundi_act_render_actor_feed_shell( Axismundi_Actor $actor, array $s
 }
 
 /** Render the current Actor's public Activity feed. */
-function axismundi_act_render_actor_activity_feed() : string {
+function axismundi_act_render_actor_activity_feed( array $attributes = array() ) : string {
 	if ( ! function_exists( 'axismundi_actors_current_actor' ) ) {
 		return '';
 	}
@@ -643,7 +643,16 @@ function axismundi_act_render_actor_activity_feed() : string {
 		$body = (string) call_user_func( $current['render'], $actor, $filter, $per_page );
 		return axismundi_act_render_actor_feed_shell( $actor, $surfaces, $surface, $filter, $current, $body );
 	}
-	$mode    = (string) ( $current['mode'] ?? 'infinite' );
+	/*
+	 * The template's choice when the source can serve it, and the source's answer when it cannot.
+	 *
+	 * The loop owns this because it decides how the list is queried and continued, not how a
+	 * button looks. But a free choice would let a template ask a numbered archive to be read with
+	 * a cursor it does not have, so the surface's declared modes are the bound.
+	 */
+	$supported = (array) ( $current['modes'] ?? array() );
+	$requested = (string) ( $attributes['navigation'] ?? '' );
+	$mode      = in_array( $requested, $supported, true ) ? $requested : (string) ( $current['mode'] ?? 'infinite' );
 	$densities_available = axismundi_act_actor_feed_densities_available( $actor );
 	$density             = axismundi_act_feed_density( $densities_available );
 	/*
@@ -1029,10 +1038,28 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 	}
 	foreach ( $surfaces as $key => $definition ) {
 		$surfaces[ $key ] = array_merge(
-			array( 'mode' => 'infinite', 'filters' => array(), 'default_filter' => '', 'heading' => '', 'label' => (string) $key ),
+			array( 'modes' => array(), 'mode' => 'infinite', 'filters' => array(), 'default_filter' => '', 'heading' => '', 'label' => (string) $key ),
 			$definition
 		);
-		$surfaces[ $key ]['mode'] = 'pagination' === ( $definition['mode'] ?? '' ) ? 'pagination' : 'infinite';
+		/*
+		 * What a surface *can* be walked as, which is not the same as what a template asked for.
+		 *
+		 * A source declares the modes it can honour: a ledger with no total cannot answer "page 7
+		 * of 12", and a numbered archive has no cursor to continue from. The template then picks
+		 * among those, and picking something absent from the list is not a preference to respect —
+		 * it is a request the source cannot serve, so the first supported mode stands.
+		 *
+		 * A surface that declares nothing is taken to support only the single mode it named, which
+		 * is what every surface written before this meant.
+		 */
+		$declared = array_values( array_intersect( array( 'infinite', 'pagination' ), (array) $surfaces[ $key ]['modes'] ) );
+		if ( empty( $declared ) ) {
+			$declared = array( 'pagination' === ( $definition['mode'] ?? '' ) ? 'pagination' : 'infinite' );
+		}
+		$surfaces[ $key ]['modes'] = $declared;
+		$surfaces[ $key ]['mode']  = in_array( (string) $surfaces[ $key ]['mode'], $declared, true )
+			? (string) $surfaces[ $key ]['mode']
+			: $declared[0];
 	}
 	return $surfaces;
 }

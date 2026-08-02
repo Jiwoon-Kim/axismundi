@@ -7,6 +7,9 @@
 	"category": "theme",
 	"icon": "list-view",
 	"description": "Displays the current Actor's public timeline of Activities and observed Objects.",
+	"attributes": {
+		"navigation": { "type": "string", "default": "" }
+	},
 	"textdomain": "axismundi-activities",
 	"supports": {
 		"html": false,

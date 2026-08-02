@@ -83,7 +83,18 @@ endif;
 	 * as a variation of the other.
 	 */
 	?>
-	<!-- wp:axismundi/feed-tab {"surface":"community"} -->
+	<?php
+	/*
+	 * A community is browsed, not scrolled: a reader goes into a thread, comes back, and links to
+	 * what they found, which is a page number rather than a position in a cursor.
+	 *
+	 * Declared for the surface, not for a kind of profile. A Group community serves numbered pages
+	 * and gets them; a Person community serves a cursor today, so the same declaration is refused
+	 * by its surface and it keeps Load more. Nothing here has to know which is which — that is the
+	 * point of the request being bounded by what the source declares.
+	 */
+	?>
+	<!-- wp:axismundi/feed-tab {"surface":"community","navigation":"pagination"} -->
 	<?php require __DIR__ . '/parts/feed-surface-layout.php'; ?>
 	<!-- /wp:axismundi/feed-tab -->
 	<!-- /wp:axismundi/feed-tabs -->

@@ -668,6 +668,28 @@ function axismundi_act_feed_tab_attributes( Axismundi_Actor $actor, string $surf
 	return array();
 }
 
+/**
+ * How this surface is walked: what the tab asked for, when the surface can serve it.
+ *
+ * A sibling of the filter-style policy and typed the same way on purpose. Both consume the same
+ * tab declaration, so both should fail the same way when it is not passed — an inline
+ * `$tab_attrs['navigation'] ?? ''` swallows an unassigned variable and silently reports that the
+ * author declared nothing, which is how the declaration reached the editor and not the page.
+ *
+ * A free choice would let a template ask a numbered archive to be read with a cursor it does not
+ * have, so the surface's declared modes are the bound and its own default is the answer to
+ * anything outside them.
+ *
+ * @param array<string,mixed> $surface        Surface descriptor.
+ * @param array<string,mixed> $tab_attributes Attributes of the tab being rendered.
+ * @return string
+ */
+function axismundi_act_feed_navigation_mode( array $surface, array $tab_attributes ) : string {
+	$supported = (array) ( $surface['modes'] ?? array() );
+	$requested = (string) ( $tab_attributes['navigation'] ?? '' );
+	return in_array( $requested, $supported, true ) ? $requested : (string) ( $surface['mode'] ?? 'infinite' );
+}
+
 /** Whether this surface's filters are reader-owned switches instead of addressable tabs. */
 function axismundi_act_feed_filters_are_client_owned( array $surface, array $tab_attributes ) : bool {
 	$filter_style = (string) ( $tab_attributes['filterStyle'] ?? '' );
@@ -780,9 +802,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 * button looks. But a free choice would let a template ask a numbered archive to be read with
 	 * a cursor it does not have, so the surface's declared modes are the bound.
 	 */
-	$supported = (array) ( $current['modes'] ?? array() );
-	$requested = (string) ( $tab_attrs['navigation'] ?? '' );
-	$mode      = in_array( $requested, $supported, true ) ? $requested : (string) ( $current['mode'] ?? 'infinite' );
+	$mode = axismundi_act_feed_navigation_mode( $current, $tab_attrs );
 	$densities_available = axismundi_act_actor_feed_densities_available( $actor, $surface );
 	$density             = axismundi_act_feed_density( $densities_available );
 	/*

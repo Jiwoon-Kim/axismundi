@@ -1194,6 +1194,17 @@ ax_feed_assert(
 		&& false === strpos( $ax_feed_density_from_card, 'axismundi-activity-feed__densities' )
 		&& false === strpos( (string) file_get_contents( dirname( __DIR__ ) . '/blocks/feed/style.css' ), 'axismundi-activity-feed__densit' )
 );
+$ax_feed_density_editor = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed-density-switch/edit.js' );
+ax_feed_assert(
+	$ax_feed_results,
+	'the density switch has a noninteractive editor preview of both views, with Card selected',
+	false !== strpos( $ax_feed_density_editor, 'wp-block-buttons is-style-connected' )
+		&& false !== strpos( $ax_feed_density_editor, 'is-style-outline' )
+		&& false !== strpos( $ax_feed_density_editor, 'is-current' )
+		&& false !== strpos( $ax_feed_density_editor, "previewSegment( 'view_stream'" )
+		&& false !== strpos( $ax_feed_density_editor, "previewSegment( 'view_list'" )
+		&& false !== strpos( $ax_feed_density_editor, "'aria-hidden': 'true'" )
+);
 ax_feed_assert(
 	$ax_feed_results,
 	'each segment addresses its own density, and the default one addresses it by leaving it out',

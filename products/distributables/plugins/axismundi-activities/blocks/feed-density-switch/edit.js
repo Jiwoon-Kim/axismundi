@@ -8,13 +8,37 @@
 	'use strict';
 	var el = element.createElement;
 	var __ = i18n.__;
+	var previewSegment = function ( icon, label, current ) {
+		return el(
+			'div',
+			{ className: 'wp-block-button is-style-outline' + ( current ? ' is-current' : '' ) },
+			el(
+				'span',
+				{
+					className: 'wp-block-button__link wp-element-button axismundi-feed-density-switch__link',
+					'aria-hidden': 'true'
+				},
+				el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, icon )
+			)
+		);
+	};
 
 	blocks.registerBlockType( 'axismundi/feed-density-switch', {
 		edit: function () {
 			return el(
 				'div',
-				blockEditor.useBlockProps( { className: 'axismundi-feed-slot' } ),
-				__( 'Card / Compact', 'axismundi-activities' )
+				blockEditor.useBlockProps( { className: 'axismundi-feed-density-switch axismundi-feed-slot' } ),
+				el(
+					'div',
+					{ className: 'wp-block-buttons is-style-connected', 'aria-hidden': 'true' },
+					previewSegment( 'view_stream', __( 'Card view', 'axismundi-activities' ), true ),
+					previewSegment( 'view_list', __( 'List view', 'axismundi-activities' ), false )
+				),
+				el(
+					'span',
+					{ className: 'screen-reader-text' },
+					__( 'Entry density selector preview. Card view is selected.', 'axismundi-activities' )
+				)
 			);
 		},
 		save: function () {

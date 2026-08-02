@@ -864,87 +864,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		$surface_nav = '<nav class="axismundi-activity-feed__surfaces" aria-label="' . esc_attr__( 'Profile surfaces', 'axismundi-activities' ) . '">'
 			. implode( '', $surface_tabs ) . '</nav>';
 	}
-	/*
-	 * Two shapes of control, because the two surfaces ask different kinds of question.
-	 *
-	 * The timeline's filters are the product of two independent switches — show replies, show
-	 * boosts — so they are presented as two switches under a disclosure whose label states the
-	 * combination, which is what Mastodon does. The community surface's slices are mutually
-	 * exclusive collections, so they stay tabs, which is what Lemmy does. Forcing either into
-	 * the other's control would misrepresent how the choices relate.
-	 *
-	 * The switches are links, not checkboxes, and the disclosure is a `details` element. Both
-	 * work with no script at all, and the chosen combination stays in the URL rather than in
-	 * browser storage — Mastodon can keep it in `localStorage` because nothing on that page is
-	 * server-rendered, but ours is, so a stored preference the server cannot see would be
-	 * contradicted by the very first paint and would not survive being shared as a link.
-	 */
-	$filter_nav = '';
-	if ( $client_owned ) {
-		$state    = axismundi_act_actor_feed_filters()[ $filter ];
-		$switches = array();
-		/*
-		 * A native checkbox with `role="switch"`, wrapped in its own label. Native means the
-		 * browser keeps Space-to-toggle, focus, and the checked state for free; the track is a
-		 * sibling the theme draws, and the handle is that track's pseudo-element rather than
-		 * another node to keep in sync. The plugin emits the semantics; the switch's appearance
-		 * is a theme component, the same way buttons and selects are.
-		 */
-		foreach ( (array) $current['toggles'] as $bit => $label ) {
-			$switches[] = '<label class="axismundi-switch axismundi-activity-feed__switch">'
-				. '<input class="axismundi-switch__input" type="checkbox" role="switch"'
-				. ' name="' . esc_attr( (string) $bit ) . '"'
-				. checked( (bool) $state[ $bit ], true, false )
-				. ' data-wp-on--change="actions.setFilter">'
-				. '<span class="axismundi-switch__track" aria-hidden="true"></span>'
-				. '<span class="axismundi-switch__label">' . esc_html( (string) $label ) . '</span>'
-				. '</label>';
-		}
-		/*
-		 * A trigger and a popover, which is the shape the Add reaction picker already
-		 * established: a button that states what is open, and a `role="dialog"` panel holding
-		 * controls. A `details` element would have been less code but the wrong promise — this
-		 * holds form controls, floats over the page, and closes on Escape and on a click
-		 * outside, none of which a disclosure does.
-		 *
-		 * The whole control is hidden until the runtime reveals it. These are real checkboxes in
-		 * no form, so without script they would sit there doing nothing — and a control that
-		 * visibly does nothing is worse than one never offered. A reader without script gets the
-		 * default timeline, which is the timeline everyone else starts on.
-		 */
-		$filter_nav = '<div class="axismundi-activity-feed__filters" hidden'
-			. ' data-wp-init="callbacks.watchFilters" data-wp-watch="callbacks.filtersLifecycle">'
-			. '<button type="button" class="axismundi-activity-feed__filters-trigger"'
-			. ' data-wp-on--click="actions.toggleFilters"'
-			. ' data-wp-bind--aria-expanded="context.isFiltersOpen"'
-			. ' aria-haspopup="dialog">'
-			. '<span data-wp-text="context.filterLabel">' . esc_html( (string) $current['filters'][ $filter ] ) . '</span>'
-			/*
-			 * The caret says which way the panel goes, and which way it will go next.
-			 *
-			 * `unfold_more` points both ways at once, which is the icon for a control that expands in
-			 * either direction — a sort order, a resizable pane. This one opens downwards and closes
-			 * again, so the arrow follows it. Two spans rather than one swapped glyph, because the
-			 * server renders the closed state and the runtime only has to flip which is hidden.
-			 */
-			. '<span class="material-symbols-outlined" aria-hidden="true" data-wp-bind--hidden="context.isFiltersOpen">arrow_drop_down</span>'
-			. '<span class="material-symbols-outlined" aria-hidden="true" hidden data-wp-bind--hidden="!context.isFiltersOpen">arrow_drop_up</span>'
-			. '</button>'
-			. '<div class="axismundi-activity-feed__filters-panel" role="dialog"'
-			. ' aria-label="' . esc_attr__( 'Timeline filters', 'axismundi-activities' ) . '"'
-			. ' hidden data-wp-bind--hidden="!context.isFiltersOpen">'
-			. implode( '', $switches )
-			. '</div>'
-			. '</div>';
-	} else {
-		$filter_tabs = array();
-		foreach ( (array) $current['filters'] as $key => $label ) {
-			$filter_tabs[] = $tab( $link_url( $surface, (string) $key ), (string) $label, (string) $key === $filter, 'axismundi-activity-feed__view' );
-		}
-		$filter_nav = count( $filter_tabs ) > 1
-			? '<nav class="axismundi-activity-feed__views" aria-label="' . esc_attr__( 'Timeline views', 'axismundi-activities' ) . '">' . implode( '', $filter_tabs ) . '</nav>'
-			: '';
-	}
+	$filter_state = $client_owned ? (array) ( axismundi_act_actor_feed_filters()[ $filter ] ?? array() ) : array();
 
 	/*
 	 * How far along this page is, as a model rather than as a control.
@@ -1009,11 +929,14 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		axismundi_act_feed_surface_blocks( axismundi_act_actor_feed_template_blocks( $actor ), $surface ),
 		array(
 			/*
-			 * Markup keys and state keys are named apart on purpose. `density` is the reader's
-			 * current choice and rides on every link the pager builds; `densityHtml` is the switch
-			 * that offers the choice. One name for both put a block of markup into a URL.
+			 * Child blocks receive the feed model, not finished chrome. `density` is the reader's
+			 * current choice and rides on links; `filters` and `toggles` describe the choices that
+			 * the filters block renders where the template placed it.
 			 */
-			'filtersHtml'    => $filter_nav,
+			'filters'        => (array) $current['filters'],
+			'toggles'        => (array) ( $current['toggles'] ?? array() ),
+			'filterState'    => $filter_state,
+			'clientOwned'    => $client_owned,
 			'densities'      => $densities_available,
 			'baseUrl'        => $base_url,
 			'surface'        => $surface,
@@ -1264,27 +1187,55 @@ function axismundi_act_feed_cursor_pager( array $context, array $page ) : string
 		. esc_attr__( 'Timeline pages', 'axismundi-activities' ) . '">' . $newer . $more . '</nav>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links and labels are escaped above.
 }
 
-/**
- * Read one part of the feed's own chrome out of block context.
- *
- * The three chrome blocks describe the query the feed just ran, so the feed builds them and each
- * block says where it goes. They are markers no longer: a marker only records a position, and the
- * feed then had to assemble the parts in that order itself — which meant two descriptions of the
- * same arrangement, the saved block tree and a slot list derived from it.
- *
- * @param string        $key   Context key holding this part's markup.
- * @param WP_Block|null $block Block instance carrying the feed context.
- * @return string
- */
-function axismundi_act_feed_chrome_part( string $key, $block ) : string {
-	$context = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
-	return (string) ( $context[ $key ] ?? '' );
-}
-
 /** The filter control, where the template placed it. */
 function axismundi_act_render_feed_filters_block( array $attributes = array(), string $content = '', $block = null ) : string {
 	unset( $attributes, $content );
-	return axismundi_act_feed_chrome_part( 'filtersHtml', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
+	$context = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
+	$filters = (array) ( $context['filters'] ?? array() );
+	if ( count( $filters ) < 2 ) {
+		return '';
+	}
+	$current = (string) ( $context['filter'] ?? '' );
+	if ( ! empty( $context['clientOwned'] ) ) {
+		$switches = array();
+		$state    = (array) ( $context['filterState'] ?? array() );
+		foreach ( (array) ( $context['toggles'] ?? array() ) as $bit => $label ) {
+			$switches[] = '<label class="axismundi-switch axismundi-activity-feed__switch">'
+				. '<input class="axismundi-switch__input" type="checkbox" role="switch"'
+				. ' name="' . esc_attr( (string) $bit ) . '"'
+				. checked( ! empty( $state[ $bit ] ), true, false )
+				. ' data-wp-on--change="actions.setFilter">'
+				. '<span class="axismundi-switch__track" aria-hidden="true"></span>'
+				. '<span class="axismundi-switch__label">' . esc_html( (string) $label ) . '</span>'
+				. '</label>';
+		}
+		return '<div class="axismundi-activity-feed__filters" hidden'
+			. ' data-wp-init="callbacks.watchFilters" data-wp-watch="callbacks.filtersLifecycle">'
+			. '<button type="button" class="axismundi-activity-feed__filters-trigger"'
+			. ' data-wp-on--click="actions.toggleFilters"'
+			. ' data-wp-bind--aria-expanded="context.isFiltersOpen"'
+			. ' aria-haspopup="dialog">'
+			. '<span data-wp-text="context.filterLabel">' . esc_html( (string) ( $filters[ $current ] ?? '' ) ) . '</span>'
+			. '<span class="material-symbols-outlined" aria-hidden="true" data-wp-bind--hidden="context.isFiltersOpen">arrow_drop_down</span>'
+			. '<span class="material-symbols-outlined" aria-hidden="true" hidden data-wp-bind--hidden="!context.isFiltersOpen">arrow_drop_up</span>'
+			. '</button>'
+			. '<div class="axismundi-activity-feed__filters-panel" role="dialog"'
+			. ' aria-label="' . esc_attr__( 'Timeline filters', 'axismundi-activities' ) . '"'
+			. ' hidden data-wp-bind--hidden="!context.isFiltersOpen">'
+			. implode( '', $switches )
+			. '</div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Labels are escaped above.
+	}
+	$tabs = array();
+	foreach ( $filters as $key => $label ) {
+		$target            = $context;
+		$target['filter']  = (string) $key;
+		$is_current         = (string) $key === $current;
+		$tabs[] = '<a class="axismundi-feed-filters__view' . ( $is_current ? ' is-current' : '' ) . '" href="'
+			. esc_url( axismundi_act_feed_url( $target ) ) . '"' . ( $is_current ? ' aria-current="page"' : '' ) . '>'
+			. esc_html( (string) $label ) . '</a>';
+	}
+	return '<nav class="axismundi-feed-filters__views" aria-label="'
+		. esc_attr__( 'Timeline views', 'axismundi-activities' ) . '">' . implode( '', $tabs ) . '</nav>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links and labels are escaped above.
 }
 
 /**

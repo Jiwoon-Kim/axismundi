@@ -862,8 +862,10 @@ try {
 			$html   = axismundi_act_render_feed_body(
 				axismundi_act_feed_surface_blocks( $blocks, 'activity' ),
 				array(
-					'filtersHtml' => '<i id="ax-f"></i>',
-					'densityHtml' => '<i id="ax-d"></i>',
+					'filters'     => array( 'first' => 'First', 'second' => 'Second' ),
+					'filter'      => 'first',
+					'defaultFilter' => 'first',
+					'clientOwned' => false,
 					'cards'      => '',
 					// The pager draws itself from the model now, so it is given one rather than a marker:
 					// a control that renders nothing cannot be found in an order.
@@ -873,7 +875,7 @@ try {
 				)
 			);
 			$found = array();
-			foreach ( array( 'ax-f' => 'filters', 'ax-d' => 'density', 'axismundi-activity-feed__list' => 'list', 'axismundi-feed-pagination' => 'pagination' ) as $needle => $name ) {
+			foreach ( array( 'axismundi-feed-filters__views' => 'filters', 'axismundi-activity-feed__list' => 'list', 'axismundi-feed-pagination' => 'pagination' ) as $needle => $name ) {
 				$at = strpos( $html, $needle );
 				if ( false !== $at ) {
 					$found[ $at ] = $name;
@@ -1116,8 +1118,8 @@ ax_feed_assert(
 	'each surface is read out of its own tab, so two tabs can hold different cards and different chrome',
 	false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_activity, 'card' ), 'object-title' )
 		&& false !== strpos( axismundi_act_extract_feed_item_template( $ax_feed_tab_community, 'card' ), 'object-summary' )
-		&& false !== strpos( axismundi_act_render_feed_body( $ax_feed_tab_activity, array( 'filtersHtml' => '<i id="ax-f"></i>', 'navigation' => 'infinite', 'page' => array() ) ), 'ax-f' )
-		&& false === strpos( axismundi_act_render_feed_body( $ax_feed_tab_community, array( 'filtersHtml' => '<i id="ax-f"></i>', 'navigation' => 'infinite', 'page' => array() ) ), 'ax-f' )
+		&& false !== strpos( axismundi_act_render_feed_body( $ax_feed_tab_activity, array( 'filters' => array( 'all' => 'All', 'other' => 'Other' ), 'filter' => 'all', 'defaultFilter' => 'all', 'navigation' => 'infinite', 'page' => array() ) ), 'axismundi-feed-filters__views' )
+		&& false === strpos( axismundi_act_render_feed_body( $ax_feed_tab_community, array( 'filters' => array( 'all' => 'All', 'other' => 'Other' ), 'filter' => 'all', 'defaultFilter' => 'all', 'navigation' => 'infinite', 'page' => array() ) ), 'axismundi-feed-filters__views' )
 );
 
 /*
@@ -1221,6 +1223,72 @@ ax_feed_assert(
 		'',
 		$ax_feed_density_context( array( 'baseUrl' => 'https://example.test/@ax', 'densities' => array( 'card' ), 'density' => 'card' ) )
 	)
+);
+
+/*
+ * Filters are two controls with one owner. Activity has independent client-side switches;
+ * Community has mutually exclusive addressable slices. The feed supplies only their model, so
+ * rebuilding either string in the root would be a second renderer rather than a context value.
+ */
+$ax_feed_filters_context = static function ( array $context ) : WP_Block {
+	return new WP_Block(
+		array( 'blockName' => 'axismundi/feed-filters', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ),
+		array( 'axismundi/feed' => $context )
+	);
+};
+$ax_feed_activity_filters = axismundi_act_render_feed_filters_block(
+	array(),
+	'',
+	$ax_feed_filters_context(
+		array(
+			'filters'     => array( 'posts-and-boosts' => 'Posts and boosts', 'all' => 'All activity' ),
+			'filter'      => 'posts-and-boosts',
+			'clientOwned' => true,
+			'toggles'     => array( 'replies' => 'Replies', 'boosts' => 'Boosts' ),
+			'filterState' => array( 'replies' => false, 'boosts' => true ),
+		)
+	)
+);
+$ax_feed_community_filters = axismundi_act_render_feed_filters_block(
+	array(),
+	'',
+	$ax_feed_filters_context(
+		array(
+			'baseUrl'       => 'https://example.test/@ax?density=compact',
+			'surface'       => 'community',
+			'filters'       => array( 'posts' => 'Posts', 'comments' => 'Comments' ),
+			'filter'        => 'posts',
+			'defaultFilter' => 'posts',
+			'clientOwned'   => false,
+		)
+	)
+);
+$ax_feed_source         = (string) @file_get_contents( dirname( __DIR__ ) . '/includes/actor-feed.php' );
+$ax_feed_filters_style  = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed-filters/style.css' );
+$ax_feed_filters_meta   = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed-filters/block.json' );
+$ax_feed_root_style     = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed/style.css' );
+ax_feed_assert(
+	$ax_feed_results,
+	'feed filters render their two shapes from context, while the feed root no longer builds or carries filter HTML',
+	2 === substr_count( $ax_feed_activity_filters, 'role="switch"' )
+		&& false !== strpos( $ax_feed_activity_filters, 'arrow_drop_down' )
+		&& false !== strpos( $ax_feed_activity_filters, 'arrow_drop_up' )
+		&& false !== strpos( $ax_feed_activity_filters, 'data-wp-bind--hidden="!context.isFiltersOpen"' )
+		&& false !== strpos( $ax_feed_community_filters, 'axismundi-feed-filters__views' )
+		&& false !== strpos( $ax_feed_community_filters, 'view=community' )
+		&& false !== strpos( $ax_feed_community_filters, 'filter=comments' )
+		&& false !== strpos( $ax_feed_community_filters, 'density=compact' )
+		&& false === strpos( $ax_feed_source, 'filtersHtml' )
+		&& false === strpos( $ax_feed_source, 'axismundi_act_feed_chrome_part' )
+);
+ax_feed_assert(
+	$ax_feed_results,
+	'the filters block owns its visual rules, including hidden-state protection against its flex panel',
+	false !== strpos( $ax_feed_filters_meta, '"style": "file:./style.css"' )
+		&& false !== strpos( $ax_feed_filters_style, '.axismundi-activity-feed__filters-panel[hidden]' )
+		&& false !== strpos( $ax_feed_filters_style, '.axismundi-feed-filters__views' )
+		&& false === strpos( $ax_feed_root_style, 'axismundi-activity-feed__filters-panel' )
+		&& false === strpos( $ax_feed_root_style, 'axismundi-activity-feed__switch' )
 );
 
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );

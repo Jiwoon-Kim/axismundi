@@ -65,6 +65,11 @@
 	transition: --md-icon-fill var(--md-sys-motion-duration-short3, 150ms) var(--md-sys-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
 }
 
+/* The utility supplies an inline-flex box, but must not resurrect an icon hidden by state. */
+.material-symbols-outlined[hidden] {
+	display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.material-symbols-outlined {
 		transition: none;

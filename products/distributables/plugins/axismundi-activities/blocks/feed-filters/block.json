@@ -6,7 +6,7 @@
 	"title": "Feed Filters",
 	"category": "theme",
 	"icon": "filter",
-	"description": "Where the timeline's view switches appear. Which switches exist depends on the surface being read, so the loop renders them and this block places them.",
+	"description": "Renders the current surface's filters where the template places them.",
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/feed-tab" ],
 	"usesContext": [ "axismundi/feed" ],
@@ -17,5 +17,6 @@
 		"interactivity": { "clientNavigation": true }
 	},
 	"editorScript": "file:./edit.js",
+	"style": "file:./style.css",
 	"render": "file:./render.php"
 }

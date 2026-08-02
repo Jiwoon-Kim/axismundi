@@ -360,7 +360,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
  * @param bool              $head_window   Whether this is the first display page in the window.
  * @return array{cards:array<int,string>,head_cursor:string,next_cursor:string,has_more:bool}
  */
-function axismundi_act_actor_feed_display_page( callable $page_callback, Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false, string $mode = 'infinite' ) : array {
+function axismundi_act_actor_feed_display_page( callable $page_callback, Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false, string $mode = 'infinite', string $density = 'card' ) : array {
 	$cards       = array();
 	$head_cursor = $cursor;
 	$scan_pages  = 0;
@@ -373,7 +373,7 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 	 * "Load more" — so the answer is worked out once, on the way in.
 	 */
 	$card_template = function_exists( 'axismundi_act_actor_feed_template_source' )
-		? axismundi_act_actor_feed_template_source( $actor )
+		? axismundi_act_actor_feed_template_source( $actor, $density )
 		: '';
 	$scan_limit  = max( 1, (int) apply_filters( 'axismundi_act_actor_feed_card_scan_pages', 10, $actor, $limit ) );
 	$page        = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false );
@@ -647,7 +647,7 @@ function axismundi_act_render_actor_activity_feed() : string {
 		$requested_page = isset( $_GET['page'] ) ? max( 1, absint( wp_unslash( $_GET['page'] ) ) ) : 1;
 		$cursor         = (string) $requested_page;
 	}
-	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter, false, false, $mode );
+	$page  = axismundi_act_actor_feed_display_page( $current['page'], $actor, $per_page, $cursor, $filter, false, false, $mode, $density );
 	$cards = implode( '', $page['cards'] );
 	/*
 	 * An empty *narrowed* surface still renders: the reader chose that tab and needs the
@@ -864,8 +864,26 @@ function axismundi_act_render_actor_activity_feed() : string {
 		'error'         => '',
 		'errorFallback' => __( 'More activity could not be loaded.', 'axismundi-activities' ),
 	);
+	/*
+	 * Plain links, so the density survives with no script and can be shared. It changes nothing
+	 * about which entries are listed, so it must not look like it selects anything — and the
+	 * reader's page and collection are kept, because density does not move anybody.
+	 */
+	$density_switch = array();
+	foreach ( axismundi_act_feed_densities() as $key => $label ) {
+		$is_current    = (string) $key === $density;
+		$density_href  = remove_query_arg( 'density' );
+		$density_href  = 'card' === (string) $key ? $density_href : add_query_arg( 'density', (string) $key, $density_href );
+		$density_switch[] = '<a class="axismundi-activity-feed__density' . ( $is_current ? ' is-current' : '' ) . '"'
+			. ' href="' . esc_url( $density_href ) . '"' . ( $is_current ? ' aria-current="true"' : '' ) . '>'
+			. esc_html( (string) $label ) . '</a>';
+	}
+	$density_nav = '<div class="axismundi-activity-feed__densities" role="group" aria-label="'
+		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">' . implode( '', $density_switch ) . '</div>';
+
 	$parts = array(
 		'filters'    => $filter_nav,
+		'density'    => $density_nav,
 		// The list is always emitted, even when this page is empty, because appended pages need
 		// something to attach to. An empty feed says so in its own row rather than by omitting
 		// the container the runtime is going to look for.
@@ -884,7 +902,9 @@ function axismundi_act_render_actor_activity_feed() : string {
 	 * be asking for a feed with no feed in it.
 	 */
 	$slots = axismundi_act_actor_feed_slots( $actor );
-	$slots = array() === $slots ? array( 'filters', 'list', 'pagination' ) : $slots;
+	// A template written before the density block existed still gets the control, in the place it
+	// was emitted from before it could be placed at all.
+	$slots = array() === $slots ? array( 'filters', 'density', 'list', 'pagination' ) : $slots;
 	if ( ! in_array( 'list', $slots, true ) ) {
 		$slots[] = 'list';
 	}
@@ -892,22 +912,6 @@ function axismundi_act_render_actor_activity_feed() : string {
 	foreach ( $slots as $slot ) {
 		$body .= $parts[ $slot ] ?? '';
 	}
-	/*
-	 * Plain links, so the density survives with no script and can be shared. It changes nothing
-	 * about which entries are listed, so it must not look like it selects anything — and the
-	 * reader's page and collection are kept, because density does not move anybody.
-	 */
-	$density_switch = array();
-	foreach ( axismundi_act_feed_densities() as $key => $label ) {
-		$is_current    = (string) $key === $density;
-		$density_href  = remove_query_arg( 'density' );
-		$density_href  = 'card' === (string) $key ? $density_href : add_query_arg( 'density', (string) $key, $density_href );
-		$density_switch[] = '<a class="axismundi-activity-feed__density' . ( $is_current ? ' is-current' : '' ) . '"'
-			. ' href="' . esc_url( $density_href ) . '"' . ( $is_current ? ' aria-current="true"' : '' ) . '>'
-			. esc_html( (string) $label ) . '</a>';
-	}
-	$density_nav = '<div class="axismundi-activity-feed__densities" role="group" aria-label="'
-		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">' . implode( '', $density_switch ) . '</div>';
 
 	return '<section class="axismundi-activity-feed is-density-' . esc_attr( $density ) . '"'
 		. ' data-density="' . esc_attr( $density ) . '" data-wp-interactive="axismundi/actor-feed" '
@@ -915,7 +919,6 @@ function axismundi_act_render_actor_activity_feed() : string {
 		. ' aria-labelledby="axismundi-activity-feed-heading">'
 		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html( (string) $current['heading'] ) . '</h2>'
 		. $surface_nav
-		. $density_nav
 		. $body
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.
 }
@@ -1103,6 +1106,7 @@ function axismundi_act_register_actor_feed_route() : void {
 				'surface'   => array( 'required' => false, 'type' => 'string', 'default' => 'activity' ),
 				'filter'    => array( 'required' => false, 'type' => 'string', 'default' => '' ),
 				'after'     => array( 'required' => false, 'type' => 'string', 'default' => '' ),
+				'density'   => array( 'required' => false, 'type' => 'string', 'default' => 'card' ),
 				'per_page'  => array( 'required' => false, 'type' => 'integer', 'default' => 20, 'minimum' => 1, 'maximum' => 50 ),
 			),
 		)
@@ -1123,7 +1127,11 @@ function axismundi_act_rest_actor_feed( WP_REST_Request $request ) {
 	$filter   = (string) $request['filter'];
 	$filter   = isset( $current['filters'][ $filter ] ) ? $filter : (string) $current['default_filter'];
 
-	$page = axismundi_act_actor_feed_display_page( $current['page'], $actor, (int) $request['per_page'], (string) $request['after'], $filter );
+	// The continuation has to repeat the card the first page drew, so the density travels with the
+	// request. Reading it off the server would find whatever the last visitor asked for.
+	$density  = 'compact' === (string) $request['density'] ? 'compact' : 'card';
+	$mode     = (string) ( $current['mode'] ?? 'infinite' );
+	$page = axismundi_act_actor_feed_display_page( $current['page'], $actor, (int) $request['per_page'], (string) $request['after'], $filter, false, false, $mode, $density );
 	$response = new WP_REST_Response(
 		array(
 			'html'        => implode( '', $page['cards'] ),
@@ -1161,6 +1169,7 @@ function axismundi_act_register_actor_activity_feed_block() : void {
 	 */
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-filters' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-pagination' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/feed-density-switch' );
 }
 add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
 
@@ -1183,8 +1192,8 @@ add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
  * @param Axismundi_Actor $actor Actor whose profile is being read.
  * @return string Serialized inner blocks of the feed item template, or '' when there is none.
  */
-function axismundi_act_actor_feed_template_source( Axismundi_Actor $actor ) : string {
-	return axismundi_act_extract_feed_item_template( axismundi_act_actor_feed_template_blocks( $actor ) );
+function axismundi_act_actor_feed_template_source( Axismundi_Actor $actor, string $density = 'card' ) : string {
+	return axismundi_act_extract_feed_item_template( axismundi_act_actor_feed_template_blocks( $actor ), $density );
 }
 
 /**
@@ -1256,6 +1265,7 @@ function axismundi_act_feed_slots_from_blocks( array $blocks ) : array {
 	}
 	$known = array(
 		'axismundi/feed-filters'       => 'filters',
+		'axismundi/feed-density-switch' => 'density',
 		'axismundi/feed-item-template' => 'list',
 		'axismundi/feed-pagination'    => 'pagination',
 	);
@@ -1301,12 +1311,39 @@ function axismundi_act_find_feed_loop_block( array $blocks ) : ?array {
  * @param array<int,array<string,mixed>> $blocks Parsed blocks.
  * @return string
  */
-function axismundi_act_extract_feed_item_template( array $blocks ) : string {
+function axismundi_act_extract_feed_item_template( array $blocks, string $density = 'card' ) : string {
+	$found = axismundi_act_find_feed_item_template( $blocks, $density );
+	/*
+	 * A saved template that names only one card is a template written before there were two, so it
+	 * answers for both densities rather than leaving compact with nothing to render. The bundled
+	 * template seeds both, so this is the upgrade path and not the normal case.
+	 */
+	return '' !== $found || 'card' === $density ? $found : axismundi_act_find_feed_item_template( $blocks, 'card' );
+}
+
+/**
+ * The saved card for one density, or '' when the template does not carry that one.
+ *
+ * Density is an attribute on the item template rather than a second block type, because both are
+ * the same thing — the card this feed repeats — differing only in how much of an entry an author
+ * chose to draw. `card` is the value a template with no attribute means, so the two spellings
+ * cannot disagree.
+ *
+ * @param array<int,array<string,mixed>> $blocks  Parsed blocks.
+ * @param string                         $density Density being rendered.
+ * @return string
+ */
+function axismundi_act_find_feed_item_template( array $blocks, string $density ) : string {
 	foreach ( $blocks as $block ) {
 		if ( 'axismundi/feed-item-template' === ( $block['blockName'] ?? '' ) ) {
-			return serialize_blocks( (array) ( $block['innerBlocks'] ?? array() ) );
+			$saved = (string) ( $block['attrs']['density'] ?? 'card' );
+			$saved = 'compact' === $saved ? 'compact' : 'card';
+			if ( $saved === $density ) {
+				return serialize_blocks( (array) ( $block['innerBlocks'] ?? array() ) );
+			}
+			continue;
 		}
-		$found = axismundi_act_extract_feed_item_template( (array) ( $block['innerBlocks'] ?? array() ) );
+		$found = axismundi_act_find_feed_item_template( (array) ( $block['innerBlocks'] ?? array() ), $density );
 		if ( '' !== $found ) {
 			return $found;
 		}

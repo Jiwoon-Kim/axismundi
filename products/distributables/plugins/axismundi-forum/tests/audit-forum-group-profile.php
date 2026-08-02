@@ -263,8 +263,18 @@ try {
 	ax_gp_assert(
 		$ax_gp_results,
 		'density is a presentation, so it changes how entries are drawn and not which ones',
-		substr_count( $ax_gp_card_html, 'axismundi-object-card__header' ) === substr_count( $ax_gp_compact_html, 'axismundi-object-card__header' )
-			&& 0 < substr_count( $ax_gp_compact_html, 'axismundi-object-card__header' )
+		/*
+		 * Counted by feed rows, not by any part of a card.
+		 *
+		 * The two densities are separate saved compositions now, so they deliberately contain
+		 * different blocks — an earlier form of this counted card headers and broke the moment
+		 * compact stopped having one, which was the feature working rather than a regression. The
+		 * row is the entry; what is inside it is the thing density is allowed to change.
+		 */
+		substr_count( $ax_gp_card_html, '<li class="axismundi-activity-feed__item' ) === substr_count( $ax_gp_compact_html, '<li class="axismundi-activity-feed__item' )
+			&& 0 < substr_count( $ax_gp_compact_html, '<li class="axismundi-activity-feed__item' )
+			// And they really are different compositions, or this would be asserting nothing.
+			&& $ax_gp_card_html !== $ax_gp_compact_html
 	);
 	ax_gp_assert(
 		$ax_gp_results,

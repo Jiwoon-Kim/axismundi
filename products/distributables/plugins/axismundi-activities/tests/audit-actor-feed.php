@@ -663,6 +663,54 @@ try {
 		 * arrangement means, and routing it through the filesystem would answer a different one
 		 * — as well as being unmeasurable within an opcache revalidation window.
 		 */
+		/*
+		 * Two saved cards, one per density, picked by the same resolver on both sides.
+		 *
+		 * This is what makes compact a composition rather than a stylesheet: how much of an entry
+		 * appears is decided by blocks an author edits, not by hiding things that were rendered
+		 * anyway. The resolver is the only place that chooses, so the first page and every page
+		 * fetched after "Load more" cannot end up drawing different cards.
+		 *
+		 * A template carrying only one card still answers for both — that is the upgrade path for
+		 * anything saved before there were two, and it is why the bundled template seeds both
+		 * rather than leaving the second to be discovered missing.
+		 */
+		$ax_feed_pair = static function ( string $inner ) : array {
+			$blocks = parse_blocks( '<!-- wp:axismundi/actor-feed-loop -->' . $inner . '<!-- /wp:axismundi/actor-feed-loop -->' );
+			return array(
+				'card'    => axismundi_act_extract_feed_item_template( $blocks, 'card' ),
+				'compact' => axismundi_act_extract_feed_item_template( $blocks, 'compact' ),
+			);
+		};
+		$ax_feed_both = $ax_feed_pair(
+			'<!-- wp:axismundi/feed-item-template {"density":"card"} --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template -->'
+			. '<!-- wp:axismundi/feed-item-template {"density":"compact"} --><!-- wp:axismundi/object-title /--><!-- /wp:axismundi/feed-item-template -->'
+		);
+		$ax_feed_single = $ax_feed_pair( '<!-- wp:axismundi/feed-item-template --><!-- wp:axismundi/object-card-body /--><!-- /wp:axismundi/feed-item-template -->' );
+		ax_feed_assert(
+			$ax_feed_results,
+			'each density resolves to its own saved card, so compact is a composition rather than a stylesheet',
+			false !== strpos( $ax_feed_both['card'], 'object-card-body' )
+				&& false !== strpos( $ax_feed_both['compact'], 'object-title' )
+				&& $ax_feed_both['card'] !== $ax_feed_both['compact']
+				&& '' !== $ax_feed_both['compact']
+		);
+		ax_feed_assert(
+			$ax_feed_results,
+			'a template saved before there were two cards answers for both densities instead of leaving one blank',
+			'' !== $ax_feed_single['card'] && $ax_feed_single['compact'] === $ax_feed_single['card']
+		);
+		$ax_feed_live_actor = $actor instanceof Axismundi_Actor ? $actor : null;
+		ax_feed_assert(
+			$ax_feed_results,
+			'the bundled profile seeds both cards, so neither density falls back to one it did not choose',
+			$ax_feed_live_actor instanceof Axismundi_Actor
+				&& '' !== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'card' )
+				&& '' !== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'compact' )
+				&& axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'card' )
+					!== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'compact' )
+		);
+
 		$ax_feed_arrangement = static function ( string $inner ) : array {
 			return axismundi_act_feed_slots_from_blocks(
 				parse_blocks( '<!-- wp:group --><div class="wp-block-group"><!-- wp:axismundi/actor-feed-loop -->' . $inner . '<!-- /wp:axismundi/actor-feed-loop --></div><!-- /wp:group -->' )

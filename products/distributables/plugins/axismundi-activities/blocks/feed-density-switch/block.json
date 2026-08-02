@@ -1,15 +1,12 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "axismundi/feed-item-template",
+	"name": "axismundi/feed-density-switch",
 	"version": "0.1.0",
-	"title": "Feed Item Template",
+	"title": "Feed Density Switch",
 	"category": "theme",
-	"icon": "layout",
-	"description": "The card the feed repeats for every Object it lists. Edited once here; rendered once per Object, including the ones that arrive after Load more.",
-	"attributes": {
-		"density": { "type": "string", "default": "card" }
-	},
+	"icon": "grid-view",
+	"description": "Where the Card/Compact control appears. It changes how the same entries are drawn, never which ones.",
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/actor-feed-loop" ],
 	"supports": {

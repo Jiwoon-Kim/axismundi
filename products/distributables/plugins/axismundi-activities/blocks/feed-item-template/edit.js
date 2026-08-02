@@ -14,6 +14,8 @@
 	var __ = i18n.__;
 	var useInnerBlocksProps = blockEditor.useInnerBlocksProps || blockEditor.__experimentalUseInnerBlocksProps;
 
+	var DENSITY_LABELS = { card: __( 'Card items', 'axismundi-activities' ), compact: __( 'Compact items', 'axismundi-activities' ) };
+
 	var TEMPLATE = [
 		[ 'axismundi/object-status' ],
 		[ 'axismundi/object-card-body' ],
@@ -28,8 +30,14 @@
 	];
 
 	blocks.registerBlockType( 'axismundi/feed-item-template', {
-		edit: function () {
-			var blockProps = blockEditor.useBlockProps( { className: 'axismundi-feed-item-template' } );
+		edit: function ( props ) {
+			var density = ( props.attributes && props.attributes.density ) === 'compact' ? 'compact' : 'card';
+			var blockProps = blockEditor.useBlockProps( {
+				className: 'axismundi-feed-item-template is-density-' + density,
+				// Named in the canvas, because two of these sit in one loop and an author editing
+				// the wrong one would be editing a card no reader on this page is looking at.
+				'aria-label': DENSITY_LABELS[ density ]
+			} );
 			var innerProps = useInnerBlocksProps
 				? useInnerBlocksProps( blockProps, { template: TEMPLATE, templateLock: false } )
 				: null;

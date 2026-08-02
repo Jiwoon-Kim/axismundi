@@ -222,53 +222,66 @@ try {
 	);
 
 	/*
-	 * Density is a presentation, so it must not change what is listed.
+	 * Density, asserted on the profile the reader actually gets.
 	 *
-	 * This is the whole reason it is neither a tab nor a filter, and the only way to hold it is to
-	 * compare what the two views select rather than what they draw. The entries are compared by
-	 * identity and order; the markup is expected to differ, because that is the point.
+	 * The previous form of this called the archive's own tab, pager and switch builders directly.
+	 * Those functions stopped being on the render path the moment a community became a feed
+	 * surface, and the assertions kept passing while the control vanished from every page — a test
+	 * that names a function proves the function, not the feature.
+	 *
+	 * `density`, not `view`: `view` already addresses a profile surface, so `?view=compact` began
+	 * resolving to a surface that does not exist. The old spelling is still read and never emitted.
 	 */
-	$ax_gp_card_entries    = axismundi_forum_visible_topic_entries( $community, 20, 1 );
-	$ax_gp_old_view        = $_GET;
-	$_GET                  = array( 'view' => 'compact' );
-	$ax_gp_compact_view    = axismundi_forum_group_archive_view();
-	$ax_gp_compact_entries = axismundi_forum_visible_topic_entries( $community, 20, 1 );
-	$_GET                  = array( 'view' => 'not-a-view' );
-	$ax_gp_unknown_view    = axismundi_forum_group_archive_view();
-	$_GET                  = $ax_gp_old_view;
-	ax_gp_assert(
-		$ax_gp_results,
-		'card and compact list the same entries in the same order, because density is not a selection',
-		'compact' === $ax_gp_compact_view
-			&& 'card' === $ax_gp_unknown_view
-			&& array() !== $ax_gp_card_entries
-			&& array_map( static fn( array $e ) : int => (int) $e['id'], $ax_gp_card_entries )
-				=== array_map( static fn( array $e ) : int => (int) $e['id'], $ax_gp_compact_entries )
-	);
 	/*
-	 * Every link the archive builds has to carry the reader's density, or the first tab or page
-	 * click silently returns them to cards. The default is carried by omission, so a card address
-	 * stays the short one and there is exactly one address per state rather than two.
+	 * One entry per page, so there is a pager to inspect at all. This fixture holds three Topics
+	 * and the default page size is twenty — at which the numbered links never render and the
+	 * clause asserting they carry the density would pass by finding nothing to disagree with.
 	 */
-	$ax_gp_tab_links   = axismundi_forum_render_archive_tabs( 'posts', 'compact' );
-	$ax_gp_page_links  = axismundi_forum_render_archive_pagination( 2, 5, 'comments', 'compact' );
-	$ax_gp_switch      = axismundi_forum_render_archive_view_switch( 'compact', 'comments', 3 );
-	$ax_gp_card_tabs   = axismundi_forum_render_archive_tabs( 'posts', 'card' );
+	$ax_gp_one_per_page = static fn() : int => 1;
+	$ax_gp_density = static function ( array $args ) use ( $group, $ax_gp_one_per_page ) : string {
+		$restore = $_GET;
+		$_GET    = $args;
+		add_filter( 'axismundi_act_actor_feed_per_page', $ax_gp_one_per_page, 99 );
+		$html = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
+		remove_filter( 'axismundi_act_actor_feed_per_page', $ax_gp_one_per_page, 99 );
+		$_GET = $restore;
+		return $html;
+	};
+	$ax_gp_card_html    = $ax_gp_density( array() );
+	$ax_gp_compact_html = $ax_gp_density( array( 'density' => 'compact' ) );
+	$ax_gp_legacy_html  = $ax_gp_density( array( 'view' => 'compact' ) );
+	$ax_gp_surface_html = $ax_gp_density( array( 'view' => 'community' ) );
 	ax_gp_assert(
 		$ax_gp_results,
-		'tabs and numbered pages both carry the density, and carry the default by leaving it out',
-		2 === preg_match_all( '#view=compact#', $ax_gp_tab_links )
-			&& 2 === preg_match_all( '#view=compact#', $ax_gp_page_links )
-			&& false === strpos( $ax_gp_card_tabs, 'view=' )
+		'the rendered profile carries the reader\'s density, and a surface name is never mistaken for one',
+		1 === preg_match( '#axismundi-activity-feed is-density-card#', $ax_gp_card_html )
+			&& 1 === preg_match( '#axismundi-activity-feed is-density-compact#', $ax_gp_compact_html )
+			// The address a community archive once published still lands on the same density.
+			&& 1 === preg_match( '#axismundi-activity-feed is-density-compact#', $ax_gp_legacy_html )
+			&& 1 === preg_match( '#axismundi-activity-feed is-density-card#', $ax_gp_surface_html )
 	);
 	ax_gp_assert(
 		$ax_gp_results,
-		'the density switch keeps the collection and the page it was pressed on',
-		2 === preg_match_all( '#filter=comments#', $ax_gp_switch )
-			&& 2 === preg_match_all( '#page=3#', $ax_gp_switch )
-			&& 1 === preg_match_all( '#view=compact#', $ax_gp_switch )
-			&& false !== strpos( $ax_gp_switch, 'aria-current="true"' )
+		'density is a presentation, so it changes how entries are drawn and not which ones',
+		substr_count( $ax_gp_card_html, 'axismundi-object-card__header' ) === substr_count( $ax_gp_compact_html, 'axismundi-object-card__header' )
+			&& 0 < substr_count( $ax_gp_compact_html, 'axismundi-object-card__header' )
 	);
+	ax_gp_assert(
+		$ax_gp_results,
+		'every link the feed builds carries the density, and carries the default by leaving it out',
+		// Collection tabs and the numbered pager both, since either would silently return the
+		// reader to cards on the first click and nothing about the page would look wrong after.
+		0 < preg_match_all( '#axismundi-activity-feed__view[^>]*href="[^"]*density=compact#', $ax_gp_compact_html )
+			&& 0 < preg_match_all( '#axismundi-activity-feed__(next|previous)-link" href="[^"]*density=compact#', $ax_gp_compact_html )
+			/*
+			 * Scoped to navigation, because the density switch itself must of course link to the
+			 * other density — including from card view, where it is the only way to reach compact.
+			 * The claim is about links that go somewhere else and carry the reader's density along.
+			 */
+			&& 0 === preg_match_all( '#axismundi-activity-feed__(view|next-link|previous-link)[^>]*href="[^"]*density=#', $ax_gp_card_html )
+			&& false === strpos( $ax_gp_compact_html, 'view=compact' )
+	);
+
 	/*
 	 * Compared after normalising the per-control instance ids.
 	 *

@@ -442,6 +442,49 @@ function axismundi_act_actor_profile_url( array $surfaces, string $surface, stri
 	return $url;
 }
 
+/**
+ * How densely the feed draws each entry.
+ *
+ * A presentation, not a selection: both densities list the same entries in the same order, and
+ * only the amount of each one drawn differs. It belongs to the feed rather than to whichever
+ * product supplied the entries, because it is a property of reading a list — which is also why a
+ * Person timeline can have it without anything new being invented for it.
+ *
+ * @return array<string,string>
+ */
+function axismundi_act_feed_densities() : array {
+	return array(
+		'card'    => __( 'Card', 'axismundi-activities' ),
+		'compact' => __( 'Compact', 'axismundi-activities' ),
+	);
+}
+
+/**
+ * The density the reader asked for.
+ *
+ * `density`, not `view`. `view` is already the address of a profile *surface* — the thing
+ * `?view=community` selects — and a community archive briefly published `?view=compact` for this
+ * instead. Two meanings for one name is not a collision that can be lived with: once a community
+ * became a surface, `?view=compact` started resolving to a surface that does not exist and quietly
+ * fell back to the default.
+ *
+ * The old spelling is still read, and only when it names a density, so `?view=community` is never
+ * mistaken for one. It is never emitted; every link this feed builds carries `density`.
+ *
+ * @return string
+ */
+function axismundi_act_feed_density() : string {
+	$densities = axismundi_act_feed_densities();
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read presentation.
+	$requested = isset( $_GET['density'] ) ? sanitize_key( wp_unslash( $_GET['density'] ) ) : '';
+	if ( ! isset( $densities[ $requested ] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- legacy public read presentation.
+		$legacy    = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
+		$requested = isset( $densities[ $legacy ] ) ? $legacy : '';
+	}
+	return '' !== $requested ? $requested : 'card';
+}
+
 /** One navigation tab. */
 function axismundi_act_actor_profile_tab( string $href, string $label, bool $is_current, string $class ) : string {
 	return '<a class="' . esc_attr( $class ) . ( $is_current ? ' is-current' : '' ) . '" href="' . esc_url( $href ) . '"'
@@ -592,7 +635,8 @@ function axismundi_act_render_actor_activity_feed() : string {
 		$body = (string) call_user_func( $current['render'], $actor, $filter, $per_page );
 		return axismundi_act_render_actor_feed_shell( $actor, $surfaces, $surface, $filter, $current, $body );
 	}
-	$mode = (string) ( $current['mode'] ?? 'infinite' );
+	$mode    = (string) ( $current['mode'] ?? 'infinite' );
+	$density = axismundi_act_feed_density();
 	/*
 	 * A paged surface is addressed by number, so the position it is asked for is a page rather
 	 * than a cursor. `page` is the same name the community archive already published, so links
@@ -625,7 +669,16 @@ function axismundi_act_render_actor_activity_feed() : string {
 	 * position in one ordering, and reusing it in a differently filtered list would land the
 	 * reader somewhere they were never at.
 	 */
-	$base_url = remove_query_arg( array( 'feed_after', 'feed_from', 'feed_pages', 'feed_head', 'view', 'filter' ) );
+	$base_url = remove_query_arg( array( 'feed_after', 'feed_from', 'feed_pages', 'feed_head', 'view', 'filter', 'density' ) );
+	/*
+	 * Density rides along on everything, because it is the reader's, not the list's. A tab or a
+	 * page number that dropped it would return them to cards on the first click — and nothing
+	 * about the page would look wrong afterwards, which is how the previous attempt at this went
+	 * unnoticed. The default is carried by omission so a card address stays the short one.
+	 */
+	if ( 'card' !== $density ) {
+		$base_url = add_query_arg( 'density', $density, $base_url );
+	}
 	$link_url = static function ( string $surface_key, string $filter_key, array $query = array() ) use ( $base_url, $surfaces ) : string {
 		$url = 'activity' === $surface_key ? $base_url : add_query_arg( 'view', $surface_key, $base_url );
 		if ( $filter_key !== (string) $surfaces[ $surface_key ]['default_filter'] ) {
@@ -839,11 +892,30 @@ function axismundi_act_render_actor_activity_feed() : string {
 	foreach ( $slots as $slot ) {
 		$body .= $parts[ $slot ] ?? '';
 	}
-	return '<section class="axismundi-activity-feed" data-wp-interactive="axismundi/actor-feed" '
+	/*
+	 * Plain links, so the density survives with no script and can be shared. It changes nothing
+	 * about which entries are listed, so it must not look like it selects anything — and the
+	 * reader's page and collection are kept, because density does not move anybody.
+	 */
+	$density_switch = array();
+	foreach ( axismundi_act_feed_densities() as $key => $label ) {
+		$is_current    = (string) $key === $density;
+		$density_href  = remove_query_arg( 'density' );
+		$density_href  = 'card' === (string) $key ? $density_href : add_query_arg( 'density', (string) $key, $density_href );
+		$density_switch[] = '<a class="axismundi-activity-feed__density' . ( $is_current ? ' is-current' : '' ) . '"'
+			. ' href="' . esc_url( $density_href ) . '"' . ( $is_current ? ' aria-current="true"' : '' ) . '>'
+			. esc_html( (string) $label ) . '</a>';
+	}
+	$density_nav = '<div class="axismundi-activity-feed__densities" role="group" aria-label="'
+		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">' . implode( '', $density_switch ) . '</div>';
+
+	return '<section class="axismundi-activity-feed is-density-' . esc_attr( $density ) . '"'
+		. ' data-density="' . esc_attr( $density ) . '" data-wp-interactive="axismundi/actor-feed" '
 		. wp_interactivity_data_wp_context( $context )
 		. ' aria-labelledby="axismundi-activity-feed-heading">'
 		. '<h2 id="axismundi-activity-feed-heading" class="axismundi-activity-feed__heading">' . esc_html( (string) $current['heading'] ) . '</h2>'
 		. $surface_nav
+		. $density_nav
 		. $body
 		. '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cards and controls are escaped above.
 }

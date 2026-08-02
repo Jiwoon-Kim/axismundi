@@ -179,3 +179,53 @@
 .axismundi-activity-feed__newer-link:hover {
 	background: color-mix(in srgb, currentColor 10%, transparent);
 }
+
+/*
+ * Entry density.
+ *
+ * Card view adds nothing: it is what the entries already are, so it stays the default and costs no
+ * rules. Only compact has anything to say, and it says it from one class on the feed rather than by
+ * teaching each renderer about density — a local Topic and a cached remote Object are drawn by
+ * different code, and giving both a notion of it would be two answers to one question.
+ */
+.axismundi-activity-feed__densities {
+	display: flex;
+	gap: 0.25rem;
+	justify-content: flex-end;
+}
+
+.axismundi-activity-feed__density {
+	border-radius: 20px;
+	padding: 0.25rem 0.75rem;
+	text-decoration: none;
+}
+
+.axismundi-activity-feed__density.is-current {
+	background-color: var(--md-sys-color-secondary-container, rgba(0, 0, 0, 0.08));
+	color: var(--md-sys-color-on-secondary-container, inherit);
+}
+
+/* Two classes, because the theme's global styles emit at `:root :where(...)` and one would lose. */
+.axismundi-activity-feed.is-density-compact .axismundi-activity-feed__item {
+	padding-block: 0.25rem;
+}
+
+.axismundi-activity-feed.is-density-compact .axismundi-object-card__header {
+	--md-icon-size: 1rem;
+	gap: 0.5rem;
+}
+
+/*
+ * The avatar is the largest thing in a row that is otherwise one line of text, so it is what makes
+ * a list feel like cards. Sized rather than hidden: it still answers who posted, which a dense list
+ * still has to answer.
+ */
+.axismundi-activity-feed.is-density-compact .axismundi-object-card__header img {
+	block-size: 24px;
+	border-radius: 50%;
+	inline-size: 24px;
+}
+
+.axismundi-activity-feed.is-density-compact .axismundi-object__read-more {
+	display: none;
+}

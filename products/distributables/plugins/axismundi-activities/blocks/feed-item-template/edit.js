@@ -37,10 +37,14 @@
 				? el( 'div', innerProps )
 				: el( 'div', blockProps, el( blockEditor.InnerBlocks, { template: TEMPLATE, templateLock: false } ) );
 		},
-		// Dynamic, like Core's Post Template: the children stay in the saved markup so the loop
-		// can read them, but nothing renders them here — the loop renders one copy per Object.
+		/*
+		 * Dynamic, like Core's Post Template: nothing renders the children here, because the loop
+		 * renders one copy of them per Object. They must still be written out, though — the
+		 * serializer emits only what `save` returns, and returning nothing serializes the block
+		 * self-closing, taking the whole card definition with it on the first editor save.
+		 */
 		save: function () {
-			return null;
+			return element.createElement( blockEditor.InnerBlocks.Content );
 		}
 	} );
 }( window.wp.blocks, window.wp.blockEditor, window.wp.element, window.wp.i18n ) );

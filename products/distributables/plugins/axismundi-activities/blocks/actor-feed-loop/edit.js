@@ -1,50 +1,45 @@
 /**
  * axismundi/actor-feed-loop editor registration (no build step).
  *
- * The preview drew the chrome and stopped, so the block that actually renders the profile's cards
- * showed none of them — while a neighbouring block that renders nothing showed four. An author
- * comparing the two would pick the wrong one, and did.
+ * The preview used to draw a whole feed — filter control, two skeleton cards, a Load more link —
+ * because at the time none of those were blocks and a preview that drew nothing looked broken.
+ * They are blocks now, and each one draws itself, so the skeleton had become a picture of the feed
+ * sitting on top of the feed: the children were in the saved markup but had nowhere to appear, and
+ * an author could neither see nor edit them.
  *
- * So the rows are here, as a skeleton rather than as content. They name the parts a card is made
- * of and nothing else: a real Object's title, body and counts are not known while a template is
- * being edited, and drawing plausible ones invites exactly the confusion this is fixing.
+ * What is left here is what the loop still owns and no child block represents — the heading and the
+ * surface tabs, both decided by the Actor being rendered rather than by anything an author arranges.
+ * Everything between them is the children, in the order the author put them.
  */
 ( function ( blocks, blockEditor, element, i18n ) {
 	'use strict';
 	var el = element.createElement;
 	var __ = i18n.__;
+	var useInnerBlocksProps = blockEditor.useInnerBlocksProps || blockEditor.__experimentalUseInnerBlocksProps;
 
-	/** One skeleton row, showing the parts a card is assembled from. */
-	function card( key, boosted ) {
-		var parts = [];
-		if ( boosted ) {
-			parts.push(
-				el(
-					'p',
-					{ className: 'axismundi-activity-feed__boost', key: 'boost' },
-					el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, 'sync' ),
-					' ',
-					__( 'Boosted', 'axismundi-activities' )
-				)
-			);
-		}
-		parts.push(
-			el(
-				'article',
-				{ className: 'axismundi-object-card', key: 'card' },
-				el( 'p', { className: 'axismundi-object-card__header' }, __( 'Actor · handle · time', 'axismundi-activities' ) ),
-				el( 'p', {}, __( 'Object body — a Note’s text, or an Article’s image, title and summary.', 'axismundi-activities' ) ),
-				el( 'p', {}, __( 'Hashtags · reactions · reply, like, repost, react', 'axismundi-activities' ) )
-			)
-		);
-		return el( 'li', { className: 'axismundi-activity-feed__item', key: key }, parts );
-	}
+	// The arrangement the bundled profile template ships with. Not locked: moving these, or
+	// dropping one, is the reason they are blocks.
+	var TEMPLATE = [
+		[ 'axismundi/feed-filters' ],
+		[ 'axismundi/feed-item-template' ],
+		[ 'axismundi/feed-pagination' ]
+	];
 
 	blocks.registerBlockType( 'axismundi/actor-feed-loop', {
 		edit: function () {
+			var blockProps = blockEditor.useBlockProps( { className: 'axismundi-activity-feed' } );
+			var inner = useInnerBlocksProps
+				? useInnerBlocksProps( {}, { template: TEMPLATE, templateLock: false } )
+				: null;
 			return el(
 				'section',
-				blockEditor.useBlockProps( { className: 'axismundi-activity-feed' } ),
+				blockProps,
+				/*
+				 * Not editable, and not children. The heading names the surface being read and the
+				 * tabs exist only when a product has contributed a second surface — both are
+				 * answers to a query, so an author moving them would be moving something the
+				 * server puts back.
+				 */
 				el( 'h2', { className: 'axismundi-activity-feed__heading' }, __( 'Timeline', 'axismundi-activities' ) ),
 				el(
 					'nav',
@@ -52,29 +47,19 @@
 					el( 'span', { className: 'axismundi-activity-feed__surface is-current', 'aria-current': 'page' }, __( 'Activity', 'axismundi-activities' ) ),
 					el( 'span', { className: 'axismundi-activity-feed__surface' }, __( 'Community', 'axismundi-activities' ) )
 				),
-				el(
-					'div',
-					{ className: 'axismundi-activity-feed__filters' },
-					el(
-						'button',
-						{ type: 'button', className: 'axismundi-activity-feed__filters-trigger', disabled: true, 'aria-haspopup': 'dialog', 'aria-expanded': 'false' },
-						el( 'span', {}, __( 'Posts and boosts', 'axismundi-activities' ) ),
-						el( 'span', { className: 'material-symbols-outlined', 'aria-hidden': 'true' }, 'unfold_more' )
-					)
-				),
-				el(
-					'ul',
-					{ className: 'axismundi-activity-feed__list' },
-					card( 'a', false ),
-					card( 'b', true )
-				),
-				el(
-					'p',
-					{ className: 'axismundi-activity-feed__pagination' },
-					el( 'span', { className: 'axismundi-activity-feed__more-link' }, __( 'Load more', 'axismundi-activities' ) )
-				)
+				inner
+					? el( 'div', inner )
+					: el( 'div', {}, el( blockEditor.InnerBlocks, { template: TEMPLATE, templateLock: false } ) )
 			);
 		},
-		save: function () { return null; },
+		/*
+		 * Dynamic on the front end, but the children still have to reach the saved markup: the
+		 * serializer renders only what `save` returns, and a block that saves nothing is written
+		 * out self-closing — which would discard the card template and the two placements on the
+		 * first save from the Site Editor.
+		 */
+		save: function () {
+			return el( blockEditor.InnerBlocks.Content );
+		}
 	} );
-} )( window.wp.blocks, window.wp.blockEditor, window.wp.element, window.wp.i18n );
+}( window.wp.blocks, window.wp.blockEditor, window.wp.element, window.wp.i18n ) );

@@ -244,6 +244,7 @@ $ax_rnd_editor_js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/ob
 // "your site doesn't include support for this block".
 $ax_rnd_owned = array(
 	'axismundi/object-status',
+	'axismundi/object-tombstone',
 	'axismundi/object-meta',
 	'axismundi/object-date',
 	'axismundi/object-type',
@@ -278,6 +279,29 @@ ax_rnd_assert(
 		&& array() !== $ax_rnd_expected
 		&& $ax_rnd_expected === $ax_rnd_actual
 		&& false !== strpos( $ax_rnd_editor_js, 'axismundiOpObjectBlocks' )
+);
+
+/*
+ * Which of the two blocks answers for a deleted Object.
+ *
+ * The notice used to be `object-status`, whose name says why an entry is in a list and whose
+ * placement — first block of every card template — is where a "boosted" or "replied" line goes.
+ * Nothing asserted the rendered notice, only that the 410 template named a block, so the two
+ * could have swapped and both templates would still have looked right.
+ */
+$ax_rnd_tomb_previous                       = $GLOBALS['axismundi_op_current_view_model'] ?? null;
+$GLOBALS['axismundi_op_current_view_model'] = array( 'status' => 'tombstone' );
+$ax_rnd_tomb_notice                         = axismundi_op_render_object_tombstone_block();
+$ax_rnd_tomb_status                         = axismundi_op_render_object_status_block();
+$GLOBALS['axismundi_op_current_view_model'] = array( 'status' => 'active' );
+$ax_rnd_active_notice                       = axismundi_op_render_object_tombstone_block();
+$GLOBALS['axismundi_op_current_view_model'] = $ax_rnd_tomb_previous;
+ax_rnd_assert(
+	$ax_rnd_results,
+	'the deleted-object notice is rendered by object-tombstone, stays silent for an active Object, and is no longer what object-status answers',
+	false !== strpos( $ax_rnd_tomb_notice, 'axismundi-object__deleted' )
+		&& '' === $ax_rnd_active_notice
+		&& '' === $ax_rnd_tomb_status
 );
 
 /*

@@ -187,13 +187,32 @@ function axismundi_op_active_object_view_model() : ?array {
 }
 
 /** Render a deleted-object notice; active objects leave this slot empty. */
-function axismundi_op_render_object_status_block() : string {
+function axismundi_op_render_object_tombstone_block() : string {
 	$model = axismundi_op_current_object_view_model();
 	if ( ! is_array( $model ) || 'tombstone' !== (string) ( $model['status'] ?? '' ) ) {
 		return '';
 	}
 	return '<p ' . get_block_wrapper_attributes( array( 'class' => 'axismundi-object__deleted' ) ) . '>'
 		. esc_html__( 'This object has been deleted.', 'axismundi-object-projections' ) . '</p>';
+}
+
+/**
+ * The row a feed entry opens with to say why it is there — reserved, and empty until it is built.
+ *
+ * `object-status` has until now rendered the deleted-object notice, which is not what its name
+ * says and not what the templates place it for: every card template opens with it, above the
+ * identity row, which is where a "boosted", "replied", or "mentioned you" line belongs. A
+ * tombstone is a property of the Object, not of why this entry appears in this list, and the two
+ * only looked alike because a hidden slot and an empty notice render the same nothing.
+ *
+ * The notice moved to `object-tombstone`, which the 410 route now places directly. This name is
+ * kept registered rather than removed because every saved card template already contains it: a
+ * block that stops existing turns those into editor errors, while one that renders nothing looks
+ * exactly like what it rendered on a feed card yesterday. A tombstoned Object is never selected
+ * into a feed in the first place, so nothing that used to be visible here has been lost.
+ */
+function axismundi_op_render_object_status_block() : string {
+	return '';
 }
 
 /**
@@ -1574,6 +1593,7 @@ add_action( 'init', 'axismundi_op_register_object_block_assets', 5 );
 function axismundi_op_register_object_blocks() : void {
 	$blocks = array(
 		'object-status'       => array( 'Object Status', 'axismundi_op_render_object_status_block' ),
+		'object-tombstone'    => array( 'Object Tombstone', 'axismundi_op_render_object_tombstone_block' ),
 		'object-avatar'       => array( 'Legacy Object Actor Avatar', 'axismundi_op_render_object_avatar_block' ),
 		'object-identity'     => array( 'Legacy Object Actor Identity', 'axismundi_op_render_object_identity_block' ),
 		'object-meta'         => array( 'Object Metadata', 'axismundi_op_render_object_meta_block' ),

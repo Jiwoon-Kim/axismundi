@@ -7,7 +7,7 @@ defined( 'ABSPATH' ) || exit;
 <main class="wp-block-group alignfull">
 	<!-- wp:group {"align":"wide","style":{"spacing":{"padding":{"top":"var:preset|spacing|500","bottom":"var:preset|spacing|500"}}},"layout":{"type":"constrained"}} -->
 	<div class="wp-block-group alignwide" style="padding-top:var(--wp--preset--spacing--500);padding-bottom:var(--wp--preset--spacing--500)">
-		<!-- wp:axismundi/object-status /-->
+		<!-- wp:axismundi/object-tombstone /-->
 	</div>
 	<!-- /wp:group -->
 </main>

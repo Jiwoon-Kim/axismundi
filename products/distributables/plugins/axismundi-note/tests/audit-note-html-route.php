@@ -104,7 +104,7 @@ try {
 	$content  = function_exists( 'axismundi_op_single_object_template_content' ) ? axismundi_op_single_object_template_content() : '';
 	ax_nh_assert( $ax_nh_results, 'Object Projections registers the editable single-Object template that the Note route reuses', $template instanceof WP_Block_Template && 'plugin' === $template->source && false !== strpos( $content, 'wp:axismundi/object-card-body' ) && false !== strpos( $content, 'wp:axismundi/replies' ) && false === strpos( $content, 'wp:query' ) && false === strpos( $content, 'wp:post-content' ) );
 	$tombstone_content = function_exists( 'axismundi_op_tombstone_template_content' ) ? axismundi_op_tombstone_template_content() : '';
-	ax_nh_assert( $ax_nh_results, 'Object Projections owns a separate privacy-minimal Tombstone template for local and cached remote 410 routes', false !== strpos( $tombstone_content, 'wp:axismundi/object-status' ) && false === strpos( $tombstone_content, 'wp:axismundi/object-content' ) && false === strpos( $tombstone_content, 'wp:axismundi/replies' ) );
+	ax_nh_assert( $ax_nh_results, 'Object Projections owns a separate privacy-minimal Tombstone template for local and cached remote 410 routes', false !== strpos( $tombstone_content, 'wp:axismundi/object-tombstone' ) && false === strpos( $tombstone_content, 'wp:axismundi/object-content' ) && false === strpos( $tombstone_content, 'wp:axismundi/replies' ) );
 
 	$public_route = ax_nh_route( $public_id, array( 'ax_note' => (string) $public['local_uuid'] ) );
 	$public_query = $public_route['query'];

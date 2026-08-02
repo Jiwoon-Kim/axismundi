@@ -1144,6 +1144,67 @@ ax_feed_assert(
 
 
 
+/*
+ * The density switch draws its own control, and both segments address the same feed.
+ *
+ * The default density is addressed by leaving the argument out, so the two links are not
+ * symmetrical: one adds `density`, the other has to remove what the reader's current address is
+ * carrying. Asserted from both sides, because a switch that only worked from the default would
+ * look correct on every first visit.
+ */
+$ax_feed_density_context = static function ( array $context ) : WP_Block {
+	return new WP_Block(
+		array( 'blockName' => 'axismundi/feed-density-switch', 'attrs' => array(), 'innerBlocks' => array(), 'innerHTML' => '', 'innerContent' => array() ),
+		array( 'axismundi/feed' => $context )
+	);
+};
+$ax_feed_density_markup = static function ( string $current ) use ( $ax_feed_density_context ) : string {
+	return axismundi_act_render_feed_density_switch_block(
+		array(),
+		'',
+		$ax_feed_density_context(
+			array(
+				'baseUrl'   => 'compact' === $current ? 'https://example.test/@ax?density=compact' : 'https://example.test/@ax',
+				'surface'   => 'activity',
+				'densities' => array( 'card', 'compact' ),
+				'density'   => $current,
+			)
+		)
+	);
+};
+$ax_feed_density_from_card    = $ax_feed_density_markup( 'card' );
+$ax_feed_density_from_compact = $ax_feed_density_markup( 'compact' );
+ax_feed_assert(
+	$ax_feed_results,
+	'the density switch is one connected control whose current segment is stated rather than only coloured',
+	false !== strpos( $ax_feed_density_from_card, 'wp-block-buttons is-style-connected' )
+		&& 2 === substr_count( $ax_feed_density_from_card, 'wp-block-button__link' )
+		&& 1 === substr_count( $ax_feed_density_from_card, 'aria-current="page"' )
+		// A link, so never `aria-pressed`: following one goes somewhere rather than toggling here.
+		&& false === strpos( $ax_feed_density_from_card, 'aria-pressed' )
+		&& 1 === substr_count( $ax_feed_density_from_card, 'is-style-tonal' )
+		&& 1 === substr_count( $ax_feed_density_from_card, 'is-style-quiet' )
+		// Not outline: that is a call to action, and the density not in use is not one.
+		&& false === strpos( $ax_feed_density_from_card, 'is-style-outline' )
+);
+ax_feed_assert(
+	$ax_feed_results,
+	'each segment addresses its own density, and the default one addresses it by leaving it out',
+	false !== strpos( $ax_feed_density_from_card, 'density=compact' )
+		&& false !== strpos( $ax_feed_density_from_compact, 'density=compact' )
+		// From compact, the card segment has to drop the argument the current address carries.
+		&& 1 === preg_match( '#href="https://example\.test/@ax"#', $ax_feed_density_from_compact )
+);
+ax_feed_assert(
+	$ax_feed_results,
+	'one saved card is a decision rather than a question, so no switch is offered for it',
+	'' === axismundi_act_render_feed_density_switch_block(
+		array(),
+		'',
+		$ax_feed_density_context( array( 'baseUrl' => 'https://example.test/@ax', 'densities' => array( 'card' ), 'density' => 'card' ) )
+	)
+);
+
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_feed_results ), $ax_feed_failures );

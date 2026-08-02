@@ -988,45 +988,6 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		'error'         => '',
 		'errorFallback' => __( 'More activity could not be loaded.', 'axismundi-activities' ),
 	);
-	/*
-	 * Plain links, so the density survives with no script and can be shared. It changes nothing
-	 * about which entries are listed, so it must not look like it selects anything — and the
-	 * reader's page and collection are kept, because density does not move anybody.
-	 */
-	$density_switch = array();
-	$density_labels = axismundi_act_feed_densities();
-	foreach ( $densities_available as $index => $key ) {
-		$is_current   = (string) $key === $density;
-		/*
-		 * The default is addressed by leaving `density` out, and the default is whichever card was
-		 * saved first. So re-ordering the templates moves the plain address onto the new default
-		 * while an old `?density=card` link keeps opening card explicitly, which is what it said.
-		 */
-		$density_href = 0 === (int) $index
-			? remove_query_arg( 'density' )
-			: add_query_arg( 'density', (string) $key, remove_query_arg( 'density' ) );
-		$label = (string) ( $density_labels[ $key ]['label'] ?? $key );
-		/*
-		 * An icon with the name behind it, not an icon instead of one. The glyph is what makes two
-		 * choices readable at a glance; the name is what the control actually says, so it stays
-		 * available to a screen reader and to a hover.
-		 *
-		 * `aria-current="page"` and not `aria-pressed`: these are links, and following one is a
-		 * navigation to a different address rather than the toggling of a state on this one.
-		 */
-		$density_switch[] = '<a class="axismundi-activity-feed__density' . ( $is_current ? ' is-current' : '' ) . '"'
-			. ' href="' . esc_url( $density_href ) . '"' . ( $is_current ? ' aria-current="page"' : '' )
-			. ' title="' . esc_attr( $label ) . '">'
-			. '<span class="material-symbols-outlined" aria-hidden="true">' . esc_html( (string) ( $density_labels[ $key ]['icon'] ?? 'view_stream' ) ) . '</span>'
-			. '<span class="screen-reader-text">' . esc_html( $label ) . '</span></a>';
-	}
-	/*
-	 * No switch when there is nothing to switch between. A template holding one card is a template
-	 * whose author decided how this feed reads, and offering a control with a single option would
-	 * be presenting that decision as a question.
-	 */
-	$density_nav = count( $density_switch ) < 2 ? '' : '<div class="axismundi-activity-feed__densities" role="group" aria-label="'
-		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">' . implode( '', $density_switch ) . '</div>';
 
 	/*
 	 * The saved layout renders itself, in its own order.
@@ -1044,7 +1005,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 			 * that offers the choice. One name for both put a block of markup into a URL.
 			 */
 			'filtersHtml'    => $filter_nav,
-			'densityHtml'    => $density_nav,
+			'densities'      => $densities_available,
 			'baseUrl'        => $base_url,
 			'surface'        => $surface,
 			'filter'         => $filter,
@@ -1084,8 +1045,18 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
  * @param array<string,string> $query   Extra arguments, such as a page or a cursor.
  * @return string
  */
-function axismundi_act_feed_url( array $context, array $query = array() ) : string {
+function axismundi_act_feed_url( array $context, array $query = array(), array $drop = array() ) : string {
 	$url     = (string) ( $context['baseUrl'] ?? '' );
+	/*
+	 * A caller may drop an argument the base address carries.
+	 *
+	 * Only the density switch needs this, and only for its first segment: the default density is
+	 * addressed by leaving the argument out entirely, so a link to it has to be able to remove
+	 * what the reader's current address is carrying.
+	 */
+	if ( array() !== $drop ) {
+		$url = remove_query_arg( $drop, $url );
+	}
 	$surface = (string) ( $context['surface'] ?? 'activity' );
 	if ( 'activity' !== $surface ) {
 		$url = add_query_arg( 'view', $surface, $url );
@@ -1097,6 +1068,65 @@ function axismundi_act_feed_url( array $context, array $query = array() ) : stri
 		$url = add_query_arg( $key, rawurlencode( (string) $value ), $url );
 	}
 	return $url;
+}
+
+/**
+ * The density switch: two links that read as one control.
+ *
+ * A connected pair of buttons, in the classes the theme's button group already uses, because that
+ * is what this is — two segments of one choice rather than two separate calls to action. The
+ * markup follows the core button convention while the block draws it itself: this is a dynamic
+ * block, so no `core/button` is ever parsed on the page and a style that waited for one would
+ * never load.
+ *
+ * `aria-current="page"` and not `aria-pressed`: these are links, and following one navigates to a
+ * different address rather than toggling a state on this one. An icon with the name behind it,
+ * not instead of it — the glyph makes the two choices readable at a glance, and the name stays
+ * available to a screen reader and to a hover.
+ *
+ * @param array<string,mixed> $attributes Block attributes.
+ * @param string              $content    Inner blocks, of which there are none.
+ * @param WP_Block|null       $block      Block instance carrying the feed context.
+ * @return string
+ */
+function axismundi_act_render_feed_density_switch_block( array $attributes = array(), string $content = '', $block = null ) : string {
+	unset( $attributes, $content );
+	$context   = is_object( $block ) && isset( $block->context['axismundi/feed'] ) ? (array) $block->context['axismundi/feed'] : array();
+	$available = array_values( (array) ( $context['densities'] ?? array() ) );
+	/*
+	 * No switch when there is nothing to switch between. A template holding one card is a template
+	 * whose author decided how this feed reads, and offering a control with a single option would
+	 * present that decision as a question.
+	 */
+	if ( count( $available ) < 2 ) {
+		return '';
+	}
+	$current  = (string) ( $context['density'] ?? '' );
+	$labels   = axismundi_act_feed_densities();
+	$segments = array();
+	foreach ( $available as $index => $key ) {
+		$is_current = (string) $key === $current;
+		/*
+		 * The default is addressed by leaving `density` out, and the default is whichever card was
+		 * saved first. So re-ordering the templates moves the plain address onto the new default,
+		 * while an old `?density=card` link keeps opening card explicitly — which is what it said.
+		 */
+		$href  = 0 === (int) $index
+			? axismundi_act_feed_url( $context, array(), array( 'density' ) )
+			: axismundi_act_feed_url( $context, array( 'density' => (string) $key ), array( 'density' ) );
+		$label = (string) ( $labels[ $key ]['label'] ?? $key );
+		$segments[] = '<div class="wp-block-button ' . ( $is_current ? 'is-style-tonal is-current' : 'is-style-quiet' ) . '">'
+			. '<a class="wp-block-button__link wp-element-button axismundi-feed-density-switch__link"'
+			. ' href="' . esc_url( $href ) . '"' . ( $is_current ? ' aria-current="page"' : '' )
+			. ' title="' . esc_attr( $label ) . '">'
+			. '<span class="material-symbols-outlined" aria-hidden="true">' . esc_html( (string) ( $labels[ $key ]['icon'] ?? 'view_stream' ) ) . '</span>'
+			. '<span class="screen-reader-text">' . esc_html( $label ) . '</span>'
+			. '</a></div>';
+	}
+	return '<nav class="axismundi-feed-density-switch axismundi-activity-feed__densities" aria-label="'
+		. esc_attr__( 'Entry density', 'axismundi-activities' ) . '">'
+		. '<div class="wp-block-buttons is-style-connected">' . implode( '', $segments ) . '</div>'
+		. '</nav>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Links and labels are escaped above.
 }
 
 /**
@@ -1240,12 +1270,6 @@ function axismundi_act_feed_chrome_part( string $key, $block ) : string {
 function axismundi_act_render_feed_filters_block( array $attributes = array(), string $content = '', $block = null ) : string {
 	unset( $attributes, $content );
 	return axismundi_act_feed_chrome_part( 'filtersHtml', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
-}
-
-/** The density switch, where the template placed it. */
-function axismundi_act_render_feed_density_switch_block( array $attributes = array(), string $content = '', $block = null ) : string {
-	unset( $attributes, $content );
-	return axismundi_act_feed_chrome_part( 'densityHtml', $block ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built and escaped by the feed.
 }
 
 /**

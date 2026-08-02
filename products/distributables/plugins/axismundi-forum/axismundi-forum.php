@@ -35,7 +35,6 @@ require_once __DIR__ . '/includes/outbound-topics.php';
 require_once __DIR__ . '/includes/distribution.php';
 require_once __DIR__ . '/includes/votes.php';
 require_once __DIR__ . '/includes/vote-block.php';
-require_once __DIR__ . '/includes/profile-surface.php';
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
 }

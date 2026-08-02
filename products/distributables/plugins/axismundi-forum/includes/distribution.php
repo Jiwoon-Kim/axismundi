@@ -562,18 +562,10 @@ function axismundi_forum_is_direct_group_reply_activity( Axismundi_Activity $act
 		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
 }
 
-/**
- * The Group's distribution, not the author's personal timeline, is the public surface of a
- * threaded reply — but the author's community surface is built to show exactly these, so this
- * answers only for `activity`.
+/*
+ * As with a Topic submission, which surface a Group reply belongs on is now read from its
+ * addressing rather than decided here. The outbox filter below is a separate question and stays.
  */
-function axismundi_forum_group_reply_actor_feed_visible( bool $visible, Axismundi_Activity $activity, string $surface = 'activity' ) : bool {
-	if ( 'activity' !== $surface ) {
-		return $visible;
-	}
-	return axismundi_forum_is_direct_group_reply_activity( $activity ) ? false : $visible;
-}
-add_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_group_reply_actor_feed_visible', 30, 3 );
 
 /** Keep public routing for remote Group replies out of the author's public outbox. */
 function axismundi_forum_group_reply_public_outbox_payload( $payload, Axismundi_Activity $activity ) {

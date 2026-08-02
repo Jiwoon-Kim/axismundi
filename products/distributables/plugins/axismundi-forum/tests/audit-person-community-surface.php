@@ -2,10 +2,13 @@
 /**
  * Person profile community-surface regression (dev-only; dist-excluded).
  *
- * Forum hides a Person's Group submissions from their personal timeline. Hiding alone lost the
- * contribution history entirely — there was nowhere on the profile to find what someone had
- * written in a community. This locks the inverse reading: the same two predicates that hide
- * those entries from `activity` are what fills `?view=community`.
+ * The two surfaces of a Person profile are one ledger read from two sides: `activity` takes the
+ * entries with no Group context, `community` takes the ones that have it. Neither is a forum
+ * feature any more — the fixtures here are forum content precisely because the point is that a
+ * Topic and a Group reply still land where they used to after the forum stopped deciding it.
+ *
+ * Kept in the forum suite for its fixtures, which is also what makes it the replacement test: if
+ * this passes with no forum rule left in the selection path, the addressing is carrying it.
  *
  * @package AxismundiForum
  */
@@ -20,7 +23,6 @@ require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/outbound-topics.php';
 require_once __DIR__ . '/../includes/distribution.php';
-require_once __DIR__ . '/../includes/profile-surface.php';
 
 axismundi_forum_install();
 axismundi_forum_register_topic_post_type();
@@ -86,50 +88,69 @@ try {
 	$surfaces = $author instanceof Axismundi_Actor ? axismundi_act_actor_profile_surfaces( $author ) : array();
 	ax_ps_assert(
 		$ax_ps_results,
-		'Forum contributes a community surface to a Person profile without replacing the activity surface',
+		'a Person profile has both sides of its own ledger, and each names the side of Group context it takes',
 		isset( $surfaces['community'], $surfaces['activity'] )
 			&& is_callable( $surfaces['community']['page'] )
-			&& 'overview' === (string) $surfaces['community']['default_filter']
-			&& array( 'overview', 'topics', 'replies' ) === array_keys( (array) $surfaces['community']['filters'] )
+			&& 'in' === (string) $surfaces['community']['group_context']
+			&& 'out' === (string) $surfaces['activity']['group_context']
+			// The same four filters as the timeline, because they are the same ledger.
+			&& array_keys( axismundi_act_actor_feed_filters() ) === array_keys( (array) $surfaces['community']['filters'] )
+			&& 'all' === (string) $surfaces['community']['default_filter']
+	);
+
+	ax_ps_assert(
+		$ax_ps_results,
+		'no forum rule is left in the profile-feed selection path, so the assertions below measure addressing',
+		! has_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_topic_submission_actor_feed_visible' )
+			&& ! has_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_group_reply_actor_feed_visible' )
+			&& ! function_exists( 'axismundi_forum_profile_surface_visible' )
+			&& ! function_exists( 'axismundi_forum_render_profile_surface' )
 	);
 
 	$group_surfaces = $group instanceof Axismundi_Actor ? axismundi_act_actor_profile_surfaces( $group ) : array();
+	/*
+	 * A Group profile already is its community, so it never reads the contributions projection —
+	 * its one surface is the Group's own archive of what it accepted. The key is the same word in
+	 * both places, which is why this asserts on the page function and not on the key: they are
+	 * different collections, and only the callable says which one a reader would get.
+	 */
 	ax_ps_assert(
 		$ax_ps_results,
-		'a Group profile gets no community tab, because a Group profile already is its community',
-		! isset( $group_surfaces['community'] )
+		'a Group profile reads its own archive rather than the Person contributions projection',
+		isset( $group_surfaces['community'] )
+			&& 'axismundi_act_actor_community_surface_page' !== (string) $group_surfaces['community']['page']
+			&& ! isset( $group_surfaces['activity'] )
 	);
 
 	$object_uris = static function ( string $filter ) use ( $author ) : array {
-		return array_column( axismundi_forum_profile_surface_page( $author, 50, '', $filter )['items'], 'object_uri' );
+		return array_column( axismundi_act_actor_community_surface_page( $author, 50, '', $filter )['items'], 'object_uri' );
 	};
-	$overview = $object_uris( 'overview' );
-	$topics   = $object_uris( 'topics' );
-	$replies  = $object_uris( 'replies' );
-	$reply_uri = axismundi_note_object_uri( (string) axismundi_note_get( $reply_post )['local_uuid'] );
+	$all          = $object_uris( 'all' );
+	$no_replies   = $object_uris( 'posts-and-boosts' );
+	$reply_uri    = axismundi_note_object_uri( (string) axismundi_note_get( $reply_post )['local_uuid'] );
 	$personal_uri = axismundi_note_object_uri( (string) axismundi_note_get( $personal_post )['local_uuid'] );
 
 	ax_ps_assert(
 		$ax_ps_results,
 		'the community surface shows the Topic and the community reply that the personal timeline hides',
 		! is_wp_error( $admitted ) && '' !== $topic_uri
-			&& in_array( $topic_uri, $topics, true )
-			&& in_array( $reply_uri, $replies, true )
-			&& in_array( $topic_uri, $overview, true )
-			&& in_array( $reply_uri, $overview, true )
+			&& in_array( $topic_uri, $all, true )
+			&& in_array( $reply_uri, $all, true )
 	);
 
+	// The timeline's own switches still work here, rather than the surface answering `all` to
+	// everything because its selection happens somewhere the filter never reaches.
 	ax_ps_assert(
 		$ax_ps_results,
-		'the community filters separate Topics from replies rather than both showing everything',
-		! in_array( $reply_uri, $topics, true ) && ! in_array( $topic_uri, $replies, true )
+		'turning replies off drops the community reply and keeps the Topic',
+		! in_array( $reply_uri, $no_replies, true ) && in_array( $topic_uri, $no_replies, true )
 	);
 
 	ax_ps_assert(
 		$ax_ps_results,
 		'an ordinary personal Note never leaks onto the community surface',
-		'' !== $personal_uri && ! in_array( $personal_uri, $overview, true )
-			&& ! in_array( $personal_uri, $topics, true ) && ! in_array( $personal_uri, $replies, true )
+		'' !== $personal_uri && ! in_array( $personal_uri, $all, true )
+			&& ! in_array( $personal_uri, $no_replies, true )
 	);
 
 	// The inverse half: what the community surface shows must still be absent from the timeline.
@@ -150,7 +171,7 @@ try {
 		$ax_ps_results,
 		'the community surface reads the same Actor URI and mints no second identity',
 		$author instanceof Axismundi_Actor
-			&& $author->get_uri() === (string) ( axismundi_forum_profile_surface_page( $author, 5, '', 'overview' )['items'][0]['actor_uri'] ?? '' )
+			&& $author->get_uri() === (string) ( axismundi_act_actor_community_surface_page( $author, 5, '', 'all' )['items'][0]['actor_uri'] ?? '' )
 	);
 } finally {
 	wp_set_current_user( 0 );

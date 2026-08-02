@@ -1094,7 +1094,40 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 	 * @param array<string,array<string,mixed>> $surfaces Registered surfaces, keyed by slug.
 	 * @param Axismundi_Actor                   $actor    Actor whose profile is being rendered.
 	 */
-	$surfaces = (array) apply_filters( 'axismundi_act_actor_profile_surfaces', array( 'activity' => $activity ), $actor );
+	$own = array( 'activity' => $activity );
+	/*
+	 * The other side of the same ledger.
+	 *
+	 * A Person's community contributions are not a second collection held somewhere else: they are
+	 * the entries of this same outbox that were addressed to a community, which is why both
+	 * surfaces read the same page function and differ only in which side of `group_context` they
+	 * take. It used to be registered by the forum, and that made "did this person write in a
+	 * community" a question only a forum could answer — untrue the moment a remote Person's Object
+	 * arrives carrying `audience`, which is how Lemmy states the same fact and how any threadiverse
+	 * peer will.
+	 *
+	 * A Group gets none. Its profile already is the community, so a "community contributions" tab
+	 * there would point at itself.
+	 */
+	if ( 'Group' !== $actor->get_type() ) {
+		$own['community'] = array(
+			'label'          => __( 'Community', 'axismundi-activities' ),
+			'heading'        => __( 'Community contributions', 'axismundi-activities' ),
+			'filters'        => $filters,
+			'toggles'        => $activity['toggles'],
+			/*
+			 * Replies included by default, unlike the timeline. A reply reads as a fragment on a
+			 * personal chronology, which is why it is hidden there; in a community it is most of
+			 * what contributing means, and hiding it would leave this surface mostly empty for
+			 * exactly the people who use communities most.
+			 */
+			'default_filter' => 'all',
+			'group_context'  => 'in',
+			'page'           => 'axismundi_act_actor_community_surface_page',
+			'mode'           => 'infinite',
+		);
+	}
+	$surfaces = (array) apply_filters( 'axismundi_act_actor_profile_surfaces', $own, $actor );
 	$surfaces = array_filter( $surfaces, 'is_array' );
 	/*
 	 * A product may remove the Activity surface, but only by leaving another in its place.
@@ -1161,6 +1194,17 @@ function axismundi_act_actor_default_surface( array $surfaces ) : string {
 /** The Activities-owned surface: what this Person published themselves. */
 function axismundi_act_actor_activity_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
 	return axismundi_act_actor_feed_page( $actor, $limit, $cursor, $filter, 'activity', $inclusive, $head_window );
+}
+
+/**
+ * The same ledger, read for what this Person addressed to a community.
+ *
+ * Identical to the timeline apart from the surface key, because the difference between them is a
+ * property of the entries and not of how they are fetched: the surface descriptor names the side
+ * of `group_context` to take, and one selection applies it to both item kinds.
+ */
+function axismundi_act_actor_community_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
+	return axismundi_act_actor_feed_page( $actor, $limit, $cursor, $filter, 'community', $inclusive, $head_window );
 }
 
 /**

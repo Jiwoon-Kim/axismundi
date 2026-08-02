@@ -256,20 +256,16 @@ function axismundi_forum_is_direct_topic_submission_activity( Axismundi_Activity
 		&& (string) ( $object['attributedTo'] ?? '' ) === $activity->get_actor_uri();
 }
 
-/**
- * Hide a Group-directed Topic commit from the author's personal timeline.
+/*
+ * A Topic submission no longer answers to the profile feed at all.
  *
- * Only from the personal timeline. The same submission is the entire point of the community
- * surface, so this refuses to answer for any surface but `activity` — otherwise hiding it here
- * would also hide it from the one place built to show it.
+ * It used to be hidden from `activity` here and admitted to `community` by a second rule, which
+ * made "is this a community contribution" a question only the forum could answer — and answerable
+ * only about a local Topic it had a row for. The same fact is stated by the addressing every such
+ * submission already carries, so the feed reads that instead and this pair of rules is gone. The
+ * outbox filter below stays: what a Person's public outbox advertises is a federation question,
+ * not a question about which tab a reader is on.
  */
-function axismundi_forum_topic_submission_actor_feed_visible( bool $visible, Axismundi_Activity $activity, string $surface = 'activity' ) : bool {
-	if ( 'activity' !== $surface ) {
-		return $visible;
-	}
-	return axismundi_forum_is_direct_topic_submission_activity( $activity ) ? false : $visible;
-}
-add_filter( 'axismundi_act_actor_feed_activity_visible', 'axismundi_forum_topic_submission_actor_feed_visible', 30, 3 );
 
 /** Keep public-routing metadata from adding a direct Topic commit to a Person outbox. */
 function axismundi_forum_topic_submission_public_outbox_payload( $payload, Axismundi_Activity $activity ) {

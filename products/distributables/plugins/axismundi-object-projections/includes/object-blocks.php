@@ -262,6 +262,70 @@ function axismundi_op_render_object_meta_block() : string {
 	return empty( $parts ) ? '' : '<div ' . get_block_wrapper_attributes( array( 'class' => 'axismundi-object__meta' ) ) . '>' . implode( '', $parts ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Values escaped above.
 }
 
+/**
+ * How each audience is drawn, and what it is called.
+ *
+ * Audience is not the same question as where something was posted. An Object addressed to a
+ * community and an Object addressed to followers are answers to different questions, and a
+ * Topic in a members-only community is both at once — so a community marker is a separate
+ * signal beside this one, owned by whichever product knows what a community is, and never a
+ * fifth value here.
+ *
+ * `unlisted` is drawn as a house rather than a lock because it is not a restriction: the
+ * permalink is public and anyone may read it, and what is withheld is only its appearance in
+ * public timelines and search. This matches what Mastodon calls Quiet public and what Misskey
+ * calls Home. Both, notably, keep suppressing *outbound federation* as a separate switch, which
+ * is why there is no glyph for it here — we do not have that switch, and drawing one would
+ * promise a reach we do not control.
+ *
+ * `limited` is the honest gap: an Object known to be non-public whose exact audience we cannot
+ * prove, because the author's followers collection was never observed. It is deliberately not
+ * drawn as a lock, which would claim followers-only.
+ *
+ * @return array<string,array{icon:string,label:string}>
+ */
+function axismundi_op_object_visibility_vocabulary() : array {
+	return array(
+		'public'    => array( 'icon' => 'public', 'label' => __( 'Public', 'axismundi-object-projections' ) ),
+		'unlisted'  => array( 'icon' => 'home', 'label' => __( 'Quiet public', 'axismundi-object-projections' ) ),
+		'followers' => array( 'icon' => 'lock', 'label' => __( 'Followers only', 'axismundi-object-projections' ) ),
+		'mentioned' => array( 'icon' => 'alternate_email', 'label' => __( 'Mentioned people only', 'axismundi-object-projections' ) ),
+		'limited'   => array( 'icon' => 'private_connectivity', 'label' => __( 'Restricted', 'axismundi-object-projections' ) ),
+	);
+}
+
+/** Render the audience one Object was addressed to. */
+function axismundi_op_render_object_visibility_block( array $attributes = array() ) : string {
+	$model = axismundi_op_active_object_view_model();
+	if ( ! is_array( $model ) ) {
+		return '';
+	}
+	$level      = (string) ( $model['visibility']['level'] ?? '' );
+	$vocabulary = axismundi_op_object_visibility_vocabulary();
+	if ( ! isset( $vocabulary[ $level ] ) ) {
+		// An Object whose audience was never resolved says nothing, rather than defaulting to
+		// the friendliest value on the list.
+		return '';
+	}
+	$entry = $vocabulary[ $level ];
+	$label = (string) $entry['label'];
+	/*
+	 * The glyph is decorative and the name is the content. A reader using a screen reader gets
+	 * the name either way — putting it on screen is a display choice, not an accessibility one.
+	 */
+	$inner = '<span class="material-symbols-outlined" aria-hidden="true">' . esc_html( (string) $entry['icon'] ) . '</span>';
+	$inner .= empty( $attributes['showLabel'] )
+		? '<span class="screen-reader-text">' . esc_html( $label ) . '</span>'
+		: '<span class="axismundi-object__visibility-label">' . esc_html( $label ) . '</span>';
+
+	return '<span ' . get_block_wrapper_attributes(
+		array(
+			'class'            => 'axismundi-object__visibility',
+			'data-visibility'  => $level,
+		)
+	) . '>' . $inner . '</span>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Glyph and label escaped above.
+}
+
 /** Render one Object publication or modification date. */
 function axismundi_op_render_object_date_block( array $attributes = array() ) : string {
 	$model = axismundi_op_active_object_view_model();
@@ -1516,6 +1580,7 @@ function axismundi_op_register_object_blocks() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-content' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-title' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-date' );
+	register_block_type( dirname( __DIR__ ) . '/blocks/object-visibility' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-type' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-summary' );
 	register_block_type( dirname( __DIR__ ) . '/blocks/object-read-more' );

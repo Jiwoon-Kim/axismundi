@@ -1,0 +1,18 @@
+/*
+ * The audience marker sits in the header's timestamp line, so it is sized and coloured by that
+ * line rather than by itself — one glyph at the text's own size, inheriting its colour. A marker
+ * that announced itself louder than the time it sits beside would be reading as a warning, and
+ * "public" is not a warning.
+ */
+.axismundi-object__visibility {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25em;
+	color: inherit;
+}
+
+.axismundi-object__visibility .material-symbols-outlined {
+	--md-icon-size: 1em;
+	font-size: var(--md-icon-size);
+	line-height: 1;
+}

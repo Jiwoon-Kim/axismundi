@@ -122,3 +122,54 @@ function axismundi_act_resolve_audience( Axismundi_Actor $actor, string $visibil
 		'public'     => in_array( $public, $to, true ) || in_array( $public, $cc, true ),
 	);
 }
+
+/**
+ * Read one stored to/cc pair back as the visibility it was authored with.
+ *
+ * The inverse of `axismundi_act_resolve_audience()`, and deliberately living beside it: a reader
+ * that derived the same four labels from its own reading of the table would agree with the writer
+ * only until one of them changed.
+ *
+ * It is inverse-where-it-can-be and honest where it cannot. Public in `to` and public in `cc` are
+ * the two arrangements only this table produces, so those two read back exactly. Telling
+ * followers-only from mentioned-only needs the author's followers collection address, which is
+ * known for a local Actor and often not for a remote one — a peer addresses its own followers
+ * collection and nothing obliges us to have seen that Actor. Without it the honest answer is that
+ * the object is restricted, not which restriction, so this returns `limited` rather than picking
+ * the likelier of the two. A guess here would be a claim about who can read something.
+ *
+ * @param string[] $to             Stored `to` audience.
+ * @param string[] $cc             Stored `cc` audience.
+ * @param string   $followers_uri  Author's followers collection URI, when known.
+ * @return string One of public, unlisted, followers, mentioned, limited.
+ */
+function axismundi_act_audience_visibility( array $to, array $cc, string $followers_uri = '' ) : string {
+	$public = axismundi_act_public_audience_uri();
+	$legacy = array( $public, 'as:Public', 'Public' );
+	$normalize = static function ( array $members ) : array {
+		$uris = array();
+		foreach ( $members as $member ) {
+			$uri = function_exists( 'axismundi_act_member_uri' ) ? axismundi_act_member_uri( $member ) : '';
+			if ( '' === $uri && is_scalar( $member ) ) {
+				$uri = (string) $member;
+			}
+			if ( '' !== $uri ) {
+				$uris[] = $uri;
+			}
+		}
+		return $uris;
+	};
+	$to = $normalize( $to );
+	$cc = $normalize( $cc );
+
+	if ( array_intersect( $legacy, $to ) ) {
+		return 'public';
+	}
+	if ( array_intersect( $legacy, $cc ) ) {
+		return 'unlisted';
+	}
+	if ( '' === $followers_uri ) {
+		return 'limited';
+	}
+	return in_array( $followers_uri, $to, true ) || in_array( $followers_uri, $cc, true ) ? 'followers' : 'mentioned';
+}

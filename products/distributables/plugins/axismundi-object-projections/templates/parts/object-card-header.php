@@ -25,7 +25,21 @@ defined( 'ABSPATH' ) || exit;
 		<!-- /wp:group -->
 		<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|0"}},"layout":{"type":"flex","orientation":"vertical","justifyContent":"right"}} -->
 		<div class="wp-block-group">
-			<!-- wp:axismundi/object-type /-->
+			<!-- wp:axismundi/object-type /--><?php
+			/*
+			 * Beside the time rather than beside the author, because it is a property of this
+			 * Object and not of whoever wrote it: the same author posts publicly and to
+			 * followers, and the marker has to change while the name above it does not.
+			 *
+			 * It says who this was addressed to and nothing about where it was posted. A Topic
+			 * in a community carries a community marker as well, contributed separately by
+			 * Forum — the two are independent, and a public community's Topic is both public
+			 * and in a community.
+			 */
+			?>
+			<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|50"}},"layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center","justifyContent":"right"}} -->
+			<div class="wp-block-group">
+				<!-- wp:axismundi/object-visibility /-->
 			<?php
 			/*
 			 * `published`, not `updated`. Only a post that has actually been edited carries
@@ -37,6 +51,8 @@ defined( 'ABSPATH' ) || exit;
 			 */
 			?>
 			<!-- wp:axismundi/object-date /-->
+			</div>
+			<!-- /wp:group -->
 		</div>
 		<!-- /wp:group -->
 	</div>

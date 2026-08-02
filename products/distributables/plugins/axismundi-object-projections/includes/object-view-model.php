@@ -338,11 +338,44 @@ function axismundi_op_normalize_object_view_model( array $model, $source = null 
 		}
 	}
 
-	if ( '' === (string) $model['visibility']['level'] && $source instanceof Axismundi_Op_Remote_Source ) {
-		$row                         = $source->get_row();
-		$model['visibility']['level'] = function_exists( 'axismundi_op_remote_object_is_publicly_listable' ) && axismundi_op_remote_object_is_publicly_listable( $row )
-			? 'public'
-			: 'limited';
+	/*
+	 * Which audience this Object was addressed to, named rather than merely ranked.
+	 *
+	 * It used to be public-or-not, which is all a listability check can answer. That is enough to
+	 * decide whether to show something and not enough to say anything about it: quiet-public and
+	 * followers-only are both "not public" while being different promises to the author.
+	 *
+	 * A local Object knows the answer directly — the author chose it and it is stored. A remote one
+	 * is read back out of the to/cc it arrived with, by the inverse of the same table that writes
+	 * ours, so the two cannot drift apart into separate readings of the same addressing.
+	 */
+	if ( '' === (string) $model['visibility']['level'] ) {
+		if ( $post instanceof WP_Post && function_exists( 'axismundi_op_post_visibility' ) ) {
+			$model['visibility']['level'] = axismundi_op_post_visibility( $post );
+		} elseif ( $source instanceof Axismundi_Op_Remote_Source && function_exists( 'axismundi_act_audience_visibility' ) ) {
+			$row     = $source->get_row();
+			$payload = (array) ( $row['payload'] ?? array() );
+			$listed  = static function ( $value ) : array {
+				return is_array( $value ) && array_is_list( $value ) ? $value : ( null === $value ? array() : array( $value ) );
+			};
+			/*
+			 * The remote author's own followers collection, which is the only address that
+			 * separates followers-only from mentioned-only. We have it when that Actor has been
+			 * seen before and not otherwise; the resolver answers `limited` rather than guessing.
+			 */
+			$followers = '';
+			if ( function_exists( 'axismundi_actors_get_by_uri' ) && function_exists( 'axismundi_actors_get_endpoint' ) ) {
+				$author = axismundi_actors_get_by_uri( (string) ( $row['attributed_to_uri'] ?? '' ) );
+				if ( $author instanceof Axismundi_Actor ) {
+					$followers = (string) axismundi_actors_get_endpoint( $author, 'followers' );
+				}
+			}
+			$model['visibility']['level'] = axismundi_act_audience_visibility(
+				$listed( $payload['to'] ?? array() ),
+				$listed( $payload['cc'] ?? array() ),
+				$followers
+			);
+		}
 	}
 
 	$model['capabilities']['can_edit'] = $post instanceof WP_Post && current_user_can( 'edit_post', $post->ID );

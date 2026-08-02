@@ -68,6 +68,66 @@ try {
 
 	$empty_mention = axismundi_act_resolve_audience( $site, 'mentioned', array() );
 	ax_aud_assert( $ax_aud_results, 'a mentioned-only object with no valid recipient is rejected', is_wp_error( $empty_mention ) && 'ax_act_audience_mentioned_empty' === $empty_mention->get_error_code() );
+	/*
+	 * Reading the table backwards.
+	 *
+	 * Every audience this resolver can write has to be readable back as the choice that wrote it,
+	 * or a card describes an Object as something other than what its author selected. The four are
+	 * checked against the resolver's own output rather than against hand-written to/cc, so the
+	 * inverse cannot pass by agreeing with a copy of the table that has drifted from it.
+	 */
+	$ax_aud_followers = $site instanceof Axismundi_Actor
+		? (string) apply_filters( 'axismundi_act_actor_followers_uri', '', $site )
+		: '';
+	$ax_aud_roundtrip = array();
+	$ax_aud_blind     = array();
+	foreach ( array( 'public', 'unlisted', 'followers', 'mentioned' ) as $ax_aud_choice ) {
+		$ax_aud_written = $site instanceof Axismundi_Actor
+			? axismundi_act_resolve_audience( $site, $ax_aud_choice, array( $mention ) )
+			: null;
+		if ( ! is_array( $ax_aud_written ) ) {
+			continue;
+		}
+		$ax_aud_roundtrip[ $ax_aud_choice ] = axismundi_act_audience_visibility( $ax_aud_written['to'], $ax_aud_written['cc'], $ax_aud_followers );
+		$ax_aud_blind[ $ax_aud_choice ]     = axismundi_act_audience_visibility( $ax_aud_written['to'], $ax_aud_written['cc'], '' );
+	}
+	ax_aud_assert(
+		$ax_aud_results,
+		'every audience the resolver writes reads back as the visibility that wrote it',
+		array(
+			'public'    => 'public',
+			'unlisted'  => 'unlisted',
+			'followers' => 'followers',
+			'mentioned' => 'mentioned',
+		) === $ax_aud_roundtrip
+	);
+	/*
+	 * Without the author's followers address, followers-only and mentioned-only are the same two
+	 * lists of opaque URIs. Naming either one would be asserting who may read something on the
+	 * strength of a guess, so both must degrade to `limited` — while the two public forms, which
+	 * are distinguished by the Public collection alone, must survive not knowing it.
+	 */
+	ax_aud_assert(
+		$ax_aud_results,
+		'an unknown followers collection costs the restricted distinction and nothing else',
+		array(
+			'public'    => 'public',
+			'unlisted'  => 'unlisted',
+			'followers' => 'limited',
+			'mentioned' => 'limited',
+		) === $ax_aud_blind
+	);
+	/*
+	 * Peers do not all spell the Public collection the same way. A card that read `as:Public` as
+	 * restricted would mark a public Object with a lock, which is the wrong direction to be wrong
+	 * in — it is the reading that misrepresents an author as more private than they chose.
+	 */
+	ax_aud_assert(
+		$ax_aud_results,
+		'the compact spellings of the Public collection are read as public, not as restricted',
+		'public' === axismundi_act_audience_visibility( array( 'as:Public' ), array(), '' )
+			&& 'unlisted' === axismundi_act_audience_visibility( array( 'https://example.com/u/x/followers' ), array( 'Public' ), '' )
+	);
 
 	if ( $site instanceof Axismundi_Actor ) {
 		axismundi_actors_set_status( $site->get_identity_id(), 'internal' );
@@ -77,6 +137,7 @@ try {
 		? axismundi_act_resolve_audience( $site, 'mentioned', array( $mention ) )
 		: null;
 	ax_aud_assert( $ax_aud_results, 'an internal local Actor cannot author a federated audience', is_wp_error( $internal_result ) && 'ax_act_audience_actor' === $internal_result->get_error_code() );
+
 
 	ax_aud_assert( $ax_aud_results, 'the resolver performs no HTTP request', 0 === $GLOBALS['ax_aud_http'] );
 } finally {

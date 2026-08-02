@@ -188,19 +188,41 @@
  * teaching each renderer about density — a local Topic and a cached remote Object are drawn by
  * different code, and giving both a notion of it would be two answers to one question.
  */
+/*
+ * A segmented control: two icons in one track, not two buttons that happen to be adjacent. With
+ * only two choices a dropdown would hide half of them behind a click, and the pair reads as one
+ * question when it is drawn as one shape.
+ *
+ * They are links, so the selected one carries `aria-current="page"` rather than a pressed state —
+ * following one navigates to a different address instead of toggling something on this one.
+ */
 .axismundi-activity-feed__densities {
-	display: flex;
-	gap: 0.25rem;
-	justify-content: flex-end;
+	border: 1px solid var(--md-sys-color-outline-variant, rgba(0, 0, 0, 0.16));
+	border-radius: 20px;
+	display: inline-flex;
+	margin-inline-start: auto;
+	overflow: hidden;
+	width: fit-content;
 }
 
 .axismundi-activity-feed__density {
-	border-radius: 20px;
-	padding: 0.25rem 0.75rem;
+	--md-icon-size: 1.125rem;
+	align-items: center;
+	color: inherit;
+	display: inline-flex;
+	justify-content: center;
+	min-block-size: 32px;
+	min-inline-size: 44px;
 	text-decoration: none;
 }
 
-.axismundi-activity-feed__density.is-current {
+.axismundi-activity-feed__density .material-symbols-outlined {
+	font-size: var(--md-icon-size);
+	line-height: 1;
+}
+
+/* Two classes, because the theme emits its own link colours at `:root :where(...)`. */
+.axismundi-activity-feed__densities .axismundi-activity-feed__density.is-current {
 	background-color: var(--md-sys-color-secondary-container, rgba(0, 0, 0, 0.08));
 	color: var(--md-sys-color-on-secondary-container, inherit);
 }

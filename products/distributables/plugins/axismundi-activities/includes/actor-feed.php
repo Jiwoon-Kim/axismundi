@@ -454,8 +454,8 @@ function axismundi_act_actor_profile_url( array $surfaces, string $surface, stri
  */
 function axismundi_act_feed_densities() : array {
 	return array(
-		'card'    => __( 'Card', 'axismundi-activities' ),
-		'compact' => __( 'Compact', 'axismundi-activities' ),
+		'card'    => array( 'label' => __( 'Card view', 'axismundi-activities' ), 'icon' => 'view_stream' ),
+		'compact' => array( 'label' => __( 'Compact view', 'axismundi-activities' ), 'icon' => 'view_list' ),
 	);
 }
 
@@ -891,9 +891,20 @@ function axismundi_act_render_actor_activity_feed() : string {
 		$density_href = 0 === (int) $index
 			? remove_query_arg( 'density' )
 			: add_query_arg( 'density', (string) $key, remove_query_arg( 'density' ) );
+		$label = (string) ( $density_labels[ $key ]['label'] ?? $key );
+		/*
+		 * An icon with the name behind it, not an icon instead of one. The glyph is what makes two
+		 * choices readable at a glance; the name is what the control actually says, so it stays
+		 * available to a screen reader and to a hover.
+		 *
+		 * `aria-current="page"` and not `aria-pressed`: these are links, and following one is a
+		 * navigation to a different address rather than the toggling of a state on this one.
+		 */
 		$density_switch[] = '<a class="axismundi-activity-feed__density' . ( $is_current ? ' is-current' : '' ) . '"'
-			. ' href="' . esc_url( $density_href ) . '"' . ( $is_current ? ' aria-current="true"' : '' ) . '>'
-			. esc_html( (string) ( $density_labels[ $key ] ?? $key ) ) . '</a>';
+			. ' href="' . esc_url( $density_href ) . '"' . ( $is_current ? ' aria-current="page"' : '' )
+			. ' title="' . esc_attr( $label ) . '">'
+			. '<span class="material-symbols-outlined" aria-hidden="true">' . esc_html( (string) ( $density_labels[ $key ]['icon'] ?? 'view_stream' ) ) . '</span>'
+			. '<span class="screen-reader-text">' . esc_html( $label ) . '</span></a>';
 	}
 	/*
 	 * No switch when there is nothing to switch between. A template holding one card is a template

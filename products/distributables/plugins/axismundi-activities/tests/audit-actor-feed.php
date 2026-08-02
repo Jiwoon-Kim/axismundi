@@ -1264,6 +1264,7 @@ $ax_feed_community_filters = axismundi_act_render_feed_filters_block(
 	)
 );
 $ax_feed_source         = (string) @file_get_contents( dirname( __DIR__ ) . '/includes/actor-feed.php' );
+$ax_feed_runtime        = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed/view.js' );
 $ax_feed_filters_style  = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed-filters/style.css' );
 $ax_feed_filters_meta   = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed-filters/block.json' );
 $ax_feed_root_style     = (string) @file_get_contents( dirname( __DIR__ ) . '/blocks/feed/style.css' );
@@ -1315,6 +1316,13 @@ ax_feed_assert(
 		&& true === axismundi_act_feed_filters_are_client_owned( array(), array( 'filterStyle' => 'switches' ) )
 		&& true === axismundi_act_feed_filters_are_client_owned( array( 'toggles' => array( 'replies' => 'Replies' ) ), array() )
 		&& false === axismundi_act_feed_filters_are_client_owned( array(), array() )
+);
+ax_feed_assert(
+	$ax_feed_results,
+	'a filter refresh carries density into REST, so replacing its rows cannot change their card composition',
+	false !== strpos( $ax_feed_source, "'density'       => \$density" )
+		&& false !== strpos( $ax_feed_runtime, "url.searchParams.set( 'density', context.density || 'card' )" )
+		&& false !== strpos( $ax_feed_source, "'density'   => array( 'required' => false" )
 );
 ax_feed_assert(
 	$ax_feed_results,

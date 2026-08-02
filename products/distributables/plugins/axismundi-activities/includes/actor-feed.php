@@ -895,6 +895,7 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 		'actorUri'      => $actor->get_uri(),
 		'surface'       => $surface,
 		'filter'        => $filter,
+		'density'       => $density,
 		'cursor'        => ! empty( $page_model['hasMore'] ) && '' !== $page_model['nextCursor'] ? $page_model['nextCursor'] : '',
 		'perPage'       => $per_page,
 		'defaultFilter' => (string) $current['default_filter'],

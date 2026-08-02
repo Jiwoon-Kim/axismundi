@@ -193,6 +193,7 @@ const requestPage = async ( context, after ) => {
 	url.searchParams.set( 'actor_uri', context.actorUri );
 	url.searchParams.set( 'surface', context.surface );
 	url.searchParams.set( 'filter', context.filter );
+	url.searchParams.set( 'density', context.density || 'card' );
 	url.searchParams.set( 'after', after || '' );
 	url.searchParams.set( 'per_page', String( context.perPage ) );
 	/*

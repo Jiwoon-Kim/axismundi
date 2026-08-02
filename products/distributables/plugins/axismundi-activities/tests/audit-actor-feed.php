@@ -1312,14 +1312,16 @@ $ax_feed_pager_editor = $ax_feed_editor_source( 'feed-pagination' );
 $ax_feed_filters_editor = $ax_feed_editor_source( 'feed-filters' );
 ax_feed_assert(
 	$ax_feed_results,
-	'the feed is where navigation is chosen, and the pager reads that choice rather than offering its own',
-	false !== strpos( $ax_feed_feed_editor, "setAttributes( { navigation:" )
+	'the tab is where navigation is chosen, and the pager reads that choice rather than offering its own',
+	false !== strpos( $ax_feed_editor_source( 'feed-tab' ), "setAttributes( { navigation:" )
+		// Not the feed: one value there could only ever be right for one of its surfaces.
+		&& false === strpos( $ax_feed_feed_editor, 'navigation' )
 		// Reads the context value, not merely names the key: the `usesContext` declaration keeps
 		// the string present even in a pager that has stopped consulting it.
 		&& 1 === preg_match( '#props\.context\[\s*.axismundi/feedNavigation.\s*\]#', $ax_feed_pager_editor )
 		// The pager must not write it: two writers of one decision is the failure being prevented.
 		&& false === strpos( $ax_feed_pager_editor, 'setAttributes' )
-		&& array( 'axismundi/feedNavigation' => 'navigation' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed' )->provides_context
+		&& 'navigation' === (string) ( (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-tab' )->provides_context )['axismundi/feedNavigation']
 		&& in_array( 'axismundi/feedNavigation', (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-pagination' )->uses_context, true )
 );
 ax_feed_assert(
@@ -1331,15 +1333,23 @@ ax_feed_assert(
 );
 ax_feed_assert(
 	$ax_feed_results,
-	'feed filters preview the current tab surface instead of a generic placeholder',
-	array( 'axismundi/feedSurface' => 'surface' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-tab' )->provides_context
+	'feed filters preview the shape the tab declares, not one guessed from its surface name',
+	'surface' === (string) ( (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-tab' )->provides_context )['axismundi/feedSurface']
 		&& in_array( 'axismundi/feedSurface', (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-filters' )->uses_context, true )
 		// Reads the value, not merely declares it: `usesContext` alone is only a promise.
 		&& 1 === preg_match( '#props\.context\[\s*.axismundi/feedSurface.\s*\]#', $ax_feed_filters_editor )
 		&& false !== strpos( $ax_feed_filters_editor, 'activityPreview' )
 		&& false !== strpos( $ax_feed_filters_editor, 'communityPreview' )
-		&& false !== strpos( $ax_feed_filters_editor, "'community' === surface" )
+		/*
+		 * The declaration decides, and the surface is only the fallback an undeclared tab resolves
+		 * to — which is what the server does. Keying on the surface name alone was wrong for a
+		 * Person's community tab, which offers the same switches the timeline does.
+		 */
+		&& 1 === preg_match( '#props\.context\[\s*.axismundi/feedFilterStyle.\s*\]#', $ax_feed_filters_editor )
+		&& false !== strpos( $ax_feed_filters_editor, "'tabs' === style" )
 		&& false !== strpos( $ax_feed_filters_editor, 'community ? communityPreview() : activityPreview()' )
+		// And the server reads the same declaration, so the two cannot drift apart.
+		&& false !== strpos( (string) @file_get_contents( dirname( __DIR__ ) . '/includes/actor-feed.php' ), "\$tab_attrs['filterStyle']" )
 		&& false !== strpos( $ax_feed_filters_editor, 'arrow_drop_down' )
 		&& false !== strpos( $ax_feed_filters_editor, "'Posts'" )
 		&& false !== strpos( $ax_feed_filters_editor, "'Comments'" )

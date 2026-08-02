@@ -33,10 +33,19 @@
 	}
 
 	blocks.registerBlockType( 'axismundi/feed-filters', {
-		usesContext: [ 'axismundi/feedSurface' ],
+		usesContext: [ 'axismundi/feedSurface', 'axismundi/feedFilterStyle' ],
 		edit: function ( props ) {
+			/*
+			 * Which shape, read from the tab's declaration rather than guessed from its surface.
+			 *
+			 * Guessing was wrong for the case that matters: a Person's community tab offers the same
+			 * two switches the timeline does, so a preview keyed on the surface name showed tabs
+			 * where the page renders a disclosure. The surface is still the fallback, because that
+			 * is what an undeclared tab resolves to on the server.
+			 */
+			var style = props.context[ 'axismundi/feedFilterStyle' ] || '';
 			var surface = props.context[ 'axismundi/feedSurface' ] || 'activity';
-			var community = 'community' === surface;
+			var community = 'tabs' === style || ( '' === style && 'activity' !== surface );
 			return el(
 				'div',
 				blockEditor.useBlockProps( { className: 'axismundi-feed-slot' } ),

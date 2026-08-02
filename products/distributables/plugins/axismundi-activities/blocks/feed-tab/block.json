@@ -10,10 +10,14 @@
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/feed-tabs" ],
 	"attributes": {
-		"surface": { "type": "string", "default": "activity" }
+		"surface": { "type": "string", "default": "activity" },
+		"navigation": { "type": "string", "default": "" },
+		"filterStyle": { "type": "string", "default": "" }
 	},
 	"providesContext": {
-		"axismundi/feedSurface": "surface"
+		"axismundi/feedSurface": "surface",
+		"axismundi/feedNavigation": "navigation",
+		"axismundi/feedFilterStyle": "filterStyle"
 	},
 	"supports": {
 		"html": false,

@@ -46,6 +46,39 @@
 							onChange: function ( value ) {
 								props.setAttributes( { surface: value } );
 							}
+						} ),
+						/*
+						 * How this surface is walked, and what its filter control looks like — both here
+						 * rather than on the feed, because they differ between surfaces of the same
+						 * profile: a timeline is continued by cursor, a community archive is browsed by
+						 * number. One value on the feed could only be right for one of them.
+						 */
+						el( components.SelectControl, {
+							label: __( 'Walked by', 'axismundi-activities' ),
+							value: props.attributes.navigation || '',
+							options: [
+								{ label: __( 'Automatic (what the surface offers)', 'axismundi-activities' ), value: '' },
+								{ label: __( 'Load more (cursor)', 'axismundi-activities' ), value: 'infinite' },
+								{ label: __( 'Numbered pages', 'axismundi-activities' ), value: 'pagination' }
+							],
+							onChange: function ( value ) {
+								props.setAttributes( { navigation: value } );
+							},
+							__nextHasNoMarginBottom: true
+						} ),
+						el( components.SelectControl, {
+							label: __( 'Filter control', 'axismundi-activities' ),
+							help: __( 'Switches are a reading preference kept out of the URL; tabs are addressable collections.', 'axismundi-activities' ),
+							value: props.attributes.filterStyle || '',
+							options: [
+								{ label: __( 'Automatic (what the surface offers)', 'axismundi-activities' ), value: '' },
+								{ label: __( 'Switches', 'axismundi-activities' ), value: 'switches' },
+								{ label: __( 'Tabs', 'axismundi-activities' ), value: 'tabs' }
+							],
+							onChange: function ( value ) {
+								props.setAttributes( { filterStyle: value } );
+							},
+							__nextHasNoMarginBottom: true
 						} )
 					)
 				),

@@ -638,6 +638,36 @@ function axismundi_act_actor_profile_tab( string $href, string $label, bool $is_
 		. ( $is_current ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
 }
 
+/**
+ * What the author declared on the tab for the surface being rendered.
+ *
+ * Two of the feed's decisions are per-surface rather than per-profile: how the collection is
+ * walked, and which shape the filter control takes. A timeline is continued by cursor and a
+ * community archive is browsed by number — one value held by the feed could only ever be right for
+ * one of them.
+ *
+ * So they live on `feed-tab`, which already owns one surface's layout, and the server reads them
+ * back out of the tab it is rendering rather than off the feed block that contains every tab.
+ *
+ * @param Axismundi_Actor $actor   Profile Actor.
+ * @param string          $surface Surface being rendered.
+ * @return array<string,mixed>
+ */
+function axismundi_act_feed_tab_attributes( Axismundi_Actor $actor, string $surface ) : array {
+	$tabs = axismundi_act_find_block_by_name( axismundi_act_actor_feed_template_blocks( $actor ), 'axismundi/feed-tabs' );
+	if ( null === $tabs ) {
+		return array();
+	}
+	foreach ( (array) ( $tabs['innerBlocks'] ?? array() ) as $tab ) {
+		if ( 'axismundi/feed-tab' === (string) ( $tab['blockName'] ?? '' )
+			&& $surface === (string) ( $tab['attrs']['surface'] ?? 'activity' )
+		) {
+			return (array) ( $tab['attrs'] ?? array() );
+		}
+	}
+	return array();
+}
+
 /** Render the current Actor's public Activity feed. */
 function axismundi_act_render_actor_activity_feed( array $attributes = array() ) : string {
 	if ( ! function_exists( 'axismundi_actors_current_actor' ) ) {
@@ -694,7 +724,21 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 * and shared with, so those live in the reader's browser and the server always renders the
 	 * default.
 	 */
-	$client_owned = ! empty( $current['toggles'] );
+	/*
+	 * Which shape the filter control takes: declared by the author, defaulted from the surface.
+	 *
+	 * It used to be derived here and nowhere else, which meant the editor could not know it —
+	 * whether a surface offers switches depends on the Actor being viewed, and an author placing
+	 * the block was shown a guess that was wrong for a Person's community tab. A declaration is
+	 * something both ends read, so the preview and the page agree by construction instead of by
+	 * two predicates staying in step.
+	 *
+	 * Unset keeps the old behaviour exactly, so every template saved before this reads the same.
+	 */
+	$filter_style = (string) ( $tab_attrs['filterStyle'] ?? '' );
+	$client_owned = 'tabs' === $filter_style
+		? false
+		: ( 'switches' === $filter_style ? true : ! empty( $current['toggles'] ) );
 	$filter       = $client_owned || ! isset( $current['filters'][ $filter ] )
 		? (string) $current['default_filter']
 		: $filter;
@@ -727,7 +771,8 @@ function axismundi_act_render_actor_activity_feed( array $attributes = array() )
 	 * a cursor it does not have, so the surface's declared modes are the bound.
 	 */
 	$supported = (array) ( $current['modes'] ?? array() );
-	$requested = (string) ( $attributes['navigation'] ?? '' );
+	$tab_attrs = axismundi_act_feed_tab_attributes( $actor, $surface );
+	$requested = (string) ( $tab_attrs['navigation'] ?? '' );
 	$mode      = in_array( $requested, $supported, true ) ? $requested : (string) ( $current['mode'] ?? 'infinite' );
 	$densities_available = axismundi_act_actor_feed_densities_available( $actor, $surface );
 	$density             = axismundi_act_feed_density( $densities_available );

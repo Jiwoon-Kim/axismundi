@@ -7,12 +7,6 @@
 	"category": "theme",
 	"icon": "list-view",
 	"description": "The Actor feed: it resolves which surface is being read, how it is walked, and hands that to the layouts inside it.",
-	"attributes": {
-		"navigation": { "type": "string", "default": "" }
-	},
-	"providesContext": {
-		"axismundi/feedNavigation": "navigation"
-	},
 	"textdomain": "axismundi-activities",
 	"supports": {
 		"html": false,

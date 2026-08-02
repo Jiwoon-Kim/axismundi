@@ -239,6 +239,32 @@ try {
 			&& $ax_aud_second_uri === $ax_aud_settled['primary_group_uri']
 	);
 
+	/*
+	 * The selection the two Person surfaces will be built from.
+	 *
+	 * Three states, not a boolean: "only community posts" and "everything except community posts"
+	 * are the two profile tabs, and "everything this Actor did" is what an unsplit profile has
+	 * always shown and what a home feed will want. Collapsing the third into one of the others
+	 * would make the whole-ledger reading unexpressible.
+	 *
+	 * `both` is the default so that introducing this changes nothing until a surface asks for a
+	 * side — which is why the Forum filters can stay in place for now and be removed after the
+	 * three paths are proven, rather than in the same step.
+	 */
+	ax_aud_assert(
+		$ax_aud_results,
+		'group context selects three ways, and the default admits everything so adding it changes nothing',
+		false === axismundi_act_group_context_admits( 'out', true )
+			&& true === axismundi_act_group_context_admits( 'out', false )
+			&& true === axismundi_act_group_context_admits( 'in', true )
+			&& false === axismundi_act_group_context_admits( 'in', false )
+			&& true === axismundi_act_group_context_admits( 'both', true )
+			&& true === axismundi_act_group_context_admits( 'both', false )
+			// An unrecognised mode admits rather than hides: a typo must not empty a profile.
+			&& true === axismundi_act_group_context_admits( '', true )
+			&& true === axismundi_act_group_context_admits( 'nonsense', false )
+	);
+
 	ax_aud_assert( $ax_aud_results, 'the resolver performs no HTTP request', 0 === $GLOBALS['ax_aud_http'] );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_aud_http' );

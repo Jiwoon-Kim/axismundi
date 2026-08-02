@@ -282,3 +282,46 @@ function axismundi_act_group_context( array $payload, string $object_uri = '' ) 
 		'primary_group_uri' => $primary,
 	);
 }
+
+/**
+ * The Groups one ledger Activity was posted into.
+ *
+ * The classifier reads addressing; this hands it the addressing an Activity actually carries. The
+ * payload is passed whole rather than picked apart, because a `Create` keeps its recipients at the
+ * root and its community on the embedded Object, and only one of those is present on a bare
+ * Announce.
+ *
+ * @param Axismundi_Activity $activity Ledger row.
+ * @return array{has_group_context:bool,group_uris:string[],primary_group_uri:string}
+ */
+function axismundi_act_activity_group_context( Axismundi_Activity $activity ) : array {
+	$payload = (array) $activity->get_payload();
+	$object  = $payload['object'] ?? null;
+	return axismundi_act_group_context(
+		$payload,
+		is_array( $object ) ? (string) ( $object['id'] ?? '' ) : (string) ( $activity->get_object_uri() ?? '' )
+	);
+}
+
+/**
+ * Whether one entry belongs in a feed selecting by Group context.
+ *
+ * Three states rather than a boolean, because "show community posts" and "hide them" are not the
+ * same question asked twice — a feed can also want everything an Actor did, which is what an
+ * unsplit profile has always shown and what a future home feed will want.
+ *
+ * `both` is the default so adding this changes nothing until a surface asks for a side.
+ *
+ * @param string $mode `out`, `in`, or `both`.
+ * @param bool   $has  Whether the entry has Group context.
+ * @return bool
+ */
+function axismundi_act_group_context_admits( string $mode, bool $has ) : bool {
+	if ( 'in' === $mode ) {
+		return $has;
+	}
+	if ( 'out' === $mode ) {
+		return ! $has;
+	}
+	return true;
+}

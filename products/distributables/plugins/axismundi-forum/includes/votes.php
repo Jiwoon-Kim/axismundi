@@ -209,10 +209,10 @@ function axismundi_forum_object_community_group( string $object_uri ) : ?Axismun
 	if ( $remote_submission_group instanceof Axismundi_Actor ) {
 		return $remote_submission_group;
 	}
-	if ( ! function_exists( 'axismundi_op_remote_object_get' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
+	if ( ! function_exists( 'axismundi_op_get_remote_object' ) || ! function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		return null;
 	}
-	$remote = axismundi_op_remote_object_get( $object_uri, false );
+	$remote = axismundi_op_get_remote_object( $object_uri, false );
 	$payload = is_array( $remote ) ? (array) ( $remote['payload'] ?? array() ) : array();
 	foreach ( array( 'audience', 'to', 'cc' ) as $property ) {
 		foreach ( axismundi_forum_member_uris( $payload[ $property ] ?? array() ) as $candidate ) {

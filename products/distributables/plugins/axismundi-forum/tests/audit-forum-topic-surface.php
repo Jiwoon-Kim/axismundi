@@ -188,7 +188,7 @@ try {
 	);
 	$reply_uri       = 'https://example.com/comment/' . wp_generate_uuid4();
 	$ax_ts_objects[] = $reply_uri;
-	$stored = axismundi_op_remote_object_store(
+	$stored = axismundi_op_store_remote_object(
 		array(
 			'id' => $reply_uri, 'type' => 'Note', 'attributedTo' => $author_uri, 'inReplyTo' => $topic_uri,
 			'content' => '<p>Remote reply body.</p>', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ),

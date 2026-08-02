@@ -104,7 +104,7 @@ try {
 		$ax_fit_results,
 		'an accepted remote Group follower is admitted only through a local Group Announce preserving the inbound Create',
 		true === $bound && true === $membership && $accepted instanceof Axismundi_Activity
-			&& is_array( axismundi_op_remote_object_get( $accepted_uri ) ) && is_array( $accepted_entry )
+			&& is_array( axismundi_op_get_remote_object( $accepted_uri ) ) && is_array( $accepted_entry )
 			&& 'topic' === (string) $accepted_entry['entry_type'] && null === $accepted_entry['source_post_id']
 			&& $member instanceof Axismundi_Actor && $member->get_identity_id() === (int) $accepted_entry['submission_actor_identity_id']
 			&& $accepted_uri === (string) $accepted_entry['object_uri']
@@ -135,7 +135,7 @@ try {
 	ax_fit_assert(
 		$ax_fit_results,
 		'a public Page from a non-member is cached but never becomes a Forum entry',
-		$outsider_create instanceof Axismundi_Activity && is_array( axismundi_op_remote_object_get( $outsider_uri ) ) && null === axismundi_forum_get_remote_entry( $community, $outsider_uri )
+		$outsider_create instanceof Axismundi_Activity && is_array( axismundi_op_get_remote_object( $outsider_uri ) ) && null === axismundi_forum_get_remote_entry( $community, $outsider_uri )
 	);
 
 	$elsewhere_uri = 'https://example.com/pages/elsewhere-' . wp_generate_uuid4();

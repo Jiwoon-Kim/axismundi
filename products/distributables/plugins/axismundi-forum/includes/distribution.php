@@ -321,8 +321,8 @@ function axismundi_forum_note_reply_parent_object( Axismundi_Note_Source $source
 		$transformer = axismundi_op_resolve_object_transformer( $parent_source );
 		$parent = is_array( $transformer ) ? (array) call_user_func( $transformer['transform'], $parent_source ) : array();
 	}
-	if ( empty( $parent ) && function_exists( 'axismundi_op_remote_object_get' ) ) {
-		$stored = axismundi_op_remote_object_get( $parent_uri, false );
+	if ( empty( $parent ) && function_exists( 'axismundi_op_get_remote_object' ) ) {
+		$stored = axismundi_op_get_remote_object( $parent_uri, false );
 		$parent = is_array( $stored ) ? (array) ( $stored['payload'] ?? array() ) : array();
 	}
 	return $parent;

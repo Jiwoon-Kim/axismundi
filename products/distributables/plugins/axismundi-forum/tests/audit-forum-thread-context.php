@@ -188,7 +188,7 @@ try {
 	 */
 	$forged_uri = 'https://example.com/forged/' . wp_generate_uuid4();
 	$ax_tc_objects[] = $forged_uri;
-	$forged = function_exists( 'axismundi_op_remote_object_store' ) ? axismundi_op_remote_object_store(
+	$forged = function_exists( 'axismundi_op_store_remote_object' ) ? axismundi_op_store_remote_object(
 		array( 'id' => $forged_uri, 'type' => 'Note', 'attributedTo' => 'https://example.com/u/axtc-stranger', 'inReplyTo' => axismundi_forum_topic_object_uri( get_post( $topic ) ), 'audience' => $group instanceof Axismundi_Actor ? $group->get_uri() : '', 'to' => array( $public_uri ), 'content' => '<p>Forged membership claim.</p>' )
 	) : new WP_Error( 'fixture' );
 	$forged_edge = '' !== axismundi_op_get_thread_parent_uri( $forged_uri );
@@ -310,7 +310,7 @@ try {
 	$ax_tc_ids[] = $remote_group instanceof Axismundi_Actor ? $remote_group->get_identity_id() : 0;
 	$remote_topic_uri = 'https://example.com/post/' . wp_generate_uuid4();
 	$ax_tc_objects[] = $remote_topic_uri;
-	$remote_parent = function_exists( 'axismundi_op_remote_object_store' ) ? axismundi_op_remote_object_store(
+	$remote_parent = function_exists( 'axismundi_op_store_remote_object' ) ? axismundi_op_store_remote_object(
 		// Lemmy comments make their parent author the audience and place the community in cc.
 		array( 'id' => $remote_topic_uri, 'type' => 'Note', 'attributedTo' => 'https://example.com/u/axtc-parent', 'inReplyTo' => 'https://example.com/post/' . wp_generate_uuid4(), 'audience' => 'https://example.com/u/axtc-parent', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ), 'cc' => array( $remote_group_uri, 'https://example.com/u/axtc-parent' ), 'content' => '<p>Remote Comment</p>' )
 	) : new WP_Error( 'fixture' );

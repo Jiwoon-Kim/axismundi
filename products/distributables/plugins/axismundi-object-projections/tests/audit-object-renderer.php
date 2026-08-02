@@ -665,7 +665,6 @@ ax_rnd_assert(
 		&& '' === trim( $ax_rnd_unbound_body_html )
 );
 
-$ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
 
 
 /*
@@ -805,6 +804,65 @@ ax_rnd_assert(
 		// a sibling of the cover rather than something inside it.
 		&& substr_count( $ax_rnd_between, '</div>' ) > substr_count( $ax_rnd_between, '<div' )
 );
+
+/*
+ * The audience marker draws what the model says and nothing when the model does not say.
+ *
+ * Each audience must be visibly distinct, because the whole purpose of the marker is that a reader
+ * can tell them apart at a glance — two audiences sharing a glyph would be worse than no marker,
+ * since it would look like an answer. `limited` in particular must not borrow the lock: it means
+ * the audience could not be established, and a lock would state followers-only as fact.
+ *
+ * An unresolved audience renders nothing at all. The tempting default is `public`, and it is the
+ * one value that must never be assumed — it would describe a restricted Object as open on a card
+ * its author is looking at.
+ */
+$ax_rnd_vis_glyphs = array();
+foreach ( array_keys( axismundi_op_object_visibility_vocabulary() ) as $ax_rnd_level ) {
+	axismundi_op_set_current_object_view_model( array( 'object_uri' => 'https://example.com/n/v', 'visibility' => array( 'level' => $ax_rnd_level ) ) );
+	$ax_rnd_vis_html = do_blocks( '<!-- wp:axismundi/object-visibility /-->' );
+	if ( 1 === preg_match( '#material-symbols-outlined"[^>]*>([a-z_]+)<#', $ax_rnd_vis_html, $ax_rnd_vis_m ) ) {
+		$ax_rnd_vis_glyphs[ $ax_rnd_level ] = $ax_rnd_vis_m[1];
+	}
+}
+axismundi_op_set_current_object_view_model( array( 'object_uri' => 'https://example.com/n/v', 'visibility' => array( 'level' => '' ) ) );
+$ax_rnd_vis_unknown = do_blocks( '<!-- wp:axismundi/object-visibility /-->' );
+axismundi_op_set_current_object_view_model( array( 'object_uri' => 'https://example.com/n/v', 'visibility' => array( 'level' => 'followers' ) ) );
+$ax_rnd_vis_followers = do_blocks( '<!-- wp:axismundi/object-visibility /-->' );
+axismundi_op_set_current_object_view_model( null );
+
+ax_rnd_assert(
+	$ax_rnd_results,
+	'every audience the marker knows draws its own glyph, so none of them reads as another',
+	5 === count( $ax_rnd_vis_glyphs )
+		&& count( $ax_rnd_vis_glyphs ) === count( array_unique( $ax_rnd_vis_glyphs ) )
+		&& 'public' === ( $ax_rnd_vis_glyphs['public'] ?? '' )
+		&& 'lock' === ( $ax_rnd_vis_glyphs['followers'] ?? '' )
+		&& 'lock' !== ( $ax_rnd_vis_glyphs['limited'] ?? 'lock' )
+		&& 'lock' !== ( $ax_rnd_vis_glyphs['unlisted'] ?? 'lock' )
+);
+ax_rnd_assert(
+	$ax_rnd_results,
+	'an Object whose audience was never resolved shows no marker rather than being called public',
+	'' === trim( $ax_rnd_vis_unknown )
+);
+ax_rnd_assert(
+	$ax_rnd_results,
+	'the audience is named for a screen reader even when only the glyph is drawn',
+	false !== strpos( $ax_rnd_vis_followers, 'screen-reader-text' )
+		&& false !== strpos( $ax_rnd_vis_followers, 'Followers only' )
+		&& false !== strpos( $ax_rnd_vis_followers, 'aria-hidden="true"' )
+		&& false !== strpos( $ax_rnd_vis_followers, 'data-visibility="followers"' )
+);
+
+/*
+ * Counted here, after the last assertion, and not anywhere earlier.
+ *
+ * This tally used to sit two thirds of the way up the file. Everything below it was still asserted
+ * and still printed its own FAIL line, while the summary counted the checks and reported none of
+ * them failed — and the exit code stayed 0, so nothing gating on this audit could see them either.
+ */
+$ax_rnd_failures = count( array_filter( $ax_rnd_results, static fn( bool $r ) : bool => ! $r ) );
 
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI test output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_rnd_results ), $ax_rnd_failures );

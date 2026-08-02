@@ -701,6 +701,13 @@ function axismundi_op_render_object_by_uri( string $uri, array $opts = array() )
 		 * status row rendered nothing while both ends of it were correct.
 		 */
 		'status'           => isset( $opts['status'] ) && is_array( $opts['status'] ) ? $opts['status'] : array(),
+		/*
+		 * Whose identity the card's header names, when the surface wants someone other than the
+		 * author. Resolved by the product that selected this entry, for the same reason `status`
+		 * is: which Actor a community surface should show is a property of the surface, and this
+		 * renderer draws one card without knowing what list it is in.
+		 */
+		'headerActor'      => isset( $opts['headerActor'] ) ? (string) $opts['headerActor'] : '',
 	);
 	$previous = axismundi_op_current_object_view_model();
 	axismundi_op_set_current_object_view_model( $model );

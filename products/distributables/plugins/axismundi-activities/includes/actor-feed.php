@@ -246,6 +246,29 @@ function axismundi_act_feed_item_with_group_context( array $item, array $payload
  * @return bool
  */
 /**
+ * The Actor whose identity the card header should name, when it is not the author.
+ *
+ * Empty for every surface that shows a chronology of one Actor's own acts, which is the ordinary
+ * case: the header names whoever wrote the Object, and nothing needs to say so.
+ *
+ * `audience` uses the classifier's `primary_group_uri` and nothing else. When an entry is
+ * addressed to several communities and no single one is primary, this returns empty and the
+ * header falls back to the author — picking the first Group would name a community the entry may
+ * only incidentally touch, and showing the wrong Group is worse than showing the author, who is
+ * at least always correct.
+ *
+ * @param array<string,mixed> $item   Feed item descriptor.
+ * @param string              $source `object` or `audience`, from the surface.
+ * @return string Actor URI, or empty for the Object's own author.
+ */
+function axismundi_act_feed_item_header_actor( array $item, string $source = 'object' ) : string {
+	if ( 'audience' !== $source ) {
+		return '';
+	}
+	return (string) ( $item['group_context']['primary_group_uri'] ?? '' );
+}
+
+/**
  * Why this entry is in this list, when there is anything to say.
  *
  * Null far more often than not, and that is the point: a Create on a personal timeline is the
@@ -360,6 +383,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 	 * one than the page it is continuing.
 	 */
 	$announce_frame = (string) ( $surfaces[ $surface ]['announce_frame'] ?? 'show' );
+	$header_source = (string) ( $surfaces[ $surface ]['header_actor_source'] ?? 'object' );
 	$empty = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false, 'filter' => $filter );
 	if ( function_exists( 'axismundi_actors_get_by_uri' ) ) {
 		// Re-resolve before applying the public boundary: a status change must not be able to
@@ -407,6 +431,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 			if ( is_array( $item ) && axismundi_act_actor_feed_item_in_filter( $item, $filter ) && axismundi_act_feed_item_in_group_context( $item, $group_context_mode ) ) {
 				$item['cursor'] = $last;
 				$item['status'] = axismundi_act_feed_item_status( $item, $announce_frame );
+				$item['header_actor'] = axismundi_act_feed_item_header_actor( $item, $header_source );
 				$items[]        = $item;
 				if ( count( $items ) >= $limit ) {
 					// Stop on the row that fills the page, so the page is exactly the size it
@@ -447,6 +472,7 @@ function axismundi_act_actor_feed_page( Axismundi_Actor $actor, int $limit = 20,
 			if ( is_array( $normalized ) && axismundi_act_actor_feed_item_in_filter( $normalized, $filter ) && axismundi_act_feed_item_in_group_context( $normalized, $group_context_mode ) ) {
 				$normalized['cursor'] = '';
 				$normalized['status'] = axismundi_act_feed_item_status( $normalized, $announce_frame );
+				$normalized['header_actor'] = axismundi_act_feed_item_header_actor( $normalized, $header_source );
 				$items[]              = $normalized;
 			}
 		}

@@ -153,6 +153,22 @@ try {
 			&& ! in_array( $personal_uri, $no_replies, true )
 	);
 
+	/*
+	 * Whose identity each row names, which is the difference between the two surfaces that a
+	 * reader actually sees. The page is already this Person's profile, so the community rows name
+	 * the Group instead — and the timeline rows must keep naming the Person, or the surfaces would
+	 * be telling the same reader two different things about the same entry.
+	 */
+	$community_item = axismundi_act_actor_community_surface_page( $author, 5, '', 'all' )['items'][0] ?? array();
+	$activity_item  = axismundi_act_actor_activity_surface_page( $author, 5, '', 'all' )['items'][0] ?? array();
+	ax_ps_assert(
+		$ax_ps_results,
+		'a community row names the Group it went to, while a timeline row names nobody but the author',
+		$group instanceof Axismundi_Actor
+			&& $group->get_uri() === (string) ( $community_item['header_actor'] ?? '' )
+			&& '' === (string) ( $activity_item['header_actor'] ?? 'unset' )
+	);
+
 	// The inverse half: what the community surface shows must still be absent from the timeline.
 	$activity_uris = array();
 	foreach ( array_keys( axismundi_act_actor_feed_filters() ) as $filter ) {

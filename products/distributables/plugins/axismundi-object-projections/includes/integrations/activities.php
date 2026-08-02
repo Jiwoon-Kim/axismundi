@@ -78,6 +78,10 @@ function axismundi_op_actor_feed_object_html( string $html, array $item, string 
 	if ( is_array( $item['status'] ?? null ) && ! empty( $item['status'] ) ) {
 		$options['status'] = $item['status'];
 	}
+	// Whose identity the header names, when the surface wants someone other than the author.
+	if ( '' !== (string) ( $item['header_actor'] ?? '' ) ) {
+		$options['headerActor'] = (string) $item['header_actor'];
+	}
 	return axismundi_op_render_object_by_uri( $object_uri, $options );
 }
 add_filter( 'axismundi_act_actor_feed_object_html', 'axismundi_op_actor_feed_object_html', 20, 4 );

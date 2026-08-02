@@ -267,6 +267,24 @@ function axismundi_op_render_object_status_block() : string {
  */
 function axismundi_op_current_object_author_subject( $subject, string $context_actor_id ) {
 	unset( $context_actor_id );
+	/*
+	 * Someone other than the author, when the surface asked for it.
+	 *
+	 * On a Person's community surface the page is already that Person's profile, so repeating
+	 * their avatar and handle on every row says nothing a reader did not know; which community
+	 * the entry went to is what they came to see. The Actor is named by the selecting product and
+	 * only used when we hold its record — an unresolved override falls through to the author
+	 * rather than emptying the row, because showing the wrong identity is worse than showing the
+	 * one that is merely less useful here.
+	 */
+	$options     = (array) ( $GLOBALS['axismundi_op_object_template_options'] ?? array() );
+	$header_uri  = (string) ( $options['headerActor'] ?? '' );
+	if ( '' !== $header_uri && function_exists( 'axismundi_actors_get_by_uri' ) && function_exists( 'axismundi_actors_block_subject_from_actor' ) ) {
+		$header_actor = axismundi_actors_get_by_uri( $header_uri );
+		if ( $header_actor instanceof Axismundi_Actor ) {
+			return axismundi_actors_block_subject_from_actor( $header_actor );
+		}
+	}
 	$model  = axismundi_op_active_object_view_model();
 	$author = is_array( $model['author'] ?? null ) ? $model['author'] : array();
 	if ( empty( $author ) ) {

@@ -9,7 +9,7 @@
 	"description": "Renders the current surface's filters where the template places them.",
 	"textdomain": "axismundi-activities",
 	"parent": [ "axismundi/feed-tab" ],
-	"usesContext": [ "axismundi/feed" ],
+	"usesContext": [ "axismundi/feed", "axismundi/feedSurface" ],
 	"supports": {
 		"html": false,
 		"reusable": false,

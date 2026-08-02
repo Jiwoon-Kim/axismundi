@@ -1309,6 +1309,7 @@ $ax_feed_editor_source = static function ( string $block ) : string {
 };
 $ax_feed_feed_editor  = $ax_feed_editor_source( 'feed' );
 $ax_feed_pager_editor = $ax_feed_editor_source( 'feed-pagination' );
+$ax_feed_filters_editor = $ax_feed_editor_source( 'feed-filters' );
 ax_feed_assert(
 	$ax_feed_results,
 	'the feed is where navigation is chosen, and the pager reads that choice rather than offering its own',
@@ -1327,6 +1328,22 @@ ax_feed_assert(
 	false !== strpos( $ax_feed_pager_editor, 'is-navigation-pagination' )
 		&& false !== strpos( $ax_feed_pager_editor, 'is-navigation-infinite' )
 		&& false !== strpos( $ax_feed_pager_editor, 'wp-block-query-pagination-numbers' )
+);
+ax_feed_assert(
+	$ax_feed_results,
+	'feed filters preview the current tab surface instead of a generic placeholder',
+	array( 'axismundi/feedSurface' => 'surface' ) === (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-tab' )->provides_context
+		&& in_array( 'axismundi/feedSurface', (array) WP_Block_Type_Registry::get_instance()->get_registered( 'axismundi/feed-filters' )->uses_context, true )
+		// Reads the value, not merely declares it: `usesContext` alone is only a promise.
+		&& 1 === preg_match( '#props\.context\[\s*.axismundi/feedSurface.\s*\]#', $ax_feed_filters_editor )
+		&& false !== strpos( $ax_feed_filters_editor, 'activityPreview' )
+		&& false !== strpos( $ax_feed_filters_editor, 'communityPreview' )
+		&& false !== strpos( $ax_feed_filters_editor, "'community' === surface" )
+		&& false !== strpos( $ax_feed_filters_editor, 'community ? communityPreview() : activityPreview()' )
+		&& false !== strpos( $ax_feed_filters_editor, 'arrow_drop_down' )
+		&& false !== strpos( $ax_feed_filters_editor, "'Posts'" )
+		&& false !== strpos( $ax_feed_filters_editor, "'Comments'" )
+		&& false === strpos( $ax_feed_filters_editor, 'axismundi-feed-filters-preview__panel' )
 );
 
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );

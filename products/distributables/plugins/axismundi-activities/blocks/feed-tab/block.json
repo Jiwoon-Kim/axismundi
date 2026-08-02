@@ -12,6 +12,9 @@
 	"attributes": {
 		"surface": { "type": "string", "default": "activity" }
 	},
+	"providesContext": {
+		"axismundi/feedSurface": "surface"
+	},
 	"supports": {
 		"html": false,
 		"reusable": false,

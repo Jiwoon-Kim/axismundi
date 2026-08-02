@@ -265,7 +265,7 @@ try {
 	$remote_actor = ax_note_quote_make_remote_actor( $ax_note_quote_actor_ids, 'quote-target-' . strtolower( wp_generate_password( 6, false, false ) ) );
 	$remote_actor_uri = $remote_actor instanceof Axismundi_Actor ? $remote_actor->get_uri() : '';
 	$ax_note_quote_remote = 'https://remote.example/objects/quote-target-' . strtolower( wp_generate_password( 6, false, false ) );
-	$stored_remote = axismundi_op_remote_object_store(
+	$stored_remote = axismundi_op_store_remote_object(
 		array(
 			'id'           => $ax_note_quote_remote,
 			'type'         => 'Note',
@@ -280,7 +280,7 @@ try {
 	// Bridge cannot address the QuoteRequest and the quoting Note would remain held.
 	$unknown_actor_uri = 'https://remote.example/actors/unknown-' . strtolower( wp_generate_password( 6, false, false ) );
 	$ax_note_quote_unknown_remote = 'https://remote.example/objects/unknown-actor-' . strtolower( wp_generate_password( 6, false, false ) );
-	$stored_unknown = axismundi_op_remote_object_store(
+	$stored_unknown = axismundi_op_store_remote_object(
 		array(
 			'id'           => $ax_note_quote_unknown_remote,
 			'type'         => 'Note',
@@ -296,7 +296,7 @@ try {
 		axismundi_actors_set_status( $gone_actor->get_identity_id(), 'tombstone' );
 	}
 	$ax_note_quote_gone_remote = 'https://remote.example/objects/gone-actor-' . strtolower( wp_generate_password( 6, false, false ) );
-	$stored_gone = axismundi_op_remote_object_store(
+	$stored_gone = axismundi_op_store_remote_object(
 		array(
 			'id'           => $ax_note_quote_gone_remote,
 			'type'         => 'Note',
@@ -311,7 +311,7 @@ try {
 	// earn self/local-other -- that is a spoofed or stale observation, not evidence the
 	// object is actually ours, so it must fail closed instead of skipping QuoteRequest.
 	$ax_note_quote_spoof_remote = 'https://remote.example/objects/spoofed-' . strtolower( wp_generate_password( 6, false, false ) );
-	$stored_spoof = axismundi_op_remote_object_store(
+	$stored_spoof = axismundi_op_store_remote_object(
 		array(
 			'id'           => $ax_note_quote_spoof_remote,
 			'type'         => 'Note',
@@ -338,15 +338,15 @@ try {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- throwaway shadow teardown.
 		$wpdb->query( "DROP TABLE IF EXISTS {$ax_note_quote_shadow_table}" );
 	}
-	if ( '' !== $ax_note_quote_remote && function_exists( 'axismundi_op_remote_object_delete' ) ) {
-		axismundi_op_remote_object_delete( $ax_note_quote_remote );
+	if ( '' !== $ax_note_quote_remote && function_exists( 'axismundi_op_delete_remote_object' ) ) {
+		axismundi_op_delete_remote_object( $ax_note_quote_remote );
 	}
-	if ( '' !== $ax_note_quote_spoof_remote && function_exists( 'axismundi_op_remote_object_delete' ) ) {
-		axismundi_op_remote_object_delete( $ax_note_quote_spoof_remote );
+	if ( '' !== $ax_note_quote_spoof_remote && function_exists( 'axismundi_op_delete_remote_object' ) ) {
+		axismundi_op_delete_remote_object( $ax_note_quote_spoof_remote );
 	}
 	foreach ( array( $ax_note_quote_unknown_remote, $ax_note_quote_gone_remote ) as $remote_uri ) {
-		if ( '' !== $remote_uri && function_exists( 'axismundi_op_remote_object_delete' ) ) {
-			axismundi_op_remote_object_delete( $remote_uri );
+		if ( '' !== $remote_uri && function_exists( 'axismundi_op_delete_remote_object' ) ) {
+			axismundi_op_delete_remote_object( $remote_uri );
 		}
 	}
 	foreach ( array_unique( $ax_note_quote_post_ids ) as $pid ) {

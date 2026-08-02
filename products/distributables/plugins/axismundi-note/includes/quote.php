@@ -53,8 +53,8 @@ function axismundi_note_quote_target_origin( string $target_uri ) : array {
 			return array( 'origin' => 'local', 'actor_uri' => (string) ( $local['author_actor_uri'] ?? '' ) );
 		}
 	}
-	if ( function_exists( 'axismundi_op_remote_object_get' ) ) {
-		$row = axismundi_op_remote_object_get( $target_uri );
+	if ( function_exists( 'axismundi_op_get_remote_object' ) ) {
+		$row = axismundi_op_get_remote_object( $target_uri );
 		if ( is_array( $row ) && ! empty( $row['attributed_to_uri'] ) ) {
 			return array( 'origin' => 'remote-cache', 'actor_uri' => (string) $row['attributed_to_uri'] );
 		}
@@ -185,7 +185,7 @@ function axismundi_note_quote_target_state( string $target_uri, string $author_a
 			'source'           => $source,
 		);
 	}
-	$row = function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $target_uri ) : null;
+	$row = function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $target_uri ) : null;
 	if ( ! is_array( $row )
 		|| 'active' !== (string) ( $row['object_status'] ?? '' )
 		|| 'Tombstone' === (string) ( $row['object_type'] ?? '' )
@@ -283,7 +283,7 @@ function axismundi_note_quote_local_authorization( string $authorization_uri, Ax
 
 /** Fetch/cache and validate one remote QuoteAuthorization named by a signed Accept. */
 function axismundi_note_quote_remote_authorization( string $authorization_uri, Axismundi_Activity $request, array $state, bool $allow_fetch = true ) {
-	$row = function_exists( 'axismundi_op_remote_object_get' ) ? axismundi_op_remote_object_get( $authorization_uri ) : null;
+	$row = function_exists( 'axismundi_op_get_remote_object' ) ? axismundi_op_get_remote_object( $authorization_uri ) : null;
 	if ( ! is_array( $row ) && $allow_fetch && function_exists( 'axismundi_op_remote_object_fetch' ) ) {
 		$row = axismundi_op_remote_object_fetch( $authorization_uri );
 	}

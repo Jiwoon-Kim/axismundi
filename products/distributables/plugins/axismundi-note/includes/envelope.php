@@ -81,8 +81,8 @@ function axismundi_note_inherited_context_uri( string $parent_uri ) : string {
 			$parent = array();
 		}
 	}
-	if ( array() === $parent && function_exists( 'axismundi_op_remote_object_get' ) ) {
-		$stored = axismundi_op_remote_object_get( $parent_uri, false );
+	if ( array() === $parent && function_exists( 'axismundi_op_get_remote_object' ) ) {
+		$stored = axismundi_op_get_remote_object( $parent_uri, false );
 		$parent = is_array( $stored ) ? (array) ( $stored['payload'] ?? array() ) : array();
 	}
 	$context = $parent['context'] ?? '';

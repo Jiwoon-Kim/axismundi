@@ -94,7 +94,7 @@ add_filter( 'axismundi_act_reply_compose_url', 'axismundi_note_reply_compose_url
 
 /** Send a front-end Quote command into the existing Note editor contract. */
 function axismundi_note_quote_compose_url( string $url, string $object_uri ) : string {
-	if ( null === axismundi_note_local_uuid_from_uri( $object_uri ) && ! function_exists( 'axismundi_op_remote_object_get' ) ) {
+	if ( null === axismundi_note_local_uuid_from_uri( $object_uri ) && ! function_exists( 'axismundi_op_get_remote_object' ) ) {
 		return $url;
 	}
 	return add_query_arg(

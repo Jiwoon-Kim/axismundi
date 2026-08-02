@@ -102,7 +102,7 @@ function ax_nql_publish( int $post_id ) : ?WP_Post {
 /** Store one remote Note target. */
 function ax_nql_remote_target( array &$remote_objects, Axismundi_Actor $actor, string $slug ) : string {
 	$uri = 'https://remote.example/notes/' . $slug;
-	$stored = axismundi_op_remote_object_store(
+	$stored = axismundi_op_store_remote_object(
 		array(
 			'id'           => $uri,
 			'type'         => 'Note',
@@ -119,7 +119,7 @@ function ax_nql_remote_target( array &$remote_objects, Axismundi_Actor $actor, s
 
 /** Cache one exact remote QuoteAuthorization document. */
 function ax_nql_remote_authorization( array &$remote_objects, string $uri, Axismundi_Activity $request, string $target_actor_uri, string $interaction_target = '' ) : bool {
-	$stored = axismundi_op_remote_object_store(
+	$stored = axismundi_op_store_remote_object(
 		array(
 			'id'                => $uri,
 			'type'              => 'QuoteAuthorization',
@@ -337,7 +337,7 @@ try {
 	remove_action( 'axismundi_note_lifecycle_failed', 'ax_nql_capture_error', 10 );
 	add_action( 'axismundi_act_outbound_quote_decided', 'axismundi_note_quote_decided', 20, 3 );
 	foreach ( array_unique( $ax_nql_remote_objects ) as $uri ) {
-		axismundi_op_remote_object_delete( $uri );
+		axismundi_op_delete_remote_object( $uri );
 	}
 	foreach ( array_unique( $ax_nql_post_ids ) as $post_id ) {
 		$wpdb->delete( axismundi_note_table(), array( 'post_id' => (int) $post_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

@@ -154,6 +154,15 @@ try {
 
 	ax_ib_assert(
 		$ax_ib_results,
+		'a selected toggle keeps the same state layer after hover ends',
+		1 === preg_match(
+			'#\.axismundi-interaction \.axismundi-interaction__button\.is-selected\s*\{\s*background-color:\s*color-mix\(in srgb, currentColor calc\(var\(--md-sys-state-hover-state-layer-opacity, 0\.08\) \* 100%\), transparent\);#s',
+			$stylesheet
+		)
+	);
+
+	ax_ib_assert(
+		$ax_ib_results,
 		'the control carries the core button class so the theme reaches it',
 		false !== strpos( ax_ib_button_attr( $plain_html, 'class' ), 'wp-element-button' )
 	);

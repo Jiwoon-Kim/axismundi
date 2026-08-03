@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.43
+Stable tag: 0.0.44
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,10 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.44 =
+* A selected Like, Repost, or Vote keeps its state-layer background after the
+  pointer leaves, making the reader's existing action visible at a glance.
 
 = 0.0.43 =
 * Version feed block styles from their files so a plugin replacement cannot

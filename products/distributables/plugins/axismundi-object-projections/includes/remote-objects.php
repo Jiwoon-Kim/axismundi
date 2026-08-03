@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '10';
+const AXISMUNDI_OP_DB_VERSION            = '11';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -41,6 +41,8 @@ function axismundi_op_install_object_index_schema() : bool {
 			publicly_listable tinyint(1) NOT NULL DEFAULT 0,
 			object_status varchar(12) NOT NULL DEFAULT 'active',
 			source varchar(12) NOT NULL DEFAULT 'remote',
+			attributed_to_uri_hash char(64) DEFAULT NULL,
+			is_reply tinyint(1) NOT NULL DEFAULT 0,
 			has_group_context tinyint(1) NOT NULL DEFAULT 0,
 			primary_group_uri_hash char(64) DEFAULT NULL,
 			updated_at datetime NOT NULL,
@@ -63,6 +65,8 @@ function axismundi_op_install_object_index_schema() : bool {
 	return in_array( 'publicly_listable', $columns, true )
 		&& in_array( 'object_status', $columns, true )
 		&& in_array( 'source', $columns, true )
+		&& in_array( 'attributed_to_uri_hash', $columns, true )
+		&& in_array( 'is_reply', $columns, true )
 		&& in_array( 'has_group_context', $columns, true )
 		&& in_array( 'primary_group_uri_hash', $columns, true )
 		&& ! empty( $identity )
@@ -110,6 +114,11 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 		$context = (array) axismundi_act_group_context( (array) ( $row['payload'] ?? array() ), $object_uri );
 	}
 	$primary = trim( (string) ( $context['primary_group_uri'] ?? '' ) );
+	$payload = (array) ( $row['payload'] ?? array() );
+	$attributed_to = function_exists( 'axismundi_op_remote_member_uri' )
+		? axismundi_op_remote_member_uri( $payload['attributedTo'] ?? ( $row['attributed_to_uri'] ?? '' ) )
+		: trim( (string) ( $row['attributed_to_uri'] ?? '' ) );
+	$is_reply = ! empty( $payload['inReplyTo'] );
 	$candidate_source = (string) ( $row['listing_source'] ?? 'remote' );
 	$source  = in_array( $candidate_source, array( 'remote', 'local' ), true )
 		? $candidate_source
@@ -141,11 +150,13 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 			 * sweep has to know what it owns before there is anything else to own.
 			 */
 			'source'                 => $source,
+			'attributed_to_uri_hash' => '' !== $attributed_to ? hash( 'sha256', $attributed_to ) : null,
+			'is_reply'               => $is_reply ? 1 : 0,
 			'has_group_context'      => ! empty( $context['has_group_context'] ) ? 1 : 0,
 			'primary_group_uri_hash' => '' !== $primary ? hash( 'sha256', $primary ) : null,
 			'updated_at'             => current_time( 'mysql', true ),
 		),
-		array( '%s', '%d', '%s', '%s', '%d', '%s', '%s' )
+		array( '%s', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s' )
 	);
 }
 
@@ -353,7 +364,7 @@ function axismundi_op_install() : bool {
 		$rebuild = function_exists( 'axismundi_op_rebuild_quote_relations' ) ? axismundi_op_rebuild_quote_relations() : array( 'failed' => 1 );
 		$valid   = 0 === (int) ( $rebuild['failed'] ?? 1 );
 	}
-	if ( $valid && version_compare( $previous_version, '10', '<' ) ) {
+	if ( $valid && version_compare( $previous_version, '11', '<' ) ) {
 		axismundi_op_normalize_legacy_object_listing_projection_sources();
 		$valid = axismundi_op_backfill_object_listing_projection();
 	}

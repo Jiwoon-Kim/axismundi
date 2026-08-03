@@ -39,7 +39,7 @@ try {
 	ax_remote_assert( $ax_remote_results, 'the schema installs with a unique URI hash and records its verified set version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the projection schema.
 	$listing_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$index_table}" );
-	ax_remote_assert( $ax_remote_results, 'the listing projection has one URI identity and queryable public, lifecycle, source, and Group-context state', in_array( 'object_uri_hash', $listing_columns, true ) && in_array( 'publicly_listable', $listing_columns, true ) && in_array( 'object_status', $listing_columns, true ) && in_array( 'source', $listing_columns, true ) && in_array( 'has_group_context', $listing_columns, true ) && in_array( 'primary_group_uri_hash', $listing_columns, true ) );
+	ax_remote_assert( $ax_remote_results, 'the listing projection has one URI identity and queryable card, lifecycle, source, and Group-context state', in_array( 'object_uri_hash', $listing_columns, true ) && in_array( 'publicly_listable', $listing_columns, true ) && in_array( 'object_status', $listing_columns, true ) && in_array( 'source', $listing_columns, true ) && in_array( 'attributed_to_uri_hash', $listing_columns, true ) && in_array( 'is_reply', $listing_columns, true ) && in_array( 'has_group_context', $listing_columns, true ) && in_array( 'primary_group_uri_hash', $listing_columns, true ) );
 
 	ax_remote_assert(
 		$ax_remote_results,
@@ -91,6 +91,8 @@ try {
 		'storing a public remote Object refreshes its queryable listing projection without copying payload JSON',
 		is_array( $projection )
 			&& 1 === (int) $projection['publicly_listable']
+			&& hash( 'sha256', 'https://remote.example/users/alice' ) === (string) $projection['attributed_to_uri_hash']
+			&& 1 === (int) $projection['is_reply']
 			&& 0 === (int) $projection['has_group_context']
 			&& null === $projection['primary_group_uri_hash']
 			&& ! array_key_exists( 'payload_json', $projection )
@@ -107,7 +109,7 @@ try {
 	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, '7', false );
 	$backfilled = axismundi_op_install();
 	$projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[0] );
-	ax_remote_assert( $ax_remote_results, 'the v8 upgrade backfills existing remote cache rows, not only future stores', $backfilled && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && is_array( $projection ) && 1 === (int) $projection['publicly_listable'] );
+	ax_remote_assert( $ax_remote_results, 'an upgrade backfills existing remote cache rows, not only future stores', $backfilled && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && is_array( $projection ) && 1 === (int) $projection['publicly_listable'] );
 	$wpdb->update( $index_table, array( 'source' => '' ), array( 'object_uri_hash' => hash( 'sha256', $ax_remote_uris[0] ) ), array( '%s' ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- simulate the short-lived v9 writer before source fallback was fixed.
 	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, '9', false );
 	$normalized = axismundi_op_install();

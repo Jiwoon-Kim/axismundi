@@ -302,10 +302,10 @@ ax_rnd_assert(
  */
 $ax_rnd_tomb_previous                       = $GLOBALS['axismundi_op_current_view_model'] ?? null;
 $GLOBALS['axismundi_op_current_view_model'] = array( 'status' => 'tombstone' );
-$ax_rnd_tomb_notice                         = axismundi_op_render_object_tombstone_block();
-$ax_rnd_tomb_status                         = axismundi_op_render_object_status_block();
+$ax_rnd_tomb_notice                         = do_blocks( '<!-- wp:axismundi/object-tombstone /-->' );
+$ax_rnd_tomb_status                         = do_blocks( '<!-- wp:axismundi/object-status /-->' );
 $GLOBALS['axismundi_op_current_view_model'] = array( 'status' => 'active' );
-$ax_rnd_active_notice                       = axismundi_op_render_object_tombstone_block();
+$ax_rnd_active_notice                       = do_blocks( '<!-- wp:axismundi/object-tombstone /-->' );
 $GLOBALS['axismundi_op_current_view_model'] = $ax_rnd_tomb_previous;
 ax_rnd_assert(
 	$ax_rnd_results,

@@ -33,7 +33,14 @@
 			} ) );
 		},
 		// Dynamic block: inner blocks are still serialized between the delimiters
-		// and rendered into $content on the server, so save stays empty.
-		save: function () { return null; }
+		/*
+		 * The children have to reach the saved markup, even though the server renders them.
+		 *
+		 * `return null` writes the block out self-closing, which discards every child the moment
+		 * the template is saved — the controls were in the editor and were gone from the file, and
+		 * a container with no children renders nothing at all. Being dynamic decides what happens
+		 * at render time; it does not excuse the block from serializing what it contains.
+		 */
+		save: function () { return el( InnerBlocks.Content ); }
 	} );
 } )( window.wp.blocks, window.wp.blockEditor, window.wp.element, window.wp.i18n );

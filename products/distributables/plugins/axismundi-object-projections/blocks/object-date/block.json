@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "axismundi/object-date",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"title": "Object Date",
 	"category": "theme",
 	"icon": "calendar",
@@ -12,7 +12,7 @@
 		"textAlign": { "type": "string" },
 		"field": { "type": "string", "default": "published" },
 		"format": { "type": "string", "default": "" },
-		"isLink": { "type": "boolean", "default": false, "role": "content" }
+		"isLink": { "type": "boolean", "default": true, "role": "content" }
 	},
 	"example": { "viewportWidth": 500 },
 	"supports": {

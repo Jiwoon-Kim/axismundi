@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.0.64
+Stable tag: 0.0.65
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, identity, actor, federation
@@ -32,6 +32,12 @@ inbox/outbox processing, follow, HTTP signatures, background refresh/backoff, an
 delivery. Those belong to Axismundi Activities and Axismundi Federation.
 
 == Changelog ==
+
+= 0.0.65 =
+* Replaces the composite Account Header block with editable Core Group markup
+  in the bundled actor profile template. Profile leaf blocks now resolve the
+  routed Actor directly, so local and cached remote profile media continue to
+  render without a wrapper-specific context.
 
 = 0.0.64 =
 * An acct address is now unique per kind of Actor rather than globally

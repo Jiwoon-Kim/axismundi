@@ -445,7 +445,23 @@ function axismundi_op_render_object_date_block( array $attributes = array() ) : 
 	$format = '' !== $format ? $format : (string) get_option( 'date_format' );
 	$inner  = esc_html( wp_date( $format, $time ) );
 	if ( ! empty( $attributes['isLink'] ) ) {
-		$url = trim( (string) ( $model['human_url'] ?? '' ) );
+		/*
+		 * The local view first, and the origin only when there is no local one.
+		 *
+		 * Reading stays inside this instance by default: following a date should open the Object
+		 * here, where the reader keeps their controls, their thread context and their session,
+		 * rather than being handed to another server mid-timeline. Leaving for the origin is a
+		 * thing a reader should be able to choose, which makes it a separate control rather than
+		 * the behaviour of every timestamp.
+		 *
+		 * `cached_view_url` is set only for a cached remote Object, so this needs no test for which
+		 * kind of Object it has: a local one has no cache view and falls through to its own
+		 * permalink, which is already a page on this site.
+		 */
+		$url = trim( (string) ( $model['cached_view_url'] ?? '' ) );
+		if ( '' === $url ) {
+			$url = trim( (string) ( $model['human_url'] ?? '' ) );
+		}
 		if ( '' !== $url ) {
 			$inner = '<a href="' . esc_url( $url ) . '">' . $inner . '</a>';
 		}

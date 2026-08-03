@@ -909,12 +909,18 @@ try {
 		$ax_feed_live_actor = $actor instanceof Axismundi_Actor ? $actor : null;
 		ax_feed_assert(
 			$ax_feed_results,
-			'the bundled profile seeds both cards, so neither density falls back to one it did not choose',
+			'each surface seeds the cards it offers, and a surface offering two seeds two different ones',
+			/*
+			 * Asked per surface, because the two stopped being the same arrangement. A timeline
+			 * offers one reading and a community archive offers two, so requiring both everywhere
+			 * would be asserting the shape the tabs exist to end.
+			 */
 			$ax_feed_live_actor instanceof Axismundi_Actor
-				&& '' !== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'card' )
-				&& '' !== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'compact' )
-				&& axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'card' )
-					!== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'compact' )
+				&& '' !== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'card', 'activity' )
+				&& '' !== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'card', 'community' )
+				&& '' !== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'compact', 'community' )
+				&& axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'card', 'community' )
+					!== axismundi_act_actor_feed_template_source( $ax_feed_live_actor, 'compact', 'community' )
 		);
 
 		/*

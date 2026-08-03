@@ -12,8 +12,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '12';
+const AXISMUNDI_OP_DB_VERSION            = '13';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
+const AXISMUNDI_OP_DELETE_RECONCILE_OPTION = 'ax_object_projections_pending_delete_reconcile';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
 
@@ -402,6 +403,11 @@ function axismundi_op_install() : bool {
 		}
 		axismundi_op_backfill_local_object_listing_projection();
 	}
+	if ( $valid && version_compare( $previous_version, '13', '<' ) ) {
+		// A prior release recorded inbound Deletes in Activities but had no Object-cache observer.
+		// Reconcile after the schema version is recorded, when repository readers are available.
+		update_option( AXISMUNDI_OP_DELETE_RECONCILE_OPTION, '1', false );
+	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
 	}
@@ -418,6 +424,32 @@ function axismundi_op_finish_local_listing_projection_upgrade() : void {
 	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
 }
 add_action( 'init', 'axismundi_op_finish_local_listing_projection_upgrade', 100 );
+
+/** Apply inbound Deletes recorded before the cache had a Delete observer. */
+function axismundi_op_finish_inbound_delete_reconcile_upgrade() : void {
+	if ( '1' !== (string) get_option( AXISMUNDI_OP_DELETE_RECONCILE_OPTION, '' )
+		|| ! function_exists( 'axismundi_act_get_object_lifecycle' )
+		|| ! function_exists( 'axismundi_op_observe_inbound_object_delete' ) ) {
+		return;
+	}
+	global $wpdb;
+	$table = axismundi_op_remote_objects_table();
+	$after = 0;
+	$batch = 200;
+	do {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded one-time repair over this repository's active cache rows.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, object_uri FROM {$table} WHERE object_status = 'active' AND id > %d ORDER BY id ASC LIMIT %d", $after, $batch ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$after = (int) $row['id'];
+			$lifecycle = axismundi_act_get_object_lifecycle( (string) $row['object_uri'] );
+			if ( $lifecycle instanceof Axismundi_Activity && 'Delete' === $lifecycle->get_type() ) {
+				axismundi_op_observe_inbound_object_delete( $lifecycle );
+			}
+		}
+	} while ( count( $rows ) === $batch );
+	delete_option( AXISMUNDI_OP_DELETE_RECONCILE_OPTION );
+}
+add_action( 'init', 'axismundi_op_finish_inbound_delete_reconcile_upgrade', 101 );
 
 /** Metadata-only cache retention in days. */
 function axismundi_op_remote_retention_days() : int {

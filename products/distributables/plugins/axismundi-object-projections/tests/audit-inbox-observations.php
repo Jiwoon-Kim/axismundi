@@ -151,6 +151,21 @@ try {
 	$tombstoned = axismundi_op_get_remote_object( $ax_inbox_object_uri );
 	ax_inbox_assert( $ax_inbox_results, 'an author Delete replaces the cached Object with a privacy-minimal Tombstone', $delete instanceof Axismundi_Activity && is_array( $tombstoned ) && 'tombstone' === (string) $tombstoned['object_status'] && 'Tombstone' === (string) $tombstoned['object_type'] && empty( $tombstoned['content'] ) && 'Note' === (string) ( $tombstoned['payload']['formerType'] ?? '' ) );
 
+	$legacy_delete_object = 'https://remote.example/objects/legacy-delete-' . $ax_inbox_suffix;
+	$legacy_stored = axismundi_op_store_remote_object( array( 'id' => $legacy_delete_object, 'type' => 'Note', 'attributedTo' => $author_uri, 'content' => '<p>Delete arrived before the observer.</p>' ) );
+	remove_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_object_delete', 20 );
+	$legacy_delete = axismundi_act_record_activity( array( 'id' => 'https://remote.example/activities/delete-legacy-' . $ax_inbox_suffix, 'type' => 'Delete', 'actor' => $author_uri, 'object' => $legacy_delete_object ), 'inbound' );
+	add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_object_delete', 20 );
+	if ( $legacy_delete instanceof Axismundi_Activity ) {
+		$ax_inbox_activity_uris[] = $legacy_delete->get_uri();
+	}
+	$legacy_before = axismundi_op_get_remote_object( $legacy_delete_object );
+	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, '12', false );
+	$legacy_install = axismundi_op_install();
+	axismundi_op_finish_inbound_delete_reconcile_upgrade();
+	$legacy_after = axismundi_op_get_remote_object( $legacy_delete_object );
+	ax_inbox_assert( $ax_inbox_results, 'the v13 repair tombstones a cached Object whose verified Delete arrived before this observer existed', is_array( $legacy_stored ) && $legacy_delete instanceof Axismundi_Activity && is_array( $legacy_before ) && 'active' === (string) $legacy_before['object_status'] && $legacy_install && is_array( $legacy_after ) && 'tombstone' === (string) $legacy_after['object_status'] && false === get_option( AXISMUNDI_OP_DELETE_RECONCILE_OPTION, false ) );
+
 	$announce_uri = 'https://remote.example/activities/announce-' . $ax_inbox_suffix;
 	$announce     = axismundi_act_record_activity(
 		array(
@@ -179,6 +194,7 @@ try {
 		$wpdb->delete( axismundi_act_activities_table(), array( 'activity_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture cleanup.
 	}
 	axismundi_op_delete_remote_object( $ax_inbox_object_uri );
+	axismundi_op_delete_remote_object( $legacy_delete_object );
 	wp_clear_scheduled_hook( 'axismundi_op_fetch_announced_object', array( $ax_inbox_announce_uri ) );
 	axismundi_op_delete_remote_object( $ax_inbox_announce_uri );
 }

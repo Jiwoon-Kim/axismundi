@@ -56,6 +56,7 @@ endif;
 <!-- wp:group {"className":"<?php echo esc_attr( $axismundi_actor_feed_class ); ?>","layout":{"type":"constrained"}} -->
 <div class="wp-block-group <?php echo esc_attr( $axismundi_actor_feed_class ); ?>"><!-- wp:axismundi/feed {"align":"wide"} -->
 <!-- wp:axismundi/feed-tabs -->
+<?php if ( 'person' === $axismundi_actor_profile_kind ) : ?>
 <!-- wp:axismundi/feed-tab -->
 <!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center","justifyContent":"space-between"}} -->
 <div class="wp-block-group"><!-- wp:axismundi/feed-filters /--></div>
@@ -101,8 +102,9 @@ endif;
 
 <!-- wp:axismundi/feed-pagination /-->
 <!-- /wp:axismundi/feed-tab -->
+<?php endif; ?>
 
-<!-- wp:axismundi/feed-tab {"surface":"community","navigation":"pagination","filterStyle":"tabs"} -->
+<!-- wp:axismundi/feed-tab {"surface":"<?php echo 'group' === $axismundi_actor_profile_kind ? 'activity' : 'community'; ?>","navigation":"pagination","filterStyle":"tabs"} -->
 <!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"center"}} -->
 <div class="wp-block-group"><!-- wp:axismundi/feed-filters /-->
 

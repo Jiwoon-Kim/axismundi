@@ -99,6 +99,35 @@ function axismundi_act_actor_feed_item_is_reply( Axismundi_Activity $activity, s
 }
 
 /**
+ * The Object one feed row ultimately presents.
+ *
+ * An ordinary Create points straight to its Object. A Group admission Announce can instead wrap
+ * the submitted Create Activity, whose own Object is the thing a card and the Object index know.
+ * Keep that protocol shape in Activities rather than teaching Forum's old renderer how to draw a
+ * second kind of card.
+ */
+function axismundi_act_actor_feed_object_uri( Axismundi_Activity $activity ) : string {
+	$payload = (array) $activity->get_payload();
+	$object  = $payload['object'] ?? null;
+	if ( 'Announce' === $activity->get_type() && is_array( $object ) && in_array( (string) ( $object['type'] ?? '' ), array( 'Create', 'Update' ), true ) ) {
+		$object = $object['object'] ?? null;
+	}
+	$uri = axismundi_act_member_uri( $object );
+	if ( '' !== $uri ) {
+		return $uri;
+	}
+	/* An Announce may carry only the submitted Activity URI; resolve that one ledger hop. */
+	$wrapped = 'Announce' === $activity->get_type() && function_exists( 'axismundi_act_get' )
+		? axismundi_act_get( (string) ( $activity->get_object_uri() ?? '' ) )
+		: null;
+	if ( $wrapped instanceof Axismundi_Activity ) {
+		$wrapped_payload = (array) $wrapped->get_payload();
+		return axismundi_act_member_uri( $wrapped_payload['object'] ?? null );
+	}
+	return (string) ( $activity->get_object_uri() ?? '' );
+}
+
+/**
  * Build one viewer-safe feed item descriptor from a Create or Announce row.
  *
  * The card content is not read here: Activities owns selection and verb framing,
@@ -131,10 +160,7 @@ function axismundi_act_actor_feed_item( Axismundi_Activity $activity, string $su
 	if ( 'Create' !== $type && 'Announce' !== $type ) {
 		return null;
 	}
-	$object_uri = axismundi_act_member_uri( $payload['object'] ?? null );
-	if ( '' === $object_uri ) {
-		$object_uri = (string) ( $activity->get_object_uri() ?? '' );
-	}
+	$object_uri = axismundi_act_actor_feed_object_uri( $activity );
 	if ( '' === $object_uri ) {
 		return null;
 	}
@@ -517,7 +543,15 @@ function axismundi_act_actor_feed_display_page( callable $page_callback, Axismun
 	$scan_limit  = max( 1, (int) apply_filters( 'axismundi_act_actor_feed_card_scan_pages', 10, $actor, $limit ) );
 	$page        = array( 'items' => array(), 'next_cursor' => '', 'has_more' => false );
 	while ( true ) {
-		$page = (array) call_user_func( $page_callback, $actor, $limit, $cursor, $filter, $inclusive, $head_window && 0 === $scan_pages );
+		/*
+		 * The surface key travels with the call rather than being inferred by the callable.
+		 *
+		 * One reader now serves more than one surface, so "which descriptor am I?" stopped having
+		 * an answer it could assume. Passing it costs a parameter that older callables simply do
+		 * not declare — harmless for userland functions, which ignore surplus arguments — and buys
+		 * the guarantee that a page and the descriptor governing it cannot disagree.
+		 */
+		$page = (array) call_user_func( $page_callback, $actor, $limit, $cursor, $filter, $inclusive, $head_window && 0 === $scan_pages, $surface );
 		foreach ( (array) ( $page['items'] ?? array() ) as $item ) {
 			if ( ! is_array( $item ) ) {
 				continue;
@@ -1425,8 +1459,9 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 	 * arrives carrying `audience`, which is how Lemmy states the same fact and how any threadiverse
 	 * peer will.
 	 *
-	 * A Group gets none. Its profile already is the community, so a "community contributions" tab
-	 * there would point at itself.
+	 * A Group gets none here. Forum contributes its one Activity surface, which reads the Group's
+	 * accepted Announce ledger; a Person-style community-contributions tab there would point at
+	 * the same Group context from the wrong side.
 	 */
 	if ( 'Group' !== $actor->get_type() ) {
 		$own['community'] = array(
@@ -1506,7 +1541,7 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
  * The surface a profile opens on, and the one an unrecognised address falls back to.
  *
  * `activity` when it is present, which is every Person. When a product has replaced the set — a
- * community Group, whose profile is its archive — the fallback is the first surface registered
+	 * Group Activity profile — the fallback is the first surface registered
  * rather than a name that is no longer there. Falling back to a missing key is how a profile
  * renders as an empty region with nothing to say about why.
  *
@@ -1522,27 +1557,45 @@ function axismundi_act_actor_default_surface( array $surfaces ) : string {
 }
 
 /** The Activities-owned surface: what this Person published themselves. */
-function axismundi_act_actor_activity_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
-	return axismundi_act_actor_feed_page( $actor, $limit, $cursor, $filter, 'activity', $inclusive, $head_window );
+function axismundi_act_actor_activity_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false, string $surface = 'activity' ) : array {
+	return axismundi_act_actor_feed_page( $actor, $limit, $cursor, $filter, '' !== $surface ? $surface : 'activity', $inclusive, $head_window );
 }
 
 /**
- * The same ledger, read for what this Person addressed to a community.
+ * The same ledger, read as a numbered collection of what was addressed to a community.
  *
  * It is the same Activity ledger, but unlike the personal timeline it is a countable projection:
  * Object listing facts make its public candidates stable enough for COUNT/LIMIT/OFFSET. The
- * surface descriptor still owns which side of `group_context` it selects.
+ * surface descriptor owns which side of `group_context` it selects, and — through
+ * `filter_selection` — how its own filter vocabulary maps onto this selection. A product may
+ * therefore name its collections in its own words without owning a second way to choose rows.
+ *
+ * @param string $surface Surface key being read, supplied by the display-page dispatcher. It is
+ *                        not assumed, because more than one surface now uses this reader and the
+ *                        descriptor it must consult is the one it was invoked for.
  */
-function axismundi_act_actor_community_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
+function axismundi_act_actor_community_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false, string $surface = 'community' ) : array {
 	unset( $inclusive, $head_window );
 	$surfaces           = axismundi_act_actor_profile_surfaces( $actor );
-	$current            = (array) ( $surfaces['community'] ?? array() );
-	$filter             = axismundi_act_actor_feed_filter( $filter );
+	$current            = (array) ( $surfaces[ '' !== $surface ? $surface : 'community' ] ?? array() );
+	/*
+	 * The surface's own vocabulary, translated rather than overruled.
+	 *
+	 * A surface may declare collections this plugin has never heard of — a community's Posts and
+	 * Comments are a different division than a timeline's replies-and-boosts switches. Normalising
+	 * such a key against the timeline vocabulary would not reject it, which would be visible; it
+	 * would silently resolve to a nearby rule and quietly answer a question nobody asked. So a
+	 * declared mapping decides, and only the rule key it names is normalised.
+	 */
+	$selection          = (array) ( $current['filter_selection'][ $filter ] ?? array() );
+	$rule_filter        = axismundi_act_actor_feed_filter( isset( $selection['filter'] ) ? (string) $selection['filter'] : $filter );
+	$object_is_reply    = array_key_exists( 'object_is_reply', $selection ) ? (bool) $selection['object_is_reply'] : null;
+	$filter             = isset( $current['filters'][ $filter ] ) ? $filter : $rule_filter;
 	$group_context_mode = (string) ( $current['group_context'] ?? 'in' );
 	$announce_frame     = (string) ( $current['announce_frame'] ?? 'hide' );
 	$header_source      = (string) ( $current['header_actor_source'] ?? 'audience' );
 	$page_number        = max( 1, absint( $cursor ) );
-	$candidates         = axismundi_act_get_countable_actor_feed_page( $actor, $limit, $page_number, $filter, $group_context_mode );
+	$candidates         = axismundi_act_get_countable_actor_feed_page( $actor, $limit, $page_number, $rule_filter, $group_context_mode, $object_is_reply );
 	$items              = array();
 	foreach ( $candidates['activities'] as $activity ) {
 		if ( ! $activity instanceof Axismundi_Activity ) {
@@ -1554,7 +1607,7 @@ function axismundi_act_actor_community_surface_page( Axismundi_Actor $actor, int
 		 * supplies the payload-derived presentation fields (notably the primary Group URI for the
 		 * header); applying the filter again here would let COUNT and the visible page drift apart.
 		 */
-		$item = axismundi_act_actor_feed_item( $activity, 'community' );
+		$item = axismundi_act_actor_feed_item( $activity, '' !== $surface ? $surface : 'community' );
 		if ( ! is_array( $item ) ) {
 			continue;
 		}

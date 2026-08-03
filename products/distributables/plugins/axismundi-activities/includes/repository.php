@@ -752,12 +752,14 @@ function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20,
  * a stronger promise -- its COUNT and LIMIT/OFFSET must name exactly the same cards -- so it reads
  * OP's materialized listing facts before it counts anything.
  *
- * @param Axismundi_Actor $actor         Actor whose ledger is read.
- * @param string          $filter        posts|posts-and-boosts|posts-and-replies|all.
- * @param string          $group_context in|out|both.
+ * @param Axismundi_Actor $actor           Actor whose ledger is read.
+ * @param string          $filter          posts|posts-and-boosts|posts-and-replies|all.
+ * @param string          $group_context   in|out|both.
+ * @param bool|null       $object_is_reply Narrow to Objects that are, or are not, replies;
+ *                                         null leaves the selection unnarrowed.
  * @return array{from:string,where:string,args:array<int,mixed>}|null
  */
-function axismundi_act_countable_actor_feed_candidate_sql( Axismundi_Actor $actor, string $filter = 'all', string $group_context = 'both' ) : ?array {
+function axismundi_act_countable_actor_feed_candidate_sql( Axismundi_Actor $actor, string $filter = 'all', string $group_context = 'both', ?bool $object_is_reply = null ) : ?array {
 	if (
 		AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' )
 		|| ! function_exists( 'axismundi_op_object_index_table' )
@@ -803,6 +805,31 @@ function axismundi_act_countable_actor_feed_candidate_sql( Axismundi_Actor $acto
 	if ( empty( $rules['replies'] ) ) {
 		$where[] = "( a.activity_type = 'Announce' OR i.is_reply = 0 )";
 	}
+	if ( null !== $object_is_reply ) {
+		/*
+		 * A fact about the announced Object, deliberately not a change to the rule above.
+		 *
+		 * The `replies` rule asks what the *Actor* did, which is why an Announce always passes it:
+		 * boosting is an act of its own regardless of what it wraps, so a Person reading "posts and
+		 * boosts" keeps seeing a boosted reply. This asks what the *Object* is, which is a different
+		 * question and the only one that can split a collection whose every row is an Announce.
+		 * Making the reply rule reach through the Announce instead would have answered both
+		 * questions with one predicate and silently changed what a Person's timeline means.
+		 *
+		 * The index row is required rather than tolerated here. Everywhere else an uncached Announce
+		 * keeps its external-reference contract, but a collection that says "these are the comments"
+		 * has to know that of every row it counts, and an Object with no listing facts is not known
+		 * to be either. Admitting it would put the same entry in both collections or in the wrong
+		 * one, and a numbered page cannot absorb that: COUNT and the visible cards must name the
+		 * same set.
+		 *
+		 * A surface asking for replies while its filter excludes them is asking for nothing, and
+		 * correctly gets nothing rather than one rule quietly overriding the other.
+		 */
+		$where[] = $object_is_reply
+			? '( i.object_uri_hash IS NOT NULL AND i.is_reply = 1 )'
+			: '( i.object_uri_hash IS NOT NULL AND i.is_reply = 0 )';
+	}
 	return array(
 		/*
 		 * Both ledger indexes preserve chronology, but only this one narrows at the public
@@ -810,7 +837,13 @@ function axismundi_act_countable_actor_feed_candidate_sql( Axismundi_Actor $acto
 		 * all-public fixture because both answer in order; forcing the candidate key prevents that
 		 * cost estimate from turning a public archive into a scan of private ledger history.
 		 */
-		'from'  => "{$table} AS a FORCE INDEX (feed_public_cursor) LEFT JOIN {$index} AS i ON i.object_uri_hash = a.object_uri_hash",
+		/*
+		 * A Group admission can Announce the submitted Create Activity rather than its Object.
+		 * Join that one ledger hop before Object facts: the Group Actor still supplies chronology
+		 * and admission, while `i` supplies renderability and the root/reply fact. Direct Object
+		 * Announces simply leave `wrapped` null and join `i` on their own object URI hash.
+		 */
+		'from'  => "{$table} AS a FORCE INDEX (feed_public_cursor) LEFT JOIN {$table} AS wrapped ON wrapped.activity_uri_hash = a.object_uri_hash LEFT JOIN {$index} AS i ON i.object_uri_hash = IF( a.activity_type = 'Announce' AND wrapped.object_uri_hash IS NOT NULL, wrapped.object_uri_hash, a.object_uri_hash )",
 		'where' => implode( ' AND ', $where ),
 		'args'  => array_merge( array( hash( 'sha256', $actor_uri ), $actor_uri ), $directions ),
 	);
@@ -822,11 +855,13 @@ function axismundi_act_countable_actor_feed_candidate_sql( Axismundi_Actor $acto
  * Observed Objects intentionally do not participate: they have no ledger position, so including
  * their head-window fallback would make page counts depend on which page a reader opened first.
  *
+ * @param bool|null $object_is_reply Narrow to Objects that are, or are not, replies; null leaves
+ *                                   the selection unnarrowed.
  * @return array{activities:array<int,Axismundi_Activity>,total:int,page:int,pages:int}
  */
-function axismundi_act_get_countable_actor_feed_page( Axismundi_Actor $actor, int $per_page = 20, int $page = 1, string $filter = 'all', string $group_context = 'both' ) : array {
+function axismundi_act_get_countable_actor_feed_page( Axismundi_Actor $actor, int $per_page = 20, int $page = 1, string $filter = 'all', string $group_context = 'both', ?bool $object_is_reply = null ) : array {
 	global $wpdb;
-	$query = axismundi_act_countable_actor_feed_candidate_sql( $actor, $filter, $group_context );
+	$query = axismundi_act_countable_actor_feed_candidate_sql( $actor, $filter, $group_context, $object_is_reply );
 	if ( null === $query ) {
 		return array( 'activities' => array(), 'total' => 0, 'page' => 1, 'pages' => 1 );
 	}

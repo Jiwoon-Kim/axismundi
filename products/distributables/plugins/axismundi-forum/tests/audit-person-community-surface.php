@@ -109,17 +109,20 @@ try {
 
 	$group_surfaces = $group instanceof Axismundi_Actor ? axismundi_act_actor_profile_surfaces( $group ) : array();
 	/*
-	 * A Group profile already is its community, so it never reads the contributions projection —
-	 * its one surface is the Group's own archive of what it accepted. The key is the same word in
-	 * both places, which is why this asserts on the page function and not on the key: they are
-	 * different collections, and only the callable says which one a reader would get.
+	 * A Group profile has one Activities-owned Activity surface. Forum contributes the
+	 * Posts/Comments vocabulary and its declarative mapping, not a second selection or page
+	 * renderer of its own.
 	 */
 	ax_ps_assert(
 		$ax_ps_results,
-		'a Group profile reads its own archive rather than the Person contributions projection',
-		isset( $group_surfaces['community'] )
-			&& 'axismundi_act_actor_community_surface_page' !== (string) $group_surfaces['community']['page']
-			&& ! isset( $group_surfaces['activity'] )
+		'a Group profile reads its accepted Announce ledger through Activities while Forum supplies only its collection vocabulary',
+		isset( $group_surfaces['activity'] )
+			&& 'axismundi_act_actor_community_surface_page' === (string) $group_surfaces['activity']['page']
+			&& array( 'posts', 'comments' ) === array_keys( (array) $group_surfaces['activity']['filters'] )
+			&& array( 'filter' => 'all', 'object_is_reply' => false ) === (array) $group_surfaces['activity']['filter_selection']['posts']
+			&& array( 'filter' => 'all', 'object_is_reply' => true ) === (array) $group_surfaces['activity']['filter_selection']['comments']
+			&& ! function_exists( 'axismundi_forum_community_surface_page' )
+			&& ! isset( $group_surfaces['community'] )
 	);
 
 	$object_uris = static function ( string $filter ) use ( $author ) : array {

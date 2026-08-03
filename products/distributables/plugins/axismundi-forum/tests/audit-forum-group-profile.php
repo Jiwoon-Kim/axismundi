@@ -62,6 +62,15 @@ function ax_gp_profile_feed( Axismundi_Actor $actor ) : string {
 	return $html;
 }
 
+/** @param array<string,string> $args Query string the reader arrived with. */
+function ax_gp_profile_feed_with_args( Axismundi_Actor $actor, array $args ) : string {
+	$restore = $_GET;
+	$_GET    = $args;
+	$html    = ax_gp_profile_feed( $actor );
+	$_GET    = $restore;
+	return $html;
+}
+
 /** @return Axismundi_Actor|WP_Error Throwaway public managed Group. */
 function ax_gp_group( int $owner, array &$identity_ids ) {
 	$group = axismundi_actors_create_managed_group(
@@ -98,11 +107,26 @@ try {
 	$topic = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_FORUM_TOPIC_POST_TYPE, 'post_status' => 'publish', 'post_author' => $owner, 'post_title' => 'Group Profile Topic Alpha', 'post_content' => 'body' ) );
 	$ax_gp_posts[] = $topic;
 	$admitted = axismundi_forum_admit_local_topic( $community, $topic, $owner );
+	$topic_uri = axismundi_forum_topic_object_uri( get_post( $topic ) );
+
+	/*
+	 * The Group admits a reply by announcing its Create, rather than the Note Object directly.
+	 * This makes the profile assertion below cover the one-hop unwrapping that lets Activities
+	 * apply Forum's Posts/Comments vocabulary to the Group Actor's common ledger.
+	 */
+	$reply = (int) wp_insert_post( array( 'post_type' => AXISMUNDI_NOTE_POST_TYPE, 'post_status' => 'draft', 'post_author' => $owner, 'post_content' => '<p>Group Profile Reply Delta.</p>' ) );
+	$ax_gp_posts[] = $reply;
+	$reply_saved = axismundi_note_save( $reply, array( 'in_reply_to_uri' => $topic_uri, 'visibility' => 'public' ) );
+	if ( ! is_wp_error( $reply_saved ) ) {
+		wp_update_post( array( 'ID' => $reply, 'post_status' => 'publish' ) );
+	}
+	$reply_envelope = axismundi_note_get( $reply );
+	$reply_uri      = is_array( $reply_envelope ) ? axismundi_note_object_uri( (string) $reply_envelope['local_uuid'] ) : '';
 
 	$group_feed = $group instanceof Axismundi_Actor ? ax_gp_profile_feed( $group ) : '';
 	ax_gp_assert(
 		$ax_gp_results,
-		'a public managed Group profile shows its community through the same feed a Person profile uses',
+		'a public managed Group profile shows its Activity through the same feed a Person profile uses',
 		$bound
 			&& ! is_wp_error( $admitted )
 			// The shared loop, not a list Forum drew itself.
@@ -117,13 +141,27 @@ try {
 			&& false !== strpos( $group_feed, 'axismundi-object-card__header' )
 			&& false !== strpos( $group_feed, 'is-type-like' )
 	);
+	$group_posts_html    = $group instanceof Axismundi_Actor ? ax_gp_profile_feed_with_args( $group, array( 'filter' => 'posts' ) ) : '';
+	$group_comments_html = $group instanceof Axismundi_Actor ? ax_gp_profile_feed_with_args( $group, array( 'filter' => 'comments' ) ) : '';
 	ax_gp_assert(
 		$ax_gp_results,
-		'a Group community is one surface, so the Person profile\'s surface switch never appears on it',
+		'Forum Posts and Comments select different admitted Objects through the Activities-owned Group Activity page',
+		! is_wp_error( $reply_saved )
+			&& '' !== $reply_uri
+			&& false !== strpos( $group_posts_html, 'Group Profile Topic Alpha' )
+			&& false === strpos( $group_posts_html, 'Group Profile Reply Delta.' )
+			&& false === strpos( $group_comments_html, 'Group Profile Topic Alpha' )
+			&& false !== strpos( $group_comments_html, 'Group Profile Reply Delta.' )
+	);
+	ax_gp_assert(
+		$ax_gp_results,
+		'a Group activity is one surface, so the Person profile\'s surface switch never appears on it',
 		false === strpos( $group_feed, 'axismundi-activity-feed__surfaces' )
 			&& $group instanceof Axismundi_Actor
-			&& array( 'community' ) === array_keys( axismundi_act_actor_profile_surfaces( $group ) )
-			&& 'pagination' === (string) axismundi_act_actor_profile_surfaces( $group )['community']['mode']
+			&& array( 'activity' ) === array_keys( axismundi_act_actor_profile_surfaces( $group ) )
+			&& 'pagination' === (string) axismundi_act_actor_profile_surfaces( $group )['activity']['mode']
+			&& 'axismundi_act_actor_community_surface_page' === (string) axismundi_act_actor_profile_surfaces( $group )['activity']['page']
+			&& ! function_exists( 'axismundi_forum_community_surface_page' )
 	);
 	ax_gp_assert(
 		$ax_gp_results,
@@ -169,7 +207,7 @@ try {
 	$_GET                 = $ax_gp_old_get;
 	ax_gp_assert(
 		$ax_gp_results,
-		'a Group community feed pages without repeating the first entry, and addresses pages by the name both collections share',
+		'a Group Activity pages without repeating the first entry, and addresses pages by the name both collections share',
 		3 === axismundi_forum_visible_topic_entry_count( $community )
 			&& 1 === count( $page_one_entries ) && 1 === count( $page_two_entries )
 			&& (int) $page_one_entries[0]['id'] !== (int) $page_two_entries[0]['id']
@@ -251,9 +289,9 @@ try {
 	$ax_gp_forced_infinite = $group instanceof Axismundi_Actor ? ax_gp_navigation_html( $group, 'infinite' ) : '';
 	ax_gp_assert(
 		$ax_gp_results,
-		'a community refuses an infinite feed it cannot serve and stays on numbered pages',
+		'a Group activity refuses an infinite feed it cannot serve and stays on numbered pages',
 		$group instanceof Axismundi_Actor
-			&& array( 'pagination' ) === (array) axismundi_act_actor_profile_surfaces( $group )['community']['modes']
+			&& array( 'pagination' ) === (array) axismundi_act_actor_profile_surfaces( $group )['activity']['modes']
 			&& 1 === preg_match( '#axismundi-feed-pagination__numbers\b#', $ax_gp_forced_infinite )
 			&& 0 === preg_match( '#axismundi-activity-feed__more-link#', $ax_gp_forced_infinite )
 	);
@@ -287,7 +325,7 @@ try {
 	$ax_gp_card_html    = $ax_gp_density( array() );
 	$ax_gp_compact_html = $ax_gp_density( array( 'density' => 'compact' ) );
 	$ax_gp_legacy_html  = $ax_gp_density( array( 'view' => 'compact' ) );
-	$ax_gp_surface_html = $ax_gp_density( array( 'view' => 'community' ) );
+	$ax_gp_surface_html = $ax_gp_density( array( 'view' => 'activity' ) );
 	ax_gp_assert(
 		$ax_gp_results,
 		'the rendered profile carries the reader\'s density, and a surface name is never mistaken for one',

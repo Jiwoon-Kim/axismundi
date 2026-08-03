@@ -213,6 +213,29 @@ try {
 			&& in_array( $remote_announce_uri, array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_spoofed_create['activities'] ), true )
 			&& in_array( $remote_uncached_announce_uri, array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_spoofed_create['activities'] ), true )
 	);
+	$ax_feed_uris = static fn( array $page ) : array => array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $page['activities'] );
+	$wpdb->update( $object_index, array( 'is_reply' => 1 ), array( 'object_uri_hash' => hash( 'sha256', $observed_note_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the announced Object becomes a reply so the two collections have one member each.
+	$countable_announced_replies = axismundi_act_get_countable_actor_feed_page( $remote_actor, 20, 1, 'all', 'both', true );
+	$countable_announced_topics  = axismundi_act_get_countable_actor_feed_page( $remote_actor, 20, 1, 'all', 'both', false );
+	$countable_reply_boost       = axismundi_act_get_countable_actor_feed_page( $remote_actor, 20, 1, 'posts-and-boosts', 'both' );
+	$countable_unnarrowed        = axismundi_act_get_countable_actor_feed_page( $remote_actor, 20, 1, 'all', 'both' );
+	$wpdb->update( $object_index, array( 'is_reply' => 0 ), array( 'object_uri_hash' => hash( 'sha256', $observed_note_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- restore candidate fixture mutation.
+	ax_feed_assert(
+		$ax_feed_results,
+		'a collection can be split by what the announced Object is, and an Object with no listing facts joins neither side',
+		array( $remote_announce_uri ) === $ax_feed_uris( $countable_announced_replies )
+			&& array( $remote_create_uri ) === $ax_feed_uris( $countable_announced_topics )
+			&& 1 === (int) $countable_announced_replies['total']
+			&& 1 === (int) $countable_announced_topics['total']
+			&& ! in_array( $remote_uncached_announce_uri, array_merge( $ax_feed_uris( $countable_announced_replies ), $ax_feed_uris( $countable_announced_topics ) ), true )
+	);
+	ax_feed_assert(
+		$ax_feed_results,
+		'narrowing by the announced Object leaves the timeline reply switch alone, so a boosted reply survives a filter that hides replies',
+		in_array( $remote_announce_uri, $ax_feed_uris( $countable_reply_boost ), true )
+			&& 3 === (int) $countable_unnarrowed['total']
+			&& array() === array_diff( array( $remote_create_uri, $remote_announce_uri, $remote_uncached_announce_uri ), $ax_feed_uris( $countable_unnarrowed ) )
+	);
 	$countable_sql = axismundi_act_countable_actor_feed_candidate_sql( $remote_actor, 'all', 'both' );
 	$countable_plan = is_array( $countable_sql )
 		? $wpdb->get_row( $wpdb->prepare( "EXPLAIN SELECT a.* FROM {$countable_sql['from']} WHERE {$countable_sql['where']} ORDER BY a.feed_sort_at DESC, a.id DESC LIMIT %d OFFSET %d", array_merge( $countable_sql['args'], array( 20, 0 ) ) ), ARRAY_A ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the shared countable candidate access path.

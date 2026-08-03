@@ -179,6 +179,51 @@ try {
 		'Activity recording materializes public addressing so a candidate query need not decode audience JSON',
 		1 === (int) $create_public_audience && 0 === (int) $private_public_audience
 	);
+	$countable_first  = axismundi_act_get_countable_actor_feed_page( $remote_actor, 1, 1, 'all', 'both' );
+	$countable_second = axismundi_act_get_countable_actor_feed_page( $remote_actor, 1, 2, 'all', 'both' );
+	$countable_third  = axismundi_act_get_countable_actor_feed_page( $remote_actor, 1, 3, 'all', 'both' );
+	$countable_ids    = array_merge(
+		array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_first['activities'] ),
+		array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_second['activities'] ),
+		array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_third['activities'] )
+	);
+	ax_feed_assert(
+		$ax_feed_results,
+		'a numbered candidate query counts and pages public Creates plus cached and uncached Announces from one predicate',
+		3 === (int) $countable_first['total']
+			&& 3 === (int) $countable_first['pages']
+			&& array() === array_diff( array( $remote_create_uri, $remote_announce_uri, $remote_uncached_announce_uri ), $countable_ids )
+	);
+	$countable_posts = axismundi_act_get_countable_actor_feed_page( $remote_actor, 20, 1, 'posts', 'both' );
+	ax_feed_assert(
+		$ax_feed_results,
+		'a candidate filter excludes Announce rows while keeping an authored Create',
+		1 === (int) $countable_posts['total'] && array( $remote_create_uri ) === array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_posts['activities'] )
+	);
+	$object_index = axismundi_op_object_index_table();
+	$bad_author   = hash( 'sha256', 'https://example.com/users/not-the-actor' );
+	$wpdb->update( $object_index, array( 'attributed_to_uri_hash' => $bad_author ), array( 'object_uri_hash' => hash( 'sha256', $remote_note_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- temporary candidate fixture mutation.
+	$countable_spoofed_create = axismundi_act_get_countable_actor_feed_page( $remote_actor, 20, 1, 'all', 'both' );
+	$wpdb->update( $object_index, array( 'attributed_to_uri_hash' => hash( 'sha256', $remote_actor_uri ) ), array( 'object_uri_hash' => hash( 'sha256', $remote_note_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- restore candidate fixture mutation.
+	ax_feed_assert(
+		$ax_feed_results,
+		'a Create needs its matching author projection, while Announce retains its separate rule',
+		2 === (int) $countable_spoofed_create['total']
+			&& ! in_array( $remote_create_uri, array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_spoofed_create['activities'] ), true )
+			&& in_array( $remote_announce_uri, array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_spoofed_create['activities'] ), true )
+			&& in_array( $remote_uncached_announce_uri, array_map( static fn( Axismundi_Activity $activity ) : string => $activity->get_uri(), $countable_spoofed_create['activities'] ), true )
+	);
+	$countable_sql = axismundi_act_countable_actor_feed_candidate_sql( $remote_actor, 'all', 'both' );
+	$countable_plan = is_array( $countable_sql )
+		? $wpdb->get_row( $wpdb->prepare( "EXPLAIN SELECT a.* FROM {$countable_sql['from']} WHERE {$countable_sql['where']} ORDER BY a.feed_sort_at DESC, a.id DESC LIMIT %d OFFSET %d", array_merge( $countable_sql['args'], array( 20, 0 ) ) ), ARRAY_A ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the shared countable candidate access path.
+		: null;
+	ax_feed_assert(
+		$ax_feed_results,
+		'the countable candidate page uses the public cursor index without filesort before joining Object facts',
+		is_array( $countable_plan )
+			&& 'feed_public_cursor' === (string) ( $countable_plan['key'] ?? '' )
+			&& false === stripos( (string) ( $countable_plan['Extra'] ?? '' ), 'filesort' )
+	);
 	$feed_args  = array( hash( 'sha256', $actor_uri ), $actor_uri );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the production cursor query's access path.
 	$feed_head_plan = $wpdb->get_row( $wpdb->prepare( "EXPLAIN SELECT * FROM {$feed_table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ('outbound','local') AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY feed_sort_at DESC, id DESC LIMIT 20", $feed_args ), ARRAY_A );
@@ -1085,6 +1130,70 @@ try {
 			&& false === strpos( $ax_feed_loop_ssr, 'axismundi-activity-feed__list' )
 	);
 
+	/*
+	 * A live countable Community page. These Object snapshots are deliberately product-neutral:
+	 * the query consumes OP's materialized Group fact while the page still derives header context
+	 * from the Activity payload. One item per page makes the numbered pager observable.
+	 */
+	axismundi_actors_set_status( $ax_feed_identity, 'public' );
+	$ax_feed_nav_objects    = array(
+		'https://example.com/notes/' . wp_generate_uuid4(),
+		'https://example.com/notes/' . wp_generate_uuid4(),
+	);
+	$ax_feed_nav_activities = array(
+		home_url( '/activities/' . wp_generate_uuid4() . '/' ),
+		home_url( '/activities/' . wp_generate_uuid4() . '/' ),
+	);
+	foreach ( $ax_feed_nav_objects as $index => $object_uri ) {
+		$stored = axismundi_op_store_remote_object(
+			array(
+				'id'           => $object_uri,
+				'type'         => 'Note',
+				'attributedTo' => $actor_uri,
+				'content'      => '<p>Countable community fixture.</p>',
+				'to'           => array( $public_uri ),
+			)
+		);
+		$recorded = axismundi_act_record_activity(
+			array(
+				'id'     => $ax_feed_nav_activities[ $index ],
+				'type'   => 'Create',
+				'actor'  => $actor_uri,
+				'object' => $object_uri,
+				'to'     => array( $public_uri ),
+			),
+			'outbound'
+		);
+		$ax_feed_activities[] = $ax_feed_nav_activities[ $index ];
+		$ax_feed_remote[]     = $object_uri;
+		$wpdb->update( axismundi_op_object_index_table(), array( 'has_group_context' => 1 ), array( 'object_uri_hash' => hash( 'sha256', $object_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture supplies the already-materialized Group selection fact.
+		ax_feed_assert( $ax_feed_results, 'fixture creates one publicly listable Group-context candidate', is_array( $stored ) && $recorded instanceof Axismundi_Activity );
+	}
+	$ax_feed_nav_size = static function ( int $per_page, Axismundi_Actor $candidate ) use ( $actor ) : int {
+		return $candidate->get_uri() === $actor->get_uri() ? 1 : $per_page;
+	};
+	add_filter( 'axismundi_act_actor_feed_per_page', $ax_feed_nav_size, 10, 2 );
+	$ax_feed_nav_previous                      = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+	$GLOBALS['axismundi_actors_current_actor'] = $actor;
+	$_GET['view']                              = 'community';
+	$ax_feed_nav_rendered                      = axismundi_act_render_actor_activity_feed( array() );
+	$ax_feed_nav_page                          = axismundi_act_actor_community_surface_page( $actor, 1, '1', 'all' );
+	unset( $_GET['view'] );
+	$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_nav_previous;
+	remove_filter( 'axismundi_act_actor_feed_per_page', $ax_feed_nav_size, 10 );
+	$ax_feed_surfaces = axismundi_act_actor_profile_surfaces( $actor );
+	ax_feed_assert(
+		$ax_feed_results,
+		'a tab declares numbered pages and the Person community projection serves a real numbered page',
+		'pagination' === (string) ( axismundi_act_feed_tab_attributes( $actor, 'community' )['navigation'] ?? '' )
+			&& array( 'pagination' ) === (array) $ax_feed_surfaces['community']['modes']
+			&& 'pagination' === axismundi_act_feed_navigation_mode( $ax_feed_surfaces['community'], axismundi_act_feed_tab_attributes( $actor, 'community' ) )
+			&& 2 === (int) ( $ax_feed_nav_page['pages'] ?? 0 )
+			&& false !== strpos( $ax_feed_nav_rendered, 'is-navigation-pagination' )
+			&& false !== strpos( $ax_feed_nav_rendered, 'Page 1 of 2' )
+			&& false === strpos( $ax_feed_nav_rendered, 'is-navigation-infinite' )
+	);
+
 
 } finally {
 	foreach ( $ax_feed_activities as $activity_uri ) {
@@ -1092,6 +1201,9 @@ try {
 	}
 	foreach ( $ax_feed_remote as $uri ) {
 		$wpdb->delete( axismundi_op_remote_objects_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fixture cleanup.
+		if ( function_exists( 'axismundi_op_delete_object_listing_projection' ) ) {
+			axismundi_op_delete_object_listing_projection( $uri );
+		}
 		if ( function_exists( 'axismundi_op_object_leases_table' ) ) {
 			$wpdb->delete( axismundi_op_object_leases_table(), array( 'object_uri_hash' => hash( 'sha256', $uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fixture cleanup.
 		}
@@ -1398,38 +1510,6 @@ ax_feed_assert(
 		&& false !== strpos( $ax_feed_filters_editor, "'Posts'" )
 		&& false !== strpos( $ax_feed_filters_editor, "'Comments'" )
 		&& false === strpos( $ax_feed_filters_editor, 'axismundi-feed-filters-preview__panel' )
-);
-
-/*
- * The declaration reaching the page, not just the helper.
- *
- * The bundled community tab declares `pagination`. A Person's community surface serves a cursor,
- * so the request is refused and the reader keeps Load more — which is the bound doing its job, and
- * proof that the declaration travelled far enough to be judged rather than being dropped on the
- * way in.
- *
- * What this cannot show is the declaration *deciding* anything, and neither can any other live
- * case today: no surface offers a choice of modes, so an honoured declaration is indistinguishable
- * from the surface's own default. Widening `modes` alone does not create one either — a numbered
- * pager needs a page function that counts pages, and this surface returns a cursor, so it renders
- * no pager at all rather than a numbered one. The Group archive is the surface that serves
- * numbered pages, and `audit-forum-group-profile` asserts its pager; the decisive case arrives
- * with the first surface that offers both.
- */
-$ax_feed_nav_previous                      = $GLOBALS['axismundi_actors_current_actor'] ?? null;
-$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_live_actor;
-$_GET['view']                              = 'community';
-$ax_feed_nav_refused                       = axismundi_act_render_actor_activity_feed( array() );
-unset( $_GET['view'] );
-$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_nav_previous;
-ax_feed_assert(
-	$ax_feed_results,
-	'a tab may declare numbered pages, and a surface that cannot serve them keeps its cursor',
-	'pagination' === (string) ( axismundi_act_feed_tab_attributes( $ax_feed_live_actor, 'community' )['navigation'] ?? '' )
-		&& 'infinite' === axismundi_act_feed_navigation_mode( array( 'modes' => array( 'infinite' ), 'mode' => 'infinite' ), array( 'navigation' => 'pagination' ) )
-		&& 'pagination' === axismundi_act_feed_navigation_mode( array( 'modes' => array( 'infinite', 'pagination' ), 'mode' => 'infinite' ), array( 'navigation' => 'pagination' ) )
-		&& false !== strpos( $ax_feed_nav_refused, 'is-navigation-infinite' )
-		&& false === strpos( $ax_feed_nav_refused, 'is-navigation-pagination' )
 );
 
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );

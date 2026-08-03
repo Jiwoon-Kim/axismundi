@@ -1360,9 +1360,10 @@ function axismundi_act_render_feed_loop( array $blocks, array $context ) : strin
  * model Lemmy and WordPress.org both use. The federated representation is untouched by which one
  * a reader happens to be looking at.
  *
- * Activities owns exactly one surface: what this Person published themselves. A product that
- * owns some other context of the same Actor — a forum's community contributions, an archive of
- * their long-form work — registers its own here, and Activities does not know those exist.
+ * Activities owns the Activity ledger's two Person projections: ordinary activity and community
+ * contributions. A product may still contribute a genuinely different collection, such as an
+ * archive of long-form work, but "addressed to a Group" is a ledger fact rather than a Forum
+ * surface.
  *
  * @param Axismundi_Actor $actor Actor whose profile is being rendered.
  * @return array<string,array{label:string,heading:string,filters:array<string,string>,default_filter:string,page:callable}>
@@ -1417,9 +1418,9 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 	 * The other side of the same ledger.
 	 *
 	 * A Person's community contributions are not a second collection held somewhere else: they are
-	 * the entries of this same outbox that were addressed to a community, which is why both
-	 * surfaces read the same page function and differ only in which side of `group_context` they
-	 * take. It used to be registered by the forum, and that made "did this person write in a
+	 * the entries of this same outbox that were addressed to a community. Both surfaces share the
+	 * ledger but take different read models: activity keeps a cursor, while community can count its
+	 * materialized candidates. It used to be registered by the forum, and that made "did this person write in a
 	 * community" a question only a forum could answer — untrue the moment a remote Person's Object
 	 * arrives carrying `audience`, which is how Lemmy states the same fact and how any threadiverse
 	 * peer will.
@@ -1452,7 +1453,8 @@ function axismundi_act_actor_profile_surfaces( Axismundi_Actor $actor ) : array 
 			'header_actor_source' => 'audience',
 			'announce_frame'      => 'hide',
 			'page'           => 'axismundi_act_actor_community_surface_page',
-			'mode'           => 'infinite',
+			'modes'          => array( 'pagination' ),
+			'mode'           => 'pagination',
 		);
 	}
 	$surfaces = (array) apply_filters( 'axismundi_act_actor_profile_surfaces', $own, $actor );
@@ -1527,12 +1529,48 @@ function axismundi_act_actor_activity_surface_page( Axismundi_Actor $actor, int 
 /**
  * The same ledger, read for what this Person addressed to a community.
  *
- * Identical to the timeline apart from the surface key, because the difference between them is a
- * property of the entries and not of how they are fetched: the surface descriptor names the side
- * of `group_context` to take, and one selection applies it to both item kinds.
+ * It is the same Activity ledger, but unlike the personal timeline it is a countable projection:
+ * Object listing facts make its public candidates stable enough for COUNT/LIMIT/OFFSET. The
+ * surface descriptor still owns which side of `group_context` it selects.
  */
 function axismundi_act_actor_community_surface_page( Axismundi_Actor $actor, int $limit, string $cursor, string $filter, bool $inclusive = false, bool $head_window = false ) : array {
-	return axismundi_act_actor_feed_page( $actor, $limit, $cursor, $filter, 'community', $inclusive, $head_window );
+	unset( $inclusive, $head_window );
+	$surfaces           = axismundi_act_actor_profile_surfaces( $actor );
+	$current            = (array) ( $surfaces['community'] ?? array() );
+	$filter             = axismundi_act_actor_feed_filter( $filter );
+	$group_context_mode = (string) ( $current['group_context'] ?? 'in' );
+	$announce_frame     = (string) ( $current['announce_frame'] ?? 'hide' );
+	$header_source      = (string) ( $current['header_actor_source'] ?? 'audience' );
+	$page_number        = max( 1, absint( $cursor ) );
+	$candidates         = axismundi_act_get_countable_actor_feed_page( $actor, $limit, $page_number, $filter, $group_context_mode );
+	$items              = array();
+	foreach ( $candidates['activities'] as $activity ) {
+		if ( ! $activity instanceof Axismundi_Activity ) {
+			continue;
+		}
+		/*
+		 * The SQL candidate predicate has already made every selection decision: public audience,
+		 * renderable Object state, author ownership, filter, and Group side. This conversion only
+		 * supplies the payload-derived presentation fields (notably the primary Group URI for the
+		 * header); applying the filter again here would let COUNT and the visible page drift apart.
+		 */
+		$item = axismundi_act_actor_feed_item( $activity, 'community' );
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+		$item['cursor']       = '';
+		$item['status']       = axismundi_act_feed_item_status( $item, $announce_frame );
+		$item['header_actor'] = axismundi_act_feed_item_header_actor( $item, $header_source );
+		$items[]              = $item;
+	}
+	return array(
+		'items'       => $items,
+		'next_cursor' => '',
+		'has_more'    => false,
+		'filter'      => $filter,
+		'page'        => (int) $candidates['page'],
+		'pages'       => (int) $candidates['pages'],
+	);
 }
 
 /**

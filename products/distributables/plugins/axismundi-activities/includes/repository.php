@@ -744,6 +744,109 @@ function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20,
 	return array_map( 'axismundi_act_hydrate', $rows );
 }
 
+/**
+ * One SQL predicate for a numbered, publicly renderable Actor feed.
+ *
+ * Cursor feeds deliberately keep their immutable-ledger scan: an uncached Announce can still be
+ * rendered as an external reference, while a vanished Create cannot. A numbered collection makes
+ * a stronger promise -- its COUNT and LIMIT/OFFSET must name exactly the same cards -- so it reads
+ * OP's materialized listing facts before it counts anything.
+ *
+ * @param Axismundi_Actor $actor         Actor whose ledger is read.
+ * @param string          $filter        posts|posts-and-boosts|posts-and-replies|all.
+ * @param string          $group_context in|out|both.
+ * @return array{from:string,where:string,args:array<int,mixed>}|null
+ */
+function axismundi_act_countable_actor_feed_candidate_sql( Axismundi_Actor $actor, string $filter = 'all', string $group_context = 'both' ) : ?array {
+	if (
+		AXISMUNDI_ACT_DB_VERSION !== (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' )
+		|| ! function_exists( 'axismundi_op_object_index_table' )
+	) {
+		return null;
+	}
+	$actor_uri = axismundi_act_uri( $actor->get_uri() );
+	if ( '' === $actor_uri ) {
+		return null;
+	}
+	$directions    = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
+	$direction_sql = implode( ', ', array_fill( 0, count( $directions ), '%s' ) );
+	$table         = axismundi_act_activities_table();
+	$index         = axismundi_op_object_index_table();
+	$rules         = function_exists( 'axismundi_act_actor_feed_filters' )
+		? axismundi_act_actor_feed_filters()
+		: array();
+	$rules         = (array) ( $rules[ $filter ] ?? $rules['all'] ?? array( 'replies' => true, 'boosts' => true ) );
+	$where         = array(
+		'a.actor_uri_hash = %s',
+		'a.actor_uri = %s',
+		"a.direction IN ({$direction_sql})",
+		"a.activity_type IN ('Create', 'Announce')",
+		"a.effective_status = 'active'",
+		'a.has_public_audience = 1',
+		/*
+		 * A Create can only be rendered from its own public Object, while an Announce keeps the
+		 * existing external-reference contract when acquisition has not populated an index row.
+		 * The author equality must stay inside the Create arm: an Announce normally names somebody
+		 * else's Object, so moving it outside would erase every boost.
+		 */
+		"( ( a.activity_type = 'Create' AND i.publicly_listable = 1 AND i.attributed_to_uri_hash = a.actor_uri_hash ) OR ( a.activity_type = 'Announce' AND ( i.object_uri_hash IS NULL OR i.publicly_listable = 1 ) ) )",
+	);
+	if ( 'in' === $group_context ) {
+		$where[] = 'i.has_group_context = 1';
+	} elseif ( 'out' === $group_context ) {
+		// An uncached Announce has no contrary addressing fact, so it stays on the ordinary feed.
+		$where[] = '( i.object_uri_hash IS NULL OR i.has_group_context = 0 )';
+	}
+	if ( empty( $rules['boosts'] ) ) {
+		$where[] = "a.activity_type = 'Create'";
+	}
+	if ( empty( $rules['replies'] ) ) {
+		$where[] = "( a.activity_type = 'Announce' OR i.is_reply = 0 )";
+	}
+	return array(
+		/*
+		 * Both ledger indexes preserve chronology, but only this one narrows at the public
+		 * audience fact before walking it. MySQL will choose the older cursor index on a tiny,
+		 * all-public fixture because both answer in order; forcing the candidate key prevents that
+		 * cost estimate from turning a public archive into a scan of private ledger history.
+		 */
+		'from'  => "{$table} AS a FORCE INDEX (feed_public_cursor) LEFT JOIN {$index} AS i ON i.object_uri_hash = a.object_uri_hash",
+		'where' => implode( ' AND ', $where ),
+		'args'  => array_merge( array( hash( 'sha256', $actor_uri ), $actor_uri ), $directions ),
+	);
+}
+
+/**
+ * Read one numbered page and its total from the exact same countable candidate set.
+ *
+ * Observed Objects intentionally do not participate: they have no ledger position, so including
+ * their head-window fallback would make page counts depend on which page a reader opened first.
+ *
+ * @return array{activities:array<int,Axismundi_Activity>,total:int,page:int,pages:int}
+ */
+function axismundi_act_get_countable_actor_feed_page( Axismundi_Actor $actor, int $per_page = 20, int $page = 1, string $filter = 'all', string $group_context = 'both' ) : array {
+	global $wpdb;
+	$query = axismundi_act_countable_actor_feed_candidate_sql( $actor, $filter, $group_context );
+	if ( null === $query ) {
+		return array( 'activities' => array(), 'total' => 0, 'page' => 1, 'pages' => 1 );
+	}
+	$per_page = max( 1, min( 50, $per_page ) );
+	$page     = max( 1, $page );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the FROM/WHERE come from the fixed predicate above; all values are prepared there.
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$query['from']} WHERE {$query['where']}", $query['args'] ) );
+	$pages = max( 1, (int) ceil( $total / $per_page ) );
+	$page  = min( $page, $pages );
+	$args  = array_merge( $query['args'], array( $per_page, ( $page - 1 ) * $per_page ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- the FROM/WHERE come from the fixed predicate above; limit and offset are prepared.
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT a.* FROM {$query['from']} WHERE {$query['where']} ORDER BY a.feed_sort_at DESC, a.id DESC LIMIT %d OFFSET %d", $args ), ARRAY_A );
+	return array(
+		'activities' => array_map( 'axismundi_act_hydrate', $rows ),
+		'total'      => $total,
+		'page'       => $page,
+		'pages'      => $pages,
+	);
+}
+
 /** Recent Activity ledger rows for administration and collection providers. */
 function axismundi_act_get_recent( int $limit = 50 ) : array {
 	global $wpdb;

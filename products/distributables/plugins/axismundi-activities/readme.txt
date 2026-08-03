@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.42
+Stable tag: 0.0.43
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,10 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.43 =
+* Version feed block styles from their files so a plugin replacement cannot
+  leave a cached prior stylesheet active.
 
 = 0.0.42 =
 * Ship the Activity feed's native filter-switch styling with the block instead

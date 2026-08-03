@@ -1716,6 +1716,25 @@ function axismundi_act_register_actor_activity_feed_block() : void {
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-filters', array( 'render_callback' => 'axismundi_act_render_feed_filters_block' ) );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-pagination', array( 'render_callback' => 'axismundi_act_render_feed_pagination_block' ) );
 	register_block_type( dirname( __DIR__ ) . '/blocks/feed-density-switch', array( 'render_callback' => 'axismundi_act_render_feed_density_switch_block' ) );
+
+	/*
+	 * WordPress uses block.json's static version for a metadata style in production.
+	 * These no-build blocks edit CSS directly, so a static `0.1.0` leaves an old
+	 * stylesheet valid in browser and edge caches after a plugin replacement.
+	 */
+	$style_versions = array(
+		'axismundi-feed-style'                => '/blocks/feed/style.css',
+		'axismundi-feed-filters-style'        => '/blocks/feed-filters/style.css',
+		'axismundi-feed-pagination-style'     => '/blocks/feed-pagination/style.css',
+		'axismundi-feed-density-switch-style' => '/blocks/feed-density-switch/style.css',
+	);
+	$styles         = wp_styles();
+	foreach ( $style_versions as $handle => $relative_path ) {
+		$path = dirname( __DIR__ ) . $relative_path;
+		if ( isset( $styles->registered[ $handle ] ) && is_file( $path ) ) {
+			$styles->registered[ $handle ]->ver = (string) filemtime( $path );
+		}
+	}
 }
 add_action( 'init', 'axismundi_act_register_actor_activity_feed_block' );
 

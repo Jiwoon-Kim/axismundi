@@ -1447,6 +1447,8 @@ ax_feed_assert(
 		&& false !== strpos( $ax_feed_filters_style, '.axismundi-feed-filters__views' )
 		&& false !== strpos( $ax_feed_filters_style, '.axismundi-activity-feed__switch .axismundi-switch__input' )
 		&& false !== strpos( $ax_feed_filters_style, ':checked ~ .axismundi-switch__track' )
+		&& false !== strpos( $ax_feed_source, "'axismundi-feed-filters-style'        => '/blocks/feed-filters/style.css'" )
+		&& false !== strpos( $ax_feed_source, '$styles->registered[ $handle ]->ver = (string) filemtime( $path );' )
 		&& false === strpos( $ax_feed_root_style, 'axismundi-activity-feed__filters-panel' )
 		&& false === strpos( $ax_feed_root_style, 'axismundi-activity-feed__switch' )
 );

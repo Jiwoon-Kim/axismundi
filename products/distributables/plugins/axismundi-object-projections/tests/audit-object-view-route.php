@@ -18,6 +18,7 @@ $ax_ovr_actor_id = 0;
 $ax_ovr_get     = $_GET;
 $ax_ovr_server  = $_SERVER;
 $ax_ovr_user_id = get_current_user_id();
+$ax_ovr_template_id = $GLOBALS['_wp_current_template_id'] ?? null;
 
 /** @param bool[] $results Results. */
 function ax_ovr_assert( array &$results, string $label, bool $condition ) : void {
@@ -129,7 +130,9 @@ try {
 	ax_ovr_assert( $ax_ovr_results, 'the dedicated Tombstone template is privacy-minimal and excludes identity, content, interactions, poll, and replies', false !== strpos( $tombstone_template, 'wp:axismundi/object-tombstone' ) && false === strpos( $tombstone_template, 'object-identity' ) && false === strpos( $tombstone_template, 'object-content' ) && false === strpos( $tombstone_template, 'axismundi/interactions' ) && false === strpos( $tombstone_template, 'wp:axismundi/question' ) && false === strpos( $tombstone_template, 'wp:axismundi/replies' ) );
 	$gone_route = ax_ovr_route( $gone_hash );
 	$gone_robots = axismundi_op_object_view_robots( array() );
-	ax_ovr_assert( $ax_ovr_results, 'a cached Tombstone preserves the URI as a noindex 410 document rather than becoming a no-results or 404 response', 410 === (int) $gone_route['route']['status'] && 'tombstone' === (string) ( $gone_route['model']['status'] ?? '' ) && ! $gone_route['query']->is_404 && ! empty( $gone_robots['noindex'] ) && ! empty( $gone_robots['nofollow'] ) );
+	$tombstone_canvas = apply_filters( 'template_include', get_stylesheet_directory() . '/index.php' );
+	ax_ovr_assert( $ax_ovr_results, 'a cached Tombstone keeps its 410 lifecycle and noindex model while serving HTML as 404 so the host cannot replace the Object template', 410 === (int) $gone_route['route']['status'] && 404 === (int) $gone_route['route']['http_status'] && 'tombstone' === (string) ( $gone_route['model']['status'] ?? '' ) && ! $gone_route['query']->is_404 && ! empty( $gone_robots['noindex'] ) && ! empty( $gone_robots['nofollow'] ) );
+	ax_ovr_assert( $ax_ovr_results, 'a Tombstone HTML route resolves the editable object-tombstone block template rather than the theme fallback', ABSPATH . WPINC . '/template-canvas.php' === $tombstone_canvas && 'axismundi//object-tombstone' === (string) ( $GLOBALS['_wp_current_template_id'] ?? '' ) );
 	$unknown_route = ax_ovr_route( str_repeat( 'f', 64 ) );
 	ax_ovr_assert( $ax_ovr_results, 'an unknown cache identity remains a real empty 404', 404 === (int) $unknown_route['route']['status'] && $unknown_route['query']->is_404 && array() === $unknown_route['query']->posts && null === $unknown_route['model'] );
 	$private_route = ax_ovr_route( hash( 'sha256', $private_uri ) );
@@ -149,6 +152,7 @@ try {
 	$_GET    = $ax_ovr_get;
 	$_SERVER = $ax_ovr_server;
 	$GLOBALS['axismundi_op_object_html_route'] = null;
+	$GLOBALS['_wp_current_template_id'] = $ax_ovr_template_id;
 	axismundi_op_set_current_object_view_model( null );
 	wp_set_current_user( $ax_ovr_user_id );
 	foreach ( $ax_ovr_uris as $uri ) {

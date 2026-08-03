@@ -71,11 +71,12 @@ function axismundi_op_clear_object_main_query( WP_Query $query ) : void {
 }
 
 /** Bind cached-Object route state and its neutral view model. */
-function axismundi_op_set_object_html_route( int $status, ?array $row = null, ?array $model = null ) : void {
+function axismundi_op_set_object_html_route( int $status, ?array $row = null, ?array $model = null, ?int $http_status = null ) : void {
 	$GLOBALS['axismundi_op_object_html_route'] = array(
-		'status' => $status,
-		'row'    => $row,
-		'model'  => $model,
+		'status'      => $status,
+		'http_status' => $http_status ?? $status,
+		'row'         => $row,
+		'model'       => $model,
 	);
 	axismundi_op_set_current_object_view_model( $model );
 }
@@ -131,8 +132,15 @@ function axismundi_op_handle_object_html_request( bool $preempt, WP_Query $query
 	}
 	$query->is_404 = false;
 	$status        = 'tombstone' === (string) ( $model['status'] ?? '' ) ? 410 : 200;
-	axismundi_op_set_object_html_route( $status, $row, $model );
-	status_header( $status );
+	/*
+	 * Atomic hosting replaces every HTML 410 body with its own disabled-site page before
+	 * WordPress can render the selected block template. Keep the Object lifecycle at 410,
+	 * while serving its human representation as a 404 so `object-tombstone` reaches the
+	 * browser. Negotiated ActivityStreams requests still emit a real 410 in router.php.
+	 */
+	$http_status = 410 === $status ? 404 : $status;
+	axismundi_op_set_object_html_route( $status, $row, $model, $http_status );
+	status_header( $http_status );
 	if ( 410 === $status || ! function_exists( 'axismundi_act_no_cache_like_state' ) ) {
 		nocache_headers();
 	} else {

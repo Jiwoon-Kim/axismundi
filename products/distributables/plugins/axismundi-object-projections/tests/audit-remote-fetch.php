@@ -163,7 +163,7 @@ try {
 	$wpdb->update( $table, array( 'expires_at' => '2000-01-01 00:00:00' ), array( 'object_uri_hash' => hash( 'sha256', $ax_fetch_url ) ) );
 	$dry_count = axismundi_op_remote_objects_purge_expired( true );
 	$purged    = axismundi_op_remote_objects_purge_expired();
-	ax_fetch_assert( $ax_fetch_results, 'expired metadata is counted and purged without touching a remote resource', 1 === $dry_count && 1 === $purged && null === axismundi_op_get_remote_object( $ax_fetch_url ) );
+	ax_fetch_assert( $ax_fetch_results, 'expired metadata is counted and purged without touching a remote resource or leaving a listing projection behind', 1 === $dry_count && 1 === $purged && null === axismundi_op_get_remote_object( $ax_fetch_url ) && null === axismundi_op_get_object_listing_projection( $ax_fetch_url ) );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_fetch_mock', 10 );
 	wp_clear_scheduled_hook( 'axismundi_op_discover_remote_actor', array( $ax_fetch_actor ) );

@@ -27,9 +27,13 @@ try {
 	global $wpdb;
 	$installed = axismundi_op_install();
 	$table     = axismundi_op_remote_objects_table();
+	$index_table = axismundi_op_object_index_table();
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the custom schema.
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'object_uri_hash'", ARRAY_A );
 	ax_remote_assert( $ax_remote_results, 'the schema installs with a unique URI hash and records its verified set version', $installed && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the projection schema.
+	$listing_columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$index_table}" );
+	ax_remote_assert( $ax_remote_results, 'the listing projection has one URI identity and queryable public and Group-context state', in_array( 'object_uri_hash', $listing_columns, true ) && in_array( 'publicly_listable', $listing_columns, true ) && in_array( 'has_group_context', $listing_columns, true ) && in_array( 'primary_group_uri_hash', $listing_columns, true ) );
 
 	ax_remote_assert(
 		$ax_remote_results,
@@ -54,6 +58,7 @@ try {
 		'contentMap'   => array( 'ko-KR' => '<p>안녕하세요.</p>' ),
 		'mediaType'    => 'text/html',
 		'published'    => '2026-07-14T10:00:00Z',
+		'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 	);
 	$stored  = axismundi_op_store_remote_object( $payload, array( 'etag' => '"phase-4a"' ) );
 	ax_remote_assert(
@@ -74,6 +79,16 @@ try {
 			&& 'ko-KR' === $stored['content_language']
 	);
 	ax_remote_assert( $ax_remote_results, 'an undeclared sensitive member remains NULL rather than becoming false', is_array( $stored ) && null === $stored['is_sensitive'] );
+	$projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[0] );
+	ax_remote_assert(
+		$ax_remote_results,
+		'storing a public remote Object refreshes its queryable listing projection without copying payload JSON',
+		is_array( $projection )
+			&& 1 === (int) $projection['publicly_listable']
+			&& 0 === (int) $projection['has_group_context']
+			&& null === $projection['primary_group_uri_hash']
+			&& ! array_key_exists( 'payload_json', $projection )
+	);
 
 	$first_id              = is_array( $stored ) ? (int) $stored['id'] : 0;
 	$payload['content']     = '<p>Updated observation.</p>';
@@ -82,6 +97,11 @@ try {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture counts its own URI row.
 	$row_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE object_uri_hash = %s", hash( 'sha256', $ax_remote_uris[0] ) ) );
 	ax_remote_assert( $ax_remote_results, 'upserting the same URI is idempotent and preserves explicit sensitive=false', is_array( $updated ) && $first_id === (int) $updated['id'] && 1 === $row_count && 0 === (int) $updated['is_sensitive'] && false !== strpos( (string) $updated['content'], 'Updated observation' ) );
+	$wpdb->delete( $index_table, array( 'object_uri_hash' => hash( 'sha256', $ax_remote_uris[0] ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- simulate the pre-v8 cache row that upgrade backfill must repair.
+	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, '7', false );
+	$backfilled = axismundi_op_install();
+	$projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[0] );
+	ax_remote_assert( $ax_remote_results, 'the v8 upgrade backfills existing remote cache rows, not only future stores', $backfilled && AXISMUNDI_OP_DB_VERSION === (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION ) && is_array( $projection ) && 1 === (int) $projection['publicly_listable'] );
 
 	$bad = axismundi_op_store_remote_object( array( 'id' => $ax_remote_uris[0] ) );
 	$after_bad = axismundi_op_get_remote_object( $ax_remote_uris[0] );
@@ -105,9 +125,11 @@ try {
 		)
 	);
 	ax_remote_assert( $ax_remote_results, 'Tombstone observations are retained as lifecycle state rather than treated as missing', is_array( $tombstone ) && 'tombstone' === $tombstone['object_status'] );
+	$tombstone_projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[1] );
+	ax_remote_assert( $ax_remote_results, 'a Tombstone refreshes the same projection to non-listable state', is_array( $tombstone_projection ) && 0 === (int) $tombstone_projection['publicly_listable'] );
 
 	$deleted = axismundi_op_delete_remote_object( $ax_remote_uris[0] );
-	ax_remote_assert( $ax_remote_results, 'cache deletion removes only the addressed local observation', $deleted && null === axismundi_op_get_remote_object( $ax_remote_uris[0] ) && null !== axismundi_op_get_remote_object( $ax_remote_uris[1] ) );
+	ax_remote_assert( $ax_remote_results, 'cache deletion removes only the addressed observation and its listing projection', $deleted && null === axismundi_op_get_remote_object( $ax_remote_uris[0] ) && null === axismundi_op_get_object_listing_projection( $ax_remote_uris[0] ) && null !== axismundi_op_get_remote_object( $ax_remote_uris[1] ) );
 } finally {
 	foreach ( $ax_remote_uris as $ax_remote_uri ) {
 		axismundi_op_delete_remote_object( $ax_remote_uri );

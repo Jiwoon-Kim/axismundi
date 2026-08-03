@@ -9,11 +9,16 @@ defined( 'ABSPATH' ) || exit( 1 );
 
 require_once dirname( __DIR__ ) . '/includes/audience.php';
 
+if ( ! function_exists( 'axismundi_op_store_remote_object' ) ) {
+	require_once dirname( dirname( __DIR__ ) ) . '/axismundi-object-projections/includes/remote-objects.php';
+}
+
 $ax_aud_results = array();
 $GLOBALS['ax_aud_http'] = 0;
 $ax_aud_identity_id = 0;
 $ax_aud_identity_ids = array();
 $ax_aud_users        = array();
+$ax_aud_remote_uris  = array();
 
 /** @param bool[] $results Results. */
 function ax_aud_assert( array &$results, string $label, bool $condition ) : void {
@@ -239,6 +244,26 @@ try {
 			&& $ax_aud_second_uri === $ax_aud_settled['primary_group_uri']
 	);
 
+	$ax_aud_remote_uri    = 'https://remote.example/objects/audience-index-' . strtolower( wp_generate_password( 8, false, false ) );
+	$ax_aud_remote_uris[] = $ax_aud_remote_uri;
+	axismundi_op_store_remote_object(
+		array(
+			'id'           => $ax_aud_remote_uri,
+			'type'         => 'Note',
+			'attributedTo' => 'https://remote.example/users/audience-author',
+			'audience'     => $ax_aud_group_uri,
+			'to'           => array( $public ),
+		)
+	);
+	$ax_aud_projection = axismundi_op_get_object_listing_projection( $ax_aud_remote_uri );
+	ax_aud_assert(
+		$ax_aud_results,
+		'the Object listing writer persists Activities group context without reimplementing the classifier',
+		is_array( $ax_aud_projection )
+			&& 1 === (int) $ax_aud_projection['has_group_context']
+			&& hash( 'sha256', $ax_aud_group_uri ) === (string) $ax_aud_projection['primary_group_uri_hash']
+	);
+
 	/*
 	 * The selection the two Person surfaces will be built from.
 	 *
@@ -268,6 +293,9 @@ try {
 	ax_aud_assert( $ax_aud_results, 'the resolver performs no HTTP request', 0 === $GLOBALS['ax_aud_http'] );
 } finally {
 	remove_filter( 'pre_http_request', 'ax_aud_http' );
+	foreach ( $ax_aud_remote_uris as $ax_aud_remote_uri ) {
+		axismundi_op_delete_remote_object( $ax_aud_remote_uri );
+	}
 	// Every Group the classifier fixtures created, on the same path as the Actor above.
 	foreach ( $ax_aud_users as $ax_aud_user ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';

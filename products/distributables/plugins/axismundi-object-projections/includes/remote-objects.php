@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '7';
+const AXISMUNDI_OP_DB_VERSION            = '8';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -21,6 +21,143 @@ const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
 function axismundi_op_remote_objects_table() : string {
 	global $wpdb;
 	return $wpdb->prefix . 'ax_remote_objects';
+}
+
+/** @return string Queryable listing state for local and remote Objects, keyed by canonical URI hash. */
+function axismundi_op_object_index_table() : string {
+	global $wpdb;
+	return $wpdb->prefix . 'ax_object_index';
+}
+
+/** Install and verify the rebuildable Object listing projection. */
+function axismundi_op_install_object_index_schema() : bool {
+	global $wpdb;
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	$table   = axismundi_op_object_index_table();
+	$charset = $wpdb->get_charset_collate();
+	dbDelta(
+		"CREATE TABLE {$table} (
+			object_uri_hash char(64) NOT NULL,
+			publicly_listable tinyint(1) NOT NULL DEFAULT 0,
+			has_group_context tinyint(1) NOT NULL DEFAULT 0,
+			primary_group_uri_hash char(64) DEFAULT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (object_uri_hash),
+			KEY listing_context (publicly_listable, has_group_context)
+		) ENGINE=InnoDB {$charset};"
+	);
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table schema verification.
+	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table schema verification.
+	$identity = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'PRIMARY'", ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom table engine verification.
+	$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$table}'" );
+	if ( 'InnoDB' !== $engine && ! empty( $columns ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- required for the snapshot/projection transaction.
+		$wpdb->query( "ALTER TABLE {$table} ENGINE=InnoDB" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- verify engine upgrade.
+		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$table}'" );
+	}
+	return in_array( 'publicly_listable', $columns, true )
+		&& in_array( 'has_group_context', $columns, true )
+		&& in_array( 'primary_group_uri_hash', $columns, true )
+		&& ! empty( $identity )
+		&& 0 === (int) $identity[0]['Non_unique']
+		&& 'InnoDB' === $engine;
+}
+
+/** @return array<string,mixed>|null Queryable projection row for one canonical Object URI. */
+function axismundi_op_get_object_listing_projection( string $object_uri ) : ?array {
+	global $wpdb;
+	$object_uri = trim( $object_uri );
+	if ( '' === $object_uri || AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
+		return null;
+	}
+	$table = axismundi_op_object_index_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- canonical custom projection lookup.
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE object_uri_hash = %s", hash( 'sha256', $object_uri ) ), ARRAY_A );
+	return is_array( $row ) ? $row : null;
+}
+
+/** Delete the listing projection for one Object URI. */
+function axismundi_op_delete_object_listing_projection( string $object_uri ) : bool {
+	global $wpdb;
+	$object_uri = trim( $object_uri );
+	if ( '' === $object_uri || AXISMUNDI_OP_DB_VERSION !== (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' ) ) {
+		return false;
+	}
+	return false !== $wpdb->delete( axismundi_op_object_index_table(), array( 'object_uri_hash' => hash( 'sha256', $object_uri ) ) );
+}
+
+/**
+ * Write one source row's listability projection. Activities owns Group-context classification;
+ * Object Projections persists that answer when Activities is available and otherwise fails closed.
+ *
+ * @param array<string,mixed> $row Stored source row with decoded `payload`.
+ */
+function axismundi_op_write_object_listing_projection( string $object_uri, array $row ) : bool {
+	global $wpdb;
+	$object_uri = trim( $object_uri );
+	if ( '' === $object_uri ) {
+		return false;
+	}
+	$context = array( 'has_group_context' => false, 'primary_group_uri' => '' );
+	if ( function_exists( 'axismundi_act_group_context' ) ) {
+		$context = (array) axismundi_act_group_context( (array) ( $row['payload'] ?? array() ), $object_uri );
+	}
+	$primary = trim( (string) ( $context['primary_group_uri'] ?? '' ) );
+	return false !== $wpdb->replace(
+		axismundi_op_object_index_table(),
+		array(
+			'object_uri_hash'        => hash( 'sha256', $object_uri ),
+			'publicly_listable'      => (int) axismundi_op_remote_object_is_publicly_listable( $row ),
+			'has_group_context'      => ! empty( $context['has_group_context'] ) ? 1 : 0,
+			'primary_group_uri_hash' => '' !== $primary ? hash( 'sha256', $primary ) : null,
+			'updated_at'             => current_time( 'mysql', true ),
+		),
+		array( '%s', '%d', '%d', '%s', '%s' )
+	);
+}
+
+/**
+ * Refresh the one listing projection writer from its current source snapshot.
+ *
+ * Phase one supplies remote observations. A caller that has just persisted a source row may
+ * pass it to keep both writes in one transaction; later local products call this same writer
+ * rather than maintaining a competing state column.
+ *
+ * @param array<string,mixed>|null $source_row Stored source row with decoded `payload`, when already available.
+ */
+function axismundi_op_refresh_object_listing_projection( string $object_uri, ?array $source_row = null ) : bool {
+	$object_uri = trim( $object_uri );
+	if ( '' === $object_uri ) {
+		return false;
+	}
+	$row = $source_row ?? axismundi_op_get_remote_object( $object_uri );
+	if ( ! is_array( $row ) ) {
+		return axismundi_op_delete_object_listing_projection( $object_uri );
+	}
+	return axismundi_op_write_object_listing_projection( $object_uri, $row );
+}
+
+/** Rebuild the remote-cache share of the listing projection during an upgrade. */
+function axismundi_op_backfill_object_listing_projection() : bool {
+	global $wpdb;
+	$objects = axismundi_op_remote_objects_table();
+	$after   = 0;
+	$batch   = 200;
+	$valid   = true;
+	do {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded upgrade backfill over the repository's own rows.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, object_uri, object_status, attributed_to_uri, payload_json FROM {$objects} WHERE id > %d ORDER BY id ASC LIMIT %d", $after, $batch ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$after          = (int) $row['id'];
+			$payload        = json_decode( (string) $row['payload_json'], true );
+			$row['payload'] = is_array( $payload ) ? $payload : array();
+			$valid          = axismundi_op_write_object_listing_projection( (string) $row['object_uri'], $row ) && $valid;
+		}
+	} while ( count( $rows ) === $batch );
+	return $valid;
 }
 
 /** Install/upgrade the Object Projections schema, recording success only after verification. */
@@ -104,10 +241,14 @@ function axismundi_op_install() : bool {
 		&& axismundi_op_install_object_mentions()
 		&& function_exists( 'axismundi_op_install_thread_edges' )
 		&& axismundi_op_install_thread_edges()
+		&& axismundi_op_install_object_index_schema()
 		&& 'InnoDB' === $engine;
 	if ( $valid && version_compare( $previous_version, '4', '<' ) ) {
 		$rebuild = function_exists( 'axismundi_op_rebuild_quote_relations' ) ? axismundi_op_rebuild_quote_relations() : array( 'failed' => 1 );
 		$valid   = 0 === (int) ( $rebuild['failed'] ?? 1 );
+	}
+	if ( $valid && version_compare( $previous_version, '8', '<' ) ) {
+		$valid = axismundi_op_backfill_object_listing_projection();
 	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
@@ -360,6 +501,13 @@ function axismundi_op_store_remote_object( array $payload, array $fetch = array(
 		$wpdb->query( 'ROLLBACK' );
 		return new WP_Error( 'ax_op_remote_write', __( 'The remote object snapshot could not be stored.', 'axismundi-object-projections' ) );
 	}
+	$projection_row            = $normalized;
+	$projection_row['payload'] = $payload;
+	if ( ! axismundi_op_refresh_object_listing_projection( (string) $normalized['object_uri'], $projection_row ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- rollback the snapshot when its required listing projection cannot be written.
+		$wpdb->query( 'ROLLBACK' );
+		return new WP_Error( 'ax_op_object_index', __( 'The object listing projection could not be stored.', 'axismundi-object-projections' ) );
+	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- commit custom repository transaction.
 	$wpdb->query( 'COMMIT' );
 	$stored = axismundi_op_get_remote_object( (string) $normalized['object_uri'] );
@@ -584,9 +732,16 @@ function axismundi_op_remote_objects_purge_expired( bool $dry_run = false ) : in
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded cache maintenance count.
 		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} o WHERE {$where}", $now, $now ) );
 	}
+	// Keep the listing projection in lockstep with cache eviction without assuming that future
+	// local sources share the remote table.
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- collect exactly the cache rows about to be evicted.
+	$purged_uris = (array) $wpdb->get_col( $wpdb->prepare( "SELECT o.object_uri FROM {$table} o WHERE {$where}", $now, $now ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit cache expiry maintenance.
 	$result = $wpdb->query( $wpdb->prepare( "DELETE o FROM {$table} o WHERE {$where}", $now, $now ) );
 	if ( false !== $result ) {
+		foreach ( $purged_uris as $purged_uri ) {
+			axismundi_op_delete_object_listing_projection( (string) $purged_uri );
+		}
 		if ( function_exists( 'axismundi_op_purge_orphan_object_relations' ) ) {
 			axismundi_op_purge_orphan_object_relations();
 		}
@@ -625,6 +780,9 @@ function axismundi_op_delete_remote_object( string $uri ) : bool {
 	}
 	if ( $deleted && is_array( $existing ) && function_exists( 'axismundi_op_replace_object_mentions' ) ) {
 		axismundi_op_replace_object_mentions( (string) $existing['object_uri'], array() );
+	}
+	if ( $deleted ) {
+		axismundi_op_delete_object_listing_projection( $valid );
 	}
 	return $deleted;
 }

@@ -19,6 +19,8 @@ require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/memberships.php';
 require_once __DIR__ . '/../includes/inbound-topics.php';
+require_once __DIR__ . '/../includes/distribution.php';
+require_once __DIR__ . '/../includes/group-archive.php';
 
 axismundi_forum_install();
 
@@ -126,6 +128,30 @@ try {
 		'' !== $card && str_contains( wp_strip_all_tags( $card ), 'Remote topic' )
 	);
 
+	$reply_uri = 'https://example.com/comments/accepted-' . wp_generate_uuid4();
+	$reply = $member instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
+		? ax_fit_create( $member, $reply_uri, array( 'type' => 'Note', 'name' => '', 'inReplyTo' => $accepted_uri, 'audience' => $group->get_uri(), 'context' => $group->get_uri() ) )
+		: new WP_Error( 'fixture' );
+	$ax_fit_activity_uris[] = $reply_uri . '/activity';
+	$ax_fit_object_uris[] = $reply_uri;
+	$reply_announces = $reply instanceof Axismundi_Activity ? axismundi_act_get_by_object( $reply->get_uri(), 10 ) : array();
+	$reply_announce = null;
+	foreach ( $reply_announces as $candidate ) {
+		if ( $candidate instanceof Axismundi_Activity && 'Announce' === $candidate->get_type() && $candidate->is_effective() && $group instanceof Axismundi_Actor && hash_equals( $group->get_uri(), $candidate->get_actor_uri() ) ) {
+			$reply_announce = $candidate;
+			$ax_fit_activity_uris[] = $candidate->get_uri();
+			break;
+		}
+	}
+	$reply_comments = $group instanceof Axismundi_Actor ? axismundi_forum_group_comment_uris( $group ) : array( 'uris' => array() );
+	ax_fit_assert(
+		$ax_fit_results,
+		'an accepted remote member Note reply is preserved in the Group Announce ledger and appears in the community Comments collection',
+		$reply instanceof Axismundi_Activity && $reply_announce instanceof Axismundi_Activity
+			&& $reply->get_payload() === (array) ( $reply_announce->get_payload()['object'] ?? array() )
+			&& in_array( $reply_uri, (array) $reply_comments['uris'], true )
+	);
+
 	$outsider_uri = 'https://example.com/pages/outsider-' . wp_generate_uuid4();
 	$outsider_create = $outsider instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
 		? ax_fit_create( $outsider, $outsider_uri, array( 'audience' => $group->get_uri() ) )
@@ -136,6 +162,19 @@ try {
 		$ax_fit_results,
 		'a public Page from a non-member is cached but never becomes a Forum entry',
 		$outsider_create instanceof Axismundi_Activity && is_array( axismundi_op_get_remote_object( $outsider_uri ) ) && null === axismundi_forum_get_remote_entry( $community, $outsider_uri )
+	);
+
+	$outsider_reply_uri = 'https://example.com/comments/outsider-' . wp_generate_uuid4();
+	$outsider_reply = $outsider instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
+		? ax_fit_create( $outsider, $outsider_reply_uri, array( 'type' => 'Note', 'name' => '', 'inReplyTo' => $accepted_uri, 'audience' => $group->get_uri(), 'context' => $group->get_uri() ) )
+		: new WP_Error( 'fixture' );
+	$ax_fit_activity_uris[] = $outsider_reply_uri . '/activity';
+	$ax_fit_object_uris[] = $outsider_reply_uri;
+	$outsider_reply_announces = $outsider_reply instanceof Axismundi_Activity ? axismundi_act_get_by_object( $outsider_reply->get_uri(), 10 ) : array();
+	ax_fit_assert(
+		$ax_fit_results,
+		'a non-member remote Note reply is cached but never gains a local Group Announce',
+		$outsider_reply instanceof Axismundi_Activity && empty( $outsider_reply_announces )
 	);
 
 	$elsewhere_uri = 'https://example.com/pages/elsewhere-' . wp_generate_uuid4();

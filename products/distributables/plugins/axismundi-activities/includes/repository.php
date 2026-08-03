@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_ACT_DB_VERSION        = '7';
+const AXISMUNDI_ACT_DB_VERSION        = '8';
 const AXISMUNDI_ACT_DB_VERSION_OPTION = 'axismundi_activities_db_version';
 const AXISMUNDI_ACT_PAYLOAD_MAX       = 1048576;
 
@@ -22,8 +22,9 @@ function axismundi_act_install() : bool {
 	global $wpdb;
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-	$table   = axismundi_act_activities_table();
-	$charset = $wpdb->get_charset_collate();
+	$table            = axismundi_act_activities_table();
+	$charset          = $wpdb->get_charset_collate();
+	$previous_version = (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION, '' );
 	dbDelta(
 		"CREATE TABLE {$table} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -51,6 +52,7 @@ function axismundi_act_install() : bool {
 			payload_hash char(64) NOT NULL,
 			published_at datetime DEFAULT NULL,
 			received_at datetime DEFAULT NULL,
+			feed_sort_at datetime DEFAULT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -61,6 +63,7 @@ function axismundi_act_install() : bool {
 			KEY object_uri_hash (object_uri_hash),
 			KEY target_uri_hash (target_uri_hash),
 			KEY instrument_uri_hash (instrument_uri_hash),
+			KEY feed_cursor (actor_uri_hash, effective_status, feed_sort_at, id),
 			KEY direction_status (direction, effective_status),
 			KEY reaction_chip (object_uri_hash, effective_status, reaction_key_hash, actor_uri_hash)
 		) ENGINE=InnoDB {$charset};"
@@ -78,6 +81,9 @@ function axismundi_act_install() : bool {
 	$instrument_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'instrument_uri_hash'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed custom index verification.
 	$reaction_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'reaction_chip'", ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed feed cursor index verification.
+	$feed_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'feed_cursor'", ARRAY_A );
+	usort( $feed_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixed table engine verification.
 	$engine = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table ) );
 	if ( 'InnoDB' !== $engine && ! empty( $columns ) ) {
@@ -104,10 +110,12 @@ function axismundi_act_install() : bool {
 		&& in_array( 'reaction_key', $columns, true )
 		&& in_array( 'reaction_key_hash', $columns, true )
 		&& in_array( 'reaction_raw', $columns, true )
+		&& in_array( 'feed_sort_at', $columns, true )
 		// The chip aggregate's covering index, verified for a quieter reason: without it
 		// every chip query still returns the right answer, by scanning. Nothing looks broken
 		// until an object collects thousands of reactions, and by then the version is stored.
 		&& ! empty( $reaction_index )
+		&& array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $feed_index, 'Column_name' )
 		&& ! in_array( 'blog_id', $columns, true )
 		&& ! empty( $uri_index )
 		&& 0 === (int) $uri_index[0]['Non_unique']
@@ -119,6 +127,9 @@ function axismundi_act_install() : bool {
 	$relations_valid = function_exists( 'axismundi_act_install_relations' ) && axismundi_act_install_relations();
 	$quotes_valid    = function_exists( 'axismundi_act_install_quote_authorizations' ) && axismundi_act_install_quote_authorizations();
 	$valid           = $base_valid && $relations_valid && $quotes_valid;
+	if ( $valid && version_compare( $previous_version, '8', '<' ) ) {
+		$valid = axismundi_act_backfill_feed_sort_at();
+	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_ACT_DB_VERSION_OPTION, AXISMUNDI_ACT_DB_VERSION, false );
 	}
@@ -168,12 +179,15 @@ final class Axismundi_Activity {
 	/**
 	 * The time the ledger orders by.
 	 *
-	 * This mirrors the `COALESCE(published_at, received_at, created_at)` every feed query sorts
-	 * on. It exists so a continuation cursor is built from the same expression the ORDER BY
-	 * uses — computing the two separately is how a cursor ends up naming a position the query
-	 * does not agree with, and rows fall through the gap between pages.
+	 * `feed_sort_at` materializes the published/received/created priority at write time. It keeps
+	 * a continuation cursor on the exact same immutable key as the indexed ORDER BY. The fallback
+	 * only protects hydrated legacy fixture rows while the v8 upgrade backfills the column.
 	 */
 	public function get_effective_time() : string {
+		$sort_at = trim( (string) ( $this->row['feed_sort_at'] ?? '' ) );
+		if ( '' !== $sort_at ) {
+			return $sort_at;
+		}
 		foreach ( array( 'published_at', 'received_at', 'created_at' ) as $column ) {
 			$value = $this->row[ $column ] ?? null;
 			if ( null !== $value && '' !== (string) $value ) {
@@ -304,6 +318,30 @@ function axismundi_act_datetime( $value ) : ?string {
 	}
 	$time = strtotime( (string) $value );
 	return false === $time ? null : gmdate( 'Y-m-d H:i:s', $time );
+}
+
+/** One immutable feed ordering value, shared by writes, upgrades, and cursor reads. */
+function axismundi_act_feed_sort_at( array $row, string $created_at ) : string {
+	foreach ( array( 'published_at', 'received_at' ) as $column ) {
+		$value = trim( (string) ( $row[ $column ] ?? '' ) );
+		if ( '' !== $value ) {
+			return $value;
+		}
+	}
+	return $created_at;
+}
+
+/** Materialize the legacy feed ordering expression before cursor reads depend on it. */
+function axismundi_act_backfill_feed_sort_at() : bool {
+	global $wpdb;
+	$table = axismundi_act_activities_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time derivation from immutable ledger timestamps.
+	$result = $wpdb->query( "UPDATE {$table} SET feed_sort_at = COALESCE(published_at, received_at, created_at) WHERE feed_sort_at IS NULL" );
+	if ( false === $result ) {
+		return false;
+	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- migration verification before recording v8.
+	return 0 === (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE feed_sort_at IS NULL" );
 }
 
 /** Normalize to/cc/bto/bcc/audience into URI lists. */
@@ -580,7 +618,7 @@ function axismundi_act_get_actor_feed( string $actor_uri, int $limit = 20, int $
 	$directions = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
 	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- actor-keyed feed selection in the custom ledger; direction placeholders and every value are allowlisted/prepared.
-	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY COALESCE(published_at, received_at, created_at) DESC, id DESC LIMIT %d OFFSET %d", array_merge( array( hash( 'sha256', $uri ), $uri ), $directions, array( $limit, $offset ) ) ), ARRAY_A );
+	$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ({$direction_sql}) AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY feed_sort_at DESC, id DESC LIMIT %d OFFSET %d", array_merge( array( hash( 'sha256', $uri ), $uri ), $directions, array( $limit, $offset ) ) ), ARRAY_A );
 	return array_map( 'axismundi_act_hydrate', $rows );
 }
 
@@ -649,7 +687,7 @@ function axismundi_act_get_actor_feed_after( string $actor_uri, int $limit = 20,
 	$limit         = max( 1, min( 50, $limit ) );
 	$directions    = $actor->is_local() ? array( 'outbound', 'local' ) : array( 'inbound' );
 	$direction_sql = implode( ',', array_fill( 0, count( $directions ), '%s' ) );
-	$sort          = 'COALESCE(published_at, received_at, created_at)';
+	$sort          = 'feed_sort_at';
 	$where         = '';
 	$args          = array_merge( array( hash( 'sha256', $uri ), $uri ), $directions );
 	if ( null !== $position ) {
@@ -920,6 +958,7 @@ function axismundi_act_record_source_activity( array $payload, string $direction
 	}
 	$table = axismundi_act_activities_table();
 	$now   = current_time( 'mysql', true );
+	$normalized['feed_sort_at'] = axismundi_act_feed_sort_at( $normalized, $now );
 	if ( '' !== $source_event_key ) {
 		$normalized['source_event_key']  = $source_event_key;
 		$normalized['source_event_hash'] = hash( 'sha256', $source_event_key );

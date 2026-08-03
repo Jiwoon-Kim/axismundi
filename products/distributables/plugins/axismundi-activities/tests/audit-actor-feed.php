@@ -169,6 +169,25 @@ try {
 		'a bounded private run does not truncate an older public timeline card before the scan limit',
 		in_array( $create_uri, $ids, true ) && array() === array_intersect( $hidden_run, $ids )
 	);
+	$feed_table = axismundi_act_activities_table();
+	$feed_args  = array( hash( 'sha256', $actor_uri ), $actor_uri );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the production cursor query's access path.
+	$feed_head_plan = $wpdb->get_row( $wpdb->prepare( "EXPLAIN SELECT * FROM {$feed_table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ('outbound','local') AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY feed_sort_at DESC, id DESC LIMIT 20", $feed_args ), ARRAY_A );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture selects a real cursor position for the equivalent deep-page plan.
+	$feed_anchor = $wpdb->get_row( $wpdb->prepare( "SELECT feed_sort_at, id FROM {$feed_table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ('outbound','local') AND activity_type IN ('Create','Announce') AND effective_status = 'active' ORDER BY feed_sort_at DESC, id DESC LIMIT 1 OFFSET 1", $feed_args ), ARRAY_A );
+	$feed_cursor_plan = is_array( $feed_anchor )
+		? $wpdb->get_row( $wpdb->prepare( "EXPLAIN SELECT * FROM {$feed_table} WHERE actor_uri_hash = %s AND actor_uri = %s AND direction IN ('outbound','local') AND activity_type IN ('Create','Announce') AND effective_status = 'active' AND ( feed_sort_at < %s OR ( feed_sort_at = %s AND id < %d ) ) ORDER BY feed_sort_at DESC, id DESC LIMIT 20", array_merge( $feed_args, array( $feed_anchor['feed_sort_at'], $feed_anchor['feed_sort_at'], $feed_anchor['id'] ) ) ), ARRAY_A )
+		: null;
+	$feed_plan_uses_cursor = static function ( $plan ) : bool {
+		return is_array( $plan )
+			&& 'feed_cursor' === (string) ( $plan['key'] ?? '' )
+			&& false === stripos( (string) ( $plan['Extra'] ?? '' ), 'filesort' );
+	};
+	ax_feed_assert(
+		$ax_feed_results,
+		'the head and cursor feed queries use the materialized feed_cursor index without filesort',
+		$feed_plan_uses_cursor( $feed_head_plan ) && $feed_plan_uses_cursor( $feed_cursor_plan )
+	);
 	$remote_items    = axismundi_act_actor_feed_items( $remote_actor, 20 );
 	$remote_ids      = array_column( $remote_items, 'id' );
 	$observed_items  = array_values( array_filter( $remote_items, static fn( array $item ) : bool => 'observed_object' === (string) ( $item['kind'] ?? '' ) ) );

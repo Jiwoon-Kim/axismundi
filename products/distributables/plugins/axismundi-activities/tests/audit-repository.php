@@ -48,7 +48,10 @@ try {
 	$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies its custom index.
 	$index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'activity_uri_hash'", ARRAY_A );
-	ax_act_assert( $ax_act_results, 'the Activity table retains verified unique URI identity and no blog_id tenancy column after upgrade', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && ! in_array( 'blog_id', $columns, true ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the cursor access path.
+	$feed_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'feed_cursor'", ARRAY_A );
+	usort( $feed_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
+	ax_act_assert( $ax_act_results, 'the Activity table retains verified URI identity and a materialized cursor key, without blog_id tenancy', $installed && AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION ) && ! empty( $index ) && 0 === (int) $index[0]['Non_unique'] && in_array( 'feed_sort_at', $columns, true ) && array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $feed_index, 'Column_name' ) && ! in_array( 'blog_id', $columns, true ) );
 
 	$site_actor = axismundi_actors_get_site_actor();
 	$remote     = axismundi_actors_upsert_remote(
@@ -117,7 +120,8 @@ try {
 	if ( $remote_activity instanceof Axismundi_Activity ) {
 		$ax_act_uris[] = $remote_activity->get_uri();
 	}
-	ax_act_assert( $ax_act_results, 'an inbound Activity preserves its remote id and has no local UUID', $remote_activity instanceof Axismundi_Activity && $remote_activity_uri === $remote_activity->get_uri() && null === $remote_activity->get_local_uuid() && 'inbound' === $remote_activity->get_direction() );
+	$remote_row = $remote_activity instanceof Axismundi_Activity ? $wpdb->get_row( $wpdb->prepare( "SELECT feed_sort_at FROM {$table} WHERE activity_uri_hash = %s", hash( 'sha256', $remote_activity_uri ) ), ARRAY_A ) : null; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture verifies the write-time materialization.
+	ax_act_assert( $ax_act_results, 'an inbound Activity preserves its remote id, has no local UUID, and materializes its published cursor time', $remote_activity instanceof Axismundi_Activity && $remote_activity_uri === $remote_activity->get_uri() && null === $remote_activity->get_local_uuid() && 'inbound' === $remote_activity->get_direction() && is_array( $remote_row ) && '2026-07-14 12:00:00' === (string) $remote_row['feed_sort_at'] );
 
 	$wrong_direction = axismundi_act_record_activity( array( 'id' => 'https://example.com/activities/wrong-' . $ax_act_suffix, 'type' => 'Like', 'actor' => $site_actor->get_uri(), 'object' => $object_uri ), 'inbound' );
 	$unknown_actor   = axismundi_act_record_activity( array( 'type' => 'Like', 'actor' => 'https://unknown.example/users/nope', 'object' => $object_uri ), 'outbound' );
@@ -257,8 +261,9 @@ try {
 
 	// Take the shadow down to the v4 shape and seed a row that predates the column.
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- throwaway fixture table.
-	$wpdb->query( "ALTER TABLE {$ax_act_shadow} DROP INDEX instrument_uri_hash, DROP COLUMN instrument_uri, DROP COLUMN instrument_uri_hash" );
+	$wpdb->query( "ALTER TABLE {$ax_act_shadow} DROP INDEX instrument_uri_hash, DROP COLUMN instrument_uri, DROP COLUMN instrument_uri_hash, DROP INDEX feed_cursor, DROP COLUMN feed_sort_at" );
 	$ax_act_seed_uri = 'https://remote.example/activities/v4-row-' . $ax_act_suffix;
+	$ax_act_seed_created_at = current_time( 'mysql', true );
 	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
 		$ax_act_shadow,
 		array(
@@ -274,8 +279,8 @@ try {
 			'audience_json' => '{}',
 			'payload_json' => '{}',
 			'payload_hash' => hash( 'sha256', '{}' ),
-			'created_at' => current_time( 'mysql', true ),
-			'updated_at' => current_time( 'mysql', true ),
+			'created_at' => $ax_act_seed_created_at,
+			'updated_at' => $ax_act_seed_created_at,
 		)
 	);
 	delete_option( AXISMUNDI_ACT_DB_VERSION_OPTION );
@@ -289,6 +294,9 @@ try {
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
 	$ax_act_v5_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$ax_act_shadow} WHERE Key_name = 'instrument_uri_hash'", ARRAY_A );
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
+	$ax_act_v8_index = (array) $wpdb->get_results( "SHOW INDEX FROM {$ax_act_shadow} WHERE Key_name = 'feed_cursor'", ARRAY_A );
+	usort( $ax_act_v8_index, static fn( array $left, array $right ) : int => (int) $left['Seq_in_index'] <=> (int) $right['Seq_in_index'] );
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- throwaway fixture table.
 	$ax_act_seed_row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$ax_act_shadow} WHERE activity_uri_hash = %s", hash( 'sha256', $ax_act_seed_uri ) ), ARRAY_A );
 
 	// Restored here so the assertions below read the real site; `finally` repeats it because
@@ -298,16 +306,19 @@ try {
 
 	ax_act_assert(
 		$ax_act_results,
-		'a populated v4 ledger upgrades in place: the column and index appear, an existing row survives with a null instrument, and the version is recorded only afterwards',
+		'a populated legacy ledger upgrades in place: both derived keys appear, a row keeps its null instrument and gains its immutable cursor time, and the version is recorded only afterwards',
 		$ax_act_shadow_built
 			&& ! in_array( 'instrument_uri', $ax_act_v4_columns, true )
 			&& $ax_act_migrated
 			&& in_array( 'instrument_uri', $ax_act_v5_columns, true )
 			&& in_array( 'instrument_uri_hash', $ax_act_v5_columns, true )
 			&& ! empty( $ax_act_v5_index )
+			&& in_array( 'feed_sort_at', $ax_act_v5_columns, true )
+			&& array( 'actor_uri_hash', 'effective_status', 'feed_sort_at', 'id' ) === array_column( $ax_act_v8_index, 'Column_name' )
 			&& is_array( $ax_act_seed_row )
 			&& null === $ax_act_seed_row['instrument_uri']
 			&& null === $ax_act_seed_row['instrument_uri_hash']
+			&& $ax_act_seed_created_at === (string) $ax_act_seed_row['feed_sort_at']
 	);
 
 	$ax_act_real_table = axismundi_act_activities_table();
@@ -319,6 +330,7 @@ try {
 		$wpdb->prefix === $ax_act_real_prefix
 			&& AXISMUNDI_ACT_DB_VERSION === (string) get_option( AXISMUNDI_ACT_DB_VERSION_OPTION )
 			&& in_array( 'instrument_uri', $ax_act_real_columns, true )
+			&& in_array( 'feed_sort_at', $ax_act_real_columns, true )
 	);
 } finally {
 	remove_action( 'axismundi_act_activity_recorded', 'ax_act_observe_record' );

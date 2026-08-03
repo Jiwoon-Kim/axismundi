@@ -76,6 +76,134 @@
 	}
 }
 
+/*
+ * The feed keeps a native checkbox for keyboard and assistive-technology
+ * behaviour, but owns the visual switch. A theme may also style the generic
+ * axismundi-switch contract; this scoped version keeps the feed functional
+ * with older or third-party themes.
+ */
 .axismundi-activity-feed__switch {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
 	margin-block: 0.125rem;
+	cursor: pointer;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input {
+	position: absolute;
+	inset: 0;
+	inline-size: 100%;
+	block-size: 100%;
+	margin: 0;
+	padding: 0;
+	opacity: 0;
+	cursor: pointer;
+	z-index: 1;
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__track {
+	position: relative;
+	flex-shrink: 0;
+	display: inline-block;
+	box-sizing: border-box;
+	inline-size: 52px;
+	block-size: 32px;
+	border: 2px solid var(--md-sys-color-outline, currentColor);
+	border-radius: var(--md-sys-shape-corner-full, 9999px);
+	background-color: var(--md-sys-color-surface-container-highest, Canvas);
+	overflow: visible;
+	transition:
+		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease),
+		border-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__track::after {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: 6px;
+	inline-size: 16px;
+	block-size: 16px;
+	border-radius: 50%;
+	transform: translateY(-50%);
+	background-color: var(--md-sys-color-outline, currentColor);
+	transition:
+		inset-inline-start var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		inline-size var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		block-size var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__track::before {
+	content: "";
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: -6px;
+	inline-size: 40px;
+	block-size: 40px;
+	border-radius: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	background-color: var(--md-sys-color-on-surface, CanvasText);
+	opacity: 0;
+	transition:
+		inset-inline-start var(--md-sys-motion-curve-fast-spatial-duration, 200ms) var(--md-sys-motion-curve-fast-spatial, ease),
+		opacity var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease),
+		background-color var(--md-sys-motion-curve-fast-effects-duration, 150ms) var(--md-sys-motion-curve-fast-effects, ease);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:hover ~ .axismundi-switch__track::before {
+	opacity: var(--md-sys-state-hover-state-layer-opacity, 0.08);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:focus-visible ~ .axismundi-switch__track {
+	outline: 2px solid var(--md-sys-color-secondary, Highlight);
+	outline-offset: 2px;
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:focus-visible ~ .axismundi-switch__track::before {
+	opacity: var(--md-sys-state-focus-state-layer-opacity, 0.1);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:active ~ .axismundi-switch__track::before {
+	opacity: var(--md-sys-state-pressed-state-layer-opacity, 0.1);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:active ~ .axismundi-switch__track::after {
+	inset-inline-start: 0;
+	inline-size: 28px;
+	block-size: 28px;
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:checked ~ .axismundi-switch__track {
+	border-color: var(--md-sys-color-primary, Highlight);
+	background-color: var(--md-sys-color-primary, Highlight);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:checked ~ .axismundi-switch__track::after {
+	inset-inline-start: 22px;
+	inline-size: 24px;
+	block-size: 24px;
+	background-color: var(--md-sys-color-on-primary, Canvas);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:checked ~ .axismundi-switch__track::before {
+	inset-inline-start: 14px;
+	background-color: var(--md-sys-color-primary, Highlight);
+}
+
+.axismundi-activity-feed__switch .axismundi-switch__input:checked:active ~ .axismundi-switch__track::after {
+	inset-inline-start: 20px;
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.axismundi-activity-feed__switch .axismundi-switch__track,
+	.axismundi-activity-feed__switch .axismundi-switch__track::after,
+	.axismundi-activity-feed__switch .axismundi-switch__track::before {
+		transition-duration: 1ms;
+	}
 }

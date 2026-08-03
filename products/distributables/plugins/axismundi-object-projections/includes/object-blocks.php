@@ -1079,26 +1079,35 @@ function axismundi_op_render_object_attachments_block( array $attributes = array
  * an explicit `axismundi/actorId` says "this belongs to that Actor", and anything
  * else falls back to the Object currently being rendered.
  *
- * @param WP_Block|null $block Block instance, for its context.
+ * @param WP_Block|null    $block      Block instance, for its context.
+ * @param array<string,mixed> $attributes Block attributes.
  * @return array{url:string,alt:string,width:int,height:int,sensitive:bool,warning:string,href:string}|null
  */
-function axismundi_op_featured_image_subject( $block ) : ?array {
+function axismundi_op_featured_image_subject( $block, array $attributes = array() ) : ?array {
 	// The presence of the context is the claim, not its value: on a profile route the
 	// Actor comes from the route and the id travels empty, exactly as it does for the
-	// other Actor blocks.
+	// other Actor blocks. `showPlaceholder` is the same claim for the profile banner:
+	// it reserves cover space even for Actors without an image. Core Group cannot
+	// provide block context, so the saved profile template uses that existing banner
+	// contract rather than requiring a composite wrapper just to identify its Actor.
 	$has_actor_context = $block instanceof WP_Block && array_key_exists( 'axismundi/actorId', (array) $block->context );
-	if ( $has_actor_context && function_exists( 'axismundi_actors_resolve_block_actor' ) ) {
-		$actor = axismundi_actors_resolve_block_actor( (string) ( $block->context['axismundi/actorId'] ?? '' ) );
+	$is_profile_banner = ! empty( $attributes['showPlaceholder'] );
+	$actor_context_id  = $block instanceof WP_Block ? (string) ( $block->context['axismundi/actorId'] ?? '' ) : '';
+	if ( ( $has_actor_context || $is_profile_banner ) && function_exists( 'axismundi_actors_resolve_block_actor' ) ) {
+		$actor = axismundi_actors_resolve_block_actor( $actor_context_id );
 		if ( ! $actor ) {
-			return null;
+			if ( $has_actor_context ) {
+				return null;
+			}
+		} else {
+			// Actors owns how an Actor's header resolves -- local attachment, cached
+			// remote asset, or nothing -- so the URL is read back out of that markup
+			// rather than re-derived here.
+			$url = axismundi_op_first_image_src( axismundi_actors_header_html( $actor ) );
+			return '' === $url
+				? null
+				: array( 'url' => $url, 'alt' => '', 'width' => 0, 'height' => 0, 'sensitive' => false, 'warning' => '', 'href' => '' );
 		}
-		// Actors owns how an Actor's header resolves -- local attachment, cached
-		// remote asset, or nothing -- so the URL is read back out of that markup
-		// rather than re-derived here.
-		$url = axismundi_op_first_image_src( axismundi_actors_header_html( $actor ) );
-		return '' === $url
-			? null
-			: array( 'url' => $url, 'alt' => '', 'width' => 0, 'height' => 0, 'sensitive' => false, 'warning' => '', 'href' => '' );
 	}
 	$model    = axismundi_op_active_object_view_model();
 	// Only a declared `image` is this Object's representative image. An attachment is
@@ -1155,7 +1164,7 @@ function axismundi_op_first_image_src( string $html ) : string {
  * @return string
  */
 function axismundi_op_render_object_featured_image_block( array $attributes = array(), string $content = '', $block = null ) : string {
-	$subject = axismundi_op_featured_image_subject( $block );
+	$subject = axismundi_op_featured_image_subject( $block, $attributes );
 
 	if ( null === $subject ) {
 		// Like Core's Featured Image, an absent image is absent: the block leaves no

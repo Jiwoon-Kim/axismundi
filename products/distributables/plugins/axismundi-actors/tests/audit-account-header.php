@@ -14,11 +14,14 @@ defined( 'ABSPATH' ) || exit( 1 );
 require_once dirname( __DIR__ ) . '/includes/repository.php';
 require_once dirname( __DIR__ ) . '/includes/routing.php';
 require_once ABSPATH . 'wp-admin/includes/user.php';
+require_once ABSPATH . 'wp-admin/includes/file.php';
+require_once ABSPATH . 'wp-admin/includes/image.php';
 
 global $wpdb;
 $ax_ah_results = array();
 $ax_ah_ids     = array();
 $ax_ah_users   = array();
+$ax_ah_atts    = array();
 
 /**
  * @param array  $results Accumulator.
@@ -63,6 +66,36 @@ function ax_ah_public_actor( array &$results, array &$ids, array &$users, string
 	return axismundi_actors_get_by_uuid( $actor->get_uuid() );
 }
 
+/** Create one tiny local header image whose attachment URL can reach the cover block. */
+function ax_ah_header_attachment( array &$attachments, int $author ) : int {
+	$upload = wp_upload_bits(
+		'ax-actor-header.png',
+		null,
+		base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLq2QAAAABJRU5ErkJggg==' )
+	);
+	if ( ! empty( $upload['error'] ) || empty( $upload['file'] ) ) {
+		return 0;
+	}
+	$attachment_id = (int) wp_insert_attachment(
+		array(
+			'post_title'     => 'AX Actor header fixture',
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'image/png',
+			'post_author'    => $author,
+		),
+		(string) $upload['file']
+	);
+	if ( $attachment_id <= 0 ) {
+		return 0;
+	}
+	$metadata = wp_generate_attachment_metadata( $attachment_id, (string) $upload['file'] );
+	if ( is_array( $metadata ) ) {
+		wp_update_attachment_metadata( $attachment_id, $metadata );
+	}
+	$attachments[] = $attachment_id;
+	return $attachment_id;
+}
+
 try {
 	axismundi_actors_install();
 
@@ -78,6 +111,13 @@ try {
 
 	$alice = ax_ah_public_actor( $ax_ah_results, $ax_ah_ids, $ax_ah_users, 'ax_ah_alice', 'Alice Header', 'alice_header' );
 	$bob   = ax_ah_public_actor( $ax_ah_results, $ax_ah_ids, $ax_ah_users, 'ax_ah_bob', 'Bob Header', 'bob_header' );
+	$alice_user = get_user_by( 'login', 'ax_ah_alice' );
+	$header_id  = $alice_user instanceof WP_User ? ax_ah_header_attachment( $ax_ah_atts, $alice_user->ID ) : 0;
+	$header_set = $header_id > 0 && $alice_user instanceof WP_User
+		? axismundi_actors_set_profile_media( $alice, 'header', $header_id, $alice_user->ID )
+		: false;
+	$alice = axismundi_actors_get_by_uuid( $alice->get_uuid() );
+	ax_ah_assert( $ax_ah_results, 'fixture gives the current Actor a real local header image', true === $header_set && $alice instanceof Axismundi_Actor && $header_id === $alice->get_header_attachment_id() );
 
 	$GLOBALS['axismundi_actors_current_actor'] = $alice;
 	$route_markup = '<!-- wp:group {"className":"ax-actor-profile__header"} --><div class="wp-block-group ax-actor-profile__header"><!-- wp:axismundi/object-featured-image {"showPlaceholder":true} /--><!-- wp:group {"className":"ax-actor-profile__head"} --><div class="wp-block-group ax-actor-profile__head"><!-- wp:axismundi/actor-avatar /--><!-- wp:axismundi/actor-identity /--></div><!-- /wp:group --><!-- wp:axismundi/actor-biography /--></div><!-- /wp:group -->';
@@ -101,6 +141,12 @@ try {
 		false !== strpos( $route_rendered, 'Alice Header' )
 			&& false === strpos( $route_rendered, 'ax-actor-biography__website' )
 			&& false === strpos( $route_rendered, 'ax_ah_alice-private@example.test' )
+	);
+	$header_cover = do_blocks( '<!-- wp:axismundi/object-featured-image {"showPlaceholder":true} /-->' );
+	ax_ah_assert(
+		$ax_ah_results,
+		'a profile banner inside a Core Group resolves the route Actor header rather than falling back to an empty Object cover',
+		false !== strpos( $header_cover, wp_get_attachment_url( $header_id ) ) && false === strpos( $header_cover, 'is-empty' )
 	);
 
 	$GLOBALS['axismundi_actors_current_actor'] = $bob;
@@ -146,6 +192,9 @@ try {
 		if ( get_userdata( $fixture_user_id ) ) {
 			wp_delete_user( $fixture_user_id );
 		}
+	}
+	foreach ( $ax_ah_atts as $attachment_id ) {
+		wp_delete_attachment( $attachment_id, true );
 	}
 }
 

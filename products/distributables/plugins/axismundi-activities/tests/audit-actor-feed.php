@@ -1512,6 +1512,52 @@ ax_feed_assert(
 		&& false === strpos( $ax_feed_filters_editor, 'axismundi-feed-filters-preview__panel' )
 );
 
+/*
+ * The tab's declaration deciding the pager, end to end.
+ *
+ * Until Community had a numbered page model this could not be asked: every surface offered exactly
+ * one mode, so an honoured declaration and the surface's own default produced the same markup and
+ * passing `array()` in place of the tab attributes changed nothing. It is askable now, but not of
+ * the shipped surfaces — Community offers only `pagination` and its page callable reads the cursor
+ * as a page number, so declaring `infinite` there would be a lie rather than a test.
+ *
+ * So the audit supplies the surface that offers both. A descriptor is data, and constructing one is
+ * how the negotiation gets exercised without pretending a real surface can serve a mode it cannot.
+ * The declaration is then the only difference between the two renders.
+ */
+$ax_feed_nav_both = static function ( array $surfaces ) : array {
+	if ( isset( $surfaces['community'] ) ) {
+		$surfaces['community']['modes'] = array( 'infinite', 'pagination' );
+		// Fallback is the cursor, so a declaration that fails to arrive is visible as Load more.
+		$surfaces['community']['mode'] = 'infinite';
+	}
+	return $surfaces;
+};
+add_filter( 'axismundi_act_actor_profile_surfaces', $ax_feed_nav_both, 20 );
+/*
+ * Rendered, not resolved. The helper negotiating correctly is a different claim from the render
+ * passing it the tab's attributes, and asserting the first was leaving the second uncovered —
+ * measured: replacing `$tab_attrs` with `array()` in the renderer changed nothing here.
+ *
+ * `is-navigation-infinite` is the discriminator rather than the numbered pager, because a
+ * numbered pager renders nothing below two pages while the cursor control is always emitted.
+ */
+$ax_feed_nav_previous                      = $GLOBALS['axismundi_actors_current_actor'] ?? null;
+$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_live_actor;
+$_GET['view']                              = 'community';
+$ax_feed_nav_declared_html                 = axismundi_act_render_actor_activity_feed( array() );
+unset( $_GET['view'] );
+$GLOBALS['axismundi_actors_current_actor'] = $ax_feed_nav_previous;
+remove_filter( 'axismundi_act_actor_profile_surfaces', $ax_feed_nav_both, 20 );
+ax_feed_assert(
+	$ax_feed_results,
+	'the tab declaration is what selects numbered pages once a surface offers a choice, and losing it falls back to the cursor',
+	false === strpos( $ax_feed_nav_declared_html, 'is-navigation-infinite' )
+		&& 'infinite' === axismundi_act_feed_navigation_mode( array( 'modes' => array( 'infinite', 'pagination' ), 'mode' => 'infinite' ), array() )
+		// And the shipped surface still refuses what it cannot serve, declaration or not.
+		&& 'pagination' === axismundi_act_feed_navigation_mode( array( 'modes' => array( 'pagination' ), 'mode' => 'pagination' ), array() )
+);
+
 $ax_feed_failures = count( array_filter( $ax_feed_results, static fn( bool $result ) : bool => ! $result ) );
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI fixture output.
 printf( "\n== %d checks, %d failed ==\n", count( $ax_feed_results ), $ax_feed_failures );

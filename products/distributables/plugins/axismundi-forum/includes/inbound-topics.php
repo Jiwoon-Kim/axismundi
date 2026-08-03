@@ -228,3 +228,23 @@ function axismundi_forum_observe_remote_root( array $stored, Axismundi_Activity 
 	axismundi_forum_admit_remote_reply( $stored, $activity );
 }
 add_action( 'axismundi_op_remote_object_observed', 'axismundi_forum_observe_remote_root', 20, 2 );
+
+/**
+ * Reconsider an already-recorded inbound Create when its cached Object is refreshed.
+ *
+ * Remote fetches do not create a second ledger Activity. Looking up the verified Create
+ * preserves the same admission evidence while allowing deployments to repair cached replies
+ * that arrived before Forum learned to announce them.
+ */
+function axismundi_forum_observe_fetched_remote_reply( array $stored ) : void {
+	$object_uri = trim( (string) ( $stored['object_uri'] ?? '' ) );
+	if ( '' === $object_uri || 'Note' !== (string) ( $stored['object_type'] ?? '' ) || empty( $stored['in_reply_to_uri'] ) || ! function_exists( 'axismundi_act_get_by_object' ) ) {
+		return;
+	}
+	foreach ( axismundi_act_get_by_object( $object_uri, 50 ) as $activity ) {
+		if ( $activity instanceof Axismundi_Activity && 'Create' === $activity->get_type() && 'inbound' === $activity->get_direction() && $activity->is_effective() ) {
+			axismundi_forum_admit_remote_reply( $stored, $activity );
+		}
+	}
+}
+add_action( 'axismundi_op_remote_object_fetched', 'axismundi_forum_observe_fetched_remote_reply', 20 );

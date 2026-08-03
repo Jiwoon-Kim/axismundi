@@ -152,6 +152,34 @@ try {
 			&& in_array( $reply_uri, (array) $reply_comments['uris'], true )
 	);
 
+	remove_action( 'axismundi_op_remote_object_observed', 'axismundi_forum_observe_remote_root', 20 );
+	$cached_reply_uri = 'https://example.com/comments/cached-' . wp_generate_uuid4();
+	$cached_reply = $member instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
+		? ax_fit_create( $member, $cached_reply_uri, array( 'type' => 'Note', 'name' => '', 'inReplyTo' => $accepted_uri, 'audience' => $group->get_uri(), 'context' => $group->get_uri() ) )
+		: new WP_Error( 'fixture' );
+	add_action( 'axismundi_op_remote_object_observed', 'axismundi_forum_observe_remote_root', 20, 2 );
+	$ax_fit_activity_uris[] = $cached_reply_uri . '/activity';
+	$ax_fit_object_uris[] = $cached_reply_uri;
+	$cached_row = $cached_reply instanceof Axismundi_Activity ? axismundi_op_get_remote_object( $cached_reply_uri ) : null;
+	$cached_before = $cached_reply instanceof Axismundi_Activity ? axismundi_act_get_by_object( $cached_reply->get_uri(), 10 ) : array();
+	if ( is_array( $cached_row ) ) {
+		axismundi_forum_observe_fetched_remote_reply( $cached_row );
+	}
+	$cached_after = $cached_reply instanceof Axismundi_Activity ? axismundi_act_get_by_object( $cached_reply->get_uri(), 10 ) : array();
+	$cached_announce = null;
+	foreach ( $cached_after as $candidate ) {
+		if ( $candidate instanceof Axismundi_Activity && 'Announce' === $candidate->get_type() && $candidate->is_effective() && $group instanceof Axismundi_Actor && hash_equals( $group->get_uri(), $candidate->get_actor_uri() ) ) {
+			$cached_announce = $candidate;
+			$ax_fit_activity_uris[] = $candidate->get_uri();
+			break;
+		}
+	}
+	ax_fit_assert(
+		$ax_fit_results,
+		'a refetch replays an already-cached inbound Note through its original verified Create without inventing another submission',
+		$cached_reply instanceof Axismundi_Activity && is_array( $cached_row ) && empty( $cached_before ) && $cached_announce instanceof Axismundi_Activity
+	);
+
 	$outsider_uri = 'https://example.com/pages/outsider-' . wp_generate_uuid4();
 	$outsider_create = $outsider instanceof Axismundi_Actor && $group instanceof Axismundi_Actor
 		? ax_fit_create( $outsider, $outsider_uri, array( 'audience' => $group->get_uri() ) )

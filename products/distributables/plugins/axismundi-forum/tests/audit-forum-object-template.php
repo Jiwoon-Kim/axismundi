@@ -17,6 +17,7 @@ require_once __DIR__ . '/../includes/repository.php';
 require_once __DIR__ . '/../includes/topics.php';
 require_once __DIR__ . '/../includes/distribution.php';
 require_once __DIR__ . '/../includes/votes.php';
+require_once __DIR__ . '/../includes/community-card.php';
 require_once __DIR__ . '/../includes/templates.php';
 
 axismundi_forum_install();
@@ -82,6 +83,21 @@ try {
 		! is_wp_error( $admitted ) && '' !== $reply_uri
 			&& axismundi_forum_object_community_group( $reply_uri ) instanceof Axismundi_Actor
 			&& 'single-object-community' === axismundi_op_object_template_slug( array( 'id' => $reply_uri, 'type' => 'Note', 'in_reply_to' => $topic_uri ), 200 )
+	);
+
+	$ax_ot_previous_route = $GLOBALS['axismundi_op_object_html_route'] ?? null;
+	$GLOBALS['axismundi_op_object_html_route'] = array(
+		'status' => 200,
+		'model'  => array( 'id' => $reply_uri ),
+	);
+	$ax_ot_card_group = axismundi_forum_card_group();
+	$GLOBALS['axismundi_op_object_html_route'] = $ax_ot_previous_route;
+	ax_ot_assert(
+		$ax_ot_results,
+		'a community Object route gives its sidebar the Group even without an Actor profile context',
+		$group instanceof Axismundi_Actor
+			&& $ax_ot_card_group instanceof Axismundi_Actor
+			&& $group->get_uri() === $ax_ot_card_group->get_uri()
 	);
 
 	ax_ot_assert(

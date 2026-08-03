@@ -3,7 +3,7 @@
  * Plugin Name:       Axismundi Forum
  * Plugin URI:        https://github.com/Jiwoon-Kim/axismundi/tree/main/products/distributables/plugins/axismundi-forum
  * Description:       Federated community support for Axismundi managed Group Actors, with Topic Article projection and membership policy.
- * Version:           0.9.22
+ * Version:           0.9.23
  * Requires at least: 6.7
  * Requires PHP:      8.1
  * Author:            KIM JIWOON
@@ -20,7 +20,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_FORUM_VERSION = '0.9.22';
+const AXISMUNDI_FORUM_VERSION = '0.9.23';
 
 require_once __DIR__ . '/includes/repository.php';
 require_once __DIR__ . '/includes/group-archive.php';

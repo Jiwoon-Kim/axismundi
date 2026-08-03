@@ -3,7 +3,7 @@ Contributors: kimjiwoon
 Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.9.22
+Stable tag: 0.9.23
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: forum, community, activitypub, group, federation
@@ -33,6 +33,10 @@ Not in this plugin: identity, handles, Group lifecycle, or manager delegation
 object rendering (Axismundi Object Projections); Note replies (Axismundi Note).
 
 == Changelog ==
+
+= 0.9.23 =
+* Show the community Group card beside a cached Object document that belongs to
+  that Group, even though the document has no Actor-profile route context.
 
 = 0.9.22 =
 * Adds a moderator roster to the Group profile: the complete, unpaginated set of

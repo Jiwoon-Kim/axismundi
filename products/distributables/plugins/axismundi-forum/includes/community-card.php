@@ -31,6 +31,13 @@ function axismundi_forum_card_group() : ?Axismundi_Actor {
 	if ( $group_identity_id > 0 ) {
 		return axismundi_forum_get_community_group( $group_identity_id );
 	}
+	/* A cached Object document has no queried Topic or current profile Actor. */
+	$route = function_exists( 'axismundi_op_object_html_route' ) ? axismundi_op_object_html_route() : null;
+	$model = is_array( $route ) && is_array( $route['model'] ?? null ) ? $route['model'] : array();
+	$uri   = trim( (string) ( $model['id'] ?? '' ) );
+	if ( '' !== $uri && function_exists( 'axismundi_forum_object_community_group' ) ) {
+		return axismundi_forum_object_community_group( $uri );
+	}
 	if ( ! is_singular( AXISMUNDI_FORUM_TOPIC_POST_TYPE ) ) {
 		return null;
 	}
@@ -42,7 +49,11 @@ function axismundi_forum_card_group() : ?Axismundi_Actor {
 	if ( is_array( $entry ) ) {
 		return axismundi_forum_get_community_group( (int) $entry['group_identity_id'] );
 	}
-	return axismundi_forum_get_remote_topic_group( $topic );
+	$remote_group = axismundi_forum_get_remote_topic_group( $topic );
+	if ( $remote_group instanceof Axismundi_Actor ) {
+		return $remote_group;
+	}
+	return null;
 }
 
 /**

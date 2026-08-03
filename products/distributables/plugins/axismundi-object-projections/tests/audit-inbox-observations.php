@@ -129,6 +129,28 @@ try {
 	$after_spoof = axismundi_op_get_remote_object( $ax_inbox_object_uri );
 	ax_inbox_assert( $ax_inbox_results, 'a mismatched Update actor cannot overwrite the cached Object', $spoof instanceof Axismundi_Activity && is_array( $after_spoof ) && 'Note' === $after_spoof['object_type'] && false !== strpos( (string) $after_spoof['content'], 'Poll removed' ) );
 
+	$spoof_delete_uri = 'https://remote.example/activities/delete-spoof-' . $ax_inbox_suffix;
+	$spoof_delete     = axismundi_act_record_activity(
+		array( 'id' => $spoof_delete_uri, 'type' => 'Delete', 'actor' => $other_uri, 'object' => $ax_inbox_object_uri ),
+		'inbound'
+	);
+	if ( $spoof_delete instanceof Axismundi_Activity ) {
+		$ax_inbox_activity_uris[] = $spoof_delete->get_uri();
+	}
+	$after_spoof_delete = axismundi_op_get_remote_object( $ax_inbox_object_uri );
+	ax_inbox_assert( $ax_inbox_results, 'a Delete from a different Actor cannot tombstone the cached Object', $spoof_delete instanceof Axismundi_Activity && is_array( $after_spoof_delete ) && 'active' === (string) $after_spoof_delete['object_status'] );
+
+	$delete_uri = 'https://remote.example/activities/delete-' . $ax_inbox_suffix;
+	$delete     = axismundi_act_record_activity(
+		array( 'id' => $delete_uri, 'type' => 'Delete', 'actor' => $author_uri, 'object' => $ax_inbox_object_uri ),
+		'inbound'
+	);
+	if ( $delete instanceof Axismundi_Activity ) {
+		$ax_inbox_activity_uris[] = $delete->get_uri();
+	}
+	$tombstoned = axismundi_op_get_remote_object( $ax_inbox_object_uri );
+	ax_inbox_assert( $ax_inbox_results, 'an author Delete replaces the cached Object with a privacy-minimal Tombstone', $delete instanceof Axismundi_Activity && is_array( $tombstoned ) && 'tombstone' === (string) $tombstoned['object_status'] && 'Tombstone' === (string) $tombstoned['object_type'] && empty( $tombstoned['content'] ) && 'Note' === (string) ( $tombstoned['payload']['formerType'] ?? '' ) );
+
 	$announce_uri = 'https://remote.example/activities/announce-' . $ax_inbox_suffix;
 	$announce     = axismundi_act_record_activity(
 		array(

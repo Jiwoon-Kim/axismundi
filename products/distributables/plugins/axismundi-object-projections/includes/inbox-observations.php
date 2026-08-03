@@ -32,6 +32,36 @@ function axismundi_op_observe_inbound_object( Axismundi_Activity $activity ) : v
 }
 add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_object', 20 );
 
+/**
+ * Replace a cached remote Object with a Tombstone after its verified author deletes it.
+ *
+ * Delete carries only a URI on the common ActivityPub path. The existing cache supplies the
+ * author binding: a different Actor must never be able to erase someone else's cached Object.
+ * The Tombstone remains in place so direct links and reply threads can say that it was deleted.
+ */
+function axismundi_op_observe_inbound_object_delete( Axismundi_Activity $activity ) : void {
+	if ( 'Delete' !== $activity->get_type() || 'inbound' !== $activity->get_direction() || ! $activity->is_effective()
+		|| ! function_exists( 'axismundi_op_get_remote_object' ) || ! function_exists( 'axismundi_op_store_remote_object' ) ) {
+		return;
+	}
+	$object_uri = trim( $activity->get_object_uri() );
+	$existing   = '' !== $object_uri ? axismundi_op_get_remote_object( $object_uri, false ) : null;
+	if ( ! is_array( $existing ) || 'active' !== (string) ( $existing['object_status'] ?? '' )
+		|| ! hash_equals( (string) ( $existing['attributed_to_uri'] ?? '' ), $activity->get_actor_uri() ) ) {
+		return;
+	}
+	axismundi_op_store_remote_object(
+		array(
+			'id'         => $object_uri,
+			'type'       => 'Tombstone',
+			'formerType' => (string) ( $existing['object_type'] ?? 'Object' ),
+			'deleted'    => current_time( DATE_W3C, true ),
+		),
+		array( 'fetched_at' => current_time( 'mysql', true ) )
+	);
+}
+add_action( 'axismundi_act_activity_recorded', 'axismundi_op_observe_inbound_object_delete', 20 );
+
 /** Queue the URI-only target of a public inbound Announce for cache acquisition. */
 function axismundi_op_observe_inbound_announce( Axismundi_Activity $activity ) : void {
 	if ( 'Announce' !== $activity->get_type()

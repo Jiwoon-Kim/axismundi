@@ -99,7 +99,45 @@ ax_nl_assert(
 		&& 'local' === (string) $listing['source']
 		&& 'active' === (string) $listing['object_status']
 		&& 1 === (int) $listing['publicly_listable']
+		&& $actor instanceof Axismundi_Actor
+		&& hash( 'sha256', $actor->get_uri() ) === (string) $listing['attributed_to_uri_hash']
+		&& 0 === (int) $listing['is_reply']
 );
+	$reply_id = (int) wp_insert_post(
+		array(
+			'post_type'    => AXISMUNDI_NOTE_POST_TYPE,
+			'post_status'  => 'draft',
+			'post_author'  => $uid,
+			'post_content' => '<p>Lifecycle reply.</p>',
+		)
+	);
+	$ax_nl_post_ids[] = $reply_id;
+	axismundi_note_save( $reply_id, array( 'visibility' => 'public', 'language' => 'en', 'in_reply_to_uri' => $object_uri ) );
+	wp_update_post( array( 'ID' => $reply_id, 'post_status' => 'publish' ) );
+	$reply_envelope = axismundi_note_get( $reply_id );
+	$reply_uri      = is_array( $reply_envelope ) ? axismundi_note_object_uri( (string) $reply_envelope['local_uuid'] ) : '';
+	$ax_nl_object_uris[] = $reply_uri;
+	$reply_listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $reply_uri ) : null;
+	ax_nl_assert(
+		$ax_nl_results,
+		'a local reply materializes its author and reply facts for a countable candidate query',
+		is_array( $reply_listing)
+			&& 'local' === (string) $reply_listing['source']
+			&& $actor instanceof Axismundi_Actor
+			&& hash( 'sha256', $actor->get_uri() ) === (string) $reply_listing['attributed_to_uri_hash']
+			&& 1 === (int) $reply_listing['is_reply']
+	);
+	$wpdb->update( axismundi_op_object_index_table(), array( 'attributed_to_uri_hash' => null, 'is_reply' => 0 ), array( 'object_uri_hash' => hash( 'sha256', $reply_uri ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- deliberate legacy-row corruption before the upgrade rebuild assertion.
+	do_action( 'axismundi_op_rebuild_local_object_listing_projection', 1 );
+	$rebuilt_reply_listing = function_exists( 'axismundi_op_get_object_listing_projection' ) ? axismundi_op_get_object_listing_projection( $reply_uri ) : null;
+	ax_nl_assert(
+		$ax_nl_results,
+		'local-source rebuild restores authored and reply facts through OP\'s one writer',
+		is_array( $rebuilt_reply_listing)
+			&& $actor instanceof Axismundi_Actor
+			&& hash( 'sha256', $actor->get_uri() ) === (string) $rebuilt_reply_listing['attributed_to_uri_hash']
+			&& 1 === (int) $rebuilt_reply_listing['is_reply']
+	);
 	$rebuilt_listing = function_exists( 'axismundi_op_backfill_object_listing_projection' ) && axismundi_op_backfill_object_listing_projection()
 		&& function_exists( 'axismundi_op_get_object_listing_projection' )
 		? axismundi_op_get_object_listing_projection( $object_uri )

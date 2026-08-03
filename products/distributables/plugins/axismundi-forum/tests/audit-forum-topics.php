@@ -145,6 +145,9 @@ try {
 		&& 'local' === (string) $listing['source']
 		&& 'active' === (string) $listing['object_status']
 		&& 1 === (int) $listing['publicly_listable']
+		&& $author_actor instanceof Axismundi_Actor
+		&& hash( 'sha256', $author_actor->get_uri() ) === (string) $listing['attributed_to_uri_hash']
+		&& 0 === (int) $listing['is_reply']
 		&& 1 === (int) $listing['has_group_context']
 		&& $group instanceof Axismundi_Actor
 		&& hash( 'sha256', $group->get_uri() ) === (string) $listing['primary_group_uri_hash']

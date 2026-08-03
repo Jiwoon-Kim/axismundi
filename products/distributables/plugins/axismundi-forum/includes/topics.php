@@ -113,6 +113,28 @@ function axismundi_forum_refresh_topic_listing_projection( WP_Post $topic ) : vo
 	axismundi_op_refresh_object_listing_projection( axismundi_forum_topic_object_uri( $topic ) );
 }
 
+/** Submit every Topic Object URI to OP's single projection writer after its schema upgrades. */
+function axismundi_forum_backfill_topic_listing_projections( int $batch_size ) : void {
+	if ( ! function_exists( 'axismundi_op_refresh_object_listing_projection' ) ) {
+		return;
+	}
+	global $wpdb;
+	$after = 0;
+	$batch_size = max( 1, min( 500, $batch_size ) );
+	do {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded scan of Forum's own Topic posts during an OP upgrade.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE ID > %d AND post_type = %s ORDER BY ID ASC LIMIT %d", $after, AXISMUNDI_FORUM_TOPIC_POST_TYPE, $batch_size ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$after = (int) $row['ID'];
+			$topic = get_post( $after );
+			if ( $topic instanceof WP_Post ) {
+				axismundi_forum_refresh_topic_listing_projection( $topic );
+			}
+		}
+	} while ( count( $rows ) === $batch_size );
+}
+add_action( 'axismundi_op_rebuild_local_object_listing_projection', 'axismundi_forum_backfill_topic_listing_projections' );
+
 /** Save transitions cover published local and remote-Group Topics after their context exists. */
 function axismundi_forum_refresh_saved_topic_listing_projection( int $post_id, WP_Post $post, bool $update ) : void {
 	unset( $post_id, $update );

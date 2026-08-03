@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '11';
+const AXISMUNDI_OP_DB_VERSION            = '12';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -116,9 +116,11 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 	$primary = trim( (string) ( $context['primary_group_uri'] ?? '' ) );
 	$payload = (array) ( $row['payload'] ?? array() );
 	$attributed_to = function_exists( 'axismundi_op_remote_member_uri' )
-		? axismundi_op_remote_member_uri( $payload['attributedTo'] ?? ( $row['attributed_to_uri'] ?? '' ) )
-		: trim( (string) ( $row['attributed_to_uri'] ?? '' ) );
-	$is_reply = ! empty( $payload['inReplyTo'] );
+		? axismundi_op_remote_member_uri( $row['listing_attributed_to_uri'] ?? $payload['attributedTo'] ?? ( $row['attributed_to_uri'] ?? '' ) )
+		: trim( (string) ( $row['listing_attributed_to_uri'] ?? $row['attributed_to_uri'] ?? '' ) );
+	$is_reply = array_key_exists( 'listing_is_reply', $row )
+		? ! empty( $row['listing_is_reply'] )
+		: ! empty( $payload['inReplyTo'] );
 	$candidate_source = (string) ( $row['listing_source'] ?? 'remote' );
 	$source  = in_array( $candidate_source, array( 'remote', 'local' ), true )
 		? $candidate_source
@@ -194,6 +196,10 @@ function axismundi_op_local_object_listing_projection_row( $source ) : ?array {
 		'object_status'              => $status,
 		'listing_source'             => 'local',
 		'listing_publicly_listable'  => 'tombstone' !== $status && $visible,
+		// Keep candidate facts explicit: a local source is authoritative even when a
+		// future transform deliberately omits a field from its public representation.
+		'listing_attributed_to_uri'  => (string) ( $payload['attributedTo'] ?? '' ),
+		'listing_is_reply'           => ! empty( $payload['inReplyTo'] ),
 	);
 }
 
@@ -275,6 +281,24 @@ function axismundi_op_backfill_object_listing_projection() : bool {
 	 */
 	axismundi_op_purge_orphan_remote_object_listing_projections();
 	return $valid;
+}
+
+/** Rebuild local shares through product-owned source scans and OP's one projection writer. */
+function axismundi_op_backfill_local_object_listing_projection() : void {
+	global $wpdb;
+	/*
+	 * Local products own different source tables, so OP cannot join one authoritative
+	 * snapshot to identify an orphan as it does for remote rows. Clear only this share
+	 * before products enumerate their current sources; otherwise an old unknown row can
+	 * keep participating in COUNT/LIMIT forever.
+	 */
+	$wpdb->delete( axismundi_op_object_index_table(), array( 'source' => 'local' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- source-scoped rebuild before product-owned enumeration.
+	/**
+	 * Products enumerate only source URIs from their own stores, then call OP's refresh writer.
+	 *
+	 * @param int $batch_size Bounded source scan size.
+	 */
+	do_action( 'axismundi_op_rebuild_local_object_listing_projection', 200 );
 }
 
 /** Install/upgrade the Object Projections schema, recording success only after verification. */
@@ -368,11 +392,32 @@ function axismundi_op_install() : bool {
 		axismundi_op_normalize_legacy_object_listing_projection_sources();
 		$valid = axismundi_op_backfill_object_listing_projection();
 	}
+	/*
+	 * Local sources depend on transformers that products register on `init`. Defer this
+	 * phase during plugins_loaded; an explicit installer call after init can finish now.
+	 */
+	if ( $valid && version_compare( $previous_version, '12', '<' ) ) {
+		if ( ! did_action( 'init' ) ) {
+			return true;
+		}
+		axismundi_op_backfill_local_object_listing_projection();
+	}
 	if ( $valid ) {
 		update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
 	}
 	return $valid;
 }
+
+/** Finish the v12 local-source rebuild after every product has registered its transformer. */
+function axismundi_op_finish_local_listing_projection_upgrade() : void {
+	$version = (string) get_option( AXISMUNDI_OP_DB_VERSION_OPTION, '' );
+	if ( version_compare( $version, '12', '>=' ) ) {
+		return;
+	}
+	axismundi_op_backfill_local_object_listing_projection();
+	update_option( AXISMUNDI_OP_DB_VERSION_OPTION, AXISMUNDI_OP_DB_VERSION, false );
+}
+add_action( 'init', 'axismundi_op_finish_local_listing_projection_upgrade', 100 );
 
 /** Metadata-only cache retention in days. */
 function axismundi_op_remote_retention_days() : int {

@@ -107,6 +107,26 @@ function axismundi_note_refresh_listing_projection( WP_Post $post ) : void {
 	}
 }
 
+/** Submit every Note-owned Object URI to OP's single projection writer after its schema upgrades. */
+function axismundi_note_backfill_listing_projections( int $batch_size ) : void {
+	if ( ! axismundi_note_ready() || ! function_exists( 'axismundi_op_refresh_object_listing_projection' ) ) {
+		return;
+	}
+	global $wpdb;
+	$table = axismundi_note_table();
+	$after = 0;
+	$batch_size = max( 1, min( 500, $batch_size ) );
+	do {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded scan of Note's own durable source rows during an OP upgrade.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, local_uuid FROM {$table} WHERE id > %d ORDER BY id ASC LIMIT %d", $after, $batch_size ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$after = (int) $row['id'];
+			axismundi_op_refresh_object_listing_projection( axismundi_note_object_uri( (string) $row['local_uuid'] ) );
+		}
+	} while ( count( $rows ) === $batch_size );
+}
+add_action( 'axismundi_op_rebuild_local_object_listing_projection', 'axismundi_note_backfill_listing_projections' );
+
 /** Refresh after complete non-REST saves; REST waits for its structured envelope field. */
 function axismundi_note_refresh_saved_listing_projection( int $post_id, WP_Post $post, bool $update, bool $rest_complete = false ) : void {
 	unset( $post_id, $update );

@@ -128,6 +128,51 @@ try {
 	$tombstone_projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[1] );
 	ax_remote_assert( $ax_remote_results, 'a Tombstone refreshes the same projection to non-listable state', is_array( $tombstone_projection ) && 0 === (int) $tombstone_projection['publicly_listable'] );
 
+	/*
+	 * Why an Object is unlistable, and who answers for the row.
+	 *
+	 * A tombstone and a private Object are both absent from every card list, and a reader is owed
+	 * different things by each — a thread can say an Object was deleted, and must say nothing at
+	 * all about one it may not see. Both were `publicly_listable = 0` and nothing else, so the
+	 * distinction would have had to be fetched from the snapshot the projection exists to avoid
+	 * reading.
+	 */
+	$ax_remote_tomb_projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[1] );
+	$ax_remote_live_projection = axismundi_op_get_object_listing_projection( $ax_remote_uris[0] );
+	ax_remote_assert(
+		$ax_remote_results,
+		'the projection records why an Object is unlistable, not only that it is',
+		is_array( $ax_remote_tomb_projection ) && is_array( $ax_remote_live_projection )
+			&& 'tombstone' === (string) $ax_remote_tomb_projection['object_status']
+			&& 0 === (int) $ax_remote_tomb_projection['publicly_listable']
+			&& 'active' === (string) $ax_remote_live_projection['object_status']
+			&& 'remote' === (string) $ax_remote_live_projection['source']
+	);
+
+	/*
+	 * A rebuild has to remove as well as write.
+	 *
+	 * A snapshot deleted while the projection was not updated leaves a row every later rebuild
+	 * preserves, and a candidate query joining the index then counts an Object that is not there —
+	 * which is the one property this projection exists to provide. Ten such rows were in the
+	 * development database when this was written.
+	 */
+	$ax_remote_orphan_uri = 'https://remote.example/objects/phase-4a-orphan';
+	$ax_remote_uris[]     = $ax_remote_orphan_uri;
+	axismundi_op_store_remote_object( array( 'id' => $ax_remote_orphan_uri, 'type' => 'Note', 'content' => 'orphan', 'to' => array( 'https://www.w3.org/ns/activitystreams#Public' ) ) );
+	$wpdb->delete( $table, array( 'object_uri_hash' => hash( 'sha256', $ax_remote_orphan_uri ) ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- fixture removes a snapshot behind the projection's back.
+	$ax_remote_orphan_before = axismundi_op_get_object_listing_projection( $ax_remote_orphan_uri );
+	axismundi_op_backfill_object_listing_projection();
+	ax_remote_assert(
+		$ax_remote_results,
+		'rebuilding the projection drops rows this store no longer answers for',
+		is_array( $ax_remote_orphan_before )
+			&& null === axismundi_op_get_object_listing_projection( $ax_remote_orphan_uri )
+			// And leaves the rows it does answer for, or the sweep would be emptying the table.
+			&& is_array( axismundi_op_get_object_listing_projection( $ax_remote_uris[0] ) )
+			&& is_array( axismundi_op_get_object_listing_projection( $ax_remote_uris[1] ) )
+	);
+
 	$deleted = axismundi_op_delete_remote_object( $ax_remote_uris[0] );
 	ax_remote_assert( $ax_remote_results, 'cache deletion removes only the addressed observation and its listing projection', $deleted && null === axismundi_op_get_remote_object( $ax_remote_uris[0] ) && null === axismundi_op_get_object_listing_projection( $ax_remote_uris[0] ) && null !== axismundi_op_get_remote_object( $ax_remote_uris[1] ) );
 } finally {

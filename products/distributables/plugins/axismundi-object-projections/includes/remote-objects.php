@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const AXISMUNDI_OP_DB_VERSION            = '8';
+const AXISMUNDI_OP_DB_VERSION            = '9';
 const AXISMUNDI_OP_DB_VERSION_OPTION     = 'ax_object_projections_db_version';
 const AXISMUNDI_OP_REMOTE_PAYLOAD_MAX    = 1048576;
 const AXISMUNDI_OP_REMOTE_RETENTION_DAYS = 30;
@@ -39,6 +39,8 @@ function axismundi_op_install_object_index_schema() : bool {
 		"CREATE TABLE {$table} (
 			object_uri_hash char(64) NOT NULL,
 			publicly_listable tinyint(1) NOT NULL DEFAULT 0,
+			object_status varchar(12) NOT NULL DEFAULT 'active',
+			source varchar(12) NOT NULL DEFAULT 'remote',
 			has_group_context tinyint(1) NOT NULL DEFAULT 0,
 			primary_group_uri_hash char(64) DEFAULT NULL,
 			updated_at datetime NOT NULL,
@@ -59,6 +61,8 @@ function axismundi_op_install_object_index_schema() : bool {
 		$engine = (string) $wpdb->get_var( "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$table}'" );
 	}
 	return in_array( 'publicly_listable', $columns, true )
+		&& in_array( 'object_status', $columns, true )
+		&& in_array( 'source', $columns, true )
 		&& in_array( 'has_group_context', $columns, true )
 		&& in_array( 'primary_group_uri_hash', $columns, true )
 		&& ! empty( $identity )
@@ -111,11 +115,30 @@ function axismundi_op_write_object_listing_projection( string $object_uri, array
 		array(
 			'object_uri_hash'        => hash( 'sha256', $object_uri ),
 			'publicly_listable'      => (int) axismundi_op_remote_object_is_publicly_listable( $row ),
+			/*
+			 * Why an Object is unlistable, not only that it is.
+			 *
+			 * A tombstone and a private Object are both kept out of every card list, and a reader is
+			 * owed different things by each: a thread that once linked to a deleted Object can say
+			 * so, and one that links to a private Object must say nothing at all. Collapsing them
+			 * into a single `publicly_listable = 0` would send that question back to the snapshot
+			 * table, which is what this projection exists to avoid.
+			 */
+			'object_status'          => (string) ( $row['object_status'] ?? 'active' ),
+			/*
+			 * Which store answers for this row, so each writer can prune only its own share.
+			 *
+			 * A projection whose source row has gone is worse than a missing one: a candidate query
+			 * joins the index and counts an Object that no longer exists. Sweeping every row without
+			 * a snapshot fixes that today and deletes every local Object's row tomorrow, so the
+			 * sweep has to know what it owns before there is anything else to own.
+			 */
+			'source'                 => 'remote',
 			'has_group_context'      => ! empty( $context['has_group_context'] ) ? 1 : 0,
 			'primary_group_uri_hash' => '' !== $primary ? hash( 'sha256', $primary ) : null,
 			'updated_at'             => current_time( 'mysql', true ),
 		),
-		array( '%s', '%d', '%d', '%s', '%s' )
+		array( '%s', '%d', '%s', '%s', '%d', '%s', '%s' )
 	);
 }
 
@@ -157,6 +180,17 @@ function axismundi_op_backfill_object_listing_projection() : bool {
 			$valid          = axismundi_op_write_object_listing_projection( (string) $row['object_uri'], $row ) && $valid;
 		}
 	} while ( count( $rows ) === $batch );
+	/*
+	 * And remove what this store no longer answers for.
+	 *
+	 * Writing is not enough to make a rebuild authoritative: a snapshot deleted while the
+	 * projection was not updated leaves a row that every later rebuild preserves, and a candidate
+	 * query then counts an Object that is not there. Scoped to `remote`, so the sweep stays
+	 * correct once local Objects have rows of their own.
+	 */
+	$index = axismundi_op_object_index_table();
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded upgrade sweep over this store's own projection rows.
+	$wpdb->query( "DELETE i FROM {$index} i LEFT JOIN {$objects} o ON o.object_uri_hash = i.object_uri_hash WHERE i.source = 'remote' AND o.id IS NULL" );
 	return $valid;
 }
 

@@ -1419,6 +1419,8 @@ ax_feed_assert(
 		&& false !== strpos( $ax_feed_community_filters, 'view=community' )
 		&& false !== strpos( $ax_feed_community_filters, 'filter=comments' )
 		&& false !== strpos( $ax_feed_community_filters, 'density=compact' )
+		&& false !== strpos( $ax_feed_filters_style, '.axismundi-activity-feed__filters-trigger .material-symbols-outlined[hidden]' )
+		&& false !== strpos( $ax_feed_filters_style, 'display: none !important;' )
 		&& false === strpos( $ax_feed_source, 'filtersHtml' )
 		&& false === strpos( $ax_feed_source, 'axismundi_act_feed_chrome_part' )
 );

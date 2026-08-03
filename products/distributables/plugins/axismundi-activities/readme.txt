@@ -4,7 +4,7 @@ Requires at least: 6.7
 Tested up to: 7.0
 Requires PHP: 8.1
 Requires Plugins: axismundi-actors
-Stable tag: 0.0.40
+Stable tag: 0.0.41
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Tags: activitypub, activitystreams, federation, social
@@ -33,6 +33,10 @@ authoritative payload remains lossless while blind recipients and non-public Act
 excluded from public projections.
 
 == Changelog ==
+
+= 0.0.41 =
+* Keep the feed-filter disclosure caret hidden even when a theme's global
+  Material Symbols utility supplies a display value.
 
 = 0.0.40 =
 * Turns the profile timeline into a client-rendered island inside the

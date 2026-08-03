@@ -39,6 +39,11 @@
 	font: inherit;
 }
 
+/* Theme icon utilities may set display:flex; the disclosure owns its hidden state. */
+.axismundi-activity-feed__filters-trigger .material-symbols-outlined[hidden] {
+	display: none !important;
+}
+
 /* The filters panel is a floating dialog, so it owns its elevated surface. */
 .axismundi-activity-feed__filters-panel {
 	position: absolute;
